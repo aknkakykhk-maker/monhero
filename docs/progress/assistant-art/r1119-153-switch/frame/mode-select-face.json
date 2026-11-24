@@ -1,0 +1,6215 @@
+{
+ "rev": "d57a7212^",
+ "rows": [
+  {
+   "screen": "battle",
+   "view": "tate",
+   "who": "mua",
+   "before": {
+    "src": "images/assistant/stand-normal/myua_wink.png",
+    "pid": "mua",
+    "frame": {
+     "w": 364,
+     "h": 368,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 364,
+     "h": 455
+    },
+    "head": 42.6,
+    "nat": 118.7,
+    "headTop": 60.4,
+    "eye": 145.6,
+    "chin": 188.2
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/myua_normal.png",
+    "pid": "mua",
+    "frame": {
+     "w": 364,
+     "h": 368,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 564,
+     "h": 670
+    },
+    "head": 50,
+    "nat": 74.6,
+    "headTop": 25.5,
+    "eye": 188.3,
+    "chin": 238.3
+   },
+   "ratio": 1.174,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "battle",
+   "view": "tate",
+   "who": "mua_halloween",
+   "before": {
+    "src": "images/assistant/stand-halloween/myua_normal.png",
+    "pid": "mua",
+    "frame": {
+     "w": 364,
+     "h": 368,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 364,
+     "h": 370
+    },
+    "head": 29.7,
+    "nat": 86.5,
+    "headTop": 81.5,
+    "eye": 124.2,
+    "chin": 153.9
+   },
+   "after": {
+    "src": "images/assistant/stand-halloween/myua_wink.png",
+    "pid": "mua",
+    "frame": {
+     "w": 364,
+     "h": 368,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 535,
+     "h": 606
+    },
+    "head": 43.6,
+    "nat": 72,
+    "headTop": 67.7,
+    "eye": 210.6,
+    "chin": 254.3
+   },
+   "ratio": 1.468,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "battle",
+   "view": "tate",
+   "who": "mua_card_master",
+   "before": {
+    "src": "images/assistant/stand-card-master/myua_wink.png",
+    "pid": "mua",
+    "frame": {
+     "w": 364,
+     "h": 368,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 524,
+     "h": 368
+    },
+    "head": 40,
+    "nat": 95.3,
+    "headTop": 37.9,
+    "eye": 113.2,
+    "chin": 153.3
+   },
+   "after": {
+    "src": "images/assistant/stand-card-master/myua_wink.png",
+    "pid": "mua",
+    "frame": {
+     "w": 364,
+     "h": 368,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 627,
+     "h": 440
+    },
+    "head": 58.8,
+    "nat": 93.9,
+    "headTop": 30.6,
+    "eye": 141.3,
+    "chin": 200.1
+   },
+   "ratio": 1.47,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "battle",
+   "view": "tate",
+   "who": "kiki",
+   "before": {
+    "src": "images/assistant/stand-normal/kiki_wink.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 364,
+     "h": 368,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 364,
+     "h": 415
+    },
+    "head": 38.4,
+    "nat": 119.3,
+    "headTop": 37,
+    "eye": 138.1,
+    "chin": 176.5
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/kiki_happy.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 364,
+     "h": 368,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 402,
+     "h": 458
+    },
+    "head": 54.7,
+    "nat": 119.3,
+    "headTop": 28.1,
+    "eye": 171.7,
+    "chin": 226.4
+   },
+   "ratio": 1.424,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "battle",
+   "view": "tate",
+   "who": "kiki_halloween",
+   "before": {
+    "src": "images/assistant/stand-halloween/kiki_happy.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 364,
+     "h": 368,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 364,
+     "h": 378
+    },
+    "head": 34.9,
+    "nat": 104.3,
+    "headTop": 59,
+    "eye": 127.1,
+    "chin": 162.1
+   },
+   "after": {
+    "src": "images/assistant/stand-halloween/kiki_wink.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 364,
+     "h": 368,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 479,
+     "h": 497
+    },
+    "head": 51.8,
+    "nat": 104.2,
+    "headTop": 81,
+    "eye": 182,
+    "chin": 233.8
+   },
+   "ratio": 1.484,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "battle",
+   "view": "tate",
+   "who": "kiki_twintail",
+   "before": {
+    "src": "images/assistant/stand-twintail/kiki_wink.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 364,
+     "h": 368,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 224,
+     "h": 460
+    },
+    "head": 49.4,
+    "nat": 170.8,
+    "headTop": 82.8,
+    "eye": 140.7,
+    "chin": 190.1
+   },
+   "after": {
+    "src": "images/assistant/stand-twintail/kiki_wink.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 364,
+     "h": 368,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 279,
+     "h": 436
+    },
+    "head": 52.9,
+    "nat": 121.4,
+    "headTop": 84.3,
+    "eye": 178.1,
+    "chin": 230.9
+   },
+   "ratio": 1.071,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "battle",
+   "view": "tate",
+   "who": "momosuke",
+   "before": {
+    "src": "images/assistant/stand-normal/momosuke_wink.png",
+    "pid": "momosuke",
+    "frame": {
+     "w": 364,
+     "h": 384,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 364,
+     "h": 410
+    },
+    "head": 42.6,
+    "nat": 52.3,
+    "headTop": 32.7,
+    "eye": 138.7,
+    "chin": 181.3
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/momosuke_excited.png",
+    "pid": "momosuke",
+    "frame": {
+     "w": 364,
+     "h": 368,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 498,
+     "h": 543
+    },
+    "head": 55.8,
+    "nat": 51.8,
+    "headTop": 28.9,
+    "eye": 167.9,
+    "chin": 223.7
+   },
+   "ratio": 1.31,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "battle",
+   "view": "tate",
+   "who": "momosuke_halloween",
+   "before": {
+    "src": "images/assistant/stand-halloween/momosuke_normal.png",
+    "pid": "momosuke",
+    "frame": {
+     "w": 364,
+     "h": 384,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 364,
+     "h": 397
+    },
+    "head": 46.4,
+    "nat": 58.3,
+    "headTop": 31,
+    "eye": 129.2,
+    "chin": 175.6
+   },
+   "after": {
+    "src": "images/assistant/stand-halloween/momosuke_happy.png",
+    "pid": "momosuke",
+    "frame": {
+     "w": 364,
+     "h": 368,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 426,
+     "h": 441
+    },
+    "head": 50.6,
+    "nat": 56.3,
+    "headTop": 79,
+    "eye": 186.2,
+    "chin": 236.8
+   },
+   "ratio": 1.091,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "battle",
+   "view": "tate",
+   "who": "atsu",
+   "before": {
+    "src": "images/assistant/stand-normal/atsu_normal.png",
+    "pid": "atsu",
+    "frame": {
+     "w": 364,
+     "h": 368,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 400,
+     "h": 380
+    },
+    "head": 38.3,
+    "nat": 28,
+    "headTop": 34.3,
+    "eye": 130,
+    "chin": 168.3
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/atsu_happy.png",
+    "pid": "atsu",
+    "frame": {
+     "w": 364,
+     "h": 368,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 429,
+     "h": 420
+    },
+    "head": 42,
+    "nat": 28,
+    "headTop": 20.7,
+    "eye": 125.4,
+    "chin": 167.4
+   },
+   "ratio": 1.097,
+   "inside": true,
+   "capped": true
+  },
+  {
+   "screen": "battle",
+   "view": "tate",
+   "who": "kyuko",
+   "before": {
+    "src": "images/assistant/stand-normal/kyuko_normal.png",
+    "pid": "kyuko",
+    "frame": {
+     "w": 364,
+     "h": 368,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 273,
+     "h": 428
+    },
+    "head": 48,
+    "nat": 140.5,
+    "headTop": 45.3,
+    "eye": 154.9,
+    "chin": 202.9
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/kyuko_normal.png",
+    "pid": "kyuko",
+    "frame": {
+     "w": 364,
+     "h": 368,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 369,
+     "h": 494
+    },
+    "head": 57.6,
+    "nat": 116.6,
+    "headTop": 29.9,
+    "eye": 161.5,
+    "chin": 219.1
+   },
+   "ratio": 1.2,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "battle",
+   "view": "tate",
+   "who": "kyuko_winter",
+   "before": {
+    "src": "images/assistant/stand-winter/kyuko_normal.png",
+    "pid": "kyuko",
+    "frame": {
+     "w": 364,
+     "h": 368,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 273,
+     "h": 455
+    },
+    "head": 45,
+    "nat": 101.3,
+    "headTop": 23.6,
+    "eye": 167.9,
+    "chin": 212.8
+   },
+   "after": {
+    "src": "images/assistant/stand-winter/kyuko_normal.png",
+    "pid": "kyuko",
+    "frame": {
+     "w": 364,
+     "h": 368,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 415,
+     "h": 573
+    },
+    "head": 50.3,
+    "nat": 56.2,
+    "headTop": 25.6,
+    "eye": 187.2,
+    "chin": 237.5
+   },
+   "ratio": 1.118,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "battle",
+   "view": "tate",
+   "who": "sorashido",
+   "before": {
+    "src": "images/assistant/stand-normal/sorashido_wink.png",
+    "pid": "sorashido",
+    "frame": {
+     "w": 364,
+     "h": 368,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 364,
+     "h": 344
+    },
+    "head": 49.9,
+    "nat": 151.2,
+    "headTop": 44.8,
+    "eye": 130.5,
+    "chin": 180.4
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/sorashido_happy.png",
+    "pid": "sorashido",
+    "frame": {
+     "w": 364,
+     "h": 368,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 356,
+     "h": 376
+    },
+    "head": 58.8,
+    "nat": 156,
+    "headTop": 35.5,
+    "eye": 136.7,
+    "chin": 195.5
+   },
+   "ratio": 1.178,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "battle",
+   "view": "tate",
+   "who": "sorashido_hosei",
+   "before": {
+    "src": "images/assistant/stand-hosei/sorashido_normal.png",
+    "pid": "sorashido",
+    "frame": {
+     "w": 364,
+     "h": 368,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 364,
+     "h": 433
+    },
+    "head": 54.7,
+    "nat": 68.5,
+    "headTop": 77.6,
+    "eye": 170.7,
+    "chin": 225.4
+   },
+   "after": {
+    "src": "images/assistant/stand-hosei/sorashido_normal.png",
+    "pid": "sorashido",
+    "frame": {
+     "w": 364,
+     "h": 384,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 619,
+     "h": 458
+    },
+    "head": 61.5,
+    "nat": 99.3,
+    "headTop": 32.3,
+    "eye": 154.6,
+    "chin": 216.1
+   },
+   "ratio": 1.124,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "battle",
+   "view": "tate",
+   "who": "erubin",
+   "before": {
+    "src": "images/assistant/stand-normal/erubin_normal.png",
+    "pid": "erubin",
+    "frame": {
+     "w": 364,
+     "h": 384,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 425,
+     "h": 384
+    },
+    "head": 57.8,
+    "nat": 128.1,
+    "headTop": 56.4,
+    "eye": 135.7,
+    "chin": 193.4
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/erubin_normal.png",
+    "pid": "erubin",
+    "frame": {
+     "w": 364,
+     "h": 368,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 433,
+     "h": 391
+    },
+    "head": 58.8,
+    "nat": 128.1,
+    "headTop": 55.8,
+    "eye": 136.5,
+    "chin": 195.4
+   },
+   "ratio": 1.017,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "battle",
+   "view": "tate",
+   "who": "erubin_sekiyuou",
+   "before": {
+    "src": "images/assistant/stand-sekiyuou/erubin_happy.png",
+    "pid": "erubin",
+    "frame": {
+     "w": 364,
+     "h": 368,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 535,
+     "h": 368
+    },
+    "head": 63,
+    "nat": 113.3,
+    "headTop": 11.3,
+    "eye": 96.7,
+    "chin": 159.8
+   },
+   "after": {
+    "src": "images/assistant/stand-sekiyuou/erubin_normal.png",
+    "pid": "erubin",
+    "frame": {
+     "w": 364,
+     "h": 368,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 493,
+     "h": 368
+    },
+    "head": 65.1,
+    "nat": 45.3,
+    "headTop": 63.3,
+    "eye": 151.7,
+    "chin": 216.8
+   },
+   "ratio": 1.033,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "card",
+   "view": "tate",
+   "who": "mua",
+   "before": {
+    "src": "images/assistant/stand-normal/myua_wink.png",
+    "pid": "mua",
+    "frame": {
+     "w": 364,
+     "h": 334,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 334,
+     "h": 417
+    },
+    "head": 39,
+    "nat": 118.7,
+    "headTop": 54.9,
+    "eye": 132.9,
+    "chin": 172
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/myua_happy.png",
+    "pid": "mua",
+    "frame": {
+     "w": 364,
+     "h": 334,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 512,
+     "h": 608
+    },
+    "head": 45.4,
+    "nat": 74.6,
+    "headTop": 22.7,
+    "eye": 170.4,
+    "chin": 215.8
+   },
+   "ratio": 1.164,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "card",
+   "view": "tate",
+   "who": "mua_halloween",
+   "before": {
+    "src": "images/assistant/stand-halloween/myua_wink.png",
+    "pid": "mua",
+    "frame": {
+     "w": 364,
+     "h": 334,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 364,
+     "h": 405
+    },
+    "head": 32.6,
+    "nat": 86.5,
+    "headTop": 88.1,
+    "eye": 134.9,
+    "chin": 167.5
+   },
+   "after": {
+    "src": "images/assistant/stand-halloween/myua_normal.png",
+    "pid": "mua",
+    "frame": {
+     "w": 364,
+     "h": 334,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 485,
+     "h": 550
+    },
+    "head": 39.6,
+    "nat": 72,
+    "headTop": 60.8,
+    "eye": 190.5,
+    "chin": 230.1
+   },
+   "ratio": 1.215,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "card",
+   "view": "tate",
+   "who": "mua_card_master",
+   "before": {
+    "src": "images/assistant/stand-card-master/myua_wink.png",
+    "pid": "mua",
+    "frame": {
+     "w": 364,
+     "h": 334,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 476,
+     "h": 334
+    },
+    "head": 36.3,
+    "nat": 95.3,
+    "headTop": 34,
+    "eye": 102.3,
+    "chin": 138.7
+   },
+   "after": {
+    "src": "images/assistant/stand-card-master/myua_excited.png",
+    "pid": "mua",
+    "frame": {
+     "w": 364,
+     "h": 334,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 569,
+     "h": 399
+    },
+    "head": 53.4,
+    "nat": 93.9,
+    "headTop": 27.4,
+    "eye": 127.8,
+    "chin": 181.2
+   },
+   "ratio": 1.471,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "card",
+   "view": "tate",
+   "who": "kiki",
+   "before": {
+    "src": "images/assistant/stand-normal/kiki_normal.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 364,
+     "h": 350,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 364,
+     "h": 415
+    },
+    "head": 38.4,
+    "nat": 119.3,
+    "headTop": 36.7,
+    "eye": 137.7,
+    "chin": 176.2
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/kiki_normal.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 364,
+     "h": 334,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 365,
+     "h": 416
+    },
+    "head": 49.6,
+    "nat": 119.3,
+    "headTop": 25.2,
+    "eye": 155.5,
+    "chin": 205.1
+   },
+   "ratio": 1.292,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "card",
+   "view": "tate",
+   "who": "kiki_halloween",
+   "before": {
+    "src": "images/assistant/stand-halloween/kiki_happy.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 364,
+     "h": 334,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 364,
+     "h": 378
+    },
+    "head": 34.9,
+    "nat": 104.3,
+    "headTop": 51.5,
+    "eye": 119.6,
+    "chin": 154.5
+   },
+   "after": {
+    "src": "images/assistant/stand-halloween/kiki_normal.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 364,
+     "h": 350,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 456,
+     "h": 473
+    },
+    "head": 49.3,
+    "nat": 104.2,
+    "headTop": 76.9,
+    "eye": 173.1,
+    "chin": 222.4
+   },
+   "ratio": 1.413,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "card",
+   "view": "tate",
+   "who": "kiki_twintail",
+   "before": {
+    "src": "images/assistant/stand-twintail/kiki_wink.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 364,
+     "h": 334,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 204,
+     "h": 417
+    },
+    "head": 44.8,
+    "nat": 170.8,
+    "headTop": 74.8,
+    "eye": 127.3,
+    "chin": 172.1
+   },
+   "after": {
+    "src": "images/assistant/stand-twintail/kiki_normal.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 364,
+     "h": 350,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 266,
+     "h": 415
+    },
+    "head": 50.4,
+    "nat": 121.4,
+    "headTop": 80,
+    "eye": 169.3,
+    "chin": 219.7
+   },
+   "ratio": 1.125,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "card",
+   "view": "tate",
+   "who": "momosuke",
+   "before": {
+    "src": "images/assistant/stand-normal/momosuke_wink.png",
+    "pid": "momosuke",
+    "frame": {
+     "w": 364,
+     "h": 350,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 364,
+     "h": 410
+    },
+    "head": 42.6,
+    "nat": 52.3,
+    "headTop": 32.1,
+    "eye": 138.1,
+    "chin": 180.7
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/momosuke_normal.png",
+    "pid": "momosuke",
+    "frame": {
+     "w": 364,
+     "h": 334,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 452,
+     "h": 492
+    },
+    "head": 50.6,
+    "nat": 51.8,
+    "headTop": 25.8,
+    "eye": 152,
+    "chin": 202.7
+   },
+   "ratio": 1.188,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "card",
+   "view": "tate",
+   "who": "momosuke_halloween",
+   "before": {
+    "src": "images/assistant/stand-halloween/momosuke_normal.png",
+    "pid": "momosuke",
+    "frame": {
+     "w": 364,
+     "h": 334,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 364,
+     "h": 397
+    },
+    "head": 46.4,
+    "nat": 58.3,
+    "headTop": 30,
+    "eye": 128.2,
+    "chin": 174.6
+   },
+   "after": {
+    "src": "images/assistant/stand-halloween/momosuke_normal.png",
+    "pid": "momosuke",
+    "frame": {
+     "w": 364,
+     "h": 334,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 387,
+     "h": 400
+    },
+    "head": 45.9,
+    "nat": 56.3,
+    "headTop": 71.3,
+    "eye": 168.6,
+    "chin": 214.4
+   },
+   "ratio": 0.989,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "card",
+   "view": "tate",
+   "who": "atsu",
+   "before": {
+    "src": "images/assistant/stand-normal/atsu_wink.png",
+    "pid": "atsu",
+    "frame": {
+     "w": 364,
+     "h": 334,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 400,
+     "h": 357
+    },
+    "head": 36,
+    "nat": 28,
+    "headTop": 31.9,
+    "eye": 121.8,
+    "chin": 157.7
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/atsu_wink.png",
+    "pid": "atsu",
+    "frame": {
+     "w": 364,
+     "h": 334,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 429,
+     "h": 420
+    },
+    "head": 42,
+    "nat": 28,
+    "headTop": 20.7,
+    "eye": 125.4,
+    "chin": 167.4
+   },
+   "ratio": 1.167,
+   "inside": true,
+   "capped": true
+  },
+  {
+   "screen": "card",
+   "view": "tate",
+   "who": "kyuko",
+   "before": {
+    "src": "images/assistant/stand-normal/kyuko_happy.png",
+    "pid": "kyuko",
+    "frame": {
+     "w": 364,
+     "h": 334,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 254,
+     "h": 417
+    },
+    "head": 46.8,
+    "nat": 140.6,
+    "headTop": 42.4,
+    "eye": 149.4,
+    "chin": 196.2
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/kyuko_wink.png",
+    "pid": "kyuko",
+    "frame": {
+     "w": 364,
+     "h": 334,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 335,
+     "h": 448
+    },
+    "head": 52.3,
+    "nat": 116.6,
+    "headTop": 26.7,
+    "eye": 146.2,
+    "chin": 198.4
+   },
+   "ratio": 1.118,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "card",
+   "view": "tate",
+   "who": "kyuko_winter",
+   "before": {
+    "src": "images/assistant/stand-winter/kyuko_normal.png",
+    "pid": "kyuko",
+    "frame": {
+     "w": 364,
+     "h": 350,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 263,
+     "h": 438
+    },
+    "head": 43.3,
+    "nat": 101.3,
+    "headTop": 22.4,
+    "eye": 161.3,
+    "chin": 204.6
+   },
+   "after": {
+    "src": "images/assistant/stand-winter/kyuko_normal.png",
+    "pid": "kyuko",
+    "frame": {
+     "w": 364,
+     "h": 334,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 376,
+     "h": 520
+    },
+    "head": 45.6,
+    "nat": 56.2,
+    "headTop": 22.8,
+    "eye": 169.5,
+    "chin": 215.1
+   },
+   "ratio": 1.053,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "card",
+   "view": "tate",
+   "who": "sorashido",
+   "before": {
+    "src": "images/assistant/stand-normal/sorashido_normal.png",
+    "pid": "sorashido",
+    "frame": {
+     "w": 364,
+     "h": 334,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 364,
+     "h": 344
+    },
+    "head": 52.3,
+    "nat": 158.4,
+    "headTop": 27.6,
+    "eye": 117.5,
+    "chin": 169.7
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/sorashido_wink.png",
+    "pid": "sorashido",
+    "frame": {
+     "w": 364,
+     "h": 334,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 323,
+     "h": 342
+    },
+    "head": 53.4,
+    "nat": 156,
+    "headTop": 31.7,
+    "eye": 123.5,
+    "chin": 176.9
+   },
+   "ratio": 1.021,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "card",
+   "view": "tate",
+   "who": "sorashido_hosei",
+   "before": {
+    "src": "images/assistant/stand-hosei/sorashido_happy.png",
+    "pid": "sorashido",
+    "frame": {
+     "w": 364,
+     "h": 334,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 351,
+     "h": 417
+    },
+    "head": 57.8,
+    "nat": 75.1,
+    "headTop": 38.9,
+    "eye": 137.3,
+    "chin": 195.1
+   },
+   "after": {
+    "src": "images/assistant/stand-hosei/sorashido_happy.png",
+    "pid": "sorashido",
+    "frame": {
+     "w": 364,
+     "h": 334,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 538,
+     "h": 397
+    },
+    "head": 53.4,
+    "nat": 99.3,
+    "headTop": 27.4,
+    "eye": 133.7,
+    "chin": 187.1
+   },
+   "ratio": 0.924,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "card",
+   "view": "tate",
+   "who": "erubin",
+   "before": {
+    "src": "images/assistant/stand-normal/erubin_normal.png",
+    "pid": "erubin",
+    "frame": {
+     "w": 364,
+     "h": 334,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 369,
+     "h": 334
+    },
+    "head": 50.2,
+    "nat": 128.1,
+    "headTop": 48.4,
+    "eye": 117.2,
+    "chin": 167.4
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/erubin_normal.png",
+    "pid": "erubin",
+    "frame": {
+     "w": 364,
+     "h": 334,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 393,
+     "h": 355
+    },
+    "head": 53.4,
+    "nat": 128.1,
+    "headTop": 50.4,
+    "eye": 123.6,
+    "chin": 177
+   },
+   "ratio": 1.064,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "card",
+   "view": "tate",
+   "who": "erubin_sekiyuou",
+   "before": {
+    "src": "images/assistant/stand-sekiyuou/erubin_normal.png",
+    "pid": "erubin",
+    "frame": {
+     "w": 364,
+     "h": 334,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 486,
+     "h": 334
+    },
+    "head": 57.2,
+    "nat": 113.3,
+    "headTop": 9.9,
+    "eye": 87.4,
+    "chin": 144.6
+   },
+   "after": {
+    "src": "images/assistant/stand-sekiyuou/erubin_normal.png",
+    "pid": "erubin",
+    "frame": {
+     "w": 364,
+     "h": 334,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 447,
+     "h": 334
+    },
+    "head": 59.1,
+    "nat": 45.3,
+    "headTop": 57.1,
+    "eye": 137.3,
+    "chin": 196.4
+   },
+   "ratio": 1.033,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "rhythm",
+   "view": "tate",
+   "who": "mua",
+   "before": {
+    "src": "images/assistant/stand-normal/myua_happy.png",
+    "pid": "mua",
+    "frame": {
+     "w": 364,
+     "h": 444,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 388,
+     "h": 444
+    },
+    "head": 41.5,
+    "nat": 118.7,
+    "headTop": 61.3,
+    "eye": 144.4,
+    "chin": 185.9
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/myua_excited.png",
+    "pid": "mua",
+    "frame": {
+     "w": 364,
+     "h": 444,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 681,
+     "h": 809
+    },
+    "head": 60.3,
+    "nat": 74.6,
+    "headTop": 31.4,
+    "eye": 227.9,
+    "chin": 288.2
+   },
+   "ratio": 1.453,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "rhythm",
+   "view": "tate",
+   "who": "mua_halloween",
+   "before": {
+    "src": "images/assistant/stand-halloween/myua_happy.png",
+    "pid": "mua",
+    "frame": {
+     "w": 364,
+     "h": 444,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 415,
+     "h": 444
+    },
+    "head": 35.6,
+    "nat": 86.5,
+    "headTop": 99.2,
+    "eye": 150.4,
+    "chin": 186
+   },
+   "after": {
+    "src": "images/assistant/stand-halloween/myua_happy.png",
+    "pid": "mua",
+    "frame": {
+     "w": 364,
+     "h": 460,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 669,
+     "h": 758
+    },
+    "head": 54.6,
+    "nat": 72,
+    "headTop": 85.5,
+    "eye": 264.4,
+    "chin": 319
+   },
+   "ratio": 1.534,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "rhythm",
+   "view": "tate",
+   "who": "mua_card_master",
+   "before": {
+    "src": "images/assistant/stand-card-master/myua_excited.png",
+    "pid": "mua",
+    "frame": {
+     "w": 364,
+     "h": 444,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 632,
+     "h": 444
+    },
+    "head": 48.3,
+    "nat": 95.3,
+    "headTop": 46.7,
+    "eye": 137.7,
+    "chin": 186
+   },
+   "after": {
+    "src": "images/assistant/stand-card-master/myua_happy.png",
+    "pid": "mua",
+    "frame": {
+     "w": 364,
+     "h": 460,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 784,
+     "h": 550
+    },
+    "head": 73.6,
+    "nat": 93.9,
+    "headTop": 39.5,
+    "eye": 178,
+    "chin": 251.6
+   },
+   "ratio": 1.524,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "rhythm",
+   "view": "tate",
+   "who": "kiki",
+   "before": {
+    "src": "images/assistant/stand-normal/kiki_wink.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 364,
+     "h": 444,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 389,
+     "h": 444
+    },
+    "head": 41.1,
+    "nat": 119.3,
+    "headTop": 41.4,
+    "eye": 149.3,
+    "chin": 190.4
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/kiki_happy.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 364,
+     "h": 444,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 485,
+     "h": 553
+    },
+    "head": 66,
+    "nat": 119.3,
+    "headTop": 34.8,
+    "eye": 208.1,
+    "chin": 274
+   },
+   "ratio": 1.606,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "rhythm",
+   "view": "tate",
+   "who": "kiki_halloween",
+   "before": {
+    "src": "images/assistant/stand-halloween/kiki_normal.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 364,
+     "h": 460,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 443,
+     "h": 460
+    },
+    "head": 42.5,
+    "nat": 104.3,
+    "headTop": 75.7,
+    "eye": 158.6,
+    "chin": 201.2
+   },
+   "after": {
+    "src": "images/assistant/stand-halloween/kiki_normal.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 364,
+     "h": 444,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 578,
+     "h": 600
+    },
+    "head": 62.5,
+    "nat": 104.2,
+    "headTop": 98.5,
+    "eye": 220.3,
+    "chin": 282.8
+   },
+   "ratio": 1.471,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "rhythm",
+   "view": "tate",
+   "who": "kiki_twintail",
+   "before": {
+    "src": "images/assistant/stand-twintail/kiki_wink.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 364,
+     "h": 444,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 271,
+     "h": 555
+    },
+    "head": 59.6,
+    "nat": 170.8,
+    "headTop": 101,
+    "eye": 170.8,
+    "chin": 230.4
+   },
+   "after": {
+    "src": "images/assistant/stand-twintail/kiki_happy.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 364,
+     "h": 444,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 337,
+     "h": 526
+    },
+    "head": 63.8,
+    "nat": 121.4,
+    "headTop": 102.5,
+    "eye": 215.6,
+    "chin": 279.4
+   },
+   "ratio": 1.07,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "rhythm",
+   "view": "tate",
+   "who": "momosuke",
+   "before": {
+    "src": "images/assistant/stand-normal/momosuke_normal.png",
+    "pid": "momosuke",
+    "frame": {
+     "w": 364,
+     "h": 444,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 364,
+     "h": 447
+    },
+    "head": 46.5,
+    "nat": 52.4,
+    "headTop": 36.2,
+    "eye": 151.9,
+    "chin": 198.4
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/momosuke_wink.png",
+    "pid": "momosuke",
+    "frame": {
+     "w": 364,
+     "h": 444,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 601,
+     "h": 655
+    },
+    "head": 67.3,
+    "nat": 51.8,
+    "headTop": 35.8,
+    "eye": 203.6,
+    "chin": 270.9
+   },
+   "ratio": 1.447,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "rhythm",
+   "view": "tate",
+   "who": "momosuke_halloween",
+   "before": {
+    "src": "images/assistant/stand-halloween/momosuke_excited.png",
+    "pid": "momosuke",
+    "frame": {
+     "w": 364,
+     "h": 444,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 364,
+     "h": 361
+    },
+    "head": 42.2,
+    "nat": 58.3,
+    "headTop": 30.1,
+    "eye": 119.5,
+    "chin": 161.6
+   },
+   "after": {
+    "src": "images/assistant/stand-halloween/momosuke_happy.png",
+    "pid": "momosuke",
+    "frame": {
+     "w": 364,
+     "h": 460,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 534,
+     "h": 552
+    },
+    "head": 63.3,
+    "nat": 56.3,
+    "headTop": 99.9,
+    "eye": 234,
+    "chin": 297.3
+   },
+   "ratio": 1.5,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "rhythm",
+   "view": "tate",
+   "who": "atsu",
+   "before": {
+    "src": "images/assistant/stand-normal/atsu_normal.png",
+    "pid": "atsu",
+    "frame": {
+     "w": 364,
+     "h": 460,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 400,
+     "h": 380
+    },
+    "head": 38.3,
+    "nat": 28,
+    "headTop": 36.1,
+    "eye": 131.8,
+    "chin": 170.1
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/atsu_happy.png",
+    "pid": "atsu",
+    "frame": {
+     "w": 364,
+     "h": 444,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 453,
+     "h": 444
+    },
+    "head": 44.4,
+    "nat": 28,
+    "headTop": 36.3,
+    "eye": 147,
+    "chin": 191.4
+   },
+   "ratio": 1.159,
+   "inside": true,
+   "capped": true
+  },
+  {
+   "screen": "rhythm",
+   "view": "tate",
+   "who": "kyuko",
+   "before": {
+    "src": "images/assistant/stand-normal/kyuko_normal.png",
+    "pid": "kyuko",
+    "frame": {
+     "w": 364,
+     "h": 444,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 273,
+     "h": 428
+    },
+    "head": 48,
+    "nat": 140.5,
+    "headTop": 49.8,
+    "eye": 159.4,
+    "chin": 207.4
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/kyuko_happy.png",
+    "pid": "kyuko",
+    "frame": {
+     "w": 364,
+     "h": 444,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 445,
+     "h": 596
+    },
+    "head": 69.5,
+    "nat": 116.6,
+    "headTop": 37.1,
+    "eye": 196,
+    "chin": 265.4
+   },
+   "ratio": 1.448,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "rhythm",
+   "view": "tate",
+   "who": "kyuko_winter",
+   "before": {
+    "src": "images/assistant/stand-winter/kyuko_happy.png",
+    "pid": "kyuko",
+    "frame": {
+     "w": 364,
+     "h": 444,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 273,
+     "h": 451
+    },
+    "head": 44.6,
+    "nat": 101.3,
+    "headTop": 28.1,
+    "eye": 171.2,
+    "chin": 215.8
+   },
+   "after": {
+    "src": "images/assistant/stand-winter/kyuko_normal.png",
+    "pid": "kyuko",
+    "frame": {
+     "w": 364,
+     "h": 444,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 500,
+     "h": 692
+    },
+    "head": 60.7,
+    "nat": 56.2,
+    "headTop": 31.8,
+    "eye": 226.7,
+    "chin": 287.4
+   },
+   "ratio": 1.361,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "rhythm",
+   "view": "tate",
+   "who": "sorashido",
+   "before": {
+    "src": "images/assistant/stand-normal/sorashido_normal.png",
+    "pid": "sorashido",
+    "frame": {
+     "w": 364,
+     "h": 444,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 364,
+     "h": 344
+    },
+    "head": 52.3,
+    "nat": 158.4,
+    "headTop": 34.3,
+    "eye": 124.1,
+    "chin": 176.4
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/sorashido_wink.png",
+    "pid": "sorashido",
+    "frame": {
+     "w": 364,
+     "h": 444,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 430,
+     "h": 454
+    },
+    "head": 71,
+    "nat": 156,
+    "headTop": 43.7,
+    "eye": 165.7,
+    "chin": 236.7
+   },
+   "ratio": 1.358,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "rhythm",
+   "view": "tate",
+   "who": "sorashido_hosei",
+   "before": {
+    "src": "images/assistant/stand-hosei/sorashido_excited.png",
+    "pid": "sorashido",
+    "frame": {
+     "w": 364,
+     "h": 444,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 364,
+     "h": 433
+    },
+    "head": 54.2,
+    "nat": 67.9,
+    "headTop": 85.7,
+    "eye": 177.9,
+    "chin": 232.1
+   },
+   "after": {
+    "src": "images/assistant/stand-hosei/sorashido_normal.png",
+    "pid": "sorashido",
+    "frame": {
+     "w": 364,
+     "h": 444,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 715,
+     "h": 528
+    },
+    "head": 71,
+    "nat": 99.3,
+    "headTop": 37.9,
+    "eye": 179.2,
+    "chin": 250.2
+   },
+   "ratio": 1.31,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "rhythm",
+   "view": "tate",
+   "who": "erubin",
+   "before": {
+    "src": "images/assistant/stand-normal/erubin_normal.png",
+    "pid": "erubin",
+    "frame": {
+     "w": 364,
+     "h": 444,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 491,
+     "h": 444
+    },
+    "head": 66.7,
+    "nat": 128.1,
+    "headTop": 65.8,
+    "eye": 157.3,
+    "chin": 224
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/erubin_happy.png",
+    "pid": "erubin",
+    "frame": {
+     "w": 364,
+     "h": 444,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 523,
+     "h": 472
+    },
+    "head": 71,
+    "nat": 128.1,
+    "headTop": 68.4,
+    "eye": 165.9,
+    "chin": 236.9
+   },
+   "ratio": 1.064,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "rhythm",
+   "view": "tate",
+   "who": "erubin_sekiyuou",
+   "before": {
+    "src": "images/assistant/stand-sekiyuou/erubin_wink.png",
+    "pid": "erubin",
+    "frame": {
+     "w": 364,
+     "h": 444,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 646,
+     "h": 444
+    },
+    "head": 76.1,
+    "nat": 113.3,
+    "headTop": 14.7,
+    "eye": 117.7,
+    "chin": 193.8
+   },
+   "after": {
+    "src": "images/assistant/stand-sekiyuou/erubin_normal.png",
+    "pid": "erubin",
+    "frame": {
+     "w": 364,
+     "h": 444,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 595,
+     "h": 444
+    },
+    "head": 78.6,
+    "nat": 45.3,
+    "headTop": 77.5,
+    "eye": 184.1,
+    "chin": 262.7
+   },
+   "ratio": 1.033,
+   "inside": true,
+   "capped": true
+  },
+  {
+   "screen": "battle",
+   "view": "tate-hikui",
+   "who": "mua",
+   "before": {
+    "src": "images/assistant/stand-normal/myua_wink.png",
+    "pid": "mua",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 87,
+     "h": 108
+    },
+    "head": 10.1,
+    "nat": 118.7,
+    "headTop": 9.5,
+    "eye": 29.8,
+    "chin": 40
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/myua_wink.png",
+    "pid": "mua",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 215,
+     "h": 256
+    },
+    "head": 19.1,
+    "nat": 74.6,
+    "headTop": -15.7,
+    "eye": 46.5,
+    "chin": 65.5
+   },
+   "ratio": 1.891,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "battle",
+   "view": "tate-hikui",
+   "who": "mua_halloween",
+   "before": {
+    "src": "images/assistant/stand-halloween/myua_normal.png",
+    "pid": "mua",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 107,
+     "h": 108
+    },
+    "head": 8.7,
+    "nat": 86.5,
+    "headTop": 14.6,
+    "eye": 27.2,
+    "chin": 35.9
+   },
+   "after": {
+    "src": "images/assistant/stand-halloween/myua_wink.png",
+    "pid": "mua",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 234,
+     "h": 265
+    },
+    "head": 19.1,
+    "nat": 72,
+    "headTop": -16.1,
+    "eye": 46.5,
+    "chin": 65.5
+   },
+   "ratio": 2.195,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "battle",
+   "view": "tate-hikui",
+   "who": "mua_card_master",
+   "before": {
+    "src": "images/assistant/stand-card-master/myua_normal.png",
+    "pid": "mua",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 155,
+     "h": 108
+    },
+    "head": 11.8,
+    "nat": 95.3,
+    "headTop": 1.8,
+    "eye": 24.1,
+    "chin": 35.9
+   },
+   "after": {
+    "src": "images/assistant/stand-card-master/myua_wink.png",
+    "pid": "mua",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 203,
+     "h": 143
+    },
+    "head": 19.1,
+    "nat": 93.9,
+    "headTop": 5.5,
+    "eye": 41.4,
+    "chin": 60.5
+   },
+   "ratio": 1.619,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "battle",
+   "view": "tate-hikui",
+   "who": "kiki",
+   "before": {
+    "src": "images/assistant/stand-normal/kiki_normal.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 95,
+     "h": 108
+    },
+    "head": 10,
+    "nat": 119.3,
+    "headTop": 4.7,
+    "eye": 31,
+    "chin": 41.1
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/kiki_normal.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 140,
+     "h": 160
+    },
+    "head": 19.1,
+    "nat": 119.3,
+    "headTop": -3.7,
+    "eye": 46.5,
+    "chin": 65.5
+   },
+   "ratio": 1.91,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "battle",
+   "view": "tate-hikui",
+   "who": "kiki_halloween",
+   "before": {
+    "src": "images/assistant/stand-halloween/kiki_normal.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 364,
+     "h": 103,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 124,
+     "h": 129
+    },
+    "head": 11.9,
+    "nat": 104.3,
+    "headTop": 10.9,
+    "eye": 34.1,
+    "chin": 46
+   },
+   "after": {
+    "src": "images/assistant/stand-halloween/kiki_happy.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 176,
+     "h": 183
+    },
+    "head": 19.1,
+    "nat": 104.2,
+    "headTop": 9.2,
+    "eye": 46.4,
+    "chin": 65.5
+   },
+   "ratio": 1.605,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "battle",
+   "view": "tate-hikui",
+   "who": "kiki_twintail",
+   "before": {
+    "src": "images/assistant/stand-twintail/kiki_normal.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 364,
+     "h": 103,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 60,
+     "h": 129
+    },
+    "head": 13.9,
+    "nat": 170.8,
+    "headTop": 18.6,
+    "eye": 34.9,
+    "chin": 48.7
+   },
+   "after": {
+    "src": "images/assistant/stand-twintail/kiki_normal.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 364,
+     "h": 103,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 106,
+     "h": 165
+    },
+    "head": 20,
+    "nat": 121.4,
+    "headTop": 25.9,
+    "eye": 61.3,
+    "chin": 81.3
+   },
+   "ratio": 1.439,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "battle",
+   "view": "tate-hikui",
+   "who": "momosuke",
+   "before": {
+    "src": "images/assistant/stand-normal/momosuke_happy.png",
+    "pid": "momosuke",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 99,
+     "h": 108
+    },
+    "head": 11.3,
+    "nat": 52.3,
+    "headTop": 3.6,
+    "eye": 31.7,
+    "chin": 43
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/momosuke_wink.png",
+    "pid": "momosuke",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 171,
+     "h": 186
+    },
+    "head": 19.1,
+    "nat": 51.8,
+    "headTop": -1.2,
+    "eye": 46.4,
+    "chin": 65.5
+   },
+   "ratio": 1.69,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "battle",
+   "view": "tate-hikui",
+   "who": "momosuke_halloween",
+   "before": {
+    "src": "images/assistant/stand-halloween/momosuke_excited.png",
+    "pid": "momosuke",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 109,
+     "h": 108
+    },
+    "head": 12.7,
+    "nat": 58.3,
+    "headTop": 3.5,
+    "eye": 30.4,
+    "chin": 43
+   },
+   "after": {
+    "src": "images/assistant/stand-halloween/momosuke_wink.png",
+    "pid": "momosuke",
+    "frame": {
+     "w": 364,
+     "h": 103,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 169,
+     "h": 174
+    },
+    "head": 20,
+    "nat": 56.3,
+    "headTop": 18.9,
+    "eye": 61.3,
+    "chin": 81.3
+   },
+   "ratio": 1.575,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "battle",
+   "view": "tate-hikui",
+   "who": "atsu",
+   "before": {
+    "src": "images/assistant/stand-normal/atsu_normal.png",
+    "pid": "atsu",
+    "frame": {
+     "w": 364,
+     "h": 103,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 181,
+     "h": 172
+    },
+    "head": 17.4,
+    "nat": 28,
+    "headTop": 10.4,
+    "eye": 53.7,
+    "chin": 71.1
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/atsu_happy.png",
+    "pid": "atsu",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 195,
+     "h": 191
+    },
+    "head": 19.1,
+    "nat": 28,
+    "headTop": -1.1,
+    "eye": 46.5,
+    "chin": 65.5
+   },
+   "ratio": 1.098,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "battle",
+   "view": "tate-hikui",
+   "who": "kyuko",
+   "before": {
+    "src": "images/assistant/stand-normal/kyuko_normal.png",
+    "pid": "kyuko",
+    "frame": {
+     "w": 364,
+     "h": 103,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 82,
+     "h": 129
+    },
+    "head": 14.5,
+    "nat": 140.5,
+    "headTop": 8.6,
+    "eye": 41.7,
+    "chin": 56.2
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/kyuko_normal.png",
+    "pid": "kyuko",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 122,
+     "h": 164
+    },
+    "head": 19.1,
+    "nat": 116.6,
+    "headTop": 2.8,
+    "eye": 46.4,
+    "chin": 65.5
+   },
+   "ratio": 1.317,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "battle",
+   "view": "tate-hikui",
+   "who": "kyuko_winter",
+   "before": {
+    "src": "images/assistant/stand-winter/kyuko_normal.png",
+    "pid": "kyuko",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 65,
+     "h": 108
+    },
+    "head": 10.7,
+    "nat": 101.3,
+    "headTop": 0.7,
+    "eye": 35.1,
+    "chin": 45.8
+   },
+   "after": {
+    "src": "images/assistant/stand-winter/kyuko_normal.png",
+    "pid": "kyuko",
+    "frame": {
+     "w": 364,
+     "h": 103,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 165,
+     "h": 228
+    },
+    "head": 20,
+    "nat": 56.2,
+    "headTop": -3,
+    "eye": 61.3,
+    "chin": 81.3
+   },
+   "ratio": 1.869,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "battle",
+   "view": "tate-hikui",
+   "who": "sorashido",
+   "before": {
+    "src": "images/assistant/stand-normal/sorashido_normal.png",
+    "pid": "sorashido",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 115,
+     "h": 108
+    },
+    "head": 16.5,
+    "nat": 158.4,
+    "headTop": 3.1,
+    "eye": 31.4,
+    "chin": 47.9
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/sorashido_normal.png",
+    "pid": "sorashido",
+    "frame": {
+     "w": 364,
+     "h": 103,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 121,
+     "h": 128
+    },
+    "head": 20,
+    "nat": 156,
+    "headTop": 7.7,
+    "eye": 42,
+    "chin": 62
+   },
+   "ratio": 1.212,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "battle",
+   "view": "tate-hikui",
+   "who": "sorashido_hosei",
+   "before": {
+    "src": "images/assistant/stand-hosei/sorashido_normal.png",
+    "pid": "sorashido",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 91,
+     "h": 108
+    },
+    "head": 13.7,
+    "nat": 68.5,
+    "headTop": 14.3,
+    "eye": 37.7,
+    "chin": 51.4
+   },
+   "after": {
+    "src": "images/assistant/stand-hosei/sorashido_normal.png",
+    "pid": "sorashido",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 192,
+     "h": 142
+    },
+    "head": 19.1,
+    "nat": 99.3,
+    "headTop": 5.5,
+    "eye": 43.5,
+    "chin": 62.6
+   },
+   "ratio": 1.394,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "battle",
+   "view": "tate-hikui",
+   "who": "erubin",
+   "before": {
+    "src": "images/assistant/stand-normal/erubin_happy.png",
+    "pid": "erubin",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 120,
+     "h": 108
+    },
+    "head": 16.3,
+    "nat": 128.1,
+    "headTop": 6.5,
+    "eye": 28.8,
+    "chin": 45.1
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/erubin_wink.png",
+    "pid": "erubin",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 140,
+     "h": 127
+    },
+    "head": 19.1,
+    "nat": 128.1,
+    "headTop": 13.7,
+    "eye": 39.8,
+    "chin": 58.9
+   },
+   "ratio": 1.172,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "battle",
+   "view": "tate-hikui",
+   "who": "erubin_sekiyuou",
+   "before": {
+    "src": "images/assistant/stand-sekiyuou/erubin_happy.png",
+    "pid": "erubin",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 158,
+     "h": 108
+    },
+    "head": 18.6,
+    "nat": 113.3,
+    "headTop": -6,
+    "eye": 19.2,
+    "chin": 37.7
+   },
+   "after": {
+    "src": "images/assistant/stand-sekiyuou/erubin_happy.png",
+    "pid": "erubin",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 144,
+     "h": 108
+    },
+    "head": 19.1,
+    "nat": 45.3,
+    "headTop": 13.9,
+    "eye": 39.8,
+    "chin": 58.9
+   },
+   "ratio": 1.027,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "card",
+   "view": "tate-hikui",
+   "who": "mua",
+   "before": {
+    "src": "images/assistant/stand-normal/myua_excited.png",
+    "pid": "mua",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 90,
+     "h": 108
+    },
+    "head": 10.1,
+    "nat": 118.7,
+    "headTop": 9.5,
+    "eye": 29.8,
+    "chin": 40
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/myua_happy.png",
+    "pid": "mua",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 215,
+     "h": 256
+    },
+    "head": 19.1,
+    "nat": 74.6,
+    "headTop": -15.7,
+    "eye": 46.5,
+    "chin": 65.5
+   },
+   "ratio": 1.891,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "card",
+   "view": "tate-hikui",
+   "who": "mua_halloween",
+   "before": {
+    "src": "images/assistant/stand-halloween/myua_excited.png",
+    "pid": "mua",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 107,
+     "h": 108
+    },
+    "head": 8.7,
+    "nat": 86.5,
+    "headTop": 14.6,
+    "eye": 27.2,
+    "chin": 35.9
+   },
+   "after": {
+    "src": "images/assistant/stand-halloween/myua_wink.png",
+    "pid": "mua",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 234,
+     "h": 265
+    },
+    "head": 19.1,
+    "nat": 72,
+    "headTop": -16.1,
+    "eye": 46.4,
+    "chin": 65.5
+   },
+   "ratio": 2.195,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "card",
+   "view": "tate-hikui",
+   "who": "mua_card_master",
+   "before": {
+    "src": "images/assistant/stand-card-master/myua_normal.png",
+    "pid": "mua",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 155,
+     "h": 108
+    },
+    "head": 11.8,
+    "nat": 95.3,
+    "headTop": 1.9,
+    "eye": 24.1,
+    "chin": 35.9
+   },
+   "after": {
+    "src": "images/assistant/stand-card-master/myua_normal.png",
+    "pid": "mua",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 203,
+     "h": 143
+    },
+    "head": 19.1,
+    "nat": 93.9,
+    "headTop": 5.5,
+    "eye": 41.4,
+    "chin": 60.5
+   },
+   "ratio": 1.619,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "card",
+   "view": "tate-hikui",
+   "who": "kiki",
+   "before": {
+    "src": "images/assistant/stand-normal/kiki_wink.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 95,
+     "h": 108
+    },
+    "head": 10,
+    "nat": 119.3,
+    "headTop": 4.7,
+    "eye": 31,
+    "chin": 41.1
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/kiki_normal.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 364,
+     "h": 103,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 147,
+     "h": 168
+    },
+    "head": 20,
+    "nat": 119.3,
+    "headTop": 6.1,
+    "eye": 58.6,
+    "chin": 78.6
+   },
+   "ratio": 2,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "card",
+   "view": "tate-hikui",
+   "who": "kiki_halloween",
+   "before": {
+    "src": "images/assistant/stand-halloween/kiki_happy.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 104,
+     "h": 108
+    },
+    "head": 10,
+    "nat": 104.3,
+    "headTop": 8.2,
+    "eye": 27.7,
+    "chin": 37.7
+   },
+   "after": {
+    "src": "images/assistant/stand-halloween/kiki_happy.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 176,
+     "h": 183
+    },
+    "head": 19.1,
+    "nat": 104.2,
+    "headTop": 9.2,
+    "eye": 46.4,
+    "chin": 65.5
+   },
+   "ratio": 1.91,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "card",
+   "view": "tate-hikui",
+   "who": "kiki_twintail",
+   "before": {
+    "src": "images/assistant/stand-twintail/kiki_normal.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 51,
+     "h": 108
+    },
+    "head": 11.7,
+    "nat": 170.8,
+    "headTop": 14.7,
+    "eye": 28.3,
+    "chin": 40
+   },
+   "after": {
+    "src": "images/assistant/stand-twintail/kiki_happy.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 101,
+     "h": 157
+    },
+    "head": 19.1,
+    "nat": 121.4,
+    "headTop": 12.6,
+    "eye": 46.4,
+    "chin": 65.5
+   },
+   "ratio": 1.632,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "card",
+   "view": "tate-hikui",
+   "who": "momosuke",
+   "before": {
+    "src": "images/assistant/stand-normal/momosuke_happy.png",
+    "pid": "momosuke",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 99,
+     "h": 108
+    },
+    "head": 11.3,
+    "nat": 52.3,
+    "headTop": 3.7,
+    "eye": 31.7,
+    "chin": 43
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/momosuke_normal.png",
+    "pid": "momosuke",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 171,
+     "h": 186
+    },
+    "head": 19.1,
+    "nat": 51.8,
+    "headTop": -1.1,
+    "eye": 46.5,
+    "chin": 65.5
+   },
+   "ratio": 1.69,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "card",
+   "view": "tate-hikui",
+   "who": "momosuke_halloween",
+   "before": {
+    "src": "images/assistant/stand-halloween/momosuke_excited.png",
+    "pid": "momosuke",
+    "frame": {
+     "w": 364,
+     "h": 103,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 130,
+     "h": 129
+    },
+    "head": 15.1,
+    "nat": 58.3,
+    "headTop": 5.3,
+    "eye": 37.3,
+    "chin": 52.3
+   },
+   "after": {
+    "src": "images/assistant/stand-halloween/momosuke_excited.png",
+    "pid": "momosuke",
+    "frame": {
+     "w": 364,
+     "h": 103,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 169,
+     "h": 174
+    },
+    "head": 20,
+    "nat": 56.3,
+    "headTop": 18.9,
+    "eye": 61.3,
+    "chin": 81.3
+   },
+   "ratio": 1.325,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "card",
+   "view": "tate-hikui",
+   "who": "atsu",
+   "before": {
+    "src": "images/assistant/stand-normal/atsu_happy.png",
+    "pid": "atsu",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 128,
+     "h": 145
+    },
+    "head": 14.6,
+    "nat": 28.1,
+    "headTop": 7.5,
+    "eye": 44,
+    "chin": 58.6
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/atsu_happy.png",
+    "pid": "atsu",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 195,
+     "h": 191
+    },
+    "head": 19.1,
+    "nat": 28,
+    "headTop": -1.1,
+    "eye": 46.5,
+    "chin": 65.5
+   },
+   "ratio": 1.308,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "card",
+   "view": "tate-hikui",
+   "who": "kyuko",
+   "before": {
+    "src": "images/assistant/stand-normal/kyuko_normal.png",
+    "pid": "kyuko",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 69,
+     "h": 108
+    },
+    "head": 12.2,
+    "nat": 140.5,
+    "headTop": 6.3,
+    "eye": 34.1,
+    "chin": 46.3
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/kyuko_happy.png",
+    "pid": "kyuko",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 122,
+     "h": 164
+    },
+    "head": 19.1,
+    "nat": 116.6,
+    "headTop": 2.8,
+    "eye": 46.4,
+    "chin": 65.5
+   },
+   "ratio": 1.566,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "card",
+   "view": "tate-hikui",
+   "who": "kyuko_winter",
+   "before": {
+    "src": "images/assistant/stand-winter/kyuko_wink.png",
+    "pid": "kyuko",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 65,
+     "h": 108
+    },
+    "head": 10.7,
+    "nat": 101.3,
+    "headTop": 0.7,
+    "eye": 35.1,
+    "chin": 45.9
+   },
+   "after": {
+    "src": "images/assistant/stand-winter/kyuko_normal.png",
+    "pid": "kyuko",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 157,
+     "h": 217
+    },
+    "head": 19.1,
+    "nat": 56.2,
+    "headTop": -14.8,
+    "eye": 46.5,
+    "chin": 65.5
+   },
+   "ratio": 1.785,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "card",
+   "view": "tate-hikui",
+   "who": "sorashido",
+   "before": {
+    "src": "images/assistant/stand-normal/sorashido_excited.png",
+    "pid": "sorashido",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 115,
+     "h": 108
+    },
+    "head": 15.7,
+    "nat": 151.2,
+    "headTop": 7.9,
+    "eye": 34.9,
+    "chin": 50.6
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/sorashido_normal.png",
+    "pid": "sorashido",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 116,
+     "h": 122
+    },
+    "head": 19.1,
+    "nat": 156,
+    "headTop": 7,
+    "eye": 39.8,
+    "chin": 58.9
+   },
+   "ratio": 1.217,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "card",
+   "view": "tate-hikui",
+   "who": "sorashido_hosei",
+   "before": {
+    "src": "images/assistant/stand-hosei/sorashido_excited.png",
+    "pid": "sorashido",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 91,
+     "h": 108
+    },
+    "head": 13.6,
+    "nat": 67.9,
+    "headTop": 15.2,
+    "eye": 38.3,
+    "chin": 51.9
+   },
+   "after": {
+    "src": "images/assistant/stand-hosei/sorashido_normal.png",
+    "pid": "sorashido",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 192,
+     "h": 142
+    },
+    "head": 19.1,
+    "nat": 99.3,
+    "headTop": 5.5,
+    "eye": 43.5,
+    "chin": 62.6
+   },
+   "ratio": 1.404,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "card",
+   "view": "tate-hikui",
+   "who": "erubin",
+   "before": {
+    "src": "images/assistant/stand-normal/erubin_excited.png",
+    "pid": "erubin",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 120,
+     "h": 108
+    },
+    "head": 16.3,
+    "nat": 128.1,
+    "headTop": 6.5,
+    "eye": 28.8,
+    "chin": 45.1
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/erubin_normal.png",
+    "pid": "erubin",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 140,
+     "h": 127
+    },
+    "head": 19.1,
+    "nat": 128.1,
+    "headTop": 13.7,
+    "eye": 39.9,
+    "chin": 58.9
+   },
+   "ratio": 1.172,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "card",
+   "view": "tate-hikui",
+   "who": "erubin_sekiyuou",
+   "before": {
+    "src": "images/assistant/stand-sekiyuou/erubin_normal.png",
+    "pid": "erubin",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 158,
+     "h": 108
+    },
+    "head": 18.6,
+    "nat": 113.3,
+    "headTop": -6,
+    "eye": 19.2,
+    "chin": 37.8
+   },
+   "after": {
+    "src": "images/assistant/stand-sekiyuou/erubin_normal.png",
+    "pid": "erubin",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 62
+    },
+    "img": {
+     "w": 144,
+     "h": 108
+    },
+    "head": 19.1,
+    "nat": 45.3,
+    "headTop": 14,
+    "eye": 39.9,
+    "chin": 58.9
+   },
+   "ratio": 1.027,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "rhythm",
+   "view": "tate-hikui",
+   "who": "mua",
+   "before": {
+    "src": "images/assistant/stand-normal/myua_happy.png",
+    "pid": "mua",
+    "frame": {
+     "w": 364,
+     "h": 103,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 113,
+     "h": 129
+    },
+    "head": 12.1,
+    "nat": 118.7,
+    "headTop": 12.5,
+    "eye": 36.6,
+    "chin": 48.7
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/myua_wink.png",
+    "pid": "mua",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 215,
+     "h": 256
+    },
+    "head": 19.1,
+    "nat": 74.6,
+    "headTop": -15.7,
+    "eye": 46.5,
+    "chin": 65.6
+   },
+   "ratio": 1.579,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "rhythm",
+   "view": "tate-hikui",
+   "who": "mua_halloween",
+   "before": {
+    "src": "images/assistant/stand-halloween/myua_happy.png",
+    "pid": "mua",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 101,
+     "h": 108
+    },
+    "head": 8.7,
+    "nat": 86.5,
+    "headTop": 14.7,
+    "eye": 27.2,
+    "chin": 35.9
+   },
+   "after": {
+    "src": "images/assistant/stand-halloween/myua_happy.png",
+    "pid": "mua",
+    "frame": {
+     "w": 364,
+     "h": 103,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 245,
+     "h": 278
+    },
+    "head": 20,
+    "nat": 72,
+    "headTop": -4.2,
+    "eye": 61.3,
+    "chin": 81.3
+   },
+   "ratio": 2.299,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "rhythm",
+   "view": "tate-hikui",
+   "who": "mua_card_master",
+   "before": {
+    "src": "images/assistant/stand-card-master/myua_excited.png",
+    "pid": "mua",
+    "frame": {
+     "w": 364,
+     "h": 70,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 125,
+     "h": 88
+    },
+    "head": 9.6,
+    "nat": 95.3,
+    "headTop": 0.4,
+    "eye": 18.4,
+    "chin": 27.9
+   },
+   "after": {
+    "src": "images/assistant/stand-card-master/myua_normal.png",
+    "pid": "mua",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 203,
+     "h": 143
+    },
+    "head": 19.1,
+    "nat": 93.9,
+    "headTop": 5.5,
+    "eye": 41.4,
+    "chin": 60.5
+   },
+   "ratio": 1.99,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "rhythm",
+   "view": "tate-hikui",
+   "who": "kiki",
+   "before": {
+    "src": "images/assistant/stand-normal/kiki_happy.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 95,
+     "h": 108
+    },
+    "head": 10,
+    "nat": 119.3,
+    "headTop": 4.7,
+    "eye": 31,
+    "chin": 41.1
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/kiki_normal.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 140,
+     "h": 160
+    },
+    "head": 19.1,
+    "nat": 119.3,
+    "headTop": -3.7,
+    "eye": 46.4,
+    "chin": 65.5
+   },
+   "ratio": 1.91,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "rhythm",
+   "view": "tate-hikui",
+   "who": "kiki_halloween",
+   "before": {
+    "src": "images/assistant/stand-halloween/kiki_normal.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 104,
+     "h": 108
+    },
+    "head": 10,
+    "nat": 104.3,
+    "headTop": 8.2,
+    "eye": 27.7,
+    "chin": 37.7
+   },
+   "after": {
+    "src": "images/assistant/stand-halloween/kiki_happy.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 176,
+     "h": 183
+    },
+    "head": 19.1,
+    "nat": 104.2,
+    "headTop": 9.2,
+    "eye": 46.4,
+    "chin": 65.5
+   },
+   "ratio": 1.91,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "rhythm",
+   "view": "tate-hikui",
+   "who": "kiki_twintail",
+   "before": {
+    "src": "images/assistant/stand-twintail/kiki_happy.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 53,
+     "h": 108
+    },
+    "head": 11.7,
+    "nat": 170.8,
+    "headTop": 14.7,
+    "eye": 28.3,
+    "chin": 40
+   },
+   "after": {
+    "src": "images/assistant/stand-twintail/kiki_normal.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 364,
+     "h": 103,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 106,
+     "h": 165
+    },
+    "head": 20,
+    "nat": 121.4,
+    "headTop": 25.8,
+    "eye": 61.3,
+    "chin": 81.3
+   },
+   "ratio": 1.709,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "rhythm",
+   "view": "tate-hikui",
+   "who": "momosuke",
+   "before": {
+    "src": "images/assistant/stand-normal/momosuke_happy.png",
+    "pid": "momosuke",
+    "frame": {
+     "w": 364,
+     "h": 103,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 118,
+     "h": 129
+    },
+    "head": 13.4,
+    "nat": 52.3,
+    "headTop": 5.5,
+    "eye": 38.9,
+    "chin": 52.3
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/momosuke_wink.png",
+    "pid": "momosuke",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 171,
+     "h": 186
+    },
+    "head": 19.1,
+    "nat": 51.8,
+    "headTop": -1.1,
+    "eye": 46.4,
+    "chin": 65.5
+   },
+   "ratio": 1.425,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "rhythm",
+   "view": "tate-hikui",
+   "who": "momosuke_halloween",
+   "before": {
+    "src": "images/assistant/stand-halloween/momosuke_happy.png",
+    "pid": "momosuke",
+    "frame": {
+     "w": 364,
+     "h": 103,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 120,
+     "h": 129
+    },
+    "head": 15.1,
+    "nat": 58.3,
+    "headTop": 5.2,
+    "eye": 37.1,
+    "chin": 52.2
+   },
+   "after": {
+    "src": "images/assistant/stand-halloween/momosuke_happy.png",
+    "pid": "momosuke",
+    "frame": {
+     "w": 364,
+     "h": 103,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 169,
+     "h": 174
+    },
+    "head": 20,
+    "nat": 56.3,
+    "headTop": 18.9,
+    "eye": 61.3,
+    "chin": 81.3
+   },
+   "ratio": 1.325,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "rhythm",
+   "view": "tate-hikui",
+   "who": "atsu",
+   "before": {
+    "src": "images/assistant/stand-normal/atsu_normal.png",
+    "pid": "atsu",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 152,
+     "h": 145
+    },
+    "head": 14.6,
+    "nat": 28,
+    "headTop": 7.7,
+    "eye": 44.2,
+    "chin": 58.8
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/atsu_wink.png",
+    "pid": "atsu",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 195,
+     "h": 191
+    },
+    "head": 19.1,
+    "nat": 28,
+    "headTop": -1.2,
+    "eye": 46.4,
+    "chin": 65.5
+   },
+   "ratio": 1.308,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "rhythm",
+   "view": "tate-hikui",
+   "who": "kyuko",
+   "before": {
+    "src": "images/assistant/stand-normal/kyuko_excited.png",
+    "pid": "kyuko",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 68,
+     "h": 108
+    },
+    "head": 12.2,
+    "nat": 140.5,
+    "headTop": 6.3,
+    "eye": 34.1,
+    "chin": 46.3
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/kyuko_normal.png",
+    "pid": "kyuko",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 122,
+     "h": 164
+    },
+    "head": 19.1,
+    "nat": 116.6,
+    "headTop": 2.9,
+    "eye": 46.5,
+    "chin": 65.6
+   },
+   "ratio": 1.566,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "rhythm",
+   "view": "tate-hikui",
+   "who": "kyuko_winter",
+   "before": {
+    "src": "images/assistant/stand-winter/kyuko_normal.png",
+    "pid": "kyuko",
+    "frame": {
+     "w": 364,
+     "h": 103,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 78,
+     "h": 129
+    },
+    "head": 12.8,
+    "nat": 101.3,
+    "headTop": 2,
+    "eye": 43,
+    "chin": 55.7
+   },
+   "after": {
+    "src": "images/assistant/stand-winter/kyuko_wink.png",
+    "pid": "kyuko",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 157,
+     "h": 217
+    },
+    "head": 19.1,
+    "nat": 56.2,
+    "headTop": -14.9,
+    "eye": 46.4,
+    "chin": 65.5
+   },
+   "ratio": 1.492,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "rhythm",
+   "view": "tate-hikui",
+   "who": "sorashido",
+   "before": {
+    "src": "images/assistant/stand-normal/sorashido_wink.png",
+    "pid": "sorashido",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 115,
+     "h": 108
+    },
+    "head": 15.7,
+    "nat": 151.2,
+    "headTop": 7.9,
+    "eye": 34.9,
+    "chin": 50.6
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/sorashido_excited.png",
+    "pid": "sorashido",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 116,
+     "h": 122
+    },
+    "head": 19.1,
+    "nat": 156,
+    "headTop": 7,
+    "eye": 39.8,
+    "chin": 58.9
+   },
+   "ratio": 1.217,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "rhythm",
+   "view": "tate-hikui",
+   "who": "sorashido_hosei",
+   "before": {
+    "src": "images/assistant/stand-hosei/sorashido_normal.png",
+    "pid": "sorashido",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 91,
+     "h": 108
+    },
+    "head": 13.7,
+    "nat": 68.5,
+    "headTop": 14.3,
+    "eye": 37.7,
+    "chin": 51.4
+   },
+   "after": {
+    "src": "images/assistant/stand-hosei/sorashido_happy.png",
+    "pid": "sorashido",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 192,
+     "h": 142
+    },
+    "head": 19.1,
+    "nat": 99.3,
+    "headTop": 5.5,
+    "eye": 43.4,
+    "chin": 62.5
+   },
+   "ratio": 1.394,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "rhythm",
+   "view": "tate-hikui",
+   "who": "erubin",
+   "before": {
+    "src": "images/assistant/stand-normal/erubin_happy.png",
+    "pid": "erubin",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 120,
+     "h": 108
+    },
+    "head": 16.3,
+    "nat": 128.1,
+    "headTop": 6.5,
+    "eye": 28.8,
+    "chin": 45.1
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/erubin_normal.png",
+    "pid": "erubin",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 140,
+     "h": 127
+    },
+    "head": 19.1,
+    "nat": 128.1,
+    "headTop": 13.7,
+    "eye": 39.8,
+    "chin": 58.9
+   },
+   "ratio": 1.172,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "rhythm",
+   "view": "tate-hikui",
+   "who": "erubin_sekiyuou",
+   "before": {
+    "src": "images/assistant/stand-sekiyuou/erubin_normal.png",
+    "pid": "erubin",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 158,
+     "h": 108
+    },
+    "head": 18.6,
+    "nat": 113.3,
+    "headTop": -6,
+    "eye": 19.2,
+    "chin": 37.7
+   },
+   "after": {
+    "src": "images/assistant/stand-sekiyuou/erubin_excited.png",
+    "pid": "erubin",
+    "frame": {
+     "w": 364,
+     "h": 87,
+     "x": 13,
+     "y": 70.5
+    },
+    "img": {
+     "w": 144,
+     "h": 108
+    },
+    "head": 19.1,
+    "nat": 45.3,
+    "headTop": 13.9,
+    "eye": 39.8,
+    "chin": 58.9
+   },
+   "ratio": 1.027,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "battle",
+   "view": "yoko",
+   "who": "mua",
+   "before": {
+    "src": "images/assistant/stand-normal/myua_happy.png",
+    "pid": "mua",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 268,
+     "h": 307
+    },
+    "head": 28.7,
+    "nat": 118.7,
+    "headTop": 40,
+    "eye": 97.4,
+    "chin": 126.1
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/myua_normal.png",
+    "pid": "mua",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 424,
+     "h": 503
+    },
+    "head": 37.5,
+    "nat": 74.6,
+    "headTop": 17.8,
+    "eye": 140,
+    "chin": 177.6
+   },
+   "ratio": 1.307,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "battle",
+   "view": "yoko",
+   "who": "mua_halloween",
+   "before": {
+    "src": "images/assistant/stand-halloween/myua_wink.png",
+    "pid": "mua",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 268,
+     "h": 299
+    },
+    "head": 24,
+    "nat": 86.5,
+    "headTop": 64.5,
+    "eye": 98.9,
+    "chin": 122.9
+   },
+   "after": {
+    "src": "images/assistant/stand-halloween/myua_normal.png",
+    "pid": "mua",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 402,
+     "h": 455
+    },
+    "head": 32.8,
+    "nat": 72,
+    "headTop": 49.5,
+    "eye": 156.8,
+    "chin": 189.6
+   },
+   "ratio": 1.367,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "battle",
+   "view": "yoko",
+   "who": "mua_card_master",
+   "before": {
+    "src": "images/assistant/stand-card-master/myua_normal.png",
+    "pid": "mua",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 394,
+     "h": 276
+    },
+    "head": 30.1,
+    "nat": 95.3,
+    "headTop": 27.3,
+    "eye": 83.8,
+    "chin": 113.9
+   },
+   "after": {
+    "src": "images/assistant/stand-card-master/myua_wink.png",
+    "pid": "mua",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 470,
+     "h": 330
+    },
+    "head": 44.2,
+    "nat": 93.9,
+    "headTop": 21.8,
+    "eye": 104.9,
+    "chin": 149.1
+   },
+   "ratio": 1.468,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "battle",
+   "view": "yoko",
+   "who": "kiki",
+   "before": {
+    "src": "images/assistant/stand-normal/kiki_happy.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 268,
+     "h": 306
+    },
+    "head": 28.3,
+    "nat": 119.3,
+    "headTop": 26,
+    "eye": 100.4,
+    "chin": 128.8
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/kiki_wink.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 302,
+     "h": 344
+    },
+    "head": 41,
+    "nat": 119.3,
+    "headTop": 20,
+    "eye": 127.8,
+    "chin": 168.9
+   },
+   "ratio": 1.449,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "battle",
+   "view": "yoko",
+   "who": "kiki_halloween",
+   "before": {
+    "src": "images/assistant/stand-halloween/kiki_happy.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 268,
+     "h": 278
+    },
+    "head": 25.7,
+    "nat": 104.3,
+    "headTop": 43.2,
+    "eye": 93.4,
+    "chin": 119.1
+   },
+   "after": {
+    "src": "images/assistant/stand-halloween/kiki_normal.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 268,
+     "h": 291,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 379,
+     "h": 394
+    },
+    "head": 41,
+    "nat": 104.2,
+    "headTop": 63.1,
+    "eye": 143,
+    "chin": 184
+   },
+   "ratio": 1.595,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "battle",
+   "view": "yoko",
+   "who": "kiki_twintail",
+   "before": {
+    "src": "images/assistant/stand-twintail/kiki_happy.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 168,
+     "h": 345
+    },
+    "head": 37.1,
+    "nat": 170.8,
+    "headTop": 61.1,
+    "eye": 104.6,
+    "chin": 141.7
+   },
+   "after": {
+    "src": "images/assistant/stand-twintail/kiki_happy.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 210,
+     "h": 327
+    },
+    "head": 39.7,
+    "nat": 121.4,
+    "headTop": 62.1,
+    "eye": 132.5,
+    "chin": 172.2
+   },
+   "ratio": 1.07,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "battle",
+   "view": "yoko",
+   "who": "momosuke",
+   "before": {
+    "src": "images/assistant/stand-normal/momosuke_normal.png",
+    "pid": "momosuke",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 268,
+     "h": 329
+    },
+    "head": 34.2,
+    "nat": 52.4,
+    "headTop": 24.4,
+    "eye": 109.5,
+    "chin": 143.8
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/momosuke_normal.png",
+    "pid": "momosuke",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 374,
+     "h": 407
+    },
+    "head": 41.9,
+    "nat": 51.8,
+    "headTop": 20.5,
+    "eye": 124.9,
+    "chin": 166.8
+   },
+   "ratio": 1.225,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "battle",
+   "view": "yoko",
+   "who": "momosuke_halloween",
+   "before": {
+    "src": "images/assistant/stand-halloween/momosuke_normal.png",
+    "pid": "momosuke",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 268,
+     "h": 292
+    },
+    "head": 34.1,
+    "nat": 58.3,
+    "headTop": 21.4,
+    "eye": 93.8,
+    "chin": 128
+   },
+   "after": {
+    "src": "images/assistant/stand-halloween/momosuke_wink.png",
+    "pid": "momosuke",
+    "frame": {
+     "w": 268,
+     "h": 291,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 338,
+     "h": 349
+    },
+    "head": 40,
+    "nat": 56.3,
+    "headTop": 61.6,
+    "eye": 146.5,
+    "chin": 186.6
+   },
+   "ratio": 1.173,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "battle",
+   "view": "yoko",
+   "who": "atsu",
+   "before": {
+    "src": "images/assistant/stand-normal/atsu_normal.png",
+    "pid": "atsu",
+    "frame": {
+     "w": 268,
+     "h": 291,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 295,
+     "h": 280
+    },
+    "head": 28.2,
+    "nat": 28,
+    "headTop": 24.4,
+    "eye": 94.9,
+    "chin": 123.1
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/atsu_normal.png",
+    "pid": "atsu",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 428,
+     "h": 419
+    },
+    "head": 41.9,
+    "nat": 28,
+    "headTop": 20.5,
+    "eye": 124.9,
+    "chin": 166.8
+   },
+   "ratio": 1.486,
+   "inside": true,
+   "capped": true
+  },
+  {
+   "screen": "battle",
+   "view": "yoko",
+   "who": "kyuko",
+   "before": {
+    "src": "images/assistant/stand-normal/kyuko_normal.png",
+    "pid": "kyuko",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 201,
+     "h": 315
+    },
+    "head": 35.3,
+    "nat": 140.5,
+    "headTop": 32.4,
+    "eye": 113.2,
+    "chin": 148.5
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/kyuko_normal.png",
+    "pid": "kyuko",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 277,
+     "h": 371
+    },
+    "head": 43.2,
+    "nat": 116.6,
+    "headTop": 21.3,
+    "eye": 120.1,
+    "chin": 163.4
+   },
+   "ratio": 1.224,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "battle",
+   "view": "yoko",
+   "who": "kyuko_winter",
+   "before": {
+    "src": "images/assistant/stand-winter/kyuko_happy.png",
+    "pid": "kyuko",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 201,
+     "h": 332
+    },
+    "head": 32.8,
+    "nat": 101.3,
+    "headTop": 16.3,
+    "eye": 121.7,
+    "chin": 154.6
+   },
+   "after": {
+    "src": "images/assistant/stand-winter/kyuko_happy.png",
+    "pid": "kyuko",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 311,
+     "h": 430
+    },
+    "head": 37.8,
+    "nat": 56.2,
+    "headTop": 18,
+    "eye": 139.3,
+    "chin": 177.1
+   },
+   "ratio": 1.152,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "battle",
+   "view": "yoko",
+   "who": "sorashido",
+   "before": {
+    "src": "images/assistant/stand-normal/sorashido_wink.png",
+    "pid": "sorashido",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 268,
+     "h": 253
+    },
+    "head": 36.7,
+    "nat": 151.2,
+    "headTop": 32.1,
+    "eye": 95.2,
+    "chin": 131.9
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/sorashido_normal.png",
+    "pid": "sorashido",
+    "frame": {
+     "w": 268,
+     "h": 261,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 253,
+     "h": 267
+    },
+    "head": 41.8,
+    "nat": 156,
+    "headTop": 23.8,
+    "eye": 95.5,
+    "chin": 137.3
+   },
+   "ratio": 1.139,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "battle",
+   "view": "yoko",
+   "who": "sorashido_hosei",
+   "before": {
+    "src": "images/assistant/stand-hosei/sorashido_normal.png",
+    "pid": "sorashido",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 268,
+     "h": 319
+    },
+    "head": 40.3,
+    "nat": 68.5,
+    "headTop": 56.2,
+    "eye": 124.8,
+    "chin": 165.1
+   },
+   "after": {
+    "src": "images/assistant/stand-hosei/sorashido_wink.png",
+    "pid": "sorashido",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 445,
+     "h": 329
+    },
+    "head": 44.2,
+    "nat": 99.3,
+    "headTop": 21,
+    "eye": 108.9,
+    "chin": 153
+   },
+   "ratio": 1.097,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "battle",
+   "view": "yoko",
+   "who": "erubin",
+   "before": {
+    "src": "images/assistant/stand-normal/erubin_wink.png",
+    "pid": "erubin",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 306,
+     "h": 276
+    },
+    "head": 41.5,
+    "nat": 128.1,
+    "headTop": 39,
+    "eye": 96,
+    "chin": 137.5
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/erubin_normal.png",
+    "pid": "erubin",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 325,
+     "h": 294
+    },
+    "head": 44.2,
+    "nat": 128.1,
+    "headTop": 40.7,
+    "eye": 101.4,
+    "chin": 145.5
+   },
+   "ratio": 1.065,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "battle",
+   "view": "yoko",
+   "who": "erubin_sekiyuou",
+   "before": {
+    "src": "images/assistant/stand-sekiyuou/erubin_wink.png",
+    "pid": "erubin",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 402,
+     "h": 276
+    },
+    "head": 47.3,
+    "nat": 113.3,
+    "headTop": 7.4,
+    "eye": 71.5,
+    "chin": 118.8
+   },
+   "after": {
+    "src": "images/assistant/stand-sekiyuou/erubin_wink.png",
+    "pid": "erubin",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 370,
+     "h": 276
+    },
+    "head": 48.9,
+    "nat": 45.3,
+    "headTop": 46.4,
+    "eye": 112.8,
+    "chin": 161.7
+   },
+   "ratio": 1.034,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "card",
+   "view": "yoko",
+   "who": "mua",
+   "before": {
+    "src": "images/assistant/stand-normal/myua_normal.png",
+    "pid": "mua",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 268,
+     "h": 325
+    },
+    "head": 30.4,
+    "nat": 118.7,
+    "headTop": 42.2,
+    "eye": 103.1,
+    "chin": 133.5
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/myua_excited.png",
+    "pid": "mua",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 424,
+     "h": 503
+    },
+    "head": 37.5,
+    "nat": 74.6,
+    "headTop": 18,
+    "eye": 140.2,
+    "chin": 177.8
+   },
+   "ratio": 1.234,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "card",
+   "view": "yoko",
+   "who": "mua_halloween",
+   "before": {
+    "src": "images/assistant/stand-halloween/myua_excited.png",
+    "pid": "mua",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 274,
+     "h": 276
+    },
+    "head": 22.2,
+    "nat": 86.5,
+    "headTop": 60,
+    "eye": 91.9,
+    "chin": 114
+   },
+   "after": {
+    "src": "images/assistant/stand-halloween/myua_excited.png",
+    "pid": "mua",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 402,
+     "h": 455
+    },
+    "head": 32.8,
+    "nat": 72,
+    "headTop": 49.5,
+    "eye": 156.8,
+    "chin": 189.6
+   },
+   "ratio": 1.477,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "card",
+   "view": "yoko",
+   "who": "mua_card_master",
+   "before": {
+    "src": "images/assistant/stand-card-master/myua_happy.png",
+    "pid": "mua",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 394,
+     "h": 276
+    },
+    "head": 30.1,
+    "nat": 95.3,
+    "headTop": 27.3,
+    "eye": 83.9,
+    "chin": 114
+   },
+   "after": {
+    "src": "images/assistant/stand-card-master/myua_normal.png",
+    "pid": "mua",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 470,
+     "h": 330
+    },
+    "head": 44.2,
+    "nat": 93.9,
+    "headTop": 21.9,
+    "eye": 105,
+    "chin": 149.2
+   },
+   "ratio": 1.468,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "card",
+   "view": "yoko",
+   "who": "kiki",
+   "before": {
+    "src": "images/assistant/stand-normal/kiki_happy.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 268,
+     "h": 306
+    },
+    "head": 28.3,
+    "nat": 119.3,
+    "headTop": 26.3,
+    "eye": 100.7,
+    "chin": 129
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/kiki_normal.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 268,
+     "h": 261,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 285,
+     "h": 325
+    },
+    "head": 38.8,
+    "nat": 119.3,
+    "headTop": 18.7,
+    "eye": 120.6,
+    "chin": 159.4
+   },
+   "ratio": 1.371,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "card",
+   "view": "yoko",
+   "who": "kiki_halloween",
+   "before": {
+    "src": "images/assistant/stand-halloween/kiki_normal.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 268,
+     "h": 261,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 268,
+     "h": 278
+    },
+    "head": 25.7,
+    "nat": 104.3,
+    "headTop": 38.8,
+    "eye": 88.9,
+    "chin": 114.6
+   },
+   "after": {
+    "src": "images/assistant/stand-halloween/kiki_normal.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 268,
+     "h": 261,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 340,
+     "h": 353
+    },
+    "head": 36.8,
+    "nat": 104.2,
+    "headTop": 56.2,
+    "eye": 127.8,
+    "chin": 164.6
+   },
+   "ratio": 1.432,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "card",
+   "view": "yoko",
+   "who": "kiki_twintail",
+   "before": {
+    "src": "images/assistant/stand-twintail/kiki_wink.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 169,
+     "h": 345
+    },
+    "head": 37.1,
+    "nat": 170.8,
+    "headTop": 61.1,
+    "eye": 104.6,
+    "chin": 141.6
+   },
+   "after": {
+    "src": "images/assistant/stand-twintail/kiki_normal.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 268,
+     "h": 261,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 198,
+     "h": 309
+    },
+    "head": 37.5,
+    "nat": 121.4,
+    "headTop": 58.5,
+    "eye": 125,
+    "chin": 162.5
+   },
+   "ratio": 1.011,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "card",
+   "view": "yoko",
+   "who": "momosuke",
+   "before": {
+    "src": "images/assistant/stand-normal/momosuke_wink.png",
+    "pid": "momosuke",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 268,
+     "h": 302
+    },
+    "head": 31.4,
+    "nat": 52.3,
+    "headTop": 22.8,
+    "eye": 100.8,
+    "chin": 132.2
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/momosuke_happy.png",
+    "pid": "momosuke",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 374,
+     "h": 407
+    },
+    "head": 41.9,
+    "nat": 51.8,
+    "headTop": 20.6,
+    "eye": 125,
+    "chin": 166.9
+   },
+   "ratio": 1.334,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "card",
+   "view": "yoko",
+   "who": "momosuke_halloween",
+   "before": {
+    "src": "images/assistant/stand-halloween/momosuke_happy.png",
+    "pid": "momosuke",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 268,
+     "h": 289
+    },
+    "head": 33.8,
+    "nat": 58.3,
+    "headTop": 21.3,
+    "eye": 92.9,
+    "chin": 126.7
+   },
+   "after": {
+    "src": "images/assistant/stand-halloween/momosuke_normal.png",
+    "pid": "momosuke",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 320,
+     "h": 331
+    },
+    "head": 38,
+    "nat": 56.3,
+    "headTop": 58.2,
+    "eye": 138.7,
+    "chin": 176.6
+   },
+   "ratio": 1.124,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "card",
+   "view": "yoko",
+   "who": "atsu",
+   "before": {
+    "src": "images/assistant/stand-normal/atsu_normal.png",
+    "pid": "atsu",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 295,
+     "h": 280
+    },
+    "head": 28.2,
+    "nat": 28,
+    "headTop": 24.2,
+    "eye": 94.7,
+    "chin": 122.9
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/atsu_excited.png",
+    "pid": "atsu",
+    "frame": {
+     "w": 268,
+     "h": 291,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 429,
+     "h": 420
+    },
+    "head": 42,
+    "nat": 28,
+    "headTop": 20.7,
+    "eye": 125.4,
+    "chin": 167.4
+   },
+   "ratio": 1.489,
+   "inside": true,
+   "capped": true
+  },
+  {
+   "screen": "card",
+   "view": "yoko",
+   "who": "kyuko",
+   "before": {
+    "src": "images/assistant/stand-normal/kyuko_normal.png",
+    "pid": "kyuko",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 201,
+     "h": 315
+    },
+    "head": 35.3,
+    "nat": 140.5,
+    "headTop": 32.5,
+    "eye": 113.2,
+    "chin": 148.5
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/kyuko_normal.png",
+    "pid": "kyuko",
+    "frame": {
+     "w": 268,
+     "h": 261,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 262,
+     "h": 350
+    },
+    "head": 40.9,
+    "nat": 116.6,
+    "headTop": 20,
+    "eye": 113.4,
+    "chin": 154.3
+   },
+   "ratio": 1.159,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "card",
+   "view": "yoko",
+   "who": "kyuko_winter",
+   "before": {
+    "src": "images/assistant/stand-winter/kyuko_normal.png",
+    "pid": "kyuko",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 201,
+     "h": 335
+    },
+    "head": 33.1,
+    "nat": 101.3,
+    "headTop": 16.5,
+    "eye": 122.8,
+    "chin": 155.9
+   },
+   "after": {
+    "src": "images/assistant/stand-winter/kyuko_normal.png",
+    "pid": "kyuko",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 311,
+     "h": 430
+    },
+    "head": 37.8,
+    "nat": 56.2,
+    "headTop": 18.1,
+    "eye": 139.4,
+    "chin": 177.2
+   },
+   "ratio": 1.142,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "card",
+   "view": "yoko",
+   "who": "sorashido",
+   "before": {
+    "src": "images/assistant/stand-normal/sorashido_happy.png",
+    "pid": "sorashido",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 268,
+     "h": 253
+    },
+    "head": 38.5,
+    "nat": 158.4,
+    "headTop": 21,
+    "eye": 87.2,
+    "chin": 125.7
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/sorashido_happy.png",
+    "pid": "sorashido",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 268,
+     "h": 283
+    },
+    "head": 44.2,
+    "nat": 156,
+    "headTop": 25.5,
+    "eye": 101.4,
+    "chin": 145.6
+   },
+   "ratio": 1.148,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "card",
+   "view": "yoko",
+   "who": "sorashido_hosei",
+   "before": {
+    "src": "images/assistant/stand-hosei/sorashido_normal.png",
+    "pid": "sorashido",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 268,
+     "h": 319
+    },
+    "head": 40.3,
+    "nat": 68.5,
+    "headTop": 56.2,
+    "eye": 124.8,
+    "chin": 165.1
+   },
+   "after": {
+    "src": "images/assistant/stand-hosei/sorashido_happy.png",
+    "pid": "sorashido",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 445,
+     "h": 329
+    },
+    "head": 44.2,
+    "nat": 99.3,
+    "headTop": 22,
+    "eye": 109.9,
+    "chin": 154
+   },
+   "ratio": 1.097,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "card",
+   "view": "yoko",
+   "who": "erubin",
+   "before": {
+    "src": "images/assistant/stand-normal/erubin_normal.png",
+    "pid": "erubin",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 306,
+     "h": 276
+    },
+    "head": 41.5,
+    "nat": 128.1,
+    "headTop": 39.2,
+    "eye": 96.2,
+    "chin": 137.7
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/erubin_normal.png",
+    "pid": "erubin",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 325,
+     "h": 294
+    },
+    "head": 44.2,
+    "nat": 128.1,
+    "headTop": 40.9,
+    "eye": 101.5,
+    "chin": 145.7
+   },
+   "ratio": 1.065,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "card",
+   "view": "yoko",
+   "who": "erubin_sekiyuou",
+   "before": {
+    "src": "images/assistant/stand-sekiyuou/erubin_excited.png",
+    "pid": "erubin",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 402,
+     "h": 276
+    },
+    "head": 47.3,
+    "nat": 113.3,
+    "headTop": 7.4,
+    "eye": 71.5,
+    "chin": 118.8
+   },
+   "after": {
+    "src": "images/assistant/stand-sekiyuou/erubin_happy.png",
+    "pid": "erubin",
+    "frame": {
+     "w": 268,
+     "h": 276,
+     "x": 1,
+     "y": 54
+    },
+    "img": {
+     "w": 370,
+     "h": 276
+    },
+    "head": 48.9,
+    "nat": 45.3,
+    "headTop": 46.4,
+    "eye": 112.8,
+    "chin": 161.7
+   },
+   "ratio": 1.034,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "rhythm",
+   "view": "yoko",
+   "who": "mua",
+   "before": {
+    "src": "images/assistant/stand-normal/myua_happy.png",
+    "pid": "mua",
+    "frame": {
+     "w": 268,
+     "h": 268,
+     "x": 1,
+     "y": 62.5
+    },
+    "img": {
+     "w": 268,
+     "h": 307
+    },
+    "head": 28.7,
+    "nat": 118.7,
+    "headTop": 39.8,
+    "eye": 97.2,
+    "chin": 125.9
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/myua_excited.png",
+    "pid": "mua",
+    "frame": {
+     "w": 268,
+     "h": 237,
+     "x": 1,
+     "y": 62.5
+    },
+    "img": {
+     "w": 364,
+     "h": 433
+    },
+    "head": 32.3,
+    "nat": 74.6,
+    "headTop": 14.7,
+    "eye": 119.8,
+    "chin": 152
+   },
+   "ratio": 1.125,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "rhythm",
+   "view": "yoko",
+   "who": "mua_halloween",
+   "before": {
+    "src": "images/assistant/stand-halloween/myua_happy.png",
+    "pid": "mua",
+    "frame": {
+     "w": 268,
+     "h": 268,
+     "x": 1,
+     "y": 62.5
+    },
+    "img": {
+     "w": 268,
+     "h": 287
+    },
+    "head": 23,
+    "nat": 86.5,
+    "headTop": 56.8,
+    "eye": 89.9,
+    "chin": 113
+   },
+   "after": {
+    "src": "images/assistant/stand-halloween/myua_excited.png",
+    "pid": "mua",
+    "frame": {
+     "w": 268,
+     "h": 253,
+     "x": 1,
+     "y": 62.5
+    },
+    "img": {
+     "w": 367,
+     "h": 416
+    },
+    "head": 30,
+    "nat": 72,
+    "headTop": 45,
+    "eye": 143.2,
+    "chin": 173.1
+   },
+   "ratio": 1.304,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "rhythm",
+   "view": "yoko",
+   "who": "mua_card_master",
+   "before": {
+    "src": "images/assistant/stand-card-master/myua_wink.png",
+    "pid": "mua",
+    "frame": {
+     "w": 268,
+     "h": 268,
+     "x": 1,
+     "y": 62.5
+    },
+    "img": {
+     "w": 381,
+     "h": 268
+    },
+    "head": 29.1,
+    "nat": 95.3,
+    "headTop": 26.3,
+    "eye": 81.2,
+    "chin": 110.3
+   },
+   "after": {
+    "src": "images/assistant/stand-card-master/myua_normal.png",
+    "pid": "mua",
+    "frame": {
+     "w": 268,
+     "h": 253,
+     "x": 1,
+     "y": 62.5
+    },
+    "img": {
+     "w": 430,
+     "h": 302
+    },
+    "head": 40.4,
+    "nat": 93.9,
+    "headTop": 19.6,
+    "eye": 95.6,
+    "chin": 136
+   },
+   "ratio": 1.388,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "rhythm",
+   "view": "yoko",
+   "who": "kiki",
+   "before": {
+    "src": "images/assistant/stand-normal/kiki_normal.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 268,
+     "h": 268,
+     "x": 1,
+     "y": 62.5
+    },
+    "img": {
+     "w": 268,
+     "h": 306
+    },
+    "head": 28.3,
+    "nat": 119.3,
+    "headTop": 25.9,
+    "eye": 100.4,
+    "chin": 128.7
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/kiki_normal.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 268,
+     "h": 253,
+     "x": 1,
+     "y": 62.5
+    },
+    "img": {
+     "w": 276,
+     "h": 315
+    },
+    "head": 37.5,
+    "nat": 119.3,
+    "headTop": 18,
+    "eye": 116.6,
+    "chin": 154.1
+   },
+   "ratio": 1.325,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "rhythm",
+   "view": "yoko",
+   "who": "kiki_halloween",
+   "before": {
+    "src": "images/assistant/stand-halloween/kiki_wink.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 268,
+     "h": 253,
+     "x": 1,
+     "y": 62.5
+    },
+    "img": {
+     "w": 268,
+     "h": 278
+    },
+    "head": 25.7,
+    "nat": 104.3,
+    "headTop": 36.1,
+    "eye": 86.2,
+    "chin": 112
+   },
+   "after": {
+    "src": "images/assistant/stand-halloween/kiki_happy.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 268,
+     "h": 268,
+     "x": 1,
+     "y": 62.5
+    },
+    "img": {
+     "w": 348,
+     "h": 362
+    },
+    "head": 37.7,
+    "nat": 104.2,
+    "headTop": 57.6,
+    "eye": 131.1,
+    "chin": 168.7
+   },
+   "ratio": 1.467,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "rhythm",
+   "view": "yoko",
+   "who": "kiki_twintail",
+   "before": {
+    "src": "images/assistant/stand-twintail/kiki_normal.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 268,
+     "h": 268,
+     "x": 1,
+     "y": 62.5
+    },
+    "img": {
+     "w": 156,
+     "h": 334
+    },
+    "head": 36,
+    "nat": 170.8,
+    "headTop": 58.9,
+    "eye": 101,
+    "chin": 137
+   },
+   "after": {
+    "src": "images/assistant/stand-twintail/kiki_normal.png",
+    "pid": "kiki",
+    "frame": {
+     "w": 268,
+     "h": 253,
+     "x": 1,
+     "y": 62.5
+    },
+    "img": {
+     "w": 192,
+     "h": 299
+    },
+    "head": 36.3,
+    "nat": 121.4,
+    "headTop": 56.3,
+    "eye": 120.7,
+    "chin": 157
+   },
+   "ratio": 1.008,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "rhythm",
+   "view": "yoko",
+   "who": "momosuke",
+   "before": {
+    "src": "images/assistant/stand-normal/momosuke_wink.png",
+    "pid": "momosuke",
+    "frame": {
+     "w": 268,
+     "h": 237,
+     "x": 1,
+     "y": 62.5
+    },
+    "img": {
+     "w": 264,
+     "h": 297
+    },
+    "head": 30.9,
+    "nat": 52.3,
+    "headTop": 21.6,
+    "eye": 98.3,
+    "chin": 129.2
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/momosuke_wink.png",
+    "pid": "momosuke",
+    "frame": {
+     "w": 268,
+     "h": 268,
+     "x": 1,
+     "y": 62.5
+    },
+    "img": {
+     "w": 363,
+     "h": 395
+    },
+    "head": 40.6,
+    "nat": 51.8,
+    "headTop": 19.7,
+    "eye": 120.9,
+    "chin": 161.5
+   },
+   "ratio": 1.314,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "rhythm",
+   "view": "yoko",
+   "who": "momosuke_halloween",
+   "before": {
+    "src": "images/assistant/stand-halloween/momosuke_normal.png",
+    "pid": "momosuke",
+    "frame": {
+     "w": 268,
+     "h": 268,
+     "x": 1,
+     "y": 62.5
+    },
+    "img": {
+     "w": 268,
+     "h": 292
+    },
+    "head": 34.1,
+    "nat": 58.3,
+    "headTop": 21.3,
+    "eye": 93.7,
+    "chin": 127.8
+   },
+   "after": {
+    "src": "images/assistant/stand-halloween/momosuke_wink.png",
+    "pid": "momosuke",
+    "frame": {
+     "w": 268,
+     "h": 237,
+     "x": 1,
+     "y": 62.5
+    },
+    "img": {
+     "w": 275,
+     "h": 285
+    },
+    "head": 32.6,
+    "nat": 56.3,
+    "headTop": 49.4,
+    "eye": 118.6,
+    "chin": 151.2
+   },
+   "ratio": 0.956,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "rhythm",
+   "view": "yoko",
+   "who": "atsu",
+   "before": {
+    "src": "images/assistant/stand-normal/atsu_normal.png",
+    "pid": "atsu",
+    "frame": {
+     "w": 268,
+     "h": 268,
+     "x": 1,
+     "y": 62.5
+    },
+    "img": {
+     "w": 295,
+     "h": 280
+    },
+    "head": 28.2,
+    "nat": 28,
+    "headTop": 23.9,
+    "eye": 94.4,
+    "chin": 122.6
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/atsu_excited.png",
+    "pid": "atsu",
+    "frame": {
+     "w": 268,
+     "h": 268,
+     "x": 1,
+     "y": 62.5
+    },
+    "img": {
+     "w": 414,
+     "h": 406
+    },
+    "head": 40.6,
+    "nat": 28,
+    "headTop": 19.7,
+    "eye": 120.9,
+    "chin": 161.5
+   },
+   "ratio": 1.44,
+   "inside": true,
+   "capped": true
+  },
+  {
+   "screen": "rhythm",
+   "view": "yoko",
+   "who": "kyuko",
+   "before": {
+    "src": "images/assistant/stand-normal/kyuko_excited.png",
+    "pid": "kyuko",
+    "frame": {
+     "w": 268,
+     "h": 253,
+     "x": 1,
+     "y": 62.5
+    },
+    "img": {
+     "w": 198,
+     "h": 316
+    },
+    "head": 35.4,
+    "nat": 140.5,
+    "headTop": 31,
+    "eye": 112,
+    "chin": 147.4
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/kyuko_normal.png",
+    "pid": "kyuko",
+    "frame": {
+     "w": 268,
+     "h": 268,
+     "x": 1,
+     "y": 62.5
+    },
+    "img": {
+     "w": 268,
+     "h": 359
+    },
+    "head": 41.9,
+    "nat": 116.6,
+    "headTop": 20.4,
+    "eye": 116.2,
+    "chin": 158.1
+   },
+   "ratio": 1.184,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "rhythm",
+   "view": "yoko",
+   "who": "kyuko_winter",
+   "before": {
+    "src": "images/assistant/stand-winter/kyuko_happy.png",
+    "pid": "kyuko",
+    "frame": {
+     "w": 268,
+     "h": 268,
+     "x": 1,
+     "y": 62.5
+    },
+    "img": {
+     "w": 201,
+     "h": 332
+    },
+    "head": 32.8,
+    "nat": 101.3,
+    "headTop": 15.9,
+    "eye": 121.3,
+    "chin": 154.2
+   },
+   "after": {
+    "src": "images/assistant/stand-winter/kyuko_excited.png",
+    "pid": "kyuko",
+    "frame": {
+     "w": 268,
+     "h": 253,
+     "x": 1,
+     "y": 62.5
+    },
+    "img": {
+     "w": 285,
+     "h": 394
+    },
+    "head": 34.5,
+    "nat": 56.2,
+    "headTop": 16.1,
+    "eye": 127,
+    "chin": 161.6
+   },
+   "ratio": 1.052,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "rhythm",
+   "view": "yoko",
+   "who": "sorashido",
+   "before": {
+    "src": "images/assistant/stand-normal/sorashido_normal.png",
+    "pid": "sorashido",
+    "frame": {
+     "w": 268,
+     "h": 253,
+     "x": 1,
+     "y": 62.5
+    },
+    "img": {
+     "w": 268,
+     "h": 253
+    },
+    "head": 38.5,
+    "nat": 158.4,
+    "headTop": 19.4,
+    "eye": 85.6,
+    "chin": 124.1
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/sorashido_normal.png",
+    "pid": "sorashido",
+    "frame": {
+     "w": 268,
+     "h": 253,
+     "x": 1,
+     "y": 62.5
+    },
+    "img": {
+     "w": 245,
+     "h": 258
+    },
+    "head": 40.4,
+    "nat": 156,
+    "headTop": 22.8,
+    "eye": 92.3,
+    "chin": 132.7
+   },
+   "ratio": 1.049,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "rhythm",
+   "view": "yoko",
+   "who": "sorashido_hosei",
+   "before": {
+    "src": "images/assistant/stand-hosei/sorashido_excited.png",
+    "pid": "sorashido",
+    "frame": {
+     "w": 268,
+     "h": 253,
+     "x": 1,
+     "y": 62.5
+    },
+    "img": {
+     "w": 266,
+     "h": 316
+    },
+    "head": 39.5,
+    "nat": 67.9,
+    "headTop": 57,
+    "eye": 124.2,
+    "chin": 163.7
+   },
+   "after": {
+    "src": "images/assistant/stand-hosei/sorashido_excited.png",
+    "pid": "sorashido",
+    "frame": {
+     "w": 268,
+     "h": 253,
+     "x": 1,
+     "y": 62.5
+    },
+    "img": {
+     "w": 407,
+     "h": 301
+    },
+    "head": 40.4,
+    "nat": 99.3,
+    "headTop": 19.6,
+    "eye": 99.9,
+    "chin": 140.3
+   },
+   "ratio": 1.023,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "rhythm",
+   "view": "yoko",
+   "who": "erubin",
+   "before": {
+    "src": "images/assistant/stand-normal/erubin_normal.png",
+    "pid": "erubin",
+    "frame": {
+     "w": 268,
+     "h": 253,
+     "x": 1,
+     "y": 62.5
+    },
+    "img": {
+     "w": 279,
+     "h": 252
+    },
+    "head": 38,
+    "nat": 128.1,
+    "headTop": 35.4,
+    "eye": 87.5,
+    "chin": 125.5
+   },
+   "after": {
+    "src": "images/assistant/stand-normal/erubin_happy.png",
+    "pid": "erubin",
+    "frame": {
+     "w": 268,
+     "h": 268,
+     "x": 1,
+     "y": 62.5
+    },
+    "img": {
+     "w": 315,
+     "h": 285
+    },
+    "head": 42.8,
+    "nat": 128.1,
+    "headTop": 39.4,
+    "eye": 98.2,
+    "chin": 141
+   },
+   "ratio": 1.126,
+   "inside": true,
+   "capped": false
+  },
+  {
+   "screen": "rhythm",
+   "view": "yoko",
+   "who": "erubin_sekiyuou",
+   "before": {
+    "src": "images/assistant/stand-sekiyuou/erubin_happy.png",
+    "pid": "erubin",
+    "frame": {
+     "w": 268,
+     "h": 268,
+     "x": 1,
+     "y": 62.5
+    },
+    "img": {
+     "w": 390,
+     "h": 268
+    },
+    "head": 45.9,
+    "nat": 113.3,
+    "headTop": 7,
+    "eye": 69.1,
+    "chin": 115
+   },
+   "after": {
+    "src": "images/assistant/stand-sekiyuou/erubin_normal.png",
+    "pid": "erubin",
+    "frame": {
+     "w": 268,
+     "h": 253,
+     "x": 1,
+     "y": 62.5
+    },
+    "img": {
+     "w": 338,
+     "h": 252
+    },
+    "head": 44.7,
+    "nat": 45.3,
+    "headTop": 42,
+    "eye": 102.7,
+    "chin": 147.4
+   },
+   "ratio": 0.974,
+   "inside": true,
+   "capped": false
+  }
+ ]
+}
