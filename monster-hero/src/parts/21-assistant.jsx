@@ -52,6 +52,9 @@ const STORY_MONSTER_ART = Object.freeze({
   PandoraShadow: typeof PANDORA_SHADOW_IMG !== 'undefined' ? PANDORA_SHADOW_IMG : null,
   PandoraAngel: typeof PANDORA_ANGEL_IMG !== 'undefined' ? PANDORA_ANGEL_IMG : null,
   PandoraDevil: typeof PANDORA_DEVIL_IMG !== 'undefined' ? PANDORA_DEVIL_IMG : null,
+  // 「咲かせて！ハナウタ・ノート」(2026-11-25 社長「ぱんぷきんに立ち絵がない」「パンドラと同じ仕様で」・r1119-170)の素のぱんぷきん。
+  //   絵は話し手 pumpkin の顔アイコン(体ごと全部が入った 256x204 の透過の絵)をそのまま使う。元の絵が小さいので枠を小さめにする(70-bootstrap.jsx)
+  Pumpkin: typeof PUMPKIN_ICON_IMG !== 'undefined' ? PUMPKIN_ICON_IMG : null,
   // えるびんの登場のお話(2026-11-05)の、胸から上の大きい立ち絵(384x512)。ErubinSekiyuou … 衣装『石油王』(初めて会う場面) / Erubin … 着替えたあとの通常の服
   //   絵の場所は助手の登録(imageDir・imagePrefix)と衣装のフォルダ(STORY_OUTFIT_DIRS)から作る(パスを画面の側に書かない)
   Erubin: storyAssistantArtOf('erubin'),
