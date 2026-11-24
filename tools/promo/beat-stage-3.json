@@ -1,0 +1,134 @@
+{
+  "_": "モンヒロビート紹介動画 HELL の見どころ(ステージ)第3版(2026-11-24 r1119-159 追記2・社長の指示 docs/promo/requests/beat-stage-3-2026-11-24.md)。使い方は tools/promo/beat-stage-build.js の頭",
+  "output": "tools/art-sources/promo/monhero-beat-stage-3.mp4",
+  "sheet": "tools/art-sources/promo/monhero-beat-stage-3-sheet.jpg",
+  "template": {
+    "src": "tools/art-sources/promo/monhero-beat-stage.mov"
+  },
+  "noteSpeed": 10.0,
+  "captureSettings": {
+    "effectAmount": "LIGHT",
+    "lightweightMode": false,
+    "autoEffectDown": false,
+    "noteSeEnabled": true,
+    "noteSeType": "STANDARD"
+  },
+  "draw": "dom",
+  "listTitle": "高難易度 HELL",
+  "listSub": "3曲連続ライブ",
+  "songs": [
+    {
+      "songId": "rebellion",
+      "diff": "HELL",
+      "title": "Rebellion",
+      "art": "monster-hero/images/song-art/rebellion.jpg",
+      "audio": "monster-hero/audio/bgm-rebellion.mp3",
+      "accent": "#c4a8ff",
+      "glow": "#7b55d6",
+      "tag": "空から地上へ",
+      "from": 179000,
+      "scenes": [
+        {
+          "at": 0,
+          "title": "空から地上へ",
+          "sub": "空中の帯が、斜めに降りてくる。"
+        },
+        {
+          "at": 14,
+          "title": "地上と空中を行き来する",
+          "sub": "緑の帯と空の帯が交互に来る。"
+        }
+      ]
+    },
+    {
+      "songId": "brand_new_sky",
+      "diff": "HELL",
+      "title": "BRAND NEW SKY",
+      "titleLines": [
+        "BRAND",
+        "NEW SKY"
+      ],
+      "art": "monster-hero/images/song-art/brand-new-sky.jpg",
+      "audio": "monster-hero/audio/bgm-brand-new-sky.mp3",
+      "accent": "#f2d08f",
+      "glow": "#b98a45",
+      "tag": "地上と空中を同時に",
+      "from": 97000,
+      "scenes": [
+        {
+          "at": 0,
+          "title": "地上と空中を同時に",
+          "sub": "片手は地上、片手は空の帯へ。"
+        },
+        {
+          "at": 14,
+          "title": "空中スライドの連続",
+          "sub": "空の帯が、左右から次々に。"
+        }
+      ]
+    },
+    {
+      "songId": "zenbu_hissatsuwaza",
+      "diff": "HELL",
+      "title": "全部必殺技でつ( `･ω･)",
+      "titleLines": [
+        "全部必殺技でつ",
+        "( `･ω･)"
+      ],
+      "art": "monster-hero/images/song-art/zenbu-hissatsuwaza.jpg",
+      "audio": "monster-hero/audio/bgm-zenbu-hissatsuwaza.mp3",
+      "accent": "#ff92c4",
+      "glow": "#c2457f",
+      "tag": "溜めて放つ必殺ノーツ",
+      "from": 89000,
+      "scenes": [
+        {
+          "at": 0,
+          "title": "溜めて放つ必殺ノーツ",
+          "sub": "ピンクのノーツを叩くほど道が光る。"
+        },
+        {
+          "at": 9,
+          "title": "地上で描く大技",
+          "sub": "大きな帯が道を横切る。"
+        },
+        {
+          "at": 23.5,
+          "title": "最後の高速連打",
+          "sub": "溜めた光を、最後の一打で。"
+        }
+      ]
+    }
+  ],
+  "calib": {
+    "songId": "lamia",
+    "title": "LAMIA",
+    "art": "monster-hero/images/song-art/lamia.jpg",
+    "accent": "#b8b0f6",
+    "glow": "#5a55c8",
+    "refAt": 45,
+    "scenes": [
+      {
+        "at": 0,
+        "title": "速度が変わる譜面",
+        "sub": "拍を刻みながら先へ。"
+      }
+    ]
+  },
+  "intro": {
+    "_": "冒頭(0〜33.6秒)を作り直す(tools/promo/beat-stage-intro.js)。room・result は beat-stage-multi-shots.js、stageCap は beat-stage-capture.js で撮った物(どちらも tools/out の下・リポジトリに入れない)",
+    "images": {
+      "teaser": "monster-hero/images/events/rhythm-grand-open-teaser.jpg",
+      "room": "tools/out/promo-stage-3/multi/room-tate.png",
+      "result": "tools/out/promo-stage-3/multi/result-tate.png",
+      "duoL": "monster-hero/images/assistant/myua_happy.PNG",
+      "duoR": "monster-hero/images/assistant/kiki_happy.PNG",
+      "golem": "monster-hero/images/monsters/golem.png",
+      "mocchi": "monster-hero/images/monsters/mocchi.png",
+      "suezo": "monster-hero/images/monsters/suezo.png",
+      "tiger": "monster-hero/images/monsters/tiger.PNG"
+    },
+    "stageCap": "tools/out/promo-stage-3/work/stage-open",
+    "stageFrom": 108000
+  }
+}
