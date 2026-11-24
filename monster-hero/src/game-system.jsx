@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a17e0f92a483d804
+// generated-sha256: d5dd74b8cdc534e4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -24882,7 +24882,7 @@ const rhythmSelectNoticeOpen=(state,playedSongCount,isShortScreen)=>isShortScree
   :(!state.noticeTouched&&playedSongCount>=RHYTHM_NOTICE_FOLD_PLAYED_SONGS?false:state.noticeOpen);
 const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,noticeHidden=0,footer=null,actionExtra=null,emptyText='遊べる譜面がまだありません。',spotClass=null,
   songId='',difficultyId='',onSongId=null,onDifficultyId=null,view=null,onView=null,
-  listScrollTop=null,onListScrollTop=null,toolbarExtra=null,playLabel='決定',playDisabled=false,hideRandom=false,unlockAll=false,songLock=null,scrollToSelected=false,detailInfoPanel=false,onListen=null})=>{
+  listScrollTop=null,onListScrollTop=null,toolbarExtra=null,playLabel='決定',playDisabled=false,hideRandom=false,unlockAll=false,songLock=null,scrollToSelected=false,detailInfoPanel=false,onListen=null,squeezeWide=false})=>{
   const spot=name=>(typeof spotClass==='function'?spotClass(name):'');
   // 演奏へ入る前に、タップ音を作り置きしておく
   useEffect(()=>{RHYTHM_NOTE_SE_RUNTIME.prepare?.();},[]);
@@ -25230,17 +25230,19 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
   // iPhone の下の余白(ホームバー)も足されてあふれ、下に貼り付けた決定の段が難易度の札の下の段(自己ベストの数字)にかぶさっていた。
   //   1 = 札を詰める(難易度44px・HIGH SCORE を低く・MAX COMBO を畳む) / 2 = 一言を出さない / 3 = 曲の長さ・ノーツ数の行を畳み、決定を少し低く(index.html)
   //   4 = 曲名を1行ぶん取り、版の札と♡を次の1行に並べる(♡だけの行を作らない・index.html) / 5 = 曲名の字を縮めて行を減らし、難易度と決定をもう少し低く(小さい横 568×320 など)
-  const noteFitShow=viewWide;
+  // squeezeWide … ソロの曲えらびだけ true。マルチは横で「難易度→決定→ジャケット」の順に並べて欄を送る作りなので、一言があるときだけ詰める(前のまま)
   const noteShown=!!notice&&noticeOpen;
+  const noteFitShow=viewWide&&(squeezeWide||noteShown);
+  const noteFitMax=squeezeWide?5:2;
   React.useLayoutEffect(()=>{setNoteFit(0);},[noteFitShow,noteShown,noteFitKey,song&&song.songId,difficulty&&difficulty.id]);
   // 欄の大きさと、中の格子の高さ(字の太さ・絵の読み込みで後から変わる)の両方を見張る。詰めた形で高さが変わったときは測り直さない
   const noteFitRo=React.useRef(null);
-  const noteFitNow=React.useRef(0);noteFitNow.current=noteFitShow?noteFit:5;
+  const noteFitNow=React.useRef(0);noteFitNow.current=noteFitShow?noteFit:noteFitMax;
   React.useLayoutEffect(()=>{
     const el=detailRef.current;
     const grid=el&&el.querySelector('[data-rhythm-song-detail-grid]');
     if(noteFitRo.current&&grid)noteFitRo.current.observe(grid);
-    if(!noteFitShow||!el||noteFit>=5)return;
+    if(!noteFitShow||!el||noteFit>=noteFitMax)return;
     // 一言が無い時の「2」は見た目が1と同じなので飛ばす
     if(el.scrollHeight>el.clientHeight+1)setNoteFit(noteFit===1&&!noteShown?3:noteFit+1);
   });
@@ -25252,7 +25254,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
       const box=`${el.clientWidth}x${el.clientHeight}`;
       if(box!==lastBox){lastBox=box;setNoteFitKey(k=>k+1);return;}
       // 中身が伸びて欄があふれたときだけ測り直す(詰めて縮んだときは何もしない)
-      if(noteFitNow.current<5&&el.scrollHeight>el.clientHeight+1)setNoteFitKey(k=>k+1);
+      if(noteFitNow.current<noteFitMax&&el.scrollHeight>el.clientHeight+1)setNoteFitKey(k=>k+1);
     });
     noteFitRo.current=ro;
     ro.observe(el);
@@ -25402,7 +25404,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
     {/* 選んでいる曲 */}
     <aside data-rhythm-song-detail ref={detailRef} data-rhythm-song-note-fit={noteFit}
       className="shrink-0 border-t border-sky-300/20 bg-gradient-to-b from-blue-950/95 to-slate-950/95 px-3 py-2 landscape:w-[44%] landscape:max-w-[440px] landscape:overflow-y-auto landscape:border-l landscape:border-t-0 landscape:py-2 landscape:[container-type:size]"
-      style={{paddingBottom:viewWide?'max(0.5rem, var(--mh-sa-bottom))':'calc(0.5rem + var(--mh-sa-bottom))'}}>
+      style={{paddingBottom:viewWide&&squeezeWide?'max(0.5rem, var(--mh-sa-bottom))':'calc(0.5rem + var(--mh-sa-bottom))'}}>
       {!song||!difficulty
         ?<p className="text-xs font-bold text-slate-400">遊べる曲がありません。</p>
         :<>
@@ -46671,6 +46673,7 @@ function RhythmSongSelectScreen({
             曲を選ぶ画面でいちばん要るのは曲の並びで、読み物は場所を取りすぎるため
             (2026-09-05・ユーザー指示)。同じ内容はチュートリアルと「📖 遊びかた」にある。 */}
         <RhythmSongSelect
+          squeezeWide
           songs={songs}
           difficulties={difficulties}
           bestRecords={rhythmBestRecords}

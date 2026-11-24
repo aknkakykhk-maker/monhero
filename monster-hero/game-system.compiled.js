@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 90cb93fc532a9f37
+// source-sha256: 2b2cbbabc08f9861
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -39915,7 +39915,8 @@ const RhythmSongSelect = ({
   songLock = null,
   scrollToSelected = false,
   detailInfoPanel = false,
-  onListen = null
+  onListen = null,
+  squeezeWide = false
 }) => {
   const spot = name => typeof spotClass === 'function' ? spotClass(name) : '';
   useEffect(() => {
@@ -40283,19 +40284,20 @@ const RhythmSongSelect = ({
       }, "🏆"));
     }));
   })();
-  const noteFitShow = viewWide;
   const noteShown = !!notice && noticeOpen;
+  const noteFitShow = viewWide && (squeezeWide || noteShown);
+  const noteFitMax = squeezeWide ? 5 : 2;
   React.useLayoutEffect(() => {
     setNoteFit(0);
   }, [noteFitShow, noteShown, noteFitKey, song && song.songId, difficulty && difficulty.id]);
   const noteFitRo = React.useRef(null);
   const noteFitNow = React.useRef(0);
-  noteFitNow.current = noteFitShow ? noteFit : 5;
+  noteFitNow.current = noteFitShow ? noteFit : noteFitMax;
   React.useLayoutEffect(() => {
     const el = detailRef.current;
     const grid = el && el.querySelector('[data-rhythm-song-detail-grid]');
     if (noteFitRo.current && grid) noteFitRo.current.observe(grid);
-    if (!noteFitShow || !el || noteFit >= 5) return;
+    if (!noteFitShow || !el || noteFit >= noteFitMax) return;
     if (el.scrollHeight > el.clientHeight + 1) setNoteFit(noteFit === 1 && !noteShown ? 3 : noteFit + 1);
   });
   useEffect(() => {
@@ -40309,7 +40311,7 @@ const RhythmSongSelect = ({
         setNoteFitKey(k => k + 1);
         return;
       }
-      if (noteFitNow.current < 5 && el.scrollHeight > el.clientHeight + 1) setNoteFitKey(k => k + 1);
+      if (noteFitNow.current < noteFitMax && el.scrollHeight > el.clientHeight + 1) setNoteFitKey(k => k + 1);
     });
     noteFitRo.current = ro;
     ro.observe(el);
@@ -40541,7 +40543,7 @@ const RhythmSongSelect = ({
     "data-rhythm-song-note-fit": noteFit,
     className: "shrink-0 border-t border-sky-300/20 bg-gradient-to-b from-blue-950/95 to-slate-950/95 px-3 py-2 landscape:w-[44%] landscape:max-w-[440px] landscape:overflow-y-auto landscape:border-l landscape:border-t-0 landscape:py-2 landscape:[container-type:size]",
     style: {
-      paddingBottom: viewWide ? 'max(0.5rem, var(--mh-sa-bottom))' : 'calc(0.5rem + var(--mh-sa-bottom))'
+      paddingBottom: viewWide && squeezeWide ? 'max(0.5rem, var(--mh-sa-bottom))' : 'calc(0.5rem + var(--mh-sa-bottom))'
     }
   }, !song || !difficulty ? React.createElement("p", {
     className: "text-xs font-bold text-slate-400"
@@ -76285,6 +76287,7 @@ function RhythmSongSelectScreen({
     style: JA_WRAP_STYLE,
     className: "mt-1 text-[9px] font-black text-red-300"
   }, jaWrap('いま周回を始められませんでした。編成のモンスターが見当たらないか、難易度がまだ解放されていません。'))), React.createElement(RhythmSongSelect, {
+    squeezeWide: true,
     songs: songs,
     difficulties: difficulties,
     bestRecords: rhythmBestRecords,
