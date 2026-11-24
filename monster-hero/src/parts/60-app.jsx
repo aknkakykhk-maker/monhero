@@ -6821,13 +6821,17 @@ function MonsterHeroGame() {
   //   負けた最後のターンの音(敵の必殺技など)が助手ライフの上でそのまま鳴っていた(2026-11-11 社長「裏クイック中に死ぬと、バトルの効果音が鳴り続ける」)
   const assistantLifeRunMuted = assistantLifeScreenOpen && runStage !== null;
   useEffect(() => { Audio_.setSeVolume(((ultraEcoSession && !cardScreenOpen) || rhythmScreenOpen || assistantLifeRunMuted) ? 0 : seVolume); }, [seVolume, ultraEcoSession, rhythmScreenOpen, cardScreenOpen, assistantLifeRunMuted]);
+  // ボタンのタップ音は別の口(Audio_.uiTap・uiBus)。モンヒロビートの画面・助手ライフの裏クイック中でも、保存してある効果音の音量で鳴らす
+  //   (2026-11-24 r1119-164 社長「モンビーだけ各場所選択してもタップ音ならない」「助手ライフもならない」→ 案B)。超省エネの0は上と同じ
+  useEffect(() => { if (Audio_.setUiSeVolume) Audio_.setUiSeVolume((ultraEcoSession && !cardScreenOpen) ? 0 : seVolume); }, [seVolume, ultraEcoSession, cardScreenOpen]);
   // モンヒロビートの画面は上で効果音の音量を0にしている(裏の周回のバトルの音を消すため)。ランクアップの演出(beatRankFx)を出している間だけは、
   // 効果音の音量設定どおりに戻して鳴らし、閉じたら上と同じ決まりに戻す(2026-10-29 社長「ファンファーレもなかった」。0のままだと演出の音が鳴らなかった)。
   // 超省エネのあいだは今までどおり鳴らさない
   useEffect(() => {
     if (!(beatRankFx || beatRankBarPlaying) || (ultraEcoSession && !cardScreenOpen)) return undefined;
     Audio_.setSeVolume(seVolume);
-    return () => { Audio_.setSeVolume(((ultraEcoSession && !cardScreenOpen) || rhythmScreenOpen) ? 0 : seVolume); };
+    // 戻す条件は上の effect と同じ(助手ライフの裏クイック中も0へ戻す。2026-11-24 r1119-164 で揃えた)
+    return () => { Audio_.setSeVolume(((ultraEcoSession && !cardScreenOpen) || rhythmScreenOpen || assistantLifeRunMuted) ? 0 : seVolume); };
   }, [beatRankFx, beatRankBarPlaying, seVolume]);
   // MFバトルカードにいるあいだは、裏の周回のバトルの効果音だけを止める(docs/spec/CARD_BATTLE.md 5-3「音」)。
   // カードも同じ効果音を使うので、上の音量(0)では止めない。カードの画面は Audio_.fgSe から鳴らすので、この印を受けない。
@@ -7221,8 +7225,14 @@ function MonsterHeroGame() {
   useEffect(() => {
     const onClick = (e) => {
       const btn = e.target.closest && e.target.closest('button');
+      if (!btn) return;
+      // モンヒロビートの演奏エリアの中は鳴らさない(ノーツの音と重ねない。今までもここは鳴っていなかった)
+      if (btn.closest('[data-rhythm-play-area]')) return;
+      // ボタンの音は、裏のバトルの音と別の口(uiTap)で鳴らす。モンヒロビートの画面・助手ライフの裏クイック中は
+      // 効果音の口(seBus)を0にしているので、se/fgSe では鳴らなかった(2026-11-24 r1119-164)
+      if (Audio_.uiTap) { Audio_.uiTap(); return; }
       // 裏クイックが回っている画面では裏のバトルの効果音を止めているので、ボタンの音は止めない側(fgSe)で鳴らす
-      if (btn) (quickAnywhereSeQuietRef.current && Audio_.fgSe ? Audio_.fgSe : Audio_.se).tap();
+      (quickAnywhereSeQuietRef.current && Audio_.fgSe ? Audio_.fgSe : Audio_.se).tap();
     };
     document.addEventListener('click', onClick, true);
     return () => document.removeEventListener('click', onClick, true);

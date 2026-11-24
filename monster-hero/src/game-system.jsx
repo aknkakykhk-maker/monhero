@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 398852ba986b2cd9
+// generated-sha256: 55487e2dbf8e6193
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -6354,6 +6354,11 @@ const Audio_ = (() => {
   //   読み込めなかったときは onFail。ほかの曲を鳴らしたら外れる(ほかの画面の曲には効かない)
   let bgmOnce = null;
   let currentKey = null, bgmVolumePct = 0, seVolumePct = 0, pageHidden = false;
+  // ボタンのタップ音だけの口(2026-11-24 r1119-164 社長「モンビーだけタップ音ならない」→ 案B)。
+  //   モンヒロビートの画面・助手ライフの裏クイック中は、裏のバトルの音を消すために seBus を0にしている。
+  //   タップ音もその seBus を通っていたので一緒に消えていた。タップ音だけはこの uiBus を通し、保存してある効果音の音量に従わせる
+  //   (超省エネの0は呼ぶ側 60-app.jsx が渡す)。裏のバトルの音は今までどおり seBus のまま
+  let uiBus = null, uiSeVolumePct = 0;
   let backgroundSeQuiet = false; // 裏の周回の効果音を止める印(下の setBackgroundSeQuiet)
   let enabled = false;
   // 音ゲーのBGM音量は、メインのBGM音量設定(対数カーブ・bgmGain)を経由させず独立させる。
@@ -6387,6 +6392,7 @@ const Audio_ = (() => {
         //   効果音は Tone.now() から直接鳴らしていて時計の予定表(Transport)を使わないので、音の出方は変わらない
         try { const toneCtx = Tone.getContext && Tone.getContext(); if (toneCtx && 'updateInterval' in toneCtx) toneCtx.updateInterval = 0.25; } catch (e) {}
         seBus = new Tone.Gain(_gainFromPct(seVolumePct)).toDestination();
+        uiBus = new Tone.Gain(_gainFromPct(uiSeVolumePct)).toDestination();
         reverb = new Tone.Reverb({ decay: 2.4, wet: 0.22 }).connect(seBus);
         try { await reverb.ready; } catch (e) {}
         ready = true;
@@ -7428,6 +7434,8 @@ const Audio_ = (() => {
     const beeped = await playTestTone();
     return { rebuilt, beeped, running: !!ctx && ctx.state === 'running' };
   };
+  const setUiSeVolume = (pct) => { uiSeVolumePct = pct; if (uiBus && Tone) { try { uiBus.gain.rampTo(_gainFromPct(pct), 0.05); } catch (e) {} } };
+  const uiSeVolume = () => uiSeVolumePct; // 検査が「ボタンの音の口が0でないか」を見る口
   const setSeVolume = (pct) => { seVolumePct = pct; if (seBus && Tone) { try { seBus.gain.rampTo(_gainFromPct(pct), 0.05); } catch (e) {} } };
   const setBgmVolume = (pct) => { bgmVolumePct = pct; applyTrackGain(resolveTrack(previewKey || currentKey)); if (pct <= 0) { stopPreview(false); stopOthers(); } else if (enabled && currentKey && !previewKey) playBGM(currentKey); };
   const resumeIfNeeded = async () => { await ensureAudioCtxRunning(); if (Tone) { try { await Tone.start(); started = true; } catch (e) {} } if (enabled && currentKey && !bgmSource) playBGM(currentKey); };
@@ -7528,6 +7536,8 @@ const Audio_ = (() => {
     // 合体演出用: 上昇アルペジオ→(両者が重なるタイミングで)ベルの一撃+きらめき和音の「ピカーン」
     fusion: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.25, release: 0.5 }, volume: -10 }).connect(reverb); const seq = [[0,'C5','8n'],[0.12,'E5','8n'],[0.24,'G5','8n'],[0.36,'C6','8n'],[0.48,'E6','4n']]; seq.forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt)); const bt = t + 0.6; const bell = new Tone.MetalSynth({ frequency: 800, envelope: { attack: 0.001, decay: 0.6, release: 0.3 }, harmonicity: 8, modulationIndex: 20, resonance: 5000, octaves: 1.5, volume: -14 }).connect(reverb); bell.triggerAttackRelease('16n', bt); const sparkle = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.4, sustain: 0.1, release: 0.5 }, volume: -12 }).connect(reverb); ['C6','E6','G6','C7'].forEach((n, i) => sparkle.triggerAttackRelease(n, '8n', bt + i * 0.03)); setTimeout(() => { try { v.dispose(); bell.dispose(); sparkle.dispose(); } catch (e) {} }, 2200); }
   };
+  // ボタンのタップ音(音は fgSe.tap と同じ。通る口だけが uiBus)。全体ミュート(enabled)には従う。裏のバトルの音を止める印は見ない
+  const uiTap = async () => { if (!enabled) return; await ensure(); if (!Tone || !uiBus) return; const t = Tone.now(); const s = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.001, decay: 0.04, sustain: 0, release: 0.02 }, volume: -16 }).connect(uiBus); s.triggerAttackRelease('C6', '64n', t); setTimeout(() => { try { s.dispose(); } catch (e) {} }, 200); };
   const se = Object.fromEntries(Object.entries(fgSe).map(([name, play]) => [name, (...args) => (backgroundSeQuiet ? Promise.resolve() : play(...args))]));
 
   const setVideoHold = (on) => {
@@ -7564,7 +7574,7 @@ const Audio_ = (() => {
   // お知らせ・ヘルプの動画にかける音量(2026-11-14 社長「予告動画の音が設定の音量と関係なく鳴る」)。
   // 動画は曲と同じ扱いにして、BGM の音量と同じ曲線(_gainFromPct)で返す。音を切っている・BGM が 0 なら 0
   const videoGain = () => (enabled && bgmVolumePct > 0 ? _gainFromPct(bgmVolumePct) : 0);
-  return { currentBgmKey: () => currentKey, isBackgroundSeQuiet, setVideoHold, videoGain, setStoryEndFade, setStoryOpenFade, playSeFile, preloadSE, playBGM, fadeToBGM, stopBGM, setBgmOnce, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
+  return { currentBgmKey: () => currentKey, isBackgroundSeQuiet, setVideoHold, videoGain, setStoryEndFade, setStoryOpenFade, playSeFile, preloadSE, playBGM, fadeToBGM, stopBGM, setBgmOnce, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setUiSeVolume, uiSeVolume, uiTap, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
 })();
 
 // ---- part: 14-success-sound.jsx ----
@@ -132960,13 +132970,17 @@ function MonsterHeroGame() {
   //   負けた最後のターンの音(敵の必殺技など)が助手ライフの上でそのまま鳴っていた(2026-11-11 社長「裏クイック中に死ぬと、バトルの効果音が鳴り続ける」)
   const assistantLifeRunMuted = assistantLifeScreenOpen && runStage !== null;
   useEffect(() => { Audio_.setSeVolume(((ultraEcoSession && !cardScreenOpen) || rhythmScreenOpen || assistantLifeRunMuted) ? 0 : seVolume); }, [seVolume, ultraEcoSession, rhythmScreenOpen, cardScreenOpen, assistantLifeRunMuted]);
+  // ボタンのタップ音は別の口(Audio_.uiTap・uiBus)。モンヒロビートの画面・助手ライフの裏クイック中でも、保存してある効果音の音量で鳴らす
+  //   (2026-11-24 r1119-164 社長「モンビーだけ各場所選択してもタップ音ならない」「助手ライフもならない」→ 案B)。超省エネの0は上と同じ
+  useEffect(() => { if (Audio_.setUiSeVolume) Audio_.setUiSeVolume((ultraEcoSession && !cardScreenOpen) ? 0 : seVolume); }, [seVolume, ultraEcoSession, cardScreenOpen]);
   // モンヒロビートの画面は上で効果音の音量を0にしている(裏の周回のバトルの音を消すため)。ランクアップの演出(beatRankFx)を出している間だけは、
   // 効果音の音量設定どおりに戻して鳴らし、閉じたら上と同じ決まりに戻す(2026-10-29 社長「ファンファーレもなかった」。0のままだと演出の音が鳴らなかった)。
   // 超省エネのあいだは今までどおり鳴らさない
   useEffect(() => {
     if (!(beatRankFx || beatRankBarPlaying) || (ultraEcoSession && !cardScreenOpen)) return undefined;
     Audio_.setSeVolume(seVolume);
-    return () => { Audio_.setSeVolume(((ultraEcoSession && !cardScreenOpen) || rhythmScreenOpen) ? 0 : seVolume); };
+    // 戻す条件は上の effect と同じ(助手ライフの裏クイック中も0へ戻す。2026-11-24 r1119-164 で揃えた)
+    return () => { Audio_.setSeVolume(((ultraEcoSession && !cardScreenOpen) || rhythmScreenOpen || assistantLifeRunMuted) ? 0 : seVolume); };
   }, [beatRankFx, beatRankBarPlaying, seVolume]);
   // MFバトルカードにいるあいだは、裏の周回のバトルの効果音だけを止める(docs/spec/CARD_BATTLE.md 5-3「音」)。
   // カードも同じ効果音を使うので、上の音量(0)では止めない。カードの画面は Audio_.fgSe から鳴らすので、この印を受けない。
@@ -133360,8 +133374,14 @@ function MonsterHeroGame() {
   useEffect(() => {
     const onClick = (e) => {
       const btn = e.target.closest && e.target.closest('button');
+      if (!btn) return;
+      // モンヒロビートの演奏エリアの中は鳴らさない(ノーツの音と重ねない。今までもここは鳴っていなかった)
+      if (btn.closest('[data-rhythm-play-area]')) return;
+      // ボタンの音は、裏のバトルの音と別の口(uiTap)で鳴らす。モンヒロビートの画面・助手ライフの裏クイック中は
+      // 効果音の口(seBus)を0にしているので、se/fgSe では鳴らなかった(2026-11-24 r1119-164)
+      if (Audio_.uiTap) { Audio_.uiTap(); return; }
       // 裏クイックが回っている画面では裏のバトルの効果音を止めているので、ボタンの音は止めない側(fgSe)で鳴らす
-      if (btn) (quickAnywhereSeQuietRef.current && Audio_.fgSe ? Audio_.fgSe : Audio_.se).tap();
+      (quickAnywhereSeQuietRef.current && Audio_.fgSe ? Audio_.fgSe : Audio_.se).tap();
     };
     document.addEventListener('click', onClick, true);
     return () => document.removeEventListener('click', onClick, true);
