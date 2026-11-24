@@ -296,7 +296,9 @@ const PLAYER_RANK_XP_TICK_GAP_MS = 90;
 const playerRankXpTickDue = (run, now) => { if (!run || !Number.isFinite(now)) return false; if (Number.isFinite(run.lastTickAt) && now - run.lastTickAt < PLAYER_RANK_XP_TICK_GAP_MS) return false; run.lastTickAt = now; return true; };
 // 伸び終わりに trainingReward を鳴らすか(ランクが上がって演出を出す側 onFull があるときは、演出のごほうびの音に任せる)
 const playerRankXpFinalSe = (rankUp, hasFullFx) => !(rankUp && hasFullFx);
-function PlayerRankXpBar({ kind = 'beat', award, onFull = null, onDone = null, onStart = null }) {
+// hold … true のあいだは動き出さない(モンヒロビートの結果で、スコアの数え上げが終わるまで待つ・2026-11-24 r1119-166。
+//   見えないうちから動いて毎コマ描き直し、数え上げのコマを落としていた)。既定は false(今までどおり)
+function PlayerRankXpBar({ kind = 'beat', award, onFull = null, onDone = null, onStart = null, hold = false }) {
   ensurePlayerRankXpBarCss();
   const k = playerRankKind(kind);
   const add = Math.max(0, Math.floor(Number(award && award.add) || 0));
@@ -358,7 +360,7 @@ function PlayerRankXpBar({ kind = 'beat', award, onFull = null, onDone = null, o
     sendFull(); sendDone();
   };
   React.useEffect(() => {
-    if (!seen || !(add > 0) || !runRef.current.running) return undefined;
+    if (!seen || hold || !(add > 0) || !runRef.current.running) return undefined;
     const run = runRef.current;
     if (onStart) onStart();
     // 舞う光の粒(伸びている間ずっと)
@@ -400,7 +402,7 @@ function PlayerRankXpBar({ kind = 'beat', award, onFull = null, onDone = null, o
     later(() => { bumpAdd('final'); sparks(10); if (playerRankXpFinalSe(rankUp, !!onFull)) se('trainingReward'); }, t + 150);
     later(() => { run.running = false; setView((v) => ({ ...v, done: true })); sendDone(); }, t + 250);
     return () => { run.running = false; clearInterval(moteTimer); run.timers.forEach(clearTimeout); };
-  }, [seen]);
+  }, [seen, hold]);
   const need = playerRankNeed(view.rank);
   const w = `${pct(view.rank, view.into)}%`;
   return (
@@ -436,14 +438,14 @@ function PlayerRankXpBar({ kind = 'beat', award, onFull = null, onDone = null, o
 // 1回ぶんの結果に出す札: 経験値の棒が伸びる演出(PlayerRankXpBar)・次のごほうび・上がったらもらった物。
 // award: { add, parts:[{label,xp}], from, to, xp(足したあとの合計), gains:[{icon,text}] }。next は次のごほうびの文(「ランク20で ビートP 300」)
 // onFull・onDone・onStart(棒が画面に入って動き出した)は PlayerRankXpBar へそのまま渡す(ビートはここで画面いっぱいの演出を出す。カードは渡さなければ今までどおり)
-function PlayerRankGain({ kind = 'beat', award, next = '', onFull = null, onDone = null, onStart = null }) {
+function PlayerRankGain({ kind = 'beat', award, next = '', onFull = null, onDone = null, onStart = null, hold = false }) {
   const [done, setDone] = React.useState(false);
   if (!award || !(award.add > 0)) return null;
   const k = playerRankKind(kind);
   const up = award.to > award.from;
   return (
     <section data-player-rank-gain={kind} className={`relative my-3 space-y-1.5 rounded-2xl border p-3 pt-4 text-left ${k.border} ${k.panel}`}>
-      <PlayerRankXpBar kind={kind} award={award} onFull={onFull} onStart={onStart} onDone={() => { setDone(true); if (onDone) onDone(); }}/>
+      <PlayerRankXpBar kind={kind} award={award} hold={hold} onFull={onFull} onStart={onStart} onDone={() => { setDone(true); if (onDone) onDone(); }}/>
       {/* ごほうびは「・」で区切った1つずつを折らないかたまりにする(「セッション券／1枚」「セッション／券」と切れていた・2026-11-23 API総点検② V23) */}
       {next && <p data-player-rank-gain-next className="text-[10px] font-bold text-slate-300">次は {String(next).split('・').map((part, i) => <span key={i} className="inline-block whitespace-nowrap">{`${i ? '・' : ''}${part}`}</span>)}</p>}
       {up && done && <PlayerRankUp kind={kind} from={award.from} to={award.to} gains={award.gains || []}/>}
