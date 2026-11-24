@@ -50,7 +50,7 @@ check('案A: 判定の行が決まるたびの音と決まる音(playResultCount
   rhythm.includes('const playResultCount=(step=0,final=false)=>{') && /playNewRecord,playResultCount,playCue,/.test(rhythm)
   && play.includes("RHYTHM_NOTE_SE_RUNTIME.playResultCount(fire,false)") && play.includes('draw(t);sound(t);'));
 check('案A: 行は1行 260ms ずつ・MAX COMBO は行のあと・スコアが決まるのは MAX COMBO のあと',
-  play.includes('const RHYTHM_RESULT_COUNT=Object.freeze({scoreAt:300,scoreMs:2120,janAt:2420,rowAt:300,rowStep:260,rowMs:200,comboAt:2120,comboMs:300,'));
+  play.includes('const RHYTHM_RESULT_COUNT=Object.freeze({scoreAt:300,scoreMs:2120,janAt:2420,rowAt:300,rowStep:260,rowMs:250,comboAt:2120,comboMs:300,'));
 check('アシストモードは更新にならない(これまでどおり記録に残らない)', /const isNewRecord=!assistOn&&score>run\.startBestScore;/.test(play));
 check('全画面の重ね(data-rhythm-record-fx)はもう出さない', !play.includes('data-rhythm-record-fx') && !html.includes('data-rhythm-record-fx'));
 check('数え上げの effect は印(id)だけを依存にする(結果へ項目が足されても走り直さない)', /\},\[resultCountId\]\);/.test(play));

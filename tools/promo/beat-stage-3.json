@@ -113,8 +113,8 @@
     "_": "冒頭(0〜33.6秒)を作り直す(tools/promo/beat-stage-intro.js)。room・result は beat-stage-multi-shots.js、stageCap は beat-stage-capture.js で撮った物(どちらも tools/out の下・リポジトリに入れない)",
     "images": {
       "teaser": "monster-hero/images/events/rhythm-grand-open-teaser.jpg",
-      "room": "tools/out/promo-stage-3/multi/room-tate.png",
-      "result": "tools/out/promo-stage-3/multi/result-tate.png",
+      "room": "tools/out/promo-stage-3/multi3/room-tate.png",
+      "result": "tools/out/promo-stage-3/multi3/result-tate.png",
       "duoL": "monster-hero/images/assistant/myua_happy.PNG",
       "duoR": "monster-hero/images/assistant/kiki_happy.PNG",
       "golem": "monster-hero/images/monsters/golem.png",
@@ -123,7 +123,8 @@
       "tiger": "monster-hero/images/monsters/tiger.PNG"
     },
     "stageCap": "tools/out/promo-stage-3/work3/stage-open",
-    "stageFrom": 108000
+    "stageFrom": 109388,
+    "_stageFrom": "冒頭の音は見本のまま。見本の 20.2秒 = 曲の 109.968秒(波形の突き合わせ)なので、場面の始まり 19.62秒 = 曲の 109.388秒"
   },
   "listen": true,
   "optionsUi": [
