@@ -2,6 +2,10 @@
 // モンヒロビートの紹介動画「HELL の見どころ(ステージ)」の演奏の素材を撮る(2026-11-24 r1119-159・社長作の見本 monhero-beat-stage.mov の第2版から)。
 //
 //   node tools/promo/beat-stage-capture.js --song rebellion --diff HELL --from 60000 --to 92000 --out <フォルダ>
+//     [--speed 10] [--settings '{"effectAmount":"LIGHT","lightweightMode":false,"autoEffectDown":false,"noteSeEnabled":true,"noteSeType":"STANDARD"}']
+//   第3版(2026-11-24)から: --settings で演奏の設定を保存値へ入れる(読み込まれた設定は画面の data-rhythm-effect などで確かめて出す)。
+//   第3版のやり直しから: --listen(曲鑑賞の「操作 隠す」で撮る)と --ui-settings(オプション画面で選んで保存)。撮り方と設定は docs/promo/VIDEOS.md
+//   描き方はゲームのおまかせのまま(切り替え・デバッグ用の上書きは使わない)。タップ音の呼び出しを se.json に控える(組み立てで beat-stage-taps.js が鳴らし直して重ねる)
 //
 // 何をするか:
 //   ふつうの演奏の画面(ソロライブ → 曲 → 難易度 → 決定)を横 844×390・deviceScaleFactor 3(2532×1170)で開き、
@@ -31,6 +35,13 @@ const OUT = path.resolve(arg('out', path.join(ROOT, 'tmp-promo', SONG || 'song')
 const SPEED = Number(arg('speed', 9.5));   // ノーツの速さ(見本は 9.5)
 const W = Number(arg('w', 844)), H = Number(arg('h', 390)), DPR = Number(arg('dpr', 3));
 const SLOW = Number(arg('slow', 0.15)), PRE = Number(arg('pre', 0.5));
+// 演奏の設定(--settings '<JSON>')。noteSpeed に重ねて保存値へ入れる(第3版: 演出量 LIGHT・軽量 OFF・自動軽減 OFF・タップ音スタンダード)
+// 第3版のやり直し(2026-11-24 r1119-159 追記4): --listen で曲鑑賞(公開の曲えらび → ジャケット → 難易度 → この譜面を鑑賞する)に入り、
+//   判定・コンボを入にして「操作 隠す」を押した状態(遊ぶ時と同じ画面)で撮る。自動の手は鑑賞そのもの(こちらから手を付けない)。
+// --ui-settings '<JSON>' … オプション画面で選ぶ項目 [[タブ, 項目の名前, 選ぶボタン], …]。保存値を書かず、画面のボタンを押して「保存」する
+const LISTEN = argv.includes('--listen');
+const UI_SETTINGS = (() => { try { return JSON.parse(arg('ui-settings', '[]')) || []; } catch { console.error('--ui-settings の JSON が読めない'); process.exit(2); } })();
+const EXTRA_SETTINGS = (() => { try { return JSON.parse(arg('settings', '{}')) || {}; } catch { console.error('--settings の JSON が読めない'); process.exit(2); } })();
 if (!SONG) { console.error('--song <songId> が要る'); process.exit(2); }
 const { chromium } = (() => { try { return require(path.join(ROOT, 'tools/node_modules/playwright')); } catch { return require('playwright'); } })();
 const { createFakeSupabase } = require(path.join(ROOT, 'tools/playbot/lib/fake-supabase.js'));
@@ -47,8 +58,8 @@ const seed = (songId) => `(() => {
   // 演奏の画面の左右に立つ飾り(育てたマスモンをモンヒロビートの枠に入れると出る)。見本と同じ4体
   put('mh_masu_mons', [['promo-mocchi', 'Mocchi', 'モッチー'], ['promo-golem', 'Golem', 'ゴーレム'], ['promo-suezo', 'Suezo', 'スエゾー'], ['promo-tiger', 'Tiger', 'タイガー']].map(([id, baseId, name]) => ({ id, baseId, name, createdAt: 1767225600000 })));
   put('mh_rhythm_monsters_v1', ['promo-mocchi', 'promo-suezo', 'promo-golem', 'promo-tiger']);
-  // 演奏の設定はノーツの速さだけ決める(ほかは既定のまま)
-  put('mh_rhythm_settings_v1', { noteSpeed: ${SPEED} });
+  // 演奏の設定はノーツの速さと --settings で渡したものだけ決める(ほかは既定のまま)
+  put('mh_rhythm_settings_v1', Object.assign(${JSON.stringify(EXTRA_SETTINGS)}, { noteSpeed: ${SPEED} }));
   put('mh_rhythm_owned_songs_v1', [${JSON.stringify(songId)}]);
   put('mh_rhythm_best_v1', { ${JSON.stringify(songId)}: Object.fromEntries(['EASY','NORMAL','HARD','EXPERT','MASTER'].map(d => [d, { bestScore: 900000, maxCombo: 10, played: true, clear: true }])) });
 })()`;
@@ -63,7 +74,10 @@ const slowClock = () => {
   performance.now = () => virt(realPerf());
   Date.now = () => Math.round(dateOff + virt(realPerf()));
   const rAF = window.requestAnimationFrame.bind(window);
-  window.requestAnimationFrame = (cb) => rAF((ts) => cb(virt(ts)));
+  // 描く時刻は performance.now と同じ時計で渡す(2026-11-24 第3版で直した)。ブラウザが渡す時刻(ts)をそのまま遅くすると、
+  //   CDP の Animation.setPlaybackRate でも遅くなる時計と二重になり、performance.now より十数秒遅れていた。
+  //   叩いた光・フリックの炎は「光った時刻(performance.now)」と「描く時刻」の差で動くので、差が負のまま炎が出なかった(第2版も同じ)
+  window.requestAnimationFrame = (cb) => rAF(() => cb(virt(realPerf())));
   const sT = window.setTimeout.bind(window), sI = window.setInterval.bind(window);
   window.setTimeout = (fn, ms, ...a) => sT(fn, (Number(ms) || 0) / rate, ...a);
   window.setInterval = (fn, ms, ...a) => sI(fn, Math.max(1, (Number(ms) || 0) / rate), ...a);
@@ -139,19 +153,86 @@ const slowClock = () => {
   await closeDialogs(12);
   await page.evaluate(() => document.querySelector('[data-home-fac="rhythm"]')?.click()); await page.waitForTimeout(2500); await closeDialogs(6);
   await clickText('ソロライブ'); await page.waitForTimeout(2500); await closeDialogs(3);
+  if (UI_SETTINGS.length) {
+    // オプション画面で1つずつ選ぶ(タブを開き、項目の枠の名前で探し、ボタンを押す)。たたまれた欄は開いて探す
+    await page.evaluate(() => document.querySelector('[data-rhythm-demo-options]')?.click()); await page.waitForTimeout(1500);
+    const done = [];
+    for (const [tab, title, option] of UI_SETTINGS) {
+      await page.evaluate((t) => document.querySelector(`[data-rhythm-options-tab="${t}"]`)?.click(), tab); await page.waitForTimeout(400);
+      let r = 'notfound';
+      for (let tries = 0; tries < 3 && r === 'notfound'; tries++) {
+        r = await page.evaluate(([title, option]) => {
+          const norm = (x) => String(x || '').replace(/[\s\u200b（）()]/g, '');
+          const field = [...document.querySelectorAll('[data-rhythm-option-field]')].find(f => { const p = f.querySelector('p'); return p && norm(p.textContent).endsWith(norm(title)); });
+          if (!field) return 'notfound';
+          const b = [...field.querySelectorAll('button')].find(x => norm(x.getAttribute('aria-label')) === norm(option) || norm(x.innerText) === norm(option));
+          if (!b) return 'nobutton:' + [...field.querySelectorAll('button')].map(x => norm(x.innerText) || norm(x.getAttribute('aria-label'))).join('/');
+          b.scrollIntoView({ block: 'center' }); b.click(); return 'ok';
+        }, [title, option]);
+        if (r === 'notfound') { await page.evaluate(() => { for (const e of document.querySelectorAll('[data-rhythm-options-scroll] [aria-expanded="false"], [data-rhythm-options-scroll] details:not([open]) > summary')) e.click(); }); await page.waitForTimeout(500); }
+      }
+      done.push(`${title}=${option}:${r}`);
+      await page.waitForTimeout(150);
+    }
+    await page.screenshot({ path: path.join(OUT, 'options-before-save.png') }).catch(() => {});
+    await page.evaluate(() => document.querySelector('[data-rhythm-options-save]')?.click()); await page.waitForTimeout(1200);
+    await page.evaluate(() => document.querySelector('[data-rhythm-options-leave-save]')?.click()); await page.waitForTimeout(800);
+    console.log('  オプション画面で選んだ: ' + done.join(' / '));
+    if (done.some(d => !d.endsWith(':ok'))) throw new Error('オプションの項目を選べなかった: ' + done.filter(d => !d.endsWith(':ok')).join(' / '));
+    // 戻る(曲えらびへ)
+    if (await page.$('[data-rhythm-options]')) { await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => /戻る/.test(x.innerText || x.getAttribute('aria-label') || '')); b && b.click(); }); await page.waitForTimeout(1200); }
+    const saved = await page.evaluate(() => localStorage.getItem('mh_rhythm_settings_v1'));
+    fs.writeFileSync(path.join(OUT, 'settings-saved.json'), saved || 'null');
+  }
   await page.evaluate((id) => {
     const head = typeof rhythmSongVersionHead === 'function' ? rhythmSongVersionHead(id) : id;
     (document.querySelector(`[data-rhythm-song-row="${id}"]`) || document.querySelector(`[data-rhythm-song-row="${head}"]`))?.click();
   }, SONG); await page.waitForTimeout(1200);
   await page.evaluate((id) => { const b = document.querySelector(`[data-rhythm-song-version="${id}"]`); if (b && b.getAttribute('aria-pressed') !== 'true') b.click(); }, SONG); await page.waitForTimeout(800);
   await page.evaluate((d) => { const b = document.querySelector(`[data-rhythm-difficulty="${d}"]`) || [...document.querySelectorAll('button')].find(x => x.textContent.trim().startsWith(d)); b?.click(); }, DIFF); await page.waitForTimeout(800);
-  const started = await clickText('^(▶\\s*)?決定$');
-  if (!started) throw new Error(`曲を始められなかった(${SONG} ${DIFF})`);
+  let started;
+  if (LISTEN) {
+    // 曲鑑賞: ジャケットを押して詳細の窓を開き、難易度を選んで「この譜面を鑑賞する」
+    await page.evaluate(() => (document.querySelector('[data-rhythm-song-art-zoom]') || document.querySelector('button[data-rhythm-song-art]') || document.querySelector('[data-rhythm-song-art]'))?.click()); await page.waitForTimeout(1200);
+    await page.evaluate((d) => document.querySelector(`[data-rhythm-listen-diff="${d}"]`)?.click(), DIFF); await page.waitForTimeout(500);
+    started = await page.evaluate(() => { const b = document.querySelector('[data-rhythm-listen-start]'); if (b) b.click(); return !!b; });
+  } else started = await clickText('^(▶\\s*)?決定$');
+  if (!started) throw new Error(`曲を始められなかった(${SONG} ${DIFF}${LISTEN ? '・鑑賞' : ''})`);
   await page.waitForFunction(() => !!document.querySelector('[data-rhythm-play-area]') && window.__mhTestHooks?.rhythmNotes?.(), null, { timeout: 30000, polling: 100 });
   const setRate = async (k) => { if (SLOW >= 1) return; await page.evaluate((x) => window.__promoSetRate(x), k); await cdp.send('Animation.enable').catch(() => {}); await cdp.send('Animation.setPlaybackRate', { playbackRate: k }).catch(() => {}); };
   await setRate(PRE);
+  // タップ音(ゲームの RHYTHM_NOTE_SE_RUNTIME)の呼び出しを、曲の時刻つきで控える。組み立てで同じ関数をオフラインで鳴らし直す(beat-stage-taps.js)
+  await page.evaluate(() => {
+    const R = RHYTHM_NOTE_SE_RUNTIME, log = window.__promoSe = [];
+    const songMs = () => { const v = window.__mhTestHooks?.rhythmSongMs?.(); return Number.isFinite(v) ? Math.round(v * 10) / 10 : null; };
+    let lastHold = '';
+    for (const name of ['play', 'playClear', 'playAccent', 'playFlick', 'playMonster', 'playSky', 'playTick', 'playEmpty', 'beginInputGroup', 'markInputGroupHandled', 'endInputGroup', 'holdSync', 'holdStopAll']) {
+      const orig = R[name]; if (typeof orig !== 'function') continue;
+      R[name] = function (...a) {
+        if (name === 'holdSync') {
+          const held = (Array.isArray(a[0]) ? a[0] : []).filter(Boolean).map(n => ({ index: n.index, type: n.type, _rhythmOriginalType: n._rhythmOriginalType }));
+          const key = held.map(n => n.index).join(',');
+          if (key !== lastHold) { lastHold = key; log.push([songMs(), name, [held]]); }
+        } else log.push([songMs(), name, JSON.parse(JSON.stringify(a.map(x => (x === undefined ? null : x))))]);
+        return orig.apply(this, a);
+      };
+    }
+  });
+  const look = await page.evaluate(() => { const a = document.querySelector('[data-rhythm-play-area]'); const el = a?.closest('[data-rhythm-effect]') || document.querySelector('[data-rhythm-effect]'); let saved = null; try { saved = JSON.parse(localStorage.getItem('mh_rhythm_settings_v1')); } catch (_) {} return { effect: el?.getAttribute('data-rhythm-effect'), lightweight: el?.getAttribute('data-rhythm-lightweight'), saved: saved && { noteSpeed: saved.noteSpeed, effectAmount: saved.effectAmount, lightweightMode: saved.lightweightMode, autoEffectDown: saved.autoEffectDown, noteSeEnabled: saved.noteSeEnabled, noteSeType: saved.noteSeType } }; });
+  console.log(`  読み込まれた設定: 画面 effect=${look.effect} lightweight=${look.lightweight} / 保存値 ${JSON.stringify(look.saved)}`);
   const head = await page.evaluate(() => (document.querySelector('[data-rhythm-play-area]')?.closest('main')?.innerText || '').replace(/\s+/g, ' ').slice(0, 80));
   console.log(`演奏: ${SONG} ${DIFF} / ${head}`);
+  if (LISTEN) {
+    // 判定・コンボは入にして、「操作 隠す」を押す(遊ぶ時と同じ画面になる)
+    await page.waitForSelector('[data-rhythm-listen-hide]', { timeout: 30000 });
+    const st = await page.evaluate(() => { for (const k of ['judge', 'combo']) { const b = document.querySelector(`[data-rhythm-listen-toggle="${k}"]`); if (b && b.getAttribute('data-state') !== 'on') b.click(); } return [...document.querySelectorAll('[data-rhythm-listen-toggle]')].map(b => b.getAttribute('data-rhythm-listen-toggle') + '=' + b.getAttribute('data-state')).join(' '); });
+    await page.waitForTimeout(300);
+    await page.evaluate(() => { window.__promoListen = true; document.querySelector('[data-rhythm-listen-hide]')?.click(); });
+    await page.waitForTimeout(300);
+    const hidden = await page.evaluate(() => !document.querySelector('[data-rhythm-listen-bar]') && !document.querySelector('[data-rhythm-listen-close]'));
+    console.log(`  鑑賞: ${st} / 操作を隠した: ${hidden}`);
+    if (!hidden) throw new Error('鑑賞の操作を隠せなかった');
+  }
   // 自動の手(曲鑑賞と同じ)。曲の時刻と壁の時計の対応を毎コマ控える(コマに曲の時刻を付けるため)
   // 手に渡すのは曲の譜面そのもの(演奏中の控え rhythmNotes は種類が書き換わるので、渡すとスライドを取りこぼす。鑑賞と同じ渡し方)
   await page.evaluate(([id, d]) => {
@@ -159,7 +240,7 @@ const slowClock = () => {
     const song = RHYTHM_SONGS.find(s => s.songId === id);
     const chart = song && song.difficulties && song.difficulties[d];
     const notes = chart && Array.isArray(chart.notes) ? chart.notes : window.__mhTestHooks.rhythmNotes();
-    window.__promoStop = rhythmPreviewHandsStart(area, { notes });
+    if (!window.__promoListen) window.__promoStop = rhythmPreviewHandsStart(area, { notes });
     const log = window.__promoClock = [];
     const tick = () => { const ms = window.__mhTestHooks?.rhythmSongMs?.(); if (ms != null && !window.__promoEnded) { if (log.length && ms < log[log.length - 1][1] - 50) window.__promoEnded = true; else log.push([(window.__promoRealNow || Date.now)(), ms]); } if (log.length < 200000) requestAnimationFrame(tick); };
     requestAnimationFrame(tick);
@@ -203,6 +284,8 @@ const slowClock = () => {
   await cdp.send('Page.stopScreencast');
   await writing;
   const clock = await page.evaluate(() => window.__promoClock);
+  const seLog = await page.evaluate(() => window.__promoSe || []);
+  const lookEnd = await page.evaluate(() => { const el = document.querySelector('[data-rhythm-effect]'); return el ? { effect: el.getAttribute('data-rhythm-effect'), lightweight: el.getAttribute('data-rhythm-lightweight') } : null; }).catch(() => null);
   await context.close(); await browser.close();
   // 壁の時計 → 曲の時刻(前後の控えで直線に補う)
   const songAt = (wall) => {
@@ -213,7 +296,10 @@ const slowClock = () => {
     return w1 === w0 ? m0 : m0 + (m1 - m0) * (wall - w0) / (w1 - w0);
   };
   const list = frames.map(f => ({ file: f.file, songMs: Math.round(songAt(f.wall) * 10) / 10 }));
-  fs.writeFileSync(path.join(OUT, 'frames.json'), JSON.stringify({ song: SONG, diff: DIFF, from: FROM, to: TO, size: [W * DPR, H * DPR], frames: list }));
+  fs.writeFileSync(path.join(OUT, 'frames.json'), JSON.stringify({ song: SONG, diff: DIFF, from: FROM, to: TO, size: [W * DPR, H * DPR], noteSpeed: SPEED, settings: Object.assign({}, EXTRA_SETTINGS, { noteSpeed: SPEED }), how: { listen: LISTEN, ui: UI_SETTINGS, clock: 2 }, look: { start: look, end: lookEnd }, frames: list }));
+  fs.writeFileSync(path.join(OUT, 'se.json'), JSON.stringify({ song: SONG, settings: Object.assign({}, EXTRA_SETTINGS, { noteSpeed: SPEED }), calls: seLog }));
+  const flicks = seLog.filter(c => c[1] === 'playFlick' && c[0] >= FROM && c[0] <= TO).map(c => (c[0] / 1000).toFixed(2));
+  console.log(`  タップ音の呼び出し ${seLog.length}件(区間のフリック ${flicks.length}: ${flicks.slice(0, 40).join(' ')})/ 終わりの画面 ${JSON.stringify(lookEnd)}`);
   const inWin = list.filter(f => f.songMs >= FROM && f.songMs <= TO).length;
   console.log(`  遅回し ${RATE}倍・${W * DPR}×${H * DPR} / コマ ${list.length}(区間の中 ${inWin}・1秒あたり ${(inWin / ((TO - FROM) / 1000)).toFixed(1)})/ ミス ${res.miss ?? '?'}(判定済み ${res.done ?? '?'}${res.where ? '・' + res.where : ''})→ ${path.relative(ROOT, OUT)}`);
   if (errors.length) console.log('  ページのエラー:', errors.slice(0, 3).join(' / '));

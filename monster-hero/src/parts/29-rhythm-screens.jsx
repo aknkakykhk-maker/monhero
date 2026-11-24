@@ -1030,7 +1030,7 @@ const rhythmSelectNoticeOpen=(state,playedSongCount,isShortScreen)=>isShortScree
   :(!state.noticeTouched&&playedSongCount>=RHYTHM_NOTICE_FOLD_PLAYED_SONGS?false:state.noticeOpen);
 const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,noticeHidden=0,footer=null,actionExtra=null,emptyText='遊べる譜面がまだありません。',spotClass=null,
   songId='',difficultyId='',onSongId=null,onDifficultyId=null,view=null,onView=null,
-  listScrollTop=null,onListScrollTop=null,toolbarExtra=null,playLabel='決定',playDisabled=false,hideRandom=false,unlockAll=false,songLock=null,scrollToSelected=false,detailInfoPanel=false,onListen=null})=>{
+  listScrollTop=null,onListScrollTop=null,toolbarExtra=null,playLabel='決定',playDisabled=false,hideRandom=false,unlockAll=false,songLock=null,scrollToSelected=false,detailInfoPanel=false,onListen=null,squeezeWide=false})=>{
   const spot=name=>(typeof spotClass==='function'?spotClass(name):'');
   // 演奏へ入る前に、タップ音を作り置きしておく
   useEffect(()=>{RHYTHM_NOTE_SE_RUNTIME.prepare?.();},[]);
@@ -1374,17 +1374,25 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                 <RhythmFitLabel text={rhythmSongVersionLabel(item.songId)||'原曲'} maxPx={viewWide?11:12} minPx={8} lines={2} className="block min-w-0 text-center leading-[1.15]"/>{eventVersion&&<span aria-label="イベント対象">🏆</span>}
               </button>;})}</div>;})();
   // 横の一言が欄に収まるかを測る(上の noteFit)。曲・難易度・開け閉め・欄の大きさが変わったら、詰めない形から測り直す
-  const noteFitShow=!!notice&&noticeOpen&&viewWide;
-  React.useLayoutEffect(()=>{setNoteFit(0);},[noteFitShow,noteFitKey,song&&song.songId,difficulty&&difficulty.id]);
+  // 一言を出していない時も横では測る(2026-11-24 r1119-161 社長「横画面まだかぶってるじゃん」)。版が3つある曲は曲名が2行・版の札と♡が折れて欄が高くなり、
+  // iPhone の下の余白(ホームバー)も足されてあふれ、下に貼り付けた決定の段が難易度の札の下の段(自己ベストの数字)にかぶさっていた。
+  //   1 = 札を詰める(難易度44px・HIGH SCORE を低く・MAX COMBO を畳む) / 2 = 一言を出さない / 3 = 曲の長さ・ノーツ数の行を畳み、決定を少し低く(index.html)
+  //   4 = 曲名を1行ぶん取り、版の札と♡を次の1行に並べる(♡だけの行を作らない・index.html) / 5 = 曲名の字を縮めて行を減らし、難易度と決定をもう少し低く(小さい横 568×320 など)
+  // squeezeWide … ソロの曲えらびだけ true。マルチは横で「難易度→決定→ジャケット」の順に並べて欄を送る作りなので、一言があるときだけ詰める(前のまま)
+  const noteShown=!!notice&&noticeOpen;
+  const noteFitShow=viewWide&&(squeezeWide||noteShown);
+  const noteFitMax=squeezeWide?5:2;
+  React.useLayoutEffect(()=>{setNoteFit(0);},[noteFitShow,noteShown,noteFitKey,song&&song.songId,difficulty&&difficulty.id]);
   // 欄の大きさと、中の格子の高さ(字の太さ・絵の読み込みで後から変わる)の両方を見張る。詰めた形で高さが変わったときは測り直さない
   const noteFitRo=React.useRef(null);
-  const noteFitNow=React.useRef(0);noteFitNow.current=noteFitShow?noteFit:2;
+  const noteFitNow=React.useRef(0);noteFitNow.current=noteFitShow?noteFit:noteFitMax;
   React.useLayoutEffect(()=>{
     const el=detailRef.current;
     const grid=el&&el.querySelector('[data-rhythm-song-detail-grid]');
     if(noteFitRo.current&&grid)noteFitRo.current.observe(grid);
-    if(!noteFitShow||!el||noteFit>=2)return;
-    if(el.scrollHeight>el.clientHeight+1)setNoteFit(noteFit+1);
+    if(!noteFitShow||!el||noteFit>=noteFitMax)return;
+    // 一言が無い時の「2」は見た目が1と同じなので飛ばす
+    if(el.scrollHeight>el.clientHeight+1)setNoteFit(noteFit===1&&!noteShown?3:noteFit+1);
   });
   useEffect(()=>{
     const el=detailRef.current;
@@ -1394,7 +1402,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
       const box=`${el.clientWidth}x${el.clientHeight}`;
       if(box!==lastBox){lastBox=box;setNoteFitKey(k=>k+1);return;}
       // 中身が伸びて欄があふれたときだけ測り直す(詰めて縮んだときは何もしない)
-      if(noteFitNow.current<2&&el.scrollHeight>el.clientHeight+1)setNoteFitKey(k=>k+1);
+      if(noteFitNow.current<noteFitMax&&el.scrollHeight>el.clientHeight+1)setNoteFitKey(k=>k+1);
     });
     noteFitRo.current=ro;
     ro.observe(el);
@@ -1472,7 +1480,17 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                   (2026-09-05・ユーザー指摘「文字数で枠がずれるのがださい」)。
                   2026-09-26 に2行ぶんの確保をやめて1行にした(ユーザー指示「見本のほうがサイズ感が見やすい」)。
                   曲名の全部は、選んだときに下の欄へ2行で出る。 */}
-              <span className="min-w-0 flex-1 [container-type:inline-size]">
+              <span className="relative min-w-0 flex-1 [container-type:inline-size]">
+                {/* 文字の列が細いとき(230px 以下: 小さい横・🔄横の細い端末)は、版の数を下の段の札ではなくジャケットの右下の角に小さく出す
+                    (2026-11-24 ミハリの気付き: 小さい横 568×320 で、行のスコア「C 799,166」と「2つの版」の札が重なっていた)。
+                    下の段の札と同じ列の幅(この span の container)で出し分けるので、両方出る・両方消えることはない */}
+                {row.versions>1&&<small {...(main?{'data-rhythm-song-row-version-corner':row.versions}:{})} aria-hidden="true"
+                  className="pointer-events-none absolute bottom-0.5 hidden whitespace-nowrap rounded border border-sky-300/60 bg-slate-950/90 px-0.5 text-[9px] font-black leading-tight text-sky-200 [@container(max-width:230px)]:block"
+                  style={{right:'calc(100% + 6px)'}}>{row.versions}版</small>}
+                {/* 買う前(🔒)とイベント対象(🏆)も、列が細いときは下の段から外してジャケットの右上の角に出す(1つの札にまとめて重ならないように) */}
+                {(lockedSong(entry)||eventSong)&&<small {...(main?{'data-rhythm-song-row-corner-marks':''}:{})} aria-hidden="true"
+                  className="pointer-events-none absolute top-0.5 hidden whitespace-nowrap rounded border border-amber-300/60 bg-slate-950/90 px-0.5 text-[9px] leading-tight [@container(max-width:230px)]:block"
+                  style={{right:'calc(100% + 6px)'}}>{lockedSong(entry)?'🔒':''}{eventSong?'🏆':''}</small>}
                 {/* 曲名は幅に合わせて15px〜12pxで1行に収める。12pxでも入らない曲名だけ2行へ折り返す。
                     高さは15pxの2行ぶん(36px)で固定し、1行の曲は上下のまん中に置く(曲名の長さで行の高さを変えない)。
                     ★折り返しと高さはインラインで持つ(CSSが届かなくても行の高さがそろうように) */}
@@ -1523,16 +1541,16 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                         :<span className={`shrink-0 whitespace-nowrap${row.versions>1?' [@container(max-width:180px)]:hidden':''}`}>未プレイ</span>}
                     </small>;
                   })()}
-                  {/* 版がいくつあるか(押したあと難易度の上で切り替えられる) */}
+                  {/* 版がいくつあるか(押したあと難易度の上で切り替えられる)。列が細いときはジャケットの角へ移す(上の data-rhythm-song-row-version-corner) */}
                   {row.versions>1&&<small {...(main?{'data-rhythm-song-row-version-count':row.versions}:{})}
-                    className="ml-1 shrink-0 rounded-md border border-sky-300/40 bg-sky-500/10 px-1 py-0.5 text-[10px] font-black leading-none text-sky-200">{row.versions}つの版</small>}
+                    className="ml-1 shrink-0 rounded-md border border-sky-300/40 bg-sky-500/10 px-1 py-0.5 text-[10px] font-black leading-none text-sky-200 [@container(max-width:230px)]:hidden">{row.versions}つの版</small>}
                   {favoriteIds.has(entry.songId)&&<small {...(main?{'data-rhythm-song-row-favorite':''}:{})} aria-label="お気に入り" className="ml-auto shrink-0 text-[12px] leading-none text-rose-300">♥</small>}
                   {firstSongId&&row.members.some(item=>item.songId===firstSongId)&&<small {...(main?{'data-rhythm-song-first':firstSongId}:{})}
                     className="ml-auto shrink-0 rounded-md border border-emerald-300/60 bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-black text-emerald-200">🔰<span className="[@container(max-width:300px)]:hidden"> 初めての1曲</span></small>}
                   {lockedSong(entry)&&<small {...(main?{'data-rhythm-song-locked':entry.songId}:{})}
-                    className="ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-black text-amber-200">🔒 {rhythmSongPrice(entry.songId).toLocaleString()}P</small>}
+                    className="ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-black text-amber-200 [@container(max-width:230px)]:hidden">🔒 {rhythmSongPrice(entry.songId).toLocaleString()}P</small>}{/* 列が細いときはジャケットの右上の角に🔒だけ出す(値段は右の欄の「買う」に出る・2026-11-24) */}
                   {eventSong&&<small {...(main?{'data-rhythm-song-event':entry.songId}:{})}
-                    className="ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-black text-amber-200">🏆<span className="[@container(max-width:380px)]:hidden"> イベント対象</span></small>}
+                    className="ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-black text-amber-200 [@container(max-width:230px)]:hidden">🏆<span className="[@container(max-width:380px)]:hidden"> イベント対象</span></small>}
                 </span>
               </span>
             </button>
@@ -1544,7 +1562,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
     {/* 選んでいる曲 */}
     <aside data-rhythm-song-detail ref={detailRef} data-rhythm-song-note-fit={noteFit}
       className="shrink-0 border-t border-sky-300/20 bg-gradient-to-b from-blue-950/95 to-slate-950/95 px-3 py-2 landscape:w-[44%] landscape:max-w-[440px] landscape:overflow-y-auto landscape:border-l landscape:border-t-0 landscape:py-2 landscape:[container-type:size]"
-      style={{paddingBottom:'calc(0.5rem + var(--mh-sa-bottom))'}}>
+      style={{paddingBottom:viewWide&&squeezeWide?'max(0.5rem, var(--mh-sa-bottom))':'calc(0.5rem + var(--mh-sa-bottom))'}}>
       {!song||!difficulty
         ?<p className="text-xs font-bold text-slate-400">遊べる曲がありません。</p>
         :<>
@@ -1583,7 +1601,8 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                   字を小さくし、入らなければ2行に折り、それでも入らないときだけ「…」。縦の低い画面(高さ700以下)は一覧の場所を残すため1行のまま */}
               {(()=>{const wideVer=viewWide&&versionsOf(song).length>1,shortTate=!viewWide;/* 縦は細い欄なので曲名は1行(入らない時だけ折る) */
                 // 縦は2行ぶん(43px)の高さの中で3行まで(題と副題が別のかたまりなので)。縦の低い画面は1行、入らない曲名だけ2〜3行
-                return <RhythmFitTitle key={song.songId} song={song} maxPx={shortTate?15:wideVer?14:viewWide?16:17} minPx={shortTate?10:10} lines={3}
+                const squeeze=viewWide&&noteFit>=5;/* 横で欄があふれる5段目: 9pxまで縮めて1行、入らなければ13px以下で2行まで(「…」にしない) */
+                return <RhythmFitTitle key={`${song.songId}:${squeeze?5:0}`} song={song} maxPx={squeeze?13:shortTate?15:wideVer?14:viewWide?16:17} minPx={squeeze?9:10} lines={squeeze?2:3}
                   maxH={shortTate?38:viewWide?0:43}
                   className={`block min-w-0 flex-1 overflow-hidden font-black leading-[1.25] text-white ${viewWide||shortTate?'':'h-[43px]'} ${wideVer?'basis-[9rem]':''}`}/>;})()}
               {viewWide&&versionTabs}
