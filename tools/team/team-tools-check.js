@@ -36,17 +36,18 @@ const CASES = [
   ['毎晩の判定の異変の報告を読んで一覧にする', 'claude-haiku-5-5'],
   ['オート∞で1時間に95MB増える件の原因を突き止める', 'claude-opus-5-5'],
   ['新しい遊び方の設計の案を出す', 'claude-opus-5-5'],
-  ['新機能の公開前の最終確認', 'claude-fable-5-2'],
+  ['新機能の公開前の最終確認', 'claude-opus-5-5'],
   // 迷ったら上(当たる語が無い=分からない仕事は、安いモデルに回さない)
   ['なんでもない頼み', 'claude-opus-5-5'],
   ['文言を直しつつ原因を調べる', 'claude-opus-5-5'],
   // 道具を作る・強化するのは最新モデル(1回)、できた道具を回してまとめるのは安いモデル(2026-11-11 社長)
-  ['譜面の全曲点検の道具を作る', 'claude-fable-5-2'],
+  ['譜面の全曲点検の道具を作る', 'claude-opus-5-5'],
   ['rhythm-chart-review.js を回して全曲点検の結果をまとめる', 'claude-sonnet-5-5'],
   ['全譜面の MISS になる所を洗い出してまとめる', 'claude-sonnet-5-5'],
 ];
 for (const [text, want] of CASES) { const got = model(text); ok(got === want, `① 「${text}」は ${want} のはずが ${got}`); }
-ok(model('モンスターノーツのかくつきを直す', { failed: 2 }) === 'claude-fable-5-2', '① 2回直して直らない不具合は claude-fable-5-2');
+ok(model('モンスターノーツのかくつきを直す', { failed: 2 }) === 'claude-opus-5-5', '① 2回直して直らない不具合も claude-opus-5-5(Fable は社長の許可なしに使わない・2026-11-24)');
+ok(loadRouting()['種類'].every(k => !/fable/.test(k.model)), '① 表に claude-fable-5-2 が無い(社長の許可なしに使わない・2026-11-24)');
 ok(model('モンスターノーツのかくつきを直す', { failed: 1 }) !== 'claude-fable-5-2', '① 1回目の直しでは claude-fable-5-2 を使わない');
 // ②
 for (const text of ['ランキングの文言を直して', '保存データの題を変える', 'SQL を足す小さな直し', 'mh_foo の色を変える', '移行の誤字']) {

@@ -59,7 +59,7 @@ function main() {
   console.log(`種類: ${r.kind['名前']}(${r.kind.id})`);
   console.log(`モデル: ${r.kind.model}`);
   console.log(`理由: ${r.why} / ${r.kind['いつ']}`);
-  if (!['final', 'tool'].includes(r.kind.id)) console.log('上げる条件: 判断や設計が要る・結果がおかしい → --kind design(claude-opus-5-5)。2回やって直らない → --failed 2(claude-fable-5-2)。迷ったら上');
+  if (!['final', 'tool'].includes(r.kind.id)) console.log('上げる条件: 判断や設計が要る・結果がおかしい → --kind design(claude-opus-5-5)。2回やって直らない → 窓口へ(Fable は社長の許可なしでは使わない)。迷ったら上');
 }
 
 if (require.main === module) main();
