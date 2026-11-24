@@ -550,6 +550,8 @@ const useCardShareEntry = (breederId, self = false) => {
   return state;
 };
 const CARD_SHARE_TILE_CLASS = 'rounded-2xl border-2 border-amber-600/60 bg-indigo-950/50 p-2';
+// デッキ名は切らずに折り返す(3行まで。ふつうは1〜2行)(2026-11-24 社長「デッキ名切れてる」)。裏クイックの札が名前の上に乗らないよう data-quick-avoid を付ける(45-quick-anywhere-float)
+const CARD_SHARE_NAME_STYLE = { display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 3, overflow: 'hidden', overflowWrap: 'anywhere' };
 // 3体のカード絵を少し重ねて並べる
 const CardShareDeckThumbs = ({ entry }) => {
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
@@ -672,11 +674,11 @@ const CardShareDeckTile = ({ mode = 'self', breederId = null, onOpen = null }) =
   const t = entry ? cardShareNormalizeTactics(entry.tactics) : null;
   const head = <small className="block text-[10px] font-black text-amber-300">バトルカードのデッキ</small>;
   const tile = self ? (
-    <button type="button" data-profile-show="card-deck" data-card-share-tile="self" onClick={() => { if (onOpen) { Audio_.fgSe.tap(); onOpen(); } }} className={`${CARD_SHARE_TILE_CLASS} block w-full text-left active:scale-[.98]`}>
+    <button type="button" data-profile-show="card-deck" data-quick-avoid data-card-share-tile="self" onClick={() => { if (onOpen) { Audio_.fgSe.tap(); onOpen(); } }} className={`${CARD_SHARE_TILE_CLASS} block w-full text-left active:scale-[.98]`}>
       {head}
       {loading ? <span className="mt-2 block text-[12px] font-bold text-slate-400">読み込み中…</span> : entry ? (<>
         <span className="mt-1.5 block"><CardShareDeckThumbs entry={entry}/></span>
-        <b className="mt-1 block truncate text-[14px] font-black text-white">{t.name || 'デッキ'}</b>
+        <b data-card-share-tile-name className="mt-1 block break-words text-[13px] font-black leading-tight text-white" style={CARD_SHARE_NAME_STYLE}>{t.name || 'デッキ'}</b>
         <small className="block text-[11px] font-black text-pink-300">{(cardShareSmartText(t).split('(')[0])}</small>
       </>) : (<>
         <span className="mt-2 block text-[13px] font-black text-slate-300">登録していません</span>
@@ -684,10 +686,10 @@ const CardShareDeckTile = ({ mode = 'self', breederId = null, onOpen = null }) =
       </>)}
     </button>
   ) : (
-    <div data-profile-show="card-deck" data-card-share-tile="friend" className={CARD_SHARE_TILE_CLASS}>
+    <div data-profile-show="card-deck" data-quick-avoid data-card-share-tile="friend" className={CARD_SHARE_TILE_CLASS}>
       {head}
       <span className="mt-1.5 block"><CardShareDeckThumbs entry={entry}/></span>
-      <b className="mt-1 block truncate text-[14px] font-black text-white">{t.name || 'デッキ'}</b>
+      <b data-card-share-tile-name className="mt-1 block break-words text-[13px] font-black leading-tight text-white" style={CARD_SHARE_NAME_STYLE}>{t.name || 'デッキ'}</b>
       <small className="block text-[11px] font-black text-pink-300">{(cardShareSmartText(t).split('(')[0])}</small>
       <button type="button" data-card-share-tile-detail onClick={() => { Audio_.fgSe.tap(); setDetail(true); }} className="mt-0.5 text-[11px] font-black text-pink-200">
         {`${entry.battles}戦 ${entry.deckWins}勝 詳細 ›`}
