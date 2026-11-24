@@ -15,6 +15,8 @@
 //                     時刻をそろえるため、撮るあいだだけ お祝いの自動の進み(setTimeout)と結果の数え上げの描画の合図(requestAnimationFrame)をつかむ
 //     --best-score  … 前の自己ベストをこの点にして始める(既定 1)。結果の「自己ベストまで あと」・越えた瞬間を撮るとき
 //     --viewport    … 画面の大きさ(既定 390x844)
+//   --rotate             … 曲えらびの「🔄横」を押してから始める(端末は縦のまま絵だけ横)
+//   --init-script <js>   … ページを開く前に差し込む台本(ページの中で動く。結果の数え上げを毎コマ記録する時など)
 //   --result-script <js> … 結果の画面が出たところで、その台本(module.exports=async(page)=>{})を呼ぶ(案の止め絵)
 //   どちらのときも、演出が出たか(盛り上がりの光が点いた時刻・叩いた場所の判定の数・ランクが上がったときの文字)を最後に出す
 //
@@ -157,6 +159,8 @@ const playOne=async(browser,songIds,songId,difficulty)=>{
   const page=await browser.newPage({viewport:{width:vw||390,height:vh||844},deviceScaleFactor:END_SHOTS?2:1,hasTouch:true,isMobile:true});
   try{
     await page.addInitScript(seed,{songIds,settings:SETTINGS,bestScore:Number(arg('--best-score',1))||1});
+    // --init-script <js> … ページを開く前に差し込む台本(ページの中で動く・結果の数え上げを毎コマ記録するときなど・2026-11-24)
+    if(arg('--init-script',null))await page.addInitScript({path:path.resolve(arg('--init-script'))});
     const clickText=pattern=>page.evaluate(s=>{const rx=new RegExp(s);const b=[...document.querySelectorAll('button')].find(x=>rx.test((x.innerText||'').replace(/\s+/g,' ').trim()));if(!b)return false;b.click();return true;},pattern);
     await page.goto(PAGE_URL,{waitUntil:'load',timeout:90000});
     await page.waitForFunction(()=>document.body&&document.body.innerText.includes('TAP TO START'),undefined,{timeout:90000});
@@ -177,6 +181,9 @@ const playOne=async(browser,songIds,songId,difficulty)=>{
     const diffOk=await page.evaluate(d=>{const b=document.querySelector(`[data-rhythm-difficulty="${d}"]`);if(!b||b.disabled)return false;b.click();return true;},difficulty);
     if(!diffOk)return {songId,difficulty,error:'難易度を選べない'};
     await page.waitForTimeout(300);
+    // --rotate … 曲えらびの「🔄横」を押してから始める(端末は縦のまま絵だけ横にする)
+    if(process.argv.includes('--rotate')){const rotated=await page.evaluate(()=>{const b=[...document.querySelectorAll('button')].find(x=>/^(🔄\s*)?横$/.test((x.innerText||'').replace(/\s+/g,' ').trim()));if(!b)return false;b.click();return true;});
+      if(!rotated)return {songId,difficulty,error:'🔄横のボタンが無い'};await page.waitForTimeout(1500);}
     await page.evaluate(m=>{window.__mhRelease=m;},RELEASE);
     await page.evaluate(installRobot);
     await page.evaluate(()=>document.querySelector('[data-rhythm-demo-start]').click());

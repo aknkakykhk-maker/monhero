@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c04b2f8edab52849
+// generated-sha256: d832273c99b6e29d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -27211,12 +27211,15 @@ const RHYTHM_CELEBRATE_AE=Object.freeze(['#67e8f9','#fde68a']);
 /* ★2026-11-24 案A「判定が1行ずつ決まる」(台帳 r1119-156 追記2・社長の選択)。判定の行を上(JUST MARVELOUS)から1行ずつ数える(1行 260ms・数えるのは 200ms)。
    行が決まるたびに数字が弾んで光の粒が散り「カチッ」と鳴る(行ごとに少し高く)。スコアは行の進みに合わせて積み上がり、全部の行のあとに MAX COMBO が数えられ、
    スコアが決まる(じゃん！・決まる音)→ ランクのはんこ → 称号の札 → 下の物。7行で約2.4秒。タップでいつでも止まった形へ飛ぶのは前のまま */
-const RHYTHM_RESULT_COUNT=Object.freeze({scoreAt:300,scoreMs:2120,janAt:2420,rowAt:300,rowStep:260,rowMs:200,comboAt:2120,comboMs:300,stampAt:2490,ribbonAt:2750,restAt:2750,endAt:3300});
+const RHYTHM_RESULT_COUNT=Object.freeze({scoreAt:300,scoreMs:2120,janAt:2420,rowAt:300,rowStep:260,rowMs:250,comboAt:2120,comboMs:300,stampAt:2490,ribbonAt:2750,restAt:2750,endAt:3300});
 // ★2026-11-24(台帳 r1119-156 追記): 演出量「最小」・軽量モード・端末の「動きを減らす(視差効果を減らす)」では止まった形にしていたが、
 //   社長の iPhone で数え上げが見えなかった(動きを減らすが入っていると止まる)。社長「リザルトなんて重さ関係ないんだから設定とか関係なしに演出強くしていいよ」
 //   → いつも数える。止めるのは演出の設定「結果の画面の演出」を「出さない」にしたときだけ(settings.fx.resultCount)
 const rhythmResultCountAnimOn=settings=>!!settings&&rhythmFxOn(settings,'resultCount',true);
 const rhythmCountEase=k=>1-Math.pow(1-k,3);
+// 判定の行・MAX COMBO の数え上げの曲線(2026-11-24 r1119-166・社長「数値の上がりがカクカクしてる」)。スコアと同じ3乗では、0.2秒の出だしの1コマで行の数の2割以上が飛んでいた。
+//   2乗のゆるい減速にして、数える長さを 0.25 秒(1行の間隔 0.26 秒の中)にした。出だしの1コマの増えは 23%→13%。スコアは3乗のまま(新記録の時刻 rhythmResultCrossMs が3乗で決まっている)
+const rhythmCountEaseSoft=k=>1-(1-k)*(1-k);
 // 数え上げが前の自己ベストを越える時刻(結果の画面に出てからのミリ秒)。越えないときは null
 const rhythmResultCrossMs=(previous,score)=>{const prev=Number(previous)||0,to=Number(score)||0;if(!(prev>0)||!(to>prev))return null;
   return Math.round(RHYTHM_RESULT_COUNT.scoreAt+(1-Math.cbrt(1-prev/to))*RHYTHM_RESULT_COUNT.scoreMs);};
@@ -28529,17 +28532,20 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
   const resultRootRef=useRef(null);
   const recordSeFireRef=useRef(null);
   const resultCountId=view.status==='result'&&view.result&&view.result.countAnim?view.result.countAnim.id:null;
+  // 数え上げが終わった(タップで飛ばしたときも)印。それまで下の経験値の棒は動き出さない(r1119-166。同じ時に動くと数え上げのコマが落ちていた)
+  const [resultCountDoneId,setResultCountDoneId]=useState(null);
+  const resultCountRunning=resultCountId!==null&&resultCountDoneId!==resultCountId;
   React.useLayoutEffect(()=>{
     const root=resultRootRef.current;
     if(!resultCountId||!root)return undefined;
     const T=RHYTHM_RESULT_COUNT;
-    const items=[...root.querySelectorAll('[data-count-to]')].map(el=>({el,to:Number(el.dataset.countTo)||0,at:Number(el.dataset.countAt)||0,ms:Math.max(1,Number(el.dataset.countMs)||1),plain:el.dataset.countPlain==='1'}));
+    const items=[...root.querySelectorAll('[data-count-to]')].map(el=>({el,to:Number(el.dataset.countTo)||0,at:Number(el.dataset.countAt)||0,ms:Math.max(1,Number(el.dataset.countMs)||1),plain:el.dataset.countPlain==='1',ease:el.dataset.countPlain==='1'?rhythmCountEaseSoft:rhythmCountEase}));
     const vs=root.querySelector('[data-rhythm-result-vs-best]'),fill=vs&&vs.querySelector('[data-rhythm-result-vs-best-fill]'),diff=root.querySelector('[data-rhythm-best-diff]');
     const card=root.querySelector('[data-rhythm-result-score-card]');
     const prev=card?Number(card.dataset.countPrev)||0:0,score=card?Number(card.dataset.countScore)||0:0,gaugeMax=vs?Math.max(1,Number(vs.dataset.max)||1):1;
     const wait=root.querySelector('[data-record-wait]');
     let raf=0,start=0,over=false;
-    const valueAt=(item,t)=>Math.round(item.to*rhythmCountEase(Math.max(0,Math.min(1,(t-item.at)/item.ms))));
+    const valueAt=(item,t)=>Math.round(item.to*item.ease(Math.max(0,Math.min(1,(t-item.at)/item.ms))));
     const draw=t=>{
       for(const item of items){const v=valueAt(item,t);const text=item.plain?String(v):v.toLocaleString();if(item.el.textContent!==text)item.el.textContent=text;}
       {const v=Math.round(score*rhythmCountEase(Math.max(0,Math.min(1,(t-T.scoreAt)/T.scoreMs))));
@@ -28548,7 +28554,7 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
         // 越えた瞬間(初めての記録は数字が決まる瞬間)に札を金色へ
         if(!over&&wait&&((prev>0&&v>prev)||(!(prev>0)&&t>=T.janAt))){over=true;wait.removeAttribute('data-record-wait');}}
     };
-    const finish=()=>{if(raf&&typeof cancelAnimationFrame==='function')cancelAnimationFrame(raf);raf=0;draw(1e9);if(wait)wait.removeAttribute('data-record-wait');root.setAttribute('data-rhythm-count-anim','done');
+    const finish=()=>{if(raf&&typeof cancelAnimationFrame==='function')cancelAnimationFrame(raf);raf=0;draw(1e9);if(wait)wait.removeAttribute('data-record-wait');root.setAttribute('data-rhythm-count-anim','done');setResultCountDoneId(resultCountId);
       root.removeEventListener('pointerdown',skipCount);};
     const skipCount=()=>{if(root.getAttribute('data-rhythm-count-anim')!=='1')return;finish();if(recordSeFireRef.current)recordSeFireRef.current();};
     if(typeof requestAnimationFrame!=='function'){finish();return undefined;}
@@ -29596,7 +29602,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
     ランクアップは重ねた画面(PlayerRankUpFx)の1回だけで伝え、この箱の中の RANK UP の札と判子は index.html で隠す(N51)。横・PC は左の列のまま */}
 {/* ビートランクの経験値の棒(2026-10-30 社長「終わったあとに経験値ゲージのバーの動きが見れない」)。(はじめはリザルトのいちばん上に置いていた。2026-11-22 にスコアと判定の下へ移した)
     この1曲でたまった経験値と、ランクが上がったときのごほうび。裏のクイック周回の「経験値」と取り違えないよう、札に「🎵 ビートランク」と書く(PlayerRankGain) */}
-<PlayerRankGain kind="beat" award={beatRankAward} onFull={onRankBarFull} onDone={onRankBarDone} onStart={onRankBarStart} next={beatRankAward?`ランク${playerRankInfo(beatRankAward.xp).rank+1}で ${beatRankRewardText(playerRankInfo(beatRankAward.xp).rank+1)}`:''}/>
+<PlayerRankGain kind="beat" award={beatRankAward} hold={resultCountRunning} onFull={onRankBarFull} onDone={onRankBarDone} onStart={onRankBarStart} next={beatRankAward?`ランク${playerRankInfo(beatRankAward.xp).rank+1}で ${beatRankRewardText(playerRankInfo(beatRankAward.xp).rank+1)}`:''}/>
 {/* 達成をひと目で分かるように、いちばん上の称号だけを大きく出す(2026-09-03)。
     ALL MARVELOUS > ALL EXCELLENT > FULL COMBO の順に上位。残りは下に小さく並べる。 */}
 {(result.fullCombo||result.allExcellent||result.allMarvelous)&&<div data-rhythm-result-celebrate className="my-3 text-center">
@@ -42021,7 +42027,9 @@ const PLAYER_RANK_XP_TICK_GAP_MS = 90;
 const playerRankXpTickDue = (run, now) => { if (!run || !Number.isFinite(now)) return false; if (Number.isFinite(run.lastTickAt) && now - run.lastTickAt < PLAYER_RANK_XP_TICK_GAP_MS) return false; run.lastTickAt = now; return true; };
 // 伸び終わりに trainingReward を鳴らすか(ランクが上がって演出を出す側 onFull があるときは、演出のごほうびの音に任せる)
 const playerRankXpFinalSe = (rankUp, hasFullFx) => !(rankUp && hasFullFx);
-function PlayerRankXpBar({ kind = 'beat', award, onFull = null, onDone = null, onStart = null }) {
+// hold … true のあいだは動き出さない(モンヒロビートの結果で、スコアの数え上げが終わるまで待つ・2026-11-24 r1119-166。
+//   見えないうちから動いて毎コマ描き直し、数え上げのコマを落としていた)。既定は false(今までどおり)
+function PlayerRankXpBar({ kind = 'beat', award, onFull = null, onDone = null, onStart = null, hold = false }) {
   ensurePlayerRankXpBarCss();
   const k = playerRankKind(kind);
   const add = Math.max(0, Math.floor(Number(award && award.add) || 0));
@@ -42083,7 +42091,7 @@ function PlayerRankXpBar({ kind = 'beat', award, onFull = null, onDone = null, o
     sendFull(); sendDone();
   };
   React.useEffect(() => {
-    if (!seen || !(add > 0) || !runRef.current.running) return undefined;
+    if (!seen || hold || !(add > 0) || !runRef.current.running) return undefined;
     const run = runRef.current;
     if (onStart) onStart();
     // 舞う光の粒(伸びている間ずっと)
@@ -42125,7 +42133,7 @@ function PlayerRankXpBar({ kind = 'beat', award, onFull = null, onDone = null, o
     later(() => { bumpAdd('final'); sparks(10); if (playerRankXpFinalSe(rankUp, !!onFull)) se('trainingReward'); }, t + 150);
     later(() => { run.running = false; setView((v) => ({ ...v, done: true })); sendDone(); }, t + 250);
     return () => { run.running = false; clearInterval(moteTimer); run.timers.forEach(clearTimeout); };
-  }, [seen]);
+  }, [seen, hold]);
   const need = playerRankNeed(view.rank);
   const w = `${pct(view.rank, view.into)}%`;
   return (
@@ -42161,14 +42169,14 @@ function PlayerRankXpBar({ kind = 'beat', award, onFull = null, onDone = null, o
 // 1回ぶんの結果に出す札: 経験値の棒が伸びる演出(PlayerRankXpBar)・次のごほうび・上がったらもらった物。
 // award: { add, parts:[{label,xp}], from, to, xp(足したあとの合計), gains:[{icon,text}] }。next は次のごほうびの文(「ランク20で ビートP 300」)
 // onFull・onDone・onStart(棒が画面に入って動き出した)は PlayerRankXpBar へそのまま渡す(ビートはここで画面いっぱいの演出を出す。カードは渡さなければ今までどおり)
-function PlayerRankGain({ kind = 'beat', award, next = '', onFull = null, onDone = null, onStart = null }) {
+function PlayerRankGain({ kind = 'beat', award, next = '', onFull = null, onDone = null, onStart = null, hold = false }) {
   const [done, setDone] = React.useState(false);
   if (!award || !(award.add > 0)) return null;
   const k = playerRankKind(kind);
   const up = award.to > award.from;
   return (
     <section data-player-rank-gain={kind} className={`relative my-3 space-y-1.5 rounded-2xl border p-3 pt-4 text-left ${k.border} ${k.panel}`}>
-      <PlayerRankXpBar kind={kind} award={award} onFull={onFull} onStart={onStart} onDone={() => { setDone(true); if (onDone) onDone(); }}/>
+      <PlayerRankXpBar kind={kind} award={award} hold={hold} onFull={onFull} onStart={onStart} onDone={() => { setDone(true); if (onDone) onDone(); }}/>
       {/* ごほうびは「・」で区切った1つずつを折らないかたまりにする(「セッション券／1枚」「セッション／券」と切れていた・2026-11-23 API総点検② V23) */}
       {next && <p data-player-rank-gain-next className="text-[10px] font-bold text-slate-300">次は {String(next).split('・').map((part, i) => <span key={i} className="inline-block whitespace-nowrap">{`${i ? '・' : ''}${part}`}</span>)}</p>}
       {up && done && <PlayerRankUp kind={kind} from={award.from} to={award.to} gains={award.gains || []}/>}

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 47b3ec0806134735
+// source-sha256: a9b44222e43ae968
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -44422,7 +44422,7 @@ const RHYTHM_RESULT_COUNT = Object.freeze({
   janAt: 2420,
   rowAt: 300,
   rowStep: 260,
-  rowMs: 200,
+  rowMs: 250,
   comboAt: 2120,
   comboMs: 300,
   stampAt: 2490,
@@ -44432,6 +44432,7 @@ const RHYTHM_RESULT_COUNT = Object.freeze({
 });
 const rhythmResultCountAnimOn = settings => !!settings && rhythmFxOn(settings, 'resultCount', true);
 const rhythmCountEase = k => 1 - Math.pow(1 - k, 3);
+const rhythmCountEaseSoft = k => 1 - (1 - k) * (1 - k);
 const rhythmResultCrossMs = (previous, score) => {
   const prev = Number(previous) || 0,
     to = Number(score) || 0;
@@ -46690,6 +46691,8 @@ const RhythmTapTest = ({
   const resultRootRef = useRef(null);
   const recordSeFireRef = useRef(null);
   const resultCountId = view.status === 'result' && view.result && view.result.countAnim ? view.result.countAnim.id : null;
+  const [resultCountDoneId, setResultCountDoneId] = useState(null);
+  const resultCountRunning = resultCountId !== null && resultCountDoneId !== resultCountId;
   React.useLayoutEffect(() => {
     const root = resultRootRef.current;
     if (!resultCountId || !root) return undefined;
@@ -46699,7 +46702,8 @@ const RhythmTapTest = ({
       to: Number(el.dataset.countTo) || 0,
       at: Number(el.dataset.countAt) || 0,
       ms: Math.max(1, Number(el.dataset.countMs) || 1),
-      plain: el.dataset.countPlain === '1'
+      plain: el.dataset.countPlain === '1',
+      ease: el.dataset.countPlain === '1' ? rhythmCountEaseSoft : rhythmCountEase
     }));
     const vs = root.querySelector('[data-rhythm-result-vs-best]'),
       fill = vs && vs.querySelector('[data-rhythm-result-vs-best-fill]'),
@@ -46712,7 +46716,7 @@ const RhythmTapTest = ({
     let raf = 0,
       start = 0,
       over = false;
-    const valueAt = (item, t) => Math.round(item.to * rhythmCountEase(Math.max(0, Math.min(1, (t - item.at) / item.ms))));
+    const valueAt = (item, t) => Math.round(item.to * item.ease(Math.max(0, Math.min(1, (t - item.at) / item.ms))));
     const draw = t => {
       for (const item of items) {
         const v = valueAt(item, t);
@@ -46739,6 +46743,7 @@ const RhythmTapTest = ({
       draw(1e9);
       if (wait) wait.removeAttribute('data-record-wait');
       root.setAttribute('data-rhythm-count-anim', 'done');
+      setResultCountDoneId(resultCountId);
       root.removeEventListener('pointerdown', skipCount);
     };
     const skipCount = () => {
@@ -49390,6 +49395,7 @@ const RhythmTapTest = ({
     })())), React.createElement(PlayerRankGain, {
       kind: "beat",
       award: beatRankAward,
+      hold: resultCountRunning,
       onFull: onRankBarFull,
       onDone: onRankBarDone,
       onStart: onRankBarStart,
@@ -68393,7 +68399,8 @@ function PlayerRankXpBar({
   award,
   onFull = null,
   onDone = null,
-  onStart = null
+  onStart = null,
+  hold = false
 }) {
   ensurePlayerRankXpBarCss();
   const k = playerRankKind(kind);
@@ -68623,7 +68630,7 @@ function PlayerRankXpBar({
     sendDone();
   };
   React.useEffect(() => {
-    if (!seen || !(add > 0) || !runRef.current.running) return undefined;
+    if (!seen || hold || !(add > 0) || !runRef.current.running) return undefined;
     const run = runRef.current;
     if (onStart) onStart();
     const moteTimer = setInterval(() => {
@@ -68744,7 +68751,7 @@ function PlayerRankXpBar({
       clearInterval(moteTimer);
       run.timers.forEach(clearTimeout);
     };
-  }, [seen]);
+  }, [seen, hold]);
   const need = playerRankNeed(view.rank);
   const w = `${pct(view.rank, view.into)}%`;
   return React.createElement("div", {
@@ -68823,7 +68830,8 @@ function PlayerRankGain({
   next = '',
   onFull = null,
   onDone = null,
-  onStart = null
+  onStart = null,
+  hold = false
 }) {
   const [done, setDone] = React.useState(false);
   if (!award || !(award.add > 0)) return null;
@@ -68835,6 +68843,7 @@ function PlayerRankGain({
   }, React.createElement(PlayerRankXpBar, {
     kind: kind,
     award: award,
+    hold: hold,
     onFull: onFull,
     onStart: onStart,
     onDone: () => {
