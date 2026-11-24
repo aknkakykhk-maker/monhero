@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5af7fcb7b66c6c5c
+// source-sha256: 482c969ba7a23fbc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -42347,7 +42347,7 @@ function RhythmSkyStage({
     fr = plane.front;
   const skyLaneLook = RHYTHM_SKY_LANE_LOOK.id,
     mk = Array.isArray(plane.markers) ? plane.markers : [];
-  const skyLineX = RHYTHM_SKY_LOOK.line.span === 'sky' ? [fr.l, fr.r] : [fr.roadL - RHYTHM_SKY_LOOK.line.marginPct, fr.roadR + RHYTHM_SKY_LOOK.line.marginPct];
+  const skyLineX = rhythmSkyLineX(plane);
   const skyLaneD = (() => {
     if (!/^d[12][lm]$/.test(skyLaneLook)) return null;
     const SKY_LANE_DEPTH = .14,
@@ -42604,6 +42604,49 @@ function RhythmSkyStage({
     strokeWidth: RHYTHM_SKY_LOOK.line.corePx,
     vectorEffect: "non-scaling-stroke"
   }));
+}
+function rhythmSkyLineX(plane) {
+  const fr = plane.front;
+  return RHYTHM_SKY_LOOK.line.span === 'sky' ? [fr.l, fr.r] : [fr.roadL - RHYTHM_SKY_LOOK.line.marginPct, fr.roadR + RHYTHM_SKY_LOOK.line.marginPct];
+}
+const RHYTHM_SKY_COVER_DIM = .15;
+function rhythmSkyCoverShape(plane) {
+  if (!plane) return null;
+  const nums = str => String(str).trim().split(/\s+/).flatMap(q => q.split(',').map(Number));
+  const look = RHYTHM_SKY_LANE_LOOK.id,
+    L = RHYTHM_SKY_LOOK.line,
+    [x0, x1] = rhythmSkyLineX(plane);
+  const k = look === 'em' ? {
+      fill: .13,
+      div: .32,
+      edge: .6
+    } : look === 'el' || look === 'elp' ? {
+      fill: .06,
+      div: .16,
+      edge: .32
+    } : null,
+    c = '226,232,240';
+  return {
+    key: `${look}|${plane.poly}`,
+    poly: k ? nums(plane.poly) : null,
+    dividers: k ? plane.dividers.map(nums) : [],
+    edges: k ? [nums(plane.leftEdge), nums(plane.rightEdge)] : [],
+    fill: k ? `rgba(${c},${k.fill})` : '',
+    div: k ? `rgba(${c},${k.div})` : '',
+    divPx: .8,
+    edge: k ? `rgba(${c},${k.edge})` : '',
+    edgePx: 1.2,
+    line: {
+      x0,
+      x1,
+      y: plane.front.y,
+      band: `rgba(${L.bandRgb},${L.bandAlpha})`,
+      bandPx: L.bandPx,
+      core: `rgba(${L.coreRgb},${L.coreAlpha})`,
+      corePx: L.corePx
+    },
+    dim: k ? `rgba(10,5,30,${RHYTHM_SKY_COVER_DIM})` : ''
+  };
 }
 function RhythmSkyLiftSwitch() {
   const read = () => {
@@ -44736,6 +44779,11 @@ const RhythmTapTest = ({
       farPosts: (p => [[p.l, p.gy, p.l, p.y], [p.r, p.gy, p.r, p.y]].map(a => a.map(f)))(pts[Math.round(steps * .4)])
     };
   })();
+  const skyCoverRef = useRef(null),
+    skyDeferRef = useRef([]);
+  if (canvasNotes && skyPlane) {
+    if (!skyCoverRef.current || skyCoverRef.current.key !== `${RHYTHM_SKY_LANE_LOOK.id}|${skyPlane.poly}`) skyCoverRef.current = rhythmSkyCoverShape(skyPlane);
+  } else skyCoverRef.current = null;
   useEffect(() => {
     RHYTHM_GESTURE_RUNTIME.setSlideSwapListener?.((keyA, keyB, noteA, noteB) => {
       RHYTHM_INPUT_REC.event('swap', {
@@ -46878,6 +46926,9 @@ const RhythmTapTest = ({
         motion: settingsLiveRef.current.noteMotionFx === true,
         ...rhythmFxRenderOptions(settings, settingsLiveRef.current)
       });
+      const skyCover = canvasReady ? skyCoverRef.current : null,
+        skyDefer = skyDeferRef.current;
+      skyDefer.length = 0;
       {
         const stageClock = stageClockRef.current;
         stageClock.t = visualTime;
@@ -47102,6 +47153,10 @@ const RhythmTapTest = ({
         }
         if (!note.done && note.activePointerId === null && note.releasedAtMs == null && songTimeMs - (note.timeMs + settings.judgmentTimingOffsetMs) > RHYTHM_MISS_RECLAIM_MS) applyJudgment(note, 'MISS', songTimeMs - note.timeMs);
         if (canvasNotes) {
+          if (skyCover && rhythmNoteIsSky(note)) {
+            skyDefer.push(note);
+            return;
+          }
           paintCanvasNote(note);
           return;
         }
@@ -47271,6 +47326,11 @@ const RhythmTapTest = ({
         }
       }
       run.notesReady = true;
+      if (skyCover) {
+        RHYTHM_CANVAS_RENDERER.drawSkyCover(skyCover);
+        for (let i = 0; i < skyDefer.length; i++) paintCanvasNote(skyDefer[i]);
+        skyDefer.length = 0;
+      }
       if (canvasNotes) RHYTHM_CANVAS_RENDERER.end();
       RHYTHM_PERF.notes(perfScanned, perfDrawn, scanFrom, run.notesAscending);
       if (settings.holdTrace === false) {

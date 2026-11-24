@@ -82231,6 +82231,7 @@ const rhythmCreateGpuSky3d=(gl,host)=>{
 //
 // 【できること】RHYTHM_CANVAS_RENDERER が本体の描き込み先に使う機能だけ:
 //   setTransform / clearRect / globalAlpha / fillStyle・strokeStyle(色の文字列と直線のグラデーション)
+//   globalCompositeOperation('source-over'・'lighter'・'source-atop')
 //   beginPath・moveTo・lineTo・arcTo・arc・closePath・fill・stroke(lineWidth / lineJoin / lineCap)
 //   fillRect / drawImage(canvas・画像。3引数・5引数・9引数) / createLinearGradient / save・restore
 // ★ここに無い機能を RHYTHM_CANVAS_RENDERER で使い始めたら、ここにも足すこと(無い機能は何も描かない)。
@@ -82345,7 +82346,8 @@ const rhythmCreateGL2D=canvas=>{
     if(viewW!==sentViewW||viewH!==sentViewH){gl.uniform2f(loc.uView,viewW,viewH);sentViewW=viewW;sentViewH=viewH;}
     const a=Math.max(0,Math.min(1,aa));if(a!==sentAlpha){gl.uniform1f(loc.uAlpha,a);sentAlpha=a;}
     if(mode!==sentMode){gl.uniform1i(loc.uMode,mode);sentMode=mode;}
-    if(cc!==sentComp){if(cc==='lighter')gl.blendFuncSeparate(gl.ONE,gl.ONE,gl.ONE,gl.ONE_MINUS_SRC_ALPHA);else gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);sentComp=cc;}
+    // source-atop … いま描いてある所(ノーツ)の上にだけ重ねる(色は濃さを掛けた形なので 結果=重ねる色×下の濃さ+下×(1-重ねる濃さ)。濃さは下のまま)。r1119-165 の空中の面と線の重ね直しで使う
+    if(cc!==sentComp){if(cc==='lighter')gl.blendFuncSeparate(gl.ONE,gl.ONE,gl.ONE,gl.ONE_MINUS_SRC_ALPHA);else if(cc==='source-atop')gl.blendFunc(gl.DST_ALPHA,gl.ONE_MINUS_SRC_ALPHA);else gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);sentComp=cc;}
     if(mode===0){const c=parseColor(paint);if(c[0]!==sentColor[0]||c[1]!==sentColor[1]||c[2]!==sentColor[2]||c[3]!==sentColor[3]){gl.uniform4f(loc.uColor,c[0],c[1],c[2],c[3]);sentColor=c.slice();}}
     else if(mode===1){
       const stops=paint.stops.slice().sort((a,b)=>a[0]-b[0]).slice(0,6);
@@ -82504,7 +82506,7 @@ const rhythmCreateGL2D=canvas=>{
     get lineJoin(){return lineJoin;},set lineJoin(v){lineJoin=v;},
     get lineCap(){return lineCap;},set lineCap(v){lineCap=v;},
     // 重ね方。'lighter'(足し算)だけ受け付け、それ以外はふつうの重ね方(source-over)にする
-    get globalCompositeOperation(){return comp;},set globalCompositeOperation(v){comp=v==='lighter'?'lighter':'source-over';},
+    get globalCompositeOperation(){return comp;},set globalCompositeOperation(v){comp=v==='lighter'||v==='source-atop'?v:'source-over';},
     imageSmoothingEnabled:true,imageSmoothingQuality:'low',
     save(){stack.push([m.slice(),alpha,fillStyle,strokeStyle,lineWidth,lineJoin,lineCap,comp]);},
     restore(){const s=stack.pop();if(s)[m,alpha,fillStyle,strokeStyle,lineWidth,lineJoin,lineCap,comp]=s;},
@@ -85032,6 +85034,31 @@ const rhythmBuildCanvasRenderer=()=>{
       }
     },
     // マスモンの顔を1つ積む。bitmap は焼いた canvas、(cx,cy) は中心、size は一辺(どれも CSS px)。
+    // 空中の面・区切り・ふち・空中の判定線を、いま描いてある地上のノーツの上にだけ重ね直す(2026-11-24 r1119-165 社長の選択「案J 地上を少し暗く」)。
+    // 演奏の輪が「地上のノーツ → これ → 空中のノーツ」の順で呼ぶ。形と色は rhythmSkyCoverShape(30-rhythm-play.jsx)。座標はプレイエリアの 0〜100。
+    // 重ね方は source-atop(ノーツのある画素にだけ乗る)。ノーツの無い所は奥の SVG のままなので、見た目は今と同じで二重にならず、
+    // ノーツの上では「面と線がノーツの手前にある」のと同じ絵になる。先に、面と重なる所の地上のノーツを少し暗くする(cover.dim)。
+    // このフレームでまだ何も描いていなければ何もしない(描き直さないフレームはそのまま)。2D と WebGL(rhythmCreateGL2D)で同じに描く
+    drawSkyCover(cover){
+      if(!ctx||!cover||pendingClear||!(cssW>0&&cssH>0))return;
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+      // 地上のマスモンの顔はふだんフレームの最後(end)に描くが、空中の面の下に置くためここで先に描く
+      if(faces.length){for(let i=0;i<faces.length;i+=5){const size=faces[i+3];ctx.globalAlpha=Math.min(1,faces[i+4]);ctx.drawImage(faces[i],faces[i+1]-size/2,faces[i+2]-size/2,size,size);}faces.length=0;}
+      ctx.save();
+      const sx=cssW/100,sy=cssH/100;
+      const path=(p,close)=>{ctx.beginPath();for(let i=0;i<p.length;i+=2){const x=p[i]*sx,y=p[i+1]*sy;if(i)ctx.lineTo(x,y);else ctx.moveTo(x,y);}if(close)ctx.closePath();};
+      const stroke=(p,color,px)=>{ctx.strokeStyle=color;ctx.lineWidth=px;path(p,false);ctx.stroke();};
+      ctx.globalAlpha=1;ctx.globalCompositeOperation='source-atop';ctx.lineJoin='miter';ctx.lineCap='butt';
+      if(cover.poly){
+        if(cover.dim){ctx.fillStyle=cover.dim;path(cover.poly,true);ctx.fill();}
+        ctx.fillStyle=cover.fill;path(cover.poly,true);ctx.fill();
+      }
+      for(const d of cover.dividers)stroke(d,cover.div,cover.divPx);
+      for(const e of cover.edges)stroke(e,cover.edge,cover.edgePx);
+      const L=cover.line,ln=[L.x0,L.y,L.x1,L.y];
+      stroke(ln,L.band,L.bandPx);stroke(ln,L.core,L.corePx);
+      ctx.restore();ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;
+    },
     drawFace(bitmap,cx,cy,size,alpha=1){
       if(!ctx||!bitmap||!(size>0)||!(alpha>0))return;
       faces.push(bitmap,cx,cy,size,alpha);

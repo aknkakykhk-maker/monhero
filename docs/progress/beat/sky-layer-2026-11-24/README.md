@@ -201,3 +201,34 @@
 
 - `look.js` に案I・J(SVG の空中の面・区切り・ふち・判定線の形・色・濃さ・太さをそのまま読み、canvas に描き直す)
 - `node compose3.js I,J` … 4回目の比べ絵(`compare4-*`)
+
+---
+
+## 本番に入れた作り(社長の選択「案J 地上を少し暗く」)
+
+- 描く順: **地上のノーツ → 空中の面・区切り・ふち・空中の判定線(地上のノーツの上にだけ重ね直す)+ 重なる所の地上を15%暗く → 空中のノーツ**
+- 重ね方は source-atop(いまノーツが描いてある画素にだけ乗る)。ノーツの無い所は奥の SVG(RhythmSkyStage)のまま見え、ノーツの上では
+  「面と線がノーツの手前にある」のと同じ色になる(計算で一致: 画面 = 面×面の濃さ + ノーツ×ノーツの濃さ×(1-面の濃さ) + 背景×(1-ノーツの濃さ)×(1-面の濃さ))。
+  だから SVG を消さなくても二重にならない。地上のノーツが1つも無いコマは何も描かない(描き直さないコマはそのまま)
+- 2D と WebGL(`rhythmCreateGL2D`)で同じ処理。WebGL の描き口に source-atop の重ね方(`blendFunc(DST_ALPHA, ONE_MINUS_SRC_ALPHA)`)を足した
+- 地上のマスモンの顔(ふだんはフレームの最後に描く)は、空中の面の下になるよう重ね直しの前に描く
+- オプション「空中の道の見え方」: はっきり・控えめは面ごと重ね直す。なしは空中の判定線だけ重ね直し、地上は暗くしない
+- 空中のある譜面(HELL)で、ノーツを canvas で描くときだけ効く。判定・譜面・保存データは変えていない
+- 場所: `monster-hero/src/parts/30-rhythm-play.jsx`(`rhythmSkyCoverShape`・描く輪の並び)/ `monster-hero/data/rhythm-mode.js`(`RHYTHM_CANVAS_RENDERER.drawSkyCover`・GL2D の source-atop)
+
+### 確かめた止め絵(本物の画面・Rebellion HELL 3:44・地上の HOLD が空中の判定線を通る所)
+
+`check-yoko.jpg`・`check-tate.jpg`・`check-rot.jpg`。左から 2D 今 / 案J の見本 / 2D 直したあと / WebGL 今 / WebGL 直したあと。下は拡大。
+2D の直したあとは案J の見本と同じに見える。WebGL もふちと判定線が HOLD の上を通る(ソフトの GPU は1コマが遅いので止まる時刻が少し違う)。
+1枚ずつは `real-2d-*`・`real-gl-*`・`before-gl-*`。控えめ・なしは `real-2d-yoko-el.jpg`・`real-2d-yoko-none.jpg`。
+
+### 重さ(Rebellion HELL を8秒流して、重ね直し1回にかかった時間)
+
+| 描き方 | 平均 | 最大 |
+|---|---|---|
+| 2D(初期設定) | 0.040ms | 0.2ms |
+| 2D(演出量 最小+軽量モード) | 0.038ms | 0.8ms |
+| 2D(全部のせ) | 0.037ms | 0.3ms |
+| WebGL(ソフトの GPU) | 0.139ms | 0.3ms |
+
+1コマの持ち時間(約16.7ms)に比べてごく小さい。`shoot.js --perf 8000`(`--minimal --light`・`--max`・`--gpu`)で測った。
