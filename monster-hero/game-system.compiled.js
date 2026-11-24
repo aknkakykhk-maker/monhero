@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 39a150df3ac78f58
+// source-sha256: e0f36ef7495b8862
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -102688,7 +102688,7 @@ function ModeSelectAssistToggles({
 const RHYTHM_MODE_ASSISTANT_DEFAULT_SHOW = 0.8;
 const RHYTHM_MODE_STAND_FACE = Object.freeze({
   h: 0.16,
-  w: 0.35,
+  w: 0.3,
   below: 2.0,
   eyeMin: 2.4,
   topPad: 0.6,
@@ -102707,7 +102707,8 @@ const rhythmModeStandFacePlace = (face, box, natH) => {
   const R = RHYTHM_MODE_STAND_FACE;
   const topK = Number.isFinite(face.top) ? (face.eye - face.top) / (face.chin - face.eye) : 1.63;
   const visTopK = (face.eye - R.visCut) / (face.chin - face.eye);
-  const eyeK = Math.max(R.eyeMin, topK + R.topPad, visTopK);
+  const canvasTopK = (box.t + vis * face.eye - R.visCut) / faceI;
+  const eyeK = Math.max(R.eyeMin, topK + R.topPad, visTopK, canvasTopK);
   const kh = Math.min(R.h, 1 / (eyeK + 1 + R.below));
   const eyeI = box.t + vis * face.eye,
     cxI = box.l + (box.r - box.l) * face.cx;
@@ -121358,7 +121359,7 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       top: 0.1592,
       eye: 0.3668,
       chin: 0.4305,
-      m: 0.474,
+      m: 0.58,
       cx: 0.493,
       above: 0.7
     },
@@ -121374,7 +121375,7 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       top: 0.0879,
       eye: 0.3357,
       chin: 0.4301,
-      m: 0.702,
+      m: 0.904,
       cx: 0.5388
     },
     atsu: {
@@ -121388,7 +121389,7 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       top: 0.0584,
       eye: 0.3167,
       chin: 0.4297,
-      m: 0.841,
+      m: 0.949,
       cx: 0.5084
     },
     sorashido: {
@@ -121420,7 +121421,7 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       top: 0.0227,
       eye: 0.2938,
       chin: 0.4301,
-      m: 1.014,
+      m: 1.059,
       cx: 0.3906
     }
   },
@@ -121429,7 +121430,7 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       top: 0.1808,
       eye: 0.3718,
       chin: 0.4301,
-      m: 0.434,
+      m: 0.541,
       cx: 0.5138,
       above: 0.95
     },
@@ -121445,7 +121446,7 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       top: 0.1495,
       eye: 0.3352,
       chin: 0.4305,
-      m: 0.709,
+      m: 0.799,
       cx: 0.5309,
       above: 0.95
     }
@@ -121455,7 +121456,7 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       top: 0.116,
       eye: 0.3209,
       chin: 0.4298,
-      m: 0.81,
+      m: 1.01,
       cx: 0.4725,
       above: 0.75
     }
@@ -121491,7 +121492,7 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       top: 0.1807,
       eye: 0.3402,
       chin: 0.4301,
-      m: 0.67,
+      m: 1.014,
       cx: 0.5119,
       above: 0.95
     }
