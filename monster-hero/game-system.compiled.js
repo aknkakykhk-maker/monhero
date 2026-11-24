@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 574f9044004e8c37
+// source-sha256: 47b3ec0806134735
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -8471,6 +8471,8 @@ const Audio_ = (() => {
     bgmVolumePct = 0,
     seVolumePct = 0,
     pageHidden = false;
+  let uiBus = null,
+    uiSeVolumePct = 0;
   let backgroundSeQuiet = false;
   let enabled = false;
   const activeRhythmGains = new Set();
@@ -8517,6 +8519,7 @@ const Audio_ = (() => {
           if (toneCtx && 'updateInterval' in toneCtx) toneCtx.updateInterval = 0.25;
         } catch (e) {}
         seBus = new Tone.Gain(_gainFromPct(seVolumePct)).toDestination();
+        uiBus = new Tone.Gain(_gainFromPct(uiSeVolumePct)).toDestination();
         reverb = new Tone.Reverb({
           decay: 2.4,
           wet: 0.22
@@ -10255,6 +10258,15 @@ const Audio_ = (() => {
       running: !!ctx && ctx.state === 'running'
     };
   };
+  const setUiSeVolume = pct => {
+    uiSeVolumePct = pct;
+    if (uiBus && Tone) {
+      try {
+        uiBus.gain.rampTo(_gainFromPct(pct), 0.05);
+      } catch (e) {}
+    }
+  };
+  const uiSeVolume = () => uiSeVolumePct;
   const setSeVolume = pct => {
     seVolumePct = pct;
     if (seBus && Tone) {
@@ -11321,6 +11333,30 @@ const Audio_ = (() => {
       }, 2200);
     }
   };
+  const uiTap = async () => {
+    if (!enabled) return;
+    await ensure();
+    if (!Tone || !uiBus) return;
+    const t = Tone.now();
+    const s = new Tone.Synth({
+      oscillator: {
+        type: 'sine'
+      },
+      envelope: {
+        attack: 0.001,
+        decay: 0.04,
+        sustain: 0,
+        release: 0.02
+      },
+      volume: -16
+    }).connect(uiBus);
+    s.triggerAttackRelease('C6', '64n', t);
+    setTimeout(() => {
+      try {
+        s.dispose();
+      } catch (e) {}
+    }, 200);
+  };
   const se = Object.fromEntries(Object.entries(fgSe).map(([name, play]) => [name, (...args) => backgroundSeQuiet ? Promise.resolve() : play(...args)]));
   const setVideoHold = on => {
     videoHold = !!on;
@@ -11376,6 +11412,9 @@ const Audio_ = (() => {
     setEnabled,
     isEnabled,
     setSeVolume,
+    setUiSeVolume,
+    uiSeVolume,
+    uiTap,
     setBgmVolume,
     unlock,
     resumeIfNeeded,
@@ -39994,6 +40033,7 @@ const RhythmSongSelect = ({
   };
   const unlocked = item => unlockAll || !song || rhythmDifficultyUnlocked(song.songId, item.id, bestRecords);
   const openList = available.filter(unlocked);
+  const listenList = available;
   const lockHint = (() => {
     if (!song) return '';
     const locked = available.filter(item => !unlocked(item));
@@ -40995,8 +41035,8 @@ const RhythmSongSelect = ({
       style: {
         minHeight: '44px'
       }
-    }, song.credit.link && song.credit.link.label || '詳しく見る', " ↗"), typeof onListen === 'function' && !lockedSong(song) && openList.length > 0 && (() => {
-      const pick = openList.find(item => item.id === listenDiffId) || (difficulty && openList.includes(difficulty) ? difficulty : openList[0]);
+    }, song.credit.link && song.credit.link.label || '詳しく見る', " ↗"), typeof onListen === 'function' && !lockedSong(song) && listenList.length > 0 && (() => {
+      const pick = listenList.find(item => item.id === listenDiffId) || (difficulty && listenList.includes(difficulty) ? difficulty : listenList[0]);
       return React.createElement("div", {
         "data-rhythm-listen-panel": true,
         onClick: e => e.stopPropagation(),
@@ -41006,7 +41046,7 @@ const RhythmSongSelect = ({
       }, "🎧 曲を鑑賞する(ノーツが自動で叩かれます)"), React.createElement("div", {
         "data-rhythm-listen-diffs": true,
         className: "mt-1.5 flex gap-1"
-      }, openList.map(item => {
+      }, listenList.map(item => {
         const on = item === pick;
         const lv = song.difficulties && song.difficulties[item.id] ? song.difficulties[item.id].level : '';
         return React.createElement("button", {
@@ -240119,10 +240159,13 @@ function MonsterHeroGame() {
     Audio_.setSeVolume(ultraEcoSession && !cardScreenOpen || rhythmScreenOpen || assistantLifeRunMuted ? 0 : seVolume);
   }, [seVolume, ultraEcoSession, rhythmScreenOpen, cardScreenOpen, assistantLifeRunMuted]);
   useEffect(() => {
+    if (Audio_.setUiSeVolume) Audio_.setUiSeVolume(ultraEcoSession && !cardScreenOpen ? 0 : seVolume);
+  }, [seVolume, ultraEcoSession, cardScreenOpen]);
+  useEffect(() => {
     if (!(beatRankFx || beatRankBarPlaying) || ultraEcoSession && !cardScreenOpen) return undefined;
     Audio_.setSeVolume(seVolume);
     return () => {
-      Audio_.setSeVolume(ultraEcoSession && !cardScreenOpen || rhythmScreenOpen ? 0 : seVolume);
+      Audio_.setSeVolume(ultraEcoSession && !cardScreenOpen || rhythmScreenOpen || assistantLifeRunMuted ? 0 : seVolume);
     };
   }, [beatRankFx, beatRankBarPlaying, seVolume]);
   const rhythmRunBackgroundQuiet = rhythmScreenOpen && runStage !== null;
@@ -240528,7 +240571,13 @@ function MonsterHeroGame() {
   useEffect(() => {
     const onClick = e => {
       const btn = e.target.closest && e.target.closest('button');
-      if (btn) (quickAnywhereSeQuietRef.current && Audio_.fgSe ? Audio_.fgSe : Audio_.se).tap();
+      if (!btn) return;
+      if (btn.closest('[data-rhythm-play-area]')) return;
+      if (Audio_.uiTap) {
+        Audio_.uiTap();
+        return;
+      }
+      (quickAnywhereSeQuietRef.current && Audio_.fgSe ? Audio_.fgSe : Audio_.se).tap();
     };
     document.addEventListener('click', onClick, true);
     return () => document.removeEventListener('click', onClick, true);
@@ -247553,7 +247602,7 @@ function MonsterHeroGame() {
   const startRhythmListen = (song, difficulty) => {
     if (!song || !difficulty) return;
     if (rhythmSongLocked(song.songId, RHYTHM_SONG_OWNED.get())) return;
-    if (!rhythmChartPlayable(song, difficulty.id) || !rhythmDifficultyUnlocked(song.songId, difficulty.id, rhythmBestRecords)) return;
+    if (!rhythmChartPlayable(song, difficulty.id)) return;
     if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
     setRhythmPlay({
       song,
