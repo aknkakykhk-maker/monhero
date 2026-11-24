@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d7ec4d5283d61f4a
+// source-sha256: df0954b0abed2bf1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -7545,6 +7545,12 @@ const RHYTHM_FX_ITEMS = Object.freeze([{
   label: 'フルコンボの大きな表示',
   weight: 'l',
   options: RHYTHM_FX_ON_OFF
+}, {
+  key: 'resultCount',
+  group: 'combo',
+  label: '結果の画面の演出',
+  weight: 'l',
+  options: RHYTHM_FX_ON_OFF
 }]);
 const RHYTHM_FX_KEYS = Object.freeze(RHYTHM_FX_ITEMS.map(item => item.key));
 const RHYTHM_FX_GROUP_ICONS = Object.freeze({
@@ -7576,7 +7582,8 @@ const RHYTHM_FX_HELP = Object.freeze({
   flash: 'モンスターノーツを取ったときに画面全体が光る演出です。既定は「おまかせ」。まぶしいときは「出さない」にしてください。',
   comboBounce: 'コンボ数が増えるたびに数字が跳ねる動きと、枠の脈打ちです。既定は「おまかせ」（演出量が「最大」「多め」のときに出ます）。',
   combo100: 'コンボが100のくぎりに届いたときのお祝いの表示です。既定は「おまかせ」（演出量「最小」と軽量モードでは出ません）。',
-  fullComboBig: 'フルコンボ・ALL MARVELOUS を取ったときの表示です。最後のノーツのあとに「FULL COMBO」の帯が出て、曲の終わりに大きく祝います。既定は「おまかせ」（演出量「最小」と軽量モードでは帯だけを控えめに出します）。「なし」にすると、どちらも出ません。'
+  fullComboBig: 'フルコンボ・ALL MARVELOUS を取ったときの表示です。最後のノーツのあとに「FULL COMBO」の帯が出て、曲の終わりに大きく祝います。既定は「おまかせ」（演出量「最小」と軽量モードでは帯だけを控えめに出します）。「なし」にすると、どちらも出ません。',
+  resultCount: '曲が終わったあとの結果の画面で、スコア・判定の数・MAX COMBO が0から数え上がり、決まった瞬間に光る演出です。既定は「おまかせ」（演出量・軽量モード・端末の「視差効果を減らす」などに関係なく出ます）。\n止めたいときは「出さない」にしてください。初めから結果の数字が出ます。タップでいつでも飛ばせます。判定・スコアは変わりません。'
 });
 const normalizeRhythmFx = raw => {
   const source = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
@@ -36042,17 +36049,36 @@ const sbSendRhythmTouchDiag = async row => {
   const controller = typeof AbortController === 'function' ? new AbortController() : null;
   const timer = controller ? setTimeout(() => controller.abort(), 8000) : null;
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${RHYTHM_TOUCH_DIAG_TABLE}`, {
+    const post = body => fetch(`${SUPABASE_URL}/rest/v1/${RHYTHM_TOUCH_DIAG_TABLE}`, {
       method: 'POST',
       headers: {
         ...SB_HEADERS,
         'Prefer': 'return=minimal'
       },
-      body: JSON.stringify(row),
+      body: JSON.stringify(body),
       ...(controller ? {
         signal: controller.signal
       } : {})
     });
+    let res = await post(row);
+    if (res.status === 400 && row.stats && typeof row.stats === 'object' && typeof RHYTHM_TOUCH_DIAG_TRIM_ORDER !== 'undefined') {
+      const stats = {
+          ...row.stats
+        },
+        dropped = [];
+      for (const name of RHYTHM_TOUCH_DIAG_TRIM_ORDER) {
+        if (!(name in stats)) continue;
+        delete stats[name];
+        dropped.push(name);
+        stats.trim = dropped.join('+');
+        stats.retry = dropped.length;
+        res = await post({
+          ...row,
+          stats
+        });
+        if (res.status !== 400) break;
+      }
+    }
     if (res.status === 404 || res.status === 401 || res.status === 403) rhythmTouchDiagDisabled = true;
     return res.ok;
   } catch {
@@ -43240,22 +43266,16 @@ const rhythmTouchDiagOf = ({
     }
   };
 };
-const RHYTHM_TOUCH_DIAG_MON_MAX = 3500;
+const RHYTHM_TOUCH_DIAG_MON_MAX = RHYTHM_TOUCH_DIAG_STATS_MAX;
 const rhythmTouchDiagWithMon = (diag, mon) => {
   if (!diag || !diag.stats || !Array.isArray(mon) || !mon.length) return diag;
   const list = mon.map(m => ({
     ...m
   }));
-  const size = () => {
-    try {
-      return JSON.stringify({
-        ...diag.stats,
-        mon: list
-      }).length;
-    } catch {
-      return Infinity;
-    }
-  };
+  const size = () => rhythmJsonbSizeEstimate({
+    ...diag.stats,
+    mon: list
+  });
   for (let i = list.length - 1; i >= 0 && size() > RHYTHM_TOUCH_DIAG_MON_MAX; i--) {
     delete list[i].c;
     if (size() > RHYTHM_TOUCH_DIAG_MON_MAX) delete list[i].i;
@@ -43290,7 +43310,7 @@ const rhythmTouchDiagRecord = async diag => {
       song_id: diag.song_id,
       difficulty: diag.difficulty,
       note_count: Math.max(1, diag.note_count),
-      stats: diag.stats,
+      stats: rhythmTouchDiagFitStats(diag.stats),
       schema_version: RHYTHM_TOUCH_DIAG_VERSION
     });
   } catch {
@@ -44253,7 +44273,7 @@ const RHYTHM_RESULT_COUNT = Object.freeze({
   restAt: 1900,
   endAt: 2400
 });
-const rhythmResultCountAnimOn = settings => !!settings && !settings.lightweightMode && settings.effectAmount !== 'MINIMAL' && !(typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+const rhythmResultCountAnimOn = settings => !!settings && rhythmFxOn(settings, 'resultCount', true);
 const rhythmCountEase = k => 1 - Math.pow(1 - k, 3);
 const rhythmResultCrossMs = (previous, score) => {
   const prev = Number(previous) || 0,

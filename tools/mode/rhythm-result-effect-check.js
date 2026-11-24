@@ -62,9 +62,10 @@ ok('段を器とランクの丸へ渡している',
 ok('リザルトでも演出量と軽量モードを効かせる',
   /data-rhythm-result data-rank=\{rank\}[\s\S]{0,400}data-rhythm-effect=\{settings\.effectAmount\}/.test(game)
   &&/data-rhythm-result data-rank=\{rank\}[\s\S]{0,440}data-rhythm-lightweight=\{settings\.lightweightMode\?'true':'false'\}/.test(game));
-ok('動きだけを止める(光は残す)',
-  html.includes('[data-rhythm-result][data-rhythm-effect="MINIMAL"] [data-rhythm-result-rank],')
-  &&/\[data-rhythm-result\]\[data-rhythm-lightweight="true"\] \[data-rhythm-result-rank\]\{animation:none\}/.test(html));
+// 2026-11-24(r1119-156 追記): 数えているあいだ(data-rhythm-count-anim="1")は、この設定に関係なく動かす。止めるのは数えていないときだけ
+ok('動きだけを止める(光は残す・数えているあいだは止めない)',
+  html.includes('[data-rhythm-result][data-rhythm-effect="MINIMAL"]:not([data-rhythm-count-anim="1"]) [data-rhythm-result-rank],')
+  &&/\[data-rhythm-result\]\[data-rhythm-lightweight="true"\]:not\(\[data-rhythm-count-anim="1"\]\) \[data-rhythm-result-rank\]\{animation:none\}/.test(html));
 
 // ---- 判定の内訳の色(2026-09-13・ユーザー指示「JUST Marvelous（虹）/ Marvelous（金）みたいな」) ----
 ok('リザルトとランキングの両方で、判定ごとの印を付けている',
@@ -236,7 +237,7 @@ ok('コンボ数の色は、遊んでいるときと同じ段(rhythmComboTier)�
   &&game.includes('rhythmComboTier(combo)'));
 ok('リザルトで難易度とコンボ数に色が付いている',
   // 2026-09-26 にリザルトの並びを作り替えた(曲名の下に難易度、MAX COMBO は判定の表の右の札)。色の付け方は同じ
-  /data-rhythm-result-song-name[^\n]{0,120}\{rhythmSongFullName\(song\)\}[\s\S]{0,200}<b data-rhythm-difficulty-name className=\{`font-black \$\{rhythmDifficultyTextColor\(difficulty\.id\)\}`\}/.test(game)
+  /data-rhythm-result-song-name[^\n]{0,120}(?:\{rhythmSongFullName\(song\)\}|<RhythmSongName song=\{song\}\/>)[\s\S]{0,200}<b data-rhythm-difficulty-name className=\{`font-black \$\{rhythmDifficultyTextColor\(difficulty\.id\)\}`\}/.test(game)
   &&/data-rhythm-max-combo className=\{`[^`]*\$\{rhythmComboTextColor\(view\.maxCombo\)\}`\}/.test(game));
 ok('ランキングでも難易度・ランク・コンボ数に色が付いている',
   /data-rhythm-difficulty-name className=\{`font-black \$\{rhythmDifficultyTextColor\(entry\.difficultyId\)\}`\}/.test(game)

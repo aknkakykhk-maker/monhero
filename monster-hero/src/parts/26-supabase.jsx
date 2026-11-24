@@ -2039,10 +2039,22 @@ const sbSendRhythmTouchDiag = async (row) => {
   const controller = typeof AbortController === 'function' ? new AbortController() : null;
   const timer = controller ? setTimeout(() => controller.abort(), 8000) : null;
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${RHYTHM_TOUCH_DIAG_TABLE}`, {
-      method: 'POST', headers: { ...SB_HEADERS, 'Prefer': 'return=minimal' }, body: JSON.stringify(row),
+    const post = body => fetch(`${SUPABASE_URL}/rest/v1/${RHYTHM_TOUCH_DIAG_TABLE}`, {
+      method: 'POST', headers: { ...SB_HEADERS, 'Prefer': 'return=minimal' }, body: JSON.stringify(body),
       ...(controller ? { signal: controller.signal } : {})
     });
+    let res = await post(row);
+    // 【2026-11-24】行の形・大きさの決まりで断られた(400)ときは、大きい物を外して1回ずつ送り直す(モンスターノーツの前後 → 画面の出来事 → 1コマの重さ)。
+    // それまでは断られた行が黙って消えていた(11/17〜11/23 の iPhone の診断)。外した物の名前は stats.trim、断られた回数は stats.retry に残る
+    if (res.status === 400 && row.stats && typeof row.stats === 'object' && typeof RHYTHM_TOUCH_DIAG_TRIM_ORDER !== 'undefined') {
+      const stats = { ...row.stats }, dropped = [];
+      for (const name of RHYTHM_TOUCH_DIAG_TRIM_ORDER) {
+        if (!(name in stats)) continue;
+        delete stats[name]; dropped.push(name); stats.trim = dropped.join('+'); stats.retry = dropped.length;
+        res = await post({ ...row, stats });
+        if (res.status !== 400) break;
+      }
+    }
     if (res.status === 404 || res.status === 401 || res.status === 403) rhythmTouchDiagDisabled = true;
     return res.ok;
   } catch {
