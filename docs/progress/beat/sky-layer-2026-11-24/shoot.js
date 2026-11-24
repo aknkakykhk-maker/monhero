@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // r1119-165 の止め絵を撮る(資料用・ゲーム本体は変えない)。tools/mode/rhythm-listen-play-check.js の入り方を写したもの。
 //   node docs/progress/beat/sky-layer-2026-11-24/shoot.js --song rebellion --diff HELL --from 214000 --shot 224000 --out a.jpg [--portrait] [--rot] [--look A|B|C] [--dump]
+//   --gpu … ノーツを WebGL で描かせる(ソフトの GPU)
 //   --rot … 縦の端末で曲選びの「🔄横」を押してから鑑賞する / --look … 案の見た目を、ページの中でだけ差し替えて撮る(look.js)
 const path = require('path'), fs = require('fs');
 const ROOT = path.resolve(__dirname, '../../../..');
@@ -8,7 +9,7 @@ const argv = process.argv.slice(2);
 const arg = (name, fb = null) => { const i = argv.indexOf(`--${name}`); return i >= 0 && i + 1 < argv.length ? argv[i + 1] : fb; };
 const SONG = arg('song', 'rebellion'), DIFF = arg('diff', 'HELL');
 const FROM = Number(arg('from', 0)), SHOT = Number(arg('shot', 224000)), OUT = arg('out', 'shot.png');
-const ROT = argv.includes('--rot'), PORTRAIT = argv.includes('--portrait') || ROT, GPU = false, LOOK = arg('look'), DUMP = argv.includes('--dump');
+const ROT = argv.includes('--rot'), PORTRAIT = argv.includes('--portrait') || ROT, GPU = argv.includes('--gpu'), LOOK = arg('look'), DUMP = argv.includes('--dump');
 const MINIMAL = argv.includes('--minimal'), LIGHT = argv.includes('--light'), MAX = argv.includes('--max'), FREEZE = argv.includes('--freeze');  // --max … 見た目のおまかせ「全部のせ」(演出量 最大)
 const { chromium } = (() => { try { return require(path.join(ROOT, 'tools/node_modules/playwright')); } catch { return require('playwright'); } })();
 const { createFakeSupabase } = require(path.join(ROOT, 'tools/playbot/lib/fake-supabase.js'));
@@ -44,6 +45,8 @@ const seed = (songId) => `(() => {
   if (GPU) await context.addInitScript(() => { try { localStorage.setItem('mh_rhythm_canvas_v1', 'webgl'); } catch (_) {} });
   await context.addInitScript(eventStorySeed());
   if (MINIMAL || LIGHT || MAX) await context.addInitScript(([m, l, x]) => { try { const s = JSON.parse(localStorage.getItem('mh_rhythm_settings_v1') || '{}'); if (m) s.effectAmount = 'MINIMAL'; if (l) s.lightweightMode = true; if (x) Object.assign(s, { effectAmount: 'NORMAL', stageEffect: 'LIVE', roadFx: true, judgmentFx: true, noteMotionFx: true, comboMilestoneFx: true, noteBloom: true, climaxFx: true }); localStorage.setItem('mh_rhythm_settings_v1', JSON.stringify(s)); } catch (_) {} }, [MINIMAL, LIGHT, MAX]);
+  // --lane em|el|none … オプション「空中の道の見え方」(はっきり/控えめ/なし)
+  if (arg('lane')) await context.addInitScript((v) => { try { localStorage.setItem('mh_sky_lane_look_proto', v); } catch (_) {} }, arg('lane'));
   if (LOOK) await context.addInitScript({ content: `window.__skyLayerLook=${JSON.stringify(LOOK)};` + fs.readFileSync(path.join(__dirname, 'look.js'), 'utf8') });
   const page = await context.newPage();
   const errors = []; page.on('pageerror', (e) => errors.push(String(e).slice(0, 200)));
@@ -73,6 +76,18 @@ const seed = (songId) => `(() => {
   await page.waitForFunction(() => (window.__mhTestHooks?.rhythmSongMs?.() ?? -1) > 0, null, { timeout: 30000, polling: 100 });
   while (FROM > 0) { const ms = await page.evaluate(() => window.__mhTestHooks.rhythmSongMs()); if (ms >= FROM - 10500) break;
     const ok = await page.evaluate(() => { const b = document.querySelector('button[aria-label="10秒送る"]'); if (b) b.click(); return !!b; }); if (!ok) break; await page.waitForTimeout(500); }
+  // --perf <ms> … いまから ms のあいだ、空中の面と線の重ね直し(RHYTHM_CANVAS_RENDERER.drawSkyCover)1回にかかった時間と、1コマの間隔を測って出す(撮らない)
+  if (arg('perf')) {
+    const r = await page.evaluate((ms) => new Promise((ok) => {
+      const R = RHYTHM_CANVAS_RENDERER, f = R.drawSkyCover, t = [], fr = []; let last = 0;
+      if (typeof f === 'function') R.drawSkyCover = function (c) { const a = performance.now(); const v = f.call(this, c); t.push(performance.now() - a); return v; };
+      const tick = (now) => { if (last) fr.push(now - last); last = now; if (fr.reduce((a, b) => a + b, 0) < ms) requestAnimationFrame(tick); else { if (typeof f === 'function') R.drawSkyCover = f; ok({ t, fr, backend: R.backend }); } };
+      requestAnimationFrame(tick);
+    }), Number(arg('perf')));
+    const st = a => { const s = a.slice().sort((x, y) => x - y); return a.length ? `平均 ${(a.reduce((x, y) => x + y, 0) / a.length).toFixed(3)}ms・95% ${s[Math.floor(s.length * .95)].toFixed(3)}ms・最大 ${s[s.length - 1].toFixed(3)}ms(${a.length}回)` : 'なし'; };
+    console.log(`描き方 ${r.backend}${MINIMAL ? '・最小' : ''}${LIGHT ? '・軽量' : ''}${MAX ? '・全部のせ' : ''}: 重ね直し ${st(r.t)} / 1コマの間隔 ${st(r.fr)}`);
+    await context.close(); await browser.close(); return;
+  }
   // --burst <n> … SHOT から 100ms おきに n 枚撮る(地上のノーツがちょうど空中の判定線を通る瞬間を探す用)。名前は OUT の拡張子の前に -<ms>
   const BURST = Number(arg('burst', 0));
   for (const t of BURST ? Array.from({ length: BURST }, (_, i) => SHOT + i * 100) : [SHOT]) {
@@ -90,7 +105,8 @@ const seed = (songId) => `(() => {
     const walk = (el, d) => { if (d > 0) return; for (const c of el.children) { const cs = getComputedStyle(c); const r = c.getBoundingClientRect();
       if (r.width > 50) out.push(`${'  '.repeat(d)}${c.tagName.toLowerCase()} ${[...c.attributes].filter(x => x.name.startsWith('data-')).map(x => x.name).join(' ')} z=${cs.zIndex} pos=${cs.position} ${Math.round(r.width)}x${Math.round(r.height)}`); walk(c, d + 1); } };
     walk(a, 0); return out.join('\n'); }));
-  console.log(`撮った: ${OUT}(${SHOT}ms${LOOK ? '・案' + LOOK : ''}${ROT ? '・🔄横' : PORTRAIT ? '・縦' : '・横'}${MAX ? '・全部のせ' : ''})`);
+  const backend = await page.evaluate(() => { try { return RHYTHM_CANVAS_RENDERER.backend; } catch (_) { return '?'; } }).catch(() => '?');
+  console.log(`撮った: ${OUT}(描き方 ${backend}・${SHOT}ms${LOOK ? '・案' + LOOK : ''}${ROT ? '・🔄横' : PORTRAIT ? '・縦' : '・横'}${MAX ? '・全部のせ' : ''})`);
   if (errors.length) console.log('ページのエラー:', errors.slice(0, 3).join(' / '));
   await context.close(); await browser.close();
 })().catch(e => { console.error(e); process.exit(2); });

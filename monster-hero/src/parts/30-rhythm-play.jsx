@@ -523,7 +523,7 @@ function RhythmSkyStage({plane,still=false}){
   const c='221,214,254',f=v=>Number(v).toFixed(2),fr=plane.front;
   const skyLaneLook=RHYTHM_SKY_LANE_LOOK.id,mk=Array.isArray(plane.markers)?plane.markers:[];
   // 空中の判定線の左右の端。'sky'(見やすさの案)は空中の道の手前の端=空中のノーツが着く幅。'road'(いま)は地上の道の幅+左右の余白
-  const skyLineX=RHYTHM_SKY_LOOK.line.span==='sky'?[fr.l,fr.r]:[fr.roadL-RHYTHM_SKY_LOOK.line.marginPct,fr.roadR+RHYTHM_SKY_LOOK.line.marginPct];
+  const skyLineX=rhythmSkyLineX(plane);
   // 案D の面と柱の形(0〜100 の座標)。面は空中の判定線から奥へ SKY_LANE_DEPTH だけ。持ち上げ方は skyPlane と同じ式
   const skyLaneD=(()=>{
     if(!/^d[12][lm]$/.test(skyLaneLook))return null;
@@ -589,6 +589,28 @@ function RhythmSkyStage({plane,still=false}){
     <line x1={f(skyLineX[0])} y1={f(fr.y)} x2={f(skyLineX[1])} y2={f(fr.y)} stroke={`rgb(${RHYTHM_SKY_LOOK.line.bandRgb})`} strokeOpacity={RHYTHM_SKY_LOOK.line.bandAlpha} strokeWidth={RHYTHM_SKY_LOOK.line.bandPx} vectorEffect="non-scaling-stroke"/>
     <line x1={f(skyLineX[0])} y1={f(fr.y)} x2={f(skyLineX[1])} y2={f(fr.y)} stroke={`rgb(${RHYTHM_SKY_LOOK.line.coreRgb})`} strokeOpacity={RHYTHM_SKY_LOOK.line.coreAlpha} strokeWidth={RHYTHM_SKY_LOOK.line.corePx} vectorEffect="non-scaling-stroke"/>
   </svg>;
+}
+// 空中の判定線の左右の端(0〜100 の座標)。'sky'(見やすさの案)は空中の道の手前の端、'road'(いま)は地上の道の幅+左右の余白
+function rhythmSkyLineX(plane){const fr=plane.front;return RHYTHM_SKY_LOOK.line.span==='sky'?[fr.l,fr.r]:[fr.roadL-RHYTHM_SKY_LOOK.line.marginPct,fr.roadR+RHYTHM_SKY_LOOK.line.marginPct];}
+// 地上のノーツを空中の段の「下」に見せる(2026-11-24 r1119-165 社長の選択「案J 地上を少し暗く」)。
+//   社長「空中レーンって薄いレーンが全体にある感じじゃん？ 地上レーンはこのレーン裏に出すような表示でできない？」
+//   「できたら今までと空中レーンの見た目は変えないで明確に下にあるようにしたい」
+// 空中の面・区切り・ふち・空中の判定線は SVG(RhythmSkyStage・ノーツより奥)にあるので、地上のノーツが空中の判定線を通ると、ノーツが線を隠して「線の上」に見えていた。
+// ノーツの canvas で、地上のノーツを描いたあと・空中のノーツを描く前に、同じ面と線を「今描いてあるノーツの上にだけ」重ね直す(RHYTHM_CANVAS_RENDERER.drawSkyCover)。
+// ノーツの無い所は SVG のまま(見た目は今と同じ・二重にならない)。ノーツの上だけ、面と線がノーツの手前に来たのと同じ絵になる。
+// あわせて、空中の面と重なる所の地上のノーツを 15% だけ暗くする。形・色・濃さ・太さは RhythmSkyStage と同じ値から取る。
+// オプション「空中の道の見え方」: はっきり(em)・控えめ(el/elp)は面ごと重ね直す。なし(none)ほか面の無い見た目は、空中の判定線だけ重ね直し、地上は暗くしない
+const RHYTHM_SKY_COVER_DIM=.15;
+function rhythmSkyCoverShape(plane){
+  if(!plane)return null;
+  const nums=str=>String(str).trim().split(/\s+/).flatMap(q=>q.split(',').map(Number));
+  const look=RHYTHM_SKY_LANE_LOOK.id,L=RHYTHM_SKY_LOOK.line,[x0,x1]=rhythmSkyLineX(plane);
+  // 濃さは RhythmSkyStage の skyELook(案E はっきり/薄め)と同じ
+  const k=look==='em'?{fill:.13,div:.32,edge:.6}:look==='el'||look==='elp'?{fill:.06,div:.16,edge:.32}:null,c='226,232,240';
+  return {key:`${look}|${plane.poly}`,poly:k?nums(plane.poly):null,dividers:k?plane.dividers.map(nums):[],edges:k?[nums(plane.leftEdge),nums(plane.rightEdge)]:[],
+    fill:k?`rgba(${c},${k.fill})`:'',div:k?`rgba(${c},${k.div})`:'',divPx:.8,edge:k?`rgba(${c},${k.edge})`:'',edgePx:1.2,
+    line:{x0,x1,y:plane.front.y,band:`rgba(${L.bandRgb},${L.bandAlpha})`,bandPx:L.bandPx,core:`rgba(${L.coreRgb},${L.coreAlpha})`,corePx:L.corePx},
+    dim:k?`rgba(10,5,30,${RHYTHM_SKY_COVER_DIM})`:''};
 }
 // 縦画面の空中の高さの差を切り替える(デバッグ専用・2026-10-11 社長「中間を作って見比べる」)。保存は新しいキー mh_sky_lift_portrait_proto だけ。
 // 横画面は39%のまま。ふつうのプレイ(この画面を通らない)は16%のまま
@@ -1291,12 +1313,15 @@ const RHYTHM_CELEBRATE_AE=Object.freeze(['#67e8f9','#fde68a']);
 /* ★2026-11-24 案A「判定が1行ずつ決まる」(台帳 r1119-156 追記2・社長の選択)。判定の行を上(JUST MARVELOUS)から1行ずつ数える(1行 260ms・数えるのは 200ms)。
    行が決まるたびに数字が弾んで光の粒が散り「カチッ」と鳴る(行ごとに少し高く)。スコアは行の進みに合わせて積み上がり、全部の行のあとに MAX COMBO が数えられ、
    スコアが決まる(じゃん！・決まる音)→ ランクのはんこ → 称号の札 → 下の物。7行で約2.4秒。タップでいつでも止まった形へ飛ぶのは前のまま */
-const RHYTHM_RESULT_COUNT=Object.freeze({scoreAt:300,scoreMs:2120,janAt:2420,rowAt:300,rowStep:260,rowMs:200,comboAt:2120,comboMs:300,stampAt:2490,ribbonAt:2750,restAt:2750,endAt:3300});
+const RHYTHM_RESULT_COUNT=Object.freeze({scoreAt:300,scoreMs:2120,janAt:2420,rowAt:300,rowStep:260,rowMs:250,comboAt:2120,comboMs:300,stampAt:2490,ribbonAt:2750,restAt:2750,endAt:3300});
 // ★2026-11-24(台帳 r1119-156 追記): 演出量「最小」・軽量モード・端末の「動きを減らす(視差効果を減らす)」では止まった形にしていたが、
 //   社長の iPhone で数え上げが見えなかった(動きを減らすが入っていると止まる)。社長「リザルトなんて重さ関係ないんだから設定とか関係なしに演出強くしていいよ」
 //   → いつも数える。止めるのは演出の設定「結果の画面の演出」を「出さない」にしたときだけ(settings.fx.resultCount)
 const rhythmResultCountAnimOn=settings=>!!settings&&rhythmFxOn(settings,'resultCount',true);
 const rhythmCountEase=k=>1-Math.pow(1-k,3);
+// 判定の行・MAX COMBO の数え上げの曲線(2026-11-24 r1119-166・社長「数値の上がりがカクカクしてる」)。スコアと同じ3乗では、0.2秒の出だしの1コマで行の数の2割以上が飛んでいた。
+//   2乗のゆるい減速にして、数える長さを 0.25 秒(1行の間隔 0.26 秒の中)にした。出だしの1コマの増えは 23%→13%。スコアは3乗のまま(新記録の時刻 rhythmResultCrossMs が3乗で決まっている)
+const rhythmCountEaseSoft=k=>1-(1-k)*(1-k);
 // 数え上げが前の自己ベストを越える時刻(結果の画面に出てからのミリ秒)。越えないときは null
 const rhythmResultCrossMs=(previous,score)=>{const prev=Number(previous)||0,to=Number(score)||0;if(!(prev>0)||!(to>prev))return null;
   return Math.round(RHYTHM_RESULT_COUNT.scoreAt+(1-Math.cbrt(1-prev/to))*RHYTHM_RESULT_COUNT.scoreMs);};
@@ -1509,6 +1534,9 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
       // (道の上の端では地上と空中が1点に寄って柱が見えないので、見える所まで手前へ出す)
       farPosts:(p=>[[p.l,p.gy,p.l,p.y],[p.r,p.gy,p.r,p.y]].map(a=>a.map(f)))(pts[Math.round(steps*.4)])};
   })();
+  // 地上のノーツの上に重ね直す空中の面と線の形(r1119-165)。ノーツを canvas で描くときだけ。描く輪からは ref で読む(輪が覚えている skyPlane は判定ラインを測る前のものなので)
+  const skyCoverRef=useRef(null),skyDeferRef=useRef([]);
+  if(canvasNotes&&skyPlane){if(!skyCoverRef.current||skyCoverRef.current.key!==`${RHYTHM_SKY_LANE_LOOK.id}|${skyPlane.poly}`)skyCoverRef.current=rhythmSkyCoverShape(skyPlane);}else skyCoverRef.current=null;
   // 交差の持ち替え(2026-10-11 社長「交差のときは指を置き換えている」)。タッチ側の見回りが2本の SLIDE の指と帯を結び直すとき、
   // 本体の「指→ノーツ」の表(run.activePointers・note.activePointerId)も同じ瞬間に入れ替える。表が想定と違えば断る(タッチ側も結び直さない)
   useEffect(()=>{
@@ -2606,17 +2634,20 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
   const resultRootRef=useRef(null);
   const recordSeFireRef=useRef(null);
   const resultCountId=view.status==='result'&&view.result&&view.result.countAnim?view.result.countAnim.id:null;
+  // 数え上げが終わった(タップで飛ばしたときも)印。それまで下の経験値の棒は動き出さない(r1119-166。同じ時に動くと数え上げのコマが落ちていた)
+  const [resultCountDoneId,setResultCountDoneId]=useState(null);
+  const resultCountRunning=resultCountId!==null&&resultCountDoneId!==resultCountId;
   React.useLayoutEffect(()=>{
     const root=resultRootRef.current;
     if(!resultCountId||!root)return undefined;
     const T=RHYTHM_RESULT_COUNT;
-    const items=[...root.querySelectorAll('[data-count-to]')].map(el=>({el,to:Number(el.dataset.countTo)||0,at:Number(el.dataset.countAt)||0,ms:Math.max(1,Number(el.dataset.countMs)||1),plain:el.dataset.countPlain==='1'}));
+    const items=[...root.querySelectorAll('[data-count-to]')].map(el=>({el,to:Number(el.dataset.countTo)||0,at:Number(el.dataset.countAt)||0,ms:Math.max(1,Number(el.dataset.countMs)||1),plain:el.dataset.countPlain==='1',ease:el.dataset.countPlain==='1'?rhythmCountEaseSoft:rhythmCountEase}));
     const vs=root.querySelector('[data-rhythm-result-vs-best]'),fill=vs&&vs.querySelector('[data-rhythm-result-vs-best-fill]'),diff=root.querySelector('[data-rhythm-best-diff]');
     const card=root.querySelector('[data-rhythm-result-score-card]');
     const prev=card?Number(card.dataset.countPrev)||0:0,score=card?Number(card.dataset.countScore)||0:0,gaugeMax=vs?Math.max(1,Number(vs.dataset.max)||1):1;
     const wait=root.querySelector('[data-record-wait]');
     let raf=0,start=0,over=false;
-    const valueAt=(item,t)=>Math.round(item.to*rhythmCountEase(Math.max(0,Math.min(1,(t-item.at)/item.ms))));
+    const valueAt=(item,t)=>Math.round(item.to*item.ease(Math.max(0,Math.min(1,(t-item.at)/item.ms))));
     const draw=t=>{
       for(const item of items){const v=valueAt(item,t);const text=item.plain?String(v):v.toLocaleString();if(item.el.textContent!==text)item.el.textContent=text;}
       {const v=Math.round(score*rhythmCountEase(Math.max(0,Math.min(1,(t-T.scoreAt)/T.scoreMs))));
@@ -2625,7 +2656,7 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
         // 越えた瞬間(初めての記録は数字が決まる瞬間)に札を金色へ
         if(!over&&wait&&((prev>0&&v>prev)||(!(prev>0)&&t>=T.janAt))){over=true;wait.removeAttribute('data-record-wait');}}
     };
-    const finish=()=>{if(raf&&typeof cancelAnimationFrame==='function')cancelAnimationFrame(raf);raf=0;draw(1e9);if(wait)wait.removeAttribute('data-record-wait');root.setAttribute('data-rhythm-count-anim','done');
+    const finish=()=>{if(raf&&typeof cancelAnimationFrame==='function')cancelAnimationFrame(raf);raf=0;draw(1e9);if(wait)wait.removeAttribute('data-record-wait');root.setAttribute('data-rhythm-count-anim','done');setResultCountDoneId(resultCountId);
       root.removeEventListener('pointerdown',skipCount);};
     const skipCount=()=>{if(root.getAttribute('data-rhythm-count-anim')!=='1')return;finish();if(recordSeFireRef.current)recordSeFireRef.current();};
     if(typeof requestAnimationFrame!=='function'){finish();return undefined;}
@@ -2712,6 +2743,8 @@ if(stagePulseOn){const pulseEl=stagePulseRef.current,notes=run.notes;let index=r
 const placeable=!!travel&&travel.ready!==false;
 // canvas で描くフレームの準備(全面を消し、大きさが変わっていれば作り直す)。DOM 版では何もしない
 const canvasReady=canvasNotes&&placeable&&RHYTHM_CANVAS_RENDERER.begin(travel.rect,{nowMs:frameNowMs,effect:settings.effectAmount,lightweight:settings.lightweightMode,maxDpr:noteCanvasMaxDprRef.current,sizeScale:settings.noteSize/100,bloom:settingsLiveRef.current.noteBloom===true,motion:settingsLiveRef.current.noteMotionFx===true,...rhythmFxRenderOptions(settings,settingsLiveRef.current)});
+// 空中のある譜面では、空中のノーツをこのフレームの最後(地上のノーツと、その上に重ね直す空中の面と線のあと)に回す(r1119-165)
+const skyCover=canvasReady?skyCoverRef.current:null,skyDefer=skyDeferRef.current;skyDefer.length=0;
 // 叩いたときの光(WebGL のときだけ canvas で描く)。光の層はノーツの下なので、ノーツより先に描く
 // ライブ背景「ライブ」の拍は、背景の描き直し(別の描き直しの輪)がこの時刻から数える
 {const stageClock=stageClockRef.current;stageClock.t=visualTime;stageClock.at=frameNowMs;}
@@ -2825,7 +2858,7 @@ if(!note.done&&note.activePointerId===null&&note.releasedAtMs!=null){
 // フレームの時刻と入力の時刻が最大80msずれるため、判定窓ちょうどで回収すると
 // 「窓の内側で叩いたのにノーツがもう無い」が起きる(rhythm-mode.js の該当コメント)。
 if(!note.done&&note.activePointerId===null&&note.releasedAtMs==null&&!placeable&&songTimeMs-(note.timeMs+settings.judgmentTimingOffsetMs)>RHYTHM_MISS_RECLAIM_MS){note.done=true;note._rhythmUnplaceable=true;return;}
-if(!note.done&&note.activePointerId===null&&note.releasedAtMs==null&&songTimeMs-(note.timeMs+settings.judgmentTimingOffsetMs)>RHYTHM_MISS_RECLAIM_MS)applyJudgment(note,'MISS',songTimeMs-note.timeMs);if(canvasNotes){paintCanvasNote(note);return;}
+if(!note.done&&note.activePointerId===null&&note.releasedAtMs==null&&songTimeMs-(note.timeMs+settings.judgmentTimingOffsetMs)>RHYTHM_MISS_RECLAIM_MS)applyJudgment(note,'MISS',songTimeMs-note.timeMs);if(canvasNotes){if(skyCover&&rhythmNoteIsSky(note)){skyDefer.push(note);return;}paintCanvasNote(note);return;}
 const el=laneRefs.current[note.index];if(!el)return;
 // 失敗したHOLD/SLIDEは薄いグレーにして、約0.3秒で消す(2026-10-12 以前は譜面上の終端まで流し続けていた)。
 // 「もう取れない」ことが見えるようにするための表示だけの扱いで、判定・スコアには関与しない。
@@ -2894,6 +2927,8 @@ for(let i=0;i<heldNotes.length;i++){const note=heldNotes[i],ticks=Number(note._r
   if(combo&&typeof combo.animate==='function'){try{combo._rhythmTickAnim?.cancel?.();combo._rhythmTickAnim=combo.animate(weak?[{transform:'scale(1)'},{transform:'scale(1.12)',offset:.25},{transform:'scale(1)'}]:[{transform:'scale(1)',filter:'brightness(1)'},{transform:'scale(1.28)',filter:`brightness(1.9) drop-shadow(0 0 10px ${slide?'#f0abfc':'#67e8f9'})`,offset:.22},{transform:'scale(1)',filter:'brightness(1)'}],{duration:weak?160:240,easing:'ease-out'});}catch(_){}}
 }
 run.notesReady=true;
+// 地上のノーツ → 空中の面と線(地上のノーツの上にだけ・地上を少し暗く) → 空中のノーツ(r1119-165)
+if(skyCover){RHYTHM_CANVAS_RENDERER.drawSkyCover(skyCover);for(let i=0;i<skyDefer.length;i++)paintCanvasNote(skyDefer[i]);skyDefer.length=0;}
 if(canvasNotes)RHYTHM_CANVAS_RENDERER.end();
 RHYTHM_PERF.notes(perfScanned,perfDrawn,scanFrom,run.notesAscending);
 // 押せている帯が変わったときだけ、道の光を付け直す(毎フレームは作り直さない)
@@ -3669,7 +3704,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
     ランクアップは重ねた画面(PlayerRankUpFx)の1回だけで伝え、この箱の中の RANK UP の札と判子は index.html で隠す(N51)。横・PC は左の列のまま */}
 {/* ビートランクの経験値の棒(2026-10-30 社長「終わったあとに経験値ゲージのバーの動きが見れない」)。(はじめはリザルトのいちばん上に置いていた。2026-11-22 にスコアと判定の下へ移した)
     この1曲でたまった経験値と、ランクが上がったときのごほうび。裏のクイック周回の「経験値」と取り違えないよう、札に「🎵 ビートランク」と書く(PlayerRankGain) */}
-<PlayerRankGain kind="beat" award={beatRankAward} onFull={onRankBarFull} onDone={onRankBarDone} onStart={onRankBarStart} next={beatRankAward?`ランク${playerRankInfo(beatRankAward.xp).rank+1}で ${beatRankRewardText(playerRankInfo(beatRankAward.xp).rank+1)}`:''}/>
+<PlayerRankGain kind="beat" award={beatRankAward} hold={resultCountRunning} onFull={onRankBarFull} onDone={onRankBarDone} onStart={onRankBarStart} next={beatRankAward?`ランク${playerRankInfo(beatRankAward.xp).rank+1}で ${beatRankRewardText(playerRankInfo(beatRankAward.xp).rank+1)}`:''}/>
 {/* 達成をひと目で分かるように、いちばん上の称号だけを大きく出す(2026-09-03)。
     ALL MARVELOUS > ALL EXCELLENT > FULL COMBO の順に上位。残りは下に小さく並べる。 */}
 {(result.fullCombo||result.allExcellent||result.allMarvelous)&&<div data-rhythm-result-celebrate className="my-3 text-center">

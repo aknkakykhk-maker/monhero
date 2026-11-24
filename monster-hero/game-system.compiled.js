@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c683d8804244f1fa
+// source-sha256: 271c5e4e0b82cd65
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -8471,6 +8471,8 @@ const Audio_ = (() => {
     bgmVolumePct = 0,
     seVolumePct = 0,
     pageHidden = false;
+  let uiBus = null,
+    uiSeVolumePct = 0;
   let backgroundSeQuiet = false;
   let enabled = false;
   const activeRhythmGains = new Set();
@@ -8517,6 +8519,7 @@ const Audio_ = (() => {
           if (toneCtx && 'updateInterval' in toneCtx) toneCtx.updateInterval = 0.25;
         } catch (e) {}
         seBus = new Tone.Gain(_gainFromPct(seVolumePct)).toDestination();
+        uiBus = new Tone.Gain(_gainFromPct(uiSeVolumePct)).toDestination();
         reverb = new Tone.Reverb({
           decay: 2.4,
           wet: 0.22
@@ -10255,6 +10258,15 @@ const Audio_ = (() => {
       running: !!ctx && ctx.state === 'running'
     };
   };
+  const setUiSeVolume = pct => {
+    uiSeVolumePct = pct;
+    if (uiBus && Tone) {
+      try {
+        uiBus.gain.rampTo(_gainFromPct(pct), 0.05);
+      } catch (e) {}
+    }
+  };
+  const uiSeVolume = () => uiSeVolumePct;
   const setSeVolume = pct => {
     seVolumePct = pct;
     if (seBus && Tone) {
@@ -11321,6 +11333,30 @@ const Audio_ = (() => {
       }, 2200);
     }
   };
+  const uiTap = async () => {
+    if (!enabled) return;
+    await ensure();
+    if (!Tone || !uiBus) return;
+    const t = Tone.now();
+    const s = new Tone.Synth({
+      oscillator: {
+        type: 'sine'
+      },
+      envelope: {
+        attack: 0.001,
+        decay: 0.04,
+        sustain: 0,
+        release: 0.02
+      },
+      volume: -16
+    }).connect(uiBus);
+    s.triggerAttackRelease('C6', '64n', t);
+    setTimeout(() => {
+      try {
+        s.dispose();
+      } catch (e) {}
+    }, 200);
+  };
   const se = Object.fromEntries(Object.entries(fgSe).map(([name, play]) => [name, (...args) => backgroundSeQuiet ? Promise.resolve() : play(...args)]));
   const setVideoHold = on => {
     videoHold = !!on;
@@ -11376,6 +11412,9 @@ const Audio_ = (() => {
     setEnabled,
     isEnabled,
     setSeVolume,
+    setUiSeVolume,
+    uiSeVolume,
+    uiTap,
     setBgmVolume,
     unlock,
     resumeIfNeeded,
@@ -39994,6 +40033,7 @@ const RhythmSongSelect = ({
   };
   const unlocked = item => unlockAll || !song || rhythmDifficultyUnlocked(song.songId, item.id, bestRecords);
   const openList = available.filter(unlocked);
+  const listenList = available;
   const lockHint = (() => {
     if (!song) return '';
     const locked = available.filter(item => !unlocked(item));
@@ -40995,8 +41035,8 @@ const RhythmSongSelect = ({
       style: {
         minHeight: '44px'
       }
-    }, song.credit.link && song.credit.link.label || '詳しく見る', " ↗"), typeof onListen === 'function' && !lockedSong(song) && openList.length > 0 && (() => {
-      const pick = openList.find(item => item.id === listenDiffId) || (difficulty && openList.includes(difficulty) ? difficulty : openList[0]);
+    }, song.credit.link && song.credit.link.label || '詳しく見る', " ↗"), typeof onListen === 'function' && !lockedSong(song) && listenList.length > 0 && (() => {
+      const pick = listenList.find(item => item.id === listenDiffId) || (difficulty && listenList.includes(difficulty) ? difficulty : listenList[0]);
       return React.createElement("div", {
         "data-rhythm-listen-panel": true,
         onClick: e => e.stopPropagation(),
@@ -41006,7 +41046,7 @@ const RhythmSongSelect = ({
       }, "🎧 曲を鑑賞する(ノーツが自動で叩かれます)"), React.createElement("div", {
         "data-rhythm-listen-diffs": true,
         className: "mt-1.5 flex gap-1"
-      }, openList.map(item => {
+      }, listenList.map(item => {
         const on = item === pick;
         const lv = song.difficulties && song.difficulties[item.id] ? song.difficulties[item.id].level : '';
         return React.createElement("button", {
@@ -42347,7 +42387,7 @@ function RhythmSkyStage({
     fr = plane.front;
   const skyLaneLook = RHYTHM_SKY_LANE_LOOK.id,
     mk = Array.isArray(plane.markers) ? plane.markers : [];
-  const skyLineX = RHYTHM_SKY_LOOK.line.span === 'sky' ? [fr.l, fr.r] : [fr.roadL - RHYTHM_SKY_LOOK.line.marginPct, fr.roadR + RHYTHM_SKY_LOOK.line.marginPct];
+  const skyLineX = rhythmSkyLineX(plane);
   const skyLaneD = (() => {
     if (!/^d[12][lm]$/.test(skyLaneLook)) return null;
     const SKY_LANE_DEPTH = .14,
@@ -42604,6 +42644,49 @@ function RhythmSkyStage({
     strokeWidth: RHYTHM_SKY_LOOK.line.corePx,
     vectorEffect: "non-scaling-stroke"
   }));
+}
+function rhythmSkyLineX(plane) {
+  const fr = plane.front;
+  return RHYTHM_SKY_LOOK.line.span === 'sky' ? [fr.l, fr.r] : [fr.roadL - RHYTHM_SKY_LOOK.line.marginPct, fr.roadR + RHYTHM_SKY_LOOK.line.marginPct];
+}
+const RHYTHM_SKY_COVER_DIM = .15;
+function rhythmSkyCoverShape(plane) {
+  if (!plane) return null;
+  const nums = str => String(str).trim().split(/\s+/).flatMap(q => q.split(',').map(Number));
+  const look = RHYTHM_SKY_LANE_LOOK.id,
+    L = RHYTHM_SKY_LOOK.line,
+    [x0, x1] = rhythmSkyLineX(plane);
+  const k = look === 'em' ? {
+      fill: .13,
+      div: .32,
+      edge: .6
+    } : look === 'el' || look === 'elp' ? {
+      fill: .06,
+      div: .16,
+      edge: .32
+    } : null,
+    c = '226,232,240';
+  return {
+    key: `${look}|${plane.poly}`,
+    poly: k ? nums(plane.poly) : null,
+    dividers: k ? plane.dividers.map(nums) : [],
+    edges: k ? [nums(plane.leftEdge), nums(plane.rightEdge)] : [],
+    fill: k ? `rgba(${c},${k.fill})` : '',
+    div: k ? `rgba(${c},${k.div})` : '',
+    divPx: .8,
+    edge: k ? `rgba(${c},${k.edge})` : '',
+    edgePx: 1.2,
+    line: {
+      x0,
+      x1,
+      y: plane.front.y,
+      band: `rgba(${L.bandRgb},${L.bandAlpha})`,
+      bandPx: L.bandPx,
+      core: `rgba(${L.coreRgb},${L.coreAlpha})`,
+      corePx: L.corePx
+    },
+    dim: k ? `rgba(10,5,30,${RHYTHM_SKY_COVER_DIM})` : ''
+  };
 }
 function RhythmSkyLiftSwitch() {
   const read = () => {
@@ -44339,7 +44422,7 @@ const RHYTHM_RESULT_COUNT = Object.freeze({
   janAt: 2420,
   rowAt: 300,
   rowStep: 260,
-  rowMs: 200,
+  rowMs: 250,
   comboAt: 2120,
   comboMs: 300,
   stampAt: 2490,
@@ -44349,6 +44432,7 @@ const RHYTHM_RESULT_COUNT = Object.freeze({
 });
 const rhythmResultCountAnimOn = settings => !!settings && rhythmFxOn(settings, 'resultCount', true);
 const rhythmCountEase = k => 1 - Math.pow(1 - k, 3);
+const rhythmCountEaseSoft = k => 1 - (1 - k) * (1 - k);
 const rhythmResultCrossMs = (previous, score) => {
   const prev = Number(previous) || 0,
     to = Number(score) || 0;
@@ -44736,6 +44820,11 @@ const RhythmTapTest = ({
       farPosts: (p => [[p.l, p.gy, p.l, p.y], [p.r, p.gy, p.r, p.y]].map(a => a.map(f)))(pts[Math.round(steps * .4)])
     };
   })();
+  const skyCoverRef = useRef(null),
+    skyDeferRef = useRef([]);
+  if (canvasNotes && skyPlane) {
+    if (!skyCoverRef.current || skyCoverRef.current.key !== `${RHYTHM_SKY_LANE_LOOK.id}|${skyPlane.poly}`) skyCoverRef.current = rhythmSkyCoverShape(skyPlane);
+  } else skyCoverRef.current = null;
   useEffect(() => {
     RHYTHM_GESTURE_RUNTIME.setSlideSwapListener?.((keyA, keyB, noteA, noteB) => {
       RHYTHM_INPUT_REC.event('swap', {
@@ -46602,6 +46691,8 @@ const RhythmTapTest = ({
   const resultRootRef = useRef(null);
   const recordSeFireRef = useRef(null);
   const resultCountId = view.status === 'result' && view.result && view.result.countAnim ? view.result.countAnim.id : null;
+  const [resultCountDoneId, setResultCountDoneId] = useState(null);
+  const resultCountRunning = resultCountId !== null && resultCountDoneId !== resultCountId;
   React.useLayoutEffect(() => {
     const root = resultRootRef.current;
     if (!resultCountId || !root) return undefined;
@@ -46611,7 +46702,8 @@ const RhythmTapTest = ({
       to: Number(el.dataset.countTo) || 0,
       at: Number(el.dataset.countAt) || 0,
       ms: Math.max(1, Number(el.dataset.countMs) || 1),
-      plain: el.dataset.countPlain === '1'
+      plain: el.dataset.countPlain === '1',
+      ease: el.dataset.countPlain === '1' ? rhythmCountEaseSoft : rhythmCountEase
     }));
     const vs = root.querySelector('[data-rhythm-result-vs-best]'),
       fill = vs && vs.querySelector('[data-rhythm-result-vs-best-fill]'),
@@ -46624,7 +46716,7 @@ const RhythmTapTest = ({
     let raf = 0,
       start = 0,
       over = false;
-    const valueAt = (item, t) => Math.round(item.to * rhythmCountEase(Math.max(0, Math.min(1, (t - item.at) / item.ms))));
+    const valueAt = (item, t) => Math.round(item.to * item.ease(Math.max(0, Math.min(1, (t - item.at) / item.ms))));
     const draw = t => {
       for (const item of items) {
         const v = valueAt(item, t);
@@ -46651,6 +46743,7 @@ const RhythmTapTest = ({
       draw(1e9);
       if (wait) wait.removeAttribute('data-record-wait');
       root.setAttribute('data-rhythm-count-anim', 'done');
+      setResultCountDoneId(resultCountId);
       root.removeEventListener('pointerdown', skipCount);
     };
     const skipCount = () => {
@@ -46878,6 +46971,9 @@ const RhythmTapTest = ({
         motion: settingsLiveRef.current.noteMotionFx === true,
         ...rhythmFxRenderOptions(settings, settingsLiveRef.current)
       });
+      const skyCover = canvasReady ? skyCoverRef.current : null,
+        skyDefer = skyDeferRef.current;
+      skyDefer.length = 0;
       {
         const stageClock = stageClockRef.current;
         stageClock.t = visualTime;
@@ -47102,6 +47198,10 @@ const RhythmTapTest = ({
         }
         if (!note.done && note.activePointerId === null && note.releasedAtMs == null && songTimeMs - (note.timeMs + settings.judgmentTimingOffsetMs) > RHYTHM_MISS_RECLAIM_MS) applyJudgment(note, 'MISS', songTimeMs - note.timeMs);
         if (canvasNotes) {
+          if (skyCover && rhythmNoteIsSky(note)) {
+            skyDefer.push(note);
+            return;
+          }
           paintCanvasNote(note);
           return;
         }
@@ -47271,6 +47371,11 @@ const RhythmTapTest = ({
         }
       }
       run.notesReady = true;
+      if (skyCover) {
+        RHYTHM_CANVAS_RENDERER.drawSkyCover(skyCover);
+        for (let i = 0; i < skyDefer.length; i++) paintCanvasNote(skyDefer[i]);
+        skyDefer.length = 0;
+      }
       if (canvasNotes) RHYTHM_CANVAS_RENDERER.end();
       RHYTHM_PERF.notes(perfScanned, perfDrawn, scanFrom, run.notesAscending);
       if (settings.holdTrace === false) {
@@ -49290,6 +49395,7 @@ const RhythmTapTest = ({
     })())), React.createElement(PlayerRankGain, {
       kind: "beat",
       award: beatRankAward,
+      hold: resultCountRunning,
       onFull: onRankBarFull,
       onDone: onRankBarDone,
       onStart: onRankBarStart,
@@ -68293,7 +68399,8 @@ function PlayerRankXpBar({
   award,
   onFull = null,
   onDone = null,
-  onStart = null
+  onStart = null,
+  hold = false
 }) {
   ensurePlayerRankXpBarCss();
   const k = playerRankKind(kind);
@@ -68523,7 +68630,7 @@ function PlayerRankXpBar({
     sendDone();
   };
   React.useEffect(() => {
-    if (!seen || !(add > 0) || !runRef.current.running) return undefined;
+    if (!seen || hold || !(add > 0) || !runRef.current.running) return undefined;
     const run = runRef.current;
     if (onStart) onStart();
     const moteTimer = setInterval(() => {
@@ -68644,7 +68751,7 @@ function PlayerRankXpBar({
       clearInterval(moteTimer);
       run.timers.forEach(clearTimeout);
     };
-  }, [seen]);
+  }, [seen, hold]);
   const need = playerRankNeed(view.rank);
   const w = `${pct(view.rank, view.into)}%`;
   return React.createElement("div", {
@@ -68723,7 +68830,8 @@ function PlayerRankGain({
   next = '',
   onFull = null,
   onDone = null,
-  onStart = null
+  onStart = null,
+  hold = false
 }) {
   const [done, setDone] = React.useState(false);
   if (!award || !(award.add > 0)) return null;
@@ -68735,6 +68843,7 @@ function PlayerRankGain({
   }, React.createElement(PlayerRankXpBar, {
     kind: kind,
     award: award,
+    hold: hold,
     onFull: onFull,
     onStart: onStart,
     onDone: () => {
@@ -70874,9 +70983,9 @@ const quickAnywhereFloatHits = (el, spot, known = null) => {
   if (typeof document === 'undefined' || !el) return 0;
   const R = quickAnywhereFloatRect(el, spot);
   let hits = 0;
-  for (const o of document.querySelectorAll('button,a,[role=button]')) {
+  for (const o of document.querySelectorAll('button,a,[role=button],[data-quick-avoid]')) {
     if (o === el || el.contains(o) || o.contains(el) || o.closest('[data-quick-anywhere-detail]') || !o.getClientRects().length) continue;
-    if (known && known.has(o)) continue;
+    if (known && known.has(o) && !o.hasAttribute('data-quick-avoid')) continue;
     const cs = getComputedStyle(o);
     if (cs.visibility === 'hidden' || cs.pointerEvents === 'none' || Number(cs.opacity) === 0) continue;
     const r = o.getBoundingClientRect();
@@ -70930,7 +71039,7 @@ const QuickAnywhereFloat = ({
       const el = ref.current;
       if (typeof document !== 'undefined' && el) {
         const R = quickAnywhereFloatRect(el, base);
-        for (const o of document.querySelectorAll('button,a,[role=button]')) {
+        for (const o of document.querySelectorAll('button,a,[role=button],[data-quick-avoid]')) {
           const r = o.getBoundingClientRect();
           if (!(Math.min(R.right, r.right) - Math.max(R.left, r.left) > 1 && Math.min(R.bottom, r.bottom) - Math.max(R.top, r.top) > 1)) set.add(o);
         }
@@ -225310,6 +225419,13 @@ const useCardShareEntry = (breederId, self = false) => {
   return state;
 };
 const CARD_SHARE_TILE_CLASS = 'rounded-2xl border-2 border-amber-600/60 bg-indigo-950/50 p-2';
+const CARD_SHARE_NAME_STYLE = {
+  display: '-webkit-box',
+  WebkitBoxOrient: 'vertical',
+  WebkitLineClamp: 3,
+  overflow: 'hidden',
+  ...JA_WRAP_STYLE
+};
 const CardShareDeckThumbs = ({
   entry
 }) => {
@@ -225541,6 +225657,7 @@ const CardShareDeckTile = ({
   const tile = self ? React.createElement("button", {
     type: "button",
     "data-profile-show": "card-deck",
+    "data-quick-avoid": true,
     "data-card-share-tile": "self",
     onClick: () => {
       if (onOpen) {
@@ -225556,8 +225673,10 @@ const CardShareDeckTile = ({
   }, React.createElement(CardShareDeckThumbs, {
     entry: entry
   })), React.createElement("b", {
-    className: "mt-1 block truncate text-[14px] font-black text-white"
-  }, t.name || 'デッキ'), React.createElement("small", {
+    "data-card-share-tile-name": true,
+    className: "mt-1 block break-words text-[13px] font-black leading-tight text-white",
+    style: CARD_SHARE_NAME_STYLE
+  }, jaWrap(t.name || 'デッキ')), React.createElement("small", {
     className: "block text-[11px] font-black text-pink-300"
   }, cardShareSmartText(t).split('(')[0])) : React.createElement(React.Fragment, null, React.createElement("span", {
     className: "mt-2 block text-[13px] font-black text-slate-300"
@@ -225565,6 +225684,7 @@ const CardShareDeckTile = ({
     className: "block text-[10px] font-bold text-slate-400"
   }, "押すとデッキ登録へ"))) : React.createElement("div", {
     "data-profile-show": "card-deck",
+    "data-quick-avoid": true,
     "data-card-share-tile": "friend",
     className: CARD_SHARE_TILE_CLASS
   }, head, React.createElement("span", {
@@ -225572,8 +225692,10 @@ const CardShareDeckTile = ({
   }, React.createElement(CardShareDeckThumbs, {
     entry: entry
   })), React.createElement("b", {
-    className: "mt-1 block truncate text-[14px] font-black text-white"
-  }, t.name || 'デッキ'), React.createElement("small", {
+    "data-card-share-tile-name": true,
+    className: "mt-1 block break-words text-[13px] font-black leading-tight text-white",
+    style: CARD_SHARE_NAME_STYLE
+  }, jaWrap(t.name || 'デッキ')), React.createElement("small", {
     className: "block text-[11px] font-black text-pink-300"
   }, cardShareSmartText(t).split('(')[0]), React.createElement("button", {
     type: "button",
@@ -240080,10 +240202,13 @@ function MonsterHeroGame() {
     Audio_.setSeVolume(ultraEcoSession && !cardScreenOpen || rhythmScreenOpen || assistantLifeRunMuted ? 0 : seVolume);
   }, [seVolume, ultraEcoSession, rhythmScreenOpen, cardScreenOpen, assistantLifeRunMuted]);
   useEffect(() => {
+    if (Audio_.setUiSeVolume) Audio_.setUiSeVolume(ultraEcoSession && !cardScreenOpen ? 0 : seVolume);
+  }, [seVolume, ultraEcoSession, cardScreenOpen]);
+  useEffect(() => {
     if (!(beatRankFx || beatRankBarPlaying) || ultraEcoSession && !cardScreenOpen) return undefined;
     Audio_.setSeVolume(seVolume);
     return () => {
-      Audio_.setSeVolume(ultraEcoSession && !cardScreenOpen || rhythmScreenOpen ? 0 : seVolume);
+      Audio_.setSeVolume(ultraEcoSession && !cardScreenOpen || rhythmScreenOpen || assistantLifeRunMuted ? 0 : seVolume);
     };
   }, [beatRankFx, beatRankBarPlaying, seVolume]);
   const rhythmRunBackgroundQuiet = rhythmScreenOpen && runStage !== null;
@@ -240489,7 +240614,13 @@ function MonsterHeroGame() {
   useEffect(() => {
     const onClick = e => {
       const btn = e.target.closest && e.target.closest('button');
-      if (btn) (quickAnywhereSeQuietRef.current && Audio_.fgSe ? Audio_.fgSe : Audio_.se).tap();
+      if (!btn) return;
+      if (btn.closest('[data-rhythm-play-area]')) return;
+      if (Audio_.uiTap) {
+        Audio_.uiTap();
+        return;
+      }
+      (quickAnywhereSeQuietRef.current && Audio_.fgSe ? Audio_.fgSe : Audio_.se).tap();
     };
     document.addEventListener('click', onClick, true);
     return () => document.removeEventListener('click', onClick, true);
@@ -247514,7 +247645,7 @@ function MonsterHeroGame() {
   const startRhythmListen = (song, difficulty) => {
     if (!song || !difficulty) return;
     if (rhythmSongLocked(song.songId, RHYTHM_SONG_OWNED.get())) return;
-    if (!rhythmChartPlayable(song, difficulty.id) || !rhythmDifficultyUnlocked(song.songId, difficulty.id, rhythmBestRecords)) return;
+    if (!rhythmChartPlayable(song, difficulty.id)) return;
     if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
     setRhythmPlay({
       song,
