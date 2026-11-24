@@ -27,6 +27,10 @@ PREFIX = dict(mua='myua', kiki='kiki', momosuke='momosuke', atsu='atsu', kyuko='
 EXPR = ('normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited')
 
 
+# 手で置いた cx(道具では長い髪に引かれてずれる組)。キーは 'stand-*/助手id'。立ち絵を目盛りつきで見て両目の真ん中の画素 x を置く
+MANUAL_X = {'stand-normal/mua': 437, 'stand-halloween/mua': 437}
+
+
 def face_cx(path, eye):
     """見えている体の中での顔の横の真ん中(0〜1)。eye は見えている体の上を0・下を1とした目の線。
     8表情は normal と同じ枠・同じ顔の位置に重ねてあるので、8枚で測った真ん中の値をとる
@@ -46,6 +50,9 @@ def face_cx(path, eye):
             continue
         vals.append(_run_cx(ae[..., 3] > ALPHA, y, (l + r) / 2.0))
     hx = float(np.median(vals)) if vals else (l + r) / 2.0
+    key = '%s/%s' % (os.path.basename(os.path.dirname(path)), {v: k for k, v in PREFIX.items()}.get(os.path.basename(path).split('_')[0], ''))
+    if key in MANUAL_X:
+        hx = float(MANUAL_X[key])
     return round(float((hx - l) / (r - l)), 4)
 
 

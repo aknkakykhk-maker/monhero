@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e0f36ef7495b8862
+// source-sha256: 548f78da97b2a2f1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -102688,7 +102688,7 @@ function ModeSelectAssistToggles({
 const RHYTHM_MODE_ASSISTANT_DEFAULT_SHOW = 0.8;
 const RHYTHM_MODE_STAND_FACE = Object.freeze({
   h: 0.16,
-  w: 0.3,
+  w: 0.4,
   below: 2.0,
   eyeMin: 2.4,
   topPad: 0.6,
@@ -121360,7 +121360,7 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       eye: 0.3668,
       chin: 0.4305,
       m: 0.58,
-      cx: 0.493,
+      cx: 0.5339,
       above: 0.7
     },
     momosuke: {
@@ -121431,7 +121431,7 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       eye: 0.3718,
       chin: 0.4301,
       m: 0.541,
-      cx: 0.5138,
+      cx: 0.5108,
       above: 0.95
     },
     momosuke: {
