@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3d9fa7abb98a288f
+// source-sha256: b96ff8d93f5cb9c7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -225281,7 +225281,7 @@ const CARD_SHARE_NAME_STYLE = {
   WebkitBoxOrient: 'vertical',
   WebkitLineClamp: 3,
   overflow: 'hidden',
-  overflowWrap: 'anywhere'
+  ...JA_WRAP_STYLE
 };
 const CardShareDeckThumbs = ({
   entry
@@ -225533,7 +225533,7 @@ const CardShareDeckTile = ({
     "data-card-share-tile-name": true,
     className: "mt-1 block break-words text-[13px] font-black leading-tight text-white",
     style: CARD_SHARE_NAME_STYLE
-  }, t.name || 'デッキ'), React.createElement("small", {
+  }, jaWrap(t.name || 'デッキ')), React.createElement("small", {
     className: "block text-[11px] font-black text-pink-300"
   }, cardShareSmartText(t).split('(')[0])) : React.createElement(React.Fragment, null, React.createElement("span", {
     className: "mt-2 block text-[13px] font-black text-slate-300"
@@ -225552,7 +225552,7 @@ const CardShareDeckTile = ({
     "data-card-share-tile-name": true,
     className: "mt-1 block break-words text-[13px] font-black leading-tight text-white",
     style: CARD_SHARE_NAME_STYLE
-  }, t.name || 'デッキ'), React.createElement("small", {
+  }, jaWrap(t.name || 'デッキ')), React.createElement("small", {
     className: "block text-[11px] font-black text-pink-300"
   }, cardShareSmartText(t).split('(')[0]), React.createElement("button", {
     type: "button",
