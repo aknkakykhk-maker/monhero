@@ -96,7 +96,7 @@ function judge({ base } = {}) {
   const mergeNeed = save.length + rank.length + feature.length > 0;
   const need = mergeNeed || edge.length > 0;
   // 確認のモデル(docs/rules/MODEL_ROUTING.md): 新しい画面・公開の印 → 要所のモデルで最終確認 / 保存・ランキング → 設計のモデル / ほか → 検査のモデル
-  const model = !need ? '' : final ? 'claude-fable-5-2' : (save.length || rank.length || edge.length) ? 'claude-opus-5-5' : 'claude-sonnet-5-5';
+  const model = !need ? '' : final ? 'claude-opus-5-5' : (save.length || rank.length || edge.length) ? 'claude-opus-5-5' : 'claude-sonnet-5-5';
   return { need, mergeNeed, save, rank, feature, edge, final, model, files: files.length, base: ref };
 }
 
