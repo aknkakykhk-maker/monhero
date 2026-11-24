@@ -43,7 +43,7 @@ check('毎コマ数える(計測ON/OFFに関係なく)',/RHYTHM_FRAME_DIAG\.tick
 check('演奏の始めに数え直す',/RHYTHM_FRAME_DIAG\.reset\(\)/.test(play));
 check('デバッグ・練習・判定調整からは送らない(今までどおり)',/const touchDiag=!debugPlay&&!tutorial&&!calibrating\?(rhythmTouchDiagWithMon\()?rhythmTouchDiagOf\(\{[^)]*frame:rhythmFrameDiagOf\(\)\}\)(,RHYTHM_FRAME_DIAG\.monSnapshot\(\)\))?:null;/.test(play));
 // モンスターノーツの前後(2026-10-16): stats.mon は行の大きさの上限(4KB)を超えないよう削ってから足す
-check('モンスターノーツの前後は大きさを見て削ってから足す(stats.mon)',/const rhythmTouchDiagWithMon=[\s\S]{0,600}RHYTHM_TOUCH_DIAG_MON_MAX[\s\S]{0,400}list\.pop\(\)/.test(play)&&/RHYTHM_FRAME_DIAG\.mark\(songTimeMs,judgment,/.test(play));
+check('モンスターノーツの前後は大きさを見て削ってから足す(stats.mon)',/const rhythmTouchDiagWithMon=[\s\S]{0,600}RHYTHM_TOUCH_DIAG_MON_MAX[\s\S]{0,400}list\.pop\(\)/.test(play)&&/const size=\(\)=>rhythmJsonbSizeEstimate\(\{\.\.\.diag\.stats,mon:list\}\);/.test(play)&&/RHYTHM_FRAME_DIAG\.mark\(songTimeMs,judgment,/.test(play));
 // 3. 読む側: frame の無い古い行・壊れた行を読んでも壊れない
 const {frameSummary}=require(path.join(ROOT,'tools/mode/rhythm-touch-diag.js'));
 const rows=[

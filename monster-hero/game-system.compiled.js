@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 089202a910261d8e
+// source-sha256: df0954b0abed2bf1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -36049,17 +36049,36 @@ const sbSendRhythmTouchDiag = async row => {
   const controller = typeof AbortController === 'function' ? new AbortController() : null;
   const timer = controller ? setTimeout(() => controller.abort(), 8000) : null;
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${RHYTHM_TOUCH_DIAG_TABLE}`, {
+    const post = body => fetch(`${SUPABASE_URL}/rest/v1/${RHYTHM_TOUCH_DIAG_TABLE}`, {
       method: 'POST',
       headers: {
         ...SB_HEADERS,
         'Prefer': 'return=minimal'
       },
-      body: JSON.stringify(row),
+      body: JSON.stringify(body),
       ...(controller ? {
         signal: controller.signal
       } : {})
     });
+    let res = await post(row);
+    if (res.status === 400 && row.stats && typeof row.stats === 'object' && typeof RHYTHM_TOUCH_DIAG_TRIM_ORDER !== 'undefined') {
+      const stats = {
+          ...row.stats
+        },
+        dropped = [];
+      for (const name of RHYTHM_TOUCH_DIAG_TRIM_ORDER) {
+        if (!(name in stats)) continue;
+        delete stats[name];
+        dropped.push(name);
+        stats.trim = dropped.join('+');
+        stats.retry = dropped.length;
+        res = await post({
+          ...row,
+          stats
+        });
+        if (res.status !== 400) break;
+      }
+    }
     if (res.status === 404 || res.status === 401 || res.status === 403) rhythmTouchDiagDisabled = true;
     return res.ok;
   } catch {
@@ -43247,22 +43266,16 @@ const rhythmTouchDiagOf = ({
     }
   };
 };
-const RHYTHM_TOUCH_DIAG_MON_MAX = 3500;
+const RHYTHM_TOUCH_DIAG_MON_MAX = RHYTHM_TOUCH_DIAG_STATS_MAX;
 const rhythmTouchDiagWithMon = (diag, mon) => {
   if (!diag || !diag.stats || !Array.isArray(mon) || !mon.length) return diag;
   const list = mon.map(m => ({
     ...m
   }));
-  const size = () => {
-    try {
-      return JSON.stringify({
-        ...diag.stats,
-        mon: list
-      }).length;
-    } catch {
-      return Infinity;
-    }
-  };
+  const size = () => rhythmJsonbSizeEstimate({
+    ...diag.stats,
+    mon: list
+  });
   for (let i = list.length - 1; i >= 0 && size() > RHYTHM_TOUCH_DIAG_MON_MAX; i--) {
     delete list[i].c;
     if (size() > RHYTHM_TOUCH_DIAG_MON_MAX) delete list[i].i;
@@ -43297,7 +43310,7 @@ const rhythmTouchDiagRecord = async diag => {
       song_id: diag.song_id,
       difficulty: diag.difficulty,
       note_count: Math.max(1, diag.note_count),
-      stats: diag.stats,
+      stats: rhythmTouchDiagFitStats(diag.stats),
       schema_version: RHYTHM_TOUCH_DIAG_VERSION
     });
   } catch {
