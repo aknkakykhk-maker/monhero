@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e0d45fdaac48c620
+// generated-sha256: 9a544a886da87ab2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -15961,7 +15961,7 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
         </button>
         <Wrapper
           {...(directItem ? { ...(directItem.attr||{}), onClick:directItem.onClick, 'aria-label':`${who.name}と${directLabel}する`, 'data-bubble-direct':'' } : useMenu ? { onClick:()=>setMenuOpen(!menuOpen), 'aria-label':`${who.name}のメニューを開く`, 'aria-expanded':menuOpen, 'data-bubble-menu-toggle':'' } : hasDetail ? { onClick:()=>setOpen(true), 'aria-label':`${who.name}の説明を開く` } : {})}
-          className={`relative flex-1 min-w-0 text-left rounded-2xl border-2 ${oneLine?'flex items-center gap-1.5 px-2.5 py-1 max-h-[36px]':compact?'px-2.5 py-1.5':'px-3 py-2'} ${hasDetail?'active:scale-[.99]':''}`}
+          className={`relative flex-1 min-w-0 text-left rounded-2xl border-2 ${oneLine?'flex items-center gap-1.5 px-2.5 py-1 max-h-[36px]':compact?'px-2.5 py-1.5':'px-3 py-2'} ${hasDetail?'active:scale-[.99]':''} ${directItem&&hasDetail?'pr-10':''}`}
           style={{ borderColor:color, backgroundColor:'var(--mh-bubble-bg, rgba(15,23,42,0.92))' }}>
           {/* oneLine … 名前とセリフを1行に並べ、はみ出す分は … で切る。「タップで詳しく」は右端の小さな「›」(高さ36px以内。
               2026-11-08 マモリ: 曲えらびの横の欄は空きが40pxほどしかなく、3行の吹き出しが画面の下へはみ出していた) */}
@@ -15987,8 +15987,8 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
         </Wrapper>
         {/* 吹き出しの角の「?」… この画面の遊び方(説明の窓)を開く。吹き出しを押したときはおしゃべり(r1119-155 案A) */}
         {directItem&&hasDetail&&<button type="button" onClick={()=>{ setOpenTopic(null); setOpen(true); }} aria-label={`${who.name}にこの画面の遊び方を聞く`} data-bubble-help-q
-          className="mh-hit-expand absolute -top-2.5 flex h-8 w-8 items-center justify-center rounded-full border-2 text-[14px] font-black shadow active:scale-90"
-          style={{ right: foldKey&&!collapseHidden ? '48px' : '-6px', zIndex:5, borderColor:color, color, backgroundColor:'rgba(15,23,42,0.97)' }}>?</button>}
+          className="mh-hit-expand absolute top-1 flex h-8 w-8 items-center justify-center rounded-full border-2 text-[14px] font-black shadow active:scale-90"
+          style={{ right: foldKey&&!collapseHidden ? '56px' : '4px', zIndex:5, borderColor:color, color, backgroundColor:'rgba(15,23,42,0.97)' }}>?</button>}
         {/* 開いている間は、吹き出しの右に「💬▲」(押すと畳む・画面ごとに覚える。r1119-135) */}
         {foldKey&&!collapseHidden&&<BubbleFoldButton open onToggle={() => setCollapsed(true)} size="sm" className="self-center" data-bubble-collapse=""/>}
         {useMenu&&menuOpen&&<>

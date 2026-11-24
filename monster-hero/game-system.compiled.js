@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 73621936af1c15db
+// source-sha256: de647c57e85b6f2f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -23184,7 +23184,7 @@ const AssistantBubble = ({
     onClick: () => setOpen(true),
     'aria-label': `${who.name}の説明を開く`
   } : {}, {
-    className: `relative flex-1 min-w-0 text-left rounded-2xl border-2 ${oneLine ? 'flex items-center gap-1.5 px-2.5 py-1 max-h-[36px]' : compact ? 'px-2.5 py-1.5' : 'px-3 py-2'} ${hasDetail ? 'active:scale-[.99]' : ''}`,
+    className: `relative flex-1 min-w-0 text-left rounded-2xl border-2 ${oneLine ? 'flex items-center gap-1.5 px-2.5 py-1 max-h-[36px]' : compact ? 'px-2.5 py-1.5' : 'px-3 py-2'} ${hasDetail ? 'active:scale-[.99]' : ''} ${directItem && hasDetail ? 'pr-10' : ''}`,
     style: {
       borderColor: color,
       backgroundColor: 'var(--mh-bubble-bg, rgba(15,23,42,0.92))'
@@ -23303,9 +23303,9 @@ const AssistantBubble = ({
     },
     "aria-label": `${who.name}にこの画面の遊び方を聞く`,
     "data-bubble-help-q": true,
-    className: "mh-hit-expand absolute -top-2.5 flex h-8 w-8 items-center justify-center rounded-full border-2 text-[14px] font-black shadow active:scale-90",
+    className: "mh-hit-expand absolute top-1 flex h-8 w-8 items-center justify-center rounded-full border-2 text-[14px] font-black shadow active:scale-90",
     style: {
-      right: foldKey && !collapseHidden ? '48px' : '-6px',
+      right: foldKey && !collapseHidden ? '56px' : '4px',
       zIndex: 5,
       borderColor: color,
       color,
