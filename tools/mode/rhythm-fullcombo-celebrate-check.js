@@ -35,8 +35,9 @@ check('称号の優先順はリザルト画面の表示と同じ(ALL MARVELOUS >
 check('celebrateTitleが無い(何も達成していない)ときは今までどおりresultへ直行する',
   finishBlock.includes('status:showCelebrate?\'celebrate\':\'result\''));
 // 2026-11-01 「フルコンボの大きな表示」を1つずつ選べるようにした。おまかせ(既定)はこれまでどおり MINIMAL・軽量モードで出さない
-check('演出量MINIMAL・軽量モードではcelebrate画面を出さない(重くしないため)',
-  finishBlock.includes("const showCelebrate=!!celebrateTitle&&!failed&&rhythmFxOn(settings,'fullComboBig',!settings.lightweightMode&&settings.effectAmount!=='MINIMAL');"));
+// 2026-11-24(台帳 r1119-143 追記4・社長「結果と同じくいつも出す」): 最小・軽量モードでも出す。止めるのは「フルコンボの大きな表示」を「出さない」にしたときだけ
+check('お祝いの画面は演出量・軽量モードに関係なく出し、「フルコンボの大きな表示」を「出さない」にしたときだけ出さない',
+  finishBlock.includes("const showCelebrate=!!celebrateTitle&&!failed&&rhythmFxOn(settings,'fullComboBig',true);"));
 // 2026-09-12・ユーザー指示「終了後にクリアか失敗かもわかるようにして」。
 // 失敗(ライフ0のまま完走)でお祝いの画面が出ることはない。
 // ※BAD・MISSが1つも無いとライフは減らないので理屈上は重ならないが、
@@ -117,8 +118,8 @@ check('上の段ほど音を重ねる(ae はきらめき、am はさらに和音
 // --- CSS ---
 check('スラムイン演出のCSSがある',html.includes('[data-rhythm-celebrate-slam]{')&&html.includes('@keyframes mhRhythmCelebrateTitle'));
 check('段ごとの色(ae・am)のCSSがある',html.includes('[data-tier="ae"] [data-rhythm-celebrate-slam]{')&&html.includes('[data-tier="am"] [data-rhythm-celebrate-slam]{'));
-check('動きを減らす設定の端末では動かさない(柱・筋・粒は出さず、称号だけ止めて出す)',
-  /@media \(prefers-reduced-motion:reduce\)\{\s*\[data-rhythm-celebrate\] \*\{animation:none!important\}/.test(html));
+check('動きを減らす設定の端末でも止めない(お祝いの画面の動きを止める規則を置かない)',
+  !/@media \(prefers-reduced-motion:reduce\)\{\s*\[data-rhythm-celebrate\] \*\{animation:none!important\}/.test(html));
 
 // --- 最後のノーツのあとの「FULL COMBO」の帯(2026-11-12・社長「モンビーでフルコンだったのになにも演出なかった」) ---
 // それまでの祝いは曲の音が終わってから・しかも演出量「最小」(マルチの既定の「軽さ優先」)では何も出なかった。
@@ -129,16 +130,15 @@ check('帯は判定の処理の中で、取った数が総ノーツ数に届い�
   &&game.includes('>=chart.totalNotes){run.fullComboBandShown=true;'));
 check('帯の称号もリザルトと同じ rhythmResultAchievements(落とした刻みも見る)で決める',
   game.includes('const ach=rhythmResultAchievements(run.counts,chart.totalNotes,run.tickRules?run.tickMiss:0);'));
-check('「フルコンボの大きな表示」を「なし」にしたときだけ出さず、軽量・最小でも控えめな形で出す',
-  /const rhythmFullComboBandMode=settings=>\{const v=rhythmFxPick\(settings,'fullComboBig'\);if\(v==='OFF'\|\|v==='NONE'\)return 'off';/.test(game)
-  &&game.includes("settings.effectAmount==='MINIMAL'))return 'modest';return 'full';"));
+check('「フルコンボの大きな表示」を「出さない」にしたときだけ出さず、軽量・最小でも全部出す',
+  /const rhythmFullComboBandMode=settings=>\{const v=rhythmFxPick\(settings,'fullComboBig'\);if\(v==='OFF'\|\|v==='NONE'\)return 'off';\s*return 'full';\}/.test(game));
 check('帯は演奏の場所の中に置き、はじめは隠しておく(描き直しを起こさない)',
   game.includes('<div ref={fullComboBandRef} data-rhythm-fullcombo-band hidden aria-hidden="true">'));
 check('帯はタップを通し、控えめな形では紙ふぶき・光の筋を出さない',
   /\[data-rhythm-fullcombo-band\]\{position:absolute;inset:0;z-index:\d+;pointer-events:none;/.test(html)
   &&html.includes('[data-rhythm-fullcombo-band][data-mode="modest"] [data-rhythm-fullcombo-confetti]{display:none}'));
-check('動きを減らす設定の端末では帯の文字を動かさない',
-  /@media \(prefers-reduced-motion:reduce\)\{\s*\[data-rhythm-fullcombo-title\]\{animation:none\}/.test(html));
+check('動きを減らす設定の端末でも帯の文字を止めない',
+  !/@media \(prefers-reduced-motion:reduce\)\{\s*\[data-rhythm-fullcombo-title\]\{animation:none\}/.test(html));
 
 // --- ヘルプ(遊び方として説明されているか) ---
 check('ヘルプにフルコンボ演出の説明がある',/フルコンボ|FULL COMBO/.test(help)&&help.includes('releaseFlag'));
