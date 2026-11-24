@@ -190,20 +190,17 @@ ok('光る段の息づかいも底上げした濃さの範囲で揺れる',(()=>
   return lows.length===2&&lows.every(value=>value>=comboTierOpacity[0]);
 })());
 // コンボ数の大きさ。置き場所ごとの基準へ割合を掛ける(段の倍率とは別)
-// コンボ数はノーツより後ろ(z-2)なので、道の上へはみ出した桁はノーツの層の道の面・空中の面の下で暗くなる
-// (2026-11-24 r1119-160 社長「コンボの1000以上の1番左の数値に色がない」)。端の置き場所では桁が増えたら縮めて道の外へ収める
-ok('端に置いたコンボ数は、桁が増えても道(空中の面)の縁より外へ収める',
-  game.includes('const rhythmComboFitScale=')&&game.includes('const rhythmComboRoadEdge=')
-  &&/rhythmComboFitScale=[\s\S]{0,120}position==='CENTER'\)return 1;/.test(game)
-  &&game.includes('rhythmSkyLiftRatio(mid)')
-  &&game.includes('skyChart={!!skyChart}'));
+// 端に置いたコンボ数は、ノーツの層(z-5)より上に描く(2026-11-24 r1119-160 社長「コンボの1000以上の1番左の数値に色がない」)。
+// 4桁以上で左の桁がレーンへはみ出し、ノーツの層が描く道の面・空中の面の下で灰色に暗くなっていた。
+// 縮めて収める直しは🔄横で小さくなりすぎた(社長「縦横ボタンで横にしたときにコンボがめちゃくちゃ小さくなってる」)ので、大きさは変えない
+ok('端に置いたコンボ数はノーツの層より上に描き、大きさは縮めない',
+  html.includes('[data-rhythm-combo-box]:not([data-combo-pos="CENTER"]){z-index:6}')
+  &&!game.includes('rhythmComboFitScale'));
 ok('コンボ数の大きさを設定から変えられる',
   game.includes('comboSize:100')
   &&game.includes('comboSize:rhythmFiniteStep(source.comboSize,RHYTHM_COMBO_SIZE_MIN,RHYTHM_COMBO_SIZE_MAX,RHYTHM_COMBO_SIZE_STEP')
   &&game.includes("stepper('comboSize',RHYTHM_COMBO_SIZE_MIN,RHYTHM_COMBO_SIZE_MAX,RHYTHM_COMBO_SIZE_STEP")
-  // 設定の大きさに、道の外へ収める倍率(comboFit・r1119-160)を掛ける
-  &&game.includes("const comboSizePct=rhythmFiniteInRange(settings.comboSize,RHYTHM_COMBO_SIZE_MIN,RHYTHM_COMBO_SIZE_MAX,100);")
-  &&game.includes("'--mh-combo-size':comboSizePct/100*comboFit")
+  &&game.includes("'--mh-combo-size':rhythmFiniteInRange(settings.comboSize,RHYTHM_COMBO_SIZE_MIN,RHYTHM_COMBO_SIZE_MAX,100)/100")
   &&html.includes('font-size:calc(min(52px,13.5vw) * var(--mh-combo-size,1))')
   &&html.includes('font-size:calc(min(34px,9vw) * var(--mh-combo-size,1))'));
 // 2026-09-13・Android勢から「重い」との声。見た目は標準のまま残し、
