@@ -249,9 +249,9 @@ const SCENES = [
   // ---- HOME まわり ----
   { id: 'home', area: 'HOME', name: 'HOME', go: async () => true },
   { id: 'home-changelog', area: 'HOME', name: '更新履歴', go: via([/^更新履歴$/], { keepLast: true }) },
-  // HOME の助手は吹き出しを押すとメニュー(おしゃべりする・詳しく見る)が出る(r1119-050 窓-36)
-  { id: 'home-assistant-menu', area: 'HOME', name: '助手のメニュー(HOME)', go: via([/のメニューを開く$/]) },
-  { id: 'home-assistant-help', area: 'HOME', name: '助手の説明(HOME)', go: async (s) => (await tapAny(s, /のメニューを開く$/)) && (await tapAny(s, /詳しく見る/)) }, // メニューを開いた直後に幕を払うと閉じるので、続けて押す
+  // 2026-11-24 r1119-155 案A: メニューは無くなり、吹き出しを押すとすぐおしゃべり。この場面は吹き出しの角の「?」が見える HOME のまま撮る
+  { id: 'home-assistant-menu', area: 'HOME', name: '助手の吹き出しと「?」(HOME)', go: async () => true },
+  { id: 'home-assistant-help', area: 'HOME', name: '助手の説明(HOME)', go: (s) => tapAny(s, /にこの画面の遊び方を聞く$/) },
   { id: 'profile', area: 'HOME', name: 'プロフィール', go: via([/^プロフィールを開く$/]) },
   // イベント回想(社長の指摘の較正 president-eye: 回想の見出しの絵文字・お話の締めの「終わり」の中心)
   { id: 'replay-list', area: 'HOME', name: 'プロフィール → イベント回想(まとまりを開いた所)', go: (s) => openReplay(s, false) },
