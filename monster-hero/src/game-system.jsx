@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2de2791f7bc87b01
+// generated-sha256: 252f83a7a8982baa
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -6354,6 +6354,11 @@ const Audio_ = (() => {
   //   読み込めなかったときは onFail。ほかの曲を鳴らしたら外れる(ほかの画面の曲には効かない)
   let bgmOnce = null;
   let currentKey = null, bgmVolumePct = 0, seVolumePct = 0, pageHidden = false;
+  // ボタンのタップ音だけの口(2026-11-24 r1119-164 社長「モンビーだけタップ音ならない」→ 案B)。
+  //   モンヒロビートの画面・助手ライフの裏クイック中は、裏のバトルの音を消すために seBus を0にしている。
+  //   タップ音もその seBus を通っていたので一緒に消えていた。タップ音だけはこの uiBus を通し、保存してある効果音の音量に従わせる
+  //   (超省エネの0は呼ぶ側 60-app.jsx が渡す)。裏のバトルの音は今までどおり seBus のまま
+  let uiBus = null, uiSeVolumePct = 0;
   let backgroundSeQuiet = false; // 裏の周回の効果音を止める印(下の setBackgroundSeQuiet)
   let enabled = false;
   // 音ゲーのBGM音量は、メインのBGM音量設定(対数カーブ・bgmGain)を経由させず独立させる。
@@ -6387,6 +6392,7 @@ const Audio_ = (() => {
         //   効果音は Tone.now() から直接鳴らしていて時計の予定表(Transport)を使わないので、音の出方は変わらない
         try { const toneCtx = Tone.getContext && Tone.getContext(); if (toneCtx && 'updateInterval' in toneCtx) toneCtx.updateInterval = 0.25; } catch (e) {}
         seBus = new Tone.Gain(_gainFromPct(seVolumePct)).toDestination();
+        uiBus = new Tone.Gain(_gainFromPct(uiSeVolumePct)).toDestination();
         reverb = new Tone.Reverb({ decay: 2.4, wet: 0.22 }).connect(seBus);
         try { await reverb.ready; } catch (e) {}
         ready = true;
@@ -7428,6 +7434,8 @@ const Audio_ = (() => {
     const beeped = await playTestTone();
     return { rebuilt, beeped, running: !!ctx && ctx.state === 'running' };
   };
+  const setUiSeVolume = (pct) => { uiSeVolumePct = pct; if (uiBus && Tone) { try { uiBus.gain.rampTo(_gainFromPct(pct), 0.05); } catch (e) {} } };
+  const uiSeVolume = () => uiSeVolumePct; // 検査が「ボタンの音の口が0でないか」を見る口
   const setSeVolume = (pct) => { seVolumePct = pct; if (seBus && Tone) { try { seBus.gain.rampTo(_gainFromPct(pct), 0.05); } catch (e) {} } };
   const setBgmVolume = (pct) => { bgmVolumePct = pct; applyTrackGain(resolveTrack(previewKey || currentKey)); if (pct <= 0) { stopPreview(false); stopOthers(); } else if (enabled && currentKey && !previewKey) playBGM(currentKey); };
   const resumeIfNeeded = async () => { await ensureAudioCtxRunning(); if (Tone) { try { await Tone.start(); started = true; } catch (e) {} } if (enabled && currentKey && !bgmSource) playBGM(currentKey); };
@@ -7528,6 +7536,8 @@ const Audio_ = (() => {
     // 合体演出用: 上昇アルペジオ→(両者が重なるタイミングで)ベルの一撃+きらめき和音の「ピカーン」
     fusion: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.25, release: 0.5 }, volume: -10 }).connect(reverb); const seq = [[0,'C5','8n'],[0.12,'E5','8n'],[0.24,'G5','8n'],[0.36,'C6','8n'],[0.48,'E6','4n']]; seq.forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt)); const bt = t + 0.6; const bell = new Tone.MetalSynth({ frequency: 800, envelope: { attack: 0.001, decay: 0.6, release: 0.3 }, harmonicity: 8, modulationIndex: 20, resonance: 5000, octaves: 1.5, volume: -14 }).connect(reverb); bell.triggerAttackRelease('16n', bt); const sparkle = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.4, sustain: 0.1, release: 0.5 }, volume: -12 }).connect(reverb); ['C6','E6','G6','C7'].forEach((n, i) => sparkle.triggerAttackRelease(n, '8n', bt + i * 0.03)); setTimeout(() => { try { v.dispose(); bell.dispose(); sparkle.dispose(); } catch (e) {} }, 2200); }
   };
+  // ボタンのタップ音(音は fgSe.tap と同じ。通る口だけが uiBus)。全体ミュート(enabled)には従う。裏のバトルの音を止める印は見ない
+  const uiTap = async () => { if (!enabled) return; await ensure(); if (!Tone || !uiBus) return; const t = Tone.now(); const s = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.001, decay: 0.04, sustain: 0, release: 0.02 }, volume: -16 }).connect(uiBus); s.triggerAttackRelease('C6', '64n', t); setTimeout(() => { try { s.dispose(); } catch (e) {} }, 200); };
   const se = Object.fromEntries(Object.entries(fgSe).map(([name, play]) => [name, (...args) => (backgroundSeQuiet ? Promise.resolve() : play(...args))]));
 
   const setVideoHold = (on) => {
@@ -7564,7 +7574,7 @@ const Audio_ = (() => {
   // お知らせ・ヘルプの動画にかける音量(2026-11-14 社長「予告動画の音が設定の音量と関係なく鳴る」)。
   // 動画は曲と同じ扱いにして、BGM の音量と同じ曲線(_gainFromPct)で返す。音を切っている・BGM が 0 なら 0
   const videoGain = () => (enabled && bgmVolumePct > 0 ? _gainFromPct(bgmVolumePct) : 0);
-  return { currentBgmKey: () => currentKey, isBackgroundSeQuiet, setVideoHold, videoGain, setStoryEndFade, setStoryOpenFade, playSeFile, preloadSE, playBGM, fadeToBGM, stopBGM, setBgmOnce, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
+  return { currentBgmKey: () => currentKey, isBackgroundSeQuiet, setVideoHold, videoGain, setStoryEndFade, setStoryOpenFade, playSeFile, preloadSE, playBGM, fadeToBGM, stopBGM, setBgmOnce, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setUiSeVolume, uiSeVolume, uiTap, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
 })();
 
 // ---- part: 14-success-sound.jsx ----
@@ -24951,6 +24961,10 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
   // unlockAll … デバッグの全解放の曲えらび(RHYTHM_DEBUG_SELECT)だけが立てる。鍵を見ずに全部の難易度を選べる
   const unlocked=item=>unlockAll||!song||rhythmDifficultyUnlocked(song.songId,item.id,bestRecords);
   const openList=available.filter(unlocked);
+  // 曲鑑賞で選べる難易度(2026-11-24 r1119-168 社長「モンビーの鑑賞ははじめからヘルまでできるようにして」)。
+  //   難易度の鍵(HARD・MASTER のクリア)に関係なく、譜面のある難易度を HELL まで全部出す。鑑賞は何も記録しないので鍵を見ない。
+  //   演奏の難易度(openList・difficulty)は今のまま鍵を見る。買っていない曲は下の lockedSong で鑑賞ごと出さない(今のまま)
+  const listenList=available;
   // 鍵のかかった難易度の開け方を、難易度の札の下に1行で出す(2026-11-22 r1119-094・点検 N8・V14)。
   //   札の中の「HARDで解放」は6pxで読めなかったので札から外し、10px以上の1行にまとめる。いちばん手前の条件だけ出す
   //   2026-11-23 API総点検② V10: HELL にも鍵があるのに EXPERT・MASTER の開け方しか書いていなかった。条件が2つ以上なら全部を並べる
@@ -25662,14 +25676,14 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
         {(song.credit.link&&song.credit.link.label)||'詳しく見る'} ↗
       </a>}
       {/* ===== 曲鑑賞(2026-11-23 r1119-112 案B・社長の選択) =====
-          ノーツが自動で叩かれながら曲が最後まで流れる。流せるのは遊べる譜面だけ(鍵のついた難易度・買っていない曲は出さない)。
+          ノーツが自動で叩かれながら曲が最後まで流れる。流せるのは譜面のある難易度すべて(鍵のついた難易度も HELL まで鑑賞できる・r1119-168。買っていない曲は出さない)。
           スコア・ランキング・自己ベスト・ビートP・ミッション・日課には何も残さない(呼ぶ側が from:'listen' で記録を全部通さない) */}
-      {typeof onListen==='function'&&!lockedSong(song)&&openList.length>0&&(()=>{
-        const pick=openList.find(item=>item.id===listenDiffId)||(difficulty&&openList.includes(difficulty)?difficulty:openList[0]);
+      {typeof onListen==='function'&&!lockedSong(song)&&listenList.length>0&&(()=>{
+        const pick=listenList.find(item=>item.id===listenDiffId)||(difficulty&&listenList.includes(difficulty)?difficulty:listenList[0]);
         return <div data-rhythm-listen-panel onClick={e=>e.stopPropagation()} className="mt-3 w-full max-w-xs rounded-2xl border border-teal-300/50 bg-teal-950/60 p-2">
           <p className="text-[11px] font-black text-teal-100">🎧 曲を鑑賞する(ノーツが自動で叩かれます)</p>
           <div data-rhythm-listen-diffs className="mt-1.5 flex gap-1">
-            {openList.map(item=>{const on=item===pick;const lv=song.difficulties&&song.difficulties[item.id]?song.difficulties[item.id].level:'';
+            {listenList.map(item=>{const on=item===pick;const lv=song.difficulties&&song.difficulties[item.id]?song.difficulties[item.id].level:'';
               return <button key={item.id} type="button" data-rhythm-listen-diff={item.id} aria-pressed={on} onClick={()=>setListenDiffId(item.id)}
                 className={`min-h-[44px] min-w-0 flex-1 rounded-lg border-2 px-0.5 text-center leading-none ${on?'border-amber-300 bg-amber-900/70 text-white':'border-slate-500 bg-slate-900/80 text-slate-100'}`}>
                 <b className="block text-sm font-black">{lv}</b><small className="mt-0.5 block text-[9px] font-black">{item.id}</small></button>;})}
@@ -43426,14 +43440,14 @@ const quickAnywhereFloatRect = (el, spot) => {
   const R = { left, top, right: left + w, bottom: top + h };
   return R;
 };
-// そこに置いたとき、ほかの押せるもの(button・a・[role=button])にかかるか。自分と、自分の詳細の窓は数えない。known に入っているもの(置いたときからあったもの)も数えない
+// そこに置いたとき、ほかの押せるもの(button・a・[role=button])と、札が隠したくない欄([data-quick-avoid]。プロフィールのデッキの札)にかかるか。自分と、自分の詳細の窓は数えない。known に入っているもの(置いたときからあったもの)も数えない
 const quickAnywhereFloatHits = (el, spot, known = null) => {
   if (typeof document === 'undefined' || !el) return 0;
   const R = quickAnywhereFloatRect(el, spot);
   let hits = 0;
-  for (const o of document.querySelectorAll('button,a,[role=button]')) {
+  for (const o of document.querySelectorAll('button,a,[role=button],[data-quick-avoid]')) {
     if (o === el || el.contains(o) || o.contains(el) || o.closest('[data-quick-anywhere-detail]') || !o.getClientRects().length) continue;
-    if (known && known.has(o)) continue;
+    if (known && known.has(o) && !o.hasAttribute('data-quick-avoid')) continue; // 隠したくない欄は、置いたときからあっても数える(スクロールで下に来たら札を隠す)
     const cs = getComputedStyle(o);
     if (cs.visibility === 'hidden' || cs.pointerEvents === 'none' || Number(cs.opacity) === 0) continue;
     const r = o.getBoundingClientRect();
@@ -43466,7 +43480,7 @@ const QuickAnywhereFloat = ({ screen, children, style, ...rest }) => {
   const placedRef = useRef(null);
   React.useLayoutEffect(() => {
     // 決めた場所にかかっているもの(画面を覆うシートなど)は入れない。かかっている間は隠し、どいたら出す
-    const remember = (base) => { const set = new WeakSet(); const el = ref.current; if (typeof document !== 'undefined' && el) { const R = quickAnywhereFloatRect(el, base); for (const o of document.querySelectorAll('button,a,[role=button]')) { const r = o.getBoundingClientRect(); if (!(Math.min(R.right, r.right) - Math.max(R.left, r.left) > 1 && Math.min(R.bottom, r.bottom) - Math.max(R.top, r.top) > 1)) set.add(o); } } knownRef.current = set; };
+    const remember = (base) => { const set = new WeakSet(); const el = ref.current; if (typeof document !== 'undefined' && el) { const R = quickAnywhereFloatRect(el, base); for (const o of document.querySelectorAll('button,a,[role=button],[data-quick-avoid]')) { const r = o.getBoundingClientRect(); if (!(Math.min(R.right, r.right) - Math.max(R.left, r.left) > 1 && Math.min(R.bottom, r.bottom) - Math.max(R.top, r.top) > 1)) set.add(o); } } knownRef.current = set; };
     // 決める(画面が変わったとき・向きや大きさが変わったときだけ)
     const decide = () => { if (!ref.current) return; const next = quickAnywhereFloatPick(ref.current, screen); const base = { side: next.side, lift: next.lift }; placedRef.current = { ...base, fromHidden: !!next.hidden }; remember(base); setSpot(next.hidden ? { ...base, hidden: true } : base); };
     // シート・確認の窓がかぶったかだけを見る。置いたときに無かったボタンにかかったら隠し、外れたら同じ場所に戻す(場所は変えない)
@@ -122343,6 +122357,8 @@ const useCardShareEntry = (breederId, self = false) => {
   return state;
 };
 const CARD_SHARE_TILE_CLASS = 'rounded-2xl border-2 border-amber-600/60 bg-indigo-950/50 p-2';
+// デッキ名は切らずに折り返す(3行まで。ふつうは1〜2行)(2026-11-24 社長「デッキ名切れてる」)。裏クイックの札が名前の上に乗らないよう data-quick-avoid を付ける(45-quick-anywhere-float)
+const CARD_SHARE_NAME_STYLE = { display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 3, overflow: 'hidden', ...JA_WRAP_STYLE };
 // 3体のカード絵を少し重ねて並べる
 const CardShareDeckThumbs = ({ entry }) => {
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
@@ -122465,11 +122481,11 @@ const CardShareDeckTile = ({ mode = 'self', breederId = null, onOpen = null }) =
   const t = entry ? cardShareNormalizeTactics(entry.tactics) : null;
   const head = <small className="block text-[10px] font-black text-amber-300">バトルカードのデッキ</small>;
   const tile = self ? (
-    <button type="button" data-profile-show="card-deck" data-card-share-tile="self" onClick={() => { if (onOpen) { Audio_.fgSe.tap(); onOpen(); } }} className={`${CARD_SHARE_TILE_CLASS} block w-full text-left active:scale-[.98]`}>
+    <button type="button" data-profile-show="card-deck" data-quick-avoid data-card-share-tile="self" onClick={() => { if (onOpen) { Audio_.fgSe.tap(); onOpen(); } }} className={`${CARD_SHARE_TILE_CLASS} block w-full text-left active:scale-[.98]`}>
       {head}
       {loading ? <span className="mt-2 block text-[12px] font-bold text-slate-400">読み込み中…</span> : entry ? (<>
         <span className="mt-1.5 block"><CardShareDeckThumbs entry={entry}/></span>
-        <b className="mt-1 block truncate text-[14px] font-black text-white">{t.name || 'デッキ'}</b>
+        <b data-card-share-tile-name className="mt-1 block break-words text-[13px] font-black leading-tight text-white" style={CARD_SHARE_NAME_STYLE}>{jaWrap(t.name || 'デッキ')}</b>
         <small className="block text-[11px] font-black text-pink-300">{(cardShareSmartText(t).split('(')[0])}</small>
       </>) : (<>
         <span className="mt-2 block text-[13px] font-black text-slate-300">登録していません</span>
@@ -122477,10 +122493,10 @@ const CardShareDeckTile = ({ mode = 'self', breederId = null, onOpen = null }) =
       </>)}
     </button>
   ) : (
-    <div data-profile-show="card-deck" data-card-share-tile="friend" className={CARD_SHARE_TILE_CLASS}>
+    <div data-profile-show="card-deck" data-quick-avoid data-card-share-tile="friend" className={CARD_SHARE_TILE_CLASS}>
       {head}
       <span className="mt-1.5 block"><CardShareDeckThumbs entry={entry}/></span>
-      <b className="mt-1 block truncate text-[14px] font-black text-white">{t.name || 'デッキ'}</b>
+      <b data-card-share-tile-name className="mt-1 block break-words text-[13px] font-black leading-tight text-white" style={CARD_SHARE_NAME_STYLE}>{jaWrap(t.name || 'デッキ')}</b>
       <small className="block text-[11px] font-black text-pink-300">{(cardShareSmartText(t).split('(')[0])}</small>
       <button type="button" data-card-share-tile-detail onClick={() => { Audio_.fgSe.tap(); setDetail(true); }} className="mt-0.5 text-[11px] font-black text-pink-200">
         {`${entry.battles}戦 ${entry.deckWins}勝 詳細 ›`}
@@ -132968,13 +132984,17 @@ function MonsterHeroGame() {
   //   負けた最後のターンの音(敵の必殺技など)が助手ライフの上でそのまま鳴っていた(2026-11-11 社長「裏クイック中に死ぬと、バトルの効果音が鳴り続ける」)
   const assistantLifeRunMuted = assistantLifeScreenOpen && runStage !== null;
   useEffect(() => { Audio_.setSeVolume(((ultraEcoSession && !cardScreenOpen) || rhythmScreenOpen || assistantLifeRunMuted) ? 0 : seVolume); }, [seVolume, ultraEcoSession, rhythmScreenOpen, cardScreenOpen, assistantLifeRunMuted]);
+  // ボタンのタップ音は別の口(Audio_.uiTap・uiBus)。モンヒロビートの画面・助手ライフの裏クイック中でも、保存してある効果音の音量で鳴らす
+  //   (2026-11-24 r1119-164 社長「モンビーだけ各場所選択してもタップ音ならない」「助手ライフもならない」→ 案B)。超省エネの0は上と同じ
+  useEffect(() => { if (Audio_.setUiSeVolume) Audio_.setUiSeVolume((ultraEcoSession && !cardScreenOpen) ? 0 : seVolume); }, [seVolume, ultraEcoSession, cardScreenOpen]);
   // モンヒロビートの画面は上で効果音の音量を0にしている(裏の周回のバトルの音を消すため)。ランクアップの演出(beatRankFx)を出している間だけは、
   // 効果音の音量設定どおりに戻して鳴らし、閉じたら上と同じ決まりに戻す(2026-10-29 社長「ファンファーレもなかった」。0のままだと演出の音が鳴らなかった)。
   // 超省エネのあいだは今までどおり鳴らさない
   useEffect(() => {
     if (!(beatRankFx || beatRankBarPlaying) || (ultraEcoSession && !cardScreenOpen)) return undefined;
     Audio_.setSeVolume(seVolume);
-    return () => { Audio_.setSeVolume(((ultraEcoSession && !cardScreenOpen) || rhythmScreenOpen) ? 0 : seVolume); };
+    // 戻す条件は上の effect と同じ(助手ライフの裏クイック中も0へ戻す。2026-11-24 r1119-164 で揃えた)
+    return () => { Audio_.setSeVolume(((ultraEcoSession && !cardScreenOpen) || rhythmScreenOpen || assistantLifeRunMuted) ? 0 : seVolume); };
   }, [beatRankFx, beatRankBarPlaying, seVolume]);
   // MFバトルカードにいるあいだは、裏の周回のバトルの効果音だけを止める(docs/spec/CARD_BATTLE.md 5-3「音」)。
   // カードも同じ効果音を使うので、上の音量(0)では止めない。カードの画面は Audio_.fgSe から鳴らすので、この印を受けない。
@@ -133368,8 +133388,14 @@ function MonsterHeroGame() {
   useEffect(() => {
     const onClick = (e) => {
       const btn = e.target.closest && e.target.closest('button');
+      if (!btn) return;
+      // モンヒロビートの演奏エリアの中は鳴らさない(ノーツの音と重ねない。今までもここは鳴っていなかった)
+      if (btn.closest('[data-rhythm-play-area]')) return;
+      // ボタンの音は、裏のバトルの音と別の口(uiTap)で鳴らす。モンヒロビートの画面・助手ライフの裏クイック中は
+      // 効果音の口(seBus)を0にしているので、se/fgSe では鳴らなかった(2026-11-24 r1119-164)
+      if (Audio_.uiTap) { Audio_.uiTap(); return; }
       // 裏クイックが回っている画面では裏のバトルの効果音を止めているので、ボタンの音は止めない側(fgSe)で鳴らす
-      if (btn) (quickAnywhereSeQuietRef.current && Audio_.fgSe ? Audio_.fgSe : Audio_.se).tap();
+      (quickAnywhereSeQuietRef.current && Audio_.fgSe ? Audio_.fgSe : Audio_.se).tap();
     };
     document.addEventListener('click', onClick, true);
     return () => document.removeEventListener('click', onClick, true);
@@ -138729,7 +138755,8 @@ function MonsterHeroGame() {
   const startRhythmListen = (song, difficulty) => {
     if (!song || !difficulty) return;
     if (rhythmSongLocked(song.songId, RHYTHM_SONG_OWNED.get())) return; // 買っていない曲は流さない
-    if (!rhythmChartPlayable(song, difficulty.id) || !rhythmDifficultyUnlocked(song.songId, difficulty.id, rhythmBestRecords)) return; // 鍵のついた譜面は流さない
+    // 難易度の鍵は見ない(2026-11-24 r1119-168: 鑑賞ははじめから HELL まで。記録は何も残さないので演奏の解放には響かない)
+    if (!rhythmChartPlayable(song, difficulty.id)) return; // 譜面の無い難易度は流さない
     if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
     setRhythmPlay({ song, difficulty, from:'listen' });
     setGameState('RHYTHM_PLAY');

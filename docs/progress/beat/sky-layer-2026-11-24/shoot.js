@@ -9,7 +9,7 @@ const arg = (name, fb = null) => { const i = argv.indexOf(`--${name}`); return i
 const SONG = arg('song', 'rebellion'), DIFF = arg('diff', 'HELL');
 const FROM = Number(arg('from', 0)), SHOT = Number(arg('shot', 224000)), OUT = arg('out', 'shot.png');
 const ROT = argv.includes('--rot'), PORTRAIT = argv.includes('--portrait') || ROT, GPU = false, LOOK = arg('look'), DUMP = argv.includes('--dump');
-const MINIMAL = argv.includes('--minimal'), LIGHT = argv.includes('--light'), MAX = argv.includes('--max');  // --max … 見た目のおまかせ「全部のせ」(演出量 最大)
+const MINIMAL = argv.includes('--minimal'), LIGHT = argv.includes('--light'), MAX = argv.includes('--max'), FREEZE = argv.includes('--freeze');  // --max … 見た目のおまかせ「全部のせ」(演出量 最大)
 const { chromium } = (() => { try { return require(path.join(ROOT, 'tools/node_modules/playwright')); } catch { return require('playwright'); } })();
 const { createFakeSupabase } = require(path.join(ROOT, 'tools/playbot/lib/fake-supabase.js'));
 const { eventStorySeed } = require(path.join(ROOT, 'tools/boot/quiet-boot-seed.js'));
@@ -73,8 +73,19 @@ const seed = (songId) => `(() => {
   await page.waitForFunction(() => (window.__mhTestHooks?.rhythmSongMs?.() ?? -1) > 0, null, { timeout: 30000, polling: 100 });
   while (FROM > 0) { const ms = await page.evaluate(() => window.__mhTestHooks.rhythmSongMs()); if (ms >= FROM - 10500) break;
     const ok = await page.evaluate(() => { const b = document.querySelector('button[aria-label="10秒送る"]'); if (b) b.click(); return !!b; }); if (!ok) break; await page.waitForTimeout(500); }
-  await page.waitForFunction((t) => (window.__mhTestHooks?.rhythmSongMs?.() ?? -1) >= t, SHOT, { timeout: 600000, polling: 5 });
-  await page.screenshot(/\.jpe?g$/i.test(OUT) ? { path: OUT, type: 'jpeg', quality: 82 } : { path: OUT });
+  // --burst <n> … SHOT から 100ms おきに n 枚撮る(地上のノーツがちょうど空中の判定線を通る瞬間を探す用)。名前は OUT の拡張子の前に -<ms>
+  const BURST = Number(arg('burst', 0));
+  for (const t of BURST ? Array.from({ length: BURST }, (_, i) => SHOT + i * 100) : [SHOT]) {
+    if (FREEZE) {
+      // --freeze … 狙った時刻になったコマで鑑賞の一時停止を押し、絵を止めてから撮る(撮る時間のぶん絵がずれないように)。一時停止の窓が出たら撮るときだけ隠す
+      await page.evaluate((t) => new Promise((ok) => { const tick = () => { const ms = window.__mhTestHooks?.rhythmSongMs?.() ?? -1; if (ms >= t) { window.__frozenAt = ms; document.querySelector('[data-rhythm-listen-pause]')?.click(); ok(); } else requestAnimationFrame(tick); }; tick(); }), t);
+      await page.waitForTimeout(400);
+      await page.addStyleTag({ content: '[data-rhythm-pause-menu]{display:none!important}' });
+      console.log(`  止めた時刻 ${Math.round(await page.evaluate(() => window.__frozenAt))}ms`);
+    } else await page.waitForFunction((t) => (window.__mhTestHooks?.rhythmSongMs?.() ?? -1) >= t, t, { timeout: 600000, polling: 5 });
+    const out = BURST ? OUT.replace(/(\.\w+)$/, `-${t}$1`) : OUT;
+    await page.screenshot(/\.jpe?g$/i.test(out) ? { path: out, type: 'jpeg', quality: 82 } : { path: out });
+  }
   if (DUMP) console.log(await page.evaluate(() => { const a = document.querySelector('[data-rhythm-play-area]'); const out = [];
     const walk = (el, d) => { if (d > 0) return; for (const c of el.children) { const cs = getComputedStyle(c); const r = c.getBoundingClientRect();
       if (r.width > 50) out.push(`${'  '.repeat(d)}${c.tagName.toLowerCase()} ${[...c.attributes].filter(x => x.name.startsWith('data-')).map(x => x.name).join(' ')} z=${cs.zIndex} pos=${cs.position} ${Math.round(r.width)}x${Math.round(r.height)}`); walk(c, d + 1); } };
