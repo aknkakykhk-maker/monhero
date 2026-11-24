@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: df9572042a3b14da
+// generated-sha256: c06d3be19adc65ff
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -15447,6 +15447,9 @@ const STORY_MONSTER_ART = Object.freeze({
   PandoraShadow: typeof PANDORA_SHADOW_IMG !== 'undefined' ? PANDORA_SHADOW_IMG : null,
   PandoraAngel: typeof PANDORA_ANGEL_IMG !== 'undefined' ? PANDORA_ANGEL_IMG : null,
   PandoraDevil: typeof PANDORA_DEVIL_IMG !== 'undefined' ? PANDORA_DEVIL_IMG : null,
+  // 「咲かせて！ハナウタ・ノート」(2026-11-25 社長「ぱんぷきんに立ち絵がない」「パンドラと同じ仕様で」・r1119-170)の素のぱんぷきん。
+  //   絵は話し手 pumpkin の顔アイコン(体ごと全部が入った 256x204 の透過の絵)をそのまま使う。元の絵が小さいので枠を小さめにする(70-bootstrap.jsx)
+  Pumpkin: typeof PUMPKIN_ICON_IMG !== 'undefined' ? PUMPKIN_ICON_IMG : null,
   // えるびんの登場のお話(2026-11-05)の、胸から上の大きい立ち絵(384x512)。ErubinSekiyuou … 衣装『石油王』(初めて会う場面) / Erubin … 着替えたあとの通常の服
   //   絵の場所は助手の登録(imageDir・imagePrefix)と衣装のフォルダ(STORY_OUTFIT_DIRS)から作る(パスを画面の側に書かない)
   Erubin: storyAssistantArtOf('erubin'),
@@ -156400,6 +156403,9 @@ const createAnimationStyle = () => {
     [data-story-pose="mergeR"] { animation: storyMergeR 1.3s ease-in both; filter: drop-shadow(0 0 14px rgba(255,255,255,.95)); }
     [data-story-pose="merged"] { position: absolute; left: 50%; bottom: 0; translate: -50% 0; animation: storyMerged 1.8s ease-out both; }
     [data-story-monster^="Pandora"] { height: min(calc(100% / 1.14), 44vw, 250px); }
+    /* 素のぱんぷきん(r1119-170)。元の絵が 256px なので、ぼやけないよう・パンドラの体より大きく見えないよう 150px まで(3つのゾーンの規則より強くするため属性を重ねる) */
+    [data-story-monster="Pumpkin"][data-story-monster="Pumpkin"][data-story-monster="Pumpkin"][data-story-monster="Pumpkin"][data-story-monster="Pumpkin"] { height: min(calc(100% / 1.14), 34vw, 150px); }
+    @media (orientation: landscape) and (max-height: 500px) { [data-story-monster="Pumpkin"][data-story-monster="Pumpkin"][data-story-monster="Pumpkin"][data-story-monster="Pumpkin"][data-story-monster="Pumpkin"] { height: min(70%, calc(((100vw - 28rem) / 2 - 30px) / 1.14 * .9), 150px); } }
     @keyframes storyMonPeek { 0% { opacity: 0; transform: translateY(18%) scale(.9); } 35% { opacity: .95; transform: translateY(4%); } 100% { opacity: .8; transform: translateY(6%); } }
     @keyframes storySplitL { 0% { opacity: 0; transform: translateX(52%) scale(.9); filter: brightness(2.6); } 25% { opacity: 1; transform: translateX(46%) scale(1.04); } 100% { transform: translateX(-6%) rotate(-3deg); } }
     @keyframes storySplitR { 0% { opacity: 0; transform: translateX(-52%) scale(.9); filter: brightness(2.6); } 25% { opacity: 1; transform: translateX(-46%) scale(1.04); } 100% { transform: translateX(6%) rotate(3deg); } }

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 923ed0c5a82c0e99
+// source-sha256: 25a19b737f3ede2c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -22477,6 +22477,7 @@ const STORY_MONSTER_ART = Object.freeze({
   PandoraShadow: typeof PANDORA_SHADOW_IMG !== 'undefined' ? PANDORA_SHADOW_IMG : null,
   PandoraAngel: typeof PANDORA_ANGEL_IMG !== 'undefined' ? PANDORA_ANGEL_IMG : null,
   PandoraDevil: typeof PANDORA_DEVIL_IMG !== 'undefined' ? PANDORA_DEVIL_IMG : null,
+  Pumpkin: typeof PUMPKIN_ICON_IMG !== 'undefined' ? PUMPKIN_ICON_IMG : null,
   Erubin: storyAssistantArtOf('erubin'),
   ErubinSekiyuou: storyAssistantArtOf('erubin', 'sekiyuou')
 });
@@ -276064,6 +276065,9 @@ const createAnimationStyle = () => {
     [data-story-pose="mergeR"] { animation: storyMergeR 1.3s ease-in both; filter: drop-shadow(0 0 14px rgba(255,255,255,.95)); }
     [data-story-pose="merged"] { position: absolute; left: 50%; bottom: 0; translate: -50% 0; animation: storyMerged 1.8s ease-out both; }
     [data-story-monster^="Pandora"] { height: min(calc(100% / 1.14), 44vw, 250px); }
+    /* 素のぱんぷきん(r1119-170)。元の絵が 256px なので、ぼやけないよう・パンドラの体より大きく見えないよう 150px まで(3つのゾーンの規則より強くするため属性を重ねる) */
+    [data-story-monster="Pumpkin"][data-story-monster="Pumpkin"][data-story-monster="Pumpkin"][data-story-monster="Pumpkin"][data-story-monster="Pumpkin"] { height: min(calc(100% / 1.14), 34vw, 150px); }
+    @media (orientation: landscape) and (max-height: 500px) { [data-story-monster="Pumpkin"][data-story-monster="Pumpkin"][data-story-monster="Pumpkin"][data-story-monster="Pumpkin"][data-story-monster="Pumpkin"] { height: min(70%, calc(((100vw - 28rem) / 2 - 30px) / 1.14 * .9), 150px); } }
     @keyframes storyMonPeek { 0% { opacity: 0; transform: translateY(18%) scale(.9); } 35% { opacity: .95; transform: translateY(4%); } 100% { opacity: .8; transform: translateY(6%); } }
     @keyframes storySplitL { 0% { opacity: 0; transform: translateX(52%) scale(.9); filter: brightness(2.6); } 25% { opacity: 1; transform: translateX(46%) scale(1.04); } 100% { transform: translateX(-6%) rotate(-3deg); } }
     @keyframes storySplitR { 0% { opacity: 0; transform: translateX(-52%) scale(.9); filter: brightness(2.6); } 25% { opacity: 1; transform: translateX(-46%) scale(1.04); } 100% { transform: translateX(6%) rotate(3deg); } }
