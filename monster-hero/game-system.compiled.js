@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9b72bce3e320dfeb
+// source-sha256: 1eb61686cfa6660e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -102603,7 +102603,7 @@ const RHYTHM_MODE_ASSISTANT_DEFAULT_SHOW = 0.8;
 const RHYTHM_MODE_STAND_FACE = Object.freeze({
   h: 0.16,
   w: 0.35,
-  below: 2.5,
+  below: 2.0,
   eyeMin: 2.4,
   topPad: 0.6,
   headLen: 2.63,
@@ -102611,7 +102611,7 @@ const RHYTHM_MODE_STAND_FACE = Object.freeze({
   lowH: 0.22,
   lowPx: 20,
   lowBelow: 0.8,
-  visCut: 0.02
+  visCut: 0.04
 });
 const rhythmModeStandFacePlace = (face, box, natH) => {
   if (!face || !box || !Number.isFinite(face.cx) || !Number.isFinite(face.eye) || !Number.isFinite(face.chin) || !(box.ar > 0)) return null;
@@ -102620,9 +102620,8 @@ const rhythmModeStandFacePlace = (face, box, natH) => {
   if (!(faceI > 0.005)) return null;
   const R = RHYTHM_MODE_STAND_FACE;
   const topK = Number.isFinite(face.top) ? (face.eye - face.top) / (face.chin - face.eye) : 1.63;
-  const hat = Number.isFinite(face.above) && face.above >= 0.9 ? (face.above - 0.55) * R.headLen : 0;
   const visTopK = (face.eye - R.visCut) / (face.chin - face.eye);
-  const eyeK = Math.max(R.eyeMin, topK + R.topPad + hat, visTopK);
+  const eyeK = Math.max(R.eyeMin, topK + R.topPad, visTopK);
   const kh = Math.min(R.h, 1 / (eyeK + 1 + R.below));
   const eyeI = box.t + vis * face.eye,
     cxI = box.l + (box.r - box.l) * face.cx;

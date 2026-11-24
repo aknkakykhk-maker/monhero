@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c3ffa5ac6227acd7
+// generated-sha256: 1225df13d30c8f60
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -60994,22 +60994,22 @@ const RHYTHM_MODE_ASSISTANT_DEFAULT_SHOW = 0.8;
 //   face … 顔の表(56-assistant-life-house.jsx の ASSISTANT_LIFE_STAND_FACE_OUTFIT。top・eye・chin は見えている体の上0〜下1、cx は左0〜右1)/box … 見えている体の範囲(assistantLifeStandBox)
 //   顔(目の線〜顎の先)の長さ F を枠の高さの h 倍にする(枠の幅の w 倍まで・元の絵の顔の upMax 倍まで = 小さい絵を引き伸ばしてぼかさない)。
 //   ただし絵の下の端は必ず枠の下まで届かせる(届かないときは F を大きくする。体が枠の途中で切れて見えないように)。
-//   目の線は、測った頭のてっぺん(耳・帽子を含む絵もある)から F の 0.6 倍上を空けた所。大きい帽子・リボンの服(表の above が 0.9 以上)はそのぶん下げる。
+//   目の線は、測った頭のてっぺんから F の 0.6 倍上を空けた所。見えている絵の上端(帽子・リボン・上げた手)は上から visCut までしか切らない所まで下げる。
 //   顎の下にも F の below 倍(首と胸元)が入るよう、背の低い枠では F を小さくする。
 //   数字は前後の止め絵 docs/progress/assistant-art/r1119-153-switch/frame/ で決めた(0.17 倍で帽子が切れ・あつがぼやけた → 帽子の余白と元の絵の上限を足して 0.16 倍)
 //   背の低い枠(社長の写真の枠は高さ 90px ほど)では、胸元を見せる余裕がないので、顔を枠の高さの lowH 倍(lowPx まで)に寄せ、顎の下は F の lowBelow 倍だけ残す。
 //   ただし頭のてっぺんの上の余白(耳・帽子)が枠に入る大きさまで(みゅあのうさ耳が上で2割切れた・assistant-art-scenes-check)
-const RHYTHM_MODE_STAND_FACE = Object.freeze({ h: 0.16, w: 0.35, below: 2.5, eyeMin: 2.4, topPad: 0.6, headLen: 2.63, upMax: 1.5, lowH: 0.22, lowPx: 20, lowBelow: 0.8, visCut: 0.02 });
+const RHYTHM_MODE_STAND_FACE = Object.freeze({ h: 0.16, w: 0.35, below: 2.0, eyeMin: 2.4, topPad: 0.6, headLen: 2.63, upMax: 1.5, lowH: 0.22, lowPx: 20, lowBelow: 0.8, visCut: 0.04 });
 const rhythmModeStandFacePlace = (face, box, natH) => {
   if (!face || !box || !Number.isFinite(face.cx) || !Number.isFinite(face.eye) || !Number.isFinite(face.chin) || !(box.ar > 0)) return null;
   const vis = box.b - box.t, faceI = vis * (face.chin - face.eye);
   if (!(faceI > 0.005)) return null;
   const R = RHYTHM_MODE_STAND_FACE;
   const topK = Number.isFinite(face.top) ? (face.eye - face.top) / (face.chin - face.eye) : 1.63;
-  const hat = Number.isFinite(face.above) && face.above >= 0.9 ? (face.above - 0.55) * R.headLen : 0;
   // 見えている絵の上端(上げた手・耳の先)は、上から visCut(見えている絵の高さに対して)までしか切らない(assistant-art-scenes-check の「上が切れる」)
   const visTopK = (face.eye - R.visCut) / (face.chin - face.eye);
-  const eyeK = Math.max(R.eyeMin, topK + R.topPad + hat, visTopK);
+  // 帽子・大きなリボン・上げた手は、見えている絵の上端(visTopK)で入る
+  const eyeK = Math.max(R.eyeMin, topK + R.topPad, visTopK);
   const kh = Math.min(R.h, 1 / (eyeK + 1 + R.below));
   const eyeI = box.t + vis * face.eye, cxI = box.l + (box.r - box.l) * face.cx;
   const cap = natH > 0 ? ` ${(natH * faceI * R.upMax).toFixed(1)}px,` : '';
