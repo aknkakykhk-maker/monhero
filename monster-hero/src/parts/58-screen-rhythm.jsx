@@ -435,6 +435,7 @@ function RhythmSongSelectScreen({
             曲を選ぶ画面でいちばん要るのは曲の並びで、読み物は場所を取りすぎるため
             (2026-09-05・ユーザー指示)。同じ内容はチュートリアルと「📖 遊びかた」にある。 */}
         <RhythmSongSelect
+          squeezeWide
           songs={songs}
           difficulties={difficulties}
           bestRecords={rhythmBestRecords}

@@ -102,12 +102,8 @@ function main() {
   console.log(`title: ${s.title}`);
   console.log(`model: ${s.model}    ← ${s.kind['名前']}(${s.why})`);
   console.log('permission_mode: auto    ← 必ず付ける(r1119-086・部の会話も自動で作り、社長に許可の画面を出さない)');
-  if (s.model === 'claude-fable-5-2') {
-    // 2026-11-11 社長「Fable を使うときは、決まりから外れている場合は俺に聞いてね」
-    console.log('★ claude-fable-5-2 を使ってよいのは次の3つだけ。どれに当たるかを確かめてから作る:');
-    console.log('   ①何度も回す点検・見張りの道具/仕組みを作る・強化する1回 ②新機能の公開前の最終確認(1回) ③同じ不具合を2回直しても直らない');
-    console.log('   どれにも当たらないなら、窓口が社長に選択式(AskUserQuestion)で聞いてから。聞かずに使わない(docs/rules/MODEL_ROUTING.md)');
-  }
+  // 2026-11-24 社長「Fable は俺の許可なしでは絶対に使わないで」(r1119-163)。表は Fable を出さない
+  console.log('★ claude-fable-5-2 は社長の許可なしでは絶対に使わない。要ると思ったら、作る前に社長へ選択式(AskUserQuestion)で聞く。聞かずに使わない');
   console.log('prompt: ↓ここから下をそのまま');
   console.log(s.prompt);
 }

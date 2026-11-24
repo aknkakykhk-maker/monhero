@@ -40,7 +40,7 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
 // ここでは各ファイルの実サイズを重みにして、実際に受け取ったバイト数で動かす。
 window.__mhBoot = (function () {
   // 起動時に読み込むファイルの実サイズ(バイト)。tools/build.js が実ファイルから書き込む
-  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":92225,"data/images/images-enemy.js":2926,"data/ally-monsters.js":60894,"data/lineages.js":26476,"data/breeder.js":146157,"data/enemy-monsters.js":7879,"data/skills.js":4375,"data/rhythm-mode.js":6815644,"data/rhythm-lane-svg.js":13321,"data/rhythm-geometry-calibration.js":15552,"data/rhythm-result-replay-remount.js":5743,"data/rhythm-event.js":108570,"data/changelog.js":2023217,"data/help.js":911089,"data/rhythm-step3-release.js":8517,"data/assistants.js":2231451,"data/card-battle-cards.js":124624,"data/assistant-masmon-techs.js":113841,"data/assistant-life-rel-talks.js":225977,"data/success-sounds.js":19367,"tailwind.css":319560,"game-system.compiled.js":12464407,"data/images/title-screen-halloween.jpg":368790,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
+  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":92225,"data/images/images-enemy.js":2926,"data/ally-monsters.js":60894,"data/lineages.js":26476,"data/breeder.js":146157,"data/enemy-monsters.js":7879,"data/skills.js":4375,"data/rhythm-mode.js":6815644,"data/rhythm-lane-svg.js":13321,"data/rhythm-geometry-calibration.js":15552,"data/rhythm-result-replay-remount.js":5743,"data/rhythm-event.js":108570,"data/changelog.js":2023943,"data/help.js":911278,"data/rhythm-step3-release.js":8517,"data/assistants.js":2231451,"data/card-battle-cards.js":124624,"data/assistant-masmon-techs.js":113841,"data/assistant-life-rel-talks.js":225977,"data/success-sounds.js":19367,"tailwind.css":319560,"game-system.compiled.js":12464774,"data/images/title-screen-halloween.jpg":368790,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
   var total = 0, k;
   for (k in SIZES) total += SIZES[k];
   var got = {};   // ファイルごとに「いま何バイト受け取ったか」
@@ -98,11 +98,11 @@ window.__mhBoot = (function () {
 })();
 // 本体JSのキャッシュキー。ここで一度だけ宣言し、下の読み込み処理でも同じ値を使う。
 // 先読みと <script> のURLがずれると、同じ2.7MBを2回取りに行くことになる
-var GAME_BUILD = '24489a169351';
+var GAME_BUILD = 'b156a3d6daf0';
 window.__mhGameBuild = GAME_BUILD;
 // 画面に出す版の日時(BUILD_DATE)。本体の中に書くと、ビルドのたびに本体の中身(と GAME_BUILD)が変わり、
 // 事前ダウンロードにためた本体が使えなくなるので、ここから渡す。tools/stamp-version.js が version.json と同じ値を打つ
-window.__mhBuildDate = '2026-11-24 18:40';
+window.__mhBuildDate = '2026-11-24 18:42';
 // 起動でいちばん大きいのは本体JS(約2.7MB)。いちばん後ろで読むため、そこへ来ると
 // ゲージが止まって見えていた。先に取りはじめて、受け取ったバイト数をそのまま出す。
 // ここで取ったものはブラウザのキャッシュに載るので、下の <script> は取り直さない
@@ -135,7 +135,7 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
      作るのは tools/build-tailwind.js(node tools/build.js が中身の変化を見て必要なときだけ呼ぶ)。
      landscape: の差し替え(自前で画面を回したときにも効かせる)もそちらの設定へ移してある。
      ?v= は中身のハッシュ。tools/stamp-version.js が data/*.js と同じ仕組みで打つ。 -->
-<link rel="stylesheet" href="tailwind.css?v=e263ee9a4c43" onload="__mhBoot.done('tailwind.css','見た目を読み込み中')" onerror="__mhBoot.fail('tailwind.css')">
+<link rel="stylesheet" href="tailwind.css?v=ad63f30b705f" onload="__mhBoot.done('tailwind.css','見た目を読み込み中')" onerror="__mhBoot.fail('tailwind.css')">
 <style>
   html, body { margin:0; padding:0; background:#000; overscroll-behavior:none; -webkit-tap-highlight-color:transparent; height:100%; }
   /* ページそのものの拡大(2本指のピンチ・連続タップの拡大)を止める(2026-11-11 社長「たまにタップズレが起きる。モンビー中や、起動直後の更新情報を見るとき」)。
@@ -848,6 +848,21 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
   [data-rhythm-detail-slim] [data-rhythm-song-version] { min-height: 30px; height: 30px; padding-top: 0; padding-bottom: 0; }
   [data-rhythm-detail-slim] [data-rhythm-difficulty-row] > button { height: 44px; }
   [data-rhythm-detail-slim] [data-rhythm-song-act] button { min-height: 50px; }
+  /* モンヒロビートの曲えらび・横(🔄横も): 測って欄があふれる時の3段目(2026-11-24 r1119-161 社長「横画面まだかぶってるじゃん」)。
+     版が3つある曲は曲名が2行・版の札と♡が折れ、iPhone の下の余白も足されて欄があふれ、下に貼り付けた決定の段が難易度の札の数字の段に重なっていた。
+     札を詰めても(1)一言を出さなくても(2)入らないときは、曲名の下の「BPM・曲の長さ・ノーツ数」の行を畳み、行の間と決定の高さを少し詰める(3)。
+     それでも入らない小さい横(568×320 など)は、版の札と♡を1行にまとめ(4)、曲名の字を縮めて行を減らし、難易度・決定をもう少し低く(5)。
+     data-rhythm-song-note-fit は横(viewWide)のときだけ0より大きくなる。tools/mode/rhythm-song-detail-landscape-fit-check.js が重なりを見張る */
+  [data-rhythm-song-detail]:is([data-rhythm-song-note-fit="3"],[data-rhythm-song-note-fit="4"],[data-rhythm-song-note-fit="5"]) [data-rhythm-song-meta] { display: none !important; }
+  [data-rhythm-song-detail]:is([data-rhythm-song-note-fit="3"],[data-rhythm-song-note-fit="4"],[data-rhythm-song-note-fit="5"]) [data-rhythm-song-detail-grid] { row-gap: 2px !important; }
+  [data-rhythm-song-detail]:is([data-rhythm-song-note-fit="3"],[data-rhythm-song-note-fit="4"]) [data-rhythm-song-act] button { min-height: 46px !important; }
+  /* 4・5: 曲名を1行ぶんいっぱいに取り、版の札と♡を次の1行に並べる(細い欄で♡だけが3行目に落ちていた) */
+  [data-rhythm-song-detail]:is([data-rhythm-song-note-fit="4"],[data-rhythm-song-note-fit="5"]) [data-rhythm-song-title] { flex-basis: 100% !important; }
+  [data-rhythm-song-detail]:is([data-rhythm-song-note-fit="4"],[data-rhythm-song-note-fit="5"]) [data-rhythm-song-versions-inline] { flex: 1 1 0; min-width: 0; }
+  [data-rhythm-song-detail]:is([data-rhythm-song-note-fit="4"],[data-rhythm-song-note-fit="5"]) [data-rhythm-song-versions-inline] > button { flex: 1 1 0; max-width: none; padding-left: 2px; padding-right: 2px; }
+  /* 5: 曲名の字を縮めて行を減らす(RhythmFitTitle・「…」にはしない)。難易度と決定をもう少し低く */
+  [data-rhythm-song-detail][data-rhythm-song-note-fit="5"] [data-rhythm-difficulty-row] > button { height: 40px !important; }
+  [data-rhythm-song-detail][data-rhythm-song-note-fit="5"] [data-rhythm-song-act] button { min-height: 40px !important; }
   /* 高さ340px以下の横持ち(640×320 など)は、曲名の下の「曲の長さ・Lv.・ノーツ数」の行を畳み、「決定」を画面に収める(2026-10-26 ビート部・部長テンポくんが A を選んだ)。
      案内が無くても「決定」の下端が 339px で、画面の下へ19pxはみ出していた。Lv. は難易度のボタン、長さとノーツ数は縦持ちで見える。
      絵を90度回しているときは高さが足りるので触らない */
@@ -2627,8 +2642,8 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
 <script src="data/rhythm-geometry-calibration.js?v=02534cca12f6" onload="__mhBoot.done('data/rhythm-geometry-calibration.js','音ゲー座標校正を読み込み中')" onerror="__mhBoot.fail('data/rhythm-geometry-calibration.js')"></script>
 <script src="data/rhythm-result-replay-remount.js?v=381554180360" onload="__mhBoot.done('data/rhythm-result-replay-remount.js','音ゲー再プレイ処理を読み込み中')" onerror="__mhBoot.fail('data/rhythm-result-replay-remount.js')"></script>
 <script src="data/rhythm-event.js?v=4dbfdfdbac7d" onload="__mhBoot.done('data/rhythm-event.js','週間ランキングを読み込み中')" onerror="__mhBoot.fail('data/rhythm-event.js')"></script>
-<script src="data/changelog.js?v=4693740941d4" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
-<script src="data/help.js?v=502e02cb54b5" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
+<script src="data/changelog.js?v=2ea478487413" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
+<script src="data/help.js?v=d57ceeb5c10a" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
 <script data-mhsave-backup src="data/mhsave-backup.js?v=7845a4fd261f" onload="__mhBoot.done('data/mhsave-backup.js','バックアップ機能を読み込み中')" onerror="__mhBoot.fail('data/mhsave-backup.js')"></script>
 <script src="data/rhythm-step3-release.js?v=ae1d7f73f23a" onload="__mhBoot.done('data/rhythm-step3-release.js','音ゲー更新情報を読み込み中')" onerror="__mhBoot.fail('data/rhythm-step3-release.js')"></script>
 <!-- 助手はbreeder.jsの顔アイコンを画像に使うため、必ずその後に読み込む -->
