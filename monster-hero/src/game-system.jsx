@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1cb6df1e55bf4322
+// generated-sha256: 2e097d34d60703df
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -26930,11 +26930,57 @@ const RhythmHudScore=({hud,maxScore,bestScore,rankFx=true})=>{const score=useRhy
     }catch(_){}},[rank,rankFx]);
   return <div className="flex items-center gap-1.5"><div ref={rankBadgeRef} className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-current bg-slate-950/85 landscape:h-7 landscape:w-7 ${RHYTHM_RANK_COLORS[rank]}`} style={{boxShadow:'0 0 8px rgba(103,232,249,.35)'}}><b data-rhythm-rank className="text-sm font-black leading-none" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{rank}</b>{rankFx&&<><i ref={rankRingRef} data-rhythm-rank-ring aria-hidden="true" style={{position:'absolute',inset:-3,borderRadius:'9999px',border:'2px solid currentColor',boxShadow:'0 0 12px currentColor',opacity:0,pointerEvents:'none'}}/><b ref={rankPopRef} data-rhythm-rank-pop aria-hidden="true" style={{position:'absolute',left:-2,top:'100%',marginTop:2,zIndex:2,whiteSpace:'nowrap',fontSize:11,fontWeight:900,fontStyle:'italic',lineHeight:1,padding:'2px 6px',borderRadius:9999,background:'rgba(2,6,23,.88)',boxShadow:'0 0 10px currentColor',textShadow:'0 0 6px currentColor',opacity:0,pointerEvents:'none'}}/></>}</div><div className="min-w-0 landscape:min-w-0"><div className="flex items-center gap-0.5 landscape:hidden"><div data-rhythm-rank-gauge className="relative h-1.5 w-14 overflow-hidden rounded-full border border-white/25 bg-slate-950/80"><i aria-hidden="true" className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-cyan-300 to-fuchsia-300" style={{width:`${rhythmRankProgress(score)}%`}}/></div><b data-rhythm-rank-next className="shrink-0 text-[9px] font-black leading-none text-slate-300">{rankNextLabel}</b></div>{/* スコアは100万点を超えると、320幅の左上(約74px)に「1,050,000」がぎりぎりなので少し小さく(2026-10-29)。このコメントを style の中に書くと、横向きHUDの検査が読み取れなくなる */}<b data-rhythm-score className="mt-0.5 block font-black leading-none tabular-nums landscape:mt-0" style={{fontSize:score>=1000000?'min(18px,4cqw)':'min(18px,4.6cqw)',textShadow:'0 1px 6px rgba(2,6,23,.96)'}}>{score.toLocaleString()}</b><small className="mt-0.5 block text-[9px] font-bold leading-none text-slate-300 landscape:hidden" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>BEST {Number(bestScore||0).toLocaleString()}</small></div></div>;};
 // フルコンボ・オールマーベラスが続いているか(comboStatus)。AM=ここまで全部MARVELOUS / FC=ここまでBAD・MISSなし / 空=切れた。アシストモードでは出さない
-const RhythmHudCombo=({hud,settings,assistOn,comboPosition,isLandscape,comboRef,comboRingRef})=>{const combo=useRhythmHudPick(hud,h=>h.combo),countsState=useRhythmHudPick(hud,h=>rhythmHudCountsState(h.counts));
+// コンボ数を道の外の空きへ収める(2026-11-24 r1119-160 社長「コンボの1000以上の1番左の数値に色がない」)。
+// コンボ数はノーツより後ろ(z-2)に描くので、道の上へはみ出した桁は、ノーツの層が描く道の面・空中の面の下に入って暗く(灰色に)見える。
+// 端に置く位置(おすすめ・右寄り・右上・左寄り)では、数字の端が道(空中の面があればその外側)の縁より外に来るよう、桁が増えたら字を縮める。
+// 真ん中は道の上に重ねる置き場所なので縮めない。返すのは字の大きさに掛ける倍率(0.4〜1)
+const RHYTHM_COMBO_FIT_MARGIN_PX=4;
+const rhythmComboRoadEdge=(side,yRatio,sky)=>{
+  const y=Math.max(0,Math.min(1,yRatio)),bound=side==='right'?RHYTHM_LANE_COUNT:0;
+  let edge=rhythmProjectBoundary(bound,y);
+  // 空中の面は、道の縁を奥行きごとの持ち上げ幅ぶん上へずらした台形。画面の高さ y に来るのは、もっと手前(t>y)の道の縁
+  if(sky&&typeof rhythmSkyLiftRatio==='function'){
+    const line=RHYTHM_JUDGMENT_LINE_Y.ratio;let lo=y,hi=line;
+    if(hi>lo&&hi-rhythmSkyLiftRatio(hi)>=y){for(let i=0;i<24;i++){const mid=(lo+hi)/2;if(mid-rhythmSkyLiftRatio(mid)<y)lo=mid;else hi=mid;}
+      const skyEdge=rhythmProjectBoundary(bound,hi);edge=side==='right'?Math.max(edge,skyEdge):Math.min(edge,skyEdge);}
+  }
+  return edge;
+};
+const rhythmComboFitScale=(boxEl,numEl,position,visualScale,currentFit,sky)=>{
+  if(!boxEl||!numEl||position==='CENTER')return 1;
+  const area=boxEl.offsetParent;if(!area)return 1;
+  const W=area.clientWidth,H=area.clientHeight;if(!(W>0&&H>0))return 1;
+  const natural=numEl.offsetWidth/(currentFit>0?currentFit:1),h=numEl.offsetHeight/(currentFit>0?currentFit:1);
+  if(!(natural>0))return 1;
+  const s=Math.max(.5,Number(visualScale)||1),side=position==='LEFT'?'left':'right';
+  // 縮めた後の字の下端の高さで道の縁を測る(道は下ほど広いので、下端がいちばん厳しい)
+  const centerY=boxEl.offsetTop+numEl.offsetTop+numEl.offsetHeight/2;
+  let fit=1;
+  for(let pass=0;pass<3;pass++){
+    const bottom=(centerY+h*fit*s/2)/H,edge=rhythmComboRoadEdge(side,bottom,sky)*W;
+    const outer=side==='right'?boxEl.offsetLeft+numEl.offsetLeft+numEl.offsetWidth:boxEl.offsetLeft+numEl.offsetLeft;
+    const room=(side==='right'?outer-edge:edge-outer)-RHYTHM_COMBO_FIT_MARGIN_PX;
+    const next=Math.max(.4,Math.min(1,room/(natural*s)));
+    if(Math.abs(next-fit)<.005)break;fit=next;
+  }
+  return Math.round(fit*100)/100;
+};
+const RhythmHudCombo=({hud,settings,assistOn,comboPosition,isLandscape,comboRef,comboRingRef,skyChart=false})=>{const combo=useRhythmHudPick(hud,h=>h.combo),countsState=useRhythmHudPick(hud,h=>rhythmHudCountsState(h.counts));
+  const comboBoxRef=useRef(null),comboFitRef=useRef(1),[comboFit,setComboFit]=useState(1),[fitTick,setFitTick]=useState(0);
+  const comboDigits=combo>0?String(Math.trunc(combo)).length:0,tierForFit=combo>0?rhythmComboTier(combo):0;
+  const comboSizePct=rhythmFiniteInRange(settings.comboSize,RHYTHM_COMBO_SIZE_MIN,RHYTHM_COMBO_SIZE_MAX,100);
+  useEffect(()=>{const on=()=>setFitTick(t=>t+1);window.addEventListener('resize',on);window.addEventListener('orientationchange',on);return()=>{window.removeEventListener('resize',on);window.removeEventListener('orientationchange',on);};},[]);
+  // 桁・段・大きさ・置き場所・画面の大きさが変わった時だけ測る(コンボが1つ増えるたびには測らない)
+  React.useLayoutEffect(()=>{if(!comboDigits)return;
+    const side=comboPosition!=='CENTER',scale=side?Math.min(rhythmComboTierScale(tierForFit),1.25):rhythmComboTierScale(tierForFit);
+    // 測るのは1回だけ(測った倍率を入れ直してもう一度測ると、字の形の丸めで .01 ずつ行き来することがある)
+    let next=1;try{next=rhythmComboFitScale(comboBoxRef.current,comboRef&&comboRef.current,comboPosition,scale,comboFitRef.current,skyChart);}catch(_){next=1;}
+    if(Math.abs(next-comboFitRef.current)>=.01){comboFitRef.current=next;setComboFit(next);}
+  },[comboDigits,tierForFit,comboSizePct,comboPosition,isLandscape,skyChart,fitTick]);
   if(settings.comboDisplay===false||!(combo>0))return null;
   const comboTier=rhythmComboTier(combo);
   const comboStatus=settings.comboStatusDisplay===false||assistOn||!countsState||countsState==='broken'?'':countsState;
-  return <div data-rhythm-combo-box data-combo-status={comboStatus} data-combo-tier={String(comboTier)} data-combo-pos={comboPosition} data-combo-wide={isLandscape?'1':''} aria-hidden="true" style={{'--mh-combo-opacity':rhythmFiniteInRange(settings.comboOpacity,RHYTHM_COMBO_OPACITY_MIN,RHYTHM_COMBO_OPACITY_MAX,100)/100}} className="pointer-events-none absolute z-[2] text-center"><b ref={comboRef} data-rhythm-combo data-combo-tier={String(comboTier)} className="block font-black leading-none tabular-nums text-white" style={{'--mh-combo-scale':rhythmComboTierScale(comboTier),'--mh-combo-size':rhythmFiniteInRange(settings.comboSize,RHYTHM_COMBO_SIZE_MIN,RHYTHM_COMBO_SIZE_MAX,100)/100}}>{combo}</b>{settings.comboMilestoneFx===true&&<i ref={comboRingRef} data-rhythm-combo-ring aria-hidden="true"/>}<span data-rhythm-combo-label className="mt-1 block font-black leading-none tracking-[0.36em]">COMBO</span>{comboStatus&&<span data-rhythm-combo-status-mark={comboStatus} className="block font-black leading-none">{comboStatus==='AM'?'ALL MARVELOUS':'FULL COMBO'}</span>}</div>;};
+  return <div data-rhythm-combo-box ref={comboBoxRef} data-combo-fit={comboFit<1?String(comboFit):undefined} data-combo-status={comboStatus} data-combo-tier={String(comboTier)} data-combo-pos={comboPosition} data-combo-wide={isLandscape?'1':''} aria-hidden="true" style={{'--mh-combo-opacity':rhythmFiniteInRange(settings.comboOpacity,RHYTHM_COMBO_OPACITY_MIN,RHYTHM_COMBO_OPACITY_MAX,100)/100}} className="pointer-events-none absolute z-[2] text-center"><b ref={comboRef} data-rhythm-combo data-combo-tier={String(comboTier)} className="block font-black leading-none tabular-nums text-white" style={{'--mh-combo-scale':rhythmComboTierScale(comboTier),'--mh-combo-size':comboSizePct/100*comboFit}}>{combo}</b>{settings.comboMilestoneFx===true&&<i ref={comboRingRef} data-rhythm-combo-ring aria-hidden="true"/>}<span data-rhythm-combo-label className="mt-1 block font-black leading-none tracking-[0.36em]">COMBO</span>{comboStatus&&<span data-rhythm-combo-status-mark={comboStatus} className="block font-black leading-none">{comboStatus==='AM'?'ALL MARVELOUS':'FULL COMBO'}</span>}</div>;};
 // ライフの数字とバー。演奏画面全体が知る必要があるのはライフの状態(rhythmLifeState)だけなので、数字はここだけが作り直す
 // 帯の長さは幅(width)ではなく、幅いっぱいの帯を右から切り抜いて(clip-path)出す(2026-10-13 社長報告「モンスターノーツのかくつき」・「元気」でライフが増えるとき)。
 // 幅を140msかけて動かすと、そのあいだ毎コマ画面の並べ直し(レイアウト)が起きる。切り抜きなら塗り直しだけで済む。
@@ -29664,7 +29710,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
       少し透かす。コンボが0のあいだは出さない。
     ★大きさの上限が無くなったので、段(comboTier)でしっかり大きくできる
       (HUDに居たころは台形にかかるので1.13倍までしか上げられなかった)。 */}
-<RhythmHudCombo hud={hudRef.current} settings={settings} assistOn={assistOn} comboPosition={comboPosition} isLandscape={isLandscape} comboRef={comboRef} comboRingRef={comboRingRef}/>{/* 判定ラインはTailwindのクラスを使わず、位置・高さ・色をすべてここへ直接書く。
+<RhythmHudCombo hud={hudRef.current} settings={settings} assistOn={assistOn} comboPosition={comboPosition} isLandscape={isLandscape} comboRef={comboRef} comboRingRef={comboRingRef} skyChart={!!skyChart}/>{/* 判定ラインはTailwindのクラスを使わず、位置・高さ・色をすべてここへ直接書く。
     Tailwindは外部CDNのJITが後からCSSを作るため、間に合わないあいだ
     bottom-[12%] も h-[3px] も bg-gradient-to-r も効かず、
     「高さ0・背景なし＝見えない線」になる。実機で「演奏を始めたときに
