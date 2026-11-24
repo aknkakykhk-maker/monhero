@@ -1263,7 +1263,10 @@ const RHYTHM_CELEBRATE_AE=Object.freeze(['#67e8f9','#fde68a']);
    (2026-11-24 までは演出量「最小」・軽量モード・動きを減らすでも止めていた。r1119-156 追記でいつも動く形にした)
    ★数字は React を通さず、要素の文字を直接書き換える(毎フレーム描き直さない)。止まった形の数字は React が初めから持っている
    ★新記録の全画面の重ね(2026-10-06)は、この数え上げが同じ役をするのでやめた(結果の中へまとめた)。時刻の表は RHYTHM_RESULT_COUNT */
-const RHYTHM_RESULT_COUNT=Object.freeze({scoreAt:300,scoreMs:1200,janAt:1500,rowAt:400,rowStep:110,rowMs:550,stampAt:1550,ribbonAt:1850,restAt:1900,endAt:2400});
+/* ★2026-11-24 案A「判定が1行ずつ決まる」(台帳 r1119-156 追記2・社長の選択)。判定の行を上(JUST MARVELOUS)から1行ずつ数える(1行 260ms・数えるのは 200ms)。
+   行が決まるたびに数字が弾んで光の粒が散り「カチッ」と鳴る(行ごとに少し高く)。スコアは行の進みに合わせて積み上がり、全部の行のあとに MAX COMBO が数えられ、
+   スコアが決まる(じゃん！・決まる音)→ ランクのはんこ → 称号の札 → 下の物。7行で約2.4秒。タップでいつでも止まった形へ飛ぶのは前のまま */
+const RHYTHM_RESULT_COUNT=Object.freeze({scoreAt:300,scoreMs:2120,janAt:2420,rowAt:300,rowStep:260,rowMs:200,comboAt:2120,comboMs:300,stampAt:2490,ribbonAt:2750,restAt:2750,endAt:3300});
 // ★2026-11-24(台帳 r1119-156 追記): 演出量「最小」・軽量モード・端末の「動きを減らす(視差効果を減らす)」では止まった形にしていたが、
 //   社長の iPhone で数え上げが見えなかった(動きを減らすが入っていると止まる)。社長「リザルトなんて重さ関係ないんだから設定とか関係なしに演出強くしていいよ」
 //   → いつも数える。止めるのは演出の設定「結果の画面の演出」を「出さない」にしたときだけ(settings.fx.resultCount)
@@ -2594,7 +2597,18 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
     const skipCount=()=>{if(root.getAttribute('data-rhythm-count-anim')!=='1')return;finish();if(recordSeFireRef.current)recordSeFireRef.current();};
     if(typeof requestAnimationFrame!=='function'){finish();return undefined;}
     draw(0);
-    const step=now=>{if(!start)start=now;const t=now-start;draw(t);if(t<T.endAt)raf=requestAnimationFrame(step);else finish();};
+    // 案A の音(2026-11-24): 判定の行が決まるたびに「カチッ」(上の行から順に少しずつ高く)、スコアが決まる瞬間に決まる音。
+    // タップで飛ばしたあとは鳴らさない。初めての記録はその瞬間に新記録の音が鳴るので、決まる音は重ねない
+    const rowItems=items.filter(item=>item.el.closest('[data-rhythm-result-judgment-table]')).sort((a,b)=>a.at-b.at);
+    const firstRecord=!!card&&card.dataset.newRecord==='1'&&!(prev>0);
+    let rowSe=0,janSe=false;
+    const sound=t=>{
+      let fire=-1;while(rowSe<rowItems.length&&t>=rowItems[rowSe].at+rowItems[rowSe].ms){fire=rowSe;rowSe++;}
+      // コマが飛んで2行いっしょに決まったときは、最後の1回だけ鳴らす
+      if(fire>=0)try{RHYTHM_NOTE_SE_RUNTIME.playResultCount(fire,false);}catch{}
+      if(!janSe&&t>=T.janAt){janSe=true;if(!firstRecord)try{RHYTHM_NOTE_SE_RUNTIME.playResultCount(0,true);}catch{}}
+    };
+    const step=now=>{if(!start)start=now;const t=now-start;draw(t);sound(t);if(t<T.endAt)raf=requestAnimationFrame(step);else finish();};
     raf=requestAnimationFrame(step);
     root.addEventListener('pointerdown',skipCount,{passive:true});
     return ()=>{if(raf&&typeof cancelAnimationFrame==='function')cancelAnimationFrame(raf);root.removeEventListener('pointerdown',skipCount);};
@@ -3474,7 +3488,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
     const RC=RHYTHM_RESULT_COUNT;
     return <main ref={resultRootRef} data-rhythm-result data-rank={rank} data-rank-tier={String(rankTier)} data-rhythm-count-anim={countOn?'1':undefined} data-rhythm-result-tier={titleTier||undefined}
       data-rhythm-effect={settings.effectAmount} data-rhythm-lightweight={settings.lightweightMode?'true':'false'}
-      className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white [container-type:inline-size] landscape:pl-[var(--mh-sa-left)] landscape:pr-[var(--mh-sa-right)]" style={{paddingTop:'var(--mh-sa-top)',...(crossMs!==null?{'--mh-record-badge-delay':`${crossMs}ms`}:{}),'--mh-count-score-at':`${RC.scoreAt}ms`,'--mh-count-jan':`${RC.janAt}ms`,'--mh-count-stamp':`${RC.stampAt}ms`,'--mh-count-ribbon':`${RC.ribbonAt}ms`,'--mh-count-rest':`${RC.restAt}ms`}}>
+      className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white [container-type:inline-size] landscape:pl-[var(--mh-sa-left)] landscape:pr-[var(--mh-sa-right)]" style={{paddingTop:'var(--mh-sa-top)',...(crossMs!==null?{'--mh-record-badge-delay':`${crossMs}ms`}:{}),'--mh-count-score-at':`${RC.scoreAt}ms`,'--mh-count-jan':`${RC.janAt}ms`,'--mh-count-stamp':`${RC.stampAt}ms`,'--mh-count-ribbon':`${RC.ribbonAt}ms`,'--mh-count-rest':`${RC.restAt}ms`,'--mh-count-combo-pop':`${RC.comboAt+RC.comboMs}ms`,'--mh-row-ms':`${RC.rowMs}ms`}}>
 {/* ===== リザルトの並び(2026-09-26・ユーザー依頼「リザルト画面や曲選択画面をこれを参考にしたい」＝バンドリ！のリザルト) =====
     上から「曲の札(ジャケット・曲名・難易度・ランクのゲージ・ランク)」→「SCORE と自己ベスト」→「判定の表と MAX COMBO」。
     そのあとに周回・ビートP・解放・ライブログを並べ、ボタンは下の帯へ固定する(スクロールしても隠れない・中身も隠さない)。
@@ -3607,7 +3621,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
 <div data-rhythm-result-combo className="flex w-[34%] shrink-0 flex-col items-center justify-center rounded-2xl border border-white/10 bg-slate-900/85 px-2 py-2 text-center [@container(min-width:680px)]:w-[31%]">
   {/* 狭い画面で「MAX/COMBO」と2行にならないよう、字の間を詰めて1行に保つ(2026-10-20 改善部 M3) */}
   <small className={`whitespace-nowrap text-[10px] font-black tracking-[.2em] max-[359px]:tracking-[.06em] ${rhythmComboTextColor(view.maxCombo)}`}>MAX COMBO</small>
-  <b data-rhythm-max-combo className={`block text-[34px] font-black leading-tight tabular-nums max-[359px]:text-[28px] ${rhythmComboTextColor(view.maxCombo)}`} {...(countOn?{'data-count-to':Number(view.maxCombo)||0,'data-count-at':RC.rowAt,'data-count-ms':RC.scoreMs-200,'data-count-plain':'1'}:{})}>{view.maxCombo}</b>
+  <b data-rhythm-max-combo className={`block text-[34px] font-black leading-tight tabular-nums max-[359px]:text-[28px] ${rhythmComboTextColor(view.maxCombo)}`} {...(countOn?{'data-count-to':Number(view.maxCombo)||0,'data-count-at':RC.comboAt,'data-count-ms':RC.comboMs,'data-count-plain':'1'}:{})}>{view.maxCombo}</b>
   {/* 刻みの数え方(2026-10-17): ホールド・スライドの刻みもノーツとしてコンボに数えたことと、取れた刻みの数を出す */}
   {view.result?.scoreVersion===2&&<small data-rhythm-result-ticks className="mt-0.5 block text-[10px] font-bold leading-tight text-slate-300">刻み <b className="tabular-nums text-white">{view.result.tickJust}</b>/{view.result.tickTotal}{view.result.tickMiss>0?<span className="text-rose-300">(MISS {view.result.tickMiss})</span>:null}{/* 中央そろえの2行で行の頭がずれていたので、左そろえにする(2026-11-23 API総点検② V22) */}<span className="block text-left text-[9px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('ホールド・スライドの刻みもコンボに数えます')}</span></small>}
   <div className="mt-1.5 grid w-full grid-cols-2 gap-1 text-[10px] font-black"><span data-rhythm-result-fast className="rounded-lg bg-cyan-500/15 py-1 text-cyan-200">FAST<b className="block text-sm tabular-nums text-white">{view.fast}</b></span><span data-rhythm-result-slow className="rounded-lg bg-fuchsia-500/15 py-1 text-fuchsia-200">SLOW<b className="block text-sm tabular-nums text-white">{view.slow}</b></span></div>
