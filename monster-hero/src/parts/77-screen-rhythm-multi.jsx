@@ -2790,6 +2790,9 @@ const RHYTHM_MODE_SELECT_CSS = `
 .mhms-art-img{width:var(--mhms-w)}
 @supports (width:1cqh){.mhms-art-img{width:min(max(var(--mhms-w),var(--mhms-cover)),var(--mhms-cap))}}
 @container (max-height:120px){.mhms-art-img{left:30%!important}}
+/* 顔で寄せる立ち絵(stand-*)は、顔の真ん中を --mhms-fx に置く。背の低い枠では左へ寄せて、右下の「立ち絵ON」「コメントON」とぶつけない */
+.mhms-art-box{--mhms-fx:50%}
+@container (max-height:120px){.mhms-art-face{--mhms-fx:34%}}
 /* 細い枠(縦持ちの375幅まで)では「立ち絵ON」「コメントON」を右の端に縦に並べ、体にかかる幅を狭くする(2026-10-26 カゲあつ「あつの手と胸に乗る」) */
 @container (max-width:360px){.mhms-art-toggles{flex-direction:column;align-items:flex-end;gap:4px}.mhms-art-toggles>button{min-height:28px;padding-left:8px;padding-right:8px}}
 .mhms-card{position:relative;overflow:hidden;clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px));box-shadow:inset 0 1px 0 rgba(255,255,255,.55),inset 0 -3px 0 rgba(0,0,0,.18)}
@@ -3019,13 +3022,55 @@ function ModeSelectAssistToggles({ assistant, showArt, showComment, onToggle, cl
 // 立ち絵とコメントは別々にオン・オフできる。両方オフなら枠ごと出さない
 // 表に無い助手(みゅあ・きき・ハロウィンの衣装など)は、枠いっぱいに広げて上から22%(横向きは30%)の所を中心に見せる。背の低い枠でも絵の高さの8割は入れる
 const RHYTHM_MODE_ASSISTANT_DEFAULT_SHOW = 0.8;
+// 立ち絵(images/assistant/stand-*・全身絵からの切り出し)は、顔の位置と大きさで寄せる(2026-11-24 r1119-153 追記4)。
+//   #7449 で全身絵から切り出し直したら、羽・上げた腕まで横に広く入り、枠いっぱいに絵を収める置き方では顔が前より小さくなった
+//   (社長「モンバト助手の立ち絵こんなだったっけ？」→ 選択「新しい絵のまま・枠での大きさを直す」)。絵は替えず、枠での寄せ方だけを変える。
+//   face … 顔の表(56-assistant-life-house.jsx の ASSISTANT_LIFE_STAND_FACE_OUTFIT。top・eye・chin は見えている体の上0〜下1、cx は左0〜右1)/box … 見えている体の範囲(assistantLifeStandBox)
+//   顔(目の線〜顎の先)の長さ F を枠の高さの h 倍にする(枠の幅の w 倍まで・元の絵の顔の upMax 倍まで = 小さい絵を引き伸ばしてぼかさない)。
+//   ただし絵の下の端は必ず枠の下まで届かせる(届かないときは F を大きくする。体が枠の途中で切れて見えないように)。
+//   目の線は、測った頭のてっぺん(耳・帽子を含む絵もある)から F の 0.6 倍上を空けた所。大きい帽子・リボンの服(表の above が 0.9 以上)はそのぶん下げる。
+//   顎の下にも F の below 倍(首と胸元)が入るよう、背の低い枠では F を小さくする。
+//   数字は前後の止め絵 docs/progress/assistant-art/r1119-153-switch/frame/ で決めた(0.17 倍は寄りすぎて帽子が切れた・あつがぼやけた)
+const RHYTHM_MODE_STAND_FACE = Object.freeze({ h: 0.145, w: 0.35, below: 2.5, eyeMin: 2.4, topPad: 0.6, headLen: 2.63, upMax: 1.5 });
+const rhythmModeStandFacePlace = (face, box, natH) => {
+  if (!face || !box || !Number.isFinite(face.cx) || !Number.isFinite(face.eye) || !Number.isFinite(face.chin) || !(box.ar > 0)) return null;
+  const vis = box.b - box.t, faceI = vis * (face.chin - face.eye);
+  if (!(faceI > 0.005)) return null;
+  const R = RHYTHM_MODE_STAND_FACE;
+  const topK = Number.isFinite(face.top) ? (face.eye - face.top) / (face.chin - face.eye) : 1.63;
+  const hat = Number.isFinite(face.above) && face.above >= 0.9 ? (face.above - 0.55) * R.headLen : 0;
+  const eyeK = Math.max(R.eyeMin, topK + R.topPad) + hat;
+  const kh = Math.min(R.h, 1 / (eyeK + 1 + R.below));
+  const eyeI = box.t + vis * face.eye, cxI = box.l + (box.r - box.l) * face.cx;
+  const cap = natH > 0 ? ` ${(natH * faceI * R.upMax).toFixed(1)}px,` : '';
+  // 絵の高さ = F / faceI。枠の下まで届く F は 枠の高さ × faceI
+  const F = `max(min(${(kh * 100).toFixed(3)}cqh,${cap} ${(R.w * 100).toFixed(1)}cqw), ${(faceI * 100).toFixed(3)}cqh)`;
+  const wK = box.ar / faceI;
+  return { width: `calc(${F} * ${wK.toFixed(4)})`, left: `calc(var(--mhms-fx) - ${F} * ${(cxI * wK).toFixed(4)})`,
+    top: `max(calc(${F} * ${(eyeK - eyeI / faceI).toFixed(4)}), calc(100cqh - ${F} * ${(1 / faceI).toFixed(4)}))` };
+};
+const RHYTHM_MODE_CQ_OK = typeof CSS !== 'undefined' && typeof CSS.supports === 'function' && CSS.supports('width', '1cqh');
 function ModeSelectAssistantPanel({ assistant, showArt, showComment, onToggle, artCorner = null }) {
   // 絵の縦横の比(読み込んでから分かる)。分かるまでは、いつもの幅で出す
   const [artRatio, setArtRatio] = React.useState(null);
+  // 絵の元の高さ(px)。顔で寄せるとき、元の絵より大きく引き伸ばしすぎないように使う
+  const [artNatH, setArtNatH] = React.useState(0);
   const artSrc = assistant && assistant.image;
-  React.useEffect(() => { setArtRatio(null); }, [artSrc]);
+  React.useEffect(() => { setArtRatio(null); setArtNatH(0); }, [artSrc]);
+  // 立ち絵(stand-*)の顔の点と見えている体の範囲。測れるまでは、今までの置き方で出す
+  const standFace = (assistant && RHYTHM_MODE_CQ_OK && /\/assistant\/stand-[a-z0-9-]+\//i.test(artSrc || '') && typeof assistantLifeStandFace === 'function') ? assistantLifeStandFace(assistant.id, artSrc) : null;
+  const standFaceOk = !!(standFace && Number.isFinite(standFace.cx));
+  const [standBox, setStandBox] = React.useState(null);
+  React.useEffect(() => {
+    setStandBox(null);
+    if (!standFaceOk || typeof assistantLifeStandBox !== 'function') return undefined;
+    let alive = true;
+    assistantLifeStandBox(artSrc).then((b) => { if (alive) setStandBox(b || null); });
+    return () => { alive = false; };
+  }, [artSrc, standFaceOk]);
+  const standPlace = standFaceOk && standBox ? rhythmModeStandFacePlace(standFace, standBox, artNatH) : null;
   if (!assistant || !(showArt || showComment)) return null;
-  const onArtLoad = (e) => { const im = e.currentTarget; if (im.naturalWidth > 0) setArtRatio(im.naturalHeight / im.naturalWidth); };
+  const onArtLoad = (e) => { const im = e.currentTarget; if (im.naturalWidth > 0) { setArtRatio(im.naturalHeight / im.naturalWidth); setArtNatH(im.naturalHeight); } };
   // 背の低い枠の上限(絵の高さ×show が枠の高さ)。cqh は枠の高さ(mhms-art-box の container-type:size)
   const capOf = (show) => (artRatio ? `${(100 / (artRatio * show)).toFixed(2)}cqh` : '9999px');
   return (
@@ -3037,7 +3082,9 @@ function ModeSelectAssistantPanel({ assistant, showArt, showComment, onToggle, a
           {/* 遊びに来ている助手(練習中)の顔。左上の角(右下の立ち絵ON/コメントONとぶつからない側) */}
           {artCorner}
           <div className="mhms-float pointer-events-none absolute inset-0">
-            {RHYTHM_MODE_ASSISTANT_FRAMES[assistant.id]
+            {standPlace
+              ? <img data-rhythm-mode-assistant-art data-rhythm-mode-assistant-art-face src={assistant.image} alt="" draggable={false} onLoad={onArtLoad} className="mhms-art-face absolute max-w-none" style={{ width: standPlace.width, height: 'auto', left: standPlace.left, top: standPlace.top }} />
+              : RHYTHM_MODE_ASSISTANT_FRAMES[assistant.id]
               ? (() => { const fr = RHYTHM_MODE_ASSISTANT_FRAMES[assistant.id]; const ex = (/_([a-z]+)\.png$/i.exec(assistant.image || '') || [])[1]; const cx = (fr.cxBy && fr.cxBy[ex]) || fr.cx; const masks = [Number.isFinite(fr.fadeBottom) ? `linear-gradient(to bottom, #000 ${fr.fadeBottom * 100}%, transparent 100%)` : null, Number.isFinite(fr.fadeSides) ? `linear-gradient(to right, transparent 0%, #000 ${fr.fadeSides * 100}%, #000 ${100 - fr.fadeSides * 100}%, transparent 100%)` : null].filter(Boolean); const mask = masks.length ? { WebkitMaskImage: masks.join(', '), maskImage: masks.join(', '), WebkitMaskComposite: masks.length > 1 ? 'source-in' : undefined, maskComposite: masks.length > 1 ? 'intersect' : undefined } : {}; return <img data-rhythm-mode-assistant-art src={assistant.image} alt="" draggable={false} onLoad={onArtLoad} className="mhms-art-img absolute max-w-none" style={{ '--mhms-w': `${fr.zoom * 100}%`, '--mhms-cover': '0px', '--mhms-cap': capOf(fr.show || 1), height: 'auto', left: '50%', top: `${fr.top * 100}%`, transform: `translate(-${cx * 100}%, -${fr.cy * 100}%)`, ...mask }} />; })()
               : <img data-rhythm-mode-assistant-art src={assistant.image} alt="" draggable={false} onLoad={onArtLoad} className="mhms-art-img absolute max-w-none [--mhms-y:0.22] landscape:[--mhms-y:0.3]" style={{ ...(artRatio && artRatio > 1.1 ? { '--mhms-y': 0.03 } : null), '--mhms-w': '100%', '--mhms-cover': artRatio ? `${(100 / artRatio).toFixed(2)}cqh` : '0px', '--mhms-cap': capOf(RHYTHM_MODE_ASSISTANT_DEFAULT_SHOW), height: 'auto', left: '50%', top: 'calc(var(--mhms-y) * 100%)', transform: 'translate(-50%, calc(var(--mhms-y) * -100%))' }} />}
           </div>

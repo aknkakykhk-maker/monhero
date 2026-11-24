@@ -1028,17 +1028,19 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   hosei: { sorashido: { top: 0.015, eye: 0.345, chin: 0.55, m: 1.248 } },
   // 社長の全身画の8表情から切り出した、みゅあの胸から上の立ち絵(2026-11-11)。測り方は上と同じ。m は、いまの立ち絵と目から顎の見た目の長さが同じになるように決めた
   //   数字は tools/assistant/life-expression-sheets.py が出す(絵を作り直したら、出た数字へ直す)。stand-normal=ふだんの服
-  'stand-normal': { mua: { top: 0.2058, eye: 0.4599, chin: 0.5379, m: 0.58, above: 0.7 }, momosuke: { top: 0.0635, eye: 0.3248, chin: 0.4296, m: 0.78, above: 0.7 }, kiki: { top: 0.1181, eye: 0.4372, chin: 0.5587, m: 0.904 }, atsu: { top: 0.0726, eye: 0.3274, chin: 0.4296, m: 0.76 }, kyuko: { top: 0.0783, eye: 0.3698, chin: 0.4973, m: 0.949 }, sorashido: { top: 0.0008, eye: 0.2722, chin: 0.4301, m: 1.175 } , erubin: { top: 0.0109, eye: 0.2535, chin: 0.4303, m: 1.316 } },
-  'stand-sekiyuou': { erubin: { top: -0.0059, eye: 0.2449, chin: 0.4297, m: 1.376 } },
-  'stand-hosei': { sorashido: { top: 0.0263, eye: 0.3096, chin: 0.452, m: 1.059 } },
-  'stand-halloween': { mua: { top: 0.2281, eye: 0.4663, chin: 0.539, m: 0.541, above: 0.95 }, momosuke: { top: 0.061, eye: 0.3118, chin: 0.4301, m: 0.88, above: 0.95 }, kiki: { top: 0.1731, eye: 0.3825, chin: 0.4899, m: 0.799, above: 0.95 } },
-  'stand-card-master': { mua: { top: 0.1476, eye: 0.403, chin: 0.5388, m: 1.01, above: 0.75 } },
+  //   cx … 顔の横の真ん中(見えている体の左を0・右を1)。モードえらびの枠が顔で寄せるのに使う(2026-11-24 r1119-153 追記4)。測り直し: python3 -I tools/assistant/life-stand-face-cx.py --write
+  'stand-normal': { mua: { top: 0.2058, eye: 0.4599, chin: 0.5379, m: 0.58, cx: 0.3604, above: 0.7 }, momosuke: { top: 0.0635, eye: 0.3248, chin: 0.4296, m: 0.78, cx: 0.4811, above: 0.7 }, kiki: { top: 0.1181, eye: 0.4372, chin: 0.5587, m: 0.904, cx: 0.523 }, atsu: { top: 0.0726, eye: 0.3274, chin: 0.4296, m: 0.76, cx: 0.4543 }, kyuko: { top: 0.0783, eye: 0.3698, chin: 0.4973, m: 0.949, cx: 0.4956 }, sorashido: { top: 0.0008, eye: 0.2722, chin: 0.4301, m: 1.175, cx: 0.4159 } , erubin: { top: 0.0109, eye: 0.2535, chin: 0.4303, m: 1.316, cx: 0.4935 } },
+  'stand-sekiyuou': { erubin: { top: -0.0059, eye: 0.2449, chin: 0.4297, m: 1.376, cx: 0.5112 } },
+  'stand-hosei': { sorashido: { top: 0.0263, eye: 0.3096, chin: 0.452, m: 1.059, cx: 0.3981 } },
+  'stand-halloween': { mua: { top: 0.2281, eye: 0.4663, chin: 0.539, m: 0.541, cx: 0.4101, above: 0.95 }, momosuke: { top: 0.061, eye: 0.3118, chin: 0.4301, m: 0.88, cx: 0.5497, above: 0.95 }, kiki: { top: 0.1731, eye: 0.3825, chin: 0.4899, m: 0.799, cx: 0.5119, above: 0.95 } },
+  'stand-card-master': { mua: { top: 0.1476, eye: 0.403, chin: 0.5388, m: 1.01, cx: 0.4844, above: 0.75 } },
   // 冬の装いの寝顔(winter/kyuko_sleep.PNG・392×1440の全身)。目・顎は絵を目盛りつきで測った(2026-11-19)
   winter: { kyuko: { top: 0.004, eye: 0.132, chin: 0.191, m: 0.441 } },
-  'stand-winter': { kyuko: { top: 0.0137, eye: 0.3314, chin: 0.4303, m: 0.736 } },
+  'stand-winter': { kyuko: { top: 0.0137, eye: 0.3314, chin: 0.4303, m: 0.736, cx: 0.5294 } },
   // ききのツインテール(全身画から実測。2026-11-20)。top はリボンを除いた頭のてっぺん、above は大きなリボンが切れないように
+  //   2026-11-24 r1119-153 追記4: stand-twintail の目の線が前髪に、顎が口元に付いていた(顔を長く測り、枠で小さく出た)。確かめ絵 stand-marks/kiki_twintail.png で目の真ん中・顎の先へ直した
   twintail: { kiki: { top: 0.112, eye: 0.183, chin: 0.244, m: 0.383, above: 0.95 } },
-  'stand-twintail': { kiki: { top: 0.2539, eye: 0.4133, chin: 0.5496, m: 1.014, above: 0.95 } },
+  'stand-twintail': { kiki: { top: 0.2539, eye: 0.4735, chin: 0.5974, m: 0.922, cx: 0.5317, above: 0.95 } },
 });
 // 絵の置き場所から、着替えの名前を引く(ふだんの服は null)
 const assistantLifeStandOutfitOf = (src) => { const m = /\/assistant\/([a-z0-9-]+)\/[a-z]+_[a-z]+\.png/i.exec(String(src || '')); return m && m[1] !== 'face' && m[1] !== 'temp' ? m[1] : null; };

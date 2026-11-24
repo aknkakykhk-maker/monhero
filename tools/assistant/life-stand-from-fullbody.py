@@ -332,6 +332,13 @@ def run(key, cfg, marks, opts):
     vh = by1 - by0
     fy = lambda y: round(float((y - frame[1] - by0) / vh), 4)
     row = dict(top=fy(mk['top']), eye=fy(mk['eye']), chin=fy(mk['chin']), m=round(float(f / vh / (0.82 * 0.1639)), 3))
+    # 顔の横の真ん中(見えている体の左を0・右を1)。モードえらびの枠が顔で寄せるのに使う(r1119-153 追記4・life-stand-face-cx.py と同じ測り方)
+    _np = os.path.join(ROOT, 'monster-hero/images/assistant', cfg['stand'], '%s_normal.png' % cfg['prefix'])
+    if os.path.exists(_np):
+        import importlib.util
+        _sp = importlib.util.spec_from_file_location('life_stand_face_cx', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'life-stand-face-cx.py'))
+        _mod = importlib.util.module_from_spec(_sp); _sp.loader.exec_module(_mod)
+        row['cx'] = _mod.face_cx(_np, row['eye'])
     if cfg.get('above'):
         row['above'] = cfg['above']
     # 顔のずれ: 場面は見えている体の範囲で置くので、表情ごとに範囲が違うと顔が動く。顔の長さ(目から顎)の何割かで出す
