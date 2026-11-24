@@ -148,7 +148,8 @@ const gameplayClip = (song, i, dir) => {
   const meta = JSON.parse(fs.readFileSync(path.join(dir, 'frames.json'), 'utf8'));
   // 撮った順に、曲の時刻が進んでいるあいだのコマだけ使う(曲が終わったあとは結果の画面などで時刻が戻る)
   const fr = [];
-  for (const f of meta.frames) { if (!Number.isFinite(f.songMs)) continue; const last = fr.length ? fr[fr.length - 1].songMs : -Infinity; if (f.songMs < last - 500) break; if (f.songMs <= last) continue; fr.push(f); }   // 少しの戻り(時計のならし)はそのコマだけ飛ばす
+  // song.lastMs … 曲が終わって鑑賞が曲えらびへ戻る曲では、その時刻より後のコマを使わない(最後の演奏のコマで止める・第3版の全部必殺技でつ)
+  for (const f of meta.frames) { if (!Number.isFinite(f.songMs)) continue; if (Number.isFinite(song.lastMs) && f.songMs > song.lastMs) break; const last = fr.length ? fr[fr.length - 1].songMs : -Infinity; if (f.songMs < last - 500) break; if (f.songMs <= last) continue; fr.push(f); }   // 少しの戻り(時計のならし)はそのコマだけ飛ばす
   const n = Math.round(T.stageDur * FPS), list = [];
   let j = 0, worst = 0;
   for (let k = 0; k < n; k++) {
