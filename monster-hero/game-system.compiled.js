@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2e146fd29de7026d
+// source-sha256: 39a150df3ac78f58
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -121355,11 +121355,11 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   },
   'stand-normal': {
     mua: {
-      top: 0.2058,
-      eye: 0.4599,
-      chin: 0.5379,
-      m: 0.58,
-      cx: 0.3604,
+      top: 0.1592,
+      eye: 0.3668,
+      chin: 0.4305,
+      m: 0.474,
+      cx: 0.493,
       above: 0.7
     },
     momosuke: {
@@ -121367,43 +121367,43 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       eye: 0.3248,
       chin: 0.4296,
       m: 0.78,
-      cx: 0.4811,
+      cx: 0.5051,
       above: 0.7
     },
     kiki: {
-      top: 0.1181,
-      eye: 0.4372,
-      chin: 0.5587,
-      m: 0.904,
-      cx: 0.523
+      top: 0.0879,
+      eye: 0.3357,
+      chin: 0.4301,
+      m: 0.702,
+      cx: 0.5388
     },
     atsu: {
       top: 0.0726,
       eye: 0.3274,
       chin: 0.4296,
       m: 0.76,
-      cx: 0.4543
+      cx: 0.4669
     },
     kyuko: {
-      top: 0.0783,
-      eye: 0.3698,
-      chin: 0.4973,
-      m: 0.949,
-      cx: 0.4956
+      top: 0.0584,
+      eye: 0.3167,
+      chin: 0.4297,
+      m: 0.841,
+      cx: 0.5084
     },
     sorashido: {
       top: 0.0008,
       eye: 0.2722,
       chin: 0.4301,
       m: 1.175,
-      cx: 0.4159
+      cx: 0.4165
     },
     erubin: {
       top: 0.0109,
       eye: 0.2535,
       chin: 0.4303,
       m: 1.316,
-      cx: 0.4935
+      cx: 0.4834
     }
   },
   'stand-sekiyuou': {
@@ -121417,20 +121417,20 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   },
   'stand-hosei': {
     sorashido: {
-      top: 0.0263,
-      eye: 0.3096,
-      chin: 0.452,
-      m: 1.059,
-      cx: 0.3981
+      top: 0.0227,
+      eye: 0.2938,
+      chin: 0.4301,
+      m: 1.014,
+      cx: 0.3906
     }
   },
   'stand-halloween': {
     mua: {
-      top: 0.2281,
-      eye: 0.4663,
-      chin: 0.539,
-      m: 0.541,
-      cx: 0.4101,
+      top: 0.1808,
+      eye: 0.3718,
+      chin: 0.4301,
+      m: 0.434,
+      cx: 0.5138,
       above: 0.95
     },
     momosuke: {
@@ -121438,25 +121438,25 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       eye: 0.3118,
       chin: 0.4301,
       m: 0.88,
-      cx: 0.5497,
+      cx: 0.5312,
       above: 0.95
     },
     kiki: {
-      top: 0.1731,
-      eye: 0.3825,
-      chin: 0.4899,
-      m: 0.799,
-      cx: 0.5119,
+      top: 0.1495,
+      eye: 0.3352,
+      chin: 0.4305,
+      m: 0.709,
+      cx: 0.5309,
       above: 0.95
     }
   },
   'stand-card-master': {
     mua: {
-      top: 0.1476,
-      eye: 0.403,
-      chin: 0.5388,
-      m: 1.01,
-      cx: 0.4844,
+      top: 0.116,
+      eye: 0.3209,
+      chin: 0.4298,
+      m: 0.81,
+      cx: 0.4725,
       above: 0.75
     }
   },
@@ -121474,7 +121474,7 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       eye: 0.3314,
       chin: 0.4303,
       m: 0.736,
-      cx: 0.5294
+      cx: 0.5286
     }
   },
   twintail: {
@@ -121488,11 +121488,11 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   },
   'stand-twintail': {
     kiki: {
-      top: 0.2539,
-      eye: 0.4735,
-      chin: 0.5974,
-      m: 0.922,
-      cx: 0.5317,
+      top: 0.1807,
+      eye: 0.3402,
+      chin: 0.4301,
+      m: 0.67,
+      cx: 0.5119,
       above: 0.95
     }
   }

@@ -24,14 +24,34 @@ ALPHA = 40
 PREFIX = dict(mua='myua', kiki='kiki', momosuke='momosuke', atsu='atsu', kyuko='kyuko', sorashido='sorashido', erubin='erubin')
 
 
+EXPR = ('normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited')
+
+
 def face_cx(path, eye):
-    """見えている体の中での顔の横の真ん中(0〜1)。eye は見えている体の上を0・下を1とした目の線。"""
+    """見えている体の中での顔の横の真ん中(0〜1)。eye は見えている体の上を0・下を1とした目の線。
+    8表情は normal と同じ枠・同じ顔の位置に重ねてあるので、8枚で測った真ん中の値をとる
+    (みゅあ ふだんの normal は上げた腕が目の高さで頭とつながり、1枚だけだと左へずれた)。範囲は normal の見えている体"""
     a = np.asarray(Image.open(path).convert('RGBA'))
     on = a[..., 3] > ALPHA
     ys, xs = np.nonzero(on)
     t, b, l, r = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
     y = int(round(t + (b - t) * eye))
-    row = on[min(max(y, 0), a.shape[0] - 1)]
+    vals = []
+    for e in EXPR:
+        pe = path.replace('_normal.png', '_%s.png' % e)
+        if not os.path.exists(pe):
+            continue
+        ae = np.asarray(Image.open(pe).convert('RGBA'))
+        if ae.shape[:2] != a.shape[:2]:
+            continue
+        vals.append(_run_cx(ae[..., 3] > ALPHA, y, (l + r) / 2.0))
+    hx = float(np.median(vals)) if vals else (l + r) / 2.0
+    return round(float((hx - l) / (r - l)), 4)
+
+
+def _run_cx(on, y, fallback):
+    """目の線の高さで、いちばん長くつながった不透明な所の真ん中(画素)"""
+    row = on[min(max(y, 0), on.shape[0] - 1)]
     best, run0 = (0, 0, 0), None
     for x in range(len(row) + 1):
         o = x < len(row) and row[x]
@@ -41,8 +61,7 @@ def face_cx(path, eye):
             if x - run0 > best[0]:
                 best = (x - run0, run0, x)
             run0 = None
-    hx = (best[1] + best[2]) / 2.0 if best[0] else (l + r) / 2.0
-    return round(float((hx - l) / (r - l)), 4)
+    return (best[1] + best[2]) / 2.0 if best[0] else fallback
 
 
 def main():
