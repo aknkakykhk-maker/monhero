@@ -15,6 +15,7 @@
 //                     時刻をそろえるため、撮るあいだだけ お祝いの自動の進み(setTimeout)と結果の数え上げの描画の合図(requestAnimationFrame)をつかむ
 //     --best-score  … 前の自己ベストをこの点にして始める(既定 1)。結果の「自己ベストまで あと」・越えた瞬間を撮るとき
 //     --viewport    … 画面の大きさ(既定 390x844)
+//   --result-script <js> … 結果の画面が出たところで、その台本(module.exports=async(page)=>{})を呼ぶ(案の止め絵)
 //   どちらのときも、演出が出たか(盛り上がりの光が点いた時刻・叩いた場所の判定の数・ランクが上がったときの文字)を最後に出す
 //
 // 【なぜ要るか】
@@ -211,6 +212,9 @@ const playOne=async(browser,songIds,songId,difficulty)=>{
         await page.screenshot({path:path.join(END_SHOTS,`result-${ms}.png`)});}
       await page.evaluate(()=>{window.__mhRafNow=undefined;});
     }
+    // --result-script <js> … 結果の画面が出たら、その台本(module.exports=async(page)=>{})を呼ぶ(案の止め絵を撮るとき・2026-11-24)
+    const resultScript=arg('--result-script',null);
+    if(resultScript){await page.waitForSelector('[data-rhythm-result]',{timeout:8*60*1000});await require(path.resolve(resultScript))(page);}
     // 曲が終わるまで待つ(結果の画面が出る・プレイエリアが消える)
     await page.waitForFunction(()=>!document.querySelector('[data-rhythm-play-area]')||/RESULT|リザルト|もう一度/.test(document.body.innerText),undefined,{timeout:8*60*1000,polling:1000});
     await page.waitForTimeout(500);
