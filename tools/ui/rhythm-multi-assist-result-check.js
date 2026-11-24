@@ -58,6 +58,20 @@ const measureResult = (page) => page.evaluate(() => {
     if (!inBox(R(face), box)) out.mvp.push('顔が枠で切れる');
     li.querySelectorAll('small, b').forEach((e) => { if (e === mvp || !e.innerText.trim()) return; if (!inBox(R(e), box)) out.mvp.push(`「${e.innerText.trim().slice(0, 10)}」が枠で切れる`); });
   }
+  // ①-2 全員の枠: 「FULL COMBO」などの札が1行に収まり(枠の幅を超えない)、名前・スコアの数字と重ならない(2026-11-24 r1119-169)
+  document.querySelectorAll('[data-rhythm-multi-result-row]').forEach((row) => {
+    const lab = row.querySelector('[data-rhythm-multi-fc-label]');
+    if (!lab || !lab.innerText.trim()) return;
+    const t = lab.innerText.trim(); const lr = R(lab); const box = R(row);
+    const range = document.createRange(); range.selectNodeContents(lab);
+    const tr0 = range.getBoundingClientRect();
+    if (Math.min(tr0.width, tr0.height) > 20) out.mvp.push(`札「${t}」が2行以上に折れる`);
+    if (tr0.right > lr.right + 1 || tr0.left < lr.left - 1) out.mvp.push(`札「${t}」が札の幅を超える`);
+    const tr = range.getBoundingClientRect();
+    if (tr.left < box.left - 1 || tr.right > box.right + 1) out.mvp.push(`札「${t}」の字が枠の外へ出る`);
+    ['[data-rhythm-multi-score]'].forEach((q) => { const e = row.querySelector(q); if (e && hit(tr, R(e))) out.mvp.push(`札「${t}」がスコアの数字に重なる`); });
+    row.querySelectorAll('span.truncate, small:not([data-rhythm-multi-fc-label])').forEach((e) => { if (e.innerText.trim() && hit(tr, R(e))) out.mvp.push(`札「${t}」が「${e.innerText.trim().slice(0, 8)}」に重なる`); });
+  });
   // ② 定型のあいさつ: 6つとも列の中に見え、🏆・チャットと重ならない
   const bar = document.querySelector('[data-rhythm-multi-result-chat] [data-rhythm-multi-stamps]');
   const stamps = bar ? [...bar.querySelectorAll('[data-rhythm-multi-chat-stamp]')] : [];
@@ -110,7 +124,7 @@ const measureResult = (page) => page.evaluate(() => {
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   const errors = [];
   try {
-    for (const [w, h, rot, name] of [[390, 664, true, 'rot-iphone'], [390, 844, true, 'rot'], [375, 667, true, 'rot-se'], [390, 844, false, 'tate'], [844, 390, false, 'yoko'], [320, 568, false, 'small']]) {
+    for (const [w, h, rot, name] of [[390, 664, true, 'rot-iphone'], [390, 844, true, 'rot'], [375, 667, true, 'rot-se'], [390, 844, false, 'tate'], [844, 390, false, 'yoko'], [320, 568, false, 'small'], [430, 932, false, 'tate430'], [390, 844, true, 'rot']].filter((x, i, a) => a.findIndex((y) => y[3] === x[3]) === i)) {
       if (process.env.ONLY && process.env.ONLY !== name) continue;
       const page = await browser.newPage({ viewport: { width: w, height: h } });
       // iPhone の切り欠き(上 59px・ホームバー 34px)を入れて測る(env() は作れないので、index.html の --mh-safe-* で差し替える)
@@ -176,7 +190,7 @@ const measureResult = (page) => page.evaluate(() => {
       // ライブが始まり、演奏の画面へ入ったら、自分の結果を知らせる。助手の結果もそこで出る
       await page.waitForFunction(() => !!document.querySelector('[data-rhythm-play-area]'), null, { timeout: 90000 });
       const round = await page.evaluate(() => RHYTHM_MULTI.view().room.round);
-      await page.evaluate((id) => RHYTHM_MULTI.reportResult(id, { score: 987654, cleared: true, fullCombo: true, maxCombo: 431, judgments: { MARVELOUS: 400, EXCELLENT: 25, GREAT: 6, GOOD: 0, BAD: 0, MISS: 0 }, fast: 12, slow: 7 }, false, { diffId: 'HELL' }), round);
+      await page.evaluate(([id, kind]) => RHYTHM_MULTI.reportResult(id, { score: 987654, cleared: true, fullCombo: true, allMarvelous: kind === 'am', allExcellent: kind === 'ae', maxCombo: 431, judgments: { MARVELOUS: 400, EXCELLENT: 25, GREAT: 6, GOOD: 0, BAD: 0, MISS: 0 }, fast: 12, slow: 7 }, false, { diffId: 'HELL' }), [round, process.env.FC_KIND || '']);
       for (let i = 0; i < 6; i += 1) {
         if (!(await page.evaluate(() => !!document.querySelector('[data-rhythm-play-area]')))) break;
         await page.evaluate(() => document.querySelector('[data-rhythm-pause]')?.click());
