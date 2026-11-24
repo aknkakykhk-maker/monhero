@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b3005296c313f0b6
+// source-sha256: 923ed0c5a82c0e99
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -102424,6 +102424,39 @@ function RhythmMultiMemberCards({
   }));
 }
 const RHYTHM_MULTI_FC_LABELS = Object.freeze(['', 'FULL COMBO!', 'ALL EXCELLENT!', 'ALL MARVELOUS!']);
+function RhythmMultiFcLabel({
+  text
+}) {
+  const box = React.useRef(null);
+  const txt = React.useRef(null);
+  const [k, setK] = React.useState(1);
+  React.useLayoutEffect(() => {
+    const fit = () => {
+      const b = box.current;
+      const t = txt.current;
+      if (!b || !t) return;
+      const w = t.scrollWidth;
+      const W = b.clientWidth;
+      setK(w > W && W > 0 ? Math.max(0.5, W / w) : 1);
+    };
+    fit();
+    if (typeof ResizeObserver !== 'function' || !box.current) return undefined;
+    const ro = new ResizeObserver(fit);
+    ro.observe(box.current);
+    return () => ro.disconnect();
+  }, [text]);
+  return React.createElement("small", {
+    "data-rhythm-multi-fc-label": true,
+    ref: box,
+    className: "block h-3.5 w-full shrink-0 overflow-hidden whitespace-nowrap text-[10px] font-black italic leading-[14px] text-pink-300 landscape:text-[11px]"
+  }, React.createElement("span", {
+    ref: txt,
+    className: "inline-block origin-left",
+    style: k < 1 ? {
+      transform: `scaleX(${k.toFixed(3)})`
+    } : undefined
+  }, text));
+}
 const RHYTHM_MODE_SELECT_CSS = `
 .mhms-stage{background:radial-gradient(120% 70% at 50% -10%,rgba(217,70,239,.32),transparent 60%),radial-gradient(90% 60% at 15% 110%,rgba(56,189,248,.22),transparent 65%),radial-gradient(90% 60% at 90% 105%,rgba(244,114,182,.22),transparent 65%),linear-gradient(160deg,#0b0620 0%,#1d0b3a 45%,#0a1030 100%);}
 .mhms-fx{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0}
@@ -106357,9 +106390,10 @@ function RhythmMultiScreenBody({
         sizeClass: "h-12 w-12 landscape:h-16 landscape:w-16 [@media(max-height:440px)]:h-11 [[data-mh-view-rotation=true]_&]:h-11 [@media(max-height:440px)]:w-11 [[data-mh-view-rotation=true]_&]:w-11"
       })), React.createElement("span", {
         className: `relative z-20 mt-1 w-full shrink-0 truncate text-[10px] font-black landscape:text-xs ${isMvp ? 'text-amber-100' : ''}`
-      }, r.m.name, r.m.id === view.selfId ? '(あなた)' : ''), React.createElement("small", {
-        className: "block h-3.5 shrink-0 text-[10px] font-black italic leading-[14px] text-pink-300 landscape:text-[11px]"
-      }, r.res && !r.res.quit && r.res.cleared && r.res.fc > 0 ? RHYTHM_MULTI_FC_LABELS[r.res.fc].replace('!', '') : ''), React.createElement("b", {
+      }, r.m.name, r.m.id === view.selfId ? '(あなた)' : ''), React.createElement(RhythmMultiFcLabel, {
+        text: r.res && !r.res.quit && r.res.cleared && r.res.fc > 0 ? RHYTHM_MULTI_FC_LABELS[r.res.fc].replace('!', '') : ''
+      }), React.createElement("b", {
+        "data-rhythm-multi-score": true,
         className: `block w-full shrink-0 text-[10px] font-black leading-tight tracking-tighter tabular-nums landscape:text-base landscape:tracking-normal [@media(max-height:440px)]:text-sm [[data-mh-view-rotation=true]_&]:text-sm ${isMvp ? 'text-amber-200' : ''}`
       }, r.res ? r.res.quit ? 'リタイア' : (Number(r.res.score) || 0).toLocaleString() : r.m.gone ? '—' : 'ライブ中…'), r.res && !r.res.quit && React.createElement(React.Fragment, null, React.createElement("small", {
         className: "mt-1 shrink-0 rounded bg-slate-800 px-1 text-[8px] font-black text-slate-300 landscape:text-[10px] [@media(max-height:440px)]:mt-0.5 [[data-mh-view-rotation=true]_&]:mt-0.5"

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: af0fa9cd098db4e0
+// generated-sha256: df9572042a3b14da
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -60832,6 +60832,19 @@ function RhythmMultiMemberCards({ members, hostId, selfId, resolveIconUrl, badge
 }
 
 const RHYTHM_MULTI_FC_LABELS = Object.freeze(['', 'FULL COMBO!', 'ALL EXCELLENT!', 'ALL MARVELOUS!']);
+// 結果の枠の「FULL COMBO」「ALL MARVELOUS」の札: 1行に置き、枠の幅からはみ出す分だけ字を横に詰める(2行に折れてスコアの数字に重なっていた・2026-11-24 r1119-169)。
+// 字の高さは変えないので、下のスコアの位置は動かない。測り直すのは枠の幅が変わったとき(向き・端末・人数)
+function RhythmMultiFcLabel({ text }) {
+  const box = React.useRef(null); const txt = React.useRef(null);
+  const [k, setK] = React.useState(1);
+  React.useLayoutEffect(() => {
+    const fit = () => { const b = box.current; const t = txt.current; if (!b || !t) return; const w = t.scrollWidth; const W = b.clientWidth; setK(w > W && W > 0 ? Math.max(0.5, W / w) : 1); };
+    fit();
+    if (typeof ResizeObserver !== 'function' || !box.current) return undefined;
+    const ro = new ResizeObserver(fit); ro.observe(box.current); return () => ro.disconnect();
+  }, [text]);
+  return <small data-rhythm-multi-fc-label ref={box} className="block h-3.5 w-full shrink-0 overflow-hidden whitespace-nowrap text-[10px] font-black italic leading-[14px] text-pink-300 landscape:text-[11px]"><span ref={txt} className="inline-block origin-left" style={k < 1 ? { transform: `scaleX(${k.toFixed(3)})` } : undefined}>{text}</span></small>;
+}
 
 // ---- モードえらびの見た目(2026-10-03・ユーザー指示「見た目自体の強化して」) ----
 // ライブ会場の舞台のような背景(揺れるスポットライト・舞う音符・キラキラ・床の光)と、
@@ -63062,8 +63075,8 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
                   <RhythmMultiAvatar m={r.m} resolveIconUrl={resolveIconUrl} sizeClass="h-12 w-12 landscape:h-16 landscape:w-16 [@media(max-height:440px)]:h-11 [[data-mh-view-rotation=true]_&]:h-11 [@media(max-height:440px)]:w-11 [[data-mh-view-rotation=true]_&]:w-11" />
                 </span>
                 <span className={`relative z-20 mt-1 w-full shrink-0 truncate text-[10px] font-black landscape:text-xs ${isMvp ? 'text-amber-100' : ''}`}>{r.m.name}{r.m.id === view.selfId ? '(あなた)' : ''}</span>
-                <small className="block h-3.5 shrink-0 text-[10px] font-black italic leading-[14px] text-pink-300 landscape:text-[11px]">{r.res && !r.res.quit && r.res.cleared && r.res.fc > 0 ? RHYTHM_MULTI_FC_LABELS[r.res.fc].replace('!', '') : ''}</small>
-                <b className={`block w-full shrink-0 text-[10px] font-black leading-tight tracking-tighter tabular-nums landscape:text-base landscape:tracking-normal [@media(max-height:440px)]:text-sm [[data-mh-view-rotation=true]_&]:text-sm ${isMvp ? 'text-amber-200' : ''}`}>{r.res ? (r.res.quit ? 'リタイア' : (Number(r.res.score) || 0).toLocaleString()) : r.m.gone ? '—' : 'ライブ中…'}</b>
+                <RhythmMultiFcLabel text={r.res && !r.res.quit && r.res.cleared && r.res.fc > 0 ? RHYTHM_MULTI_FC_LABELS[r.res.fc].replace('!', '') : ''} />
+                <b data-rhythm-multi-score className={`block w-full shrink-0 text-[10px] font-black leading-tight tracking-tighter tabular-nums landscape:text-base landscape:tracking-normal [@media(max-height:440px)]:text-sm [[data-mh-view-rotation=true]_&]:text-sm ${isMvp ? 'text-amber-200' : ''}`}>{r.res ? (r.res.quit ? 'リタイア' : (Number(r.res.score) || 0).toLocaleString()) : r.m.gone ? '—' : 'ライブ中…'}</b>
                 {r.res && !r.res.quit && <>
                   <small className="mt-1 shrink-0 rounded bg-slate-800 px-1 text-[8px] font-black text-slate-300 landscape:text-[10px] [@media(max-height:440px)]:mt-0.5 [[data-mh-view-rotation=true]_&]:mt-0.5">{r.res.diffId || '-'}{lv ? ` Lv.${lv}` : ''}</small>
                   {!r.res.cleared && <small className="text-[8px] font-black text-rose-300">失敗</small>}
