@@ -3,6 +3,10 @@
 //   案A … 地上のノーツ → 空中のガラスの面(すりガラス+両端のレール) → 空中のノーツ。地上は「ガラスの向こう」に見える
 //   案B … 地上のノーツ → 空中の面と重なる所だけ地上のノーツを暗くする(ノーツの上だけ・背景は変えない) → 空中のノーツ。地上が「奥に沈む」
 //   案C … 地上のノーツ → 空中のノーツ(描く順番を変えるだけ。重なった所はいつも空中が上)
+// 2回目(社長「空中で濃すぎてみづらい」): 空中の面を薄くし、地上は軽くだけ沈める
+//   案D … 面を今の半分(塗り13%→6.5%・区切りとふちも半分)+ 重なる所の地上を3割だけ暗く
+//   案E … 面を今の3分の1(塗り13%→4.3%)+ 重なる所の地上を3割だけ暗く
+//   案F … 面の塗りと区切りを消し、両端のふちだけ細く残す + 重なる所の地上を2割5分だけ暗く
 (() => {
   const LOOK = window.__skyLayerLook;
   const poly = (ctx, plane, rect) => {
@@ -17,11 +21,15 @@
     // 空中の面(SVG)と同じ 0〜100 の座標を、ノーツの canvas の見えている大きさ(CSS px)へ写す
     const rect = { width: ctx.canvas.clientWidth || rect0.width, height: ctx.canvas.clientHeight || rect0.height };
     if (LOOK === 'C') return;
+    const SOFT = { D: .3, E: .3, F: .25 }[LOOK];
     ctx.save();
     // ノーツの canvas は解像度の倍率が端末と違うことがある(重いときに下げる)ので、CSS の px で描けるように倍率を合わせ直す
     ctx.setTransform(ctx.canvas.width / rect.width, 0, 0, ctx.canvas.height / rect.height, 0, 0);
     const { pts, y0, y1 } = poly(ctx, plane, rect);
-    if (LOOK === 'B') {
+    if (SOFT) {
+      ctx.globalCompositeOperation = 'source-atop';
+      ctx.fillStyle = `rgba(10,5,30,${SOFT})`; ctx.fill();
+    } else if (LOOK === 'B') {
       // 地上のノーツだけを暗く・紫へ寄せる(source-atop … いま描いてあるノーツの上にだけ乗る)
       ctx.globalCompositeOperation = 'source-atop';
       const g = ctx.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, 'rgba(10,5,30,.8)'); g.addColorStop(1, 'rgba(10,5,30,.6)');
@@ -43,9 +51,16 @@
     }
     ctx.restore();
   };
-  if (LOOK === 'A') {
-    // 案A は SVG の空中の面(今の薄い面)をガラスの面に置き換えるので、元の面の塗りは消す(区切りの線は残す)
-    const css = '[data-rhythm-sky-lane-look="em"] > polygon{fill-opacity:0}';
+  // 案A は SVG の空中の面(今の薄い面)をガラスの面に置き換えるので、元の面の塗りは消す(区切りの線は残す)。
+  // 案D・E・F は SVG の空中の面(塗り .13・区切り .32・ふち .6)を薄くする
+  const G = '[data-rhythm-sky-lane-look="em"]';
+  const css = {
+    A: `${G} > polygon{fill-opacity:0}`,
+    D: `${G} > polygon{fill-opacity:.065}${G} > polyline{stroke-opacity:.16}${G} > polyline:nth-last-of-type(-n+2){stroke-opacity:.3}`,
+    E: `${G} > polygon{fill-opacity:.043}${G} > polyline{stroke-opacity:.11}${G} > polyline:nth-last-of-type(-n+2){stroke-opacity:.2}`,
+    F: `${G} > polygon{fill-opacity:0}${G} > polyline{stroke-opacity:0}${G} > polyline:nth-last-of-type(-n+2){stroke-opacity:.35}`,
+  }[LOOK];
+  if (css) {
     const add = () => { const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st); };
     if (document.head) add(); else document.addEventListener('DOMContentLoaded', add);
   }
