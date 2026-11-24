@@ -3030,9 +3030,9 @@ const RHYTHM_MODE_ASSISTANT_DEFAULT_SHOW = 0.8;
 //   ただし絵の下の端は必ず枠の下まで届かせる(届かないときは F を大きくする。体が枠の途中で切れて見えないように)。
 //   目の線は、測った頭のてっぺん(耳・帽子を含む絵もある)から F の 0.6 倍上を空けた所。大きい帽子・リボンの服(表の above が 0.9 以上)はそのぶん下げる。
 //   顎の下にも F の below 倍(首と胸元)が入るよう、背の低い枠では F を小さくする。
-//   数字は前後の止め絵 docs/progress/assistant-art/r1119-153-switch/frame/ で決めた(0.17 倍は寄りすぎて帽子が切れた・あつがぼやけた)
+//   数字は前後の止め絵 docs/progress/assistant-art/r1119-153-switch/frame/ で決めた(0.17 倍で帽子が切れ・あつがぼやけた → 帽子の余白と元の絵の上限を足して 0.16 倍)
 //   背の低い枠(社長の写真の枠は高さ 90px ほど)では、胸元を見せる余裕がないので、顔を枠の高さの lowH 倍(lowPx まで)に寄せ、顎の下は F の lowBelow 倍だけ残す(帽子の先は切れてよい)
-const RHYTHM_MODE_STAND_FACE = Object.freeze({ h: 0.145, w: 0.35, below: 2.5, eyeMin: 2.4, topPad: 0.6, headLen: 2.63, upMax: 1.5, lowH: 0.22, lowPx: 20, lowBelow: 0.8 });
+const RHYTHM_MODE_STAND_FACE = Object.freeze({ h: 0.16, w: 0.35, below: 2.5, eyeMin: 2.4, topPad: 0.6, headLen: 2.63, upMax: 1.5, lowH: 0.22, lowPx: 20, lowBelow: 0.8 });
 const rhythmModeStandFacePlace = (face, box, natH) => {
   if (!face || !box || !Number.isFinite(face.cx) || !Number.isFinite(face.eye) || !Number.isFinite(face.chin) || !(box.ar > 0)) return null;
   const vis = box.b - box.t, faceI = vis * (face.chin - face.eye);
