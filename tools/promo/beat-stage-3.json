@@ -217,5 +217,6 @@
       "ON"
     ]
   ],
-  "_settings": "撮影の設定は社長の端末のオプション(docs/promo/requests/beat-stage-3-settings-2026-11-24/)。optionsUi をオプション画面で選んで保存する。速さ 10.0 だけ保存値に入れる(指示書)。ほかは初期設定"
+  "_settings": "撮影の設定は社長の端末のオプション(docs/promo/requests/beat-stage-3-settings-2026-11-24/)。optionsUi をオプション画面で選んで保存する。速さ 10.0 だけ保存値に入れる(指示書)。ほかは初期設定",
+  "slow": 0.09
 }

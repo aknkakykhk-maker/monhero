@@ -68,7 +68,7 @@ const capture = (song, i) => {
   if (ok && !argv.includes('--recapture')) return dir;
   console.log(`撮影 ${i + 1}: ${song.songId} ${song.diff || 'HELL'} ${from}〜${to}ms`);
   execFileSync('node', [R('tools/promo/beat-stage-capture.js'), '--song', song.songId, '--diff', song.diff || 'HELL', '--from', String(from), '--to', String(to), '--speed', String(plan.noteSpeed || 9.5),
-    '--settings', JSON.stringify(plan.captureSettings || {}), ...(plan.listen ? ['--listen'] : []), ...(plan.optionsUi ? ['--ui-settings', JSON.stringify(plan.optionsUi)] : []), '--out', dir], { stdio: 'inherit' });
+    '--settings', JSON.stringify(plan.captureSettings || {}), ...(plan.listen ? ['--listen'] : []), ...(plan.slow ? ['--slow', String(plan.slow)] : []), ...(plan.optionsUi ? ['--ui-settings', JSON.stringify(plan.optionsUi)] : []), '--out', dir], { stdio: 'inherit' });
   return dir;
 };
 
