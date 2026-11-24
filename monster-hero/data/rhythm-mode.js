@@ -3548,6 +3548,38 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
   // 場面の合図の短い音(2026-11-20 音の点検 F2・F3・F6)。'count' … 演奏前の 3・2・1(1つ数えるごとに1回)/ 'join' … マルチの部屋に
   // 人やマスモンが加わった / 'mvp' … マルチのみんなの結果で MVP を発表する。守りは playFullCombo と同じ(ノーツの効果音OFF・音量0・全体ミュートでは鳴らさない)。
   // モンヒロビートの画面は効果音(Audio_.se)の音量を0にしているので、ノーツの音と同じ出口から鳴らす
+  // 結果の画面の数え上げの音(2026-11-24・台帳 r1119-156 追記2 案A)。判定の行が1つ決まるたびの「カチッ」(step で1行ごとに少しずつ高く)と、
+  // スコアが決まる瞬間の音(final)。素材は足さず、ここで短い音を作る。守りは playCue と同じ(ノーツの効果音OFF・音量0・全体ミュートでは鳴らさない)
+  const playResultCount=(step=0,final=false)=>{
+    const settings=readSettings();
+    if(!settings.enabled||settings.volume<=0||!rhythmAudioGloballyEnabled())return false;
+    const audio=context();
+    if(!audio)return false;
+    if(audio.state==='suspended'&&typeof audio.resume==='function')audio.resume().catch(()=>{});
+    const now=audio.currentTime,level=rhythmNoteSeLevel(final?.045:.035,settings.volume/100);
+    const tone=(type,freq,start,sustain,scale)=>{
+      const oscillator=audio.createOscillator(),gain=audio.createGain();
+      oscillator.type=type;
+      oscillator.frequency.setValueAtTime(freq,start);
+      gain.gain.setValueAtTime(.0001,start);
+      gain.gain.exponentialRampToValueAtTime(Math.max(.0002,level*scale),start+.006);
+      gain.gain.exponentialRampToValueAtTime(.0001,start+sustain);
+      oscillator.connect(gain);
+      gain.connect(output(audio));
+      oscillator.start(start);
+      oscillator.stop(start+sustain+.02);
+      oscillator.onended=()=>{try{oscillator.disconnect();gain.disconnect();}catch{}};
+    };
+    if(final){
+      // 決まる音: 低い支え(G4)と、上の和音(D6・G6)を短く重ねる
+      tone('triangle',392,now,.32,.9);[[1174.66,.8],[1567.98,1]].forEach(([freq,scale])=>tone('triangle',freq,now+.02,.36,scale));
+      return true;
+    }
+    // カチッ: 高い短い音(行ごとに半音2つずつ上がる)と、ごく短い低い当たり
+    const base=880*Math.pow(2,Math.max(0,Math.min(12,Number(step)||0))*2/12);
+    tone('square',base,now,.05,.55);tone('triangle',base/2,now,.035,.6);
+    return true;
+  };
   const RHYTHM_CUE_NOTES={count:[[880,0,.09]],join:[[659.25,0,.14],[987.77,.09,.22]],mvp:[[783.99,0,.12],[1046.5,.08,.12],[1318.51,.16,.12],[1567.98,.24,.42]]};
   const playCue=(kind)=>{
     const notes=RHYTHM_CUE_NOTES[kind];
@@ -3573,7 +3605,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     });
     return true;
   };
-  return {warm,wake,prepare,play,playClear,playAccent,playFlick,playMonster,playSky,playTick,preview,playEmpty,beginInputGroup,markInputGroupHandled,recentNoteSe,endInputGroup,playFullCombo,playNewRecord,playCue,holdSync,holdStopAll,_holdVoiceCount:()=>holdVoices.size,_readSettings:readSettings};
+  return {warm,wake,prepare,play,playClear,playAccent,playFlick,playMonster,playSky,playTick,preview,playEmpty,beginInputGroup,markInputGroupHandled,recentNoteSe,endInputGroup,playFullCombo,playNewRecord,playResultCount,playCue,holdSync,holdStopAll,_holdVoiceCount:()=>holdVoices.size,_readSettings:readSettings};
 })();
 
 // 途中追従判定(暫定値。実機確認のうえで調整する)。

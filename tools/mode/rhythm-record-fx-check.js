@@ -46,6 +46,11 @@ check('練習・タイミング合わせでは数え上げない', cond.includes
 check('数え上げは演出量・軽量モード・動きを減らすに関係なく出し、止めるのは設定「結果の画面の演出」の「出さない」だけ(2026-11-24 r1119-156 追記)',
   cond.includes('rhythmResultCountAnimOn(settings)') && play.includes("const rhythmResultCountAnimOn=settings=>!!settings&&rhythmFxOn(settings,'resultCount',true);")
   && /\{key:'resultCount',group:'combo',label:'結果の画面の演出',weight:'l',options:RHYTHM_FX_ON_OFF\}/.test(fs.readFileSync(path.join(ROOT, 'monster-hero/src/parts/13-bgm-and-rhythm-settings.jsx'), 'utf8')))
+check('案A: 判定の行が決まるたびの音と決まる音(playResultCount)があり、タップで飛ばしたあとは鳴らさない(step の中だけで鳴らす)',
+  rhythm.includes('const playResultCount=(step=0,final=false)=>{') && /playNewRecord,playResultCount,playCue,/.test(rhythm)
+  && play.includes("RHYTHM_NOTE_SE_RUNTIME.playResultCount(fire,false)") && play.includes('draw(t);sound(t);'));
+check('案A: 行は1行 260ms ずつ・MAX COMBO は行のあと・スコアが決まるのは MAX COMBO のあと',
+  play.includes('const RHYTHM_RESULT_COUNT=Object.freeze({scoreAt:300,scoreMs:2120,janAt:2420,rowAt:300,rowStep:260,rowMs:200,comboAt:2120,comboMs:300,'));
 check('アシストモードは更新にならない(これまでどおり記録に残らない)', /const isNewRecord=!assistOn&&score>run\.startBestScore;/.test(play));
 check('全画面の重ね(data-rhythm-record-fx)はもう出さない', !play.includes('data-rhythm-record-fx') && !html.includes('data-rhythm-record-fx'));
 check('数え上げの effect は印(id)だけを依存にする(結果へ項目が足されても走り直さない)', /\},\[resultCountId\]\);/.test(play));
@@ -128,6 +133,7 @@ check('演出量「最小」・軽量モードで動きを止める規則は、�
       return {
         rowAnim: (() => { const el = q('[data-rhythm-result-judgment-table] > dt'); return el ? getComputedStyle(el).animationName : ''; })(),
         rankAnim: (() => { const el = q('[data-rhythm-result-rank]'); return el ? getComputedStyle(el).animationName : ''; })(),
+        rows: [...document.querySelectorAll('[data-rhythm-result-judgment-table] > dd')].map((el) => ({ text: el.textContent, to: el.dataset.countTo, at: Number(el.dataset.countAt) })),
         fx: !!q('[data-rhythm-record-fx]'), anim: q('[data-rhythm-result]')?.getAttribute('data-rhythm-count-anim') || '',
         score: q('[data-rhythm-result-score]')?.textContent || '', cardNew: q('[data-rhythm-result-score-card]')?.getAttribute('data-new-record'),
         wait: q('[data-rhythm-result-score-card]')?.hasAttribute('data-record-wait'), vs: !!q('[data-rhythm-result-vs-best]'), diff: q('[data-rhythm-best-diff]')?.textContent || '',
@@ -138,7 +144,7 @@ check('演出量「最小」・軽量モードで動きを止める規則は、�
     const early = await read(); await shot(1);
     await page.waitForTimeout(700);
     const mid = await read(); await shot(2);
-    await page.waitForTimeout(2200);
+    await page.waitForTimeout(3000);
     const after = await read(); await shot(3);
 
     check('検査のために、ライフが減らないよう書き換えて配れている(本体の書き方が変わったらここで気づく)', patched);
@@ -147,6 +153,8 @@ check('演出量「最小」・軽量モードで動きを止める規則は、�
     check('全画面の重ねは出ない', !early.fx && !after.fx);
     check('結果が出た直後は数え上げの途中(印が "1"・数字は最後のスコアより小さい)', early.anim === '1' && num(early.score) < scoreNum, `${early.anim} ${early.score} → ${scoreNum}`);
     check('動きを減らす・演出量「最小」・軽量モードでも、判定の行とランクのはんこが動く', /mhRhythmResultRow/.test(early.rowAnim) && /mhRhythmResultStamp/.test(early.rankAnim), `${early.rowAnim} / ${early.rankAnim}`);
+    check('案A: 判定の行は上から順に数える(行ごとに始まる時刻がずれていく)', mid.rows.length >= 7 && mid.rows.every((r, i) => i === 0 || r.at > mid.rows[i - 1].at), mid.rows.map((r) => r.at).join(','));
+    check('案A: 途中では上の行が先に決まり、下の行はまだ数えていない', (() => { const first = mid.rows[0], last = mid.rows[mid.rows.length - 1]; return first && last && first.text === String(first.to) && (Number(last.to) === 0 || Number(last.text) < Number(last.to) || last.text === '0'); })(), JSON.stringify(mid.rows.map((r) => `${r.text}/${r.to}`)));
     check('数字が数え上げられていく(途中の値が、最初と最後のあいだにある)', num(mid.score) >= num(early.score) && num(mid.score) <= scoreNum, `${early.score} → ${mid.score} → ${after.score}`);
     check('数え終わると止まった形になる(印が done)', after.anim === 'done', after.anim);
     check('自己ベストの棒と「前の自己ベストから +○○」が出る', after.vs && after.diff.replace(/[^0-9]/g, '') === String(scoreNum - 1) && /前の自己ベストから/.test(after.diff), after.diff);
