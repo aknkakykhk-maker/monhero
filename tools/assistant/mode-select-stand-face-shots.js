@@ -4,8 +4,8 @@
 //   node tools/assistant/mode-select-stand-face-shots.js [--rev d57a7212^] [--views tate,tate-hikui,yoko] [--out docs/progress/assistant-art/r1119-153-switch/frame] [--only mua,kiki] [--screens battle,card,rhythm] [--no-shots]
 //   前 = --rev の版(手元と違うファイルだけ git から配る)/後 = 手元
 //   測るもの: 顔(目の線〜顎の先)の画面での長さ(px。頭のてっぺんは帽子・耳で点がぶれるので使わない)・枠の高さに対する割合・顔(目〜顎)が枠の中に入っているか
-//   書き出し: <out>/mode-select-face.json(数字)・<out>/ms-<画面>-<向き>-<助手>.png(前後を左右に並べた枠の切り抜き)
-//   最後の行: OK(全部、後の顔が前の 0.97 倍以上で、顔が枠からはみ出していない)/NG
+//   書き出し: <out>/mode-select-face.json(数字)・<out>/README.md(突き合わせ表。--table-only で数字から表だけ作り直す)・<out>/ms-<画面>-<向き>-<助手>.png(前後を左右に並べた枠の切り抜き)
+//   最後の行: OK(全部、後の顔が前の 0.97 倍以上か元の絵の上限で、顔(目〜顎)が枠からはみ出していない)/NG
 const http = require('http'), fs = require('fs'), path = require('path'), { execFileSync } = require('child_process');
 const root = path.resolve(__dirname, '..', '..'), PORT = 9293;
 const arg = (k, d) => { const i = process.argv.indexOf(k); return i >= 0 ? process.argv[i + 1] : d; };
@@ -25,6 +25,29 @@ const ONLY = arg('--only', '');
 const LIST = ONLY ? ALL.filter(([w]) => ONLY.split(',').includes(w)) : ALL;
 // tate-hikui … 縦で、助手の枠を高さ 150px に詰めたもの(社長の写真 frame/shacho-monbattle-select.png は、下に「いま〜にいる助手」の欄が出て枠が低かった)
 const VIEWS = [{ tag: 'tate', w: 390, h: 844 }, { tag: 'tate-hikui', w: 390, h: 844, low: 150 }, { tag: 'yoko', w: 844, h: 390 }].filter(v => !arg('--views', '') || arg('--views', '').split(',').includes(v.tag));
+
+// 突き合わせ表(<out>/README.md)。決めごとの行ごとに、止め絵のどこで満たすかと、組ごとの数字
+const writeTable = (rows) => {
+  const VN = { tate: '縦', 'tate-hikui': '縦・低い枠', yoko: '横' }, SN = { battle: 'モンヒロバトル', card: 'MFバトルカード', rhythm: 'モンヒロビート' };
+  const bad = rows.filter(r => !((r.ratio >= 0.97) || r.capped) || !r.inside), capped = rows.filter(r => r.capped && !(r.ratio >= 0.97));
+  const min = (k) => Math.min(...rows.filter(r => r.ratio).map(r => r.ratio));
+  const L = [];
+  L.push('# モードえらびの枠の立ち絵: #7449 の前と後の顔の大きさ(r1119-153 追記4・追跡 r1124-012)', '');
+  L.push('作り方: `node tools/assistant/mode-select-stand-face-shots.js`(前 = `' + REV + '`・後 = この枝)。顔 = 目の線〜顎の先の画面での長さ(px)。', '');
+  L.push('前の版の顔の表は前の絵と合っていない所があり(例: きき ツインテール)、「前」の数字は目安。止め絵(`ms-<画面>-<向き>-<助手>.png`・左が前・右が後)で目でも確かめた。', '');
+  L.push('## 決めごととの突き合わせ', '');
+  L.push('| 決めごと | 満たし方 | どの止め絵で見るか |', '| --- | --- | --- |');
+  L.push(`| r1119-153 追記4「顔が前より小さくならないように寄せ方を直す」 | 立ち絵を顔の位置と大きさで寄せる。${rows.length}組のうち前の0.97倍未満は ${bad.length}組${capped.length ? `(ほかに元の絵が小さく上限で止めた ${capped.length}組: ${capped.map(r => `${SN[r.screen]} ${VN[r.view]} ${r.who} ×${r.ratio}`).join('・')})` : ''}。いちばん小さい倍率 ×${min()} | 全部の \`ms-*.png\`。社長の写真と同じ低い枠は \`ms-battle-tate-hikui-mua_halloween.png\` |`);
+  L.push('| 同「絵は新しいまま・引き伸ばさない」 | 絵のファイルは替えない。画面での拡大は元の絵の顔の1.5倍まで(あつ・えるびん石油王のように元の絵が小さい組はそこで止める) | `ms-card-tate-atsu.png` |');
+  L.push('| 同「モンヒロバトル・MFバトルカード・モンヒロビートのモード選びなど」 | 3画面とも同じ部品(ModeSelectAssistantPanel)なので、1か所の直しで3画面に効く | `ms-battle-*`・`ms-card-*`・`ms-rhythm-*` |');
+  L.push('| 同「全助手・全服で前後を撮って確かめる」 | 全身絵からの立ち絵がある15組 × 3画面 × 縦・縦の低い枠・横 = ' + rows.length + '組 | 下の表 |');
+  L.push('| r1115-143・r1119-153「色を減らさない・古い絵は消さない」 | 絵のファイルに触れていない | — |');
+  L.push('| 顔が枠からはみ出さない | 顔(目〜顎)はどの組も枠の中' + (rows.some(r => !r.inside) ? '(★の組を除く)' : '') + '。背の低い枠では帽子・耳の先は切れてよいとした | `ms-*-tate-hikui-*.png` |', '');
+  L.push('## 組ごとの数字', '', '| 画面 | 向き | 助手・服 | 枠の高さ | 前 | 後 | 倍 |', '| --- | --- | --- | --- | --- | --- | --- |');
+  for (const r of rows) L.push(`| ${SN[r.screen]} | ${VN[r.view]} | ${r.who} | ${r.after ? r.after.frame.h : '-'} | ${r.before ? r.before.head : '-'} | ${r.after ? r.after.head : '-'} | ×${r.ratio}${r.inside ? '' : ' ★枠の外'}${r.capped && !(r.ratio >= 0.97) ? '(元の絵の上限)' : ''} |`);
+  fs.writeFileSync(path.join(OUT, 'README.md'), L.join('\n') + '\n');
+};
+if (process.argv.includes('--table-only')) { writeTable(JSON.parse(fs.readFileSync(path.join(OUT, 'mode-select-face.json'), 'utf8')).rows); console.log('表を書いた'); process.exit(0); }
 
 (async () => {
   let chromium;
@@ -90,7 +113,7 @@ const VIEWS = [{ tag: 'tate', w: 390, h: 844 }, { tag: 'tate-hikui', w: 390, h: 
     const vy = (f) => r.top + r.height * (box.t + (box.b - box.t) * f);
     const headTop = vy(face.top), eye = vy(face.eye), chin = vy(face.chin);
     return { src: src.replace(/\?.*$/, ''), pid, frame: { w: Math.round(b.width), h: Math.round(b.height), x: b.left, y: b.top },
-      img: { w: Math.round(r.width), h: Math.round(r.height) }, head: +(chin - eye).toFixed(1), headTop: +(headTop - b.top).toFixed(1), eye: +(eye - b.top).toFixed(1), chin: +(chin - b.top).toFixed(1) };
+      img: { w: Math.round(r.width), h: Math.round(r.height) }, head: +(chin - eye).toFixed(1), nat: +(img.naturalHeight * (box.b - box.t) * (face.chin - face.eye)).toFixed(1), headTop: +(headTop - b.top).toFixed(1), eye: +(eye - b.top).toFixed(1), chin: +(chin - b.top).toFixed(1) };
   });
   const goto = async (page, screen) => {
     await page.locator(`[data-home-fac="${screen}"]`).first().click({ timeout: 8000 });
@@ -134,13 +157,16 @@ const VIEWS = [{ tag: 'tate', w: 390, h: 844 }, { tag: 'tate-hikui', w: 390, h: 
       }
       const b = pair.before, a = pair.after;
       const ratio = b && a ? +(a.head / b.head).toFixed(3) : null;
-      const inside = a ? a.headTop >= -2 && a.chin <= a.frame.h + 2 : false;
-      rows.push({ screen, view: view.tag, who: tag, before: b, after: a, ratio, inside });
-      console.log(`${screen.padEnd(6)} ${view.tag} ${tag.padEnd(22)} 顔 前${b ? b.head : '-'}px 後${a ? a.head : '-'}px ×${ratio} 枠${a ? a.frame.h : '-'} ${inside ? '' : '★顔が枠の外'}`);
+      // 顔(目の線〜顎)が枠の中か(背の低い枠では帽子・耳の先は切れてよい)。capped … 元の絵の顔の 1.45 倍以上(引き伸ばしの上限で止めた)
+      const inside = a ? a.eye >= -2 && a.chin <= a.frame.h + 2 : false;
+      const capped = !!(a && a.nat > 0 && a.head >= a.nat * 1.45);
+      rows.push({ screen, view: view.tag, who: tag, before: b, after: a, ratio, inside, capped });
+      console.log(`${screen.padEnd(6)} ${view.tag} ${tag.padEnd(22)} 顔 前${b ? b.head : '-'}px 後${a ? a.head : '-'}px ×${ratio} 枠${a ? a.frame.h : '-'} ${inside ? '' : '★顔が枠の外'}${capped ? '(元の絵の上限)' : ''}`);
     }
   } catch (e) { console.log('NG: 途中で止まった —', e.message.split('\n').slice(0, 3).join(' ')); }
   await browser.close(); server.close();
   fs.writeFileSync(path.join(OUT, 'mode-select-face.json'), JSON.stringify({ rev: REV, rows }, null, 1) + '\n');
+  writeTable(rows);
   // 前・後を左右に並べる
   const pairs = shots.filter(f => f.endsWith('-before.png')).filter(f => fs.existsSync(f.replace('-before.png', '-after.png')));
   if (pairs.length) {
@@ -165,7 +191,9 @@ for b in sys.argv[1:]:
 `, ...pairs]);
     for (const f of shots) if (fs.existsSync(f)) fs.unlinkSync(f);
   }
-  const bad = rows.filter(r => !(r.ratio >= 0.97) || !r.inside);
+  const bad = rows.filter(r => !((r.ratio >= 0.97) || r.capped) || !r.inside);
+  const cappedRows = rows.filter(r => r.capped && !(r.ratio >= 0.97));
+  if (cappedRows.length) console.log(`元の絵が小さく上限で止めた(数えない): ${cappedRows.map(r => `${r.screen}/${r.view}/${r.who}×${r.ratio}`).join(' ')}`);
   if (errors.length) console.log('エラー: ' + errors.slice(0, 4).join(' / '));
   console.log(`${rows.length}組を測った・顔が前より小さい/枠の外: ${bad.length}組${bad.length ? ' ' + bad.slice(0, 8).map(r => `${r.screen}/${r.view}/${r.who}×${r.ratio}`).join(' ') : ''}`);
   const ok = !errors.length && rows.length && !bad.length;
