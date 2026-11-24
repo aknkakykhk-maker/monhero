@@ -61,13 +61,14 @@ const capture = (song, i) => {
   const dir = path.join(WORK, 'cap', song.songId);
   const from = song.from - 1000, to = song.from + T.stageDur * 1000 + 1000;
   const meta = path.join(dir, 'frames.json');
-  // 速度・設定・描き方が違う撮影は使わない(第3版: 速度9.5の旧録画を使わないため)
+  // 速度・設定が違う撮影は使わない(第3版: 速度9.5の旧録画を使わないため)
   const want = JSON.stringify(Object.assign({}, plan.captureSettings || {}, { noteSpeed: plan.noteSpeed || 9.5 }));
-  const ok = fs.existsSync(meta) && (() => { const m = JSON.parse(fs.readFileSync(meta, 'utf8')); return m.from <= from + 1 && m.to >= Math.min(to, song.endMs || to) - 1 && JSON.stringify(m.settings || { noteSpeed: m.noteSpeed }) === want && (m.draw || 'auto') === (plan.draw || 'auto'); })();
+  const wantHow = JSON.stringify({ listen: !!plan.listen, ui: plan.optionsUi || [], clock: 2 });
+  const ok = fs.existsSync(meta) && (() => { const m = JSON.parse(fs.readFileSync(meta, 'utf8')); return m.from <= from + 1 && m.to >= Math.min(to, song.endMs || to) - 1 && JSON.stringify(m.settings || { noteSpeed: m.noteSpeed }) === want && JSON.stringify(m.how || {}) === wantHow; })();
   if (ok && !argv.includes('--recapture')) return dir;
   console.log(`撮影 ${i + 1}: ${song.songId} ${song.diff || 'HELL'} ${from}〜${to}ms`);
   execFileSync('node', [R('tools/promo/beat-stage-capture.js'), '--song', song.songId, '--diff', song.diff || 'HELL', '--from', String(from), '--to', String(to), '--speed', String(plan.noteSpeed || 9.5),
-    '--settings', JSON.stringify(plan.captureSettings || {}), ...(plan.draw ? ['--draw', plan.draw] : []), '--out', dir], { stdio: 'inherit' });
+    '--settings', JSON.stringify(plan.captureSettings || {}), ...(plan.listen ? ['--listen'] : []), ...(plan.slow ? ['--slow', String(plan.slow)] : []), ...(plan.optionsUi ? ['--ui-settings', JSON.stringify(plan.optionsUi)] : []), '--out', dir], { stdio: 'inherit' });
   return dir;
 };
 
@@ -147,7 +148,8 @@ const gameplayClip = (song, i, dir) => {
   const meta = JSON.parse(fs.readFileSync(path.join(dir, 'frames.json'), 'utf8'));
   // 撮った順に、曲の時刻が進んでいるあいだのコマだけ使う(曲が終わったあとは結果の画面などで時刻が戻る)
   const fr = [];
-  for (const f of meta.frames) { if (!Number.isFinite(f.songMs)) continue; const last = fr.length ? fr[fr.length - 1].songMs : -Infinity; if (f.songMs < last - 500) break; if (f.songMs <= last) continue; fr.push(f); }   // 少しの戻り(時計のならし)はそのコマだけ飛ばす
+  // song.lastMs … 曲が終わって鑑賞が曲えらびへ戻る曲では、その時刻より後のコマを使わない(最後の演奏のコマで止める・第3版の全部必殺技でつ)
+  for (const f of meta.frames) { if (!Number.isFinite(f.songMs)) continue; if (Number.isFinite(song.lastMs) && f.songMs > song.lastMs) break; const last = fr.length ? fr[fr.length - 1].songMs : -Infinity; if (f.songMs < last - 500) break; if (f.songMs <= last) continue; fr.push(f); }   // 少しの戻り(時計のならし)はそのコマだけ飛ばす
   const n = Math.round(T.stageDur * FPS), list = [];
   let j = 0, worst = 0;
   for (let k = 0; k < n; k++) {

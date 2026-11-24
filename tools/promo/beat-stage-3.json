@@ -6,14 +6,7 @@
     "src": "tools/art-sources/promo/monhero-beat-stage.mov"
   },
   "noteSpeed": 10.0,
-  "captureSettings": {
-    "effectAmount": "LIGHT",
-    "lightweightMode": false,
-    "autoEffectDown": false,
-    "noteSeEnabled": true,
-    "noteSeType": "STANDARD"
-  },
-  "draw": "dom",
+  "captureSettings": {},
   "listTitle": "高難易度 HELL",
   "listSub": "3曲連続ライブ",
   "songs": [
@@ -97,7 +90,8 @@
           "title": "最後の高速連打",
           "sub": "溜めた光を、最後の一打で。"
         }
-      ]
+      ],
+      "lastMs": 117960
     }
   ],
   "calib": {
@@ -128,7 +122,102 @@
       "suezo": "monster-hero/images/monsters/suezo.png",
       "tiger": "monster-hero/images/monsters/tiger.PNG"
     },
-    "stageCap": "tools/out/promo-stage-3/work/stage-open",
+    "stageCap": "tools/out/promo-stage-3/work3/stage-open",
     "stageFrom": 108000
-  }
+  },
+  "listen": true,
+  "optionsUi": [
+    [
+      "live",
+      "道の幅（横向き）",
+      "細い"
+    ],
+    [
+      "display",
+      "演奏中は曲名を薄くする",
+      "OFF"
+    ],
+    [
+      "display",
+      "レーン発光",
+      "標準"
+    ],
+    [
+      "system",
+      "軽量モード",
+      "OFF"
+    ],
+    [
+      "system",
+      "演出量",
+      "最大"
+    ],
+    [
+      "system",
+      "重いときは演出を自動で控えめに",
+      "OFF"
+    ],
+    [
+      "system",
+      "ライブ背景",
+      "ライブ"
+    ],
+    [
+      "system",
+      "ジャケットのぼかし",
+      "おまかせ"
+    ],
+    [
+      "system",
+      "サーチライト",
+      "出す"
+    ],
+    [
+      "system",
+      "光の粒",
+      "多い"
+    ],
+    [
+      "system",
+      "レーザー",
+      "出す"
+    ],
+    [
+      "system",
+      "観客のペンライト",
+      "多い"
+    ],
+    [
+      "system",
+      "タイミングの光",
+      "出さない"
+    ],
+    [
+      "system",
+      "記念ステージ",
+      "いつもの背景"
+    ],
+    [
+      "system",
+      "画質",
+      "高"
+    ],
+    [
+      "system",
+      "描画方式",
+      "自動"
+    ],
+    [
+      "system",
+      "曲選びで試聴する",
+      "ON"
+    ],
+    [
+      "system",
+      "タップ時の振動",
+      "ON"
+    ]
+  ],
+  "_settings": "撮影の設定は社長の端末のオプション(docs/promo/requests/beat-stage-3-settings-2026-11-24/)。optionsUi をオプション画面で選んで保存する。速さ 10.0 だけ保存値に入れる(指示書)。ほかは初期設定",
+  "slow": 0.09
 }
