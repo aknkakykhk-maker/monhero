@@ -22,7 +22,7 @@
   "badgeText": null,
   "badgeOnTile": null,
   "badgeOnName": null,
-  "rectCount": 3
+  "rectCount": 10
  },
  {
   "tag": "縦320",
@@ -47,7 +47,7 @@
   "badgeText": null,
   "badgeOnTile": null,
   "badgeOnName": null,
-  "rectCount": 3
+  "rectCount": 10
  },
  {
   "tag": "縦375",
@@ -77,7 +77,7 @@
   "badgeText": "🔁 1周目 W5/10",
   "badgeOnTile": false,
   "badgeOnName": false,
-  "rectCount": 2
+  "rectCount": 9
  },
  {
   "tag": "縦375",
@@ -104,10 +104,10 @@
    34
   ],
   "badgeHidden": false,
-  "badgeText": "🔁 1周目 W7/10",
+  "badgeText": "🔁 1周目 W5/10",
   "badgeOnTile": false,
   "badgeOnName": false,
-  "rectCount": 2
+  "rectCount": 9
  },
  {
   "tag": "縦390",
@@ -137,7 +137,7 @@
   "badgeText": "🔁 1周目 W5/10",
   "badgeOnTile": false,
   "badgeOnName": false,
-  "rectCount": 2
+  "rectCount": 9
  },
  {
   "tag": "縦390",
@@ -164,10 +164,10 @@
    34
   ],
   "badgeHidden": false,
-  "badgeText": "🔁 1周目 W7/10",
+  "badgeText": "🔁 1周目 W5/10",
   "badgeOnTile": false,
   "badgeOnName": false,
-  "rectCount": 2
+  "rectCount": 9
  },
  {
   "tag": "縦430",
@@ -194,10 +194,10 @@
    34
   ],
   "badgeHidden": false,
-  "badgeText": "🔁 1周目 W4/10",
+  "badgeText": "🔁 1周目 W5/10",
   "badgeOnTile": false,
   "badgeOnName": false,
-  "rectCount": 2
+  "rectCount": 9
  },
  {
   "tag": "縦430",
@@ -227,7 +227,7 @@
   "badgeText": "🔁 1周目 W6/10",
   "badgeOnTile": false,
   "badgeOnName": false,
-  "rectCount": 2
+  "rectCount": 9
  },
  {
   "tag": "横844",
@@ -257,7 +257,7 @@
   "badgeText": "🔁 1周目 W5/10",
   "badgeOnTile": false,
   "badgeOnName": false,
-  "rectCount": 2
+  "rectCount": 10
  },
  {
   "tag": "横844",
@@ -284,9 +284,9 @@
    34
   ],
   "badgeHidden": false,
-  "badgeText": "🔁 1周目 W6/10",
+  "badgeText": "🔁 1周目 W5/10",
   "badgeOnTile": false,
   "badgeOnName": false,
-  "rectCount": 2
+  "rectCount": 10
  }
 ]
