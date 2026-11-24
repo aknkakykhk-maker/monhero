@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2b2cbbabc08f9861
+// source-sha256: 82a2ab1e53f2d760
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -40436,8 +40436,24 @@ const RhythmSongSelect = ({
       song: entry,
       marked: main
     }), React.createElement("span", {
-      className: "min-w-0 flex-1 [container-type:inline-size]"
-    }, React.createElement("span", _extends({}, main ? {
+      className: "relative min-w-0 flex-1 [container-type:inline-size]"
+    }, row.versions > 1 && React.createElement("small", _extends({}, main ? {
+      'data-rhythm-song-row-version-corner': row.versions
+    } : {}, {
+      "aria-hidden": "true",
+      className: "pointer-events-none absolute bottom-0.5 hidden whitespace-nowrap rounded border border-sky-300/60 bg-slate-950/90 px-0.5 text-[9px] font-black leading-tight text-sky-200 [@container(max-width:230px)]:block",
+      style: {
+        right: 'calc(100% + 6px)'
+      }
+    }), row.versions, "版"), (lockedSong(entry) || eventSong) && React.createElement("small", _extends({}, main ? {
+      'data-rhythm-song-row-corner-marks': ''
+    } : {}, {
+      "aria-hidden": "true",
+      className: "pointer-events-none absolute top-0.5 hidden whitespace-nowrap rounded border border-amber-300/60 bg-slate-950/90 px-0.5 text-[9px] leading-tight [@container(max-width:230px)]:block",
+      style: {
+        right: 'calc(100% + 6px)'
+      }
+    }), lockedSong(entry) ? '🔒' : '', eventSong ? '🏆' : ''), React.createElement("span", _extends({}, main ? {
       'data-rhythm-song-row-title': ''
     } : {}, {
       className: "flex items-center overflow-hidden",
@@ -40514,7 +40530,7 @@ const RhythmSongSelect = ({
     })(), row.versions > 1 && React.createElement("small", _extends({}, main ? {
       'data-rhythm-song-row-version-count': row.versions
     } : {}, {
-      className: "ml-1 shrink-0 rounded-md border border-sky-300/40 bg-sky-500/10 px-1 py-0.5 text-[10px] font-black leading-none text-sky-200"
+      className: "ml-1 shrink-0 rounded-md border border-sky-300/40 bg-sky-500/10 px-1 py-0.5 text-[10px] font-black leading-none text-sky-200 [@container(max-width:230px)]:hidden"
     }), row.versions, "つの版"), favoriteIds.has(entry.songId) && React.createElement("small", _extends({}, main ? {
       'data-rhythm-song-row-favorite': ''
     } : {}, {
@@ -40529,11 +40545,11 @@ const RhythmSongSelect = ({
     }, " 初めての1曲")), lockedSong(entry) && React.createElement("small", _extends({}, main ? {
       'data-rhythm-song-locked': entry.songId
     } : {}, {
-      className: "ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-black text-amber-200"
+      className: "ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-black text-amber-200 [@container(max-width:230px)]:hidden"
     }), "🔒 ", rhythmSongPrice(entry.songId).toLocaleString(), "P"), eventSong && React.createElement("small", _extends({}, main ? {
       'data-rhythm-song-event': entry.songId
     } : {}, {
-      className: "ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-black text-amber-200"
+      className: "ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-black text-amber-200 [@container(max-width:230px)]:hidden"
     }), "🏆", React.createElement("span", {
       className: "[@container(max-width:380px)]:hidden"
     }, " イベント対象"))))));
