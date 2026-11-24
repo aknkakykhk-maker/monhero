@@ -9,7 +9,8 @@
 //   ・結果の画面でスコアが0から数え上がり、止まった形では新しいスコアになる(全画面の重ねは出ない)
 //   ・自己ベストの印の付いた棒と「前の自己ベストから +○○」が出て、スコアの札が金色・NEW RECORD の札・伸びた点・前回のBESTが残る
 //   ・数え終わると data-rhythm-count-anim が done になる
-//   ・数え上げを出さない場面(練習・タイミング合わせ・演出量MINIMAL・軽量モード・動きを減らす)の条件
+//   ・数え上げを出さない場面(練習・タイミング合わせ・設定「結果の画面の演出」が「出さない」)の条件
+//   ・横向き・FC でない回・演出量「最小」・軽量モード・動きを減らすを全部入れた状態で、実際に数える(社長の iPhone の条件)
 const path = require('path');
 const http = require('http');
 const fs = require('fs');
@@ -29,7 +30,8 @@ const seed = (song) => {
   put('mh_assistant_selected_v1', 'mua'); put('mh_assistant_unlock_seen_v1', true); put('mh_update_notice_seen_v1', true);
   put('mh_rhythm_tutorial_seen_v1', true); put('mh_rhythm_play_defaults_restored_v1', true); put('mh_rhythm_six_lane_seen_v1', true);
   put('mh_inherited_unique_level_compensation_v1', true); put('mh_rhythm_look_intro_seen_v1', true);
-  put('mh_rhythm_settings_v1', { autoEffectDown: false, effectAmount: 'NORMAL', lightweightMode: false });
+  // 社長の iPhone と同じく、演出量「最小」・軽量モード・端末の動きを減らすを全部入れても数える(2026-11-24 r1119-156 追記)
+  put('mh_rhythm_settings_v1', { autoEffectDown: false, effectAmount: 'MINIMAL', lightweightMode: true });
   // 前のBESTは1点(1つでも当たれば更新になる)
   put('mh_rhythm_best_v1', { [song]: { EASY: { bestScore: 1, maxCombo: 1, played: true, clear: true } } });
 };
@@ -41,8 +43,9 @@ const rhythm = fs.readFileSync(path.join(ROOT, 'monster-hero/data/rhythm-mode.js
 const cond = play.match(/const countAnim=([^\n]*)\?\{id:/)?.[1] || '';
 check('数え上げの条件を取り出せる', cond.length > 0);
 check('練習・タイミング合わせでは数え上げない', cond.includes('!tutorial&&!calibrating'));
-check('演出量MINIMAL・軽量モード・動きを減らす設定では数え上げない(止まった形)',
-  cond.includes('rhythmResultCountAnimOn(settings)') && /const rhythmResultCountAnimOn=settings=>!!settings&&!settings\.lightweightMode&&settings\.effectAmount!=='MINIMAL'\s*&&!\(typeof window!=='undefined'&&typeof window\.matchMedia==='function'&&window\.matchMedia\('\(prefers-reduced-motion: reduce\)'\)\.matches\);/.test(play));
+check('数え上げは演出量・軽量モード・動きを減らすに関係なく出し、止めるのは設定「結果の画面の演出」の「出さない」だけ(2026-11-24 r1119-156 追記)',
+  cond.includes('rhythmResultCountAnimOn(settings)') && play.includes("const rhythmResultCountAnimOn=settings=>!!settings&&rhythmFxOn(settings,'resultCount',true);")
+  && /\{key:'resultCount',group:'combo',label:'結果の画面の演出',weight:'l',options:RHYTHM_FX_ON_OFF\}/.test(fs.readFileSync(path.join(ROOT, 'monster-hero/src/parts/13-bgm-and-rhythm-settings.jsx'), 'utf8')))
 check('アシストモードは更新にならない(これまでどおり記録に残らない)', /const isNewRecord=!assistOn&&score>run\.startBestScore;/.test(play));
 check('全画面の重ね(data-rhythm-record-fx)はもう出さない', !play.includes('data-rhythm-record-fx') && !html.includes('data-rhythm-record-fx'));
 check('数え上げの effect は印(id)だけを依存にする(結果へ項目が足されても走り直さない)', /\},\[resultCountId\]\);/.test(play));
@@ -54,7 +57,9 @@ check('専用の効果音(playNewRecord)があり、既存のタップ音と同�
 check('結果とお祝いの動きは transform と opacity だけ(ぼかしの半径・大きさ・位置は動かさない)',
   (() => { const frames = [...html.matchAll(/@keyframes mhRhythm(?:Result(?:In|Row|Jan|JanFlash|Stamp|Ribbon)|Celebrate(?:Line|Pillar|Flash|Spin|Ring|Spark|Title|Up))\{[\s\S]*?\}\s*\}/g)].map((m) => m[0]);
     return frames.length >= 14 && frames.every((f) => { const props = [...f.replace(/^@keyframes \w+\{/, '').matchAll(/([a-z-]+)\s*:/g)].map((m) => m[1]); return props.every((x) => x === 'transform' || x === 'opacity'); }); })());
-check('動きを減らす設定では、札の弾みを止める', /prefers-reduced-motion:reduce\)\{\s*\[data-rhythm-new-record\]\{animation:none;opacity:1\}/.test(html));
+check('動きを減らす設定では、数えていないときだけ札の弾みを止める', /prefers-reduced-motion:reduce\)\{\s*\[data-rhythm-result\]:not\(\[data-rhythm-count-anim="1"\]\) \[data-rhythm-new-record\]\{animation:none;opacity:1\}/.test(html));
+check('演出量「最小」・軽量モードで動きを止める規則は、数えているあいだは効かない',
+  ['data-rhythm-result-rank', 'data-rhythm-judgment-row', 'data-rhythm-new-record'].every((name) => ['effect="MINIMAL"', 'lightweight="true"'].every((sel) => html.includes(`[data-rhythm-result][data-rhythm-${sel}]:not([data-rhythm-count-anim="1"]) [${name}]`))));
 
 (async () => {
   let playwright;
@@ -78,7 +83,7 @@ check('動きを減らす設定では、札の弾みを止める', /prefers-redu
   await new Promise((r) => server.listen(PORT, r));
   const browser = await playwright.chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--autoplay-policy=no-user-gesture-required'] });
   try {
-    const page = await browser.newPage({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
+    const page = await browser.newPage({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce' });
     const errors = [];
     page.on('pageerror', (e) => errors.push(String(e)));
     // 通信を差し替えたので、ゲーム側の「自動操作では書き込まない」止めを外す(26-supabase.jsx)
@@ -121,6 +126,8 @@ check('動きを減らす設定では、札の弾みを止める', /prefers-redu
     const read = () => page.evaluate(() => {
       const q = (s) => document.querySelector(s);
       return {
+        rowAnim: (() => { const el = q('[data-rhythm-result-judgment-table] > dt'); return el ? getComputedStyle(el).animationName : ''; })(),
+        rankAnim: (() => { const el = q('[data-rhythm-result-rank]'); return el ? getComputedStyle(el).animationName : ''; })(),
         fx: !!q('[data-rhythm-record-fx]'), anim: q('[data-rhythm-result]')?.getAttribute('data-rhythm-count-anim') || '',
         score: q('[data-rhythm-result-score]')?.textContent || '', cardNew: q('[data-rhythm-result-score-card]')?.getAttribute('data-new-record'),
         wait: q('[data-rhythm-result-score-card]')?.hasAttribute('data-record-wait'), vs: !!q('[data-rhythm-result-vs-best]'), diff: q('[data-rhythm-best-diff]')?.textContent || '',
@@ -139,6 +146,7 @@ check('動きを減らす設定では、札の弾みを止める', /prefers-redu
     const scoreNum = num(after.score);
     check('全画面の重ねは出ない', !early.fx && !after.fx);
     check('結果が出た直後は数え上げの途中(印が "1"・数字は最後のスコアより小さい)', early.anim === '1' && num(early.score) < scoreNum, `${early.anim} ${early.score} → ${scoreNum}`);
+    check('動きを減らす・演出量「最小」・軽量モードでも、判定の行とランクのはんこが動く', /mhRhythmResultRow/.test(early.rowAnim) && /mhRhythmResultStamp/.test(early.rankAnim), `${early.rowAnim} / ${early.rankAnim}`);
     check('数字が数え上げられていく(途中の値が、最初と最後のあいだにある)', num(mid.score) >= num(early.score) && num(mid.score) <= scoreNum, `${early.score} → ${mid.score} → ${after.score}`);
     check('数え終わると止まった形になる(印が done)', after.anim === 'done', after.anim);
     check('自己ベストの棒と「前の自己ベストから +○○」が出る', after.vs && after.diff.replace(/[^0-9]/g, '') === String(scoreNum - 1) && /前の自己ベストから/.test(after.diff), after.diff);

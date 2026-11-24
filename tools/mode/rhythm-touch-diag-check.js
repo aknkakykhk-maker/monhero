@@ -17,6 +17,28 @@ const read=file=>fs.readFileSync(path.join(ROOT,file),'utf8');
 const play=read('monster-hero/src/parts/30-rhythm-play.jsx'),supa=read('monster-hero/src/parts/26-supabase.jsx');
 const sendBlock=(play.match(/const rhythmTouchDiagRecord=[\s\S]*?\n\};/)||[''])[0];
 const diagBlock=(play.match(/const rhythmTouchDiagOf=[\s\S]*?\n\};/)||[''])[0];
+// 【2026-11-24】大きさはデータベースの中の形で測り(文字数ではない)、断られたら大きい物を外して送り直す。黙って消さない
+{
+  const rm=read('monster-hero/data/rhythm-mode.js');
+  const blk=(rm.match(/const rhythmJsonbSizeEstimate=value=>\{[\s\S]*?const rhythmTouchDiagFitStats=[\s\S]*?\n\};/)||[''])[0];
+  const f=blk?new Function(`${blk}\nreturn {est:rhythmJsonbSizeEstimate,fit:rhythmTouchDiagFitStats,max:RHYTHM_TOUCH_DIAG_STATS_MAX,server:RHYTHM_TOUCH_DIAG_STATS_SERVER_MAX};`)():null;
+  ok('大きさの見積もりと、収める関数がある',!!f);
+  if(f){
+    ok('見積もりは PostgreSQL 16 の実測と同じ({} = 8・{"a":1} = 28・数字と文字と入れ子 = 170)',f.est({})===8&&f.est({a:1})===28&&f.est({lateHist:[0,12,345,67890],x:-12.3,s:'あい',t:true,n:null,o:{k:0.05}})===170,[f.est({}),f.est({a:1})].join('/'));
+    ok('送る側の上限(7600)は、表の上限(8192)より小さい',f.max===7600&&f.server===8192);
+    const big=n=>{const o={};for(let i=0;i<n;i++)o['k'+i]=i*7+0.5;return o;};
+    const small={touchStarts:900,mon:[{l:'1:2:3'}],scr:['0:play:start'],frame:{n:1}};
+    ok('収まっている行はそのまま(何も外さない)',f.fit(small)===small);
+    const fat={touchStarts:900,timing:big(100),mon:big(400),scr:['0:play:start'],frame:{n:1}};
+    const cut=f.fit(fat);
+    ok('超える行は、モンスターノーツの前後から外し、外した物の名前を残す',f.est(fat)>f.max&&f.est(cut)<=f.max&&!('mon' in cut)&&cut.trim==='mon'&&cut.frame&&cut.scr&&cut.touchStarts===900,JSON.stringify({before:f.est(fat),after:f.est(cut),trim:cut.trim}));
+    const fat2={touchStarts:900,timing:big(100),mon:big(300),scr:big(300),frame:big(200)};
+    ok('それでも超えれば、画面の出来事・1コマの重さの順に外す',f.fit(fat2).trim==='mon+scr+frame'||f.fit(fat2).trim==='mon+scr');
+  }
+  ok('モンスターノーツの前後を足すときも、同じ見積もりで測る',/const size=\(\)=>rhythmJsonbSizeEstimate\(\{\.\.\.diag\.stats,mon:list\}\);/.test(play)&&/const RHYTHM_TOUCH_DIAG_MON_MAX=RHYTHM_TOUCH_DIAG_STATS_MAX;/.test(play));
+  ok('送る直前に、上限に収める',/stats:rhythmTouchDiagFitStats\(diag\.stats\),schema_version/.test(play));
+  ok('断られた(400)ときは、大きい物を外して送り直す(外した物と回数を残す)',/if \(res\.status === 400 && row\.stats/.test(supa)&&/for \(const name of RHYTHM_TOUCH_DIAG_TRIM_ORDER\)/.test(supa)&&/stats\.trim = dropped\.join\('\+'\); stats\.retry = dropped\.length;/.test(supa)&&/if \(res\.status !== 400\) break;/.test(supa));
+}
 ok('送り先は rhythm_touch_diagnostics・表が無い(404)・権限が無いと分かったら送るのをやめる',
   /const RHYTHM_TOUCH_DIAG_TABLE = 'rhythm_touch_diagnostics';/.test(supa)&&/res\.status === 404 \|\| res\.status === 401 \|\| res\.status === 403\) rhythmTouchDiagDisabled = true/.test(supa));
 ok('名前・ブリーダーIDは送らない',sendBlock.length>0&&!/user_name|breeder|userName|breederId/i.test(sendBlock+diagBlock));
@@ -41,7 +63,7 @@ if(has('psql')&&has('pg_ctlcluster')&&process.getuid&&process.getuid()===0){
   const psql=args=>spawnSync('su',['postgres','-c',`psql ${args}`],{encoding:'utf8'});
   const DB='monhero_touch_diag_check';
   const WORK=fs.mkdtempSync(path.join(os.tmpdir(),'touchdiag-'));
-  const files=['RHYTHM_TOUCH_DIAG_APPLY_TEST.sql','RHYTHM_TOUCH_DIAG_APPLY.sql','RHYTHM_TOUCH_DIAG_VERIFY.sql'];
+  const files=['RHYTHM_TOUCH_DIAG_APPLY_TEST.sql','RHYTHM_TOUCH_DIAG_APPLY.sql','RHYTHM_TOUCH_DIAG_VERIFY.sql','RHYTHM_TOUCH_DIAG_STATS_LIMIT_8192.sql'];
   files.forEach(f=>fs.copyFileSync(path.join(ROOT,sqlDir,f),path.join(WORK,f)));
   fs.writeFileSync(path.join(WORK,'00-base.sql'),`
 do $$ begin if not exists (select 1 from pg_roles where rolname='anon') then create role anon nologin; end if; end $$;
@@ -71,6 +93,26 @@ insert into public.rankings (user_name, score) values ('太郎', 1);
     ok('anon は読み出せる',Number((asAnon('select count(*) from public.rhythm_touch_diagnostics').stdout||'').trim().split('\n').pop())>=1);
     ok('anon は書き換えできない',!/UPDATE [1-9]/.test((asAnon("update public.rhythm_touch_diagnostics set platform='other'").stdout||''))&&query("select count(*) from public.rhythm_touch_diagnostics where platform='other'")==='0');
     ok('anon は削除できない',(()=>{asAnon('delete from public.rhythm_touch_diagnostics');return Number(query('select count(*) from public.rhythm_touch_diagnostics'))>=1;})());
+    // ── stats の大きさの上限(2026-11-24・4096 → 8192)と、送る側の大きさの見積もり ──
+    //   決まりは pg_column_size(文字数ではない)。11/17 に診断へ数を足したあと、iPhone の行の 96% が 4096 を超えて断られ、黙って消えていた
+    {
+      const big=n=>{const o={};for(let i=0;i<n;i++)o['k'+i]=i*7+0.5;return o;};
+      const ins=obj=>good.replace(`'{"pointerOnly":2,"touchStarts":900}'::jsonb`,`'${JSON.stringify(obj)}'::jsonb`);
+      const sizeOf=obj=>Number(query(`select pg_column_size('${JSON.stringify(obj)}'::jsonb)`));
+      const mid=big(330),over=big(520);
+      ok('前提: 4096 と 8192 のあいだの行と、8192 を超える行を用意できる',sizeOf(mid)>4096&&sizeOf(mid)<8192&&sizeOf(over)>8192,`${sizeOf(mid)} / ${sizeOf(over)}`);
+      ok('上げる前は、4096 を超える行は断られる',asAnon(ins(mid)).status!==0);
+      const lim=runFile('RHYTHM_TOUCH_DIAG_STATS_LIMIT_8192.sql');
+      ok('上限を上げる SQL が通る',lim.status===0,(lim.stderr||'').trim().slice(0,200));
+      ok('もう一度流しても同じ(二重適用に強い)',runFile('RHYTHM_TOUCH_DIAG_STATS_LIMIT_8192.sql').status===0);
+      ok('既存の行は消えない',Number(query('select count(*) from public.rhythm_touch_diagnostics'))>=1);
+      ok('上げたあとは、8192 までの行が入り、超える行は断られる',asAnon(ins(mid)).status===0&&asAnon(ins(over)).status!==0);
+      // 送る側の見積もり(rhythmJsonbSizeEstimate)は、本物の pg_column_size とほぼ同じ
+      const est=new Function(`${read('monster-hero/data/rhythm-mode.js').match(/const rhythmJsonbSizeEstimate=value=>\{[\s\S]*?\n\};/)[0]}\nreturn rhythmJsonbSizeEstimate;`)();
+      const samples=[{},{a:1},{lateHist:[0,12,345,67890],x:-12.3,s:'あい',t:true,n:null,o:{k:0.05}},mid,over,{timing:{ageHist:[2111,470,23,17,7,0],biasMs:-38.4,fixes:['lateInputEffectDown','wideEdge']},mon:[{c:'flash@1;side@5',l:'-410:32:1;4:48:1',avg:16.9}]}];
+      const diffs=samples.map(o=>est(o)-sizeOf(o));
+      ok('送る側の大きさの見積もりは、データベースの実測と ±8 バイト以内',diffs.every(d=>Math.abs(d)<=8),JSON.stringify(diffs));
+    }
     const bad=[
       ['知らない系統',good.replace("'ios'","'windows'")],
       ['形の違う端末ID',good.replace("'abcdefgh1234'","'NG!'")],
