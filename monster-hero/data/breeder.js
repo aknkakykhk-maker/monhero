@@ -13,7 +13,7 @@ const GEZUDERO_ICON = "images/breeder-icons/gezudero.png?v=d79a38ee0679";
 const MELOPANMAN_ICON = "images/breeder-icons/melopanman.png?v=1eba631f1832";
 const CADMIUM_FACE_ICON = "images/breeder-icons/cadmium.png?v=bfaf6e5ecfad";
 // ももすけのカード用の顔アイコン。助手の表情画像(小さい)をそのまま使う
-const MOMOSUKE_FACE_ICON = "images/assistant/face/momosuke_happy.PNG?v=33d1b7eaa678";
+const MOMOSUKE_FACE_ICON = "images/assistant/face/momosuke_happy.PNG?v=f628a5859eb5";
 const KIKI_FACE_ICON = "images/breeder-icons/kiki.PNG?v=35362d7b6e3e";
 const POLTZ_FACE_ICON = "images/breeder-icons/poltz.PNG?v=a17ca7fa2869";
 // きゅうこ(2026-10-22)。顔アイコン(案B)をそのまま使う
