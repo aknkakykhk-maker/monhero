@@ -59,7 +59,7 @@ const raidXmasTierAt = (kind, index) => {
 const RAID_XMAS_SKILL_NAMES = Object.freeze({
   normal: '正拳・闇',
   special: '瞬黒撃',
-  sweep: 'X\u2019マスキャロル',
+  sweep: '超宝屁',   // ちょうほうひ(社長の訂正 2026-11-25)
   rush: '超飛び蹴り',
   pierce: '超暗けい',
   roar: '怪しこの夜',
