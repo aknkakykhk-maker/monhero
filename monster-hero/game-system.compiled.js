@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 07a48a8542d0d7c8
+// source-sha256: b831d66e14e6d009
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -15903,6 +15903,14 @@ const RELEASE_FLAGS = {
   get rhythmGrandOpen() {
     try {
       return RHYTHM_GRAND_OPEN_RELEASE === true && Date.now() >= Date.parse(RHYTHM_GRAND_OPEN_START_AT);
+    } catch (e) {
+      return false;
+    }
+  },
+  get rhythmXmasBoost() {
+    try {
+      const c = typeof rhythmEventPointCampaignAt === 'function' ? rhythmEventPointCampaignAt(Date.now()) : null;
+      return !!c && c.id === 'xmas_2026';
     } catch (e) {
       return false;
     }
