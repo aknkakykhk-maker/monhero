@@ -83,6 +83,7 @@ const RewardSummaryCard = ({ summary, onPresentationComplete }) => {
   return (
   <div className="w-full max-w-xs bg-black/30 border border-white/10 rounded-2xl p-3 mb-2 text-left shrink-0 flex flex-col min-h-0">
     <div className="space-y-3 shrink-0">
+      {summary.xmasBonus > 1 && <div data-xmas-battle-bonus className="rounded-lg border border-emerald-400/40 bg-emerald-950/50 px-2 py-1 text-[10px] font-black leading-snug text-emerald-100">🎄 クリスマスイベント中！ 経験値とダイヤが{summary.xmasBonus}倍</div>}
       <div>
         <div className="flex items-center justify-between text-[11px] mb-1">
           <span className="text-indigo-300 font-black flex items-center gap-1"><Crown size={12}/>ブリーダー経験値</span>
