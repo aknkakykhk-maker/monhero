@@ -379,7 +379,8 @@ const ensureArtPickerCss = () => {
 function ScreenThemeModal({ screenTheme, onChange, titleArt, onChangeTitleArt, homeArt, onChangeHomeArt, onClose }) {
   const rows = [
     { id: 'title', label: 'タイトル画面', value: titleArt, set: onChangeTitleArt },
-    { id: 'home', label: 'ホーム画面', value: homeArt, set: onChangeHomeArt },
+    // ホームだけは季節の絵(クリスマスなど・出してよい期間のもの)も選べる(r1125-059)
+    { id: 'home', label: 'ホーム画面', value: homeArt, set: onChangeHomeArt, choices: [...SCREEN_THEME_CHOICES, ...homeArtOptionsAt().filter(option => !SCREEN_THEME_CHOICES.some(choice => choice.id === option.id)).map(option => ({ id: option.id, label: option.label }))] },
     ...SCREEN_THEME_READY_CATEGORIES.map(category => ({ ...category, value: screenTheme[category.id], set: choice => onChange(category.id, choice) })),
   ];
   const setAll = choice => { onChangeTitleArt(choice); onChangeHomeArt(choice); onChange('*', choice); };
@@ -396,7 +397,7 @@ function ScreenThemeModal({ screenTheme, onChange, titleArt, onChangeTitleArt, h
   return (
     <ModalSheet title="画面テーマ" onClose={cancel} size="wide" dataProps={{'data-screen-theme-picker':'',onPointerDown:e=>e.stopPropagation()}}
       footer={<><ModalSheetButton back onClick={cancel}>やめる</ModalSheetButton><ModalSheetButton kind="go" onClick={onClose} data-screen-theme-ok>決定</ModalSheetButton></>}>
-      <p className="text-[12px] font-bold leading-relaxed text-slate-300" style={JA_LABEL_STYLE}>{jaWrap('画面の種類ごとに見た目を選べます。「おまかせ」は季節に合わせて切り替わり、10月31日まではハロウィン、11月1日からはクラシックになります。')}</p>
+      <p className="text-[12px] font-bold leading-relaxed text-slate-300" style={JA_LABEL_STYLE}>{jaWrap('画面の種類ごとに見た目を選べます。「おまかせ」は季節に合わせて切り替わります。')}</p>
       <div className="mt-2 rounded-xl border border-amber-300/40 bg-amber-500/10 p-2">
         <b className="block text-[12px] font-black text-amber-100">まとめて変える</b>
         <div className="mt-1.5 flex gap-1.5">{SCREEN_THEME_CHOICES.map(choice => <button key={choice.id} type="button" onClick={() => setAll(choice.id)} className={chip(false)}>{choice.label}</button>)}</div>
@@ -406,7 +407,7 @@ function ScreenThemeModal({ screenTheme, onChange, titleArt, onChangeTitleArt, h
         <div key={row.id} data-screen-theme-row={row.id} className="rounded-xl border border-white/10 bg-white/5 p-2">
           <b className="block text-[12px] font-black text-white">{row.label}</b>
           {/* 見出しをくり返すだけの説明(「マーケット／マーケット」)は出さない(2026-11-23 API 総点検③ settings-theme) */}{row.desc && row.desc !== row.label && <small className="block text-[10px] font-bold text-slate-400">{row.desc}</small>}
-          <div className="mt-1.5 flex gap-1.5">{SCREEN_THEME_CHOICES.map(choice => <button key={choice.id} type="button" aria-pressed={row.value === choice.id} onClick={() => row.set(choice.id)} className={chip(row.value === choice.id)}>{choice.label}</button>)}</div>
+          <div className="mt-1.5 flex gap-1.5">{(row.choices || SCREEN_THEME_CHOICES).map(choice => <button key={choice.id} type="button" aria-pressed={row.value === choice.id} onClick={() => row.set(choice.id)} className={chip(row.value === choice.id)}>{choice.label}</button>)}</div>
         </div>
       ))}</div>
     </ModalSheet>

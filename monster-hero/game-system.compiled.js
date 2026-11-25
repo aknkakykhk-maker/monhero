@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: dd40c1a433fa7231
+// source-sha256: 13e3b972d35a96c4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -8355,7 +8355,17 @@ const titleArtSrc = (value, shape = 'portrait') => {
   return option.src;
 };
 const HOME_ART_STORAGE_KEY = 'mh_home_art';
+const HOME_ART_XMAS_FROM = () => Date.parse(typeof RAID_XMAS_START_AT === 'string' ? RAID_XMAS_START_AT : '2026-11-30T10:00:00+09:00');
+const HOME_ART_XMAS_UNTIL = () => Date.parse(typeof RAID_XMAS_EVENT === 'object' && RAID_XMAS_EVENT && typeof RAID_XMAS_EVENT.endAt === 'string' ? RAID_XMAS_EVENT.endAt : '2026-12-31T04:00:00+09:00');
 const HOME_ART_OPTIONS = [{
+  id: 'xmas',
+  label: 'クリスマス',
+  desc: '雪の夜、イルミネーションがきらめく村の広場',
+  src: 'data/images/home-background-xmas.jpg',
+  squareSrc: 'data/images/home-background-xmas-square.jpg',
+  wideSrc: 'data/images/home-background-xmas-wide.jpg',
+  from: HOME_ART_XMAS_FROM
+}, {
   id: 'halloween',
   label: 'ハロウィン',
   desc: 'かぼちゃの灯りがともる、月夜の村の広場',
@@ -8371,9 +8381,13 @@ const HOME_ART_OPTIONS = [{
 }];
 const DEFAULT_HOME_ART = 'auto';
 const normalizeHomeArt = value => value === 'auto' || HOME_ART_OPTIONS.some(option => option.id === value) ? value : DEFAULT_HOME_ART;
+const homeArtAvailable = (option, now = Date.now()) => !!option && (typeof option.from !== 'function' || now >= option.from());
+const homeArtOptionsAt = (now = Date.now()) => HOME_ART_OPTIONS.filter(option => homeArtAvailable(option, now));
+const homeArtXmasOpenAt = (now = Date.now()) => now >= HOME_ART_XMAS_FROM() && now < HOME_ART_XMAS_UNTIL();
 const resolveHomeArt = (value, now = Date.now()) => {
   const v = normalizeHomeArt(value);
-  return v === 'auto' ? resolveScreenTheme('auto', now) : v;
+  if (v === 'auto') return homeArtXmasOpenAt(now) ? 'xmas' : resolveScreenTheme('auto', now);
+  return homeArtAvailable(HOME_ART_OPTIONS.find(option => option.id === v), now) ? v : resolveScreenTheme('auto', now);
 };
 const homeArtSrc = (value, shape = 'portrait') => {
   const option = HOME_ART_OPTIONS.find(item => item.id === resolveHomeArt(value));
@@ -72660,7 +72674,11 @@ function ScreenThemeModal({
     id: 'home',
     label: 'ホーム画面',
     value: homeArt,
-    set: onChangeHomeArt
+    set: onChangeHomeArt,
+    choices: [...SCREEN_THEME_CHOICES, ...homeArtOptionsAt().filter(option => !SCREEN_THEME_CHOICES.some(choice => choice.id === option.id)).map(option => ({
+      id: option.id,
+      label: option.label
+    }))]
   }, ...SCREEN_THEME_READY_CATEGORIES.map(category => ({
     ...category,
     value: screenTheme[category.id],
@@ -72706,7 +72724,7 @@ function ScreenThemeModal({
   }, React.createElement("p", {
     className: "text-[12px] font-bold leading-relaxed text-slate-300",
     style: JA_LABEL_STYLE
-  }, jaWrap('画面の種類ごとに見た目を選べます。「おまかせ」は季節に合わせて切り替わり、10月31日まではハロウィン、11月1日からはクラシックになります。')), React.createElement("div", {
+  }, jaWrap('画面の種類ごとに見た目を選べます。「おまかせ」は季節に合わせて切り替わります。')), React.createElement("div", {
     className: "mt-2 rounded-xl border border-amber-300/40 bg-amber-500/10 p-2"
   }, React.createElement("b", {
     className: "block text-[12px] font-black text-amber-100"
@@ -72729,7 +72747,7 @@ function ScreenThemeModal({
     className: "block text-[10px] font-bold text-slate-400"
   }, row.desc), React.createElement("div", {
     className: "mt-1.5 flex gap-1.5"
-  }, SCREEN_THEME_CHOICES.map(choice => React.createElement("button", {
+  }, (row.choices || SCREEN_THEME_CHOICES).map(choice => React.createElement("button", {
     key: choice.id,
     type: "button",
     "aria-pressed": row.value === choice.id,
@@ -258880,8 +258898,8 @@ function MonsterHeroGame() {
   }) : showHomeArt ? React.createElement(ArtPickerModal, {
     pickerId: "home",
     heading: "ホーム画面アレンジ",
-    note: "ホーム画面の背景を選べます。横画面では、どちらの絵も横長の絵になります。",
-    options: HOME_ART_OPTIONS,
+    note: "ホーム画面の背景を選べます。横画面では、どの絵も横長の絵になります。",
+    options: homeArtOptionsAt(),
     value: homeArt,
     resolved: resolveHomeArt(homeArt),
     onChange: changeHomeArt,
