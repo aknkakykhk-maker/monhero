@@ -1235,7 +1235,7 @@ const halloweenCostume = (assistantId, imagePrefix, name, desc) => ({
 //   (2026-10-27 社長「解放されるまでマーケットに出ない？ 出てないなら出して入手条件かくようにして」。前は勝つまで並べなかった)
 const ASSISTANT_COSTUME_MUA_MASTER_RELEASE = true;
 // 商品の絵(顔アイコン)。画像のパスはデータの中に直接書かず、定数にして指す(image/data-image-source-check.js)
-const MUA_CARD_MASTER_COSTUME_ART = "images/assistant/card-master/face/myua_happy.PNG?v=d860998677ef";
+const MUA_CARD_MASTER_COSTUME_ART = "images/assistant/card-master/face/myua_happy.PNG?v=6572cd5ff0a7";
 const muaCardMasterCostume = Object.freeze({
   id: 'mua_card_master_v1', assistantId: 'mua',
   name: 'デュエルマスター', desc: 'MFバトルカードの決闘者ふうの衣装。黒い服に白と青のマント、赤い指なし手袋と金の三角のペンダントです。',
