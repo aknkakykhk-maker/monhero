@@ -181,3 +181,4 @@ select kind, tier, source, count(distinct breeder_id) as players, sum(damage)::b
 | 物 | 部 | PR |
 | --- | --- | --- |
 | この紙 | バトル部 | (この PR) |
+| カード: ボスのデッキ・考え方・換算 `raidXmasCardDamageOf`(`82-card-raid-core.jsx`)・対戦の画面の受け口 `raidChallenge`(`84-screen-card-battle.jsx`)。口の形は [`CARD_RAID_XMAS.md`](../../spec/CARD_RAID_XMAS.md)「つなぐ口」。App の `startRaidXmasCard` は §2・§3 の関数ができたらつなぐ | カード部 | (この PR) |
