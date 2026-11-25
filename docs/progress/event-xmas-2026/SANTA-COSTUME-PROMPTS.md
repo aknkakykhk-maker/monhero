@@ -7,7 +7,7 @@
 1. チャッピーの新しい会話を開く(**1人ずつ別の会話**。同じ会話で続けると、前の助手の顔が混ざりやすい)
 2. 下の「チャッピーへ送る文」の「◯◯」を助手の名前にして送る。これだけで、チャッピーがこのページと絵を見て作る
 3. 全身の1枚ができたら、同じ会話で「表情8種も作って」と送る(このページの「表情8種のプロンプト」に従う)
-4. できた絵は**加工せずに**窓口へ(受け取った物はそのまま入れない決まり。切り分け・顔アイコン作りはこちらでやる)
+4. できた絵は**加工せずに**、下の「できた絵の保存先」の場所・名前で置く(切り分け・顔アイコン作りはこちらでやる)
 
 ### チャッピーへ送る文
 
@@ -16,12 +16,37 @@
 https://github.com/aknkakykhk-maker/monhero/blob/main/docs/progress/event-xmas-2026/SANTA-COSTUME-PROMPTS.md
 
 このページの「共通の前置き」と「◯◯」の指示を読み、指示の中にある「参考の絵」のリンクの絵をよく見てから、その人物のサンタ衣装の全身絵を作ってください。
+できた絵のファイル名は、このページの「できた絵の保存先」の表のとおりにしてください。
 ```
 
 - ページや絵が開けないと言われたときだけ、その助手の絵を添付し、その助手の指示の文をそのまま貼る
 
 - ハロウィンの衣装と同じく、ゲームの中では「全身の絵+表情8種」を使う
 - ボスが「贈り物を奪う黒いサンタ」なので、**助手のサンタは黒を主役にしない**(あつは黒が持ち色なので、赤を主役にして黒は差し色まで)
+
+## できた絵の保存先(GitHub)
+
+チャッピーが作った絵は、**加工せずに**下の場所へ置く(受け取った物はそのまま残す決まり)。ゲームで使う大きさへの切り出し・顔アイコン作りはバトル部(または窓口)が、ここから作る。
+
+置き場所: `tools/art-sources/assistants/<フォルダ>/santa/received/`
+GitHub で見る: https://github.com/aknkakykhk-maker/monhero/tree/main/tools/art-sources/assistants
+
+| 助手 | フォルダ | 全身の絵のファイル名 | 表情8種の絵のファイル名 |
+| --- | --- | --- | --- |
+| みゅあ | `mua` | `mua_santa_fullbody.png` | `mua_santa_faces.png` |
+| きき | `kiki` | `kiki_santa_fullbody.png` | `kiki_santa_faces.png` |
+| ももすけ | `momosuke` | `momosuke_santa_fullbody.png` | `momosuke_santa_faces.png` |
+| ドラ | `dra` | `dra_santa_face.png`(顔の絵1枚) | `dra_santa_faces.png` |
+| あつ | `atsu` | `atsu_santa_fullbody.png` | `atsu_santa_faces.png` |
+| きゅうこ | `kyuko` | `kyuko_santa_fullbody.png` | `kyuko_santa_faces.png` |
+| ソラシド | `sorashido` | `sorashido_santa_fullbody.png` | `sorashido_santa_faces.png` |
+| えるびん | `erubin` | `erubin_santa_fullbody.png` | `erubin_santa_faces.png` |
+
+例: みゅあの全身の絵は `tools/art-sources/assistants/mua/santa/received/mua_santa_fullbody.png`
+
+- 置き方は、窓口(または担当の会話)に絵を渡せば置いてもらえる。自分で GitHub に上げるときは、上の場所へ「Add file → Upload files」で
+- 作り直した絵は、前の絵を消さずに `_v2` を付ける(例 `mua_santa_fullbody_v2.png`)。どちらを使うかは渡すときに言う
+- ゲームに入れたあとの置き場所(参考): 全身 `monster-hero/images/assistant/fullbody/<名前>_santa.png`、表情 `monster-hero/images/assistant/santa/`(ハロウィンの衣装と同じ並び)
 
 ## 助手ごとのイメージ(一覧)
 
