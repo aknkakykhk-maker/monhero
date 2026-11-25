@@ -34,7 +34,7 @@
 | 全身絵 | `monster-hero/images/assistant/fullbody/kyuko_santa[__<表情>].png` | 10 | 2026-11-25 76509b02b(10枚・うち表情なし1) | `tools/art-sources/assistants/kyuko/santa/received/kyuko_santa_*.png` | `tools/assistant/life-fullbody-art.py`(受け取った全身の10枚。received は加工せずに保管。輪郭の外の薄いもやは書き出しで掃除) |
 | 立ち絵 | `monster-hero/images/assistant/stand-santa/kyuko_<表情>.png` | 8 | 2026-11-25 76509b02b(8枚) | `tools/art-sources/assistants/kyuko/santa/received/kyuko_santa_*.png` | `tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(全身絵から切り出す) |
 | バスト絵 | `monster-hero/images/assistant/santa/kyuko_<表情>.PNG` | 9 | 2026-11-25 76509b02b(9枚・うち寝顔1) | `tools/art-sources/assistants/kyuko/santa/received/kyuko_santa_*.png` | `tools/assistant/life-fullbody-art.py` の全身絵をそのまま写す(ほかの助手のクリスマスの衣装と同じく、全身の絵をバスト絵の置き場に置く) |
-| 顔アイコン | `monster-hero/images/assistant/santa/face/kyuko_<表情>.PNG` | 9 | 未コミット (9枚・うち寝顔1) | `tools/art-sources/assistants/kyuko/santa/received/kyuko_santa_*.png` | `tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(顔の切り方は life-stand-cut.json の kyuko:santa。きゅうこ(ふだん)・冬の装いの顔にそろえる) |
+| 顔アイコン | `monster-hero/images/assistant/santa/face/kyuko_<表情>.PNG` | 9 | 2026-11-25 25dcc6c2(9枚・うち寝顔1) | `tools/art-sources/assistants/kyuko/santa/received/kyuko_santa_*.png` | `tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(顔の切り方は life-stand-cut.json の kyuko:santa。きゅうこ(ふだん)・冬の装いの顔にそろえる) |
 
 ## 旧版(正本ではない・保管庫)
 
