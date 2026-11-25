@@ -184,6 +184,8 @@ select kind, tier, source, count(distinct breeder_id) as players, sum(damage)::b
 | この紙 | バトル部 | #7591 |
 | 定義 `35-raid-xmas.jsx`・回数と与ダメージ `36-raid-xmas-api.jsx`(`raidXmasUseTry`・`raidXmasAddDamage` は App ではなく**どこからでも呼べる関数**にした)・`RELEASE_FLAGS.raidXmas`・検査 `tools/battle/raid-xmas-check.js` | バトル部 | (この PR) |
 | レイド画面・バトルの1戦・結果画面 `openRaidXmasResult`(App の中)・ランキングの「バトルカード」・ボスの絵 `RAID_XMAS_BOSS_IMG` | バトル部 | (③の PR) |
+| カード: ボスのデッキ・考え方・換算 `raidXmasCardDamageOf`(`82-card-raid-core.jsx`)・対戦の画面の受け口 `raidChallenge`(`84-screen-card-battle.jsx`)。口の形は [`CARD_RAID_XMAS.md`](../../spec/CARD_RAID_XMAS.md)「つなぐ口」。App の `startRaidXmasCard` は §2・§3 の関数ができたらつなぐ | カード部 | #7607 |
+| ビート挑戦をイベントのつなぎ口で動かす部品 `39-raid-rhythm.jsx`(ジャックは同じ動き・クリスマスのつなぎ口は §2〜§4 の形で用意。App でつなぐのは §3 の関数が入ってから。[`BEAT.md`](BEAT.md)) | ビート部 | #7618 |
 
 ## 10. つなぎ方(③でできた所・2026-11-25)
 

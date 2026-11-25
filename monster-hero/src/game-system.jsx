@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5ae567bcd23f8960
+// generated-sha256: de0f2c6bef918673
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -10843,7 +10843,10 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   //   数字は 32-tactics-units.jsx の TACTICS_HATE / MONSTER_TYPES。お話「タクティクスバトル ～4人のタイプ～」(tactics_types)もこの印で出る
   tacticsHate: true,
   // タクティクスのEXスキル。遊べる入口(β版を含む)があって、EXの公開フラグも立っているときだけ
-  tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, get rhythmGrandOpen() { try { return RHYTHM_GRAND_OPEN_RELEASE === true && Date.now() >= Date.parse(RHYTHM_GRAND_OPEN_START_AT); } catch (e) { return false; } }, rhythmGrandOpenTeaser:RHYTHM_GRAND_OPEN_TEASER_RELEASE, rhythmMulti:RHYTHM_MULTI_PUBLIC_RELEASE, friends:FRIENDS_PUBLIC_RELEASE, raidJackRhythm: RAID_JACK_RHYTHM_PUBLIC_RELEASE, get raidJack() { try { return RAID_JACK_PUBLIC_RELEASE === true && Date.now() >= Date.parse(RAID_JACK_START_AT); } catch (e) { return false; } }, get raidXmas() { try { return Date.now() >= Date.parse(RAID_XMAS_START_AT); } catch (e) { return false; } }, get xmasCostume() { try { return Date.now() >= Date.parse(XMAS_COSTUME_START_AT); } catch (e) { return false; } }, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
+  tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, get rhythmGrandOpen() { try { return RHYTHM_GRAND_OPEN_RELEASE === true && Date.now() >= Date.parse(RHYTHM_GRAND_OPEN_START_AT); } catch (e) { return false; } },
+  // クリスマスイベントのモンヒロビート5倍(data/rhythm-event.js の xmas_2026・台帳 r1119-172 追記・追跡 r1125-044)の期間だけ真。
+  // ヘルプの説明を開始の 11/30 10:00 まで出さず、12/31 4:00 に下げる。見るたびに数え直す(読み込み時に決めない)
+  get rhythmXmasBoost() { try { const c = typeof rhythmEventPointCampaignAt === 'function' ? rhythmEventPointCampaignAt(Date.now()) : null; return !!c && c.id === 'xmas_2026'; } catch (e) { return false; } }, rhythmGrandOpenTeaser:RHYTHM_GRAND_OPEN_TEASER_RELEASE, rhythmMulti:RHYTHM_MULTI_PUBLIC_RELEASE, friends:FRIENDS_PUBLIC_RELEASE, raidJackRhythm: RAID_JACK_RHYTHM_PUBLIC_RELEASE, get raidJack() { try { return RAID_JACK_PUBLIC_RELEASE === true && Date.now() >= Date.parse(RAID_JACK_START_AT); } catch (e) { return false; } }, get raidXmas() { try { return Date.now() >= Date.parse(RAID_XMAS_START_AT); } catch (e) { return false; } }, get xmasCostume() { try { return Date.now() >= Date.parse(XMAS_COSTUME_START_AT); } catch (e) { return false; } }, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
 // releaseFlag = そのフラグが立つまで出さない。unreleasedFlag = そのフラグが立ったら出さない。
 // 逆向きの名札が要るのは「準備中です」の案内で、公開したあとも残っていると
 // 遊べているのに準備中の項目が並ぶ(ヘルプのモンヒロビートで実際にそうなっていた・2026-09-06)。
@@ -39337,7 +39340,7 @@ const RaidJackDamageFx = ({ fx, onDone }) => {
   const defeated = hasLife && !fx.pumpkin && fx.damage > 0 && fx.damage >= fx.lifeBefore;
   const none = !(fx.damage > 0);
   return (
-    <div data-raid-jack-damage-fx data-jack-aura={fx.pumpkin ? undefined : n} className="mh-rjdmg" role="status"
+    <div data-raid-jack-damage-fx data-jack-aura={fx.pumpkin || fx.bossImg ? undefined : n} className="mh-rjdmg" role="status"
       onClick={() => { if (Date.now() - startedRef.current > 1500) finish(); }}>
       <i className="mh-rjdmg-flash" />
       <div className="mh-rjdmg-score">
@@ -39345,9 +39348,10 @@ const RaidJackDamageFx = ({ fx, onDone }) => {
         <b><TrainingCountUp from={0} to={Math.max(0, fx.score)} delay={250} duration={700} format={(v) => v.toLocaleString()} /></b>
       </div>
       <div className="mh-rjdmg-stage">
-        {!fx.pumpkin && <JackAuraLayer tier={n} limit={10} />}
-        <img src={fx.pumpkin ? PUMPKIN_ICON_IMG : JACK_IMG} alt="" draggable={false} className={`mh-rjdmg-jack${none ? ' mh-rjdmg-jack-none' : ''}`}
-          style={fx.pumpkin ? undefined : { filter: raidJackAuraGlowFilter(n, 0.5) }} />
+        {/* fx.bossImg: ジャック以外のレイド(39-raid-rhythm.jsx のつなぎ口の bossImg)。そのときはジャックのオーラを出さない */}
+        {!fx.pumpkin && !fx.bossImg && <JackAuraLayer tier={n} limit={10} />}
+        <img src={fx.bossImg || (fx.pumpkin ? PUMPKIN_ICON_IMG : JACK_IMG)} alt="" draggable={false} className={`mh-rjdmg-jack${none ? ' mh-rjdmg-jack-none' : ''}`}
+          style={fx.pumpkin || fx.bossImg ? undefined : { filter: raidJackAuraGlowFilter(n, 0.5) }} />
         {!none && <><i className="mh-rjdmg-slash mh-rjdmg-slash-a" /><i className="mh-rjdmg-slash mh-rjdmg-slash-b" /></>}
       </div>
       <div className="mh-rjdmg-name">{fx.tierName}</div>
@@ -40534,6 +40538,242 @@ function MultiStampShopList({ points = 0, busy = false, disabled = false, openSh
     {edit && <MultiStampEditor onClose={() => setEdit(false)} />}
   </>;
 }
+
+// ---- part: 39-raid-rhythm.jsx ----
+// ===== レイドバトルのモンヒロビート挑戦: イベントに縛られない作り(2026-11-25・台帳 r1119-172・ビート部) =====
+// ジャック(ハロウィン)のとき 60-app.jsx に直書きしていた「回数を使う → 演奏 → ダメージの演出 → 送る → 結果」を、
+// イベントごとの「つなぎ口(アダプタ)」を受け取る形にした。ジャックの動きは前と同じ(下の raidJackRhythmAdapter)。
+// 新しいイベント(クリスマス raid_xmas_2026 の案)は、バトル部の定義(docs/progress/event-xmas-2026/BUILD.md)に合わせて
+// アダプタを1つ足すだけで、曲えらびの帯・演出・送信・結果が動く。
+//
+// アダプタの形(ここで読むものだけ):
+//   key            'jack' など。曲えらびの状態(raidRhythm.eventKey)に入れる
+//   eventId        送る先のイベントid(デバッグで強制表示しているあいだは本番と別の id)
+//   liveEventId    本番のイベントid(eventId がこれと違えば「デバッグの記録」)
+//   screen         演奏を出ていったあとに戻る画面(gameState)
+//   icon           曲えらびの帯の頭の絵文字
+//   bossImg        演出に出すボスの絵(null ならジャックの絵とオーラ。37-raid-jack-aura.jsx の RaidJackDamageFx)
+//   tierCount      段階の数
+//   tierAt(i)      → { id, name, hp }
+//   infiniteName   最後の段階を倒したあとの相手(共有ライフが無限)の名前
+//   fetchTotals()  → 段階ごとの合計(取れないとき null)
+//   doneOf(totals, i)      その段階へ与えたダメージの合計
+//   infiniteAt(totals, i)  その段階が「倒したあとの無限の相手」か
+//   useCount(nowMs)        → 'ok'(1回使った・デバッグで数えないときも ok) / 'none'(回数が無い) / 'saveFailed'(保存できない)
+//   submit(run, hit, tier, defeated) → { outcome, opened }(本番の送信。デバッグの記録は別の id で送るだけ)
+//   damageOf(result, difficulty)     省略するとジャックの式(35-raid-jack.jsx の raidJackRhythmDamageOf)
+//   ── BUILD.md の形(クリスマスから。バトル部が App の中に作る3つの関数を受け取る)。あれば上の useCount / submit より先に使う ──
+//   begin()                → { ok, hitId, eventId }(= raidXmasUseTry。回数を1回使う。デバッグ中は数えない・送る id も向こうが決める)
+//   addDamage(input)       → 結果画面の中身(= raidXmasAddDamage。送る・倒した印・再送待ち・バトルの記録は全部向こう)
+//   openResult(r)          (= openRaidXmasResult。レイドの結果画面を出す)
+// ★保存データ(CLAUDE.md ⑦): ここは保存キーを持たない。回数・倒した印は各イベントのアダプタが自分のキーへ書く
+//   (ジャックは mh_raid_jack_v1 のまま。新しいイベントは新しいキー)
+
+const raidRhythmClampTier = (adapter, tierIndex) =>
+  Math.min(Math.max(Math.floor(Number(tierIndex) || 0), 0), Math.max(0, (adapter && adapter.tierCount || 1) - 1));
+
+// 1回の演奏のダメージ。イベントが式を持っていなければジャックの式
+const raidRhythmDamageOf = (adapter, result, difficulty) =>
+  adapter && typeof adapter.damageOf === 'function' ? adapter.damageOf(result, difficulty) : raidJackRhythmDamageOf(result, difficulty);
+
+// 曲えらびの帯に出すもの
+const raidRhythmBannerOf = (adapter, tierIndex) => adapter ? {
+  icon: adapter.icon || '🎃',
+  tierName: adapter.tierAt(raidRhythmClampTier(adapter, tierIndex)).name,
+} : null;
+
+// 演出で見せる「いまのボスのライフ」。演奏が始まる前から裏で取っておく(取れなくても演出は出す)
+const raidRhythmLifeInfo = async (adapter, tierIndex, eventId) => {
+  try {
+    const totals = await Promise.race([adapter.fetchTotals(eventId), new Promise((resolve) => setTimeout(() => resolve(null), 4000))]);
+    const tierDef = adapter.tierAt(tierIndex);
+    const done = totals ? adapter.doneOf(totals, tierIndex) : 0;
+    const pumpkin = adapter.infiniteAt(totals, tierIndex);
+    return { lifeBefore: totals ? (pumpkin ? tierDef.hp : Math.max(0, tierDef.hp - done)) : null, pumpkin };
+  } catch (e) { return null; }
+};
+
+// 1回の挑戦を始める(回数を使う)。使えたら run を返す。null のときは始めない(reason: 'none' / 'saveFailed')
+const raidRhythmBeginRun = async (adapter, tierIndex, nowMs = Date.now()) => {
+  let hitId = null;
+  let eventId = adapter.eventId;
+  if (typeof adapter.begin === 'function') {
+    // BUILD.md の形: 回数を使えなかった(残りが無い・保存に失敗)ときは ok が偽。どちらか分からないので曲えらびへ戻す
+    let t = null;
+    try { t = await adapter.begin(); } catch (e) { t = null; }
+    if (!t || t.ok !== true || typeof t.hitId !== 'string' || !t.hitId) return { run: null, reason: 'none' };
+    hitId = t.hitId;
+    if (typeof t.eventId === 'string' && t.eventId) eventId = t.eventId;
+  } else {
+    const used = await adapter.useCount(nowMs);
+    if (used !== 'ok') return { run: null, reason: used === 'none' ? 'none' : 'saveFailed' };
+    hitId = raidJackMakeHitId();
+  }
+  const run = { adapter, tierIndex: raidRhythmClampTier(adapter, tierIndex), hitId, eventId,
+    finished: false, completing: false, promise: null, lifePromise: null };
+  run.lifePromise = raidRhythmLifeInfo(adapter, run.tierIndex, eventId);
+  return { run, reason: 'ok' };
+};
+
+// 演奏が終わった直後の演出(RaidJackDamageFx)に渡す中身
+const raidRhythmFxOf = (run, info, result, difficulty) => {
+  const adapter = run.adapter;
+  const tier = adapter.tierAt(run.tierIndex);
+  return { key: `${run.hitId}`, tierIndex: run.tierIndex, tierName: info && info.pumpkin ? adapter.infiniteName : tier.name,
+    score: Math.max(0, Math.floor(Number(result && result.score) || 0)), damage: raidRhythmDamageOf(adapter, result, difficulty),
+    assist: !!(result && result.assist === true),
+    lifeBefore: info && Number.isFinite(info.lifeBefore) ? info.lifeBefore : null, max: tier.hp, pumpkin: !!(info && info.pumpkin),
+    bossImg: adapter.bossImg || null };
+};
+
+// 演奏が最後まで終わった: スコアをダメージに換えて、バトルと同じ表へ送る。戻り値は結果画面の中身
+const raidRhythmFinish = async (run, result, song, difficulty) => {
+  if (!run || run.finished) return null;
+  run.finished = true;
+  const adapter = run.adapter;
+  const tier = adapter.tierAt(run.tierIndex);
+  const score = Math.max(0, Math.floor(Number(result && result.score) || 0));
+  const assist = !!(result && result.assist === true);
+  const damage = raidRhythmDamageOf(adapter, result, difficulty);
+  if (typeof adapter.addDamage === 'function') {
+    // BUILD.md の形: 送る・倒した印・次の段階・再送待ち・バトルの記録は、バトル部の raidXmasAddDamage が全部やる
+    const detail = { songName: song && song.displayName || '', difficultyName: difficulty && difficulty.id || '', score, assist };
+    let res = null;
+    try {
+      res = await adapter.addDamage({ source: 'rhythm', kind: 'a', tierIndex: run.tierIndex, damage, hitId: run.hitId, eventId: run.eventId, detail });
+    } catch (e) { res = null; }
+    return { tierIndex: run.tierIndex, tierName: tier.name, damage, defeated: false, outcome: 'error', detail, ...(res || {}),
+      way: 'rhythm', songName: detail.songName, difficultyName: detail.difficultyName, score, assist, eventId: run.eventId, eventKey: adapter.key };
+  }
+  // 倒しきったか: いまの共有ライフの残りと比べる。最後の段階を倒したあとの相手は共有ライフが無限なので、倒した扱いにしない
+  let startLife = null;
+  let pumpkin = false;
+  try {
+    const totals = await Promise.race([adapter.fetchTotals(run.eventId), new Promise((resolve) => setTimeout(() => resolve(null), 4000))]);
+    const done = totals ? adapter.doneOf(totals, run.tierIndex) : 0;
+    if (totals && tier.hp - done > 0) startLife = tier.hp - done;
+    pumpkin = adapter.infiniteAt(totals, run.tierIndex);
+  } catch (e) { startLife = null; }
+  const defeated = !pumpkin && damage > 0 && startLife !== null && damage >= startLife;
+  const hit = { hitId: run.hitId, kind: 'a', tier: run.tierIndex + 1, damage, defeated, source: 'rhythm' };
+  let outcome = 'error';
+  let opened = false;
+  const isDebugRun = run.eventId !== adapter.liveEventId;
+  try {
+    if (damage <= 0) outcome = 'sent';   // 送るものが無い(アシストモードなど)
+    else if (isDebugRun) {
+      const breederId = await ensureBreederId();
+      outcome = await sbSendRaidJackHit(hit, breederId, run.eventId);
+    } else {
+      const sent = await adapter.submit(run, hit, tier, defeated);
+      outcome = sent.outcome; opened = !!sent.opened;
+    }
+    // バトルの1回ごとの記録(2026-10-21・下準備)。モンヒロビート挑戦は編成が無いので、段階と与ダメージだけ。印が偽のあいだは送らない
+    if (RELEASE_FLAGS.battleLog === true && !isDebugRun && damage > 0) {
+      try { void sbSendRaidBattleLog(buildRaidBattleLogRow({ score, raid: { event: run.eventId, kind: 'a', tier: run.tierIndex + 1, source: 'rhythm', damage, defeated } })); } catch {}
+    }
+  } catch (error) { outcome = 'error'; }
+  return { way: 'rhythm', songName: song && song.displayName || '', difficultyName: difficulty && difficulty.id || '', score, assist,
+    kind: 'a', tierIndex: run.tierIndex, tierName: pumpkin ? adapter.infiniteName : tier.name, reason: defeated ? 'defeated' : 'rhythm',
+    damage, defeated, turns: 0, levelUps: 0, growths: 0, outcome, opened, eventId: run.eventId, quickAward: null,
+    lifeLeft: Math.max(0, (startLife !== null ? startLife : tier.hp) - damage),
+    // 結果画面の体力のバー(演奏前 → いま)。演奏前の体力が取れなかったときは出さない
+    lifeBefore: startLife, lifeMax: tier.hp, pumpkin, eventKey: adapter.key };
+};
+
+// 最後まで遊ばなかった: 回数は使ったまま、ダメージは0(送らない)
+const raidRhythmGiveUpResult = (run, adapter, tierIndex) => {
+  const tier = adapter.tierAt(tierIndex);
+  if (typeof adapter.openResult === 'function') {
+    // BUILD.md の形(§3 の最後): 途中でやめた結果は { way, damage: 0, tierIndex, outcome: 'sent', detail }
+    return { way: 'rhythm', damage: 0, tierIndex, tierName: tier.name, outcome: 'sent', reason: 'giveup', defeated: false,
+      detail: { songName: '', difficultyName: '', score: 0, assist: false }, eventId: run ? run.eventId : adapter.eventId, eventKey: adapter.key };
+  }
+  return { way: 'rhythm', songName: '', difficultyName: '', score: 0, assist: false, kind: 'a', tierIndex, tierName: tier.name, reason: 'giveup', damage: 0, defeated: false,
+    turns: 0, levelUps: 0, growths: 0, outcome: 'sent', opened: false, eventId: run ? run.eventId : adapter.eventId, quickAward: null, lifeLeft: tier.hp, eventKey: adapter.key };
+};
+
+// ---- ジャック(ハロウィン 2026)のつなぎ口。前に 60-app.jsx に直書きしていた処理をそのまま移した ----
+// ctx = { eventId(本番 or デバッグの id), debugForce, realRules }
+const raidJackRhythmAdapter = (ctx) => ({
+  key: 'jack',
+  eventId: raidJackSafeEventId(ctx.eventId),
+  liveEventId: RAID_JACK_EVENT.id,
+  screen: 'RAID_JACK',
+  icon: '🎃',
+  bossImg: null,
+  tierCount: RAID_JACK_A_TIERS.length,
+  tierAt: (i) => raidJackTierAt('a', i),
+  infiniteName: RAID_JACK_PUMPKIN.name,
+  fetchTotals: () => sbFetchRaidJackTierTotals(ctx.eventId),   // 前と同じく App の raidJackEventId で引く
+  doneOf: (totals, i) => totals && totals.a && totals.a[i + 1] ? Number(totals.a[i + 1].total) || 0 : 0,
+  infiniteAt: (totals, i) => i === RAID_JACK_A_TIERS.length - 1 && raidJackBossDown(totals),
+  // 回数はバトルと同じもの。デバッグの強制表示中は数えない(startRaidJackFromPrep と同じ)
+  useCount: async (nowMs) => {
+    if (ctx.debugForce && !ctx.realRules) return 'ok';
+    const state = await raidJackLoadState();
+    const side = state.a;
+    const today = raidJackDayKey(nowMs);
+    if (side.day !== today) { side.day = today; side.used = 0; side.extra = 0; }
+    if (raidJackRemaining(side, nowMs) <= 0) return 'none';
+    side.used += 1;
+    if (!(await raidJackSaveState(state))) return 'saveFailed';   // 保存できないときは始めない(回数だけ減る事故を作らない)
+    return 'ok';
+  },
+  submit: async (run, hit, tier, defeated) => {
+    let next = await raidJackLoadState();
+    const side = next.a;
+    const before = raidJackUnlockedCount('a', side.defeated);
+    if (defeated && !side.defeated.includes(tier.id)) side.defeated = [...side.defeated, tier.id];
+    const opened = raidJackUnlockedCount('a', side.defeated) > before;
+    const breederId = await ensureBreederId();
+    const sent = await raidJackSubmitHit(next, hit, breederId, run.eventId);
+    next = sent.state;
+    await raidJackSaveState(next);
+    return { outcome: sent.outcome, opened };
+  },
+});
+
+// ---- クリスマス(2026)のつなぎ口。docs/progress/event-xmas-2026/BUILD.md §1〜§4 の名前と形 ----
+// バトル部の定義(35-raid-xmas.jsx)と App の中の関数は、App から ctx で渡してもらう(ここからは直接さわらない):
+// ctx = { event: RAID_XMAS_EVENT, tiers: RAID_XMAS_A_TIERS, tierAt: (i) => raidXmasTierAt('a', i), bossImg: RAID_XMAS_BOSS_IMG,
+//         damageOf: raidXmasRhythmDamageOf, useTry: raidXmasUseTry, addDamage: raidXmasAddDamage, openResult: openRaidXmasResult,
+//         screen: レイド画面の gameState, infiniteName: 大王のあとの相手の名前(無ければ段階の名前のまま) }
+// 演出のライフは、ジャックと同じ表(raid_jack_hits)を event_id で引く(BUILD.md §7)
+const raidXmasRhythmAdapter = (ctx) => {
+  const ev = ctx.event || {};
+  const tiers = Array.isArray(ctx.tiers) ? ctx.tiers : [];
+  const last = Math.max(0, tiers.length - 1);
+  return {
+    key: 'xmas',
+    eventId: typeof ev.id === 'string' ? ev.id : '',
+    liveEventId: typeof ev.id === 'string' ? ev.id : '',
+    screen: ctx.screen || 'RAID_JACK',
+    icon: '🎄',
+    bossImg: ctx.bossImg || null,
+    tierCount: tiers.length || 1,
+    tierAt: (i) => (typeof ctx.tierAt === 'function' ? ctx.tierAt(i) : tiers[i]) || { id: '', name: '', hp: 0 },
+    infiniteName: ctx.infiniteName || '',
+    fetchTotals: (eventId) => sbFetchRaidJackTierTotals(eventId || ev.id),
+    doneOf: (totals, i) => totals && totals.a && totals.a[i + 1] ? Number(totals.a[i + 1].total) || 0 : 0,
+    infiniteAt: (totals, i) => !!ctx.infiniteName && i === last && !!totals && !!totals.a && !!totals.a[last + 1]
+      && (Number(totals.a[last + 1].total) || 0) >= (Number((tiers[last] || {}).hp) || Infinity),
+    damageOf: typeof ctx.damageOf === 'function' ? ctx.damageOf : undefined,
+    begin: ctx.useTry,
+    addDamage: ctx.addDamage,
+    openResult: ctx.openResult,
+  };
+};
+
+// イベントの鍵 → つなぎ口
+const RAID_RHYTHM_ADAPTERS = Object.freeze({
+  jack: raidJackRhythmAdapter,
+  xmas: raidXmasRhythmAdapter,
+});
+const raidRhythmAdapter = (key, ctx) => {
+  const make = RAID_RHYTHM_ADAPTERS[key] || RAID_RHYTHM_ADAPTERS.jack;
+  return make(ctx || {});
+};
 
 // ---- part: 40-screen-effects.jsx ----
 // ==== 画面ライフサイクル: タイマー・リスナーの登録簿(useScreenEffects) ====
@@ -46918,9 +47158,9 @@ function RhythmSongSelectScreen({
               return <button key={id} type="button" role="radio" aria-checked={on} data-rhythm-debug-song-filter-option={id} onClick={()=>setDebugSongFilter(id)}
                 className={`min-h-[44px] rounded-xl border px-2 text-[12px] font-black leading-tight ${on?'border-amber-300 bg-amber-500/80 text-slate-950':'border-white/15 bg-slate-900/80 text-amber-100'}`}>{label}</button>;})}
           </div>;})()}
-        {/* レイドバトルのモンヒロビート挑戦で開いたときの帯(2026-10-06・ユーザー指示)。遊んだ1曲のスコアが、ジャックへのダメージになる */}
+        {/* レイドバトルのモンヒロビート挑戦で開いたときの帯(2026-10-06・ユーザー指示)。遊んだ1曲のスコアが、ボスへのダメージになる。頭の絵文字はイベントのつなぎ口(39-raid-rhythm.jsx)の icon */}
         {raidChallenge&&<div style={JA_WRAP_STYLE} data-raid-challenge-banner role="status" className="shrink-0 border-b border-orange-300/40 bg-orange-950/80 px-3 py-1.5 text-center text-[10px] font-black leading-snug text-orange-100">
-          🎃 レイドバトル「{raidChallenge.tierName}{jaWrap('」に挑戦中。好きな曲と難易度を選んで、最後まで遊んでください。スコアがダメージになります(決定すると挑戦回数を1回使います)')}
+          {raidChallenge.icon||'🎃'} レイドバトル「{raidChallenge.tierName}{jaWrap('」に挑戦中。好きな曲と難易度を選んで、最後まで遊んでください。スコアがダメージになります(決定すると挑戦回数を1回使います)')}
         </div>}
         {/* ===== クイック∞周回の進捗(docs/spec/QUICK_RHYTHM_LINK.md PR6) =====
             常に出すのは1行だけ。曲の一覧を押し下げないよう、詳細はタップで開く。
@@ -108973,6 +109213,142 @@ const cardTourRewardOf = (rewards, place, wins) => {
   return { point: base + t.perWin * (Math.max(0, Math.floor(Number(wins) || 0))) };
 };
 
+// ---- part: 82-card-raid-core.jsx ----
+// ===== MFバトルカード: レイドのボスと戦う(クリスマスイベント 2026・台帳 r1119-172・企画 docs/progress/event-xmas-2026/PLAN.md §4-1 案ア) =====
+// レイド画面の「バトルカードで挑む」から、ボスのデッキ(コンピューター)と専用の1戦をする。与えたダメージを換算してレイドへ足す(source='card')。
+// ★この部品は画面・保存・サーバーに触らない(計算だけ)。画面は 84-screen-card-battle.jsx、レイドへ足すのはバトル部の口(BUILD.md)。
+// ★ボスは仮(「贈り物を奪う黒いサンタ」。名前と絵は社長が後で渡す)。数字も仮(社長が表から選ぶ)。設計と数字の表: docs/spec/CARD_RAID_XMAS.md
+// ★82-card-battle-core.jsx(大会のサーバーにも写る)は変えない。ボスの表は助手の表(CARD_AI_HABITS・CARD_AI_DECKS)に足さない
+//   (足すと相手えらび・検査・強さの測りが助手として数えてしまう)。
+
+// ボスの定義(仮)。名前・絵が届いたらここだけ直す
+const CARD_RAID_BOSS = Object.freeze({
+  id: 'raid_xmas_2026',
+  name: '黒いサンタ',            // 仮の名前(社長が決める)
+  deckName: '奪われた贈り物',    // 仮のデッキ名
+  // 3体(仮)。黒い服の子を集めた: ジョーカー(空中)・ゴースト(空中)・ゴーレム(地上・ライフが多い)
+  monsters: Object.freeze(['C-047', 'C-024', 'C-003']),
+  // 考え方のくせ(重みの意味は 82-card-battle-core.jsx の CARD_AI_HABITS と同じ)。
+  //   「贈り物を奪う」ので、相手の手札・ガッツをいじる札(disrupt)をいちばん好む。弱った子を狙い、全体攻撃も好き
+  habit: Object.freeze({ attack: 1.2, keepGuard: 0.8, saveGuts: 0.8, big: 1.0, disrupt: 1.7, area: 1.3, finish: 1.3 }),
+  // デッキに先に入れる札(この3体で使える物だけが入る。無い名前は飛ばす)
+  prefer: Object.freeze(['大鎌']),
+});
+
+// 段階ごと(レイドの5段階・0 始まり)のボスの強さ(仮)。
+//   level … 考え方の強さ(CARD_AI_LEVELS の難易度) / life … ボスの3体のライフの倍率(レイドのボスなので1戦では倒しきりにくい)
+//   rate … 換算の段階の補正(上の段階ほど1点が重い)
+const CARD_RAID_TIERS = Object.freeze([
+  Object.freeze({ level: 'normal', life: 2, rate: 1.0 }),
+  Object.freeze({ level: 'hard', life: 2, rate: 1.25 }),
+  Object.freeze({ level: 'expert', life: 2.5, rate: 1.5 }),
+  Object.freeze({ level: 'master', life: 3, rate: 1.75 }),
+  Object.freeze({ level: 'master', life: 3, rate: 2.0 }),
+]);
+const cardRaidTierOf = (tierIndex) => CARD_RAID_TIERS[Math.min(CARD_RAID_TIERS.length - 1, Math.max(0, Math.floor(Number(tierIndex) || 0)))];
+
+// 与ダメージの換算(仮。社長が表から選ぶ)
+//   レイドへ足すダメージ = floor( (与えたダメージ × perPoint + 倒した数 × perKo + 勝ち ? win : 0) × 段階の補正 )
+//   与えたダメージ … ボスの3体が減ったライフの合計(倒した子の削りすぎは数えない・回復されたぶんは引かれる)
+//   投了しても、それまでに与えたぶんは足す(勝ちの上乗せは付かない)。途中で閉じた(結果が出なかった)ときは 0
+const CARD_RAID_DAMAGE = Object.freeze({ perPoint: 8000, perKo: 40000, win: 150000, cap: null });
+
+// ボスのデッキを組む(段階で決まる種。同じ段階なら毎回同じデッキ)
+const cardRaidBossDeck = (db, tierIndex = 0) => {
+  const tier = cardRaidTierOf(tierIndex);
+  const cfg = CARD_AI_BUILD[tier.level] || CARD_AI_BUILD.normal;
+  const habit = CARD_RAID_BOSS.habit;
+  const rnd = cardAiSeededRand(`${CARD_RAID_BOSS.id}:${tier.level}`);
+  const monsters = CARD_RAID_BOSS.monsters.filter((no) => cardMonsterOf(db, no));
+  const mons = monsters.map((no) => cardMonsterOf(db, no));
+  // 弾の制限はかけない(ボスは全部の弾の札を使う)。名前ごとに入れたい度の高い番号1つ
+  const pool = Object.values(db.cards).filter((c) => c.ready && (c.user === 'any' || c.user === 'breeder' || mons.some((m) => cardUsableBy(c, { ...m, ko: false }))));
+  const byName = {};
+  pool.forEach((c) => { const v = cardAiCardValue(c, habit) + cfg.noise * (rnd() * 2 - 1); if (!byName[c.name] || byName[c.name].v < v) byName[c.name] = { c, v }; });
+  const ranked = Object.values(byName).sort((a, b) => b.v - a.v || (a.c.no < b.c.no ? -1 : 1));
+  const cards = [];
+  const count = (no) => cards.filter((n) => n === no).length;
+  const add = (c, n) => { for (let i = 0; i < n && cards.length < CARD_BATTLE_DECK_SIZE && count(c.no) < CARD_DECK_COPY_MAX; i++) cards.push(c.no); };
+  const used = new Set();
+  CARD_RAID_BOSS.prefer.forEach((name) => { const x = byName[name]; if (x) { used.add(name); add(x.c, CARD_DECK_COPY_MAX); } });
+  // 守りは3体に順番に配る(14枚が目安)
+  const guards = ranked.filter((x) => cardIsGuardKind(x.c.kind));
+  const guardLanes = mons.map((m) => guards.filter((x) => x.c.user === 'any' || cardUsableBy(x.c, { ...m, ko: false })));
+  for (let gi = 0, miss = 0, g = 0; g < 14 && miss < guardLanes.length; gi = (gi + 1) % guardLanes.length) {
+    const x = guardLanes[gi].find((y) => !used.has(y.c.name));
+    if (!x) { miss += 1; continue; }
+    miss = 0; used.add(x.c.name);
+    const before = cards.length; add(x.c, Math.min(CARD_DECK_COPY_MAX, 14 - g)); g += cards.length - before;
+  }
+  // 攻撃は3体と共通の札に順番に(重い技は8枚まで)
+  const attacks = ranked.filter((x) => !cardIsGuardKind(x.c.kind));
+  const lanes = [...mons.map((m) => attacks.filter((x) => x.c.user !== 'any' && x.c.user !== 'breeder' && cardUsableBy(x.c, { ...m, ko: false }))),
+    attacks.filter((x) => x.c.user === 'any' || x.c.user === 'breeder')];
+  let heavy = cards.filter((no) => { const c = cardOf(db, no); return c && !cardIsGuardKind(c.kind) && c.guts >= 5; }).length;
+  for (let li = 0, loop = 0; cards.length < CARD_BATTLE_DECK_SIZE && loop < 400; li = (li + 1) % lanes.length, loop++) {
+    const x = lanes[li].find((y) => !used.has(y.c.name) && !(y.c.guts >= 5 && heavy >= 8) && !cardHasEff(y.c, 'attach'));
+    if (!x) continue;
+    used.add(x.c.name);
+    const before = cards.length; add(x.c, CARD_DECK_COPY_MAX);
+    if (x.c.guts >= 5) heavy += cards.length - before;
+  }
+  for (const x of ranked) { if (cards.length >= CARD_BATTLE_DECK_SIZE) break; add(x.c, CARD_DECK_COPY_MAX); }
+  const deck = { monsters: monsters.slice(), cards };
+  // 組めなかった(カードの表が変わったなど)ときは、きゅうこの組み方で代わりに組む(対戦は必ず始められる)
+  if (cardDeckProblems(db, deck).length) return cardAiBuildDeck(db, 'kyuko', tier.level, rnd);
+  return deck;
+};
+
+// ボスの打ち方(段階の強さ+ボスのくせ)。戦術カード(助手の基本カード)は持たない
+const cardRaidBossPolicy = (tierIndex = 0) => {
+  const tier = cardRaidTierOf(tierIndex);
+  const base = cardAiPolicy('kyuko', tier.level, { noTactics: true });
+  return { ...base, habit: { ...CARD_RAID_BOSS.habit } };
+};
+
+// 始まりの場に、ボスのライフの倍率をかける(p はボスの側)。cardCreateGame の直後に1回だけ呼ぶ
+const cardRaidPrepareGame = (st, tierIndex = 0, p = 1) => {
+  const tier = cardRaidTierOf(tierIndex);
+  const pl = st && st.players && st.players[p];
+  if (!pl) return st;
+  pl.mons.forEach((m) => { const life = Math.max(1, Math.round(m.max * tier.life)); m.life = life; m.max = life; });
+  st.raid = { boss: CARD_RAID_BOSS.id, tier: Math.max(0, Math.floor(Number(tierIndex) || 0)), side: p };
+  return st;
+};
+
+// 場から「与えたダメージ」を数える(p はボスの側)。削りすぎは数えない
+const cardRaidDealt = (st, p = 1) => {
+  const pl = st && st.players && st.players[p];
+  if (!pl) return { dealt: 0, kos: 0, lifeMax: 0 };
+  let dealt = 0, kos = 0, lifeMax = 0;
+  pl.mons.forEach((m) => {
+    const max = Math.max(0, Number(m.max) || 0);
+    const life = Math.max(0, Math.min(max, Number(m.life) || 0));
+    lifeMax += max; dealt += max - life; if (m.ko) kos += 1;
+  });
+  return { dealt, kos, lifeMax };
+};
+
+// 換算: レイドへ足すダメージ(0 以上の整数)。outcome は 'win' / 'lose' / 'resign'(投了)など。勝ちの上乗せは 'win' だけ
+const cardRaidDamage = ({ dealt = 0, kos = 0, outcome = 'lose', tierIndex = 0 } = {}) => {
+  const tier = cardRaidTierOf(tierIndex);
+  const d = Math.max(0, Math.floor(Number(dealt) || 0));
+  const k = Math.max(0, Math.min(3, Math.floor(Number(kos) || 0)));
+  const raw = (d * CARD_RAID_DAMAGE.perPoint + k * CARD_RAID_DAMAGE.perKo + (outcome === 'win' ? CARD_RAID_DAMAGE.win : 0)) * tier.rate;
+  const out = Math.max(0, Math.floor(raw));
+  return Number.isFinite(CARD_RAID_DAMAGE.cap) && CARD_RAID_DAMAGE.cap > 0 ? Math.min(CARD_RAID_DAMAGE.cap, out) : out;
+};
+
+// 終わった場から、まとめて結果を出す(画面と検査が同じものを使う)
+const cardRaidResultOf = (st, tierIndex = 0, outcome = 'lose', p = 1) => {
+  const { dealt, kos, lifeMax } = cardRaidDealt(st, p);
+  return { dealt, kos, lifeMax, outcome, tierIndex, damage: cardRaidDamage({ dealt, kos, outcome, tierIndex }) };
+};
+
+// バトル部とのつなぎ目(docs/progress/event-xmas-2026/BUILD.md §4)の名前。カードの換算はこれ1つを直す
+//   使い方: raidXmasCardDamageOf({ dealt, kos, outcome, tierIndex }) → レイドへ足すダメージ(raidXmasAddDamage の damage に渡す)
+const raidXmasCardDamageOf = (r) => cardRaidDamage(r || {});
+
 // ---- part: 83-card-battle-lines.jsx ----
 // ===== MFバトルカード: 相手の助手のひとこと(5-3・5-5) =====
 // 外のAIは使わず、場面ごとに決めた台詞を出す(社長)。話し方は ASSISTANTS(data/assistants.js)の一人称・語尾・くせに合わせる。
@@ -112604,8 +112980,10 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   const [replayAt, setReplayAt] = useState(0);
   // みんなのデッキ(95)の登録デッキが相手: 名前・アイコンは登録した人、打ち方は登録した戦い方(cardSharePolicy)。助手のひとことは出さない
   const share = game.share || null;
-  const who = pvp ? { id: 'pvp', name: pvp.name, accent: '#38bdf8' } : share ? { id: 'share', name: share.name, accent: '#34d399' } : (ASSISTANTS.find((a) => a.id === game.who) || ASSISTANTS[0]);
-  const policy = useMemo(() => (share && typeof cardSharePolicy === 'function' ? cardSharePolicy(share.tactics, game.level, { sameBlood: !!game.cpuSameBlood }) : cardAiPolicy(game.who, game.level, { sameBlood: !!game.cpuSameBlood })), [game.who, game.level, game.cpuSameBlood]);
+  // レイドのボス(82-card-raid-core.jsx。クリスマスイベント 2026): 助手ではない相手。名前・考え方はボスのもの、ひとことは出さない
+  const raid = game.raid || null;
+  const who = pvp ? { id: 'pvp', name: pvp.name, accent: '#38bdf8' } : raid ? { id: 'raid', name: raid.bossName, accent: '#ef4444' } : share ? { id: 'share', name: share.name, accent: '#34d399' } : (ASSISTANTS.find((a) => a.id === game.who) || ASSISTANTS[0]);
+  const policy = useMemo(() => (raid && typeof cardRaidBossPolicy === 'function' ? cardRaidBossPolicy(raid.tier) : share && typeof cardSharePolicy === 'function' ? cardSharePolicy(share.tactics, game.level, { sameBlood: !!game.cpuSameBlood }) : cardAiPolicy(game.who, game.level, { sameBlood: !!game.cpuSameBlood })), [game.who, game.level, game.cpuSameBlood]);
   // オートの操作(×1/×2/×4・自分で/オート)。横の画面の見出しの列に出す。label … 「オートで戦っています」の文も出すか
   const autoControls = (label) => (<>
     {label && <span className="min-w-0 flex-1 truncate text-[12px] font-black text-sky-100">{autoOn ? '🤖 オートで戦っています' : '🖐 自分で操作しています'}</span>}
@@ -112743,7 +113121,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
 
   // ai … 山場なら { scene(AIに伝える場面), next(操作のあとの状態) }。決まった台詞を出したまま、間に合ったときだけAIのひとことに差しかえる
   const say = (scene, ai = null) => {
-    if (!scene || pvp || share || settings.bubble === 'OFF') return;
+    if (!scene || pvp || share || raid || settings.bubble === 'OFF') return;
     const turn = st.turn;
     if (spoke.current.turn !== turn) spoke.current = { turn, n: 0 };
     if (spoke.current.n >= (CARD_BUBBLE_PER_TURN[settings.bubble] ?? CARD_LINE_PER_TURN) && scene !== 'win' && scene !== 'lose') return;
@@ -113774,9 +114152,10 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       {/* マルチの電波の知らせは、上の帯の番の札に出す(段を増やさない。2026-10-29 案B) */}
       {/* 相手の帯(隠さない) */}
       <div className={`flex ${tiny ? 'h-[36px]' : compact ? 'h-[42px]' : 'h-[50px]'} shrink-0 items-center gap-2 px-2`}>
-        {(pvp || share) ? <span data-card-pvp-foe className={`block ${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} shrink-0`}><CardPvpAvatar icon={(pvp || share).icon} frame={(pvp || share).frame} className="h-full w-full"/></span>
+        {raid ? <span data-card-raid-foe aria-hidden="true" className={`flex ${tiny ? 'h-[34px] w-[34px] text-[20px]' : 'h-[42px] w-[42px] text-[26px]'} shrink-0 items-center justify-center rounded-xl border-2 border-red-500 bg-slate-950`}>🎅</span>
+          : (pvp || share) ? <span data-card-pvp-foe className={`block ${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} shrink-0`}><CardPvpAvatar icon={(pvp || share).icon} frame={(pvp || share).frame} className="h-full w-full"/></span>
           : <img src={assistantFaceImage(who, face)} alt={who.name} className={`${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} rounded-xl border-2 bg-black object-cover object-top`} style={{ borderColor: who.accent }}/>}
-        <div className={`min-w-0 text-[13px] font-black leading-tight ${pvp ? 'max-w-[34%] truncate whitespace-nowrap' : 'shrink-0 whitespace-nowrap'}`}>{who.name}<small className="block text-[10px] font-bold text-rose-200">{pvp ? 'マルチ対戦' : cardBattleLevelLabel(game.level, game.share) || 'フリー対戦'}</small></div>
+        <div className={`min-w-0 text-[13px] font-black leading-tight ${pvp ? 'max-w-[34%] truncate whitespace-nowrap' : 'shrink-0 whitespace-nowrap'}`}>{who.name}<small className="block text-[10px] font-bold text-rose-200">{pvp ? 'マルチ対戦' : raid ? 'レイドバトル' : cardBattleLevelLabel(game.level, game.share) || 'フリー対戦'}</small></div>
         <div className="ml-auto">{strip(CARD_CPU)}</div>
       </div>
       {/* リプレイでは相手の手札も表で見せる(終わったあとなので。2026-10-27 社長)。押すと詳しい画面 */}
@@ -114221,7 +114600,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       )}
       {confirm && <ConfirmSheet title={confirm.label} message={confirm.kind === 'use' ? 'オプションで確かめないようにもできます' : ''} confirmLabel={confirm.kind === 'use' ? '使う' : '終わる'} onCancel={() => setConfirm(null)} onConfirm={confirmYes}/>}
       {pvpVoid && <CardPvpVoidDialog onExit={() => { finished.current = true; onFinish({ outcome: 'void', st: stRef.current }); }}/>}
-      {quit && !tutorial && <ConfirmSheet title="投了しますか？" message={pvp ? '投了すると負けになります' : '投了すると負けになります(ビートPとクイック周回は、倒した相手のモンスターの数に応じて少しだけ)'} confirmLabel="投了する" danger onCancel={() => setQuit(false)} onConfirm={() => { setQuit(false); finished.current = true; if (pvp) CARD_PVP.surrender(); onFinish({ outcome: 'surrender', st }); }}/>}
+      {quit && !tutorial && <ConfirmSheet title="投了しますか？" message={pvp ? '投了すると負けになります' : raid ? 'ここまでに与えたダメージは、レイドに入ります' : '投了すると負けになります(ビートPとクイック周回は、倒した相手のモンスターの数に応じて少しだけ)'} confirmLabel="投了する" danger onCancel={() => setQuit(false)} onConfirm={() => { setQuit(false); finished.current = true; if (pvp) CARD_PVP.surrender(); onFinish({ outcome: 'surrender', st }); }}/>}
       {skipAsk && <ConfirmSheet title="結果へ進みますか？" message="ここから最後まで、2人とも戦術カードで一瞬で戦って、結果を出します(この対戦はあとから見返せます)" confirmLabel="結果へ" onCancel={() => setSkipAsk(false)} onConfirm={() => { setSkipAsk(false); skipToEnd(); }}/>}
       {quit && tutorial && <ConfirmSheet title="チュートリアルを飛ばしますか？" message={'ルールの画面からいつでもできます'} confirmLabel="飛ばす" onCancel={() => setQuit(false)} onConfirm={() => { setQuit(false); finished.current = true; onFinish({ outcome: 'tutorialSkip', st }); }}/>}
     </div>
@@ -114666,7 +115045,7 @@ const CardAutoTicketSheet = ({ info, tickets, busy = false, onUse, onClose }) =>
     </ModalFrame>
   );
 };
-const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', seenStoryIds = [], debug = false, cupItems = null, onBgm, onQuickLoops, onOpenMarket, topAssistant = null, rank = null, bgmPreview = null, quickRun = null, quickAutoReady = false, onSettings = null, sessionTickets = null, onUseSessionTicket = null, onRefundSessionTicket = null }) => {
+const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', seenStoryIds = [], debug = false, cupItems = null, onBgm, onQuickLoops, onOpenMarket, topAssistant = null, rank = null, bgmPreview = null, quickRun = null, quickAutoReady = false, onSettings = null, sessionTickets = null, onUseSessionTicket = null, onRefundSessionTicket = null, raidChallenge = null }) => {
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
   const [save, setSave] = useState(null);
   const [view, setView] = useState('top');
@@ -114702,6 +115081,21 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   useEffect(() => { const go = () => { if (CARD_PVP_BACK.take()) setView('pvp'); }; go(); return CARD_PVP_BACK.on(go); }, []);
   // 対戦の前のデッキ選び(87-card-deck-pick.jsx)。next … 'cpu'(助手と対戦。pick は相手と難易度) / 'pvp'(マルチの入口へ)
   const [deckPick, setDeckPick] = useState(null);
+  // レイドのボスと戦う(クリスマスイベント 2026・82-card-raid-core.jsx)。raid … いま挑んでいる挑戦(レイド画面から来た raidChallenge か、デバッグの試し)
+  //   挑戦の口: { tierIndex, tierName, onStart() → 真なら始める(回数を使う)・onResult(結果) → 送った結果・onClose() → レイド画面へ戻る }
+  //   raidDone … 終わった1戦の結果(与ダメージ・換算・送れたか)。結果の画面(view 'raidResult')が読む
+  const [raid, setRaid] = useState(null);
+  const [raidDone, setRaidDone] = useState(null);
+  const raidStartingRef = useRef(false);   // 始める途中(回数を使っている間)に二度押しさせない
+  useEffect(() => {
+    if (!raidChallenge || !save) return;
+    setRaidDone(null);
+    setRaid(raidChallenge);
+    // スターターをまだ受け取っていない人は、デッキが無いので挑めない(レイド画面へ戻す)
+    if (!save.starter) { setNotice('MFバトルカードのスターターを受け取ると挑めます'); if (typeof raidChallenge.onClose === 'function') raidChallenge.onClose('noStarter'); return; }
+    setDeckPick({ next: 'raid', pick: { who: 'raid', level: cardRaidTierOf(raidChallenge.tierIndex).level, raid: raidChallenge } });
+    setView('deckPick');
+  }, [raidChallenge, !!save]);
   // オートで挑む(案B・2026-11-02): ほかのブリーダーと戦う前のデッキ選びの切り替えと、今日のごほうびの残り回数(96 の cardAutoRewardLoad)
   const [shareAuto, setShareAuto] = useState(false);
   const [shareQuick, setShareQuick] = useState(false); // オートの「結果だけ見る」(2026-11-02)
@@ -115181,6 +115575,22 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         setView(back);
         return;
       }
+      // レイドのボスとの1戦(82-card-raid-core.jsx): 与えたダメージを換算して、挑戦の口(onResult)へ渡す。助手の記録・ごほうび・ミッションは通らない
+      //   投了(surrender)は、それまでに与えたぶんを足す(勝ちの上乗せは付かない)
+      if (game.raid) {
+        const rc = game.raid.run;
+        const res = cardRaidResultOf(st, game.raid.tier, outcome === 'win' ? 'win' : outcome === 'surrender' ? 'resign' : 'lose', CARD_CPU);
+        const done = { ...res, tierName: game.raid.tierName, bossName: game.raid.bossName, turns: cardOwnTurns(st, CARD_ME), sent: null, debug: !!(rc && rc.debug) };
+        setGame(null);
+        setRaidDone(done);
+        onBgm && onBgm(cardBgmOf(save.bgm.top));
+        onNavigate('CARD_TOP');
+        setView('raidResult');
+        let sent = null;
+        try { sent = rc && typeof rc.onResult === 'function' ? await rc.onResult(done) : null; } catch (_) { sent = { ok: false }; }
+        setRaidDone({ ...done, sent: sent || { ok: false } });
+        return;
+      }
       // マルチの無効試合(91 の goVoid): 何も付けない・数えない・送らない。部屋を出て、入口へ(杯の試合なら杯の画面へ)
       //   窓のあいだに場の上で決着が付いても(相手の手はもう当てない)、無効のまま。ミッション・助手どうしも数えない
       if (game.pvp && (outcome === 'void' || CARD_PVP.get().phase === 'void')) {
@@ -115479,6 +115889,32 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     onNavigate('CARD_BATTLE');
   };
   startBattleRef.current = startBattle;
+  // レイドのボスと戦う(82-card-raid-core.jsx)。回数を使う(rc.onStart)のは、デッキを選んで始める時だけ。使えなければ始めない
+  //   ボスは助手ではないので、助手の記録・ランキング・ごほうび・投了の印(CARD_CPU_OPEN_KEY)・ひとことは通らない
+  const startRaidBattle = async (rc, deck) => {
+    if (!rc || raidStartingRef.current) return;
+    const issues = deck ? [...cardDeckProblems(db, deck), ...cardDeckOwnProblems(db, deck, save.collection)] : ['デッキがありません'];
+    if (issues.length) { setNotice(issues.join('・')); setDeckPick({ next: 'raid', pick: { who: 'raid', level: cardRaidTierOf(rc.tierIndex).level, raid: rc } }); setView('deckPick'); return; }
+    raidStartingRef.current = true;
+    try {
+      let ok = false;
+      try { ok = typeof rc.onStart === 'function' ? (await rc.onStart()) !== false : true; } catch (_) { ok = false; }
+      if (!ok) { setNotice('きょうの挑戦の回数がありません'); setRaid(null); setView('top'); if (typeof rc.onClose === 'function') rc.onClose('noCount'); return; }
+      const tier = cardRaidTierOf(rc.tierIndex);
+      const cpuDeck = cardRaidBossDeck(db, rc.tierIndex);
+      const seed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
+      const first = Math.random() < 0.5 ? CARD_ME : CARD_CPU;
+      const bossName = rc.bossName || CARD_RAID_BOSS.name;
+      const st = cardRaidPrepareGame(cardCreateGame(db, { decks: [{ monsters: deck.monsters, cards: deck.cards }, cpuDeck], names: ['あなた', bossName], seed, first }), rc.tierIndex, CARD_CPU);
+      setResult(null);
+      setRaidDone(null);
+      const intro = { mode: 'assistant', foe: { who: null, name: bossName, icon: null, frame: null, line: null, deckName: CARD_RAID_BOSS.deckName, monsters: vsMons(st, CARD_CPU) },
+        me: { name: myName, deckName: deck.name || null, monsters: vsMons(st, CARD_ME) } };
+      setGame({ key: `raid-${seed}`, st, who: 'raid', level: tier.level, settings: save.settings, intro, raid: { tier: Math.max(0, Math.floor(Number(rc.tierIndex) || 0)), tierName: rc.tierName || '', bossName, run: rc } });
+      onBgm && onBgm(cardBgmOf(cardCpuPlaylistOf(save.cpuPlaylist, 'kyuko')));
+      onNavigate('CARD_BATTLE');
+    } finally { raidStartingRef.current = false; }
+  };
 
 
   // ---- はじめのスターターを開ける(パックと同じ画面。閉じたら、練習試合がまだなら練習試合へ) ----
@@ -115676,15 +116112,42 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       {notice && <div data-card-cup-toast className="pointer-events-none fixed inset-x-0 bottom-24 z-[60] mx-auto w-fit max-w-[92vw] rounded-full bg-slate-950/95 px-4 py-2 text-[13px] font-black text-amber-100 shadow-lg" style={JA_WRAP_STYLE}>{jaWrap(notice)}</div>}
     </>;
   }
+  // ---- レイドのボスとの1戦の結果(与ダメージ・倒した数・レイドへ足すダメージ)。閉じるとレイド画面へ ----
+  if (view === 'raidResult' && raidDone) {
+    const r = raidDone;
+    const close = () => { const rc = raid; setRaid(null); setRaidDone(null); setView('top'); if (rc && typeof rc.onClose === 'function') rc.onClose('done'); };
+    const sending = r.sent === null;
+    return (
+      <div data-mh-screen data-card-raid-result className={SCREEN_SHELL_CLASS}>
+        <ScreenHead title="レイドバトルの結果" accent="text-red-200" onBack={sending ? null : close}/>
+        <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
+          <div className="rounded-2xl border-2 border-red-500/60 bg-slate-950/80 p-3 text-center">
+            <div className="text-[12px] font-bold text-slate-300">{r.bossName}{r.tierName ? `(${r.tierName})` : ''}</div>
+            <div className="mt-1 text-[14px] font-black text-white">{r.outcome === 'win' ? '勝ちました！' : r.outcome === 'resign' ? '投了しました' : '負けました'}</div>
+            <div className="mt-2 text-[12px] font-bold text-red-200">レイドへ与えたダメージ</div>
+            <div data-card-raid-damage className="text-[30px] font-black leading-tight text-amber-200">{r.damage.toLocaleString()}</div>
+          </div>
+          <div className="grid grid-cols-2 gap-1 rounded-2xl border border-white/10 bg-slate-900/70 p-3 text-[12px] font-bold text-slate-200">
+            <span>与えたダメージ</span><b data-card-raid-dealt className="text-right">{r.dealt} / {r.lifeMax}</b>
+            <span>倒したモンスター</span><b className="text-right">{r.kos}体</b>
+            <span>自分の番</span><b className="text-right">{r.turns}回</b>
+          </div>
+          <div data-card-raid-sent className="text-center text-[12px] font-bold text-slate-300">{sending ? 'レイドへ送っています…' : r.debug ? 'デバッグの試しなので、レイドへは送っていません' : r.sent && r.sent.ok ? 'レイドへ送りました' : '送れませんでした。通信のよい所でレイド画面を開き直してください'}</div>
+          <button type="button" data-card-raid-close disabled={sending} className="mh-button mh-button-primary min-h-[48px] w-full rounded-2xl text-[14px] font-black disabled:opacity-50" onClick={() => { Audio_.fgSe.tap(); close(); }}>レイドへ戻る</button>
+        </div>
+      </div>
+    );
+  }
+
   // ---- 対戦の前のデッキ選び(助手と対戦・マルチ。練習試合には出さない) ----
   if (view === 'deckPick' && deckPick) {
     const toPvp = deckPick.next === 'pvp';
     // ほかのブリーダーの登録デッキと戦うとき(2026-10-31 テスターさんの要望)。借りたデッキでは戦わない(ごほうびの扱いを変えないため)
     const sharePick = !!(deckPick.pick && deckPick.pick.share);
     return <><CardDeckPick db={db} decks={save.decks} collection={save.collection}
-      note={toPvp ? 'マルチ対戦で使うデッキを選んでください。選んだデッキは次の対戦でも使います' : '使うデッキを選んでください。選んだデッキは次の対戦でも使います'}
-      onBack={() => { const back = deckPick.back; setDeckPick(null); if (toPvp && CARD_PVP_NEXT.take()) { setView('pvp'); return; } setView(toPvp ? 'mode' : back || 'foe'); }}
-      allowRented={!toPvp && !sharePick} rentTab={shareForm && !toPvp && !sharePick}
+      note={toPvp ? 'マルチ対戦で使うデッキを選んでください。選んだデッキは次の対戦でも使います' : deckPick.next === 'raid' ? 'レイドのボスと戦うデッキを選んでください。選ぶと挑戦の回数を1回使います' : '使うデッキを選んでください。選んだデッキは次の対戦でも使います'}
+      onBack={() => { const back = deckPick.back; const rc = deckPick.next === 'raid' ? deckPick.pick.raid : null; setDeckPick(null); if (rc) { setRaid(null); setView('top'); if (typeof rc.onClose === 'function') rc.onClose('back'); return; } if (toPvp && CARD_PVP_NEXT.take()) { setView('pvp'); return; } setView(toPvp ? 'mode' : back || 'foe'); }}
+      allowRented={!toPvp && !sharePick && deckPick.next !== 'raid'} rentTab={shareForm && !toPvp && !sharePick && deckPick.next !== 'raid'}
       auto={sharePick && typeof cardTacticsAutoOf === 'function' ? { on: shareAuto, onChange: setShareAuto, left: autoLeft, info: autoInfo, quick: shareQuick, extraLeft: autoExtraLeft, tickets: Number.isInteger(sessionTickets) ? sessionTickets : null, ticketNote: autoTicketNote, onExtra: typeof onUseSessionTicket === 'function' && typeof cardAutoRewardAddExtra === 'function' ? () => { setAutoTicketNote(''); setAutoTicketAsk(true); } : null, onQuick: typeof cardShareAutoFinish === 'function' ? setShareQuick : null } : null}
       onPick={async (c) => {
         // 借りたデッキ(みんなのデッキ・95): 自分のデッキの active は書き換えない
@@ -115701,6 +116164,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         const next = deckPick;
         setDeckPick(null);
         if (next.next === 'pvp') { setView('pvp'); return; }
+        if (next.next === 'raid') { void startRaidBattle(next.pick.raid, deck); return; }
         startBattle(next.pick, deck, autoT ? { auto: { tactics: autoT, quick: shareQuick && typeof cardShareAutoFinish === 'function' } } : {});
       }}/>
       {/* セッション券でオートのごほうびをふやす窓(上の CardAutoTicketSheet。結果の画面と同じ部品・何枚使うかを選ぶ) */}
@@ -116306,6 +116770,20 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
                 setPackDemo({ packId: 'p1', packs: [a.cards, b.cards], dupPoint: 0, cost: 0, demo: true });
                 setView('packOpen');
               }}>パックを開ける見本</button>
+            </div>
+            {/* レイドのボスと戦う試し(クリスマスイベント 2026)。回数は使わない・レイドへは送らない */}
+            <div className="grid grid-cols-5 gap-1" data-card-raid-debug>
+              {CARD_RAID_TIERS.map((t, i) => (
+                <button key={i} type="button" data-card-raid-debug-tier={i} className="mh-button mh-button-secondary min-h-[40px] rounded-xl border border-red-400/40 bg-slate-800 text-[10px] font-black" onClick={() => {
+                  Audio_.fgSe.tap();
+                  setRaid(null);
+                  setRaidDone(null);
+                  const rc = { debug: true, tierIndex: i, tierName: `段階${i + 1}`, onStart: async () => true, onResult: async () => ({ ok: false, debug: true }), onClose: () => {} };
+                  setRaid(rc);
+                  setDeckPick({ next: 'raid', pick: { who: 'raid', level: t.level, raid: rc } });
+                  setView('deckPick');
+                }}>ボス{i + 1}</button>
+              ))}
             </div>
             <select data-card-result-demo-who value={demoWho} onChange={(e) => setDemoWho(e.target.value)} className="w-full rounded-lg border border-white/20 bg-slate-800 px-2 py-1 text-[12px] font-bold text-white">
               {allAssistants.filter((x) => CARD_AI_HABITS[x.id] && cardFoeReleased(x.id)).map((x) => <option key={x.id} value={x.id}>見本の相手: {x.name}</option>)}
@@ -144976,38 +145454,26 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 流れ: レイド画面で「モンヒロビートで挑戦する」→ 曲えらび(帯つき)→ 決定で回数を1回使って演奏 → 最後まで遊ぶとスコアをダメージに換えて送る
   //       → 演奏のリザルトを出ていくと、レイドの結果が出る。途中でやめたときは回数だけ使い、ダメージは0(送らない)。
   // 自己ベスト・クリア回数・実績・周回の報酬・全国ランキングは、onComplete がふつうの演奏と同じ処理で入れる(アシストモードは除く)
-  const startRaidJackRhythmSelect = async (tierIndex) => {
+  // ★流れの本体はイベントに縛られない部品(39-raid-rhythm.jsx)。ここはイベントのつなぎ口を選んで、画面の状態をつなぐだけ
+  //   (2026-11-25・台帳 r1119-172。クリスマスのレイドも同じ流れで動かすため。ジャックの動きは前と同じ)
+  const raidRhythmAdapterOf = (eventKey) => raidRhythmAdapter(eventKey || 'jack', { eventId: raidJackEventId, debugForce: raidJackDebugForce, realRules: raidJackDebugRealRules });
+  const startRaidJackRhythmSelect = async (tierIndex, eventKey = 'jack') => {
+    const adapter = raidRhythmAdapterOf(eventKey);
     raidJackReturnTierRef.current = Math.max(0, Math.floor(Number(tierIndex) || 0));
     await openRhythmDemo({ to: 'RHYTHM_DEMO_HOME' });
-    setRaidRhythm({ tierIndex: Math.min(Math.max(Math.floor(Number(tierIndex) || 0), 0), RAID_JACK_A_TIERS.length - 1) });
+    setRaidRhythm({ tierIndex: raidRhythmClampTier(adapter, tierIndex), eventKey: adapter.key });
   };
-  const cancelRaidJackRhythm = () => { raidRhythmRunRef.current = null; setRaidRhythm(null); setGameState('RAID_JACK'); };
+  const cancelRaidJackRhythm = () => {
+    const screen = raidRhythmAdapterOf(raidRhythm && raidRhythm.eventKey).screen;
+    raidRhythmRunRef.current = null; setRaidRhythm(null); setGameState(screen);
+  };
   const startRaidJackRhythmPlay = async (song, difficulty) => {
     const rr = raidRhythm;
     if (!rr) return;
-    const nowMs = Date.now();
-    // 回数はバトルと同じもの。デバッグの強制表示中は数えない(startRaidJackFromPrep と同じ)
-    if (!raidJackDebugForce || raidJackDebugRealRules) {
-      const state = await raidJackLoadState();
-      const side = state.a;
-      const today = raidJackDayKey(nowMs);
-      if (side.day !== today) { side.day = today; side.used = 0; side.extra = 0; }
-      if (raidJackRemaining(side, nowMs) <= 0) { cancelRaidJackRhythm(); return; }
-      side.used += 1;
-      if (!(await raidJackSaveState(state))) return;   // 保存できないときは始めない(回数だけ減る事故を作らない)
-    }
-    const run = { tierIndex: rr.tierIndex, hitId: raidJackMakeHitId(), eventId: raidJackSafeEventId(raidJackEventId), finished: false, completing: false, promise: null, lifePromise: null };
-    // 演出で見せる「いまのジャックのライフ」を、演奏が始まる前から裏で取っておく(取れなくても演出は出す)
-    run.lifePromise = (async () => {
-      try {
-        const totals = await Promise.race([sbFetchRaidJackTierTotals(raidJackEventId), new Promise((resolve) => setTimeout(() => resolve(null), 4000))]);
-        const tierDef = raidJackTierAt('a', rr.tierIndex);
-        const done = totals && totals.a && totals.a[rr.tierIndex + 1] ? Number(totals.a[rr.tierIndex + 1].total) || 0 : 0;
-        const pumpkin = rr.tierIndex === RAID_JACK_A_TIERS.length - 1 && raidJackBossDown(totals);
-        return { lifeBefore: totals ? (pumpkin ? tierDef.hp : Math.max(0, tierDef.hp - done)) : null, pumpkin };
-      } catch (e) { return null; }
-    })();
-    raidRhythmRunRef.current = run;
+    // 回数はバトルと同じもの(つなぎ口の useCount)。回数が無いときは曲えらびをやめて戻る・保存できないときは始めない
+    const begun = await raidRhythmBeginRun(raidRhythmAdapterOf(rr.eventKey), rr.tierIndex, Date.now());
+    if (!begun.run) { if (begun.reason === 'none') cancelRaidJackRhythm(); return; }
+    raidRhythmRunRef.current = begun.run;
     setRhythmPlay({ song, difficulty, from: 'raid' });
     setGameState('RHYTHM_PLAY');
   };
@@ -145016,82 +145482,23 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const run = raidRhythmRunRef.current;
     if (!run || run.completing) return;
     run.completing = true;
-    const tier = raidJackTierAt('a', run.tierIndex);
-    const score = Math.max(0, Math.floor(Number(result && result.score) || 0));
-    const assist = !!(result && result.assist === true);
-    const damage = raidJackRhythmDamageOf(result, difficulty);
     const info = await Promise.race([run.lifePromise || Promise.resolve(null), new Promise((resolve) => setTimeout(() => resolve(null), 500))]);
-    setRaidDamageFx({ key: `${run.hitId}`, tierIndex: run.tierIndex, tierName: info && info.pumpkin ? RAID_JACK_PUMPKIN.name : tier.name, score, damage, assist,
-      lifeBefore: info && Number.isFinite(info.lifeBefore) ? info.lifeBefore : null, max: tier.hp, pumpkin: !!(info && info.pumpkin) });
-    run.promise = finishRaidJackRhythm(result, song, difficulty);
-  };
-  // 演奏が最後まで終わった: スコアをダメージに換えて、バトルと同じ表へ送る。戻り値は結果画面の中身
-  const finishRaidJackRhythm = async (result, song, difficulty) => {
-    const run = raidRhythmRunRef.current;
-    if (!run || run.finished) return null;
-    run.finished = true;
-    const tier = raidJackTierAt('a', run.tierIndex);
-    const score = Math.max(0, Math.floor(Number(result && result.score) || 0));
-    const assist = !!(result && result.assist === true);
-    const damage = raidJackRhythmDamageOf(result, difficulty);
-    // 倒しきったか: いまの共有ライフの残りと比べる。大王を倒したあとの「ぱんぷきん」は共有ライフが無限なので、倒した扱いにしない
-    let startLife = null;
-    let pumpkin = false;
-    try {
-      const totals = await Promise.race([sbFetchRaidJackTierTotals(raidJackEventId), new Promise((resolve) => setTimeout(() => resolve(null), 4000))]);
-      const done = totals && totals.a && totals.a[run.tierIndex + 1] ? Number(totals.a[run.tierIndex + 1].total) || 0 : 0;
-      if (totals && tier.hp - done > 0) startLife = tier.hp - done;
-      pumpkin = run.tierIndex === RAID_JACK_A_TIERS.length - 1 && raidJackBossDown(totals);
-    } catch (e) { startLife = null; }
-    const defeated = !pumpkin && damage > 0 && startLife !== null && damage >= startLife;
-    const hit = { hitId: run.hitId, kind: 'a', tier: run.tierIndex + 1, damage, defeated, source: 'rhythm' };
-    let outcome = 'error';
-    let opened = false;
-    const isDebugRun = run.eventId !== RAID_JACK_EVENT.id;
-    try {
-      if (damage <= 0) outcome = 'sent';   // 送るものが無い(アシストモードなど)
-      else if (isDebugRun) {
-        const breederId = await ensureBreederId();
-        outcome = await sbSendRaidJackHit(hit, breederId, run.eventId);
-      } else {
-        let next = await raidJackLoadState();
-        const side = next.a;
-        const before = raidJackUnlockedCount('a', side.defeated);
-        if (defeated && !side.defeated.includes(tier.id)) side.defeated = [...side.defeated, tier.id];
-        opened = raidJackUnlockedCount('a', side.defeated) > before;
-        const breederId = await ensureBreederId();
-        const sent = await raidJackSubmitHit(next, hit, breederId, run.eventId);
-        next = sent.state; outcome = sent.outcome;
-        await raidJackSaveState(next);
-      }
-      // バトルの1回ごとの記録(2026-10-21・下準備)。モンヒロビート挑戦は編成が無いので、段階と与ダメージだけ。印が偽のあいだは送らない
-      if (RELEASE_FLAGS.battleLog === true && !isDebugRun && damage > 0) {
-        try { void sbSendRaidBattleLog(buildRaidBattleLogRow({ score, raid: { event: run.eventId, kind: 'a', tier: run.tierIndex + 1, source: 'rhythm', damage, defeated } })); } catch {}
-      }
-    } catch (error) { outcome = 'error'; }
-    return { way: 'rhythm', songName: song && song.displayName || '', difficultyName: difficulty && difficulty.id || '', score, assist,
-      kind: 'a', tierIndex: run.tierIndex, tierName: pumpkin ? RAID_JACK_PUMPKIN.name : tier.name, reason: defeated ? 'defeated' : 'rhythm',
-      damage, defeated, turns: 0, levelUps: 0, growths: 0, outcome, opened, eventId: run.eventId, quickAward: null,
-      lifeLeft: Math.max(0, (startLife !== null ? startLife : tier.hp) - damage),
-      // 結果画面の体力のバー(演奏前 → いま)。演奏前の体力が取れなかったときは出さない
-      lifeBefore: startLife, lifeMax: tier.hp, pumpkin };
+    setRaidDamageFx(raidRhythmFxOf(run, info, result, difficulty));
+    run.promise = raidRhythmFinish(run, result, song, difficulty);
   };
   // 演奏の画面を出ていく(リザルトを見終えた・途中でやめた)。レイド画面へ戻って、結果を出す
   const exitRaidJackRhythmPlay = () => {
     const run = raidRhythmRunRef.current;
+    const adapter = run ? run.adapter : raidRhythmAdapterOf(raidRhythm && raidRhythm.eventKey);
     const tierIndex = run ? run.tierIndex : (raidRhythm ? raidRhythm.tierIndex : 0);
-    setRhythmPlay(null); setRaidRhythm(null); setRaidDamageFx(null); setGameState('RAID_JACK');
+    setRhythmPlay(null); setRaidRhythm(null); setRaidDamageFx(null); setGameState(adapter.screen);
     (async () => {
       let r = null;
       try { if (run && run.promise) r = await run.promise; } catch (e) { r = null; }
-      if (!r && run) {
-        // 最後まで遊ばなかった: 回数は使ったまま、ダメージは0(送らない)
-        const tier = raidJackTierAt('a', tierIndex);
-        r = { way: 'rhythm', songName: '', difficultyName: '', score: 0, assist: false, kind: 'a', tierIndex, tierName: tier.name, reason: 'giveup', damage: 0, defeated: false,
-          turns: 0, levelUps: 0, growths: 0, outcome: 'sent', opened: false, eventId: run.eventId, quickAward: null, lifeLeft: tier.hp };
-      }
+      if (!r && run) r = raidRhythmGiveUpResult(run, adapter, tierIndex);   // 最後まで遊ばなかった: 回数は使ったまま、ダメージは0(送らない)
       raidRhythmRunRef.current = null;
-      if (r) setRaidJackResult(r);
+      // 結果画面: クリスマスなどは、つなぎ口の openResult(BUILD.md の openRaidXmasResult)。ジャックは前と同じ
+      if (r) { if (typeof adapter.openResult === 'function') adapter.openResult(r); else setRaidJackResult(r); }
     })();
   };
   // クリスマスのレイドの結果画面を出す(BUILD.md §3)。ビート部・カード部が raidXmasAddDamage の返り値をそのまま渡す。
@@ -149001,7 +149408,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             handleGiveUp={handleGiveUp}
             mainHero={mainHero}
             exitingQuickRun={rhythmExitingRun}
-            raidChallenge={raidRhythm?{tierName:raidJackTierAt('a',raidRhythm.tierIndex).name}:null}
+            raidChallenge={raidRhythm?raidRhythmBannerOf(raidRhythmAdapterOf(raidRhythm.eventKey),raidRhythm.tierIndex):null}
             onExit={raidRhythm?cancelRaidJackRhythm:()=>setGameState('RHYTHM_MODE_SELECT')}
             onOpenEventRanking={()=>{
               // 曲えらびの案内から開く。期間限定を開催中ならそちらのタブ、なければ週間のタブ

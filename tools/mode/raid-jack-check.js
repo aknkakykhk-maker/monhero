@@ -86,6 +86,8 @@ check('A のライフは 175万 / 320万 / 800万 / 3,500万 / 8,000万(ユー�
 }
 {
   const appSrc = read('monster-hero/src/parts/60-app.jsx');
+  // ビート挑戦の流れの本体は 39-raid-rhythm.jsx(イベントのつなぎ口で動く・2026-11-25 r1119-172)
+  const rrSrc = read('monster-hero/src/parts/39-raid-rhythm.jsx');
   // 一時停止(2026-10-06・ユーザー指示。仕様が固まるまで)。公開フラグが偽のあいだは、ボタン・更新履歴・ヘルプが出ない(デバッグの強制表示ではボタンだけ出る)
   // サブストーリー「ドラのビート ～音でジャックへ～」(2026-10-06。仕様: docs/spec/RAID_JACK_RHYTHM_STORY.md)
   const asst = read('monster-hero/data/assistants.js');
@@ -106,10 +108,12 @@ check('A のライフは 175万 / 320万 / 800万 / 3,500万 / 8,000万(ユー�
     && /RELEASE_FLAGS\.raidJackRhythm === true \|\| forced/.test(screenSrc) && /RELEASE_FLAGS\.raidJackRhythm===true\|\|raidJackDebugForce/.test(appSrc)
     && /releaseFlag:'raidJackRhythm'/.test(read('monster-hero/data/changelog.js')) && (read('monster-hero/data/help.js').match(/releaseFlag:'raidJackRhythm'/g) || []).length === 3);
   check('モンヒロビート挑戦: 演奏の完了は、ダメージの処理を始めたうえで、ふつうの演奏と同じ共通の処理(自己ベスト・周回の報酬・全国ランキング)へ進む',
-    /if\(rhythmPlay\.from==='raid'\)void completeRaidJackRhythm\([^)]*\);/.test(appSrc) && /rhythmPlay\.from==='multi'\|\|rhythmPlay\.from==='raid'\)submitRhythmRankingScore/.test(appSrc) && /const completeRaidJackRhythm = async[\s\S]{0,1400}run\.promise = finishRaidJackRhythm\(/.test(appSrc));
+    /if\(rhythmPlay\.from==='raid'\)void completeRaidJackRhythm\([^)]*\);/.test(appSrc) && /rhythmPlay\.from==='multi'\|\|rhythmPlay\.from==='raid'\)submitRhythmRankingScore/.test(appSrc) && /const completeRaidJackRhythm = async[\s\S]{0,1400}run\.promise = raidRhythmFinish\(/.test(appSrc));
   check('モンヒロビート挑戦: 回数はバトルと同じもの(state.a の used / extra・raidJackRemaining)を使い、始めた時点で1回使う',
-    /const startRaidJackRhythmPlay = async[\s\S]{0,900}raidJackRemaining\(side, nowMs\) <= 0[\s\S]{0,200}side\.used \+= 1;/.test(appSrc));
-  check('モンヒロビート挑戦: 送る先はバトルと同じ表(kind:\'a\'・段階は tierIndex+1)', /const hit = \{ hitId: run\.hitId, kind: 'a', tier: run\.tierIndex \+ 1, damage, defeated, source: 'rhythm' \};/.test(appSrc));
+    /const startRaidJackRhythmPlay = async[\s\S]{0,400}raidRhythmBeginRun\(/.test(appSrc)
+    && /useCount: async \(nowMs\) => \{[\s\S]{0,400}raidJackRemaining\(side, nowMs\) <= 0\) return 'none';[\s\S]{0,100}side\.used \+= 1;/.test(rrSrc)
+    && /const used = await adapter\.useCount\(nowMs\);/.test(rrSrc));
+  check('モンヒロビート挑戦: 送る先はバトルと同じ表(kind:\'a\'・段階は tierIndex+1)', /const hit = \{ hitId: run\.hitId, kind: 'a', tier: run\.tierIndex \+ 1, damage, defeated, source: 'rhythm' \};/.test(rrSrc));
 }
 check('A の倍率 power は hp ÷ 350,000(男爵は 5)', o.RAID_JACK_A_TIERS.every((t) => Math.abs(t.power - t.hp / 350000) < 1e-9) && o.RAID_JACK_A_TIERS[0].power === 5);
 // ①-2 大王を倒したあとの「ぱんぷきん」(2026-10-05・ユーザー指示: ライフは設定・毎回ぜんかい / 攻撃力は 700(はじめは子爵と同じ。子爵を 500 に決め直したあとも 700 のまま) / 技名はそのまま)

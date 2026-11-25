@@ -18343,38 +18343,26 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 流れ: レイド画面で「モンヒロビートで挑戦する」→ 曲えらび(帯つき)→ 決定で回数を1回使って演奏 → 最後まで遊ぶとスコアをダメージに換えて送る
   //       → 演奏のリザルトを出ていくと、レイドの結果が出る。途中でやめたときは回数だけ使い、ダメージは0(送らない)。
   // 自己ベスト・クリア回数・実績・周回の報酬・全国ランキングは、onComplete がふつうの演奏と同じ処理で入れる(アシストモードは除く)
-  const startRaidJackRhythmSelect = async (tierIndex) => {
+  // ★流れの本体はイベントに縛られない部品(39-raid-rhythm.jsx)。ここはイベントのつなぎ口を選んで、画面の状態をつなぐだけ
+  //   (2026-11-25・台帳 r1119-172。クリスマスのレイドも同じ流れで動かすため。ジャックの動きは前と同じ)
+  const raidRhythmAdapterOf = (eventKey) => raidRhythmAdapter(eventKey || 'jack', { eventId: raidJackEventId, debugForce: raidJackDebugForce, realRules: raidJackDebugRealRules });
+  const startRaidJackRhythmSelect = async (tierIndex, eventKey = 'jack') => {
+    const adapter = raidRhythmAdapterOf(eventKey);
     raidJackReturnTierRef.current = Math.max(0, Math.floor(Number(tierIndex) || 0));
     await openRhythmDemo({ to: 'RHYTHM_DEMO_HOME' });
-    setRaidRhythm({ tierIndex: Math.min(Math.max(Math.floor(Number(tierIndex) || 0), 0), RAID_JACK_A_TIERS.length - 1) });
+    setRaidRhythm({ tierIndex: raidRhythmClampTier(adapter, tierIndex), eventKey: adapter.key });
   };
-  const cancelRaidJackRhythm = () => { raidRhythmRunRef.current = null; setRaidRhythm(null); setGameState('RAID_JACK'); };
+  const cancelRaidJackRhythm = () => {
+    const screen = raidRhythmAdapterOf(raidRhythm && raidRhythm.eventKey).screen;
+    raidRhythmRunRef.current = null; setRaidRhythm(null); setGameState(screen);
+  };
   const startRaidJackRhythmPlay = async (song, difficulty) => {
     const rr = raidRhythm;
     if (!rr) return;
-    const nowMs = Date.now();
-    // 回数はバトルと同じもの。デバッグの強制表示中は数えない(startRaidJackFromPrep と同じ)
-    if (!raidJackDebugForce || raidJackDebugRealRules) {
-      const state = await raidJackLoadState();
-      const side = state.a;
-      const today = raidJackDayKey(nowMs);
-      if (side.day !== today) { side.day = today; side.used = 0; side.extra = 0; }
-      if (raidJackRemaining(side, nowMs) <= 0) { cancelRaidJackRhythm(); return; }
-      side.used += 1;
-      if (!(await raidJackSaveState(state))) return;   // 保存できないときは始めない(回数だけ減る事故を作らない)
-    }
-    const run = { tierIndex: rr.tierIndex, hitId: raidJackMakeHitId(), eventId: raidJackSafeEventId(raidJackEventId), finished: false, completing: false, promise: null, lifePromise: null };
-    // 演出で見せる「いまのジャックのライフ」を、演奏が始まる前から裏で取っておく(取れなくても演出は出す)
-    run.lifePromise = (async () => {
-      try {
-        const totals = await Promise.race([sbFetchRaidJackTierTotals(raidJackEventId), new Promise((resolve) => setTimeout(() => resolve(null), 4000))]);
-        const tierDef = raidJackTierAt('a', rr.tierIndex);
-        const done = totals && totals.a && totals.a[rr.tierIndex + 1] ? Number(totals.a[rr.tierIndex + 1].total) || 0 : 0;
-        const pumpkin = rr.tierIndex === RAID_JACK_A_TIERS.length - 1 && raidJackBossDown(totals);
-        return { lifeBefore: totals ? (pumpkin ? tierDef.hp : Math.max(0, tierDef.hp - done)) : null, pumpkin };
-      } catch (e) { return null; }
-    })();
-    raidRhythmRunRef.current = run;
+    // 回数はバトルと同じもの(つなぎ口の useCount)。回数が無いときは曲えらびをやめて戻る・保存できないときは始めない
+    const begun = await raidRhythmBeginRun(raidRhythmAdapterOf(rr.eventKey), rr.tierIndex, Date.now());
+    if (!begun.run) { if (begun.reason === 'none') cancelRaidJackRhythm(); return; }
+    raidRhythmRunRef.current = begun.run;
     setRhythmPlay({ song, difficulty, from: 'raid' });
     setGameState('RHYTHM_PLAY');
   };
@@ -18383,82 +18371,23 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const run = raidRhythmRunRef.current;
     if (!run || run.completing) return;
     run.completing = true;
-    const tier = raidJackTierAt('a', run.tierIndex);
-    const score = Math.max(0, Math.floor(Number(result && result.score) || 0));
-    const assist = !!(result && result.assist === true);
-    const damage = raidJackRhythmDamageOf(result, difficulty);
     const info = await Promise.race([run.lifePromise || Promise.resolve(null), new Promise((resolve) => setTimeout(() => resolve(null), 500))]);
-    setRaidDamageFx({ key: `${run.hitId}`, tierIndex: run.tierIndex, tierName: info && info.pumpkin ? RAID_JACK_PUMPKIN.name : tier.name, score, damage, assist,
-      lifeBefore: info && Number.isFinite(info.lifeBefore) ? info.lifeBefore : null, max: tier.hp, pumpkin: !!(info && info.pumpkin) });
-    run.promise = finishRaidJackRhythm(result, song, difficulty);
-  };
-  // 演奏が最後まで終わった: スコアをダメージに換えて、バトルと同じ表へ送る。戻り値は結果画面の中身
-  const finishRaidJackRhythm = async (result, song, difficulty) => {
-    const run = raidRhythmRunRef.current;
-    if (!run || run.finished) return null;
-    run.finished = true;
-    const tier = raidJackTierAt('a', run.tierIndex);
-    const score = Math.max(0, Math.floor(Number(result && result.score) || 0));
-    const assist = !!(result && result.assist === true);
-    const damage = raidJackRhythmDamageOf(result, difficulty);
-    // 倒しきったか: いまの共有ライフの残りと比べる。大王を倒したあとの「ぱんぷきん」は共有ライフが無限なので、倒した扱いにしない
-    let startLife = null;
-    let pumpkin = false;
-    try {
-      const totals = await Promise.race([sbFetchRaidJackTierTotals(raidJackEventId), new Promise((resolve) => setTimeout(() => resolve(null), 4000))]);
-      const done = totals && totals.a && totals.a[run.tierIndex + 1] ? Number(totals.a[run.tierIndex + 1].total) || 0 : 0;
-      if (totals && tier.hp - done > 0) startLife = tier.hp - done;
-      pumpkin = run.tierIndex === RAID_JACK_A_TIERS.length - 1 && raidJackBossDown(totals);
-    } catch (e) { startLife = null; }
-    const defeated = !pumpkin && damage > 0 && startLife !== null && damage >= startLife;
-    const hit = { hitId: run.hitId, kind: 'a', tier: run.tierIndex + 1, damage, defeated, source: 'rhythm' };
-    let outcome = 'error';
-    let opened = false;
-    const isDebugRun = run.eventId !== RAID_JACK_EVENT.id;
-    try {
-      if (damage <= 0) outcome = 'sent';   // 送るものが無い(アシストモードなど)
-      else if (isDebugRun) {
-        const breederId = await ensureBreederId();
-        outcome = await sbSendRaidJackHit(hit, breederId, run.eventId);
-      } else {
-        let next = await raidJackLoadState();
-        const side = next.a;
-        const before = raidJackUnlockedCount('a', side.defeated);
-        if (defeated && !side.defeated.includes(tier.id)) side.defeated = [...side.defeated, tier.id];
-        opened = raidJackUnlockedCount('a', side.defeated) > before;
-        const breederId = await ensureBreederId();
-        const sent = await raidJackSubmitHit(next, hit, breederId, run.eventId);
-        next = sent.state; outcome = sent.outcome;
-        await raidJackSaveState(next);
-      }
-      // バトルの1回ごとの記録(2026-10-21・下準備)。モンヒロビート挑戦は編成が無いので、段階と与ダメージだけ。印が偽のあいだは送らない
-      if (RELEASE_FLAGS.battleLog === true && !isDebugRun && damage > 0) {
-        try { void sbSendRaidBattleLog(buildRaidBattleLogRow({ score, raid: { event: run.eventId, kind: 'a', tier: run.tierIndex + 1, source: 'rhythm', damage, defeated } })); } catch {}
-      }
-    } catch (error) { outcome = 'error'; }
-    return { way: 'rhythm', songName: song && song.displayName || '', difficultyName: difficulty && difficulty.id || '', score, assist,
-      kind: 'a', tierIndex: run.tierIndex, tierName: pumpkin ? RAID_JACK_PUMPKIN.name : tier.name, reason: defeated ? 'defeated' : 'rhythm',
-      damage, defeated, turns: 0, levelUps: 0, growths: 0, outcome, opened, eventId: run.eventId, quickAward: null,
-      lifeLeft: Math.max(0, (startLife !== null ? startLife : tier.hp) - damage),
-      // 結果画面の体力のバー(演奏前 → いま)。演奏前の体力が取れなかったときは出さない
-      lifeBefore: startLife, lifeMax: tier.hp, pumpkin };
+    setRaidDamageFx(raidRhythmFxOf(run, info, result, difficulty));
+    run.promise = raidRhythmFinish(run, result, song, difficulty);
   };
   // 演奏の画面を出ていく(リザルトを見終えた・途中でやめた)。レイド画面へ戻って、結果を出す
   const exitRaidJackRhythmPlay = () => {
     const run = raidRhythmRunRef.current;
+    const adapter = run ? run.adapter : raidRhythmAdapterOf(raidRhythm && raidRhythm.eventKey);
     const tierIndex = run ? run.tierIndex : (raidRhythm ? raidRhythm.tierIndex : 0);
-    setRhythmPlay(null); setRaidRhythm(null); setRaidDamageFx(null); setGameState('RAID_JACK');
+    setRhythmPlay(null); setRaidRhythm(null); setRaidDamageFx(null); setGameState(adapter.screen);
     (async () => {
       let r = null;
       try { if (run && run.promise) r = await run.promise; } catch (e) { r = null; }
-      if (!r && run) {
-        // 最後まで遊ばなかった: 回数は使ったまま、ダメージは0(送らない)
-        const tier = raidJackTierAt('a', tierIndex);
-        r = { way: 'rhythm', songName: '', difficultyName: '', score: 0, assist: false, kind: 'a', tierIndex, tierName: tier.name, reason: 'giveup', damage: 0, defeated: false,
-          turns: 0, levelUps: 0, growths: 0, outcome: 'sent', opened: false, eventId: run.eventId, quickAward: null, lifeLeft: tier.hp };
-      }
+      if (!r && run) r = raidRhythmGiveUpResult(run, adapter, tierIndex);   // 最後まで遊ばなかった: 回数は使ったまま、ダメージは0(送らない)
       raidRhythmRunRef.current = null;
-      if (r) setRaidJackResult(r);
+      // 結果画面: クリスマスなどは、つなぎ口の openResult(BUILD.md の openRaidXmasResult)。ジャックは前と同じ
+      if (r) { if (typeof adapter.openResult === 'function') adapter.openResult(r); else setRaidJackResult(r); }
     })();
   };
   // クリスマスのレイドの結果画面を出す(BUILD.md §3)。ビート部・カード部が raidXmasAddDamage の返り値をそのまま渡す。
@@ -22368,7 +22297,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             handleGiveUp={handleGiveUp}
             mainHero={mainHero}
             exitingQuickRun={rhythmExitingRun}
-            raidChallenge={raidRhythm?{tierName:raidJackTierAt('a',raidRhythm.tierIndex).name}:null}
+            raidChallenge={raidRhythm?raidRhythmBannerOf(raidRhythmAdapterOf(raidRhythm.eventKey),raidRhythm.tierIndex):null}
             onExit={raidRhythm?cancelRaidJackRhythm:()=>setGameState('RHYTHM_MODE_SELECT')}
             onOpenEventRanking={()=>{
               // 曲えらびの案内から開く。期間限定を開催中ならそちらのタブ、なければ週間のタブ
