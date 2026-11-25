@@ -1379,7 +1379,7 @@ const atsuXmasCostume = Object.freeze({
 });
 // えるびんのサンタ(2026-11-25 クリスマスイベント r1119-172)。ほかの助手のクリスマスの衣装と同じ売り方・同じ期間。絵は images/assistant/santa/erubin_*(立ち絵は stand-santa、全身画は fullbody/erubin_santa)。
 //   原本は tools/art-sources/assistants/erubin/santa/received/(加工せずに保管・大きさがばらばら・寝顔はプレゼント箱に座った横長)。顔アイコンの切り方は life-stand-cut.json の erubin:santa
-const ERUBIN_SANTA_COSTUME_ART = "images/assistant/santa/face/erubin_happy.PNG?v=854ced27beb4";
+const ERUBIN_SANTA_COSTUME_ART = "images/assistant/santa/face/erubin_happy.PNG?v=57849ea73e8a";
 const erubinSantaCostume = Object.freeze({
   id: 'erubin_santa_2026', assistantId: 'erubin',
   name: 'クリスマス', desc: 'クリスマスの衣装。白いファーの赤いサンタのマントと頭巾に、金の刺しゅうの白い衣です。',

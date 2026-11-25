@@ -11,7 +11,7 @@
   "atsu:santa": {"face": {"head": 1.26, "up": 0.11, "dx": 0.1}},
   "momosuke:halloween": {"face": {"head": 1.45, "up": 0.15}},
   "_erubin:santa": "えるびんのサンタ(2026-11-25)。顔アイコンを、Muse 承認済みのえるびん(ふだん)・石油王の顔の大きさ・目の高さ(目が丸の約0.5・顔の幅が約半分)にそろえた",
-  "erubin:santa": {"face": {"head": 1.95, "up": 0.5}},
+  "erubin:santa": {"face": {"head": 1.95, "up": 0.5, "expr": {"normal": {"zoom": 1.08, "dx": -0.03, "dy": 0}, "happy": {"zoom": 1.08, "dx": -0.03, "dy": 0}, "wink": {"zoom": 1.08, "dx": -0.03, "dy": 0}, "surprise": {"zoom": 1.08, "dx": -0.03, "dy": 0}, "troubled": {"zoom": 1.08, "dx": -0.03, "dy": 0}, "angry": {"zoom": 1.08, "dx": -0.03, "dy": 0}, "crying": {"zoom": 1.08, "dx": -0.03, "dy": 0}, "excited": {"zoom": 1.08, "dx": -0.03, "dy": 0}, "sleep": {"zoom": 1.08, "dx": -0.03, "dy": 0}}}},
   "_kyuko:santa": "きゅうこのサンタ(2026-11-25)。顔アイコンを、承認済みのきゅうこ(ふだん)・冬の装いの顔の大きさ・目の高さにそろえた",
   "kyuko:santa": {"face": {"head": 2.0, "up": 0.48, "expr": {"crying": {"zoom": 0.87, "dx": -0.065, "dy": 0.056}, "excited": {"zoom": 1.3, "dx": -0.06, "dy": 0.12}, "sleep": {"zoom": 0.884, "dx": -0.115, "dy": 0.021}, "normal": {"zoom": 0.76, "dx": 0.004, "dy": 0.002}, "happy": {"zoom": 0.79, "dx": -0.009, "dy": -0.006}, "wink": {"zoom": 0.8, "dx": -0.027, "dy": -0.027}, "surprise": {"zoom": 0.74, "dx": -0.013, "dy": 0.025}, "troubled": {"zoom": 0.84, "dx": 0.004, "dy": 0.06}, "angry": {"zoom": 0.8, "dx": 0.009, "dy": -0.053}}}},
   "mua": {"face": {"head": 1.8, "up": 0.24}},

@@ -129,7 +129,7 @@ check('成長のターンは 3 / 5 / 8 / 11(固有技は2段階ずつ・アシ�
 check('撃破は resolveEnemyDefeat の先頭(WAVE報酬より前)で終わる', /enemyDefeatResolvedRef\.current = true;\n\s*\/\/ ★ジャック戦はここで終わり[^\n]*\n\s*if \(raidJackRunRef\.current\) \{ await finishRaidJack\('defeated'\); return true; \}/.test(app));
 check('全滅・リタイアも finishRaidJack を通る', /if \(raidJackRunRef\.current\) \{ finishRaidJack\('wipe'\); return; \}/.test(app) && /finishRaidJack\('giveup'\)/.test(app));
 check('finishRaidJack は一度しか動かない(finished)', /if\(!run\|\|run\.finished\) return;\n\s*run\.finished=true;/.test(app));
-check('ジャック戦は debugBattleRef を立てて始まる(報酬・絆・記録へつながらない)', /raidJackRunRef\.current=\{kind:isB\?'b':'a'[\s\S]{0,900}debugBattleRef\.current=true;/.test(app));
+check('ジャック戦は debugBattleRef を立てて始まる(報酬・絆・記録へつながらない)', /raidJackRunRef\.current=\{(?:ev:[^,]+,)?kind:isB\?'b':'a'[\s\S]{0,1000}debugBattleRef\.current=true;/.test(app));
 check('ジャック戦の敵は段階の値で作る(編成の総合力の補正を掛けない)', /const raidRun=isRaidJackMode\(runMode\)\?raidJackRunRef\.current:null;[\s\S]{0,200}isTacticsMode\(runMode\)&&!raidRun/.test(app));
 
 // ⑧ レイドバトル(A)専用ルール(2026-10-04)。EXの回数はコードの形で固定する(実機で通しにくいため)
@@ -147,7 +147,7 @@ check('AもBも、味方のライフ・ガッツは全快からはじまる(追�
 check('1回の戦闘は20ターン(レイドバトルもグランドスラムも)・ターンごとのバフは半分(5% / 1.5%)',
   /const RAID_JACK_TURNS = 20;/.test(defs35) && /RAID_JACK_TURN_GROWTH = 1\.05;/.test(defs35) && /RAID_JACK_TURN_REGEN_STEP = 0\.015;/.test(defs35));
 check('ジャックとの戦いは Monster(全編)、レイド画面・段階えらび・編成はぱんぷきんの曲に固定(どちらも isGameOver より前で決める)',
-  /if \(state === 'BATTLE' && raidJackRunRef\.current\) return RAID_JACK_BATTLE_BGM_TRACK;\s*if \(RAID_JACK_BGM_STATES\.includes\(state\)\) return RAID_JACK_BGM_TRACK;[\s\S]{0,900}if \(isGameOver\) return bgmArrangement\.gameOver;/.test(app)
+  /if \(state === 'BATTLE' && raidJackRunRef\.current\) return RAID_JACK_BATTLE_BGM_TRACK;\s*if \(RAID_JACK_BGM_STATES\.includes\(state\)(?: && raidEvRef\.current !== 'xmas')?\) return RAID_JACK_BGM_TRACK;[\s\S]{0,900}if \(isGameOver\) return bgmArrangement\.gameOver;/.test(app)
   && /RAID_JACK_BGM_TRACK = 'melo_crazy_party_night_full'/.test(defs35) && /id:'melo_crazy_party_night_full'/.test(read('monster-hero/src/parts/13-bgm-and-rhythm-settings.jsx'))
   && /RAID_JACK_BATTLE_BGM_TRACK = 'melo_monster';/.test(defs35) && /id:'melo_monster'/.test(read('monster-hero/src/parts/13-bgm-and-rhythm-settings.jsx')));
 check('HOMEの曲は、イベント中かつ曲を選んでいないときだけぱんぷきん(開催中は見るたびに数え直す)',
