@@ -1310,7 +1310,7 @@ const ASSISTANT_COSTUME_XMAS_END_AT = '2026-12-31T04:00:00+09:00';
 const MUA_SANTA_COSTUME_ART = "images/assistant/santa/face/myua_happy.PNG?v=2295682732ab";
 const muaSantaCostume = Object.freeze({
   id: 'mua_santa_2026', assistantId: 'mua',
-  name: '天使のサンタ', desc: 'クリスマスの衣装。白いファーのピンクのサンタ服と、ぽんぽんのついたサンタ帽です。',
+  name: 'クリスマス', desc: 'クリスマスの衣装。白いファーのピンクのサンタ服と、ぽんぽんのついたサンタ帽です。',
   get released() { return Date.now() >= Date.parse(ASSISTANT_COSTUME_XMAS_START_AT); },
   icon: MUA_SANTA_COSTUME_ART,
   imageDir: 'images/assistant/santa',
@@ -1324,7 +1324,7 @@ const muaSantaCostume = Object.freeze({
 const KIKI_SANTA_COSTUME_ART = "images/assistant/santa/face/kiki_happy.PNG?v=5a78e5be353e";
 const kikiSantaCostume = Object.freeze({
   id: 'kiki_santa_2026', assistantId: 'kiki',
-  name: '王道のサンタ', desc: 'クリスマスの衣装。白いファーの真っ赤なサンタケープとスカートに、柊の飾りのサンタ帽です。',
+  name: 'クリスマス', desc: 'クリスマスの衣装。白いファーの真っ赤なサンタケープとスカートに、柊の飾りのサンタ帽です。',
   get released() { return Date.now() >= Date.parse(ASSISTANT_COSTUME_XMAS_START_AT); },
   icon: KIKI_SANTA_COSTUME_ART,
   imageDir: 'images/assistant/santa',
@@ -1338,7 +1338,7 @@ const kikiSantaCostume = Object.freeze({
 const MOMOSUKE_SANTA_COSTUME_ART = "images/assistant/santa/face/momosuke_happy.PNG?v=e31b409a9646";
 const momosukeSantaCostume = Object.freeze({
   id: 'momosuke_santa_2026', assistantId: 'momosuke',
-  name: '小悪魔アイドルのサンタ', desc: 'クリスマスの衣装。白いファーの濃いピンクのサンタ服に、雪の結晶と柊の飾りのサンタ帽です。',
+  name: 'クリスマス', desc: 'クリスマスの衣装。白いファーの濃いピンクのサンタ服に、雪の結晶と柊の飾りのサンタ帽です。',
   get released() { return Date.now() >= Date.parse(ASSISTANT_COSTUME_XMAS_START_AT); },
   icon: MOMOSUKE_SANTA_COSTUME_ART,
   imageDir: 'images/assistant/santa',
