@@ -53,8 +53,9 @@ ART = {
     'sorashido:santa': 'sorashido_santa_fullbody.png',
     **{'sorashido:santa@%s' % e: 'sorashido_santa_%s.png' % e for e in ('angry', 'crying', 'excited', 'happy', 'normal', 'surprise', 'troubled', 'wink', 'sleep')},
     # あつのクリスマス(探偵の衣装・2026-11-25 r1119-172)。全身の10枚(表情ごとにポーズが違う・寝顔は立ったまま目を閉じた縦長)。王冠は金・マフラーはグレーのチェック(社長「このまま」)
-    'atsu:santa': 'atsu_santa_fullbody.png',
-    **{'atsu:santa@%s' % e: 'atsu_santa_%s.png' % e for e in ('angry', 'crying', 'excited', 'happy', 'normal', 'surprise', 'troubled', 'wink', 'sleep')},
+    # 2026-11-25 r1125-050 作り直し版(_v2・社長「顔色が悪い」→ 肌・髪・目の色をふだんのあつに合わせた)。前の10枚は received に残す(使わない)
+    'atsu:santa': 'atsu_santa_fullbody_v2.png',
+    **{'atsu:santa@%s' % e: 'atsu_santa_%s_v2.png' % e for e in ('angry', 'crying', 'excited', 'happy', 'normal', 'surprise', 'troubled', 'wink', 'sleep')},
     # えるびんのサンタ(2026-11-25 r1119-172)。全身の10枚(大きさがばらばら: ふつう 887×1774・surprise と excited は 1024×1536・寝顔はプレゼント箱に座った横長 1174×1339)
     'erubin:santa': 'erubin_santa_fullbody.png',
     **{'erubin:santa@%s' % e: 'erubin_santa_%s.png' % e for e in ('angry', 'crying', 'excited', 'happy', 'normal', 'surprise', 'troubled', 'wink', 'sleep')},

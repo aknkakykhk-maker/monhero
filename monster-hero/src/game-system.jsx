@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e06d4f9c331138f6
+// generated-sha256: 098658bfe13923df
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -71193,7 +71193,7 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   // みゅあのサンタ(2026-11-25 クリスマスイベント r1119-172)。santa はバスト絵の置き場に置いた全身画(santa/myua_<表情>.PNG)の点、
   //   stand-santa は life-stand-from-fullbody.py の出力(目印は life-stand-marks.json の mua:santa。top は帽子を除いた頭のてっぺん)
   santa: { mua: { top: 0.1007, eye: 0.2132, chin: 0.2677, m: 0.406, above: 0.95 }, kiki: { top: 0.0941, eye: 0.1797, chin: 0.2325, m: 0.393, above: 0.95 }, momosuke: { top: 0.0735, eye: 0.1865, chin: 0.2374, m: 0.379, above: 0.95 }, sorashido: { top: 0.0026, eye: 0.1116, chin: 0.1664, m: 0.408, above: 0.95 }, atsu: { top: 0.0175, eye: 0.0994, chin: 0.1473, m: 0.357, above: 0.95 }, erubin: { top: 0.0589, eye: 0.1006, chin: 0.147, m: 0.345, above: 0.95 }, kyuko: { top: 0.0727, eye: 0.1552, chin: 0.218, m: 0.467, above: 0.95 } },
-  'stand-santa': { mua: { top: 0.1614, eye: 0.342, chin: 0.4296, m: 0.652, cx: 0.4783, above: 0.95 }, kiki: { top: 0.1746, eye: 0.3328, chin: 0.4303, m: 0.725, cx: 0.551, above: 0.95 }, momosuke: { top: 0.1333, eye: 0.338, chin: 0.4302, m: 0.686, cx: 0.4985, above: 0.95 }, sorashido: { top: 0.0065, eye: 0.2884, chin: 0.4301, m: 1.054, cx: 0.577, above: 0.95 }, atsu: { top: 0.0512, eye: 0.2901, chin: 0.43, m: 1.041, cx: 0.4773, above: 0.95 }, erubin: { top: 0.1725, eye: 0.2944, chin: 0.4303, m: 1.011, cx: 0.5528, above: 0.95 }, kyuko: { top: 0.143, eye: 0.3059, chin: 0.4298, m: 0.922, cx: 0.4314, above: 0.95 } },
+  'stand-santa': { mua: { top: 0.1614, eye: 0.342, chin: 0.4296, m: 0.652, cx: 0.4783, above: 0.95 }, kiki: { top: 0.1746, eye: 0.3328, chin: 0.4303, m: 0.725, cx: 0.551, above: 0.95 }, momosuke: { top: 0.1333, eye: 0.338, chin: 0.4302, m: 0.686, cx: 0.4985, above: 0.95 }, sorashido: { top: 0.0065, eye: 0.2884, chin: 0.4301, m: 1.054, cx: 0.577, above: 0.95 }, atsu: { top: 0.0562, eye: 0.305, chin: 0.4302, m: 0.932, cx: 0.4455, above: 0.95 }, erubin: { top: 0.1725, eye: 0.2944, chin: 0.4303, m: 1.011, cx: 0.5528, above: 0.95 }, kyuko: { top: 0.143, eye: 0.3059, chin: 0.4298, m: 0.922, cx: 0.4314, above: 0.95 } },
 });
 // 絵の置き場所から、着替えの名前を引く(ふだんの服は null)
 const assistantLifeStandOutfitOf = (src) => { const m = /\/assistant\/([a-z0-9-]+)\/[a-z]+_[a-z]+\.png/i.exec(String(src || '')); return m && m[1] !== 'face' && m[1] !== 'temp' ? m[1] : null; };

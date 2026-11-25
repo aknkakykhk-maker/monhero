@@ -8,7 +8,7 @@
   "mua:card-master": {"face": {"head": 1.83, "up": 0.35, "dx": 0.05}},
   "mua:halloween": {"face": {"head": 1.85, "up": 0.25, "dx": 0.05}},
   "_atsu:santa": "あつのクリスマス(2026-11-25)。顔アイコンをナカヨシの基準(目の高さが丸の0.48〜0.55・顔の幅が丸の約半分)に合わせて寄せた",
-  "atsu:santa": {"face": {"head": 1.26, "up": 0.11, "dx": 0.1}},
+  "atsu:santa": {"face": {"head": 1.5, "up": 0.16, "dx": -0.04}},
   "momosuke:halloween": {"face": {"head": 1.45, "up": 0.15}},
   "_erubin:santa": "えるびんのサンタ(2026-11-25)。顔アイコンを、Muse 承認済みのえるびん(ふだん)・石油王の顔の大きさ・目の高さ(目が丸の約0.5・顔の幅が約半分)にそろえた",
   "erubin:santa": {"face": {"head": 1.95, "up": 0.5}},
