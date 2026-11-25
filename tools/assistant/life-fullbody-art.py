@@ -39,6 +39,22 @@ ART = {
     'mua': 'msg2-blonde-angel.png',
     'mua:halloween': 'msg3-blonde-halloween-witch.png',
     'mua:card-master': 'msg4-blonde-blue-cape.png',
+    # みゅあのサンタ(2026-11-25 クリスマスイベント r1119-172)。チャッピーで作った全身の10枚(tools/art-sources/assistants/mua/santa/received/・加工せずに保管)。
+    #   表情も全身で届いた。fullbody と normal は同じ絵。sleep は両目を閉じた寝顔の全身(ききのツインテールと同じく fullbody/<名前>__sleep.png も作る)
+    'mua:santa': 'mua_santa_fullbody.png',
+    **{'mua:santa@%s' % e: 'mua_santa_%s.png' % e for e in ('angry', 'crying', 'excited', 'happy', 'normal', 'surprise', 'troubled', 'wink', 'sleep')},
+    # ききのサンタ(2026-11-25 r1119-172)。みゅあと同じく全身の10枚(スカートは指示と違って赤だが、社長はこのままでよい)
+    'kiki:santa': 'kiki_santa_fullbody.png',
+    **{'kiki:santa@%s' % e: 'kiki_santa_%s.png' % e for e in ('angry', 'crying', 'excited', 'happy', 'normal', 'surprise', 'troubled', 'wink', 'sleep')},
+    # ももすけのサンタ(2026-11-25 r1119-172)。全身の10枚(表情ごとにポーズが違う・寝顔は座った姿の横長 1134×1387)。服は指示の真っ赤ではなく濃いピンク(社長「このまま」)
+    'momosuke:santa': 'momosuke_santa_fullbody.png',
+    **{'momosuke:santa@%s' % e: 'momosuke_santa_%s.png' % e for e in ('angry', 'crying', 'excited', 'happy', 'normal', 'surprise', 'troubled', 'wink', 'sleep')},
+    # ソラシドのクリスマス(探偵の衣装・2026-11-25 r1119-172)。全身の10枚(表情ごとにポーズが違う・寝顔は立ったままうとうとする縦長)。虫めがねは無く、手の小物はノートPCだけ(社長「このまま」)
+    'sorashido:santa': 'sorashido_santa_fullbody.png',
+    **{'sorashido:santa@%s' % e: 'sorashido_santa_%s.png' % e for e in ('angry', 'crying', 'excited', 'happy', 'normal', 'surprise', 'troubled', 'wink', 'sleep')},
+    # あつのクリスマス(探偵の衣装・2026-11-25 r1119-172)。全身の10枚(表情ごとにポーズが違う・寝顔は立ったまま目を閉じた縦長)。王冠は金・マフラーはグレーのチェック(社長「このまま」)
+    'atsu:santa': 'atsu_santa_fullbody.png',
+    **{'atsu:santa@%s' % e: 'atsu_santa_%s.png' % e for e in ('angry', 'crying', 'excited', 'happy', 'normal', 'surprise', 'troubled', 'wink', 'sleep')},
     'sorashido:hosei': 'msg6-kimono-boy.png',  # 2026-11-15 から服『補正』(いままでのソラシド)。新しい絵が既定の服『馬骨』(sorashido)
     'erubin': 'msg7-curly-man-casual.png',
     'erubin:sekiyuou': 'msg8-curly-man-robe.png',

@@ -43,16 +43,22 @@ HEADS = {
     'mua:halloween': dict(name='mua_halloween', stand='stand-halloween', prefix='myua', chin_frac=0.43, above=0.95, match_scale=True, scene_same_frame=True),
     # カードマスター(2026-11-23 r1119-137)。normal だけ手を頭の上へ上げているので、重ね合わせは横だけ(same_frame)
     'mua:card-master': dict(name='mua_card-master', stand='stand-card-master', prefix='myua', chin_frac=0.43, above=0.75, same_frame=True),
+    # サンタ(2026-11-25 クリスマスイベント r1119-172)。表情も全身で届いた(大きさは表情ごとに少し違う)。寝顔の全身(mua_santa__sleep.png)は sleep で、ふつうの顔と同じ枠で顔アイコンを切る
+    'mua:santa': dict(name='mua_santa', stand='stand-santa', prefix='myua', chin_frac=0.43, above=0.95, match_scale=True, scene_same_frame=True, sleep=True),
     'kiki': dict(name='kiki', stand='stand-normal', prefix='kiki', chin_frac=0.43, above=None, match_scale=True, scene_same_frame=True),
     'kiki:halloween': dict(name='kiki_halloween', stand='stand-halloween', prefix='kiki', chin_frac=0.43, above=0.95, match_scale=True, scene_same_frame=True),
     'kiki:twintail': dict(name='kiki_twintail', stand='stand-twintail', prefix='kiki', chin_frac=0.43, above=0.95, match_scale=True, scene_same_frame=True),
+    'kiki:santa': dict(name='kiki_santa', stand='stand-santa', prefix='kiki', chin_frac=0.43, above=0.95, match_scale=True, scene_same_frame=True, sleep=True),  # ききのサンタ(2026-11-25)
     'momosuke': dict(name='momosuke', stand='stand-normal', prefix='momosuke', chin_frac=0.43, above=0.7, match_scale=True, scene_same_frame=True),
     'momosuke:halloween': dict(name='momosuke_halloween', stand='stand-halloween', prefix='momosuke', chin_frac=0.43, above=0.95, match_scale=True, scene_same_frame=True),
+    'momosuke:santa': dict(name='momosuke_santa', stand='stand-santa', prefix='momosuke', chin_frac=0.43, above=0.95, match_scale=True, scene_same_frame=True, sleep=True),  # ももすけのサンタ(2026-11-25)
     'atsu': dict(name='atsu', stand='stand-normal', prefix='atsu', chin_frac=0.43, above=None, match_scale=True, scene_same_frame=True),
+    'atsu:santa': dict(name='atsu_santa', stand='stand-santa', prefix='atsu', chin_frac=0.43, above=0.95, match_scale=True, scene_same_frame=True, sleep=True),  # あつのクリスマス(探偵・2026-11-25)
     'kyuko': dict(name='kyuko', stand='stand-normal', prefix='kyuko', chin_frac=0.43, above=None, match_scale=True, scene_same_frame=True),
     'kyuko:winter': dict(name='kyuko_winter', stand='stand-winter', prefix='kyuko', chin_frac=0.43, above=None, match_scale=True, scene_same_frame=True),
     'sorashido': dict(name='sorashido', stand='stand-normal', prefix='sorashido', chin_frac=0.43, above=None, match_scale=True, scene_same_frame=True),
     'sorashido:hosei': dict(name='sorashido_hosei', stand='stand-hosei', prefix='sorashido', chin_frac=0.43, above=None, match_scale=True, scene_same_frame=True),
+    'sorashido:santa': dict(name='sorashido_santa', stand='stand-santa', prefix='sorashido', chin_frac=0.43, above=0.95, match_scale=True, scene_same_frame=True, sleep=True),  # ソラシドのクリスマス(探偵・2026-11-25)
     'erubin': dict(name='erubin', stand='stand-normal', prefix='erubin', chin_frac=0.43, above=None, match_scale=True, scene_same_frame=True),
     'erubin:sekiyuou': dict(name='erubin_sekiyuou', stand='stand-sekiyuou', prefix='erubin', chin_frac=0.43, above=None, match_scale=True, scene_same_frame=True),
 }
@@ -396,6 +402,24 @@ def run(key, cfg, marks, opts):
             fdir = '%s/face' % key.split(':')[1] if ':' in key else 'face'
             ft += save_png(fim, os.path.join(ROOT, 'monster-hero/images/assistant', fdir, '%s_%s.PNG' % (cfg['prefix'], e)))
         print('   顔アイコン: 一辺 %d 計%dKB' % (side, ft))
+        if cfg.get('sleep'):
+            # 寝顔の全身画(<名前>__sleep.png。ききのツインテール・みゅあのサンタ)があれば、ふつう(normal)と同じ枠で寝顔の顔アイコンを切る。
+            #   寝顔は normal と同じ立ち姿なので、normal と同じ倍率(match_scale のときは T)で縮め、重ね合わせは normal に合わせる
+            sp = os.path.join(FB, '%s__sleep.png' % cfg['name'])
+            if os.path.exists(sp):
+                sa = load(sp)
+                # 寝顔の絵は大きさが normal と違うことがある(ききのサンタは頭が約1割大きい)。ほかの表情と同じく、normal(縮めたあと)に
+                #   重ねたときの倍率を測って縮める。引き伸ばしはしない(r1115-143)
+                k = align(ims[0], sa, mk, cx)[1]
+                if k > 1.0001:
+                    sa = shrink(sa, 1.0 / k)
+                sd = align(ims[0], sa, mk, cx)[0]
+                fim = place(sa, (fx0, fy0, fx0 + side, fy0 + side), sd)
+                if fc.get('px') and side > fc['px']:
+                    fim = Image.fromarray(shrink(np.asarray(fim), fc['px'] / float(side)))
+                fdir = '%s/face' % key.split(':')[1] if ':' in key else 'face'
+                save_png(fim, os.path.join(ROOT, 'monster-hero/images/assistant', fdir, '%s_sleep.PNG' % cfg['prefix']))
+                print('   寝顔の顔アイコン: %s/%s_sleep.PNG(重ね位置 %+d%+d)' % (fdir, cfg['prefix'], sd[0], sd[1]))
 
 
 if __name__ == '__main__':

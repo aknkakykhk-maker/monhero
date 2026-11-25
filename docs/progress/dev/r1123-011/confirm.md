@@ -2,9 +2,10 @@
 
 <!-- node tools/image/assistant-art-catalog.js が書く。手で直さない -->
 
-## 要確認(8 件)
+## 要確認(9 件)
 
 - kiki/twintail/stand: 全身絵(2026-11-25)のほうが立ち絵(2026-11-23)より新しい。立ち絵は作り直した全身絵と同じ絵か
+- erubin/sekiyuou/fullbody: 表情なしの全身絵(erubin_sekiyuou.png・2026-11-23)が、表情つき(9999)より古い世代のまま現行フォルダにある
 - mua/normal/fullbody: 表情なしの全身絵(mua.png・2026-11-21)が、表情つき(2026-11-22)より古い世代のまま現行フォルダにある
 - mua/halloween/fullbody: 表情なしの全身絵(mua_halloween.png・2026-11-21)が、表情つき(2026-11-22)より古い世代のまま現行フォルダにある
 - sorashido/normal/fullbody: 表情なしの全身絵(sorashido.png・2026-11-23)が、表情つき(2026-11-24)より古い世代のまま現行フォルダにある

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 138c95999fa0f7dc
+// generated-sha256: 7fff2da14e48eb45
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -10671,6 +10671,9 @@ const FRIENDS_PUBLIC_RELEASE = true;
 // 開始を過ぎても更新履歴に出なかった(2026-10-05・ユーザー指摘「もう公開してるのに更新情報に出てない」)。
 // 開始日時はここにも置く(35-raid-jack.jsx の RAID_JACK_EVENT.startAt と同じ値。食い違いは tools/mode/raid-jack-check.js が見る)。
 const RAID_JACK_START_AT = '2026-10-05T04:00:00+09:00';
+// クリスマスイベントの衣装(みゅあのサンタ・2026-11-25 r1119-172)の売り出しの時刻。RELEASE_FLAGS.xmasCostume が見るたびに数え直す。
+//   data/breeder.js の ASSISTANT_COSTUME_XMAS_START_AT と同じ値(更新履歴・ヘルプの出し入れに使う。食い違いは tools/market/assistant-costume-check.js が見る)
+const XMAS_COSTUME_START_AT = '2026-11-30T10:00:00+09:00';
 const RAID_JACK_PUBLIC_RELEASE = true;
 // レイドバトルの「モンヒロビートで挑戦する」(2026-10-06)。ダメージの仕様が固まるまで一時止めていた(ユーザー指示)が、仕様の確定・実装・サブストーリー(ドラのビート)の用意ができたので、
 // 2026-10-06 にユーザーの「出して」で公開した。偽にすると、レイド画面のボタン・サブストーリー・更新履歴・ヘルプの説明が出なくなる(デバッグの強制表示では、確認のためボタンだけ出る)
@@ -10837,7 +10840,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   //   数字は 32-tactics-units.jsx の TACTICS_HATE / MONSTER_TYPES。お話「タクティクスバトル ～4人のタイプ～」(tactics_types)もこの印で出る
   tacticsHate: true,
   // タクティクスのEXスキル。遊べる入口(β版を含む)があって、EXの公開フラグも立っているときだけ
-  tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, get rhythmGrandOpen() { try { return RHYTHM_GRAND_OPEN_RELEASE === true && Date.now() >= Date.parse(RHYTHM_GRAND_OPEN_START_AT); } catch (e) { return false; } }, rhythmGrandOpenTeaser:RHYTHM_GRAND_OPEN_TEASER_RELEASE, rhythmMulti:RHYTHM_MULTI_PUBLIC_RELEASE, friends:FRIENDS_PUBLIC_RELEASE, raidJackRhythm: RAID_JACK_RHYTHM_PUBLIC_RELEASE, get raidJack() { try { return RAID_JACK_PUBLIC_RELEASE === true && Date.now() >= Date.parse(RAID_JACK_START_AT); } catch (e) { return false; } }, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
+  tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, get rhythmGrandOpen() { try { return RHYTHM_GRAND_OPEN_RELEASE === true && Date.now() >= Date.parse(RHYTHM_GRAND_OPEN_START_AT); } catch (e) { return false; } }, rhythmGrandOpenTeaser:RHYTHM_GRAND_OPEN_TEASER_RELEASE, rhythmMulti:RHYTHM_MULTI_PUBLIC_RELEASE, friends:FRIENDS_PUBLIC_RELEASE, raidJackRhythm: RAID_JACK_RHYTHM_PUBLIC_RELEASE, get raidJack() { try { return RAID_JACK_PUBLIC_RELEASE === true && Date.now() >= Date.parse(RAID_JACK_START_AT); } catch (e) { return false; } }, get xmasCostume() { try { return Date.now() >= Date.parse(XMAS_COSTUME_START_AT); } catch (e) { return false; } }, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
 // releaseFlag = そのフラグが立つまで出さない。unreleasedFlag = そのフラグが立ったら出さない。
 // 逆向きの名札が要るのは「準備中です」の案内で、公開したあとも残っていると
 // 遊べているのに準備中の項目が並ぶ(ヘルプのモンヒロビートで実際にそうなっていた・2026-09-06)。
@@ -71187,6 +71190,10 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   //   2026-11-24 r1119-153 追記4: stand-* の行は、立ち絵を縮めた組で点がずれていたのを直して出し直した(life-stand-from-fullbody.py)。ツインテールの印も目の真ん中・顎の先へ直した
   twintail: { kiki: { top: 0.112, eye: 0.183, chin: 0.244, m: 0.383, above: 0.95 } },
   'stand-twintail': { kiki: { top: 0.1807, eye: 0.3402, chin: 0.4301, m: 1.014, cx: 0.5119, above: 0.95 } },
+  // みゅあのサンタ(2026-11-25 クリスマスイベント r1119-172)。santa はバスト絵の置き場に置いた全身画(santa/myua_<表情>.PNG)の点、
+  //   stand-santa は life-stand-from-fullbody.py の出力(目印は life-stand-marks.json の mua:santa。top は帽子を除いた頭のてっぺん)
+  santa: { mua: { top: 0.1007, eye: 0.2132, chin: 0.2677, m: 0.406, above: 0.95 }, kiki: { top: 0.0941, eye: 0.1797, chin: 0.2325, m: 0.393, above: 0.95 }, momosuke: { top: 0.0735, eye: 0.1865, chin: 0.2374, m: 0.379, above: 0.95 }, sorashido: { top: 0.0026, eye: 0.1116, chin: 0.1664, m: 0.408, above: 0.95 }, atsu: { top: 0.0175, eye: 0.0994, chin: 0.1473, m: 0.357, above: 0.95 } },
+  'stand-santa': { mua: { top: 0.1614, eye: 0.342, chin: 0.4296, m: 0.652, cx: 0.4783, above: 0.95 }, kiki: { top: 0.1746, eye: 0.3328, chin: 0.4303, m: 0.725, cx: 0.551, above: 0.95 }, momosuke: { top: 0.1333, eye: 0.338, chin: 0.4302, m: 0.686, cx: 0.4985, above: 0.95 }, sorashido: { top: 0.0065, eye: 0.2884, chin: 0.4301, m: 1.054, cx: 0.577, above: 0.95 }, atsu: { top: 0.0512, eye: 0.2901, chin: 0.43, m: 1.041, cx: 0.4773, above: 0.95 } },
 });
 // 絵の置き場所から、着替えの名前を引く(ふだんの服は null)
 const assistantLifeStandOutfitOf = (src) => { const m = /\/assistant\/([a-z0-9-]+)\/[a-z]+_[a-z]+\.png/i.exec(String(src || '')); return m && m[1] !== 'face' && m[1] !== 'temp' ? m[1] : null; };
@@ -73343,6 +73350,11 @@ const ASSISTANT_LIFE_SLEEP_ART = Object.freeze(new Set([
   'momosuke_normal.PNG', 'face/momosuke_normal.PNG', 'halloween/momosuke_normal.PNG', 'halloween/face/momosuke_normal.PNG',
   'winter/kyuko_normal.PNG', 'winter/face/kyuko_normal.PNG', // きゅうこ『冬の装い』の寝顔(2026-11-19 部屋の画面で、冬服に SVG の目がずれて重なっていた)
   'twintail/kiki_normal.PNG', 'twintail/face/kiki_normal.PNG', // きき『ツインテール』の寝顔(2026-11-20)
+  'santa/myua_normal.PNG', 'santa/face/myua_normal.PNG', // みゅあ『サンタ』の寝顔(2026-11-25・寝顔の全身から作った)
+  'santa/kiki_normal.PNG', 'santa/face/kiki_normal.PNG', // きき『サンタ』の寝顔(2026-11-25・寝顔の全身から作った)
+  'santa/momosuke_normal.PNG', 'santa/face/momosuke_normal.PNG', // ももすけ『サンタ』の寝顔(2026-11-25・座った姿の寝顔の絵から作った)
+  'santa/sorashido_normal.PNG', 'santa/face/sorashido_normal.PNG', // ソラシド『探偵』の寝顔(2026-11-25・立ったままうとうとする絵から作った)
+  'santa/atsu_normal.PNG', 'santa/face/atsu_normal.PNG', // あつ『探偵』の寝顔(2026-11-25・立ったまま目を閉じた絵から作った)
 ]));
 // SVG の閉じた目・眼鏡を外した顔は、その目の位置の表を測った絵(その助手の ふだんの服の全身 / 顔アイコン)にだけ重ねる。
 //   着替え・立ち絵(stand-*)・全身画など別の絵では位置がちがい、ずれた目が出る(2026-11-19 社長「寝顔じゃない顔を無理やり寝顔にしようとしてる」)。ずれた目を出すより出さない
