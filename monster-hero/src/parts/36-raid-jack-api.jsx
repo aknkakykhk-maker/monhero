@@ -82,6 +82,8 @@ const sbSendRaidJackHit = async (hit, breederId, eventId) => {
   } else {
     result = await send({ ...row, source: clean.source });
     if (result.ok) _raidJackSourceColumn = true;
+    // 'card'(クリスマスのレイド)は、表の制約へ 'card' を足す SQL の前だと弾かれる。battle として送り直さず、再送待ちに残す
+    else if (clean.source === 'card' && result.status === 400 && /source/i.test(String(result.body || ''))) return 'notready';
     else if (result.status === 400 && /source/i.test(String(result.body || '')) && _raidJackSourceColumn !== true) {
       _raidJackSourceColumn = false;
       result = await send(row);

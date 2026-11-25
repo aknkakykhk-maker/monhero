@@ -23,6 +23,8 @@ node tools/ctx.js brief               いまの状態
 - `monster-hero/src/parts/36-raid-jack-api.jsx`
 - `monster-hero/src/parts/37-raid-jack-aura.jsx`
 - `monster-hero/src/parts/38-raid-jack-home-lines.jsx`
+- `monster-hero/src/parts/35-raid-xmas.jsx`
+- `monster-hero/src/parts/36-raid-xmas-api.jsx`
 - `monster-hero/src/parts/67-screen-pick.jsx`
 - `monster-hero/src/parts/68-screen-run-result.jsx`
 - `monster-hero/src/parts/71-screen-battle.jsx`(0.4MB・開かない)
