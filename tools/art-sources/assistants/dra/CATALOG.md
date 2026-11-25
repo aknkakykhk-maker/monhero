@@ -18,6 +18,15 @@
 | バスト絵 | `monster-hero/images/assistant/dra_<表情>.PNG` | 8 | 2026-09-17 #1468(8枚) | `tools/art-sources/assistants/dra/normal/bust/dra-expressions-sheet.png` | 8表情のシートから切り出し(`tools/image/split-expression-sheet.js`) |
 | 顔アイコン | `monster-hero/images/assistant/face/dra_<表情>.PNG` | 8 | 2026-09-17 #1468(8枚) | `monster-hero/images/assistant/dra_*.PNG` | `tools/make-assistant-faces.js`(バスト絵から) |
 
+## 服「クリスマス」(santa)
+
+| 種類 | ゲームで使っているファイル | 枚数 | 最後に作った日・PR | 正本(最新の原本) | 作り方 |
+| --- | --- | ---: | --- | --- | --- |
+| 全身絵 | なし | 0 | | | |
+| 立ち絵 | なし | 0 | | | |
+| バスト絵 | `monster-hero/images/assistant/santa/dra_<表情>.PNG` | 9 | 2026-11-25 35b9d5abf(9枚・うち寝顔1) | `tools/art-sources/assistants/dra/santa/received/dra_santa_*.png` | 元絵(1254×1254 の顔だけの絵)の外の薄いもやを縁を残して消し、ふだんのドラの絵と同じ 384×384 に縮めた。顔アイコンは normal の絵の範囲で倍率をそろえて 256×256 に切った(9枚とも同じ切り方。2026-11-25 クリスマス作業場の処理・全身画は無い) |
+| 顔アイコン | `monster-hero/images/assistant/santa/face/dra_<表情>.PNG` | 9 | 2026-11-25 8c31068a2(1枚) / 2026-11-25 35b9d5abf(8枚・うち寝顔1) | `tools/art-sources/assistants/dra/santa/received/dra_santa_*.png` | 元絵(1254×1254 の顔だけの絵)の外の薄いもやを縁を残して消し、ふだんのドラの絵と同じ 384×384 に縮めた。顔アイコンは normal の絵の範囲で倍率をそろえて 256×256 に切った(9枚とも同じ切り方。2026-11-25 クリスマス作業場の処理・全身画は無い) |
+
 ## 旧版(正本ではない・保管庫)
 
 - `archive/old-art/assistant/dra/normal/2026-09-17-duplicate-of-current-bust/`(8枚)… 旧版ではなく重複。配信中のバスト絵と1バイトも違わない同じ物が2か所にある(「同じ中身を2か所で持たない」決まり)。原本のシート dra-expressions-sheet.png は正本として残す
