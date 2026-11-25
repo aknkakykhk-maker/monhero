@@ -1365,7 +1365,7 @@ const sorashidoXmasCostume = Object.freeze({
 // あつのクリスマス(探偵の衣装・2026-11-25 クリスマスイベント r1119-172。お話ではソラシドのライバルの探偵役)。ほかの助手のクリスマスの衣装と同じ売り方・同じ期間。
 //   絵は images/assistant/santa/atsu_*(立ち絵は stand-santa、全身画は fullbody/atsu_santa)。原本は tools/art-sources/assistants/atsu/santa/received/(加工せずに保管)。
 //   王冠は指示の銀ではなく金・マフラーはグレーのチェック(社長「このまま」)。顔アイコンの切り方は tools/assistant/life-stand-cut.json の atsu:santa
-const ATSU_XMAS_COSTUME_ART = "images/assistant/santa/face/atsu_happy.PNG?v=267733c7c709";
+const ATSU_XMAS_COSTUME_ART = "images/assistant/santa/face/atsu_happy.PNG?v=3afe66a12844";
 const atsuXmasCostume = Object.freeze({
   id: 'atsu_santa_2026', assistantId: 'atsu',
   name: '探偵', desc: 'クリスマスの衣装。黒いコートにグレーのチェックのマフラー、柊の飾りをつけた探偵の姿です。頭には金の王冠。',

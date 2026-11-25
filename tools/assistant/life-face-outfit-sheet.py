@@ -2,6 +2,7 @@
 # 新しい着替えを公開する前の点検に使う。手順と合格の目安は docs/progress/assistant-art/face-align/README.md「新しい着替えの点検」
 # 使い方: python3 tools/assistant/life-face-outfit-sheet.py <出力.png> <服(例 santa)> [助手の接頭辞 ...]
 #   --ref <git の版> を付けると、その版(例 origin/main)の絵で並べる(前後の比べに使う)
+#   --compare を付けると、助手ごとに「前(origin/main)」「後(今の絵)」の2行で並べる(止め絵用)
 import sys, io, os, subprocess
 from PIL import Image, ImageDraw, ImageFont
 A = 'monster-hero/images/assistant/'
@@ -11,6 +12,9 @@ FONT = '/usr/share/fonts/opentype/ipafont-gothic/ipag.ttf'
 S, P, L = 120, 8, 96
 args = sys.argv[1:]
 ref = None
+compare = '--compare' in args
+if compare:
+    args.remove('--compare')
 if '--ref' in args:
     i = args.index('--ref'); ref = args[i + 1]; del args[i:i + 2]
 out, outfit = args[0], args[1]
@@ -32,13 +36,14 @@ def circ(im):
     return bg.convert('RGB'), m
 
 W = L + (len(EX) + 1) * (S + P) + P
-H = 30 + len(who) * (S + P + 4) + P
+rows = [(n, r) for n in who for r in (('origin/main', '前'), (None, '後'))] if compare else [(n, (ref, '')) for n in who]
+H = 30 + len(rows) * (S + P + 4) + P
 o = Image.new('RGB', (W, H), (236, 232, 224)); d = ImageDraw.Draw(o)
 for j, e in enumerate(EX + ['基準:ふだん']):
     d.text((L + j * (S + P), 8), e, fill=(0, 0, 0), font=font)
-for r, n in enumerate(who):
+for r, (n, (ref, lab)) in enumerate(rows):
     y = 30 + r * (S + P + 4)
-    d.text((P, y + S / 2 - 8), NAMES.get(n, n), fill=(0, 0, 0), font=font)
+    d.text((P, y + S / 2 - 8), NAMES.get(n, n) + (' ' + lab if lab else ''), fill=(0, 0, 0), font=font)
     for j, e in enumerate(EX + ['ref']):
         x = L + j * (S + P)
         im = Image.open(A + 'face/%s_normal.PNG' % n) if e == 'ref' else get('%s/face/%s_%s.PNG' % (outfit, n, e))
