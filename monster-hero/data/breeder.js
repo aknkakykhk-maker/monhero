@@ -1266,7 +1266,7 @@ const erubinSekiyuouCostume = Object.freeze({
 // ソラシドの服『補正』(2026-11-15 社長「新しい絵をデフォルト=馬骨、今の物を補正」)。いままでのソラシドの絵。はじめから全員が持っている(starter)。
 //   保存は増やさない: 持っている服(owned)には書かない(starter は読み込みのたびに足される)・着ている服(worn)は選んだ人だけ { sorashido: 'sorashido_hosei_v1' }。
 //   既定の服(worn に何も無い)は新しい絵『馬骨』。移行の処理は無い(いままでソラシドの服を持っていた人はいない)
-const SORASHIDO_HOSEI_COSTUME_ART = "images/assistant/hosei/face/sorashido_happy.PNG?v=c3d47c8149ad";
+const SORASHIDO_HOSEI_COSTUME_ART = "images/assistant/hosei/face/sorashido_happy.PNG?v=ff99ef65869f";
 const sorashidoHoseiCostume = Object.freeze({
   id: 'sorashido_hosei_v1', assistantId: 'sorashido',
   name: '補正', desc: 'いままでのソラシドの服。着物の姿です。',
