@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a18cf9c59ea498f4
+// generated-sha256: ac01fcaf6d0d4e31
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -38334,7 +38334,11 @@ const raidJackMakeEnemy = (kind, tierIndex, mode, opts = {}) => {
     if (!base) return null;
     const after = opts.pumpkin === true && kind === 'a' && tierIndex === RAID_XMAS_A_TIERS.length - 1;
     const t = after ? RAID_XMAS_AFTER_BOSS : xt;
-    return { ...base, name: t.name, maxHp: t.hp, hp: t.hp, atk: t.atk, raidJackTier: xt.id, raidXmas: true,
+    // 技の名前はサンタの物(35-raid-xmas.jsx の RAID_XMAS_SKILL_NAMES)。バトル中の見出し・ログ・敵の詳細はこの敵の normal / special / actions を読む
+    const sn = RAID_XMAS_SKILL_NAMES;
+    return { ...base, name: t.name, maxHp: t.hp, hp: t.hp, atk: t.atk, raidJackTier: xt.id, raidXmas: true, emoji: '🎅',
+      normal: sn.normal, special: sn.special,
+      actions: { ...(base.actions || {}), sweep: sn.sweep, rush: sn.rush, pierce: sn.pierce, roar: sn.roar, allout: sn.allout },
       imgUrl: (typeof RAID_XMAS_BOSS_IMG !== 'undefined' ? RAID_XMAS_BOSS_IMG : base.imgUrl), poseImgUrl: null };
   }
   const tier = raidJackTierAt(kind, tierIndex);
@@ -38941,6 +38945,19 @@ const raidXmasTierAt = (kind, index) => {
   const i = Number.isFinite(index) ? Math.floor(index) : 0;
   return list[Math.min(Math.max(i, 0), list.length - 1)];
 };
+
+// ボス(覚醒サンタ)の技の名前(社長決定 2026-11-25・台帳 r1125-058)。動き(rush/sweep/roar/pierce/allout)と本数 3/4/5/5/5 はジャックのまま。
+//   名前だけを 35-raid-jack.jsx の raidJackMakeEnemy(opts.ev === 'xmas')で敵へ写す。ジャックの RAID_JACK_SKILL_NAMES・敵データ Jack は変えない。
+//   「X’マス」の「’」は全角の右シングル引用符(U+2019)
+const RAID_XMAS_SKILL_NAMES = Object.freeze({
+  normal: '正拳・闇',
+  special: '瞬黒撃',
+  sweep: 'X\u2019マスキャロル',
+  rush: '超飛び蹴り',
+  pierce: '超暗けい',
+  roar: '怪しこの夜',
+  allout: 'X\u2019マスプレデター',
+});
 
 // 報酬はジャックと同じ表(社長決定 2026-11-25)
 const RAID_XMAS_REWARDS = RAID_JACK_REWARDS;
@@ -132801,6 +132818,8 @@ function MonsterHeroGame() {
   const [cardTeaserOpen, setCardTeaserOpen] = useState(false);
   // MFバトルカードへどこから入ったか('debug' … デバッグ設定から / 'home' … HOME の入口・公開のお話のあと)。戻るボタンの行き先と、デバッグの道具を出すかに使う
   const [cardOrigin, setCardOrigin] = useState('home');
+  // クリスマスのレイド「バトルカードで挑む」で MFバトルカードの画面へ渡す挑戦(startRaidXmasCard が作る・閉じたら null)
+  const [cardRaidChallenge, setCardRaidChallenge] = useState(null);
   const cardOriginBackRef = useRef(null); // MFバトルカードを閉じたときの戻り先(プロフィール・フレンドの「バトルカードのデッキ」から来たとき)
   // MFバトルカードの「マーケットへ」から入ったときだけ、マーケットに「MFバトルカード」の売り場を出す(デバッグ専用のあいだ。区切り2)
   const [cardMarketEntry, setCardMarketEntryRaw] = useState(false);
@@ -138563,7 +138582,7 @@ function MonsterHeroGame() {
   const exitCardBattle = async () => {
     const toDebug = cardOrigin === 'debug';
     if (cardOrigin === 'profile' || cardOrigin === 'friends') cardOriginBackRef.current = cardOrigin === 'profile' ? 'PROFILE' : 'FRIENDS';
-    setCardBgm(null); setCardOrigin('home');
+    setCardBgm(null); setCardOrigin('home'); setCardRaidChallenge(null);   // レイドの挑戦を持ったまま出ない(次に開いたとき、またボス戦が始まらないように)
     // 裏クイックをどこでも回すときは、締めずにそのまま出る(出た先でも回り続ける。2026-11-11 社長)
     if (runStageRef.current != null && !quickAnywhereKeepsRun()) {
       if (cardExitingRunRef.current) return;
@@ -145541,6 +145560,35 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       lifeLeft: num(r.lifeLeft), lifeBefore: num(r.lifeBefore), lifeMax: num(r.lifeMax), pumpkin: !!r.afterBoss,
       songName: d.songName || '', difficultyName: d.difficultyName || '', score: Math.max(0, Math.floor(Number(d.score) || 0)), assist: d.assist === true, detail: d, quickAward: null });
   };
+  // クリスマスのレイド「バトルカードで挑む」(カード部・BUILD.md §4・設計 docs/spec/CARD_RAID_XMAS.md「つなぐ口」)。
+  //   MFバトルカードの画面へ挑戦(raidChallenge)を渡して開く → デッキえらび → 始める直前に回数を使う(raidXmasUseTry)→ ボスと1戦
+  //   → 換算したダメージを raidXmasAddDamage({ source:'card' }) へ → カードの結果の画面を閉じるとレイド画面へ戻り、レイドの結果を出す
+  //   回数が無い・デッキえらびで戻ったときは、そのままレイド画面へ戻る
+  const startRaidXmasCard = async (tierIndex) => {
+    const ti = Math.min(Math.max(Math.floor(Number(tierIndex) || 0), 0), RAID_XMAS_A_TIERS.length - 1);
+    const tier = raidXmasTierAt('a', ti);
+    const run = { use: null, res: null };
+    raidJackReturnTierRef.current = ti;
+    setCardRaidChallenge({
+      tierIndex: ti, tierName: tier.name, bossName: RAID_XMAS_EVENT.name,
+      onStart: async () => { try { run.use = await raidXmasUseTry('a'); } catch (e) { run.use = null; } return !!(run.use && run.use.ok); },
+      onResult: async (r) => {
+        if (!run.use || !run.use.ok) return { ok: false };
+        const detail = { won: r.outcome === 'win', turns: r.turns, ko: r.kos };
+        if (!(r.damage > 0)) { run.res = { way: 'card', kind: 'a', damage: 0, tierIndex: ti, outcome: 'sent', detail }; return { ok: true }; }
+        try { run.res = await raidXmasAddDamage({ source: 'card', kind: 'a', tierIndex: ti, damage: r.damage, hitId: run.use.hitId, eventId: run.use.eventId, detail }); } catch (e) { run.res = null; }
+        // 'pending' は端末に残して後で送り直す(バトル部の口)。画面では「送りました」と同じ扱い
+        return { ok: !!(run.res && (run.res.outcome === 'sent' || run.res.outcome === 'pending')) };
+      },
+      onClose: (why) => {
+        setCardRaidChallenge(null); setCardBgm(null); setCardOrigin('home');
+        setGameState('RAID_JACK');
+        if (why === 'done' && run.res) openRaidXmasResult({ ...run.res, way: 'card' });
+      },
+    });
+    setCardOrigin('raid');
+    setGameState('CARD_TOP');
+  };
   // レイドの結果(モンヒロビート)を閉じてレイド画面へ戻る
   const exitRaidJackRhythmResult = (toDebug = false) => {
     raidJackLastClaimRef.current = 0;   // 倒した直後の報酬を、すぐ確かめる
@@ -149903,7 +149951,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {roomLinkNotice&&(<div className="pointer-events-none fixed inset-x-0 top-0 z-[99000] flex justify-center px-2 pt-[max(env(safe-area-inset-top),6px)]"><div data-room-link-notice role="alert" className="pointer-events-auto w-full max-w-md rounded-2xl border-2 border-sky-400 bg-slate-900/95 p-3 shadow-2xl"><p className="text-[13px] font-black leading-snug text-white" style={JA_WRAP_STYLE}>{jaWrap(roomLinkNotice)}</p><button type="button" className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[14px] font-black text-white" onClick={()=>setRoomLinkNotice('')}>閉じる</button></div></div>)}
         <CardMultiAwayBar busy={CARD_PVP_NOTICE_BUSY.includes(gameState)} onReturn={()=>{CARD_PVP_BACK.request();if(!String(gameState).startsWith('CARD_'))setCardOrigin('home');setGameState('CARD_TOP');}}/>
         <CardPvpInviteNotice enabled={!!cardBattleEntryVisible&&(cardPvpOpen()||!!cardBattleDebugHome)} busy={CARD_PVP_NOTICE_BUSY.includes(gameState)} onAccept={()=>{if(!String(gameState).startsWith('CARD_'))setCardOrigin('home');setGameState('CARD_TOP');}}/>
-        {(gameState==='CARD_TOP'||gameState==='CARD_BATTLE'||(gameState==='CARD_PACK_OPEN'&&!cardPackOpen))&&(<CardBattleScreen screen={gameState} onNavigate={setGameState} sessionTickets={ownedItemCount(ownedItems,RHYTHM_BUDDY_TICKET_ITEM_ID)} onUseSessionTicket={consumeBuddyTicket} onRefundSessionTicket={refundBuddyTicket} onExit={()=>{void exitCardBattle();}} exitLabel={cardOrigin==='debug'?'デバッグ設定へ戻る':'HOMEへ戻る'} seenStoryIds={rhythmEventStorySeen||[]} debug={cardOrigin==='debug'} onBgm={playCardBgm} onQuickLoops={awardCardQuickLoops}
+        {(gameState==='CARD_TOP'||gameState==='CARD_BATTLE'||(gameState==='CARD_PACK_OPEN'&&!cardPackOpen))&&(<CardBattleScreen raidChallenge={cardRaidChallenge} screen={gameState} onNavigate={setGameState} sessionTickets={ownedItemCount(ownedItems,RHYTHM_BUDDY_TICKET_ITEM_ID)} onUseSessionTicket={consumeBuddyTicket} onRefundSessionTicket={refundBuddyTicket} onExit={()=>{void exitCardBattle();}} exitLabel={cardOrigin==='debug'?'デバッグ設定へ戻る':'HOMEへ戻る'} seenStoryIds={rhythmEventStorySeen||[]} debug={cardOrigin==='debug'} onBgm={playCardBgm} onQuickLoops={awardCardQuickLoops}
           quickRun={cardQuickRunView()}
           quickAutoReady={autoQuickRunConfigured(autoSettings)} onSettings={(settings)=>setCardQuickAutoStart(!!(settings&&settings.quickAutoStart))} onOpenMarket={()=>{setCardMarketEntry(true);setMarketExchangeError('');void loadCardShop();setGameState('BREEDER_MARKET');}}
           topAssistant={cardTopAssistant}

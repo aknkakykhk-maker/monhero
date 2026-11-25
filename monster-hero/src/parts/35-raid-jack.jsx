@@ -361,7 +361,11 @@ const raidJackMakeEnemy = (kind, tierIndex, mode, opts = {}) => {
     if (!base) return null;
     const after = opts.pumpkin === true && kind === 'a' && tierIndex === RAID_XMAS_A_TIERS.length - 1;
     const t = after ? RAID_XMAS_AFTER_BOSS : xt;
-    return { ...base, name: t.name, maxHp: t.hp, hp: t.hp, atk: t.atk, raidJackTier: xt.id, raidXmas: true,
+    // 技の名前はサンタの物(35-raid-xmas.jsx の RAID_XMAS_SKILL_NAMES)。バトル中の見出し・ログ・敵の詳細はこの敵の normal / special / actions を読む
+    const sn = RAID_XMAS_SKILL_NAMES;
+    return { ...base, name: t.name, maxHp: t.hp, hp: t.hp, atk: t.atk, raidJackTier: xt.id, raidXmas: true, emoji: '🎅',
+      normal: sn.normal, special: sn.special,
+      actions: { ...(base.actions || {}), sweep: sn.sweep, rush: sn.rush, pierce: sn.pierce, roar: sn.roar, allout: sn.allout },
       imgUrl: (typeof RAID_XMAS_BOSS_IMG !== 'undefined' ? RAID_XMAS_BOSS_IMG : base.imgUrl), poseImgUrl: null };
   }
   const tier = raidJackTierAt(kind, tierIndex);
