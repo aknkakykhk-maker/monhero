@@ -1349,11 +1349,11 @@ const momosukeSantaCostume = Object.freeze({
 });
 // ソラシドのクリスマス(探偵の衣装・2026-11-25 クリスマスイベント r1119-172。お話では名探偵役)。みゅあ・きき・ももすけのサンタと同じ売り方・同じ期間。
 //   絵は images/assistant/santa/sorashido_*(立ち絵は stand-santa、全身画は fullbody/sorashido_santa)。原本は tools/art-sources/assistants/sorashido/santa/received/(加工せずに保管)。
-//   紺のブレザー・赤い蝶ネクタイ・丸い眼鏡・紺の半ズボン・サンタ帽の猫2匹。虫めがねは無く手の小物はノートPCだけ(社長「このまま」)。名前は仮
+//   紺のブレザー・赤い蝶ネクタイ・丸い眼鏡・紺の半ズボン・サンタ帽の猫2匹。虫めがねは無く手の小物はノートPCだけ(社長「このまま」)
 const SORASHIDO_XMAS_COSTUME_ART = "images/assistant/santa/face/sorashido_happy.PNG?v=e847972a1e4d";
 const sorashidoXmasCostume = Object.freeze({
   id: 'sorashido_santa_2026', assistantId: 'sorashido',
-  name: '聖夜の名探偵', desc: 'クリスマスの衣装。紺のブレザーに赤い蝶ネクタイ、丸い眼鏡の探偵の姿です。腰の猫のキーホルダーもサンタ帽をかぶっています。',
+  name: '探偵', desc: 'クリスマスの衣装。紺のブレザーに赤い蝶ネクタイ、丸い眼鏡の探偵の姿です。腰の猫のキーホルダーもサンタ帽をかぶっています。',
   get released() { return Date.now() >= Date.parse(ASSISTANT_COSTUME_XMAS_START_AT); },
   icon: SORASHIDO_XMAS_COSTUME_ART,
   imageDir: 'images/assistant/santa',
