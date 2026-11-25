@@ -1324,7 +1324,7 @@ const muaSantaCostume = Object.freeze({
 const KIKI_SANTA_COSTUME_ART = "images/assistant/santa/face/kiki_happy.PNG?v=5a78e5be353e";
 const kikiSantaCostume = Object.freeze({
   id: 'kiki_santa_2026', assistantId: 'kiki',
-  name: '王道のサンタ', desc: 'クリスマスの衣装。白いファーの真っ赤なサンタケープとスカートに、柊の飾りのサンタ帽です。',
+  name: 'クリスマス', desc: 'クリスマスの衣装。白いファーの真っ赤なサンタケープとスカートに、柊の飾りのサンタ帽です。',
   get released() { return Date.now() >= Date.parse(ASSISTANT_COSTUME_XMAS_START_AT); },
   icon: KIKI_SANTA_COSTUME_ART,
   imageDir: 'images/assistant/santa',
