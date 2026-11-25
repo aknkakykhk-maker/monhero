@@ -17,7 +17,8 @@
 const RAID_XMAS_EVENT = Object.freeze({
   id: 'raid_xmas_2026',             // raid_jack_hits.event_id(本番)
   debugId: 'raid_xmas_debug',       // デバッグで送るとき(本番の集計を汚さない)
-  name: '(仮)黒いサンタ',            // ボスの名前は社長が後で決める。画面はここを読む(直書きしない)
+  title: '聖夜の名探偵',             // イベントの名前(社長決定)。画面に出すイベント名はここを読む
+  name: '黒いサンタ(仮)',            // ボスの名前は社長が後で決める。画面はここを読む(直書きしない)
   startAt: '2026-11-30T10:00:00+09:00',
   endAt:   '2026-12-31T04:00:00+09:00',
   storageKey: 'mh_raid_xmas_v1',

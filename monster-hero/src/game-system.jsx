@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: bb1f79906b7616e0
+// generated-sha256: 4ce63cafeaa1f077
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -38890,7 +38890,8 @@ const raidJackRevokeUnearned = async (state, gifts, breederId, eventId) => {
 const RAID_XMAS_EVENT = Object.freeze({
   id: 'raid_xmas_2026',
   debugId: 'raid_xmas_debug',
-  name: '黒いサンタ(仮)',
+  title: '聖夜の名探偵',                 // イベントの名前(社長決定 2026-11-25)。副題の案は「〜雪山ペンションと消えたプレゼント〜」
+  name: '黒いサンタ(仮)',               // ボスの名前(仮・社長の返事待ち)。ボスは「サンタ」が覚醒した「覚醒サンタ」
   startAt: '2026-11-30T10:00:00+09:00',
   endAt: '2026-12-31T04:00:00+09:00',
   storageKey: 'mh_raid_xmas_v1',
