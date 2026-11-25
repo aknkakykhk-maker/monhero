@@ -39,3 +39,9 @@
 
 - 敵の待機の動きは `data-tactics-look="rich"` のときだけ動く。端末が重いと、見張りが画面の軽さを自動で下げ(`calm` になる)、敵の待機の動きが止まる。設定の表示は「動かす」のまま
 - 一度、バトル中の戦場の上へ `[data-battle-speed]::after` で全面の飾りを重ねたところ、iPhone でこれが起きた。**バトル中の画面には、全面の飾り・背景の重ね・`isolation` を足さない**
+
+## タイトル画面のクリスマス(2026-11-25・r1125-061)
+
+- `TITLE_ART_OPTIONS` の先頭に `xmas`(縦 941×1672 / 横 1672×941 / ほぼ正方形 1354×1162 の JPEG・ハロウィンと同じ形)。正方形は原本の上40px・下138pxを切ってから広げた
+- 期間・おまかせ・開始前に出さない決まりはホームと同じ(`TITLE_ART_XMAS_FROM`〜`UNTIL`・`titleArtOptionsAt`)。保存キー `mh_title_art` に値 `'xmas'` が入るだけ
+- `index.html` の先読み(`TITLE_ARTS`・`TITLE_ARTS_WIDE`・`TITLE_ARTS_SQUARE` とおまかせの時刻)も同じ時刻を持っている。変えるときは両方そろえる

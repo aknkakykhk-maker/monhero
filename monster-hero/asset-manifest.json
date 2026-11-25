@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "8bf635a4d839",
-  "packs": {"beat":{"bytes":311557065,"count":166},"battle":{"bytes":739907157,"count":1836},"card":{"bytes":38085297,"count":1046},"all":{"bytes":1089549519,"count":3048},"core":{"bytes":25996605,"count":25}},
+  "id": "a08a2cad2182",
+  "packs": {"beat":{"bytes":311557065,"count":166},"battle":{"bytes":741133597,"count":1839},"card":{"bytes":38085297,"count":1046},"all":{"bytes":1090775959,"count":3051},"core":{"bytes":25997940,"count":25}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"b43d691d4773","size":2833344,"pack":"beat"},
@@ -139,6 +139,9 @@
     "data/images/title-screen-halloween-square.jpg": {"v":"0c063aa9bc1b","size":422077,"pack":"battle"},
     "data/images/title-screen-halloween-wide.jpg": {"v":"a5a04d125370","size":364966,"pack":"battle"},
     "data/images/title-screen-halloween.jpg": {"v":"d63064f3f579","size":368790,"pack":"battle"},
+    "data/images/title-screen-xmas-square.jpg": {"v":"4628d3e0bd2c","size":438432,"pack":"battle"},
+    "data/images/title-screen-xmas-wide.jpg": {"v":"f9c056f6f221","size":410114,"pack":"battle"},
+    "data/images/title-screen-xmas.jpg": {"v":"d7444964decf","size":377894,"pack":"battle"},
     "images/assistant/atsu_angry.PNG": {"v":"34d64dc9fa92","size":174773,"pack":"battle"},
     "images/assistant/atsu_crying.PNG": {"v":"578d67efe73a","size":176272,"pack":"battle"},
     "images/assistant/atsu_excited.PNG": {"v":"1cfd7faf13a7","size":176399,"pack":"battle"},
@@ -3053,7 +3056,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"112bb70986b9","size":319705,"pack":"core"},
+    "tailwind.css": {"v":"13c1dbeba3b9","size":319705,"pack":"core"},
     "data/images/images-ally.js": {"v":"7fcc9331d4b6","size":92225,"pack":"core"},
     "data/images/images-enemy.js": {"v":"0d3643e9bc69","size":3262,"pack":"core"},
     "data/ally-monsters.js": {"v":"6737b7dced48","size":60894,"pack":"core"},
@@ -3075,6 +3078,6 @@
     "data/assistant-masmon-techs.js": {"v":"353cf73676a6","size":113841,"pack":"core"},
     "data/assistant-life-rel-talks.js": {"v":"cde51ded5428","size":225977,"pack":"core"},
     "data/success-sounds.js": {"v":"9692dd51493a","size":19367,"pack":"core"},
-    "game-system.compiled.js": {"v":"b28e479e944b","size":12527455,"pack":"core"}
+    "game-system.compiled.js": {"v":"a83121e27b96","size":12528790,"pack":"core"}
   }
 }
