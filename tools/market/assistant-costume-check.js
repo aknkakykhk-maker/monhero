@@ -122,6 +122,19 @@ check('きゅうこのサンタ: 開始の前は見えず、開始から見え�
   xBefore.releasedAssistantCostumes().every(c => c.id !== 'kyuko_santa_2026') && xDuring.releasedAssistantCostumes().some(c => c.id === 'kyuko_santa_2026')
   && xDuring.assistantCostumeSaleIn(xDuring.assistantCostumeById('kyuko_santa_2026'), 'beatPoint')?.cost === 1000
   && xAfter.assistantCostumeSaleIn(xAfter.assistantCostumeById('kyuko_santa_2026'), 'diamond')?.cost === 100000);
+check('ドラのサンタ: 開始の前は見えず、開始から見える・期間中はビートP1000・終わりからダイヤ100000',
+  xBefore.releasedAssistantCostumes().every(c => c.id !== 'dra_santa_2026') && xDuring.releasedAssistantCostumes().some(c => c.id === 'dra_santa_2026')
+  && xDuring.assistantCostumeSaleIn(xDuring.assistantCostumeById('dra_santa_2026'), 'beatPoint')?.cost === 1000
+  && xAfter.assistantCostumeSaleIn(xAfter.assistantCostumeById('dra_santa_2026'), 'diamond')?.cost === 100000);
+{
+  // ドラは顔だけ(立ち絵・全身画は無い)。顔の絵と顔アイコンが8表情+寝顔そろっていること
+  const miss = [];
+  for (const e of [...EXPRESSIONS, 'sleep']) for (const sub of ['', 'face/']) {
+    const rel = `images/assistant/santa/${sub}dra_${e}.PNG`;
+    if (!fs.existsSync(path.join(ROOT, 'monster-hero', rel))) miss.push(rel);
+  }
+  check('ドラのサンタ: 顔の絵と顔アイコン(8表情+寝顔)が全部ある', miss.length === 0, miss.slice(0, 4).join(' / '));
+}
 check('ききのサンタ: 開始の前は見えず、開始から見える・期間中はビートP1000・終わりからダイヤ100000',
   kikiSantaOf(xBefore).length === 0 && kikiSantaOf(xDuring).length === 1
   && xDuring.assistantCostumeSaleIn(xDuring.assistantCostumeById('kiki_santa_2026'), 'beatPoint')?.cost === 1000
