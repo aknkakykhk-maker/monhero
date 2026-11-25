@@ -750,6 +750,11 @@
       "pure": true
     },
     {
+      "file": "82-card-raid-core.jsx",
+      "role": "MFバトルカード: レイドのボスと戦う(クリスマスイベント 2026)。ボスのデッキ・考え方・ライフの倍率・与ダメージの換算(計算だけ。画面は 84・レイドへ足すのはバトル部の口)。設計 docs/spec/CARD_RAID_XMAS.md",
+      "pure": true
+    },
+    {
       "file": "83-card-battle-lines.jsx",
       "role": "MFバトルカードの相手の助手のひとこと(6人×14場面の台詞・表情・場面の選び方)",
       "pure": true
