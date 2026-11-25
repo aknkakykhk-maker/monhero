@@ -49,10 +49,6 @@
    "date": "2026-11-25T17:21:25+09:00",
    "subject": "素材: atsu のクリスマスイベントの探偵の衣装の元絵(チャッピーで作成・加工なし)"
   },
-  "25dcc6c2": {
-   "date": "2026-11-25T12:02:06+00:00",
-   "subject": "助手: きゅうこのサンタの顔アイコンを表情ごとにそろえる・新しい着替えの点検の手順と道具(r1125-040)"
-  },
   "2805e672": {
    "date": "2026-11-25T12:06:58+00:00",
    "subject": "助手: あつのサンタの顔アイコンを案Cにそろえて王冠まで入れる(r1125-040)"
@@ -192,6 +188,10 @@
   "70aa3c0c": {
    "date": "2026-11-23T22:54:35+09:00",
    "subject": "erubin_sekiyuou 全身イラスト9枚を肌色統一版に差し替え"
+  },
+  "718dff0c": {
+   "date": "2026-11-25T15:19:10+00:00",
+   "subject": "助手: きゅうこのクリスマスの顔アイコンを、同じ表情のふだんにそろえる(r1125-048・r1125-050)"
   },
   "74aa2d14c": {
    "date": "2026-11-14T19:55:36+00:00",
@@ -364,6 +364,10 @@
   "fa7db52a": {
    "date": "2026-11-25T16:59:31+09:00",
    "subject": "ききハロウィン顔アイコン差し替えとexcited全身の透過修正"
+  },
+  "ff54166f": {
+   "date": "2026-11-25T23:29:58+09:00",
+   "subject": "素材: あつのクリスマス探偵衣装の改訂版を追加"
   },
   "ffdba7903": {
    "date": "2026-11-20T16:03:40+09:00",
@@ -859,15 +863,15 @@
   "monster-hero/images/assistant/santa/face/kiki_surprise.PNG": "c35e7ba7d076 be3ada39",
   "monster-hero/images/assistant/santa/face/kiki_troubled.PNG": "ba4ed80dda0c be3ada39",
   "monster-hero/images/assistant/santa/face/kiki_wink.PNG": "682a95ca6e80 be3ada39",
-  "monster-hero/images/assistant/santa/face/kyuko_angry.PNG": "f08389c5d1ed 25dcc6c2",
-  "monster-hero/images/assistant/santa/face/kyuko_crying.PNG": "f4834c6cdbbe 25dcc6c2",
-  "monster-hero/images/assistant/santa/face/kyuko_excited.PNG": "824d93f11d31 25dcc6c2",
-  "monster-hero/images/assistant/santa/face/kyuko_happy.PNG": "1c801d7d53dc 25dcc6c2",
-  "monster-hero/images/assistant/santa/face/kyuko_normal.PNG": "088e13762db9 25dcc6c2",
-  "monster-hero/images/assistant/santa/face/kyuko_sleep.PNG": "2d04c10725ad 25dcc6c2",
-  "monster-hero/images/assistant/santa/face/kyuko_surprise.PNG": "6e83ca280886 25dcc6c2",
-  "monster-hero/images/assistant/santa/face/kyuko_troubled.PNG": "47976b99dd0a 25dcc6c2",
-  "monster-hero/images/assistant/santa/face/kyuko_wink.PNG": "0165432ba409 25dcc6c2",
+  "monster-hero/images/assistant/santa/face/kyuko_angry.PNG": "0e776f9c7862 718dff0c",
+  "monster-hero/images/assistant/santa/face/kyuko_crying.PNG": "7fa5f952df5c 718dff0c",
+  "monster-hero/images/assistant/santa/face/kyuko_excited.PNG": "597960822bd8 718dff0c",
+  "monster-hero/images/assistant/santa/face/kyuko_happy.PNG": "b2e1d411fd68 718dff0c",
+  "monster-hero/images/assistant/santa/face/kyuko_normal.PNG": "d55dc86f632c 718dff0c",
+  "monster-hero/images/assistant/santa/face/kyuko_sleep.PNG": "d7f6b1a5633b 718dff0c",
+  "monster-hero/images/assistant/santa/face/kyuko_surprise.PNG": "b19af3e0fb21 718dff0c",
+  "monster-hero/images/assistant/santa/face/kyuko_troubled.PNG": "dbd0b5f18dab 718dff0c",
+  "monster-hero/images/assistant/santa/face/kyuko_wink.PNG": "3d4070905de5 718dff0c",
   "monster-hero/images/assistant/santa/face/momosuke_angry.PNG": "c47de2386186 23d1cc00d",
   "monster-hero/images/assistant/santa/face/momosuke_crying.PNG": "5f843a08826f 23d1cc00d",
   "monster-hero/images/assistant/santa/face/momosuke_excited.PNG": "416c7493658b 23d1cc00d",
@@ -1180,15 +1184,25 @@
   "tools/art-sources/assistants/atsu/normal/fullbody/atsu-8expressions-sheet.png": "ba1d97eafebc 1b459ad96",
   "tools/art-sources/assistants/atsu/normal/fullbody/atsu_transparent_fixed.png": "e9f8cea04aad 52f83eeff",
   "tools/art-sources/assistants/atsu/santa/received/atsu_santa_angry.png": "7276db5da289 24acf71fe",
+  "tools/art-sources/assistants/atsu/santa/received/atsu_santa_angry_v2.png": "16d3f11493b9 ff54166f",
   "tools/art-sources/assistants/atsu/santa/received/atsu_santa_crying.png": "3447ad29f8cd 24acf71fe",
+  "tools/art-sources/assistants/atsu/santa/received/atsu_santa_crying_v2.png": "5647712be730 ff54166f",
   "tools/art-sources/assistants/atsu/santa/received/atsu_santa_excited.png": "b9fd6d88f779 24acf71fe",
+  "tools/art-sources/assistants/atsu/santa/received/atsu_santa_excited_v2.png": "153864aee68e ff54166f",
   "tools/art-sources/assistants/atsu/santa/received/atsu_santa_fullbody.png": "4f384c8567dc 24acf71fe",
+  "tools/art-sources/assistants/atsu/santa/received/atsu_santa_fullbody_v2.png": "3d16d0fe412f ff54166f",
   "tools/art-sources/assistants/atsu/santa/received/atsu_santa_happy.png": "a4be14fde8e8 24acf71fe",
+  "tools/art-sources/assistants/atsu/santa/received/atsu_santa_happy_v2.png": "300fcb1b2049 ff54166f",
   "tools/art-sources/assistants/atsu/santa/received/atsu_santa_normal.png": "a7371b16da8d 24acf71fe",
+  "tools/art-sources/assistants/atsu/santa/received/atsu_santa_normal_v2.png": "761e9c064d0c ff54166f",
   "tools/art-sources/assistants/atsu/santa/received/atsu_santa_sleep.png": "46718e2e9d22 24acf71fe",
+  "tools/art-sources/assistants/atsu/santa/received/atsu_santa_sleep_v2.png": "bcf0b367d4af ff54166f",
   "tools/art-sources/assistants/atsu/santa/received/atsu_santa_surprise.png": "82f3b161da61 24acf71fe",
+  "tools/art-sources/assistants/atsu/santa/received/atsu_santa_surprise_v2.png": "6d474beb6a3e ff54166f",
   "tools/art-sources/assistants/atsu/santa/received/atsu_santa_troubled.png": "3a3851df2b20 24acf71fe",
+  "tools/art-sources/assistants/atsu/santa/received/atsu_santa_troubled_v2.png": "f51c0274e2ea ff54166f",
   "tools/art-sources/assistants/atsu/santa/received/atsu_santa_wink.png": "50f1c6c256a2 24acf71fe",
+  "tools/art-sources/assistants/atsu/santa/received/atsu_santa_wink_v2.png": "30cb1670df7e ff54166f",
   "tools/art-sources/assistants/dra/normal/bust/dra-expressions-sheet.png": "08e3258d7aaa 0f8437591",
   "tools/art-sources/assistants/dra/santa/received/dra_santa_angry.png": "04bfd55ba2ba d71ccfab9",
   "tools/art-sources/assistants/dra/santa/received/dra_santa_crying.png": "1dd2ffcb6b4b d71ccfab9",
