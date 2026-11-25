@@ -5274,7 +5274,11 @@ function MonsterHeroGame() {
     if (!current || current.finished || runStage === null) return { xp:0, gold:0 };
     const cleared = Math.max(0, (Number(wave) || 1) - 1);
     if (cleared <= 0) return { xp:0, gold:0 };
-    const { xpMult, goldMult } = runRewardMultipliers();
+    const { xpMult: xpMultBase, goldMult: goldMultBase } = runRewardMultipliers();
+    // クリスマスの期間中はモンヒロバトルのごほうび1.5倍(配るときの awardRunRewards と同じ倍率)
+    const xmasBonus = xmasBattleBonusRateAt(Date.now());
+    const xpMult = xpMultBase * xmasBonus;
+    const goldMult = goldMultBase * xmasBonus;
     return {
       xp: applyQuickXpPolicy(xpForWavesClearedInMode(cleared, xpMult, runMode), runMode, quickRewardPolicyRunRef.current),
       gold: applyQuickDiamondPolicy(goldForWavesClearedInMode(cleared, goldMult, runMode), runMode, quickRewardPolicyRunRef.current),
@@ -11391,7 +11395,8 @@ function MonsterHeroGame() {
     const quickDifficulty = autoSettings.quickRun.difficulty;
     if (!isAutoQuickRunDifficultyAllowed(quickDifficulty, quickClearCounts)) return null;
     // 周回数は 19-difficulties-and-rules.jsx の proQuickLoopsFor(Hard 10 〜 Legend 300・極限 500〜。Normal 以下は今までの式。負けたら後ろのWAVEほど重く数える。2026-11-10 社長の表)
-    const loops = proQuickLoopsFor(wavesCleared, difficulty, extremeRunRef.current ? extremeDifficulty : null);
+    // クリスマスの期間中は周回数も1.5倍(35-raid-xmas.jsx の xmasBattleBonusRateAt。端数は切り捨て)
+    const loops = Math.floor(proQuickLoopsFor(wavesCleared, difficulty, extremeRunRef.current ? extremeDifficulty : null) * xmasBattleBonusRateAt(Date.now()));
     if (loops <= 0) return null;
     const awardedPro = await awardBackQuickLoops(loops);
     return awardedPro ? { ...awardedPro, wavesCleared } : null;
@@ -11486,7 +11491,12 @@ function MonsterHeroGame() {
     if (wavesCleared < wave) await saveMissionProgress('battle');
     if (wavesCleared <= 0) { setFinalRewardSummary({ quickMode: isQuickMode(runMode), breederXpGain: 0, breederLevelBefore: breederLevel, breederLevelAfter: breederLevel, goldBefore: gold, goldAfter: gold, heroBondGain: null, allyBondGains: [], waveHistory }); return; }
     // 極限チャレンジはスコア×20・経験値×25・ダイヤ×7.5。通常の難易度表ではなく EXTREME_SETTING を使う
-    const { scoreMult, goldMult, xpMult } = runRewardMultipliers();
+    const { scoreMult, goldMult: goldMultBase, xpMult: xpMultBase } = runRewardMultipliers();
+    // クリスマスの期間中はモンヒロバトルのごほうび(ブリーダー経験値・絆経験値・ダイヤ)を1.5倍(35-raid-xmas.jsx)。
+    //   スコア(scoreMult)には掛けない = ランキング・自己ベストは変わらない
+    const xmasBonus = xmasBattleBonusRateAt(Date.now());
+    const goldMult = goldMultBase * xmasBonus;
+    const xpMult = xpMultBase * xmasBonus;
 
     // クイックモードは経験値とダイヤだけ1.5倍(スコア倍率は難易度のまま)
     const breederXpGain = applyQuickXpPolicy(xpForWavesClearedInMode(wavesCleared, xpMult, runMode), runMode, quickRewardPolicyRunRef.current);
@@ -11594,7 +11604,7 @@ function MonsterHeroGame() {
       ? waveHistory.map(entry => ({ ...entry, xpGain: 0 })) : waveHistory;
     // プロのランぶんのクイック周回報酬。ここまでで通常の報酬は配り終えている
     const proQuickAward = await awardProRunQuickLoops(wavesCleared);
-    setFinalRewardSummary({ quickMode: isQuickMode(runMode), breederXpGain, breederLevelBefore, breederLevelAfter, goldBefore, goldAfter, heroBondGain, allyBondGains, waveHistory: rewardWaveHistory, proQuickAward });
+    setFinalRewardSummary({ quickMode: isQuickMode(runMode), breederXpGain, breederLevelBefore, breederLevelAfter, goldBefore, goldAfter, heroBondGain, allyBondGains, waveHistory: rewardWaveHistory, proQuickAward, xmasBonus: xmasBonus > 1 ? xmasBonus : null });
     // ここまでで、この周ぶんの報酬はすべて書き終えている。
     // 端末へ書けていなければ、次の周へ行かずにここで止める(∞周回のとき)
     checkStorageTrouble();
@@ -14810,7 +14820,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setWaveResult({wave,waveMult,turn:turnCount,totalTurnCount:newTotalTurnCount,pendingUltimateDistanceBreak:!!distanceBreakThreshold,remainingTurns,turnMult,totalDamage:totalWaveDamage,roundScore:finalRoundScore,totalScore:score+finalRoundScore,distDamage:finalDistDamage,normalGainedDistBonus,gainedDistBonus,newDistBonus,baseRecoveryDelta,recoveryDelta,totalDistDamage:newTotalDistDamage,totalAllDamage:newTotalAllDamage,totalRecoveryDelta:newTotalRecoveryDelta});
     await saveMissionProgress('battle');
     await saveMissionProgress('win');
-    setWaveHistory(prev => [...prev, { wave, roundScore: finalRoundScore, totalScore: score + finalRoundScore, ...(extremeRun?{xpGain:waveXpGainInMode(wave, xpMultiplier, runMode)}:{xpGain: waveXpGainInMode(wave, scoreMultiplier, runMode)}), goldGain: waveGoldGainInMode(wave, goldMultiplier, runMode) }]);
+    setWaveHistory(prev => [...prev, { wave, roundScore: finalRoundScore, totalScore: score + finalRoundScore, ...(extremeRun?{xpGain:waveXpGainInMode(wave, xpMultiplier*xmasBattleBonusRateAt(Date.now()), runMode)}:{xpGain: waveXpGainInMode(wave, scoreMultiplier*xmasBattleBonusRateAt(Date.now()), runMode)}), goldGain: waveGoldGainInMode(wave, goldMultiplier*xmasBattleBonusRateAt(Date.now()), runMode) }]);   // 表示の経験値・ダイヤもクリスマスの1.5倍をそろえる(配る量と同じ)
     setTimeout(()=>{setDefeatFx(null); if(runGenerationRef.current!==defeatGeneration)return; advanceRunStage('WAVE_RESULT');},battleMs(defeatFxOn?1600:500));
     return true;
   };
