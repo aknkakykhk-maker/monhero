@@ -802,7 +802,7 @@ const assistantFaceImage = (who, expression) => (who && who.imagePrefix)
 const ASSISTANT_STAND_ART = Object.freeze({
   mua: 'stand-normal', 'mua:halloween': 'stand-halloween', 'mua:card-master': 'stand-card-master', 'mua:santa': 'stand-santa', // サンタ(2026-11-25 クリスマスイベント r1119-172)
   // 8表情の全身画がある助手(2026-11-14)。作り方は tools/assistant/life-stand-from-fullbody.py
-  kiki: 'stand-normal', 'kiki:halloween': 'stand-halloween', 'kiki:twintail': 'stand-twintail', 'kiki:santa': 'stand-santa', momosuke: 'stand-normal', 'momosuke:halloween': 'stand-halloween', 'momosuke:santa': 'stand-santa', atsu: 'stand-normal', 'atsu:santa': 'stand-santa', kyuko: 'stand-normal', 'kyuko:winter': 'stand-winter', sorashido: 'stand-normal', 'sorashido:hosei': 'stand-hosei', 'sorashido:santa': 'stand-santa', erubin: 'stand-normal', 'erubin:sekiyuou': 'stand-sekiyuou',
+  kiki: 'stand-normal', 'kiki:halloween': 'stand-halloween', 'kiki:twintail': 'stand-twintail', 'kiki:santa': 'stand-santa', momosuke: 'stand-normal', 'momosuke:halloween': 'stand-halloween', 'momosuke:santa': 'stand-santa', atsu: 'stand-normal', 'atsu:santa': 'stand-santa', kyuko: 'stand-normal', 'kyuko:winter': 'stand-winter', sorashido: 'stand-normal', 'sorashido:hosei': 'stand-hosei', 'sorashido:santa': 'stand-santa', erubin: 'stand-normal', 'erubin:sekiyuou': 'stand-sekiyuou', 'erubin:santa': 'stand-santa',
 });
 const ASSISTANT_STAND_EXPRESSIONS = Object.freeze(['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited']);
 // outfit … 服の名前(ふだんの服は '')。表情が8つのどれでもない・絵が無い助手・服は null(今までの立ち絵へ)
@@ -829,7 +829,7 @@ const assistantFullImage = (who, expression) => (who && who.imagePrefix)
 const ASSISTANT_FULLBODY_ART = Object.freeze({
   atsu: 'atsu', 'atsu:santa': 'atsu_santa', kiki: 'kiki', 'kiki:halloween': 'kiki_halloween', 'kiki:twintail': 'kiki_twintail', 'kiki:santa': 'kiki_santa', kyuko: 'kyuko', 'kyuko:winter': 'kyuko_winter', momosuke: 'momosuke', 'momosuke:halloween': 'momosuke_halloween', 'momosuke:santa': 'momosuke_santa',
   mua: 'mua', 'mua:halloween': 'mua_halloween', 'mua:card-master': 'mua_card-master', 'mua:santa': 'mua_santa', sorashido: 'sorashido', 'sorashido:hosei': 'sorashido_hosei', 'sorashido:santa': 'sorashido_santa',
-  erubin: 'erubin', 'erubin:sekiyuou': 'erubin_sekiyuou',
+  erubin: 'erubin', 'erubin:sekiyuou': 'erubin_sekiyuou', 'erubin:santa': 'erubin_santa',
 });
 // 表情ごとの全身画(社長「時間があったら全身画の8表情を作りたい」)。届いたら、上の名前をキーに、あるぶんの表情名を足すだけ(絵は <名前>__<表情>.png)。
 //   例: atsu: ['happy', 'wink']。ここに無い表情は、表情なしの絵(<名前>.png)を出す。表情名は今の立ち絵と同じ8つ(angry・crying・excited・happy・normal・surprise・troubled・wink)
@@ -838,7 +838,7 @@ const ASSISTANT_FULLBODY_EXPRESSIONS = Object.freeze({
   kiki: ASSISTANT_STAND_EXPRESSIONS, kiki_halloween: ASSISTANT_STAND_EXPRESSIONS, kiki_twintail: ASSISTANT_STAND_EXPRESSIONS, kiki_santa: ASSISTANT_STAND_EXPRESSIONS, // 2026-11-12 社長から届いたききの8表情(ふだん・ハロウィン)
   kyuko: ASSISTANT_STAND_EXPRESSIONS, kyuko_winter: ASSISTANT_STAND_EXPRESSIONS, // 2026-11-12 社長から届いたキュウコの8表情 / 2026-11-16 冬服の8表情
   momosuke: ASSISTANT_STAND_EXPRESSIONS, momosuke_halloween: ASSISTANT_STAND_EXPRESSIONS, momosuke_santa: ASSISTANT_STAND_EXPRESSIONS, // 2026-11-15 社長から届いたももすけの8表情(ふだん・ハロウィン)
-  atsu: ASSISTANT_STAND_EXPRESSIONS, atsu_santa: ASSISTANT_STAND_EXPRESSIONS, sorashido: ASSISTANT_STAND_EXPRESSIONS, sorashido_hosei: ASSISTANT_STAND_EXPRESSIONS, sorashido_santa: ASSISTANT_STAND_EXPRESSIONS, erubin: ASSISTANT_STAND_EXPRESSIONS, erubin_sekiyuou: ASSISTANT_STAND_EXPRESSIONS, // 2026-11-12 社長から届いたあつ・ソラシドの8表情(あつはすその切れを描き足し、ソラシドは髪のふちのもやを直した)
+  atsu: ASSISTANT_STAND_EXPRESSIONS, atsu_santa: ASSISTANT_STAND_EXPRESSIONS, sorashido: ASSISTANT_STAND_EXPRESSIONS, sorashido_hosei: ASSISTANT_STAND_EXPRESSIONS, sorashido_santa: ASSISTANT_STAND_EXPRESSIONS, erubin: ASSISTANT_STAND_EXPRESSIONS, erubin_sekiyuou: ASSISTANT_STAND_EXPRESSIONS, erubin_santa: ASSISTANT_STAND_EXPRESSIONS, // 2026-11-12 社長から届いたあつ・ソラシドの8表情(あつはすその切れを描き足し、ソラシドは髪のふちのもやを直した)
 });
 // 全身画の名前(ASSISTANT_FULLBODY_ART の値)と表情から、絵の置き場所を返す(画像のパスはここに集める)。
 //   その表情の絵が無いときは、表情なしの絵(<名前>.png)。マーケットの着替えの全身絵プレビュー(20-market-notices-help.jsx)もここを使う

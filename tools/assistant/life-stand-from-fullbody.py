@@ -61,6 +61,7 @@ HEADS = {
     'sorashido:santa': dict(name='sorashido_santa', stand='stand-santa', prefix='sorashido', chin_frac=0.43, above=0.95, match_scale=True, scene_same_frame=True, sleep=True),  # ソラシドのクリスマス(探偵・2026-11-25)
     'erubin': dict(name='erubin', stand='stand-normal', prefix='erubin', chin_frac=0.43, above=None, match_scale=True, scene_same_frame=True),
     'erubin:sekiyuou': dict(name='erubin_sekiyuou', stand='stand-sekiyuou', prefix='erubin', chin_frac=0.43, above=None, match_scale=True, scene_same_frame=True),
+    'erubin:santa': dict(name='erubin_santa', stand='stand-santa', prefix='erubin', chin_frac=0.43, above=0.95, match_scale=True, scene_same_frame=True, sleep=True),  # えるびんのサンタ(2026-11-25)
 }
 ALPHA = 40  # これより濃い画素を「体」とみなす(端の検査 life-stand-edge-check.js と同じ考え)
 
