@@ -53,7 +53,8 @@
    "name": "ソラシド",
    "prefix": "sorashido",
    "outfits": {
-    "hosei": "補正"
+    "hosei": "補正",
+    "santa": "クリスマス(探偵)"
    }
   },
   "erubin": {
@@ -81,6 +82,7 @@
   "mua/santa": "mua_santa",
   "sorashido/normal": "sorashido",
   "sorashido/hosei": "sorashido_hosei",
+  "sorashido/santa": "sorashido_santa",
   "erubin/normal": "erubin",
   "erubin/sekiyuou": "erubin_sekiyuou"
  },
@@ -432,6 +434,30 @@
   "mua/normal/stand": {
    "master": "self",
    "how": "社長が完成品を直接入れた。道具で作り直さない"
+  },
+  "sorashido/santa/bust": {
+   "master": [
+    "tools/art-sources/assistants/sorashido/santa/received/sorashido_santa_*.png"
+   ],
+   "how": "`tools/assistant/life-fullbody-art.py` の全身絵をそのまま写す(みゅあ・きき・ももすけのサンタと同じく、全身の絵をバスト絵の置き場に置く)"
+  },
+  "sorashido/santa/face": {
+   "master": [
+    "tools/art-sources/assistants/sorashido/santa/received/sorashido_santa_*.png"
+   ],
+   "how": "`tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(寝顔はふつうの顔と同じ大きさで切る)"
+  },
+  "sorashido/santa/fullbody": {
+   "master": [
+    "tools/art-sources/assistants/sorashido/santa/received/sorashido_santa_*.png"
+   ],
+   "how": "`tools/assistant/life-fullbody-art.py`(受け取った全身の10枚。received は加工せずに保管)"
+  },
+  "sorashido/santa/stand": {
+   "master": [
+    "tools/art-sources/assistants/sorashido/santa/received/sorashido_santa_*.png"
+   ],
+   "how": "`tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(全身絵から切り出す)"
   },
   "sorashido/hosei/bust": {
    "master": "self",

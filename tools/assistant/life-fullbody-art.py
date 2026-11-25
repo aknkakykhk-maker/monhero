@@ -49,6 +49,9 @@ ART = {
     # ももすけのサンタ(2026-11-25 r1119-172)。全身の10枚(表情ごとにポーズが違う・寝顔は座った姿の横長 1134×1387)。服は指示の真っ赤ではなく濃いピンク(社長「このまま」)
     'momosuke:santa': 'momosuke_santa_fullbody.png',
     **{'momosuke:santa@%s' % e: 'momosuke_santa_%s.png' % e for e in ('angry', 'crying', 'excited', 'happy', 'normal', 'surprise', 'troubled', 'wink', 'sleep')},
+    # ソラシドのクリスマス(探偵の衣装・2026-11-25 r1119-172)。全身の10枚(表情ごとにポーズが違う・寝顔は立ったままうとうとする縦長)。虫めがねは無く、手の小物はノートPCだけ(社長「このまま」)
+    'sorashido:santa': 'sorashido_santa_fullbody.png',
+    **{'sorashido:santa@%s' % e: 'sorashido_santa_%s.png' % e for e in ('angry', 'crying', 'excited', 'happy', 'normal', 'surprise', 'troubled', 'wink', 'sleep')},
     'sorashido:hosei': 'msg6-kimono-boy.png',  # 2026-11-15 から服『補正』(いままでのソラシド)。新しい絵が既定の服『馬骨』(sorashido)
     'erubin': 'msg7-curly-man-casual.png',
     'erubin:sekiyuou': 'msg8-curly-man-robe.png',

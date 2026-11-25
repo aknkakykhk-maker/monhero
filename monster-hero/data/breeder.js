@@ -1347,6 +1347,21 @@ const momosukeSantaCostume = Object.freeze({
     Object.freeze({ shop:'diamond', cost:100000, from:ASSISTANT_COSTUME_XMAS_END_AT }),
   ]),
 });
+// ソラシドのクリスマス(探偵の衣装・2026-11-25 クリスマスイベント r1119-172。お話では名探偵役)。みゅあ・きき・ももすけのサンタと同じ売り方・同じ期間。
+//   絵は images/assistant/santa/sorashido_*(立ち絵は stand-santa、全身画は fullbody/sorashido_santa)。原本は tools/art-sources/assistants/sorashido/santa/received/(加工せずに保管)。
+//   紺のブレザー・赤い蝶ネクタイ・丸い眼鏡・紺の半ズボン・サンタ帽の猫2匹。虫めがねは無く手の小物はノートPCだけ(社長「このまま」)
+const SORASHIDO_XMAS_COSTUME_ART = "images/assistant/santa/face/sorashido_happy.PNG?v=e847972a1e4d";
+const sorashidoXmasCostume = Object.freeze({
+  id: 'sorashido_santa_2026', assistantId: 'sorashido',
+  name: '探偵', desc: 'クリスマスの衣装。紺のブレザーに赤い蝶ネクタイ、丸い眼鏡の探偵の姿です。腰の猫のキーホルダーもサンタ帽をかぶっています。',
+  get released() { return Date.now() >= Date.parse(ASSISTANT_COSTUME_XMAS_START_AT); },
+  icon: SORASHIDO_XMAS_COSTUME_ART,
+  imageDir: 'images/assistant/santa',
+  saleWindows: Object.freeze([
+    Object.freeze({ shop:'beatPoint', cost:1000, from:ASSISTANT_COSTUME_XMAS_START_AT, until:ASSISTANT_COSTUME_XMAS_END_AT }),
+    Object.freeze({ shop:'diamond', cost:100000, from:ASSISTANT_COSTUME_XMAS_END_AT }),
+  ]),
+});
 const ASSISTANT_COSTUMES = Object.freeze([
   halloweenCostume('mua', 'myua', 'ハロウィンの魔女', 'ハロウィン・ナイトの衣装。大きな魔女帽子とカボチャのステッキのコスプレです。'),
   halloweenCostume('kiki', 'kiki', 'ハロウィンのうさ耳フード', 'ハロウィン・ナイトの衣装。オレンジと黒のうさ耳リボンとパーカーのコスプレです。'),
@@ -1359,6 +1374,7 @@ const ASSISTANT_COSTUMES = Object.freeze([
   muaSantaCostume,
   kikiSantaCostume,
   momosukeSantaCostume,
+  sorashidoXmasCostume,
 ]);
 // ---- 解放が要る服(unlock を持つ服)の覚え方(2026-10-27) ----
 // 新しいキー mh_assistant_costume_unlocked_v1 … 解放された服のidの配列。足すだけで消さない(CLAUDE.md ⑦)。
