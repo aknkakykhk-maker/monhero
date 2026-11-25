@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5d14c13ecded9478
+// generated-sha256: c8d83320432f1a9e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -38916,8 +38916,10 @@ const RAID_XMAS_EXTRA_COST_BEAT_P = 300;
 const RAID_XMAS_TURNS = 20;
 
 // ---- 段階(仮。ジャックの最後の数字と同じ) ----
-// A: レイドバトル(協力・共有ライフ)。ライフ 175万 / 320万 / 800万 / 3,500万 / 8,000万・攻撃力 350 / 500 / 600 / 800 / 1,000
-const RAID_XMAS_A_HPS = Object.freeze([1750000, 3200000, 8000000, 35000000, 80000000]);
+// A: レイドバトル(協力・共有ライフ)。攻撃力 350 / 500 / 600 / 800 / 1,000(ジャックと同じ・仮)
+// ライフは社長決定(2026-11-25「前半が5倍。後半は前回より少し高め」): 段階1〜3はジャックの5倍(875万 / 1,600万 / 4,000万)、
+//   段階4・5はジャックの1.2倍(4,200万 / 9,600万)
+const RAID_XMAS_A_HPS = Object.freeze([8750000, 16000000, 40000000, 42000000, 96000000]);
 const RAID_XMAS_A_ATKS = Object.freeze([350, 500, 600, 800, 1000]);
 const RAID_XMAS_A_NAMES = Object.freeze(['黒いサンタ(仮)・一', '黒いサンタ(仮)・二', '黒いサンタ(仮)・三', '黒いサンタ(仮)・四', '黒いサンタ(仮)・五']);
 const RAID_XMAS_A_TIERS = Object.freeze(RAID_XMAS_A_NAMES.map((name, i) =>
