@@ -46,6 +46,9 @@ ART = {
     # ききのサンタ(2026-11-25 r1119-172)。みゅあと同じく全身の10枚(スカートは指示と違って赤だが、社長はこのままでよい)
     'kiki:santa': 'kiki_santa_fullbody.png',
     **{'kiki:santa@%s' % e: 'kiki_santa_%s.png' % e for e in ('angry', 'crying', 'excited', 'happy', 'normal', 'surprise', 'troubled', 'wink', 'sleep')},
+    # ももすけのサンタ(2026-11-25 r1119-172)。全身の10枚(表情ごとにポーズが違う・寝顔は座った姿の横長 1134×1387)。服は指示の真っ赤ではなく濃いピンク(社長「このまま」)
+    'momosuke:santa': 'momosuke_santa_fullbody.png',
+    **{'momosuke:santa@%s' % e: 'momosuke_santa_%s.png' % e for e in ('angry', 'crying', 'excited', 'happy', 'normal', 'surprise', 'troubled', 'wink', 'sleep')},
     'sorashido:hosei': 'msg6-kimono-boy.png',  # 2026-11-15 から服『補正』(いままでのソラシド)。新しい絵が既定の服『馬骨』(sorashido)
     'erubin': 'msg7-curly-man-casual.png',
     'erubin:sekiyuou': 'msg8-curly-man-robe.png',

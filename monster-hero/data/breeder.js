@@ -1333,6 +1333,20 @@ const kikiSantaCostume = Object.freeze({
     Object.freeze({ shop:'diamond', cost:100000, from:ASSISTANT_COSTUME_XMAS_END_AT }),
   ]),
 });
+// ももすけのサンタ(2026-11-25 クリスマスイベント r1119-172)。みゅあ・ききのサンタと同じ売り方・同じ期間。絵は images/assistant/santa/momosuke_*(立ち絵は stand-santa、全身画は fullbody/momosuke_santa)。
+//   原本は tools/art-sources/assistants/momosuke/santa/received/(加工せずに保管)。服は指示の真っ赤ではなく濃いピンク(社長「このまま」)。寝顔は座った姿の絵
+const MOMOSUKE_SANTA_COSTUME_ART = "images/assistant/santa/face/momosuke_happy.PNG?v=e31b409a9646";
+const momosukeSantaCostume = Object.freeze({
+  id: 'momosuke_santa_2026', assistantId: 'momosuke',
+  name: 'クリスマス', desc: 'クリスマスの衣装。白いファーの濃いピンクのサンタ服に、雪の結晶と柊の飾りのサンタ帽です。',
+  get released() { return Date.now() >= Date.parse(ASSISTANT_COSTUME_XMAS_START_AT); },
+  icon: MOMOSUKE_SANTA_COSTUME_ART,
+  imageDir: 'images/assistant/santa',
+  saleWindows: Object.freeze([
+    Object.freeze({ shop:'beatPoint', cost:1000, from:ASSISTANT_COSTUME_XMAS_START_AT, until:ASSISTANT_COSTUME_XMAS_END_AT }),
+    Object.freeze({ shop:'diamond', cost:100000, from:ASSISTANT_COSTUME_XMAS_END_AT }),
+  ]),
+});
 const ASSISTANT_COSTUMES = Object.freeze([
   halloweenCostume('mua', 'myua', 'ハロウィンの魔女', 'ハロウィン・ナイトの衣装。大きな魔女帽子とカボチャのステッキのコスプレです。'),
   halloweenCostume('kiki', 'kiki', 'ハロウィンのうさ耳フード', 'ハロウィン・ナイトの衣装。オレンジと黒のうさ耳リボンとパーカーのコスプレです。'),
@@ -1344,6 +1358,7 @@ const ASSISTANT_COSTUMES = Object.freeze([
   kikiTwintailCostume,
   muaSantaCostume,
   kikiSantaCostume,
+  momosukeSantaCostume,
 ]);
 // ---- 解放が要る服(unlock を持つ服)の覚え方(2026-10-27) ----
 // 新しいキー mh_assistant_costume_unlocked_v1 … 解放された服のidの配列。足すだけで消さない(CLAUDE.md ⑦)。

@@ -102,6 +102,10 @@ const santaOf = (x) => x.releasedAssistantCostumes().filter(c => c.id === 'mua_s
 const kikiSantaOf = (x) => x.releasedAssistantCostumes().filter(c => c.id === 'kiki_santa_2026');
 const xBefore = load('', jst(XS) - 1), xDuring = load('', jst(XS)), xLast = load('', jst(XE) - 1), xAfter = load('', jst(XE));
 check('サンタ: 開始(11/30 10:00)の前は見えず、開始の時刻から見える', santaOf(xBefore).length === 0 && santaOf(xDuring).length === 1);
+check('ももすけのサンタ: 開始の前は見えず、開始から見える・期間中はビートP1000・終わりからダイヤ100000',
+  xBefore.releasedAssistantCostumes().every(c => c.id !== 'momosuke_santa_2026') && xDuring.releasedAssistantCostumes().some(c => c.id === 'momosuke_santa_2026')
+  && xDuring.assistantCostumeSaleIn(xDuring.assistantCostumeById('momosuke_santa_2026'), 'beatPoint')?.cost === 1000
+  && xAfter.assistantCostumeSaleIn(xAfter.assistantCostumeById('momosuke_santa_2026'), 'diamond')?.cost === 100000);
 check('ききのサンタ: 開始の前は見えず、開始から見える・期間中はビートP1000・終わりからダイヤ100000',
   kikiSantaOf(xBefore).length === 0 && kikiSantaOf(xDuring).length === 1
   && xDuring.assistantCostumeSaleIn(xDuring.assistantCostumeById('kiki_santa_2026'), 'beatPoint')?.cost === 1000
@@ -115,7 +119,7 @@ check('サンタ: 期間が breeder.js と公開フラグ(17-release…jsx の X
   && read('monster-hero/src/parts/17-release-changelog-login-missions.jsx').includes(`XMAS_COSTUME_START_AT = '${XS}'`));
 {
   const miss = [];
-  for (const [cid, pre, fb] of [['mua_santa_2026', 'myua', 'mua_santa'], ['kiki_santa_2026', 'kiki', 'kiki_santa']]) {
+  for (const [cid, pre, fb] of [['mua_santa_2026', 'myua', 'mua_santa'], ['kiki_santa_2026', 'kiki', 'kiki_santa'], ['momosuke_santa_2026', 'momosuke', 'momosuke_santa']]) {
   const c = xDuring.assistantCostumeById(cid);
   if (!c || !fs.existsSync(path.join(ROOT, 'monster-hero', String(c.icon).split('?')[0]))) miss.push(cid + ' icon');
   for (const e of [...EXPRESSIONS, 'sleep']) for (const sub of ['', 'face/']) {
@@ -126,7 +130,7 @@ check('サンタ: 期間が breeder.js と公開フラグ(17-release…jsx の X
     for (const rel of [`images/assistant/stand-santa/${pre}_${e}.png`, `images/assistant/fullbody/${fb}__${e}.png`]) if (!fs.existsSync(path.join(ROOT, 'monster-hero', rel))) miss.push(rel);
   }
   }
-  check('サンタ(みゅあ・きき): 絵(バスト・顔アイコン・寝顔・立ち絵・全身画)が全部ある', miss.length === 0, miss.slice(0, 4).join(' / '));
+  check('サンタ(みゅあ・きき・ももすけ): 絵(バスト・顔アイコン・寝顔・立ち絵・全身画)が全部ある', miss.length === 0, miss.slice(0, 4).join(' / '));
 }
 
 // ② 売り値
