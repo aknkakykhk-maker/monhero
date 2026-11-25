@@ -2,8 +2,8 @@
   "_説明": "全身画から立ち絵・顔アイコンを切るときの数字(life-stand-from-fullbody.py が読む)。default が全組の既定、キー(助手id か 助手id:服)ごとに上書き。face.head=一辺が頭(てっぺん〜顎)の何倍か・up=てっぺんより上へ頭の何割・dx/dy=一辺の何割ずらすか(+は右・下)・px=縮める一辺。stand_max=立ち絵の長い辺の上限。face:null は顔アイコンを作らない。直し方は docs/progress/assistant-art/r1119-153-switch/MUSE.md",
   "default": {"stand_max": 1000, "face": {"head": 1.5, "up": 0.1, "dx": 0, "dy": 0, "px": 256}},
   "atsu": {"face": null},
-  "momosuke:santa": {"face": {"head": 1.8, "up": 0.32}},
-  "mua:santa": {"face": {"head": 1.73, "up": 0.26}},
+  "momosuke:santa": {"face": {"head": 1.8, "up": 0.32, "expr": {"normal": {"zoom": 0.96, "dx": 0.062, "dy": 0.01}, "happy": {"zoom": 1.1, "dx": 0.031, "dy": 0.083}, "troubled": {"zoom": 1.14, "dx": 0.062, "dy": 0.095}}}},
+  "mua:santa": {"face": {"head": 1.73, "up": 0.26, "expr": {"normal": {"zoom": 0.96, "dx": 0.036, "dy": 0.01}, "happy": {"zoom": 0.96, "dx": 0.036, "dy": 0.019}, "wink": {"zoom": 0.96, "dx": 0.036, "dy": 0.01}, "surprise": {"zoom": 0.96, "dx": 0.036, "dy": -0.008}, "troubled": {"zoom": 0.94, "dx": 0.031, "dy": 0.011}, "angry": {"zoom": 0.94, "dx": 0.031, "dy": 0.002}, "crying": {"zoom": 0.96, "dx": 0.036, "dy": 0.01}, "excited": {"zoom": 0.94, "dx": 0.031, "dy": 0.002}, "sleep": {"zoom": 0.86, "dx": 0.089, "dy": 0.06}}}},
   "kiki:halloween": {"face": {"head": 1.73, "up": 0.29, "dx": -0.03}},
   "mua:card-master": {"face": {"head": 1.83, "up": 0.35, "dx": 0.05}},
   "mua:halloween": {"face": {"head": 1.85, "up": 0.25, "dx": 0.05}},
@@ -11,8 +11,10 @@
   "atsu:santa": {"face": {"head": 1.5, "up": 0.16, "dx": 0.06, "dy": -0.06, "expr": {"wink": {"dx": -0.05}, "surprise": {"dx": -0.05}}}},
   "momosuke:halloween": {"face": {"head": 1.45, "up": 0.15}},
   "_erubin:santa": "えるびんのサンタ(2026-11-25)。顔アイコンを、Muse 承認済みのえるびん(ふだん)・石油王の顔の大きさ・目の高さ(目が丸の約0.5・顔の幅が約半分)にそろえた",
-  "erubin:santa": {"face": {"head": 1.95, "up": 0.5}},
+  "erubin:santa": {"face": {"head": 1.95, "up": 0.5, "expr": {"normal": {"zoom": 1.08, "dx": -0.03, "dy": 0}, "happy": {"zoom": 1.08, "dx": -0.03, "dy": 0}, "wink": {"zoom": 1.08, "dx": -0.03, "dy": 0}, "surprise": {"zoom": 1.08, "dx": -0.03, "dy": 0}, "troubled": {"zoom": 1.08, "dx": -0.03, "dy": 0}, "angry": {"zoom": 1.08, "dx": -0.03, "dy": 0}, "crying": {"zoom": 1.08, "dx": -0.03, "dy": 0}, "excited": {"zoom": 1.08, "dx": -0.03, "dy": 0}, "sleep": {"zoom": 1.08, "dx": -0.03, "dy": 0}}}},
   "_kyuko:santa": "きゅうこのサンタ(2026-11-25)。顔アイコンを、承認済みのきゅうこ(ふだん)・冬の装いの顔の大きさ・目の高さにそろえた",
-  "kyuko:santa": {"face": {"head": 2.0, "up": 0.48, "expr": {"crying": {"zoom": 1.12, "dx": -0.06, "dy": 0.056}, "excited": {"zoom": 1.33, "dx": -0.117, "dy": 0.073}, "sleep": {"zoom": 1.3, "dx": -0.127, "dy": 0.025}}}},
-  "mua": {"face": {"head": 1.8, "up": 0.24}}
+  "kyuko:santa": {"face": {"head": 2.0, "up": 0.48, "expr": {"crying": {"zoom": 0.87, "dx": -0.065, "dy": 0.056}, "excited": {"zoom": 1.3, "dx": -0.06, "dy": 0.12}, "sleep": {"zoom": 0.884, "dx": -0.115, "dy": 0.021}, "normal": {"zoom": 0.76, "dx": 0.004, "dy": 0.002}, "happy": {"zoom": 0.79, "dx": -0.009, "dy": -0.006}, "wink": {"zoom": 0.8, "dx": -0.027, "dy": -0.027}, "surprise": {"zoom": 0.74, "dx": -0.013, "dy": 0.025}, "troubled": {"zoom": 0.84, "dx": 0.004, "dy": 0.06}, "angry": {"zoom": 0.8, "dx": 0.009, "dy": -0.053}}}},
+  "mua": {"face": {"head": 1.8, "up": 0.24}},
+  "kiki:santa": {"face": {"expr": {"normal": {"zoom": 1.32, "dx": -0.009, "dy": -0.07}, "surprise": {"zoom": 1.42, "dx": 0.022, "dy": -0.031}, "angry": {"zoom": 1.28, "dx": -0.013, "dy": -0.095}, "excited": {"zoom": 1.48, "dx": -0.054, "dy": -0.007}, "happy": {"zoom": 1.32, "dx": -0.009, "dy": -0.07}, "wink": {"zoom": 1.32, "dx": -0.009, "dy": -0.07}, "troubled": {"zoom": 1.32, "dx": -0.009, "dy": -0.07}, "crying": {"zoom": 1.32, "dx": -0.009, "dy": -0.07}, "sleep": {"zoom": 1.32, "dx": -0.009, "dy": -0.07}}}},
+  "sorashido:santa": {"face": {"expr": {"normal": {"zoom": 0.87, "dx": 0, "dy": 0}, "happy": {"zoom": 0.87, "dx": 0, "dy": 0}, "wink": {"zoom": 0.87, "dx": 0, "dy": 0}, "surprise": {"zoom": 0.87, "dx": 0, "dy": 0}, "troubled": {"zoom": 0.87, "dx": 0, "dy": 0}, "angry": {"zoom": 0.87, "dx": 0, "dy": 0}, "crying": {"zoom": 0.87, "dx": 0, "dy": 0}, "excited": {"zoom": 0.87, "dx": 0, "dy": 0}, "sleep": {"zoom": 0.87, "dx": 0, "dy": 0}}}}
 }

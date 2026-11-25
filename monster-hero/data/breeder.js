@@ -1307,7 +1307,7 @@ const kikiTwintailCostume = Object.freeze({
 // ★期間はクリスマスイベントの期間(docs/progress/event-xmas-2026/PLAN.md)。イベントの定義を足したら、そちらと食い違わないように検査で見張る
 const ASSISTANT_COSTUME_XMAS_START_AT = '2026-11-30T10:00:00+09:00';
 const ASSISTANT_COSTUME_XMAS_END_AT = '2026-12-31T04:00:00+09:00';
-const MUA_SANTA_COSTUME_ART = "images/assistant/santa/face/myua_happy.PNG?v=1a0a1a2cb5e6";
+const MUA_SANTA_COSTUME_ART = "images/assistant/santa/face/myua_happy.PNG?v=0c64729b1058";
 const muaSantaCostume = Object.freeze({
   id: 'mua_santa_2026', assistantId: 'mua',
   name: 'クリスマス', desc: 'クリスマスの衣装。白いファーのピンクのサンタ服と、ぽんぽんのついたサンタ帽です。',
@@ -1321,7 +1321,7 @@ const muaSantaCostume = Object.freeze({
 });
 // ききのサンタ(2026-11-25 クリスマスイベント r1119-172)。みゅあのサンタと同じ売り方・同じ期間。絵は images/assistant/santa/kiki_*(立ち絵は stand-santa、全身画は fullbody/kiki_santa)。
 //   原本は tools/art-sources/assistants/kiki/santa/received/(加工せずに保管)。スカートは指示の緑と違って赤だが、社長はこのままでよい
-const KIKI_SANTA_COSTUME_ART = "images/assistant/santa/face/kiki_happy.PNG?v=5a78e5be353e";
+const KIKI_SANTA_COSTUME_ART = "images/assistant/santa/face/kiki_happy.PNG?v=d6d29eada6b3";
 const kikiSantaCostume = Object.freeze({
   id: 'kiki_santa_2026', assistantId: 'kiki',
   name: 'クリスマス', desc: 'クリスマスの衣装。白いファーの真っ赤なサンタケープとスカートに、柊の飾りのサンタ帽です。',
@@ -1335,7 +1335,7 @@ const kikiSantaCostume = Object.freeze({
 });
 // ももすけのサンタ(2026-11-25 クリスマスイベント r1119-172)。みゅあ・ききのサンタと同じ売り方・同じ期間。絵は images/assistant/santa/momosuke_*(立ち絵は stand-santa、全身画は fullbody/momosuke_santa)。
 //   原本は tools/art-sources/assistants/momosuke/santa/received/(加工せずに保管)。服は指示の真っ赤ではなく濃いピンク(社長「このまま」)。寝顔は座った姿の絵
-const MOMOSUKE_SANTA_COSTUME_ART = "images/assistant/santa/face/momosuke_happy.PNG?v=61e11fef4f2e";
+const MOMOSUKE_SANTA_COSTUME_ART = "images/assistant/santa/face/momosuke_happy.PNG?v=e11ade57cb96";
 const momosukeSantaCostume = Object.freeze({
   id: 'momosuke_santa_2026', assistantId: 'momosuke',
   name: 'クリスマス', desc: 'クリスマスの衣装。白いファーの濃いピンクのサンタ服に、雪の結晶と柊の飾りのサンタ帽です。',
@@ -1350,7 +1350,7 @@ const momosukeSantaCostume = Object.freeze({
 // ソラシドのクリスマス(探偵の衣装・2026-11-25 クリスマスイベント r1119-172。お話では名探偵役)。みゅあ・きき・ももすけのサンタと同じ売り方・同じ期間。
 //   絵は images/assistant/santa/sorashido_*(立ち絵は stand-santa、全身画は fullbody/sorashido_santa)。原本は tools/art-sources/assistants/sorashido/santa/received/(加工せずに保管)。
 //   紺のブレザー・赤い蝶ネクタイ・丸い眼鏡・紺の半ズボン・サンタ帽の猫2匹。虫めがねは無く手の小物はノートPCだけ(社長「このまま」)
-const SORASHIDO_XMAS_COSTUME_ART = "images/assistant/santa/face/sorashido_happy.PNG?v=e847972a1e4d";
+const SORASHIDO_XMAS_COSTUME_ART = "images/assistant/santa/face/sorashido_happy.PNG?v=28d98c6ccb75";
 const sorashidoXmasCostume = Object.freeze({
   id: 'sorashido_santa_2026', assistantId: 'sorashido',
   name: '探偵', desc: 'クリスマスの衣装。紺のブレザーに赤い蝶ネクタイ、丸い眼鏡の探偵の姿です。腰の猫のキーホルダーもサンタ帽をかぶっています。',
@@ -1379,7 +1379,7 @@ const atsuXmasCostume = Object.freeze({
 });
 // えるびんのサンタ(2026-11-25 クリスマスイベント r1119-172)。ほかの助手のクリスマスの衣装と同じ売り方・同じ期間。絵は images/assistant/santa/erubin_*(立ち絵は stand-santa、全身画は fullbody/erubin_santa)。
 //   原本は tools/art-sources/assistants/erubin/santa/received/(加工せずに保管・大きさがばらばら・寝顔はプレゼント箱に座った横長)。顔アイコンの切り方は life-stand-cut.json の erubin:santa
-const ERUBIN_SANTA_COSTUME_ART = "images/assistant/santa/face/erubin_happy.PNG?v=854ced27beb4";
+const ERUBIN_SANTA_COSTUME_ART = "images/assistant/santa/face/erubin_happy.PNG?v=57849ea73e8a";
 const erubinSantaCostume = Object.freeze({
   id: 'erubin_santa_2026', assistantId: 'erubin',
   name: 'クリスマス', desc: 'クリスマスの衣装。白いファーの赤いサンタのマントと頭巾に、金の刺しゅうの白い衣です。',
@@ -1394,7 +1394,7 @@ const erubinSantaCostume = Object.freeze({
 // きゅうこのサンタ(2026-11-25 クリスマスイベント r1119-172)。ほかの助手のクリスマスの衣装と同じ売り方・同じ期間。絵は images/assistant/santa/kyuko_*(立ち絵は stand-santa、全身画は fullbody/kyuko_santa)。
 //   原本は tools/art-sources/assistants/kyuko/santa/received/(加工せずに保管)。服は指示のローズピンクではなく黄色(社長「このまま」)。顔アイコンの切り方は life-stand-cut.json の kyuko:santa
 // ★冬の装い(kyuko_winter_v1)とは別の服。imageDir が違う(winter / santa)
-const KYUKO_SANTA_COSTUME_ART = "images/assistant/santa/face/kyuko_happy.PNG?v=0a5df455fc36";
+const KYUKO_SANTA_COSTUME_ART = "images/assistant/santa/face/kyuko_happy.PNG?v=7fd99e5f6344";
 const kyukoSantaCostume = Object.freeze({
   id: 'kyuko_santa_2026', assistantId: 'kyuko',
   name: 'クリスマス', desc: 'クリスマスの衣装。白いファーの黄色いサンタケープと、音符と柊の飾りのサンタ帽です。',
