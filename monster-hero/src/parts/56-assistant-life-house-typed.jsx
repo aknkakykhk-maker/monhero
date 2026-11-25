@@ -363,7 +363,7 @@ function AssistantLifeFriendsTyped({ life, ids, metIds, peerSt, nameOf, tabs, ta
   return (
     <AluFrame title="友情" onBack={onBack} tab={tab} onTab={onTab} tabs={tabs} data-assistant-life-typed-friends="1"
       scene={<AssistantLifeFriendGraph ids={list} st={st} hot={best ? [best.a, best.b] : null} onPair={setAlbumPair} />}
-      overlay={<>{resultNode || sheetNode}{albumPair && typeof AssistantPeerAlbum === 'function' ? <AssistantPeerAlbum pair={albumPair} onClose={() => setAlbumPair(null)} onReplay={(t) => { setAlbumPair(null); onReplay && onReplay(t); }} peerItems={peerItems} onUseItem={onUseItem} onGivePair={onGivePair} /> : null}</>}>
+      overlay={<>{resultNode || sheetNode}{albumPair && typeof AssistantPeerAlbum === 'function' ? <AssistantPeerAlbum pair={albumPair} onClose={() => setAlbumPair(null)} onReplay={(t) => { setAlbumPair(null); onReplay && onReplay(t); }} peerItems={peerItems} onUseItem={onUseItem} onGivePair={onGivePair ? (p) => { setAlbumPair(null); onGivePair(p); } : null} /> : null}</>}>
       <AluGo data-assistant-life-friends-go disabled={!best} onClick={() => best && onWatch && onWatch(groupOf[best.pk])}>{goLabel}</AluGo>
       {note ? <div className="alu-card alu-n" data-assistant-life-friends-note>{note}</div> : null}
       {soon.length ? (

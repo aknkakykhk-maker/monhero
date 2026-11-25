@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c06d3be19adc65ff
+// generated-sha256: 138c95999fa0f7dc
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -72391,7 +72391,7 @@ function AssistantLifeFriendsTyped({ life, ids, metIds, peerSt, nameOf, tabs, ta
   return (
     <AluFrame title="友情" onBack={onBack} tab={tab} onTab={onTab} tabs={tabs} data-assistant-life-typed-friends="1"
       scene={<AssistantLifeFriendGraph ids={list} st={st} hot={best ? [best.a, best.b] : null} onPair={setAlbumPair} />}
-      overlay={<>{resultNode || sheetNode}{albumPair && typeof AssistantPeerAlbum === 'function' ? <AssistantPeerAlbum pair={albumPair} onClose={() => setAlbumPair(null)} onReplay={(t) => { setAlbumPair(null); onReplay && onReplay(t); }} peerItems={peerItems} onUseItem={onUseItem} onGivePair={onGivePair} /> : null}</>}>
+      overlay={<>{resultNode || sheetNode}{albumPair && typeof AssistantPeerAlbum === 'function' ? <AssistantPeerAlbum pair={albumPair} onClose={() => setAlbumPair(null)} onReplay={(t) => { setAlbumPair(null); onReplay && onReplay(t); }} peerItems={peerItems} onUseItem={onUseItem} onGivePair={onGivePair ? (p) => { setAlbumPair(null); onGivePair(p); } : null} /> : null}</>}>
       <AluGo data-assistant-life-friends-go disabled={!best} onClick={() => best && onWatch && onWatch(groupOf[best.pk])}>{goLabel}</AluGo>
       {note ? <div className="alu-card alu-n" data-assistant-life-friends-note>{note}</div> : null}
       {soon.length ? (

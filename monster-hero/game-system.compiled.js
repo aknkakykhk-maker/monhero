@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 25a19b737f3ede2c
+// source-sha256: c799f46f157c79eb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -124934,7 +124934,10 @@ function AssistantLifeFriendsTyped({
       },
       peerItems: peerItems,
       onUseItem: onUseItem,
-      onGivePair: onGivePair
+      onGivePair: onGivePair ? p => {
+        setAlbumPair(null);
+        onGivePair(p);
+      } : null
     }) : null)
   }, React.createElement(AluGo, {
     "data-assistant-life-friends-go": true,
