@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 43c6359468f5b49e
+// source-sha256: aad682867092fb7a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -127550,7 +127550,7 @@ const ASSISTANT_LIFE_SLEEP_EYES_FACE = Object.freeze({
     eyes: [[0.315, 0.64, 0.145, 0.12, '#f9c7b0'], [0.605, 0.585, 0.185, 0.115, '#fbd6bf']]
   }
 });
-const ASSISTANT_LIFE_SLEEP_ART = Object.freeze(new Set(['atsu_normal.PNG', 'face/atsu_normal.PNG', 'kiki_normal.PNG', 'face/kiki_normal.PNG', 'halloween/kiki_normal.PNG', 'halloween/face/kiki_normal.PNG', 'kyuko_normal.PNG', 'face/kyuko_normal.PNG', 'myua_normal.PNG', 'face/myua_normal.PNG', 'card-master/myua_normal.PNG', 'card-master/face/myua_normal.PNG', 'halloween/myua_normal.PNG', 'halloween/face/myua_normal.PNG', 'sorashido_normal.PNG', 'face/sorashido_normal.PNG', 'momosuke_normal.PNG', 'face/momosuke_normal.PNG', 'halloween/momosuke_normal.PNG', 'halloween/face/momosuke_normal.PNG', 'winter/kyuko_normal.PNG', 'winter/face/kyuko_normal.PNG', 'twintail/kiki_normal.PNG', 'twintail/face/kiki_normal.PNG', 'santa/myua_normal.PNG', 'santa/face/myua_normal.PNG', 'santa/kiki_normal.PNG', 'santa/face/kiki_normal.PNG', 'santa/momosuke_normal.PNG', 'santa/face/momosuke_normal.PNG', 'santa/sorashido_normal.PNG', 'santa/face/sorashido_normal.PNG', 'santa/atsu_normal.PNG', 'santa/face/atsu_normal.PNG', 'santa/erubin_normal.PNG', 'santa/face/erubin_normal.PNG', 'santa/kyuko_normal.PNG', 'santa/face/kyuko_normal.PNG']));
+const ASSISTANT_LIFE_SLEEP_ART = Object.freeze(new Set(['atsu_normal.PNG', 'face/atsu_normal.PNG', 'kiki_normal.PNG', 'face/kiki_normal.PNG', 'halloween/kiki_normal.PNG', 'halloween/face/kiki_normal.PNG', 'kyuko_normal.PNG', 'face/kyuko_normal.PNG', 'myua_normal.PNG', 'face/myua_normal.PNG', 'card-master/myua_normal.PNG', 'card-master/face/myua_normal.PNG', 'halloween/myua_normal.PNG', 'halloween/face/myua_normal.PNG', 'sorashido_normal.PNG', 'face/sorashido_normal.PNG', 'momosuke_normal.PNG', 'face/momosuke_normal.PNG', 'halloween/momosuke_normal.PNG', 'halloween/face/momosuke_normal.PNG', 'winter/kyuko_normal.PNG', 'winter/face/kyuko_normal.PNG', 'twintail/kiki_normal.PNG', 'twintail/face/kiki_normal.PNG', 'santa/myua_normal.PNG', 'santa/face/myua_normal.PNG', 'santa/kiki_normal.PNG', 'santa/face/kiki_normal.PNG', 'santa/momosuke_normal.PNG', 'santa/face/momosuke_normal.PNG', 'santa/sorashido_normal.PNG', 'santa/face/sorashido_normal.PNG', 'santa/atsu_normal.PNG', 'santa/face/atsu_normal.PNG', 'santa/erubin_normal.PNG', 'santa/face/erubin_normal.PNG', 'santa/kyuko_normal.PNG', 'santa/face/kyuko_normal.PNG', 'santa/dra_normal.PNG', 'santa/face/dra_normal.PNG']));
 function assistantLifeSleepMeasured(pid, src) {
   const who = typeof assistantById === 'function' ? assistantById(pid) : null;
   if (!who || !who.imagePrefix || !who.imageDir) return null;
