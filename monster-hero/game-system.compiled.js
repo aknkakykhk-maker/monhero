@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: edec81f82be35700
+// source-sha256: 48960613711930cf
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -66401,7 +66401,10 @@ const raidRhythmFinish = async (run, result, song, difficulty) => {
         damage,
         hitId: run.hitId,
         eventId: run.eventId,
-        detail
+        detail,
+        log: {
+          score
+        }
       });
     } catch (e) {
       res = null;
@@ -66606,7 +66609,7 @@ const raidXmasRhythmAdapter = ctx => {
     infiniteName: ctx.infiniteName || '',
     fetchTotals: eventId => sbFetchRaidJackTierTotals(eventId || ev.id),
     doneOf: (totals, i) => totals && totals.a && totals.a[i + 1] ? Number(totals.a[i + 1].total) || 0 : 0,
-    infiniteAt: (totals, i) => !!ctx.infiniteName && i === last && !!totals && !!totals.a && !!totals.a[last + 1] && (Number(totals.a[last + 1].total) || 0) >= (Number((tiers[last] || {}).hp) || Infinity),
+    infiniteAt: (totals, i) => i === last && !!totals && (typeof ctx.bossDown === 'function' ? !!ctx.bossDown(totals) : !!ctx.infiniteName && !!totals.a && !!totals.a[last + 1] && (Number(totals.a[last + 1].total) || 0) >= (Number((tiers[last] || {}).hp) || Infinity)),
     damageOf: typeof ctx.damageOf === 'function' ? ctx.damageOf : undefined,
     begin: ctx.useTry,
     addDamage: ctx.addDamage,
@@ -256092,7 +256095,19 @@ function MonsterHeroGame() {
     setRunMode(BATTLE_MODE_CHALLENGE);
     if (toDebug) setGameState('RAID_JACK_DEBUG');
   };
-  const raidRhythmAdapterOf = eventKey => raidRhythmAdapter(eventKey || 'jack', {
+  const raidRhythmAdapterOf = eventKey => eventKey === 'xmas' ? raidRhythmAdapter('xmas', {
+    event: RAID_XMAS_EVENT,
+    tiers: RAID_XMAS_A_TIERS,
+    tierAt: i => raidXmasTierAt('a', i),
+    bossImg: RAID_XMAS_BOSS_IMG,
+    damageOf: raidXmasRhythmDamageOf,
+    useTry: () => raidXmasUseTry('a'),
+    addDamage: raidXmasAddDamage,
+    openResult: openRaidXmasResult,
+    bossDown: raidXmasBossDown,
+    infiniteName: RAID_XMAS_AFTER_BOSS.name,
+    screen: 'RAID_JACK'
+  }) : raidRhythmAdapter(eventKey || 'jack', {
     eventId: raidJackEventId,
     debugForce: raidJackDebugForce,
     realRules: raidJackDebugRealRules
@@ -256108,6 +256123,7 @@ function MonsterHeroGame() {
       eventKey: adapter.key
     });
   };
+  const startRaidXmasRhythm = tierIndex => startRaidJackRhythmSelect(tierIndex, 'xmas');
   const cancelRaidJackRhythm = () => {
     const screen = raidRhythmAdapterOf(raidRhythm && raidRhythm.eventKey).screen;
     raidRhythmRunRef.current = null;

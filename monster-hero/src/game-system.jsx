@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: de0f2c6bef918673
+// generated-sha256: 5d14c13ecded9478
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -40640,7 +40640,8 @@ const raidRhythmFinish = async (run, result, song, difficulty) => {
     const detail = { songName: song && song.displayName || '', difficultyName: difficulty && difficulty.id || '', score, assist };
     let res = null;
     try {
-      res = await adapter.addDamage({ source: 'rhythm', kind: 'a', tierIndex: run.tierIndex, damage, hitId: run.hitId, eventId: run.eventId, detail });
+      // log: バトルの記録に送る物(ビートは編成が無いので score だけ・BUILD.md §3)
+      res = await adapter.addDamage({ source: 'rhythm', kind: 'a', tierIndex: run.tierIndex, damage, hitId: run.hitId, eventId: run.eventId, detail, log: { score } });
     } catch (e) { res = null; }
     return { tierIndex: run.tierIndex, tierName: tier.name, damage, defeated: false, outcome: 'error', detail, ...(res || {}),
       way: 'rhythm', songName: detail.songName, difficultyName: detail.difficultyName, score, assist, eventId: run.eventId, eventKey: adapter.key };
@@ -40738,7 +40739,7 @@ const raidJackRhythmAdapter = (ctx) => ({
 // バトル部の定義(35-raid-xmas.jsx)と App の中の関数は、App から ctx で渡してもらう(ここからは直接さわらない):
 // ctx = { event: RAID_XMAS_EVENT, tiers: RAID_XMAS_A_TIERS, tierAt: (i) => raidXmasTierAt('a', i), bossImg: RAID_XMAS_BOSS_IMG,
 //         damageOf: raidXmasRhythmDamageOf, useTry: raidXmasUseTry, addDamage: raidXmasAddDamage, openResult: openRaidXmasResult,
-//         screen: レイド画面の gameState, infiniteName: 大王のあとの相手の名前(無ければ段階の名前のまま) }
+//         bossDown: raidXmasBossDown, screen: 'RAID_JACK'(ジャックと同じ画面), infiniteName: RAID_XMAS_AFTER_BOSS.name }
 // 演出のライフは、ジャックと同じ表(raid_jack_hits)を event_id で引く(BUILD.md §7)
 const raidXmasRhythmAdapter = (ctx) => {
   const ev = ctx.event || {};
@@ -40756,8 +40757,9 @@ const raidXmasRhythmAdapter = (ctx) => {
     infiniteName: ctx.infiniteName || '',
     fetchTotals: (eventId) => sbFetchRaidJackTierTotals(eventId || ev.id),
     doneOf: (totals, i) => totals && totals.a && totals.a[i + 1] ? Number(totals.a[i + 1].total) || 0 : 0,
-    infiniteAt: (totals, i) => !!ctx.infiniteName && i === last && !!totals && !!totals.a && !!totals.a[last + 1]
-      && (Number(totals.a[last + 1].total) || 0) >= (Number((tiers[last] || {}).hp) || Infinity),
+    // 最後の段階を倒したか(raidXmasBossDown)。無ければ、最後の段階の合計が体力に届いたか
+    infiniteAt: (totals, i) => i === last && !!totals && (typeof ctx.bossDown === 'function' ? !!ctx.bossDown(totals)
+      : (!!ctx.infiniteName && !!totals.a && !!totals.a[last + 1] && (Number(totals.a[last + 1].total) || 0) >= (Number((tiers[last] || {}).hp) || Infinity))),
     damageOf: typeof ctx.damageOf === 'function' ? ctx.damageOf : undefined,
     begin: ctx.useTry,
     addDamage: ctx.addDamage,
@@ -145456,13 +145458,21 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 自己ベスト・クリア回数・実績・周回の報酬・全国ランキングは、onComplete がふつうの演奏と同じ処理で入れる(アシストモードは除く)
   // ★流れの本体はイベントに縛られない部品(39-raid-rhythm.jsx)。ここはイベントのつなぎ口を選んで、画面の状態をつなぐだけ
   //   (2026-11-25・台帳 r1119-172。クリスマスのレイドも同じ流れで動かすため。ジャックの動きは前と同じ)
-  const raidRhythmAdapterOf = (eventKey) => raidRhythmAdapter(eventKey || 'jack', { eventId: raidJackEventId, debugForce: raidJackDebugForce, realRules: raidJackDebugRealRules });
+  const raidRhythmAdapterOf = (eventKey) => eventKey === 'xmas'
+    // クリスマス(BUILD.md §2〜§4)。回数・送信・倒した印・再送待ちはバトル部の raidXmasUseTry / raidXmasAddDamage。
+    //   レイド画面はジャックと同じ RAID_JACK(raidEv が 'xmas' のあいだクリスマスの中身)。結果は openRaidXmasResult
+    ? raidRhythmAdapter('xmas', { event: RAID_XMAS_EVENT, tiers: RAID_XMAS_A_TIERS, tierAt: (i) => raidXmasTierAt('a', i), bossImg: RAID_XMAS_BOSS_IMG,
+        damageOf: raidXmasRhythmDamageOf, useTry: () => raidXmasUseTry('a'), addDamage: raidXmasAddDamage, openResult: openRaidXmasResult,
+        bossDown: raidXmasBossDown, infiniteName: RAID_XMAS_AFTER_BOSS.name, screen: 'RAID_JACK' })
+    : raidRhythmAdapter(eventKey || 'jack', { eventId: raidJackEventId, debugForce: raidJackDebugForce, realRules: raidJackDebugRealRules });
   const startRaidJackRhythmSelect = async (tierIndex, eventKey = 'jack') => {
     const adapter = raidRhythmAdapterOf(eventKey);
     raidJackReturnTierRef.current = Math.max(0, Math.floor(Number(tierIndex) || 0));
     await openRhythmDemo({ to: 'RHYTHM_DEMO_HOME' });
     setRaidRhythm({ tierIndex: raidRhythmClampTier(adapter, tierIndex), eventKey: adapter.key });
   };
+  // クリスマスのレイド画面の「モンヒロビートで挑む」(BUILD.md §4)。ここに置くと、レイド画面にボタンが出る
+  const startRaidXmasRhythm = (tierIndex) => startRaidJackRhythmSelect(tierIndex, 'xmas');
   const cancelRaidJackRhythm = () => {
     const screen = raidRhythmAdapterOf(raidRhythm && raidRhythm.eventKey).screen;
     raidRhythmRunRef.current = null; setRaidRhythm(null); setGameState(screen);
