@@ -29,6 +29,10 @@
    "date": "2026-11-20T15:58:56+09:00",
    "subject": "Add files via upload"
   },
+  "1a44ce4fa": {
+   "date": "2026-11-25T10:16:15+00:00",
+   "subject": "助手: きき ハロウィンの顔アイコンの目の高さと大きさをそろえる(r1125-023)"
+  },
   "1b459ad96": {
    "date": "2026-11-13T04:01:59+09:00",
    "subject": "あつ・ソラシドの全身画8表情(あつはすその切れを描き足し・ソラシドは髪のふちのもやを直す) (#5817)"
@@ -640,15 +644,15 @@
   "monster-hero/images/assistant/fullbody/sorashido_santa__surprise.png": "498dad3fd513 5bbc4a4de",
   "monster-hero/images/assistant/fullbody/sorashido_santa__troubled.png": "a0652a2b27f8 5bbc4a4de",
   "monster-hero/images/assistant/fullbody/sorashido_santa__wink.png": "caf41e547b24 5bbc4a4de",
-  "monster-hero/images/assistant/halloween/face/kiki_angry.PNG": "ffd49b4e6b17 (まだコミットしていない)",
-  "monster-hero/images/assistant/halloween/face/kiki_crying.PNG": "ce9c37db85fa (まだコミットしていない)",
-  "monster-hero/images/assistant/halloween/face/kiki_excited.PNG": "43120d6c9f96 (まだコミットしていない)",
-  "monster-hero/images/assistant/halloween/face/kiki_happy.PNG": "266298210256 (まだコミットしていない)",
-  "monster-hero/images/assistant/halloween/face/kiki_normal.PNG": "1f530375e4c9 (まだコミットしていない)",
+  "monster-hero/images/assistant/halloween/face/kiki_angry.PNG": "ffd49b4e6b17 1a44ce4fa",
+  "monster-hero/images/assistant/halloween/face/kiki_crying.PNG": "ce9c37db85fa 1a44ce4fa",
+  "monster-hero/images/assistant/halloween/face/kiki_excited.PNG": "43120d6c9f96 1a44ce4fa",
+  "monster-hero/images/assistant/halloween/face/kiki_happy.PNG": "266298210256 1a44ce4fa",
+  "monster-hero/images/assistant/halloween/face/kiki_normal.PNG": "1f530375e4c9 1a44ce4fa",
   "monster-hero/images/assistant/halloween/face/kiki_sleep.PNG": "77ab57b8ebe6 b46dfe005",
-  "monster-hero/images/assistant/halloween/face/kiki_surprise.PNG": "56a62b704c0a (まだコミットしていない)",
-  "monster-hero/images/assistant/halloween/face/kiki_troubled.PNG": "32750db70d39 (まだコミットしていない)",
-  "monster-hero/images/assistant/halloween/face/kiki_wink.PNG": "a0d5af34d0e8 (まだコミットしていない)",
+  "monster-hero/images/assistant/halloween/face/kiki_surprise.PNG": "56a62b704c0a 1a44ce4fa",
+  "monster-hero/images/assistant/halloween/face/kiki_troubled.PNG": "32750db70d39 1a44ce4fa",
+  "monster-hero/images/assistant/halloween/face/kiki_wink.PNG": "a0d5af34d0e8 1a44ce4fa",
   "monster-hero/images/assistant/halloween/face/momosuke_angry.PNG": "e2ff562e194a edf783df",
   "monster-hero/images/assistant/halloween/face/momosuke_crying.PNG": "ec769fca57bf edf783df",
   "monster-hero/images/assistant/halloween/face/momosuke_excited.PNG": "837dd63e19ea edf783df",
