@@ -48,7 +48,8 @@
    "name": "きゅうこ",
    "prefix": "kyuko",
    "outfits": {
-    "winter": "冬の装い"
+    "winter": "冬の装い",
+    "santa": "クリスマス"
    }
   },
   "sorashido": {
@@ -77,6 +78,7 @@
   "kiki/santa": "kiki_santa",
   "kyuko/normal": "kyuko",
   "kyuko/winter": "kyuko_winter",
+  "kyuko/santa": "kyuko_santa",
   "momosuke/normal": "momosuke",
   "momosuke/halloween": "momosuke_halloween",
   "momosuke/santa": "momosuke_santa",
@@ -327,6 +329,30 @@
     "monster-hero/images/assistant/fullbody/kyuko__*.png"
    ],
    "how": "`tools/assistant/life-stand-from-fullbody.py`(全身絵から切り出す)"
+  },
+  "kyuko/santa/bust": {
+   "master": [
+    "tools/art-sources/assistants/kyuko/santa/received/kyuko_santa_*.png"
+   ],
+   "how": "`tools/assistant/life-fullbody-art.py` の全身絵をそのまま写す(ほかの助手のクリスマスの衣装と同じく、全身の絵をバスト絵の置き場に置く)"
+  },
+  "kyuko/santa/face": {
+   "master": [
+    "tools/art-sources/assistants/kyuko/santa/received/kyuko_santa_*.png"
+   ],
+   "how": "`tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(顔の切り方は life-stand-cut.json の kyuko:santa。きゅうこ(ふだん)・冬の装いの顔にそろえる)"
+  },
+  "kyuko/santa/fullbody": {
+   "master": [
+    "tools/art-sources/assistants/kyuko/santa/received/kyuko_santa_*.png"
+   ],
+   "how": "`tools/assistant/life-fullbody-art.py`(受け取った全身の10枚。received は加工せずに保管。輪郭の外の薄いもやは書き出しで掃除)"
+  },
+  "kyuko/santa/stand": {
+   "master": [
+    "tools/art-sources/assistants/kyuko/santa/received/kyuko_santa_*.png"
+   ],
+   "how": "`tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(全身絵から切り出す)"
   },
   "kyuko/winter/bust": {
    "master": "self",

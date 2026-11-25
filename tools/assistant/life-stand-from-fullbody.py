@@ -56,6 +56,7 @@ HEADS = {
     'atsu:santa': dict(name='atsu_santa', stand='stand-santa', prefix='atsu', chin_frac=0.43, above=0.95, match_scale=True, scene_same_frame=True, sleep=True),  # あつのクリスマス(探偵・2026-11-25)
     'kyuko': dict(name='kyuko', stand='stand-normal', prefix='kyuko', chin_frac=0.43, above=None, match_scale=True, scene_same_frame=True),
     'kyuko:winter': dict(name='kyuko_winter', stand='stand-winter', prefix='kyuko', chin_frac=0.43, above=None, match_scale=True, scene_same_frame=True),
+    'kyuko:santa': dict(name='kyuko_santa', stand='stand-santa', prefix='kyuko', chin_frac=0.43, above=0.95, match_scale=True, scene_same_frame=True, sleep=True),  # きゅうこのサンタ(2026-11-25)
     'sorashido': dict(name='sorashido', stand='stand-normal', prefix='sorashido', chin_frac=0.43, above=None, match_scale=True, scene_same_frame=True),
     'sorashido:hosei': dict(name='sorashido_hosei', stand='stand-hosei', prefix='sorashido', chin_frac=0.43, above=None, match_scale=True, scene_same_frame=True),
     'sorashido:santa': dict(name='sorashido_santa', stand='stand-santa', prefix='sorashido', chin_frac=0.43, above=0.95, match_scale=True, scene_same_frame=True, sleep=True),  # ソラシドのクリスマス(探偵・2026-11-25)

@@ -58,6 +58,9 @@ ART = {
     # えるびんのサンタ(2026-11-25 r1119-172)。全身の10枚(大きさがばらばら: ふつう 887×1774・surprise と excited は 1024×1536・寝顔はプレゼント箱に座った横長 1174×1339)
     'erubin:santa': 'erubin_santa_fullbody.png',
     **{'erubin:santa@%s' % e: 'erubin_santa_%s.png' % e for e in ('angry', 'crying', 'excited', 'happy', 'normal', 'surprise', 'troubled', 'wink', 'sleep')},
+    # きゅうこのサンタ(2026-11-25 r1119-172)。全身の10枚(1024×1536・寝顔はプレゼント箱に座った絵)。服は指示のローズピンクではなく黄色(社長「このまま」)。輪郭の外に薄いもやが多い
+    'kyuko:santa': 'kyuko_santa_fullbody.png',
+    **{'kyuko:santa@%s' % e: 'kyuko_santa_%s.png' % e for e in ('angry', 'crying', 'excited', 'happy', 'normal', 'surprise', 'troubled', 'wink', 'sleep')},
     'sorashido:hosei': 'msg6-kimono-boy.png',  # 2026-11-15 から服『補正』(いままでのソラシド)。新しい絵が既定の服『馬骨』(sorashido)
     'erubin': 'msg7-curly-man-casual.png',
     'erubin:sekiyuou': 'msg8-curly-man-robe.png',

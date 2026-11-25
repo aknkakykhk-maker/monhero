@@ -171,6 +171,7 @@ const ASSISTANT_LIFE_SLEEP_ART = Object.freeze(new Set([
   'santa/sorashido_normal.PNG', 'santa/face/sorashido_normal.PNG', // ソラシド『探偵』の寝顔(2026-11-25・立ったままうとうとする絵から作った)
   'santa/atsu_normal.PNG', 'santa/face/atsu_normal.PNG', // あつ『探偵』の寝顔(2026-11-25・立ったまま目を閉じた絵から作った)
   'santa/erubin_normal.PNG', 'santa/face/erubin_normal.PNG', // えるびん『クリスマス』の寝顔(2026-11-25・プレゼント箱に座った寝顔の絵から作った)
+  'santa/kyuko_normal.PNG', 'santa/face/kyuko_normal.PNG', // きゅうこ『クリスマス』の寝顔(2026-11-25・プレゼント箱に座った寝顔の絵から作った)
 ]));
 // SVG の閉じた目・眼鏡を外した顔は、その目の位置の表を測った絵(その助手の ふだんの服の全身 / 顔アイコン)にだけ重ねる。
 //   着替え・立ち絵(stand-*)・全身画など別の絵では位置がちがい、ずれた目が出る(2026-11-19 社長「寝顔じゃない顔を無理やり寝顔にしようとしてる」)。ずれた目を出すより出さない
