@@ -48,6 +48,7 @@ HEADS = {
     'kiki': dict(name='kiki', stand='stand-normal', prefix='kiki', chin_frac=0.43, above=None, match_scale=True, scene_same_frame=True),
     'kiki:halloween': dict(name='kiki_halloween', stand='stand-halloween', prefix='kiki', chin_frac=0.43, above=0.95, match_scale=True, scene_same_frame=True),
     'kiki:twintail': dict(name='kiki_twintail', stand='stand-twintail', prefix='kiki', chin_frac=0.43, above=0.95, match_scale=True, scene_same_frame=True),
+    'kiki:santa': dict(name='kiki_santa', stand='stand-santa', prefix='kiki', chin_frac=0.43, above=0.95, match_scale=True, scene_same_frame=True, sleep=True),  # ききのサンタ(2026-11-25)
     'momosuke': dict(name='momosuke', stand='stand-normal', prefix='momosuke', chin_frac=0.43, above=0.7, match_scale=True, scene_same_frame=True),
     'momosuke:halloween': dict(name='momosuke_halloween', stand='stand-halloween', prefix='momosuke', chin_frac=0.43, above=0.95, match_scale=True, scene_same_frame=True),
     'atsu': dict(name='atsu', stand='stand-normal', prefix='atsu', chin_frac=0.43, above=None, match_scale=True, scene_same_frame=True),
@@ -404,8 +405,11 @@ def run(key, cfg, marks, opts):
             sp = os.path.join(FB, '%s__sleep.png' % cfg['name'])
             if os.path.exists(sp):
                 sa = load(sp)
-                if cfg.get('match_scale'):
-                    sa = shrink(sa, T)
+                # 寝顔の絵は大きさが normal と違うことがある(ききのサンタは頭が約1割大きい)。ほかの表情と同じく、normal(縮めたあと)に
+                #   重ねたときの倍率を測って縮める。引き伸ばしはしない(r1115-143)
+                k = align(ims[0], sa, mk, cx)[1]
+                if k > 1.0001:
+                    sa = shrink(sa, 1.0 / k)
                 sd = align(ims[0], sa, mk, cx)[0]
                 fim = place(sa, (fx0, fy0, fx0 + side, fy0 + side), sd)
                 if fc.get('px') and side > fc['px']:

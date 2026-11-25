@@ -802,7 +802,7 @@ const assistantFaceImage = (who, expression) => (who && who.imagePrefix)
 const ASSISTANT_STAND_ART = Object.freeze({
   mua: 'stand-normal', 'mua:halloween': 'stand-halloween', 'mua:card-master': 'stand-card-master', 'mua:santa': 'stand-santa', // サンタ(2026-11-25 クリスマスイベント r1119-172)
   // 8表情の全身画がある助手(2026-11-14)。作り方は tools/assistant/life-stand-from-fullbody.py
-  kiki: 'stand-normal', 'kiki:halloween': 'stand-halloween', 'kiki:twintail': 'stand-twintail', momosuke: 'stand-normal', 'momosuke:halloween': 'stand-halloween', atsu: 'stand-normal', kyuko: 'stand-normal', 'kyuko:winter': 'stand-winter', sorashido: 'stand-normal', 'sorashido:hosei': 'stand-hosei', erubin: 'stand-normal', 'erubin:sekiyuou': 'stand-sekiyuou',
+  kiki: 'stand-normal', 'kiki:halloween': 'stand-halloween', 'kiki:twintail': 'stand-twintail', 'kiki:santa': 'stand-santa', momosuke: 'stand-normal', 'momosuke:halloween': 'stand-halloween', atsu: 'stand-normal', kyuko: 'stand-normal', 'kyuko:winter': 'stand-winter', sorashido: 'stand-normal', 'sorashido:hosei': 'stand-hosei', erubin: 'stand-normal', 'erubin:sekiyuou': 'stand-sekiyuou',
 });
 const ASSISTANT_STAND_EXPRESSIONS = Object.freeze(['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited']);
 // outfit … 服の名前(ふだんの服は '')。表情が8つのどれでもない・絵が無い助手・服は null(今までの立ち絵へ)
@@ -827,7 +827,7 @@ const assistantFullImage = (who, expression) => (who && who.imagePrefix)
 //   絵の仕上げ: tools/assistant/life-fullbody-art.py(元の絵 tools/art-sources/assistant-fullbody/received-v1/)。まだ絵の無い助手・服はここに無い=今の立ち絵のまま。
 //   絵が届いたら、ここに1行足して(元の絵を同じ道具へ足して回す)だけでよい。全身が入るので、胸から下をぼかす処理も顔の表も使わない
 const ASSISTANT_FULLBODY_ART = Object.freeze({
-  atsu: 'atsu', kiki: 'kiki', 'kiki:halloween': 'kiki_halloween', 'kiki:twintail': 'kiki_twintail', kyuko: 'kyuko', 'kyuko:winter': 'kyuko_winter', momosuke: 'momosuke', 'momosuke:halloween': 'momosuke_halloween',
+  atsu: 'atsu', kiki: 'kiki', 'kiki:halloween': 'kiki_halloween', 'kiki:twintail': 'kiki_twintail', 'kiki:santa': 'kiki_santa', kyuko: 'kyuko', 'kyuko:winter': 'kyuko_winter', momosuke: 'momosuke', 'momosuke:halloween': 'momosuke_halloween',
   mua: 'mua', 'mua:halloween': 'mua_halloween', 'mua:card-master': 'mua_card-master', 'mua:santa': 'mua_santa', sorashido: 'sorashido', 'sorashido:hosei': 'sorashido_hosei',
   erubin: 'erubin', 'erubin:sekiyuou': 'erubin_sekiyuou',
 });
@@ -835,7 +835,7 @@ const ASSISTANT_FULLBODY_ART = Object.freeze({
 //   例: atsu: ['happy', 'wink']。ここに無い表情は、表情なしの絵(<名前>.png)を出す。表情名は今の立ち絵と同じ8つ(angry・crying・excited・happy・normal・surprise・troubled・wink)
 const ASSISTANT_FULLBODY_EXPRESSIONS = Object.freeze({
   mua: ASSISTANT_STAND_EXPRESSIONS, mua_halloween: ASSISTANT_STAND_EXPRESSIONS, 'mua_card-master': ASSISTANT_STAND_EXPRESSIONS, mua_santa: ASSISTANT_STAND_EXPRESSIONS, // サンタは表情も全身で届いた(2026-11-25)
-  kiki: ASSISTANT_STAND_EXPRESSIONS, kiki_halloween: ASSISTANT_STAND_EXPRESSIONS, kiki_twintail: ASSISTANT_STAND_EXPRESSIONS, // 2026-11-12 社長から届いたききの8表情(ふだん・ハロウィン)
+  kiki: ASSISTANT_STAND_EXPRESSIONS, kiki_halloween: ASSISTANT_STAND_EXPRESSIONS, kiki_twintail: ASSISTANT_STAND_EXPRESSIONS, kiki_santa: ASSISTANT_STAND_EXPRESSIONS, // 2026-11-12 社長から届いたききの8表情(ふだん・ハロウィン)
   kyuko: ASSISTANT_STAND_EXPRESSIONS, kyuko_winter: ASSISTANT_STAND_EXPRESSIONS, // 2026-11-12 社長から届いたキュウコの8表情 / 2026-11-16 冬服の8表情
   momosuke: ASSISTANT_STAND_EXPRESSIONS, momosuke_halloween: ASSISTANT_STAND_EXPRESSIONS, // 2026-11-15 社長から届いたももすけの8表情(ふだん・ハロウィン)
   atsu: ASSISTANT_STAND_EXPRESSIONS, sorashido: ASSISTANT_STAND_EXPRESSIONS, sorashido_hosei: ASSISTANT_STAND_EXPRESSIONS, erubin: ASSISTANT_STAND_EXPRESSIONS, erubin_sekiyuou: ASSISTANT_STAND_EXPRESSIONS, // 2026-11-12 社長から届いたあつ・ソラシドの8表情(あつはすその切れを描き足し、ソラシドは髪のふちのもやを直した)
