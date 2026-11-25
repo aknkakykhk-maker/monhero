@@ -39,6 +39,10 @@ ART = {
     'mua': 'msg2-blonde-angel.png',
     'mua:halloween': 'msg3-blonde-halloween-witch.png',
     'mua:card-master': 'msg4-blonde-blue-cape.png',
+    # みゅあのサンタ(2026-11-25 クリスマスイベント r1119-172)。チャッピーで作った全身の10枚(tools/art-sources/assistants/mua/santa/received/・加工せずに保管)。
+    #   表情も全身で届いた。fullbody と normal は同じ絵。sleep は両目を閉じた寝顔の全身(ききのツインテールと同じく fullbody/<名前>__sleep.png も作る)
+    'mua:santa': 'mua_santa_fullbody.png',
+    **{'mua:santa@%s' % e: 'mua_santa_%s.png' % e for e in ('angry', 'crying', 'excited', 'happy', 'normal', 'surprise', 'troubled', 'wink', 'sleep')},
     'sorashido:hosei': 'msg6-kimono-boy.png',  # 2026-11-15 から服『補正』(いままでのソラシド)。新しい絵が既定の服『馬骨』(sorashido)
     'erubin': 'msg7-curly-man-casual.png',
     'erubin:sekiyuou': 'msg8-curly-man-robe.png',

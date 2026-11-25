@@ -96,6 +96,32 @@ check('ハロウィンの衣装の絵(立ち絵と顔アイコン・8表情ぶ�
 check('ビートP交換所に3着が並び、いま売れるかは見るたびに数え直す(available)',
   /get available\(\)/.test(rhythmEvent) && /assistantCostumeEverSellsIn\(costume, 'beatPoint'\)/.test(rhythmEvent));
 
+// みゅあのサンタ(2026-11-25 クリスマスイベント r1119-172・ハロウィンと同じ売り方)
+const XS = '2026-11-30T10:00:00+09:00', XE = '2026-12-31T04:00:00+09:00';
+const santaOf = (x) => x.releasedAssistantCostumes().filter(c => c.id === 'mua_santa_2026');
+const xBefore = load('', jst(XS) - 1), xDuring = load('', jst(XS)), xLast = load('', jst(XE) - 1), xAfter = load('', jst(XE));
+check('サンタ: 開始(11/30 10:00)の前は見えず、開始の時刻から見える', santaOf(xBefore).length === 0 && santaOf(xDuring).length === 1);
+check('サンタ: 期間中はビートP交換所の1000Pだけ・終わりの直前もビートP',
+  xDuring.assistantCostumeSaleIn(xDuring.assistantCostumeById('mua_santa_2026'), 'beatPoint')?.cost === 1000 && !xDuring.assistantCostumeSaleIn(xDuring.assistantCostumeById('mua_santa_2026'), 'diamond')
+  && xLast.assistantCostumeSaleIn(xLast.assistantCostumeById('mua_santa_2026'), 'beatPoint')?.cost === 1000);
+check('サンタ: 終わり(12/31 4:00)からはダイヤショップの100000ダイヤ', !xAfter.assistantCostumeSaleIn(xAfter.assistantCostumeById('mua_santa_2026'), 'beatPoint') && xAfter.assistantCostumeSaleIn(xAfter.assistantCostumeById('mua_santa_2026'), 'diamond')?.cost === 100000);
+check('サンタ: 期間が breeder.js と公開フラグ(17-release…jsx の XMAS_COSTUME_START_AT)で同じ',
+  block.includes(`ASSISTANT_COSTUME_XMAS_START_AT = '${XS}'`) && block.includes(`ASSISTANT_COSTUME_XMAS_END_AT = '${XE}'`)
+  && read('monster-hero/src/parts/17-release-changelog-login-missions.jsx').includes(`XMAS_COSTUME_START_AT = '${XS}'`));
+{
+  const c = xDuring.assistantCostumeById('mua_santa_2026');
+  const miss = [];
+  if (!c || !fs.existsSync(path.join(ROOT, 'monster-hero', String(c.icon).split('?')[0]))) miss.push('icon');
+  for (const e of [...EXPRESSIONS, 'sleep']) for (const sub of ['', 'face/']) {
+    const rel = `images/assistant/santa/${sub}myua_${e}.PNG`;
+    if (!fs.existsSync(path.join(ROOT, 'monster-hero', rel))) miss.push(rel);
+  }
+  for (const e of EXPRESSIONS) {
+    for (const rel of [`images/assistant/stand-santa/myua_${e}.png`, `images/assistant/fullbody/mua_santa__${e}.png`]) if (!fs.existsSync(path.join(ROOT, 'monster-hero', rel))) miss.push(rel);
+  }
+  check('サンタ: 絵(バスト・顔アイコン・寝顔・立ち絵・全身画)が全部ある', miss.length === 0, miss.slice(0, 4).join(' / '));
+}
+
 // ② 売り値
 const t = load(FAKE);
 const mua = t.assistantCostumeById('mua_test_v1');

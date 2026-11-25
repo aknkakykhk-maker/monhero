@@ -1300,6 +1300,25 @@ const kikiTwintailCostume = Object.freeze({
   imageDir: 'images/assistant/twintail',
   price: Object.freeze({ diamond: 100000 }),
 });
+// みゅあのサンタ(2026-11-25 社長・クリスマスイベント r1119-172「ハロウィンと同じ売り方」「イベントとストーリーはみんなこれを着ている」)。
+//   イベント中(11/30 10:00〜12/31 3:59)はビートP交換所で1000P、終わったあとはダイヤショップで100000ダイヤ。開始の前は released が偽で、着替えにもマーケットにも出ない。
+//   絵は images/assistant/santa/(全身の絵をバスト絵の置き場に置く・face/ の顔アイコン・寝顔 myua_sleep.PNG)。立ち絵は stand-santa、全身画は fullbody/mua_santa。
+//   原本は tools/art-sources/assistants/mua/santa/received/(加工せずに保管)。作り方は life-fullbody-art.py → life-stand-from-fullbody.py
+// ★期間はクリスマスイベントの期間(docs/progress/event-xmas-2026/PLAN.md)。イベントの定義を足したら、そちらと食い違わないように検査で見張る
+const ASSISTANT_COSTUME_XMAS_START_AT = '2026-11-30T10:00:00+09:00';
+const ASSISTANT_COSTUME_XMAS_END_AT = '2026-12-31T04:00:00+09:00';
+const MUA_SANTA_COSTUME_ART = "images/assistant/santa/face/myua_happy.PNG?v=2295682732ab";
+const muaSantaCostume = Object.freeze({
+  id: 'mua_santa_2026', assistantId: 'mua',
+  name: 'クリスマス', desc: 'クリスマスの衣装。白いファーのピンクのサンタ服と、ぽんぽんのついたサンタ帽です。',
+  get released() { return Date.now() >= Date.parse(ASSISTANT_COSTUME_XMAS_START_AT); },
+  icon: MUA_SANTA_COSTUME_ART,
+  imageDir: 'images/assistant/santa',
+  saleWindows: Object.freeze([
+    Object.freeze({ shop:'beatPoint', cost:1000, from:ASSISTANT_COSTUME_XMAS_START_AT, until:ASSISTANT_COSTUME_XMAS_END_AT }),
+    Object.freeze({ shop:'diamond', cost:100000, from:ASSISTANT_COSTUME_XMAS_END_AT }),
+  ]),
+});
 const ASSISTANT_COSTUMES = Object.freeze([
   halloweenCostume('mua', 'myua', 'ハロウィンの魔女', 'ハロウィン・ナイトの衣装。大きな魔女帽子とカボチャのステッキのコスプレです。'),
   halloweenCostume('kiki', 'kiki', 'ハロウィンのうさ耳フード', 'ハロウィン・ナイトの衣装。オレンジと黒のうさ耳リボンとパーカーのコスプレです。'),
@@ -1309,6 +1328,7 @@ const ASSISTANT_COSTUMES = Object.freeze([
   sorashidoHoseiCostume,
   kyukoWinterCostume,
   kikiTwintailCostume,
+  muaSantaCostume,
 ]);
 // ---- 解放が要る服(unlock を持つ服)の覚え方(2026-10-27) ----
 // 新しいキー mh_assistant_costume_unlocked_v1 … 解放された服のidの配列。足すだけで消さない(CLAUDE.md ⑦)。

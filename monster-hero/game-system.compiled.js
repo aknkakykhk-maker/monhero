@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c799f46f157c79eb
+// source-sha256: 99db15b72981179f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -15834,6 +15834,7 @@ const RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE = true;
 const RHYTHM_MULTI_PUBLIC_RELEASE = true;
 const FRIENDS_PUBLIC_RELEASE = true;
 const RAID_JACK_START_AT = '2026-10-05T04:00:00+09:00';
+const XMAS_COSTUME_START_AT = '2026-11-30T10:00:00+09:00';
 const RAID_JACK_PUBLIC_RELEASE = true;
 const RAID_JACK_RHYTHM_PUBLIC_RELEASE = true;
 const RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE = true;
@@ -15912,6 +15913,13 @@ const RELEASE_FLAGS = {
   get raidJack() {
     try {
       return RAID_JACK_PUBLIC_RELEASE === true && Date.now() >= Date.parse(RAID_JACK_START_AT);
+    } catch (e) {
+      return false;
+    }
+  },
+  get xmasCostume() {
+    try {
+      return Date.now() >= Date.parse(XMAS_COSTUME_START_AT);
     } catch (e) {
       return false;
     }
@@ -121640,6 +121648,25 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       cx: 0.5119,
       above: 0.95
     }
+  },
+  santa: {
+    mua: {
+      top: 0.1007,
+      eye: 0.2132,
+      chin: 0.2677,
+      m: 0.406,
+      above: 0.95
+    }
+  },
+  'stand-santa': {
+    mua: {
+      top: 0.1614,
+      eye: 0.342,
+      chin: 0.4296,
+      m: 0.652,
+      cx: 0.4783,
+      above: 0.95
+    }
   }
 });
 const assistantLifeStandOutfitOf = src => {
@@ -127433,7 +127460,7 @@ const ASSISTANT_LIFE_SLEEP_EYES_FACE = Object.freeze({
     eyes: [[0.315, 0.64, 0.145, 0.12, '#f9c7b0'], [0.605, 0.585, 0.185, 0.115, '#fbd6bf']]
   }
 });
-const ASSISTANT_LIFE_SLEEP_ART = Object.freeze(new Set(['atsu_normal.PNG', 'face/atsu_normal.PNG', 'kiki_normal.PNG', 'face/kiki_normal.PNG', 'halloween/kiki_normal.PNG', 'halloween/face/kiki_normal.PNG', 'kyuko_normal.PNG', 'face/kyuko_normal.PNG', 'myua_normal.PNG', 'face/myua_normal.PNG', 'card-master/myua_normal.PNG', 'card-master/face/myua_normal.PNG', 'halloween/myua_normal.PNG', 'halloween/face/myua_normal.PNG', 'sorashido_normal.PNG', 'face/sorashido_normal.PNG', 'momosuke_normal.PNG', 'face/momosuke_normal.PNG', 'halloween/momosuke_normal.PNG', 'halloween/face/momosuke_normal.PNG', 'winter/kyuko_normal.PNG', 'winter/face/kyuko_normal.PNG', 'twintail/kiki_normal.PNG', 'twintail/face/kiki_normal.PNG']));
+const ASSISTANT_LIFE_SLEEP_ART = Object.freeze(new Set(['atsu_normal.PNG', 'face/atsu_normal.PNG', 'kiki_normal.PNG', 'face/kiki_normal.PNG', 'halloween/kiki_normal.PNG', 'halloween/face/kiki_normal.PNG', 'kyuko_normal.PNG', 'face/kyuko_normal.PNG', 'myua_normal.PNG', 'face/myua_normal.PNG', 'card-master/myua_normal.PNG', 'card-master/face/myua_normal.PNG', 'halloween/myua_normal.PNG', 'halloween/face/myua_normal.PNG', 'sorashido_normal.PNG', 'face/sorashido_normal.PNG', 'momosuke_normal.PNG', 'face/momosuke_normal.PNG', 'halloween/momosuke_normal.PNG', 'halloween/face/momosuke_normal.PNG', 'winter/kyuko_normal.PNG', 'winter/face/kyuko_normal.PNG', 'twintail/kiki_normal.PNG', 'twintail/face/kiki_normal.PNG', 'santa/myua_normal.PNG', 'santa/face/myua_normal.PNG']));
 function assistantLifeSleepMeasured(pid, src) {
   const who = typeof assistantById === 'function' ? assistantById(pid) : null;
   if (!who || !who.imagePrefix || !who.imageDir) return null;

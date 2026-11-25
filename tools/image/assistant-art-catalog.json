@@ -11,7 +11,8 @@
    "prefix": "myua",
    "outfits": {
     "halloween": "ハロウィン",
-    "card-master": "デュエルマスター"
+    "card-master": "デュエルマスター",
+    "santa": "サンタ"
    }
   },
   "kiki": {
@@ -73,6 +74,7 @@
   "mua/normal": "mua",
   "mua/halloween": "mua_halloween",
   "mua/card-master": "mua_card-master",
+  "mua/santa": "mua_santa",
   "sorashido/normal": "sorashido",
   "sorashido/hosei": "sorashido_hosei",
   "erubin/normal": "erubin",
@@ -304,6 +306,30 @@
   "momosuke/normal/stand": {
    "master": [
     "tools/art-sources/assistants/momosuke/normal/fullbody/momosuke-normal-sheet*.png"
+   ],
+   "how": "`tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(全身絵から切り出す)"
+  },
+  "mua/santa/bust": {
+   "master": [
+    "tools/art-sources/assistants/mua/santa/received/mua_santa_*.png"
+   ],
+   "how": "`tools/assistant/life-fullbody-art.py` の全身絵をそのまま写す(ききのツインテールと同じく、全身の絵をバスト絵の置き場に置く)"
+  },
+  "mua/santa/face": {
+   "master": [
+    "tools/art-sources/assistants/mua/santa/received/mua_santa_*.png"
+   ],
+   "how": "`tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(寝顔はふつうの顔と同じ枠で切る)"
+  },
+  "mua/santa/fullbody": {
+   "master": [
+    "tools/art-sources/assistants/mua/santa/received/mua_santa_*.png"
+   ],
+   "how": "`tools/assistant/life-fullbody-art.py`(受け取った全身の10枚。received は加工せずに保管)"
+  },
+  "mua/santa/stand": {
+   "master": [
+    "tools/art-sources/assistants/mua/santa/received/mua_santa_*.png"
    ],
    "how": "`tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(全身絵から切り出す)"
   },

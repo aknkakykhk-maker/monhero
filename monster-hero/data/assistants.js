@@ -411,7 +411,7 @@ const eventScriptForPlayer = (script, seenStoryIds) => {
     ? { ...l, who: [l.who, typeof l.outfit === 'string' ? l.outfit : '', l.secret ? 'secret' : ''].filter(Boolean).join('@') } : l);
 };
 // 台本の行で衣装を指定するときの、衣装の名前 → 絵のフォルダ(立ち絵 <接頭辞>_<表情>.PNG と face/)
-const STORY_OUTFIT_DIRS = Object.freeze({ sekiyuou: 'images/assistant/sekiyuou', winter: 'images/assistant/winter', twintail: 'images/assistant/twintail' });
+const STORY_OUTFIT_DIRS = Object.freeze({ sekiyuou: 'images/assistant/sekiyuou', winter: 'images/assistant/winter', twintail: 'images/assistant/twintail', santa: 'images/assistant/santa' });
 // 選べる助手だけを残す。読み込みが間に合っていない・壊れた値でも、
 // 条件のない助手は必ず残る(画面から助手が消えない)
 const assistantsUnlockedFrom = (seenStoryIds) =>
@@ -800,7 +800,7 @@ const assistantFaceImage = (who, expression) => (who && who.imagePrefix)
 //   キーは「助手id」か「助手id:服の名前」、値は絵のフォルダ(images/assistant/<値>/<接頭辞>_<表情>.png・8表情そろい)。
 //   無い助手・服は今までの立ち絵のまま。足すときは、絵を tools/assistant/life-expression-sheets.py で作り、ここへ1行と、顔の表(56-assistant-life-house.jsx の ASSISTANT_LIFE_STAND_FACE_OUTFIT)へ顔の点を足す
 const ASSISTANT_STAND_ART = Object.freeze({
-  mua: 'stand-normal', 'mua:halloween': 'stand-halloween', 'mua:card-master': 'stand-card-master',
+  mua: 'stand-normal', 'mua:halloween': 'stand-halloween', 'mua:card-master': 'stand-card-master', 'mua:santa': 'stand-santa', // サンタ(2026-11-25 クリスマスイベント r1119-172)
   // 8表情の全身画がある助手(2026-11-14)。作り方は tools/assistant/life-stand-from-fullbody.py
   kiki: 'stand-normal', 'kiki:halloween': 'stand-halloween', 'kiki:twintail': 'stand-twintail', momosuke: 'stand-normal', 'momosuke:halloween': 'stand-halloween', atsu: 'stand-normal', kyuko: 'stand-normal', 'kyuko:winter': 'stand-winter', sorashido: 'stand-normal', 'sorashido:hosei': 'stand-hosei', erubin: 'stand-normal', 'erubin:sekiyuou': 'stand-sekiyuou',
 });
@@ -828,13 +828,13 @@ const assistantFullImage = (who, expression) => (who && who.imagePrefix)
 //   絵が届いたら、ここに1行足して(元の絵を同じ道具へ足して回す)だけでよい。全身が入るので、胸から下をぼかす処理も顔の表も使わない
 const ASSISTANT_FULLBODY_ART = Object.freeze({
   atsu: 'atsu', kiki: 'kiki', 'kiki:halloween': 'kiki_halloween', 'kiki:twintail': 'kiki_twintail', kyuko: 'kyuko', 'kyuko:winter': 'kyuko_winter', momosuke: 'momosuke', 'momosuke:halloween': 'momosuke_halloween',
-  mua: 'mua', 'mua:halloween': 'mua_halloween', 'mua:card-master': 'mua_card-master', sorashido: 'sorashido', 'sorashido:hosei': 'sorashido_hosei',
+  mua: 'mua', 'mua:halloween': 'mua_halloween', 'mua:card-master': 'mua_card-master', 'mua:santa': 'mua_santa', sorashido: 'sorashido', 'sorashido:hosei': 'sorashido_hosei',
   erubin: 'erubin', 'erubin:sekiyuou': 'erubin_sekiyuou',
 });
 // 表情ごとの全身画(社長「時間があったら全身画の8表情を作りたい」)。届いたら、上の名前をキーに、あるぶんの表情名を足すだけ(絵は <名前>__<表情>.png)。
 //   例: atsu: ['happy', 'wink']。ここに無い表情は、表情なしの絵(<名前>.png)を出す。表情名は今の立ち絵と同じ8つ(angry・crying・excited・happy・normal・surprise・troubled・wink)
 const ASSISTANT_FULLBODY_EXPRESSIONS = Object.freeze({
-  mua: ASSISTANT_STAND_EXPRESSIONS, mua_halloween: ASSISTANT_STAND_EXPRESSIONS, 'mua_card-master': ASSISTANT_STAND_EXPRESSIONS,
+  mua: ASSISTANT_STAND_EXPRESSIONS, mua_halloween: ASSISTANT_STAND_EXPRESSIONS, 'mua_card-master': ASSISTANT_STAND_EXPRESSIONS, mua_santa: ASSISTANT_STAND_EXPRESSIONS, // サンタは表情も全身で届いた(2026-11-25)
   kiki: ASSISTANT_STAND_EXPRESSIONS, kiki_halloween: ASSISTANT_STAND_EXPRESSIONS, kiki_twintail: ASSISTANT_STAND_EXPRESSIONS, // 2026-11-12 社長から届いたききの8表情(ふだん・ハロウィン)
   kyuko: ASSISTANT_STAND_EXPRESSIONS, kyuko_winter: ASSISTANT_STAND_EXPRESSIONS, // 2026-11-12 社長から届いたキュウコの8表情 / 2026-11-16 冬服の8表情
   momosuke: ASSISTANT_STAND_EXPRESSIONS, momosuke_halloween: ASSISTANT_STAND_EXPRESSIONS, // 2026-11-15 社長から届いたももすけの8表情(ふだん・ハロウィン)
