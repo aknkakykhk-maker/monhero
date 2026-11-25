@@ -21,7 +21,7 @@ const KYUKO_FACE_ICON = "images/assistant/face/kyuko_happy.PNG?v=38cc7a61a4ea";
 // ソラシド(2026-10-27)。顔アイコンをそのまま使う(きゅうこと同じ形。字のアイコンのままだと、マーケットで「?」の箱になった)
 const SORASHIDO_FACE_ICON = "images/assistant/face/sorashido_happy.PNG?v=ad0afb356c2c";
 // えるびん(2026-11-05)。顔アイコンをそのまま使う(きゅうこ・ソラシドと同じ形)
-const ERUBIN_FACE_ICON = "images/assistant/face/erubin_happy.PNG?v=f5bc030bddd1";
+const ERUBIN_FACE_ICON = "images/assistant/face/erubin_happy.PNG?v=b54a78f745e0";
 // お話の背景絵(2026-11-05 社長「背景絵がない」「今後のイベントや今のパンドラのイベントにも使いたい」)。どのお話からも使える共通の背景。台本の行の bg:'<名前>' で切り替える(次に bg を書いた行まで続き、bg:'none' で消す。一覧は docs/progress/story-bg/README.md)。
 //   1080×1080 の正方形で、大事なものは真ん中に寄せてある(縦の画面は左右、横の低い画面は上下が切れても見える)。ほかのお話でも使ってよい
 const STORY_BG_DESERT_PALACE = "images/story-bg/desert_palace.jpg?v=890ff3607962";     // 石油王の世界: 砂漠の夕方と白い宮殿・ラクダ
