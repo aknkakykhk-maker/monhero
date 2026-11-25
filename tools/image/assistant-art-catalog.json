@@ -28,7 +28,8 @@
    "name": "ももすけ",
    "prefix": "momosuke",
    "outfits": {
-    "halloween": "ハロウィン"
+    "halloween": "ハロウィン",
+    "santa": "サンタ"
    }
   },
   "dra": {
@@ -73,6 +74,7 @@
   "kyuko/winter": "kyuko_winter",
   "momosuke/normal": "momosuke",
   "momosuke/halloween": "momosuke_halloween",
+  "momosuke/santa": "momosuke_santa",
   "mua/normal": "mua",
   "mua/halloween": "mua_halloween",
   "mua/card-master": "mua_card-master",
@@ -292,6 +294,30 @@
     "tools/art-sources/assistants/kyuko/winter/pre-resize-2026-11-17/stand/kyuko_*.png"
    ],
    "how": "`tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(全身絵から切り出す)。正本は表示の大きさへ縮める前(2026-11-17)の物"
+  },
+  "momosuke/santa/bust": {
+   "master": [
+    "tools/art-sources/assistants/momosuke/santa/received/momosuke_santa_*.png"
+   ],
+   "how": "`tools/assistant/life-fullbody-art.py` の全身絵をそのまま写す(みゅあ・ききのサンタと同じく、全身の絵をバスト絵の置き場に置く)"
+  },
+  "momosuke/santa/face": {
+   "master": [
+    "tools/art-sources/assistants/momosuke/santa/received/momosuke_santa_*.png"
+   ],
+   "how": "`tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(寝顔は座った姿の絵から、ふつうの顔と同じ大きさで切る)"
+  },
+  "momosuke/santa/fullbody": {
+   "master": [
+    "tools/art-sources/assistants/momosuke/santa/received/momosuke_santa_*.png"
+   ],
+   "how": "`tools/assistant/life-fullbody-art.py`(受け取った全身の10枚。received は加工せずに保管)"
+  },
+  "momosuke/santa/stand": {
+   "master": [
+    "tools/art-sources/assistants/momosuke/santa/received/momosuke_santa_*.png"
+   ],
+   "how": "`tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(全身絵から切り出す)"
   },
   "momosuke/halloween/bust": {
    "master": "self",
