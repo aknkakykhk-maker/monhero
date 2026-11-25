@@ -3,5 +3,6 @@
   "default": {"stand_max": 1000, "face": {"head": 1.5, "up": 0.1, "dx": 0, "dy": 0, "px": 256}},
   "atsu": {"face": null},
   "_atsu:santa": "あつのクリスマス(2026-11-25)。顔アイコンをナカヨシの基準(目の高さが丸の0.48〜0.55・顔の幅が丸の約半分)に合わせて寄せた",
-  "atsu:santa": {"face": {"head": 1.2, "up": -0.02, "dx": 0.1}}
+  "atsu:santa": {"face": {"head": 1.2, "up": -0.02, "dx": 0.1}},
+  "momosuke:halloween": {"face": {"head": 1.45, "up": 0.15}}
 }

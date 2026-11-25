@@ -14,9 +14,9 @@
 | 種類 | ゲームで使っているファイル | 枚数 | 最後に作った日・PR | 正本(最新の原本) | 作り方 |
 | --- | --- | ---: | --- | --- | --- |
 | 全身絵 | `monster-hero/images/assistant/fullbody/sorashido[__<表情>].png` | 9 | 2026-11-24 5f1c4f99(8枚) / 2026-11-23 #7292(1枚・うち表情なし1) | 現行のファイルそのもの(完成品を直接入れた・別の原本はリポジトリに無い) | 社長が完成品を直接入れた。道具で作り直さない。8表情は 2026-11-23 に #7292 の前の版(2026-11-20〜21 に入れた物)へ戻した。表情なしの絵だけ #7292 の版 |
-| 立ち絵 | `monster-hero/images/assistant/stand-normal/sorashido_<表情>.png` | 8 | 2026-11-24 #7476(8枚) | 現行のファイルそのもの(完成品を直接入れた・別の原本はリポジトリに無い) | 社長が完成品を直接入れた(2026-11-20〜21 の高画質版)。作り直すなら全身絵から `tools/assistant/life-stand-from-fullbody.py`(r1119-122) |
+| 立ち絵 | `monster-hero/images/assistant/stand-normal/sorashido_<表情>.png` | 8 | 2026-11-24 #7501(8枚) | 現行のファイルそのもの(完成品を直接入れた・別の原本はリポジトリに無い) | 社長が完成品を直接入れた(2026-11-20〜21 の高画質版)。作り直すなら全身絵から `tools/assistant/life-stand-from-fullbody.py`(r1119-122) |
 | バスト絵 | `monster-hero/images/assistant/sorashido_<表情>.PNG` | 9 | 2026-11-21 4c8aa98d0(4枚・うち寝顔1) / 2026-11-20 ffdba7903(5枚) | 現行のファイルそのもの(完成品を直接入れた・別の原本はリポジトリに無い) | 社長が完成品を直接入れた。道具で作り直さない |
-| 顔アイコン | `monster-hero/images/assistant/face/sorashido_<表情>.PNG` | 9 | 2026-11-24 #7476(8枚) / 2026-11-20 633bd64be(1枚・うち寝顔1) | 現行のファイルそのもの(完成品を直接入れた・別の原本はリポジトリに無い) | 社長が完成品を直接入れた。道具で作り直さない |
+| 顔アイコン | `monster-hero/images/assistant/face/sorashido_<表情>.PNG` | 9 | 2026-11-24 #7501(8枚) / 2026-11-20 633bd64be(1枚・うち寝顔1) | 現行のファイルそのもの(完成品を直接入れた・別の原本はリポジトリに無い) | 社長が完成品を直接入れた。道具で作り直さない |
 
 ## 服「補正」(hosei)
 
@@ -26,15 +26,6 @@
 | 立ち絵 | `monster-hero/images/assistant/stand-hosei/sorashido_<表情>.png` | 8 | 2026-11-23 69cee4cd(8枚) | 現行のファイルそのもの(完成品を直接入れた・別の原本はリポジトリに無い) | 社長が完成品を直接入れた。道具で作り直さない |
 | バスト絵 | `monster-hero/images/assistant/hosei/sorashido_<表情>.PNG` | 8 | 2026-11-20 3e9923f8c(8枚) | 現行のファイルそのもの(完成品を直接入れた・別の原本はリポジトリに無い) | 社長が完成品を直接入れた。道具で作り直さない |
 | 顔アイコン | `monster-hero/images/assistant/hosei/face/sorashido_<表情>.PNG` | 8 | 2026-11-25 b4ab01f3(8枚) | 現行のファイルそのもの(完成品を直接入れた・別の原本はリポジトリに無い) | 社長が完成品を直接入れた。道具で作り直さない |
-
-## 服「クリスマス(探偵)」(santa)
-
-| 種類 | ゲームで使っているファイル | 枚数 | 最後に作った日・PR | 正本(最新の原本) | 作り方 |
-| --- | --- | ---: | --- | --- | --- |
-| 全身絵 | `monster-hero/images/assistant/fullbody/sorashido_santa[__<表情>].png` | 10 | 2026-11-25 5bbc4a4d(10枚・うち表情なし1) | `tools/art-sources/assistants/sorashido/santa/received/sorashido_santa_*.png` | `tools/assistant/life-fullbody-art.py`(受け取った全身の10枚。received は加工せずに保管) |
-| 立ち絵 | `monster-hero/images/assistant/stand-santa/sorashido_<表情>.png` | 8 | 2026-11-25 5bbc4a4d(8枚) | `tools/art-sources/assistants/sorashido/santa/received/sorashido_santa_*.png` | `tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(全身絵から切り出す) |
-| バスト絵 | `monster-hero/images/assistant/santa/sorashido_<表情>.PNG` | 9 | 2026-11-25 5bbc4a4d(9枚・うち寝顔1) | `tools/art-sources/assistants/sorashido/santa/received/sorashido_santa_*.png` | `tools/assistant/life-fullbody-art.py` の全身絵をそのまま写す(みゅあ・きき・ももすけのサンタと同じく、全身の絵をバスト絵の置き場に置く) |
-| 顔アイコン | `monster-hero/images/assistant/santa/face/sorashido_<表情>.PNG` | 9 | 2026-11-25 5bbc4a4d(9枚・うち寝顔1) | `tools/art-sources/assistants/sorashido/santa/received/sorashido_santa_*.png` | `tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(寝顔はふつうの顔と同じ大きさで切る) |
 
 ## 旧版(正本ではない・保管庫)
 
