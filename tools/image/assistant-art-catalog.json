@@ -40,7 +40,9 @@
   "atsu": {
    "name": "あつ",
    "prefix": "atsu",
-   "outfits": {}
+   "outfits": {
+    "santa": "クリスマス(探偵)"
+   }
   },
   "kyuko": {
    "name": "きゅうこ",
@@ -67,6 +69,7 @@
  },
  "fullbodyNames": {
   "atsu/normal": "atsu",
+  "atsu/santa": "atsu_santa",
   "kiki/normal": "kiki",
   "kiki/halloween": "kiki_halloween",
   "kiki/twintail": "kiki_twintail",
@@ -88,6 +91,30 @@
  },
  "sleepNote": "寝顔(`<接頭辞>_sleep.PNG`)は各組の枚数に入っているが、作った日の新旧の検査からは外している。原本は `tools/art-sources/assistants/_shared/sleep-faces/`(9着ぶんのシート `received-v1.png`・ももすけ2着)で、`tools/assistant/life-sleep-faces-make.js` が切り出す。ソラシド2着・きき(ツインテール)の寝顔は社長が直接入れた完成品。縮める前(2026-11-17)の寝顔は 各キャラの `<服>/pre-resize-2026-11-17/bust/` にある。",
  "groups": {
+  "atsu/santa/bust": {
+   "master": [
+    "tools/art-sources/assistants/atsu/santa/received/atsu_santa_*.png"
+   ],
+   "how": "`tools/assistant/life-fullbody-art.py` の全身絵をそのまま写す(ほかの助手のクリスマスの衣装と同じく、全身の絵をバスト絵の置き場に置く)"
+  },
+  "atsu/santa/face": {
+   "master": [
+    "tools/art-sources/assistants/atsu/santa/received/atsu_santa_*.png"
+   ],
+   "how": "`tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(顔の切り方は life-stand-cut.json の atsu:santa。目の高さ・顔の幅はナカヨシの基準に合わせた)"
+  },
+  "atsu/santa/fullbody": {
+   "master": [
+    "tools/art-sources/assistants/atsu/santa/received/atsu_santa_*.png"
+   ],
+   "how": "`tools/assistant/life-fullbody-art.py`(受け取った全身の10枚。received は加工せずに保管)"
+  },
+  "atsu/santa/stand": {
+   "master": [
+    "tools/art-sources/assistants/atsu/santa/received/atsu_santa_*.png"
+   ],
+   "how": "`tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(全身絵から切り出す)"
+  },
   "atsu/normal/bust": {
    "master": "self",
    "how": "受け取った絵を配信の形にした物。原本は別に無い(道具で作り直さない)"

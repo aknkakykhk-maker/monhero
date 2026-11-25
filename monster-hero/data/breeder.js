@@ -1362,6 +1362,21 @@ const sorashidoXmasCostume = Object.freeze({
     Object.freeze({ shop:'diamond', cost:100000, from:ASSISTANT_COSTUME_XMAS_END_AT }),
   ]),
 });
+// あつのクリスマス(探偵の衣装・2026-11-25 クリスマスイベント r1119-172。お話ではソラシドのライバルの探偵役)。ほかの助手のクリスマスの衣装と同じ売り方・同じ期間。
+//   絵は images/assistant/santa/atsu_*(立ち絵は stand-santa、全身画は fullbody/atsu_santa)。原本は tools/art-sources/assistants/atsu/santa/received/(加工せずに保管)。
+//   王冠は指示の銀ではなく金・マフラーはグレーのチェック(社長「このまま」)。顔アイコンの切り方は tools/assistant/life-stand-cut.json の atsu:santa。名前は仮
+const ATSU_XMAS_COSTUME_ART = "images/assistant/santa/face/atsu_happy.PNG?v=267733c7c709";
+const atsuXmasCostume = Object.freeze({
+  id: 'atsu_santa_2026', assistantId: 'atsu',
+  name: '王冠の名探偵', desc: 'クリスマスの衣装。黒いコートにグレーのチェックのマフラー、柊の飾りをつけた探偵の姿です。頭には金の王冠。',
+  get released() { return Date.now() >= Date.parse(ASSISTANT_COSTUME_XMAS_START_AT); },
+  icon: ATSU_XMAS_COSTUME_ART,
+  imageDir: 'images/assistant/santa',
+  saleWindows: Object.freeze([
+    Object.freeze({ shop:'beatPoint', cost:1000, from:ASSISTANT_COSTUME_XMAS_START_AT, until:ASSISTANT_COSTUME_XMAS_END_AT }),
+    Object.freeze({ shop:'diamond', cost:100000, from:ASSISTANT_COSTUME_XMAS_END_AT }),
+  ]),
+});
 const ASSISTANT_COSTUMES = Object.freeze([
   halloweenCostume('mua', 'myua', 'ハロウィンの魔女', 'ハロウィン・ナイトの衣装。大きな魔女帽子とカボチャのステッキのコスプレです。'),
   halloweenCostume('kiki', 'kiki', 'ハロウィンのうさ耳フード', 'ハロウィン・ナイトの衣装。オレンジと黒のうさ耳リボンとパーカーのコスプレです。'),
@@ -1375,6 +1390,7 @@ const ASSISTANT_COSTUMES = Object.freeze([
   kikiSantaCostume,
   momosukeSantaCostume,
   sorashidoXmasCostume,
+  atsuXmasCostume,
 ]);
 // ---- 解放が要る服(unlock を持つ服)の覚え方(2026-10-27) ----
 // 新しいキー mh_assistant_costume_unlocked_v1 … 解放された服のidの配列。足すだけで消さない(CLAUDE.md ⑦)。

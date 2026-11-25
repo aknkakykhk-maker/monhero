@@ -53,6 +53,7 @@ HEADS = {
     'momosuke:halloween': dict(name='momosuke_halloween', stand='stand-halloween', prefix='momosuke', chin_frac=0.43, above=0.95, match_scale=True, scene_same_frame=True),
     'momosuke:santa': dict(name='momosuke_santa', stand='stand-santa', prefix='momosuke', chin_frac=0.43, above=0.95, match_scale=True, scene_same_frame=True, sleep=True),  # ももすけのサンタ(2026-11-25)
     'atsu': dict(name='atsu', stand='stand-normal', prefix='atsu', chin_frac=0.43, above=None, match_scale=True, scene_same_frame=True),
+    'atsu:santa': dict(name='atsu_santa', stand='stand-santa', prefix='atsu', chin_frac=0.43, above=0.95, match_scale=True, scene_same_frame=True, sleep=True),  # あつのクリスマス(探偵・2026-11-25)
     'kyuko': dict(name='kyuko', stand='stand-normal', prefix='kyuko', chin_frac=0.43, above=None, match_scale=True, scene_same_frame=True),
     'kyuko:winter': dict(name='kyuko_winter', stand='stand-winter', prefix='kyuko', chin_frac=0.43, above=None, match_scale=True, scene_same_frame=True),
     'sorashido': dict(name='sorashido', stand='stand-normal', prefix='sorashido', chin_frac=0.43, above=None, match_scale=True, scene_same_frame=True),
