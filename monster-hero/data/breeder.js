@@ -1335,7 +1335,7 @@ const kikiSantaCostume = Object.freeze({
 });
 // ももすけのサンタ(2026-11-25 クリスマスイベント r1119-172)。みゅあ・ききのサンタと同じ売り方・同じ期間。絵は images/assistant/santa/momosuke_*(立ち絵は stand-santa、全身画は fullbody/momosuke_santa)。
 //   原本は tools/art-sources/assistants/momosuke/santa/received/(加工せずに保管)。服は指示の真っ赤ではなく濃いピンク(社長「このまま」)。寝顔は座った姿の絵
-const MOMOSUKE_SANTA_COSTUME_ART = "images/assistant/santa/face/momosuke_happy.PNG?v=e31b409a9646";
+const MOMOSUKE_SANTA_COSTUME_ART = "images/assistant/santa/face/momosuke_happy.PNG?v=61e11fef4f2e";
 const momosukeSantaCostume = Object.freeze({
   id: 'momosuke_santa_2026', assistantId: 'momosuke',
   name: 'クリスマス', desc: 'クリスマスの衣装。白いファーの濃いピンクのサンタ服に、雪の結晶と柊の飾りのサンタ帽です。',
