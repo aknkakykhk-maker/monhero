@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7083ff7a5a4729a0
+// generated-sha256: 260673c263164c0f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -38333,7 +38333,11 @@ const raidJackMakeEnemy = (kind, tierIndex, mode, opts = {}) => {
     if (!base) return null;
     const after = opts.pumpkin === true && kind === 'a' && tierIndex === RAID_XMAS_A_TIERS.length - 1;
     const t = after ? RAID_XMAS_AFTER_BOSS : xt;
-    return { ...base, name: t.name, maxHp: t.hp, hp: t.hp, atk: t.atk, raidJackTier: xt.id, raidXmas: true,
+    // 技の名前はサンタの物(35-raid-xmas.jsx の RAID_XMAS_SKILL_NAMES)。バトル中の見出し・ログ・敵の詳細はこの敵の normal / special / actions を読む
+    const sn = RAID_XMAS_SKILL_NAMES;
+    return { ...base, name: t.name, maxHp: t.hp, hp: t.hp, atk: t.atk, raidJackTier: xt.id, raidXmas: true, emoji: '🎅',
+      normal: sn.normal, special: sn.special,
+      actions: { ...(base.actions || {}), sweep: sn.sweep, rush: sn.rush, pierce: sn.pierce, roar: sn.roar, allout: sn.allout },
       imgUrl: (typeof RAID_XMAS_BOSS_IMG !== 'undefined' ? RAID_XMAS_BOSS_IMG : base.imgUrl), poseImgUrl: null };
   }
   const tier = raidJackTierAt(kind, tierIndex);
@@ -38940,6 +38944,19 @@ const raidXmasTierAt = (kind, index) => {
   const i = Number.isFinite(index) ? Math.floor(index) : 0;
   return list[Math.min(Math.max(i, 0), list.length - 1)];
 };
+
+// ボス(覚醒サンタ)の技の名前(社長決定 2026-11-25・台帳 r1125-058)。動き(rush/sweep/roar/pierce/allout)と本数 3/4/5/5/5 はジャックのまま。
+//   名前だけを 35-raid-jack.jsx の raidJackMakeEnemy(opts.ev === 'xmas')で敵へ写す。ジャックの RAID_JACK_SKILL_NAMES・敵データ Jack は変えない。
+//   「X’マス」の「’」は全角の右シングル引用符(U+2019)
+const RAID_XMAS_SKILL_NAMES = Object.freeze({
+  normal: '正拳・闇',
+  special: '瞬黒撃',
+  sweep: 'X\u2019マスキャロル',
+  rush: '超飛び蹴り',
+  pierce: '超暗けい',
+  roar: '怪しこの夜',
+  allout: 'X\u2019マスプレデター',
+});
 
 // 報酬はジャックと同じ表(社長決定 2026-11-25)
 const RAID_XMAS_REWARDS = RAID_JACK_REWARDS;
