@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4ce63cafeaa1f077
+// generated-sha256: 543cac8bbf24442c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -73598,6 +73598,7 @@ const ASSISTANT_LIFE_SLEEP_ART = Object.freeze(new Set([
   'santa/atsu_normal.PNG', 'santa/face/atsu_normal.PNG', // あつ『探偵』の寝顔(2026-11-25・立ったまま目を閉じた絵から作った)
   'santa/erubin_normal.PNG', 'santa/face/erubin_normal.PNG', // えるびん『クリスマス』の寝顔(2026-11-25・プレゼント箱に座った寝顔の絵から作った)
   'santa/kyuko_normal.PNG', 'santa/face/kyuko_normal.PNG', // きゅうこ『クリスマス』の寝顔(2026-11-25・プレゼント箱に座った寝顔の絵から作った)
+  'santa/dra_normal.PNG', 'santa/face/dra_normal.PNG', // ドラ『クリスマス』の寝顔(2026-11-25・顔だけの寝顔の絵から作った。眼鏡を外す SVG は重ねない)
 ]));
 // SVG の閉じた目・眼鏡を外した顔は、その目の位置の表を測った絵(その助手の ふだんの服の全身 / 顔アイコン)にだけ重ねる。
 //   着替え・立ち絵(stand-*)・全身画など別の絵では位置がちがい、ずれた目が出る(2026-11-19 社長「寝顔じゃない顔を無理やり寝顔にしようとしてる」)。ずれた目を出すより出さない

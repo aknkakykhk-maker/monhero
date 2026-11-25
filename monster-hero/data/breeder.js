@@ -1406,6 +1406,21 @@ const kyukoSantaCostume = Object.freeze({
     Object.freeze({ shop:'diamond', cost:100000, from:ASSISTANT_COSTUME_XMAS_END_AT }),
   ]),
 });
+// ドラのサンタ(2026-11-25 クリスマスイベント r1119-172)。ほかの助手のクリスマスの衣装と同じ売り方・同じ期間。
+//   ドラは全身の絵が無く、ふだんも顔だけ。社長の選択で、クリスマスも顔だけのまま(全身の決まりの例外)。絵は images/assistant/santa/dra_*(384×384・ふだんと同じ大きさ)と face/(256×256)。
+//   立ち絵・全身画は無いので、ふだんと同じく顔の絵が立ち絵の代わりに出る。原本は tools/art-sources/assistants/dra/santa/received/(加工せずに保管)
+const DRA_SANTA_COSTUME_ART = "images/assistant/santa/face/dra_happy.PNG?v=fa847762c222";
+const draSantaCostume = Object.freeze({
+  id: 'dra_santa_2026', assistantId: 'dra',
+  name: 'クリスマス', desc: 'クリスマスの衣装。緑のサンタ帽に、星の形のめがねと赤い鼻、もこもこのつけひげです。',
+  get released() { return Date.now() >= Date.parse(ASSISTANT_COSTUME_XMAS_START_AT); },
+  icon: DRA_SANTA_COSTUME_ART,
+  imageDir: 'images/assistant/santa',
+  saleWindows: Object.freeze([
+    Object.freeze({ shop:'beatPoint', cost:1000, from:ASSISTANT_COSTUME_XMAS_START_AT, until:ASSISTANT_COSTUME_XMAS_END_AT }),
+    Object.freeze({ shop:'diamond', cost:100000, from:ASSISTANT_COSTUME_XMAS_END_AT }),
+  ]),
+});
 const ASSISTANT_COSTUMES = Object.freeze([
   halloweenCostume('mua', 'myua', 'ハロウィンの魔女', 'ハロウィン・ナイトの衣装。大きな魔女帽子とカボチャのステッキのコスプレです。'),
   halloweenCostume('kiki', 'kiki', 'ハロウィンのうさ耳フード', 'ハロウィン・ナイトの衣装。オレンジと黒のうさ耳リボンとパーカーのコスプレです。'),
@@ -1422,6 +1437,7 @@ const ASSISTANT_COSTUMES = Object.freeze([
   atsuXmasCostume,
   erubinSantaCostume,
   kyukoSantaCostume,
+  draSantaCostume,
 ]);
 // ---- 解放が要る服(unlock を持つ服)の覚え方(2026-10-27) ----
 // 新しいキー mh_assistant_costume_unlocked_v1 … 解放された服のidの配列。足すだけで消さない(CLAUDE.md ⑦)。
