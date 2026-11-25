@@ -225,7 +225,7 @@ const sbCountRaidJackMaxHitAhead = async (kind, myMax, eventId, tier = 0) => {
 // docs/sql/raid/RAID_JACK_SOURCE.sql)。source は 'battle' か 'rhythm'、tier は 0=全段階 / 1〜5、metric は 'total'(合計) か 'max'(1回の最大)。
 // ビューが無い間は null を返し、画面は「準備中」にする。報酬には使わない
 const raidJackSourceBase = (source, tier, metric) => {
-  const src = source === 'rhythm' ? 'rhythm' : 'battle';
+  const src = source === 'rhythm' || source === 'card' ? source : 'battle';   // card はクリスマスのレイドから(ジャックは送らない)
   const t = Math.floor(Number(tier)) || 0;
   const col = metric === 'max' ? 'max_damage' : 'total_damage';
   return { col, path: t >= 1 && t <= 5 ? `raid_jack_source_by_tier?kind=eq.a&source=eq.${src}&tier=eq.${t}` : `raid_jack_source_ranking?kind=eq.a&source=eq.${src}` };
