@@ -2,6 +2,7 @@
   "_説明": "全身画から立ち絵・顔アイコンを切るときの数字(life-stand-from-fullbody.py が読む)。default が全組の既定、キー(助手id か 助手id:服)ごとに上書き。face.head=一辺が頭(てっぺん〜顎)の何倍か・up=てっぺんより上へ頭の何割・dx/dy=一辺の何割ずらすか(+は右・下)・px=縮める一辺。stand_max=立ち絵の長い辺の上限。face:null は顔アイコンを作らない。直し方は docs/progress/assistant-art/r1119-153-switch/MUSE.md",
   "default": {"stand_max": 1000, "face": {"head": 1.5, "up": 0.1, "dx": 0, "dy": 0, "px": 256}},
   "atsu": {"face": null},
+  "mua:card-master": {"face": {"head": 1.83, "up": 0.35, "dx": 0.05}},
   "mua:halloween": {"face": {"head": 1.85, "up": 0.25, "dx": 0.05}},
   "_atsu:santa": "あつのクリスマス(2026-11-25)。顔アイコンをナカヨシの基準(目の高さが丸の0.48〜0.55・顔の幅が丸の約半分)に合わせて寄せた",
   "atsu:santa": {"face": {"head": 1.2, "up": -0.02, "dx": 0.1}},
