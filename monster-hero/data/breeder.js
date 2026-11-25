@@ -1394,7 +1394,7 @@ const erubinSantaCostume = Object.freeze({
 // きゅうこのサンタ(2026-11-25 クリスマスイベント r1119-172)。ほかの助手のクリスマスの衣装と同じ売り方・同じ期間。絵は images/assistant/santa/kyuko_*(立ち絵は stand-santa、全身画は fullbody/kyuko_santa)。
 //   原本は tools/art-sources/assistants/kyuko/santa/received/(加工せずに保管)。服は指示のローズピンクではなく黄色(社長「このまま」)。顔アイコンの切り方は life-stand-cut.json の kyuko:santa
 // ★冬の装い(kyuko_winter_v1)とは別の服。imageDir が違う(winter / santa)
-const KYUKO_SANTA_COSTUME_ART = "images/assistant/santa/face/kyuko_happy.PNG?v=0a5df455fc36";
+const KYUKO_SANTA_COSTUME_ART = "images/assistant/santa/face/kyuko_happy.PNG?v=7fd99e5f6344";
 const kyukoSantaCostume = Object.freeze({
   id: 'kyuko_santa_2026', assistantId: 'kyuko',
   name: 'クリスマス', desc: 'クリスマスの衣装。白いファーの黄色いサンタケープと、音符と柊の飾りのサンタ帽です。',
