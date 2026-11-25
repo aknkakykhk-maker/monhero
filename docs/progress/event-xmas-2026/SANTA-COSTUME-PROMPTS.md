@@ -6,7 +6,7 @@
 
 1. チャッピーの新しい会話を開く(**1人ずつ別の会話**。同じ会話で続けると、前の助手の顔が混ざりやすい)
 2. 下の「チャッピーへ送る文」の「◯◯」を助手の名前にして送る。これだけで、チャッピーがこのページと絵を見て作る
-3. 全身の1枚ができたら、同じ会話で「表情8種も作って」と送る(このページの「表情8種のプロンプト」に従う)
+3. 全身の1枚ができたら、同じ会話で「表情8種も作って」と送り、そのあと「寝顔も作って」と送る(このページの「表情8種のプロンプト」「寝顔のプロンプト」に従う)
 4. できた絵は**加工せずに**、下の「できた絵の保存先」の場所・名前で置く(切り分け・顔アイコン作りはこちらでやる)
 
 ### チャッピーへ送る文
@@ -31,16 +31,16 @@ https://github.com/aknkakykhk-maker/monhero/blob/main/docs/progress/event-xmas-2
 置き場所: `tools/art-sources/assistants/<フォルダ>/santa/received/`
 GitHub で見る: https://github.com/aknkakykhk-maker/monhero/tree/main/tools/art-sources/assistants
 
-| 助手 | フォルダ | 全身の絵のファイル名 | 表情8種の絵のファイル名 |
-| --- | --- | --- | --- |
-| みゅあ | `mua` | `mua_santa_fullbody.png` | `mua_santa_faces.png` |
-| きき | `kiki` | `kiki_santa_fullbody.png` | `kiki_santa_faces.png` |
-| ももすけ | `momosuke` | `momosuke_santa_fullbody.png` | `momosuke_santa_faces.png` |
-| ドラ | `dra` | `dra_santa_face.png`(顔の絵1枚) | `dra_santa_faces.png` |
-| あつ | `atsu` | `atsu_santa_fullbody.png` | `atsu_santa_faces.png` |
-| きゅうこ | `kyuko` | `kyuko_santa_fullbody.png` | `kyuko_santa_faces.png` |
-| ソラシド | `sorashido` | `sorashido_santa_fullbody.png` | `sorashido_santa_faces.png` |
-| えるびん | `erubin` | `erubin_santa_fullbody.png` | `erubin_santa_faces.png` |
+| 助手 | フォルダ | 全身の絵のファイル名 | 表情8種の絵のファイル名 | 寝顔の絵のファイル名 |
+| --- | --- | --- | --- | --- |
+| みゅあ | `mua` | `mua_santa_fullbody.png` | `mua_santa_faces.png` | `mua_santa_sleep.png` |
+| きき | `kiki` | `kiki_santa_fullbody.png` | `kiki_santa_faces.png` | `kiki_santa_sleep.png` |
+| ももすけ | `momosuke` | `momosuke_santa_fullbody.png` | `momosuke_santa_faces.png` | `momosuke_santa_sleep.png` |
+| ドラ | `dra` | `dra_santa_face.png`(顔の絵1枚) | `dra_santa_faces.png` | `dra_santa_sleep.png` |
+| あつ | `atsu` | `atsu_santa_fullbody.png` | `atsu_santa_faces.png` | `atsu_santa_sleep.png` |
+| きゅうこ | `kyuko` | `kyuko_santa_fullbody.png` | `kyuko_santa_faces.png` | `kyuko_santa_sleep.png` |
+| ソラシド | `sorashido` | `sorashido_santa_fullbody.png` | `sorashido_santa_faces.png` | `sorashido_santa_sleep.png` |
+| えるびん | `erubin` | `erubin_santa_fullbody.png` | `erubin_santa_faces.png` | `erubin_santa_sleep.png` |
 
 例: みゅあの全身の絵は `tools/art-sources/assistants/mua/santa/received/mua_santa_fullbody.png`
 
@@ -195,6 +195,20 @@ GitHub で見る: https://github.com/aknkakykhk-maker/monhero/tree/main/tools/ar
 - 顔・髪・服・画風は、さっきの絵と完全に同じ。変えるのは表情だけ
 - 並び順(左上から右へ): ふつうの微笑み / 笑顔 / ウインク / 驚き / 困り顔 / むくれ顔(怒り) / 泣き顔(照れ泣き) / わくわく(したり顔)
 - 背景は透過(できなければ真っ白)。文字・番号・枠線は入れない
+- できた絵のファイル名は、このページの「できた絵の保存先」の表の「表情8種の絵のファイル名」にする
 ```
 
 ドラは表情も落書き風のまま、正方形の顔だけで8つ(並び順は同じ)。
+
+## 寝顔のプロンプト(表情8種のあと、同じ会話で送る)
+
+```
+いま作ったサンタ衣装のキャラクターの「寝顔」を1枚作ってください。
+- 表情8種と同じ画角(胸から上)・同じ服・同じ画風。顔・髪もさっきの絵と完全に同じ
+- 目を閉じて、すやすや眠っている穏やかな顔。少し首をかたむける
+- サンタ帽をかぶっている子は、帽子が少しずれている。頭の上に小さな「Zzz」を1つだけ入れてよい(ほかの文字は入れない)
+- 背景は透過(できなければ真っ白)。枠線・番号は入れない
+- できた絵のファイル名は、このページの「できた絵の保存先」の表の「寝顔の絵のファイル名」にする
+```
+
+ドラの寝顔も落書き風のまま、正方形の顔だけで1つ。
