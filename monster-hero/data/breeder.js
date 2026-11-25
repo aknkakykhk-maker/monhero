@@ -1310,7 +1310,7 @@ const ASSISTANT_COSTUME_XMAS_END_AT = '2026-12-31T04:00:00+09:00';
 const MUA_SANTA_COSTUME_ART = "images/assistant/santa/face/myua_happy.PNG?v=2295682732ab";
 const muaSantaCostume = Object.freeze({
   id: 'mua_santa_2026', assistantId: 'mua',
-  name: '天使のサンタ', desc: 'クリスマスの衣装。白いファーのピンクのサンタ服と、ぽんぽんのついたサンタ帽です。',
+  name: 'クリスマス', desc: 'クリスマスの衣装。白いファーのピンクのサンタ服と、ぽんぽんのついたサンタ帽です。',
   get released() { return Date.now() >= Date.parse(ASSISTANT_COSTUME_XMAS_START_AT); },
   icon: MUA_SANTA_COSTUME_ART,
   imageDir: 'images/assistant/santa',
