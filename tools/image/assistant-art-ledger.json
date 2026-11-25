@@ -49,10 +49,6 @@
    "date": "2026-11-25T17:21:25+09:00",
    "subject": "素材: atsu のクリスマスイベントの探偵の衣装の元絵(チャッピーで作成・加工なし)"
   },
-  "25dcc6c2": {
-   "date": "2026-11-25T12:02:06+00:00",
-   "subject": "助手: きゅうこのサンタの顔アイコンを表情ごとにそろえる・新しい着替えの点検の手順と道具(r1125-040)"
-  },
   "2805e672": {
    "date": "2026-11-25T12:06:58+00:00",
    "subject": "助手: あつのサンタの顔アイコンを案Cにそろえて王冠まで入れる(r1125-040)"
@@ -196,6 +192,10 @@
   "70e6f92f": {
    "date": "2026-11-25T15:03:45+00:00",
    "subject": "助手: えるびんのクリスマスの顔アイコンを小さくし、ふだんの顔の大きさ・目の高さにそろえる(r1125-048)"
+  },
+  "718dff0c4": {
+   "date": "2026-11-25T15:19:10+00:00",
+   "subject": "助手: きゅうこのクリスマスの顔アイコンを、同じ表情のふだんにそろえる(r1125-048・r1125-050)"
   },
   "74aa2d14c": {
    "date": "2026-11-14T19:55:36+00:00",
@@ -867,15 +867,15 @@
   "monster-hero/images/assistant/santa/face/kiki_surprise.PNG": "c35e7ba7d076 be3ada39",
   "monster-hero/images/assistant/santa/face/kiki_troubled.PNG": "ba4ed80dda0c be3ada39",
   "monster-hero/images/assistant/santa/face/kiki_wink.PNG": "682a95ca6e80 be3ada39",
-  "monster-hero/images/assistant/santa/face/kyuko_angry.PNG": "f08389c5d1ed 25dcc6c2",
-  "monster-hero/images/assistant/santa/face/kyuko_crying.PNG": "f4834c6cdbbe 25dcc6c2",
-  "monster-hero/images/assistant/santa/face/kyuko_excited.PNG": "824d93f11d31 25dcc6c2",
-  "monster-hero/images/assistant/santa/face/kyuko_happy.PNG": "1c801d7d53dc 25dcc6c2",
-  "monster-hero/images/assistant/santa/face/kyuko_normal.PNG": "088e13762db9 25dcc6c2",
-  "monster-hero/images/assistant/santa/face/kyuko_sleep.PNG": "2d04c10725ad 25dcc6c2",
-  "monster-hero/images/assistant/santa/face/kyuko_surprise.PNG": "6e83ca280886 25dcc6c2",
-  "monster-hero/images/assistant/santa/face/kyuko_troubled.PNG": "47976b99dd0a 25dcc6c2",
-  "monster-hero/images/assistant/santa/face/kyuko_wink.PNG": "0165432ba409 25dcc6c2",
+  "monster-hero/images/assistant/santa/face/kyuko_angry.PNG": "0e776f9c7862 718dff0c4",
+  "monster-hero/images/assistant/santa/face/kyuko_crying.PNG": "7fa5f952df5c 718dff0c4",
+  "monster-hero/images/assistant/santa/face/kyuko_excited.PNG": "597960822bd8 718dff0c4",
+  "monster-hero/images/assistant/santa/face/kyuko_happy.PNG": "b2e1d411fd68 718dff0c4",
+  "monster-hero/images/assistant/santa/face/kyuko_normal.PNG": "d55dc86f632c 718dff0c4",
+  "monster-hero/images/assistant/santa/face/kyuko_sleep.PNG": "d7f6b1a5633b 718dff0c4",
+  "monster-hero/images/assistant/santa/face/kyuko_surprise.PNG": "b19af3e0fb21 718dff0c4",
+  "monster-hero/images/assistant/santa/face/kyuko_troubled.PNG": "dbd0b5f18dab 718dff0c4",
+  "monster-hero/images/assistant/santa/face/kyuko_wink.PNG": "3d4070905de5 718dff0c4",
   "monster-hero/images/assistant/santa/face/momosuke_angry.PNG": "c47de2386186 23d1cc00d",
   "monster-hero/images/assistant/santa/face/momosuke_crying.PNG": "5f843a08826f 23d1cc00d",
   "monster-hero/images/assistant/santa/face/momosuke_excited.PNG": "416c7493658b 23d1cc00d",
