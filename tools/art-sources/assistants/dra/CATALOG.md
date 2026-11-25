@@ -24,8 +24,8 @@
 | --- | --- | ---: | --- | --- | --- |
 | 全身絵 | なし | 0 | | | |
 | 立ち絵 | なし | 0 | | | |
-| バスト絵 | `monster-hero/images/assistant/santa/dra_<表情>.PNG` | 9 | 未コミット (9枚・うち寝顔1) | `tools/art-sources/assistants/dra/santa/received/dra_santa_*.png` | 元絵(1254×1254 の顔だけの絵)の外の薄いもやを縁を残して消し、ふだんのドラの絵と同じ 384×384 に縮めた。顔アイコンは normal の絵の範囲で倍率をそろえて 256×256 に切った(9枚とも同じ切り方。2026-11-25 クリスマス作業場の処理・全身画は無い) |
-| 顔アイコン | `monster-hero/images/assistant/santa/face/dra_<表情>.PNG` | 9 | 未コミット (9枚・うち寝顔1) | `tools/art-sources/assistants/dra/santa/received/dra_santa_*.png` | 元絵(1254×1254 の顔だけの絵)の外の薄いもやを縁を残して消し、ふだんのドラの絵と同じ 384×384 に縮めた。顔アイコンは normal の絵の範囲で倍率をそろえて 256×256 に切った(9枚とも同じ切り方。2026-11-25 クリスマス作業場の処理・全身画は無い) |
+| バスト絵 | `monster-hero/images/assistant/santa/dra_<表情>.PNG` | 9 | 2026-11-25 35b9d5abf(9枚・うち寝顔1) | `tools/art-sources/assistants/dra/santa/received/dra_santa_*.png` | 元絵(1254×1254 の顔だけの絵)の外の薄いもやを縁を残して消し、ふだんのドラの絵と同じ 384×384 に縮めた。顔アイコンは normal の絵の範囲で倍率をそろえて 256×256 に切った(9枚とも同じ切り方。2026-11-25 クリスマス作業場の処理・全身画は無い) |
+| 顔アイコン | `monster-hero/images/assistant/santa/face/dra_<表情>.PNG` | 9 | 2026-11-25 8c31068a2(1枚) / 2026-11-25 35b9d5abf(8枚・うち寝顔1) | `tools/art-sources/assistants/dra/santa/received/dra_santa_*.png` | 元絵(1254×1254 の顔だけの絵)の外の薄いもやを縁を残して消し、ふだんのドラの絵と同じ 384×384 に縮めた。顔アイコンは normal の絵の範囲で倍率をそろえて 256×256 に切った(9枚とも同じ切り方。2026-11-25 クリスマス作業場の処理・全身画は無い) |
 
 ## 旧版(正本ではない・保管庫)
 
