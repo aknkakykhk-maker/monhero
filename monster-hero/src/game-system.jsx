@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e06d4f9c331138f6
+// generated-sha256: 543cac8bbf24442c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -10674,6 +10674,9 @@ const RAID_JACK_START_AT = '2026-10-05T04:00:00+09:00';
 // クリスマスイベントの衣装(みゅあのサンタ・2026-11-25 r1119-172)の売り出しの時刻。RELEASE_FLAGS.xmasCostume が見るたびに数え直す。
 //   data/breeder.js の ASSISTANT_COSTUME_XMAS_START_AT と同じ値(更新履歴・ヘルプの出し入れに使う。食い違いは tools/market/assistant-costume-check.js が見る)
 const XMAS_COSTUME_START_AT = '2026-11-30T10:00:00+09:00';
+// クリスマスのレイド(r1119-172)の開始時刻。35-raid-xmas.jsx の RAID_XMAS_EVENT.startAt と同じ値(食い違いは tools/battle/raid-xmas-check.js が見る)。
+//   RELEASE_FLAGS.raidXmas はこの時刻まで偽を返す(見るたびに数え直す)。入口・HOMEのボス・ヘルプ・更新履歴はこれを見る
+const RAID_XMAS_START_AT = '2026-11-30T10:00:00+09:00';
 const RAID_JACK_PUBLIC_RELEASE = true;
 // レイドバトルの「モンヒロビートで挑戦する」(2026-10-06)。ダメージの仕様が固まるまで一時止めていた(ユーザー指示)が、仕様の確定・実装・サブストーリー(ドラのビート)の用意ができたので、
 // 2026-10-06 にユーザーの「出して」で公開した。偽にすると、レイド画面のボタン・サブストーリー・更新履歴・ヘルプの説明が出なくなる(デバッグの強制表示では、確認のためボタンだけ出る)
@@ -10840,7 +10843,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   //   数字は 32-tactics-units.jsx の TACTICS_HATE / MONSTER_TYPES。お話「タクティクスバトル ～4人のタイプ～」(tactics_types)もこの印で出る
   tacticsHate: true,
   // タクティクスのEXスキル。遊べる入口(β版を含む)があって、EXの公開フラグも立っているときだけ
-  tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, get rhythmGrandOpen() { try { return RHYTHM_GRAND_OPEN_RELEASE === true && Date.now() >= Date.parse(RHYTHM_GRAND_OPEN_START_AT); } catch (e) { return false; } }, rhythmGrandOpenTeaser:RHYTHM_GRAND_OPEN_TEASER_RELEASE, rhythmMulti:RHYTHM_MULTI_PUBLIC_RELEASE, friends:FRIENDS_PUBLIC_RELEASE, raidJackRhythm: RAID_JACK_RHYTHM_PUBLIC_RELEASE, get raidJack() { try { return RAID_JACK_PUBLIC_RELEASE === true && Date.now() >= Date.parse(RAID_JACK_START_AT); } catch (e) { return false; } }, get xmasCostume() { try { return Date.now() >= Date.parse(XMAS_COSTUME_START_AT); } catch (e) { return false; } }, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
+  tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, get rhythmGrandOpen() { try { return RHYTHM_GRAND_OPEN_RELEASE === true && Date.now() >= Date.parse(RHYTHM_GRAND_OPEN_START_AT); } catch (e) { return false; } }, rhythmGrandOpenTeaser:RHYTHM_GRAND_OPEN_TEASER_RELEASE, rhythmMulti:RHYTHM_MULTI_PUBLIC_RELEASE, friends:FRIENDS_PUBLIC_RELEASE, raidJackRhythm: RAID_JACK_RHYTHM_PUBLIC_RELEASE, get raidJack() { try { return RAID_JACK_PUBLIC_RELEASE === true && Date.now() >= Date.parse(RAID_JACK_START_AT); } catch (e) { return false; } }, get raidXmas() { try { return Date.now() >= Date.parse(RAID_XMAS_START_AT); } catch (e) { return false; } }, get xmasCostume() { try { return Date.now() >= Date.parse(XMAS_COSTUME_START_AT); } catch (e) { return false; } }, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
 // releaseFlag = そのフラグが立つまで出さない。unreleasedFlag = そのフラグが立ったら出さない。
 // 逆向きの名札が要るのは「準備中です」の案内で、公開したあとも残っていると
 // 遊べているのに準備中の項目が並ぶ(ヘルプのモンヒロビートで実際にそうなっていた・2026-09-06)。
@@ -38282,7 +38285,7 @@ const raidJackNormalizePending = (raw) => (Array.isArray(raw) ? raw : []).map((h
   if (typeof x.hitId !== 'string' || !/^[0-9A-Za-z_-]{8,64}$/.test(x.hitId)) return null;
   if (x.kind !== 'a' && x.kind !== 'b') return null;
   if (tier < 1 || tier > 5 || damage < 0 || damage > 100000000) return null;
-  return { hitId: x.hitId, kind: x.kind, tier, damage, defeated: x.defeated === true, source: x.source === 'rhythm' ? 'rhythm' : 'battle' };
+  return { hitId: x.hitId, kind: x.kind, tier, damage, defeated: x.defeated === true, source: (x.source === 'rhythm' || x.source === 'card') ? x.source : 'battle' };   // card はクリスマスのレイド(MFバトルカード)。ジャックは送らない
 }).filter(Boolean).slice(0, 30);
 const raidJackNormalizeState = (raw) => {
   const src = raw && typeof raw === 'object' ? raw : {};
@@ -38553,6 +38556,8 @@ const sbSendRaidJackHit = async (hit, breederId, eventId) => {
   } else {
     result = await send({ ...row, source: clean.source });
     if (result.ok) _raidJackSourceColumn = true;
+    // 'card'(クリスマスのレイド)は、表の制約へ 'card' を足す SQL の前だと弾かれる。battle として送り直さず、再送待ちに残す
+    else if (clean.source === 'card' && result.status === 400 && /source/i.test(String(result.body || ''))) return 'notready';
     else if (result.status === 400 && /source/i.test(String(result.body || '')) && _raidJackSourceColumn !== true) {
       _raidJackSourceColumn = false;
       result = await send(row);
@@ -38865,6 +38870,242 @@ const raidJackRevokeUnearned = async (state, gifts, breederId, eventId) => {
   });
   const next = raidJackNormalizeState({ ...norm, claimed: nextClaimed, giftsChecked: true });
   return { ok: true, state: next, gifts: nextGifts, changed: removed > 0 || nextClaimed.length !== norm.claimed.length, removed };
+};
+
+// ---- part: 35-raid-xmas.jsx ----
+// ===== クリスマスのレイド(r1119-172)の定義(純粋な計算とデータ) =====
+// つなぎ目の正本: docs/progress/event-xmas-2026/BUILD.md / 企画: docs/progress/event-xmas-2026/PLAN.md
+//
+// 決めごと:
+//  ・土台はジャック(35-raid-jack.jsx)。ジャックのデータ・キー・関数の動きは変えない。段階の形・報酬の表・ビートの換算はジャックの物を使い回す。
+//  ・サーバーはジャックと同じ表 raid_jack_hits を、イベントid raid_xmas_2026 で使う(デバッグは raid_xmas_debug)。
+//  ・端末の保存は新しいキー mh_raid_xmas_v1(形は mh_raid_jack_v1 と同じ)。ジャックのキーには触らない。
+//  ・与ダメージの入口は battle / rhythm / card の3つ。レイドバトル(A)の回数は3つで共通。グランドスラム(B)はバトルだけ。
+//  ・ボスの名前・絵は仮(社長が後で渡す)。画面は RAID_XMAS_EVENT.name と段階の name を読み、直書きしない。
+//  ・数字は仮(ジャックの最後の数字と同じ)。社長が決めたら、この下の表だけ差し替える。
+//  ・開催中かどうかは、見るたびに raidXmasWindowAt(Date.now()) で数え直す。
+//  ・公開フラグ RELEASE_FLAGS.raidXmas(開始時刻を過ぎたら真)が偽のあいだは、入口もヘルプ・更新履歴も出さない。
+
+// 開始は 17-release-changelog-login-missions.jsx の RAID_XMAS_START_AT と同じ値(更新履歴の公開判定が先に読むため、そちらにも置く。食い違いは raid-xmas-check.js が見る)
+const RAID_XMAS_EVENT = Object.freeze({
+  id: 'raid_xmas_2026',
+  debugId: 'raid_xmas_debug',
+  title: '聖夜の名探偵',                 // イベントの名前(社長決定 2026-11-25)。副題の案は「〜雪山ペンションと消えたプレゼント〜」
+  name: '黒いサンタ(仮)',               // ボスの名前(仮・社長の返事待ち)。ボスは「サンタ」が覚醒した「覚醒サンタ」
+  startAt: '2026-11-30T10:00:00+09:00',
+  endAt: '2026-12-31T04:00:00+09:00',
+  storageKey: 'mh_raid_xmas_v1',
+});
+const RAID_XMAS_STORAGE_KEY = RAID_XMAS_EVENT.storageKey;
+const RAID_XMAS_SOURCES = Object.freeze(['battle', 'rhythm', 'card']);
+const RAID_XMAS_FREE_PER_DAY = 3;
+const RAID_XMAS_EXTRA_COST_BEAT_P = 300;
+const RAID_XMAS_TURNS = 20;
+
+// ---- 段階(仮。ジャックの最後の数字と同じ) ----
+// A: レイドバトル(協力・共有ライフ)。ライフ 175万 / 320万 / 800万 / 3,500万 / 8,000万・攻撃力 350 / 500 / 600 / 800 / 1,000
+const RAID_XMAS_A_HPS = Object.freeze([1750000, 3200000, 8000000, 35000000, 80000000]);
+const RAID_XMAS_A_ATKS = Object.freeze([350, 500, 600, 800, 1000]);
+const RAID_XMAS_A_NAMES = Object.freeze(['黒いサンタ(仮)・一', '黒いサンタ(仮)・二', '黒いサンタ(仮)・三', '黒いサンタ(仮)・四', '黒いサンタ(仮)・五']);
+const RAID_XMAS_A_TIERS = Object.freeze(RAID_XMAS_A_NAMES.map((name, i) =>
+  raidJackTier(`a${i + 1}`, name, [5.0, 6.5, 8.0, 10.0, 13.0][i], [3, 4, 5, 5, 5][i], RAID_XMAS_A_ATKS[i] / RAID_JACK_BASE.atk, RAID_XMAS_A_HPS[i])));
+// 最後の段階を倒したあと: 共有ライフは無限(倒した扱いにしない)・1戦のライフ 455万・攻撃力 700。サーバーへ送る段階は 5 のまま
+const RAID_XMAS_AFTER_BOSS = raidJackTier('a6', '黒いサンタ(仮)・聖夜', 13.0, 5, 1.0, 4550000);
+// B: グランドスラム(個人・累計)。倍率 0.2 / 2 / 10 / 40 / 100
+const RAID_XMAS_B_TIERS = Object.freeze([
+  raidJackTier('b1', '初級 黒いサンタ(仮)', 0.2, 3),
+  raidJackTier('b2', '中級 黒いサンタ(仮)', 2, 4),
+  raidJackTier('b3', '上級 黒いサンタ(仮)', 10, 5),
+  raidJackTier('b4', '超級 黒いサンタ(仮)', 40, 5),
+  raidJackTier('b5', '極級 黒いサンタ(仮)', 100, 5),
+]);
+const raidXmasTiers = (kind) => (kind === 'b' ? RAID_XMAS_B_TIERS : RAID_XMAS_A_TIERS);
+const raidXmasTierAt = (kind, index) => {
+  const list = raidXmasTiers(kind);
+  const i = Number.isFinite(index) ? Math.floor(index) : 0;
+  return list[Math.min(Math.max(i, 0), list.length - 1)];
+};
+
+// 報酬はジャックと同じ表(社長決定 2026-11-25)
+const RAID_XMAS_REWARDS = RAID_JACK_REWARDS;
+
+// 期間。見るたびに数え直す
+const raidXmasWindowAt = (nowMs) => {
+  const now = Number.isFinite(nowMs) ? nowMs : 0;
+  const start = Date.parse(RAID_XMAS_EVENT.startAt);
+  const end = Date.parse(RAID_XMAS_EVENT.endAt);
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return 'before';
+  if (now < start) return 'before';
+  if (now >= end) return 'after';
+  return 'open';
+};
+
+// 最後の段階が倒されたか(totals は sbFetchRaidJackTierTotals の返り値)
+const raidXmasBossDown = (totals) => !!totals && !!totals.a && !!totals.a[RAID_XMAS_A_TIERS.length]
+  && (Number(totals.a[RAID_XMAS_A_TIERS.length].total) || 0) >= RAID_XMAS_A_TIERS[RAID_XMAS_A_TIERS.length - 1].hp;
+
+// 今日の残りの回数(日付の区切りはジャックと同じ 4:00)。extra はビートPで買った分(その日のうち)
+const raidXmasRemaining = (side, nowMs) => {
+  const s = raidJackNormalizeSide(side, false);
+  const today = raidJackDayKey(nowMs);
+  const used = s.day === today ? s.used : 0;
+  const extra = s.day === today ? s.extra : 0;
+  return Math.max(0, RAID_XMAS_FREE_PER_DAY + extra - used);
+};
+
+// モンヒロビートの換算。はじめはジャックの式そのまま(数字を変えるときはここだけ直す)
+const raidXmasRhythmDamageOf = (result, difficulty) => raidJackRhythmDamageOf(result, difficulty);
+
+// ---- 段階を倒すたびのお話(台本は docs/progress/event-xmas-2026/SCRIPT.md。データは data/assistants.js の EVENT_REPLAYS に足す) ----
+const RAID_XMAS_STORY_START_ID = 'raid_xmas_story_1b';
+const RAID_XMAS_STORY_AFTER_TIER = Object.freeze({
+  a1: 'raid_xmas_story_2', a2: 'raid_xmas_story_3', a3: 'raid_xmas_story_4', a4: 'raid_xmas_story_5', a5: 'raid_xmas_story_6',
+});
+const RAID_XMAS_ENDING_CLEARED_ID = 'raid_xmas_ending_cleared';
+const RAID_XMAS_ENDING_NOTCLEARED_ID = 'raid_xmas_ending_notcleared';
+const RAID_XMAS_STORY_IDS = Object.freeze([
+  RAID_XMAS_STORY_START_ID, ...Object.values(RAID_XMAS_STORY_AFTER_TIER), RAID_XMAS_ENDING_CLEARED_ID, RAID_XMAS_ENDING_NOTCLEARED_ID,
+]);
+// 段階を倒したあと・期間が終わったあとに流すお話の候補(古い順)。totals が取れていないときは段階の話を出さない
+const raidXmasStoryCandidates = (totals, nowMs) => {
+  const out = [];
+  const a = totals && totals.a ? totals.a : null;
+  const defeatedAt = (i) => !!a && !!a[i + 1] && (Number(a[i + 1].total) || 0) >= RAID_XMAS_A_TIERS[i].hp;
+  if (a) RAID_XMAS_A_TIERS.forEach((t, i) => { if (defeatedAt(i)) out.push(RAID_XMAS_STORY_AFTER_TIER[t.id]); });
+  if (raidXmasWindowAt(nowMs) === 'after' && a) {
+    out.push(defeatedAt(RAID_XMAS_A_TIERS.length - 1) ? RAID_XMAS_ENDING_CLEARED_ID : RAID_XMAS_ENDING_NOTCLEARED_ID);
+  }
+  return out.filter(Boolean);
+};
+
+// ---- part: 36-raid-xmas-api.jsx ----
+// ===== クリスマスのレイドの回数・与ダメージ(3つの入口で共通の口) =====
+// つなぎ目の正本: docs/progress/event-xmas-2026/BUILD.md(§2 回数・§3 ダメージを足す関数)
+//
+// 決めごと:
+//  ・サーバーへ送るのはジャックの通信(sbSendRaidJackHit・raidJackSubmitHit)を、イベントid raid_xmas_2026 で使う。
+//  ・端末の保存は mh_raid_xmas_v1 だけ。ジャックの mh_raid_jack_v1 には読みも書きもしない。
+//  ・各部(バトル・ビート・カード)は表へ直接送らず、raidXmasUseTry → 遊ぶ → raidXmasAddDamage の順に呼ぶ。
+//  ・デバッグの強制表示中(raidXmasSetDebug)は、端末の記録に書かず・デバッグ用のイベントidで送るだけ(回数は realRules のときだけ数える)。
+
+const raidXmasLoadState = async () => {
+  try { return raidJackNormalizeState(await storeGet(RAID_XMAS_STORAGE_KEY, null, false)); } catch (e) { return raidJackDefaultState(); }
+};
+const raidXmasSaveState = async (state) => {
+  try { await storeSet(RAID_XMAS_STORAGE_KEY, raidJackNormalizeState(state), false); return true; } catch (e) { return false; }
+};
+
+// デバッグの強制表示(レイドの確認画面から入れる)。realRules が真なら回数・端末の記録は本番どおり数える(送り先はデバッグのid)
+let _raidXmasDebug = { force: false, realRules: false };
+const raidXmasSetDebug = (opts) => {
+  const o = opts && typeof opts === 'object' ? opts : {};
+  _raidXmasDebug = { force: o.force === true, realRules: o.realRules === true };
+};
+const raidXmasEventId = () => (_raidXmasDebug.force ? RAID_XMAS_EVENT.debugId : RAID_XMAS_EVENT.id);
+const raidXmasSafeEventId = (id) => (id === RAID_XMAS_EVENT.id || id === RAID_XMAS_EVENT.debugId ? id : raidXmasEventId());
+
+// 段階の合計を取る(取れなければ null)。待つのは長くて waitMs まで
+const raidXmasFetchTotals = async (eventId, waitMs = 4000) => {
+  try {
+    return await Promise.race([sbFetchRaidJackTierTotals(raidXmasSafeEventId(eventId)), new Promise((resolve) => setTimeout(() => resolve(null), waitMs))]);
+  } catch (e) { return null; }
+};
+
+// 1回挑む前に呼ぶ。レイドバトル(A)の回数を1つ使う(3つの入口で共通)。返り値 { ok, hitId, eventId, remaining }
+//   ok が false: 期間外・残りが無い・保存に失敗(始めない)。kind 'b' はグランドスラム(バトルだけ)
+const raidXmasUseTry = async (kind = 'a', nowMs = Date.now()) => {
+  const k = kind === 'b' ? 'b' : 'a';
+  const eventId = raidXmasEventId();
+  const hitId = raidJackMakeHitId(nowMs);
+  if (_raidXmasDebug.force && !_raidXmasDebug.realRules) return { ok: true, hitId, eventId, remaining: null };
+  if (!_raidXmasDebug.force && raidXmasWindowAt(nowMs) !== 'open') return { ok: false, hitId: '', eventId, remaining: 0 };
+  const state = await raidXmasLoadState();
+  const side = state[k];
+  const today = raidJackDayKey(nowMs);
+  if (side.day !== today) { side.day = today; side.used = 0; side.extra = 0; }
+  const left = raidXmasRemaining(side, nowMs);
+  if (left <= 0) return { ok: false, hitId: '', eventId, remaining: 0 };
+  side.used += 1;
+  if (!(await raidXmasSaveState(state))) return { ok: false, hitId: '', eventId, remaining: left };   // 回数だけ減る事故を作らない
+  return { ok: true, hitId, eventId, remaining: left - 1 };
+};
+
+// 1回の挑戦が終わったら1度だけ呼ぶ。input = { source, kind, tierIndex, damage, hitId, eventId, defeated?, detail?, log? }
+//   defeated: バトルは自分で分かる(敵を倒した)ので渡す。渡さなければ、いまの共有ライフの残りと比べて決める(ビート・カード)
+//   log: バトルの記録に送る物 { party, units, turns, score }(バトルだけ。ビートは score だけ。カードは送らない)
+// 返り値 { way, outcome('sent'|'pending'|'invalid'), damage, defeated, opened, kind, tierIndex, tierName, lifeBefore, lifeLeft, lifeMax, afterBoss, eventId, hitId, detail }
+const raidXmasAddDamage = async (input) => {
+  const i = input && typeof input === 'object' ? input : {};
+  const source = RAID_XMAS_SOURCES.includes(i.source) ? i.source : '';
+  const kind = i.kind === 'b' ? 'b' : 'a';
+  const list = raidXmasTiers(kind);
+  const tierIndex = Math.min(Math.max(Math.floor(Number(i.tierIndex) || 0), 0), list.length - 1);
+  const tier = list[tierIndex];
+  const damage = Math.max(0, Math.min(100000000, Math.floor(Number(i.damage) || 0)));
+  const eventId = raidXmasSafeEventId(i.eventId);
+  const hitId = raidJackSafeId(i.hitId) && i.hitId.length <= 64 ? i.hitId : raidJackMakeHitId();
+  const res = { way: source, outcome: 'sent', damage, defeated: false, opened: false, kind, tierIndex, tierName: tier.name,
+    lifeBefore: null, lifeLeft: null, lifeMax: tier.hp, afterBoss: false, eventId, hitId, detail: i.detail && typeof i.detail === 'object' ? i.detail : null };
+  if (!source || (kind === 'b' && source !== 'battle')) return { ...res, outcome: 'invalid' };
+  // いまの共有ライフ(A だけ)。最後の段階を倒したあとは共有ライフが無限なので、倒した扱いにしない
+  if (kind === 'a') {
+    const totals = await raidXmasFetchTotals(eventId);
+    if (totals) {
+      const done = totals.a && totals.a[tierIndex + 1] ? Number(totals.a[tierIndex + 1].total) || 0 : 0;
+      res.afterBoss = tierIndex === list.length - 1 && raidXmasBossDown(totals);
+      res.lifeBefore = res.afterBoss ? RAID_XMAS_AFTER_BOSS.hp : Math.max(0, tier.hp - done);
+      if (res.afterBoss) { res.tierName = RAID_XMAS_AFTER_BOSS.name; res.lifeMax = RAID_XMAS_AFTER_BOSS.hp; }
+    }
+  }
+  if (typeof i.defeated === 'boolean') res.defeated = i.defeated && !res.afterBoss;
+  else res.defeated = kind === 'a' && !res.afterBoss && damage > 0 && res.lifeBefore !== null && res.lifeBefore > 0 && damage >= res.lifeBefore;
+  res.lifeLeft = res.lifeBefore === null ? null : Math.max(0, res.lifeBefore - damage);
+  if (damage <= 0) return res;   // 送るものが無い(アシストモード・途中でやめた)
+  const hit = { hitId, kind, tier: tierIndex + 1, damage, defeated: res.defeated, source };
+  const isDebugRun = eventId !== RAID_XMAS_EVENT.id;
+  let outcome = 'error';
+  try {
+    if (isDebugRun) {   // デバッグの回は本番の端末記録(倒した段階・累計・再送待ち)に書かない(ジャックと同じ)
+      outcome = await sbSendRaidJackHit(hit, await ensureBreederId(), eventId);
+    } else {
+      let next = await raidXmasLoadState();
+      const side = next[kind];
+      const before = raidJackUnlockedCount(kind, side.defeated);
+      if (res.defeated && !side.defeated.includes(tier.id)) side.defeated = [...side.defeated, tier.id];
+      if (kind === 'b') side.total = (side.total || 0) + damage;
+      res.opened = raidJackUnlockedCount(kind, side.defeated) > before;
+      const sent = await raidJackSubmitHit(next, hit, await ensureBreederId(), eventId);
+      next = sent.state; outcome = sent.outcome;
+      await raidXmasSaveState(next);
+    }
+  } catch (e) { outcome = 'error'; }
+  res.outcome = outcome === 'sent' ? 'sent' : outcome === 'invalid' ? 'invalid' : 'pending';
+  // バトルの記録(印が偽のあいだ・デバッグ・カードは送らない。待たない)
+  if (typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.battleLog === true && !isDebugRun && source !== 'card') {
+    try {
+      const log = i.log && typeof i.log === 'object' ? i.log : {};
+      void sbSendRaidBattleLog(buildRaidBattleLogRow({ party: log.party, units: log.units, score: log.score,
+        raid: { event: eventId, kind, tier: tierIndex + 1, source, damage, defeated: res.defeated, turns: log.turns } }));
+    } catch (e) {}
+  }
+  return res;
+};
+
+// 端末に残っている再送待ちを送り直す(HOME とレイド画面を開いたとき)。返り値は送れた件数
+const raidXmasFlushStoredPending = async (breederId) => {
+  try {
+    const state = await raidXmasLoadState();
+    if (!state.pending.length || !raidJackSafeId(breederId)) return 0;
+    const before = state.pending.length;
+    const next = await raidJackFlushPending(state, breederId, RAID_XMAS_EVENT.id);
+    if (next.pending.length !== before) {
+      const latest = await raidXmasLoadState();
+      const left = new Set(next.pending.map((p) => p.hitId));
+      latest.pending = latest.pending.filter((p) => left.has(p.hitId));
+      await raidXmasSaveState(latest);
+    }
+    return before - next.pending.length;
+  } catch (e) { return 0; }
 };
 
 // ---- part: 37-raid-jack-aura.jsx ----
