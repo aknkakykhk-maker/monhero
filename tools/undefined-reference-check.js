@@ -70,6 +70,8 @@ const GLOBALS = new Set([
 //   許すのは、ソースのどこかに「typeof 名前 === 'function'」がある名前だけ(確かめずに呼ぶ書き方は、ここに載っていても落とす)。
 //   定義が入ったら、この一覧から消してよい(消し忘れても、定義があれば許しは使われない)
 const LATER_HOOKS = {
+  startRaidXmasRhythm: 'クリスマスのレイドのモンヒロビート挑戦(ビート部が 60-app.jsx の App に置く・docs/progress/event-xmas-2026/BUILD.md §4)。レイド画面の呼び出しが typeof で確かめてボタンを出す。2026-11-25',
+  startRaidXmasCard: 'クリスマスのレイドのバトルカード挑戦(カード部が 60-app.jsx の App に置く・BUILD.md §4)。レイド画面の呼び出しが typeof で確かめてボタンを出す。2026-11-25',
   MonsucFuseSheet: 'モンヒロサクセスの保存枠どうしの合体の画面部品(合体の担当 claude/monsuc-fuse が足す)。保存枠の画面(56-monhero-success-r3-retire.jsx)の「合体する」から開く。2026-11-12',
   assistantLifeHospitalCureSlotsOf: '特別な治療(ビートPの品物)を使った病院の回(abs)の配列(ナカヨシ・56-assistant-life-body.jsx)。育成ノートが、その回で助手のマスモンのけが・病気の残りを0にするのに読む。2026-11-12 キズナ',
   assistantLifeHospitalSlotsOf: '助手専用の病院にいた生活の回(abs)の配列(ナカヨシが足す)。育成ノート(56-assistant-life-masmon-plan.jsx)がけが・病気を早く治すのに読む。2026-11-12 キズナ',

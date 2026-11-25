@@ -60,8 +60,10 @@ const row = B({ party, raid: { event: 'raid_jack_2026', kind: 'b', tier: 3, sour
   const body = app.slice(at, app.indexOf('const row = { difficulty: diff, user_name: name', at));
   check('③ 通常のバトル(submitLocalScore)からは送らない', !/sbSendRaidBattleLog|sbSendBattleLog|buildBattleLogRow|buildRaidBattleLogRow/.test(body));
   check('③ 前の名前(buildBattleLogRow・sbSendBattleLog・battle_logs)が残っていない', !/buildBattleLogRow|sbSendBattleLog\b|'battle_logs'/.test(app + supa));
-  const hooks = (app.match(/if ?\(RELEASE_FLAGS\.battleLog ?=== ?true ?&& ?!isDebugRun[^\n]*\n[^\n]*sbSendRaidBattleLog\(buildRaidBattleLogRow\(\{[^\n]*raid: ?\{[^\n]*/g) || []);
-  check('③ 送る所はレイドの2か所(レイドバトル・グランドスラム / モンヒロビート挑戦)だけで、印が真・デバッグでないときだけ', hooks.length === 2 && (app.match(/sbSendRaidBattleLog\(/g) || []).length === 2
+  // モンヒロビート挑戦の送る所は 39-raid-rhythm.jsx(イベントごとのつなぎ口・2026-11-25 r1119-172)
+  const sendSrc = app + '\n' + read('monster-hero/src/parts/39-raid-rhythm.jsx');
+  const hooks = (sendSrc.match(/if ?\(RELEASE_FLAGS\.battleLog ?=== ?true ?&& ?!isDebugRun[^\n]*\n[^\n]*sbSendRaidBattleLog\(buildRaidBattleLogRow\(\{[^\n]*raid: ?\{[^\n]*/g) || []);
+  check('③ 送る所はレイドの2か所(レイドバトル・グランドスラム / モンヒロビート挑戦)だけで、印が真・デバッグでないときだけ', hooks.length === 2 && (sendSrc.match(/sbSendRaidBattleLog\(/g) || []).length === 2
     && hooks.some((t) => /source: ?'battle'/.test(t)) && hooks.some((t) => /source: ?'rhythm'/.test(t)));
   check('③ レイドの送る所で名前・ブリーダーIDを渡していない', hooks.every((t) => !/breederId|user_name|breederName|icon/.test(t)));
   check('③ raid_jack_hits への送り方は変えていない', /const sent=await raidJackSubmitHit\(next,hit,breederId,run\.eventId\);/.test(app));

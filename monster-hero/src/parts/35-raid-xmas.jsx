@@ -28,8 +28,10 @@ const RAID_XMAS_EXTRA_COST_BEAT_P = 300;
 const RAID_XMAS_TURNS = 20;
 
 // ---- 段階(仮。ジャックの最後の数字と同じ) ----
-// A: レイドバトル(協力・共有ライフ)。ライフ 175万 / 320万 / 800万 / 3,500万 / 8,000万・攻撃力 350 / 500 / 600 / 800 / 1,000
-const RAID_XMAS_A_HPS = Object.freeze([1750000, 3200000, 8000000, 35000000, 80000000]);
+// A: レイドバトル(協力・共有ライフ)。攻撃力 350 / 500 / 600 / 800 / 1,000(ジャックと同じ・仮)
+// ライフは社長決定(2026-11-25「前半が5倍。後半は前回より少し高め」): 段階1〜3はジャックの5倍(875万 / 1,600万 / 4,000万)、
+//   段階4・5はジャックの1.2倍(4,200万 / 9,600万)
+const RAID_XMAS_A_HPS = Object.freeze([8750000, 16000000, 40000000, 42000000, 96000000]);
 const RAID_XMAS_A_ATKS = Object.freeze([350, 500, 600, 800, 1000]);
 const RAID_XMAS_A_NAMES = Object.freeze(['黒いサンタ(仮)・一', '黒いサンタ(仮)・二', '黒いサンタ(仮)・三', '黒いサンタ(仮)・四', '黒いサンタ(仮)・五']);
 const RAID_XMAS_A_TIERS = Object.freeze(RAID_XMAS_A_NAMES.map((name, i) =>
@@ -50,6 +52,19 @@ const raidXmasTierAt = (kind, index) => {
   const i = Number.isFinite(index) ? Math.floor(index) : 0;
   return list[Math.min(Math.max(i, 0), list.length - 1)];
 };
+
+// ボス(覚醒サンタ)の技の名前(社長決定 2026-11-25・台帳 r1125-058)。動き(rush/sweep/roar/pierce/allout)と本数 3/4/5/5/5 はジャックのまま。
+//   名前だけを 35-raid-jack.jsx の raidJackMakeEnemy(opts.ev === 'xmas')で敵へ写す。ジャックの RAID_JACK_SKILL_NAMES・敵データ Jack は変えない。
+//   「X’マス」の「’」は全角の右シングル引用符(U+2019)
+const RAID_XMAS_SKILL_NAMES = Object.freeze({
+  normal: '正拳・闇',
+  special: '瞬黒撃',
+  sweep: '超宝屁',   // ちょうほうひ(社長の訂正 2026-11-25)
+  rush: '超飛び蹴り',
+  pierce: '超暗けい',
+  roar: '怪しこの夜',
+  allout: 'X\u2019マスプレデター',
+});
 
 // 報酬はジャックと同じ表(社長決定 2026-11-25)
 const RAID_XMAS_REWARDS = RAID_JACK_REWARDS;
@@ -102,3 +117,11 @@ const raidXmasStoryCandidates = (totals, nowMs) => {
   }
   return out.filter(Boolean);
 };
+
+// ---- 期間中のモンヒロバトルのごほうび1.5倍(r1119-172 追記「期間中のボーナス」③・社長の選択) ----
+//  ・期間はクリスマスのイベントと同じ(11/30 10:00〜12/31 4:00)。見るたびに時刻で決める(保存しない)。
+//  ・掛けるのは、モンヒロバトルのランで配るブリーダー経験値・絆経験値・ダイヤ(60-app.jsx の awardRunRewards)と、
+//    プロのランぶんのクイック周回の周回数。今ある倍率(難易度・クイック・プロなど)とは掛け算で重ねる(カードと同じ「A 掛け算」)。
+//  ・スコア・ランキングの送信・自己ベスト・スキップチケット・レイド・モンヒロビートの周回(ビートの5倍の側)には掛けない。
+const XMAS_BATTLE_BONUS_RATE = 1.5;
+const xmasBattleBonusRateAt = (nowMs) => (raidXmasWindowAt(nowMs) === 'open' ? XMAS_BATTLE_BONUS_RATE : 1);

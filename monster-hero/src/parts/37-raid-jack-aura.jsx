@@ -98,6 +98,7 @@ const RAID_JACK_STINGERS = Object.freeze({
   wipe: { text: 'DEFEAT', tone: 'lose' },
   giveup: { text: 'RETIRE', tone: 'end' },
   rhythm: { text: 'FINISH', tone: 'end' },   // モンヒロビートで挑戦したとき(倒さなかったとき)
+  card: { text: 'FINISH', tone: 'end' },     // バトルカードで挑戦したとき(クリスマスのレイド・倒さなかったとき)
 });
 const RaidJackResultStinger = ({ reason }) => {
   const def = RAID_JACK_STINGERS[reason] || RAID_JACK_STINGERS.turns;
@@ -137,7 +138,7 @@ const RaidJackDamageFx = ({ fx, onDone }) => {
   const defeated = hasLife && !fx.pumpkin && fx.damage > 0 && fx.damage >= fx.lifeBefore;
   const none = !(fx.damage > 0);
   return (
-    <div data-raid-jack-damage-fx data-jack-aura={fx.pumpkin ? undefined : n} className="mh-rjdmg" role="status"
+    <div data-raid-jack-damage-fx data-jack-aura={fx.pumpkin || fx.bossImg ? undefined : n} className="mh-rjdmg" role="status"
       onClick={() => { if (Date.now() - startedRef.current > 1500) finish(); }}>
       <i className="mh-rjdmg-flash" />
       <div className="mh-rjdmg-score">
@@ -145,9 +146,10 @@ const RaidJackDamageFx = ({ fx, onDone }) => {
         <b><TrainingCountUp from={0} to={Math.max(0, fx.score)} delay={250} duration={700} format={(v) => v.toLocaleString()} /></b>
       </div>
       <div className="mh-rjdmg-stage">
-        {!fx.pumpkin && <JackAuraLayer tier={n} limit={10} />}
-        <img src={fx.pumpkin ? PUMPKIN_ICON_IMG : JACK_IMG} alt="" draggable={false} className={`mh-rjdmg-jack${none ? ' mh-rjdmg-jack-none' : ''}`}
-          style={fx.pumpkin ? undefined : { filter: raidJackAuraGlowFilter(n, 0.5) }} />
+        {/* fx.bossImg: ジャック以外のレイド(39-raid-rhythm.jsx のつなぎ口の bossImg)。そのときはジャックのオーラを出さない */}
+        {!fx.pumpkin && !fx.bossImg && <JackAuraLayer tier={n} limit={10} />}
+        <img src={fx.bossImg || (fx.pumpkin ? PUMPKIN_ICON_IMG : JACK_IMG)} alt="" draggable={false} className={`mh-rjdmg-jack${none ? ' mh-rjdmg-jack-none' : ''}`}
+          style={fx.pumpkin || fx.bossImg ? undefined : { filter: raidJackAuraGlowFilter(n, 0.5) }} />
         {!none && <><i className="mh-rjdmg-slash mh-rjdmg-slash-a" /><i className="mh-rjdmg-slash mh-rjdmg-slash-b" /></>}
       </div>
       <div className="mh-rjdmg-name">{fx.tierName}</div>

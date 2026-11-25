@@ -48,3 +48,5 @@ const JACK_POSE_IMG = "images/enemies/jack-pose.png?v=b566f028caa6";
 const JACK_ICON_IMG = "images/raid/jack-icon.png?v=03c637e855ac";
 // 素のぱんぷきん(爵位を脱いだ小さな姿)の顔アイコン。ジャックの顔アイコンの目をやさしい丸い目に描き替えたもの(ストーリーの話し手 pumpkin)
 const PUMPKIN_ICON_IMG = "images/raid/pumpkin-icon.png?v=f836641ae5ca";
+// クリスマスのレイドのボス「覚醒サンタ」(黒・にらみ目の版。社長決定 #7610)。元の絵は tools/art-sources/raid-xmas-2026/received/santa_black_kakusei_glare.png(縁の赤いにじみだけ落とした・目元は触らない)
+const RAID_XMAS_BOSS_IMG = "images/enemies/santa-black.png?v=79767188ad99";
