@@ -150,6 +150,7 @@
 | `mh_pending_room_link_v1` | object / `null` | 招待リンク(`?beatRoom=` / `?cardRoom=`)で開いたときの部屋 `{kind, code, at}`。URLの引数は読んだらすぐ消し、ここへ預けて、起動の流れ・はじめての案内が済んだHOMEで部屋へ入ったら消す。3時間たつと捨てる(`mhNormalizeRoomLink` を通す) |
 | `mh_rhythm_multi_spectate_v1` | object / `{allow:true}` | モンヒロビートのマルチで、自分の演奏を観戦してもらってよいか(`{ allow: boolean }`。無い・壊れているときは許す。`false` だけ「許さない」)。端末だけに覚える |
 | `mh_raid_jack_v1` | object / `raidJackDefaultState()` | イベント・レイドボス「ジャック」の端末側の記録(A/Bそれぞれの今日の使用回数・買い足した回数・倒した段階、Bの累計ダメージの自分用の控え、受け取り済みの報酬ID、送れなかった与ダメージの再送待ち)。`raidJackNormalizeState` を通す。既存のキーには触らない。設計: `docs/spec/RAID_BOSS_JACK.md` |
+| `mh_raid_xmas_v1` | object / `raidJackDefaultState()` | クリスマスのレイド(r1119-172)の端末側の記録。形は `mh_raid_jack_v1` と同じ(`raidJackNormalizeState` を通す)。再送待ちの `source` は battle / rhythm / card。書くのは `36-raid-xmas-api.jsx` だけ。ジャックのキーには触らない。つなぎ目: `docs/progress/event-xmas-2026/BUILD.md` |
 | `mh_card_collection_v1` | object / `cardNormalizeCollection` | MFバトルカードの持っているカード `{ カード番号: 枚数 }`(モンスターカードも同じ表)。枚数は 1〜99。知らない番号は消さずに残す。設計: `docs/spec/CARD_BATTLE.md` 6-1 |
 | `mh_card_pvp_penalty_v1` | number(時刻ms) | MFバトルカードのマルチ対戦で、試合の途中で部屋を出た・アプリを閉じたとき、この時刻(3分後)まで部屋に入れない(2026-10-24・91-card-battle-multi.jsx)。無い・壊れた値・過ぎた時刻は「入れる」 |
 | `mh_card_chat_prefs_v1` | object / `cardChatNormalizePrefs` | MFバトルカードのマルチと観戦のコメントの設定 `{ free, flow }`(自由文を出すか・観戦のコメントを流すか。2026-10-30・91-card-battle-multi.jsx)。無い・壊れているときはどちらも true。コメントの本文は保存しない |

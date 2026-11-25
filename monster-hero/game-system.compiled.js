@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f5e516e0b54f0842
+// source-sha256: 2676120d38596927
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -15835,6 +15835,7 @@ const RHYTHM_MULTI_PUBLIC_RELEASE = true;
 const FRIENDS_PUBLIC_RELEASE = true;
 const RAID_JACK_START_AT = '2026-10-05T04:00:00+09:00';
 const XMAS_COSTUME_START_AT = '2026-11-30T10:00:00+09:00';
+const RAID_XMAS_START_AT = '2026-11-30T10:00:00+09:00';
 const RAID_JACK_PUBLIC_RELEASE = true;
 const RAID_JACK_RHYTHM_PUBLIC_RELEASE = true;
 const RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE = true;
@@ -15906,6 +15907,14 @@ const RELEASE_FLAGS = {
       return false;
     }
   },
+  get rhythmXmasBoost() {
+    try {
+      const c = typeof rhythmEventPointCampaignAt === 'function' ? rhythmEventPointCampaignAt(Date.now()) : null;
+      return !!c && c.id === 'xmas_2026';
+    } catch (e) {
+      return false;
+    }
+  },
   rhythmGrandOpenTeaser: RHYTHM_GRAND_OPEN_TEASER_RELEASE,
   rhythmMulti: RHYTHM_MULTI_PUBLIC_RELEASE,
   friends: FRIENDS_PUBLIC_RELEASE,
@@ -15913,6 +15922,13 @@ const RELEASE_FLAGS = {
   get raidJack() {
     try {
       return RAID_JACK_PUBLIC_RELEASE === true && Date.now() >= Date.parse(RAID_JACK_START_AT);
+    } catch (e) {
+      return false;
+    }
+  },
+  get raidXmas() {
+    try {
+      return Date.now() >= Date.parse(RAID_XMAS_START_AT);
     } catch (e) {
       return false;
     }
@@ -63001,7 +63017,7 @@ const raidJackNormalizePending = raw => (Array.isArray(raw) ? raw : []).map(h =>
     tier,
     damage,
     defeated: x.defeated === true,
-    source: x.source === 'rhythm' ? 'rhythm' : 'battle'
+    source: x.source === 'rhythm' || x.source === 'card' ? x.source : 'battle'
   };
 }).filter(Boolean).slice(0, 30);
 const raidJackNormalizeState = raw => {
@@ -63467,7 +63483,7 @@ const sbSendRaidJackHit = async (hit, breederId, eventId) => {
       ...row,
       source: clean.source
     });
-    if (result.ok) _raidJackSourceColumn = true;else if (result.status === 400 && /source/i.test(String(result.body || '')) && _raidJackSourceColumn !== true) {
+    if (result.ok) _raidJackSourceColumn = true;else if (clean.source === 'card' && result.status === 400 && /source/i.test(String(result.body || ''))) return 'notready';else if (result.status === 400 && /source/i.test(String(result.body || '')) && _raidJackSourceColumn !== true) {
       _raidJackSourceColumn = false;
       result = await send(row);
     }
@@ -63840,6 +63856,267 @@ const raidJackRevokeUnearned = async (state, gifts, breederId, eventId) => {
     removed
   };
 };
+const RAID_XMAS_EVENT = Object.freeze({
+  id: 'raid_xmas_2026',
+  debugId: 'raid_xmas_debug',
+  title: '聖夜の名探偵',
+  name: '黒いサンタ(仮)',
+  startAt: '2026-11-30T10:00:00+09:00',
+  endAt: '2026-12-31T04:00:00+09:00',
+  storageKey: 'mh_raid_xmas_v1'
+});
+const RAID_XMAS_STORAGE_KEY = RAID_XMAS_EVENT.storageKey;
+const RAID_XMAS_SOURCES = Object.freeze(['battle', 'rhythm', 'card']);
+const RAID_XMAS_FREE_PER_DAY = 3;
+const RAID_XMAS_EXTRA_COST_BEAT_P = 300;
+const RAID_XMAS_TURNS = 20;
+const RAID_XMAS_A_HPS = Object.freeze([1750000, 3200000, 8000000, 35000000, 80000000]);
+const RAID_XMAS_A_ATKS = Object.freeze([350, 500, 600, 800, 1000]);
+const RAID_XMAS_A_NAMES = Object.freeze(['黒いサンタ(仮)・一', '黒いサンタ(仮)・二', '黒いサンタ(仮)・三', '黒いサンタ(仮)・四', '黒いサンタ(仮)・五']);
+const RAID_XMAS_A_TIERS = Object.freeze(RAID_XMAS_A_NAMES.map((name, i) => raidJackTier(`a${i + 1}`, name, [5.0, 6.5, 8.0, 10.0, 13.0][i], [3, 4, 5, 5, 5][i], RAID_XMAS_A_ATKS[i] / RAID_JACK_BASE.atk, RAID_XMAS_A_HPS[i])));
+const RAID_XMAS_AFTER_BOSS = raidJackTier('a6', '黒いサンタ(仮)・聖夜', 13.0, 5, 1.0, 4550000);
+const RAID_XMAS_B_TIERS = Object.freeze([raidJackTier('b1', '初級 黒いサンタ(仮)', 0.2, 3), raidJackTier('b2', '中級 黒いサンタ(仮)', 2, 4), raidJackTier('b3', '上級 黒いサンタ(仮)', 10, 5), raidJackTier('b4', '超級 黒いサンタ(仮)', 40, 5), raidJackTier('b5', '極級 黒いサンタ(仮)', 100, 5)]);
+const raidXmasTiers = kind => kind === 'b' ? RAID_XMAS_B_TIERS : RAID_XMAS_A_TIERS;
+const raidXmasTierAt = (kind, index) => {
+  const list = raidXmasTiers(kind);
+  const i = Number.isFinite(index) ? Math.floor(index) : 0;
+  return list[Math.min(Math.max(i, 0), list.length - 1)];
+};
+const RAID_XMAS_REWARDS = RAID_JACK_REWARDS;
+const raidXmasWindowAt = nowMs => {
+  const now = Number.isFinite(nowMs) ? nowMs : 0;
+  const start = Date.parse(RAID_XMAS_EVENT.startAt);
+  const end = Date.parse(RAID_XMAS_EVENT.endAt);
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return 'before';
+  if (now < start) return 'before';
+  if (now >= end) return 'after';
+  return 'open';
+};
+const raidXmasBossDown = totals => !!totals && !!totals.a && !!totals.a[RAID_XMAS_A_TIERS.length] && (Number(totals.a[RAID_XMAS_A_TIERS.length].total) || 0) >= RAID_XMAS_A_TIERS[RAID_XMAS_A_TIERS.length - 1].hp;
+const raidXmasRemaining = (side, nowMs) => {
+  const s = raidJackNormalizeSide(side, false);
+  const today = raidJackDayKey(nowMs);
+  const used = s.day === today ? s.used : 0;
+  const extra = s.day === today ? s.extra : 0;
+  return Math.max(0, RAID_XMAS_FREE_PER_DAY + extra - used);
+};
+const raidXmasRhythmDamageOf = (result, difficulty) => raidJackRhythmDamageOf(result, difficulty);
+const RAID_XMAS_STORY_START_ID = 'raid_xmas_story_1b';
+const RAID_XMAS_STORY_AFTER_TIER = Object.freeze({
+  a1: 'raid_xmas_story_2',
+  a2: 'raid_xmas_story_3',
+  a3: 'raid_xmas_story_4',
+  a4: 'raid_xmas_story_5',
+  a5: 'raid_xmas_story_6'
+});
+const RAID_XMAS_ENDING_CLEARED_ID = 'raid_xmas_ending_cleared';
+const RAID_XMAS_ENDING_NOTCLEARED_ID = 'raid_xmas_ending_notcleared';
+const RAID_XMAS_STORY_IDS = Object.freeze([RAID_XMAS_STORY_START_ID, ...Object.values(RAID_XMAS_STORY_AFTER_TIER), RAID_XMAS_ENDING_CLEARED_ID, RAID_XMAS_ENDING_NOTCLEARED_ID]);
+const raidXmasStoryCandidates = (totals, nowMs) => {
+  const out = [];
+  const a = totals && totals.a ? totals.a : null;
+  const defeatedAt = i => !!a && !!a[i + 1] && (Number(a[i + 1].total) || 0) >= RAID_XMAS_A_TIERS[i].hp;
+  if (a) RAID_XMAS_A_TIERS.forEach((t, i) => {
+    if (defeatedAt(i)) out.push(RAID_XMAS_STORY_AFTER_TIER[t.id]);
+  });
+  if (raidXmasWindowAt(nowMs) === 'after' && a) {
+    out.push(defeatedAt(RAID_XMAS_A_TIERS.length - 1) ? RAID_XMAS_ENDING_CLEARED_ID : RAID_XMAS_ENDING_NOTCLEARED_ID);
+  }
+  return out.filter(Boolean);
+};
+const raidXmasLoadState = async () => {
+  try {
+    return raidJackNormalizeState(await storeGet(RAID_XMAS_STORAGE_KEY, null, false));
+  } catch (e) {
+    return raidJackDefaultState();
+  }
+};
+const raidXmasSaveState = async state => {
+  try {
+    await storeSet(RAID_XMAS_STORAGE_KEY, raidJackNormalizeState(state), false);
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
+let _raidXmasDebug = {
+  force: false,
+  realRules: false
+};
+const raidXmasSetDebug = opts => {
+  const o = opts && typeof opts === 'object' ? opts : {};
+  _raidXmasDebug = {
+    force: o.force === true,
+    realRules: o.realRules === true
+  };
+};
+const raidXmasEventId = () => _raidXmasDebug.force ? RAID_XMAS_EVENT.debugId : RAID_XMAS_EVENT.id;
+const raidXmasSafeEventId = id => id === RAID_XMAS_EVENT.id || id === RAID_XMAS_EVENT.debugId ? id : raidXmasEventId();
+const raidXmasFetchTotals = async (eventId, waitMs = 4000) => {
+  try {
+    return await Promise.race([sbFetchRaidJackTierTotals(raidXmasSafeEventId(eventId)), new Promise(resolve => setTimeout(() => resolve(null), waitMs))]);
+  } catch (e) {
+    return null;
+  }
+};
+const raidXmasUseTry = async (kind = 'a', nowMs = Date.now()) => {
+  const k = kind === 'b' ? 'b' : 'a';
+  const eventId = raidXmasEventId();
+  const hitId = raidJackMakeHitId(nowMs);
+  if (_raidXmasDebug.force && !_raidXmasDebug.realRules) return {
+    ok: true,
+    hitId,
+    eventId,
+    remaining: null
+  };
+  if (!_raidXmasDebug.force && raidXmasWindowAt(nowMs) !== 'open') return {
+    ok: false,
+    hitId: '',
+    eventId,
+    remaining: 0
+  };
+  const state = await raidXmasLoadState();
+  const side = state[k];
+  const today = raidJackDayKey(nowMs);
+  if (side.day !== today) {
+    side.day = today;
+    side.used = 0;
+    side.extra = 0;
+  }
+  const left = raidXmasRemaining(side, nowMs);
+  if (left <= 0) return {
+    ok: false,
+    hitId: '',
+    eventId,
+    remaining: 0
+  };
+  side.used += 1;
+  if (!(await raidXmasSaveState(state))) return {
+    ok: false,
+    hitId: '',
+    eventId,
+    remaining: left
+  };
+  return {
+    ok: true,
+    hitId,
+    eventId,
+    remaining: left - 1
+  };
+};
+const raidXmasAddDamage = async input => {
+  const i = input && typeof input === 'object' ? input : {};
+  const source = RAID_XMAS_SOURCES.includes(i.source) ? i.source : '';
+  const kind = i.kind === 'b' ? 'b' : 'a';
+  const list = raidXmasTiers(kind);
+  const tierIndex = Math.min(Math.max(Math.floor(Number(i.tierIndex) || 0), 0), list.length - 1);
+  const tier = list[tierIndex];
+  const damage = Math.max(0, Math.min(100000000, Math.floor(Number(i.damage) || 0)));
+  const eventId = raidXmasSafeEventId(i.eventId);
+  const hitId = raidJackSafeId(i.hitId) && i.hitId.length <= 64 ? i.hitId : raidJackMakeHitId();
+  const res = {
+    way: source,
+    outcome: 'sent',
+    damage,
+    defeated: false,
+    opened: false,
+    kind,
+    tierIndex,
+    tierName: tier.name,
+    lifeBefore: null,
+    lifeLeft: null,
+    lifeMax: tier.hp,
+    afterBoss: false,
+    eventId,
+    hitId,
+    detail: i.detail && typeof i.detail === 'object' ? i.detail : null
+  };
+  if (!source || kind === 'b' && source !== 'battle') return {
+    ...res,
+    outcome: 'invalid'
+  };
+  if (kind === 'a') {
+    const totals = await raidXmasFetchTotals(eventId);
+    if (totals) {
+      const done = totals.a && totals.a[tierIndex + 1] ? Number(totals.a[tierIndex + 1].total) || 0 : 0;
+      res.afterBoss = tierIndex === list.length - 1 && raidXmasBossDown(totals);
+      res.lifeBefore = res.afterBoss ? RAID_XMAS_AFTER_BOSS.hp : Math.max(0, tier.hp - done);
+      if (res.afterBoss) {
+        res.tierName = RAID_XMAS_AFTER_BOSS.name;
+        res.lifeMax = RAID_XMAS_AFTER_BOSS.hp;
+      }
+    }
+  }
+  if (typeof i.defeated === 'boolean') res.defeated = i.defeated && !res.afterBoss;else res.defeated = kind === 'a' && !res.afterBoss && damage > 0 && res.lifeBefore !== null && res.lifeBefore > 0 && damage >= res.lifeBefore;
+  res.lifeLeft = res.lifeBefore === null ? null : Math.max(0, res.lifeBefore - damage);
+  if (damage <= 0) return res;
+  const hit = {
+    hitId,
+    kind,
+    tier: tierIndex + 1,
+    damage,
+    defeated: res.defeated,
+    source
+  };
+  const isDebugRun = eventId !== RAID_XMAS_EVENT.id;
+  let outcome = 'error';
+  try {
+    if (isDebugRun) {
+      outcome = await sbSendRaidJackHit(hit, await ensureBreederId(), eventId);
+    } else {
+      let next = await raidXmasLoadState();
+      const side = next[kind];
+      const before = raidJackUnlockedCount(kind, side.defeated);
+      if (res.defeated && !side.defeated.includes(tier.id)) side.defeated = [...side.defeated, tier.id];
+      if (kind === 'b') side.total = (side.total || 0) + damage;
+      res.opened = raidJackUnlockedCount(kind, side.defeated) > before;
+      const sent = await raidJackSubmitHit(next, hit, await ensureBreederId(), eventId);
+      next = sent.state;
+      outcome = sent.outcome;
+      await raidXmasSaveState(next);
+    }
+  } catch (e) {
+    outcome = 'error';
+  }
+  res.outcome = outcome === 'sent' ? 'sent' : outcome === 'invalid' ? 'invalid' : 'pending';
+  if (typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.battleLog === true && !isDebugRun && source !== 'card') {
+    try {
+      const log = i.log && typeof i.log === 'object' ? i.log : {};
+      void sbSendRaidBattleLog(buildRaidBattleLogRow({
+        party: log.party,
+        units: log.units,
+        score: log.score,
+        raid: {
+          event: eventId,
+          kind,
+          tier: tierIndex + 1,
+          source,
+          damage,
+          defeated: res.defeated,
+          turns: log.turns
+        }
+      }));
+    } catch (e) {}
+  }
+  return res;
+};
+const raidXmasFlushStoredPending = async breederId => {
+  try {
+    const state = await raidXmasLoadState();
+    if (!state.pending.length || !raidJackSafeId(breederId)) return 0;
+    const before = state.pending.length;
+    const next = await raidJackFlushPending(state, breederId, RAID_XMAS_EVENT.id);
+    if (next.pending.length !== before) {
+      const latest = await raidXmasLoadState();
+      const left = new Set(next.pending.map(p => p.hitId));
+      latest.pending = latest.pending.filter(p => left.has(p.hitId));
+      await raidXmasSaveState(latest);
+    }
+    return before - next.pending.length;
+  } catch (e) {
+    return 0;
+  }
+};
 const RAID_JACK_AURA_TONGUES = Object.freeze([6, 10, 16, 24, 34]);
 const RAID_JACK_AURA_EMBERS = Object.freeze([0, 0, 6, 12, 20]);
 const RAID_JACK_AURA_WAVES = Object.freeze([0, 0, 1, 2, 3]);
@@ -64073,7 +64350,7 @@ const RaidJackDamageFx = ({
   const none = !(fx.damage > 0);
   return React.createElement("div", {
     "data-raid-jack-damage-fx": true,
-    "data-jack-aura": fx.pumpkin ? undefined : n,
+    "data-jack-aura": fx.pumpkin || fx.bossImg ? undefined : n,
     className: "mh-rjdmg",
     role: "status",
     onClick: () => {
@@ -64091,15 +64368,15 @@ const RaidJackDamageFx = ({
     format: v => v.toLocaleString()
   }))), React.createElement("div", {
     className: "mh-rjdmg-stage"
-  }, !fx.pumpkin && React.createElement(JackAuraLayer, {
+  }, !fx.pumpkin && !fx.bossImg && React.createElement(JackAuraLayer, {
     tier: n,
     limit: 10
   }), React.createElement("img", {
-    src: fx.pumpkin ? PUMPKIN_ICON_IMG : JACK_IMG,
+    src: fx.bossImg || (fx.pumpkin ? PUMPKIN_ICON_IMG : JACK_IMG),
     alt: "",
     draggable: false,
     className: `mh-rjdmg-jack${none ? ' mh-rjdmg-jack-none' : ''}`,
-    style: fx.pumpkin ? undefined : {
+    style: fx.pumpkin || fx.bossImg ? undefined : {
       filter: raidJackAuraGlowFilter(n, 0.5)
     }
   }), !none && React.createElement(React.Fragment, null, React.createElement("i", {
@@ -65926,6 +66203,326 @@ function MultiStampShopList({
     onClose: () => setEdit(false)
   }));
 }
+const raidRhythmClampTier = (adapter, tierIndex) => Math.min(Math.max(Math.floor(Number(tierIndex) || 0), 0), Math.max(0, (adapter && adapter.tierCount || 1) - 1));
+const raidRhythmDamageOf = (adapter, result, difficulty) => adapter && typeof adapter.damageOf === 'function' ? adapter.damageOf(result, difficulty) : raidJackRhythmDamageOf(result, difficulty);
+const raidRhythmBannerOf = (adapter, tierIndex) => adapter ? {
+  icon: adapter.icon || '🎃',
+  tierName: adapter.tierAt(raidRhythmClampTier(adapter, tierIndex)).name
+} : null;
+const raidRhythmLifeInfo = async (adapter, tierIndex, eventId) => {
+  try {
+    const totals = await Promise.race([adapter.fetchTotals(eventId), new Promise(resolve => setTimeout(() => resolve(null), 4000))]);
+    const tierDef = adapter.tierAt(tierIndex);
+    const done = totals ? adapter.doneOf(totals, tierIndex) : 0;
+    const pumpkin = adapter.infiniteAt(totals, tierIndex);
+    return {
+      lifeBefore: totals ? pumpkin ? tierDef.hp : Math.max(0, tierDef.hp - done) : null,
+      pumpkin
+    };
+  } catch (e) {
+    return null;
+  }
+};
+const raidRhythmBeginRun = async (adapter, tierIndex, nowMs = Date.now()) => {
+  let hitId = null;
+  let eventId = adapter.eventId;
+  if (typeof adapter.begin === 'function') {
+    let t = null;
+    try {
+      t = await adapter.begin();
+    } catch (e) {
+      t = null;
+    }
+    if (!t || t.ok !== true || typeof t.hitId !== 'string' || !t.hitId) return {
+      run: null,
+      reason: 'none'
+    };
+    hitId = t.hitId;
+    if (typeof t.eventId === 'string' && t.eventId) eventId = t.eventId;
+  } else {
+    const used = await adapter.useCount(nowMs);
+    if (used !== 'ok') return {
+      run: null,
+      reason: used === 'none' ? 'none' : 'saveFailed'
+    };
+    hitId = raidJackMakeHitId();
+  }
+  const run = {
+    adapter,
+    tierIndex: raidRhythmClampTier(adapter, tierIndex),
+    hitId,
+    eventId,
+    finished: false,
+    completing: false,
+    promise: null,
+    lifePromise: null
+  };
+  run.lifePromise = raidRhythmLifeInfo(adapter, run.tierIndex, eventId);
+  return {
+    run,
+    reason: 'ok'
+  };
+};
+const raidRhythmFxOf = (run, info, result, difficulty) => {
+  const adapter = run.adapter;
+  const tier = adapter.tierAt(run.tierIndex);
+  return {
+    key: `${run.hitId}`,
+    tierIndex: run.tierIndex,
+    tierName: info && info.pumpkin ? adapter.infiniteName : tier.name,
+    score: Math.max(0, Math.floor(Number(result && result.score) || 0)),
+    damage: raidRhythmDamageOf(adapter, result, difficulty),
+    assist: !!(result && result.assist === true),
+    lifeBefore: info && Number.isFinite(info.lifeBefore) ? info.lifeBefore : null,
+    max: tier.hp,
+    pumpkin: !!(info && info.pumpkin),
+    bossImg: adapter.bossImg || null
+  };
+};
+const raidRhythmFinish = async (run, result, song, difficulty) => {
+  if (!run || run.finished) return null;
+  run.finished = true;
+  const adapter = run.adapter;
+  const tier = adapter.tierAt(run.tierIndex);
+  const score = Math.max(0, Math.floor(Number(result && result.score) || 0));
+  const assist = !!(result && result.assist === true);
+  const damage = raidRhythmDamageOf(adapter, result, difficulty);
+  if (typeof adapter.addDamage === 'function') {
+    const detail = {
+      songName: song && song.displayName || '',
+      difficultyName: difficulty && difficulty.id || '',
+      score,
+      assist
+    };
+    let res = null;
+    try {
+      res = await adapter.addDamage({
+        source: 'rhythm',
+        kind: 'a',
+        tierIndex: run.tierIndex,
+        damage,
+        hitId: run.hitId,
+        eventId: run.eventId,
+        detail
+      });
+    } catch (e) {
+      res = null;
+    }
+    return {
+      tierIndex: run.tierIndex,
+      tierName: tier.name,
+      damage,
+      defeated: false,
+      outcome: 'error',
+      detail,
+      ...(res || {}),
+      way: 'rhythm',
+      songName: detail.songName,
+      difficultyName: detail.difficultyName,
+      score,
+      assist,
+      eventId: run.eventId,
+      eventKey: adapter.key
+    };
+  }
+  let startLife = null;
+  let pumpkin = false;
+  try {
+    const totals = await Promise.race([adapter.fetchTotals(run.eventId), new Promise(resolve => setTimeout(() => resolve(null), 4000))]);
+    const done = totals ? adapter.doneOf(totals, run.tierIndex) : 0;
+    if (totals && tier.hp - done > 0) startLife = tier.hp - done;
+    pumpkin = adapter.infiniteAt(totals, run.tierIndex);
+  } catch (e) {
+    startLife = null;
+  }
+  const defeated = !pumpkin && damage > 0 && startLife !== null && damage >= startLife;
+  const hit = {
+    hitId: run.hitId,
+    kind: 'a',
+    tier: run.tierIndex + 1,
+    damage,
+    defeated,
+    source: 'rhythm'
+  };
+  let outcome = 'error';
+  let opened = false;
+  const isDebugRun = run.eventId !== adapter.liveEventId;
+  try {
+    if (damage <= 0) outcome = 'sent';else if (isDebugRun) {
+      const breederId = await ensureBreederId();
+      outcome = await sbSendRaidJackHit(hit, breederId, run.eventId);
+    } else {
+      const sent = await adapter.submit(run, hit, tier, defeated);
+      outcome = sent.outcome;
+      opened = !!sent.opened;
+    }
+    if (RELEASE_FLAGS.battleLog === true && !isDebugRun && damage > 0) {
+      try {
+        void sbSendRaidBattleLog(buildRaidBattleLogRow({
+          score,
+          raid: {
+            event: run.eventId,
+            kind: 'a',
+            tier: run.tierIndex + 1,
+            source: 'rhythm',
+            damage,
+            defeated
+          }
+        }));
+      } catch {}
+    }
+  } catch (error) {
+    outcome = 'error';
+  }
+  return {
+    way: 'rhythm',
+    songName: song && song.displayName || '',
+    difficultyName: difficulty && difficulty.id || '',
+    score,
+    assist,
+    kind: 'a',
+    tierIndex: run.tierIndex,
+    tierName: pumpkin ? adapter.infiniteName : tier.name,
+    reason: defeated ? 'defeated' : 'rhythm',
+    damage,
+    defeated,
+    turns: 0,
+    levelUps: 0,
+    growths: 0,
+    outcome,
+    opened,
+    eventId: run.eventId,
+    quickAward: null,
+    lifeLeft: Math.max(0, (startLife !== null ? startLife : tier.hp) - damage),
+    lifeBefore: startLife,
+    lifeMax: tier.hp,
+    pumpkin,
+    eventKey: adapter.key
+  };
+};
+const raidRhythmGiveUpResult = (run, adapter, tierIndex) => {
+  const tier = adapter.tierAt(tierIndex);
+  if (typeof adapter.openResult === 'function') {
+    return {
+      way: 'rhythm',
+      damage: 0,
+      tierIndex,
+      tierName: tier.name,
+      outcome: 'sent',
+      reason: 'giveup',
+      defeated: false,
+      detail: {
+        songName: '',
+        difficultyName: '',
+        score: 0,
+        assist: false
+      },
+      eventId: run ? run.eventId : adapter.eventId,
+      eventKey: adapter.key
+    };
+  }
+  return {
+    way: 'rhythm',
+    songName: '',
+    difficultyName: '',
+    score: 0,
+    assist: false,
+    kind: 'a',
+    tierIndex,
+    tierName: tier.name,
+    reason: 'giveup',
+    damage: 0,
+    defeated: false,
+    turns: 0,
+    levelUps: 0,
+    growths: 0,
+    outcome: 'sent',
+    opened: false,
+    eventId: run ? run.eventId : adapter.eventId,
+    quickAward: null,
+    lifeLeft: tier.hp,
+    eventKey: adapter.key
+  };
+};
+const raidJackRhythmAdapter = ctx => ({
+  key: 'jack',
+  eventId: raidJackSafeEventId(ctx.eventId),
+  liveEventId: RAID_JACK_EVENT.id,
+  screen: 'RAID_JACK',
+  icon: '🎃',
+  bossImg: null,
+  tierCount: RAID_JACK_A_TIERS.length,
+  tierAt: i => raidJackTierAt('a', i),
+  infiniteName: RAID_JACK_PUMPKIN.name,
+  fetchTotals: () => sbFetchRaidJackTierTotals(ctx.eventId),
+  doneOf: (totals, i) => totals && totals.a && totals.a[i + 1] ? Number(totals.a[i + 1].total) || 0 : 0,
+  infiniteAt: (totals, i) => i === RAID_JACK_A_TIERS.length - 1 && raidJackBossDown(totals),
+  useCount: async nowMs => {
+    if (ctx.debugForce && !ctx.realRules) return 'ok';
+    const state = await raidJackLoadState();
+    const side = state.a;
+    const today = raidJackDayKey(nowMs);
+    if (side.day !== today) {
+      side.day = today;
+      side.used = 0;
+      side.extra = 0;
+    }
+    if (raidJackRemaining(side, nowMs) <= 0) return 'none';
+    side.used += 1;
+    if (!(await raidJackSaveState(state))) return 'saveFailed';
+    return 'ok';
+  },
+  submit: async (run, hit, tier, defeated) => {
+    let next = await raidJackLoadState();
+    const side = next.a;
+    const before = raidJackUnlockedCount('a', side.defeated);
+    if (defeated && !side.defeated.includes(tier.id)) side.defeated = [...side.defeated, tier.id];
+    const opened = raidJackUnlockedCount('a', side.defeated) > before;
+    const breederId = await ensureBreederId();
+    const sent = await raidJackSubmitHit(next, hit, breederId, run.eventId);
+    next = sent.state;
+    await raidJackSaveState(next);
+    return {
+      outcome: sent.outcome,
+      opened
+    };
+  }
+});
+const raidXmasRhythmAdapter = ctx => {
+  const ev = ctx.event || {};
+  const tiers = Array.isArray(ctx.tiers) ? ctx.tiers : [];
+  const last = Math.max(0, tiers.length - 1);
+  return {
+    key: 'xmas',
+    eventId: typeof ev.id === 'string' ? ev.id : '',
+    liveEventId: typeof ev.id === 'string' ? ev.id : '',
+    screen: ctx.screen || 'RAID_JACK',
+    icon: '🎄',
+    bossImg: ctx.bossImg || null,
+    tierCount: tiers.length || 1,
+    tierAt: i => (typeof ctx.tierAt === 'function' ? ctx.tierAt(i) : tiers[i]) || {
+      id: '',
+      name: '',
+      hp: 0
+    },
+    infiniteName: ctx.infiniteName || '',
+    fetchTotals: eventId => sbFetchRaidJackTierTotals(eventId || ev.id),
+    doneOf: (totals, i) => totals && totals.a && totals.a[i + 1] ? Number(totals.a[i + 1].total) || 0 : 0,
+    infiniteAt: (totals, i) => !!ctx.infiniteName && i === last && !!totals && !!totals.a && !!totals.a[last + 1] && (Number(totals.a[last + 1].total) || 0) >= (Number((tiers[last] || {}).hp) || Infinity),
+    damageOf: typeof ctx.damageOf === 'function' ? ctx.damageOf : undefined,
+    begin: ctx.useTry,
+    addDamage: ctx.addDamage,
+    openResult: ctx.openResult
+  };
+};
+const RAID_RHYTHM_ADAPTERS = Object.freeze({
+  jack: raidJackRhythmAdapter,
+  xmas: raidXmasRhythmAdapter
+});
+const raidRhythmAdapter = (key, ctx) => {
+  const make = RAID_RHYTHM_ADAPTERS[key] || RAID_RHYTHM_ADAPTERS.jack;
+  return make(ctx || {});
+};
 const SCREEN_EFFECT_SCOPES = {
   SCREEN: 'screen',
   PROGRESS: 'progress'
@@ -76216,7 +76813,7 @@ function RhythmSongSelectScreen({
     "data-raid-challenge-banner": true,
     role: "status",
     className: "shrink-0 border-b border-orange-300/40 bg-orange-950/80 px-3 py-1.5 text-center text-[10px] font-black leading-snug text-orange-100"
-  }, "🎃 レイドバトル「", raidChallenge.tierName, jaWrap('」に挑戦中。好きな曲と難易度を選んで、最後まで遊んでください。スコアがダメージになります(決定すると挑戦回数を1回使います)')), quickRunProgress && React.createElement("div", {
+  }, raidChallenge.icon || '🎃', " レイドバトル「", raidChallenge.tierName, jaWrap('」に挑戦中。好きな曲と難易度を選んで、最後まで遊んでください。スコアがダメージになります(決定すると挑戦回数を1回使います)')), quickRunProgress && React.createElement("div", {
     "data-quick-run-progress": true,
     className: "shrink-0 border-b border-fuchsia-400/20 bg-slate-900/80"
   }, React.createElement("div", {
@@ -200766,6 +201363,213 @@ const cardTourRewardOf = (rewards, place, wins) => {
     point: base + t.perWin * Math.max(0, Math.floor(Number(wins) || 0))
   };
 };
+const CARD_RAID_BOSS = Object.freeze({
+  id: 'raid_xmas_2026',
+  name: '黒いサンタ',
+  deckName: '奪われた贈り物',
+  monsters: Object.freeze(['C-047', 'C-024', 'C-003']),
+  habit: Object.freeze({
+    attack: 1.2,
+    keepGuard: 0.8,
+    saveGuts: 0.8,
+    big: 1.0,
+    disrupt: 1.7,
+    area: 1.3,
+    finish: 1.3
+  }),
+  prefer: Object.freeze(['大鎌'])
+});
+const CARD_RAID_TIERS = Object.freeze([Object.freeze({
+  level: 'normal',
+  life: 2,
+  rate: 1.0
+}), Object.freeze({
+  level: 'hard',
+  life: 2,
+  rate: 1.25
+}), Object.freeze({
+  level: 'expert',
+  life: 2.5,
+  rate: 1.5
+}), Object.freeze({
+  level: 'master',
+  life: 3,
+  rate: 1.75
+}), Object.freeze({
+  level: 'master',
+  life: 3,
+  rate: 2.0
+})]);
+const cardRaidTierOf = tierIndex => CARD_RAID_TIERS[Math.min(CARD_RAID_TIERS.length - 1, Math.max(0, Math.floor(Number(tierIndex) || 0)))];
+const CARD_RAID_DAMAGE = Object.freeze({
+  perPoint: 8000,
+  perKo: 40000,
+  win: 150000,
+  cap: null
+});
+const cardRaidBossDeck = (db, tierIndex = 0) => {
+  const tier = cardRaidTierOf(tierIndex);
+  const cfg = CARD_AI_BUILD[tier.level] || CARD_AI_BUILD.normal;
+  const habit = CARD_RAID_BOSS.habit;
+  const rnd = cardAiSeededRand(`${CARD_RAID_BOSS.id}:${tier.level}`);
+  const monsters = CARD_RAID_BOSS.monsters.filter(no => cardMonsterOf(db, no));
+  const mons = monsters.map(no => cardMonsterOf(db, no));
+  const pool = Object.values(db.cards).filter(c => c.ready && (c.user === 'any' || c.user === 'breeder' || mons.some(m => cardUsableBy(c, {
+    ...m,
+    ko: false
+  }))));
+  const byName = {};
+  pool.forEach(c => {
+    const v = cardAiCardValue(c, habit) + cfg.noise * (rnd() * 2 - 1);
+    if (!byName[c.name] || byName[c.name].v < v) byName[c.name] = {
+      c,
+      v
+    };
+  });
+  const ranked = Object.values(byName).sort((a, b) => b.v - a.v || (a.c.no < b.c.no ? -1 : 1));
+  const cards = [];
+  const count = no => cards.filter(n => n === no).length;
+  const add = (c, n) => {
+    for (let i = 0; i < n && cards.length < CARD_BATTLE_DECK_SIZE && count(c.no) < CARD_DECK_COPY_MAX; i++) cards.push(c.no);
+  };
+  const used = new Set();
+  CARD_RAID_BOSS.prefer.forEach(name => {
+    const x = byName[name];
+    if (x) {
+      used.add(name);
+      add(x.c, CARD_DECK_COPY_MAX);
+    }
+  });
+  const guards = ranked.filter(x => cardIsGuardKind(x.c.kind));
+  const guardLanes = mons.map(m => guards.filter(x => x.c.user === 'any' || cardUsableBy(x.c, {
+    ...m,
+    ko: false
+  })));
+  for (let gi = 0, miss = 0, g = 0; g < 14 && miss < guardLanes.length; gi = (gi + 1) % guardLanes.length) {
+    const x = guardLanes[gi].find(y => !used.has(y.c.name));
+    if (!x) {
+      miss += 1;
+      continue;
+    }
+    miss = 0;
+    used.add(x.c.name);
+    const before = cards.length;
+    add(x.c, Math.min(CARD_DECK_COPY_MAX, 14 - g));
+    g += cards.length - before;
+  }
+  const attacks = ranked.filter(x => !cardIsGuardKind(x.c.kind));
+  const lanes = [...mons.map(m => attacks.filter(x => x.c.user !== 'any' && x.c.user !== 'breeder' && cardUsableBy(x.c, {
+    ...m,
+    ko: false
+  }))), attacks.filter(x => x.c.user === 'any' || x.c.user === 'breeder')];
+  let heavy = cards.filter(no => {
+    const c = cardOf(db, no);
+    return c && !cardIsGuardKind(c.kind) && c.guts >= 5;
+  }).length;
+  for (let li = 0, loop = 0; cards.length < CARD_BATTLE_DECK_SIZE && loop < 400; li = (li + 1) % lanes.length, loop++) {
+    const x = lanes[li].find(y => !used.has(y.c.name) && !(y.c.guts >= 5 && heavy >= 8) && !cardHasEff(y.c, 'attach'));
+    if (!x) continue;
+    used.add(x.c.name);
+    const before = cards.length;
+    add(x.c, CARD_DECK_COPY_MAX);
+    if (x.c.guts >= 5) heavy += cards.length - before;
+  }
+  for (const x of ranked) {
+    if (cards.length >= CARD_BATTLE_DECK_SIZE) break;
+    add(x.c, CARD_DECK_COPY_MAX);
+  }
+  const deck = {
+    monsters: monsters.slice(),
+    cards
+  };
+  if (cardDeckProblems(db, deck).length) return cardAiBuildDeck(db, 'kyuko', tier.level, rnd);
+  return deck;
+};
+const cardRaidBossPolicy = (tierIndex = 0) => {
+  const tier = cardRaidTierOf(tierIndex);
+  const base = cardAiPolicy('kyuko', tier.level, {
+    noTactics: true
+  });
+  return {
+    ...base,
+    habit: {
+      ...CARD_RAID_BOSS.habit
+    }
+  };
+};
+const cardRaidPrepareGame = (st, tierIndex = 0, p = 1) => {
+  const tier = cardRaidTierOf(tierIndex);
+  const pl = st && st.players && st.players[p];
+  if (!pl) return st;
+  pl.mons.forEach(m => {
+    const life = Math.max(1, Math.round(m.max * tier.life));
+    m.life = life;
+    m.max = life;
+  });
+  st.raid = {
+    boss: CARD_RAID_BOSS.id,
+    tier: Math.max(0, Math.floor(Number(tierIndex) || 0)),
+    side: p
+  };
+  return st;
+};
+const cardRaidDealt = (st, p = 1) => {
+  const pl = st && st.players && st.players[p];
+  if (!pl) return {
+    dealt: 0,
+    kos: 0,
+    lifeMax: 0
+  };
+  let dealt = 0,
+    kos = 0,
+    lifeMax = 0;
+  pl.mons.forEach(m => {
+    const max = Math.max(0, Number(m.max) || 0);
+    const life = Math.max(0, Math.min(max, Number(m.life) || 0));
+    lifeMax += max;
+    dealt += max - life;
+    if (m.ko) kos += 1;
+  });
+  return {
+    dealt,
+    kos,
+    lifeMax
+  };
+};
+const cardRaidDamage = ({
+  dealt = 0,
+  kos = 0,
+  outcome = 'lose',
+  tierIndex = 0
+} = {}) => {
+  const tier = cardRaidTierOf(tierIndex);
+  const d = Math.max(0, Math.floor(Number(dealt) || 0));
+  const k = Math.max(0, Math.min(3, Math.floor(Number(kos) || 0)));
+  const raw = (d * CARD_RAID_DAMAGE.perPoint + k * CARD_RAID_DAMAGE.perKo + (outcome === 'win' ? CARD_RAID_DAMAGE.win : 0)) * tier.rate;
+  const out = Math.max(0, Math.floor(raw));
+  return Number.isFinite(CARD_RAID_DAMAGE.cap) && CARD_RAID_DAMAGE.cap > 0 ? Math.min(CARD_RAID_DAMAGE.cap, out) : out;
+};
+const cardRaidResultOf = (st, tierIndex = 0, outcome = 'lose', p = 1) => {
+  const {
+    dealt,
+    kos,
+    lifeMax
+  } = cardRaidDealt(st, p);
+  return {
+    dealt,
+    kos,
+    lifeMax,
+    outcome,
+    tierIndex,
+    damage: cardRaidDamage({
+      dealt,
+      kos,
+      outcome,
+      tierIndex
+    })
+  };
+};
+const raidXmasCardDamageOf = r => cardRaidDamage(r || {});
 const CARD_LINE_SCENES = Object.freeze(['challenge', 'start', 'big', 'bigHit', 'guardMine', 'guardTheirs', 'myKo', 'theirKo', 'lastMine', 'lastTheirs', 'deckMine', 'deckTheirs', 'win', 'lose', 'winQuick']);
 const CARD_LINE_FACE = Object.freeze({
   challenge: 'wink',
@@ -206717,16 +207521,21 @@ const CardBattleBoard = ({
   const [watchEndHide, setWatchEndHide] = useState(false);
   const [replayAt, setReplayAt] = useState(0);
   const share = game.share || null;
+  const raid = game.raid || null;
   const who = pvp ? {
     id: 'pvp',
     name: pvp.name,
     accent: '#38bdf8'
+  } : raid ? {
+    id: 'raid',
+    name: raid.bossName,
+    accent: '#ef4444'
   } : share ? {
     id: 'share',
     name: share.name,
     accent: '#34d399'
   } : ASSISTANTS.find(a => a.id === game.who) || ASSISTANTS[0];
-  const policy = useMemo(() => share && typeof cardSharePolicy === 'function' ? cardSharePolicy(share.tactics, game.level, {
+  const policy = useMemo(() => raid && typeof cardRaidBossPolicy === 'function' ? cardRaidBossPolicy(raid.tier) : share && typeof cardSharePolicy === 'function' ? cardSharePolicy(share.tactics, game.level, {
     sameBlood: !!game.cpuSameBlood
   }) : cardAiPolicy(game.who, game.level, {
     sameBlood: !!game.cpuSameBlood
@@ -206926,7 +207735,7 @@ const CardBattleBoard = ({
   const press = useCardLongPress(no => setDetail(no), pressMs);
   const paused = !!detail || !!discard || quit || skipAsk;
   const say = (scene, ai = null) => {
-    if (!scene || pvp || share || settings.bubble === 'OFF') return;
+    if (!scene || pvp || share || raid || settings.bubble === 'OFF') return;
     const turn = st.turn;
     if (spoke.current.turn !== turn) spoke.current = {
       turn,
@@ -208486,7 +209295,11 @@ const CardBattleBoard = ({
     className: wide ? 'flex min-h-0 min-w-0 flex-1 flex-col' : 'contents'
   }, React.createElement("div", {
     className: `flex ${tiny ? 'h-[36px]' : compact ? 'h-[42px]' : 'h-[50px]'} shrink-0 items-center gap-2 px-2`
-  }, pvp || share ? React.createElement("span", {
+  }, raid ? React.createElement("span", {
+    "data-card-raid-foe": true,
+    "aria-hidden": "true",
+    className: `flex ${tiny ? 'h-[34px] w-[34px] text-[20px]' : 'h-[42px] w-[42px] text-[26px]'} shrink-0 items-center justify-center rounded-xl border-2 border-red-500 bg-slate-950`
+  }, "🎅") : pvp || share ? React.createElement("span", {
     "data-card-pvp-foe": true,
     className: `block ${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} shrink-0`
   }, React.createElement(CardPvpAvatar, {
@@ -208504,7 +209317,7 @@ const CardBattleBoard = ({
     className: `min-w-0 text-[13px] font-black leading-tight ${pvp ? 'max-w-[34%] truncate whitespace-nowrap' : 'shrink-0 whitespace-nowrap'}`
   }, who.name, React.createElement("small", {
     className: "block text-[10px] font-bold text-rose-200"
-  }, pvp ? 'マルチ対戦' : cardBattleLevelLabel(game.level, game.share) || 'フリー対戦')), React.createElement("div", {
+  }, pvp ? 'マルチ対戦' : raid ? 'レイドバトル' : cardBattleLevelLabel(game.level, game.share) || 'フリー対戦')), React.createElement("div", {
     className: "ml-auto"
   }, strip(CARD_CPU))), replay && !wide && replayFoeHand, React.createElement("div", {
     "data-card-side-active": turnLive && !turnMe ? 'foe' : undefined,
@@ -209392,7 +210205,7 @@ const CardBattleBoard = ({
     }
   }), quit && !tutorial && React.createElement(ConfirmSheet, {
     title: "投了しますか？",
-    message: pvp ? '投了すると負けになります' : '投了すると負けになります(ビートPとクイック周回は、倒した相手のモンスターの数に応じて少しだけ)',
+    message: pvp ? '投了すると負けになります' : raid ? 'ここまでに与えたダメージは、レイドに入ります' : '投了すると負けになります(ビートPとクイック周回は、倒した相手のモンスターの数に応じて少しだけ)',
     confirmLabel: "投了する",
     danger: true,
     onCancel: () => setQuit(false),
@@ -210106,7 +210919,8 @@ const CardBattleScreen = ({
   onSettings = null,
   sessionTickets = null,
   onUseSessionTicket = null,
-  onRefundSessionTicket = null
+  onRefundSessionTicket = null,
+  raidChallenge = null
 }) => {
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
   const [save, setSave] = useState(null);
@@ -210165,6 +210979,28 @@ const CardBattleScreen = ({
     return CARD_PVP_BACK.on(go);
   }, []);
   const [deckPick, setDeckPick] = useState(null);
+  const [raid, setRaid] = useState(null);
+  const [raidDone, setRaidDone] = useState(null);
+  const raidStartingRef = useRef(false);
+  useEffect(() => {
+    if (!raidChallenge || !save) return;
+    setRaidDone(null);
+    setRaid(raidChallenge);
+    if (!save.starter) {
+      setNotice('MFバトルカードのスターターを受け取ると挑めます');
+      if (typeof raidChallenge.onClose === 'function') raidChallenge.onClose('noStarter');
+      return;
+    }
+    setDeckPick({
+      next: 'raid',
+      pick: {
+        who: 'raid',
+        level: cardRaidTierOf(raidChallenge.tierIndex).level,
+        raid: raidChallenge
+      }
+    });
+    setView('deckPick');
+  }, [raidChallenge, !!save]);
   const [shareAuto, setShareAuto] = useState(false);
   const [shareQuick, setShareQuick] = useState(false);
   const [autoLeft, setAutoLeft] = useState(null);
@@ -210976,6 +211812,38 @@ const CardBattleScreen = ({
         setView(back);
         return;
       }
+      if (game.raid) {
+        const rc = game.raid.run;
+        const res = cardRaidResultOf(st, game.raid.tier, outcome === 'win' ? 'win' : outcome === 'surrender' ? 'resign' : 'lose', CARD_CPU);
+        const done = {
+          ...res,
+          tierName: game.raid.tierName,
+          bossName: game.raid.bossName,
+          turns: cardOwnTurns(st, CARD_ME),
+          sent: null,
+          debug: !!(rc && rc.debug)
+        };
+        setGame(null);
+        setRaidDone(done);
+        onBgm && onBgm(cardBgmOf(save.bgm.top));
+        onNavigate('CARD_TOP');
+        setView('raidResult');
+        let sent = null;
+        try {
+          sent = rc && typeof rc.onResult === 'function' ? await rc.onResult(done) : null;
+        } catch (_) {
+          sent = {
+            ok: false
+          };
+        }
+        setRaidDone({
+          ...done,
+          sent: sent || {
+            ok: false
+          }
+        });
+        return;
+      }
       if (game.pvp && (outcome === 'void' || CARD_PVP.get().phase === 'void')) {
         const wasCup = !!CARD_PVP.get().cup;
         CARD_PVP.leave();
@@ -211647,6 +212515,90 @@ const CardBattleScreen = ({
     onNavigate('CARD_BATTLE');
   };
   startBattleRef.current = startBattle;
+  const startRaidBattle = async (rc, deck) => {
+    if (!rc || raidStartingRef.current) return;
+    const issues = deck ? [...cardDeckProblems(db, deck), ...cardDeckOwnProblems(db, deck, save.collection)] : ['デッキがありません'];
+    if (issues.length) {
+      setNotice(issues.join('・'));
+      setDeckPick({
+        next: 'raid',
+        pick: {
+          who: 'raid',
+          level: cardRaidTierOf(rc.tierIndex).level,
+          raid: rc
+        }
+      });
+      setView('deckPick');
+      return;
+    }
+    raidStartingRef.current = true;
+    try {
+      let ok = false;
+      try {
+        ok = typeof rc.onStart === 'function' ? (await rc.onStart()) !== false : true;
+      } catch (_) {
+        ok = false;
+      }
+      if (!ok) {
+        setNotice('きょうの挑戦の回数がありません');
+        setRaid(null);
+        setView('top');
+        if (typeof rc.onClose === 'function') rc.onClose('noCount');
+        return;
+      }
+      const tier = cardRaidTierOf(rc.tierIndex);
+      const cpuDeck = cardRaidBossDeck(db, rc.tierIndex);
+      const seed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
+      const first = Math.random() < 0.5 ? CARD_ME : CARD_CPU;
+      const bossName = rc.bossName || CARD_RAID_BOSS.name;
+      const st = cardRaidPrepareGame(cardCreateGame(db, {
+        decks: [{
+          monsters: deck.monsters,
+          cards: deck.cards
+        }, cpuDeck],
+        names: ['あなた', bossName],
+        seed,
+        first
+      }), rc.tierIndex, CARD_CPU);
+      setResult(null);
+      setRaidDone(null);
+      const intro = {
+        mode: 'assistant',
+        foe: {
+          who: null,
+          name: bossName,
+          icon: null,
+          frame: null,
+          line: null,
+          deckName: CARD_RAID_BOSS.deckName,
+          monsters: vsMons(st, CARD_CPU)
+        },
+        me: {
+          name: myName,
+          deckName: deck.name || null,
+          monsters: vsMons(st, CARD_ME)
+        }
+      };
+      setGame({
+        key: `raid-${seed}`,
+        st,
+        who: 'raid',
+        level: tier.level,
+        settings: save.settings,
+        intro,
+        raid: {
+          tier: Math.max(0, Math.floor(Number(rc.tierIndex) || 0)),
+          tierName: rc.tierName || '',
+          bossName,
+          run: rc
+        }
+      });
+      onBgm && onBgm(cardBgmOf(cardCpuPlaylistOf(save.cpuPlaylist, 'kyuko')));
+      onNavigate('CARD_BATTLE');
+    } finally {
+      raidStartingRef.current = false;
+    }
+  };
   if (view === 'starter-open' && starterOpen) {
     const needTutorial = !save.tutorial.done && !save.tutorial.skipped;
     return React.createElement(CardPackOpen, {
@@ -212125,6 +213077,60 @@ const CardBattleScreen = ({
       style: JA_WRAP_STYLE
     }, jaWrap(notice)));
   }
+  if (view === 'raidResult' && raidDone) {
+    const r = raidDone;
+    const close = () => {
+      const rc = raid;
+      setRaid(null);
+      setRaidDone(null);
+      setView('top');
+      if (rc && typeof rc.onClose === 'function') rc.onClose('done');
+    };
+    const sending = r.sent === null;
+    return React.createElement("div", {
+      "data-mh-screen": true,
+      "data-card-raid-result": true,
+      className: SCREEN_SHELL_CLASS
+    }, React.createElement(ScreenHead, {
+      title: "レイドバトルの結果",
+      accent: "text-red-200",
+      onBack: sending ? null : close
+    }), React.createElement("div", {
+      className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
+    }, React.createElement("div", {
+      className: "rounded-2xl border-2 border-red-500/60 bg-slate-950/80 p-3 text-center"
+    }, React.createElement("div", {
+      className: "text-[12px] font-bold text-slate-300"
+    }, r.bossName, r.tierName ? `(${r.tierName})` : ''), React.createElement("div", {
+      className: "mt-1 text-[14px] font-black text-white"
+    }, r.outcome === 'win' ? '勝ちました！' : r.outcome === 'resign' ? '投了しました' : '負けました'), React.createElement("div", {
+      className: "mt-2 text-[12px] font-bold text-red-200"
+    }, "レイドへ与えたダメージ"), React.createElement("div", {
+      "data-card-raid-damage": true,
+      className: "text-[30px] font-black leading-tight text-amber-200"
+    }, r.damage.toLocaleString())), React.createElement("div", {
+      className: "grid grid-cols-2 gap-1 rounded-2xl border border-white/10 bg-slate-900/70 p-3 text-[12px] font-bold text-slate-200"
+    }, React.createElement("span", null, "与えたダメージ"), React.createElement("b", {
+      "data-card-raid-dealt": true,
+      className: "text-right"
+    }, r.dealt, " / ", r.lifeMax), React.createElement("span", null, "倒したモンスター"), React.createElement("b", {
+      className: "text-right"
+    }, r.kos, "体"), React.createElement("span", null, "自分の番"), React.createElement("b", {
+      className: "text-right"
+    }, r.turns, "回")), React.createElement("div", {
+      "data-card-raid-sent": true,
+      className: "text-center text-[12px] font-bold text-slate-300"
+    }, sending ? 'レイドへ送っています…' : r.debug ? 'デバッグの試しなので、レイドへは送っていません' : r.sent && r.sent.ok ? 'レイドへ送りました' : '送れませんでした。通信のよい所でレイド画面を開き直してください'), React.createElement("button", {
+      type: "button",
+      "data-card-raid-close": true,
+      disabled: sending,
+      className: "mh-button mh-button-primary min-h-[48px] w-full rounded-2xl text-[14px] font-black disabled:opacity-50",
+      onClick: () => {
+        Audio_.fgSe.tap();
+        close();
+      }
+    }, "レイドへ戻る")));
+  }
   if (view === 'deckPick' && deckPick) {
     const toPvp = deckPick.next === 'pvp';
     const sharePick = !!(deckPick.pick && deckPick.pick.share);
@@ -212132,18 +213138,25 @@ const CardBattleScreen = ({
       db: db,
       decks: save.decks,
       collection: save.collection,
-      note: toPvp ? 'マルチ対戦で使うデッキを選んでください。選んだデッキは次の対戦でも使います' : '使うデッキを選んでください。選んだデッキは次の対戦でも使います',
+      note: toPvp ? 'マルチ対戦で使うデッキを選んでください。選んだデッキは次の対戦でも使います' : deckPick.next === 'raid' ? 'レイドのボスと戦うデッキを選んでください。選ぶと挑戦の回数を1回使います' : '使うデッキを選んでください。選んだデッキは次の対戦でも使います',
       onBack: () => {
         const back = deckPick.back;
+        const rc = deckPick.next === 'raid' ? deckPick.pick.raid : null;
         setDeckPick(null);
+        if (rc) {
+          setRaid(null);
+          setView('top');
+          if (typeof rc.onClose === 'function') rc.onClose('back');
+          return;
+        }
         if (toPvp && CARD_PVP_NEXT.take()) {
           setView('pvp');
           return;
         }
         setView(toPvp ? 'mode' : back || 'foe');
       },
-      allowRented: !toPvp && !sharePick,
-      rentTab: shareForm && !toPvp && !sharePick,
+      allowRented: !toPvp && !sharePick && deckPick.next !== 'raid',
+      rentTab: shareForm && !toPvp && !sharePick && deckPick.next !== 'raid',
       auto: sharePick && typeof cardTacticsAutoOf === 'function' ? {
         on: shareAuto,
         onChange: setShareAuto,
@@ -212191,6 +213204,10 @@ const CardBattleScreen = ({
         setDeckPick(null);
         if (next.next === 'pvp') {
           setView('pvp');
+          return;
+        }
+        if (next.next === 'raid') {
+          void startRaidBattle(next.pick.raid, deck);
           return;
         }
         startBattle(next.pick, deck, autoT ? {
@@ -213607,7 +214624,41 @@ const CardBattleScreen = ({
       });
       setView('packOpen');
     }
-  }, "パックを開ける見本")), React.createElement("select", {
+  }, "パックを開ける見本")), React.createElement("div", {
+    className: "grid grid-cols-5 gap-1",
+    "data-card-raid-debug": true
+  }, CARD_RAID_TIERS.map((t, i) => React.createElement("button", {
+    key: i,
+    type: "button",
+    "data-card-raid-debug-tier": i,
+    className: "mh-button mh-button-secondary min-h-[40px] rounded-xl border border-red-400/40 bg-slate-800 text-[10px] font-black",
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setRaid(null);
+      setRaidDone(null);
+      const rc = {
+        debug: true,
+        tierIndex: i,
+        tierName: `段階${i + 1}`,
+        onStart: async () => true,
+        onResult: async () => ({
+          ok: false,
+          debug: true
+        }),
+        onClose: () => {}
+      };
+      setRaid(rc);
+      setDeckPick({
+        next: 'raid',
+        pick: {
+          who: 'raid',
+          level: t.level,
+          raid: rc
+        }
+      });
+      setView('deckPick');
+    }
+  }, "ボス", i + 1))), React.createElement("select", {
     "data-card-result-demo-who": true,
     value: demoWho,
     onChange: e => setDemoWho(e.target.value),
@@ -254827,64 +255878,37 @@ function MonsterHeroGame() {
     setRunMode(BATTLE_MODE_CHALLENGE);
     if (toDebug) setGameState('RAID_JACK_DEBUG');
   };
-  const startRaidJackRhythmSelect = async tierIndex => {
+  const raidRhythmAdapterOf = eventKey => raidRhythmAdapter(eventKey || 'jack', {
+    eventId: raidJackEventId,
+    debugForce: raidJackDebugForce,
+    realRules: raidJackDebugRealRules
+  });
+  const startRaidJackRhythmSelect = async (tierIndex, eventKey = 'jack') => {
+    const adapter = raidRhythmAdapterOf(eventKey);
     raidJackReturnTierRef.current = Math.max(0, Math.floor(Number(tierIndex) || 0));
     await openRhythmDemo({
       to: 'RHYTHM_DEMO_HOME'
     });
     setRaidRhythm({
-      tierIndex: Math.min(Math.max(Math.floor(Number(tierIndex) || 0), 0), RAID_JACK_A_TIERS.length - 1)
+      tierIndex: raidRhythmClampTier(adapter, tierIndex),
+      eventKey: adapter.key
     });
   };
   const cancelRaidJackRhythm = () => {
+    const screen = raidRhythmAdapterOf(raidRhythm && raidRhythm.eventKey).screen;
     raidRhythmRunRef.current = null;
     setRaidRhythm(null);
-    setGameState('RAID_JACK');
+    setGameState(screen);
   };
   const startRaidJackRhythmPlay = async (song, difficulty) => {
     const rr = raidRhythm;
     if (!rr) return;
-    const nowMs = Date.now();
-    if (!raidJackDebugForce || raidJackDebugRealRules) {
-      const state = await raidJackLoadState();
-      const side = state.a;
-      const today = raidJackDayKey(nowMs);
-      if (side.day !== today) {
-        side.day = today;
-        side.used = 0;
-        side.extra = 0;
-      }
-      if (raidJackRemaining(side, nowMs) <= 0) {
-        cancelRaidJackRhythm();
-        return;
-      }
-      side.used += 1;
-      if (!(await raidJackSaveState(state))) return;
+    const begun = await raidRhythmBeginRun(raidRhythmAdapterOf(rr.eventKey), rr.tierIndex, Date.now());
+    if (!begun.run) {
+      if (begun.reason === 'none') cancelRaidJackRhythm();
+      return;
     }
-    const run = {
-      tierIndex: rr.tierIndex,
-      hitId: raidJackMakeHitId(),
-      eventId: raidJackSafeEventId(raidJackEventId),
-      finished: false,
-      completing: false,
-      promise: null,
-      lifePromise: null
-    };
-    run.lifePromise = (async () => {
-      try {
-        const totals = await Promise.race([sbFetchRaidJackTierTotals(raidJackEventId), new Promise(resolve => setTimeout(() => resolve(null), 4000))]);
-        const tierDef = raidJackTierAt('a', rr.tierIndex);
-        const done = totals && totals.a && totals.a[rr.tierIndex + 1] ? Number(totals.a[rr.tierIndex + 1].total) || 0 : 0;
-        const pumpkin = rr.tierIndex === RAID_JACK_A_TIERS.length - 1 && raidJackBossDown(totals);
-        return {
-          lifeBefore: totals ? pumpkin ? tierDef.hp : Math.max(0, tierDef.hp - done) : null,
-          pumpkin
-        };
-      } catch (e) {
-        return null;
-      }
-    })();
-    raidRhythmRunRef.current = run;
+    raidRhythmRunRef.current = begun.run;
     setRhythmPlay({
       song,
       difficulty,
@@ -254896,120 +255920,18 @@ function MonsterHeroGame() {
     const run = raidRhythmRunRef.current;
     if (!run || run.completing) return;
     run.completing = true;
-    const tier = raidJackTierAt('a', run.tierIndex);
-    const score = Math.max(0, Math.floor(Number(result && result.score) || 0));
-    const assist = !!(result && result.assist === true);
-    const damage = raidJackRhythmDamageOf(result, difficulty);
     const info = await Promise.race([run.lifePromise || Promise.resolve(null), new Promise(resolve => setTimeout(() => resolve(null), 500))]);
-    setRaidDamageFx({
-      key: `${run.hitId}`,
-      tierIndex: run.tierIndex,
-      tierName: info && info.pumpkin ? RAID_JACK_PUMPKIN.name : tier.name,
-      score,
-      damage,
-      assist,
-      lifeBefore: info && Number.isFinite(info.lifeBefore) ? info.lifeBefore : null,
-      max: tier.hp,
-      pumpkin: !!(info && info.pumpkin)
-    });
-    run.promise = finishRaidJackRhythm(result, song, difficulty);
-  };
-  const finishRaidJackRhythm = async (result, song, difficulty) => {
-    const run = raidRhythmRunRef.current;
-    if (!run || run.finished) return null;
-    run.finished = true;
-    const tier = raidJackTierAt('a', run.tierIndex);
-    const score = Math.max(0, Math.floor(Number(result && result.score) || 0));
-    const assist = !!(result && result.assist === true);
-    const damage = raidJackRhythmDamageOf(result, difficulty);
-    let startLife = null;
-    let pumpkin = false;
-    try {
-      const totals = await Promise.race([sbFetchRaidJackTierTotals(raidJackEventId), new Promise(resolve => setTimeout(() => resolve(null), 4000))]);
-      const done = totals && totals.a && totals.a[run.tierIndex + 1] ? Number(totals.a[run.tierIndex + 1].total) || 0 : 0;
-      if (totals && tier.hp - done > 0) startLife = tier.hp - done;
-      pumpkin = run.tierIndex === RAID_JACK_A_TIERS.length - 1 && raidJackBossDown(totals);
-    } catch (e) {
-      startLife = null;
-    }
-    const defeated = !pumpkin && damage > 0 && startLife !== null && damage >= startLife;
-    const hit = {
-      hitId: run.hitId,
-      kind: 'a',
-      tier: run.tierIndex + 1,
-      damage,
-      defeated,
-      source: 'rhythm'
-    };
-    let outcome = 'error';
-    let opened = false;
-    const isDebugRun = run.eventId !== RAID_JACK_EVENT.id;
-    try {
-      if (damage <= 0) outcome = 'sent';else if (isDebugRun) {
-        const breederId = await ensureBreederId();
-        outcome = await sbSendRaidJackHit(hit, breederId, run.eventId);
-      } else {
-        let next = await raidJackLoadState();
-        const side = next.a;
-        const before = raidJackUnlockedCount('a', side.defeated);
-        if (defeated && !side.defeated.includes(tier.id)) side.defeated = [...side.defeated, tier.id];
-        opened = raidJackUnlockedCount('a', side.defeated) > before;
-        const breederId = await ensureBreederId();
-        const sent = await raidJackSubmitHit(next, hit, breederId, run.eventId);
-        next = sent.state;
-        outcome = sent.outcome;
-        await raidJackSaveState(next);
-      }
-      if (RELEASE_FLAGS.battleLog === true && !isDebugRun && damage > 0) {
-        try {
-          void sbSendRaidBattleLog(buildRaidBattleLogRow({
-            score,
-            raid: {
-              event: run.eventId,
-              kind: 'a',
-              tier: run.tierIndex + 1,
-              source: 'rhythm',
-              damage,
-              defeated
-            }
-          }));
-        } catch {}
-      }
-    } catch (error) {
-      outcome = 'error';
-    }
-    return {
-      way: 'rhythm',
-      songName: song && song.displayName || '',
-      difficultyName: difficulty && difficulty.id || '',
-      score,
-      assist,
-      kind: 'a',
-      tierIndex: run.tierIndex,
-      tierName: pumpkin ? RAID_JACK_PUMPKIN.name : tier.name,
-      reason: defeated ? 'defeated' : 'rhythm',
-      damage,
-      defeated,
-      turns: 0,
-      levelUps: 0,
-      growths: 0,
-      outcome,
-      opened,
-      eventId: run.eventId,
-      quickAward: null,
-      lifeLeft: Math.max(0, (startLife !== null ? startLife : tier.hp) - damage),
-      lifeBefore: startLife,
-      lifeMax: tier.hp,
-      pumpkin
-    };
+    setRaidDamageFx(raidRhythmFxOf(run, info, result, difficulty));
+    run.promise = raidRhythmFinish(run, result, song, difficulty);
   };
   const exitRaidJackRhythmPlay = () => {
     const run = raidRhythmRunRef.current;
+    const adapter = run ? run.adapter : raidRhythmAdapterOf(raidRhythm && raidRhythm.eventKey);
     const tierIndex = run ? run.tierIndex : raidRhythm ? raidRhythm.tierIndex : 0;
     setRhythmPlay(null);
     setRaidRhythm(null);
     setRaidDamageFx(null);
-    setGameState('RAID_JACK');
+    setGameState(adapter.screen);
     (async () => {
       let r = null;
       try {
@@ -255017,32 +255939,11 @@ function MonsterHeroGame() {
       } catch (e) {
         r = null;
       }
-      if (!r && run) {
-        const tier = raidJackTierAt('a', tierIndex);
-        r = {
-          way: 'rhythm',
-          songName: '',
-          difficultyName: '',
-          score: 0,
-          assist: false,
-          kind: 'a',
-          tierIndex,
-          tierName: tier.name,
-          reason: 'giveup',
-          damage: 0,
-          defeated: false,
-          turns: 0,
-          levelUps: 0,
-          growths: 0,
-          outcome: 'sent',
-          opened: false,
-          eventId: run.eventId,
-          quickAward: null,
-          lifeLeft: tier.hp
-        };
-      }
+      if (!r && run) r = raidRhythmGiveUpResult(run, adapter, tierIndex);
       raidRhythmRunRef.current = null;
-      if (r) setRaidJackResult(r);
+      if (r) {
+        if (typeof adapter.openResult === 'function') adapter.openResult(r);else setRaidJackResult(r);
+      }
     })();
   };
   const exitRaidJackRhythmResult = (toDebug = false) => {
@@ -263283,9 +264184,7 @@ function MonsterHeroGame() {
       handleGiveUp: handleGiveUp,
       mainHero: mainHero,
       exitingQuickRun: rhythmExitingRun,
-      raidChallenge: raidRhythm ? {
-        tierName: raidJackTierAt('a', raidRhythm.tierIndex).name
-      } : null,
+      raidChallenge: raidRhythm ? raidRhythmBannerOf(raidRhythmAdapterOf(raidRhythm.eventKey), raidRhythm.tierIndex) : null,
       onExit: raidRhythm ? cancelRaidJackRhythm : () => setGameState('RHYTHM_MODE_SELECT'),
       onOpenEventRanking: () => {
         const kind = rhythmSongSelectEvent && rhythmSongSelectEvent.kind === 'limited' ? 'limited' : 'weekly';

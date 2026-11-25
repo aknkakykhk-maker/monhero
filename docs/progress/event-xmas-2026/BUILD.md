@@ -17,7 +17,8 @@
 const RAID_XMAS_EVENT = Object.freeze({
   id: 'raid_xmas_2026',             // raid_jack_hits.event_id(本番)
   debugId: 'raid_xmas_debug',       // デバッグで送るとき(本番の集計を汚さない)
-  name: '(仮)黒いサンタ',            // ボスの名前は社長が後で決める。画面はここを読む(直書きしない)
+  title: '聖夜の名探偵',             // イベントの名前(社長決定)。画面に出すイベント名はここを読む
+  name: '黒いサンタ(仮)',            // ボスの名前は社長が後で決める。画面はここを読む(直書きしない)
   startAt: '2026-11-30T10:00:00+09:00',
   endAt:   '2026-12-31T04:00:00+09:00',
   storageKey: 'mh_raid_xmas_v1',
@@ -38,7 +39,7 @@ raidXmasTierAt(kind, index)   // kind 'a' | 'b'、index は 0 始まり
 始めた時点で1回使い、途中でやめても戻らない(ジャックのビート挑戦と同じ)。
 
 ```js
-// App の中(バトル部が作る)。始める直前に呼ぶ。ok が false なら始めない(残りが無い・保存に失敗)
+// 36-raid-xmas-api.jsx(どこからでも呼べる)。始める直前に呼ぶ。ok が false なら始めない(残りが無い・保存に失敗)
 const t = await raidXmasUseTry();   // → { ok, hitId, eventId }
 ```
 
@@ -48,7 +49,7 @@ const t = await raidXmasUseTry();   // → { ok, hitId, eventId }
 ## 3. ダメージを足す関数(3つの入口で共通)
 
 ```js
-// App の中(バトル部が作る)。1回の挑戦が終わったら1度だけ呼ぶ
+// 36-raid-xmas-api.jsx(どこからでも呼べる)。1回の挑戦が終わったら1度だけ呼ぶ
 const res = await raidXmasAddDamage({
   source: 'card',          // 'battle' | 'rhythm' | 'card'
   kind: 'a',               // カード・ビートは 'a' だけ。'b'(グランドスラム)はバトルだけ
@@ -60,7 +61,7 @@ const res = await raidXmasAddDamage({
 // res = { way, outcome, damage, defeated, opened, tierIndex, tierName, lifeBefore, lifeLeft, lifeMax, afterBoss, detail }
 //   outcome: 'sent'(送れた)| 'pending'(送れず端末に残した・あとで自動で送り直す)| 'invalid'(形が違う・送らない)
 //   defeated: この1回で段階を倒しきったか(共有ライフの残りと比べる。大王のあとの無限の段階は倒さない)
-openRaidXmasResult(res);   // レイドの結果画面を出す(閉じるとレイド画面へ戻る)。カード・ビートの結果画面を出し終えてから呼ぶ
+openRaidXmasResult(res);   // App の中(バトル部・③で作る)。レイドの結果画面を出す(閉じるとレイド画面へ戻る)。カード・ビートの結果画面を出し終えてから呼ぶ
 ```
 
 - 送る・送れなかったら端末に残す・段階を倒した印・次の段階を開く・バトルの記録、は全部この中でやる。**各部は表へ直接送らない**
@@ -180,4 +181,7 @@ select kind, tier, source, count(distinct breeder_id) as players, sum(damage)::b
 
 | 物 | 部 | PR |
 | --- | --- | --- |
-| この紙 | バトル部 | (この PR) |
+| この紙 | バトル部 | #7591 |
+| 定義 `35-raid-xmas.jsx`・回数と与ダメージ `36-raid-xmas-api.jsx`(`raidXmasUseTry`・`raidXmasAddDamage` は App ではなく**どこからでも呼べる関数**にした)・`RELEASE_FLAGS.raidXmas`・検査 `tools/battle/raid-xmas-check.js` | バトル部 | (この PR) |
+| カード: ボスのデッキ・考え方・換算 `raidXmasCardDamageOf`(`82-card-raid-core.jsx`)・対戦の画面の受け口 `raidChallenge`(`84-screen-card-battle.jsx`)。口の形は [`CARD_RAID_XMAS.md`](../../spec/CARD_RAID_XMAS.md)「つなぐ口」。App の `startRaidXmasCard` は §2・§3 の関数ができたらつなぐ | カード部 | #7607 |
+| ビート挑戦をイベントのつなぎ口で動かす部品 `39-raid-rhythm.jsx`(ジャックは同じ動き・クリスマスのつなぎ口は §2〜§4 の形で用意。App でつなぐのは §3 の関数が入ってから。[`BEAT.md`](BEAT.md)) | ビート部 | #7618 |
