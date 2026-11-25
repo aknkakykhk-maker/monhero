@@ -86,5 +86,5 @@ raidChallenge = {
 }
 ```
 
-App の `startRaidXmasCard(tierIndex)` は、上を作って MFバトルカードの画面(`CARD_TOP`)を開くだけ。バトル部の `raidXmasUseTry` / `raidXmasAddDamage` / `openRaidXmasResult` ができたらカード部がつなぐ。
+App の `startRaidXmasCard(tierIndex)`(`60-app.jsx`)が上を作って MFバトルカードの画面(`CARD_TOP`)を開く。レイド画面は、これが App にあると「バトルカードで」の挑み方を出す。MFバトルカードを閉じると挑戦は消える(`exitCardBattle` で null)。ブラウザの検査: `tools/card/card-raid-xmas-browser-check.js`。
 デバッグでは、MFバトルカードのトップ(デバッグから開いたとき)の「ボス1〜5」で、回数を使わず・送らずに試せる。
