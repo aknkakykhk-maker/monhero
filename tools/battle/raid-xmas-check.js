@@ -41,7 +41,7 @@ const make = (nowIso) => {
     },
   };
   vm.createContext(ctx);
-  vm.runInContext(`${src}\nthis.o={RAID_XMAS_EVENT,RAID_XMAS_SOURCES,RAID_XMAS_A_TIERS,RAID_XMAS_B_TIERS,RAID_XMAS_STORY_IDS,raidXmasWindowAt,raidXmasUseTry,raidXmasAddDamage,raidXmasLoadState,raidXmasSetDebug,raidXmasStoryCandidates,raidJackNormalizePending,sbSendRaidJackHit};`, ctx);
+  vm.runInContext(`${src}\nthis.o={RAID_XMAS_EVENT,RAID_XMAS_SOURCES,RAID_XMAS_A_TIERS,RAID_XMAS_B_TIERS,RAID_XMAS_STORY_IDS,raidXmasWindowAt,raidXmasUseTry,raidXmasAddDamage,raidXmasLoadState,raidXmasSetDebug,raidXmasStoryCandidates,raidJackNormalizePending,sbSendRaidJackHit,RAID_XMAS_SKILL_NAMES,RAID_JACK_SKILL_NAMES,xmasBattleBonusRateAt};`, ctx);
   return { o: ctx.o, calls, store, setResponder: (f) => { responder = f; } };
 };
 const OPEN = '2026-12-01T12:00:00+09:00';
@@ -119,6 +119,32 @@ const totalsBody = (a1) => JSON.stringify([{ kind: 'a', tier: 1, total_damage: a
     const row = JSON.parse((t.calls.find((c) => c.init && c.init.method === 'POST') || { init: { body: '{}' } }).init.body);
     check('デバッグはデバッグのidで送る', row.event_id === 'raid_xmas_debug');
     check('デバッグは端末の記録に書かない', !('mh_raid_xmas_v1' in t.store));
+  }
+  // ---- ボスの技の名前(社長決定・r1125-058)。サンタの名前は敵を作るときだけ写す。ジャックの名前は変えない ----
+  {
+    const t = make('2026-12-01T12:00:00+09:00');
+    const x = t.o.RAID_XMAS_SKILL_NAMES, j = t.o.RAID_JACK_SKILL_NAMES;
+    check('サンタの技名(正拳・闇 / 瞬黒撃 / 超宝屁 / 超飛び蹴り / 超暗けい / 怪しこの夜 / X’マスプレデター)',
+      x.normal === '正拳・闇' && x.special === '瞬黒撃' && x.sweep === '超宝屁' && x.rush === '超飛び蹴り'
+      && x.pierce === '超暗けい' && x.roar === '怪しこの夜' && x.allout === 'X\u2019マスプレデター');
+    check('ジャックの技名は前のまま', j.normal === 'カボチャ張り手' && j.allout === 'おばけパレード');
+    check('クリスマスのボスを作るときにサンタの技名を写す', /const sn = RAID_XMAS_SKILL_NAMES;[\s\S]{0,300}normal: sn\.normal, special: sn\.special,[\s\S]{0,200}sweep: sn\.sweep, rush: sn\.rush, pierce: sn\.pierce, roar: sn\.roar, allout: sn\.allout/.test(read(P + '35-raid-jack.jsx')));
+  }
+  // ---- 期間中のモンヒロバトルのごほうび1.5倍(r1119-172 期間中のボーナス③) ----
+  {
+    const t = make('2026-12-01T12:00:00+09:00');
+    const r = t.o.xmasBattleBonusRateAt;
+    check('ごほうび1.5倍: 開始前は1倍・期間中は1.5倍・終わったら1倍',
+      r(Date.parse('2026-11-30T09:59:59+09:00')) === 1 && r(Date.parse('2026-11-30T10:00:00+09:00')) === 1.5
+      && r(Date.parse('2026-12-31T03:59:59+09:00')) === 1.5 && r(Date.parse('2026-12-31T04:00:00+09:00')) === 1);
+    const app = read(P + '60-app.jsx');
+    const body = (name, len = 6000) => { const i = app.indexOf(`const ${name} = `); return i < 0 ? '' : app.slice(i, i + len); };
+    const award = body('awardRunRewards', 3000);
+    check('ごほうび1.5倍: ランの終わりで経験値とダイヤの倍率に掛ける(スコアには掛けない)',
+      /const xmasBonus = xmasBattleBonusRateAt\(Date\.now\(\)\);\s*const goldMult = goldMultBase \* xmasBonus;\s*const xpMult = xpMultBase \* xmasBonus;/.test(award) && !/scoreMult \* xmasBonus|scoreMult\*xmasBonus/.test(award));
+    check('ごほうび1.5倍: 倍率の元(runRewardMultipliers)には掛けない(モンヒロビートの周回の報酬に重ならない)', !/xmasBattleBonus/.test(body('runRewardMultipliers', 900)));
+    check('ごほうび1.5倍: プロのランぶんの周回数に掛ける', /proQuickLoopsFor\([^;]*\* xmasBattleBonusRateAt\(Date\.now\(\)\)\)/.test(body('awardProRunQuickLoops', 1500)));
+    check('ごほうび1.5倍: 結果のまとめの札に🎄の一言', /data-xmas-battle-bonus/.test(read(P + '27-result-widgets.jsx')) && /xmasBonus: xmasBonus > 1 \? xmasBonus : null/.test(award + body('awardRunRewards', 12000)));
   }
   console.log(failed ? `\nNG ${failed} 件` : '\nOK: クリスマスのレイドの定義と回数・与ダメージの口');
   process.exit(failed ? 1 : 0);

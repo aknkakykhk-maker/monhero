@@ -53,6 +53,19 @@ const raidXmasTierAt = (kind, index) => {
   return list[Math.min(Math.max(i, 0), list.length - 1)];
 };
 
+// ボス(覚醒サンタ)の技の名前(社長決定 2026-11-25・台帳 r1125-058)。動き(rush/sweep/roar/pierce/allout)と本数 3/4/5/5/5 はジャックのまま。
+//   名前だけを 35-raid-jack.jsx の raidJackMakeEnemy(opts.ev === 'xmas')で敵へ写す。ジャックの RAID_JACK_SKILL_NAMES・敵データ Jack は変えない。
+//   「X’マス」の「’」は全角の右シングル引用符(U+2019)
+const RAID_XMAS_SKILL_NAMES = Object.freeze({
+  normal: '正拳・闇',
+  special: '瞬黒撃',
+  sweep: '超宝屁',   // ちょうほうひ(社長の訂正 2026-11-25)
+  rush: '超飛び蹴り',
+  pierce: '超暗けい',
+  roar: '怪しこの夜',
+  allout: 'X\u2019マスプレデター',
+});
+
 // 報酬はジャックと同じ表(社長決定 2026-11-25)
 const RAID_XMAS_REWARDS = RAID_JACK_REWARDS;
 
@@ -104,3 +117,11 @@ const raidXmasStoryCandidates = (totals, nowMs) => {
   }
   return out.filter(Boolean);
 };
+
+// ---- 期間中のモンヒロバトルのごほうび1.5倍(r1119-172 追記「期間中のボーナス」③・社長の選択) ----
+//  ・期間はクリスマスのイベントと同じ(11/30 10:00〜12/31 4:00)。見るたびに時刻で決める(保存しない)。
+//  ・掛けるのは、モンヒロバトルのランで配るブリーダー経験値・絆経験値・ダイヤ(60-app.jsx の awardRunRewards)と、
+//    プロのランぶんのクイック周回の周回数。今ある倍率(難易度・クイック・プロなど)とは掛け算で重ねる(カードと同じ「A 掛け算」)。
+//  ・スコア・ランキングの送信・自己ベスト・スキップチケット・レイド・モンヒロビートの周回(ビートの5倍の側)には掛けない。
+const XMAS_BATTLE_BONUS_RATE = 1.5;
+const xmasBattleBonusRateAt = (nowMs) => (raidXmasWindowAt(nowMs) === 'open' ? XMAS_BATTLE_BONUS_RATE : 1);
