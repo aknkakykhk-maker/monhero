@@ -49,10 +49,6 @@
    "date": "2026-11-25T17:21:25+09:00",
    "subject": "素材: atsu のクリスマスイベントの探偵の衣装の元絵(チャッピーで作成・加工なし)"
   },
-  "2805e672": {
-   "date": "2026-11-25T12:06:58+00:00",
-   "subject": "助手: あつのサンタの顔アイコンを案Cにそろえて王冠まで入れる(r1125-040)"
-  },
   "29c7158ae": {
    "date": "2026-11-13T02:59:40+09:00",
    "subject": "ききの全身画8表情(ふだん・ハロウィン)を入れる (#5796)"
@@ -145,10 +141,6 @@
    "date": "2026-11-25T08:24:01+00:00",
    "subject": "ソラシドのクリスマスきせかえ『聖夜の名探偵』(探偵の衣装)を組み込む(r1119-172・r1125-024・名前と値段は仮)"
   },
-  "5bbff8fab": {
-   "date": "2026-11-25T08:32:00+00:00",
-   "subject": "あつのクリスマスきせかえ『王冠の名探偵』(探偵の衣装)を組み込む(r1119-172・r1125-027・名前と値段は仮)"
-  },
   "5c657424e": {
    "date": "2026-11-05T02:14:30+00:00",
    "subject": "受け取り: えるびんの衣装『石油王』の表情の絵(社長から・未加工・実装はまだ)"
@@ -184,6 +176,10 @@
   "6cbd2b4be": {
    "date": "2026-11-25T17:59:18+09:00",
    "subject": "素材: kyuko のサンタきせかえの元絵(チャッピーで作成・加工なし)"
+  },
+  "70801035c": {
+   "date": "2026-11-25T23:43:07+09:00",
+   "subject": "ももすけハロウィン全身絵7表情を高解像度マスターに差し替え"
   },
   "70aa3c0c": {
    "date": "2026-11-23T22:54:35+09:00",
@@ -236,6 +232,10 @@
   "7f0d4898a": {
    "date": "2026-11-18T06:10:32+09:00",
    "subject": "統合バッチ: 画像・音声2"
+  },
+  "8809dcc03": {
+   "date": "2026-11-25T22:19:10+00:00",
+   "subject": "あつのクリスマスの顔アイコンを少し下げ、王冠を丸のふちから離す"
   },
   "883b868d2": {
    "date": "2026-11-25T16:43:45+09:00",
@@ -369,6 +369,10 @@
    "date": "2026-11-25T16:59:31+09:00",
    "subject": "ききハロウィン顔アイコン差し替えとexcited全身の透過修正"
   },
+  "fcbea473a": {
+   "date": "2026-11-25T14:52:25+00:00",
+   "subject": "あつのクリスマス(探偵)の絵を作り直し版(_v2)に差し替える(r1119-172・r1125-050)"
+  },
   "ff54166f": {
    "date": "2026-11-25T23:29:58+09:00",
    "subject": "素材: あつのクリスマス探偵衣装の改訂版を追加"
@@ -501,16 +505,16 @@
   "monster-hero/images/assistant/fullbody/atsu__surprise.png": "1ca9c4b8962a 691e2a3d2",
   "monster-hero/images/assistant/fullbody/atsu__troubled.png": "a371e1dc0119 691e2a3d2",
   "monster-hero/images/assistant/fullbody/atsu__wink.png": "bbbe25ee4feb 691e2a3d2",
-  "monster-hero/images/assistant/fullbody/atsu_santa.png": "51c0de8d1915 5bbff8fab",
-  "monster-hero/images/assistant/fullbody/atsu_santa__angry.png": "bbe58d746668 5bbff8fab",
-  "monster-hero/images/assistant/fullbody/atsu_santa__crying.png": "615baf6327ea 5bbff8fab",
-  "monster-hero/images/assistant/fullbody/atsu_santa__excited.png": "09daa72a3ca4 5bbff8fab",
-  "monster-hero/images/assistant/fullbody/atsu_santa__happy.png": "472a4088665d 5bbff8fab",
-  "monster-hero/images/assistant/fullbody/atsu_santa__normal.png": "60a962aa3d03 5bbff8fab",
-  "monster-hero/images/assistant/fullbody/atsu_santa__sleep.png": "063b57fa80ad 5bbff8fab",
-  "monster-hero/images/assistant/fullbody/atsu_santa__surprise.png": "964660686633 5bbff8fab",
-  "monster-hero/images/assistant/fullbody/atsu_santa__troubled.png": "fabfd239f754 5bbff8fab",
-  "monster-hero/images/assistant/fullbody/atsu_santa__wink.png": "8e1d082849fc 5bbff8fab",
+  "monster-hero/images/assistant/fullbody/atsu_santa.png": "8cc8549c802e fcbea473a",
+  "monster-hero/images/assistant/fullbody/atsu_santa__angry.png": "24374581282c fcbea473a",
+  "monster-hero/images/assistant/fullbody/atsu_santa__crying.png": "ee2e8ac2cfb8 fcbea473a",
+  "monster-hero/images/assistant/fullbody/atsu_santa__excited.png": "568d3755fb78 fcbea473a",
+  "monster-hero/images/assistant/fullbody/atsu_santa__happy.png": "c56e2357d5d1 fcbea473a",
+  "monster-hero/images/assistant/fullbody/atsu_santa__normal.png": "9854b486458a fcbea473a",
+  "monster-hero/images/assistant/fullbody/atsu_santa__sleep.png": "08a3f7c8229e fcbea473a",
+  "monster-hero/images/assistant/fullbody/atsu_santa__surprise.png": "01b867e0a098 fcbea473a",
+  "monster-hero/images/assistant/fullbody/atsu_santa__troubled.png": "79da62404811 fcbea473a",
+  "monster-hero/images/assistant/fullbody/atsu_santa__wink.png": "76e5ba7d02ae fcbea473a",
   "monster-hero/images/assistant/fullbody/erubin.png": "53151f391384 5459e3f5",
   "monster-hero/images/assistant/fullbody/erubin__angry.png": "78c5b33a3e72 5459e3f5",
   "monster-hero/images/assistant/fullbody/erubin__crying.png": "4a3d910221b0 5459e3f5",
@@ -615,14 +619,14 @@
   "monster-hero/images/assistant/fullbody/momosuke__troubled.png": "858a41196097 bf5f3397a",
   "monster-hero/images/assistant/fullbody/momosuke__wink.png": "6baaa650b2c5 bf5f3397a",
   "monster-hero/images/assistant/fullbody/momosuke_halloween.png": "31c076738301 f24fe446e",
-  "monster-hero/images/assistant/fullbody/momosuke_halloween__angry.png": "996ac8719417 bf5f3397a",
-  "monster-hero/images/assistant/fullbody/momosuke_halloween__crying.png": "36531bf3fe76 bf5f3397a",
-  "monster-hero/images/assistant/fullbody/momosuke_halloween__excited.png": "c78a4b760bb6 bf5f3397a",
-  "monster-hero/images/assistant/fullbody/momosuke_halloween__happy.png": "eee11d6bf603 bf5f3397a",
+  "monster-hero/images/assistant/fullbody/momosuke_halloween__angry.png": "38fffda5cee3 70801035c",
+  "monster-hero/images/assistant/fullbody/momosuke_halloween__crying.png": "94ec075f17ce 70801035c",
+  "monster-hero/images/assistant/fullbody/momosuke_halloween__excited.png": "d6ce2ac04579 70801035c",
+  "monster-hero/images/assistant/fullbody/momosuke_halloween__happy.png": "204947bb0af7 70801035c",
   "monster-hero/images/assistant/fullbody/momosuke_halloween__normal.png": "d51f287f3ea1 bf5f3397a",
-  "monster-hero/images/assistant/fullbody/momosuke_halloween__surprise.png": "8282faa6fc1b bf5f3397a",
-  "monster-hero/images/assistant/fullbody/momosuke_halloween__troubled.png": "b9fc4927d7fd bf5f3397a",
-  "monster-hero/images/assistant/fullbody/momosuke_halloween__wink.png": "8c7c6390001b bf5f3397a",
+  "monster-hero/images/assistant/fullbody/momosuke_halloween__surprise.png": "6124c7cd45dc 70801035c",
+  "monster-hero/images/assistant/fullbody/momosuke_halloween__troubled.png": "510d86820d1b 70801035c",
+  "monster-hero/images/assistant/fullbody/momosuke_halloween__wink.png": "a30043bd75da 70801035c",
   "monster-hero/images/assistant/fullbody/momosuke_santa.png": "7a382bec0030 01c7413c5",
   "monster-hero/images/assistant/fullbody/momosuke_santa__angry.png": "7e7636ab13ee 01c7413c5",
   "monster-hero/images/assistant/fullbody/momosuke_santa__crying.png": "e7e49d87979f 01c7413c5",
@@ -804,15 +808,15 @@
   "monster-hero/images/assistant/myua_surprise.PNG": "caf129bbcc9c f0d5f08a9",
   "monster-hero/images/assistant/myua_troubled.PNG": "5f6335356b91 f0d5f08a9",
   "monster-hero/images/assistant/myua_wink.PNG": "4896bb37dc7f f0d5f08a9",
-  "monster-hero/images/assistant/santa/atsu_angry.PNG": "bbe58d746668 5bbff8fab",
-  "monster-hero/images/assistant/santa/atsu_crying.PNG": "615baf6327ea 5bbff8fab",
-  "monster-hero/images/assistant/santa/atsu_excited.PNG": "09daa72a3ca4 5bbff8fab",
-  "monster-hero/images/assistant/santa/atsu_happy.PNG": "472a4088665d 5bbff8fab",
-  "monster-hero/images/assistant/santa/atsu_normal.PNG": "60a962aa3d03 5bbff8fab",
-  "monster-hero/images/assistant/santa/atsu_sleep.PNG": "063b57fa80ad 5bbff8fab",
-  "monster-hero/images/assistant/santa/atsu_surprise.PNG": "964660686633 5bbff8fab",
-  "monster-hero/images/assistant/santa/atsu_troubled.PNG": "fabfd239f754 5bbff8fab",
-  "monster-hero/images/assistant/santa/atsu_wink.PNG": "8e1d082849fc 5bbff8fab",
+  "monster-hero/images/assistant/santa/atsu_angry.PNG": "24374581282c fcbea473a",
+  "monster-hero/images/assistant/santa/atsu_crying.PNG": "ee2e8ac2cfb8 fcbea473a",
+  "monster-hero/images/assistant/santa/atsu_excited.PNG": "568d3755fb78 fcbea473a",
+  "monster-hero/images/assistant/santa/atsu_happy.PNG": "c56e2357d5d1 fcbea473a",
+  "monster-hero/images/assistant/santa/atsu_normal.PNG": "9854b486458a fcbea473a",
+  "monster-hero/images/assistant/santa/atsu_sleep.PNG": "08a3f7c8229e fcbea473a",
+  "monster-hero/images/assistant/santa/atsu_surprise.PNG": "01b867e0a098 fcbea473a",
+  "monster-hero/images/assistant/santa/atsu_troubled.PNG": "79da62404811 fcbea473a",
+  "monster-hero/images/assistant/santa/atsu_wink.PNG": "76e5ba7d02ae fcbea473a",
   "monster-hero/images/assistant/santa/dra_angry.PNG": "3d5e49ab032c 35b9d5abf",
   "monster-hero/images/assistant/santa/dra_crying.PNG": "cbc3eb532faa 35b9d5abf",
   "monster-hero/images/assistant/santa/dra_excited.PNG": "24ddc07fcb9d 35b9d5abf",
@@ -831,15 +835,15 @@
   "monster-hero/images/assistant/santa/erubin_surprise.PNG": "85434798a0db 201ff712b",
   "monster-hero/images/assistant/santa/erubin_troubled.PNG": "3a3b3bb9ab49 201ff712b",
   "monster-hero/images/assistant/santa/erubin_wink.PNG": "71559291ec2f 201ff712b",
-  "monster-hero/images/assistant/santa/face/atsu_angry.PNG": "82bcb6f4acc4 2805e672",
-  "monster-hero/images/assistant/santa/face/atsu_crying.PNG": "e4a547eed354 2805e672",
-  "monster-hero/images/assistant/santa/face/atsu_excited.PNG": "29db33f08cb1 2805e672",
-  "monster-hero/images/assistant/santa/face/atsu_happy.PNG": "ad0d62caf547 2805e672",
-  "monster-hero/images/assistant/santa/face/atsu_normal.PNG": "dc6e7653f8bd 2805e672",
-  "monster-hero/images/assistant/santa/face/atsu_sleep.PNG": "dbf636fc6462 2805e672",
-  "monster-hero/images/assistant/santa/face/atsu_surprise.PNG": "6c6f329fe7af 2805e672",
-  "monster-hero/images/assistant/santa/face/atsu_troubled.PNG": "032347a536cd 2805e672",
-  "monster-hero/images/assistant/santa/face/atsu_wink.PNG": "2173b8c09614 2805e672",
+  "monster-hero/images/assistant/santa/face/atsu_angry.PNG": "ac985783409f 8809dcc03",
+  "monster-hero/images/assistant/santa/face/atsu_crying.PNG": "1789c174672f 8809dcc03",
+  "monster-hero/images/assistant/santa/face/atsu_excited.PNG": "e69da0136003 8809dcc03",
+  "monster-hero/images/assistant/santa/face/atsu_happy.PNG": "049f23f81d89 8809dcc03",
+  "monster-hero/images/assistant/santa/face/atsu_normal.PNG": "6bc54b99fc08 8809dcc03",
+  "monster-hero/images/assistant/santa/face/atsu_sleep.PNG": "c11e0a3f1280 8809dcc03",
+  "monster-hero/images/assistant/santa/face/atsu_surprise.PNG": "b94fe9a5eae8 8809dcc03",
+  "monster-hero/images/assistant/santa/face/atsu_troubled.PNG": "24cbc8bf4956 8809dcc03",
+  "monster-hero/images/assistant/santa/face/atsu_wink.PNG": "a7f46998bde8 8809dcc03",
   "monster-hero/images/assistant/santa/face/dra_angry.PNG": "a9633748353d 35b9d5abf",
   "monster-hero/images/assistant/santa/face/dra_crying.PNG": "55ae2f6715f5 35b9d5abf",
   "monster-hero/images/assistant/santa/face/dra_excited.PNG": "bddcf8993737 35b9d5abf",
@@ -1069,14 +1073,14 @@
   "monster-hero/images/assistant/stand-normal/sorashido_surprise.png": "022a60eedb3e 74c6b99d",
   "monster-hero/images/assistant/stand-normal/sorashido_troubled.png": "27859494a954 74c6b99d",
   "monster-hero/images/assistant/stand-normal/sorashido_wink.png": "05454594ab5b 74c6b99d",
-  "monster-hero/images/assistant/stand-santa/atsu_angry.png": "895b324cc271 5bbff8fab",
-  "monster-hero/images/assistant/stand-santa/atsu_crying.png": "3fc6f75907b3 5bbff8fab",
-  "monster-hero/images/assistant/stand-santa/atsu_excited.png": "14235a85a9f5 5bbff8fab",
-  "monster-hero/images/assistant/stand-santa/atsu_happy.png": "d71d3de6df76 5bbff8fab",
-  "monster-hero/images/assistant/stand-santa/atsu_normal.png": "c15411c7c3a3 5bbff8fab",
-  "monster-hero/images/assistant/stand-santa/atsu_surprise.png": "5a239584017d 5bbff8fab",
-  "monster-hero/images/assistant/stand-santa/atsu_troubled.png": "c40dd56fade9 5bbff8fab",
-  "monster-hero/images/assistant/stand-santa/atsu_wink.png": "40fd9fe4e2cd 5bbff8fab",
+  "monster-hero/images/assistant/stand-santa/atsu_angry.png": "d3e840832a66 fcbea473a",
+  "monster-hero/images/assistant/stand-santa/atsu_crying.png": "f7ecca48999e fcbea473a",
+  "monster-hero/images/assistant/stand-santa/atsu_excited.png": "c42bd9a7054d fcbea473a",
+  "monster-hero/images/assistant/stand-santa/atsu_happy.png": "df6b9dbfcb8f fcbea473a",
+  "monster-hero/images/assistant/stand-santa/atsu_normal.png": "74a0da698824 fcbea473a",
+  "monster-hero/images/assistant/stand-santa/atsu_surprise.png": "7f5256baf12e fcbea473a",
+  "monster-hero/images/assistant/stand-santa/atsu_troubled.png": "e224d22cfd0d fcbea473a",
+  "monster-hero/images/assistant/stand-santa/atsu_wink.png": "2a05070addd3 fcbea473a",
   "monster-hero/images/assistant/stand-santa/erubin_angry.png": "3f691706b63a 201ff712b",
   "monster-hero/images/assistant/stand-santa/erubin_crying.png": "5cbe5e66e118 201ff712b",
   "monster-hero/images/assistant/stand-santa/erubin_excited.png": "e2cb6fadcae5 201ff712b",
