@@ -6,5 +6,7 @@
   "atsu:santa": {"face": {"head": 1.2, "up": -0.02, "dx": 0.1}},
   "momosuke:halloween": {"face": {"head": 1.45, "up": 0.15}},
   "_erubin:santa": "えるびんのサンタ(2026-11-25)。顔アイコンを、Muse 承認済みのえるびん(ふだん)・石油王の顔の大きさ・目の高さ(目が丸の約0.5・顔の幅が約半分)にそろえた",
-  "erubin:santa": {"face": {"head": 1.95, "up": 0.5}}
+  "erubin:santa": {"face": {"head": 1.95, "up": 0.5}},
+  "mua": {"face": {"head": 1.8, "up": 0.24}},
+  "momosuke:halloween": {"face": {"head": 1.45, "up": 0.15}}
 }
