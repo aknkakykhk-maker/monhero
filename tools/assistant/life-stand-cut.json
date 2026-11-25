@@ -1,5 +1,6 @@
 {
   "_説明": "全身画から立ち絵・顔アイコンを切るときの数字(life-stand-from-fullbody.py が読む)。default が全組の既定、キー(助手id か 助手id:服)ごとに上書き。face.head=一辺が頭(てっぺん〜顎)の何倍か・up=てっぺんより上へ頭の何割・dx/dy=一辺の何割ずらすか(+は右・下)・px=縮める一辺。stand_max=立ち絵の長い辺の上限。face:null は顔アイコンを作らない。直し方は docs/progress/assistant-art/r1119-153-switch/MUSE.md",
   "default": {"stand_max": 1000, "face": {"head": 1.5, "up": 0.1, "dx": 0, "dy": 0, "px": 256}},
-  "atsu": {"face": null}
+  "atsu": {"face": null},
+  "momosuke:halloween": {"face": {"head": 1.45, "up": 0.15}}
 }

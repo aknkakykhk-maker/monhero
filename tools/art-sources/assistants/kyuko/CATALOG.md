@@ -16,7 +16,7 @@
 | 全身絵 | `monster-hero/images/assistant/fullbody/kyuko[__<表情>].png` | 9 | 2026-11-22 7d171f10f(9枚・うち表情なし1) | 現行のファイルそのもの(完成品を直接入れた・別の原本はリポジトリに無い) | 社長が完成品を直接入れた。道具で作り直さない |
 | 立ち絵 | `monster-hero/images/assistant/stand-normal/kyuko_<表情>.png` | 8 | 2026-11-23 69cee4cd(8枚) | `monster-hero/images/assistant/fullbody/kyuko__*.png` | `tools/assistant/life-stand-from-fullbody.py`(全身絵から切り出す) |
 | バスト絵 | `monster-hero/images/assistant/kyuko_<表情>.PNG` | 9 | 2026-11-22 5da1fb0de(8枚) / 2026-11-12 #5492(1枚・うち寝顔1) | 現行のファイルそのもの(完成品を直接入れた・別の原本はリポジトリに無い) | 社長が完成品を直接入れた。道具で作り直さない |
-| 顔アイコン | `monster-hero/images/assistant/face/kyuko_<表情>.PNG` | 9 | 2026-11-23 69cee4cd(8枚) / 2026-11-12 #5492(1枚・うち寝顔1) | 現行のファイルそのもの(完成品を直接入れた・別の原本はリポジトリに無い) | 社長が完成品を直接入れた。道具で作り直さない |
+| 顔アイコン | `monster-hero/images/assistant/face/kyuko_<表情>.PNG` | 9 | 2026-11-25 381dcb0e(8枚) / 2026-11-12 #5492(1枚・うち寝顔1) | 現行のファイルそのもの(完成品を直接入れた・別の原本はリポジトリに無い) | 社長が完成品を直接入れた。道具で作り直さない |
 
 ## 服「冬の装い」(winter)
 
