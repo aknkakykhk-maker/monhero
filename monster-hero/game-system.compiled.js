@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a4866e6e8c29a3ac
+// source-sha256: 02e0ee28028654af
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -15835,6 +15835,7 @@ const RHYTHM_MULTI_PUBLIC_RELEASE = true;
 const FRIENDS_PUBLIC_RELEASE = true;
 const RAID_JACK_START_AT = '2026-10-05T04:00:00+09:00';
 const XMAS_COSTUME_START_AT = '2026-11-30T10:00:00+09:00';
+const RAID_XMAS_START_AT = '2026-11-30T10:00:00+09:00';
 const RAID_JACK_PUBLIC_RELEASE = true;
 const RAID_JACK_RHYTHM_PUBLIC_RELEASE = true;
 const RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE = true;
@@ -15913,6 +15914,13 @@ const RELEASE_FLAGS = {
   get raidJack() {
     try {
       return RAID_JACK_PUBLIC_RELEASE === true && Date.now() >= Date.parse(RAID_JACK_START_AT);
+    } catch (e) {
+      return false;
+    }
+  },
+  get raidXmas() {
+    try {
+      return Date.now() >= Date.parse(RAID_XMAS_START_AT);
     } catch (e) {
       return false;
     }
@@ -63001,7 +63009,7 @@ const raidJackNormalizePending = raw => (Array.isArray(raw) ? raw : []).map(h =>
     tier,
     damage,
     defeated: x.defeated === true,
-    source: x.source === 'rhythm' ? 'rhythm' : 'battle'
+    source: x.source === 'rhythm' || x.source === 'card' ? x.source : 'battle'
   };
 }).filter(Boolean).slice(0, 30);
 const raidJackNormalizeState = raw => {
@@ -63467,7 +63475,7 @@ const sbSendRaidJackHit = async (hit, breederId, eventId) => {
       ...row,
       source: clean.source
     });
-    if (result.ok) _raidJackSourceColumn = true;else if (result.status === 400 && /source/i.test(String(result.body || '')) && _raidJackSourceColumn !== true) {
+    if (result.ok) _raidJackSourceColumn = true;else if (clean.source === 'card' && result.status === 400 && /source/i.test(String(result.body || ''))) return 'notready';else if (result.status === 400 && /source/i.test(String(result.body || '')) && _raidJackSourceColumn !== true) {
       _raidJackSourceColumn = false;
       result = await send(row);
     }
@@ -63839,6 +63847,266 @@ const raidJackRevokeUnearned = async (state, gifts, breederId, eventId) => {
     changed: removed > 0 || nextClaimed.length !== norm.claimed.length,
     removed
   };
+};
+const RAID_XMAS_EVENT = Object.freeze({
+  id: 'raid_xmas_2026',
+  debugId: 'raid_xmas_debug',
+  name: '黒いサンタ(仮)',
+  startAt: '2026-11-30T10:00:00+09:00',
+  endAt: '2026-12-31T04:00:00+09:00',
+  storageKey: 'mh_raid_xmas_v1'
+});
+const RAID_XMAS_STORAGE_KEY = RAID_XMAS_EVENT.storageKey;
+const RAID_XMAS_SOURCES = Object.freeze(['battle', 'rhythm', 'card']);
+const RAID_XMAS_FREE_PER_DAY = 3;
+const RAID_XMAS_EXTRA_COST_BEAT_P = 300;
+const RAID_XMAS_TURNS = 20;
+const RAID_XMAS_A_HPS = Object.freeze([1750000, 3200000, 8000000, 35000000, 80000000]);
+const RAID_XMAS_A_ATKS = Object.freeze([350, 500, 600, 800, 1000]);
+const RAID_XMAS_A_NAMES = Object.freeze(['黒いサンタ(仮)・一', '黒いサンタ(仮)・二', '黒いサンタ(仮)・三', '黒いサンタ(仮)・四', '黒いサンタ(仮)・五']);
+const RAID_XMAS_A_TIERS = Object.freeze(RAID_XMAS_A_NAMES.map((name, i) => raidJackTier(`a${i + 1}`, name, [5.0, 6.5, 8.0, 10.0, 13.0][i], [3, 4, 5, 5, 5][i], RAID_XMAS_A_ATKS[i] / RAID_JACK_BASE.atk, RAID_XMAS_A_HPS[i])));
+const RAID_XMAS_AFTER_BOSS = raidJackTier('a6', '黒いサンタ(仮)・聖夜', 13.0, 5, 1.0, 4550000);
+const RAID_XMAS_B_TIERS = Object.freeze([raidJackTier('b1', '初級 黒いサンタ(仮)', 0.2, 3), raidJackTier('b2', '中級 黒いサンタ(仮)', 2, 4), raidJackTier('b3', '上級 黒いサンタ(仮)', 10, 5), raidJackTier('b4', '超級 黒いサンタ(仮)', 40, 5), raidJackTier('b5', '極級 黒いサンタ(仮)', 100, 5)]);
+const raidXmasTiers = kind => kind === 'b' ? RAID_XMAS_B_TIERS : RAID_XMAS_A_TIERS;
+const raidXmasTierAt = (kind, index) => {
+  const list = raidXmasTiers(kind);
+  const i = Number.isFinite(index) ? Math.floor(index) : 0;
+  return list[Math.min(Math.max(i, 0), list.length - 1)];
+};
+const RAID_XMAS_REWARDS = RAID_JACK_REWARDS;
+const raidXmasWindowAt = nowMs => {
+  const now = Number.isFinite(nowMs) ? nowMs : 0;
+  const start = Date.parse(RAID_XMAS_EVENT.startAt);
+  const end = Date.parse(RAID_XMAS_EVENT.endAt);
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return 'before';
+  if (now < start) return 'before';
+  if (now >= end) return 'after';
+  return 'open';
+};
+const raidXmasBossDown = totals => !!totals && !!totals.a && !!totals.a[RAID_XMAS_A_TIERS.length] && (Number(totals.a[RAID_XMAS_A_TIERS.length].total) || 0) >= RAID_XMAS_A_TIERS[RAID_XMAS_A_TIERS.length - 1].hp;
+const raidXmasRemaining = (side, nowMs) => {
+  const s = raidJackNormalizeSide(side, false);
+  const today = raidJackDayKey(nowMs);
+  const used = s.day === today ? s.used : 0;
+  const extra = s.day === today ? s.extra : 0;
+  return Math.max(0, RAID_XMAS_FREE_PER_DAY + extra - used);
+};
+const raidXmasRhythmDamageOf = (result, difficulty) => raidJackRhythmDamageOf(result, difficulty);
+const RAID_XMAS_STORY_START_ID = 'raid_xmas_story_1b';
+const RAID_XMAS_STORY_AFTER_TIER = Object.freeze({
+  a1: 'raid_xmas_story_2',
+  a2: 'raid_xmas_story_3',
+  a3: 'raid_xmas_story_4',
+  a4: 'raid_xmas_story_5',
+  a5: 'raid_xmas_story_6'
+});
+const RAID_XMAS_ENDING_CLEARED_ID = 'raid_xmas_ending_cleared';
+const RAID_XMAS_ENDING_NOTCLEARED_ID = 'raid_xmas_ending_notcleared';
+const RAID_XMAS_STORY_IDS = Object.freeze([RAID_XMAS_STORY_START_ID, ...Object.values(RAID_XMAS_STORY_AFTER_TIER), RAID_XMAS_ENDING_CLEARED_ID, RAID_XMAS_ENDING_NOTCLEARED_ID]);
+const raidXmasStoryCandidates = (totals, nowMs) => {
+  const out = [];
+  const a = totals && totals.a ? totals.a : null;
+  const defeatedAt = i => !!a && !!a[i + 1] && (Number(a[i + 1].total) || 0) >= RAID_XMAS_A_TIERS[i].hp;
+  if (a) RAID_XMAS_A_TIERS.forEach((t, i) => {
+    if (defeatedAt(i)) out.push(RAID_XMAS_STORY_AFTER_TIER[t.id]);
+  });
+  if (raidXmasWindowAt(nowMs) === 'after' && a) {
+    out.push(defeatedAt(RAID_XMAS_A_TIERS.length - 1) ? RAID_XMAS_ENDING_CLEARED_ID : RAID_XMAS_ENDING_NOTCLEARED_ID);
+  }
+  return out.filter(Boolean);
+};
+const raidXmasLoadState = async () => {
+  try {
+    return raidJackNormalizeState(await storeGet(RAID_XMAS_STORAGE_KEY, null, false));
+  } catch (e) {
+    return raidJackDefaultState();
+  }
+};
+const raidXmasSaveState = async state => {
+  try {
+    await storeSet(RAID_XMAS_STORAGE_KEY, raidJackNormalizeState(state), false);
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
+let _raidXmasDebug = {
+  force: false,
+  realRules: false
+};
+const raidXmasSetDebug = opts => {
+  const o = opts && typeof opts === 'object' ? opts : {};
+  _raidXmasDebug = {
+    force: o.force === true,
+    realRules: o.realRules === true
+  };
+};
+const raidXmasEventId = () => _raidXmasDebug.force ? RAID_XMAS_EVENT.debugId : RAID_XMAS_EVENT.id;
+const raidXmasSafeEventId = id => id === RAID_XMAS_EVENT.id || id === RAID_XMAS_EVENT.debugId ? id : raidXmasEventId();
+const raidXmasFetchTotals = async (eventId, waitMs = 4000) => {
+  try {
+    return await Promise.race([sbFetchRaidJackTierTotals(raidXmasSafeEventId(eventId)), new Promise(resolve => setTimeout(() => resolve(null), waitMs))]);
+  } catch (e) {
+    return null;
+  }
+};
+const raidXmasUseTry = async (kind = 'a', nowMs = Date.now()) => {
+  const k = kind === 'b' ? 'b' : 'a';
+  const eventId = raidXmasEventId();
+  const hitId = raidJackMakeHitId(nowMs);
+  if (_raidXmasDebug.force && !_raidXmasDebug.realRules) return {
+    ok: true,
+    hitId,
+    eventId,
+    remaining: null
+  };
+  if (!_raidXmasDebug.force && raidXmasWindowAt(nowMs) !== 'open') return {
+    ok: false,
+    hitId: '',
+    eventId,
+    remaining: 0
+  };
+  const state = await raidXmasLoadState();
+  const side = state[k];
+  const today = raidJackDayKey(nowMs);
+  if (side.day !== today) {
+    side.day = today;
+    side.used = 0;
+    side.extra = 0;
+  }
+  const left = raidXmasRemaining(side, nowMs);
+  if (left <= 0) return {
+    ok: false,
+    hitId: '',
+    eventId,
+    remaining: 0
+  };
+  side.used += 1;
+  if (!(await raidXmasSaveState(state))) return {
+    ok: false,
+    hitId: '',
+    eventId,
+    remaining: left
+  };
+  return {
+    ok: true,
+    hitId,
+    eventId,
+    remaining: left - 1
+  };
+};
+const raidXmasAddDamage = async input => {
+  const i = input && typeof input === 'object' ? input : {};
+  const source = RAID_XMAS_SOURCES.includes(i.source) ? i.source : '';
+  const kind = i.kind === 'b' ? 'b' : 'a';
+  const list = raidXmasTiers(kind);
+  const tierIndex = Math.min(Math.max(Math.floor(Number(i.tierIndex) || 0), 0), list.length - 1);
+  const tier = list[tierIndex];
+  const damage = Math.max(0, Math.min(100000000, Math.floor(Number(i.damage) || 0)));
+  const eventId = raidXmasSafeEventId(i.eventId);
+  const hitId = raidJackSafeId(i.hitId) && i.hitId.length <= 64 ? i.hitId : raidJackMakeHitId();
+  const res = {
+    way: source,
+    outcome: 'sent',
+    damage,
+    defeated: false,
+    opened: false,
+    kind,
+    tierIndex,
+    tierName: tier.name,
+    lifeBefore: null,
+    lifeLeft: null,
+    lifeMax: tier.hp,
+    afterBoss: false,
+    eventId,
+    hitId,
+    detail: i.detail && typeof i.detail === 'object' ? i.detail : null
+  };
+  if (!source || kind === 'b' && source !== 'battle') return {
+    ...res,
+    outcome: 'invalid'
+  };
+  if (kind === 'a') {
+    const totals = await raidXmasFetchTotals(eventId);
+    if (totals) {
+      const done = totals.a && totals.a[tierIndex + 1] ? Number(totals.a[tierIndex + 1].total) || 0 : 0;
+      res.afterBoss = tierIndex === list.length - 1 && raidXmasBossDown(totals);
+      res.lifeBefore = res.afterBoss ? RAID_XMAS_AFTER_BOSS.hp : Math.max(0, tier.hp - done);
+      if (res.afterBoss) {
+        res.tierName = RAID_XMAS_AFTER_BOSS.name;
+        res.lifeMax = RAID_XMAS_AFTER_BOSS.hp;
+      }
+    }
+  }
+  if (typeof i.defeated === 'boolean') res.defeated = i.defeated && !res.afterBoss;else res.defeated = kind === 'a' && !res.afterBoss && damage > 0 && res.lifeBefore !== null && res.lifeBefore > 0 && damage >= res.lifeBefore;
+  res.lifeLeft = res.lifeBefore === null ? null : Math.max(0, res.lifeBefore - damage);
+  if (damage <= 0) return res;
+  const hit = {
+    hitId,
+    kind,
+    tier: tierIndex + 1,
+    damage,
+    defeated: res.defeated,
+    source
+  };
+  const isDebugRun = eventId !== RAID_XMAS_EVENT.id;
+  let outcome = 'error';
+  try {
+    if (isDebugRun) {
+      outcome = await sbSendRaidJackHit(hit, await ensureBreederId(), eventId);
+    } else {
+      let next = await raidXmasLoadState();
+      const side = next[kind];
+      const before = raidJackUnlockedCount(kind, side.defeated);
+      if (res.defeated && !side.defeated.includes(tier.id)) side.defeated = [...side.defeated, tier.id];
+      if (kind === 'b') side.total = (side.total || 0) + damage;
+      res.opened = raidJackUnlockedCount(kind, side.defeated) > before;
+      const sent = await raidJackSubmitHit(next, hit, await ensureBreederId(), eventId);
+      next = sent.state;
+      outcome = sent.outcome;
+      await raidXmasSaveState(next);
+    }
+  } catch (e) {
+    outcome = 'error';
+  }
+  res.outcome = outcome === 'sent' ? 'sent' : outcome === 'invalid' ? 'invalid' : 'pending';
+  if (typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.battleLog === true && !isDebugRun && source !== 'card') {
+    try {
+      const log = i.log && typeof i.log === 'object' ? i.log : {};
+      void sbSendRaidBattleLog(buildRaidBattleLogRow({
+        party: log.party,
+        units: log.units,
+        score: log.score,
+        raid: {
+          event: eventId,
+          kind,
+          tier: tierIndex + 1,
+          source,
+          damage,
+          defeated: res.defeated,
+          turns: log.turns
+        }
+      }));
+    } catch (e) {}
+  }
+  return res;
+};
+const raidXmasFlushStoredPending = async breederId => {
+  try {
+    const state = await raidXmasLoadState();
+    if (!state.pending.length || !raidJackSafeId(breederId)) return 0;
+    const before = state.pending.length;
+    const next = await raidJackFlushPending(state, breederId, RAID_XMAS_EVENT.id);
+    if (next.pending.length !== before) {
+      const latest = await raidXmasLoadState();
+      const left = new Set(next.pending.map(p => p.hitId));
+      latest.pending = latest.pending.filter(p => left.has(p.hitId));
+      await raidXmasSaveState(latest);
+    }
+    return before - next.pending.length;
+  } catch (e) {
+    return 0;
+  }
 };
 const RAID_JACK_AURA_TONGUES = Object.freeze([6, 10, 16, 24, 34]);
 const RAID_JACK_AURA_EMBERS = Object.freeze([0, 0, 6, 12, 20]);
