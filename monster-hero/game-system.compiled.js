@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 56222c9b8aa12b14
+// source-sha256: 1315900834f9023f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -15922,6 +15922,13 @@ const RELEASE_FLAGS = {
   get raidJack() {
     try {
       return RAID_JACK_PUBLIC_RELEASE === true && Date.now() >= Date.parse(RAID_JACK_START_AT);
+    } catch (e) {
+      return false;
+    }
+  },
+  get xmasBattleBonus() {
+    try {
+      return typeof xmasBattleBonusRateAt === 'function' && xmasBattleBonusRateAt(Date.now()) > 1;
     } catch (e) {
       return false;
     }
@@ -36575,7 +36582,10 @@ const RewardSummaryCard = ({
     className: "w-full max-w-xs bg-black/30 border border-white/10 rounded-2xl p-3 mb-2 text-left shrink-0 flex flex-col min-h-0"
   }, React.createElement("div", {
     className: "space-y-3 shrink-0"
-  }, React.createElement("div", null, React.createElement("div", {
+  }, summary.xmasBonus > 1 && React.createElement("div", {
+    "data-xmas-battle-bonus": true,
+    className: "rounded-lg border border-emerald-400/40 bg-emerald-950/50 px-2 py-1 text-[10px] font-black leading-snug text-emerald-100"
+  }, "🎄 クリスマスイベント中！ 経験値とダイヤが", summary.xmasBonus, "倍"), React.createElement("div", null, React.createElement("div", {
     className: "flex items-center justify-between text-[11px] mb-1"
   }, React.createElement("span", {
     className: "text-indigo-300 font-black flex items-center gap-1"
@@ -63945,6 +63955,8 @@ const raidXmasStoryCandidates = (totals, nowMs) => {
   }
   return out.filter(Boolean);
 };
+const XMAS_BATTLE_BONUS_RATE = 1.5;
+const xmasBattleBonusRateAt = nowMs => raidXmasWindowAt(nowMs) === 'open' ? XMAS_BATTLE_BONUS_RATE : 1;
 const raidXmasLoadState = async () => {
   try {
     return raidJackNormalizeState(await storeGet(RAID_XMAS_STORAGE_KEY, null, false));
@@ -240210,9 +240222,12 @@ function MonsterHeroGame() {
       gold: 0
     };
     const {
-      xpMult,
-      goldMult
+      xpMult: xpMultBase,
+      goldMult: goldMultBase
     } = runRewardMultipliers();
+    const xmasBonus = xmasBattleBonusRateAt(Date.now());
+    const xpMult = xpMultBase * xmasBonus;
+    const goldMult = goldMultBase * xmasBonus;
     return {
       xp: applyQuickXpPolicy(xpForWavesClearedInMode(cleared, xpMult, runMode), runMode, quickRewardPolicyRunRef.current),
       gold: applyQuickDiamondPolicy(goldForWavesClearedInMode(cleared, goldMult, runMode), runMode, quickRewardPolicyRunRef.current)
@@ -247686,7 +247701,7 @@ function MonsterHeroGame() {
     if (!autoQuickRunConfigured(autoSettings)) return null;
     const quickDifficulty = autoSettings.quickRun.difficulty;
     if (!isAutoQuickRunDifficultyAllowed(quickDifficulty, quickClearCounts)) return null;
-    const loops = proQuickLoopsFor(wavesCleared, difficulty, extremeRunRef.current ? extremeDifficulty : null);
+    const loops = Math.floor(proQuickLoopsFor(wavesCleared, difficulty, extremeRunRef.current ? extremeDifficulty : null) * xmasBattleBonusRateAt(Date.now()));
     if (loops <= 0) return null;
     const awardedPro = await awardBackQuickLoops(loops);
     return awardedPro ? {
@@ -247795,9 +247810,12 @@ function MonsterHeroGame() {
     }
     const {
       scoreMult,
-      goldMult,
-      xpMult
+      goldMult: goldMultBase,
+      xpMult: xpMultBase
     } = runRewardMultipliers();
+    const xmasBonus = xmasBattleBonusRateAt(Date.now());
+    const goldMult = goldMultBase * xmasBonus;
+    const xpMult = xpMultBase * xmasBonus;
     const breederXpGain = applyQuickXpPolicy(xpForWavesClearedInMode(wavesCleared, xpMult, runMode), runMode, quickRewardPolicyRunRef.current);
     const breederLevelBefore = levelInfo(breederXp);
     const nextXp = breederXp + breederXpGain;
@@ -247910,7 +247928,8 @@ function MonsterHeroGame() {
       heroBondGain,
       allyBondGains,
       waveHistory: rewardWaveHistory,
-      proQuickAward
+      proQuickAward,
+      xmasBonus: xmasBonus > 1 ? xmasBonus : null
     });
     checkStorageTrouble();
   };
@@ -251822,11 +251841,11 @@ function MonsterHeroGame() {
       roundScore: finalRoundScore,
       totalScore: score + finalRoundScore,
       ...(extremeRun ? {
-        xpGain: waveXpGainInMode(wave, xpMultiplier, runMode)
+        xpGain: waveXpGainInMode(wave, xpMultiplier * xmasBattleBonusRateAt(Date.now()), runMode)
       } : {
-        xpGain: waveXpGainInMode(wave, scoreMultiplier, runMode)
+        xpGain: waveXpGainInMode(wave, scoreMultiplier * xmasBattleBonusRateAt(Date.now()), runMode)
       }),
-      goldGain: waveGoldGainInMode(wave, goldMultiplier, runMode)
+      goldGain: waveGoldGainInMode(wave, goldMultiplier * xmasBattleBonusRateAt(Date.now()), runMode)
     }]);
     setTimeout(() => {
       setDefeatFx(null);

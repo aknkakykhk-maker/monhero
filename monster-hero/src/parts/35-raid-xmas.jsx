@@ -104,3 +104,11 @@ const raidXmasStoryCandidates = (totals, nowMs) => {
   }
   return out.filter(Boolean);
 };
+
+// ---- 期間中のモンヒロバトルのごほうび1.5倍(r1119-172 追記「期間中のボーナス」③・社長の選択) ----
+//  ・期間はクリスマスのイベントと同じ(11/30 10:00〜12/31 4:00)。見るたびに時刻で決める(保存しない)。
+//  ・掛けるのは、モンヒロバトルのランで配るブリーダー経験値・絆経験値・ダイヤ(60-app.jsx の awardRunRewards)と、
+//    プロのランぶんのクイック周回の周回数。今ある倍率(難易度・クイック・プロなど)とは掛け算で重ねる(カードと同じ「A 掛け算」)。
+//  ・スコア・ランキングの送信・自己ベスト・スキップチケット・レイド・モンヒロビートの周回(ビートの5倍の側)には掛けない。
+const XMAS_BATTLE_BONUS_RATE = 1.5;
+const xmasBattleBonusRateAt = (nowMs) => (raidXmasWindowAt(nowMs) === 'open' ? XMAS_BATTLE_BONUS_RATE : 1);
