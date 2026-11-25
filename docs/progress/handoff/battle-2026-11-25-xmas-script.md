@@ -1,0 +1,25 @@
+# 引き継ぎメモ: バトル部(クリスマスイベントの台本係)(2026-11-25)
+
+次の会話は、CLAUDE.md → `docs/depts/battle.md` → このメモ、の順に読んで始める。前の会話の中身は読みに行かない。
+同じ日の `battle-2026-11-25.md` は別の会話(ゲームに入れる係)のメモ。
+
+## 仕事
+クリスマスイベント「聖夜の名探偵」のお話の台本(台帳 r1119-172・追跡 r1125-041)。窓口(session_0113GBaCCe57vnmvsZ6f3TFr)からの指示だけで動く。報告は send_message を使わず、会話の最後の発言に書く。
+
+## いまの状態
+- 台本: `docs/progress/event-xmas-2026/SCRIPT.md`。全話一覧(第2案・25話・解決とクリスマス会は 12/24 で決定)、レイドの「もしも」の話(ボス=覚醒サンタ・きっかけA・つなげ方ア 決定)、裏の真相メモ、**第1〜12話の台本**まで
+- **社長が全話一覧・ドラを怪しく見せる場面・第1〜12話を読んで確認中。返事が来るまで第13話から先は書かない・SCRIPT.md は窓口が許した直しだけ**
+- 済んだ直し: 呼び方を `ASSISTANT_PEER_CALLS` に合わせた(#7622)、あつの軽い場面の文末(#7626)
+
+## 書くときの決まり(この仕事で出たもの)
+- 呼び方は `monster-hero/data/assistants.js` の `ASSISTANT_PEER_CALLS` が正。SCRIPT.md を直す・足すたびに、PR の前に `python3 tools/assistant/script-peer-calls-check.py docs/progress/event-xmas-2026/SCRIPT.md` を0件にする
+- 口調は SCRIPT.md「書き方の約束」と assistants.js の見本。あつは軽い場面は「笑」や記号で終わり、真面目な場面は言い切りでよい(社長「状況にあわせて」)
+- イチーカの顔はスネグーラチカのアイコン `monster-hero/images/monster-icons/face/snegurochka.png`(ゲームに入れる形 BUILD.md に合わせるとき)
+- 覚醒サンタの目つきは鋭い版の絵(`tools/art-sources/raid-xmas-2026/received/santa_black_kakusei_glare.png`)に合わせる
+- 屋根裏の短い場面の声は話し手「？？？」(`secret:true`)、声の主は表の中にだけ書く
+- 怖がらせ方は停電・足音・影・閉じ込め・時計の音まで。血・死・けがは出さない
+
+## 次にやること
+1. 窓口から社長の返事(第1〜12話の直し)を受けて直す
+2. 第13〜25話を書く(全話一覧の第2案どおり。区切りごとに PR → マージ)
+3. レイドの話(導入+5話+終章2種)の台本
