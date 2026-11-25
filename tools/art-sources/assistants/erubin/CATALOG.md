@@ -22,7 +22,7 @@
 
 | 種類 | ゲームで使っているファイル | 枚数 | 最後に作った日・PR | 正本(最新の原本) | 作り方 |
 | --- | --- | ---: | --- | --- | --- |
-| 全身絵 | `monster-hero/images/assistant/fullbody/erubin_sekiyuou[__<表情>].png` | 9 | 2026-11-23 70aa3c0c(9枚・うち表情なし1) | `tools/art-sources/assistants/erubin/sekiyuou/fullbody/erubin-sekiyuou-sheet*.png`<br>`tools/art-sources/assistants/erubin/sekiyuou/fullbody/msg8-curly-man-robe.png` | `tools/assistant/life-fullbody-art.py` |
+| 全身絵 | `monster-hero/images/assistant/fullbody/erubin_sekiyuou[__<表情>].png` | 9 | 未コミット (8枚) / 2026-11-23 70aa3c0c(1枚・うち表情なし1) | `tools/art-sources/assistants/erubin/sekiyuou/fullbody/erubin-sekiyuou-sheet*.png`<br>`tools/art-sources/assistants/erubin/sekiyuou/fullbody/msg8-curly-man-robe.png` | `tools/assistant/life-fullbody-art.py` |
 | 立ち絵 | `monster-hero/images/assistant/stand-sekiyuou/erubin_<表情>.png` | 8 | 2026-11-23 69cee4cd(8枚) | `tools/art-sources/assistants/erubin/sekiyuou/fullbody/erubin-sekiyuou-sheet*.png` | `tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(全身絵から切り出す) |
 | バスト絵 | `monster-hero/images/assistant/sekiyuou/erubin_<表情>.PNG` | 8 | 2026-11-05 #4592(8枚) | `tools/art-sources/assistants/erubin/sekiyuou/bust/erubin-costume-sekiyuou-sheet.png` | `tools/assistant/refine-assistant-cutout.py … --cloth`(減色前の物は `tools/art-sources/assistants/erubin/sekiyuou/bust/cut/`)→ 256色 |
 | 顔アイコン | `monster-hero/images/assistant/sekiyuou/face/erubin_<表情>.PNG` | 8 | 2026-11-25 928a833c(8枚) | `monster-hero/images/assistant/sekiyuou/erubin_*.PNG` | `tools/make-assistant-faces.js monster-hero/images/assistant/sekiyuou` |
