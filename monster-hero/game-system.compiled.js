@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: edec81f82be35700
+// source-sha256: 56222c9b8aa12b14
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -63891,7 +63891,7 @@ const RAID_XMAS_SOURCES = Object.freeze(['battle', 'rhythm', 'card']);
 const RAID_XMAS_FREE_PER_DAY = 3;
 const RAID_XMAS_EXTRA_COST_BEAT_P = 300;
 const RAID_XMAS_TURNS = 20;
-const RAID_XMAS_A_HPS = Object.freeze([1750000, 3200000, 8000000, 35000000, 80000000]);
+const RAID_XMAS_A_HPS = Object.freeze([8750000, 16000000, 40000000, 42000000, 96000000]);
 const RAID_XMAS_A_ATKS = Object.freeze([350, 500, 600, 800, 1000]);
 const RAID_XMAS_A_NAMES = Object.freeze(['黒いサンタ(仮)・一', '黒いサンタ(仮)・二', '黒いサンタ(仮)・三', '黒いサンタ(仮)・四', '黒いサンタ(仮)・五']);
 const RAID_XMAS_A_TIERS = Object.freeze(RAID_XMAS_A_NAMES.map((name, i) => raidJackTier(`a${i + 1}`, name, [5.0, 6.5, 8.0, 10.0, 13.0][i], [3, 4, 5, 5, 5][i], RAID_XMAS_A_ATKS[i] / RAID_JACK_BASE.atk, RAID_XMAS_A_HPS[i])));
