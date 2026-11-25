@@ -1307,7 +1307,7 @@ const kikiTwintailCostume = Object.freeze({
 // ★期間はクリスマスイベントの期間(docs/progress/event-xmas-2026/PLAN.md)。イベントの定義を足したら、そちらと食い違わないように検査で見張る
 const ASSISTANT_COSTUME_XMAS_START_AT = '2026-11-30T10:00:00+09:00';
 const ASSISTANT_COSTUME_XMAS_END_AT = '2026-12-31T04:00:00+09:00';
-const MUA_SANTA_COSTUME_ART = "images/assistant/santa/face/myua_happy.PNG?v=2295682732ab";
+const MUA_SANTA_COSTUME_ART = "images/assistant/santa/face/myua_happy.PNG?v=1a0a1a2cb5e6";
 const muaSantaCostume = Object.freeze({
   id: 'mua_santa_2026', assistantId: 'mua',
   name: 'クリスマス', desc: 'クリスマスの衣装。白いファーのピンクのサンタ服と、ぽんぽんのついたサンタ帽です。',
