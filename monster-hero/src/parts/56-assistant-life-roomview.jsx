@@ -166,6 +166,7 @@ const ASSISTANT_LIFE_SLEEP_ART = Object.freeze(new Set([
   'winter/kyuko_normal.PNG', 'winter/face/kyuko_normal.PNG', // きゅうこ『冬の装い』の寝顔(2026-11-19 部屋の画面で、冬服に SVG の目がずれて重なっていた)
   'twintail/kiki_normal.PNG', 'twintail/face/kiki_normal.PNG', // きき『ツインテール』の寝顔(2026-11-20)
   'santa/myua_normal.PNG', 'santa/face/myua_normal.PNG', // みゅあ『サンタ』の寝顔(2026-11-25・寝顔の全身から作った)
+  'santa/kiki_normal.PNG', 'santa/face/kiki_normal.PNG', // きき『サンタ』の寝顔(2026-11-25・寝顔の全身から作った)
 ]));
 // SVG の閉じた目・眼鏡を外した顔は、その目の位置の表を測った絵(その助手の ふだんの服の全身 / 顔アイコン)にだけ重ねる。
 //   着替え・立ち絵(stand-*)・全身画など別の絵では位置がちがい、ずれた目が出る(2026-11-19 社長「寝顔じゃない顔を無理やり寝顔にしようとしてる」)。ずれた目を出すより出さない

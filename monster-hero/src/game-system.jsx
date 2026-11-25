@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 19709a76bf019704
+// generated-sha256: 83fdea968c95afcd
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -71192,8 +71192,8 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   'stand-twintail': { kiki: { top: 0.1807, eye: 0.3402, chin: 0.4301, m: 1.014, cx: 0.5119, above: 0.95 } },
   // みゅあのサンタ(2026-11-25 クリスマスイベント r1119-172)。santa はバスト絵の置き場に置いた全身画(santa/myua_<表情>.PNG)の点、
   //   stand-santa は life-stand-from-fullbody.py の出力(目印は life-stand-marks.json の mua:santa。top は帽子を除いた頭のてっぺん)
-  santa: { mua: { top: 0.1007, eye: 0.2132, chin: 0.2677, m: 0.406, above: 0.95 } },
-  'stand-santa': { mua: { top: 0.1614, eye: 0.342, chin: 0.4296, m: 0.652, cx: 0.4783, above: 0.95 } },
+  santa: { mua: { top: 0.1007, eye: 0.2132, chin: 0.2677, m: 0.406, above: 0.95 }, kiki: { top: 0.0941, eye: 0.1797, chin: 0.2325, m: 0.393, above: 0.95 } },
+  'stand-santa': { mua: { top: 0.1614, eye: 0.342, chin: 0.4296, m: 0.652, cx: 0.4783, above: 0.95 }, kiki: { top: 0.1746, eye: 0.3328, chin: 0.4303, m: 0.725, cx: 0.551, above: 0.95 } },
 });
 // 絵の置き場所から、着替えの名前を引く(ふだんの服は null)
 const assistantLifeStandOutfitOf = (src) => { const m = /\/assistant\/([a-z0-9-]+)\/[a-z]+_[a-z]+\.png/i.exec(String(src || '')); return m && m[1] !== 'face' && m[1] !== 'temp' ? m[1] : null; };
@@ -73351,6 +73351,7 @@ const ASSISTANT_LIFE_SLEEP_ART = Object.freeze(new Set([
   'winter/kyuko_normal.PNG', 'winter/face/kyuko_normal.PNG', // きゅうこ『冬の装い』の寝顔(2026-11-19 部屋の画面で、冬服に SVG の目がずれて重なっていた)
   'twintail/kiki_normal.PNG', 'twintail/face/kiki_normal.PNG', // きき『ツインテール』の寝顔(2026-11-20)
   'santa/myua_normal.PNG', 'santa/face/myua_normal.PNG', // みゅあ『サンタ』の寝顔(2026-11-25・寝顔の全身から作った)
+  'santa/kiki_normal.PNG', 'santa/face/kiki_normal.PNG', // きき『サンタ』の寝顔(2026-11-25・寝顔の全身から作った)
 ]));
 // SVG の閉じた目・眼鏡を外した顔は、その目の位置の表を測った絵(その助手の ふだんの服の全身 / 顔アイコン)にだけ重ねる。
 //   着替え・立ち絵(stand-*)・全身画など別の絵では位置がちがい、ずれた目が出る(2026-11-19 社長「寝顔じゃない顔を無理やり寝顔にしようとしてる」)。ずれた目を出すより出さない

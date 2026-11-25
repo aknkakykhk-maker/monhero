@@ -20,7 +20,8 @@
    "prefix": "kiki",
    "outfits": {
     "halloween": "ハロウィン",
-    "twintail": "ツインテール"
+    "twintail": "ツインテール",
+    "santa": "サンタ"
    }
   },
   "momosuke": {
@@ -67,6 +68,7 @@
   "kiki/normal": "kiki",
   "kiki/halloween": "kiki_halloween",
   "kiki/twintail": "kiki_twintail",
+  "kiki/santa": "kiki_santa",
   "kyuko/normal": "kyuko",
   "kyuko/winter": "kyuko_winter",
   "momosuke/normal": "momosuke",
@@ -208,6 +210,30 @@
   "kiki/normal/stand": {
    "master": [
     "tools/art-sources/assistants/kiki/normal/fullbody/kiki__*.png"
+   ],
+   "how": "`tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(全身絵から切り出す)"
+  },
+  "kiki/santa/bust": {
+   "master": [
+    "tools/art-sources/assistants/kiki/santa/received/kiki_santa_*.png"
+   ],
+   "how": "`tools/assistant/life-fullbody-art.py` の全身絵をそのまま写す(みゅあのサンタと同じく、全身の絵をバスト絵の置き場に置く)"
+  },
+  "kiki/santa/face": {
+   "master": [
+    "tools/art-sources/assistants/kiki/santa/received/kiki_santa_*.png"
+   ],
+   "how": "`tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(寝顔はふつうの顔と同じ枠で切る)"
+  },
+  "kiki/santa/fullbody": {
+   "master": [
+    "tools/art-sources/assistants/kiki/santa/received/kiki_santa_*.png"
+   ],
+   "how": "`tools/assistant/life-fullbody-art.py`(受け取った全身の10枚。received は加工せずに保管)"
+  },
+  "kiki/santa/stand": {
+   "master": [
+    "tools/art-sources/assistants/kiki/santa/received/kiki_santa_*.png"
    ],
    "how": "`tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(全身絵から切り出す)"
   },
