@@ -21,6 +21,10 @@
    "date": "2026-09-17T10:40:57+09:00",
    "subject": "ドラの表情8種を原本として保存し、シートを切り分けるツールを追加 (#1467)"
   },
+  "142113b6": {
+   "date": "2026-11-25T10:12:41+00:00",
+   "subject": "助手: みゅあ カードマスターの顔アイコンを真ん中に寄せ、大きさをそろえる(r1125-023)"
+  },
   "15464edad": {
    "date": "2026-11-20T15:58:56+09:00",
    "subject": "Add files via upload"
@@ -273,10 +277,6 @@
    "date": "2026-11-18T06:05:32+09:00",
    "subject": "統合バッチ: 画像・音声2"
   },
-  "d62cea40": {
-   "date": "2026-11-25T16:58:02+09:00",
-   "subject": "ききハロウィン顔アイコン差し替えとexcited全身の透過修正"
-  },
   "d9a00168": {
    "date": "2026-11-23T20:03:01+09:00",
    "subject": "助手イラスト（きき・通常服）の作り直し"
@@ -332,15 +332,15 @@
   "monster-hero/images/assistant/atsu_surprise.PNG": "e166ca70390e ebdc835a5",
   "monster-hero/images/assistant/atsu_troubled.PNG": "fb1a39b067db ebdc835a5",
   "monster-hero/images/assistant/atsu_wink.PNG": "2c6ce4d2d40e ebdc835a5",
-  "monster-hero/images/assistant/card-master/face/myua_angry.PNG": "b25c69b98fd8 (まだコミットしていない)",
-  "monster-hero/images/assistant/card-master/face/myua_crying.PNG": "684529cc1739 (まだコミットしていない)",
-  "monster-hero/images/assistant/card-master/face/myua_excited.PNG": "da351b3e08f6 (まだコミットしていない)",
-  "monster-hero/images/assistant/card-master/face/myua_happy.PNG": "06d44c5329a7 (まだコミットしていない)",
-  "monster-hero/images/assistant/card-master/face/myua_normal.PNG": "b7920f4e5f22 (まだコミットしていない)",
+  "monster-hero/images/assistant/card-master/face/myua_angry.PNG": "b25c69b98fd8 142113b6",
+  "monster-hero/images/assistant/card-master/face/myua_crying.PNG": "684529cc1739 142113b6",
+  "monster-hero/images/assistant/card-master/face/myua_excited.PNG": "da351b3e08f6 142113b6",
+  "monster-hero/images/assistant/card-master/face/myua_happy.PNG": "06d44c5329a7 142113b6",
+  "monster-hero/images/assistant/card-master/face/myua_normal.PNG": "b7920f4e5f22 142113b6",
   "monster-hero/images/assistant/card-master/face/myua_sleep.PNG": "652d6e5f7d8a b46dfe005",
-  "monster-hero/images/assistant/card-master/face/myua_surprise.PNG": "dab80c38456f (まだコミットしていない)",
-  "monster-hero/images/assistant/card-master/face/myua_troubled.PNG": "33379a9eab3c (まだコミットしていない)",
-  "monster-hero/images/assistant/card-master/face/myua_wink.PNG": "f110f935a3f2 (まだコミットしていない)",
+  "monster-hero/images/assistant/card-master/face/myua_surprise.PNG": "dab80c38456f 142113b6",
+  "monster-hero/images/assistant/card-master/face/myua_troubled.PNG": "33379a9eab3c 142113b6",
+  "monster-hero/images/assistant/card-master/face/myua_wink.PNG": "f110f935a3f2 142113b6",
   "monster-hero/images/assistant/card-master/myua_angry.PNG": "087011b1ee99 e6b4874ee",
   "monster-hero/images/assistant/card-master/myua_crying.PNG": "f044effd1f7d e6b4874ee",
   "monster-hero/images/assistant/card-master/myua_excited.PNG": "0472575bbda5 e6b4874ee",
@@ -622,15 +622,15 @@
   "monster-hero/images/assistant/fullbody/sorashido_santa__surprise.png": "498dad3fd513 5bbc4a4de",
   "monster-hero/images/assistant/fullbody/sorashido_santa__troubled.png": "a0652a2b27f8 5bbc4a4de",
   "monster-hero/images/assistant/fullbody/sorashido_santa__wink.png": "caf41e547b24 5bbc4a4de",
-  "monster-hero/images/assistant/halloween/face/kiki_angry.PNG": "ae79132af9b8 d62cea40",
-  "monster-hero/images/assistant/halloween/face/kiki_crying.PNG": "937449bc6c7a d62cea40",
-  "monster-hero/images/assistant/halloween/face/kiki_excited.PNG": "cbac687d291e d62cea40",
-  "monster-hero/images/assistant/halloween/face/kiki_happy.PNG": "4a3730ac66dc d62cea40",
-  "monster-hero/images/assistant/halloween/face/kiki_normal.PNG": "e4f3be7e0121 d62cea40",
+  "monster-hero/images/assistant/halloween/face/kiki_angry.PNG": "ffd49b4e6b17 (まだコミットしていない)",
+  "monster-hero/images/assistant/halloween/face/kiki_crying.PNG": "ce9c37db85fa (まだコミットしていない)",
+  "monster-hero/images/assistant/halloween/face/kiki_excited.PNG": "43120d6c9f96 (まだコミットしていない)",
+  "monster-hero/images/assistant/halloween/face/kiki_happy.PNG": "266298210256 (まだコミットしていない)",
+  "monster-hero/images/assistant/halloween/face/kiki_normal.PNG": "1f530375e4c9 (まだコミットしていない)",
   "monster-hero/images/assistant/halloween/face/kiki_sleep.PNG": "77ab57b8ebe6 b46dfe005",
-  "monster-hero/images/assistant/halloween/face/kiki_surprise.PNG": "582411880c90 d62cea40",
-  "monster-hero/images/assistant/halloween/face/kiki_troubled.PNG": "728dd00e14d2 d62cea40",
-  "monster-hero/images/assistant/halloween/face/kiki_wink.PNG": "bebb7693aedc d62cea40",
+  "monster-hero/images/assistant/halloween/face/kiki_surprise.PNG": "56a62b704c0a (まだコミットしていない)",
+  "monster-hero/images/assistant/halloween/face/kiki_troubled.PNG": "32750db70d39 (まだコミットしていない)",
+  "monster-hero/images/assistant/halloween/face/kiki_wink.PNG": "a0d5af34d0e8 (まだコミットしていない)",
   "monster-hero/images/assistant/halloween/face/momosuke_angry.PNG": "e2ff562e194a edf783df",
   "monster-hero/images/assistant/halloween/face/momosuke_crying.PNG": "ec769fca57bf edf783df",
   "monster-hero/images/assistant/halloween/face/momosuke_excited.PNG": "837dd63e19ea edf783df",
