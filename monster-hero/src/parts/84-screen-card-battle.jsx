@@ -1207,8 +1207,10 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   const [replayAt, setReplayAt] = useState(0);
   // みんなのデッキ(95)の登録デッキが相手: 名前・アイコンは登録した人、打ち方は登録した戦い方(cardSharePolicy)。助手のひとことは出さない
   const share = game.share || null;
-  const who = pvp ? { id: 'pvp', name: pvp.name, accent: '#38bdf8' } : share ? { id: 'share', name: share.name, accent: '#34d399' } : (ASSISTANTS.find((a) => a.id === game.who) || ASSISTANTS[0]);
-  const policy = useMemo(() => (share && typeof cardSharePolicy === 'function' ? cardSharePolicy(share.tactics, game.level, { sameBlood: !!game.cpuSameBlood }) : cardAiPolicy(game.who, game.level, { sameBlood: !!game.cpuSameBlood })), [game.who, game.level, game.cpuSameBlood]);
+  // レイドのボス(82-card-raid-core.jsx。クリスマスイベント 2026): 助手ではない相手。名前・考え方はボスのもの、ひとことは出さない
+  const raid = game.raid || null;
+  const who = pvp ? { id: 'pvp', name: pvp.name, accent: '#38bdf8' } : raid ? { id: 'raid', name: raid.bossName, accent: '#ef4444' } : share ? { id: 'share', name: share.name, accent: '#34d399' } : (ASSISTANTS.find((a) => a.id === game.who) || ASSISTANTS[0]);
+  const policy = useMemo(() => (raid && typeof cardRaidBossPolicy === 'function' ? cardRaidBossPolicy(raid.tier) : share && typeof cardSharePolicy === 'function' ? cardSharePolicy(share.tactics, game.level, { sameBlood: !!game.cpuSameBlood }) : cardAiPolicy(game.who, game.level, { sameBlood: !!game.cpuSameBlood })), [game.who, game.level, game.cpuSameBlood]);
   // オートの操作(×1/×2/×4・自分で/オート)。横の画面の見出しの列に出す。label … 「オートで戦っています」の文も出すか
   const autoControls = (label) => (<>
     {label && <span className="min-w-0 flex-1 truncate text-[12px] font-black text-sky-100">{autoOn ? '🤖 オートで戦っています' : '🖐 自分で操作しています'}</span>}
@@ -1346,7 +1348,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
 
   // ai … 山場なら { scene(AIに伝える場面), next(操作のあとの状態) }。決まった台詞を出したまま、間に合ったときだけAIのひとことに差しかえる
   const say = (scene, ai = null) => {
-    if (!scene || pvp || share || settings.bubble === 'OFF') return;
+    if (!scene || pvp || share || raid || settings.bubble === 'OFF') return;
     const turn = st.turn;
     if (spoke.current.turn !== turn) spoke.current = { turn, n: 0 };
     if (spoke.current.n >= (CARD_BUBBLE_PER_TURN[settings.bubble] ?? CARD_LINE_PER_TURN) && scene !== 'win' && scene !== 'lose') return;
@@ -2377,9 +2379,10 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       {/* マルチの電波の知らせは、上の帯の番の札に出す(段を増やさない。2026-10-29 案B) */}
       {/* 相手の帯(隠さない) */}
       <div className={`flex ${tiny ? 'h-[36px]' : compact ? 'h-[42px]' : 'h-[50px]'} shrink-0 items-center gap-2 px-2`}>
-        {(pvp || share) ? <span data-card-pvp-foe className={`block ${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} shrink-0`}><CardPvpAvatar icon={(pvp || share).icon} frame={(pvp || share).frame} className="h-full w-full"/></span>
+        {raid ? <span data-card-raid-foe aria-hidden="true" className={`flex ${tiny ? 'h-[34px] w-[34px] text-[20px]' : 'h-[42px] w-[42px] text-[26px]'} shrink-0 items-center justify-center rounded-xl border-2 border-red-500 bg-slate-950`}>🎅</span>
+          : (pvp || share) ? <span data-card-pvp-foe className={`block ${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} shrink-0`}><CardPvpAvatar icon={(pvp || share).icon} frame={(pvp || share).frame} className="h-full w-full"/></span>
           : <img src={assistantFaceImage(who, face)} alt={who.name} className={`${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} rounded-xl border-2 bg-black object-cover object-top`} style={{ borderColor: who.accent }}/>}
-        <div className={`min-w-0 text-[13px] font-black leading-tight ${pvp ? 'max-w-[34%] truncate whitespace-nowrap' : 'shrink-0 whitespace-nowrap'}`}>{who.name}<small className="block text-[10px] font-bold text-rose-200">{pvp ? 'マルチ対戦' : cardBattleLevelLabel(game.level, game.share) || 'フリー対戦'}</small></div>
+        <div className={`min-w-0 text-[13px] font-black leading-tight ${pvp ? 'max-w-[34%] truncate whitespace-nowrap' : 'shrink-0 whitespace-nowrap'}`}>{who.name}<small className="block text-[10px] font-bold text-rose-200">{pvp ? 'マルチ対戦' : raid ? 'レイドバトル' : cardBattleLevelLabel(game.level, game.share) || 'フリー対戦'}</small></div>
         <div className="ml-auto">{strip(CARD_CPU)}</div>
       </div>
       {/* リプレイでは相手の手札も表で見せる(終わったあとなので。2026-10-27 社長)。押すと詳しい画面 */}
@@ -2824,7 +2827,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       )}
       {confirm && <ConfirmSheet title={confirm.label} message={confirm.kind === 'use' ? 'オプションで確かめないようにもできます' : ''} confirmLabel={confirm.kind === 'use' ? '使う' : '終わる'} onCancel={() => setConfirm(null)} onConfirm={confirmYes}/>}
       {pvpVoid && <CardPvpVoidDialog onExit={() => { finished.current = true; onFinish({ outcome: 'void', st: stRef.current }); }}/>}
-      {quit && !tutorial && <ConfirmSheet title="投了しますか？" message={pvp ? '投了すると負けになります' : '投了すると負けになります(ビートPとクイック周回は、倒した相手のモンスターの数に応じて少しだけ)'} confirmLabel="投了する" danger onCancel={() => setQuit(false)} onConfirm={() => { setQuit(false); finished.current = true; if (pvp) CARD_PVP.surrender(); onFinish({ outcome: 'surrender', st }); }}/>}
+      {quit && !tutorial && <ConfirmSheet title="投了しますか？" message={pvp ? '投了すると負けになります' : raid ? 'ここまでに与えたダメージは、レイドに入ります' : '投了すると負けになります(ビートPとクイック周回は、倒した相手のモンスターの数に応じて少しだけ)'} confirmLabel="投了する" danger onCancel={() => setQuit(false)} onConfirm={() => { setQuit(false); finished.current = true; if (pvp) CARD_PVP.surrender(); onFinish({ outcome: 'surrender', st }); }}/>}
       {skipAsk && <ConfirmSheet title="結果へ進みますか？" message="ここから最後まで、2人とも戦術カードで一瞬で戦って、結果を出します(この対戦はあとから見返せます)" confirmLabel="結果へ" onCancel={() => setSkipAsk(false)} onConfirm={() => { setSkipAsk(false); skipToEnd(); }}/>}
       {quit && tutorial && <ConfirmSheet title="チュートリアルを飛ばしますか？" message={'ルールの画面からいつでもできます'} confirmLabel="飛ばす" onCancel={() => setQuit(false)} onConfirm={() => { setQuit(false); finished.current = true; onFinish({ outcome: 'tutorialSkip', st }); }}/>}
     </div>
@@ -3269,7 +3272,7 @@ const CardAutoTicketSheet = ({ info, tickets, busy = false, onUse, onClose }) =>
     </ModalFrame>
   );
 };
-const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', seenStoryIds = [], debug = false, cupItems = null, onBgm, onQuickLoops, onOpenMarket, topAssistant = null, rank = null, bgmPreview = null, quickRun = null, quickAutoReady = false, onSettings = null, sessionTickets = null, onUseSessionTicket = null, onRefundSessionTicket = null }) => {
+const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', seenStoryIds = [], debug = false, cupItems = null, onBgm, onQuickLoops, onOpenMarket, topAssistant = null, rank = null, bgmPreview = null, quickRun = null, quickAutoReady = false, onSettings = null, sessionTickets = null, onUseSessionTicket = null, onRefundSessionTicket = null, raidChallenge = null }) => {
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
   const [save, setSave] = useState(null);
   const [view, setView] = useState('top');
@@ -3305,6 +3308,21 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   useEffect(() => { const go = () => { if (CARD_PVP_BACK.take()) setView('pvp'); }; go(); return CARD_PVP_BACK.on(go); }, []);
   // 対戦の前のデッキ選び(87-card-deck-pick.jsx)。next … 'cpu'(助手と対戦。pick は相手と難易度) / 'pvp'(マルチの入口へ)
   const [deckPick, setDeckPick] = useState(null);
+  // レイドのボスと戦う(クリスマスイベント 2026・82-card-raid-core.jsx)。raid … いま挑んでいる挑戦(レイド画面から来た raidChallenge か、デバッグの試し)
+  //   挑戦の口: { tierIndex, tierName, onStart() → 真なら始める(回数を使う)・onResult(結果) → 送った結果・onClose() → レイド画面へ戻る }
+  //   raidDone … 終わった1戦の結果(与ダメージ・換算・送れたか)。結果の画面(view 'raidResult')が読む
+  const [raid, setRaid] = useState(null);
+  const [raidDone, setRaidDone] = useState(null);
+  const raidStartingRef = useRef(false);   // 始める途中(回数を使っている間)に二度押しさせない
+  useEffect(() => {
+    if (!raidChallenge || !save) return;
+    setRaidDone(null);
+    setRaid(raidChallenge);
+    // スターターをまだ受け取っていない人は、デッキが無いので挑めない(レイド画面へ戻す)
+    if (!save.starter) { setNotice('MFバトルカードのスターターを受け取ると挑めます'); if (typeof raidChallenge.onClose === 'function') raidChallenge.onClose('noStarter'); return; }
+    setDeckPick({ next: 'raid', pick: { who: 'raid', level: cardRaidTierOf(raidChallenge.tierIndex).level, raid: raidChallenge } });
+    setView('deckPick');
+  }, [raidChallenge, !!save]);
   // オートで挑む(案B・2026-11-02): ほかのブリーダーと戦う前のデッキ選びの切り替えと、今日のごほうびの残り回数(96 の cardAutoRewardLoad)
   const [shareAuto, setShareAuto] = useState(false);
   const [shareQuick, setShareQuick] = useState(false); // オートの「結果だけ見る」(2026-11-02)
@@ -3784,6 +3802,22 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         setView(back);
         return;
       }
+      // レイドのボスとの1戦(82-card-raid-core.jsx): 与えたダメージを換算して、挑戦の口(onResult)へ渡す。助手の記録・ごほうび・ミッションは通らない
+      //   投了(surrender)は、それまでに与えたぶんを足す(勝ちの上乗せは付かない)
+      if (game.raid) {
+        const rc = game.raid.run;
+        const res = cardRaidResultOf(st, game.raid.tier, outcome === 'win' ? 'win' : outcome === 'surrender' ? 'resign' : 'lose', CARD_CPU);
+        const done = { ...res, tierName: game.raid.tierName, bossName: game.raid.bossName, turns: cardOwnTurns(st, CARD_ME), sent: null, debug: !!(rc && rc.debug) };
+        setGame(null);
+        setRaidDone(done);
+        onBgm && onBgm(cardBgmOf(save.bgm.top));
+        onNavigate('CARD_TOP');
+        setView('raidResult');
+        let sent = null;
+        try { sent = rc && typeof rc.onResult === 'function' ? await rc.onResult(done) : null; } catch (_) { sent = { ok: false }; }
+        setRaidDone({ ...done, sent: sent || { ok: false } });
+        return;
+      }
       // マルチの無効試合(91 の goVoid): 何も付けない・数えない・送らない。部屋を出て、入口へ(杯の試合なら杯の画面へ)
       //   窓のあいだに場の上で決着が付いても(相手の手はもう当てない)、無効のまま。ミッション・助手どうしも数えない
       if (game.pvp && (outcome === 'void' || CARD_PVP.get().phase === 'void')) {
@@ -4082,6 +4116,32 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     onNavigate('CARD_BATTLE');
   };
   startBattleRef.current = startBattle;
+  // レイドのボスと戦う(82-card-raid-core.jsx)。回数を使う(rc.onStart)のは、デッキを選んで始める時だけ。使えなければ始めない
+  //   ボスは助手ではないので、助手の記録・ランキング・ごほうび・投了の印(CARD_CPU_OPEN_KEY)・ひとことは通らない
+  const startRaidBattle = async (rc, deck) => {
+    if (!rc || raidStartingRef.current) return;
+    const issues = deck ? [...cardDeckProblems(db, deck), ...cardDeckOwnProblems(db, deck, save.collection)] : ['デッキがありません'];
+    if (issues.length) { setNotice(issues.join('・')); setDeckPick({ next: 'raid', pick: { who: 'raid', level: cardRaidTierOf(rc.tierIndex).level, raid: rc } }); setView('deckPick'); return; }
+    raidStartingRef.current = true;
+    try {
+      let ok = false;
+      try { ok = typeof rc.onStart === 'function' ? (await rc.onStart()) !== false : true; } catch (_) { ok = false; }
+      if (!ok) { setNotice('きょうの挑戦の回数がありません'); setRaid(null); setView('top'); if (typeof rc.onClose === 'function') rc.onClose('noCount'); return; }
+      const tier = cardRaidTierOf(rc.tierIndex);
+      const cpuDeck = cardRaidBossDeck(db, rc.tierIndex);
+      const seed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
+      const first = Math.random() < 0.5 ? CARD_ME : CARD_CPU;
+      const bossName = rc.bossName || CARD_RAID_BOSS.name;
+      const st = cardRaidPrepareGame(cardCreateGame(db, { decks: [{ monsters: deck.monsters, cards: deck.cards }, cpuDeck], names: ['あなた', bossName], seed, first }), rc.tierIndex, CARD_CPU);
+      setResult(null);
+      setRaidDone(null);
+      const intro = { mode: 'assistant', foe: { who: null, name: bossName, icon: null, frame: null, line: null, deckName: CARD_RAID_BOSS.deckName, monsters: vsMons(st, CARD_CPU) },
+        me: { name: myName, deckName: deck.name || null, monsters: vsMons(st, CARD_ME) } };
+      setGame({ key: `raid-${seed}`, st, who: 'raid', level: tier.level, settings: save.settings, intro, raid: { tier: Math.max(0, Math.floor(Number(rc.tierIndex) || 0)), tierName: rc.tierName || '', bossName, run: rc } });
+      onBgm && onBgm(cardBgmOf(cardCpuPlaylistOf(save.cpuPlaylist, 'kyuko')));
+      onNavigate('CARD_BATTLE');
+    } finally { raidStartingRef.current = false; }
+  };
 
 
   // ---- はじめのスターターを開ける(パックと同じ画面。閉じたら、練習試合がまだなら練習試合へ) ----
@@ -4279,15 +4339,42 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       {notice && <div data-card-cup-toast className="pointer-events-none fixed inset-x-0 bottom-24 z-[60] mx-auto w-fit max-w-[92vw] rounded-full bg-slate-950/95 px-4 py-2 text-[13px] font-black text-amber-100 shadow-lg" style={JA_WRAP_STYLE}>{jaWrap(notice)}</div>}
     </>;
   }
+  // ---- レイドのボスとの1戦の結果(与ダメージ・倒した数・レイドへ足すダメージ)。閉じるとレイド画面へ ----
+  if (view === 'raidResult' && raidDone) {
+    const r = raidDone;
+    const close = () => { const rc = raid; setRaid(null); setRaidDone(null); setView('top'); if (rc && typeof rc.onClose === 'function') rc.onClose('done'); };
+    const sending = r.sent === null;
+    return (
+      <div data-mh-screen data-card-raid-result className={SCREEN_SHELL_CLASS}>
+        <ScreenHead title="レイドバトルの結果" accent="text-red-200" onBack={sending ? null : close}/>
+        <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
+          <div className="rounded-2xl border-2 border-red-500/60 bg-slate-950/80 p-3 text-center">
+            <div className="text-[12px] font-bold text-slate-300">{r.bossName}{r.tierName ? `(${r.tierName})` : ''}</div>
+            <div className="mt-1 text-[14px] font-black text-white">{r.outcome === 'win' ? '勝ちました！' : r.outcome === 'resign' ? '投了しました' : '負けました'}</div>
+            <div className="mt-2 text-[12px] font-bold text-red-200">レイドへ与えたダメージ</div>
+            <div data-card-raid-damage className="text-[30px] font-black leading-tight text-amber-200">{r.damage.toLocaleString()}</div>
+          </div>
+          <div className="grid grid-cols-2 gap-1 rounded-2xl border border-white/10 bg-slate-900/70 p-3 text-[12px] font-bold text-slate-200">
+            <span>与えたダメージ</span><b data-card-raid-dealt className="text-right">{r.dealt} / {r.lifeMax}</b>
+            <span>倒したモンスター</span><b className="text-right">{r.kos}体</b>
+            <span>自分の番</span><b className="text-right">{r.turns}回</b>
+          </div>
+          <div data-card-raid-sent className="text-center text-[12px] font-bold text-slate-300">{sending ? 'レイドへ送っています…' : r.debug ? 'デバッグの試しなので、レイドへは送っていません' : r.sent && r.sent.ok ? 'レイドへ送りました' : '送れませんでした。通信のよい所でレイド画面を開き直してください'}</div>
+          <button type="button" data-card-raid-close disabled={sending} className="mh-button mh-button-primary min-h-[48px] w-full rounded-2xl text-[14px] font-black disabled:opacity-50" onClick={() => { Audio_.fgSe.tap(); close(); }}>レイドへ戻る</button>
+        </div>
+      </div>
+    );
+  }
+
   // ---- 対戦の前のデッキ選び(助手と対戦・マルチ。練習試合には出さない) ----
   if (view === 'deckPick' && deckPick) {
     const toPvp = deckPick.next === 'pvp';
     // ほかのブリーダーの登録デッキと戦うとき(2026-10-31 テスターさんの要望)。借りたデッキでは戦わない(ごほうびの扱いを変えないため)
     const sharePick = !!(deckPick.pick && deckPick.pick.share);
     return <><CardDeckPick db={db} decks={save.decks} collection={save.collection}
-      note={toPvp ? 'マルチ対戦で使うデッキを選んでください。選んだデッキは次の対戦でも使います' : '使うデッキを選んでください。選んだデッキは次の対戦でも使います'}
-      onBack={() => { const back = deckPick.back; setDeckPick(null); if (toPvp && CARD_PVP_NEXT.take()) { setView('pvp'); return; } setView(toPvp ? 'mode' : back || 'foe'); }}
-      allowRented={!toPvp && !sharePick} rentTab={shareForm && !toPvp && !sharePick}
+      note={toPvp ? 'マルチ対戦で使うデッキを選んでください。選んだデッキは次の対戦でも使います' : deckPick.next === 'raid' ? 'レイドのボスと戦うデッキを選んでください。選ぶと挑戦の回数を1回使います' : '使うデッキを選んでください。選んだデッキは次の対戦でも使います'}
+      onBack={() => { const back = deckPick.back; const rc = deckPick.next === 'raid' ? deckPick.pick.raid : null; setDeckPick(null); if (rc) { setRaid(null); setView('top'); if (typeof rc.onClose === 'function') rc.onClose('back'); return; } if (toPvp && CARD_PVP_NEXT.take()) { setView('pvp'); return; } setView(toPvp ? 'mode' : back || 'foe'); }}
+      allowRented={!toPvp && !sharePick && deckPick.next !== 'raid'} rentTab={shareForm && !toPvp && !sharePick && deckPick.next !== 'raid'}
       auto={sharePick && typeof cardTacticsAutoOf === 'function' ? { on: shareAuto, onChange: setShareAuto, left: autoLeft, info: autoInfo, quick: shareQuick, extraLeft: autoExtraLeft, tickets: Number.isInteger(sessionTickets) ? sessionTickets : null, ticketNote: autoTicketNote, onExtra: typeof onUseSessionTicket === 'function' && typeof cardAutoRewardAddExtra === 'function' ? () => { setAutoTicketNote(''); setAutoTicketAsk(true); } : null, onQuick: typeof cardShareAutoFinish === 'function' ? setShareQuick : null } : null}
       onPick={async (c) => {
         // 借りたデッキ(みんなのデッキ・95): 自分のデッキの active は書き換えない
@@ -4304,6 +4391,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         const next = deckPick;
         setDeckPick(null);
         if (next.next === 'pvp') { setView('pvp'); return; }
+        if (next.next === 'raid') { void startRaidBattle(next.pick.raid, deck); return; }
         startBattle(next.pick, deck, autoT ? { auto: { tactics: autoT, quick: shareQuick && typeof cardShareAutoFinish === 'function' } } : {});
       }}/>
       {/* セッション券でオートのごほうびをふやす窓(上の CardAutoTicketSheet。結果の画面と同じ部品・何枚使うかを選ぶ) */}
@@ -4909,6 +4997,20 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
                 setPackDemo({ packId: 'p1', packs: [a.cards, b.cards], dupPoint: 0, cost: 0, demo: true });
                 setView('packOpen');
               }}>パックを開ける見本</button>
+            </div>
+            {/* レイドのボスと戦う試し(クリスマスイベント 2026)。回数は使わない・レイドへは送らない */}
+            <div className="grid grid-cols-5 gap-1" data-card-raid-debug>
+              {CARD_RAID_TIERS.map((t, i) => (
+                <button key={i} type="button" data-card-raid-debug-tier={i} className="mh-button mh-button-secondary min-h-[40px] rounded-xl border border-red-400/40 bg-slate-800 text-[10px] font-black" onClick={() => {
+                  Audio_.fgSe.tap();
+                  setRaid(null);
+                  setRaidDone(null);
+                  const rc = { debug: true, tierIndex: i, tierName: `段階${i + 1}`, onStart: async () => true, onResult: async () => ({ ok: false, debug: true }), onClose: () => {} };
+                  setRaid(rc);
+                  setDeckPick({ next: 'raid', pick: { who: 'raid', level: t.level, raid: rc } });
+                  setView('deckPick');
+                }}>ボス{i + 1}</button>
+              ))}
             </div>
             <select data-card-result-demo-who value={demoWho} onChange={(e) => setDemoWho(e.target.value)} className="w-full rounded-lg border border-white/20 bg-slate-800 px-2 py-1 text-[12px] font-bold text-white">
               {allAssistants.filter((x) => CARD_AI_HABITS[x.id] && cardFoeReleased(x.id)).map((x) => <option key={x.id} value={x.id}>見本の相手: {x.name}</option>)}
