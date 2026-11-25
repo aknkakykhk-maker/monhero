@@ -124,8 +124,8 @@ const totalsBody = (a1) => JSON.stringify([{ kind: 'a', tier: 1, total_damage: a
   {
     const t = make('2026-12-01T12:00:00+09:00');
     const x = t.o.RAID_XMAS_SKILL_NAMES, j = t.o.RAID_JACK_SKILL_NAMES;
-    check('サンタの技名(正拳・闇 / 瞬黒撃 / X’マスキャロル / 超飛び蹴り / 超暗けい / 怪しこの夜 / X’マスプレデター)',
-      x.normal === '正拳・闇' && x.special === '瞬黒撃' && x.sweep === 'X\u2019マスキャロル' && x.rush === '超飛び蹴り'
+    check('サンタの技名(正拳・闇 / 瞬黒撃 / 超宝屁 / 超飛び蹴り / 超暗けい / 怪しこの夜 / X’マスプレデター)',
+      x.normal === '正拳・闇' && x.special === '瞬黒撃' && x.sweep === '超宝屁' && x.rush === '超飛び蹴り'
       && x.pierce === '超暗けい' && x.roar === '怪しこの夜' && x.allout === 'X\u2019マスプレデター');
     check('ジャックの技名は前のまま', j.normal === 'カボチャ張り手' && j.allout === 'おばけパレード');
     check('クリスマスのボスを作るときにサンタの技名を写す', /const sn = RAID_XMAS_SKILL_NAMES;[\s\S]{0,300}normal: sn\.normal, special: sn\.special,[\s\S]{0,200}sweep: sn\.sweep, rush: sn\.rush, pierce: sn\.pierce, roar: sn\.roar, allout: sn\.allout/.test(read(P + '35-raid-jack.jsx')));

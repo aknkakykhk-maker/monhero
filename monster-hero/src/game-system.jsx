@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ac01fcaf6d0d4e31
+// generated-sha256: 7144b2c360981581
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -38952,7 +38952,7 @@ const raidXmasTierAt = (kind, index) => {
 const RAID_XMAS_SKILL_NAMES = Object.freeze({
   normal: '正拳・闇',
   special: '瞬黒撃',
-  sweep: 'X\u2019マスキャロル',
+  sweep: '超宝屁',   // ちょうほうひ(社長の訂正 2026-11-25)
   rush: '超飛び蹴り',
   pierce: '超暗けい',
   roar: '怪しこの夜',
