@@ -55,6 +55,9 @@ ART = {
     # あつのクリスマス(探偵の衣装・2026-11-25 r1119-172)。全身の10枚(表情ごとにポーズが違う・寝顔は立ったまま目を閉じた縦長)。王冠は金・マフラーはグレーのチェック(社長「このまま」)
     'atsu:santa': 'atsu_santa_fullbody.png',
     **{'atsu:santa@%s' % e: 'atsu_santa_%s.png' % e for e in ('angry', 'crying', 'excited', 'happy', 'normal', 'surprise', 'troubled', 'wink', 'sleep')},
+    # えるびんのサンタ(2026-11-25 r1119-172)。全身の10枚(大きさがばらばら: ふつう 887×1774・surprise と excited は 1024×1536・寝顔はプレゼント箱に座った横長 1174×1339)
+    'erubin:santa': 'erubin_santa_fullbody.png',
+    **{'erubin:santa@%s' % e: 'erubin_santa_%s.png' % e for e in ('angry', 'crying', 'excited', 'happy', 'normal', 'surprise', 'troubled', 'wink', 'sleep')},
     'sorashido:hosei': 'msg6-kimono-boy.png',  # 2026-11-15 から服『補正』(いままでのソラシド)。新しい絵が既定の服『馬骨』(sorashido)
     'erubin': 'msg7-curly-man-casual.png',
     'erubin:sekiyuou': 'msg8-curly-man-robe.png',

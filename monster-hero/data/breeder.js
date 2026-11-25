@@ -1377,6 +1377,20 @@ const atsuXmasCostume = Object.freeze({
     Object.freeze({ shop:'diamond', cost:100000, from:ASSISTANT_COSTUME_XMAS_END_AT }),
   ]),
 });
+// えるびんのサンタ(2026-11-25 クリスマスイベント r1119-172)。ほかの助手のクリスマスの衣装と同じ売り方・同じ期間。絵は images/assistant/santa/erubin_*(立ち絵は stand-santa、全身画は fullbody/erubin_santa)。
+//   原本は tools/art-sources/assistants/erubin/santa/received/(加工せずに保管・大きさがばらばら・寝顔はプレゼント箱に座った横長)。顔アイコンの切り方は life-stand-cut.json の erubin:santa
+const ERUBIN_SANTA_COSTUME_ART = "images/assistant/santa/face/erubin_happy.PNG?v=854ced27beb4";
+const erubinSantaCostume = Object.freeze({
+  id: 'erubin_santa_2026', assistantId: 'erubin',
+  name: 'クリスマス', desc: 'クリスマスの衣装。白いファーの赤いサンタのマントと頭巾に、金の刺しゅうの白い衣です。',
+  get released() { return Date.now() >= Date.parse(ASSISTANT_COSTUME_XMAS_START_AT); },
+  icon: ERUBIN_SANTA_COSTUME_ART,
+  imageDir: 'images/assistant/santa',
+  saleWindows: Object.freeze([
+    Object.freeze({ shop:'beatPoint', cost:1000, from:ASSISTANT_COSTUME_XMAS_START_AT, until:ASSISTANT_COSTUME_XMAS_END_AT }),
+    Object.freeze({ shop:'diamond', cost:100000, from:ASSISTANT_COSTUME_XMAS_END_AT }),
+  ]),
+});
 const ASSISTANT_COSTUMES = Object.freeze([
   halloweenCostume('mua', 'myua', 'ハロウィンの魔女', 'ハロウィン・ナイトの衣装。大きな魔女帽子とカボチャのステッキのコスプレです。'),
   halloweenCostume('kiki', 'kiki', 'ハロウィンのうさ耳フード', 'ハロウィン・ナイトの衣装。オレンジと黒のうさ耳リボンとパーカーのコスプレです。'),
@@ -1391,6 +1405,7 @@ const ASSISTANT_COSTUMES = Object.freeze([
   momosukeSantaCostume,
   sorashidoXmasCostume,
   atsuXmasCostume,
+  erubinSantaCostume,
 ]);
 // ---- 解放が要る服(unlock を持つ服)の覚え方(2026-10-27) ----
 // 新しいキー mh_assistant_costume_unlocked_v1 … 解放された服のidの配列。足すだけで消さない(CLAUDE.md ⑦)。

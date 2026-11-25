@@ -25,7 +25,7 @@
 | 全身絵 | `monster-hero/images/assistant/fullbody/kiki_halloween[__<表情>].png` | 9 | 2026-11-25 fa7db52a(1枚) / 2026-11-23 40a38fb3(8枚・うち表情なし1) | `tools/art-sources/assistants/kiki/halloween/fullbody/kiki-halloween-8expressions-sheet*.png`<br>`tools/art-sources/assistants/kiki/halloween/fullbody/kiki_halloween_transparent_fixed.png` | `tools/assistant/life-fullbody-art.py` |
 | 立ち絵 | `monster-hero/images/assistant/stand-halloween/kiki_<表情>.png` | 8 | 2026-11-23 69cee4cd(8枚) | `tools/art-sources/assistants/kiki/halloween/fullbody/kiki-halloween-8expressions-sheet*.png` | `tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(全身絵から切り出す) |
 | バスト絵 | `monster-hero/images/assistant/halloween/kiki_<表情>.PNG` | 9 | 2026-11-18 492a7160d(1枚・うち寝顔1) / 2026-10-04 #2092(8枚) | 現行のファイルそのもの(完成品を直接入れた・別の原本はリポジトリに無い) | 受け取った絵を配信の形にした物。原本は別に無い(道具で作り直さない) |
-| 顔アイコン | `monster-hero/images/assistant/halloween/face/kiki_<表情>.PNG` | 9 | 未コミット (8枚) / 2026-11-12 #5492(1枚・うち寝顔1) | 現行のファイルそのもの(完成品を直接入れた・別の原本はリポジトリに無い) | `tools/make-assistant-faces.js`(バスト絵から)で作った物。原本は別に無い |
+| 顔アイコン | `monster-hero/images/assistant/halloween/face/kiki_<表情>.PNG` | 9 | 2026-11-25 1a44ce4fa(8枚) / 2026-11-12 #5492(1枚・うち寝顔1) | 現行のファイルそのもの(完成品を直接入れた・別の原本はリポジトリに無い) | `tools/make-assistant-faces.js`(バスト絵から)で作った物。原本は別に無い |
 
 ## 服「ツインテール」(twintail)
 

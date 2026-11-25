@@ -63,7 +63,8 @@
    "name": "えるびん",
    "prefix": "erubin",
    "outfits": {
-    "sekiyuou": "石油王"
+    "sekiyuou": "石油王",
+    "santa": "クリスマス"
    }
   }
  },
@@ -87,7 +88,8 @@
   "sorashido/hosei": "sorashido_hosei",
   "sorashido/santa": "sorashido_santa",
   "erubin/normal": "erubin",
-  "erubin/sekiyuou": "erubin_sekiyuou"
+  "erubin/sekiyuou": "erubin_sekiyuou",
+  "erubin/santa": "erubin_santa"
  },
  "sleepNote": "寝顔(`<接頭辞>_sleep.PNG`)は各組の枚数に入っているが、作った日の新旧の検査からは外している。原本は `tools/art-sources/assistants/_shared/sleep-faces/`(9着ぶんのシート `received-v1.png`・ももすけ2着)で、`tools/assistant/life-sleep-faces-make.js` が切り出す。ソラシド2着・きき(ツインテール)の寝顔は社長が直接入れた完成品。縮める前(2026-11-17)の寝顔は 各キャラの `<服>/pre-resize-2026-11-17/bust/` にある。",
  "groups": {
@@ -149,6 +151,30 @@
     "monster-hero/images/assistant/dra_*.PNG"
    ],
    "how": "`tools/make-assistant-faces.js`(バスト絵から)"
+  },
+  "erubin/santa/bust": {
+   "master": [
+    "tools/art-sources/assistants/erubin/santa/received/erubin_santa_*.png"
+   ],
+   "how": "`tools/assistant/life-fullbody-art.py` の全身絵をそのまま写す(ほかの助手のクリスマスの衣装と同じく、全身の絵をバスト絵の置き場に置く)"
+  },
+  "erubin/santa/face": {
+   "master": [
+    "tools/art-sources/assistants/erubin/santa/received/erubin_santa_*.png"
+   ],
+   "how": "`tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(顔の切り方は life-stand-cut.json の erubin:santa。えるびん(ふだん)・石油王の顔に大きさ・目の高さをそろえた)"
+  },
+  "erubin/santa/fullbody": {
+   "master": [
+    "tools/art-sources/assistants/erubin/santa/received/erubin_santa_*.png"
+   ],
+   "how": "`tools/assistant/life-fullbody-art.py`(受け取った全身の10枚。received は加工せずに保管)"
+  },
+  "erubin/santa/stand": {
+   "master": [
+    "tools/art-sources/assistants/erubin/santa/received/erubin_santa_*.png"
+   ],
+   "how": "`tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(全身絵から切り出す)"
   },
   "erubin/normal/bust": {
    "master": [
