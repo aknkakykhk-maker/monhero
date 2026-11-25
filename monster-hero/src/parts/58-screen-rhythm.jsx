@@ -252,9 +252,9 @@ function RhythmSongSelectScreen({
               return <button key={id} type="button" role="radio" aria-checked={on} data-rhythm-debug-song-filter-option={id} onClick={()=>setDebugSongFilter(id)}
                 className={`min-h-[44px] rounded-xl border px-2 text-[12px] font-black leading-tight ${on?'border-amber-300 bg-amber-500/80 text-slate-950':'border-white/15 bg-slate-900/80 text-amber-100'}`}>{label}</button>;})}
           </div>;})()}
-        {/* レイドバトルのモンヒロビート挑戦で開いたときの帯(2026-10-06・ユーザー指示)。遊んだ1曲のスコアが、ジャックへのダメージになる */}
+        {/* レイドバトルのモンヒロビート挑戦で開いたときの帯(2026-10-06・ユーザー指示)。遊んだ1曲のスコアが、ボスへのダメージになる。頭の絵文字はイベントのつなぎ口(39-raid-rhythm.jsx)の icon */}
         {raidChallenge&&<div style={JA_WRAP_STYLE} data-raid-challenge-banner role="status" className="shrink-0 border-b border-orange-300/40 bg-orange-950/80 px-3 py-1.5 text-center text-[10px] font-black leading-snug text-orange-100">
-          🎃 レイドバトル「{raidChallenge.tierName}{jaWrap('」に挑戦中。好きな曲と難易度を選んで、最後まで遊んでください。スコアがダメージになります(決定すると挑戦回数を1回使います)')}
+          {raidChallenge.icon||'🎃'} レイドバトル「{raidChallenge.tierName}{jaWrap('」に挑戦中。好きな曲と難易度を選んで、最後まで遊んでください。スコアがダメージになります(決定すると挑戦回数を1回使います)')}
         </div>}
         {/* ===== クイック∞周回の進捗(docs/spec/QUICK_RHYTHM_LINK.md PR6) =====
             常に出すのは1行だけ。曲の一覧を押し下げないよう、詳細はタップで開く。
