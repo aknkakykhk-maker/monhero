@@ -34,7 +34,7 @@
 | 全身絵 | `monster-hero/images/assistant/fullbody/momosuke_santa[__<表情>].png` | 10 | 2026-11-25 01c7413c5(10枚・うち表情なし1) | `tools/art-sources/assistants/momosuke/santa/received/momosuke_santa_*.png` | `tools/assistant/life-fullbody-art.py`(受け取った全身の10枚。received は加工せずに保管) |
 | 立ち絵 | `monster-hero/images/assistant/stand-santa/momosuke_<表情>.png` | 8 | 2026-11-25 01c7413c5(8枚) | `tools/art-sources/assistants/momosuke/santa/received/momosuke_santa_*.png` | `tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(全身絵から切り出す) |
 | バスト絵 | `monster-hero/images/assistant/santa/momosuke_<表情>.PNG` | 9 | 2026-11-25 01c7413c5(9枚・うち寝顔1) | `tools/art-sources/assistants/momosuke/santa/received/momosuke_santa_*.png` | `tools/assistant/life-fullbody-art.py` の全身絵をそのまま写す(みゅあ・ききのサンタと同じく、全身の絵をバスト絵の置き場に置く) |
-| 顔アイコン | `monster-hero/images/assistant/santa/face/momosuke_<表情>.PNG` | 9 | 2026-11-25 01c7413c5(9枚・うち寝顔1) | `tools/art-sources/assistants/momosuke/santa/received/momosuke_santa_*.png` | `tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(寝顔は座った姿の絵から、ふつうの顔と同じ大きさで切る) |
+| 顔アイコン | `monster-hero/images/assistant/santa/face/momosuke_<表情>.PNG` | 9 | 未コミット (9枚・うち寝顔1) | `tools/art-sources/assistants/momosuke/santa/received/momosuke_santa_*.png` | `tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(寝顔は座った姿の絵から、ふつうの顔と同じ大きさで切る) |
 
 ## 旧版(正本ではない・保管庫)
 
