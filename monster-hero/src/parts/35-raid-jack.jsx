@@ -353,7 +353,17 @@ const raidJackUnlockedCount = (kind, defeatedIds) => {
 
 // 戦闘に出すジャック本体。ライフ・攻撃は段階の値をそのまま使う(35,000×倍率×10 の端数ずれを避けるため上書きする)。
 // 技の本数は actionCount で直接指定する(再生なし。3/4/5/5/5)。createBattleEnemy は 22-enemy-and-bond-entries.jsx
+// opts.ev === 'xmas' のときはクリスマスのボス(段階は 35-raid-xmas.jsx・絵は RAID_XMAS_BOSS_IMG)。技と動きはジャックの物を借りる(仮)
 const raidJackMakeEnemy = (kind, tierIndex, mode, opts = {}) => {
+  if (opts.ev === 'xmas') {
+    const xt = raidXmasTierAt(kind, tierIndex);
+    const base = createBattleEnemy(1, 'Normal', 'Jack', xt.power, 1, { mode, actionCount: xt.actionCount });
+    if (!base) return null;
+    const after = opts.pumpkin === true && kind === 'a' && tierIndex === RAID_XMAS_A_TIERS.length - 1;
+    const t = after ? RAID_XMAS_AFTER_BOSS : xt;
+    return { ...base, name: t.name, maxHp: t.hp, hp: t.hp, atk: t.atk, raidJackTier: xt.id, raidXmas: true,
+      imgUrl: (typeof RAID_XMAS_BOSS_IMG !== 'undefined' ? RAID_XMAS_BOSS_IMG : base.imgUrl), poseImgUrl: null };
+  }
   const tier = raidJackTierAt(kind, tierIndex);
   const enemy = createBattleEnemy(1, 'Normal', 'Jack', tier.power, 1, { mode, actionCount: tier.actionCount });
   if (!enemy) return null;
