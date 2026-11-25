@@ -181,3 +181,4 @@ select kind, tier, source, count(distinct breeder_id) as players, sum(damage)::b
 | 物 | 部 | PR |
 | --- | --- | --- |
 | この紙 | バトル部 | (この PR) |
+| ビート挑戦をイベントのつなぎ口で動かす部品 `39-raid-rhythm.jsx`(ジャックは同じ動き・クリスマスのつなぎ口は §2〜§4 の形で用意。App でつなぐのは §3 の関数が入ってから。[`BEAT.md`](BEAT.md)) | ビート部 | (ビート部の PR) |
