@@ -171,6 +171,7 @@
   "mode/raid-jack-check.js",
   "mode/raid-jack-consistency-check.js",
   "mode/raid-jack-home-lines-check.js",
+  "mode/raid-rhythm-adapter-check.js",
   "mode/raid-jack-reward-badge-check.js",
   "mode/raid-jack-story-check.js",
   "mode/rhythm-achievement-check.js",
