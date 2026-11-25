@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: edec81f82be35700
+// source-sha256: a7349b8132c388f7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -240516,6 +240516,7 @@ function MonsterHeroGame() {
   const [cardQuickAutoStart, setCardQuickAutoStart] = useState(false);
   const [cardTeaserOpen, setCardTeaserOpen] = useState(false);
   const [cardOrigin, setCardOrigin] = useState('home');
+  const [cardRaidChallenge, setCardRaidChallenge] = useState(null);
   const cardOriginBackRef = useRef(null);
   const [cardMarketEntry, setCardMarketEntryRaw] = useState(false);
   const [lifeShopEntry, setLifeShopEntry] = useState(null);
@@ -247728,6 +247729,7 @@ function MonsterHeroGame() {
     if (cardOrigin === 'profile' || cardOrigin === 'friends') cardOriginBackRef.current = cardOrigin === 'profile' ? 'PROFILE' : 'FRIENDS';
     setCardBgm(null);
     setCardOrigin('home');
+    setCardRaidChallenge(null);
     if (runStageRef.current != null && !quickAnywhereKeepsRun()) {
       if (cardExitingRunRef.current) return;
       cardExitingRunRef.current = true;
@@ -256193,6 +256195,79 @@ function MonsterHeroGame() {
       detail: d,
       quickAward: null
     });
+  };
+  const startRaidXmasCard = async tierIndex => {
+    const ti = Math.min(Math.max(Math.floor(Number(tierIndex) || 0), 0), RAID_XMAS_A_TIERS.length - 1);
+    const tier = raidXmasTierAt('a', ti);
+    const run = {
+      use: null,
+      res: null
+    };
+    raidJackReturnTierRef.current = ti;
+    setCardRaidChallenge({
+      tierIndex: ti,
+      tierName: tier.name,
+      bossName: RAID_XMAS_EVENT.name,
+      onStart: async () => {
+        try {
+          run.use = await raidXmasUseTry('a');
+        } catch (e) {
+          run.use = null;
+        }
+        return !!(run.use && run.use.ok);
+      },
+      onResult: async r => {
+        if (!run.use || !run.use.ok) return {
+          ok: false
+        };
+        const detail = {
+          won: r.outcome === 'win',
+          turns: r.turns,
+          ko: r.kos
+        };
+        if (!(r.damage > 0)) {
+          run.res = {
+            way: 'card',
+            kind: 'a',
+            damage: 0,
+            tierIndex: ti,
+            outcome: 'sent',
+            detail
+          };
+          return {
+            ok: true
+          };
+        }
+        try {
+          run.res = await raidXmasAddDamage({
+            source: 'card',
+            kind: 'a',
+            tierIndex: ti,
+            damage: r.damage,
+            hitId: run.use.hitId,
+            eventId: run.use.eventId,
+            detail
+          });
+        } catch (e) {
+          run.res = null;
+        }
+        return {
+          ok: !!(run.res && (run.res.outcome === 'sent' || run.res.outcome === 'pending'))
+        };
+      },
+      onClose: why => {
+        setCardRaidChallenge(null);
+        setCardBgm(null);
+        setCardOrigin('home');
+        setGameState('RAID_JACK');
+        if (why === 'done' && run.res) openRaidXmasResult({
+          ...run.res,
+          way: 'card'
+        });
+      }
+    });
+    setCardOrigin('raid');
+    setGameState('CARD_TOP');
   };
   const exitRaidJackRhythmResult = (toDebug = false) => {
     raidJackLastClaimRef.current = 0;
@@ -265798,6 +265873,7 @@ function MonsterHeroGame() {
         setGameState('CARD_TOP');
       }
     }), (gameState === 'CARD_TOP' || gameState === 'CARD_BATTLE' || gameState === 'CARD_PACK_OPEN' && !cardPackOpen) && React.createElement(CardBattleScreen, {
+      raidChallenge: cardRaidChallenge,
       screen: gameState,
       onNavigate: setGameState,
       sessionTickets: ownedItemCount(ownedItems, RHYTHM_BUDDY_TICKET_ITEM_ID),
