@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "e4ddbf7c5fd0",
-  "packs": {"beat":{"bytes":311557065,"count":166},"battle":{"bytes":728235142,"count":1836},"card":{"bytes":38085297,"count":1046},"all":{"bytes":1077877504,"count":3048},"core":{"bytes":25993681,"count":25}},
+  "id": "76c637bd93a2",
+  "packs": {"beat":{"bytes":311557065,"count":166},"battle":{"bytes":740164314,"count":1836},"card":{"bytes":38085297,"count":1046},"all":{"bytes":1089806676,"count":3048},"core":{"bytes":25993683,"count":25}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"b43d691d4773","size":2833344,"pack":"beat"},
@@ -375,14 +375,14 @@
     "images/assistant/fullbody/momosuke__troubled.png": {"v":"59730d7f4fd1","size":533692,"pack":"battle"},
     "images/assistant/fullbody/momosuke__wink.png": {"v":"f83cdcd0dcb0","size":513566,"pack":"battle"},
     "images/assistant/fullbody/momosuke_halloween.png": {"v":"9d3a418a4d0c","size":1401392,"pack":"battle"},
-    "images/assistant/fullbody/momosuke_halloween__angry.png": {"v":"80f7660a8df5","size":625398,"pack":"battle"},
-    "images/assistant/fullbody/momosuke_halloween__crying.png": {"v":"dfa0a414335b","size":623103,"pack":"battle"},
-    "images/assistant/fullbody/momosuke_halloween__excited.png": {"v":"863b370a30b6","size":699037,"pack":"battle"},
-    "images/assistant/fullbody/momosuke_halloween__happy.png": {"v":"7404fe0fa52b","size":585996,"pack":"battle"},
+    "images/assistant/fullbody/momosuke_halloween__angry.png": {"v":"117d2d0e7cee","size":2312782,"pack":"battle"},
+    "images/assistant/fullbody/momosuke_halloween__crying.png": {"v":"38144251acc2","size":2320368,"pack":"battle"},
+    "images/assistant/fullbody/momosuke_halloween__excited.png": {"v":"9971fa539fa7","size":2593917,"pack":"battle"},
+    "images/assistant/fullbody/momosuke_halloween__happy.png": {"v":"bc498a872069","size":2219822,"pack":"battle"},
     "images/assistant/fullbody/momosuke_halloween__normal.png": {"v":"0c18108584e2","size":613558,"pack":"battle"},
-    "images/assistant/fullbody/momosuke_halloween__surprise.png": {"v":"a66bca48c618","size":614641,"pack":"battle"},
-    "images/assistant/fullbody/momosuke_halloween__troubled.png": {"v":"7f1718405c97","size":605570,"pack":"battle"},
-    "images/assistant/fullbody/momosuke_halloween__wink.png": {"v":"9070d552b90c","size":637879,"pack":"battle"},
+    "images/assistant/fullbody/momosuke_halloween__surprise.png": {"v":"3f669f02ac4e","size":2272922,"pack":"battle"},
+    "images/assistant/fullbody/momosuke_halloween__troubled.png": {"v":"53a9054b0161","size":2229419,"pack":"battle"},
+    "images/assistant/fullbody/momosuke_halloween__wink.png": {"v":"7a0f68ec5370","size":2371566,"pack":"battle"},
     "images/assistant/fullbody/momosuke_santa.png": {"v":"99dcc0f758e8","size":1286854,"pack":"battle"},
     "images/assistant/fullbody/momosuke_santa__angry.png": {"v":"99310c0d0663","size":1390323,"pack":"battle"},
     "images/assistant/fullbody/momosuke_santa__crying.png": {"v":"5de7a89c7988","size":1324581,"pack":"battle"},
@@ -3053,7 +3053,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"a563bfc5beae","size":319705,"pack":"core"},
+    "tailwind.css": {"v":"c190cee94f4f","size":319705,"pack":"core"},
     "data/images/images-ally.js": {"v":"7fcc9331d4b6","size":92225,"pack":"core"},
     "data/images/images-enemy.js": {"v":"0d3643e9bc69","size":3262,"pack":"core"},
     "data/ally-monsters.js": {"v":"6737b7dced48","size":60894,"pack":"core"},
@@ -3075,6 +3075,6 @@
     "data/assistant-masmon-techs.js": {"v":"353cf73676a6","size":113841,"pack":"core"},
     "data/assistant-life-rel-talks.js": {"v":"cde51ded5428","size":225977,"pack":"core"},
     "data/success-sounds.js": {"v":"9692dd51493a","size":19367,"pack":"core"},
-    "game-system.compiled.js": {"v":"ed5230ba7730","size":12525711,"pack":"core"}
+    "game-system.compiled.js": {"v":"fb99fea54991","size":12525713,"pack":"core"}
   }
 }
