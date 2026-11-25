@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1d89b2b959fa09bb
+// source-sha256: 68eb032908a22ff8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -237658,6 +237658,8 @@ function MonsterHeroGame() {
   const [raidEv, setRaidEv] = useState('jack');
   const raidEvRef = useRef('jack');
   const raidDef = raidEventDef(raidEv);
+  const raidXmasOpen = raidEv === 'xmas';
+  const raidJackOpen = !raidXmasOpen;
   const raidCurEventId = raidEv === 'xmas' ? raidJackDebugForce ? RAID_XMAS_EVENT.debugId : RAID_XMAS_EVENT.id : raidJackEventId;
   useEffect(() => {
     raidXmasSetDebug({
@@ -265039,7 +265041,7 @@ function MonsterHeroGame() {
       onChange: trial => {
         if (/^rhythm_floor3d/.test(trial.id)) setRhythmFloor3dPref(rhythmFloor3dPreference());
       }
-    })))), gameState === 'RAID_JACK' && raidEv === 'xmas' && React.createElement(RaidJackScreen, {
+    })))), gameState === 'RAID_JACK' && raidXmasOpen && React.createElement(RaidJackScreen, {
       key: "raid-xmas",
       ev: RAID_EVENT_XMAS,
       ways: ['battle', ...(typeof startRaidXmasRhythm === 'function' ? ['rhythm'] : []), ...(typeof startRaidXmasCard === 'function' ? ['card'] : [])],
@@ -265073,7 +265075,7 @@ function MonsterHeroGame() {
       renderPlace: rankingPlace,
       renderIcon: rankingBreederIcon,
       cardClass: rankingCardClass
-    }), gameState === 'RAID_JACK' && raidEv !== 'xmas' && React.createElement(RaidJackScreen, {
+    }), gameState === 'RAID_JACK' && raidJackOpen && React.createElement(RaidJackScreen, {
       initialTier: raidJackReturnTierRef.current,
       onBack: () => {
         raidJackReturnTierRef.current = 0;

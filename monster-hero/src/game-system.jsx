@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b20f44f52db36500
+// generated-sha256: 5ae567bcd23f8960
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -130265,6 +130265,8 @@ function MonsterHeroGame() {
   const [raidEv, setRaidEv] = useState('jack');
   const raidEvRef = useRef('jack');
   const raidDef = raidEventDef(raidEv);
+  const raidXmasOpen = raidEv === 'xmas';
+  const raidJackOpen = !raidXmasOpen;
   const raidCurEventId = raidEv === 'xmas' ? (raidJackDebugForce ? RAID_XMAS_EVENT.debugId : RAID_XMAS_EVENT.id) : raidJackEventId;
   // クリスマスのデバッグの強制表示は、ジャックと同じ切り替え(レイドの確認画面)に合わせる
   useEffect(() => { raidXmasSetDebug({ force: raidJackDebugForce, realRules: raidJackDebugRealRules }); }, [raidJackDebugForce, raidJackDebugRealRules]);
@@ -149438,7 +149440,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </div>
         )}
 
-        {gameState==='RAID_JACK'&&raidEv==='xmas'&&(<RaidJackScreen key="raid-xmas" ev={RAID_EVENT_XMAS}
+        {gameState==='RAID_JACK'&&raidXmasOpen&&(<RaidJackScreen key="raid-xmas" ev={RAID_EVENT_XMAS}
           /* 挑み方: バトルはバトル部。モンヒロビート・バトルカードはビート部・カード部が startRaidXmasRhythm / startRaidXmasCard を App に置いたら出る(BUILD.md §4) */
           ways={['battle',...(typeof startRaidXmasRhythm === 'function'?['rhythm']:[]),...(typeof startRaidXmasCard === 'function'?['card']:[])]}
           initialTier={raidJackReturnTierRef.current}
@@ -149446,7 +149448,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           onChallenge={(kind,tierIndex,way)=>{raidJackReturnTierRef.current=tierIndex;if(kind==='a'&&way==='rhythm'){if(typeof startRaidXmasRhythm === 'function')void startRaidXmasRhythm(tierIndex);return;}if(kind==='a'&&way==='card'){if(typeof startRaidXmasCard === 'function')void startRaidXmasCard(tierIndex);return;}setRaidJackPrep({kind,tierIndex});setGameState('RAID_JACK_PREP');}}
           onPurchase={purchaseRaidJackExtra} onClaimRewards={claimRaidXmasRewards} beatPoints={rhythmEventPoints} eventId={raidCurEventId} forced={raidJackDebugForce} unlimited={raidJackDebugForce&&!raidJackDebugRealRules}
           renderPlace={rankingPlace} renderIcon={rankingBreederIcon} cardClass={rankingCardClass}/>)}
-        {gameState==='RAID_JACK'&&raidEv!=='xmas'&&(<RaidJackScreen
+        {gameState==='RAID_JACK'&&raidJackOpen&&(<RaidJackScreen
           initialTier={raidJackReturnTierRef.current}
           onBack={()=>{raidJackReturnTierRef.current=0;setGameState(raidJackDebugForce&&!RELEASE_FLAGS.raidJack?'RAID_JACK_DEBUG':'HOME');}}
           onChallenge={(kind,tierIndex,way)=>{if(kind==='a'&&way==='rhythm'){if(RELEASE_FLAGS.raidJackRhythm===true||raidJackDebugForce)void startRaidJackRhythmSelect(tierIndex);return;}setRaidJackPrep({kind,tierIndex});setGameState('RAID_JACK_PREP');}}
