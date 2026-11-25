@@ -39,6 +39,9 @@ const FRIENDS_PUBLIC_RELEASE = true;
 // 開始を過ぎても更新履歴に出なかった(2026-10-05・ユーザー指摘「もう公開してるのに更新情報に出てない」)。
 // 開始日時はここにも置く(35-raid-jack.jsx の RAID_JACK_EVENT.startAt と同じ値。食い違いは tools/mode/raid-jack-check.js が見る)。
 const RAID_JACK_START_AT = '2026-10-05T04:00:00+09:00';
+// クリスマスイベントの衣装(みゅあのサンタ・2026-11-25 r1119-172)の売り出しの時刻。RELEASE_FLAGS.xmasCostume が見るたびに数え直す。
+//   data/breeder.js の ASSISTANT_COSTUME_XMAS_START_AT と同じ値(更新履歴・ヘルプの出し入れに使う。食い違いは tools/market/assistant-costume-check.js が見る)
+const XMAS_COSTUME_START_AT = '2026-11-30T10:00:00+09:00';
 const RAID_JACK_PUBLIC_RELEASE = true;
 // レイドバトルの「モンヒロビートで挑戦する」(2026-10-06)。ダメージの仕様が固まるまで一時止めていた(ユーザー指示)が、仕様の確定・実装・サブストーリー(ドラのビート)の用意ができたので、
 // 2026-10-06 にユーザーの「出して」で公開した。偽にすると、レイド画面のボタン・サブストーリー・更新履歴・ヘルプの説明が出なくなる(デバッグの強制表示では、確認のためボタンだけ出る)
@@ -205,7 +208,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   //   数字は 32-tactics-units.jsx の TACTICS_HATE / MONSTER_TYPES。お話「タクティクスバトル ～4人のタイプ～」(tactics_types)もこの印で出る
   tacticsHate: true,
   // タクティクスのEXスキル。遊べる入口(β版を含む)があって、EXの公開フラグも立っているときだけ
-  tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, get rhythmGrandOpen() { try { return RHYTHM_GRAND_OPEN_RELEASE === true && Date.now() >= Date.parse(RHYTHM_GRAND_OPEN_START_AT); } catch (e) { return false; } }, rhythmGrandOpenTeaser:RHYTHM_GRAND_OPEN_TEASER_RELEASE, rhythmMulti:RHYTHM_MULTI_PUBLIC_RELEASE, friends:FRIENDS_PUBLIC_RELEASE, raidJackRhythm: RAID_JACK_RHYTHM_PUBLIC_RELEASE, get raidJack() { try { return RAID_JACK_PUBLIC_RELEASE === true && Date.now() >= Date.parse(RAID_JACK_START_AT); } catch (e) { return false; } }, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
+  tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, get rhythmGrandOpen() { try { return RHYTHM_GRAND_OPEN_RELEASE === true && Date.now() >= Date.parse(RHYTHM_GRAND_OPEN_START_AT); } catch (e) { return false; } }, rhythmGrandOpenTeaser:RHYTHM_GRAND_OPEN_TEASER_RELEASE, rhythmMulti:RHYTHM_MULTI_PUBLIC_RELEASE, friends:FRIENDS_PUBLIC_RELEASE, raidJackRhythm: RAID_JACK_RHYTHM_PUBLIC_RELEASE, get raidJack() { try { return RAID_JACK_PUBLIC_RELEASE === true && Date.now() >= Date.parse(RAID_JACK_START_AT); } catch (e) { return false; } }, get xmasCostume() { try { return Date.now() >= Date.parse(XMAS_COSTUME_START_AT); } catch (e) { return false; } }, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
 // releaseFlag = そのフラグが立つまで出さない。unreleasedFlag = そのフラグが立ったら出さない。
 // 逆向きの名札が要るのは「準備中です」の案内で、公開したあとも残っていると
 // 遊べているのに準備中の項目が並ぶ(ヘルプのモンヒロビートで実際にそうなっていた・2026-09-06)。
