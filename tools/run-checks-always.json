@@ -165,6 +165,7 @@
   "mode/quick-extreme-special-rules-check.js",
   "mode/quick-rhythm-guide-check.js",
   "mode/ragnarok-rules-check.js",
+  "boot/rhythm-xmas-campaign-check.js",
   "mode/raid-jack-api-check.js",
   "mode/raid-jack-battle-check.js",
   "mode/raid-jack-check.js",
