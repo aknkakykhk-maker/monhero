@@ -183,3 +183,13 @@ select kind, tier, source, count(distinct breeder_id) as players, sum(damage)::b
 | --- | --- | --- |
 | この紙 | バトル部 | #7591 |
 | 定義 `35-raid-xmas.jsx`・回数と与ダメージ `36-raid-xmas-api.jsx`(`raidXmasUseTry`・`raidXmasAddDamage` は App ではなく**どこからでも呼べる関数**にした)・`RELEASE_FLAGS.raidXmas`・検査 `tools/battle/raid-xmas-check.js` | バトル部 | (この PR) |
+| レイド画面・バトルの1戦・結果画面 `openRaidXmasResult`(App の中)・ランキングの「バトルカード」・ボスの絵 `RAID_XMAS_BOSS_IMG` | バトル部 | (③の PR) |
+
+## 10. つなぎ方(③でできた所・2026-11-25)
+
+- **レイド画面のボタン**: App の中に `const startRaidXmasRhythm = (tierIndex) => …`(ビート部)/ `const startRaidXmasCard = (tierIndex) => …`(カード部)を置けば、**レイド画面にボタンが自動で出る**(呼び出し側が `typeof … === 'function'` で確かめる。`tools/undefined-reference-check.js` の「後から足す口」に登録済み)
+- **結果画面**: `openRaidXmasResult(res)`(App の中)。`res` は `raidXmasAddDamage` の返り値そのまま。`detail` はカード `{ won, turns, ko }` / ビート `{ songName, difficultyName, score, assist }`。閉じるとクリスマスのレイド画面へ戻る(デバッグの記録のときはレイドの確認画面へ)
+- **途中でやめた**: `openRaidXmasResult({ way, tierIndex, damage: 0, outcome: 'sent', detail })`
+- **レイド画面へ戻す**: `setGameState('RAID_JACK')`(画面の名前はジャックと同じ。どのイベントかは App の `raidEvRef` が持つ)
+- **デバッグ**: DEBUG MENU → ⚔️バトル → レイドの確認画面の「🎅 クリスマスのレイド画面を開く」。送り先は `raid_xmas_debug`
+- このあとバトル部が足す: 報酬の受け取り・HOME のボス・段階のお話・再送待ちを HOME で送り直す

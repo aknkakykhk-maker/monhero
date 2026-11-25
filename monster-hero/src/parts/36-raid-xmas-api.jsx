@@ -126,3 +126,81 @@ const raidXmasFlushStoredPending = async (breederId) => {
     return before - next.pending.length;
   } catch (e) { return 0; }
 };
+
+// ===== レイドの定義(def)。レイド画面(79-screen-raid-jack.jsx)と本体(60-app.jsx)は、ここを読んでジャックとクリスマスを同じ流れで動かす =====
+//  ・ジャックの定義は、これまで画面・本体に直接書いていた値を集めただけ(ジャックの見え方・動きは変えない)。
+//  ・クリスマスの数字・名前は 35-raid-xmas.jsx。ここは並べ替えるだけ(数字を書き写さない)。
+//  ・関数(絵・状態の読み書き)は呼んだときに読む。絵の定数は data/images/images-enemy.js。
+const raidEventShortName = (bossWord, name) => String(name || '').replace(`${bossWord}・`, '').replace(bossWord, '').trim();
+const RAID_EVENT_JACK = Object.freeze({
+  key: 'jack',
+  id: RAID_JACK_EVENT.id,
+  debugId: RAID_JACK_DEBUG_EVENT_ID,
+  title: 'カボチャの大王ジャック',
+  icon: '🎃',
+  note: '全員でジャックを倒そう',
+  bossWord: 'ジャック',
+  aTiers: RAID_JACK_A_TIERS,
+  bTiers: RAID_JACK_B_TIERS,
+  tiers: raidJackTiers,
+  tierAt: raidJackTierAt,
+  afterBoss: RAID_JACK_PUMPKIN,
+  afterBossBadge: 'あそびに来た',
+  afterBossNote: '共有ライフは無限です。毎回ぜんかいのライフから戦い、与えたダメージが累計に足されます',
+  lockedNote: '前の段階のジャックを倒すと姿をあらわします',
+  lastTierWord: '大王',
+  rankNote: '男爵〜公爵は倒れた時点、大王は期間の終わりに順位が決まります',
+  endLabel: '11/1 4:00',
+  rewards: RAID_JACK_REWARDS,
+  freePerDay: RAID_JACK_FREE_PER_DAY,
+  extraCost: RAID_JACK_EXTRA_COST_BEAT_P,
+  turns: RAID_JACK_TURNS,
+  storageKey: RAID_JACK_STORAGE_KEY,
+  sources: Object.freeze([['all', '合計'], ['battle', 'バトル'], ['rhythm', 'モンヒロビート']]),
+  windowAt: raidJackWindowAt,
+  remaining: raidJackRemaining,
+  bossDown: raidJackBossDown,
+  loadState: raidJackLoadState,
+  saveState: raidJackSaveState,
+  flushPending: (meId) => raidJackFlushStoredPending(meId, RAID_JACK_EVENT.id),
+  bossImg: () => JACK_IMG,
+  afterBossImg: () => PUMPKIN_ICON_IMG,
+  aura: true,
+});
+const RAID_EVENT_XMAS = Object.freeze({
+  key: 'xmas',
+  id: RAID_XMAS_EVENT.id,
+  debugId: RAID_XMAS_EVENT.debugId,
+  title: RAID_XMAS_EVENT.name,
+  icon: '🎅',
+  note: `全員で${RAID_XMAS_EVENT.name}を止めよう`,
+  bossWord: RAID_XMAS_EVENT.name,
+  aTiers: RAID_XMAS_A_TIERS,
+  bTiers: RAID_XMAS_B_TIERS,
+  tiers: raidXmasTiers,
+  tierAt: raidXmasTierAt,
+  afterBoss: RAID_XMAS_AFTER_BOSS,
+  afterBossBadge: 'まだ暴れている',
+  afterBossNote: '共有ライフは無限です。毎回いっぱいのライフから戦い、与えたダメージが累計に足されます',
+  lockedNote: `前の段階の${RAID_XMAS_EVENT.name}を止めると姿をあらわします`,
+  lastTierWord: '最後の段階',
+  rankNote: '段階1〜4は倒れた時点、最後の段階は期間の終わりに順位が決まります',
+  endLabel: '12/31 4:00',
+  rewards: RAID_XMAS_REWARDS,
+  freePerDay: RAID_XMAS_FREE_PER_DAY,
+  extraCost: RAID_XMAS_EXTRA_COST_BEAT_P,
+  turns: RAID_XMAS_TURNS,
+  storageKey: RAID_XMAS_STORAGE_KEY,
+  sources: Object.freeze([['all', '合計'], ['battle', 'バトル'], ['rhythm', 'モンヒロビート'], ['card', 'バトルカード']]),
+  windowAt: raidXmasWindowAt,
+  remaining: raidXmasRemaining,
+  bossDown: raidXmasBossDown,
+  loadState: raidXmasLoadState,
+  saveState: raidXmasSaveState,
+  flushPending: (meId) => raidXmasFlushStoredPending(meId),
+  bossImg: () => RAID_XMAS_BOSS_IMG,
+  afterBossImg: () => RAID_XMAS_BOSS_IMG,
+  aura: false,
+});
+const raidEventDef = (key) => (key === 'xmas' ? RAID_EVENT_XMAS : RAID_EVENT_JACK);
+const raidEventTierShort = (ev, tier) => raidEventShortName((ev || RAID_EVENT_JACK).bossWord, tier && tier.name);

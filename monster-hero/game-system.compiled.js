@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ef089a908d745847
+// source-sha256: 1d89b2b959fa09bb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -63040,6 +63040,27 @@ const raidJackUnlockedCount = (kind, defeatedIds) => {
   return n;
 };
 const raidJackMakeEnemy = (kind, tierIndex, mode, opts = {}) => {
+  if (opts.ev === 'xmas') {
+    const xt = raidXmasTierAt(kind, tierIndex);
+    const base = createBattleEnemy(1, 'Normal', 'Jack', xt.power, 1, {
+      mode,
+      actionCount: xt.actionCount
+    });
+    if (!base) return null;
+    const after = opts.pumpkin === true && kind === 'a' && tierIndex === RAID_XMAS_A_TIERS.length - 1;
+    const t = after ? RAID_XMAS_AFTER_BOSS : xt;
+    return {
+      ...base,
+      name: t.name,
+      maxHp: t.hp,
+      hp: t.hp,
+      atk: t.atk,
+      raidJackTier: xt.id,
+      raidXmas: true,
+      imgUrl: typeof RAID_XMAS_BOSS_IMG !== 'undefined' ? RAID_XMAS_BOSS_IMG : base.imgUrl,
+      poseImgUrl: null
+    };
+  }
   const tier = raidJackTierAt(kind, tierIndex);
   const enemy = createBattleEnemy(1, 'Normal', 'Jack', tier.power, 1, {
     mode,
@@ -63631,7 +63652,7 @@ const sbCountRaidJackMaxHitAhead = async (kind, myMax, eventId, tier = 0) => {
   return m ? Number(m[1]) : null;
 };
 const raidJackSourceBase = (source, tier, metric) => {
-  const src = source === 'rhythm' ? 'rhythm' : 'battle';
+  const src = source === 'rhythm' || source === 'card' ? source : 'battle';
   const t = Math.floor(Number(tier)) || 0;
   const col = metric === 'max' ? 'max_damage' : 'total_damage';
   return {
@@ -64109,6 +64130,79 @@ const raidXmasFlushStoredPending = async breederId => {
     return 0;
   }
 };
+const raidEventShortName = (bossWord, name) => String(name || '').replace(`${bossWord}・`, '').replace(bossWord, '').trim();
+const RAID_EVENT_JACK = Object.freeze({
+  key: 'jack',
+  id: RAID_JACK_EVENT.id,
+  debugId: RAID_JACK_DEBUG_EVENT_ID,
+  title: 'カボチャの大王ジャック',
+  icon: '🎃',
+  note: '全員でジャックを倒そう',
+  bossWord: 'ジャック',
+  aTiers: RAID_JACK_A_TIERS,
+  bTiers: RAID_JACK_B_TIERS,
+  tiers: raidJackTiers,
+  tierAt: raidJackTierAt,
+  afterBoss: RAID_JACK_PUMPKIN,
+  afterBossBadge: 'あそびに来た',
+  afterBossNote: '共有ライフは無限です。毎回ぜんかいのライフから戦い、与えたダメージが累計に足されます',
+  lockedNote: '前の段階のジャックを倒すと姿をあらわします',
+  lastTierWord: '大王',
+  rankNote: '男爵〜公爵は倒れた時点、大王は期間の終わりに順位が決まります',
+  endLabel: '11/1 4:00',
+  rewards: RAID_JACK_REWARDS,
+  freePerDay: RAID_JACK_FREE_PER_DAY,
+  extraCost: RAID_JACK_EXTRA_COST_BEAT_P,
+  turns: RAID_JACK_TURNS,
+  storageKey: RAID_JACK_STORAGE_KEY,
+  sources: Object.freeze([['all', '合計'], ['battle', 'バトル'], ['rhythm', 'モンヒロビート']]),
+  windowAt: raidJackWindowAt,
+  remaining: raidJackRemaining,
+  bossDown: raidJackBossDown,
+  loadState: raidJackLoadState,
+  saveState: raidJackSaveState,
+  flushPending: meId => raidJackFlushStoredPending(meId, RAID_JACK_EVENT.id),
+  bossImg: () => JACK_IMG,
+  afterBossImg: () => PUMPKIN_ICON_IMG,
+  aura: true
+});
+const RAID_EVENT_XMAS = Object.freeze({
+  key: 'xmas',
+  id: RAID_XMAS_EVENT.id,
+  debugId: RAID_XMAS_EVENT.debugId,
+  title: RAID_XMAS_EVENT.name,
+  icon: '🎅',
+  note: `全員で${RAID_XMAS_EVENT.name}を止めよう`,
+  bossWord: RAID_XMAS_EVENT.name,
+  aTiers: RAID_XMAS_A_TIERS,
+  bTiers: RAID_XMAS_B_TIERS,
+  tiers: raidXmasTiers,
+  tierAt: raidXmasTierAt,
+  afterBoss: RAID_XMAS_AFTER_BOSS,
+  afterBossBadge: 'まだ暴れている',
+  afterBossNote: '共有ライフは無限です。毎回いっぱいのライフから戦い、与えたダメージが累計に足されます',
+  lockedNote: `前の段階の${RAID_XMAS_EVENT.name}を止めると姿をあらわします`,
+  lastTierWord: '最後の段階',
+  rankNote: '段階1〜4は倒れた時点、最後の段階は期間の終わりに順位が決まります',
+  endLabel: '12/31 4:00',
+  rewards: RAID_XMAS_REWARDS,
+  freePerDay: RAID_XMAS_FREE_PER_DAY,
+  extraCost: RAID_XMAS_EXTRA_COST_BEAT_P,
+  turns: RAID_XMAS_TURNS,
+  storageKey: RAID_XMAS_STORAGE_KEY,
+  sources: Object.freeze([['all', '合計'], ['battle', 'バトル'], ['rhythm', 'モンヒロビート'], ['card', 'バトルカード']]),
+  windowAt: raidXmasWindowAt,
+  remaining: raidXmasRemaining,
+  bossDown: raidXmasBossDown,
+  loadState: raidXmasLoadState,
+  saveState: raidXmasSaveState,
+  flushPending: meId => raidXmasFlushStoredPending(meId),
+  bossImg: () => RAID_XMAS_BOSS_IMG,
+  afterBossImg: () => RAID_XMAS_BOSS_IMG,
+  aura: false
+});
+const raidEventDef = key => key === 'xmas' ? RAID_EVENT_XMAS : RAID_EVENT_JACK;
+const raidEventTierShort = (ev, tier) => raidEventShortName((ev || RAID_EVENT_JACK).bossWord, tier && tier.name);
 const RAID_JACK_AURA_TONGUES = Object.freeze([6, 10, 16, 24, 34]);
 const RAID_JACK_AURA_EMBERS = Object.freeze([0, 0, 6, 12, 20]);
 const RAID_JACK_AURA_WAVES = Object.freeze([0, 0, 1, 2, 3]);
@@ -64282,6 +64376,10 @@ const RAID_JACK_STINGERS = Object.freeze({
     tone: 'end'
   },
   rhythm: {
+    text: 'FINISH',
+    tone: 'end'
+  },
+  card: {
     text: 'FINISH',
     tone: 'end'
   }
@@ -91574,7 +91672,7 @@ function BattleScreen({
     marginLeft: `${(1 - RAID_JACK_PUMPKIN_ART_SCALE) * 50}%`,
     marginTop: `${(1 - RAID_JACK_PUMPKIN_ART_SCALE) * 50}%`
   };
-  const jackAuraTier = enemy?.id === 'Jack' && !enemy.raidJackPumpkin ? Number(String(enemy.raidJackTier || '').slice(1)) || 0 : 0;
+  const jackAuraTier = enemy?.id === 'Jack' && !enemy.raidJackPumpkin && !enemy.raidXmas ? Number(String(enemy.raidJackTier || '').slice(1)) || 0 : 0;
   const enemyBossImgSrc = enemy?.id === 'Jack' && enemy.poseImgUrl && ['normal', 'roar', 'special'].includes(enemySkillNow) ? enemy.poseImgUrl : enemy?.imgUrl;
   const emFxStyle = emSpec && emSpec[2] ? {
     '--em-e': JSON.stringify(emSpec[2])
@@ -110404,7 +110502,9 @@ const RaidJackDebugScreen = ({
   onOpenRaid,
   onGoHome,
   onPreviewDamageFx,
-  onPreviewRhythmResult
+  onPreviewRhythmResult,
+  onOpenRaidXmas,
+  onPreviewRaidXmasResult
 }) => {
   const [nowChoice, setNowChoice] = useState('real');
   const [state, setState] = useState(() => raidJackDefaultState());
@@ -110673,6 +110773,14 @@ const RaidJackDebugScreen = ({
     className: `${btn} border-orange-400/60 bg-orange-950/40`,
     onClick: () => onOpenRaid && onOpenRaid()
   }, "レイド画面を開く"), React.createElement("button", {
+    "data-raid-xmas-open": true,
+    className: `${btn} border-emerald-400/60 bg-emerald-950/40`,
+    onClick: () => onOpenRaidXmas && onOpenRaidXmas()
+  }, "🎅 クリスマスのレイド画面を開く"), React.createElement("button", {
+    "data-raid-xmas-card-result": true,
+    className: `${btn} border-emerald-400/60 bg-emerald-950/40`,
+    onClick: () => onPreviewRaidXmasResult && onPreviewRaidXmasResult('card')
+  }, "🎅 結果画面(バトルカード)"), React.createElement("button", {
     "data-raid-go-home": true,
     className: `${btn} col-span-2 border-orange-400/60 bg-orange-950/40`,
     onClick: () => onGoHome && onGoHome()
@@ -110863,9 +110971,11 @@ const RaidJackRewardRow = ({
 const RaidJackTierRewards = ({
   kind,
   index,
-  claimed
+  claimed,
+  ev = RAID_EVENT_JACK
 }) => {
   const have = Array.isArray(claimed) ? claimed : [];
+  const RW = ev.rewards;
   if (kind === 'a') {
     return React.createElement("div", {
       "data-raid-jack-tier-rewards": "a"
@@ -110873,15 +110983,15 @@ const RaidJackTierRewards = ({
       dataKey: "clear",
       label: "討伐報酬",
       note: "参加した全員",
-      reward: RAID_JACK_REWARDS.aClear[index],
+      reward: RW.aClear[index],
       got: have.includes(raidJackClaimId('clear_a', index))
-    }), RAID_JACK_REWARDS.aRank[index].map((r, k) => React.createElement(RaidJackRewardRow, {
+    }), RW.aRank[index].map((r, k) => React.createElement(RaidJackRewardRow, {
       key: k,
       dataKey: `rank-${k + 1}`,
       label: `貢献${k + 1}位`,
       reward: r,
       got: have.includes(raidJackPlaceId(raidJackClaimId('rank_a', index), k + 1))
-    })), have.includes(raidJackClaimId('rank_a', index)) && !RAID_JACK_REWARDS.aRank[index].some((r, k) => have.includes(raidJackPlaceId(raidJackClaimId('rank_a', index), k + 1))) && React.createElement("div", {
+    })), have.includes(raidJackClaimId('rank_a', index)) && !RW.aRank[index].some((r, k) => have.includes(raidJackPlaceId(raidJackClaimId('rank_a', index), k + 1))) && React.createElement("div", {
       "data-raid-jack-rank-note": "delivered",
       className: "mt-1 rounded-lg bg-emerald-950/40 px-2 py-1 text-[9px] font-black text-emerald-200"
     }, "順位の報酬は、ギフトに届いています(何位かは、ギフトの名前で分かります)"), have.includes(raidJackNoneId(raidJackClaimId('rank_a', index))) && React.createElement("div", {
@@ -110889,7 +110999,7 @@ const RaidJackTierRewards = ({
       className: "mt-1 rounded-lg bg-slate-800/60 px-2 py-1 text-[9px] font-black text-slate-300"
     }, "この段階では、順位の報酬の対象(5位まで)になりませんでした"), React.createElement("div", {
       className: "mt-1 text-[9px] text-slate-400"
-    }, index === RAID_JACK_A_TIERS.length - 1 ? '大王の貢献順位は、期間の終わり(11/1 4:00)に確定してギフトで届きます。' : '倒したときに順位が確定して、ギフトで届きます。'));
+    }, index === ev.aTiers.length - 1 ? `${ev.lastTierWord}の貢献順位は、期間の終わり(${ev.endLabel})に確定してギフトで届きます。` : '倒したときに順位が確定して、ギフトで届きます。'));
   }
   return React.createElement("div", {
     "data-raid-jack-tier-rewards": "b"
@@ -110897,7 +111007,7 @@ const RaidJackTierRewards = ({
     dataKey: "clear",
     label: "初めて倒したとき",
     note: "1回だけ",
-    reward: RAID_JACK_REWARDS.bClear[index],
+    reward: RW.bClear[index],
     got: have.includes(raidJackClaimId('clear_b', index))
   }), React.createElement("div", {
     className: "mt-1 text-[9px] text-slate-400"
@@ -110906,7 +111016,8 @@ const RaidJackTierRewards = ({
 const RaidJackRewardList = ({
   onClose,
   claimed,
-  initialTab = 'a'
+  initialTab = 'a',
+  ev = RAID_EVENT_JACK
 }) => {
   const [tab, setTab] = useState(initialTab);
   const have = Array.isArray(claimed) ? claimed : [];
@@ -110915,7 +111026,7 @@ const RaidJackRewardList = ({
     className: "fixed inset-0 z-[32000] flex flex-col bg-slate-950 p-3",
     role: "dialog",
     "aria-modal": "true",
-    "aria-label": "ジャックの報酬一覧",
+    "aria-label": `${ev.bossWord}の報酬一覧`,
     style: {
       paddingTop: 'calc(0.75rem + env(safe-area-inset-top))',
       paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))'
@@ -110924,7 +111035,7 @@ const RaidJackRewardList = ({
     className: "mb-2 flex shrink-0 items-center justify-between"
   }, React.createElement("div", {
     className: "text-[14px] font-black text-orange-200"
-  }, "🎃 ジャックの報酬一覧"), React.createElement("button", {
+  }, ev.icon, " ", ev.bossWord, "の報酬一覧"), React.createElement("button", {
     type: "button",
     "data-raid-jack-reward-close": true,
     onClick: onClose,
@@ -110949,9 +111060,9 @@ const RaidJackRewardList = ({
   }, "参加賞(1回でも挑戦した全員・", tab === 'a' ? 'レイドバトル' : 'グランドスラム', "で1回)"), React.createElement(RaidJackRewardRow, {
     dataKey: "participation",
     label: "参加賞",
-    reward: RAID_JACK_REWARDS.participation,
+    reward: ev.rewards.participation,
     got: have.includes(raidJackClaimId(tab === 'a' ? 'part_a' : 'part_b'))
-  })), raidJackTiers(tab).map((t, i) => React.createElement("div", {
+  })), ev.tiers(tab).map((t, i) => React.createElement("div", {
     key: t.id,
     "data-raid-jack-reward-tier": t.id,
     className: "rounded-2xl border border-white/10 bg-black/30 p-3"
@@ -110960,13 +111071,14 @@ const RaidJackRewardList = ({
   }, i + 1, ". ", t.name), React.createElement(RaidJackTierRewards, {
     kind: tab,
     index: i,
-    claimed: have
+    claimed: have,
+    ev: ev
   }))), tab === 'b' && React.createElement("div", {
     "data-raid-jack-reward-final": true,
     className: "rounded-2xl border border-orange-300/30 bg-orange-950/20 p-3"
   }, React.createElement("div", {
     className: "mb-1 text-[12px] font-black text-orange-200"
-  }, "累計ダメージの最終順位(全難易度の合計)"), RAID_JACK_REWARDS.bFinal.map((r, k) => React.createElement(RaidJackRewardRow, {
+  }, "累計ダメージの最終順位(全難易度の合計)"), ev.rewards.bFinal.map((r, k) => React.createElement(RaidJackRewardRow, {
     key: k,
     dataKey: `final-${k + 1}`,
     label: `${k + 1}位`,
@@ -110974,7 +111086,7 @@ const RaidJackRewardList = ({
     got: have.includes(raidJackPlaceId(raidJackClaimId('final_b'), k + 1))
   })), React.createElement("div", {
     className: "mt-1 text-[9px] text-slate-400"
-  }, "期間の終わり(11/1 4:00)に確定して、ギフトで届きます。")), React.createElement("div", {
+  }, "期間の終わり(", ev.endLabel, ")に確定して、ギフトで届きます。")), React.createElement("div", {
     className: "rounded-2xl border border-white/10 bg-black/30 p-3 text-[10px] leading-relaxed text-slate-300"
   }, "🔮 魂格の結晶は、マスモンの魂格特性の画面で使うと、そのマスモンの魂格Pが1個につき+1されます。", React.createElement("br", null), "🌈 虹の超越の実は、超越強化で超越ポイント+1に変えられます。")));
 };
@@ -111025,10 +111137,11 @@ const RaidJackRankingList = ({
   initialTier = 0,
   renderPlace,
   renderIcon,
-  cardClass
+  cardClass,
+  ev = RAID_EVENT_JACK
 }) => {
   const [tab, setTab] = useState(initialTab);
-  const [tierIdx, setTierIdx] = useState(Math.min(Math.max(initialTier, 0), RAID_JACK_A_TIERS.length - 1));
+  const [tierIdx, setTierIdx] = useState(Math.min(Math.max(initialTier, 0), ev.aTiers.length - 1));
   const [allMode, setAllMode] = useState(false);
   const [maxHit, setMaxHit] = useState(false);
   const [rows, setRows] = useState(undefined);
@@ -111039,7 +111152,8 @@ const RaidJackRankingList = ({
   const [maxTier, setMaxTier] = useState(0);
   const [src, setSrc] = useState('all');
   const useSrc = tab === 'a' && src !== 'all';
-  const srcName = src === 'rhythm' ? 'モンヒロビート' : 'バトル';
+  const srcName = (ev.sources.find(([id]) => id === src) || [src, 'バトル'])[1];
+  const srcUnit = src === 'rhythm' ? '1曲' : '1戦';
   const useAll = !maxHit && tab === 'a' && allMode;
   useEffect(() => {
     let alive = true;
@@ -111086,14 +111200,14 @@ const RaidJackRankingList = ({
     };
   }, [tab, tierIdx, useAll, maxHit, maxTier, src, eventId]);
   const myTotal = useSrc || maxHit ? Number(myMax) || 0 : self ? useAll ? Object.values(self.a).reduce((sum, n) => sum + (Number(n) || 0), 0) : tab === 'a' ? self.a[tierIdx + 1] || 0 : self.bTotal : 0;
-  const maxTierName = maxTier >= 1 ? raidJackTiers(tab)[maxTier - 1].name : '全難易度';
-  const title = useSrc && maxHit ? `${srcName}の最大ダメージ(${src === 'rhythm' ? '1曲' : '1戦'}あたり・${maxTierName})` : useSrc ? `${srcName}で与えたダメージの合計(${useAll ? '全段階の合計' : `${RAID_JACK_A_TIERS[tierIdx].name.replace('ジャック', '')}`})` : maxHit ? `${tab === 'a' ? 'レイドバトル' : 'グランドスラム'}の最大ダメージ(1戦あたり・${maxTierName})` : useAll ? 'レイドバトルの累計ダメージ(全段階の合計)' : tab === 'a' ? `${RAID_JACK_A_TIERS[tierIdx].name}への貢献ランキング` : 'グランドスラムの累計ダメージ(5難易度の合計)';
+  const maxTierName = maxTier >= 1 ? ev.tiers(tab)[maxTier - 1].name : '全難易度';
+  const title = useSrc && maxHit ? `${srcName}の最大ダメージ(${srcUnit}あたり・${maxTierName})` : useSrc ? `${srcName}で与えたダメージの合計(${useAll ? '全段階の合計' : `${raidEventTierShort(ev, ev.aTiers[tierIdx])}`})` : maxHit ? `${tab === 'a' ? 'レイドバトル' : 'グランドスラム'}の最大ダメージ(1戦あたり・${maxTierName})` : useAll ? 'レイドバトルの累計ダメージ(全段階の合計)' : tab === 'a' ? `${ev.aTiers[tierIdx].name}への貢献ランキング` : 'グランドスラムの累計ダメージ(5難易度の合計)';
   return React.createElement("div", {
     "data-raid-jack-ranking-list": true,
     className: "fixed inset-0 z-[32000] flex flex-col bg-slate-950 p-3",
     role: "dialog",
     "aria-modal": "true",
-    "aria-label": "ジャックのランキング",
+    "aria-label": `${ev.bossWord}のランキング`,
     style: {
       paddingTop: 'calc(0.75rem + env(safe-area-inset-top))',
       paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))'
@@ -111102,7 +111216,7 @@ const RaidJackRankingList = ({
     className: "mb-2 flex shrink-0 items-center justify-between"
   }, React.createElement("div", {
     className: "text-[14px] font-black text-orange-200"
-  }, "🏆 ジャックのランキング"), React.createElement("button", {
+  }, "🏆 ", ev.bossWord, "のランキング"), React.createElement("button", {
     type: "button",
     "data-raid-jack-ranking-close": true,
     onClick: onClose,
@@ -111140,7 +111254,7 @@ const RaidJackRankingList = ({
   }, "1戦の最大ダメージ")), tab === 'a' && React.createElement("div", {
     "data-raid-jack-ranking-sources": true,
     className: "flex shrink-0 gap-1.5 border-l border-white/15 pl-1.5"
-  }, [['all', '合計'], ['battle', 'バトル'], ['rhythm', 'モンヒロビート']].map(([id, label]) => React.createElement("button", {
+  }, ev.sources.map(([id, label]) => React.createElement("button", {
     type: "button",
     key: id,
     "data-raid-jack-ranking-source": id,
@@ -111153,9 +111267,9 @@ const RaidJackRankingList = ({
     id: 'all',
     name: '全難易度',
     n: 0
-  }, ...raidJackTiers(tab).map((t, i) => ({
+  }, ...ev.tiers(tab).map((t, i) => ({
     id: t.id,
-    name: t.name.replace('ジャック', ''),
+    name: raidEventTierShort(ev, t),
     n: i + 1
   }))].map(t => React.createElement("button", {
     type: "button",
@@ -111166,7 +111280,7 @@ const RaidJackRankingList = ({
   }, t.name))), tab === 'a' && !maxHit && React.createElement("div", {
     "data-raid-jack-ranking-tiers": true,
     className: "mb-2 flex shrink-0 gap-1.5 overflow-x-auto mh-scroll whitespace-nowrap text-[10px] font-black [&>*]:shrink-0"
-  }, RAID_JACK_A_TIERS.map((t, i) => React.createElement("button", {
+  }, ev.aTiers.map((t, i) => React.createElement("button", {
     type: "button",
     key: t.id,
     "data-raid-jack-ranking-tier": t.id,
@@ -111175,7 +111289,7 @@ const RaidJackRankingList = ({
       setAllMode(false);
     },
     className: `min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${!useAll && tierIdx === i ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`
-  }, t.name.replace('ジャック', ''))), React.createElement("button", {
+  }, raidEventTierShort(ev, t))), React.createElement("button", {
     type: "button",
     "data-raid-jack-ranking-all": true,
     onClick: () => setAllMode(true),
@@ -111191,7 +111305,7 @@ const RaidJackRankingList = ({
     className: "shrink-0 text-[10px] text-slate-200"
   }, "あなた ", myTotal.toLocaleString(), ahead !== null ? `(${ahead + 1}位)` : '')), React.createElement("div", {
     className: "mb-2 text-[9px] text-slate-400"
-  }, useSrc && maxHit ? `${src === 'rhythm' ? '1曲' : '1回の戦い'}で出した、一番大きいダメージで競います。難易度ごとにも見られます。順位報酬はありません。` : useSrc ? `${srcName}だけで与えたダメージで競います。順位報酬はありません(報酬は全体の貢献ランキングで決まります)。` : maxHit ? '1回の戦いで出した、一番大きいダメージで競います。難易度ごとにも見られます。順位報酬はありません。' : useAll ? '全段階へ与えたダメージの合計です。この順位に報酬はありません(報酬は段階ごとの貢献で決まります)。' : tab === 'a' ? '1〜5位に報酬があります。男爵〜公爵は倒れた時点、大王は期間の終わりに順位が決まります(報酬一覧)。' : '1〜5位に報酬があります。期間の終わりに順位が決まります(報酬一覧)。'), rows === undefined && React.createElement("div", {
+  }, useSrc && maxHit ? `${src === 'rhythm' ? '1曲' : '1回の戦い'}で出した、一番大きいダメージで競います。難易度ごとにも見られます。順位報酬はありません。` : useSrc ? `${srcName}だけで与えたダメージで競います。順位報酬はありません(報酬は全体の貢献ランキングで決まります)。` : maxHit ? '1回の戦いで出した、一番大きいダメージで競います。難易度ごとにも見られます。順位報酬はありません。' : useAll ? '全段階へ与えたダメージの合計です。この順位に報酬はありません(報酬は段階ごとの貢献で決まります)。' : tab === 'a' ? `1〜5位に報酬があります。${ev.rankNote}(報酬一覧)。` : '1〜5位に報酬があります。期間の終わりに順位が決まります(報酬一覧)。'), rows === undefined && React.createElement("div", {
     className: "py-3 text-center text-[10px] text-slate-400"
   }, "読み込み中…"), rows === null && React.createElement("div", {
     className: "py-3 text-center text-[10px] text-slate-400"
@@ -111205,7 +111319,26 @@ const RaidJackRankingList = ({
     cardClass: cardClass
   })));
 };
+const RAID_WAY_BUTTONS = Object.freeze({
+  battle: {
+    label: 'バトルで',
+    data: 'data-raid-jack-challenge',
+    tone: 'border-orange-300/70 bg-orange-700'
+  },
+  rhythm: {
+    label: 'モンヒロビートで',
+    data: 'data-raid-jack-challenge-rhythm',
+    tone: 'border-fuchsia-300/70 bg-fuchsia-800'
+  },
+  card: {
+    label: 'バトルカードで',
+    data: 'data-raid-challenge-card',
+    tone: 'border-sky-300/70 bg-sky-800'
+  }
+});
 const RaidJackScreen = ({
+  ev = RAID_EVENT_JACK,
+  ways = null,
   initialTier = 0,
   onBack,
   onChallenge,
@@ -111223,7 +111356,7 @@ const RaidJackScreen = ({
 }) => {
   const [tab, setTab] = useState('a');
   const [sel, setSel] = useState(() => ({
-    a: Math.min(Math.max(Math.floor(Number(initialTier) || 0), 0), RAID_JACK_A_TIERS.length - 1),
+    a: Math.min(Math.max(Math.floor(Number(initialTier) || 0), 0), ev.aTiers.length - 1),
     b: 0
   }));
   const [state, setState] = useState(() => raidJackDefaultState());
@@ -111243,28 +111376,28 @@ const RaidJackScreen = ({
   const [showRanking, setShowRanking] = useState(false);
   const [aAll, setAAll] = useState(false);
   const nowMs = Date.now();
-  const windowState = raidJackWindowAt(nowMs);
+  const windowState = ev.windowAt(nowMs);
   const open = forced || windowState === 'open';
   useEffect(() => {
     let alive = true;
     const totalsPromise = sbFetchRaidJackTierTotals(eventId);
     (async () => {
-      let loaded = await raidJackLoadState();
+      let loaded = await ev.loadState();
       if (!alive) return;
       const granted = typeof onClaimRewards === 'function' ? await onClaimRewards() : 0;
       if (!alive) return;
-      loaded = await raidJackLoadState();
-      if (granted > 0) setMessage(`ジャックの報酬が${granted}件、ギフトに届きました`);
+      loaded = await ev.loadState();
+      if (granted > 0) setMessage(`${ev.bossWord}の報酬が${granted}件、ギフトに届きました`);
       setState(loaded);
       const meId = await ensureBreederId();
       if (alive) setMyId(meId || null);
       let flushed = 0;
-      if (!forced && eventId === RAID_JACK_EVENT.id && loaded.pending && loaded.pending.length > 0) {
-        flushed = await raidJackFlushStoredPending(meId, eventId);
+      if (!forced && eventId === ev.id && loaded.pending && loaded.pending.length > 0) {
+        flushed = await ev.flushPending(meId);
         if (!alive) return;
         if (flushed > 0) {
           setMessage(`送れていなかった与ダメージを${flushed}件、送り直しました`);
-          loaded = await raidJackLoadState();
+          loaded = await ev.loadState();
           if (!alive) return;
           setState(loaded);
         }
@@ -111277,7 +111410,7 @@ const RaidJackScreen = ({
       setSelf(mine);
       setRows(undefined);
       setAhead(null);
-      const bossDown = !!t && !!t.a && !!t.a[RAID_JACK_A_TIERS.length] && t.a[RAID_JACK_A_TIERS.length].total >= RAID_JACK_A_TIERS[RAID_JACK_A_TIERS.length - 1].hp;
+      const bossDown = ev.bossDown(t);
       const useAll = tab === 'a' && aAll && bossDown;
       const list = useAll ? await sbFetchRaidJackARanking(100, eventId) : tab === 'a' ? await sbFetchRaidJackContributions(sel.a + 1, 100, eventId) : await sbFetchRaidJackBRanking(100, eventId);
       if (!alive) return;
@@ -111299,8 +111432,8 @@ const RaidJackScreen = ({
     };
   }, [tab, tab === 'a' ? sel.a : 0, tick, eventId, aAll]);
   const side = tab === 'a' ? state.a : state.b;
-  const remaining = unlimited ? Infinity : raidJackRemaining(side, nowMs);
-  const tiers = raidJackTiers(tab);
+  const remaining = unlimited ? Infinity : ev.remaining(side, nowMs);
+  const tiers = ev.tiers(tab);
   const aTotalOf = i => totals && totals.a && totals.a[i + 1] ? totals.a[i + 1].total : 0;
   const aDefeated = i => totals ? aTotalOf(i) >= tiers[i].hp : false;
   const unlocked = unlimited ? () => true : tab === 'a' ? i => i === 0 || aDefeated(i - 1) : i => i < raidJackUnlockedCount('b', state.b.defeated);
@@ -111316,7 +111449,7 @@ const RaidJackScreen = ({
     try {
       const result = await onPurchase(tab);
       if (result && result.ok) {
-        setMessage(`追加の挑戦を1回ぶん買いました(ビートP ${RAID_JACK_EXTRA_COST_BEAT_P})`);
+        setMessage(`追加の挑戦を1回ぶん買いました(ビートP ${ev.extraCost})`);
         setTick(n => n + 1);
       } else setMessage(result && result.reason === 'short' ? 'ビートPが足りません' : '買えませんでした。もう一度試してください');
     } finally {
@@ -111330,12 +111463,12 @@ const RaidJackScreen = ({
     "data-raid-jack-screen": true
   }, React.createElement(ScreenHead, {
     title: React.createElement(RaidJackFitTitle, {
-      text: "カボチャの大王ジャック"
+      text: ev.title
     }),
-    icon: "🎃",
+    icon: ev.icon,
     accent: "text-orange-200",
     onBack: onBack,
-    note: forced ? '(デバッグ表示・別のイベントIDの記録)' : '全員でジャックを倒そう'
+    note: forced ? '(デバッグ表示・別のイベントIDの記録)' : ev.note
   }), guideVisible && React.createElement("div", {
     "data-raid-jack-guide": true,
     className: "mb-2 shrink-0"
@@ -111367,7 +111500,7 @@ const RaidJackScreen = ({
     className: "text-white"
   }, "無制限"), "(デバッグ・全段階を選べます)") : React.createElement(React.Fragment, null, "今日の残り ", React.createElement("b", {
     className: "text-white"
-  }, remaining), " 回(無料", RAID_JACK_FREE_PER_DAY, "回+買い足し)"))), React.createElement("button", {
+  }, remaining), " 回(無料", ev.freePerDay, "回+買い足し)"))), React.createElement("button", {
     type: "button",
     "data-raid-jack-buy": true,
     disabled: busy || !open || unlimited,
@@ -111375,7 +111508,7 @@ const RaidJackScreen = ({
     className: "min-h-[40px] shrink-0 rounded-xl border border-amber-400/60 bg-amber-950/40 px-3 text-[11px] font-black leading-tight text-amber-100 active:scale-95 disabled:opacity-40"
   }, "1回追加", React.createElement("br", null), React.createElement("small", {
     className: "text-[9px] opacity-80"
-  }, "ビートP ", RAID_JACK_EXTRA_COST_BEAT_P, "(所持 ", beatPoints, ")"))), React.createElement("div", {
+  }, "ビートP ", ev.extraCost, "(所持 ", beatPoints, ")"))), React.createElement("div", {
     className: "mb-2 grid shrink-0 grid-cols-2 gap-2"
   }, React.createElement("button", {
     type: "button",
@@ -111413,23 +111546,23 @@ const RaidJackScreen = ({
       })),
       className: `flex w-full items-center gap-3 rounded-2xl border-2 p-2 text-left active:scale-[0.99] ${on ? 'border-orange-300 bg-orange-950/40' : 'border-white/10 bg-slate-900/60'}`
     }, React.createElement("span", {
-      "data-jack-aura": isOpen && !isPumpkin ? i + 1 : undefined,
+      "data-jack-aura": ev.aura && isOpen && !isPumpkin ? i + 1 : undefined,
       "data-raid-pumpkin": isPumpkin ? 'true' : undefined,
       className: "relative block h-14 w-16 shrink-0"
-    }, isOpen && !isPumpkin && React.createElement(JackAuraLayer, {
+    }, ev.aura && isOpen && !isPumpkin && React.createElement(JackAuraLayer, {
       tier: i + 1,
       limit: 8
     }), isPumpkin ? React.createElement("img", {
-      src: PUMPKIN_ICON_IMG,
+      src: ev.afterBossImg(),
       alt: "",
       className: "relative mx-auto h-14 w-14 object-contain"
     }) : React.createElement("img", {
-      src: JACK_IMG,
+      src: ev.bossImg(),
       alt: "",
       className: "relative h-14 w-16 object-contain",
-      style: isOpen ? {
+      style: isOpen ? ev.aura ? {
         filter: raidJackAuraGlowFilter(i + 1, 0.4)
-      } : {
+      } : undefined : {
         filter: 'brightness(0)',
         opacity: 0.5
       }
@@ -111439,12 +111572,12 @@ const RaidJackScreen = ({
       className: "flex items-center gap-2"
     }, React.createElement("span", {
       className: "truncate text-[13px] font-black text-white"
-    }, i + 1, ". ", isPumpkin ? RAID_JACK_PUMPKIN.name : t.name), React.createElement("span", {
+    }, i + 1, ". ", isPumpkin ? ev.afterBoss.name : t.name), React.createElement("span", {
       className: `shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-black ${isPumpkin ? 'bg-amber-500 text-slate-950' : done ? 'bg-emerald-600 text-white' : isOpen ? 'bg-orange-600 text-white' : 'bg-slate-700 text-slate-300'}`
-    }, isPumpkin ? 'あそびに来た' : done ? '討伐済み' : isOpen ? '挑戦できる' : '未解放')), tab === 'a' ? isPumpkin ? React.createElement("div", {
+    }, isPumpkin ? ev.afterBossBadge : done ? '討伐済み' : isOpen ? '挑戦できる' : '未解放')), tab === 'a' ? isPumpkin ? React.createElement("div", {
       "data-raid-pumpkin-note": true,
       className: "text-[10px] leading-snug text-amber-100"
-    }, "共有ライフは無限です。毎回ぜんかいのライフから戦い、与えたダメージが累計に足されます", totals && totals.a && totals.a[i + 1] ? `(${totals.a[i + 1].players.toLocaleString()}人が参加)` : '') : isOpen ? React.createElement(React.Fragment, null, React.createElement(RaidJackHpBar, {
+    }, ev.afterBossNote, totals && totals.a && totals.a[i + 1] ? `(${totals.a[i + 1].players.toLocaleString()}人が参加)` : '') : isOpen ? React.createElement(React.Fragment, null, React.createElement(RaidJackHpBar, {
       left: left,
       max: t.hp,
       tone: done ? 'emerald' : 'orange'
@@ -111452,7 +111585,7 @@ const RaidJackScreen = ({
       className: "mt-0.5 text-[9px] text-slate-300"
     }, "共有HP ", left.toLocaleString(), " / ", t.hp.toLocaleString(), totals && totals.a && totals.a[i + 1] ? `(${totals.a[i + 1].players.toLocaleString()}人が参加)` : '')) : React.createElement("div", {
       className: "text-[10px] text-slate-400"
-    }, "前の段階のジャックを倒すと姿をあらわします") : React.createElement("div", {
+    }, ev.lockedNote) : React.createElement("div", {
       className: "text-[10px] text-slate-300"
     }, "ライフ ", t.hp.toLocaleString(), " / 技 ", t.actionCount, "本", isOpen ? '' : '(前の段階を倒すと開く)')));
   }), React.createElement("div", {
@@ -111470,7 +111603,8 @@ const RaidJackScreen = ({
   }, "報酬一覧")), React.createElement(RaidJackTierRewards, {
     kind: tab,
     index: current,
-    claimed: state.claimed
+    claimed: state.claimed,
+    ev: ev
   })), React.createElement("div", {
     className: "rounded-2xl border border-white/10 bg-black/30 p-3"
   }, React.createElement("div", {
@@ -111483,7 +111617,7 @@ const RaidJackScreen = ({
   }, "あなた ", myTotalHere.toLocaleString(), ahead !== null ? `(${ahead + 1}位)` : '')), bossDownNow && React.createElement("div", {
     "data-raid-jack-all-toggle": true,
     className: "mb-2 flex gap-1.5 text-[10px] font-black"
-  }, [[false, '大王への貢献'], [true, '累計ダメージ']].map(([v, label]) => React.createElement("button", {
+  }, [[false, `${ev.lastTierWord}への貢献`], [true, '累計ダメージ']].map(([v, label]) => React.createElement("button", {
     type: "button",
     key: label,
     "data-raid-jack-all-mode": v ? 'all' : 'tier',
@@ -111504,7 +111638,19 @@ const RaidJackScreen = ({
   }))), React.createElement("div", {
     "data-raid-jack-footer": true,
     className: `${SCREEN_FOOTER_CLASS} [@media(orientation:landscape)_and_(max-height:520px)]:sticky [@media(orientation:landscape)_and_(max-height:520px)]:bottom-0 [@media(orientation:landscape)_and_(max-height:520px)]:z-20 [@media(orientation:landscape)_and_(max-height:520px)]:-mx-4 [@media(orientation:landscape)_and_(max-height:520px)]:-mb-4 [@media(orientation:landscape)_and_(max-height:520px)]:px-4 [@media(orientation:landscape)_and_(max-height:520px)]:pb-3 [@media(orientation:landscape)_and_(max-height:520px)]:bg-slate-950 [@media(orientation:landscape)_and_(max-height:520px)]:shadow-[0_60px_0_0_#020617]`
-  }, tab === 'a' && open && isOpenTier && !closedTier && remaining > 0 && (RELEASE_FLAGS.raidJackRhythm === true || forced) ? React.createElement("div", {
+  }, tab === 'a' && open && isOpenTier && !closedTier && remaining > 0 && Array.isArray(ways) && ways.length > 1 ? React.createElement("div", {
+    "data-raid-ways": ways.join(' '),
+    className: `grid gap-2 ${ways.length >= 3 ? 'grid-cols-3' : 'grid-cols-2'}`
+  }, ways.map(way => {
+    const w = RAID_WAY_BUTTONS[way];
+    return w ? React.createElement("button", {
+      type: "button",
+      key: way,
+      [w.data]: true,
+      onClick: () => onChallenge(tab, current, way),
+      className: `min-h-[48px] rounded-2xl border-2 px-1 text-[12px] font-black leading-tight text-white active:scale-95 ${w.tone}`
+    }, w.label, React.createElement("br", null), "挑戦する") : null;
+  })) : tab === 'a' && open && isOpenTier && !closedTier && remaining > 0 && !Array.isArray(ways) && (RELEASE_FLAGS.raidJackRhythm === true || forced) ? React.createElement("div", {
     className: "grid grid-cols-2 gap-2"
   }, React.createElement("button", {
     type: "button",
@@ -111523,6 +111669,7 @@ const RaidJackScreen = ({
     onClick: () => onChallenge(tab, current, 'battle'),
     className: "w-full min-h-[48px] rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400"
   }, challengeLabel)), showRanking && React.createElement(RaidJackRankingList, {
+    ev: ev,
     eventId: eventId,
     initialTab: tab,
     initialTier: current,
@@ -111531,6 +111678,7 @@ const RaidJackScreen = ({
     cardClass: cardClass,
     onClose: () => setShowRanking(false)
   }), showRewards && React.createElement(RaidJackRewardList, {
+    ev: ev,
     claimed: state.claimed,
     initialTab: tab,
     onClose: () => setShowRewards(false)
@@ -111539,6 +111687,7 @@ const RaidJackScreen = ({
 const RAID_JACK_RANGE_TONE = ['border-red-400/70 bg-red-600 text-white', 'border-amber-300/70 bg-amber-500 text-black', 'border-emerald-300/70 bg-emerald-600 text-white', 'border-sky-300/70 bg-sky-600 text-white'];
 const raidJackAptPct = (mon, range) => aptGradeToPct(mon && mon.distAptitude && mon.distAptitude[range] || 'C');
 const RaidJackPrepScreen = ({
+  ev = RAID_EVENT_JACK,
   kind,
   tierIndex,
   candidates,
@@ -111551,7 +111700,7 @@ const RaidJackPrepScreen = ({
 }) => {
   const isB = kind === 'b';
   const maxTeach = RAID_JACK_TEACHING_MAX;
-  const tier = raidJackTierAt(kind, tierIndex);
+  const tier = ev.tierAt(kind, tierIndex);
   const list = Array.isArray(candidates) ? candidates : [];
   const keyOf = mon => String(mon.masuId || mon.id);
   const monOf = k => k ? list.find(m => keyOf(m) === k) || null : null;
@@ -111771,7 +111920,7 @@ const RaidJackPrepScreen = ({
     "data-raid-prep-step": step
   }, React.createElement(ScreenHead, {
     title: `${tier.name}に挑む`,
-    icon: "🎃",
+    icon: ev.icon,
     accent: "text-orange-200",
     onBack: step === 'teach' ? () => setStep('hero') : step === 'hero' ? () => setStep('party') : onBack,
     note: step === 'teach' ? '③ アシカを選ぶ' : step === 'hero' ? '② 勇者モンを選ぶ' : `① ${isB ? 'マスモン' : 'ベースモン'}を距離に置く・20ターン勝負`
@@ -237506,6 +237655,16 @@ function MonsterHeroGame() {
   const [raidJackDebugForce, setRaidJackDebugForce] = useState(false);
   const [raidJackDebugRealRules, setRaidJackDebugRealRules] = useState(false);
   const raidJackEventId = raidJackDebugForce ? RAID_JACK_DEBUG_EVENT_ID : RAID_JACK_EVENT.id;
+  const [raidEv, setRaidEv] = useState('jack');
+  const raidEvRef = useRef('jack');
+  const raidDef = raidEventDef(raidEv);
+  const raidCurEventId = raidEv === 'xmas' ? raidJackDebugForce ? RAID_XMAS_EVENT.debugId : RAID_XMAS_EVENT.id : raidJackEventId;
+  useEffect(() => {
+    raidXmasSetDebug({
+      force: raidJackDebugForce,
+      realRules: raidJackDebugRealRules
+    });
+  }, [raidJackDebugForce, raidJackDebugRealRules]);
   const rpgDefaultAlly = index => {
     const list = rpgMonsterList();
     const mon = list[index % Math.max(1, list.length)] || list[0];
@@ -240575,7 +240734,7 @@ function MonsterHeroGame() {
     if (battleBgmOverlay) return typeof battleBgmOverlay === 'string' && typeof BGM_TRACK_BY_ID !== 'undefined' && BGM_TRACK_BY_ID[battleBgmOverlay] ? battleBgmOverlay : bgmArrangement.battle || DEFAULT_BGM_ARRANGEMENT.battle;
     if (assistantLifeOpenNow && (state === 'HOME' || state === 'PROFILE' || state === 'ITEM_INVENTORY') && typeof ASSISTANT_LIFE_BGM_TRACK === 'string') return ASSISTANT_LIFE_BGM_TRACK;
     if (state === 'BATTLE' && raidJackRunRef.current) return RAID_JACK_BATTLE_BGM_TRACK;
-    if (RAID_JACK_BGM_STATES.includes(state)) return RAID_JACK_BGM_TRACK;
+    if (RAID_JACK_BGM_STATES.includes(state) && raidEvRef.current !== 'xmas') return RAID_JACK_BGM_TRACK;
     const halloweenNightOpen = Date.now() >= Date.parse(HALLOWEEN_NIGHT_START_AT) && Date.now() < Date.parse(HALLOWEEN_NIGHT_END_AT);
     const homeBgm = (RELEASE_FLAGS.raidJack === true && raidJackWindowAt(Date.now()) === 'open' || raidJackDebugForce || halloweenNightOpen) && bgmArrangement.home === DEFAULT_BGM_ARRANGEMENT.home ? RAID_JACK_BGM_TRACK : bgmArrangement.home;
     if (isGameOver) return bgmArrangement.gameOver;
@@ -254213,7 +254372,8 @@ function MonsterHeroGame() {
     const raidRun = isRaidJackMode(runMode) ? raidJackRunRef.current : null;
     const tacticsEnemyBoost = isTacticsMode(runMode) && !raidRun ? tacticsEnemyPowerMultiplier(tacticsPowerRef.current.start, tacticsPowerRef.current.now) : 1;
     const newEnemy = raidRun ? raidJackMakeEnemy(raidRun.kind, raidRun.tierIndex, runMode, {
-      pumpkin: raidRun.pumpkin === true
+      pumpkin: raidRun.pumpkin === true,
+      ev: raidRun.ev
     }) : createBattleEnemy(w, difficulty, forcedEnemyKey, battleSetting?.power ?? null, enemyTurnMultiplier * stagedEnemyMultiplier * tacticsEnemyBoost, {
       mode: runMode
     });
@@ -254856,9 +255016,10 @@ function MonsterHeroGame() {
       uid: Math.random()
     });
     raidJackRunRef.current = {
+      ev: req.ev === 'xmas' ? 'xmas' : 'jack',
       kind: isB ? 'b' : 'a',
       tierIndex: Math.min(Math.max(Math.floor(Number(req.tierIndex) || 0), 0), 4),
-      hitId: raidJackMakeHitId(),
+      hitId: req.ev === 'xmas' && raidJackSafeId(req.hitId) ? req.hitId : raidJackMakeHitId(),
       eventId: raidJackSafeEventId(req.eventId),
       turns: 1,
       finished: false,
@@ -255011,6 +255172,57 @@ function MonsterHeroGame() {
     setResultProcessing(false);
     const damage = Math.max(0, Math.min(100000000, Math.floor(raidJackDamageRef.current)));
     const defeated = reason === 'defeated';
+    if (run.ev === 'xmas') {
+      const isDebugX = run.eventId !== RAID_XMAS_EVENT.id;
+      let res = null;
+      try {
+        res = await raidXmasAddDamage({
+          source: 'battle',
+          kind: run.kind,
+          tierIndex: run.tierIndex,
+          damage,
+          hitId: run.hitId,
+          eventId: run.eventId,
+          defeated,
+          log: {
+            party: slots.map(sl => sl && {
+              role: sl === mainHero ? 'hero' : 'ally',
+              monsterId: sl.id
+            }),
+            turns: run.turns
+          }
+        });
+      } catch (error) {
+        res = null;
+      }
+      let quickAwardX = null;
+      if (!isDebugX) {
+        try {
+          quickAwardX = await awardRaidJackQuickLoops(reason === 'giveup' ? Math.max(0, (run.turns || 1) - 1) : run.turns || 0);
+        } catch (error) {
+          quickAwardX = null;
+        }
+      }
+      const xt = raidXmasTierAt(run.kind, run.tierIndex);
+      setRaidJackResult({
+        ev: 'xmas',
+        quickAward: quickAwardX,
+        kind: run.kind,
+        tierIndex: run.tierIndex,
+        tierName: run.pumpkin ? RAID_XMAS_AFTER_BOSS.name : xt.name,
+        reason,
+        damage,
+        defeated: !!(res && res.defeated),
+        turns: run.turns || 1,
+        levelUps: run.levelUps || 0,
+        growths: run.growths || 0,
+        outcome: res ? res.outcome === 'sent' ? 'sent' : res.outcome === 'invalid' ? 'invalid' : 'error' : 'error',
+        opened: !!(res && res.opened),
+        eventId: run.eventId,
+        lifeLeft: Math.max(0, (Number.isFinite(run.startLife) && run.startLife > 0 ? run.startLife : run.pumpkin ? RAID_XMAS_AFTER_BOSS.hp : xt.hp) - damage)
+      });
+      return;
+    }
     const tier = raidJackTierAt(run.kind, run.tierIndex);
     const hit = {
       hitId: run.hitId,
@@ -255314,6 +255526,40 @@ function MonsterHeroGame() {
       if (r) setRaidJackResult(r);
     })();
   };
+  const openRaidXmasResult = res => {
+    const r = res && typeof res === 'object' ? res : {};
+    const d = r.detail && typeof r.detail === 'object' ? r.detail : {};
+    const way = r.way === 'card' ? 'card' : r.way === 'rhythm' ? 'rhythm' : 'battle';
+    const kind = r.kind === 'b' ? 'b' : 'a';
+    const tierIndex = Math.min(Math.max(Math.floor(Number(r.tierIndex) || 0), 0), raidXmasTiers(kind).length - 1);
+    const num = v => Number.isFinite(Number(v)) && v !== null && v !== undefined ? Number(v) : null;
+    raidEvRef.current = 'xmas';
+    setRaidEv('xmas');
+    raidJackReturnTierRef.current = tierIndex;
+    setRaidJackResult({
+      ev: 'xmas',
+      way,
+      kind,
+      tierIndex,
+      tierName: typeof r.tierName === 'string' && r.tierName ? r.tierName : raidXmasTierAt(kind, tierIndex).name,
+      reason: r.defeated ? 'defeated' : r.damage > 0 ? way : 'giveup',
+      damage: Math.max(0, Math.floor(Number(r.damage) || 0)),
+      defeated: !!r.defeated,
+      outcome: r.outcome === 'sent' ? 'sent' : r.outcome === 'invalid' ? 'invalid' : 'error',
+      opened: !!r.opened,
+      eventId: typeof r.eventId === 'string' && r.eventId ? r.eventId : raidXmasEventId(),
+      lifeLeft: num(r.lifeLeft),
+      lifeBefore: num(r.lifeBefore),
+      lifeMax: num(r.lifeMax),
+      pumpkin: !!r.afterBoss,
+      songName: d.songName || '',
+      difficultyName: d.difficultyName || '',
+      score: Math.max(0, Math.floor(Number(d.score) || 0)),
+      assist: d.assist === true,
+      detail: d,
+      quickAward: null
+    });
+  };
   const exitRaidJackRhythmResult = (toDebug = false) => {
     raidJackLastClaimRef.current = 0;
     setRaidJackResult(null);
@@ -255450,6 +255696,8 @@ function MonsterHeroGame() {
     void claimRaidJackRewards();
   }, [gameState]);
   const openRaidJack = async () => {
+    raidEvRef.current = 'jack';
+    setRaidEv('jack');
     setRhythmEventPoints(await loadRhythmEventPoints());
     try {
       setRaidJackGuideSeen((await storeGet(RAID_JACK_GUIDE_KEY, false, false)) === true);
@@ -255458,6 +255706,15 @@ function MonsterHeroGame() {
     }
     setGameState('RAID_JACK');
   };
+  const openRaidXmas = async (force = false) => {
+    if (!RELEASE_FLAGS.raidXmas && !raidJackDebugForce && force !== true) return;
+    raidEvRef.current = 'xmas';
+    setRaidEv('xmas');
+    raidJackReturnTierRef.current = 0;
+    setRhythmEventPoints(await loadRhythmEventPoints());
+    setGameState('RAID_JACK');
+  };
+  const claimRaidXmasRewards = async () => 0;
   const dismissRaidJackGuide = () => {
     setRaidJackGuideSeen(true);
     if (!raidJackDebugForce) storeSet(RAID_JACK_GUIDE_KEY, true, false);
@@ -255470,13 +255727,14 @@ function MonsterHeroGame() {
     marketPurchaseProcessingRef.current = true;
     try {
       const key = kind === 'b' ? 'b' : 'a';
+      const def = raidEventDef(raidEvRef.current);
       const before = await loadRhythmEventPoints();
       const free = raidJackDebugForce;
-      if (!free && before < RAID_JACK_EXTRA_COST_BEAT_P) return {
+      if (!free && before < def.extraCost) return {
         ok: false,
         reason: 'short'
       };
-      const state = await raidJackLoadState();
+      const state = await def.loadState();
       const today = raidJackDayKey(Date.now());
       const side = state[key];
       if (side.day !== today) {
@@ -255485,9 +255743,9 @@ function MonsterHeroGame() {
         side.extra = 0;
       }
       side.extra += 1;
-      const nextPoints = free ? before : before - RAID_JACK_EXTRA_COST_BEAT_P;
+      const nextPoints = free ? before : before - def.extraCost;
       if (!free) await storeSet(RHYTHM_EVENT_POINTS_KEY, nextPoints, false);
-      const saved = await raidJackSaveState(state);
+      const saved = await def.saveState(state);
       if (!saved) {
         if (!free) await storeSet(RHYTHM_EVENT_POINTS_KEY, before, false);
         return {
@@ -255520,6 +255778,42 @@ function MonsterHeroGame() {
     if (!prep || !Array.isArray(party) || party.length === 0) return;
     const key = prep.kind === 'b' ? 'b' : 'a';
     const nowMs = Date.now();
+    if (raidEvRef.current === 'xmas') {
+      const t = await raidXmasUseTry(key, nowMs);
+      if (!t.ok) {
+        setGameState('RAID_JACK');
+        return;
+      }
+      let startLife = null;
+      let after = false;
+      if (key === 'a') {
+        const totals = await raidXmasFetchTotals(t.eventId);
+        const tierDef = raidXmasTierAt('a', prep.tierIndex);
+        const done = totals && totals.a && totals.a[prep.tierIndex + 1] ? Number(totals.a[prep.tierIndex + 1].total) || 0 : 0;
+        if (totals && tierDef.hp - done > 0) startLife = tierDef.hp - done;
+        after = prep.tierIndex === RAID_XMAS_A_TIERS.length - 1 && raidXmasBossDown(totals);
+      }
+      const xmode = key === 'b' ? BATTLE_MODE_RAID_JACK_B : BATTLE_MODE_RAID_JACK_A;
+      setRunMode(xmode);
+      setDifficulty('Normal');
+      setExtremeRun(false);
+      setRaidJackStartRequest({
+        mode: xmode,
+        kind: key,
+        tierIndex: prep.tierIndex,
+        party,
+        teachingIds,
+        slots,
+        heroSlot,
+        partnerSlot,
+        eventId: t.eventId,
+        hitId: t.hitId,
+        ev: 'xmas',
+        startLife,
+        pumpkin: after
+      });
+      return;
+    }
     if (!raidJackDebugForce || raidJackDebugRealRules) {
       const state = await raidJackLoadState();
       const side = state[key];
@@ -264745,7 +265039,41 @@ function MonsterHeroGame() {
       onChange: trial => {
         if (/^rhythm_floor3d/.test(trial.id)) setRhythmFloor3dPref(rhythmFloor3dPreference());
       }
-    })))), gameState === 'RAID_JACK' && React.createElement(RaidJackScreen, {
+    })))), gameState === 'RAID_JACK' && raidEv === 'xmas' && React.createElement(RaidJackScreen, {
+      key: "raid-xmas",
+      ev: RAID_EVENT_XMAS,
+      ways: ['battle', ...(typeof startRaidXmasRhythm === 'function' ? ['rhythm'] : []), ...(typeof startRaidXmasCard === 'function' ? ['card'] : [])],
+      initialTier: raidJackReturnTierRef.current,
+      onBack: () => {
+        raidJackReturnTierRef.current = 0;
+        setGameState(raidJackDebugForce && !RELEASE_FLAGS.raidXmas ? 'RAID_JACK_DEBUG' : 'HOME');
+      },
+      onChallenge: (kind, tierIndex, way) => {
+        raidJackReturnTierRef.current = tierIndex;
+        if (kind === 'a' && way === 'rhythm') {
+          if (typeof startRaidXmasRhythm === 'function') void startRaidXmasRhythm(tierIndex);
+          return;
+        }
+        if (kind === 'a' && way === 'card') {
+          if (typeof startRaidXmasCard === 'function') void startRaidXmasCard(tierIndex);
+          return;
+        }
+        setRaidJackPrep({
+          kind,
+          tierIndex
+        });
+        setGameState('RAID_JACK_PREP');
+      },
+      onPurchase: purchaseRaidJackExtra,
+      onClaimRewards: claimRaidXmasRewards,
+      beatPoints: rhythmEventPoints,
+      eventId: raidCurEventId,
+      forced: raidJackDebugForce,
+      unlimited: raidJackDebugForce && !raidJackDebugRealRules,
+      renderPlace: rankingPlace,
+      renderIcon: rankingBreederIcon,
+      cardClass: rankingCardClass
+    }), gameState === 'RAID_JACK' && raidEv !== 'xmas' && React.createElement(RaidJackScreen, {
       initialTier: raidJackReturnTierRef.current,
       onBack: () => {
         raidJackReturnTierRef.current = 0;
@@ -264774,6 +265102,7 @@ function MonsterHeroGame() {
       renderIcon: rankingBreederIcon,
       cardClass: rankingCardClass
     }), gameState === 'RAID_JACK_PREP' && raidJackPrep && React.createElement(React.Fragment, null, React.createElement(RaidJackPrepScreen, {
+      ev: raidDef,
       kind: raidJackPrep.kind,
       tierIndex: raidJackPrep.tierIndex,
       candidates: raidJackPrep.kind === 'b' ? getActiveMonsterList() : getUnlockedBaseMonsterList(),
@@ -264906,6 +265235,36 @@ function MonsterHeroGame() {
       onOpenRaid: async () => {
         setRaidJackDebugForce(true);
         await openRaidJack();
+      },
+      onOpenRaidXmas: async () => {
+        setRaidJackDebugForce(true);
+        raidXmasSetDebug({
+          force: true,
+          realRules: raidJackDebugRealRules
+        });
+        await openRaidXmas(true);
+      },
+      onPreviewRaidXmasResult: () => {
+        const t = RAID_XMAS_A_TIERS[1];
+        openRaidXmasResult({
+          way: 'card',
+          kind: 'a',
+          tierIndex: 1,
+          tierName: t.name,
+          damage: 234567,
+          defeated: false,
+          outcome: 'sent',
+          opened: false,
+          eventId: RAID_XMAS_EVENT.debugId,
+          lifeBefore: Math.floor(t.hp * 0.7),
+          lifeLeft: Math.floor(t.hp * 0.7) - 234567,
+          lifeMax: t.hp,
+          detail: {
+            won: true,
+            turns: 9,
+            ko: 3
+          }
+        });
       },
       onGoHome: returnToHome,
       onPreviewRhythmResult: kind => {
@@ -272652,13 +273011,19 @@ function MonsterHeroGame() {
       className: "w-full bg-slate-800 text-slate-300 py-3 rounded-2xl font-black uppercase text-sm active:scale-95"
     }, "戦いを続ける"))), document.body), raidJackResult && (() => {
       const r = raidJackResult;
+      const RD = raidEventDef(r.ev);
+      const lifeOk = Number.isFinite(r.lifeLeft);
       const reasonLabel = (r.way === 'rhythm' ? {
-        defeated: 'ジャックを倒した！',
+        defeated: `${RD.bossWord}を倒した！`,
         rhythm: 'モンヒロビートで挑戦した',
         giveup: '途中でやめた'
+      } : r.way === 'card' ? {
+        defeated: `${RD.bossWord}を倒した！`,
+        card: 'バトルカードで挑戦した',
+        giveup: '途中でやめた'
       } : {
-        defeated: 'ジャックを倒した！',
-        turns: '20ターンを使い切った',
+        defeated: `${RD.bossWord}を倒した！`,
+        turns: `${RD.turns}ターンを使い切った`,
         wipe: '全滅した',
         giveup: 'リタイアした'
       })[r.reason] || '';
@@ -272722,9 +273087,9 @@ function MonsterHeroGame() {
         className: "text-right"
       }, "ダメージにならない")), r.pumpkin ? React.createElement(React.Fragment, null, React.createElement("span", null, "体力"), React.createElement("b", {
         className: "text-right"
-      }, "∞")) : React.createElement(React.Fragment, null, React.createElement("span", null, "ジャックの残りライフ(みんなの分を引いた計算)"), React.createElement("b", {
+      }, "∞")) : lifeOk && React.createElement(React.Fragment, null, React.createElement("span", null, RD.bossWord, "の残りライフ(みんなの分を引いた計算)"), React.createElement("b", {
         className: "text-right"
-      }, r.lifeLeft.toLocaleString()))), !r.pumpkin && Number.isFinite(r.lifeBefore) && r.lifeMax > 0 && React.createElement("div", {
+      }, r.lifeLeft.toLocaleString()))), !r.pumpkin && lifeOk && Number.isFinite(r.lifeBefore) && r.lifeMax > 0 && React.createElement("div", {
         "data-raid-jack-life-bar": true,
         className: "mt-2"
       }, React.createElement("div", {
@@ -272737,13 +273102,24 @@ function MonsterHeroGame() {
         }
       })), React.createElement("div", {
         className: "mt-0.5 text-right text-[9px] font-black text-red-200"
-      }, r.lifeBefore.toLocaleString(), " → ", r.lifeLeft.toLocaleString()))) : React.createElement("div", {
+      }, r.lifeBefore.toLocaleString(), " → ", r.lifeLeft.toLocaleString()))) : r.way === 'card' ? React.createElement("div", {
+        "data-raid-card-rows": true,
+        className: "mt-2 grid grid-cols-2 gap-1 text-[10px] text-slate-200"
+      }, React.createElement("span", null, "対戦の結果"), React.createElement("b", {
+        className: "text-right"
+      }, r.detail && r.detail.won === true ? '勝ち' : r.detail && r.detail.won === false ? '負け' : '-'), r.detail && Number.isFinite(r.detail.turns) && React.createElement(React.Fragment, null, React.createElement("span", null, "ターン"), React.createElement("b", {
+        className: "text-right"
+      }, r.detail.turns)), r.pumpkin ? React.createElement(React.Fragment, null, React.createElement("span", null, "体力"), React.createElement("b", {
+        className: "text-right"
+      }, "∞")) : lifeOk && React.createElement(React.Fragment, null, React.createElement("span", null, RD.bossWord, "の残りライフ(みんなの分を引いた計算)"), React.createElement("b", {
+        className: "text-right"
+      }, r.lifeLeft.toLocaleString()))) : React.createElement("div", {
         className: "mt-2 grid grid-cols-2 gap-1 text-[10px] text-slate-200"
       }, React.createElement("span", null, "使ったターン"), React.createElement("b", {
         className: "text-right"
-      }, r.turns, " / ", RAID_JACK_TURNS), r.kind === 'a' && React.createElement(React.Fragment, null, React.createElement("span", null, "ジャックの残りライフ(みんなの分を引いた計算)"), React.createElement("b", {
+      }, r.turns, " / ", RD.turns), r.kind === 'a' && React.createElement(React.Fragment, null, React.createElement("span", null, RD.bossWord, "の残りライフ(みんなの分を引いた計算)"), React.createElement("b", {
         className: "text-right"
-      }, r.lifeLeft.toLocaleString()), React.createElement("span", null, "固有技とアシカの成長"), React.createElement("b", {
+      }, lifeOk ? r.lifeLeft.toLocaleString() : '-'), React.createElement("span", null, "固有技とアシカの成長"), React.createElement("b", {
         "data-raid-jack-levelups": true,
         className: "text-right"
       }, r.levelUps, "回"), React.createElement("span", {
@@ -272773,13 +273149,13 @@ function MonsterHeroGame() {
         style: {
           '--d': '1500ms'
         }
-      }, sendLabel, r.eventId !== RAID_JACK_EVENT.id ? '(デバッグ用の記録)' : ''), React.createElement("div", {
+      }, sendLabel, r.eventId !== RD.id ? '(デバッグ用の記録)' : ''), React.createElement("div", {
         className: "mh-rjresult-in w-full max-w-xs space-y-3",
         style: {
           '--d': '1600ms'
         }
       }, React.createElement("button", {
-        onClick: () => r.way === 'rhythm' ? exitRaidJackRhythmResult(r.eventId !== RAID_JACK_EVENT.id) : exitRaidJack(r.eventId !== RAID_JACK_EVENT.id),
+        onClick: () => r.way === 'rhythm' || r.way === 'card' ? exitRaidJackRhythmResult(r.eventId !== RD.id) : exitRaidJack(r.eventId !== RD.id),
         className: "w-full bg-orange-700 text-white py-3.5 rounded-2xl font-black"
       }, "戻る")));
     })(), debugBattle && debugOutcome && React.createElement("div", {
