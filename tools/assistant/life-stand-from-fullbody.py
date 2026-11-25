@@ -14,7 +14,7 @@
     8枚とも同じ大きさ・同じ顔の位置になる(広がった分は透明の余白で吸い、場面は見えている体の範囲で置くので余白で絵は動かない)
   ・色を減らさない・縮めない・引き伸ばさない(2026-11-15 r1115-143)。顔アイコンも全身画の画素のまま切る
   ・顔の表(ASSISTANT_LIFE_STAND_FACE_OUTFIT)の1行を出す(--write で書きこむ)。表情ごとに見えている体の範囲が違って場面で顔がずれるときは「顔のずれ」を出す
-使い方: python3 tools/assistant/life-stand-from-fullbody.py [--only キー] [--write] [--marks]   (--marks … 確かめ絵を docs/progress/assistant-art/stand-marks/ へ)
+使い方: python3 tools/assistant/life-stand-from-fullbody.py [--only キー] [--write] [--marks] [--face-only]   (--marks … 確かめ絵を docs/progress/assistant-art/stand-marks/ へ)
 足すときは下の HEADS に1つ足し、life-stand-marks.json に点を足す(初めの1回だけ手で測る。--marks の絵で確かめる)。
 """
 import os, sys, json, re, io, subprocess, hashlib
@@ -333,7 +333,8 @@ def run(key, cfg, marks, opts):
             # 場面の大きさに合う細かさへ縮める(引き伸ばさない・r1119-153 社長「重くしすぎない」)
             c = Image.fromarray(shrink(np.asarray(c), cfg['stand_max'] / float(max(c.size))))
         outs.append(c)
-        tot += save_png(c, os.path.join(ROOT, 'monster-hero/images/assistant', cfg['stand'], '%s_%s.png' % (cfg['prefix'], e)))
+        if not opts.get('face_only'):
+            tot += save_png(c, os.path.join(ROOT, 'monster-hero/images/assistant', cfg['stand'], '%s_%s.png' % (cfg['prefix'], e)))
     # 顔の表(見えている体の上を0・下を1)。normal の絵で測る
     vb = [bbox(np.asarray(c)) for c in outs]
     by0, by1 = vb[0][1], vb[0][3]
@@ -365,7 +366,8 @@ def run(key, cfg, marks, opts):
     if worst[0] > 0.1:
         print('   注意: %s は場面で顔が 顔の長さの%d%% ずれる(見えている体の範囲が normal と違う)' % (worst[1], round(worst[0] * 100)))
     print('   顔の表(%s): %s: %s' % (cfg['stand'], key.split(':')[0], row))
-    write_made(key, cfg)
+    if not opts.get('face_only'):
+        write_made(key, cfg)
     if opts['write']:
         ok = write_face_row(cfg['stand'], key.split(':')[0], row)
         print('   → 56-assistant-life-house.jsx に%s' % ('書いた' if ok else '書けなかった(手で足す)'))
@@ -395,11 +397,23 @@ def run(key, cfg, marks, opts):
             cy = mk['eye'] + 0.35 * f  # 目と鼻のあいだ
             fx0, fy0 = int(round(cx - side / 2.0)), int(round(cy - side * (0.5 + fc['down'])))
         ft = 0
+
+        def ebox(e):
+            # 表情ごとの上書き(2026-11-25 r1125-040 社長「根本的にずれとサイズ感が悪い」: 表情ごとに全身画の大きさ・ポーズが違う)。
+            #   face.expr.<表情> = {zoom: 一辺を何倍に(大きいほど引く), dx, dy: 一辺の何割ずらす(+は右・下)}。真ん中を基準に変える
+            o = (fc.get('expr') or {}).get(e) or {}
+            sd2 = int(round(side * o.get('zoom', 1.0)))
+            mx = fx0 + side / 2.0 + side * o.get('dx', 0)
+            my = fy0 + side / 2.0 + side * o.get('dy', 0)
+            x0, y0 = int(round(mx - sd2 / 2.0)), int(round(my - sd2 / 2.0))
+            return (x0, y0, x0 + sd2, y0 + sd2), sd2
+
         for e, a, d in zip(EXPR, ims, ds):
-            fim = place(a, (fx0, fy0, fx0 + side, fy0 + side), d)
-            if fc.get('px') and side > fc['px']:
+            box, sd2 = ebox(e)
+            fim = place(a, box, d)
+            if fc.get('px') and sd2 > fc['px']:
                 # 吹き出しの顔は 48〜72px で出る。重くしないよう px へ縮める(引き伸ばしはしない・r1119-153 社長「場面の大きさに合う解像度で」)
-                fim = Image.fromarray(shrink(np.asarray(fim), fc['px'] / float(side)))
+                fim = Image.fromarray(shrink(np.asarray(fim), fc['px'] / float(sd2)))
             # 服の顔は images/assistant/<服>/face/(assistantCostumeImage と同じ置き場)
             fdir = '%s/face' % key.split(':')[1] if ':' in key else 'face'
             ft += save_png(fim, os.path.join(ROOT, 'monster-hero/images/assistant', fdir, '%s_%s.PNG' % (cfg['prefix'], e)))
@@ -416,9 +430,10 @@ def run(key, cfg, marks, opts):
                 if k > 1.0001:
                     sa = shrink(sa, 1.0 / k)
                 sd = align(ims[0], sa, mk, cx)[0]
-                fim = place(sa, (fx0, fy0, fx0 + side, fy0 + side), sd)
-                if fc.get('px') and side > fc['px']:
-                    fim = Image.fromarray(shrink(np.asarray(fim), fc['px'] / float(side)))
+                box, sd2 = ebox('sleep')
+                fim = place(sa, box, sd)
+                if fc.get('px') and sd2 > fc['px']:
+                    fim = Image.fromarray(shrink(np.asarray(fim), fc['px'] / float(sd2)))
                 fdir = '%s/face' % key.split(':')[1] if ':' in key else 'face'
                 save_png(fim, os.path.join(ROOT, 'monster-hero/images/assistant', fdir, '%s_sleep.PNG' % cfg['prefix']))
                 print('   寝顔の顔アイコン: %s/%s_sleep.PNG(重ね位置 %+d%+d)' % (fdir, cfg['prefix'], sd[0], sd[1]))
@@ -426,7 +441,8 @@ def run(key, cfg, marks, opts):
 
 if __name__ == '__main__':
     only = sys.argv[sys.argv.index('--only') + 1] if '--only' in sys.argv else None
-    opts = dict(write='--write' in sys.argv, marks='--marks' in sys.argv)
+    # --face-only … 顔アイコンだけ書く(立ち絵・life-stand-made.json は書かない。2026-11-25 r1125-023: 顔の位置合わせで立ち絵を動かさない)
+    opts = dict(write='--write' in sys.argv, marks='--marks' in sys.argv, face_only='--face-only' in sys.argv)
     marks = json.load(open(MARKS, encoding='utf-8'))
     before = json.dumps(marks, sort_keys=True)
     for k, c in HEADS.items():
