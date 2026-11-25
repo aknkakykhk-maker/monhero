@@ -6,15 +6,15 @@
 
 1. チャッピーの新しい会話を開く(**1人ずつ別の会話**。同じ会話で続けると、前の助手の顔が混ざりやすい)
 2. 下の「助手ごとのまとめのプロンプト」から、その助手の枠を**そのまま全部コピーして貼る**。これ1つで、参考の絵・衣装・作る順番(全身 → 表情8種 → 寝顔)・書き出すファイル名まで全部入っている
-3. 1つできるごとに見せてくれるので、よければ「次へ」と送る。最後にZIPで書き出してくれる
-4. ZIPは**加工せずに**、下の「できた絵の保存先」へ置く(担当の会話に渡せば置いてもらえる)
+3. 1つできるごとに見せてくれるので、よければ「次へ」と送る
+4. 最後に、チャッピーが**GitHubの「できた絵の保存先」へ直接置いてコミットする**(加工なし)。置けたら担当の会話に「◯◯の絵を置いた」と知らせる
 
 - チャッピーが参考の絵のリンクを開けないと言ったときだけ、その助手の絵を添付する
 - ボスが「贈り物を奪う黒いサンタ」なので、**助手のサンタは黒を主役にしない**(あつは黒が持ち色なので、赤を主役にして黒は差し色まで)
 
 ## できた絵の保存先(GitHub)
 
-チャッピーが書き出したZIPの中の絵は、**加工せずに**下の場所へ置く(受け取った物はそのまま残す決まり)。ゲームで使う大きさへの切り出し・顔アイコン作りはバトル部(または窓口)がここから作る。
+チャッピーが作った絵は、チャッピーが**加工せずに**下の場所へ直接置く(受け取った物はそのまま残す決まり)。ゲームで使う大きさへの切り出し・顔アイコン作りはバトル部(または窓口)がここから作る。
 
 置き場所: `tools/art-sources/assistants/<フォルダ>/santa/received/`
 GitHub で見る: https://github.com/aknkakykhk-maker/monhero/tree/main/tools/art-sources/assistants
@@ -89,7 +89,7 @@ https://github.com/aknkakykhk-maker/monhero/blob/main/monster-hero/images/assist
 1. 全身の絵(正面・頭の上から足の先まで全部・縦長・参考の絵に近い自然な立ちポーズ)
 2. 表情8種(胸から上・同じ服・同じ画角で8枚): ふつうの微笑み/笑顔/ウインク/驚き/困り顔/むくれ顔(怒り)/泣き顔(照れ泣き)/わくわく(したり顔)
 3. 寝顔(胸から上・1枚・目を閉じてすやすや・少し首をかたむける・サンタ帽があれば少しずれる・小さな「Zzz」1つまで)
-4. 最後に、全部をZIPで書き出す(下の「書き出し」)
+4. 最後に、全部をGitHubへ置く(下の「GitHubへ置く」)
 
 ■守ること
 - 参考の絵と同じ人物にする。顔立ち・目の色と形・髪型・髪色・体型・年齢感は変えない
@@ -98,8 +98,9 @@ https://github.com/aknkakykhk-maker/monhero/blob/main/monster-hero/images/assist
 - 背景は透過(できなければ真っ白の単色)。床の影・背景の模様・文字・ロゴ・サインは入れない(寝顔の「Zzz」1つだけは可)
 - 手と指の数・形を正しく
 
-■書き出し(全部できたら)
-作った絵を描き直さずにそのまま、次のファイル名のPNG(背景は透過のまま)にして、1つのZIP「mua_santa.zip」にまとめてダウンロードできるようにしてください。
+■GitHubへ置く(全部できたら)
+作った絵を描き直さず・縮めず、PNG(背景は透過のまま)で、GitHub のリポジトリ aknkakykhk-maker/monhero の main ブランチへ、次の場所に追加してコミットしてください。
+置き場所: tools/art-sources/assistants/mua/santa/received/
 - 全身の絵 → mua_santa_fullbody.png
 - ふつうの微笑み → mua_santa_normal.png
 - 笑顔 → mua_santa_happy.png
@@ -110,6 +111,11 @@ https://github.com/aknkakykhk-maker/monhero/blob/main/monster-hero/images/assist
 - 泣き顔(照れ泣き) → mua_santa_crying.png
 - わくわく(したり顔) → mua_santa_excited.png
 - 寝顔 → mua_santa_sleep.png
+コミットメッセージ: 素材: mua のサンタきせかえの元絵(チャッピーで作成・加工なし)
+- この場所以外のファイルは、追加・変更・削除しない
+- 同じ名前のファイルがもうあるときは上書きせず、名前の最後に _v2 を付ける
+- 終わったら、コミットのリンクと追加したファイルの一覧を見せる
+- GitHubへ置けないときだけ、同じファイル名で1つのZIP「mua_santa.zip」にまとめてダウンロードできるようにする
 ```
 
 ### きき
@@ -132,7 +138,7 @@ https://github.com/aknkakykhk-maker/monhero/blob/main/monster-hero/images/assist
 1. 全身の絵(正面・頭の上から足の先まで全部・縦長・参考の絵に近い自然な立ちポーズ)
 2. 表情8種(胸から上・同じ服・同じ画角で8枚): ふつうの微笑み/笑顔/ウインク/驚き/困り顔/むくれ顔(怒り)/泣き顔(照れ泣き)/わくわく(したり顔)
 3. 寝顔(胸から上・1枚・目を閉じてすやすや・少し首をかたむける・サンタ帽があれば少しずれる・小さな「Zzz」1つまで)
-4. 最後に、全部をZIPで書き出す(下の「書き出し」)
+4. 最後に、全部をGitHubへ置く(下の「GitHubへ置く」)
 
 ■守ること
 - 参考の絵と同じ人物にする。顔立ち・目の色と形・髪型・髪色・体型・年齢感は変えない
@@ -141,8 +147,9 @@ https://github.com/aknkakykhk-maker/monhero/blob/main/monster-hero/images/assist
 - 背景は透過(できなければ真っ白の単色)。床の影・背景の模様・文字・ロゴ・サインは入れない(寝顔の「Zzz」1つだけは可)
 - 手と指の数・形を正しく
 
-■書き出し(全部できたら)
-作った絵を描き直さずにそのまま、次のファイル名のPNG(背景は透過のまま)にして、1つのZIP「kiki_santa.zip」にまとめてダウンロードできるようにしてください。
+■GitHubへ置く(全部できたら)
+作った絵を描き直さず・縮めず、PNG(背景は透過のまま)で、GitHub のリポジトリ aknkakykhk-maker/monhero の main ブランチへ、次の場所に追加してコミットしてください。
+置き場所: tools/art-sources/assistants/kiki/santa/received/
 - 全身の絵 → kiki_santa_fullbody.png
 - ふつうの微笑み → kiki_santa_normal.png
 - 笑顔 → kiki_santa_happy.png
@@ -153,6 +160,11 @@ https://github.com/aknkakykhk-maker/monhero/blob/main/monster-hero/images/assist
 - 泣き顔(照れ泣き) → kiki_santa_crying.png
 - わくわく(したり顔) → kiki_santa_excited.png
 - 寝顔 → kiki_santa_sleep.png
+コミットメッセージ: 素材: kiki のサンタきせかえの元絵(チャッピーで作成・加工なし)
+- この場所以外のファイルは、追加・変更・削除しない
+- 同じ名前のファイルがもうあるときは上書きせず、名前の最後に _v2 を付ける
+- 終わったら、コミットのリンクと追加したファイルの一覧を見せる
+- GitHubへ置けないときだけ、同じファイル名で1つのZIP「kiki_santa.zip」にまとめてダウンロードできるようにする
 ```
 
 ### ももすけ
@@ -175,7 +187,7 @@ https://github.com/aknkakykhk-maker/monhero/blob/main/monster-hero/images/assist
 1. 全身の絵(正面・頭の上から足の先まで全部・縦長・参考の絵に近い自然な立ちポーズ)
 2. 表情8種(胸から上・同じ服・同じ画角で8枚): ふつうの微笑み/笑顔/ウインク/驚き/困り顔/むくれ顔(怒り)/泣き顔(照れ泣き)/わくわく(したり顔)
 3. 寝顔(胸から上・1枚・目を閉じてすやすや・少し首をかたむける・サンタ帽があれば少しずれる・小さな「Zzz」1つまで)
-4. 最後に、全部をZIPで書き出す(下の「書き出し」)
+4. 最後に、全部をGitHubへ置く(下の「GitHubへ置く」)
 
 ■守ること
 - 参考の絵と同じ人物にする。顔立ち・目の色と形・髪型・髪色・体型・年齢感は変えない
@@ -184,8 +196,9 @@ https://github.com/aknkakykhk-maker/monhero/blob/main/monster-hero/images/assist
 - 背景は透過(できなければ真っ白の単色)。床の影・背景の模様・文字・ロゴ・サインは入れない(寝顔の「Zzz」1つだけは可)
 - 手と指の数・形を正しく
 
-■書き出し(全部できたら)
-作った絵を描き直さずにそのまま、次のファイル名のPNG(背景は透過のまま)にして、1つのZIP「momosuke_santa.zip」にまとめてダウンロードできるようにしてください。
+■GitHubへ置く(全部できたら)
+作った絵を描き直さず・縮めず、PNG(背景は透過のまま)で、GitHub のリポジトリ aknkakykhk-maker/monhero の main ブランチへ、次の場所に追加してコミットしてください。
+置き場所: tools/art-sources/assistants/momosuke/santa/received/
 - 全身の絵 → momosuke_santa_fullbody.png
 - ふつうの微笑み → momosuke_santa_normal.png
 - 笑顔 → momosuke_santa_happy.png
@@ -196,6 +209,11 @@ https://github.com/aknkakykhk-maker/monhero/blob/main/monster-hero/images/assist
 - 泣き顔(照れ泣き) → momosuke_santa_crying.png
 - わくわく(したり顔) → momosuke_santa_excited.png
 - 寝顔 → momosuke_santa_sleep.png
+コミットメッセージ: 素材: momosuke のサンタきせかえの元絵(チャッピーで作成・加工なし)
+- この場所以外のファイルは、追加・変更・削除しない
+- 同じ名前のファイルがもうあるときは上書きせず、名前の最後に _v2 を付ける
+- 終わったら、コミットのリンクと追加したファイルの一覧を見せる
+- GitHubへ置けないときだけ、同じファイル名で1つのZIP「momosuke_santa.zip」にまとめてダウンロードできるようにする
 ```
 
 ### ドラ
@@ -214,7 +232,7 @@ https://github.com/aknkakykhk-maker/monhero/blob/main/monster-hero/images/assist
 1. 顔の絵(正方形・1枚)
 2. 表情8種(同じ形の顔の絵を8枚): ふつうの微笑み/笑顔/ウインク/驚き/困り顔/むくれ顔(怒り)/泣き顔(照れ泣き)/わくわく(したり顔)
 3. 寝顔(1枚・目を閉じてすやすや・帽子が少しずれる・小さな「Zzz」1つまで)
-4. 最後に、全部をZIPで書き出す(下の「書き出し」)
+4. 最後に、全部をGitHubへ置く(下の「GitHubへ置く」)
 
 ■守ること
 - 参考の絵と同じ、手描きの落書き風の画風のまま(太い茶色の線・塗りは肌色だけの、ゆるい絵)。リアルにしない・アニメ絵にしない
@@ -222,8 +240,9 @@ https://github.com/aknkakykhk-maker/monhero/blob/main/monster-hero/images/assist
 - どの絵も正方形で、顔は真ん中。絵の大きさ・余白は参考の絵とそろえる
 - 背景は透過(できなければ真っ白)。文字は入れない(寝顔の「Zzz」1つだけは可)
 
-■書き出し(全部できたら)
-作った絵を描き直さずにそのまま、次のファイル名のPNG(背景は透過のまま)にして、1つのZIP「dra_santa.zip」にまとめてダウンロードできるようにしてください。
+■GitHubへ置く(全部できたら)
+作った絵を描き直さず・縮めず、PNG(背景は透過のまま)で、GitHub のリポジトリ aknkakykhk-maker/monhero の main ブランチへ、次の場所に追加してコミットしてください。
+置き場所: tools/art-sources/assistants/dra/santa/received/
 - 顔の絵 → dra_santa_face.png
 - ふつうの微笑み → dra_santa_normal.png
 - 笑顔 → dra_santa_happy.png
@@ -234,6 +253,11 @@ https://github.com/aknkakykhk-maker/monhero/blob/main/monster-hero/images/assist
 - 泣き顔(照れ泣き) → dra_santa_crying.png
 - わくわく(したり顔) → dra_santa_excited.png
 - 寝顔 → dra_santa_sleep.png
+コミットメッセージ: 素材: dra のサンタきせかえの元絵(チャッピーで作成・加工なし)
+- この場所以外のファイルは、追加・変更・削除しない
+- 同じ名前のファイルがもうあるときは上書きせず、名前の最後に _v2 を付ける
+- 終わったら、コミットのリンクと追加したファイルの一覧を見せる
+- GitHubへ置けないときだけ、同じファイル名で1つのZIP「dra_santa.zip」にまとめてダウンロードできるようにする
 ```
 
 ### あつ
@@ -256,7 +280,7 @@ https://github.com/aknkakykhk-maker/monhero/blob/main/monster-hero/images/assist
 1. 全身の絵(正面・頭の上から足の先まで全部・縦長・参考の絵に近い自然な立ちポーズ)
 2. 表情8種(胸から上・同じ服・同じ画角で8枚): ふつうの微笑み/笑顔/ウインク/驚き/困り顔/むくれ顔(怒り)/泣き顔(照れ泣き)/わくわく(したり顔)
 3. 寝顔(胸から上・1枚・目を閉じてすやすや・少し首をかたむける・サンタ帽があれば少しずれる・小さな「Zzz」1つまで)
-4. 最後に、全部をZIPで書き出す(下の「書き出し」)
+4. 最後に、全部をGitHubへ置く(下の「GitHubへ置く」)
 
 ■守ること
 - 参考の絵と同じ人物にする。顔立ち・目の色と形・髪型・髪色・体型・年齢感は変えない
@@ -265,8 +289,9 @@ https://github.com/aknkakykhk-maker/monhero/blob/main/monster-hero/images/assist
 - 背景は透過(できなければ真っ白の単色)。床の影・背景の模様・文字・ロゴ・サインは入れない(寝顔の「Zzz」1つだけは可)
 - 手と指の数・形を正しく
 
-■書き出し(全部できたら)
-作った絵を描き直さずにそのまま、次のファイル名のPNG(背景は透過のまま)にして、1つのZIP「atsu_santa.zip」にまとめてダウンロードできるようにしてください。
+■GitHubへ置く(全部できたら)
+作った絵を描き直さず・縮めず、PNG(背景は透過のまま)で、GitHub のリポジトリ aknkakykhk-maker/monhero の main ブランチへ、次の場所に追加してコミットしてください。
+置き場所: tools/art-sources/assistants/atsu/santa/received/
 - 全身の絵 → atsu_santa_fullbody.png
 - ふつうの微笑み → atsu_santa_normal.png
 - 笑顔 → atsu_santa_happy.png
@@ -277,6 +302,11 @@ https://github.com/aknkakykhk-maker/monhero/blob/main/monster-hero/images/assist
 - 泣き顔(照れ泣き) → atsu_santa_crying.png
 - わくわく(したり顔) → atsu_santa_excited.png
 - 寝顔 → atsu_santa_sleep.png
+コミットメッセージ: 素材: atsu のサンタきせかえの元絵(チャッピーで作成・加工なし)
+- この場所以外のファイルは、追加・変更・削除しない
+- 同じ名前のファイルがもうあるときは上書きせず、名前の最後に _v2 を付ける
+- 終わったら、コミットのリンクと追加したファイルの一覧を見せる
+- GitHubへ置けないときだけ、同じファイル名で1つのZIP「atsu_santa.zip」にまとめてダウンロードできるようにする
 ```
 
 ### きゅうこ
@@ -299,7 +329,7 @@ https://github.com/aknkakykhk-maker/monhero/blob/main/monster-hero/images/assist
 1. 全身の絵(正面・頭の上から足の先まで全部・縦長・参考の絵に近い自然な立ちポーズ)
 2. 表情8種(胸から上・同じ服・同じ画角で8枚): ふつうの微笑み/笑顔/ウインク/驚き/困り顔/むくれ顔(怒り)/泣き顔(照れ泣き)/わくわく(したり顔)
 3. 寝顔(胸から上・1枚・目を閉じてすやすや・少し首をかたむける・サンタ帽があれば少しずれる・小さな「Zzz」1つまで)
-4. 最後に、全部をZIPで書き出す(下の「書き出し」)
+4. 最後に、全部をGitHubへ置く(下の「GitHubへ置く」)
 
 ■守ること
 - 参考の絵と同じ人物にする。顔立ち・目の色と形・髪型・髪色・体型・年齢感は変えない
@@ -308,8 +338,9 @@ https://github.com/aknkakykhk-maker/monhero/blob/main/monster-hero/images/assist
 - 背景は透過(できなければ真っ白の単色)。床の影・背景の模様・文字・ロゴ・サインは入れない(寝顔の「Zzz」1つだけは可)
 - 手と指の数・形を正しく
 
-■書き出し(全部できたら)
-作った絵を描き直さずにそのまま、次のファイル名のPNG(背景は透過のまま)にして、1つのZIP「kyuko_santa.zip」にまとめてダウンロードできるようにしてください。
+■GitHubへ置く(全部できたら)
+作った絵を描き直さず・縮めず、PNG(背景は透過のまま)で、GitHub のリポジトリ aknkakykhk-maker/monhero の main ブランチへ、次の場所に追加してコミットしてください。
+置き場所: tools/art-sources/assistants/kyuko/santa/received/
 - 全身の絵 → kyuko_santa_fullbody.png
 - ふつうの微笑み → kyuko_santa_normal.png
 - 笑顔 → kyuko_santa_happy.png
@@ -320,6 +351,11 @@ https://github.com/aknkakykhk-maker/monhero/blob/main/monster-hero/images/assist
 - 泣き顔(照れ泣き) → kyuko_santa_crying.png
 - わくわく(したり顔) → kyuko_santa_excited.png
 - 寝顔 → kyuko_santa_sleep.png
+コミットメッセージ: 素材: kyuko のサンタきせかえの元絵(チャッピーで作成・加工なし)
+- この場所以外のファイルは、追加・変更・削除しない
+- 同じ名前のファイルがもうあるときは上書きせず、名前の最後に _v2 を付ける
+- 終わったら、コミットのリンクと追加したファイルの一覧を見せる
+- GitHubへ置けないときだけ、同じファイル名で1つのZIP「kyuko_santa.zip」にまとめてダウンロードできるようにする
 ```
 
 ### ソラシド
@@ -342,7 +378,7 @@ https://github.com/aknkakykhk-maker/monhero/blob/main/monster-hero/images/assist
 1. 全身の絵(正面・頭の上から足の先まで全部・縦長・参考の絵に近い自然な立ちポーズ)
 2. 表情8種(胸から上・同じ服・同じ画角で8枚): ふつうの微笑み/笑顔/ウインク/驚き/困り顔/むくれ顔(怒り)/泣き顔(照れ泣き)/わくわく(したり顔)
 3. 寝顔(胸から上・1枚・目を閉じてすやすや・少し首をかたむける・サンタ帽があれば少しずれる・小さな「Zzz」1つまで)
-4. 最後に、全部をZIPで書き出す(下の「書き出し」)
+4. 最後に、全部をGitHubへ置く(下の「GitHubへ置く」)
 
 ■守ること
 - 参考の絵と同じ人物にする。顔立ち・目の色と形・髪型・髪色・体型・年齢感は変えない
@@ -351,8 +387,9 @@ https://github.com/aknkakykhk-maker/monhero/blob/main/monster-hero/images/assist
 - 背景は透過(できなければ真っ白の単色)。床の影・背景の模様・文字・ロゴ・サインは入れない(寝顔の「Zzz」1つだけは可)
 - 手と指の数・形を正しく
 
-■書き出し(全部できたら)
-作った絵を描き直さずにそのまま、次のファイル名のPNG(背景は透過のまま)にして、1つのZIP「sorashido_santa.zip」にまとめてダウンロードできるようにしてください。
+■GitHubへ置く(全部できたら)
+作った絵を描き直さず・縮めず、PNG(背景は透過のまま)で、GitHub のリポジトリ aknkakykhk-maker/monhero の main ブランチへ、次の場所に追加してコミットしてください。
+置き場所: tools/art-sources/assistants/sorashido/santa/received/
 - 全身の絵 → sorashido_santa_fullbody.png
 - ふつうの微笑み → sorashido_santa_normal.png
 - 笑顔 → sorashido_santa_happy.png
@@ -363,6 +400,11 @@ https://github.com/aknkakykhk-maker/monhero/blob/main/monster-hero/images/assist
 - 泣き顔(照れ泣き) → sorashido_santa_crying.png
 - わくわく(したり顔) → sorashido_santa_excited.png
 - 寝顔 → sorashido_santa_sleep.png
+コミットメッセージ: 素材: sorashido のサンタきせかえの元絵(チャッピーで作成・加工なし)
+- この場所以外のファイルは、追加・変更・削除しない
+- 同じ名前のファイルがもうあるときは上書きせず、名前の最後に _v2 を付ける
+- 終わったら、コミットのリンクと追加したファイルの一覧を見せる
+- GitHubへ置けないときだけ、同じファイル名で1つのZIP「sorashido_santa.zip」にまとめてダウンロードできるようにする
 ```
 
 ### えるびん
@@ -386,7 +428,7 @@ https://github.com/aknkakykhk-maker/monhero/blob/main/monster-hero/images/assist
 1. 全身の絵(正面・頭の上から足の先まで全部・縦長・参考の絵に近い自然な立ちポーズ)
 2. 表情8種(胸から上・同じ服・同じ画角で8枚): ふつうの微笑み/笑顔/ウインク/驚き/困り顔/むくれ顔(怒り)/泣き顔(照れ泣き)/わくわく(したり顔)
 3. 寝顔(胸から上・1枚・目を閉じてすやすや・少し首をかたむける・サンタ帽があれば少しずれる・小さな「Zzz」1つまで)
-4. 最後に、全部をZIPで書き出す(下の「書き出し」)
+4. 最後に、全部をGitHubへ置く(下の「GitHubへ置く」)
 
 ■守ること
 - 参考の絵と同じ人物にする。顔立ち・目の色と形・髪型・髪色・体型・年齢感は変えない
@@ -395,8 +437,9 @@ https://github.com/aknkakykhk-maker/monhero/blob/main/monster-hero/images/assist
 - 背景は透過(できなければ真っ白の単色)。床の影・背景の模様・文字・ロゴ・サインは入れない(寝顔の「Zzz」1つだけは可)
 - 手と指の数・形を正しく
 
-■書き出し(全部できたら)
-作った絵を描き直さずにそのまま、次のファイル名のPNG(背景は透過のまま)にして、1つのZIP「erubin_santa.zip」にまとめてダウンロードできるようにしてください。
+■GitHubへ置く(全部できたら)
+作った絵を描き直さず・縮めず、PNG(背景は透過のまま)で、GitHub のリポジトリ aknkakykhk-maker/monhero の main ブランチへ、次の場所に追加してコミットしてください。
+置き場所: tools/art-sources/assistants/erubin/santa/received/
 - 全身の絵 → erubin_santa_fullbody.png
 - ふつうの微笑み → erubin_santa_normal.png
 - 笑顔 → erubin_santa_happy.png
@@ -407,4 +450,9 @@ https://github.com/aknkakykhk-maker/monhero/blob/main/monster-hero/images/assist
 - 泣き顔(照れ泣き) → erubin_santa_crying.png
 - わくわく(したり顔) → erubin_santa_excited.png
 - 寝顔 → erubin_santa_sleep.png
+コミットメッセージ: 素材: erubin のサンタきせかえの元絵(チャッピーで作成・加工なし)
+- この場所以外のファイルは、追加・変更・削除しない
+- 同じ名前のファイルがもうあるときは上書きせず、名前の最後に _v2 を付ける
+- 終わったら、コミットのリンクと追加したファイルの一覧を見せる
+- GitHubへ置けないときだけ、同じファイル名で1つのZIP「erubin_santa.zip」にまとめてダウンロードできるようにする
 ```
