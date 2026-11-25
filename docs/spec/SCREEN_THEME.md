@@ -42,7 +42,7 @@
 
 ## ホーム画面のクリスマス(2026-11-25・r1125-059)
 
-- `HOME_ART_OPTIONS` の先頭に `xmas`(縦 853×1516 / 横 1671×941 / 正方形 1254×1254 の JPEG・ハロウィンと同じ重さ)。素材は `tools/art-sources/promo/xmas-2026/received/`
+- `HOME_ART_OPTIONS` の先頭に `xmas`(縦 853×1516 / 横 1671×941 / 正方形 1254×1254 の JPEG・ハロウィンと同じ重さ)。素材は `tools/art-sources/promo/xmas-2026/received/` の `_v2` の3枚(改訂版)
 - 出す期間はクリスマスのイベントと同じ(`RAID_XMAS_START_AT` 〜 `RAID_XMAS_EVENT.endAt` = 11/30 10:00 〜 12/31 4:00)。見るたびに時刻で決める(保存しない)
   - 開始前は選択肢に出さない(`homeArtOptionsAt`)。アレンジの窓と画面テーマの窓(ホームの行だけ「クリスマス」の札が増える)の両方
   - おまかせは期間中だけクリスマス、そのあとはクラシック(`resolveHomeArt`)。自分で選んだ人は期間のあとも選んだまま

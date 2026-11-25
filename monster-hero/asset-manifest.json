@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "7169104384a0",
-  "packs": {"beat":{"bytes":311557065,"count":166},"battle":{"bytes":741245040,"count":1839},"card":{"bytes":38085297,"count":1046},"all":{"bytes":1090887402,"count":3051},"core":{"bytes":25997902,"count":25}},
+  "id": "01e67719d47d",
+  "packs": {"beat":{"bytes":311557065,"count":166},"battle":{"bytes":741258699,"count":1839},"card":{"bytes":38085297,"count":1046},"all":{"bytes":1090901061,"count":3051},"core":{"bytes":25997902,"count":25}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"b43d691d4773","size":2833344,"pack":"beat"},
@@ -134,9 +134,9 @@
     "data/images/home-background-halloween.jpg": {"v":"79c502aaaa1f","size":386465,"pack":"battle"},
     "data/images/home-background-square.jpg": {"v":"3b63caebd592","size":923191,"pack":"battle"},
     "data/images/home-background-wide.jpg": {"v":"d2410b6b1266","size":931337,"pack":"battle"},
-    "data/images/home-background-xmas-square.jpg": {"v":"d5b4d0ef6bfc","size":458908,"pack":"battle"},
-    "data/images/home-background-xmas-wide.jpg": {"v":"71be616797ad","size":474357,"pack":"battle"},
-    "data/images/home-background-xmas.jpg": {"v":"0562b9bce42a","size":404618,"pack":"battle"},
+    "data/images/home-background-xmas-square.jpg": {"v":"5181ff36dadd","size":466279,"pack":"battle"},
+    "data/images/home-background-xmas-wide.jpg": {"v":"a6fce37e2b8e","size":490740,"pack":"battle"},
+    "data/images/home-background-xmas.jpg": {"v":"72ea03f16b79","size":394523,"pack":"battle"},
     "data/images/home-background.jpg": {"v":"608588ae9147","size":673030,"pack":"battle"},
     "data/images/title-screen-clean.jpg": {"v":"f3fd870fba60","size":699051,"pack":"battle"},
     "data/images/title-screen-halloween-square.jpg": {"v":"0c063aa9bc1b","size":422077,"pack":"battle"},
