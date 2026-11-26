@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 316eabc03a414717
+// generated-sha256: 1f31f97a4f67ee04
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -153142,7 +153142,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const cast=storyCastOf(script).filter(who=>who.role!=='ゲスト')
           .filter(who=>!hiddenUntil.includes(who.id)||script.slice(0,step+1).some(l=>l&&storyBase(l.who)===who.id));
         let stageIdx=-1;
-        // 顔を出さない話し手(noFace・クリスマスのルーペ)は、話している行だけ上に出す(ジャックのように残し続けない)
+        // 顔を出さない話し手(noFace・クリスマスのワトソンくん)は、話している行だけ上に出す(ジャックのように残し続けない)
         for(let i=step;i>=0;i--){const l=script[i];if(l.stage==='none'){stageIdx=-1;break;}if(l.stage||isGuestWho(l.who)){stageIdx=(i<step&&!l.stage&&assistantById(l.who).noFace)?-1:i;break;}}
         const stageLine=stageIdx>=0?script[stageIdx]:null;
         const stageGuest=stageLine&&!storyStillImg?assistantById(stageLine.stage||stageLine.who):null;
@@ -153335,7 +153335,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           {stageGuest&&(
             <div ref={storyMeasureRef('--story-stage-bottom','bottom')} data-story-stage className="pointer-events-none" data-story-shake={(fx==='transform'||fx==='rankup')?step%2:undefined} style={{position:'absolute',top:'calc(env(safe-area-inset-top) + 13vh)',left:0,right:0,zIndex:3}}>
               <div className="mx-auto flex w-full max-w-md items-start gap-2 px-3">
-                {/* 顔を出さない話し手(noFace・クリスマスのルーペ)は、顔の欄を出さず、名前の札と吹き出しだけ */}
+                {/* 顔を出さない話し手(noFace・クリスマスのワトソンくん)は、顔の欄を出さず、名前の札と吹き出しだけ */}
                 {!stageGuest.noFace&&<div key={`${stageGuest.id}:${stageName}`} data-story-guest={stageGuest.id} data-story-fx={fx||undefined} className="shrink-0 text-center" style={{animation:fx==='shrink'?'storyShrink .9s ease-out both':fx==='transform'||fx==='rankup'?'storyGrow .9s ease-out both':'storyStageIn .45s ease-out both'}}>
                   <span data-jack-aura={stageTier||undefined} style={{position:'relative',display:'block',width:96,height:96,filter:(stageTier>0&&typeof raidJackAuraGlowFilter==='function')?raidJackAuraGlowFilter(stageTier,.4):undefined}}>
                     {stageTier>0&&typeof JackAuraLayer==='function'&&<JackAuraLayer tier={stageTier} limit={8}/>}
