@@ -190,6 +190,7 @@ select kind, tier, source, count(distinct breeder_id) as players, sum(damage)::b
 | カード: ボスのデッキ・考え方・換算 `raidXmasCardDamageOf`(`82-card-raid-core.jsx`)・対戦の画面の受け口 `raidChallenge`(`84-screen-card-battle.jsx`)。口の形は [`CARD_RAID_XMAS.md`](../../spec/CARD_RAID_XMAS.md)「つなぐ口」。App の `startRaidXmasCard` は §2・§3 の関数ができたらつなぐ | カード部 | #7607 |
 | イベントページ `79-screen-xmas-event.jsx`(題・ポスター・期間・タブ 物語/レイド/ボーナス)・話の一覧と読んだ印 `mh_xmas_story_v1`・登場人物パネル・`completeXmasStoryChapter`・HOME のイベントの札から開く | バトル部 | (この PR・r1126-006) |
 | ビート挑戦をイベントのつなぎ口で動かす部品 `39-raid-rhythm.jsx`(ジャックは同じ動き・クリスマスのつなぎ口は §2〜§4 の形で用意。App でつなぐのは §3 の関数が入ってから。[`BEAT.md`](BEAT.md)) | ビート部 | #7618 |
+| 動線の点検の道具 `tools/battle/xmas-flow-browser-check.js`(11/28・11/30・12/31 の3つの時刻 × 縦・横・タブレットで、入口・ボス・3タブ・挑戦・事件簿・序章・戻る先を通す)と止め絵・見つけた所の一覧 [`flow/README.md`](flow/README.md)・カードで挑む前のスターターの案内(r1126-028) | バトル部 | (この PR) |
 
 ## 10. つなぎ方(③でできた所・2026-11-25)
 
