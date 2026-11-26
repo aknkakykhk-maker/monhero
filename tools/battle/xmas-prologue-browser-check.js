@@ -85,8 +85,9 @@ const CASES = [
       await row.waitFor({ timeout: 10000 }).catch(() => {});
       const rowText = await row.innerText().catch(() => '');
       check(`② ${vp.label}: 物語タブに序章「とどいたゲーム」が開いている`, /とどいたゲーム/.test(rowText) && (await row.getAttribute('data-status')) !== 'locked', rowText.replace(/\s+/g, ' '));
-      const row1 = await page.locator('[data-xmas-story-chapter="xs01"]').getAttribute('data-status').catch(() => '');
-      check(`② ${vp.label}: 第1話はまだ鍵`, row1 === 'locked', row1);
+      const row1Count = await page.locator('[data-xmas-story-chapter="xs01"]').count();
+      const note = await page.locator('[data-xmas-story]').innerText().catch(() => '');
+      check(`② ${vp.label}: 開幕までは序章だけを見せる(第1話の行が無い・説明は「本編は 11/30 10:00 から」)`, row1Count === 0 && /序章が読めます/.test(note) && /本編は 11\/30/.test(note) && !/毎日/.test(note), note.replace(/\s+/g, ' ').slice(0, 80));
       await row.dispatchEvent('click');
       const read = page.locator('[data-xmas-story-read]');
       await read.waitFor({ timeout: 5000 }).catch(() => {});
