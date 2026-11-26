@@ -43,6 +43,10 @@ const CHANGELOG = [
     pinUntil:'2026-11-30T10:00:00+09:00',
     pinEmoji:'🎄',
     image: 'images/events/xmas-2026-notice.jpg?v=789f225e7916',
+    // 2026-11-26 社長「土曜日の告知のときに場面場面で予告動画というかそういう感じのもいれたいね」(r1126-010)。お話の絵・助手のクリスマスの立ち絵・BGM でつないだ予告編(38秒)。
+    //   第1話の範囲(招待状・ペンション)と、ポスターに出ている影だけ。ボスの名前・犯人・誰が消えるかは出さない。作り方は docs/promo/VIDEOS.md
+    video: 'movies/xmas-2026-trailer.mp4?v=f2735fa7f435',
+    videoPoster: 'images/events/xmas-2026-trailer-poster.jpg?v=4d487f178ec8',
     assistantNotice: {
       id:'update_notice_xmas_2026_notice_v1', type:'content',
       notifyFrom:'2026-11-28T10:00:00+09:00',
