@@ -360,12 +360,18 @@ function ArtPickerModal({ pickerId, heading, note, options, value, resolved, onC
     </ModalSheet>
   );
 }
-// 絵を選ぶ窓の中の並び。縦は上から説明・おまかせ・2枚の絵。横の低い画面は左に説明とおまかせ、右に2枚の絵(r1119-066①)
+// 絵を選ぶ窓の中の並び。縦は上から説明・おまかせ・絵の札(3列)。横の低い画面は左に説明とおまかせ、右に絵の札(3列)。
+// 2026-11-26 r1125-059: 3枚目(クリスマス)が増えて、縦は3枚目が下の段に隠れ、横は3枚目が見えず説明も切れていた。
+//   3列に並べ、横の低い画面では絵を 4:3 に切り抜いて(真ん中を見せる)、札が窓の高さに収まるようにした
 const ART_PICKER_CSS = `
 .mh-art-picker{display:flex;flex-direction:column;gap:12px}
 .mh-art-picker-side{display:flex;flex-direction:column;gap:10px}
-.mh-art-picker-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-@media (orientation:landscape) and (max-height:520px){.mh-art-picker{flex-direction:row;align-items:flex-start}.mh-art-picker-side{flex:1 1 0;min-width:0}.mh-art-picker-grid{flex:none;grid-template-columns:repeat(2,124px)}}
+.mh-art-picker-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+/* 絵の名前は1行に(320幅で「クリスマ/ス」と折れていた)。狭い画面だけ字を少し小さくする */
+.mh-art-picker-grid button>span.block{white-space:nowrap;font-size:clamp(11px,3.4vw,13px)}
+/* 背の低い縦の画面(320×568 など)は絵を 3:4 に短くする(タイトルの窓は説明が長く、3枚目の下が決定の段に隠れていた) */
+@media (orientation:portrait) and (max-height:640px){.mh-art-picker-grid button img{aspect-ratio:3/4}}
+@media (orientation:landscape) and (max-height:520px){.mh-art-picker{flex-direction:row;align-items:flex-start}.mh-art-picker-side{flex:1 1 0;min-width:0}.mh-art-picker-grid{flex:none;grid-template-columns:repeat(3,124px)}.mh-art-picker-grid button img{aspect-ratio:4/3}}
 `;
 const ensureArtPickerCss = () => {
   try {
