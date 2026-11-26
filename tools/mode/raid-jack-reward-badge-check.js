@@ -66,7 +66,7 @@ check('順位の印のid: rank_a1 → rank_a1_p2 / final_b → final_b_p3', o.ra
 const app = read('monster-hero/src/parts/60-app.jsx');
 check('配るときに、順位つきの印(raidJackPlaceId)も受け取り済みの印へ一緒に入れる', /found\.due\.filter\(entry=>entry\.place\)\.map\(entry=>raidJackPlaceId\(entry\.id,entry\.place\)\)/.test(app));
 const api = read('monster-hero/src/parts/36-raid-jack-api.jsx');
-check('順位の報酬(A順位・B最終)は、届けた順位(place)を持って返る', /RAID_JACK_REWARDS\.aRank\[i\]\[place\], place \+ 1\)/.test(api) && /RAID_JACK_REWARDS\.bFinal\[place\], place \+ 1\)/.test(api));
+check('順位の報酬(A順位・B最終)は、届けた順位(place)を持って返る', /(?:RAID_JACK_REWARDS|rewards)\.aRank\[i\]\[place\], place \+ 1\)/.test(api) && /(?:RAID_JACK_REWARDS|rewards)\.bFinal\[place\], place \+ 1\)/.test(api));
 // 保存の上限(64)に収まる
 check('印が増えても保存の上限(64個)に収まる(最大でも30個ほど)', 2 + 5 + 5 * 2 + 5 + 2 <= 64);
 
