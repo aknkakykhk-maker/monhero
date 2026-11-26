@@ -3393,6 +3393,17 @@ const createAnimationStyle = () => {
     @media (orientation: portrait) { [data-story-bg]::before { bottom: 30%; -webkit-mask-image: linear-gradient(180deg, #000 80%, transparent 100%); mask-image: linear-gradient(180deg, #000 80%, transparent 100%); } }
     @keyframes storySceneIn { 0% { opacity: 0; } 100% { opacity: 1; } }
     /* fx:'fall' … 穴へ落ちていく。背景が上へ流れながら暗くなる(行の holdMs のあいだに終わる長さ) */
+    /* ゲームの中の場面(台本の frame:'game'・2026-11-26 クリスマスの序章 r1126-022 追記7)。背景を古いゲームの画面のわくに入れ、走査線を重ねる。
+       縦はわくの下を台詞の窓の上にそろえる(--story-sheet-h)。背の低い横は画面いっぱいのわく */
+    [data-story-bg][data-story-bg-frame="game"] { background: radial-gradient(ellipse at 50% 40%, #1d1830 0%, #07060d 75%); }
+    [data-story-bg][data-story-bg-frame="game"]::before, [data-story-bg][data-story-bg-frame="game"]::after { top: calc(env(safe-area-inset-top) + 12px); left: 12px; right: 12px; bottom: calc(var(--story-sheet-h, 40%) + 12px); border-radius: 14px; -webkit-mask-image: none; mask-image: none; }
+    [data-story-bg][data-story-bg-frame="game"]::before { filter: saturate(.78) contrast(1.06) sepia(.12); box-shadow: 0 0 0 6px #2a2440, 0 0 0 9px #8a7fb0, 0 0 0 11px #120f1f, 0 10px 30px #000; }
+    [data-story-bg][data-story-bg-frame="game"]::after { background: repeating-linear-gradient(180deg, rgba(0,0,0,.16) 0 1px, transparent 1px 3px), radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(0,0,0,.5) 100%); }
+    [data-story-bg-frame-label] { position: absolute; z-index: 1; left: 50%; transform: translateX(-50%); top: calc(env(safe-area-inset-top) + 4px); padding: 1px 10px; border-radius: 999px; background: #120f1f; border: 1px solid #8a7fb0; color: #d9d2f5; font-size: 10px; font-weight: 900; letter-spacing: .2em; white-space: nowrap; }
+    @media (orientation: landscape) and (max-height: 520px) {
+      [data-story-bg][data-story-bg-frame="game"]::before, [data-story-bg][data-story-bg-frame="game"]::after { top: 14px; left: 14px; right: 14px; bottom: 14px; }
+      [data-story-bg-frame-label] { top: 6px; }
+    }
     [data-story-bg][data-story-bg-fx="fall"] { animation: storySceneFall 2.4s cubic-bezier(.55,0,.8,.4) both; }
     @keyframes storySceneFall { 0% { transform: none; filter: none; } 100% { transform: translateY(-85%) scale(1.25); filter: brightness(0); } }
     @media (prefers-reduced-motion: reduce) { [data-story-bg], [data-story-bg][data-story-bg-fx="fall"] { animation-duration: .01s !important; } }
