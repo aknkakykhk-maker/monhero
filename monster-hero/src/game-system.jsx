@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 10ee32a6777c4d01
+// generated-sha256: c971a7b94a91749d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -67539,9 +67539,9 @@ const XMAS_NOVEL_CAST = Object.freeze([
   { id: 'erubin', name: 'えるびん', kind: 'assistant' },
   { id: 'ichika', name: 'イチーカ', kind: 'monster', art: 'images/monsters/snegurochka.png', face: 'images/monster-icons/face/snegurochka.png' },
   { id: 'mochimaru', name: 'もちまる', kind: 'monster', art: 'images/monsters/mocchi.png', face: 'images/monster-icons/face/mocchi.png' },
-  // 謎の客2人(2026-11-26 届いた絵・余白だけ切りそろえた。表情は1枚)
-  { id: 'kuroba', name: '黒羽', full: '黒羽 宗一郎', kind: 'guest', art: 'images/story-guests/kuroba_stand.png', face: 'images/story-guests/kuroba_stand.png', tone: '#3b3f4a' },
-  { id: 'shirase', name: '白瀬', full: '白瀬 雪絵', kind: 'guest', art: 'images/story-guests/shirase_stand.png', face: 'images/story-guests/shirase_stand.png', tone: '#5a6a86' },
+  // 謎の客2人(2026-11-26 届いた絵・余白だけ切りそろえた。表情は1枚)。顔は、社長が渡した顔の絵からほかの人と同じ寄り具合に切り出した物(r1126-033)
+  { id: 'kuroba', name: '黒羽', full: '黒羽 宗一郎', kind: 'guest', art: 'images/story-guests/kuroba_stand.png', face: 'images/story-guests/kuroba_face.png', tone: '#3b3f4a' },
+  { id: 'shirase', name: '白瀬', full: '白瀬 雪絵', kind: 'guest', art: 'images/story-guests/shirase_stand.png', face: 'images/story-guests/shirase_face.png', tone: '#5a6a86' },
 ]);
 // 話し手だけの人(パネルには出ない)
 const XMAS_NOVEL_SPEAKERS_EXTRA = Object.freeze([
