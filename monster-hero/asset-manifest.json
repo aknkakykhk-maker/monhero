@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "a85a8638e10a",
-  "packs": {"beat":{"bytes":311557065,"count":166},"battle":{"bytes":754426310,"count":1852},"card":{"bytes":38085297,"count":1046},"all":{"bytes":1104068672,"count":3064},"core":{"bytes":26372139,"count":25}},
+  "id": "c39242cc69f4",
+  "packs": {"beat":{"bytes":311557065,"count":166},"battle":{"bytes":758489574,"count":1868},"card":{"bytes":38085297,"count":1046},"all":{"bytes":1108131936,"count":3080},"core":{"bytes":26374484,"count":25}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"b43d691d4773","size":2833344,"pack":"beat"},
@@ -2625,6 +2625,22 @@
     "images/story-bg/monhero_town.jpg": {"v":"802681764caa","size":77045,"pack":"battle"},
     "images/story-bg/monsuc_farm.webp": {"v":"923e3efc44ed","size":640608,"pack":"battle"},
     "images/story-bg/monsuc_gate.jpg": {"v":"73a1779eec12","size":241216,"pack":"battle"},
+    "images/story-bg/xmas_attic.jpg": {"v":"330facda544a","size":216982,"pack":"battle"},
+    "images/story-bg/xmas_attic_party.jpg": {"v":"9eec11365681","size":370510,"pack":"battle"},
+    "images/story-bg/xmas_backdoor.jpg": {"v":"ad17183533df","size":246610,"pack":"battle"},
+    "images/story-bg/xmas_corridor_2f.jpg": {"v":"8086842dee89","size":249774,"pack":"battle"},
+    "images/story-bg/xmas_dining.jpg": {"v":"8e96390095c5","size":285359,"pack":"battle"},
+    "images/story-bg/xmas_guest_room.jpg": {"v":"03314744243b","size":252913,"pack":"battle"},
+    "images/story-bg/xmas_hall_day.jpg": {"v":"0dfaa2c61e56","size":305128,"pack":"battle"},
+    "images/story-bg/xmas_hall_night.jpg": {"v":"c6af693c9ddb","size":206635,"pack":"battle"},
+    "images/story-bg/xmas_kitchen.jpg": {"v":"ac6b49b4eb7f","size":287928,"pack":"battle"},
+    "images/story-bg/xmas_locked_room.jpg": {"v":"fefda7f82993","size":172686,"pack":"battle"},
+    "images/story-bg/xmas_mirror_hall.jpg": {"v":"5b555b7f3d7c","size":274307,"pack":"battle"},
+    "images/story-bg/xmas_mountain_road.jpg": {"v":"51d5aad86e46","size":278046,"pack":"battle"},
+    "images/story-bg/xmas_secret_passage.jpg": {"v":"5c8331915a08","size":157158,"pack":"battle"},
+    "images/story-bg/xmas_snowfield_cliff.jpg": {"v":"f6dac2b4cae6","size":252687,"pack":"battle"},
+    "images/story-bg/xmas_stairs_candle.jpg": {"v":"05bf310c9084","size":223881,"pack":"battle"},
+    "images/story-bg/xmas_study.jpg": {"v":"49774cc57804","size":282660,"pack":"battle"},
     "images/story-guests/kuroba_face.png": {"v":"577ec9801d27","size":677091,"pack":"battle"},
     "images/story-guests/kuroba_stand.png": {"v":"fc37798575e8","size":1198120,"pack":"battle"},
     "images/story-guests/shirase_face.png": {"v":"dc615e671884","size":1092889,"pack":"battle"},
@@ -3069,7 +3085,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"68209bdfc8d7","size":321765,"pack":"core"},
+    "tailwind.css": {"v":"6fd126bef3bd","size":321765,"pack":"core"},
     "data/images/images-ally.js": {"v":"7fcc9331d4b6","size":92225,"pack":"core"},
     "data/images/images-enemy.js": {"v":"360f32b5807d","size":3612,"pack":"core"},
     "data/ally-monsters.js": {"v":"6737b7dced48","size":60894,"pack":"core"},
@@ -3091,6 +3107,6 @@
     "data/assistant-masmon-techs.js": {"v":"353cf73676a6","size":113841,"pack":"core"},
     "data/assistant-life-rel-talks.js": {"v":"cde51ded5428","size":225977,"pack":"core"},
     "data/success-sounds.js": {"v":"9692dd51493a","size":19367,"pack":"core"},
-    "game-system.compiled.js": {"v":"2739a1e41533","size":12845563,"pack":"core"}
+    "game-system.compiled.js": {"v":"0c5a38801a23","size":12847908,"pack":"core"}
   }
 }
