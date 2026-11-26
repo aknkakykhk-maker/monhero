@@ -1,0 +1,314 @@
+// ===== クリスマスのミステリーノベル「聖夜の名探偵」の進め方(台帳 r1126-022・純粋な計算とデータ) =====
+// 画面は 79-screen-xmas-novel.jsx、台本のデータは 79-xmas-novel-script.jsx(tools/novel/xmas-novel-build.js が SCRIPT.md から作る)。
+// ここは React・保存・音に触らない(parts-purity-check)。台本の形は docs/progress/xmas-novel/FORMAT.md。
+//
+// 進み具合(cur)の形: { scene, idx, flags:{f_x:数}, clues:[{n:名前, d:説明}], ans:{問いID:{t:答えた回数, f:一発目で当てたか}} }
+//   scene … 場面ID(C1-2 など) / idx … 場面の rows の何行目を読んでいるか(問いの行のときは、答えるまでそこに止まる)
+// 保存(mh_xmas_novel_v1)の形は xmasNovelNormalize を見る。
+
+const XMAS_NOVEL_STORAGE_KEY = 'mh_xmas_novel_v1';
+
+// 登場人物(パネル・人を選ぶ問い・立ち絵の名前)。並びは SCRIPT.md の D(12人を6人ずつ2段)
+//   kind: 'assistant' = 助手(サンタの立ち絵) / 'monster' = 絵が1枚(art) / 'shadow' = 絵がまだ無い(影の立ち絵)
+const XMAS_NOVEL_CAST = Object.freeze([
+  { id: 'atsu', name: 'あつ', kind: 'assistant' },
+  { id: 'myua', name: 'みゅあ', kind: 'assistant' },
+  { id: 'sorashido', name: 'ソラシド', kind: 'assistant' },
+  { id: 'kiki', name: 'きき', kind: 'assistant' },
+  { id: 'momosuke', name: 'ももすけ', kind: 'assistant' },
+  { id: 'dra', name: 'ドラ', kind: 'assistant' },
+  { id: 'kyuko', name: 'きゅうこ', kind: 'assistant' },
+  { id: 'erubin', name: 'えるびん', kind: 'assistant' },
+  { id: 'ichika', name: 'イチーカ', kind: 'monster', art: 'images/monsters/snegurochka.png', face: 'images/monster-icons/face/snegurochka.png' },
+  { id: 'mochimaru', name: 'もちまる', kind: 'monster', art: 'images/monsters/mocchi.png', face: 'images/monster-icons/face/mocchi.png' },
+  { id: 'kuroba', name: '黒羽', full: '黒羽 宗一郎', kind: 'shadow', tone: '#3b3f4a' },
+  { id: 'shirase', name: '白瀬', full: '白瀬 雪絵', kind: 'shadow', tone: '#5a6a86' },
+]);
+// 話し手だけの人(パネルには出ない)
+const XMAS_NOVEL_SPEAKERS_EXTRA = Object.freeze([
+  { id: 'watson', name: 'ワトソンくん', kind: 'laptop' },
+]);
+const xmasNovelCastOf = (id) => XMAS_NOVEL_CAST.find((c) => c.id === id) || XMAS_NOVEL_SPEAKERS_EXTRA.find((c) => c.id === id) || null;
+
+// ---- 条件 ----
+//  条件のデータ: { any: [ { all: [ { k:'f_kuroba', op:'=', v:1 }, ... ] }, ... ] }(または のどれか・かつ の全部)。null は「いつでも」
+//  k は f_* のフラグ、score(いまの読み進めで一発目で当てた数)、clues(手がかりの数)
+const xmasNovelValueOf = (k, ctx) => {
+  if (k === 'score') return Number(ctx.score) || 0;
+  if (k === 'clues') return Array.isArray(ctx.clues) ? ctx.clues.length : 0;
+  const v = ctx.flags ? ctx.flags[k] : undefined;
+  return Number.isFinite(v) ? v : 0;
+};
+const xmasNovelTest = (atom, ctx) => {
+  if (!atom || typeof atom.k !== 'string') return true;
+  const a = xmasNovelValueOf(atom.k, ctx);
+  const b = Number(atom.v) || 0;
+  switch (atom.op) {
+    case '>=': return a >= b;
+    case '<=': return a <= b;
+    case '>': return a > b;
+    case '<': return a < b;
+    case '!=': return a !== b;
+    default: return a === b;
+  }
+};
+const xmasNovelCondOk = (cond, ctx) => {
+  if (!cond || !Array.isArray(cond.any) || !cond.any.length) return true;
+  return cond.any.some((g) => !g || !Array.isArray(g.all) || g.all.every((atom) => xmasNovelTest(atom, ctx)));
+};
+
+// ---- 台本を引く ----
+const xmasNovelScenes = (script) => (script && Array.isArray(script.scenes) ? script.scenes : []);
+const xmasNovelSceneById = (script, id) => xmasNovelScenes(script).find((s) => s.id === id) || null;
+const xmasNovelIsEnding = (scene) => !!(scene && scene.ending);
+// 場面IDの「仲間」: C3-1a と C3-1b は C3-1 の仲間(同じ所で分かれる場面)
+const xmasNovelSceneBase = (id) => String(id || '').replace(/^(C\d+-\d+)[a-z]$/, '$1');
+
+// ---- 一発目の成績 ----
+//  問いのまとまり(group)ごとに、まとまりの問いが全部「一発目で当てた」なら1。最後の問いは1段目と2段目で1つ(group 'final')
+const xmasNovelScoreGroups = (script) => {
+  const groups = [];
+  xmasNovelScenes(script).forEach((s) => (s.rows || []).forEach((r) => {
+    if (r && r.t === 'q' && r.score) {
+      const g = r.group || r.id;
+      let hit = groups.find((x) => x.id === g);
+      if (!hit) { hit = { id: g, qs: [] }; groups.push(hit); }
+      hit.qs.push(r.id);
+    }
+  }));
+  return groups;
+};
+// ans … { 問いID: { f: true/false } } の形(進み具合の ans でも、保存の first でも同じ形で数える)
+const xmasNovelScoreOf = (script, ans) => {
+  const a = ans && typeof ans === 'object' ? ans : {};
+  return xmasNovelScoreGroups(script).filter((g) => g.qs.every((q) => a[q] && a[q].f === true)).length;
+};
+const xmasNovelCtx = (script, cur) => ({ flags: (cur && cur.flags) || {}, clues: (cur && cur.clues) || [], score: xmasNovelScoreOf(script, cur && cur.ans) });
+
+// 場面へ入る: id の場面の条件が合わなければ、同じ仲間(C3-1a→C3-1b)で条件の合う場面へ。どれも合わなければ null
+const xmasNovelResolveScene = (script, id, ctx) => {
+  const scenes = xmasNovelScenes(script);
+  const first = scenes.find((s) => s.id === id);
+  if (first && xmasNovelCondOk(first.cond, ctx)) return first;
+  const base = xmasNovelSceneBase(id);
+  return scenes.find((s) => xmasNovelSceneBase(s.id) === base && s.id !== id && xmasNovelCondOk(s.cond, ctx)) || null;
+};
+// 場面の次: 見出しの「次」→ それが無ければ台本の並びで次の、条件の合う場面(エンディングの場面へは並びでは入らない)。
+//   次: END(または最後の場面のあと)… 条件の合う最初のエンディングへ
+const xmasNovelNextScene = (script, scene, ctx) => {
+  const scenes = xmasNovelScenes(script);
+  if (!scene) return null;
+  if (xmasNovelIsEnding(scene)) return null;
+  const toEnding = () => scenes.find((s) => xmasNovelIsEnding(s) && s.cond && xmasNovelCondOk(s.cond, ctx))
+    || scenes.find((s) => xmasNovelIsEnding(s) && !s.cond) || null;
+  if (scene.next === 'END') return toEnding();
+  if (scene.next) {
+    const byScene = xmasNovelResolveScene(script, scene.next, ctx);
+    if (byScene) return byScene;
+  }
+  const i = scenes.findIndex((s) => s.id === scene.id);
+  const base = xmasNovelSceneBase(scene.id);
+  for (let j = i + 1; j < scenes.length; j += 1) {
+    const s = scenes[j];
+    if (xmasNovelIsEnding(s)) break;
+    if (xmasNovelSceneBase(s.id) === base && s.id !== scene.id) continue; // 自分の仲間(分かれた別の側)は飛ばす
+    if (xmasNovelCondOk(s.cond, ctx)) return s;
+  }
+  return toEnding();
+};
+// 行IDのある場所(行き先が問いの行のとき: 「選び直す」で Q7a へ)
+const xmasNovelFindRow = (script, rowId) => {
+  for (const s of xmasNovelScenes(script)) {
+    const idx = (s.rows || []).findIndex((r) => r && r.id === rowId);
+    if (idx >= 0) return { scene: s, idx };
+  }
+  return null;
+};
+
+// ---- 進み具合 ----
+const xmasNovelFreshCur = (script) => {
+  const ctx = { flags: {}, clues: [], score: 0 };
+  const first = xmasNovelScenes(script).find((s) => !xmasNovelIsEnding(s) && xmasNovelCondOk(s.cond, ctx));
+  return { scene: first ? first.id : null, idx: 0, flags: {}, clues: [], ans: {} };
+};
+// 行き先(場面ID・行ID・END)へ飛ぶ。返り値は新しい cur(場所だけ変わる)
+const xmasNovelJump = (script, cur, to) => {
+  const ctx = xmasNovelCtx(script, cur);
+  if (to === 'END') {
+    const s = xmasNovelNextScene(script, { id: '__', next: 'END' }, ctx);
+    return s ? { ...cur, scene: s.id, idx: 0 } : cur;
+  }
+  const s = xmasNovelResolveScene(script, to, ctx);
+  if (s) return { ...cur, scene: s.id, idx: 0 };
+  const row = xmasNovelFindRow(script, to);
+  if (row) return { ...cur, scene: row.scene.id, idx: row.idx };
+  return cur;
+};
+// 行の効き目(読んだ瞬間に起きること): 手がかりをためる・フラグを書く
+const xmasNovelApplyRow = (cur, row) => {
+  if (!row) return cur;
+  if (row.t === 'clue' && row.clue) {
+    const list = Array.isArray(cur.clues) ? cur.clues : [];
+    const at = list.findIndex((c) => c.n === row.clue);
+    if (at < 0) return { ...cur, clues: [...list, { n: row.clue, d: row.x || '' }] };
+    if (!row.add) return cur;
+    const d = list[at].d && row.x && !list[at].d.includes(row.x) ? `${list[at].d}\n${row.x}` : (list[at].d || row.x || '');
+    return { ...cur, clues: list.map((c, i) => (i === at ? { ...c, d } : c)) };
+  }
+  if (row.t === 'flag' && Array.isArray(row.set)) return { ...cur, flags: xmasNovelSetFlags(cur.flags, row.set) };
+  return cur;
+};
+const xmasNovelSetFlags = (flags, sets) => {
+  const next = { ...(flags || {}) };
+  (sets || []).forEach((s) => {
+    if (!s || typeof s.k !== 'string') return;
+    const v = Number(s.v) || 0;
+    const was = Number.isFinite(next[s.k]) ? next[s.k] : 0;
+    next[s.k] = s.op === '+=' ? was + v : s.op === '-=' ? was - v : v;
+  });
+  return next;
+};
+// いまの場所から、条件の合う次の行へ(idx が今の行を指していれば、その次から探す)。
+//   返り値 { cur, row, scene, ending, chapterChanged }。row=null で ending があれば、そのエンディングの終わり
+const xmasNovelSettle = (script, cur) => {
+  let c = cur;
+  for (let guard = 0; guard < 4000; guard += 1) {
+    const scene = xmasNovelSceneById(script, c.scene);
+    if (!scene) return { cur: c, row: null, scene: null, ending: null };
+    const rows = scene.rows || [];
+    const ctx = xmasNovelCtx(script, c);
+    let i = Math.max(0, Number(c.idx) || 0);
+    while (i < rows.length && !xmasNovelCondOk(rows[i] && rows[i].c, ctx)) i += 1;
+    if (i < rows.length) return { cur: { ...c, idx: i }, row: rows[i], scene, ending: null };
+    if (xmasNovelIsEnding(scene)) return { cur: { ...c, idx: rows.length }, row: null, scene, ending: scene.ending };
+    const next = xmasNovelNextScene(script, scene, ctx);
+    if (!next) return { cur: { ...c, idx: rows.length }, row: null, scene, ending: null };
+    c = { ...c, scene: next.id, idx: 0 };
+  }
+  return { cur: c, row: null, scene: null, ending: null };
+};
+// 1行すすめる(問いの行では使わない。問いは xmasNovelAnswer)
+const xmasNovelStep = (script, cur) => xmasNovelSettle(script, { ...cur, idx: (Number(cur.idx) || 0) + 1 });
+
+// ---- 問いに答える ----
+//  pick … 突きつけ: 手がかりの名前 / 人を選ぶ: 人のid / 行動: 選択肢の番号(0から)
+//  返り値 { cur, ok, replies:[行], then:'retry'|'next'|{to} }。replies を読ませたあと then のとおりに進める
+const xmasNovelPickReplies = (q, key) => (q.replies && Array.isArray(q.replies[key]) ? q.replies[key] : []);
+const xmasNovelAnswer = (script, cur, q, pick) => {
+  if (!q || q.t !== 'q') return { cur, ok: false, replies: [], then: 'next' };
+  const was = (cur.ans && cur.ans[q.id]) || null;
+  const tries = (was ? was.t : 0) + 1;
+  if (q.kind === 'action') {
+    const ctx = xmasNovelCtx(script, cur);
+    const opts = xmasNovelOptionsOf(q, ctx);
+    const opt = opts.find((o) => o.i === pick) || null;
+    if (!opt) return { cur, ok: false, replies: [], then: 'retry' };
+    const next = { ...cur, flags: xmasNovelSetFlags(cur.flags, opt.set), ans: { ...(cur.ans || {}), [q.id]: { t: tries, f: true, pick: opt.i } } };
+    const replies = xmasNovelPickReplies(q, String(opt.i + 1));
+    const lastTo = xmasNovelRepliesTo(replies);
+    return { cur: next, ok: true, replies, then: opt.to ? { to: opt.to } : lastTo ? { to: lastTo } : 'next' };
+  }
+  const answers = Array.isArray(q.answer) ? q.answer : [];
+  const ok = answers.includes(pick);
+  const firstOk = was ? was.f === true : ok;
+  let flags = cur.flags;
+  if (!was && q.first) flags = { ...(flags || {}), [q.first]: ok ? 1 : 0 }; // 一発目で決まるフラグ(あとから当てても変えない)
+  const done = ok || !!(was && was.done);
+  const wrongs = (was && Number.isFinite(was.w) ? was.w : 0) + (ok ? 0 : 1);
+  const next = { ...cur, flags, ans: { ...(cur.ans || {}), [q.id]: { t: tries, f: firstOk, w: wrongs, ...(done ? { done: true } : {}) } } };
+  if (ok) {
+    const replies = xmasNovelPickReplies(q, 'ok').length ? xmasNovelPickReplies(q, 'ok') : xmasNovelPickReplies(q, String(pick));
+    const to = xmasNovelRepliesTo(replies);
+    return { cur: next, ok: true, replies, then: to ? { to } : 'next' };
+  }
+  // まちがい: 人ごとの返し → 近い手がかりの返し → 回数の返し(3回目からは x3)
+  const personal = q.kind === 'person' ? xmasNovelPickReplies(q, String(pick)) : [];
+  const near = q.kind === 'present' && Array.isArray(q.near) && q.near.includes(pick) ? xmasNovelPickReplies(q, 'near') : [];
+  const n = Math.min(3, Math.max(1, wrongs));
+  let counted = [];
+  for (let k = n; k >= 1 && !counted.length; k -= 1) counted = xmasNovelPickReplies(q, `x${k}`);
+  const replies = personal.length ? personal : near.length ? near : counted;
+  const to = xmasNovelRepliesTo(replies);
+  return { cur: next, ok: false, replies, then: to ? { to } : 'retry' };
+};
+const xmasNovelRepliesTo = (replies) => {
+  for (let i = (replies || []).length - 1; i >= 0; i -= 1) if (replies[i] && replies[i].to) return replies[i].to;
+  return null;
+};
+// 行動の選択肢のうち、いま出せる物(条件つきの選択肢: 「オルゴールを鳴らす」は f_lullaby=1 のときだけ)
+const xmasNovelOptionsOf = (q, ctx) => (Array.isArray(q && q.options) ? q.options : [])
+  .map((o, i) => ({ ...o, i }))
+  .filter((o) => xmasNovelCondOk(o.c, ctx));
+// 人を選ぶ問いの候補(12人)
+const xmasNovelPersonChoices = () => XMAS_NOVEL_CAST.map((c) => ({ id: c.id, name: c.name }));
+
+// 章: 場面の chapter から。章の初めの場面(読み直しの入口)
+const xmasNovelChapters = (script) => (script && Array.isArray(script.chapters) ? script.chapters : []);
+const xmasNovelChapterOfScene = (script, sceneId) => {
+  const s = xmasNovelSceneById(script, sceneId);
+  return s ? s.chapter : null;
+};
+
+// ---- 保存 ----
+//  { v:1,
+//    cur: 進み具合 | null(はじめから・エンディングのあと),
+//    read: [行の読んだ印(場面ID:行ID)],
+//    endings: [見たエンディングID], first: {問いID:{f:一発目で当てたか}}(一番はじめに答えたときだけ書く・読み直しで変えない),
+//    snaps: {章ID: 章に入ったときの {flags, clues, ans}}(章から読み直す),
+//    titleSent: 全部一発の称号を渡したか, auto: オートの速さ(0=切 1=ふつう 2=はやい) }
+const xmasNovelNormalizeCur = (raw, script) => {
+  if (!raw || typeof raw !== 'object') return null;
+  if (typeof raw.scene !== 'string' || (script && !xmasNovelSceneById(script, raw.scene))) return null;
+  const flags = {};
+  if (raw.flags && typeof raw.flags === 'object') Object.keys(raw.flags).forEach((k) => { const v = raw.flags[k]; if (/^f_\w+$/.test(k) && Number.isFinite(v)) flags[k] = v; });
+  const clues = Array.isArray(raw.clues) ? raw.clues.filter((c) => c && typeof c.n === 'string').map((c) => ({ n: c.n, d: typeof c.d === 'string' ? c.d : '' })) : [];
+  const ans = {};
+  if (raw.ans && typeof raw.ans === 'object') Object.keys(raw.ans).forEach((k) => {
+    const a = raw.ans[k];
+    if (a && typeof a === 'object' && Number.isFinite(a.t)) ans[k] = { t: Math.max(1, Math.floor(a.t)), f: a.f === true, ...(Number.isFinite(a.w) && a.w >= 0 ? { w: Math.floor(a.w) } : {}), ...(a.done ? { done: true } : {}), ...(Number.isInteger(a.pick) ? { pick: a.pick } : {}) };
+  });
+  const idx = Number.isInteger(raw.idx) && raw.idx >= 0 ? raw.idx : 0;
+  return { scene: raw.scene, idx, flags, clues, ans };
+};
+const xmasNovelNormalize = (raw, script = null) => {
+  const r = raw && typeof raw === 'object' ? raw : {};
+  const strs = (v, max) => (Array.isArray(v) ? [...new Set(v.filter((x) => typeof x === 'string' && x))].slice(-max) : []);
+  const first = {};
+  if (r.first && typeof r.first === 'object') Object.keys(r.first).forEach((k) => { const a = r.first[k]; if (a && typeof a === 'object' && typeof a.f === 'boolean') first[k] = { f: a.f }; });
+  const snaps = {};
+  if (r.snaps && typeof r.snaps === 'object') Object.keys(r.snaps).forEach((k) => {
+    const s = r.snaps[k];
+    if (!/^C\d+$|^END$/.test(k) || !s || typeof s !== 'object') return;
+    const c = xmasNovelNormalizeCur({ ...s, scene: typeof s.scene === 'string' ? s.scene : '' }, script);
+    if (c) snaps[k] = c;
+  });
+  return {
+    v: 1,
+    cur: xmasNovelNormalizeCur(r.cur, script),
+    read: strs(r.read, 6000),
+    endings: strs(r.endings, 50),
+    first,
+    snaps,
+    titleSent: r.titleSent === true,
+    auto: [0, 1, 2].includes(r.auto) ? r.auto : 0,
+  };
+};
+// 一番はじめの答えを記録(読み直しでは書き変えない)。称号は「一発目だけで数える」(r1126-021)
+const xmasNovelRecordFirst = (save, qid, ok) => {
+  if (!save || !qid || (save.first && save.first[qid])) return save;
+  return { ...save, first: { ...(save.first || {}), [qid]: { f: !!ok } } };
+};
+// 全部一発で当てたか(称号の口)。問いが1つも無い台本では偽
+const xmasNovelPerfectCount = (script, save) => xmasNovelScoreOf(script, save && save.first);
+const xmasNovelIsPerfect = (script, save) => {
+  const total = xmasNovelScoreGroups(script).length;
+  return total > 0 && xmasNovelPerfectCount(script, save) === total;
+};
+
+// エンディングの種類の名前(一覧の札)
+const XMAS_NOVEL_ENDING_KINDS = Object.freeze({
+  good: { label: 'グッド', tone: '#f5d27a' },
+  normal: { label: 'ノーマル', tone: '#b9c7e6' },
+  bad: { label: 'バッド', tone: '#e07a7a' },
+  another: { label: 'あつルート', tone: '#e8a95b' },
+});

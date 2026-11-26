@@ -13,8 +13,8 @@ function getParser() {
   return parser;
 }
 
-// 丸ごと見ないファイル(台詞・お話・出した更新履歴・生成物)
-const SKIP_FILE = /(?:^|\/)(?:changelog\.js|assistants\.js|assistant-chat-digest\.json|monhero-success-script-[^/]*\.js|game-system\.jsx|33-rhythm-buddy-(?:talk|convo|persona)\.jsx|[^/]*css\.jsx|23-rpg-debug\.jsx|31-debug-ui\.jsx|74-screen-monster-check-debug\.jsx|76-screen-debug-data\.jsx|78-screen-raid-jack-debug\.jsx)$/;
+// 丸ごと見ないファイル(台詞・お話・出した更新履歴・生成物。79-xmas-novel-script.jsx はノベルの台本の生成物)
+const SKIP_FILE = /(?:^|\/)(?:changelog\.js|assistants\.js|assistant-chat-digest\.json|monhero-success-script-[^/]*\.js|game-system\.jsx|79-xmas-novel-script\.jsx|33-rhythm-buddy-(?:talk|convo|persona)\.jsx|[^/]*css\.jsx|23-rpg-debug\.jsx|31-debug-ui\.jsx|74-screen-monster-check-debug\.jsx|76-screen-debug-data\.jsx|78-screen-raid-jack-debug\.jsx)$/;
 // 台詞の多い部品: 短い文(ボタン・札)だけ見る
 const DIALOG_FILE = /assistant|buddy|lines|persona|story|convo|talk|peer|chat|sorashido|card-battle-vs|card-battle-multi|finds|gifts|arc|card-ai-deck|tevent|issa|scenario/;
 const SHORT = 12;
