@@ -6,7 +6,7 @@
 //
 //   ① 11/28 9:59 … 序章はまだ読めない(公開の印が偽・回想の並びに無い・HOME にイベントの入口が無い)
 //   ② 11/28 10:05(開幕の前)… HOME の入口からイベントページを開き、物語タブの序章の「お話を読む」で読める
-//   ③ 帯の行は帯(data-story-banner)で出る・ルーペは顔なし(名前と吹き出しだけ)・助手の顔はクリスマス衣装(santa/face)
+//   ③ 帯の行は帯(data-story-banner)で出る・ワトソンくんは顔なし(名前と吹き出しだけ)・助手の顔はクリスマス衣装(santa/face)
 //   ④ 最後まで送ると、一覧の序章が「読んだ」になり、読んだ印(mh_xmas_story_v1 の cleared に xs00)が付く・実行時エラーが無い
 const http = require('http'), path = require('path'), fs = require('fs');
 const seeds = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
@@ -98,7 +98,7 @@ const CASES = [
       await page.waitForTimeout(1500);
       await page.locator('[data-story-opening-card]').dispatchEvent('click').catch(() => {});
       await page.waitForTimeout(900);
-      let bandSeen = 0, loupeOk = null, santaOk = null, last = -1;
+      let bandSeen = 0, watsonOk = null, santaOk = null, last = -1;
       for (let i = 0; i < 200; i++) {
         if (await page.locator('[data-story-ending]').count() > 0 || await story.count() === 0) break;
         const step = Number(await story.getAttribute('data-story-step').catch(() => -1));
@@ -108,11 +108,11 @@ const CASES = [
           const t = await story.innerText().catch(() => '');
           if (banner > 0) bandSeen++;
           if (step === 0) await shot('1-band');
-          if (loupeOk == null && /表を出しました/.test(t)) {
-            // ルーペ: 顔の欄が無く、名前の札と吹き出しだけ
-            loupeOk = await page.evaluate(() => !document.querySelector('[data-story-guest="loupe"]') && !!document.querySelector('[data-story-guest-bubble]') && /ルーペ/.test(document.querySelector('[data-story-guest-bubble]').innerText));
+          if (watsonOk == null && /表を出しました/.test(t)) {
+            // ワトソンくん: 顔の欄が無く、名前の札と吹き出しだけ
+            watsonOk = await page.evaluate(() => !document.querySelector('[data-story-guest="watson"]') && !!document.querySelector('[data-story-guest-bubble]') && /ワトソンくん/.test(document.querySelector('[data-story-guest-bubble]').innerText));
             santaOk = await page.evaluate(() => [...document.querySelectorAll('[data-story-speaker] img')].some((im) => /assistant\/santa\/face\//.test(im.getAttribute('src') || '')));
-            await shot('2-loupe');
+            await shot('2-watson');
           }
           if (/封筒！？/.test(t)) await shot('3-mua');
           if (/招待状——/.test(t)) await shot('4-letter');
@@ -124,7 +124,7 @@ const CASES = [
         if (Number(await story.getAttribute('data-story-step').catch(() => -1)) === step) await page.waitForTimeout(1400);
       }
       check(`③ ${vp.label}: 帯の行が帯で出る`, bandSeen >= 6, `${bandSeen} 行`);
-      check(`③ ${vp.label}: ルーペは顔なし(名前と吹き出しだけ)`, loupeOk === true);
+      check(`③ ${vp.label}: ワトソンくんは顔なし(名前と吹き出しだけ)`, watsonOk === true);
       check(`③ ${vp.label}: 助手の顔はクリスマス衣装`, santaOk === true);
       check(`④ ${vp.label}: 最後(${last + 1} 行目)まで送れた`, last + 1 === 42, `${last + 1}`);
       const ending = page.locator('[data-story-ending]');
