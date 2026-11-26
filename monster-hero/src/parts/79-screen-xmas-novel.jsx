@@ -74,6 +74,14 @@ const XMAS_NOVEL_CSS = `
 .mh-nv-person[data-st='dead'] .ph { filter: grayscale(1) brightness(.3); }
 .mh-nv-person .stamp { position: absolute; top: 34%; left: 50%; transform: translateX(-50%) rotate(-12deg); padding: 0 4px; border: 2px solid #d33; color: #f55; font-size: 9px; background: rgba(0,0,0,.4); white-space: nowrap; }
 .mh-nv-person .tag { position: absolute; top: 4px; right: 4px; padding: 0 4px; border-radius: 4px; background: #f0f0f0; color: #a11; font-size: 9px; }
+.mh-nv-person[data-st='santa'] .ph { filter: grayscale(1) brightness(.25); }
+.mh-nv-person .santa { position: absolute; top: 12%; left: 50%; width: 70%; transform: translateX(-50%) rotate(-10deg); }
+.mh-nv-person[data-fresh] { animation: mh-nv-fresh 1.1s ease; box-shadow: 0 0 0 2px #e8c46a; }
+.mh-nv-person[data-fresh] .stamp, .mh-nv-person[data-fresh] .santa, .mh-nv-person[data-fresh] .flower { animation: mh-nv-stamp .5s cubic-bezier(.2,1.6,.4,1) both; }
+@keyframes mh-nv-fresh { 0% { transform: scale(1); } 30% { transform: scale(1.08); } 100% { transform: scale(1); } }
+@keyframes mh-nv-stamp { from { opacity: 0; scale: 2.2; } to { opacity: 1; scale: 1; } }
+.mh-nv-fig.laugh svg { animation: mh-nv-laugh .25s ease-in-out 6; }
+@keyframes mh-nv-laugh { 50% { transform: translateY(-4px) scaleY(1.03); } }
 .mh-nv-person .flower { position: absolute; top: 30%; left: 50%; transform: translateX(-50%); font-size: 16px; color: #fff; text-shadow: 0 0 6px #fff; }
 .mh-nv-choice { width: 100%; min-height: 52px; padding: 10px 14px; border-radius: 12px; font-size: 15px; font-weight: 800; color: #fff3d0; text-align: center;
   background: linear-gradient(180deg, rgba(27,44,92,.95), rgba(10,20,52,.95)); box-shadow: 0 0 0 1px #e8c46a, 0 6px 16px rgba(0,0,0,.45); }
@@ -137,12 +145,13 @@ const xmasNovelFigureSrc = (who, e) => {
   if (c.kind === 'monster') return { src: c.art };
   return null;
 };
-const XmasNovelShadow = ({ tone = '#2a3350', label = '' }) => (
+const XmasNovelShadow = ({ tone = '#2a3350', label = '', hat = false }) => (
   <svg viewBox="0 0 200 300" style={{ height: '92%', maxWidth: '100%' }} aria-label={label}>
     <defs>
       <radialGradient id="mh-nv-shadow-g" cx="50%" cy="30%" r="70%"><stop offset="0%" stopColor={tone} /><stop offset="100%" stopColor="#05070e" /></radialGradient>
     </defs>
     <circle cx="100" cy="78" r="44" fill="url(#mh-nv-shadow-g)" stroke="rgba(232,196,106,.35)" strokeWidth="1.5" />
+    {hat && <><path d="M54 66 C70 18 120 6 150 40 L146 52 C130 40 116 44 108 58 Z" fill="#05070e" stroke="rgba(200,40,40,.55)" strokeWidth="1.5" /><circle cx="152" cy="44" r="9" fill="#05070e" stroke="rgba(200,40,40,.55)" strokeWidth="1.5" /></>}
     <path d="M20 300 C24 200 60 140 100 136 C140 140 176 200 180 300 Z" fill="url(#mh-nv-shadow-g)" stroke="rgba(232,196,106,.35)" strokeWidth="1.5" />
   </svg>
 );
@@ -155,11 +164,16 @@ const XmasNovelLaptop = () => (
     <path d="M8 140 L232 140 L218 158 L22 158 Z" fill="#1b2a52" stroke="#e8c46a" strokeWidth="2" />
   </svg>
 );
+// シルエットの笑い(名前を伏せた声で「ふふ」「あはは」)。笑い声の音源はまだ無いので、いまはボスの技の音で代える
+const xmasNovelIsSilhouette = (row) => !!(row && /黒いサンタのシルエット|黒いサンタの影/.test(row.x || ''));
+const xmasNovelIsLaugh = (row) => !!(row && /ふふ|あはは|ははは/.test(row.x || ''));
 const XmasNovelFigure = ({ row, dim = false }) => {
   const [broken, setBroken] = useState(0);
+  if (row && row.t === 'band' && xmasNovelIsSilhouette(row)) return <div className={`mh-nv-fig${dim ? ' dim' : ''}`} key={`band-${row.id}`}><XmasNovelShadow tone="#000" hat label="黒いサンタ" /></div>;
   if (!row || row.t !== 'line') return null;
   const key = `${row.w || row.n}-${row.e || ''}`;
-  if (row.n === '？？？' || !row.w) return row.n === '？？？' ? <div className={`mh-nv-fig${dim ? ' dim' : ''}`} key={key}><XmasNovelShadow tone="#1c2240" label="？？？" /></div> : null;
+  const laugh = row.n === '？？？' && xmasNovelIsLaugh(row);
+  if (row.n === '？？？' || !row.w) return row.n === '？？？' ? <div className={`mh-nv-fig${dim ? ' dim' : ''}${laugh ? ' laugh' : ''}`} key={key}><XmasNovelShadow tone={laugh ? '#000' : '#1c2240'} hat={laugh} label="？？？" /></div> : null;
   if (row.w === 'watson') return <div className="mh-nv-fig" key={key}><XmasNovelLaptop /></div>;
   const c = xmasNovelCastOf(row.w);
   const fig = xmasNovelFigureSrc(row.w, row.e);
@@ -182,10 +196,19 @@ const xmasNovelFaceOf = (id) => {
 };
 
 // ---- 人の並び(パネル・人を選ぶ問い) ----
-const XmasNovelCast = ({ states = {}, onPick = null }) => (
+// 黒いサンタの判(バッドエンド。赤い丸の中に、黒いサンタの影)
+const XmasNovelSantaStamp = () => (
+  <svg viewBox="0 0 40 40" width="100%" height="100%" aria-hidden="true">
+    <circle cx="20" cy="20" r="17" fill="none" stroke="#d22" strokeWidth="3" />
+    <path d="M12 17 L22 7 L28 15 Z" fill="#0a0a0a" /><circle cx="28" cy="15" r="2.4" fill="#0a0a0a" />
+    <circle cx="20" cy="20" r="5" fill="#0a0a0a" /><path d="M11 33 C12 25 16 24 20 24 C24 24 28 25 29 33 Z" fill="#0a0a0a" />
+  </svg>
+);
+const XmasNovelCast = ({ states = {}, changed = [], onPick = null }) => (
   <div className="mh-nv-cast">
     {XMAS_NOVEL_CAST.map((c) => {
       const st = states[c.id] || '';
+      const fresh = changed.includes(c.id);
       const face = xmasNovelFaceOf(c.id);
       const inner = (
         <>
@@ -194,16 +217,18 @@ const XmasNovelCast = ({ states = {}, onPick = null }) => (
           {st === 'missing' && <span className="stamp">行方不明</span>}
           {st === 'hurt' && <span className="tag">けが</span>}
           {st === 'dead' && <span className="flower" aria-label="白い花">✿</span>}
+          {st === 'santa' && <span className="santa" aria-label="黒いサンタの判"><XmasNovelSantaStamp /></span>}
         </>
       );
       return onPick
         ? <button type="button" key={c.id} data-xmas-novel-person={c.id} data-st={st || undefined} className="mh-nv-person active:scale-95" onClick={() => onPick(c.id)}>{inner}</button>
-        : <div key={c.id} data-st={st || undefined} className="mh-nv-person">{inner}</div>;
+        : <div key={c.id} data-xmas-novel-cast={c.id} data-st={st || undefined} data-fresh={fresh ? '' : undefined} className="mh-nv-person">{inner}</div>;
     })}
   </div>
 );
-const xmasNovelPanelStates = (row) => {
-  const s = {};
+// 古い書き方(行方不明: きゅうこ / 亡くなった: 黒羽)の行は、その行の分も重ねる
+const xmasNovelPanelStates = (panel, row) => {
+  const s = { ...(panel || {}) };
   if (!row) return s;
   (row.missing || []).forEach((id) => { s[id] = 'missing'; });
   (row.hurt || []).forEach((id) => { s[id] = 'hurt'; });
@@ -231,7 +256,7 @@ const xmasNovelFill = (text, playerName) => String(text || '').replace(/\{name\}
 const xmasNovelSe = (kind) => {
   try {
     if (typeof Audio_ === 'undefined' || !Audio_ || !Audio_.se) return;
-    const map = { bell: 'levelUp', impact: 'enemyAttack', music: 'heal', tap: 'tap', clue: 'card', ok: 'victory', ng: 'guard' };
+    const map = { laugh: 'enemySpecial', bell: 'levelUp', impact: 'enemyAttack', music: 'heal', tap: 'tap', clue: 'card', ok: 'victory', ng: 'guard' };
     const fn = Audio_.se[map[kind] || 'tap'];
     if (typeof fn === 'function') fn();
   } catch (e) { /* 音が出せなくても読み進める */ }
@@ -336,6 +361,7 @@ const XmasNovelScreen = ({ playerName = '', onClose, onPerfect, script = null })
     } else setFx((f) => (f && f.kind === 'dark' ? null : f));
     if (r.bgm && r.bgm !== lastBgm.current) { lastBgm.current = r.bgm; xmasNovelBgm(r.bgm); }
     if (r.t === 'clue') { setGot({ n: r.clue, d: r.x, add: !!r.add }); xmasNovelSe('clue'); }
+    if (r.t === 'line' && r.n === '？？？' && xmasNovelIsLaugh(r)) xmasNovelSe('laugh');
     if (r.t === 'line' || r.t === 'band') setLog((l) => [...l.slice(-299), { who: r.t === 'line' ? xmasNovelNameOf(r) : '', text: xmasNovelFill(r.x, playerName) }]);
     if (r.t === 'q' && !opts.quiet && !opts.held) setSheet({ kind: r.kind, q: r });
     setShown(opts.instant ? 99999 : 0);
@@ -372,13 +398,17 @@ const XmasNovelScreen = ({ playerName = '', onClose, onPerfect, script = null })
       const opening = lastChapter.current !== null || next.cur.idx === 0;
       lastChapter.current = scene.chapter;
       if (ch && ch.id !== 'END') {
-        if (!s.snaps[ch.id] || next.cur.idx === 0) s = { ...s, snaps: { ...s.snaps, [ch.id]: { scene: scene.id, idx: 0, flags: next.cur.flags, clues: next.cur.clues, ans: next.cur.ans } } };
+        if (!s.snaps[ch.id] || next.cur.idx === 0) s = { ...s, snaps: { ...s.snaps, [ch.id]: { scene: scene.id, idx: 0, flags: next.cur.flags, clues: next.cur.clues, ans: next.cur.ans, panel: next.cur.panel || {} } } };
         if (opening) { setCard({ kind: 'chapter', label: xmasNovelChapterLabel(ch), title: ch.title }); setSkip(false); chapterCard = true; }
       }
     }
     let cur = next.cur;
-    if (next.row.t === 'clue' || next.row.t === 'flag') cur = xmasNovelApplyRow(cur, next.row);
-    const settled = { ...next, cur };
+    let panelChanged = [];
+    if (next.row.t === 'clue' || next.row.t === 'flag' || next.row.t === 'panel') {
+      cur = xmasNovelApplyRow(cur, next.row);
+      if (next.row.t === 'panel') { panelChanged = xmasNovelPanelChanged(next.cur.panel, cur.panel); if (next.row.stamp) xmasNovelSe('impact'); }
+    }
+    const settled = { ...next, cur, panelChanged };
     s = arriveRow(next.row, { ...s, cur }, { held: chapterCard });
     setSt(settled);
     persist(s);
@@ -572,12 +602,12 @@ const XmasNovelScreen = ({ playerName = '', onClose, onPerfect, script = null })
       <div key={`stage-${shake}`} className={`mh-nv-stage${shake ? ' mh-nv-shake' : ''}`} onClick={advance}>
         <div className="mh-nv-bg" key={scene ? scene.bg || scene.id : 'bg'} style={bg.img ? { backgroundImage: `url(${bg.img})` } : { background: bg.grad }} />
         {(bg.snow || !bg.img) && <><div className="mh-nv-snow" />{bg.snow && <div className="mh-nv-snow b" />}</>}
-        {!darkNow && isLine && <XmasNovelFigure row={row} />}
+        {!darkNow && (isLine || (isBand && xmasNovelIsSilhouette(row))) && <XmasNovelFigure row={row} />}
         {fx && <div key={fx.n} className={`mh-nv-fx ${fx.kind}`} />}
         {row && row.t === 'panel' && (
           <div className="absolute inset-x-0 top-[12%] z-[5] mx-auto w-[min(94vw,640px)] rounded-2xl p-3" data-xmas-novel-panel style={{ background: 'rgba(4,8,22,.88)', boxShadow: '0 0 0 1px #e8c46a' }}>
-            <div className="mh-nv-serif mh-nv-gold mb-2 text-center text-[15px] font-black">のこった人</div>
-            <XmasNovelCast states={xmasNovelPanelStates(row)} />
+            <div className="mh-nv-serif mh-nv-gold mb-2 text-center text-[15px] font-black">登場人物</div>
+            <XmasNovelCast states={xmasNovelPanelStates(st && st.cur && st.cur.panel, row)} changed={(st && st.panelChanged) || []} />
           </div>
         )}
         {(isLine || isBand || (row && (row.t === 'clue' || row.t === 'panel' || row.t === 'q'))) && !(card && card.kind !== 'band') && (
@@ -585,7 +615,7 @@ const XmasNovelScreen = ({ playerName = '', onClose, onPerfect, script = null })
             {name && <div className="mh-nv-name mh-nv-serif">{name}</div>}
             <div className={`mh-nv-text${isBand ? ' band mh-nv-serif' : ''}`} data-xmas-novel-text>
               {row.t === 'clue' ? `手がかり帳に「${row.clue}」を書きとめた`
-                : row.t === 'panel' ? (row.x || 'のこった人')
+                : row.t === 'panel' ? (row.x || (row.stamp ? '……' : '登場人物'))
                 : row.t === 'q' ? xmasNovelFill(row.x, playerName)
                 : text.slice(0, shown)}
             </div>

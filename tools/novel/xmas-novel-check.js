@@ -52,6 +52,10 @@ const walk = (cur0, depth, log) => {
       paths += 1;
       if (st.ending) {
         const e = st.ending.id; reached.set(e, (reached.get(e) || 0) + 1);
+        // パネル: バッドエンドの終わりは12人みんな暗い / 真グッド・ノーマルグッドは、きゅうこの「死んだと見せかけ」が外れている
+        const pn = st.cur.panel || {};
+        if (st.ending.kind === 'bad' && S.src.includes('SCRIPT') && Object.keys(pn).filter((k) => pn[k] === 'dead' || pn[k] === 'santa').length !== 12) fail(`${e}: 終わりのパネルが12人みんな暗くなっていない ${JSON.stringify(pn)}`);
+        if ((e === 'END-G' || e === 'END-N') && pn.kyuko) fail(`${e}: きゅうこのパネルが戻っていない(${pn.kyuko})`);
         // あつルートなどの「選び直す」(次: 問いの行)は、選び直したあとも先へ進めるか、1回だけ見る
         if (st.scene.next && depth < 3) walk(E.xmasNovelJump(S, st.cur, st.scene.next), depth + 1, [...log, `${e}→${st.scene.next}`]);
       } else { stuck += 1; if (stuck <= 5) fail(`エンディングに着かずに止まった: ${st.cur.scene} ${log.slice(-6).join(' > ')}`); }
@@ -112,7 +116,7 @@ const unvisited = S.scenes.filter((s) => !visited.has(s.id) && !(s.rows || []).e
 
 // 3. 保存の正規化
 const bad = [null, 1, 'x', [], { v: 9, cur: { scene: 'C99-9', idx: -3 }, read: 'no', endings: [1, 'END-G', 'END-G'], first: { Q: { f: 'yes' } }, snaps: { C1: 3, zz: {} }, auto: 7 },
-  { cur: { scene: S.scenes[0].id, idx: 2, flags: { f_a: 1, f_b: 'x', bad: 2 }, clues: [{ n: 'a' }, 3], ans: { Q: { t: 'x' } } } }];
+  { cur: { scene: S.scenes[0].id, idx: 2, flags: { f_a: 1, f_b: 'x', bad: 2 }, clues: [{ n: 'a' }, 3], ans: { Q: { t: 'x' } }, panel: { kyuko: 'dead', nobody: 'dead', dra: 'zzz' } } }];
 bad.forEach((b, i) => {
   try {
     const n = E.xmasNovelNormalize(b, S);
@@ -120,6 +124,7 @@ bad.forEach((b, i) => {
     if (i === 4 && n.cur && n.cur.scene !== 'C99-9') { /* 無い場面IDは null */ }
     if (i === 4 && n.cur) fail('正規化: 台本に無い場面IDの進み具合が残った');
     if (i === 4 && (n.endings.length !== 1 || n.auto !== 0)) fail('正規化: 見たエンディングの重なり・オートの値が直らない');
+    if (i === 5 && n.cur && (n.cur.panel.kyuko !== 'dead' || n.cur.panel.nobody || n.cur.panel.dra)) fail('正規化: 壊れたパネルの状態が残った');
     if (i === 5 && (!n.cur || n.cur.flags.f_b !== undefined || n.cur.flags.bad !== undefined || n.cur.clues.length !== 1)) fail('正規化: 壊れたフラグ・手がかりが残った');
   } catch (e) { fail(`正規化 ${i}: 落ちた ${e.message}`); }
 });

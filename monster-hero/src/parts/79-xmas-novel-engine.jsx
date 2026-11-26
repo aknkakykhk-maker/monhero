@@ -2,7 +2,7 @@
 // 画面は 79-screen-xmas-novel.jsx、台本のデータは 79-xmas-novel-script.jsx(tools/novel/xmas-novel-build.js が SCRIPT.md から作る)。
 // ここは React・保存・音に触らない(parts-purity-check)。台本の形は docs/progress/xmas-novel/FORMAT.md。
 //
-// 進み具合(cur)の形: { scene, idx, flags:{f_x:数}, clues:[{n:名前, d:説明}], ans:{問いID:{t:答えた回数, f:一発目で当てたか}} }
+// 進み具合(cur)の形: { scene, idx, flags:{f_x:数}, clues:[{n:名前, d:説明}], ans:{問いID:{t:答えた回数, f:一発目で当てたか}}, panel:{人:状態} }
 //   scene … 場面ID(C1-2 など) / idx … 場面の rows の何行目を読んでいるか(問いの行のときは、答えるまでそこに止まる)
 // 保存(mh_xmas_novel_v1)の形は xmasNovelNormalize を見る。
 
@@ -130,7 +130,7 @@ const xmasNovelFindRow = (script, rowId) => {
 const xmasNovelFreshCur = (script) => {
   const ctx = { flags: {}, clues: [], score: 0 };
   const first = xmasNovelScenes(script).find((s) => !xmasNovelIsEnding(s) && xmasNovelCondOk(s.cond, ctx));
-  return { scene: first ? first.id : null, idx: 0, flags: {}, clues: [], ans: {} };
+  return { scene: first ? first.id : null, idx: 0, flags: {}, clues: [], ans: {}, panel: {} };
 };
 // 行き先(場面ID・行ID・END)へ飛ぶ。返り値は新しい cur(場所だけ変わる)
 const xmasNovelJump = (script, cur, to) => {
@@ -157,8 +157,26 @@ const xmasNovelApplyRow = (cur, row) => {
     return { ...cur, clues: list.map((c, i) => (i === at ? { ...c, d } : c)) };
   }
   if (row.t === 'flag' && Array.isArray(row.set)) return { ...cur, flags: xmasNovelSetFlags(cur.flags, row.set) };
+  if (row.t === 'panel') return { ...cur, panel: xmasNovelPanelApply(cur.panel, row) };
   return cur;
 };
+// ---- 登場人物パネル(話の進みで積み上げる) ----
+//  状態: '' ふつう / 'missing' 行方不明のはんこ / 'hurt' けがの札 / 'dead' 暗いパネルと白い花 / 'santa' 暗いパネルと黒いサンタの判(バッドエンド)
+//  行の ops(人ごとの変わり方)と stamp(1 = まだ暗くない人を1人・'all' = のこった人みんなに黒いサンタの判)
+const XMAS_NOVEL_PANEL_STATES = Object.freeze(['missing', 'hurt', 'dead', 'santa']);
+const xmasNovelPanelApply = (panel, row) => {
+  const next = { ...(panel || {}) };
+  (row.ops || []).forEach((o) => {
+    if (!o || !xmasNovelCastOf(o.id)) return;
+    if (o.st === 'normal') delete next[o.id]; else if (XMAS_NOVEL_PANEL_STATES.includes(o.st)) next[o.id] = o.st;
+  });
+  const alive = () => XMAS_NOVEL_CAST.filter((c) => next[c.id] !== 'dead' && next[c.id] !== 'santa');
+  if (row.stamp === 'all') alive().forEach((c) => { next[c.id] = 'santa'; });
+  else if (row.stamp === 1) { const c = alive()[0]; if (c) next[c.id] = 'santa'; }
+  return next;
+};
+// その行でパネルが変わった人(画面で目立たせる)
+const xmasNovelPanelChanged = (before, after) => XMAS_NOVEL_CAST.map((c) => c.id).filter((id) => (before || {})[id] !== (after || {})[id]);
 const xmasNovelSetFlags = (flags, sets) => {
   const next = { ...(flags || {}) };
   (sets || []).forEach((s) => {
@@ -282,7 +300,9 @@ const xmasNovelNormalizeCur = (raw, script) => {
     if (a && typeof a === 'object' && Number.isFinite(a.t)) ans[k] = { t: Math.max(1, Math.floor(a.t)), f: a.f === true, ...(Number.isFinite(a.w) && a.w >= 0 ? { w: Math.floor(a.w) } : {}), ...(a.done ? { done: true } : {}), ...(Number.isInteger(a.pick) ? { pick: a.pick } : {}) };
   });
   const idx = Number.isInteger(raw.idx) && raw.idx >= 0 ? raw.idx : 0;
-  return { scene: raw.scene, idx, flags, clues, ans };
+  const panel = {};
+  if (raw.panel && typeof raw.panel === 'object') Object.keys(raw.panel).forEach((k) => { if (xmasNovelCastOf(k) && XMAS_NOVEL_PANEL_STATES.includes(raw.panel[k])) panel[k] = raw.panel[k]; });
+  return { scene: raw.scene, idx, flags, clues, ans, panel };
 };
 const xmasNovelNormalize = (raw, script = null) => {
   const r = raw && typeof raw === 'object' ? raw : {};
