@@ -2194,7 +2194,8 @@
         "beatsPerBar": 4,
         "subdivisionsPerBeat": 4,
         "source": "command"
-      }
+      },
+      "chartIntensity": "strong"
     },
     "kiss_mystery_short": {
       "flowPlacement": true,
@@ -2208,7 +2209,8 @@
         "beatsPerBar": 4,
         "subdivisionsPerBeat": 4,
         "source": "command"
-      }
+      },
+      "chartIntensity": "strong"
     },
     "dear_santa": {
       "flowPlacement": true,
@@ -2222,7 +2224,8 @@
         "beatsPerBar": 4,
         "subdivisionsPerBeat": 4,
         "source": "command"
-      }
+      },
+      "hellDensity": 0.75
     },
     "dear_santa_short": {
       "flowPlacement": true,
@@ -2240,7 +2243,8 @@
       "sustainScale": {
         "EXPERT": 0.7,
         "MASTER": 0.7
-      }
+      },
+      "hellDensity": 0.75
     },
     "winter_fall": {
       "flowPlacement": true,
@@ -2254,7 +2258,8 @@
         "beatsPerBar": 4,
         "subdivisionsPerBeat": 4,
         "source": "command"
-      }
+      },
+      "chartIntensity": "strong"
     },
     "winter_fall_short": {
       "flowPlacement": true,
@@ -2268,7 +2273,8 @@
         "beatsPerBar": 4,
         "subdivisionsPerBeat": 4,
         "source": "command"
-      }
+      },
+      "chartIntensity": "strong"
     }
   }
 }
