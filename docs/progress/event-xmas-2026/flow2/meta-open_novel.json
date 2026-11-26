@@ -1,0 +1,72 @@
+[
+ {
+  "stage": "open",
+  "f": "open-0a-raidstory-start.jpg",
+  "label": "レイドのお話 導入(はじまり)"
+ },
+ {
+  "stage": "open",
+  "f": "open-0b-raidstory-kuroha.jpg",
+  "label": "レイドのお話 導入(黒羽)"
+ },
+ {
+  "stage": "open",
+  "f": "open-0c-raidstory-shirase.jpg",
+  "label": "レイドのお話 導入(白瀬)"
+ },
+ {
+  "stage": "open",
+  "f": "open-1-home.jpg",
+  "label": "HOME"
+ },
+ {
+  "stage": "open",
+  "f": "open-2-story.jpg",
+  "label": "イベントページ 物語"
+ },
+ {
+  "stage": "open",
+  "f": "open-3-raid.jpg",
+  "label": "レイド レイドバトル"
+ },
+ {
+  "stage": "open",
+  "f": "open-4-grandslam.jpg",
+  "label": "レイド グランドスラム"
+ },
+ {
+  "stage": "open",
+  "f": "open-5-bonus.jpg",
+  "label": "イベントページ ボーナス"
+ },
+ {
+  "stage": "open",
+  "f": "open-8-changelog.jpg",
+  "label": "更新履歴(開催のお知らせ) 更新情報"
+ },
+ {
+  "stage": "open",
+  "f": "open-8b-changelog-event.jpg",
+  "label": "更新履歴(開催のお知らせ) イベント"
+ },
+ {
+  "stage": "open",
+  "f": "open-9-help.jpg",
+  "label": "ヘルプ クリスマスの項目"
+ },
+ {
+  "stage": "novel",
+  "f": "open-6-novel-title.jpg",
+  "label": "事件簿 起動画面"
+ },
+ {
+  "stage": "novel",
+  "f": "open-7-novel-ch1.jpg",
+  "label": "事件簿 第1章のはじまり"
+ },
+ {
+  "stage": "novel",
+  "f": "open-7b-novel-ch1-first.jpg",
+  "label": "事件簿 第1章の最初の場面"
+ }
+]

@@ -151,7 +151,8 @@ const cardCpuPlaylistOf = (playlist, who) => {
 };
 const cardIsBgmTrack = (id) => typeof BGM_TRACKS !== 'undefined' && BGM_TRACKS.some((t) => t.id === id);
 // 鳴らす曲(onBgm に渡す形)。ランダム(CARD_BGM_RANDOM)は選べる曲ぜんぶの並び → 60-app が開くたび・対戦を始めるたびにシャッフルして流す
-const cardBgmAllTracks = () => (typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS.map((t) => t.id) : []);
+// 「おまかせ」で選ぶ曲は、一覧に出している曲だけ(公開を止めている曲・時刻前の曲は入れない。13-bgm の bgmListedTracks)
+const cardBgmAllTracks = () => (typeof bgmListedTracks === 'function' ? bgmListedTracks().map((t) => t.id) : typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS.map((t) => t.id) : []);
 const cardBgmOf = (v) => {
   if (v === CARD_BGM_RANDOM) return cardBgmAllTracks();
   if (Array.isArray(v) && v.includes(CARD_BGM_RANDOM)) return cardBgmAllTracks();
@@ -3093,7 +3094,9 @@ const CardAssistantArt = ({ src, alt, className = '', style = null, knownBox = n
 // 同じ曲は選べない(ほかの行で使っている曲は一覧に出さない)。1曲だけのときは外せない(0曲にしない)
 const CardPlaylistRows = ({ list, onChange, bgmPreview, tag }) => {
   const tracks = typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : [];
-  const choices = (keep) => tracks.filter((t) => t.id === keep || !list.includes(t.id));
+  // 一覧に出すのは bgmListedTracks の曲だけ(公開を止めている曲・時刻前の曲は出さない)。いま選んでいる曲(keep)は消さずに残す
+  const listed = (t) => typeof bgmTrackListed !== 'function' || bgmTrackListed(t);
+  const choices = (keep) => tracks.filter((t) => t.id === keep || (listed(t) && !list.includes(t.id)));
   const selectClass = 'min-h-[44px] min-w-0 flex-1 rounded-xl border border-white/15 bg-slate-950 px-2 py-2 text-xs text-white';
   // ランダム(選べる曲ぜんぶから、毎回ちがう順で)。並びは [CARD_BGM_RANDOM] の1つだけ
   if (list.length === 1 && list[0] === CARD_BGM_RANDOM) {
@@ -4144,7 +4147,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       const intro = { mode: 'assistant', foe: { who: null, name: bossName, icon: null, frame: null, line: null, deckName: CARD_RAID_BOSS.deckName, monsters: vsMons(st, CARD_CPU) },
         me: { name: myName, deckName: deck.name || null, monsters: vsMons(st, CARD_ME) } };
       setGame({ key: `raid-${seed}`, st, who: 'raid', level: tier.level, settings: save.settings, intro, raid: { tier: Math.max(0, Math.floor(Number(rc.tierIndex) || 0)), tierName: rc.tierName || '', bossName, run: rc } });
-      onBgm && onBgm(cardBgmOf(cardCpuPlaylistOf(save.cpuPlaylist, 'kyuko')));
+      // レイドのボスとの対戦はクリスマスのレイドバトル曲「winter fall」(台帳 r1126-023)。曲が無いときは今までどおり
+      onBgm && onBgm(typeof XMAS_RAID_BATTLE_BGM_TRACK === 'string' && BGM_TRACK_BY_ID[XMAS_RAID_BATTLE_BGM_TRACK] ? XMAS_RAID_BATTLE_BGM_TRACK : cardBgmOf(cardCpuPlaylistOf(save.cpuPlaylist, 'kyuko')));
       onNavigate('CARD_BATTLE');
     } finally { raidStartingRef.current = false; }
   };
@@ -4763,7 +4767,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
                   <select data-card-bgm-select={k} aria-label={`${label}のBGM`} value={save.bgm[k]} onChange={(e) => { void persist({ bgm: normalizeCardBgm({ ...save.bgm, [k]: e.target.value }, cardIsBgmTrack) }); }}
                     className="min-h-[44px] min-w-0 flex-1 rounded-xl border border-white/15 bg-slate-950 px-2 py-2 text-xs text-white">
                     <option value={CARD_BGM_RANDOM}>ランダム(毎回ちがう曲)</option>
-                    {(typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : []).map((t) => <option key={t.id} value={t.id}>{t.name}{t.id === (CARD_BGM_DEFAULT[k] || CARD_BGM_DEFAULT.pvp) ? '(初めの曲)' : ''}</option>)}
+                    {(typeof bgmListedTracks === 'function' ? bgmListedTracks() : typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : []).map((t) => <option key={t.id} value={t.id}>{t.name}{t.id === (CARD_BGM_DEFAULT[k] || CARD_BGM_DEFAULT.pvp) ? '(初めの曲)' : ''}</option>)}
                   </select>
                   {/* ランダムの試聴は1曲を選んで流す(鳴っていれば止める) */}
                   {bgmPreview && (save.bgm[k] === CARD_BGM_RANDOM

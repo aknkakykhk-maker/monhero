@@ -426,6 +426,36 @@
   "kimimachi_loop/hard": "5f8316826b8fc0e6",
   "kimimachi_loop/expert": "a590f649d59c759a",
   "kimimachi_loop/master": "804001a10a1ec514",
+  "kiss_mystery/easy": "568ae8fdef02fdaf",
+  "kiss_mystery/normal": "2d10e17985fce4e4",
+  "kiss_mystery/hard": "4e19f0dcfd5e053f",
+  "kiss_mystery/expert": "00e6841a2af23509",
+  "kiss_mystery/master": "cf3e830e3d624f64",
+  "kiss_mystery_short/easy": "de948cb16622f400",
+  "kiss_mystery_short/normal": "ecd17f588c269936",
+  "kiss_mystery_short/hard": "c26558e67f75fabe",
+  "kiss_mystery_short/expert": "742b29ec03ad1bae",
+  "kiss_mystery_short/master": "1dc3e5d462830afc",
+  "dear_santa/easy": "d092bcaeba626dad",
+  "dear_santa/normal": "47e6c437229923c0",
+  "dear_santa/hard": "068070935d38b4c3",
+  "dear_santa/expert": "71a2950ae97fff6d",
+  "dear_santa/master": "b2be04085fdc9ce7",
+  "dear_santa_short/easy": "c3abf021a6d0a5ff",
+  "dear_santa_short/normal": "849a1ba639b2b3d4",
+  "dear_santa_short/hard": "aee10aaebca32b77",
+  "dear_santa_short/expert": "a3a060b6b0d7be30",
+  "dear_santa_short/master": "0a2df05804c1ddca",
+  "winter_fall/easy": "cdc374450ba9e381",
+  "winter_fall/normal": "a8db3a3bb8200e3e",
+  "winter_fall/hard": "a7e29069107f58d3",
+  "winter_fall/expert": "d43fd5ae5dbae8ea",
+  "winter_fall/master": "32e1a586b5fd8283",
+  "winter_fall_short/easy": "a1c0852eecdea402",
+  "winter_fall_short/normal": "91d7f0251f3bcc08",
+  "winter_fall_short/hard": "de9ef98c35536f39",
+  "winter_fall_short/expert": "0eb4665df3daab89",
+  "winter_fall_short/master": "706cd0b4651ab483",
   "zenbu_hissatsuwaza/easy": "07f646677627ba53",
   "zenbu_hissatsuwaza/normal": "1d1fcd2a2e216f28",
   "zenbu_hissatsuwaza/hard": "1a984063bd072fb0",
@@ -526,6 +556,12 @@
   "desert_crown/hell": "662c4a0b30060ef2",
   "brand_new_sky/hell": "184d3b1d09c53b39",
   "kimimachi_loop/hell": "c58629c2c246d6f1",
+  "kiss_mystery/hell": "796241eb5014008d",
+  "kiss_mystery_short/hell": "dea60bd2cac81de3",
+  "dear_santa/hell": "65bc451ba4c41cd7",
+  "dear_santa_short/hell": "2661bec7c3e38eff",
+  "winter_fall/hell": "e9fd6788c3b23fca",
+  "winter_fall_short/hell": "9884e50326e14940",
   "zenbu_hissatsuwaza/hell": "52af5d2cacf4545f",
   "megalovania_sans/hell": "b54acba215aae1da",
   "megalovania_smash/hell": "2ba3b2a5cd05b394"
@@ -1292,6 +1328,11 @@
    "changed": [
     "zenbu_hissatsuwaza/hell"
    ]
+  },
+  {
+   "at": "2026-11-26 23:04",
+   "reason": "新曲 Kissからはじまるミステリー・Dear Santa・winter fall(原曲と short ver.)を公開",
+   "changedCount": 36
   }
  ]
 }

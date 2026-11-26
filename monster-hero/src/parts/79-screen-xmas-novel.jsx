@@ -215,7 +215,11 @@ const xmasNovelTintOf = (n, b) => {
 };
 const xmasNovelBgOf = (name) => {
   const n = String(name || '').split('→')[0]; // 「A→B」は A から始める(B へ変わる行は XMAS_NOVEL_BG_SHIFT)
-  if (/^[a-z0-9_]+$/.test(n)) return { img: `images/story-bg/${n}.jpg` };
+  // 「monhero_plaza(画面のわくの中)」のように、絵の名前のうしろに説明が付く物も、頭の絵の名前で出す(無地になっていた・2026-11-26 窓口)
+  const raw = n.match(/^([a-z0-9_]+)(?=$|[(（])/);
+  if (raw) return { img: `images/story-bg/${raw[1]}.jpg` };
+  // 外側の場面「ゲーム機をかこむ助手たち」は、台本の最初の外側の場面(monhero_plaza_evening)と同じ広場で出す。夜は夜の広場
+  if (/ゲーム機をかこむ/.test(n)) return { img: `images/story-bg/${/夜/.test(n) ? 'monhero_night' : 'monhero_plaza_evening'}.jpg` };
   const b = XMAS_NOVEL_BG.find((x) => x.re.test(n));
   if (!b) return XMAS_NOVEL_BG_DEFAULT;
   const tint = xmasNovelTintOf(n, b);

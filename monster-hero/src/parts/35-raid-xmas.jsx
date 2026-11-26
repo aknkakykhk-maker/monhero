@@ -231,3 +231,9 @@ const xmasStoryCastAt = (no) => {
 
 // イベントページ(レイドの準備画面も)を開いているあいだの曲(台帳 r1126-015)。閉じると画面の曲へ戻る。BGM を切っている人には鳴らない(ふだんの BGM と同じ口)
 const XMAS_EVENT_BGM_TRACK = 'melo_kiss_mystery';
+// クリスマスイベントの期間(11/30 10:00〜12/31 3:59)だけの曲(台帳 r1126-023)。期間の外は今までの曲。開催中かは見るたびに数え直す
+//  ・ホームのBGM「Dear Santa」(台帳 r1126-023 追記1): HOME の曲(プロフィール・持ち物など HOME の曲を続ける画面も)。BGMアレンジでデフォルトのままの人だけ(自分で選んだ曲は替えない)
+//  ・レイドバトル曲「winter fall」: レイドのボスとの戦いの最中(モンヒロバトルの戦闘・MFバトルカードの対戦)
+const XMAS_HOME_BGM_TRACK = 'melo_dear_santa';
+const XMAS_RAID_BATTLE_BGM_TRACK = 'melo_winter_fall';
+const xmasEventBgmOpenAt = (nowMs) => raidXmasWindowAt(nowMs) === 'open';

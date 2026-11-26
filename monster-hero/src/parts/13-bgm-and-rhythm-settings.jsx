@@ -78,6 +78,12 @@ const BGM_TRACKS = [
   { id:'melo_crazy_party_night_full', name:'Crazy Party Night ～ぱんぷきんの逆襲～ full', creator:'オリジナル', src:'audio/bgm-crazy-party-night-full.mp3', gain:1, loop:true },
   // クリスマスイベント「聖夜の名探偵」のイベントページの曲(2026-11-26 社長・台帳 r1126-015)。5分4秒。元の音源は tools/art-sources/song-audio/kiss_mystery/
   { id:'melo_kiss_mystery', name:'Kissからはじまるミステリー', creator:'オリジナル', src:'audio/bgm-kiss-mystery.mp3', gain:1, loop:true },
+  // クリスマスイベントの3曲(2026-11-26 社長・台帳 r1126-023)。モンヒロビートの曲でもある(頭に2秒の無音を足した版)。元の音源は tools/art-sources/song-audio/<kiss_mystery|dear_santa|winter_fall>/
+  { id:'melo_kiss_mystery_short', name:'Kissからはじまるミステリー short ver.', creator:'オリジナル', src:'audio/bgm-kiss-mystery-short.mp3', gain:1, loop:true },
+  { id:'melo_dear_santa', name:'Dear Santa', creator:'オリジナル', src:'audio/bgm-dear-santa.mp3', gain:1, loop:true },
+  { id:'melo_dear_santa_short', name:'Dear Santa short ver.', creator:'オリジナル', src:'audio/bgm-dear-santa-short.mp3', gain:1, loop:true },
+  { id:'melo_winter_fall', name:'winter fall', creator:'オリジナル', src:'audio/bgm-winter-fall.mp3', gain:1, loop:true },
+  { id:'melo_winter_fall_short', name:'winter fall short ver.', creator:'オリジナル', src:'audio/bgm-winter-fall-short.mp3', gain:1, loop:true },
   { id:'melo_emerald_rush', name:'Emerald Rush', creator:'オリジナル', src:'audio/bgm-emerald-rush.mp3', gain:1, loop:true },
   { id:'melo_wrath_of_the_thorn_king', name:'Wrath of the Thorn King「茨の王の怒り」', creator:'オリジナル', src:'audio/bgm-wrath-of-the-thorn-king.mp3', gain:1, loop:true },
   { id:'melo_monster', name:'Monster', creator:'オリジナル', src:'audio/bgm-monster.mp3', gain:1, loop:true },
@@ -181,6 +187,26 @@ const BGM_UNRELEASED_TRACKS = Object.freeze([
   { id:'melo_battle_5_short', name:'Battle #5 short ver.', creator:'オリジナル', src:'audio/bgm-battle-5-short.mp3', gain:1, loop:true },
 ]);
 const BGM_TRACK_BY_ID = Object.fromEntries(BGM_TRACKS.map(track => [track.id, track]));
+// 曲を選ぶ一覧(BGMアレンジ・自動戦闘のBGM・MFバトルカードの対戦BGMとその「おまかせ」)に出すかどうか(2026-11-26 ミハリの指摘・PR #7771)。
+// 公開を止めている曲(Battle #5)は、はじめから BGM_TRACKS に入れていない(上の BGM_UNRELEASED_TRACKS)。鳴らす口(BGM_TRACK_BY_ID)は絞らない。HOME やレイドの曲として決まった時刻から鳴らす物は、一覧に出る前でも鳴らせる。
+//  ・BGM_TRACK_LISTED_FROM … 一覧に出しはじめる時刻。モンヒロビートの RHYTHM_SONG_RELEASE_AT と同じ時刻にそろえる。見るたびに数え直す(CLAUDE.md ⑥-4)
+const BGM_TRACK_LISTED_FROM = Object.freeze({
+  // クリスマスイベントの曲(台帳 r1126-023)。開幕の 11/30 10:00 から(Kiss の全編はイベントページの曲として先に入っているので外さない)
+  melo_kiss_mystery_short: '2026-11-30T10:00:00+09:00',
+  melo_dear_santa: '2026-11-30T10:00:00+09:00',
+  melo_dear_santa_short: '2026-11-30T10:00:00+09:00',
+  melo_winter_fall: '2026-11-30T10:00:00+09:00',
+  melo_winter_fall_short: '2026-11-30T10:00:00+09:00',
+});
+const bgmTrackListed = (track, nowMs = Date.now()) => {
+  const id = track && track.id;
+  if (!id) return false;
+  const from = BGM_TRACK_LISTED_FROM[id];
+  if (!from) return true;
+  const ms = Date.parse(from);
+  return Number.isFinite(ms) && Number(nowMs) >= ms;
+};
+const bgmListedTracks = (nowMs = Date.now()) => BGM_TRACKS.filter((track) => bgmTrackListed(track, nowMs));
 BGM_PROTO_TRACKS.forEach(track => { if (!BGM_TRACK_BY_ID[track.id]) BGM_TRACK_BY_ID[track.id] = track; });
 BGM_UNRELEASED_TRACKS.forEach(track => { if (!BGM_TRACK_BY_ID[track.id]) BGM_TRACK_BY_ID[track.id] = track; });
 const BGM_TRACK_BY_KEY = Object.fromEntries(BGM_TRACKS.filter(track => track.legacyKey).map(track => [track.legacyKey, track]));

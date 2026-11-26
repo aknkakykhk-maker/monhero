@@ -55,7 +55,7 @@ node tools/ctx.js brief               いまの状態
 - `monster-hero/src/parts/81-*`
 - `monster-hero/data/breeder.js`
 - `monster-hero/data/help.js`(0.9MB・開かない)
-- `monster-hero/data/changelog.js`(1.9MB・開かない)
+- `monster-hero/data/changelog.js`(2.0MB・開かない)
 - `monster-hero/data/mhsave-backup.js`
 - `tools/boot/*`
 - `tools/market/*`
