@@ -11300,6 +11300,15 @@ const STORY_GUEST_SPEAKERS = [
   { id: 'pandora_shadow', name: '？？？', role: 'ゲスト', emoji: '🗝️', accent: '#6b21a8', image: (typeof PANDORA_SHADOW_IMG !== 'undefined' ? PANDORA_SHADOW_IMG : null), imageFit: 'contain', expressions: [], defaultExpression: 'normal' },
   // クリスマスのイベント「聖夜の名探偵」(2026-11-28 序章から・台帳 r1126-013)のワトソンくん(台本の初めの名前はルーペ)。ソラシドのノートパソコンの AI。顔は出さず、名前と台詞だけ(noFace)
   { id: 'watson', name: 'ワトソンくん', role: 'ゲスト', emoji: '💻', accent: '#67e8f9', image: null, noFace: true, expressions: [], defaultExpression: 'normal' },
+  // クリスマスのレイド「もうひとつの聖夜」(RAID_XMAS_STORY_*・r1126-026)の話し手。表情の絵は1枚(expressions は空)。
+  //   絵が読めないときは AssistantFace が絵文字で出す(謎の客2人は 2026-11-26 に届いた立ち絵。顔の枠には全身を収める)
+  { id: 'ichika', name: 'イチーカ', role: 'ゲスト', emoji: '❄️', accent: '#93c5fd', image: 'images/monster-icons/face/snegurochka.png', expressions: [], defaultExpression: 'normal' },
+  { id: 'mochimaru', name: 'もちまる', role: 'ゲスト', emoji: '🍡', accent: '#fca5a5', image: 'images/monster-icons/face/mocchi.png', expressions: [], defaultExpression: 'normal' },
+  { id: 'kuroba', name: '黒羽', role: 'ゲスト', emoji: '🕰️', accent: '#94a3b8', image: 'images/story-guests/kuroba_stand.png', imageFit: 'contain', expressions: [], defaultExpression: 'normal' },
+  { id: 'shirase', name: '白瀬', role: 'ゲスト', emoji: '🧤', accent: '#f87171', image: 'images/story-guests/shirase_stand.png', imageFit: 'contain', expressions: [], defaultExpression: 'normal' },
+  // 赤いサンタは、まだゲームの中に絵が無いので絵文字で出す。黒いサンタはレイドのボスの絵(行の name で段階の名前に上書きする)
+  { id: 'xmas_santa', name: 'サンタ', role: 'ゲスト', emoji: '🎅', accent: '#ef4444', image: null, expressions: [], defaultExpression: 'normal' },
+  { id: 'xmas_kurosanta', name: '黒いサンタ', role: 'ゲスト', emoji: '🎅', accent: '#7f1d1d', image: (typeof RAID_XMAS_BOSS_IMG !== 'undefined' ? RAID_XMAS_BOSS_IMG : null), imageFit: 'contain', expressions: [], defaultExpression: 'normal' },
 ];
 
 // ===== ぱんぷきん×ジャックのストーリー(第1.5部〜終章) =====
@@ -13079,9 +13088,220 @@ const XMAS_STORY_00 = [
 const XMAS_STORY_CALLS = { mua: 'あつくん', sorashido: 'ワトソンくん', momosuke: 'ドラちゃん', kyuko: 'えるニキ', erubin: 'きゅうこちゃん' };
 // 助手の顔はクリスマス衣装(images/assistant/santa/face/・data/breeder.js の *_santa_2026)。会話のあいだだけ着る
 const XMAS_STORY_COSTUMES = Object.freeze({ mua:'mua_santa_2026', kiki:'kiki_santa_2026', momosuke:'momosuke_santa_2026', dra:'dra_santa_2026', atsu:'atsu_santa_2026', kyuko:'kyuko_santa_2026', sorashido:'sorashido_santa_2026', erubin:'erubin_santa_2026' });
+// ---- クリスマスのレイド「もうひとつの聖夜」(段階を倒すたびのお話・r1126-026 で謎の客2人を入れて書き直し) ----
+// 台本は docs/progress/event-xmas-2026/SCRIPT.md の「## みんなで進む話(レイド) 台本」(台詞は台本のまま。この配列は台本の表から作った)。
+//   だれも消えなかった「もしも」の話。謎の客2人(黒羽・白瀬)も生きていて、事件・12年前には触れない。
+//   黒いサンタは段階ごとに name を上書きする(咎・戒・罰・断罪・煉獄)。赤に戻ったあとと覚醒する前は santa。
+//   id と流す時は 35-raid-xmas.jsx の RAID_XMAS_STORY_START_ID・RAID_XMAS_STORY_AFTER_TIER・RAID_XMAS_ENDING_*_ID。公開の印 raidXmas(11/30 10:00)まで回想にも出さない
+// レイド導入 ～もうひとつの聖夜～ (レイド開始 11/30 10:00)
+const RAID_XMAS_STORY_1B = [
+  { band:true, fxText:'これは、もうひとつの聖夜のお話。——もしも、だれも消えなかったら' },
+  { band:true, fxText:'ペンション・シュプール。クリスマス会の前の晩' },
+  { who:'mua', e:'excited', t:'飾りつけ、あとちょっと！ ひめちん、そっちの星とって！' },
+  { who:'kiki', e:'happy', t:'はいでつ。……みゅあちん、それ、さかさまでつよ' },
+  { band:true, fxText:'暖炉のそばには、泊まり客が2人。懐中時計ばかり見ている黒羽さんと、赤い毛糸の手袋をひざにのせた白瀬さん' },
+  { who:'kuroba', t:'飾りつけに何時間かける気だね。時は金なり、だよ' },
+  { who:'momosuke', e:'angry', t:'もう〜、黒羽さんも手伝ってくれたら、すぐ終わるのにw' },
+  { who:'kuroba', t:'くだらん。わたしは客だ' },
+  { who:'shirase', t:'(小さく)……きれいな星。……ごめんなさい、じゃまにならないように、ここで見ています' },
+  { band:true, fxText:'コン、コン(玄関をたたく音)' },
+  { who:'ichika', t:'こんな吹雪の夜に、お客さま……？ はい、どなたですか' },
+  { who:'mochimaru', t:'ぼくが出ますっちー！ ……オーナー、うしろにいてくださいっちー' },
+  { band:true, fxText:'戸口に立っていたのは、赤い服に、大きなうさぎの耳。背中には、ふくらんだ布袋' },
+  { who:'xmas_santa', t:'こんばんは。道に迷ってしまってね。少しだけ、火にあたらせてもらえないかな' },
+  { who:'momosuke', e:'surprise', t:'え、うそ、サンタさん！？ 本物！？ 耳、ふわふわ〜♡' },
+  { who:'xmas_santa', t:'ふふ。この耳で、みんなの『ほしい』を聞き分けて、配っているんだよ' },
+  { who:'kuroba', t:'サンタだと？ くだらん。おとぎ話の衣装だろう' },
+  { who:'xmas_santa', t:'ふふ。おとぎ話でも、配る袋は本物だよ' },
+  { who:'erubin', e:'happy', t:'明日が本番なんだよね。よかったら、配る準備、俺たちも手伝おうか' },
+  { who:'dra', e:'normal', t:'力仕事ならおでに任せろ。……ところで、その袋、ちょっとにおわないか？' },
+  { who:'xmas_santa', t:'……よく言われるんだ' },
+  { who:'mochimaru', t:'袋、あとでぼくが洗っておきますっちー……' },
+  { who:'atsu', e:'happy', t:'ドラちゃん、正直すぎ笑' },
+  { band:true, fxText:'夜ふけ。吹雪が、いちだんと強くなる' },
+  { who:'sorashido', e:'normal', t:'プレゼントの数、数え終わりました。……サンタさん？' },
+  { band:true, fxText:'サンタの大きな耳が、ぴくりと動いた。ぴくり、ぴくり——止まらない' },
+  { who:'xmas_santa', t:'……聞こえる。世界じゅうの『ほしい』が、いっぺんに……。あれがほしい、もっとほしい、ぜんぶ、ほしい……' },
+  { who:'kyuko', e:'surprise', t:'ちょ、サンタさん、大丈夫！？ 耳、ふさいで！' },
+  { band:true, fxText:'赤い服が、すみのように黒く染まっていく。髪は白く、目は、鋭い赤に' },
+  { who:'xmas_kurosanta', name:'黒いサンタ・咎', t:'……ぜんぶ、ワタシのものだ' },
+  { band:true, fxText:'怪しこの夜——黒い気配が、ペンションを包む' },
+  { band:true, fxText:'黒いサンタは、もみの木の下のプレゼントも、配るはずのプレゼントも——黒羽さんの手の懐中時計まで、すべて袋に詰めて、屋根の上へ' },
+  { who:'kuroba', t:'わ、わたしの時計を……！ 返したまえ！ あれは、わたしの……！' },
+  { who:'ichika', t:'……言い伝えの、黒いサンタ。本当に、いたなんて' },
+  { who:'shirase', t:'(赤い手袋をにぎりしめて)……サンタさん、苦しそうでした。たくさんの『ほしい』に、ひとりで押しつぶされているみたいで' },
+  { who:'atsu', e:'normal', t:'言い伝えでも何でもいい。あのままじゃ、だれにも届かない' },
+  { who:'kuroba', t:'……ふん。時計を取り返すまでは、わたしも付き合ってやる。むだな時間は、使わせるなよ' },
+  { who:'sorashido', e:'normal', t:'みなさんの力を、少しずつ重ねましょう。1回では無理でも、みんなで削れば届きます' },
+  { who:'mua', e:'angry', t:'サンタさんを、元に戻すよ！ みんな、いくよ！' },
+];
+// レイド 第1話 ～落ちたひとつ～ (第1段階・咎を倒したあと)
+const RAID_XMAS_STORY_2 = [
+  { band:true, fxText:'屋根の上。吹雪の中に、黒い影' },
+  { who:'xmas_kurosanta', name:'黒いサンタ・咎', t:'よこせ。ぜんぶ、よこせ' },
+  { band:true, fxText:'正拳・闇——黒い拳が、雪の屋根を打ちくだく' },
+  { who:'mua', e:'surprise', t:'ひゃっ！？ 屋根、割れたぢゃん！ まぢ力強すぎ！' },
+  { who:'momosuke', e:'angry', t:'でも、もも、負けないもん！ みゅあねぇ、いっしょに！' },
+  { band:true, fxText:'みんなの攻撃が重なり、黒いサンタがよろめく。袋の口から、プレゼントがひとつ転がり落ちた' },
+  { band:true, fxText:'黒いサンタは、それを拾おうと手をのばし——途中で、手を止めた' },
+  { who:'xmas_kurosanta', name:'黒いサンタ・咎', t:'……これは、だれの……' },
+  { who:'momosuke', e:'normal', t:'……いま、止まったよね？ 拾わなかった' },
+  { band:true, fxText:'雪の上の小さな包み。破れた紙のすきまから、銀色のハーモニカがのぞいている。札には、たどたどしい字で「サンタさんへ ハーモニカがほしいです」' },
+  { who:'kuroba', t:'(包みを拾い上げて)……ハーモニカか' },
+  { who:'mua', e:'normal', t:'黒羽さん？ それ、なんかあるの？' },
+  { who:'kuroba', t:'……わたしも子どものころ、同じものを書いた。届かなかったがね。だから、自分で稼いで買うことにした。それだけの話だ' },
+  { who:'momosuke', e:'troubled', t:'……黒羽さん、ちょっとさみしそう' },
+  { who:'kuroba', t:'くだらん。……(包みを、みゅあの手にのせて)なくすなよ。持ち主が待っている' },
+  { who:'mua', e:'normal', t:'うん。サンタさん、たぶんまだ、中にいるんだよ。もも、あきらめないでいこ' },
+  { band:true, fxText:'黒いサンタは、袋をかつぎ直して、吹雪の向こうへ跳んだ' },
+];
+// レイド 第2話 ～ゆれる声～ (第2段階・戒を倒したあと)
+const RAID_XMAS_STORY_3 = [
+  { band:true, fxText:'ペンションの裏の、雪の森' },
+  { band:true, fxText:'超宝屁——袋の口から、ものすごいにおいの黒い風' },
+  { who:'dra', e:'surprise', t:'くっさ！！ な、なんだ今の！ 袋のにおいが、10倍になってるぞ！' },
+  { who:'kiki', e:'crying', t:'目が……目がしみまつ……( ˘ω˘ )' },
+  { who:'shirase', t:'ききさん、これで目を。……雪でぬらしたハンカチです。少しは、楽になるはず' },
+  { who:'kiki', e:'happy', t:'白瀬さん、ありがとうございまつ……ひんやりして、生き返りまつ' },
+  { who:'dra', e:'normal', t:'靴下さん、おでのうしろに隠れてろ。においは、おでが受け止める' },
+  { who:'kiki', e:'troubled', t:'ドラさん、それは、かっこいいのか、かっこよくないのか、分からないでつ……' },
+  { band:true, fxText:'2人の攻撃が届き、黒いサンタが雪にひざをつく' },
+  { who:'xmas_kurosanta', name:'黒いサンタ・戒', t:'……ほしい。ちがう、ワタシは……ワタシは、なにを……' },
+  { who:'dra', e:'normal', t:'迷ってるなら、おでらが手伝うぞ。ひとりで抱えるな' },
+  { who:'xmas_kurosanta', name:'黒いサンタ・戒', t:'……だまれ' },
+  { who:'kiki', e:'normal', t:'いま、声がゆれまちた。……あと少しで、届く気がしまつ' },
+];
+// レイド 第3話 ～赤い色～ (第3段階・罰を倒したあと)
+const RAID_XMAS_STORY_4 = [
+  { band:true, fxText:'凍った湖の上' },
+  { band:true, fxText:'超飛び蹴り——黒い影が、湖の向こうから一直線に飛んでくる' },
+  { who:'erubin', e:'surprise', t:'あっくん、よけて！' },
+  { who:'atsu', e:'excited', t:'よけたら、うしろのみんなに当たるでしょ！ 受けるよ！' },
+  { band:true, fxText:'瞬黒撃——まばたきのあいだに、黒い一撃' },
+  { who:'atsu', e:'troubled', t:'……っ、速っ。でも、見えた' },
+  { band:true, fxText:'湖を渡る風に、えるびんの手が真っ赤にかじかんでいる' },
+  { who:'shirase', t:'えるびんさん、これを。……赤い手袋。わたしは、ポケットで平気ですから' },
+  { who:'erubin', e:'surprise', t:'え、でも、白瀬さんの手が……' },
+  { who:'shirase', t:'いいの。……わたし、いつも、うしろで見ているだけだったから。今夜くらいは、だれかの役に立ちたいの' },
+  { who:'erubin', e:'normal', t:'……ありがとう。大事に使うね。——俺が足を止めるよ。砂漠の砂あらしより、ずっとやさしい吹雪だ' },
+  { band:true, fxText:'えるびんが足もとをすくい、あつの一撃が入る。黒いサンタの体が、湖の氷の上をすべった' },
+  { band:true, fxText:'白い髪の先に、ほんの少しだけ、赤い色が戻っている' },
+  { who:'erubin', e:'surprise', t:'見て。髪のはし……赤くなってる。白瀬さんの手袋と、同じ色だ' },
+  { who:'shirase', t:'……よかった。ちゃんと、届いているのね' },
+  { who:'atsu', e:'normal', t:'戻ってきてる。……エルちゃん、次で、もっと戻すよ' },
+  { who:'xmas_kurosanta', name:'黒いサンタ・罰', t:'……あたたかい。いやだ……ワタシは、ぜんぶ、ほしい……はず……' },
+];
+// レイド 第4話 ～聞きおぼえのある曲～ (第4段階・断罪を倒したあと)
+const RAID_XMAS_STORY_5 = [
+  { band:true, fxText:'ペンションの時計台の上' },
+  { band:true, fxText:'超暗けい——闇の一撃が、守りをつらぬいてくる' },
+  { who:'sorashido', e:'troubled', t:'守りの上から、まっすぐ抜けてきます……！ 受け止めるより、数で押し返しましょう' },
+  { who:'ichika', t:'雪のことなら、わたしにおまかせを。足場は、わたしが固めますね' },
+  { who:'mochimaru', t:'ぼくは、みなさんにあったかいココアを配りますっちー！ 寒いと手がかじかむっちー' },
+  { who:'kyuko', e:'normal', t:'じゃあ俺は……これかな' },
+  { band:true, fxText:'♪(きゅうこが、クリスマスの曲を弾きはじめる)' },
+  { band:true, fxText:'その曲に、静かな歌声が重なった。白瀬さんだった' },
+  { who:'sorashido', e:'surprise', t:'白瀬さん……歌えるんですか' },
+  { who:'shirase', t:'むかし、少しだけ。……いまは、子どもたちにピアノを教えています。でも、この曲なら、知っているから' },
+  { band:true, fxText:'黒いサンタの大きな耳が、そっと、歌のほうへ動いた' },
+  { who:'sorashido', e:'normal', t:'……耳が、歌を聞いています。『ほしい』の声じゃなくて' },
+  { who:'kyuko', e:'happy', t:'だよね。この曲、毎年サンタさんが配りながら口ずさんでるやつだって、聞いたことあるよぉ。白瀬さん、もう1回いこ！' },
+  { who:'kuroba', t:'(腕を組んで聞いていたが)……ふん。白瀬、もっと大きく歌いたまえ。あいつの耳に、届くまで' },
+  { who:'shirase', t:'……はい' },
+  { band:true, fxText:'鋭い赤い目が、ほんの少し、ゆるむ' },
+  { who:'xmas_kurosanta', name:'黒いサンタ・断罪', t:'……その歌。ワタシは、知っている……' },
+  { who:'ichika', t:'ええ。きっと、あなたがいちばんよく知っている歌ですよ' },
+  { who:'sorashido', e:'normal', t:'今です。みなさん、合わせてください！' },
+];
+// レイド 第5話 ～ありがとうの声～ (第5段階・煉獄を倒したあと)
+const RAID_XMAS_STORY_6 = [
+  { band:true, fxText:'聖夜の空。ペンションの屋根の上で、最後の対決' },
+  { who:'xmas_kurosanta', name:'黒いサンタ・煉獄', t:'ぜんぶ……ぜんぶ、ワタシのものだ……！' },
+  { band:true, fxText:'X’マスプレデター——黒い力が、聖夜の空いっぱいにふくれあがる' },
+  { who:'atsu', e:'angry', t:'全員、ふんばって！ ここで止める！' },
+  { band:true, fxText:'黒い力がはじけ、雪けむりが晴れていく' },
+  { who:'mua', e:'normal', t:'……ねえ、みんな。たたかうだけじゃなくて、伝えよ。サンタさんに' },
+  { who:'mua', e:'happy', t:'毎年、プレゼントありがと！' },
+  { who:'kiki', e:'happy', t:'ありがとうございまつ。いつも、うれしかったでつ♪♪' },
+  { who:'momosuke', e:'happy', t:'ありがと♡ 袋はちょっとくさいけど、大好きだよw' },
+  { who:'dra', e:'happy', t:'ありがとな。おでも、今年は配る側を手伝うぞ' },
+  { who:'erubin', e:'happy', t:'砂漠にも、ちゃんと届いてたよ。ありがとう' },
+  { who:'kyuko', e:'happy', t:'ありがと〜！ 曲、また聞かせてあげるね' },
+  { who:'sorashido', e:'happy', t:'ありがとうございます。記録に、ちゃんと残しておきます笑' },
+  { who:'atsu', e:'happy', t:'ありがと！ ……だから、戻ってきて' },
+  { who:'ichika', t:'ありがとうございます。シュプールは、いつでもあなたを待っていますよ' },
+  { who:'mochimaru', t:'ありがとうございますっちー！ 来年は、ぼくのスープも飲みに来てくださいっちー' },
+  { who:'shirase', t:'……ありがとう。今夜、わたし、久しぶりに歌えました' },
+  { who:'kuroba', t:'……ふん。わたしは、礼など言わんぞ' },
+  { who:'atsu', e:'normal', t:'黒羽のおじさん' },
+  { who:'kuroba', t:'……(目をそらして)あのハーモニカを、ちゃんと届けてやれ。……それで、十分だ' },
+  { band:true, fxText:'大きな耳に、たくさんの「ありがとう」が届く。黒い服のすそから、赤い色が、ゆっくりと広がっていく' },
+  { who:'xmas_kurosanta', name:'黒いサンタ・煉獄', t:'……あたたかい声だ。『ほしい』よりも、ずっと……' },
+  { who:'xmas_santa', t:'……ワタシは、配るほうだった' },
+  { band:true, fxText:'赤に戻ったサンタの袋から、金色の鎖が、するりとこぼれた。黒羽さんの懐中時計だ' },
+  { who:'xmas_santa', t:'……これ、きみのだね。ごめんなさい' },
+  { who:'kuroba', t:'(時計を開いて)……時間だ。……配ってこい。待っている子どもが、いるんだろう' },
+  { who:'xmas_santa', t:'……うん。いってきます' },
+];
+// レイド 終章A ～メリークリスマス～ (期間終了後・煉獄まで倒せた)
+const RAID_XMAS_ENDING_CLEARED = [
+  { band:true, fxText:'聖夜が明けて。ペンションのホール' },
+  { who:'xmas_santa', t:'みんな、本当にありがとう。それから……ごめんね。こわい思いをさせた' },
+  { who:'erubin', e:'happy', t:'戻ってきてくれたなら、それでいいよ' },
+  { who:'xmas_santa', t:'お礼に、ひとりずつ、手で渡させてほしいんだ。……はい、きみの分' },
+  { band:true, fxText:'赤いサンタが、袋のプレゼントを、ひとりずつ手渡しで配っていく' },
+  { who:'momosuke', e:'happy', t:'わーい♡ ……でも、袋、やっぱりちょっとくさいw' },
+  { who:'xmas_santa', t:'……来年までに、洗っておくよ' },
+  { who:'dra', e:'happy', t:'おでが干すの手伝うぞ。えへへ' },
+  { who:'mochimaru', t:'洗うのはぼくにおまかせっちー。においとりは、とくいだっちー！' },
+  { who:'xmas_santa', t:'黒羽さん。きみの分も、あるよ' },
+  { band:true, fxText:'小さな包み。中には、銀色のハーモニカ' },
+  { who:'kuroba', t:'……わたしは、もう子どもではないぞ' },
+  { who:'xmas_santa', t:'うん。でもこの耳は、ずっと前の『ほしい』も、ちゃんと覚えているんだ。遅くなって、ごめんね' },
+  { who:'kuroba', t:'……くだらん。…………ありがとう' },
+  { who:'momosuke', e:'excited', t:'いま『ありがとう』って言った！ 黒羽さん、もも、聞いたからね♡' },
+  { who:'kuroba', t:'言っておらん！ ……時は金なり、だよ。次へ行きたまえ' },
+  { who:'erubin', e:'normal', t:'白瀬さん、手袋、返すね。……ありがとう。ずっと、あったかかった' },
+  { who:'shirase', t:'ありがとう。……でも、これは、サンタさんに。ひと晩じゅう配って、きっと手が冷たいから' },
+  { who:'xmas_santa', t:'ワタシに……？ 配るほうが、もらっていいのかな' },
+  { who:'shirase', t:'いいと思うの。サンタさんにだって、プレゼントがあっても' },
+  { band:true, fxText:'赤い手袋は、サンタの手に、ぴったりだった' },
+  { who:'ichika', t:'来年のクリスマスも、ぜひシュプールへ。今度は、迷わずにいらしてくださいね' },
+  { who:'xmas_santa', t:'うん。必ず。……メリークリスマス' },
+  { band:true, fxText:'メリークリスマス！' },
+];
+// レイド 終章B ～おそくなったサンタ～ (期間終了後・倒せなかった)
+const RAID_XMAS_ENDING_NOTCLEARED = [
+  { band:true, fxText:'24日の夜。黒いサンタは、吹雪の向こうへ逃げたまま' },
+  { who:'kiki', e:'troubled', t:'……サンタさん、戻ってきませんでつね' },
+  { who:'mua', e:'normal', t:'でもさ、届くかもしれないぢゃん。歌おうよ、みんなで。サンタさんの曲' },
+  { who:'shirase', t:'……わたしが、先に歌います。みなさんは、あとから、ついてきてください' },
+  { who:'kyuko', e:'normal', t:'ほい。……じゃあ、いくよぉ' },
+  { band:true, fxText:'♪(白瀬さんの歌に、ペンションのみんなの歌声が重なっていく)' },
+  { band:true, fxText:'吹雪の向こう。雪の丘の上で、黒い影の大きな耳が、歌のほうへ動く。黒い服が、少しずつ赤に戻っていく' },
+  { band:true, fxText:'コン、コン(玄関をたたく音)' },
+  { who:'xmas_santa', t:'……遅くなった。配りに来たよ' },
+  { who:'xmas_santa', t:'それから、これ。……きみの時計、袋の中で、ずっとコチコチ鳴っていたんだ。早く行けって、言われているみたいだった' },
+  { who:'kuroba', t:'(時計を受け取って)……ふん。遅刻だぞ。……時間だ。配ってこい' },
+  { who:'atsu', e:'happy', t:'……おかえり！ 待ってた笑' },
+  { who:'sorashido', e:'happy', t:'ぎりぎり、24日のうちです。記録しておきます笑' },
+  { who:'shirase', t:'(赤い手袋を、そっとサンタの手に)……寒い中、おつかれさま。これ、どうぞ' },
+  { band:true, fxText:'メリークリスマス！' },
+];
+const RAID_XMAS_STORY_CALLS = { mua: 'ひめちん／もも／黒羽さん', kiki: 'みゅあちん／ドラさん／白瀬さん', momosuke: 'みゅあねぇ／黒羽さん', dra: '靴下さん', atsu: 'エルちゃん／黒羽のおじさん', kyuko: '白瀬さん', erubin: 'あっくん／白瀬さん', kuroba: '白瀬／きみ', shirase: '◯◯さん／黒羽さん', mochimaru: 'オーナー', ichika: '—' };
 const EVENT_REPLAYS = [
   // クリスマスのイベント「聖夜の名探偵」序章(2026-11-28 10:00 から・台帳 r1126-013)。イベントページの「物語」タブから読む。回想には、読んだあとに並ぶ(xmasStory00Seen)
   { id: 'xmas_story_00', date: '2026-11-28 10:00', title: '聖夜の名探偵 序章 ～とどいたゲーム～', script: XMAS_STORY_00, calls: XMAS_STORY_CALLS, unlockedKey: 'xmasStory00Seen', costumes: XMAS_STORY_COSTUMES, releaseFlag: 'xmasStoryPrologue', group: 'xmas' },
+  // クリスマスのレイド「もうひとつの聖夜」(r1126-026)。導入=レイド開始 / 第1〜5話=段階(咎・戒・罰・断罪・煉獄)を倒したあと / 終章=期間終了後(煉獄まで倒せたかで2本)。
+  //   id は 35-raid-xmas.jsx の RAID_XMAS_STORY_IDS と同じ。公開の印 raidXmas(11/30 10:00)まで回想にも出さない。date は回想の並び順にだけ使う(1分ずつ振る)
+  { id: 'raid_xmas_story_1b', date: '2026-11-30 10:00', title: '聖夜の名探偵 レイド 導入 ～もうひとつの聖夜～', script: RAID_XMAS_STORY_1B, calls: RAID_XMAS_STORY_CALLS, unlockedKey: 'raidXmasStory1bSeen', costumes: XMAS_STORY_COSTUMES, releaseFlag: 'raidXmas', group: 'xmas' },
+  { id: 'raid_xmas_story_2', date: '2026-11-30 10:01', title: '聖夜の名探偵 レイド 第1話 ～落ちたひとつ～', script: RAID_XMAS_STORY_2, calls: RAID_XMAS_STORY_CALLS, unlockedKey: 'raidXmasStory2Seen', costumes: XMAS_STORY_COSTUMES, releaseFlag: 'raidXmas', group: 'xmas' },
+  { id: 'raid_xmas_story_3', date: '2026-11-30 10:02', title: '聖夜の名探偵 レイド 第2話 ～ゆれる声～', script: RAID_XMAS_STORY_3, calls: RAID_XMAS_STORY_CALLS, unlockedKey: 'raidXmasStory3Seen', costumes: XMAS_STORY_COSTUMES, releaseFlag: 'raidXmas', group: 'xmas' },
+  { id: 'raid_xmas_story_4', date: '2026-11-30 10:03', title: '聖夜の名探偵 レイド 第3話 ～赤い色～', script: RAID_XMAS_STORY_4, calls: RAID_XMAS_STORY_CALLS, unlockedKey: 'raidXmasStory4Seen', costumes: XMAS_STORY_COSTUMES, releaseFlag: 'raidXmas', group: 'xmas' },
+  { id: 'raid_xmas_story_5', date: '2026-11-30 10:04', title: '聖夜の名探偵 レイド 第4話 ～聞きおぼえのある曲～', script: RAID_XMAS_STORY_5, calls: RAID_XMAS_STORY_CALLS, unlockedKey: 'raidXmasStory5Seen', costumes: XMAS_STORY_COSTUMES, releaseFlag: 'raidXmas', group: 'xmas' },
+  { id: 'raid_xmas_story_6', date: '2026-11-30 10:05', title: '聖夜の名探偵 レイド 第5話 ～ありがとうの声～', script: RAID_XMAS_STORY_6, calls: RAID_XMAS_STORY_CALLS, unlockedKey: 'raidXmasStory6Seen', costumes: XMAS_STORY_COSTUMES, releaseFlag: 'raidXmas', group: 'xmas' },
+  { id: 'raid_xmas_ending_cleared', date: '2026-12-31 04:00', title: '聖夜の名探偵 レイド 終章 ～メリークリスマス(煉獄まで倒せた)～', script: RAID_XMAS_ENDING_CLEARED, calls: RAID_XMAS_STORY_CALLS, unlockedKey: 'raidXmasEndingClearedSeen', costumes: XMAS_STORY_COSTUMES, releaseFlag: 'raidXmas', group: 'xmas' },
+  { id: 'raid_xmas_ending_notcleared', date: '2026-12-31 04:01', title: '聖夜の名探偵 レイド 終章 ～おそくなったサンタ(煉獄には届かなかった)～', script: RAID_XMAS_ENDING_NOTCLEARED, calls: RAID_XMAS_STORY_CALLS, unlockedKey: 'raidXmasEndingNotclearedSeen', costumes: XMAS_STORY_COSTUMES, releaseFlag: 'raidXmas', group: 'xmas' },
   // あつとみゅあの歌のお話(2026-11-22 社長 r1119-076)。新曲 Beyond the Same Sky と一緒に出る。更新のあとに初めて HOME に着いたときに1回流れ、あとは回想から読める。台本は BEYOND_SAME_SKY_STORY
   { id: 'beyond_same_sky_story', date: '2026-11-22 12:00', title: '同じ空の先へ ～Beyond the Same Sky～', script: BEYOND_SAME_SKY_STORY, calls: BEYOND_SAME_SKY_STORY_CALLS, unlockedKey: 'beyondSameSkyStorySeen', group: 'wof_song' },
   // えるびんの歌のお話(2026-11-21 社長 r1119-079)。新曲 Desert Crown と一緒に出る。「同じ空の先へ」を見たあと、次に HOME に着いたときに1回流れ、あとは回想から読める。台本は DESERT_CROWN_STORY
