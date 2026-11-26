@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: da6037652218fc3a
+// source-sha256: b7afe87ffca7c380
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -6298,6 +6298,13 @@ const BGM_TRACKS = [{
   gain: 1,
   loop: true
 }, {
+  id: 'melo_kiss_mystery',
+  name: 'Kissからはじまるミステリー',
+  creator: 'オリジナル',
+  src: 'audio/bgm-kiss-mystery.mp3',
+  gain: 1,
+  loop: true
+}, {
   id: 'melo_emerald_rush',
   name: 'Emerald Rush',
   creator: 'オリジナル',
@@ -8635,6 +8642,7 @@ const Audio_ = (() => {
     "audio/bgm-kiki-issen-short.mp3": "add607be5bec",
     "audio/bgm-kimimachi-loop.mp3": "1be296a6cdb3",
     "audio/bgm-kindan-no-resistance.mp3": "efca5c01d0b7",
+    "audio/bgm-kiss-mystery.mp3": "8ccb87dfc4ad",
     "audio/bgm-lamia.mp3": "faaab8302652",
     "audio/bgm-light-player-short.mp3": "5d59fb7eb1fb",
     "audio/bgm-light-player.mp3": "c07830c2e774",
@@ -64143,6 +64151,7 @@ const xmasStoryCastAt = no => {
     emptyBoxes: away.filter(m => m.box).length
   };
 };
+const XMAS_EVENT_BGM_TRACK = 'melo_kiss_mystery';
 const raidXmasLoadState = async () => {
   try {
     return raidJackNormalizeState(await storeGet(RAID_XMAS_STORAGE_KEY, null, false));
@@ -242514,7 +242523,7 @@ function MonsterHeroGame() {
     if (battleBgmOverlay) return typeof battleBgmOverlay === 'string' && typeof BGM_TRACK_BY_ID !== 'undefined' && BGM_TRACK_BY_ID[battleBgmOverlay] ? battleBgmOverlay : bgmArrangement.battle || DEFAULT_BGM_ARRANGEMENT.battle;
     if (assistantLifeOpenNow && (state === 'HOME' || state === 'PROFILE' || state === 'ITEM_INVENTORY') && typeof ASSISTANT_LIFE_BGM_TRACK === 'string') return ASSISTANT_LIFE_BGM_TRACK;
     if (state === 'BATTLE' && raidJackRunRef.current) return RAID_JACK_BATTLE_BGM_TRACK;
-    if (RAID_JACK_BGM_STATES.includes(state) && raidEvRef.current !== 'xmas') return RAID_JACK_BGM_TRACK;
+    if (RAID_JACK_BGM_STATES.includes(state)) return raidEvRef.current === 'xmas' ? XMAS_EVENT_BGM_TRACK : RAID_JACK_BGM_TRACK;
     const halloweenNightOpen = Date.now() >= Date.parse(HALLOWEEN_NIGHT_START_AT) && Date.now() < Date.parse(HALLOWEEN_NIGHT_END_AT);
     const homeBgm = (RELEASE_FLAGS.raidJack === true && raidJackWindowAt(Date.now()) === 'open' || raidJackDebugForce || halloweenNightOpen) && bgmArrangement.home === DEFAULT_BGM_ARRANGEMENT.home ? RAID_JACK_BGM_TRACK : bgmArrangement.home;
     if (isGameOver) return bgmArrangement.gameOver;

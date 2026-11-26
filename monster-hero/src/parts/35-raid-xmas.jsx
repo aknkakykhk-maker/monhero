@@ -226,3 +226,6 @@ const xmasStoryCastAt = (no) => {
     emptyBoxes: away.filter((m) => m.box).length,
   };
 };
+
+// イベントページ(レイドの準備画面も)を開いているあいだの曲(台帳 r1126-015)。閉じると画面の曲へ戻る。BGM を切っている人には鳴らない(ふだんの BGM と同じ口)
+const XMAS_EVENT_BGM_TRACK = 'melo_kiss_mystery';

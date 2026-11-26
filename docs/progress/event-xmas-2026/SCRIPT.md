@@ -237,13 +237,28 @@
 | 日 | 楽しい・日常 | `default`(いつものお話の曲) | `kaze_ga_soyogu`(風がそよぐ場所) | |
 | 不 | あやしい・不穏 | `melo_dullahan_clockwork`(呪われた騎士の時計仕掛け。柱時計の話に合う) | `makutsu_no_senritsu`(魔窟の旋律) | |
 | 怖 | 怖い・事件(停電・消える場面) | `melo_dullahan_steel_ghost`(鋼鉄の亡霊) | `original_dullahan`(デュラハンテーマ) | |
-| 推 | 推理・謎解き | `melo_dullahan_clockwork_alt`(呪われた騎士の時計仕掛け -Another-) | `melo_midnight_studio_short`(Midnight Studio short ver.) | ★ |
-| 決 | 決め台詞の場面(第20話「謎はすべて解けた!」・第24話「真実はいつもひとつ!」) | 推と同じ | `melo_against_my_own_shadow`(Against My Own Shadow) | ★(いちばん差し替えたい) |
+| 推 | 推理・謎解き | `melo_dullahan_clockwork_alt`(呪われた騎士の時計仕掛け -Another-) | `melo_midnight_studio_short`(Midnight Studio short ver.) | ★ → `melo_kiss_mystery`(Kissからはじまるミステリー)を ★ の場面に |
+| 決 | 決め台詞の場面(第20話「謎はすべて解けた!」・第24話「真実はいつもひとつ!」) | 推と同じ | `melo_against_my_own_shadow`(Against My Own Shadow) | **`melo_kiss_mystery`(Kissからはじまるミステリー)** |
 | 切 | せつない(消えたあとの朝・ドラが疑われる) | `melo_sad_song_short`(SAD SONG short ver.) | `melo_tsuki_ga_michiru_mae_ni_short`(月が満ちる前に short ver.) | |
 | 温 | あたたかい・仲直り | `close_to_your_heart_alt`(Close To Your Heart -BGM-) | `melo_erfolg_piano`(Erfolg ピアノ ver.) | ★(クリスマス会・本物のサンタ) |
 | 戦 | 戦う(「戦う」の前後) | `senjou_no_shippuu`(戦場の疾風) | `original_battle`(バトルテーマ) | |
 | 屋 | 屋根裏の「？？？」の短い声 | `makutsu_no_senritsu`(魔窟の旋律) | 曲を止めて効果音だけ | |
 | ボ | レイドの覚醒サンタ | `original_boss`(ボステーマ) | `ichika_boss`(ボステーマ by いちか) | ★(レイドの新曲。社長が用意する) |
+
+#### 新曲「Kissからはじまるミステリー」を当てた所(2026-11-26 社長「他にも使えそうなとこあったら使って」・台帳 r1126-015・バトル部)
+
+曲の id は `melo_kiss_mystery`(5分4秒・BGM アレンジの一覧にも出る)。**推理の山場だけ**に当てる(どこでも流すと山場で効かなくなるため)。ふだんの「推」は上の第1候補のまま。
+
+| 話 | 場面 | 印 |
+| --- | --- | --- |
+| 20 | 20-23(「謎はすべて解けた!」)から場面4の終わりまで | 決 |
+| 22 | 場面1「記録を並べる」・場面2「いつ、進められたか」(そろいすぎた手がかりに気づく) | 推 ★ |
+| 24 | 場面1「みゅあのひとこと」・場面2「ひとつずつ」 | 推 ★ |
+| 24 | 24-12(「真実はいつもひとつ!」)から場面2の終わりまで | 決 |
+| (ほか) | イベントページを開いているあいだ(物語・レイド・ボーナスのタブとレイドの準備画面) | — |
+
+- 第20話と第24話で同じ曲を使い、あつの推理(外れ)とソラシドの本当の解決が「対」に聞こえるようにする
+- お話の中で流すときは、台本の場面の最初の行に `bgm:'melo_kiss_mystery'`
 
 ### 話ごとの割り当て(第3案の台本の場面。各場面の見出しの「(曲: ◯)」と同じ)
 

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9f7683db55e34471
+// generated-sha256: da5ad0484c3f9f43
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -4909,6 +4909,8 @@ const BGM_TRACKS = [
   { id:'melo_kiki_issen_short', name:'綺季一閃 ～花雪に舞う詠姫～ short ver.', creator:'オリジナル', src:'audio/bgm-kiki-issen-short.mp3', gain:1, loop:true },
   { id:'melo_crazy_party_night', name:'Crazy Party Night ～ぱんぷきんの逆襲～', creator:'オリジナル', src:'audio/bgm-crazy-party-night.mp3', gain:1, loop:true },
   { id:'melo_crazy_party_night_full', name:'Crazy Party Night ～ぱんぷきんの逆襲～ full', creator:'オリジナル', src:'audio/bgm-crazy-party-night-full.mp3', gain:1, loop:true },
+  // クリスマスイベント「聖夜の名探偵」のイベントページの曲(2026-11-26 社長・台帳 r1126-015)。5分4秒。元の音源は tools/art-sources/song-audio/kiss_mystery/
+  { id:'melo_kiss_mystery', name:'Kissからはじまるミステリー', creator:'オリジナル', src:'audio/bgm-kiss-mystery.mp3', gain:1, loop:true },
   { id:'melo_emerald_rush', name:'Emerald Rush', creator:'オリジナル', src:'audio/bgm-emerald-rush.mp3', gain:1, loop:true },
   { id:'melo_wrath_of_the_thorn_king', name:'Wrath of the Thorn King「茨の王の怒り」', creator:'オリジナル', src:'audio/bgm-wrath-of-the-thorn-king.mp3', gain:1, loop:true },
   { id:'melo_monster', name:'Monster', creator:'オリジナル', src:'audio/bgm-monster.mp3', gain:1, loop:true },
@@ -6511,6 +6513,7 @@ const Audio_ = (() => {
     "audio/bgm-kiki-issen-short.mp3": "add607be5bec",
     "audio/bgm-kimimachi-loop.mp3": "1be296a6cdb3",
     "audio/bgm-kindan-no-resistance.mp3": "efca5c01d0b7",
+    "audio/bgm-kiss-mystery.mp3": "8ccb87dfc4ad",
     "audio/bgm-lamia.mp3": "faaab8302652",
     "audio/bgm-light-player-short.mp3": "5d59fb7eb1fb",
     "audio/bgm-light-player.mp3": "c07830c2e774",
@@ -39149,6 +39152,9 @@ const xmasStoryCastAt = (no) => {
     emptyBoxes: away.filter((m) => m.box).length,
   };
 };
+
+// イベントページ(レイドの準備画面も)を開いているあいだの曲(台帳 r1126-015)。閉じると画面の曲へ戻る。BGM を切っている人には鳴らない(ふだんの BGM と同じ口)
+const XMAS_EVENT_BGM_TRACK = 'melo_kiss_mystery';
 
 // ---- part: 36-raid-xmas-api.jsx ----
 // ===== クリスマスのレイドの回数・与ダメージ(3つの入口で共通の口) =====
@@ -134451,7 +134457,8 @@ function MonsterHeroGame() {
     if (assistantLifeOpenNow && (state === 'HOME' || state === 'PROFILE' || state === 'ITEM_INVENTORY') && typeof ASSISTANT_LIFE_BGM_TRACK === 'string') return ASSISTANT_LIFE_BGM_TRACK;
     // イベント・レイドボス「ジャック」: ジャックとの戦いは Monster(全編)、レイド画面・段階えらび・編成はぱんぷきんの曲に固定する
     if (state === 'BATTLE' && raidJackRunRef.current) return RAID_JACK_BATTLE_BGM_TRACK;
-    if (RAID_JACK_BGM_STATES.includes(state) && raidEvRef.current !== 'xmas') return RAID_JACK_BGM_TRACK;   // クリスマスのレイド画面は、曲が届くまで HOME の曲
+    // クリスマスはイベントページ(物語・レイド・ボーナス)とレイドの準備画面で「Kissからはじまるミステリー」(台帳 r1126-015)
+    if (RAID_JACK_BGM_STATES.includes(state)) return raidEvRef.current === 'xmas' ? XMAS_EVENT_BGM_TRACK : RAID_JACK_BGM_TRACK;
     // HOMEの曲は、イベント中だけ(ユーザーが曲を選んでいないとき)ぱんぷきんの曲にする。終わったら元の曲へ戻る。
     // 開催中かは見るたびに数え直す(読み込み時に1回だけ決めない)
     // ハロウィン・ナイト(10/4〜11/1)のあいだも同じ曲にする(2026-10-04・ユーザー指摘「ホーム音楽がぱんぷきんのはずなのにデフォルトでもならない」。

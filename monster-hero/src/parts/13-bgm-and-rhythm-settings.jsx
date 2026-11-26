@@ -76,6 +76,8 @@ const BGM_TRACKS = [
   { id:'melo_kiki_issen_short', name:'綺季一閃 ～花雪に舞う詠姫～ short ver.', creator:'オリジナル', src:'audio/bgm-kiki-issen-short.mp3', gain:1, loop:true },
   { id:'melo_crazy_party_night', name:'Crazy Party Night ～ぱんぷきんの逆襲～', creator:'オリジナル', src:'audio/bgm-crazy-party-night.mp3', gain:1, loop:true },
   { id:'melo_crazy_party_night_full', name:'Crazy Party Night ～ぱんぷきんの逆襲～ full', creator:'オリジナル', src:'audio/bgm-crazy-party-night-full.mp3', gain:1, loop:true },
+  // クリスマスイベント「聖夜の名探偵」のイベントページの曲(2026-11-26 社長・台帳 r1126-015)。5分4秒。元の音源は tools/art-sources/song-audio/kiss_mystery/
+  { id:'melo_kiss_mystery', name:'Kissからはじまるミステリー', creator:'オリジナル', src:'audio/bgm-kiss-mystery.mp3', gain:1, loop:true },
   { id:'melo_emerald_rush', name:'Emerald Rush', creator:'オリジナル', src:'audio/bgm-emerald-rush.mp3', gain:1, loop:true },
   { id:'melo_wrath_of_the_thorn_king', name:'Wrath of the Thorn King「茨の王の怒り」', creator:'オリジナル', src:'audio/bgm-wrath-of-the-thorn-king.mp3', gain:1, loop:true },
   { id:'melo_monster', name:'Monster', creator:'オリジナル', src:'audio/bgm-monster.mp3', gain:1, loop:true },
