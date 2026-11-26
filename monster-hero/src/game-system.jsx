@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 380896792feaa4aa
+// generated-sha256: 316eabc03a414717
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -67183,7 +67183,7 @@ const XmasSectionTitle = ({ children, right = null }) => (
 
 // ---- 登場人物パネル(推理ドラマの登場人物パネル風・台帳 r1125-063) ----
 //  no: 読み終えた話の番号。はじめてだれかがいなくなる話より前は何も出さない(社長 2026-11-26)
-//  いなくなった人は白黒+「ゆくえ不明」のはんこ。帯に「のこった人 ◯人 / 空になった箱 ◯つ」(10人みんなを数える)
+//  いなくなった人は白黒+「行方不明」のはんこ。帯に「のこった人 ◯人 / 空になった箱 ◯つ」(10人みんなを数える)
 //  animate: その話でいなくなった人だけ、色が抜けてはんこが押される動き(お話の終わりで使う。一覧では動かさない)
 const XmasCastPanel = ({ no, animate = false, compact = false }) => {
   useXmasEventCss();
@@ -67201,7 +67201,7 @@ const XmasCastPanel = ({ no, animate = false, compact = false }) => {
               <div className={`relative mx-auto aspect-square w-full overflow-hidden rounded-md border-2 ${away ? 'border-slate-600 bg-slate-800' : 'border-[#f3e3b3] bg-[#2a3a62]'} ${compact ? 'max-w-[48px]' : 'max-w-[66px]'}`}>
                 <img src={xmasCastFaceOf(c)} alt="" className="h-full w-full object-cover object-top" />
                 {away && (
-                  <span data-xmas-cast-stamp aria-label="ゆくえ不明" className="absolute inset-0 m-auto flex h-max w-max flex-col items-center rounded border-2 border-rose-500 bg-white/85 px-0.5 text-[10px] font-black leading-none text-rose-600"><span className="py-px">ゆくえ</span><span className="py-px">不明</span></span>
+                  <span data-xmas-cast-stamp aria-label="行方不明" className="absolute inset-0 m-auto flex h-max w-max flex-col items-center rounded border-2 border-rose-500 bg-white/85 px-0.5 text-[10px] font-black leading-none text-rose-600"><span className="py-px">行方</span><span className="py-px">不明</span></span>
                 )}
               </div>
               <div className={`mt-0.5 truncate text-[10px] font-black ${away ? 'text-slate-500' : 'text-amber-50'}`}>{c.name}</div>

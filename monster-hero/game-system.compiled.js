@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 05b68c315be69a27
+// source-sha256: ddafb1dd7dbdbcdf
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -112917,11 +112917,11 @@ const XmasCastPanel = ({
       className: "h-full w-full object-cover object-top"
     }), away && React.createElement("span", {
       "data-xmas-cast-stamp": true,
-      "aria-label": "ゆくえ不明",
+      "aria-label": "行方不明",
       className: "absolute inset-0 m-auto flex h-max w-max flex-col items-center rounded border-2 border-rose-500 bg-white/85 px-0.5 text-[10px] font-black leading-none text-rose-600"
     }, React.createElement("span", {
       className: "py-px"
-    }, "ゆくえ"), React.createElement("span", {
+    }, "行方"), React.createElement("span", {
       className: "py-px"
     }, "不明"))), React.createElement("div", {
       className: `mt-0.5 truncate text-[10px] font-black ${away ? 'text-slate-500' : 'text-amber-50'}`
