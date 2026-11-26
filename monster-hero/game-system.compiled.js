@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a627a3ecba692f7f
+// source-sha256: a63bf9252aa0b51b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -119575,7 +119575,7 @@ const XMAS_NOVEL_CSS = `
 .mh-nv-serif { font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'YuMincho', 'Noto Serif JP', 'Shippori Mincho', serif; }
 .mh-nv-stage { position: absolute; inset: 0; }
 .mh-nv-bg { position: absolute; inset: 0; background-size: cover; background-position: center; transition: opacity .6s ease; }
-.mh-nv-bg::after { content: ''; position: absolute; inset: 0; background: radial-gradient(130% 90% at 50% 40%, transparent 40%, rgba(0,0,0,.72) 100%); }
+.mh-nv-bg::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 55%, rgba(0,0,0,.42) 100%), radial-gradient(130% 90% at 50% 40%, transparent 40%, rgba(0,0,0,.72) 100%); }
 .mh-nv-snow { position: absolute; inset: -10% 0 0 0; pointer-events: none; opacity: .55;
   background-image: radial-gradient(1.6px 1.6px at 10% 20%, #fff 50%, transparent 51%), radial-gradient(1.2px 1.2px at 30% 70%, #fff 50%, transparent 51%),
     radial-gradient(2px 2px at 55% 35%, #fff 50%, transparent 51%), radial-gradient(1.3px 1.3px at 75% 80%, #fff 50%, transparent 51%),
@@ -119724,59 +119724,132 @@ const useXmasNovelCss = () => {
     document.head.appendChild(tag);
   }, []);
 };
+const XMAS_NOVEL_BG_IMG = Object.freeze({
+  hall_day: 'images/story-bg/xmas_hall_day.jpg',
+  hall_night: 'images/story-bg/xmas_hall_night.jpg',
+  backdoor: 'images/story-bg/xmas_backdoor.jpg',
+  attic: 'images/story-bg/xmas_attic.jpg',
+  attic_party: 'images/story-bg/xmas_attic_party.jpg',
+  dining: 'images/story-bg/xmas_dining.jpg',
+  kitchen: 'images/story-bg/xmas_kitchen.jpg',
+  locked_room: 'images/story-bg/xmas_locked_room.jpg',
+  mirror_hall: 'images/story-bg/xmas_mirror_hall.jpg',
+  snowfield_cliff: 'images/story-bg/xmas_snowfield_cliff.jpg',
+  secret_passage: 'images/story-bg/xmas_secret_passage.jpg',
+  mountain_road: 'images/story-bg/xmas_mountain_road.jpg',
+  study: 'images/story-bg/xmas_study.jpg',
+  stairs_candle: 'images/story-bg/xmas_stairs_candle.jpg',
+  guest_room: 'images/story-bg/xmas_guest_room.jpg',
+  corridor_2f: 'images/story-bg/xmas_corridor_2f.jpg'
+});
+const XMAS_NOVEL_TINT = Object.freeze({
+  morning: 'linear-gradient(180deg, rgba(214,230,255,.30) 0%, rgba(255,244,228,.14) 55%, rgba(255,244,228,0) 100%)',
+  night: 'linear-gradient(180deg, rgba(6,12,38,.62) 0%, rgba(8,12,34,.5) 100%)',
+  candle: 'radial-gradient(60% 55% at 50% 45%, rgba(255,170,70,.16) 0%, rgba(20,10,4,.35) 55%, rgba(4,2,1,.7) 100%)',
+  storm: 'linear-gradient(180deg, rgba(40,70,130,.28) 0%, rgba(10,20,50,.18) 100%)',
+  blackout: 'radial-gradient(45% 35% at 50% 40%, rgba(2,4,12,.8) 0%, rgba(0,0,0,.94) 70%)'
+});
 const XMAS_NOVEL_BG = Object.freeze([{
   re: /停電|まっくら|真っ暗|暗転/,
-  grad: 'radial-gradient(60% 40% at 50% 30%, #0d1428 0%, #02040a 70%)'
+  img: 'hall_night',
+  tint: 'blackout'
 }, {
   re: /山道|外観/,
-  grad: 'linear-gradient(180deg, #6f86b8 0%, #b9c9e8 45%, #eef3fb 70%, #c9d6ec 100%)',
+  img: 'mountain_road',
   snow: true
 }, {
-  re: /雪原|雪の庭|庭|森|足あと/,
-  grad: 'linear-gradient(180deg, #0f1d44 0%, #2d4378 45%, #9fb2d8 72%, #dfe8f6 100%)',
+  re: /雪原|雪の庭|庭|森|足あと|崖/,
+  img: 'snowfield_cliff',
   snow: true
 }, {
   re: /屋根裏の会場|会場/,
-  grad: 'radial-gradient(70% 60% at 50% 40%, #6b3a1c 0%, #2e160c 60%, #130804 100%)',
-  warm: true
+  img: 'attic_party'
 }, {
   re: /屋根裏|暗がり/,
-  grad: 'radial-gradient(40% 30% at 50% 35%, #3b2a18 0%, #120c08 60%, #050302 100%)'
+  img: 'attic'
 }, {
   re: /通り道|壁の中|はしご/,
-  grad: 'linear-gradient(90deg, #07060a 0%, #2a2116 50%, #07060a 100%)'
+  img: 'secret_passage'
 }, {
   re: /鏡/,
-  grad: 'linear-gradient(90deg, #0c1530 0%, #3a4a72 18%, #0c1530 30%, #3a4a72 48%, #0c1530 60%, #3a4a72 78%, #0c1530 100%)'
+  img: 'mirror_hall',
+  pos: '58% center'
 }, {
-  re: /廊下|開かずの部屋/,
-  grad: 'linear-gradient(180deg, #120f1d 0%, #2a2033 50%, #0b0910 100%)'
+  re: /開かずの部屋/,
+  img: 'locked_room'
 }, {
-  re: /台所|食堂/,
-  grad: 'radial-gradient(80% 60% at 50% 30%, #5a3d22 0%, #2a1a0e 70%, #120a05 100%)',
-  warm: true
+  re: /2階の廊下|二階の廊下|廊下/,
+  img: 'corridor_2f'
 }, {
-  re: /書斎|客室|部屋/,
-  grad: 'radial-gradient(80% 60% at 40% 30%, #3e2a1a 0%, #1b120b 70%, #0a0604 100%)',
-  warm: true
+  re: /裏口/,
+  img: 'backdoor'
 }, {
-  re: /柱時計|時計/,
-  grad: 'radial-gradient(50% 60% at 50% 40%, #4a3520 0%, #1a1009 70%, #070402 100%)'
+  re: /台所/,
+  img: 'kitchen'
 }, {
-  re: /ホール/,
-  grad: 'radial-gradient(90% 70% at 50% 35%, #3a2a3e 0%, #171329 55%, #070812 100%)',
-  warm: true
+  re: /食堂/,
+  img: 'dining',
+  day: true
+}, {
+  re: /書斎/,
+  img: 'study'
+}, {
+  re: /階段/,
+  img: 'stairs_candle'
+}, {
+  re: /客室|部屋/,
+  img: 'guest_room',
+  day: true
+}, {
+  re: /夜のホール|ホール.*(夜|ろうそく|停電)|暖炉/,
+  img: 'hall_night'
+}, {
+  re: /ホール|柱時計|時計/,
+  img: 'hall_day'
 }]);
 const XMAS_NOVEL_BG_DEFAULT = {
   grad: 'radial-gradient(120% 80% at 50% 0%, #17305f 0%, #0b1733 50%, #050a1a 100%)',
   snow: true
 };
+const xmasNovelTintOf = (n, b) => {
+  if (b.tint) return b.tint;
+  if (/ろうそく/.test(n) && b.img !== 'hall_night') return 'candle';
+  if (/夜/.test(n) && b.day) return 'night';
+  if (/朝/.test(n)) return 'morning';
+  if (/吹雪/.test(n)) return 'storm';
+  return '';
+};
 const xmasNovelBgOf = name => {
-  const n = String(name || '');
+  const n = String(name || '').split('→')[0];
   if (/^[a-z0-9_]+$/.test(n)) return {
     img: `images/story-bg/${n}.jpg`
   };
-  return XMAS_NOVEL_BG.find(b => b.re.test(n)) || XMAS_NOVEL_BG_DEFAULT;
+  const b = XMAS_NOVEL_BG.find(x => x.re.test(n));
+  if (!b) return XMAS_NOVEL_BG_DEFAULT;
+  const tint = xmasNovelTintOf(n, b);
+  return {
+    img: XMAS_NOVEL_BG_IMG[b.img],
+    pos: b.pos,
+    tint: tint ? XMAS_NOVEL_TINT[tint] : '',
+    tintKind: tint,
+    snow: !!(b.snow || /吹雪/.test(n))
+  };
+};
+const XMAS_NOVEL_BG_SHIFT = Object.freeze({
+  'C10-3': [['10-3-4', 'ペンションのホール(朝)'], ['10-3-7', '朝の裏口'], ['10-3-12', 'ペンションのホール(朝)']],
+  'END-G': [['G-10', '屋根裏の会場']]
+});
+const xmasNovelSceneBgName = (scene, idx) => {
+  if (!scene) return '';
+  const shifts = XMAS_NOVEL_BG_SHIFT[scene.id];
+  let name = scene.bg || '';
+  if (!shifts || !Array.isArray(scene.rows)) return name;
+  const at = Number.isFinite(idx) ? idx : 0;
+  shifts.forEach(([rowId, bg]) => {
+    const i = scene.rows.findIndex(r => r && r.id === rowId);
+    if (i >= 0 && at >= i) name = bg;
+  });
+  return name;
 };
 const XMAS_NOVEL_FACES = Object.freeze(['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited']);
 const xmasNovelFigureSrc = (who, e) => {
@@ -120644,7 +120717,8 @@ const XmasNovelScreen = ({
     className: "mh-nv-serif mh-nv-gold"
   }, "読み込み中…")));
   const scene = st && st.scene;
-  const bg = xmasNovelBgOf(scene ? scene.bg : '');
+  const bgName = xmasNovelSceneBgName(scene, st && st.cur ? st.cur.idx : 0);
+  const bg = xmasNovelBgOf(bgName);
   const chapter = scene ? xmasNovelChapters(S).find(c => c.id === scene.chapter) : null;
   const clues = st && st.cur && st.cur.clues || [];
   const endingsAll = xmasNovelScenes(S).filter(s => s.ending).map(s => s.ending);
@@ -120852,9 +120926,11 @@ const XmasNovelScreen = ({
     onClick: advance
   }, React.createElement("div", {
     className: "mh-nv-bg",
-    key: scene ? scene.bg || scene.id : 'bg',
+    key: bgName || (scene ? scene.id : 'bg'),
+    "data-xmas-novel-bg": bg.tintKind || '',
     style: bg.img ? {
-      backgroundImage: `url(${bg.img})`
+      backgroundImage: `${bg.tint ? `${bg.tint}, ` : ''}url(${bg.img})`,
+      backgroundPosition: bg.pos || 'center'
     } : {
       background: bg.grad
     }
