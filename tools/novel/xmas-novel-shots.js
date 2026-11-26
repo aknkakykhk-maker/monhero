@@ -31,7 +31,7 @@ const SHOTS_046 = [
   { name: '01-m1-secret', row: '1-M-8', side: 1, label: '幕間 眠る客(？？？)' },
   { name: '02-m2-kuroba', row: '2-M-16', side: 1, label: '幕間 鍵をかけた部屋(黒羽「あいつ」)' },
   { name: '03-m3-ichika', row: '3-M-7', side: 2, label: '幕間 古い鍵(イチーカ)' },
-  { name: '04-m4-shirase', row: '4-M-12', side: 2, label: '幕間 書きかけの手紙(白瀬)' },
+  { name: '04-m4-shirase', row: '4-M-6', side: 2, label: '幕間 書きかけの手紙(白瀬)' },
   { name: '05-m5-dra', row: '5-M-12', side: 1, label: '幕間 手をつけないクッキー(ドラ)' },
   { name: '06-m6-mochi', row: '6-M-9', side: 2, label: '幕間 帳面の名前(もちまる)' },
   { name: '07-past-list', list: true, label: '「章から」の一覧(過去編が開いた)' },
