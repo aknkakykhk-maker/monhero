@@ -360,12 +360,18 @@ function ArtPickerModal({ pickerId, heading, note, options, value, resolved, onC
     </ModalSheet>
   );
 }
-// 絵を選ぶ窓の中の並び。縦は上から説明・おまかせ・2枚の絵。横の低い画面は左に説明とおまかせ、右に2枚の絵(r1119-066①)
+// 絵を選ぶ窓の中の並び。縦は上から説明・おまかせ・絵の札(3列)。横の低い画面は左に説明とおまかせ、右に絵の札(3列)。
+// 2026-11-26 r1125-059: 3枚目(クリスマス)が増えて、縦は3枚目が下の段に隠れ、横は3枚目が見えず説明も切れていた。
+//   3列に並べ、横の低い画面では絵を 4:3 に切り抜いて(真ん中を見せる)、札が窓の高さに収まるようにした
 const ART_PICKER_CSS = `
 .mh-art-picker{display:flex;flex-direction:column;gap:12px}
 .mh-art-picker-side{display:flex;flex-direction:column;gap:10px}
-.mh-art-picker-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-@media (orientation:landscape) and (max-height:520px){.mh-art-picker{flex-direction:row;align-items:flex-start}.mh-art-picker-side{flex:1 1 0;min-width:0}.mh-art-picker-grid{flex:none;grid-template-columns:repeat(2,124px)}}
+.mh-art-picker-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+/* 絵の名前は1行に(320幅で「クリスマ/ス」と折れていた)。狭い画面だけ字を少し小さくする */
+.mh-art-picker-grid button>span.block{white-space:nowrap;font-size:clamp(11px,3.4vw,13px)}
+/* 背の低い縦の画面(320×568 など)は絵を 3:4 に短くする(タイトルの窓は説明が長く、3枚目の下が決定の段に隠れていた) */
+@media (orientation:portrait) and (max-height:640px){.mh-art-picker-grid button img{aspect-ratio:3/4}}
+@media (orientation:landscape) and (max-height:520px){.mh-art-picker{flex-direction:row;align-items:flex-start}.mh-art-picker-side{flex:1 1 0;min-width:0}.mh-art-picker-grid{flex:none;grid-template-columns:repeat(3,124px)}.mh-art-picker-grid button img{aspect-ratio:4/3}}
 `;
 const ensureArtPickerCss = () => {
   try {
@@ -379,7 +385,8 @@ const ensureArtPickerCss = () => {
 function ScreenThemeModal({ screenTheme, onChange, titleArt, onChangeTitleArt, homeArt, onChangeHomeArt, onClose }) {
   const rows = [
     { id: 'title', label: 'タイトル画面', value: titleArt, set: onChangeTitleArt },
-    { id: 'home', label: 'ホーム画面', value: homeArt, set: onChangeHomeArt },
+    // ホームだけは季節の絵(クリスマスなど・出してよい期間のもの)も選べる(r1125-059)
+    { id: 'home', label: 'ホーム画面', value: homeArt, set: onChangeHomeArt, choices: [...SCREEN_THEME_CHOICES, ...homeArtOptionsAt().filter(option => !SCREEN_THEME_CHOICES.some(choice => choice.id === option.id)).map(option => ({ id: option.id, label: option.label }))] },
     ...SCREEN_THEME_READY_CATEGORIES.map(category => ({ ...category, value: screenTheme[category.id], set: choice => onChange(category.id, choice) })),
   ];
   const setAll = choice => { onChangeTitleArt(choice); onChangeHomeArt(choice); onChange('*', choice); };
@@ -396,7 +403,7 @@ function ScreenThemeModal({ screenTheme, onChange, titleArt, onChangeTitleArt, h
   return (
     <ModalSheet title="画面テーマ" onClose={cancel} size="wide" dataProps={{'data-screen-theme-picker':'',onPointerDown:e=>e.stopPropagation()}}
       footer={<><ModalSheetButton back onClick={cancel}>やめる</ModalSheetButton><ModalSheetButton kind="go" onClick={onClose} data-screen-theme-ok>決定</ModalSheetButton></>}>
-      <p className="text-[12px] font-bold leading-relaxed text-slate-300" style={JA_LABEL_STYLE}>{jaWrap('画面の種類ごとに見た目を選べます。「おまかせ」は季節に合わせて切り替わり、10月31日まではハロウィン、11月1日からはクラシックになります。')}</p>
+      <p className="text-[12px] font-bold leading-relaxed text-slate-300" style={JA_LABEL_STYLE}>{jaWrap('画面の種類ごとに見た目を選べます。「おまかせ」は季節に合わせて切り替わります。')}</p>
       <div className="mt-2 rounded-xl border border-amber-300/40 bg-amber-500/10 p-2">
         <b className="block text-[12px] font-black text-amber-100">まとめて変える</b>
         <div className="mt-1.5 flex gap-1.5">{SCREEN_THEME_CHOICES.map(choice => <button key={choice.id} type="button" onClick={() => setAll(choice.id)} className={chip(false)}>{choice.label}</button>)}</div>
@@ -406,7 +413,7 @@ function ScreenThemeModal({ screenTheme, onChange, titleArt, onChangeTitleArt, h
         <div key={row.id} data-screen-theme-row={row.id} className="rounded-xl border border-white/10 bg-white/5 p-2">
           <b className="block text-[12px] font-black text-white">{row.label}</b>
           {/* 見出しをくり返すだけの説明(「マーケット／マーケット」)は出さない(2026-11-23 API 総点検③ settings-theme) */}{row.desc && row.desc !== row.label && <small className="block text-[10px] font-bold text-slate-400">{row.desc}</small>}
-          <div className="mt-1.5 flex gap-1.5">{SCREEN_THEME_CHOICES.map(choice => <button key={choice.id} type="button" aria-pressed={row.value === choice.id} onClick={() => row.set(choice.id)} className={chip(row.value === choice.id)}>{choice.label}</button>)}</div>
+          <div className="mt-1.5 flex gap-1.5">{(row.choices || SCREEN_THEME_CHOICES).map(choice => <button key={choice.id} type="button" aria-pressed={row.value === choice.id} onClick={() => row.set(choice.id)} className={chip(row.value === choice.id)}>{choice.label}</button>)}</div>
         </div>
       ))}</div>
     </ModalSheet>
