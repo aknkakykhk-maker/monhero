@@ -384,8 +384,9 @@ const ensureArtPickerCss = () => {
 // タイトルとホームの絵も同じ3択でここから変えられる(絵を見て選びたいときは各アレンジ画面から)
 function ScreenThemeModal({ screenTheme, onChange, titleArt, onChangeTitleArt, homeArt, onChangeHomeArt, onClose }) {
   const rows = [
-    { id: 'title', label: 'タイトル画面', value: titleArt, set: onChangeTitleArt },
-    // ホームだけは季節の絵(クリスマスなど・出してよい期間のもの)も選べる(r1125-059)
+    // タイトルは季節の絵(クリスマスなど・出してよい期間のもの)も選べる(r1125-061)
+    { id: 'title', label: 'タイトル画面', value: titleArt, set: onChangeTitleArt, choices: [...SCREEN_THEME_CHOICES, ...titleArtOptionsAt().filter(option => !SCREEN_THEME_CHOICES.some(choice => choice.id === option.id)).map(option => ({ id: option.id, label: option.label }))] },
+    // ホームも季節の絵(クリスマスなど・出してよい期間のもの)も選べる(r1125-059)
     { id: 'home', label: 'ホーム画面', value: homeArt, set: onChangeHomeArt, choices: [...SCREEN_THEME_CHOICES, ...homeArtOptionsAt().filter(option => !SCREEN_THEME_CHOICES.some(choice => choice.id === option.id)).map(option => ({ id: option.id, label: option.label }))] },
     ...SCREEN_THEME_READY_CATEGORIES.map(category => ({ ...category, value: screenTheme[category.id], set: choice => onChange(category.id, choice) })),
   ];

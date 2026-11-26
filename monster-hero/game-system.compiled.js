@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: baf623c2d8cd5298
+// source-sha256: a27c3b3bf91605b2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -8324,7 +8324,17 @@ const screenThemeCategory = (gameState, rhythmOpen = false) => {
   return 'menu';
 };
 const TITLE_ART_STORAGE_KEY = 'mh_title_art';
+const TITLE_ART_XMAS_FROM = () => Date.parse(typeof RAID_XMAS_START_AT === 'string' ? RAID_XMAS_START_AT : '2026-11-30T10:00:00+09:00');
+const TITLE_ART_XMAS_UNTIL = () => Date.parse(typeof RAID_XMAS_EVENT === 'object' && RAID_XMAS_EVENT && typeof RAID_XMAS_EVENT.endAt === 'string' ? RAID_XMAS_EVENT.endAt : '2026-12-31T04:00:00+09:00');
 const TITLE_ART_OPTIONS = [{
+  id: 'xmas',
+  label: 'クリスマス',
+  desc: '雪の夜の広場。モッチーたちがクリスマスの装いでお出迎え',
+  src: 'data/images/title-screen-xmas.jpg',
+  squareSrc: 'data/images/title-screen-xmas-square.jpg',
+  wideSrc: 'data/images/title-screen-xmas-wide.jpg',
+  from: TITLE_ART_XMAS_FROM
+}, {
   id: 'halloween',
   label: 'ハロウィン',
   desc: '月夜のお城とかぼちゃ。モッチーたちが仮装してお出迎え',
@@ -8339,9 +8349,13 @@ const TITLE_ART_OPTIONS = [{
 }];
 const DEFAULT_TITLE_ART = 'auto';
 const normalizeTitleArt = value => value === 'auto' || TITLE_ART_OPTIONS.some(option => option.id === value) ? value : DEFAULT_TITLE_ART;
+const titleArtAvailable = (option, now = Date.now()) => !!option && (typeof option.from !== 'function' || now >= option.from());
+const titleArtOptionsAt = (now = Date.now()) => TITLE_ART_OPTIONS.filter(option => titleArtAvailable(option, now));
+const titleArtXmasOpenAt = (now = Date.now()) => now >= TITLE_ART_XMAS_FROM() && now < TITLE_ART_XMAS_UNTIL();
 const resolveTitleArt = (value, now = Date.now()) => {
   const v = normalizeTitleArt(value);
-  return v === 'auto' ? resolveScreenTheme('auto', now) : v;
+  if (v === 'auto') return titleArtXmasOpenAt(now) ? 'xmas' : resolveScreenTheme('auto', now);
+  return titleArtAvailable(TITLE_ART_OPTIONS.find(option => option.id === v), now) ? v : resolveScreenTheme('auto', now);
 };
 const titleArtShapeOf = (width, height) => {
   const ratio = Number(width) > 0 && Number(height) > 0 ? width / height : 0.5;
@@ -72683,7 +72697,11 @@ function ScreenThemeModal({
     id: 'title',
     label: 'タイトル画面',
     value: titleArt,
-    set: onChangeTitleArt
+    set: onChangeTitleArt,
+    choices: [...SCREEN_THEME_CHOICES, ...titleArtOptionsAt().filter(option => !SCREEN_THEME_CHOICES.some(choice => choice.id === option.id)).map(option => ({
+      id: option.id,
+      label: option.label
+    }))]
   }, {
     id: 'home',
     label: 'ホーム画面',
@@ -258975,8 +258993,8 @@ function MonsterHeroGame() {
   }, "閉じる"))) : showTitleArt ? React.createElement(ArtPickerModal, {
     pickerId: "title",
     heading: "タイトル画像アレンジ",
-    note: "タイトル画面に出す絵を選べます。次に開いたときもこの絵で始まります。「ハロウィン」は、横画面では横長の絵になります。",
-    options: TITLE_ART_OPTIONS,
+    note: "タイトル画面に出す絵を選べます。次に開いたときもこの絵で始まります。「クラシック」のほかは、横画面では横長の絵になります。",
+    options: titleArtOptionsAt(),
     value: titleArt,
     resolved: resolveTitleArt(titleArt),
     onChange: changeTitleArt,

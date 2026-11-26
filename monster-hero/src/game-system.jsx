@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 19fef400505f4dd1
+// generated-sha256: 7b2d451f9a1ecf85
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -6240,14 +6240,29 @@ const screenThemeCategory = (gameState, rhythmOpen = false) => {
 // 起動直後の先読み(index.html)もこのキーを読むので、キー名と id は変えない。
 // squareSrc は縦横比がほぼ正方形の画面、wideSrc は横長の画面に出す絵。無い絵は縦の絵を切り抜いて出す
 const TITLE_ART_STORAGE_KEY = 'mh_title_art';
+// クリスマス(r1125-061・社長 2026-11-25): from〜until はクリスマスのイベント(RAID_XMAS_START_AT・RAID_XMAS_EVENT.endAt)と同じ。
+//   from より前は選択肢にも出さない(titleArtOptionsAt)。おまかせは from〜until のあいだだけクリスマス、そのあとはクラシック。
+//   自分で選んだ人は until のあとも選んだまま。期間は見るたびに時刻で決める(保存しない)。★index.html の先読みも同じ時刻を持っている
+const TITLE_ART_XMAS_FROM = () => Date.parse(typeof RAID_XMAS_START_AT === 'string' ? RAID_XMAS_START_AT : '2026-11-30T10:00:00+09:00');
+const TITLE_ART_XMAS_UNTIL = () => Date.parse(typeof RAID_XMAS_EVENT === 'object' && RAID_XMAS_EVENT && typeof RAID_XMAS_EVENT.endAt === 'string' ? RAID_XMAS_EVENT.endAt : '2026-12-31T04:00:00+09:00');
 const TITLE_ART_OPTIONS = [
+  { id: 'xmas', label: 'クリスマス', desc: '雪の夜の広場。モッチーたちがクリスマスの装いでお出迎え', src: 'data/images/title-screen-xmas.jpg', squareSrc: 'data/images/title-screen-xmas-square.jpg', wideSrc: 'data/images/title-screen-xmas-wide.jpg', from: TITLE_ART_XMAS_FROM },
   { id: 'halloween', label: 'ハロウィン', desc: '月夜のお城とかぼちゃ。モッチーたちが仮装してお出迎え', src: 'data/images/title-screen-halloween.jpg', squareSrc: 'data/images/title-screen-halloween-square.jpg', wideSrc: 'data/images/title-screen-halloween-wide.jpg' },
   { id: 'classic', label: 'クラシック', desc: 'これまでのタイトル画面', src: 'data/images/title-screen-clean.jpg' },
 ];
 // 'auto'(おまかせ)は季節に合わせる(SCREEN_THEME_HALLOWEEN_UNTIL まではハロウィン、そのあとはクラシック)
 const DEFAULT_TITLE_ART = 'auto';
 const normalizeTitleArt = value => value === 'auto' || TITLE_ART_OPTIONS.some(option => option.id === value) ? value : DEFAULT_TITLE_ART;
-const resolveTitleArt = (value, now = Date.now()) => { const v = normalizeTitleArt(value); return v === 'auto' ? resolveScreenTheme('auto', now) : v; };
+// 選択肢に出す絵(from より前の絵は出さない)。保存の読み方(normalizeTitleArt)は全部の id を受ける
+const titleArtAvailable = (option, now = Date.now()) => !!option && (typeof option.from !== 'function' || now >= option.from());
+const titleArtOptionsAt = (now = Date.now()) => TITLE_ART_OPTIONS.filter(option => titleArtAvailable(option, now));
+const titleArtXmasOpenAt = (now = Date.now()) => now >= TITLE_ART_XMAS_FROM() && now < TITLE_ART_XMAS_UNTIL();
+const resolveTitleArt = (value, now = Date.now()) => {
+  const v = normalizeTitleArt(value);
+  if (v === 'auto') return titleArtXmasOpenAt(now) ? 'xmas' : resolveScreenTheme('auto', now);
+  // まだ出していない絵が入っていたら(時計を戻した等)、おまかせと同じに決める
+  return titleArtAvailable(TITLE_ART_OPTIONS.find(option => option.id === v), now) ? v : resolveScreenTheme('auto', now);
+};
 // 画面の縦横比から、出す絵の形を決める。縦長(941x1672 = 0.56)・ほぼ正方形(1354x1162 = 1.17)・横長(1672x941 = 1.78)の3枚のうち、
 // 比が近いほうを選ぶ(境目は、隣り合う2枚の比の相乗平均。0.81 と 1.44)。折りたたみの横開きの内側(約0.9)は「ほぼ正方形」になる
 // ★index.html の先読みも同じ境目を持っている。変えるときは両方そろえる
@@ -44680,8 +44695,9 @@ const ensureArtPickerCss = () => {
 // タイトルとホームの絵も同じ3択でここから変えられる(絵を見て選びたいときは各アレンジ画面から)
 function ScreenThemeModal({ screenTheme, onChange, titleArt, onChangeTitleArt, homeArt, onChangeHomeArt, onClose }) {
   const rows = [
-    { id: 'title', label: 'タイトル画面', value: titleArt, set: onChangeTitleArt },
-    // ホームだけは季節の絵(クリスマスなど・出してよい期間のもの)も選べる(r1125-059)
+    // タイトルは季節の絵(クリスマスなど・出してよい期間のもの)も選べる(r1125-061)
+    { id: 'title', label: 'タイトル画面', value: titleArt, set: onChangeTitleArt, choices: [...SCREEN_THEME_CHOICES, ...titleArtOptionsAt().filter(option => !SCREEN_THEME_CHOICES.some(choice => choice.id === option.id)).map(option => ({ id: option.id, label: option.label }))] },
+    // ホームも季節の絵(クリスマスなど・出してよい期間のもの)も選べる(r1125-059)
     { id: 'home', label: 'ホーム画面', value: homeArt, set: onChangeHomeArt, choices: [...SCREEN_THEME_CHOICES, ...homeArtOptionsAt().filter(option => !SCREEN_THEME_CHOICES.some(choice => choice.id === option.id)).map(option => ({ id: option.id, label: option.label }))] },
     ...SCREEN_THEME_READY_CATEGORIES.map(category => ({ ...category, value: screenTheme[category.id], set: choice => onChange(category.id, choice) })),
   ];
@@ -147213,7 +147229,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   ) : showTitleSettings ? (
     <div className="mh-title-modal" {...settingsBackdropProps(()=>setShowTitleSettings(false))}><div className="mh-title-dialog mh-title-dialog--menu"><div className="mh-dialog-head"><h3>設定</h3></div><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowAudioSettings(true)}}>🔊 音量設定 <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowBgmArrangement(true)}}>🎼 BGMアレンジ <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowTitleArt(true)}}>🖼️ タイトル画像アレンジ <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowHomeArt(true)}}>🏡 ホーム画面アレンジ <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowScreenTheme(true)}}>🎃 画面テーマ <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowBackup(true)}}>🛡️ データ引き継ぎ <ChevronRight size={18}/></button><button className="mh-dialog-close" data-mh-back onClick={()=>setShowTitleSettings(false)}>閉じる</button></div></div>
   ) : showTitleArt ? (
-    <ArtPickerModal pickerId="title" heading="タイトル画像アレンジ" note="タイトル画面に出す絵を選べます。次に開いたときもこの絵で始まります。「ハロウィン」は、横画面では横長の絵になります。" options={TITLE_ART_OPTIONS} value={titleArt} resolved={resolveTitleArt(titleArt)} onChange={changeTitleArt} onClose={()=>setShowTitleArt(false)}/>
+    <ArtPickerModal pickerId="title" heading="タイトル画像アレンジ" note="タイトル画面に出す絵を選べます。次に開いたときもこの絵で始まります。「クラシック」のほかは、横画面では横長の絵になります。" options={titleArtOptionsAt()} value={titleArt} resolved={resolveTitleArt(titleArt)} onChange={changeTitleArt} onClose={()=>setShowTitleArt(false)}/>
   ) : showScreenTheme ? (
     <ScreenThemeModal screenTheme={screenTheme} onChange={changeScreenTheme} titleArt={titleArt} onChangeTitleArt={changeTitleArt} homeArt={homeArt} onChangeHomeArt={changeHomeArt} onClose={()=>setShowScreenTheme(false)}/>
   ) : showHomeArt ? (
