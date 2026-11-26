@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7c99c3705143d44c
+// generated-sha256: 46a334b00ad8fba2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -67239,6 +67239,12 @@ const XmasStoryTab = ({ version = 0, allOpen = false, fightWays = [], onRead, on
   const reached = xmasStoryReachedNo(progress);
   const readCount = XMAS_STORY_CHAPTERS.filter((c) => progress.cleared.includes(c.id)).length;
   const chapter = sel ? XMAS_STORY_CHAPTERS.find((c) => c.id === sel) : null;
+  // 本編の開幕(11/30 10:00)より前は序章だけを見せる(台帳 r1126-022・本編はひとつのコンテンツで 11/30 に出る。毎日1話ずつ開く形はやめた)
+  const preMain = !allOpen && !(nowMs >= Date.parse(RAID_XMAS_EVENT.startAt));
+  const shownChapters = preMain ? XMAS_STORY_CHAPTERS.filter((c) => c.prologue) : XMAS_STORY_CHAPTERS;
+  const storyNote = preMain
+    ? `${xmasEventDateLabel(XMAS_STORY_PROLOGUE_OPEN_AT)} から序章が読めます。本編は ${xmasEventDateLabel(RAID_XMAS_EVENT.startAt)} から始まります`
+    : '読んだ話は、いつでも読み返せます';
   const select = (c) => {
     setSel(c.id);
     // 開いた印(NEW を消す)。押した話だけ
@@ -67248,10 +67254,10 @@ const XmasStoryTab = ({ version = 0, allOpen = false, fightWays = [], onRead, on
     <div data-xmas-story className="space-y-3">
       <XmasCastPanel no={reached} compact />
       <section>
-        <XmasSectionTitle right={<span className="text-[10px] font-black text-amber-100/80">{readCount} / {XMAS_STORY_CHAPTERS.length} 話</span>}>ひとりで進める物語</XmasSectionTitle>
-        <p className="mb-2 px-0.5 text-[10px] font-bold leading-relaxed text-slate-300" style={JA_LABEL_STYLE}>{jaWrap('毎日1話ずつ開きます。開いた話は、いつでも読み返せます')}</p>
+        <XmasSectionTitle right={preMain ? null : <span className="text-[10px] font-black text-amber-100/80">{readCount} / {XMAS_STORY_CHAPTERS.length} 話</span>}>ひとりで進める物語</XmasSectionTitle>
+        <p className="mb-2 px-0.5 text-[10px] font-bold leading-relaxed text-slate-300" style={JA_LABEL_STYLE}>{jaWrap(storyNote)}</p>
         <ol data-xmas-story-list className="space-y-1.5">
-          {XMAS_STORY_CHAPTERS.map((c) => {
+          {shownChapters.map((c) => {
             const st = xmasStoryStatusOf(c, progress, nowMs, allOpen);
             const locked = st === 'locked';
             const can = !locked && st !== 'waiting';

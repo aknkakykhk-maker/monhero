@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f82208cdd03eddee
+// source-sha256: 8021319b60dd1204
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -112976,6 +112976,9 @@ const XmasStoryTab = ({
   const reached = xmasStoryReachedNo(progress);
   const readCount = XMAS_STORY_CHAPTERS.filter(c => progress.cleared.includes(c.id)).length;
   const chapter = sel ? XMAS_STORY_CHAPTERS.find(c => c.id === sel) : null;
+  const preMain = !allOpen && !(nowMs >= Date.parse(RAID_XMAS_EVENT.startAt));
+  const shownChapters = preMain ? XMAS_STORY_CHAPTERS.filter(c => c.prologue) : XMAS_STORY_CHAPTERS;
+  const storyNote = preMain ? `${xmasEventDateLabel(XMAS_STORY_PROLOGUE_OPEN_AT)} から序章が読めます。本編は ${xmasEventDateLabel(RAID_XMAS_EVENT.startAt)} から始まります` : '読んだ話は、いつでも読み返せます';
   const select = c => {
     setSel(c.id);
     void xmasStoryMarkSeen(c.id).then(p => setProgress(p));
@@ -112987,16 +112990,16 @@ const XmasStoryTab = ({
     no: reached,
     compact: true
   }), React.createElement("section", null, React.createElement(XmasSectionTitle, {
-    right: React.createElement("span", {
+    right: preMain ? null : React.createElement("span", {
       className: "text-[10px] font-black text-amber-100/80"
     }, readCount, " / ", XMAS_STORY_CHAPTERS.length, " 話")
   }, "ひとりで進める物語"), React.createElement("p", {
     className: "mb-2 px-0.5 text-[10px] font-bold leading-relaxed text-slate-300",
     style: JA_LABEL_STYLE
-  }, jaWrap('毎日1話ずつ開きます。開いた話は、いつでも読み返せます')), React.createElement("ol", {
+  }, jaWrap(storyNote)), React.createElement("ol", {
     "data-xmas-story-list": true,
     className: "space-y-1.5"
-  }, XMAS_STORY_CHAPTERS.map(c => {
+  }, shownChapters.map(c => {
     const st = xmasStoryStatusOf(c, progress, nowMs, allOpen);
     const locked = st === 'locked';
     const can = !locked && st !== 'waiting';
