@@ -119,6 +119,8 @@ const xmasNovelNextScene = (script, scene, ctx) => {
     const byScene = xmasNovelResolveScene(script, scene.next, ctx);
     if (byScene) return byScene;
   }
+  // 過去編(真グッドのあとに「章から」で読む章)は、最後の場面で終わり(エンディングへは進まない・起動画面へ戻る)
+  if (scene.past) return null;
   const i = scenes.findIndex((s) => s.id === scene.id);
   const base = xmasNovelSceneBase(scene.id);
   for (let j = i + 1; j < scenes.length; j += 1) {
