@@ -196,7 +196,7 @@ const raidJackRhythmAdapter = (ctx) => ({
 
 // ---- クリスマス(2026)のつなぎ口。docs/progress/event-xmas-2026/BUILD.md §1〜§4 の名前と形 ----
 // バトル部の定義(35-raid-xmas.jsx)と App の中の関数は、App から ctx で渡してもらう(ここからは直接さわらない):
-// ctx = { event: RAID_XMAS_EVENT, tiers: RAID_XMAS_A_TIERS, tierAt: (i) => raidXmasTierAt('a', i), bossImg: RAID_XMAS_BOSS_IMG, afterBossImg: RAID_XMAS_SANTA_IMG,
+// ctx = { event: RAID_XMAS_EVENT, tiers: RAID_XMAS_A_TIERS, tierAt: (i) => raidXmasTierAt('a', i), bossImg: RAID_XMAS_BOSS_IMG,
 //         damageOf: raidXmasRhythmDamageOf, useTry: raidXmasUseTry, addDamage: raidXmasAddDamage, openResult: openRaidXmasResult,
 //         bossDown: raidXmasBossDown, screen: 'RAID_JACK'(ジャックと同じ画面), infiniteName: RAID_XMAS_AFTER_BOSS.name }
 // 演出のライフは、ジャックと同じ表(raid_jack_hits)を event_id で引く(BUILD.md §7)
@@ -211,7 +211,8 @@ const raidXmasRhythmAdapter = (ctx) => {
     screen: ctx.screen || 'RAID_JACK',
     icon: '🎄',
     bossImg: ctx.bossImg || null,
-    afterBossImg: ctx.afterBossImg || null,
+    // 最後の段階を倒したあとの絵(普通のサンタ・r1126-024)。ctx に無ければ data/images/images-enemy.js の RAID_XMAS_SANTA_IMG
+    afterBossImg: ctx.afterBossImg || (typeof RAID_XMAS_SANTA_IMG !== 'undefined' ? RAID_XMAS_SANTA_IMG : null),
     tierCount: tiers.length || 1,
     tierAt: (i) => (typeof ctx.tierAt === 'function' ? ctx.tierAt(i) : tiers[i]) || { id: '', name: '', hp: 0 },
     infiniteName: ctx.infiniteName || '',

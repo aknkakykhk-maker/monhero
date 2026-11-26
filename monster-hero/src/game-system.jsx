@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 565f79eea3819a8a
+// generated-sha256: 2485a39e960388d5
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -40941,7 +40941,7 @@ const raidJackRhythmAdapter = (ctx) => ({
 
 // ---- クリスマス(2026)のつなぎ口。docs/progress/event-xmas-2026/BUILD.md §1〜§4 の名前と形 ----
 // バトル部の定義(35-raid-xmas.jsx)と App の中の関数は、App から ctx で渡してもらう(ここからは直接さわらない):
-// ctx = { event: RAID_XMAS_EVENT, tiers: RAID_XMAS_A_TIERS, tierAt: (i) => raidXmasTierAt('a', i), bossImg: RAID_XMAS_BOSS_IMG, afterBossImg: RAID_XMAS_SANTA_IMG,
+// ctx = { event: RAID_XMAS_EVENT, tiers: RAID_XMAS_A_TIERS, tierAt: (i) => raidXmasTierAt('a', i), bossImg: RAID_XMAS_BOSS_IMG,
 //         damageOf: raidXmasRhythmDamageOf, useTry: raidXmasUseTry, addDamage: raidXmasAddDamage, openResult: openRaidXmasResult,
 //         bossDown: raidXmasBossDown, screen: 'RAID_JACK'(ジャックと同じ画面), infiniteName: RAID_XMAS_AFTER_BOSS.name }
 // 演出のライフは、ジャックと同じ表(raid_jack_hits)を event_id で引く(BUILD.md §7)
@@ -40956,7 +40956,8 @@ const raidXmasRhythmAdapter = (ctx) => {
     screen: ctx.screen || 'RAID_JACK',
     icon: '🎄',
     bossImg: ctx.bossImg || null,
-    afterBossImg: ctx.afterBossImg || null,
+    // 最後の段階を倒したあとの絵(普通のサンタ・r1126-024)。ctx に無ければ data/images/images-enemy.js の RAID_XMAS_SANTA_IMG
+    afterBossImg: ctx.afterBossImg || (typeof RAID_XMAS_SANTA_IMG !== 'undefined' ? RAID_XMAS_SANTA_IMG : null),
     tierCount: tiers.length || 1,
     tierAt: (i) => (typeof ctx.tierAt === 'function' ? ctx.tierAt(i) : tiers[i]) || { id: '', name: '', hp: 0 },
     infiniteName: ctx.infiniteName || '',
@@ -148124,7 +148125,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const raidRhythmAdapterOf = (eventKey) => eventKey === 'xmas'
     // クリスマス(BUILD.md §2〜§4)。回数・送信・倒した印・再送待ちはバトル部の raidXmasUseTry / raidXmasAddDamage。
     //   レイド画面はジャックと同じ RAID_JACK(raidEv が 'xmas' のあいだクリスマスの中身)。結果は openRaidXmasResult
-    ? raidRhythmAdapter('xmas', { event: RAID_XMAS_EVENT, tiers: RAID_XMAS_A_TIERS, tierAt: (i) => raidXmasTierAt('a', i), bossImg: RAID_XMAS_BOSS_IMG, afterBossImg: RAID_XMAS_SANTA_IMG,
+    ? raidRhythmAdapter('xmas', { event: RAID_XMAS_EVENT, tiers: RAID_XMAS_A_TIERS, tierAt: (i) => raidXmasTierAt('a', i), bossImg: RAID_XMAS_BOSS_IMG,
         damageOf: raidXmasRhythmDamageOf, useTry: () => raidXmasUseTry('a'), addDamage: raidXmasAddDamage, openResult: openRaidXmasResult,
         bossDown: raidXmasBossDown, infiniteName: RAID_XMAS_AFTER_BOSS.name, screen: 'RAID_JACK' })
     : raidRhythmAdapter(eventKey || 'jack', { eventId: raidJackEventId, debugForce: raidJackDebugForce, realRules: raidJackDebugRealRules });
