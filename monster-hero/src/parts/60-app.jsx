@@ -3633,6 +3633,11 @@ function MonsterHeroGame() {
   const raidEvRef = useRef('jack');
   const raidDef = raidEventDef(raidEv);
   const raidXmasOpen = raidEv === 'xmas';
+  // クリスマスのイベントページ(79-screen-xmas-event.jsx・台帳 r1126-006)のいまのタブ('story' | 'raid' | 'bonus')。
+  //   バトル・ビート・カードから setGameState('RAID_JACK') で戻ったときも、同じタブへ帰る
+  const [xmasEventTab, setXmasEventTab] = useState('story');
+  // ひとりで進める物語の読んだ印(mh_xmas_story_v1)が変わったら増やす。物語タブが読み直す
+  const [xmasStoryVersion, setXmasStoryVersion] = useState(0);
   const raidJackOpen = !raidXmasOpen;
   const raidCurEventId = raidEv === 'xmas' ? (raidJackDebugForce ? RAID_XMAS_EVENT.debugId : RAID_XMAS_EVENT.id) : raidJackEventId;
   // クリスマスのデバッグの強制表示は、ジャックと同じ切り替え(レイドの確認画面)に合わせる
@@ -6703,7 +6708,8 @@ function MonsterHeroGame() {
     if (assistantLifeOpenNow && (state === 'HOME' || state === 'PROFILE' || state === 'ITEM_INVENTORY') && typeof ASSISTANT_LIFE_BGM_TRACK === 'string') return ASSISTANT_LIFE_BGM_TRACK;
     // イベント・レイドボス「ジャック」: ジャックとの戦いは Monster(全編)、レイド画面・段階えらび・編成はぱんぷきんの曲に固定する
     if (state === 'BATTLE' && raidJackRunRef.current) return RAID_JACK_BATTLE_BGM_TRACK;
-    if (RAID_JACK_BGM_STATES.includes(state) && raidEvRef.current !== 'xmas') return RAID_JACK_BGM_TRACK;   // クリスマスのレイド画面は、曲が届くまで HOME の曲
+    // クリスマスはイベントページ(物語・レイド・ボーナス)とレイドの準備画面で「Kissからはじまるミステリー」(台帳 r1126-015)
+    if (RAID_JACK_BGM_STATES.includes(state)) return raidEvRef.current === 'xmas' ? XMAS_EVENT_BGM_TRACK : RAID_JACK_BGM_TRACK;
     // HOMEの曲は、イベント中だけ(ユーザーが曲を選んでいないとき)ぱんぷきんの曲にする。終わったら元の曲へ戻る。
     // 開催中かは見るたびに数え直す(読み込み時に1回だけ決めない)
     // ハロウィン・ナイト(10/4〜11/1)のあいだも同じ曲にする(2026-10-04・ユーザー指摘「ホーム音楽がぱんぷきんのはずなのにデフォルトでもならない」。
@@ -18571,12 +18577,45 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     try { setRaidJackGuideSeen((await storeGet(RAID_JACK_GUIDE_KEY, false, false)) === true); } catch (e) { setRaidJackGuideSeen(true); }
     setGameState('RAID_JACK');
   };
-  // クリスマスのレイド画面を開く(入口: HOME のボス(⑤で作る)・レイドの確認画面)。開始前はデバッグの強制表示のときだけ
-  const openRaidXmas = async (force = false) => {
-    if (!RELEASE_FLAGS.raidXmas && !raidJackDebugForce && force !== true) return;
+  // クリスマスのイベントページを開く(入口: HOME のイベントの札・HOME のボス(⑤で作る)・レイドの確認画面)。開始前はデバッグの強制表示のときだけ
+  //   tab: 開くタブ。イベントの札は「物語」、ボスとレイドの確認画面は「レイド」
+  const openRaidXmas = async (force = false, tab = 'raid') => {
+    // 11/28 10:00(序章が開く)からはページを開ける。レイド・ボーナスのタブは 11/30 10:00 まで「から」と出す(台帳 r1126-014)
+    if (!RELEASE_FLAGS.raidXmas && !raidJackDebugForce && force !== true && !xmasEventPageOpenAt(Date.now())) return;
     raidEvRef.current = 'xmas'; setRaidEv('xmas');
     raidJackReturnTierRef.current = 0;
+    setXmasEventTab(XMAS_EVENT_TABS.some((t) => t.id === tab) ? tab : 'raid');
     setRhythmEventPoints(await loadRhythmEventPoints());
+    setGameState('RAID_JACK');
+  };
+  // ひとりで進める物語(イベントページの「物語」タブ)。話は選んで読む(自動では流さない)。
+  //   読む話は、最後まで読む(飛ばしても)と「読んだ」。戦う話は、お話を読んだだけでは進まず、勝つと completeXmasStoryChapter で進む
+  const openXmasStoryChapter = (chapter) => {
+    if (!chapter || !chapter.scriptId) return;
+    setEventReplay({ id: chapter.scriptId, step: 0, xmasChapter: chapter.id, xmasType: chapter.type, debug: raidJackDebugForce && !RELEASE_FLAGS.raidXmas });
+  };
+  const finishXmasStoryRead = (replay) => {
+    if (!replay || !replay.xmasChapter || replay.xmasType !== 'read') return;
+    void xmasStoryMarkCleared(replay.xmasChapter).then(() => setXmasStoryVersion((v) => v + 1));
+  };
+  // 戦う話の入口。バトル・ビート・カードの各部が App に startXmasStoryBattle / startXmasStoryRhythm / startXmasStoryCard を置くと選べる(BUILD.md §5)
+  const xmasStoryFightWays = [
+    ...(typeof startXmasStoryBattle === 'function' ? ['battle'] : []),
+    ...(typeof startXmasStoryRhythm === 'function' ? ['rhythm'] : []),
+    ...(typeof startXmasStoryCard === 'function' ? ['card'] : []),
+  ];
+  const fightXmasStoryChapter = (chapter, way) => {
+    if (!chapter) return;
+    if (way === 'battle' && typeof startXmasStoryBattle === 'function') { void startXmasStoryBattle(chapter.id); return; }
+    if (way === 'rhythm' && typeof startXmasStoryRhythm === 'function') { void startXmasStoryRhythm(chapter.id); return; }
+    if (way === 'card' && typeof startXmasStoryCard === 'function') void startXmasStoryCard(chapter.id);
+  };
+  // 戦う話が終わったら各部が呼ぶ(BUILD.md §5)。勝ちなら印を付ける。勝ち負けどちらもイベントページの「物語」へ戻す(負けは何度でも挑める)
+  const completeXmasStoryChapter = async (chapterId, result = {}) => {
+    if (result && result.won === true) await xmasStoryMarkCleared(chapterId);
+    setXmasStoryVersion((v) => v + 1);
+    raidEvRef.current = 'xmas'; setRaidEv('xmas');
+    setXmasEventTab('story');
     setGameState('RAID_JACK');
   };
   // クリスマスの報酬の受け取り(次の PR で作る)。いまは何も届けない
@@ -20378,6 +20417,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             resolveIconUrl={resolveIconUrl} spotClass={spotClass}
             raidJackVisible={(RELEASE_FLAGS.raidJack===true&&raidJackWindowAt(Date.now())==='open')||raidJackDebugForce}
             raidJackEventId={raidJackEventId} onOpenRaidJack={openRaidJack}
+            /* クリスマスのイベントの札(台帳 r1126-006)。開始時刻(RELEASE_FLAGS.raidXmas)からだけ、札を押すとイベントページの「物語」を開く */
+            onOpenXmasEvent={RELEASE_FLAGS.raidXmas===true?()=>{void openRaidXmas(false,'story');}:null}
+            /* クリスマスのイベントページの目立つ入口(台帳 r1126-014)。序章が開く 11/28 10:00 から、11/30 10:00 までは「序章公開中」 */
+            xmasEntry={xmasEventPageOpenAt(Date.now())||(raidJackDebugForce&&raidEv==='xmas')?{onOpen:()=>{void openRaidXmas(true,'story');},preOpen:RELEASE_FLAGS.raidXmas!==true}:null}
+            /* クリスマスのレイドのボス(台帳 r1126-006)。期間中か、デバッグの強制表示でクリスマスを開いたあと。押すとイベントページの「レイド」タブ */
+            raidXmasVisible={(RELEASE_FLAGS.raidXmas===true&&raidXmasWindowAt(Date.now())==='open')||(raidJackDebugForce&&raidEv==='xmas')}
+            raidXmasEventId={raidJackDebugForce&&!RELEASE_FLAGS.raidXmas?RAID_XMAS_EVENT.debugId:RAID_XMAS_EVENT.id} onOpenRaidXmas={()=>{void openRaidXmas(false,'raid');}}
             onOpenAssistantChat={RELEASE_FLAGS.assistantChat===true?()=>setAssistantChatOpen(true):null}
             cardBattleVisible={(EVENT_REPLAY_RELEASE_FLAGS.cardBattle&&cardBattleIntroSeenFlag)||cardBattleDebugHome} onOpenCardBattle={()=>{setCardOrigin('home');setGameState('CARD_TOP');}}
             /* 公開前の予告(社長 2026-10-25)。ふつうのプレイヤーに「近日公開」の札を出し、押すと予告の小窓。公開の印が立てば出なくなり、上のふつうの入口に替わる */
@@ -22785,14 +22831,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </div>
         )}
 
-        {gameState==='RAID_JACK'&&raidXmasOpen&&(<RaidJackScreen key="raid-xmas" ev={RAID_EVENT_XMAS}
-          /* 挑み方: バトルはバトル部。モンヒロビート・バトルカードはビート部・カード部が startRaidXmasRhythm / startRaidXmasCard を App に置いたら出る(BUILD.md §4) */
-          ways={['battle',...(typeof startRaidXmasRhythm === 'function'?['rhythm']:[]),...(typeof startRaidXmasCard === 'function'?['card']:[])]}
-          initialTier={raidJackReturnTierRef.current}
+        {gameState==='RAID_JACK'&&raidXmasOpen&&(<XmasEventScreen tab={xmasEventTab} onTab={setXmasEventTab} forced={raidJackDebugForce&&!RELEASE_FLAGS.raidXmas} preOpen={!RELEASE_FLAGS.raidXmas&&!raidJackDebugForce}
           onBack={()=>{raidJackReturnTierRef.current=0;setGameState(raidJackDebugForce&&!RELEASE_FLAGS.raidXmas?'RAID_JACK_DEBUG':'HOME');}}
-          onChallenge={(kind,tierIndex,way)=>{raidJackReturnTierRef.current=tierIndex;if(kind==='a'&&way==='rhythm'){if(typeof startRaidXmasRhythm === 'function')void startRaidXmasRhythm(tierIndex);return;}if(kind==='a'&&way==='card'){if(typeof startRaidXmasCard === 'function')void startRaidXmasCard(tierIndex);return;}setRaidJackPrep({kind,tierIndex});setGameState('RAID_JACK_PREP');}}
-          onPurchase={purchaseRaidJackExtra} onClaimRewards={claimRaidXmasRewards} beatPoints={rhythmEventPoints} eventId={raidCurEventId} forced={raidJackDebugForce} unlimited={raidJackDebugForce&&!raidJackDebugRealRules}
-          renderPlace={rankingPlace} renderIcon={rankingBreederIcon} cardClass={rankingCardClass}/>)}
+          storyVersion={xmasStoryVersion} fightWays={xmasStoryFightWays} onReadChapter={openXmasStoryChapter} onFightChapter={fightXmasStoryChapter}
+          /* レイドのタブの中身(今までのクリスマスのレイド画面そのまま) */
+          raid={{ev:RAID_EVENT_XMAS,
+            /* 挑み方: バトルはバトル部。モンヒロビート・バトルカードはビート部・カード部が startRaidXmasRhythm / startRaidXmasCard を App に置いたら出る(BUILD.md §4) */
+            ways:['battle',...(typeof startRaidXmasRhythm === 'function'?['rhythm']:[]),...(typeof startRaidXmasCard === 'function'?['card']:[])],
+            initialTier:raidJackReturnTierRef.current,
+            onBack:()=>{raidJackReturnTierRef.current=0;setGameState(raidJackDebugForce&&!RELEASE_FLAGS.raidXmas?'RAID_JACK_DEBUG':'HOME');},
+            onChallenge:(kind,tierIndex,way)=>{raidJackReturnTierRef.current=tierIndex;if(kind==='a'&&way==='rhythm'){if(typeof startRaidXmasRhythm === 'function')void startRaidXmasRhythm(tierIndex);return;}if(kind==='a'&&way==='card'){if(typeof startRaidXmasCard === 'function')void startRaidXmasCard(tierIndex);return;}setRaidJackPrep({kind,tierIndex});setGameState('RAID_JACK_PREP');},
+            onPurchase:purchaseRaidJackExtra,onClaimRewards:claimRaidXmasRewards,beatPoints:rhythmEventPoints,eventId:raidCurEventId,forced:raidJackDebugForce,unlimited:raidJackDebugForce&&!raidJackDebugRealRules,
+            renderPlace:rankingPlace,renderIcon:rankingBreederIcon,cardClass:rankingCardClass}}/>)}
         {gameState==='RAID_JACK'&&raidJackOpen&&(<RaidJackScreen
           initialTier={raidJackReturnTierRef.current}
           onBack={()=>{raidJackReturnTierRef.current=0;setGameState(raidJackDebugForce&&!RELEASE_FLAGS.raidJack?'RAID_JACK_DEBUG':'HOME');}}
@@ -25460,6 +25510,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             setRhythmHellGuide({page:0,debugList:!!eventReplay.debugList,fromList:!!eventReplay.fromList});
             setEventReplay(null);return;
           }
+          // クリスマスのひとりで進める物語: 読む話は最後まで読んだら「読んだ」(戦う話は勝つまで進まない)
+          if(eventReplay.xmasChapter) finishXmasStoryRead(eventReplay);
           if(eventReplay.debugList) setShowDebugStoryList(true);
           if(eventReplay.fromList) setShowEventReplayList(true);
           setEventReplay(null);
@@ -25481,6 +25533,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           if(eventReplay.live&&!eventReplay.debug&&event&&(event.id===RAID_JACK_ENDING_CLEARED_ID||event.id===RAID_JACK_ENDING_NOTCLEARED_ID)) markRaidJackEndingReplayed();
           // MFバトルカードのはじまりは、飛ばしたら HOME のまま(入口から入れる)
           if(eventReplay.live&&!eventReplay.debug&&event&&event.id===CARD_BATTLE_INTRO_STORY_ID) markCardBattleIntroSeen();
+          // クリスマスのひとりで進める物語は、イベントページから自分で選んで開いた話なので、飛ばしても「読んだ」にする(いつでも読み返せる)
+          if(eventReplay.xmasChapter) finishXmasStoryRead(eventReplay);
           // HELL のお話は飛ばしても説明は出す(遊び方は飛ばさずに知ってほしい)。見たにするのは本編で流したときだけ
           if(event&&event.id===RHYTHM_HELL_STORY_ID){
             if(eventReplay.live&&!eventReplay.debug) markRhythmHellStorySeen();

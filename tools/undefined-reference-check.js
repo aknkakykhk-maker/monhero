@@ -72,6 +72,9 @@ const GLOBALS = new Set([
 const LATER_HOOKS = {
   startRaidXmasRhythm: 'クリスマスのレイドのモンヒロビート挑戦(ビート部が 60-app.jsx の App に置く・docs/progress/event-xmas-2026/BUILD.md §4)。レイド画面の呼び出しが typeof で確かめてボタンを出す。2026-11-25',
   startRaidXmasCard: 'クリスマスのレイドのバトルカード挑戦(カード部が 60-app.jsx の App に置く・BUILD.md §4)。レイド画面の呼び出しが typeof で確かめてボタンを出す。2026-11-25',
+  startXmasStoryBattle: 'クリスマスのひとりで進める物語の「戦う」話をモンヒロバトルで(バトル部が 60-app.jsx の App に置く・BUILD.md §5)。イベントページが typeof で確かめてボタンを出す。2026-11-26',
+  startXmasStoryRhythm: '同じ話をモンヒロビートで(ビート部が App に置く・BUILD.md §5)。2026-11-26',
+  startXmasStoryCard: '同じ話をMFバトルカードで(カード部が App に置く・BUILD.md §5)。2026-11-26',
   MonsucFuseSheet: 'モンヒロサクセスの保存枠どうしの合体の画面部品(合体の担当 claude/monsuc-fuse が足す)。保存枠の画面(56-monhero-success-r3-retire.jsx)の「合体する」から開く。2026-11-12',
   assistantLifeHospitalCureSlotsOf: '特別な治療(ビートPの品物)を使った病院の回(abs)の配列(ナカヨシ・56-assistant-life-body.jsx)。育成ノートが、その回で助手のマスモンのけが・病気の残りを0にするのに読む。2026-11-12 キズナ',
   assistantLifeHospitalSlotsOf: '助手専用の病院にいた生活の回(abs)の配列(ナカヨシが足す)。育成ノート(56-assistant-life-masmon-plan.jsx)がけが・病気を早く治すのに読む。2026-11-12 キズナ',

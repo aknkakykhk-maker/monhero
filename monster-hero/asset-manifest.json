@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "e8550de53e41",
-  "packs": {"beat":{"bytes":311557065,"count":166},"battle":{"bytes":743151045,"count":1843},"card":{"bytes":38085297,"count":1046},"all":{"bytes":1092793407,"count":3055},"core":{"bytes":26008662,"count":25}},
+  "id": "60c94685be2c",
+  "packs": {"beat":{"bytes":311557065,"count":166},"battle":{"bytes":748638144,"count":1845},"card":{"bytes":38085297,"count":1046},"all":{"bytes":1098280506,"count":3057},"core":{"bytes":26049689,"count":25}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"b43d691d4773","size":2833344,"pack":"beat"},
@@ -65,6 +65,7 @@
     "audio/bgm-kiki-issen-short.mp3": {"v":"add607be5bec","size":3113795,"pack":"beat"},
     "audio/bgm-kimimachi-loop.mp3": {"v":"1be296a6cdb3","size":3886848,"pack":"beat"},
     "audio/bgm-kindan-no-resistance.mp3": {"v":"efca5c01d0b7","size":1961280,"pack":"beat"},
+    "audio/bgm-kiss-mystery.mp3": {"v":"8ccb87dfc4ad","size":4861745,"pack":"battle"},
     "audio/bgm-lamia.mp3": {"v":"faaab8302652","size":2295849,"pack":"beat"},
     "audio/bgm-light-player-short.mp3": {"v":"5d59fb7eb1fb","size":2409534,"pack":"beat"},
     "audio/bgm-light-player.mp3": {"v":"c07830c2e774","size":4301217,"pack":"beat"},
@@ -2118,6 +2119,7 @@
     "images/events/rhythm-grand-open-teaser.jpg": {"v":"45ae90cee48b","size":197841,"pack":"battle"},
     "images/events/spooky-dye-preview.jpg": {"v":"5f2023b32279","size":67687,"pack":"battle"},
     "images/events/spooky-profile.jpg": {"v":"998671fd3d0b","size":134035,"pack":"battle"},
+    "images/events/xmas-2026-event-wide.jpg": {"v":"4c99b2d7addd","size":625354,"pack":"battle"},
     "images/events/xmas-2026-notice.jpg": {"v":"789f225e7916","size":530555,"pack":"battle"},
     "images/events/yggdrasil-dye-preview.jpg": {"v":"1fc38d84ced6","size":77069,"pack":"battle"},
     "images/events/yggdrasil-lineage-notice.jpg": {"v":"bdf973efa1bc","size":119475,"pack":"battle"},
@@ -3060,7 +3062,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"4c25a53a4adc","size":319705,"pack":"core"},
+    "tailwind.css": {"v":"14fbadd06e06","size":321157,"pack":"core"},
     "data/images/images-ally.js": {"v":"7fcc9331d4b6","size":92225,"pack":"core"},
     "data/images/images-enemy.js": {"v":"0d3643e9bc69","size":3262,"pack":"core"},
     "data/ally-monsters.js": {"v":"6737b7dced48","size":60894,"pack":"core"},
@@ -3082,6 +3084,6 @@
     "data/assistant-masmon-techs.js": {"v":"353cf73676a6","size":113841,"pack":"core"},
     "data/assistant-life-rel-talks.js": {"v":"cde51ded5428","size":225977,"pack":"core"},
     "data/success-sounds.js": {"v":"9692dd51493a","size":19367,"pack":"core"},
-    "game-system.compiled.js": {"v":"03538e35d0f6","size":12535141,"pack":"core"}
+    "game-system.compiled.js": {"v":"ef2a36e5d07b","size":12574716,"pack":"core"}
   }
 }

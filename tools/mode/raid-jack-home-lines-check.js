@@ -61,8 +61,8 @@ check('{name} など差し込みの印が残っていない', all.every((l) => !
 
 // ⑤ 画面
 const home = read('monster-hero/src/parts/69-screen-home.jsx');
-check('HOMEのジャックは、段階・残りライフ・ぱんぷきんから、ひとことを選ぶ(raidJackHomeLines(tier.id, rate, allDone))', /const speechLines = raidJackHomeLines\(tier\.id, rate, allDone\);/.test(home));
-check('吹き出しは別のボタンで、押すと次のセリフへ進む(ジャック本体のボタンの入れ子にしない)', /data-home-raid-say[\s\S]{0,200}onClick=\{\(\) => setLineNo\(\(n\) => n \+ 1\)\}/.test(home) && /<button type="button" data-home-raid-jack onClick=\{onOpen\}/.test(home) && /<\/button>\s*<button type="button" data-home-raid-jack/.test(home));
+check('HOMEのジャックは、段階・残りライフ・ぱんぷきんから、ひとことを選ぶ(raidJackHomeLines(tier.id, rate, allDone))', /const speechLines = (?:isJack \? )?raidJackHomeLines\(tier\.id, rate, allDone\)(?: : \[\])?;/.test(home));
+check('吹き出しは別のボタンで、押すと次のセリフへ進む(ジャック本体のボタンの入れ子にしない)', /data-home-raid-say[\s\S]{0,200}onClick=\{\(\) => setLineNo\(\(n\) => n \+ 1\)\}/.test(home) && /<button type="button" data-home-raid-jack onClick=\{onOpen\}/.test(home) && /<\/button>\}?\s*<button type="button" data-home-raid-jack/.test(home));
 check('セリフの番号は一覧の長さで割った余りを使う(段階・場面が替わって一覧が短くなっても落ちない)', /speechLines\[lineNo % speechLines\.length\]/.test(home));
 check('動きを減らす設定では、吹き出しの出る動きを止める(data-story-pop を付けている)', /data-home-raid-say data-story-pop="1"/.test(home));
 const pj = JSON.parse(read('monster-hero/src/parts/parts.json'));

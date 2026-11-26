@@ -406,6 +406,10 @@
       "role": "画面: イベント・レイドボス「ジャック」(RAID_JACK=A協力戦・B累計ダメージ・残り回数・追加購入・ランキング / RAID_JACK_PREP=編成とアシカえらび)。表示と選択だけで、回数・ビートP・戦闘開始は本体側"
     },
     {
+      "file": "79-screen-xmas-event.jsx",
+      "role": "画面: クリスマスイベント「聖夜の名探偵」のイベントページ(題・ポスター・期間・タブ 物語/レイド/ボーナス)。物語=登場人物パネル XmasCastPanel と話の一覧(mh_xmas_story_v1)、レイド=RaidJackScreen を head つきで入れる、ボーナス=期間中のボーナスの一覧。gameState は RAID_JACK のまま"
+    },
+    {
       "file": "56-assistant-chat.jsx",
       "role": "助手とおしゃべりの窓(AssistantChatWindow)。中継役へ送るだけで、会話は端末の新しいキーにだけ置く。公開の印 assistantChat の後ろ"
     },
