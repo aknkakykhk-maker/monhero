@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: eb1639d2344ce3f0
+// source-sha256: ab21f902b3061d21
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -114120,7 +114120,7 @@ const XMAS_NOVEL_SCRIPT = {
     }, {
       "id": "0-10",
       "t": "band",
-      "x": "中には、古いゲームソフトが1本。ラベルには『モンヒロ事件簿 ―呪いのセーブデータ― 雪山編』",
+      "x": "中には、古いゲームソフトが1本。ラベルには『モンヒロ事件簿 ―呪いのセーブデータ― 十三番目の鐘』",
       "k": "OUT-0-1:0-10"
     }, {
       "id": "0-11",
@@ -114228,7 +114228,7 @@ const XMAS_NOVEL_SCRIPT = {
     }, {
       "id": "0-25",
       "t": "band",
-      "x": "画面いっぱいに、題字 ——『モンヒロ事件簿 ―呪いのセーブデータ― 雪山編』",
+      "x": "画面いっぱいに、題字 ——『モンヒロ事件簿 ―呪いのセーブデータ― 十三番目の鐘』",
       "k": "OUT-0-2:0-25"
     }],
     "outside": true
