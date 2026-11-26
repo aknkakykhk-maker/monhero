@@ -4,7 +4,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageEnhance
 
 REPO, S, OUT = sys.argv[1], sys.argv[2], sys.argv[3]
-W, H, FPS, DUR = 720, 1280, 30, 43.0
+W, H, FPS, DUR = 720, 1280, 30, 48.2
 R = REPO + '/tools/art-sources/promo/xmas-2026/received/'
 IMG = REPO + '/monster-hero/images/'
 def rgba(p): return Image.open(p).convert('RGBA')
@@ -42,7 +42,7 @@ def text_at(base, k, t, t0, t1, y, fade=0.5, rise=14):
     im = TX[k]
     paste_a(base, im, ((W - im.width) / 2, y + (1 - ease((t - t0) / fade)) * rise), a)
 
-TX = {k: txt(k) for k in ['s1', 'band', 's2', 'card', 's3', 's3b', 's4', 's5', 's6a', 's6b', 's7', 'v1', 'v2', 'stamp']}
+TX = {k: txt(k) for k in ['s1', 'band', 's2', 'card', 's3', 's3b', 's4', 's5', 's6a', 's6b', 's7', 'v1', 'v2', 'stamp', 'parcel', 'cart', 'crt', 'crt_sub', 'crt_press', 'tv', 'g1']}
 
 # ── 素材 ──
 home = rgb(R + 'home-background-xmas_v2.png')
@@ -281,6 +281,50 @@ def sc7(t):  # 28.6-33.6 名探偵は、だれだ。
             s = lerp(1.25, 1.0, p); im2 = im.resize((int(im.width * s), int(im.height * s)), Image.BICUBIC)
             paste_a(img, im2, ((W - im2.width) / 2, y - (im2.height - im.height) / 2), min(1, p * 1.5) * min(1, (5.0 - t) / 0.4))
     return img
+# ── 差出人のない小包と、古いゲームの起動画面 ──
+nrng = np.random.default_rng(3)
+def sc7b(t):  # 38.4-44.0
+    if t < 3.0:
+        img = Image.new('RGBA', (W, H), (0, 0, 0, 255)); img.alpha_composite(box_bg.convert('RGBA').point(lambda v: int(v * 0.75)))
+        sp = Image.new('L', (W, H), 0); ImageDraw.Draw(sp).ellipse((60, 380, 660, 1000), fill=90)
+        spl = Image.new('RGBA', (W, H), (255, 225, 170, 255)); spl.putalpha(sp.filter(ImageFilter.GaussianBlur(60))); img.alpha_composite(spl)
+        pc = TX['parcel']; px, py = (W - pc.width) // 2, 560
+        r = ease((t - 0.9) / 1.4); cs = lerp(0.78, 1.0, r); ct = TX['cart'].resize((int(340 * cs), int(440 * cs)), Image.BICUBIC)
+        cy = lerp(py + 140, 150, r)
+        if r > 0:
+            glow = Image.new('L', (W, H), 0); ImageDraw.Draw(glow).ellipse((W / 2 - 200, cy + 40, W / 2 + 200, cy + ct.height - 40), fill=int(120 * r))
+            gl = Image.new('RGBA', (W, H), (255, 70, 60, 255)); gl.putalpha(glow.filter(ImageFilter.GaussianBlur(50))); img.alpha_composite(gl)
+            paste_a(img, ct, ((W - ct.width) / 2, cy), min(1, r * 3))
+        img.alpha_composite(pc, (px, py))
+        img = cover(img.convert('RGB'), lerp(1.0, 1.07, ease(t / 3.0)), W / 2, 640).convert('RGBA')
+        text_at(img, 'g1', t, 0.3, 2.95, 1030, fade=0.4)
+        if t > 2.75:  # 砂あらしで切り替え
+            a = min(1, (t - 2.75) / 0.25); n = nrng.integers(0, 255, (H // 4, W // 4), dtype=np.uint8)
+            nz = Image.fromarray(n).resize((W, H), Image.NEAREST).convert('RGBA'); nz.putalpha(int(255 * a)); img.alpha_composite(nz)
+        return img
+    tt = t - 3.0
+    scr = TX['crt'].copy().convert('RGB')
+    a = np.asarray(scr).astype(np.float32)
+    if tt > 0.6: pass
+    sub_a = ease((tt - 0.7) / 0.6)
+    s2 = Image.fromarray(a.astype(np.uint8)).convert('RGBA')
+    paste_a(s2, TX['crt_sub'], (0, 300), sub_a)
+    if tt > 1.5 and int(tt * 2.5) % 2 == 0: s2.alpha_composite(TX['crt_press'], (0, 400))
+    a = np.asarray(s2.convert('RGB')).astype(np.float32)
+    on = ease(tt / 0.35); a *= on * (0.93 + 0.07 * math.sin(tt * 47))
+    a[::3, :, :] *= 0.72  # 走査線
+    n = nrng.normal(0, 1, (480, 640, 1)).astype(np.float32) * (18 + 60 * max(0, 1 - tt / 0.5)); a += n
+    if tt < 0.5:  # 横ずれ
+        for y0 in range(0, 480, 24):
+            a[y0:y0 + 24] = np.roll(a[y0:y0 + 24], int(nrng.integers(-30, 30) * (1 - tt / 0.5)), axis=1)
+    band = int((tt * 260) % 560) - 40; a[max(0, band):max(0, band + 30)] += 18
+    scr = Image.fromarray(np.clip(a, 0, 255).astype(np.uint8)).convert('RGBA')
+    img = Image.new('RGBA', (W, H), (4, 3, 6, 255))
+    gl = Image.new('L', (W, H), 0); ImageDraw.Draw(gl).rectangle((40, 360, 680, 840), fill=int(110 * on))
+    g = Image.new('RGBA', (W, H), (200, 60, 60, 255)); g.putalpha(gl.filter(ImageFilter.GaussianBlur(70))); img.alpha_composite(g)
+    img.alpha_composite(scr, (40, 360)); img.alpha_composite(TX['tv'], (0, 320))
+    img = cover(img.convert('RGB'), lerp(1.0, 1.03, ease(tt / 2.6)), W / 2, 600).convert('RGBA')
+    return img
 def sc8(t):  # 33.4-38 題字と開幕
     img = cover(title_bg, lerp(1.12, 1.02, ease(t / 4.6)), title_bg.width / 2, title_bg.height * 0.45)
     img = ImageEnhance.Brightness(img.filter(ImageFilter.GaussianBlur(6))).enhance(0.42).convert('RGBA')
@@ -291,7 +335,7 @@ def sc8(t):  # 33.4-38 題字と開幕
     text_at(img, 's7', t, 1.3, 9.0, 720, fade=0.6)
     return img
 
-SCENES = [(0.0, 5.4, sc1), (5.0, 9.4, sc2), (9.0, 14.4, sc3), (14.0, 19.4, sc4), (19.0, 24.4, sc5), (24.0, 29.4, sc5b), (29.0, 33.8, sc6), (33.6, 38.8, sc7), (38.4, 43.0, sc8)]
+SCENES = [(0.0, 5.4, sc1), (5.0, 9.4, sc2), (9.0, 14.4, sc3), (14.0, 19.4, sc4), (19.0, 24.4, sc5), (24.0, 29.4, sc5b), (29.0, 33.8, sc6), (33.6, 38.8, sc7), (38.4, 44.0, sc7b), (43.6, 48.2, sc8)]
 
 def frame(t):
     act = [(a, b, f) for a, b, f in SCENES if a <= t < b]
