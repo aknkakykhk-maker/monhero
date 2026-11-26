@@ -198,4 +198,6 @@ select kind, tier, source, count(distinct breeder_id) as players, sum(damage)::b
 - **途中でやめた**: `openRaidXmasResult({ way, tierIndex, damage: 0, outcome: 'sent', detail })`
 - **レイド画面へ戻す**: `setGameState('RAID_JACK')`(画面の名前はジャックと同じ。どのイベントかは App の `raidEvRef` が持つ)。2026-11-26 から、クリスマスはイベントページ(`XmasEventScreen`)の「レイド」タブの中にレイド画面がある。戻るとレイドのタブのまま(タブは App の `xmasEventTab`)
 - **デバッグ**: DEBUG MENU → ⚔️バトル → レイドの確認画面の「🎅 クリスマスのレイド画面を開く」。送り先は `raid_xmas_debug`
-- このあとバトル部が足す: 報酬の受け取り・HOME のボス・段階のお話・再送待ちを HOME で送り直す
+- **報酬の受け取り**(2026-11-26・r1126-027): App の `claimRaidXmasRewards`。HOME にいるとき(5分あけて・戦ったあとはすぐ)確かめ、ギフト(`source:'raidXmas'`・id は `raid_xmas_2026_<報酬のid>`)で届ける。判定はジャックの `raidJackCollectDueRewards` に `raidXmasRewardRules()`(段階のライフ・期間・題名)を渡して使う。受け取り済みの印は `mh_raid_xmas_v1` の `claimed`
+- 再送待ちの送り直しは HOME のボス(`HomeRaidJack` の `ev.flushPending`)とレイド画面で済み
+- このあとバトル部が足す: 段階のお話

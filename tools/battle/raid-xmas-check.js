@@ -41,7 +41,7 @@ const make = (nowIso) => {
     },
   };
   vm.createContext(ctx);
-  vm.runInContext(`${src}\nthis.o={story:{XMAS_STORY_CHAPTERS,XMAS_STORY_CAST,xmasStoryStatusOf,xmasStoryNormalize,xmasStoryCastAt,xmasStoryMarkSeen,xmasStoryMarkCleared},RAID_XMAS_EVENT,RAID_XMAS_SOURCES,RAID_XMAS_A_TIERS,RAID_XMAS_B_TIERS,RAID_XMAS_STORY_IDS,raidXmasWindowAt,raidXmasUseTry,raidXmasAddDamage,raidXmasLoadState,raidXmasSetDebug,raidXmasStoryCandidates,raidJackNormalizePending,sbSendRaidJackHit,RAID_XMAS_SKILL_NAMES,RAID_JACK_SKILL_NAMES,xmasBattleBonusRateAt};`, ctx);
+  vm.runInContext(`${src}\nthis.o={story:{XMAS_STORY_CHAPTERS,XMAS_STORY_CAST,xmasStoryStatusOf,xmasStoryNormalize,xmasStoryCastAt,xmasStoryMarkSeen,xmasStoryMarkCleared},RAID_XMAS_EVENT,RAID_XMAS_SOURCES,RAID_XMAS_A_TIERS,RAID_XMAS_B_TIERS,RAID_XMAS_STORY_IDS,raidXmasWindowAt,raidXmasUseTry,raidXmasAddDamage,raidXmasLoadState,raidXmasSetDebug,raidXmasStoryCandidates,raidJackNormalizePending,sbSendRaidJackHit,RAID_XMAS_SKILL_NAMES,RAID_JACK_SKILL_NAMES,xmasBattleBonusRateAt,raidJackCollectDueRewards,raidXmasRewardRules,raidXmasGiftId,RAID_JACK_A_TIERS};`, ctx);
   return { o: ctx.o, calls, store, setResponder: (f) => { responder = f; } };
 };
 const OPEN = '2026-12-01T12:00:00+09:00';
@@ -170,6 +170,45 @@ const totalsBody = (a1) => JSON.stringify([{ kind: 'a', tier: 1, total_damage: a
     check('並び: 帯は10人みんなを数える(第7話 9人/1つ・第16話 6人/3つ・第25話 10人/0つ)',
       a7.left === 9 && a7.emptyBoxes === 1 && a16.left === 6 && a16.emptyBoxes === 3 && a25.left === 10 && a25.emptyBoxes === 0);
     check('並び: 10人', S.XMAS_STORY_CAST.length === 10);
+  }
+  // ⑨ 報酬の受け取り(r1126-027): 表はジャックと同じ。段階のライフ・期間・題名・ギフトの id・印のキーはクリスマスのもの
+  {
+    const me = 'breeder-aaaa1111';
+    const run = async (a1, rules) => {
+      const t = make(OPEN);
+      t.setResponder((url) => {
+        if (/raid_jack_tier_totals/.test(url)) return { ok: true, status: 200, body: totalsBody(a1) };
+        if (/raid_jack_contributions/.test(url) && /breeder_id=eq\./.test(url)) return { ok: true, status: 200, body: JSON.stringify([{ kind: 'a', tier: 1, total_damage: 5000 }]) };
+        if (/raid_jack_contributions/.test(url)) return { ok: true, status: 200, body: JSON.stringify([{ breeder_id: me, total_damage: 5000, last_hit_at: '2026-12-01T00:00:00Z' }]) };
+        return { ok: true, status: 200, body: '[]' };
+      });
+      return { t, r: await t.o.raidJackCollectDueRewards({}, me, 'raid_xmas_2026', Date.parse(OPEN), rules ? t.o.raidXmasRewardRules() : null) };
+    };
+    const jackHp = make(OPEN).o.RAID_JACK_A_TIERS[0].hp;
+    const x1 = await run(jackHp, true);
+    const ids1 = x1.r.due.map((d) => d.id);
+    check('報酬: ジャックの段階1のライフでは、クリスマスの段階1は倒れていない(討伐報酬を出さない)', x1.r.ok && ids1.join() === 'part_a', ids1.join());
+    check('報酬: 参加賞の題名はクリスマスのボスの名前', x1.r.due[0] && x1.r.due[0].title.startsWith(x1.t.o.RAID_XMAS_EVENT.name), x1.r.due[0] && x1.r.due[0].title);
+    const j1 = await run(jackHp, false);
+    check('報酬: 規則を渡さないとジャックのまま(ジャックの動きを変えない)', j1.r.due.map((d) => d.id).includes('clear_a1') && /ジャック/.test(j1.r.due[0].title));
+    const x2 = await run(x1.t.o.RAID_XMAS_A_TIERS[0].hp, true);
+    const ids2 = x2.r.due.map((d) => d.id);
+    check('報酬: クリスマスの段階1のライフに届くと討伐・貢献の報酬', ids2.includes('clear_a1') && ids2.includes('rank_a1') && x2.r.due.find((d) => d.id === 'clear_a1').title.startsWith(x2.t.o.RAID_XMAS_A_TIERS[0].name), ids2.join());
+    const x3 = await (async () => { const t = make('2026-11-30T09:00:00+09:00'); return t.o.raidJackCollectDueRewards({}, me, 'raid_xmas_2026', Date.parse('2026-11-30T09:00:00+09:00'), t.o.raidXmasRewardRules()); })();
+    check('報酬: 開始前は何も出さない(クリスマスの期間で見る)', x3.ok && x3.due.length === 0);
+    const x4 = await (async () => { const t = make(OPEN); t.setResponder((url) => (/raid_jack_tier_totals/.test(url) ? { ok: true, status: 200, body: totalsBody(x1.t.o.RAID_XMAS_A_TIERS[0].hp) } : /breeder_id=eq\./.test(url) ? { ok: true, status: 200, body: JSON.stringify([{ kind: 'a', tier: 1, total_damage: 5000 }]) } : { ok: true, status: 200, body: '[]' })); return t.o.raidJackCollectDueRewards({ claimed: ['part_a', 'clear_a1', 'rank_a1'] }, me, 'raid_xmas_2026', Date.parse(OPEN), t.o.raidXmasRewardRules()); })();
+    check('報酬: 受け取り済みの印があれば二度は出さない', x4.ok && x4.due.length === 0, JSON.stringify(x4.due));
+    check('報酬: ギフトの id はイベント id から作る(ジャックとぶつからない)', x1.t.o.raidXmasGiftId('part_a') === 'raid_xmas_2026_part_a');
+    const app = read(P + '60-app.jsx');
+    const m = app.match(/const claimRaidXmasRewards = async \(\) => \{[\s\S]*?\n  \};/);
+    const body = m ? m[0] : '';
+    check('報酬: App の受け取りは仮のままでない', !!body && !/async \(\) => 0;/.test(body));
+    check('報酬: 印はクリスマスのキーに書き、ジャックのキーには触れない', /key:RAID_XMAS_STORAGE_KEY/.test(body) && !/RAID_JACK_STORAGE_KEY|raidJackLoadState|raidJackSaveState/.test(body));
+    check('報酬: ギフトと印を同じ取引で保存・ギフトは一度だけ', /saveStoredValuesOrRollback/.test(body) && /grantGiftOnce/.test(body) && /raidXmasGiftId\(entry\.id\)/.test(body) && /raidXmasRewardRules\(\)/.test(body));
+    check('報酬: デバッグの強制表示中・公開前は届けない', /RELEASE_FLAGS\.raidXmas !== true \|\| raidJackDebugForce/.test(body));
+    check('報酬: HOME で受け取りを確かめる', /raidXmasLastClaimRef\.current = now;\n\s*void claimRaidXmasRewards\(\);/.test(app));
+    const rel = read(P + '17-release-changelog-login-missions.jsx');
+    check('報酬: ギフト箱の札(raidXmas)', /gift\?\.source === 'raidXmas'\) return \{ label:'レイド報酬'/.test(rel));
   }
   console.log(failed ? `\nNG ${failed} 件` : '\nOK: クリスマスのレイドの定義と回数・与ダメージの口');
   process.exit(failed ? 1 : 0);
