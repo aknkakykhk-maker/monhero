@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c63050d98097a11c
+// generated-sha256: 0650cf255239ed0b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -528,6 +528,8 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   get cardCup() { return typeof cardCupOpen === 'function' && cardCupOpen() === true; },
   // クリスマスのひとりで進める物語の序章(xmas_story_00・台帳 r1126-013)。11/28 10:00 から読める(17-release の RELEASE_FLAGS.xmasStoryPrologue)
   get xmasStoryPrologue() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.xmasStoryPrologue === true; },
+  // クリスマスのレイド「もうひとつの聖夜」のお話(raid_xmas_story_*・r1126-026)。レイドの開始 11/30 10:00 から(17-release の RELEASE_FLAGS.raidXmas・見るたびに時刻で決める)
+  get raidXmas() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.raidXmas === true; },
 });
 const eventReplayReleased = (event) => !event?.releaseFlag || EVENT_REPLAY_RELEASE_FLAGS[event.releaseFlag] === true;
 // 画面に並べるイベント回想。3か所(プロフィール・回想一覧・再生)が同じ並びを見るための唯一の入口
