@@ -85,7 +85,8 @@ check('③-5 絆はAUTO設定の供モン①②③へも入れる',
 // ★報酬を配り終えてから呼ぶ。先に呼ぶと、プロ本体の報酬が入る前に画面へ出てしまう
 check('③-6 プロ本体の報酬を配り終えてから呼ぶ',
   /const proQuickAward = await awardProRunQuickLoops\(wavesCleared\);\n\s*setFinalRewardSummary\(/.test(app));
-check('③-7 結果画面へ渡している', /setFinalRewardSummary\(\{[^}]*proQuickAward \}\)/.test(app));
+// (2026-11-26 修正: xmasBonus が後ろに足され、proQuickAward が最後の項目でなくなった。渡していること自体を見る)
+check('③-7 結果画面へ渡している', /setFinalRewardSummary\(\{[^}]*proQuickAward\s*[,}]/.test(app));
 check('③-8 結果画面に出している',
   part('27-result-widgets.jsx').includes('data-pro-quick-award')
   && part('27-result-widgets.jsx').includes('summary.proQuickAward.loops'));
