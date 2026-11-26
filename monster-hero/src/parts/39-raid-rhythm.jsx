@@ -81,7 +81,8 @@ const raidRhythmFxOf = (run, info, result, difficulty) => {
     score: Math.max(0, Math.floor(Number(result && result.score) || 0)), damage: raidRhythmDamageOf(adapter, result, difficulty),
     assist: !!(result && result.assist === true),
     lifeBefore: info && Number.isFinite(info.lifeBefore) ? info.lifeBefore : null, max: tier.hp, pumpkin: !!(info && info.pumpkin),
-    bossImg: adapter.bossImg || null };
+    // 最後の段階を倒したあと(pumpkin)は、あとの姿の絵(クリスマスは普通のサンタ・r1126-024)。ジャックは null のまま(演出側でぱんぷきん)
+    bossImg: (info && info.pumpkin && adapter.afterBossImg) ? adapter.afterBossImg : (adapter.bossImg || null) };
 };
 
 // 演奏が最後まで終わった: スコアをダメージに換えて、バトルと同じ表へ送る。戻り値は結果画面の中身
@@ -195,7 +196,7 @@ const raidJackRhythmAdapter = (ctx) => ({
 
 // ---- クリスマス(2026)のつなぎ口。docs/progress/event-xmas-2026/BUILD.md §1〜§4 の名前と形 ----
 // バトル部の定義(35-raid-xmas.jsx)と App の中の関数は、App から ctx で渡してもらう(ここからは直接さわらない):
-// ctx = { event: RAID_XMAS_EVENT, tiers: RAID_XMAS_A_TIERS, tierAt: (i) => raidXmasTierAt('a', i), bossImg: RAID_XMAS_BOSS_IMG,
+// ctx = { event: RAID_XMAS_EVENT, tiers: RAID_XMAS_A_TIERS, tierAt: (i) => raidXmasTierAt('a', i), bossImg: RAID_XMAS_BOSS_IMG, afterBossImg: RAID_XMAS_SANTA_IMG,
 //         damageOf: raidXmasRhythmDamageOf, useTry: raidXmasUseTry, addDamage: raidXmasAddDamage, openResult: openRaidXmasResult,
 //         bossDown: raidXmasBossDown, screen: 'RAID_JACK'(ジャックと同じ画面), infiniteName: RAID_XMAS_AFTER_BOSS.name }
 // 演出のライフは、ジャックと同じ表(raid_jack_hits)を event_id で引く(BUILD.md §7)
@@ -210,6 +211,7 @@ const raidXmasRhythmAdapter = (ctx) => {
     screen: ctx.screen || 'RAID_JACK',
     icon: '🎄',
     bossImg: ctx.bossImg || null,
+    afterBossImg: ctx.afterBossImg || null,
     tierCount: tiers.length || 1,
     tierAt: (i) => (typeof ctx.tierAt === 'function' ? ctx.tierAt(i) : tiers[i]) || { id: '', name: '', hp: 0 },
     infiniteName: ctx.infiniteName || '',

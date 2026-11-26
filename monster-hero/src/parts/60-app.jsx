@@ -18375,7 +18375,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const raidRhythmAdapterOf = (eventKey) => eventKey === 'xmas'
     // クリスマス(BUILD.md §2〜§4)。回数・送信・倒した印・再送待ちはバトル部の raidXmasUseTry / raidXmasAddDamage。
     //   レイド画面はジャックと同じ RAID_JACK(raidEv が 'xmas' のあいだクリスマスの中身)。結果は openRaidXmasResult
-    ? raidRhythmAdapter('xmas', { event: RAID_XMAS_EVENT, tiers: RAID_XMAS_A_TIERS, tierAt: (i) => raidXmasTierAt('a', i), bossImg: RAID_XMAS_BOSS_IMG,
+    ? raidRhythmAdapter('xmas', { event: RAID_XMAS_EVENT, tiers: RAID_XMAS_A_TIERS, tierAt: (i) => raidXmasTierAt('a', i), bossImg: RAID_XMAS_BOSS_IMG, afterBossImg: RAID_XMAS_SANTA_IMG,
         damageOf: raidXmasRhythmDamageOf, useTry: () => raidXmasUseTry('a'), addDamage: raidXmasAddDamage, openResult: openRaidXmasResult,
         bossDown: raidXmasBossDown, infiniteName: RAID_XMAS_AFTER_BOSS.name, screen: 'RAID_JACK' })
     : raidRhythmAdapter(eventKey || 'jack', { eventId: raidJackEventId, debugForce: raidJackDebugForce, realRules: raidJackDebugRealRules });
