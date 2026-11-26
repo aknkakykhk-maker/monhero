@@ -91,6 +91,8 @@ const xmasNovelResolveScene = (script, id, ctx) => {
   const first = scenes.find((s) => s.id === id);
   if (first && (first.jumpOnly || xmasNovelCondOk(first.cond, ctx))) return first; // 行き先でだけ入る場面は、名指しされたら入る
   const base = xmasNovelSceneBase(id);
+  // 名指しされた場面に、分かれた仲間(C3-1a と C3-1b)が無ければ、条件に関係なく入る(問いの行き先 END-B など)
+  if (first && !scenes.some((s) => s.id !== id && xmasNovelSceneBase(s.id) === base)) return first;
   return scenes.find((s) => xmasNovelSceneBase(s.id) === base && s.id !== id && xmasNovelCondOk(s.cond, ctx)) || null;
 };
 // 場面の次: 見出しの「次」→ それが無ければ台本の並びで次の、条件の合う場面(エンディングの場面へは並びでは入らない)。

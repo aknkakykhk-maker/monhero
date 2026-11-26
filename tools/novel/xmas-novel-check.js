@@ -6,6 +6,7 @@
 //   3. 保存の正規化: 壊れた値・古い場面IDを入れても落ちず、既定へ戻るか
 //   4. 画面の部品に、決まった入口(openXmasNovel・XmasNovelScreen)があるか
 // 使い方: node tools/novel/xmas-novel-check.js   (結果は最後の数行だけ見ればよい)
+//         node tools/novel/xmas-novel-check.js --sample   仮の台本(SAMPLE.md)の分かれ道をたどる(生成物は見ない)
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -17,8 +18,9 @@ const P = (f) => path.join(ROOT, 'monster-hero/src/parts', f);
 const fails = [];
 const fail = (m) => fails.push(m);
 
+const SAMPLE_MODE = process.argv.includes('--sample');
 // 1. 生成物
-try { execFileSync(process.execPath, [path.join(__dirname, 'xmas-novel-build.js'), '--check'], { stdio: 'pipe' }); }
+if (!SAMPLE_MODE) try { execFileSync(process.execPath, [path.join(__dirname, 'xmas-novel-build.js'), '--check'], { stdio: 'pipe' }); }
 catch (e) { fail(`生成物が台本と違う(node tools/novel/xmas-novel-build.js で作り直す)\n${String(e.stdout || '').split('\n').slice(-4).join('\n')}`); }
 
 // 2. 読み込み(純粋な部品なので、そのまま vm で動かせる)
@@ -27,7 +29,7 @@ vm.runInContext(`${fs.readFileSync(P('79-xmas-novel-engine.jsx'), 'utf8')}\n${fs
 this.E = { XMAS_NOVEL_SCRIPT, xmasNovelFreshCur, xmasNovelSettle, xmasNovelStep, xmasNovelAnswer, xmasNovelApplyRow, xmasNovelJump, xmasNovelOptionsOf,
   xmasNovelCtx, xmasNovelPersonChoices, xmasNovelNormalize, xmasNovelScoreGroups, xmasNovelIsPerfect, xmasNovelRecordFirst };`, ctx);
 const E = ctx.E;
-const S = E.XMAS_NOVEL_SCRIPT;
+const S = SAMPLE_MODE ? require('./xmas-novel-build.js').parseScript(fs.readFileSync(path.join(ROOT, 'docs/progress/xmas-novel/SAMPLE.md'), 'utf8'), 'docs/progress/xmas-novel/SAMPLE.md') : E.XMAS_NOVEL_SCRIPT;
 const endingsAll = S.scenes.filter((s) => s.ending).map((s) => s.ending.id);
 const reached = new Map();
 let paths = 0; let stuck = 0;
@@ -57,7 +59,7 @@ const walk = (cur0, depth, log) => {
         if (st.ending.kind === 'bad' && S.src.includes('SCRIPT') && Object.keys(pn).filter((k) => pn[k] === 'dead' || pn[k] === 'santa').length !== 12) fail(`${e}: 終わりのパネルが12人みんな暗くなっていない ${JSON.stringify(pn)}`);
         if ((e === 'END-G' || e === 'END-N') && pn.kyuko) fail(`${e}: きゅうこのパネルが戻っていない(${pn.kyuko})`);
         // あつルートなどの「選び直す」(次: 問いの行)は、選び直したあとも先へ進めるか、1回だけ見る
-        if (st.scene.next && depth < 3) walk(E.xmasNovelJump(S, st.cur, st.scene.next), depth + 1, [...log, `${e}→${st.scene.next}`]);
+        if (st.scene.next && !S.scenes.some((x) => x.id === st.scene.next) && depth < 3) walk(E.xmasNovelJump(S, st.cur, st.scene.next), depth + 1, [...log, `${e}→${st.scene.next}`]);
       } else { stuck += 1; if (stuck <= 5) fail(`エンディングに着かずに止まった: ${st.cur.scene} ${log.slice(-6).join(' > ')}`); }
       return;
     }

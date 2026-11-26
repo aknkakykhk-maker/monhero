@@ -84,6 +84,7 @@ const cleanLine = (raw) => {
 const speakerOf = (name) => {
   const n = stripMd(name);
   if (/^[？?]{3}$/.test(n)) return { secret: true };
+  if (n === '全員' || n === 'みんな') return { n, crowd: true };
   const hit = SPEAKERS.find(([ja]) => n === ja || n.startsWith(ja));
   return hit ? { w: hit[1] } : { n };
 };
@@ -125,10 +126,15 @@ const parseSceneHead = (cells, chapter, seq) => {
   const condOk = /^[\sf_\w=<>!&|,、]*$|かつ|または/.test(condSrc) && /f_\w+|score|clues/.test(condSrc);
   const cond = condSrc && condOk ? parseCond(condSrc) : null;
   const nextRaw = (kv['次'] || '').trim();
-  const next = /^(C\d+-[0-9A-Za-z]+|END-[A-Z]+(?:-[0-9A-Za-z]+)*|END|Q\d+[a-z]+|A\d+[a-z]*|[A-Z]{2,}\d*-[0-9A-Za-z-]+)$/.test(nextRaw) ? nextRaw : null;
+  // 「G-10(そのままクリスマス会へ)」のように、ID のうしろの覚え書きは読み飛ばす
+  const nextTok = (nextRaw.match(/^([A-Za-z0-9][0-9A-Za-z-]*)/) || [])[1] || '';
+  const next = /^(C\d+-[0-9A-Za-z]+|END-[A-Z]+(?:-[0-9A-Za-z]+)*|END|Q\d+[a-z]+|A\d+[a-z]*|[A-Z]{2,}\d*-[0-9A-Za-z-]+|[A-Z]-\d+[a-z0-9]*)$/.test(nextTok) ? nextTok : null;
+  // カーテンコールの差しこみ: 「END-G の G-9 のあと」「END-N のあと」
+  const afterM = condSrc.match(/(END-[A-Z]+)(?:\s*の\s*([A-Z]-[0-9a-z]+))?\s*のあと/);
   const bgRaw = (kv['背景'] || '').split(/→/)[0].trim();
   const scene = { id, chapter: chapter.id, title, cond, bgm, bg: bgRaw || null, next, rows: [] };
   if (condSrc && !cond) scene.jumpOnly = true;
+  if (afterM) scene.after = { scene: afterM[1], row: afterM[2] || null };
   // カーテンコールの場面(題か ID に「カーテンコール」「CC」)。エンディングの場面の「次」でつなぐ
   if (/カーテンコール/.test(title) || /(^|-)CC(-|$)/.test(id)) scene.curtain = true;
   const em = !scene.curtain && id.match(/^END-([A-Z]+)$/);
@@ -274,12 +280,15 @@ const parseRow = (cells, where) => {
       if (!m || !FX_TAGS[m[1]]) break;
       fx.push(FX_TAGS[m[1]]); s = s.slice(m[0].length);
     }
-    // 終わりの(…)は書いた人への覚え(画面に出さない)。「出す」「画面」「声の主」「確認」を含むものだけ外す
-    s = s.replace(/[(（][^)）]*(出す|画面|声の主|確認|ここ)[^)）]*[)）]\s*$/, '').trim();
+    // 文の中の(…幕が下りる)(…幕が上がる)も演出(「(効果音)パチパチ……(幕が下りる)」「カーン(開演の鐘。幕が上がる)」)
+    if (/幕が(下|お)りる/.test(s)) fx.push('curtainDown');
+    if (/幕が(上|あ)がる/.test(s)) fx.push('curtainUp');
+    // 終わりの(…)は書いた人への覚え(画面に出さない)。「出す」「画面」「声の主」「確認」「幕が」を含むものだけ外す
+    s = s.replace(/[(（][^)）]*(出す|画面|声の主|確認|ここ|幕が)[^)）]*[)）]\s*$/, '').trim();
     row.t = 'band'; row.x = s;
     const uniq = [...new Set(fx.filter((f) => f !== 'band'))];
     if (uniq.length) row.fx = uniq;
-    if (fx.includes('se')) row.se = /鐘|時計/.test(s) ? 'bell' : /悲鳴|ドン|バタン|ガタン|ブツン|ザザッ/.test(s) ? 'impact' : /オルゴール|♪/.test(s) ? 'music' : 'tap';
+    if (fx.includes('se')) row.se = /パチパチ|拍手/.test(s) ? 'clap' : /鐘|時計/.test(s) ? 'bell' : /悲鳴|ドン|バタン|ガタン|ブツン|ザザッ/.test(s) ? 'impact' : /オルゴール|♪/.test(s) ? 'music' : 'tap';
     return row;
   }
   if (who === '手がかり') {
@@ -306,7 +315,8 @@ const parseRow = (cells, where) => {
   const sp = speakerOf(who);
   const { text, note: memo } = cleanLine(stripMd(raw));
   const line = { ...row, t: 'line', ...sp, x: text };
-  if (sp.n) note(where, `知らない話し手「${sp.n}」(名前だけ出す)`);
+  if (sp.n && !sp.crowd) note(where, `知らない話し手「${sp.n}」(名前だけ出す)`);
+  delete line.crowd;
   if (sp.secret) { line.n = '？？？'; delete line.w; }
   if (face && face !== '—' && face !== '-') { if (EXPRESSIONS.includes(face)) line.e = face; else note(where, `知らない表情「${face}」`); }
   const bgmM = memo && memo.match(/曲[:：]\s*([^\s)）]+)/);
@@ -389,7 +399,31 @@ const parseScript = (md, srcName) => {
     scene.rows.push(row);
     lastQ = row.t === 'q' ? row : null;
   }
-    const seenCh = new Set();
+    // カーテンコールをエンディングにつなぐ。行のあと(END-G の G-9 のあと)なら、エンディングの場面をそこで分け、カーテンコールの「次」(G-10)を分けたうしろの場面にする
+  scenes.filter((sc) => sc.after).forEach((cc) => {
+    const end = scenes.find((x) => x.id === cc.after.scene);
+    if (!end) { note(cc.id, `差しこむ先「${cc.after.scene}」が無い`); return; }
+    if (cc.after.row) {
+      const at = end.rows.findIndex((r) => r.id.replace(/\[.*$/, '') === cc.after.row);
+      if (at < 0) { note(cc.id, `差しこむ行「${cc.after.row}」が ${end.id} に無い`); return; }
+      const tail = { ...end, id: `${end.id}-2`, rows: end.rows.slice(at + 1), next: end.next };
+      delete tail.ending;
+      tail.rows.forEach((r) => { if (r.k) r.k = r.k.replace(`${end.id}:`, `${tail.id}:`); });
+      end.rows = end.rows.slice(0, at + 1);
+      end.next = cc.id;
+      // うしろの行(G-10〜)が、カーテンコールの表の続きに書いてあるときは、カーテンコールの中で分ける
+      const inCc = cc.next ? cc.rows.findIndex((r) => r.id.replace(/\[.*$/, '') === cc.next) : -1;
+      if (inCc >= 0) {
+        tail.rows = [...cc.rows.slice(inCc), ...tail.rows];
+        tail.rows.forEach((r) => { if (r.k) r.k = r.k.replace(`${cc.id}:`, `${tail.id}:`); });
+        cc.rows = cc.rows.slice(0, inCc);
+      }
+      if (!cc.next || inCc >= 0 || tail.rows.some((r) => r.id.replace(/\[.*$/, '') === cc.next)) cc.next = tail.id;
+      scenes.splice(scenes.indexOf(end) + 1, 0, tail);
+    } else if (!end.next || !scenes.some((x) => x.id === end.next)) end.next = cc.id;
+    delete cc.after;
+  });
+  const seenCh = new Set();
   const chs = chapters.filter((c) => scenes.some((s) => s.chapter === c.id) && !seenCh.has(c.id) && seenCh.add(c.id));
   return { v: 1, src: srcName, chapters: chs.map(({ id, no, label, disp, title }) => ({ id, no, label, disp, title })), scenes };
 };

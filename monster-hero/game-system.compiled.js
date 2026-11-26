@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a1c1e5c101b2874f
+// source-sha256: 349c96a78fdafd93
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -113451,6 +113451,7 @@ const xmasNovelResolveScene = (script, id, ctx) => {
   const first = scenes.find(s => s.id === id);
   if (first && (first.jumpOnly || xmasNovelCondOk(first.cond, ctx))) return first;
   const base = xmasNovelSceneBase(id);
+  if (first && !scenes.some(s => s.id !== id && xmasNovelSceneBase(s.id) === base)) return first;
   return scenes.find(s => xmasNovelSceneBase(s.id) === base && s.id !== id && xmasNovelCondOk(s.cond, ctx)) || null;
 };
 const xmasNovelNextScene = (script, scene, ctx) => {
@@ -114128,7 +114129,7 @@ const XMAS_NOVEL_SCRIPT = {
     }, {
       "id": "0-15",
       "t": "band",
-      "x": "招待状——『モンヒロの助手のみなさまへ。雪山のペンション・シュプールで、クリスマス会をいたしませんか。にぎやかな歌声が、山の上まで届いておりました』",
+      "x": "招待状——『モンヒロの助手のみなさまへ。雪山のペンション・シュプールで、名物の推理劇のクリスマス会をいたしませんか。みなさまに役をお配りして、ひと晩じゅう謎を解いていただく、体験型の推理劇です。にぎやかな歌声が、山の上まで届いておりました』",
       "k": "C0-2:0-15"
     }, {
       "id": "0-16",
@@ -114139,7 +114140,7 @@ const XMAS_NOVEL_SCRIPT = {
       "id": "0-17",
       "t": "line",
       "w": "momosuke",
-      "x": "雪山のペンションでクリスマス会！？ かわいすぎ〜♡",
+      "x": "雪山のペンションで、推理劇のクリスマス会！？ かわいすぎ〜♡",
       "e": "excited",
       "k": "C0-2:0-17"
     }, {
@@ -114182,7 +114183,7 @@ const XMAS_NOVEL_SCRIPT = {
       "id": "0-22",
       "t": "line",
       "w": "atsu",
-      "x": "じゃあ決まり！ 行こう！ ……みゅあも行くよね？",
+      "x": "推理劇なら、名探偵の出番じゃん！ 決まり！ 行こう！ ……みゅあも行くよね？",
       "e": "excited",
       "k": "C0-3:0-22"
     }, {
@@ -114424,7 +114425,7 @@ const XMAS_NOVEL_SCRIPT = {
     "cond": null,
     "bgm": "close_to_your_heart_alt",
     "bg": "ペンションのホール",
-    "next": "C1-3",
+    "next": "C1-OP",
     "rows": [{
       "id": "1-2-1",
       "t": "line",
@@ -114459,7 +114460,7 @@ const XMAS_NOVEL_SCRIPT = {
       "id": "1-2-6",
       "t": "line",
       "w": "mochimaru",
-      "x": "ぼくも、みなさんに小さい箱を用意したっちー。水色のリボンの、手作りクッキーだっちー",
+      "x": "ぼくは世話役だから、箱は無いっちー。そのかわり、毎朝おいしいごはんを作るっちー",
       "k": "C1-2:1-2-6"
     }, {
       "id": "1-2-7",
@@ -114471,7 +114472,7 @@ const XMAS_NOVEL_SCRIPT = {
     }, {
       "id": "1-2-8",
       "t": "band",
-      "x": "木の下に、箱が10。にぎやかな色のリボンが、暖炉の火にゆれている",
+      "x": "木の下に、助手たちの箱が8つ。にぎやかな色のリボンが、暖炉の火にゆれている",
       "k": "C1-2:1-2-8"
     }, {
       "id": "1-2-9",
@@ -114500,6 +114501,103 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "はいはい、名探偵がふたり！ 助手のあたしは、あつくんのほうね！",
       "e": "wink",
       "k": "C1-2:1-2-12"
+    }]
+  }, {
+    "id": "C1-OP",
+    "chapter": "C1",
+    "title": "開演",
+    "cond": null,
+    "bgm": "close_to_your_heart_alt",
+    "bg": "ペンションのホール",
+    "next": "C1-3",
+    "rows": [{
+      "id": "1-OP-1",
+      "t": "band",
+      "x": "夕方。ホールの灯りが落ち、暖炉の前に、イチーカが立つ",
+      "k": "C1-OP:1-OP-1"
+    }, {
+      "id": "1-OP-2",
+      "t": "line",
+      "w": "ichika",
+      "x": "みなさん。ペンション・シュプール名物、推理劇のクリスマス会へ、ようこそ",
+      "k": "C1-OP:1-OP-2"
+    }, {
+      "id": "1-OP-3",
+      "t": "line",
+      "w": "ichika",
+      "x": "決まりは4つです。ひとつ、みなさんには役をお配りします。ふたつ、台本はお渡ししません。みっつ、真相は、ご自分で推理してくださいね",
+      "k": "C1-OP:1-OP-3"
+    }, {
+      "id": "1-OP-4",
+      "t": "line",
+      "w": "ichika",
+      "x": "よっつ。劇の中では、本当に起きたことのように演じること。……幕が下りるまで、ですよ。ふふっ",
+      "k": "C1-OP:1-OP-4"
+    }, {
+      "id": "1-OP-5",
+      "t": "line",
+      "w": "ichika",
+      "x": "劇団の役者さんも、おふたり、お客さまの役で加わってくださいます。どなたかは、劇が始まってからのお楽しみに",
+      "k": "C1-OP:1-OP-5"
+    }, {
+      "id": "1-OP-6",
+      "t": "band",
+      "x": "ひとりずつに、役の書かれた封筒が配られる",
+      "k": "C1-OP:1-OP-6"
+    }, {
+      "id": "1-OP-7",
+      "t": "line",
+      "w": "myua",
+      "x": "あたし『名探偵の助手』！ ぴったりぢゃん！",
+      "e": "excited",
+      "k": "C1-OP:1-OP-7"
+    }, {
+      "id": "1-OP-8",
+      "t": "line",
+      "w": "atsu",
+      "x": "俺、『名探偵』って書いてある笑",
+      "e": "wink",
+      "k": "C1-OP:1-OP-8"
+    }, {
+      "id": "1-OP-9",
+      "t": "line",
+      "w": "sorashido",
+      "x": "……自分も『名探偵』です笑",
+      "e": "normal",
+      "k": "C1-OP:1-OP-9"
+    }, {
+      "id": "1-OP-10",
+      "t": "line",
+      "w": "dra",
+      "x": "おでの、なんか字が多いな……。あ、見せちゃだめなんだっけ",
+      "e": "troubled",
+      "k": "C1-OP:1-OP-10"
+    }, {
+      "id": "1-OP-11",
+      "t": "line",
+      "w": "kyuko",
+      "x": "(封筒をのぞいて、すぐにしまう)……ほい。ふつうの役だよぉ笑",
+      "e": "normal",
+      "k": "C1-OP:1-OP-11"
+    }, {
+      "id": "1-OP-12",
+      "t": "line",
+      "w": "watson",
+      "x": "わたしは、劇の中のことも、全部記録します",
+      "k": "C1-OP:1-OP-12"
+    }, {
+      "id": "1-OP-13",
+      "t": "line",
+      "w": "ichika",
+      "x": "{name}さんも、推理する人として、どうぞ。……では、開演です",
+      "k": "C1-OP:1-OP-13"
+    }, {
+      "id": "1-OP-14",
+      "t": "band",
+      "x": "カーン",
+      "fx": ["se", "curtainUp"],
+      "se": "tap",
+      "k": "C1-OP:1-OP-14"
     }]
   }, {
     "id": "C1-3",
@@ -114574,6 +114672,11 @@ const XMAS_NOVEL_SCRIPT = {
       "w": "kuroba",
       "x": "くだらん。いたずらなら、いたずらで結構。雪がやむまでは泊めてもらう。時は金なり、だよ",
       "k": "C1-3:1-3-11"
+    }, {
+      "id": "1-3-11b",
+      "t": "band",
+      "x": "招待状には「プレゼントの箱をひとつ」とあった。黒羽は面倒そうに小さな箱を木の下へ置き、白瀬も、そっと包みを置く。木の下の箱は10になった",
+      "k": "C1-3:1-3-11b"
     }, {
       "id": "1-3-12",
       "t": "line",
@@ -115313,6 +115416,11 @@ const XMAS_NOVEL_SCRIPT = {
       "w": "shirase",
       "x": "(雪の上にひざをつき、声も出せずにいる)",
       "k": "C3-1:3-1-12"
+    }, {
+      "id": "3-1-12b",
+      "t": "band",
+      "x": "ホールに戻ると、もみの木の下から、黒羽の箱が消えていた",
+      "k": "C3-1:3-1-12b"
     }, {
       "id": "3-1-13",
       "t": "panel",
@@ -116269,6 +116377,11 @@ const XMAS_NOVEL_SCRIPT = {
       "e": "troubled",
       "k": "C5-4:5-4-7"
     }, {
+      "id": "5-4-7b",
+      "t": "band",
+      "x": "もみの木の下から、白瀬の包みも消えていた",
+      "k": "C5-4:5-4-7b"
+    }, {
       "id": "5-4-8",
       "t": "band",
       "x": "白瀬のケープのポケットに、書きかけの手紙が入っていた",
@@ -117039,7 +117152,7 @@ const XMAS_NOVEL_SCRIPT = {
     "cond": null,
     "bgm": "melo_kiss_mystery",
     "bg": "ペンションのホール",
-    "next": null,
+    "next": "Q7a",
     "rows": [{
       "id": "7-2-1",
       "t": "band",
@@ -117706,14 +117819,14 @@ const XMAS_NOVEL_SCRIPT = {
       "id": "10-1-9",
       "t": "line",
       "w": "sorashido",
-      "x": "(メモ)えるさんの箱が消えた。……黒いサンタは、ねらった人の箱を、持っていくのかもしれません",
+      "x": "(メモ)黒羽さん、白瀬さん、そして、えるさん。亡くなるたびに、その人の箱が消えている。……黒いサンタは、箱を持つお客をねらって、その箱を持っていくのかもしれません",
       "e": "normal",
       "k": "C10-1:10-1-9"
     }, {
       "id": "10-1-9c",
       "t": "clue",
       "clue": "消えた箱",
-      "x": "えるびんが亡くなった朝、もみの木の下の、えるびんの箱が消えていた",
+      "x": "黒羽・白瀬・えるびんが亡くなるたびに、その人の箱が、もみの木の下から消えていた",
       "k": "C10-1:10-1-9c"
     }, {
       "id": "10-1-10",
@@ -117872,13 +117985,13 @@ const XMAS_NOVEL_SCRIPT = {
     }, {
       "id": "10-3-9",
       "t": "band",
-      "x": "もみの木の下。水色のリボンの小さな箱が、結ばれたまま残っていた",
+      "x": "もみの木の下。箱は、ひとつも減っていなかった",
       "k": "C10-3:10-3-9"
     }, {
       "id": "10-3-9c",
       "t": "clue",
-      "clue": "空にならない箱",
-      "x": "もちまるが亡くなった朝。もちまるの水色のリボンの箱だけは、消えずに、結ばれたまま木の下に残っていた",
+      "clue": "箱のない犠牲者",
+      "x": "もちまるは世話役で、はじめから箱を持っていない。もちまるが亡くなった朝、木の下の箱は、ひとつも減っていなかった",
       "k": "C10-3:10-3-9c"
     }, {
       "id": "10-3-10",
@@ -117902,14 +118015,14 @@ const XMAS_NOVEL_SCRIPT = {
       "id": "10-4-1",
       "t": "line",
       "w": "myua",
-      "x": "……ねえ、あつくん。もちまるんの箱、なくなってない",
+      "x": "……ねえ、あつくん。今度は、箱がなくなってない。……もちまるん、世話役だから、箱、持ってなかったもんね",
       "e": "troubled",
       "k": "C10-4:10-4-1"
     }, {
       "t": "q",
       "id": "Q10a",
       "kind": "present",
-      "x": "もちまるが亡くなった朝は、えるびん・ももすけのときと、ちがう所がある。それを示す手がかりを、手がかり帳から1つ突きつけよう",
+      "x": "もちまるが亡くなった朝は、今までに亡くなった人たちのときと、ちがう所がある。それを示す手がかりを、手がかり帳から1つ突きつけよう",
       "replies": {
         "x1": [{
           "id": "Q10a-x1",
@@ -117928,7 +118041,7 @@ const XMAS_NOVEL_SCRIPT = {
           "id": "Q10a-x3",
           "t": "line",
           "w": "myua",
-          "x": "水色のリボン……ほどけてないよ",
+          "x": "もちまるんは、世話役だから……",
           "e": "troubled"
         }],
         "near": [{
@@ -117942,12 +118055,12 @@ const XMAS_NOVEL_SCRIPT = {
           "id": "Q10a-ok",
           "t": "line",
           "w": "sorashido",
-          "x": "はい。黒いサンタは、ねらった人の箱を持っていく。なのに、もちまるさんの箱は残った。……もちまるさんは、ねらわれていなかったんです",
+          "x": "はい。黒いサンタは、箱を持つお客をねらい、その箱を持っていく。でも、もちまるさんは世話役で、箱を持っていなかった。……決まりから外れています。もちまるさんは、ねらわれていなかったんです",
           "e": "normal"
         }]
       },
       "label": "推理の問い⑦",
-      "answer": ["空にならない箱"],
+      "answer": ["箱のない犠牲者"],
       "k": "C10-4:Q10a",
       "near": ["消えた箱"]
     }, {
@@ -118000,7 +118113,7 @@ const XMAS_NOVEL_SCRIPT = {
     "cond": null,
     "bgm": "melo_kiss_mystery",
     "bg": "ペンションのホール",
-    "next": null,
+    "next": "Q11a",
     "rows": [{
       "id": "11-1-1",
       "t": "band",
@@ -118211,7 +118324,7 @@ const XMAS_NOVEL_SCRIPT = {
     "cond": null,
     "bgm": "melo_sad_song_short",
     "bg": "ペンションのホール(朝)",
-    "next": null,
+    "next": "CC-G",
     "rows": [{
       "id": "G-1",
       "t": "band",
@@ -118267,70 +118380,86 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "もも、待ってるから。ずっと。……ドラちゃんも、きゅうちゃんも",
       "e": "crying",
       "k": "END-G:G-9"
-    }, {
+    }],
+    "jumpOnly": true,
+    "ending": {
+      "id": "END-G",
+      "kind": "good",
+      "label": "真グッド",
+      "name": "やり直しのクリスマス会"
+    }
+  }, {
+    "id": "END-G-2",
+    "chapter": "END",
+    "title": "",
+    "cond": null,
+    "bgm": "melo_sad_song_short",
+    "bg": "ペンションのホール(朝)",
+    "next": null,
+    "rows": [{
       "id": "G-10",
       "t": "band",
       "x": "屋根裏の会場。もみの木の下にあった10の箱が、やっと開けられる",
-      "k": "END-G:G-10"
+      "k": "END-G-2:G-10"
     }, {
       "id": "G-11",
       "t": "line",
       "w": "myua",
       "x": "……じゃーん。みんなに、マフラー。夜中に台所で編んでたの、ないしょだったの。あつくんのは、黒",
       "e": "wink",
-      "k": "END-G:G-11"
+      "k": "END-G-2:G-11"
     }, {
       "id": "G-12",
       "t": "line",
       "w": "atsu",
       "x": "……毛糸の正体、それだったのか。ありがと、みゅあ",
       "e": "happy",
-      "k": "END-G:G-12"
+      "k": "END-G-2:G-12"
     }, {
       "id": "G-13",
       "t": "line",
       "w": "myua",
-      "x": "きゅきゅの分も、ちゃんとあるよ。ふもとは、寒いから",
-      "e": "crying",
-      "k": "END-G:G-13"
+      "x": "きゅきゅの分も、ちゃんとあるよ。犯人役でも、仲間はずれにしないもん",
+      "e": "happy",
+      "k": "END-G-2:G-13"
     }, {
       "id": "G-14",
       "t": "line",
       "w": "mochimaru",
       "x": "今日は、いっぱい食べてっちー。……みなさんがいてくれて、よかったっちー",
-      "k": "END-G:G-14"
+      "k": "END-G-2:G-14"
     }, {
       "id": "G-15",
       "t": "band",
       "x": "♪(きゅうこが、母の子守歌をピアノで弾きはじめる。みんなが、小さな声で歌う)",
       "fx": ["se"],
       "se": "music",
-      "k": "END-G:G-15"
+      "k": "END-G-2:G-15"
     }, {
       "id": "G-16",
       "t": "line",
       "w": "ichika",
-      "x": "……12年ぶりの、歌声ですね。カノンさん、聞こえていますか",
-      "k": "END-G:G-16"
+      "x": "……にぎやかな歌声が、今年も、山の上まで届きますね",
+      "k": "END-G-2:G-16"
     }, {
       "id": "G-17",
       "t": "line",
       "w": "sorashido",
       "x": "あつさん。……今回は、ふたりで解きました。引き分けです",
       "e": "normal",
-      "k": "END-G:G-17"
+      "k": "END-G-2:G-17"
     }, {
       "id": "G-18",
       "t": "line",
       "w": "atsu",
       "x": "次は、だれも失わないで解こう。……ふたりで",
       "e": "normal",
-      "k": "END-G:G-18"
+      "k": "END-G-2:G-18"
     }, {
       "id": "G-19",
       "t": "band",
       "x": "窓の外。雪の空を、赤いサンタのそりが、鈴を鳴らして横切っていった",
-      "k": "END-G:G-19"
+      "k": "END-G-2:G-19"
     }, {
       "id": "G-20g3",
       "c": {
@@ -118346,7 +118475,7 @@ const XMAS_NOVEL_SCRIPT = {
       "w": "sorashido",
       "x": "{name}、ぜんぶ一回で当てましたね。……今回のいちばんの名探偵は、{name}だったのかもしれません",
       "e": "happy",
-      "k": "END-G:G-20g3"
+      "k": "END-G-2:G-20g3"
     }, {
       "id": "G-20g2",
       "c": {
@@ -118366,7 +118495,7 @@ const XMAS_NOVEL_SCRIPT = {
       "w": "atsu",
       "x": "{name}、けっこう当ててたね。次は助手じゃなくて、探偵として勝負ね笑",
       "e": "normal",
-      "k": "END-G:G-20g2"
+      "k": "END-G-2:G-20g2"
     }, {
       "id": "G-20g1",
       "c": {
@@ -118382,20 +118511,75 @@ const XMAS_NOVEL_SCRIPT = {
       "w": "myua",
       "x": "{name}、いっぱい迷ったけど、最後までいっしょに考えてくれてありがと。それが、いちばんの助手ぢゃん",
       "e": "happy",
-      "k": "END-G:G-20g1"
+      "k": "END-G-2:G-20g1"
     }, {
       "id": "G-21",
       "t": "band",
       "x": "聖夜の名探偵 —— おしまい",
-      "k": "END-G:G-21"
+      "k": "END-G-2:G-21"
+    }],
+    "jumpOnly": true
+  }, {
+    "id": "CC-G",
+    "chapter": "END",
+    "title": "カーテンコール",
+    "cond": null,
+    "bgm": "close_to_your_heart_alt",
+    "bg": "ペンションのホール(幕の前",
+    "next": "END-G-2",
+    "rows": [{
+      "id": "CC-G-1",
+      "t": "band",
+      "x": "パチパチパチ……",
+      "fx": ["se", "curtainDown"],
+      "se": "clap",
+      "k": "CC-G:CC-G-1"
+    }, {
+      "id": "CC-G-2",
+      "t": "band",
+      "x": "カーテンコール。幕の前に、役を終えた12人が並ぶ",
+      "k": "CC-G:CC-G-2"
+    }, {
+      "id": "CC-G-3",
+      "t": "line",
+      "n": "全員",
+      "x": "おつかれさまでしたー!",
+      "k": "CC-G:CC-G-3"
+    }, {
+      "id": "CC-G-4",
+      "t": "line",
+      "w": "kuroba",
+      "x": "(コートをぬいで、にこにこと)いやあ、いじわるな役は肩がこりますな。みなさんの推理、おみごとでした",
+      "k": "CC-G:CC-G-4"
+    }, {
+      "id": "CC-G-5",
+      "t": "line",
+      "w": "shirase",
+      "x": "客席から見ていて、どきどきしました。……あの手紙、書くの、ちょっと泣きそうになったんですよ",
+      "k": "CC-G:CC-G-5"
+    }, {
+      "id": "CC-G-6",
+      "t": "line",
+      "w": "kyuko",
+      "x": "ほい、ばれちゃった笑 ばこちゃん、あつニキ、さすがだね",
+      "e": "wink",
+      "k": "CC-G:CC-G-6"
+    }, {
+      "id": "CC-G-7",
+      "t": "line",
+      "w": "dra",
+      "x": "おで、かばう役、ちゃんとできてたか？ えへへ",
+      "e": "happy",
+      "k": "CC-G:CC-G-7"
+    }, {
+      "id": "CC-G-8",
+      "t": "line",
+      "w": "ichika",
+      "x": "では、ここからは、本当のクリスマス会です。ふふっ",
+      "k": "CC-G:CC-G-8"
     }],
     "jumpOnly": true,
-    "ending": {
-      "id": "END-G",
-      "kind": "good",
-      "label": "真グッド",
-      "name": "やり直しのクリスマス会"
-    }
+    "curtain": true
   }, {
     "id": "END-N",
     "chapter": "END",
@@ -118403,7 +118587,7 @@ const XMAS_NOVEL_SCRIPT = {
     "cond": null,
     "bgm": "melo_sad_song_short",
     "bg": "ペンションのホール(朝",
-    "next": null,
+    "next": "CC-N",
     "rows": [{
       "id": "N-1",
       "t": "band",
@@ -118449,19 +118633,19 @@ const XMAS_NOVEL_SCRIPT = {
       "id": "N-8",
       "t": "line",
       "w": "myua",
-      "x": "(マフラーを、もちまるんの箱のとなりに置く)……みんなの分、編んだのに",
+      "x": "(マフラーを、もちまるんの帳面のとなりに置く)……みんなの分、編んだのに",
       "e": "crying",
       "k": "END-N:N-8"
     }, {
       "id": "N-9",
       "t": "line",
       "w": "ichika",
-      "x": "もちまるの箱、開けましょうね。……あの子が、みなさんのために焼いたクッキーです",
+      "x": "もちまるの見回りの帳面……最後のページを、読みましょうね",
       "k": "END-N:N-9"
     }, {
       "id": "N-10",
       "t": "band",
-      "x": "箱の中のクッキー。ひとつずつに、小さく「メリークリスマスだっちー」",
+      "x": "最後のページのすみに、小さく「みなさんに、メリークリスマスだっちー」。エプロンのポケットには、包んだクッキーが、人数分",
       "k": "END-N:N-10"
     }, {
       "id": "N-11",
@@ -118557,13 +118741,69 @@ const XMAS_NOVEL_SCRIPT = {
       "name": "とどかなかった鐘"
     }
   }, {
+    "id": "CC-N",
+    "chapter": "END",
+    "title": "カーテンコール",
+    "cond": null,
+    "bgm": "close_to_your_heart_alt",
+    "bg": "ペンションのホール(幕の前",
+    "next": null,
+    "rows": [{
+      "id": "CC-N-1",
+      "t": "band",
+      "x": "パチパチパチ……",
+      "fx": ["se", "curtainDown"],
+      "se": "clap",
+      "k": "CC-N:CC-N-1"
+    }, {
+      "id": "CC-N-2",
+      "t": "band",
+      "x": "カーテンコール。退場した役の、えるびん・ももすけ・もちまる、劇団のふたりも、みんな並ぶ",
+      "k": "CC-N:CC-N-2"
+    }, {
+      "id": "CC-N-3",
+      "t": "line",
+      "n": "全員",
+      "x": "おつかれさまでしたー!",
+      "k": "CC-N:CC-N-3"
+    }, {
+      "id": "CC-N-4",
+      "t": "line",
+      "w": "momosuke",
+      "x": "もも、途中で退場って、さびしすぎw",
+      "e": "wink",
+      "k": "CC-N:CC-N-4"
+    }, {
+      "id": "CC-N-5",
+      "t": "line",
+      "w": "mochimaru",
+      "x": "ぼく、箱のない役、がんばったっちー",
+      "k": "CC-N:CC-N-5"
+    }, {
+      "id": "CC-N-6",
+      "t": "line",
+      "w": "erubin",
+      "x": "俺、早めに出番が終わったから、ずっと客席で見てたよ",
+      "e": "happy",
+      "k": "CC-N:CC-N-6"
+    }, {
+      "id": "CC-N-7",
+      "t": "line",
+      "w": "kyuko",
+      "x": "ほい……ちょっとやりすぎちゃったかな笑 次は、1回目で当ててよぉ",
+      "e": "wink",
+      "k": "CC-N:CC-N-7"
+    }],
+    "jumpOnly": true,
+    "curtain": true
+  }, {
     "id": "END-A",
     "chapter": "END",
     "title": "",
     "cond": null,
     "bgm": "melo_sad_song_short",
     "bg": "雪の山道(朝",
-    "next": null,
+    "next": "CC-A",
     "rows": [{
       "id": "A-1",
       "t": "band",
@@ -118626,13 +118866,70 @@ const XMAS_NOVEL_SCRIPT = {
       "name": "偽りの解決"
     }
   }, {
+    "id": "CC-A",
+    "chapter": "END",
+    "title": "カーテンコール",
+    "cond": null,
+    "bgm": "close_to_your_heart_alt",
+    "bg": "ペンションのホール(幕の前",
+    "next": null,
+    "rows": [{
+      "id": "CC-A-1",
+      "t": "band",
+      "x": "パチパチパチ……",
+      "fx": ["se", "curtainDown"],
+      "se": "clap",
+      "k": "CC-A:CC-A-1"
+    }, {
+      "id": "CC-A-2",
+      "t": "band",
+      "x": "カーテンコール。役を終えた12人が並ぶ",
+      "k": "CC-A:CC-A-2"
+    }, {
+      "id": "CC-A-3",
+      "t": "line",
+      "n": "全員",
+      "x": "おつかれさまでしたー!",
+      "k": "CC-A:CC-A-3"
+    }, {
+      "id": "CC-A-4",
+      "t": "line",
+      "w": "dra",
+      "x": "おで、かばう役、むずかしかった……",
+      "e": "troubled",
+      "k": "CC-A:CC-A-4"
+    }, {
+      "id": "CC-A-5",
+      "t": "line",
+      "w": "atsu",
+      "x": "……え、かばう役？ ドラちゃん、それって——",
+      "e": "surprise",
+      "k": "CC-A:CC-A-5"
+    }, {
+      "id": "CC-A-6",
+      "t": "line",
+      "w": "dra",
+      "x": "おっと、それは、ないしょだ。えへへ",
+      "e": "happy",
+      "k": "CC-A:CC-A-6"
+    }, {
+      "id": "CC-A-7",
+      "t": "line",
+      "w": "kyuko",
+      "x": "(にこにこして、なにも言わない)",
+      "e": "normal",
+      "k": "CC-A:CC-A-7"
+    }],
+    "jumpOnly": true,
+    "curtain": true
+  }, {
     "id": "END-B",
     "chapter": "END",
     "title": "",
     "cond": null,
     "bgm": "melo_dullahan_steel_ghost",
     "bg": "夜のホール",
-    "next": null,
+    "next": "CC-B",
     "rows": [{
       "id": "B-1",
       "t": "band",
@@ -118733,6 +119030,56 @@ const XMAS_NOVEL_SCRIPT = {
       "label": "バッドエンド",
       "name": "だれもいない聖夜"
     }
+  }, {
+    "id": "CC-B",
+    "chapter": "END",
+    "title": "カーテンコール",
+    "cond": null,
+    "bgm": "close_to_your_heart_alt",
+    "bg": "ペンションのホール(幕の前",
+    "next": null,
+    "rows": [{
+      "id": "CC-B-1",
+      "t": "band",
+      "x": "パチパチパチ……",
+      "fx": ["se", "curtainDown"],
+      "se": "clap",
+      "k": "CC-B:CC-B-1"
+    }, {
+      "id": "CC-B-2",
+      "t": "band",
+      "x": "カーテンコール。暗くなったパネルの12人が、みんな元気に並ぶ",
+      "k": "CC-B:CC-B-2"
+    }, {
+      "id": "CC-B-3",
+      "t": "line",
+      "n": "全員",
+      "x": "おつかれさまでしたー!",
+      "k": "CC-B:CC-B-3"
+    }, {
+      "id": "CC-B-4",
+      "t": "line",
+      "w": "kyuko",
+      "x": "ほい、全員やっつけちゃった笑 ごめんよぉ",
+      "e": "excited",
+      "k": "CC-B:CC-B-4"
+    }, {
+      "id": "CC-B-5",
+      "t": "line",
+      "w": "myua",
+      "x": "きゅきゅ〜！ こわすぎ！ 夜、ひとりでトイレ行けなくなるぢゃん！",
+      "e": "angry",
+      "k": "CC-B:CC-B-5"
+    }, {
+      "id": "CC-B-6",
+      "t": "line",
+      "w": "atsu",
+      "x": "次は、ちゃんと当てるからね笑",
+      "e": "happy",
+      "k": "CC-B:CC-B-6"
+    }],
+    "jumpOnly": true,
+    "curtain": true
   }]
 };
 const XMAS_NOVEL_CSS = `
@@ -119187,6 +119534,7 @@ const xmasNovelSe = kind => {
   try {
     if (typeof Audio_ === 'undefined' || !Audio_ || !Audio_.se) return;
     const map = {
+      clap: 'join',
       laugh: 'enemySpecial',
       bell: 'levelUp',
       impact: 'enemyAttack',
@@ -119283,6 +119631,7 @@ const XmasNovelScreen = ({
   const [shake, setShake] = useState(0);
   const [curtain, setCurtain] = useState(null);
   const replayRef = useRef(false);
+  const lastSceneRef = useRef(null);
   const [cards, setCards] = useState([]);
   const card = cards[0] || null;
   const setCard = c => setCards(list => c ? [...list, c] : []);
@@ -119458,6 +119807,12 @@ const XmasNovelScreen = ({
     }
     const scene = next.scene;
     let chapterCard = false;
+    if (scene && lastSceneRef.current && lastSceneRef.current.curtain && !scene.curtain) {
+      setCurtain(c => c === 'down' ? 'up' : c);
+      setTimeout(() => setCurtain(c => c === 'up' ? null : c), 1700);
+    }
+    lastSceneRef.current = scene || null;
+    if (scene && scene.curtain) setCurtain(c => c || 'down');
     if (scene && scene.bgm && scene.bgm !== lastBgm.current) {
       lastBgm.current = scene.bgm;
       xmasNovelBgm(scene.bgm);
@@ -119885,7 +120240,12 @@ const XmasNovelScreen = ({
     className: "mh-nv-curtain",
     "data-st": curtain,
     "data-xmas-novel-curtain": curtain
-  }), row && row.t === 'panel' && React.createElement("div", {
+  }), scene && scene.curtain && curtain === 'down' && !(row && row.t === 'panel') && React.createElement("div", {
+    className: "absolute inset-x-0 top-[14%] z-[5] mx-auto w-[min(94vw,640px)]",
+    "data-xmas-novel-lineup": true
+  }, React.createElement(XmasNovelCast, {
+    states: {}
+  })), row && row.t === 'panel' && React.createElement("div", {
     className: "absolute inset-x-0 top-[12%] z-[5] mx-auto w-[min(94vw,640px)] rounded-2xl p-3",
     "data-xmas-novel-panel": true,
     style: {

@@ -265,7 +265,7 @@ const xmasNovelFill = (text, playerName) => String(text || '').replace(/\{name\}
 const xmasNovelSe = (kind) => {
   try {
     if (typeof Audio_ === 'undefined' || !Audio_ || !Audio_.se) return;
-    const map = { laugh: 'enemySpecial', bell: 'levelUp', impact: 'enemyAttack', music: 'heal', tap: 'tap', clue: 'card', ok: 'victory', ng: 'guard' };
+    const map = { clap: 'join', laugh: 'enemySpecial', bell: 'levelUp', impact: 'enemyAttack', music: 'heal', tap: 'tap', clue: 'card', ok: 'victory', ng: 'guard' };
     const fn = Audio_.se[map[kind] || 'tap'];
     if (typeof fn === 'function') fn();
   } catch (e) { /* 音が出せなくても読み進める */ }
@@ -324,7 +324,8 @@ const XmasNovelScreen = ({ playerName = '', onClose, onPerfect, script = null })
   const [fx, setFx] = useState(null); // { kind, n }
   const [shake, setShake] = useState(0);
   const [curtain, setCurtain] = useState(null); // 'down'(下りて閉じたまま)/ 'up'(上がっていく)
-  const replayRef = useRef(false); // エンディングの記録から見返している(進み具合・記録は書かない)
+  const replayRef = useRef(false);
+  const lastSceneRef = useRef(null); // エンディングの記録から見返している(進み具合・記録は書かない)
   const [cards, setCards] = useState([]); // 札の並び { kind:'chapter'|'title'|'band'|'ending', ... }。先頭を出す
   const card = cards[0] || null;
   const setCard = (c) => setCards((list) => (c ? [...list, c] : []));
@@ -415,6 +416,10 @@ const XmasNovelScreen = ({ playerName = '', onClose, onPerfect, script = null })
     if (!next.row) { persist({ ...s, cur: null }, true); setSt(null); setMode('title'); return; }
     const scene = next.scene;
     let chapterCard = false;
+    // カーテンコールの場面を出たら、下りていた幕を上げる
+    if (scene && lastSceneRef.current && lastSceneRef.current.curtain && !scene.curtain) { setCurtain((c) => (c === 'down' ? 'up' : c)); setTimeout(() => setCurtain((c) => (c === 'up' ? null : c)), 1700); }
+    lastSceneRef.current = scene || null;
+    if (scene && scene.curtain) setCurtain((c) => c || 'down'); // カーテンコールは幕の前(途中から読んでも幕を下ろしておく)
     if (scene && scene.bgm && scene.bgm !== lastBgm.current) { lastBgm.current = scene.bgm; xmasNovelBgm(scene.bgm); }
     if (scene && scene.chapter !== lastChapter.current) {
       const ch = xmasNovelChapters(S).find((c) => c.id === scene.chapter);
@@ -631,6 +636,11 @@ const XmasNovelScreen = ({ playerName = '', onClose, onPerfect, script = null })
         {!darkNow && (isLine || (isBand && xmasNovelIsSilhouette(row))) && <XmasNovelFigure row={row} />}
         {fx && <div key={fx.n} className={`mh-nv-fx ${fx.kind}`} />}
         {curtain && <div key={`curtain-${curtain}`} className="mh-nv-curtain" data-st={curtain} data-xmas-novel-curtain={curtain} />}
+        {scene && scene.curtain && curtain === 'down' && !(row && row.t === 'panel') && (
+          <div className="absolute inset-x-0 top-[14%] z-[5] mx-auto w-[min(94vw,640px)]" data-xmas-novel-lineup>
+            <XmasNovelCast states={{}} />
+          </div>
+        )}
         {row && row.t === 'panel' && (
           <div className="absolute inset-x-0 top-[12%] z-[5] mx-auto w-[min(94vw,640px)] rounded-2xl p-3" data-xmas-novel-panel style={{ background: 'rgba(4,8,22,.88)', boxShadow: '0 0 0 1px #e8c46a' }}>
             <div className="mh-nv-serif mh-nv-gold mb-2 text-center text-[15px] font-black">登場人物</div>
