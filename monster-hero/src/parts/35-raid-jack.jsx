@@ -366,7 +366,10 @@ const raidJackMakeEnemy = (kind, tierIndex, mode, opts = {}) => {
     return { ...base, name: t.name, maxHp: t.hp, hp: t.hp, atk: t.atk, raidJackTier: xt.id, raidXmas: true, emoji: '🎅',
       normal: sn.normal, special: sn.special,
       actions: { ...(base.actions || {}), sweep: sn.sweep, rush: sn.rush, pierce: sn.pierce, roar: sn.roar, allout: sn.allout },
-      imgUrl: (typeof RAID_XMAS_BOSS_IMG !== 'undefined' ? RAID_XMAS_BOSS_IMG : base.imgUrl), poseImgUrl: null };
+      // 最後の段階を倒したあと(after)は、正気に戻った普通のサンタの絵(ジャックのぱんぷきんと同じ形・社長決定 r1126-024)
+      imgUrl: (after
+        ? (typeof RAID_XMAS_SANTA_IMG !== 'undefined' ? RAID_XMAS_SANTA_IMG : base.imgUrl)
+        : (typeof RAID_XMAS_BOSS_IMG !== 'undefined' ? RAID_XMAS_BOSS_IMG : base.imgUrl)), poseImgUrl: null };
   }
   const tier = raidJackTierAt(kind, tierIndex);
   const enemy = createBattleEnemy(1, 'Normal', 'Jack', tier.power, 1, { mode, actionCount: tier.actionCount });

@@ -81,7 +81,8 @@ const raidRhythmFxOf = (run, info, result, difficulty) => {
     score: Math.max(0, Math.floor(Number(result && result.score) || 0)), damage: raidRhythmDamageOf(adapter, result, difficulty),
     assist: !!(result && result.assist === true),
     lifeBefore: info && Number.isFinite(info.lifeBefore) ? info.lifeBefore : null, max: tier.hp, pumpkin: !!(info && info.pumpkin),
-    bossImg: adapter.bossImg || null };
+    // 最後の段階を倒したあと(pumpkin)は、あとの姿の絵(クリスマスは普通のサンタ・r1126-024)。ジャックは null のまま(演出側でぱんぷきん)
+    bossImg: (info && info.pumpkin && adapter.afterBossImg) ? adapter.afterBossImg : (adapter.bossImg || null) };
 };
 
 // 演奏が最後まで終わった: スコアをダメージに換えて、バトルと同じ表へ送る。戻り値は結果画面の中身
@@ -210,6 +211,8 @@ const raidXmasRhythmAdapter = (ctx) => {
     screen: ctx.screen || 'RAID_JACK',
     icon: '🎄',
     bossImg: ctx.bossImg || null,
+    // 最後の段階を倒したあとの絵(普通のサンタ・r1126-024)。ctx に無ければ data/images/images-enemy.js の RAID_XMAS_SANTA_IMG
+    afterBossImg: ctx.afterBossImg || (typeof RAID_XMAS_SANTA_IMG !== 'undefined' ? RAID_XMAS_SANTA_IMG : null),
     tierCount: tiers.length || 1,
     tierAt: (i) => (typeof ctx.tierAt === 'function' ? ctx.tierAt(i) : tiers[i]) || { id: '', name: '', hp: 0 },
     infiniteName: ctx.infiniteName || '',
