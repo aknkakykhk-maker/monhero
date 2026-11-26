@@ -18357,13 +18357,21 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 自己ベスト・クリア回数・実績・周回の報酬・全国ランキングは、onComplete がふつうの演奏と同じ処理で入れる(アシストモードは除く)
   // ★流れの本体はイベントに縛られない部品(39-raid-rhythm.jsx)。ここはイベントのつなぎ口を選んで、画面の状態をつなぐだけ
   //   (2026-11-25・台帳 r1119-172。クリスマスのレイドも同じ流れで動かすため。ジャックの動きは前と同じ)
-  const raidRhythmAdapterOf = (eventKey) => raidRhythmAdapter(eventKey || 'jack', { eventId: raidJackEventId, debugForce: raidJackDebugForce, realRules: raidJackDebugRealRules });
+  const raidRhythmAdapterOf = (eventKey) => eventKey === 'xmas'
+    // クリスマス(BUILD.md §2〜§4)。回数・送信・倒した印・再送待ちはバトル部の raidXmasUseTry / raidXmasAddDamage。
+    //   レイド画面はジャックと同じ RAID_JACK(raidEv が 'xmas' のあいだクリスマスの中身)。結果は openRaidXmasResult
+    ? raidRhythmAdapter('xmas', { event: RAID_XMAS_EVENT, tiers: RAID_XMAS_A_TIERS, tierAt: (i) => raidXmasTierAt('a', i), bossImg: RAID_XMAS_BOSS_IMG,
+        damageOf: raidXmasRhythmDamageOf, useTry: () => raidXmasUseTry('a'), addDamage: raidXmasAddDamage, openResult: openRaidXmasResult,
+        bossDown: raidXmasBossDown, infiniteName: RAID_XMAS_AFTER_BOSS.name, screen: 'RAID_JACK' })
+    : raidRhythmAdapter(eventKey || 'jack', { eventId: raidJackEventId, debugForce: raidJackDebugForce, realRules: raidJackDebugRealRules });
   const startRaidJackRhythmSelect = async (tierIndex, eventKey = 'jack') => {
     const adapter = raidRhythmAdapterOf(eventKey);
     raidJackReturnTierRef.current = Math.max(0, Math.floor(Number(tierIndex) || 0));
     await openRhythmDemo({ to: 'RHYTHM_DEMO_HOME' });
     setRaidRhythm({ tierIndex: raidRhythmClampTier(adapter, tierIndex), eventKey: adapter.key });
   };
+  // クリスマスのレイド画面の「モンヒロビートで挑む」(BUILD.md §4)。ここに置くと、レイド画面にボタンが出る
+  const startRaidXmasRhythm = (tierIndex) => startRaidJackRhythmSelect(tierIndex, 'xmas');
   const cancelRaidJackRhythm = () => {
     const screen = raidRhythmAdapterOf(raidRhythm && raidRhythm.eventKey).screen;
     raidRhythmRunRef.current = null; setRaidRhythm(null); setGameState(screen);

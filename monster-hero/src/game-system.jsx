@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f0e9a22e87fea2a8
+// generated-sha256: b65b0c915d6ca9cb
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -10861,7 +10861,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, get rhythmGrandOpen() { try { return RHYTHM_GRAND_OPEN_RELEASE === true && Date.now() >= Date.parse(RHYTHM_GRAND_OPEN_START_AT); } catch (e) { return false; } },
   // クリスマスイベントのモンヒロビート5倍(data/rhythm-event.js の xmas_2026・台帳 r1119-172 追記・追跡 r1125-044)の期間だけ真。
   // ヘルプの説明を開始の 11/30 10:00 まで出さず、12/31 4:00 に下げる。見るたびに数え直す(読み込み時に決めない)
-  get rhythmXmasBoost() { try { const c = typeof rhythmEventPointCampaignAt === 'function' ? rhythmEventPointCampaignAt(Date.now()) : null; return !!c && c.id === 'xmas_2026'; } catch (e) { return false; } }, rhythmGrandOpenTeaser:RHYTHM_GRAND_OPEN_TEASER_RELEASE, rhythmMulti:RHYTHM_MULTI_PUBLIC_RELEASE, friends:FRIENDS_PUBLIC_RELEASE, raidJackRhythm: RAID_JACK_RHYTHM_PUBLIC_RELEASE, get raidJack() { try { return RAID_JACK_PUBLIC_RELEASE === true && Date.now() >= Date.parse(RAID_JACK_START_AT); } catch (e) { return false; } }, get xmasBattleBonus() { try { return typeof xmasBattleBonusRateAt === 'function' && xmasBattleBonusRateAt(Date.now()) > 1; } catch (e) { return false; } }, get raidXmas() { try { return Date.now() >= Date.parse(RAID_XMAS_START_AT); } catch (e) { return false; } }, get xmasCostume() { try { return Date.now() >= Date.parse(XMAS_COSTUME_START_AT); } catch (e) { return false; } }, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
+  get rhythmXmasBoost() { try { const c = typeof rhythmEventPointCampaignAt === 'function' ? rhythmEventPointCampaignAt(Date.now()) : null; return !!c && c.id === 'xmas_2026'; } catch (e) { return false; } }, rhythmGrandOpenTeaser:RHYTHM_GRAND_OPEN_TEASER_RELEASE, rhythmMulti:RHYTHM_MULTI_PUBLIC_RELEASE, friends:FRIENDS_PUBLIC_RELEASE, raidJackRhythm: RAID_JACK_RHYTHM_PUBLIC_RELEASE, get raidJack() { try { return RAID_JACK_PUBLIC_RELEASE === true && Date.now() >= Date.parse(RAID_JACK_START_AT); } catch (e) { return false; } }, get xmasBattleBonus() { try { return typeof xmasBattleBonusRateAt === 'function' && xmasBattleBonusRateAt(Date.now()) > 1; } catch (e) { return false; } }, get raidXmas() { try { return Date.now() >= Date.parse(RAID_XMAS_START_AT); } catch (e) { return false; } }, get xmasCostume() { try { return Date.now() >= Date.parse(XMAS_COSTUME_START_AT); } catch (e) { return false; } }, get cardXmasBonus() { try { return typeof cardEventBonusOn === 'function' && cardEventBonusOn() === true; } catch (e) { return false; } }, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
 // releaseFlag = そのフラグが立つまで出さない。unreleasedFlag = そのフラグが立ったら出さない。
 // 逆向きの名札が要るのは「準備中です」の案内で、公開したあとも残っていると
 // 遊べているのに準備中の項目が並ぶ(ヘルプのモンヒロビートで実際にそうなっていた・2026-09-06)。
@@ -40683,7 +40683,8 @@ const raidRhythmFinish = async (run, result, song, difficulty) => {
     const detail = { songName: song && song.displayName || '', difficultyName: difficulty && difficulty.id || '', score, assist };
     let res = null;
     try {
-      res = await adapter.addDamage({ source: 'rhythm', kind: 'a', tierIndex: run.tierIndex, damage, hitId: run.hitId, eventId: run.eventId, detail });
+      // log: バトルの記録に送る物(ビートは編成が無いので score だけ・BUILD.md §3)
+      res = await adapter.addDamage({ source: 'rhythm', kind: 'a', tierIndex: run.tierIndex, damage, hitId: run.hitId, eventId: run.eventId, detail, log: { score } });
     } catch (e) { res = null; }
     return { tierIndex: run.tierIndex, tierName: tier.name, damage, defeated: false, outcome: 'error', detail, ...(res || {}),
       way: 'rhythm', songName: detail.songName, difficultyName: detail.difficultyName, score, assist, eventId: run.eventId, eventKey: adapter.key };
@@ -40781,7 +40782,7 @@ const raidJackRhythmAdapter = (ctx) => ({
 // バトル部の定義(35-raid-xmas.jsx)と App の中の関数は、App から ctx で渡してもらう(ここからは直接さわらない):
 // ctx = { event: RAID_XMAS_EVENT, tiers: RAID_XMAS_A_TIERS, tierAt: (i) => raidXmasTierAt('a', i), bossImg: RAID_XMAS_BOSS_IMG,
 //         damageOf: raidXmasRhythmDamageOf, useTry: raidXmasUseTry, addDamage: raidXmasAddDamage, openResult: openRaidXmasResult,
-//         screen: レイド画面の gameState, infiniteName: 大王のあとの相手の名前(無ければ段階の名前のまま) }
+//         bossDown: raidXmasBossDown, screen: 'RAID_JACK'(ジャックと同じ画面), infiniteName: RAID_XMAS_AFTER_BOSS.name }
 // 演出のライフは、ジャックと同じ表(raid_jack_hits)を event_id で引く(BUILD.md §7)
 const raidXmasRhythmAdapter = (ctx) => {
   const ev = ctx.event || {};
@@ -40799,8 +40800,9 @@ const raidXmasRhythmAdapter = (ctx) => {
     infiniteName: ctx.infiniteName || '',
     fetchTotals: (eventId) => sbFetchRaidJackTierTotals(eventId || ev.id),
     doneOf: (totals, i) => totals && totals.a && totals.a[i + 1] ? Number(totals.a[i + 1].total) || 0 : 0,
-    infiniteAt: (totals, i) => !!ctx.infiniteName && i === last && !!totals && !!totals.a && !!totals.a[last + 1]
-      && (Number(totals.a[last + 1].total) || 0) >= (Number((tiers[last] || {}).hp) || Infinity),
+    // 最後の段階を倒したか(raidXmasBossDown)。無ければ、最後の段階の合計が体力に届いたか
+    infiniteAt: (totals, i) => i === last && !!totals && (typeof ctx.bossDown === 'function' ? !!ctx.bossDown(totals)
+      : (!!ctx.infiniteName && !!totals.a && !!totals.a[last + 1] && (Number(totals.a[last + 1].total) || 0) >= (Number((tiers[last] || {}).hp) || Infinity))),
     damageOf: typeof ctx.damageOf === 'function' ? ctx.damageOf : undefined,
     begin: ctx.useTry,
     addDamage: ctx.addDamage,
@@ -109030,6 +109032,36 @@ const cardSharePolicy = (tactics, levelId, opts = {}) => {
   return { ...base, habit, aces: t.aces.slice() };
 };
 
+// ---- part: 82-card-event-bonus.jsx ----
+// ===== MFバトルカード: イベント期間のごほうびの倍(クリスマスイベント 2026・台帳 r1119-172 追記(期間中のボーナス)・追跡 r1125-044) =====
+// 期間中は、対戦のごほうび(ビートP・カードランクの経験値・クイック周回)が 1.5倍。
+//   掛ける所: 助手と対戦(手・オート)・みんなのデッキとの対戦・マルチ対戦。掛けない所: その日はじめての勝ちの上乗せ・杯と大会の賞品・レイドのボスとの1戦
+//   重ね方(社長 2026-11-25「A 掛け算」): カード部屋の助手と対戦(×1.375)・マルチ対戦(×2)とは掛け算で重ねる(部屋の助手 ≒2.06倍・マルチ 3倍)
+// ★期間は見るたびに時刻で決める(保存しない)。対戦の倍は、助手と対戦・みんなのデッキは始めた時点、マルチは終わった時点で決める
+const CARD_EVENT_BONUS = Object.freeze({
+  id: 'xmas_2026',
+  name: 'クリスマスイベント',
+  startAt: '2026-11-30T10:00:00+09:00',
+  endAt: '2026-12-31T04:00:00+09:00',
+  mult: 1.5,
+  label: '1.5倍',
+});
+// デバッグで期間の前に見るための印(デバッグの画面だけが立てる。保存しない)
+let cardEventBonusForce = false;
+const cardEventBonusOn = (nowMs = Date.now()) => {
+  if (cardEventBonusForce === true) return true;
+  const t = Number(nowMs);
+  if (!Number.isFinite(t)) return false;
+  return t >= Date.parse(CARD_EVENT_BONUS.startAt) && t < Date.parse(CARD_EVENT_BONUS.endAt);
+};
+// いまの倍(期間外は 1)
+const cardEventBonusMult = (nowMs = Date.now()) => (cardEventBonusOn(nowMs) ? CARD_EVENT_BONUS.mult : 1);
+// 数に倍を掛ける(0 は 0 のまま・四捨五入。82 の cardLifeUpApply と同じ丸め)
+const cardEventBonusApply = (n, ev = 1) => {
+  const v = Number.isFinite(n) ? n : 0;
+  return Number.isFinite(ev) && ev > 1 && v > 0 ? Math.round(v * ev) : v;
+};
+
 // ---- part: 82-card-tournament-core.jsx ----
 // ===== MFバトルカード: 大会の計算(画面と保存を触らない) =====
 // 2026-10-30 社長「作り始めて」。仕様は docs/progress/card-tournament/plan/README.md
@@ -115707,9 +115739,11 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         const ar = await cardAutoRewardLoad();
         const paid = ar.left > 0;
         const half = cardCpuReward(fresh.daily, CARD_SHARE_REWARD_LEVEL, outcome, facts);
-        const point = paid ? Math.floor(half.base / 2) : 0;
-        const loops = paid ? Math.floor(cardCpuLoops(CARD_SHARE_REWARD_LEVEL, outcome, facts) / 2) : 0;
-        const levelGain = paid && typeof cardLevelEntries === 'function' ? await cardLevelEntries({ kind: 'cpu', level: CARD_SHARE_REWARD_LEVEL, outcome, debug, auto: true }) : { entries: [] };
+        // イベント期間の倍(82-card-event-bonus.jsx)。オートの半分のあとに掛ける。倍は始めた時点のもの(game.eventMult)
+        const evMult = Number.isFinite(game.eventMult) && game.eventMult > 1 ? game.eventMult : 1;
+        const point = paid ? cardEventBonusApply(Math.floor(half.base / 2), evMult) : 0;
+        const loops = paid ? cardEventBonusApply(Math.floor(cardCpuLoops(CARD_SHARE_REWARD_LEVEL, outcome, facts) / 2), evMult) : 0;
+        const levelGain = paid && typeof cardLevelEntries === 'function' ? await cardLevelEntries({ kind: 'cpu', level: CARD_SHARE_REWARD_LEVEL, outcome, debug, auto: true, event: evMult }) : { entries: [] };
         const rankPoint = (levelGain.gain && levelGain.gain.points) || 0;
         // ごほうびが出た試合だけ、その日の回数に数える(自分の番が少なく0になった試合では回数を使わない)
         const counted = paid && (point > 0 || loops > 0 || (levelGain.gain && levelGain.gain.add > 0));
@@ -115721,7 +115755,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         if (autoLog) cpuLogRef.current = null;
         const replayRec = autoLog && typeof cardReplayFromCpu === 'function' ? cardReplayFromCpu(db, { id: `a${autoLog.id}`, at: Date.now(), myDeck: autoLog.decks[0], cpuDeck: autoLog.decks[1],
           seed: autoLog.seed, first: autoLog.first, history: autoLog.acts, foe: { name: game.share.name }, outcome, reason: '' }) : null;
-        const reward = { ...half, base: point, got: point, bonus: 0, total: point, full: paid ? Math.floor(half.full / 2) : 0, daily: fresh.daily }; // ごほうびなしの日は「満額 → 0」と減った理由を出さない
+        const reward = { ...half, base: point, got: point, bonus: 0, total: point, eventMult: paid && point > 0 ? evMult : 1, full: paid ? Math.floor(half.full / 2) : 0, daily: fresh.daily }; // ごほうびなしの日は「満額 → 0」と減った理由を出さない
         setResult({ outcome, reward, opened: null, saved: ok, who: null, level: game.level, loops, quick, facts, talk: null, replay: null, share: game.share, rankGain: ok ? levelGain.gain : null,
           replayRec: replayRec || null, auto: { tactics: game.auto.tactics, quick: !!game.auto.quick, paid, left: Math.max(0, ar.left - (ok && counted ? 1 : 0)) } });
         onBgm && onBgm(cardBgmOf(save.bgm.top));
@@ -115732,9 +115766,11 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       if (game.share) {
         const facts = cardResultFacts(st, CARD_ME);
         const fresh = await freshCardSave();
-        const reward = cardCpuReward(fresh.daily, CARD_SHARE_REWARD_LEVEL, outcome, facts);
-        const loops = cardCpuLoops(CARD_SHARE_REWARD_LEVEL, outcome, facts);
-        const levelGain = typeof cardLevelEntries === 'function' ? await cardLevelEntries({ kind: 'cpu', level: CARD_SHARE_REWARD_LEVEL, outcome, debug }) : { entries: [] };
+        // イベント期間の倍(82-card-event-bonus.jsx・始めた時点のもの)。その日はじめての勝ちの +50 は倍にしない
+        const evMult = Number.isFinite(game.eventMult) && game.eventMult > 1 ? game.eventMult : 1;
+        const reward = { ...cardCpuReward(fresh.daily, CARD_SHARE_REWARD_LEVEL, outcome, facts, evMult), eventMult: evMult };
+        const loops = cardCpuLoops(CARD_SHARE_REWARD_LEVEL, outcome, facts, evMult);
+        const levelGain = typeof cardLevelEntries === 'function' ? await cardLevelEntries({ kind: 'cpu', level: CARD_SHARE_REWARD_LEVEL, outcome, debug, event: evMult }) : { entries: [] };
         const rankPoint = (levelGain.gain && levelGain.gain.points) || 0;
         const ok = await persist({ point: save.point + reward.total + rankPoint, daily: reward.daily }, fresh.raw, levelGain.entries);
         if (ok && levelGain.gain && levelGain.gain.to > levelGain.gain.from && !debug) void cardRankPut(rank && rank.profile);
@@ -115785,10 +115821,12 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       const facts = cardResultFacts(st, CARD_ME);
       const fresh = await freshCardSave();
       const lifeMult = game.lifeUp && !game.demo ? CARD_LIFE_UP_MULT : 1; // カード部屋にいた助手と対戦: ビートP・経験値・周回を 1.5倍
-      const reward = cardCpuReward(fresh.daily, game.level, outcome, facts, lifeMult);
+      // イベント期間の倍(82-card-event-bonus.jsx・始めた時点のもの)。カード部屋の倍とは掛け算で重ねる(2026-11-25 社長 A)
+      const evMult = !game.demo && Number.isFinite(game.eventMult) && game.eventMult > 1 ? game.eventMult : 1;
+      const reward = { ...cardCpuReward(fresh.daily, game.level, outcome, facts, lifeMult * evMult), eventMult: evMult };
       // カード部屋の 1.5倍を1回使った(本当に増えた試合だけ。始めた時点の時間帯で数える)。結果と同じ取引で書く
       const lifeEntry = lifeMult > 1 && reward.lifeUp === true && Number.isFinite(game.lifeSlot) ? await cardLifeRewardEntry(game.who, game.lifeSlot) : null;
-      const loops = cardCpuLoops(game.level, outcome, facts, lifeMult);
+      const loops = cardCpuLoops(game.level, outcome, facts, lifeMult * evMult);
       // ランキングに数えるのは、公開後に、デバッグでない人がふつうの入口から戦ったぶんだけ(rank.send。60-app が決める)
       //   借りたデッキ(みんなのデッキ・95)で戦った試合も数える(2026-10-29 社長「数える」)
       const rankable = !!(rank && rank.send) && !debug;
@@ -115806,7 +115844,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       const detailEntry = game.demo ? null : await cardRecordDetailEntry(fresh.record, (d) => cardRecordDetailAfter(d, { who: game.who, level: game.level, outcome, turns: facts.ownTurns,
         deck: usedDeck ? { id: usedDeck.id, name: usedDeck.name } : null, mons: usedMons, moves: cardRecordMovesOf(db, replayRec), today: cardTodayJst() }));
       // MFバトルカードのレベル(96。公開前はデバッグの人だけ)。同じ取引で書く。みんなのデッキ・借りたデッキも、選んだ強さで数える
-      const levelGain = !game.demo && typeof cardLevelEntries === 'function' ? await cardLevelEntries({ kind: 'cpu', level: game.level, outcome, debug, mult: lifeMult }) : { entries: [] };
+      const levelGain = !game.demo && typeof cardLevelEntries === 'function' ? await cardLevelEntries({ kind: 'cpu', level: game.level, outcome, debug, mult: lifeMult, event: evMult }) : { entries: [] };
       // カードランクのごほうびのビートP(ランクが上がったときだけ)も、同じ取引で足す
       const rankPoint = (levelGain.gain && levelGain.gain.points) || 0;
       const ok = await persist({ point: save.point + reward.total + rankPoint, daily: reward.daily, record: nextRecord, unlocked: nextUnlocked }, fresh.raw, [...openExtra, ...(detailEntry ? [detailEntry] : []), ...levelGain.entries, ...(lifeEntry ? [lifeEntry] : [])]);
@@ -115921,7 +115959,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     //   1つの時間帯で助手1人につき1回まで(cardLifeRewardLeft。2026-11-08 社長)。数える時間帯も始めた時点のもの(lifeSlot)
     const lifeUp = !share && !cup && !auto && cardLifeAtCard(pick.who) && cardLifeRewardLeft(pick.who);
     const lifeSlot = lifeUp ? (cardLifeSlotNow() || {}).abs : null;
-    setGame({ key: gameKey, st, who: pick.who, level: pick.level, settings: save.settings, intro: auto && auto.quick ? null : intro, cpuSameBlood: !!cpuDeck.sameBlood, ...(lifeUp ? { lifeUp: true, lifeSlot } : {}), ...(aiPick ? { aiDeck: { style: aiPick.styleId, name: aiPick.name, team: intro.foe.deckName || null, deckId: aiPick.deckId || aiPick.styleId, deckFrom: aiPick.deckFrom === 'past' ? 'past' : 'now' } } : {}), ...(share ? { share } : {}), ...(cup ? { cup } : {}), ...(auto ? { auto } : {}),
+    setGame({ key: gameKey, st, who: pick.who, level: pick.level, settings: save.settings, intro: auto && auto.quick ? null : intro, cpuSameBlood: !!cpuDeck.sameBlood, eventMult: cup ? 1 : cardEventBonusMult(), ...(lifeUp ? { lifeUp: true, lifeSlot } : {}), ...(aiPick ? { aiDeck: { style: aiPick.styleId, name: aiPick.name, team: intro.foe.deckName || null, deckId: aiPick.deckId || aiPick.styleId, deckFrom: aiPick.deckFrom === 'past' ? 'past' : 'now' } } : {}), ...(share ? { share } : {}), ...(cup ? { cup } : {}), ...(auto ? { auto } : {}),
       ...(rented ? { rented: { ownerId: rented.ownerId, version: rented.version, name: rented.owner } } : {}) });
     const scene = typeof window !== 'undefined' && typeof window.__mhCardScene === 'function';
     cpuLogRef.current = scene ? null : { id: gameKey, style: foeStyle || 'normal', styleName: (aiPick && aiPick.name) || null, seed, first, decks: [{ monsters: activeDeck.monsters, cards: activeDeck.cards }, cpuDeck], foeName: intro.foe.name, deckName: intro.foe.deckName || null, acts: [] };
@@ -116222,7 +116260,10 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     // 91 の結果の画面は point をそのまま「もらったビートP」に出すので、+50 を足した合計を返す(bonus は内訳)
     // ★クイック周回のあとの書き直しにも firstWin を入れる(抜けていて、印が消えて1日に何度も +50 になっていた。2026-10-27 総点検)
     const pvpReward = async (r) => {
-      const base = cardPvpReward(r.reward, r.facts);
+      // イベント期間の倍(82-card-event-bonus.jsx)。マルチの2倍のあとに掛ける(2026-11-25 社長 A・3倍)。杯の試合には掛けない。倍は終わった時点のもの
+      const pvpEv = typeof CARD_PVP !== 'undefined' && CARD_PVP.get().cup ? 1 : cardEventBonusMult();
+      const base0 = cardPvpReward(r.reward, r.facts);
+      const base = { ...base0, point: cardEventBonusApply(base0.point, pvpEv), loops: cardEventBonusApply(base0.loops, pvpEv), eventMult: base0.point > 0 || base0.loops > 0 ? pvpEv : 1 };
       // 書く直前に読み直す(助手と対戦と同じ。古い中身で記録・その日の数を上書きしない)
       const fresh = await freshCardSave();
       const daily = fresh.daily;
@@ -116231,7 +116272,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       const bonus = r.reward === 'win' && base.point > 0 && !daily.firstWin ? CARD_FIRST_WIN_BONUS : 0;
       const got = { ...base, point: base.point + bonus, bonus };
       // MFバトルカードのレベル(96)。途中で部屋を出た試合(left)は数えない
-      const levelGain = typeof cardLevelEntries === 'function' && (r.reward === 'win' || r.reward === 'lose') ? await cardLevelEntries({ kind: 'pvp', outcome: r.reward, debug }) : { entries: [] };
+      const levelGain = typeof cardLevelEntries === 'function' && (r.reward === 'win' || r.reward === 'lose') ? await cardLevelEntries({ kind: 'pvp', outcome: r.reward, debug, event: pvpEv }) : { entries: [] };
       const rankPoint = (levelGain.gain && levelGain.gain.points) || 0;
       const ok = await persist({ point: save.point + got.point + rankPoint, daily: { ...daily, pvpPoint: daily.pvpPoint + got.point, firstWin: daily.firstWin || bonus > 0 },
         record: { ...record, pvp: { win: record.pvp.win + (win ? 1 : 0), lose: record.pvp.lose + (win ? 0 : 1) } } }, fresh.raw, levelGain.entries);
@@ -116454,9 +116495,13 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             {!result.demo && r.total > 0 && <div data-card-gain-count className="mb-1 text-center text-[32px] font-black leading-none text-amber-200 [text-shadow:0_0_16px_rgba(251,191,36,.55)]">+<CardCountUp to={r.total}/><span className="ml-1 text-[14px]">ビートP</span></div>}
             <div className="text-[13px] font-black text-amber-200">もらったビートP: {r.total}{cardResultLifeUp(r) && <span data-card-result-life-plain className="ml-1 text-[11px] font-bold text-slate-300">(ふだん {cardResultPlain(r) + (r.bonus || 0)})</span>}</div>
             {/* カード部屋にいた助手と対戦した(助手ライフ・2026-11-07 社長)。1.5倍で増えたときだけ出す */}
-            {cardResultLifeUp(r) && <div data-card-result-life-up className="my-1.5 rounded-xl border-2 border-amber-300 bg-amber-950/80 px-2.5 py-1.5 text-[13px] font-black leading-snug text-amber-200" style={JA_LABEL_STYLE}>
+            {/* イベント期間の倍(82-card-event-bonus.jsx)。倍が付いた試合だけ */}
+            {r.eventMult > 1 && <div data-card-result-event-bonus className="my-1.5 rounded-xl border-2 border-emerald-300 bg-emerald-950/80 px-2.5 py-1.5 text-[13px] font-black leading-snug text-emerald-100" style={JA_LABEL_STYLE}>
+              <p>{jaWrap(`🎄 ${CARD_EVENT_BONUS.name}のあいだは、ビートP・カードランクの経験値・クイック周回が ${CARD_EVENT_BONUS.label}`)}</p>
+            </div>}
+            {cardResultLifeUp(r) && result.lifeUp && <div data-card-result-life-up className="my-1.5 rounded-xl border-2 border-amber-300 bg-amber-950/80 px-2.5 py-1.5 text-[13px] font-black leading-snug text-amber-200" style={JA_LABEL_STYLE}>
               <p>{jaWrap(`🃏 カード部屋の${a ? a.name : '助手'}と対戦しました`)}</p>
-              <p className="text-[12px] text-white">{jaWrap(`ビートP・カードランクの経験値・クイック周回 ${CARD_LIFE_UP_LABEL}(${cardResultPlain(r)} → ${r.got})`)}</p>
+              <p className="text-[12px] text-white">{jaWrap(`ビートP・カードランクの経験値・クイック周回 ${CARD_LIFE_UP_LABEL}${r.eventMult > 1 ? '' : `(${cardResultPlain(r)} → ${r.got})`}`)}</p>
             </div>}
             <div className="mt-1 text-[12px] font-bold text-slate-300">{cardBattleLevelLabel(result.level, result.share)}の{win ? '勝ち' : result.outcome === 'lose' ? '負け' : '投了'}: {cardResultCut(r) ? `${r.full} → ${cardResultPlain(r)}` : cardResultPlain(r)}</div>
             {cardResultCut(r) && <div data-card-result-cut className="text-[11px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap(cardResultCutWhy(result.outcome, r))}</div>}
@@ -116829,6 +116874,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
                 }}>ボス{i + 1}</button>
               ))}
             </div>
+            {/* イベント期間の倍(82-card-event-bonus.jsx)を期間の前に試す。保存しない・読み込み直すと切れる */}
+            <button type="button" data-card-event-bonus-debug className="mh-button mh-button-secondary min-h-[40px] w-full rounded-xl border border-emerald-400/40 bg-slate-800 text-[11px] font-black" onClick={() => { Audio_.fgSe.tap(); cardEventBonusForce = !cardEventBonusForce; setNotice(cardEventBonusForce ? `${CARD_EVENT_BONUS.name}の倍を入れました(次の対戦から・読み込み直すと切れます)` : `${CARD_EVENT_BONUS.name}の倍を切りました`); }}>イベントの倍(入/切)</button>
             <select data-card-result-demo-who value={demoWho} onChange={(e) => setDemoWho(e.target.value)} className="w-full rounded-lg border border-white/20 bg-slate-800 px-2 py-1 text-[12px] font-bold text-white">
               {allAssistants.filter((x) => CARD_AI_HABITS[x.id] && cardFoeReleased(x.id)).map((x) => <option key={x.id} value={x.id}>見本の相手: {x.name}</option>)}
             </select>
@@ -120822,6 +120869,7 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
             {r.verify === 'ng' && <div className="text-[12px] font-bold text-slate-300">無効の試合なので、ビートPとクイック周回は入りません</div>}
             {got && (<>
               <div data-card-pvp-reward className="text-[13px] font-black text-amber-200">もらったビートP: {got.point}</div>
+              {got.eventMult > 1 && typeof CARD_EVENT_BONUS !== 'undefined' && <div data-card-pvp-event-bonus className="mt-1 text-[12px] font-black text-emerald-200" style={JA_LABEL_STYLE}>{jaWrap(`🎄 ${CARD_EVENT_BONUS.name}のあいだは ${CARD_EVENT_BONUS.label}`)}</div>}
               {got.short && <div className="mt-1 text-[12px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('自分のターンを3回やる前に終わったので、ビートPとクイック周回は入りません')}</div>}
               {!got.short && got.loops > 0 && (
                 <div data-card-quick-loops={got.quick ? got.loops : 0} className="mt-2 rounded-xl border border-sky-300/40 bg-sky-500/10 px-2 py-1.5">
@@ -123687,18 +123735,21 @@ const cardLevelXpOf = ({ kind, level, outcome }) => {
 //   ごほうびは、この試合で上がったランク(from より上・to まで)の分だけ。前に上がったランクの分はさかのぼって配らない
 //   parts は結果に出す内わけ、gains はランクアップの演出に出す「もらった物」
 //   auto … オートで挑んだ試合(2026-11-02 社長・案3): 手で戦うときの半分。その日はじめての勝ちは付けず、その日の勝ちの印も動かさない
-const cardLevelAfter = (prev, { kind, level, outcome, today: today0, auto = false, mult = 1 }) => {
+const cardLevelAfter = (prev, { kind, level, outcome, today: today0, auto = false, mult = 1, event = 1 }) => {
   const cur = cardNormalizeLevel(prev);
   const today = cardDayCarry(cur.day, today0);   // 切り替えの夜は、0時区切りで書いた次の日のまま数える
   const lv0 = cardLevelInfo(cur.xp).level;
   const base0 = auto ? Math.floor(cardLevelXpOf({ kind, level, outcome }) / 2) : cardLevelXpOf({ kind, level, outcome });
   // カード部屋にいる助手と対戦(82 の cardLifeUpApply・手で遊んだときだけ): 勝ち負けの分だけ 1.5倍。その日はじめての勝ちの +30 は倍にしない
-  const base = !auto && Number.isFinite(mult) && mult > 1 && base0 > 0 ? Math.round(base0 * mult) : base0; // 82 の cardLifeUpApply と同じ(96 は単独でも読まれる)
+  const baseRoom = !auto && Number.isFinite(mult) && mult > 1 && base0 > 0 ? Math.round(base0 * mult) : base0; // 82 の cardLifeUpApply と同じ(96 は単独でも読まれる)
+  // イベント期間の倍(82-card-event-bonus.jsx・2026-11-25 社長 A): カード部屋の倍と掛け算で重ねる。オートにも掛ける。その日はじめての勝ちの +30 は倍にしない
+  const ev = Number.isFinite(event) && event > 1 ? event : 1;
+  const base = ev > 1 && base0 > 0 ? Math.round(base0 * (baseRoom > base0 ? mult : 1) * ev) : baseRoom;
   if (!base) return { next: cur, tickets: 0, points: 0, add: 0, from: lv0, to: lv0, xp: cur.xp, parts: [], gains: [] };
   const sameDay = cur.day === today;
   const first = !auto && outcome === 'win' && !(sameDay && cur.dayWin);
   const add = base + (first ? CARD_LEVEL_XP.firstWin : 0);
-  const parts = [{ label: outcome === 'win' ? '勝ち' : '負け', xp: base0 }, ...(base > base0 ? [{ label: `カード部屋の助手と対戦(${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : '倍'})`, xp: base - base0 }] : []), ...(first ? [{ label: 'その日初めての勝ち', xp: CARD_LEVEL_XP.firstWin }] : [])];
+  const parts = [{ label: outcome === 'win' ? '勝ち' : '負け', xp: base0 }, ...(baseRoom > base0 ? [{ label: `カード部屋の助手と対戦(${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : '倍'})`, xp: baseRoom - base0 }] : []), ...(base > baseRoom ? [{ label: `${typeof CARD_EVENT_BONUS !== 'undefined' ? CARD_EVENT_BONUS.name : 'イベント'}(${typeof CARD_EVENT_BONUS !== 'undefined' ? CARD_EVENT_BONUS.label : '倍'})`, xp: base - baseRoom }] : []), ...(first ? [{ label: 'その日初めての勝ち', xp: CARD_LEVEL_XP.firstWin }] : [])];
   const xp = cardLevelSafeXp(cur.xp + add);
   const to = cardLevelInfo(xp).level;
   const got = [...cur.got];
@@ -123915,11 +123966,11 @@ const cardAutoTicketBlock = ({ tickets, extraLeft }) => (
   !(Number.isInteger(extraLeft) && extraLeft > 0) ? `今日はこれ以上ふやせません(1日${CARD_AUTO_REWARD_EXTRA_MAX}回まで)`
       : !(Number.isInteger(tickets) && tickets > 0) ? 'セッション券がありません(モンヒロビートのランクが上がるともらえます)' : '');
 // 1試合ぶんの経験値の保存の項目(84 の結果の取引に足す)。経験値を入れない人(公開前・デバッグでない)は空
-const cardLevelEntries = async ({ kind, level, outcome, debug = false, auto = false, mult = 1 }) => {
+const cardLevelEntries = async ({ kind, level, outcome, debug = false, auto = false, mult = 1, event = 1 }) => {
   if (!cardTacticsOpen() && !debug) return { entries: [], gain: null };
   let rawL = null, rawT = null;
   try { [rawL, rawT] = await Promise.all([storeGet(CARD_LEVEL_KEY, null), storeGet(CARD_TACTICS_KEY, null)]); } catch (_) { return { entries: [], gain: null }; }
-  const gain = cardLevelAfter(rawL, { kind, level, outcome, auto, mult, today: typeof cardTodayJst === 'function' ? cardTodayJst() : '' });
+  const gain = cardLevelAfter(rawL, { kind, level, outcome, auto, mult, event, today: typeof cardTodayJst === 'function' ? cardTodayJst() : '' });
   if (!gain.add) return { entries: [], gain };
   const entries = [{ key: CARD_LEVEL_KEY, before: rawL, next: gain.next }];
   if (gain.tickets) { const t = cardNormalizeTactics(rawT); entries.push({ key: CARD_TACTICS_KEY, before: rawT, next: { ...t, tickets: t.tickets + gain.tickets } }); }
@@ -145512,13 +145563,21 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 自己ベスト・クリア回数・実績・周回の報酬・全国ランキングは、onComplete がふつうの演奏と同じ処理で入れる(アシストモードは除く)
   // ★流れの本体はイベントに縛られない部品(39-raid-rhythm.jsx)。ここはイベントのつなぎ口を選んで、画面の状態をつなぐだけ
   //   (2026-11-25・台帳 r1119-172。クリスマスのレイドも同じ流れで動かすため。ジャックの動きは前と同じ)
-  const raidRhythmAdapterOf = (eventKey) => raidRhythmAdapter(eventKey || 'jack', { eventId: raidJackEventId, debugForce: raidJackDebugForce, realRules: raidJackDebugRealRules });
+  const raidRhythmAdapterOf = (eventKey) => eventKey === 'xmas'
+    // クリスマス(BUILD.md §2〜§4)。回数・送信・倒した印・再送待ちはバトル部の raidXmasUseTry / raidXmasAddDamage。
+    //   レイド画面はジャックと同じ RAID_JACK(raidEv が 'xmas' のあいだクリスマスの中身)。結果は openRaidXmasResult
+    ? raidRhythmAdapter('xmas', { event: RAID_XMAS_EVENT, tiers: RAID_XMAS_A_TIERS, tierAt: (i) => raidXmasTierAt('a', i), bossImg: RAID_XMAS_BOSS_IMG,
+        damageOf: raidXmasRhythmDamageOf, useTry: () => raidXmasUseTry('a'), addDamage: raidXmasAddDamage, openResult: openRaidXmasResult,
+        bossDown: raidXmasBossDown, infiniteName: RAID_XMAS_AFTER_BOSS.name, screen: 'RAID_JACK' })
+    : raidRhythmAdapter(eventKey || 'jack', { eventId: raidJackEventId, debugForce: raidJackDebugForce, realRules: raidJackDebugRealRules });
   const startRaidJackRhythmSelect = async (tierIndex, eventKey = 'jack') => {
     const adapter = raidRhythmAdapterOf(eventKey);
     raidJackReturnTierRef.current = Math.max(0, Math.floor(Number(tierIndex) || 0));
     await openRhythmDemo({ to: 'RHYTHM_DEMO_HOME' });
     setRaidRhythm({ tierIndex: raidRhythmClampTier(adapter, tierIndex), eventKey: adapter.key });
   };
+  // クリスマスのレイド画面の「モンヒロビートで挑む」(BUILD.md §4)。ここに置くと、レイド画面にボタンが出る
+  const startRaidXmasRhythm = (tierIndex) => startRaidJackRhythmSelect(tierIndex, 'xmas');
   const cancelRaidJackRhythm = () => {
     const screen = raidRhythmAdapterOf(raidRhythm && raidRhythm.eventKey).screen;
     raidRhythmRunRef.current = null; setRaidRhythm(null); setGameState(screen);

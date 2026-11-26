@@ -3890,9 +3890,11 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         const ar = await cardAutoRewardLoad();
         const paid = ar.left > 0;
         const half = cardCpuReward(fresh.daily, CARD_SHARE_REWARD_LEVEL, outcome, facts);
-        const point = paid ? Math.floor(half.base / 2) : 0;
-        const loops = paid ? Math.floor(cardCpuLoops(CARD_SHARE_REWARD_LEVEL, outcome, facts) / 2) : 0;
-        const levelGain = paid && typeof cardLevelEntries === 'function' ? await cardLevelEntries({ kind: 'cpu', level: CARD_SHARE_REWARD_LEVEL, outcome, debug, auto: true }) : { entries: [] };
+        // イベント期間の倍(82-card-event-bonus.jsx)。オートの半分のあとに掛ける。倍は始めた時点のもの(game.eventMult)
+        const evMult = Number.isFinite(game.eventMult) && game.eventMult > 1 ? game.eventMult : 1;
+        const point = paid ? cardEventBonusApply(Math.floor(half.base / 2), evMult) : 0;
+        const loops = paid ? cardEventBonusApply(Math.floor(cardCpuLoops(CARD_SHARE_REWARD_LEVEL, outcome, facts) / 2), evMult) : 0;
+        const levelGain = paid && typeof cardLevelEntries === 'function' ? await cardLevelEntries({ kind: 'cpu', level: CARD_SHARE_REWARD_LEVEL, outcome, debug, auto: true, event: evMult }) : { entries: [] };
         const rankPoint = (levelGain.gain && levelGain.gain.points) || 0;
         // ごほうびが出た試合だけ、その日の回数に数える(自分の番が少なく0になった試合では回数を使わない)
         const counted = paid && (point > 0 || loops > 0 || (levelGain.gain && levelGain.gain.add > 0));
@@ -3904,7 +3906,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         if (autoLog) cpuLogRef.current = null;
         const replayRec = autoLog && typeof cardReplayFromCpu === 'function' ? cardReplayFromCpu(db, { id: `a${autoLog.id}`, at: Date.now(), myDeck: autoLog.decks[0], cpuDeck: autoLog.decks[1],
           seed: autoLog.seed, first: autoLog.first, history: autoLog.acts, foe: { name: game.share.name }, outcome, reason: '' }) : null;
-        const reward = { ...half, base: point, got: point, bonus: 0, total: point, full: paid ? Math.floor(half.full / 2) : 0, daily: fresh.daily }; // ごほうびなしの日は「満額 → 0」と減った理由を出さない
+        const reward = { ...half, base: point, got: point, bonus: 0, total: point, eventMult: paid && point > 0 ? evMult : 1, full: paid ? Math.floor(half.full / 2) : 0, daily: fresh.daily }; // ごほうびなしの日は「満額 → 0」と減った理由を出さない
         setResult({ outcome, reward, opened: null, saved: ok, who: null, level: game.level, loops, quick, facts, talk: null, replay: null, share: game.share, rankGain: ok ? levelGain.gain : null,
           replayRec: replayRec || null, auto: { tactics: game.auto.tactics, quick: !!game.auto.quick, paid, left: Math.max(0, ar.left - (ok && counted ? 1 : 0)) } });
         onBgm && onBgm(cardBgmOf(save.bgm.top));
@@ -3915,9 +3917,11 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       if (game.share) {
         const facts = cardResultFacts(st, CARD_ME);
         const fresh = await freshCardSave();
-        const reward = cardCpuReward(fresh.daily, CARD_SHARE_REWARD_LEVEL, outcome, facts);
-        const loops = cardCpuLoops(CARD_SHARE_REWARD_LEVEL, outcome, facts);
-        const levelGain = typeof cardLevelEntries === 'function' ? await cardLevelEntries({ kind: 'cpu', level: CARD_SHARE_REWARD_LEVEL, outcome, debug }) : { entries: [] };
+        // イベント期間の倍(82-card-event-bonus.jsx・始めた時点のもの)。その日はじめての勝ちの +50 は倍にしない
+        const evMult = Number.isFinite(game.eventMult) && game.eventMult > 1 ? game.eventMult : 1;
+        const reward = { ...cardCpuReward(fresh.daily, CARD_SHARE_REWARD_LEVEL, outcome, facts, evMult), eventMult: evMult };
+        const loops = cardCpuLoops(CARD_SHARE_REWARD_LEVEL, outcome, facts, evMult);
+        const levelGain = typeof cardLevelEntries === 'function' ? await cardLevelEntries({ kind: 'cpu', level: CARD_SHARE_REWARD_LEVEL, outcome, debug, event: evMult }) : { entries: [] };
         const rankPoint = (levelGain.gain && levelGain.gain.points) || 0;
         const ok = await persist({ point: save.point + reward.total + rankPoint, daily: reward.daily }, fresh.raw, levelGain.entries);
         if (ok && levelGain.gain && levelGain.gain.to > levelGain.gain.from && !debug) void cardRankPut(rank && rank.profile);
@@ -3968,10 +3972,12 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       const facts = cardResultFacts(st, CARD_ME);
       const fresh = await freshCardSave();
       const lifeMult = game.lifeUp && !game.demo ? CARD_LIFE_UP_MULT : 1; // カード部屋にいた助手と対戦: ビートP・経験値・周回を 1.5倍
-      const reward = cardCpuReward(fresh.daily, game.level, outcome, facts, lifeMult);
+      // イベント期間の倍(82-card-event-bonus.jsx・始めた時点のもの)。カード部屋の倍とは掛け算で重ねる(2026-11-25 社長 A)
+      const evMult = !game.demo && Number.isFinite(game.eventMult) && game.eventMult > 1 ? game.eventMult : 1;
+      const reward = { ...cardCpuReward(fresh.daily, game.level, outcome, facts, lifeMult * evMult), eventMult: evMult };
       // カード部屋の 1.5倍を1回使った(本当に増えた試合だけ。始めた時点の時間帯で数える)。結果と同じ取引で書く
       const lifeEntry = lifeMult > 1 && reward.lifeUp === true && Number.isFinite(game.lifeSlot) ? await cardLifeRewardEntry(game.who, game.lifeSlot) : null;
-      const loops = cardCpuLoops(game.level, outcome, facts, lifeMult);
+      const loops = cardCpuLoops(game.level, outcome, facts, lifeMult * evMult);
       // ランキングに数えるのは、公開後に、デバッグでない人がふつうの入口から戦ったぶんだけ(rank.send。60-app が決める)
       //   借りたデッキ(みんなのデッキ・95)で戦った試合も数える(2026-10-29 社長「数える」)
       const rankable = !!(rank && rank.send) && !debug;
@@ -3989,7 +3995,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       const detailEntry = game.demo ? null : await cardRecordDetailEntry(fresh.record, (d) => cardRecordDetailAfter(d, { who: game.who, level: game.level, outcome, turns: facts.ownTurns,
         deck: usedDeck ? { id: usedDeck.id, name: usedDeck.name } : null, mons: usedMons, moves: cardRecordMovesOf(db, replayRec), today: cardTodayJst() }));
       // MFバトルカードのレベル(96。公開前はデバッグの人だけ)。同じ取引で書く。みんなのデッキ・借りたデッキも、選んだ強さで数える
-      const levelGain = !game.demo && typeof cardLevelEntries === 'function' ? await cardLevelEntries({ kind: 'cpu', level: game.level, outcome, debug, mult: lifeMult }) : { entries: [] };
+      const levelGain = !game.demo && typeof cardLevelEntries === 'function' ? await cardLevelEntries({ kind: 'cpu', level: game.level, outcome, debug, mult: lifeMult, event: evMult }) : { entries: [] };
       // カードランクのごほうびのビートP(ランクが上がったときだけ)も、同じ取引で足す
       const rankPoint = (levelGain.gain && levelGain.gain.points) || 0;
       const ok = await persist({ point: save.point + reward.total + rankPoint, daily: reward.daily, record: nextRecord, unlocked: nextUnlocked }, fresh.raw, [...openExtra, ...(detailEntry ? [detailEntry] : []), ...levelGain.entries, ...(lifeEntry ? [lifeEntry] : [])]);
@@ -4104,7 +4110,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     //   1つの時間帯で助手1人につき1回まで(cardLifeRewardLeft。2026-11-08 社長)。数える時間帯も始めた時点のもの(lifeSlot)
     const lifeUp = !share && !cup && !auto && cardLifeAtCard(pick.who) && cardLifeRewardLeft(pick.who);
     const lifeSlot = lifeUp ? (cardLifeSlotNow() || {}).abs : null;
-    setGame({ key: gameKey, st, who: pick.who, level: pick.level, settings: save.settings, intro: auto && auto.quick ? null : intro, cpuSameBlood: !!cpuDeck.sameBlood, ...(lifeUp ? { lifeUp: true, lifeSlot } : {}), ...(aiPick ? { aiDeck: { style: aiPick.styleId, name: aiPick.name, team: intro.foe.deckName || null, deckId: aiPick.deckId || aiPick.styleId, deckFrom: aiPick.deckFrom === 'past' ? 'past' : 'now' } } : {}), ...(share ? { share } : {}), ...(cup ? { cup } : {}), ...(auto ? { auto } : {}),
+    setGame({ key: gameKey, st, who: pick.who, level: pick.level, settings: save.settings, intro: auto && auto.quick ? null : intro, cpuSameBlood: !!cpuDeck.sameBlood, eventMult: cup ? 1 : cardEventBonusMult(), ...(lifeUp ? { lifeUp: true, lifeSlot } : {}), ...(aiPick ? { aiDeck: { style: aiPick.styleId, name: aiPick.name, team: intro.foe.deckName || null, deckId: aiPick.deckId || aiPick.styleId, deckFrom: aiPick.deckFrom === 'past' ? 'past' : 'now' } } : {}), ...(share ? { share } : {}), ...(cup ? { cup } : {}), ...(auto ? { auto } : {}),
       ...(rented ? { rented: { ownerId: rented.ownerId, version: rented.version, name: rented.owner } } : {}) });
     const scene = typeof window !== 'undefined' && typeof window.__mhCardScene === 'function';
     cpuLogRef.current = scene ? null : { id: gameKey, style: foeStyle || 'normal', styleName: (aiPick && aiPick.name) || null, seed, first, decks: [{ monsters: activeDeck.monsters, cards: activeDeck.cards }, cpuDeck], foeName: intro.foe.name, deckName: intro.foe.deckName || null, acts: [] };
@@ -4405,7 +4411,10 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     // 91 の結果の画面は point をそのまま「もらったビートP」に出すので、+50 を足した合計を返す(bonus は内訳)
     // ★クイック周回のあとの書き直しにも firstWin を入れる(抜けていて、印が消えて1日に何度も +50 になっていた。2026-10-27 総点検)
     const pvpReward = async (r) => {
-      const base = cardPvpReward(r.reward, r.facts);
+      // イベント期間の倍(82-card-event-bonus.jsx)。マルチの2倍のあとに掛ける(2026-11-25 社長 A・3倍)。杯の試合には掛けない。倍は終わった時点のもの
+      const pvpEv = typeof CARD_PVP !== 'undefined' && CARD_PVP.get().cup ? 1 : cardEventBonusMult();
+      const base0 = cardPvpReward(r.reward, r.facts);
+      const base = { ...base0, point: cardEventBonusApply(base0.point, pvpEv), loops: cardEventBonusApply(base0.loops, pvpEv), eventMult: base0.point > 0 || base0.loops > 0 ? pvpEv : 1 };
       // 書く直前に読み直す(助手と対戦と同じ。古い中身で記録・その日の数を上書きしない)
       const fresh = await freshCardSave();
       const daily = fresh.daily;
@@ -4414,7 +4423,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       const bonus = r.reward === 'win' && base.point > 0 && !daily.firstWin ? CARD_FIRST_WIN_BONUS : 0;
       const got = { ...base, point: base.point + bonus, bonus };
       // MFバトルカードのレベル(96)。途中で部屋を出た試合(left)は数えない
-      const levelGain = typeof cardLevelEntries === 'function' && (r.reward === 'win' || r.reward === 'lose') ? await cardLevelEntries({ kind: 'pvp', outcome: r.reward, debug }) : { entries: [] };
+      const levelGain = typeof cardLevelEntries === 'function' && (r.reward === 'win' || r.reward === 'lose') ? await cardLevelEntries({ kind: 'pvp', outcome: r.reward, debug, event: pvpEv }) : { entries: [] };
       const rankPoint = (levelGain.gain && levelGain.gain.points) || 0;
       const ok = await persist({ point: save.point + got.point + rankPoint, daily: { ...daily, pvpPoint: daily.pvpPoint + got.point, firstWin: daily.firstWin || bonus > 0 },
         record: { ...record, pvp: { win: record.pvp.win + (win ? 1 : 0), lose: record.pvp.lose + (win ? 0 : 1) } } }, fresh.raw, levelGain.entries);
@@ -4637,9 +4646,13 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             {!result.demo && r.total > 0 && <div data-card-gain-count className="mb-1 text-center text-[32px] font-black leading-none text-amber-200 [text-shadow:0_0_16px_rgba(251,191,36,.55)]">+<CardCountUp to={r.total}/><span className="ml-1 text-[14px]">ビートP</span></div>}
             <div className="text-[13px] font-black text-amber-200">もらったビートP: {r.total}{cardResultLifeUp(r) && <span data-card-result-life-plain className="ml-1 text-[11px] font-bold text-slate-300">(ふだん {cardResultPlain(r) + (r.bonus || 0)})</span>}</div>
             {/* カード部屋にいた助手と対戦した(助手ライフ・2026-11-07 社長)。1.5倍で増えたときだけ出す */}
-            {cardResultLifeUp(r) && <div data-card-result-life-up className="my-1.5 rounded-xl border-2 border-amber-300 bg-amber-950/80 px-2.5 py-1.5 text-[13px] font-black leading-snug text-amber-200" style={JA_LABEL_STYLE}>
+            {/* イベント期間の倍(82-card-event-bonus.jsx)。倍が付いた試合だけ */}
+            {r.eventMult > 1 && <div data-card-result-event-bonus className="my-1.5 rounded-xl border-2 border-emerald-300 bg-emerald-950/80 px-2.5 py-1.5 text-[13px] font-black leading-snug text-emerald-100" style={JA_LABEL_STYLE}>
+              <p>{jaWrap(`🎄 ${CARD_EVENT_BONUS.name}のあいだは、ビートP・カードランクの経験値・クイック周回が ${CARD_EVENT_BONUS.label}`)}</p>
+            </div>}
+            {cardResultLifeUp(r) && result.lifeUp && <div data-card-result-life-up className="my-1.5 rounded-xl border-2 border-amber-300 bg-amber-950/80 px-2.5 py-1.5 text-[13px] font-black leading-snug text-amber-200" style={JA_LABEL_STYLE}>
               <p>{jaWrap(`🃏 カード部屋の${a ? a.name : '助手'}と対戦しました`)}</p>
-              <p className="text-[12px] text-white">{jaWrap(`ビートP・カードランクの経験値・クイック周回 ${CARD_LIFE_UP_LABEL}(${cardResultPlain(r)} → ${r.got})`)}</p>
+              <p className="text-[12px] text-white">{jaWrap(`ビートP・カードランクの経験値・クイック周回 ${CARD_LIFE_UP_LABEL}${r.eventMult > 1 ? '' : `(${cardResultPlain(r)} → ${r.got})`}`)}</p>
             </div>}
             <div className="mt-1 text-[12px] font-bold text-slate-300">{cardBattleLevelLabel(result.level, result.share)}の{win ? '勝ち' : result.outcome === 'lose' ? '負け' : '投了'}: {cardResultCut(r) ? `${r.full} → ${cardResultPlain(r)}` : cardResultPlain(r)}</div>
             {cardResultCut(r) && <div data-card-result-cut className="text-[11px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap(cardResultCutWhy(result.outcome, r))}</div>}
@@ -5012,6 +5025,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
                 }}>ボス{i + 1}</button>
               ))}
             </div>
+            {/* イベント期間の倍(82-card-event-bonus.jsx)を期間の前に試す。保存しない・読み込み直すと切れる */}
+            <button type="button" data-card-event-bonus-debug className="mh-button mh-button-secondary min-h-[40px] w-full rounded-xl border border-emerald-400/40 bg-slate-800 text-[11px] font-black" onClick={() => { Audio_.fgSe.tap(); cardEventBonusForce = !cardEventBonusForce; setNotice(cardEventBonusForce ? `${CARD_EVENT_BONUS.name}の倍を入れました(次の対戦から・読み込み直すと切れます)` : `${CARD_EVENT_BONUS.name}の倍を切りました`); }}>イベントの倍(入/切)</button>
             <select data-card-result-demo-who value={demoWho} onChange={(e) => setDemoWho(e.target.value)} className="w-full rounded-lg border border-white/20 bg-slate-800 px-2 py-1 text-[12px] font-bold text-white">
               {allAssistants.filter((x) => CARD_AI_HABITS[x.id] && cardFoeReleased(x.id)).map((x) => <option key={x.id} value={x.id}>見本の相手: {x.name}</option>)}
             </select>

@@ -87,16 +87,16 @@ check('A 倍率は 1.375(移動12回で +0.5 → +0.375。台帳 #5328)', M === 
   const s84 = src('src/parts/84-screen-card-battle.jsx');
   check('E 始めた時点で決める: みんなのデッキ・杯・オートは上げない', /const lifeUp = !share && !cup && !auto && cardLifeAtCard\(pick\.who\) && cardLifeRewardLeft\(pick\.who\);/.test(s84));
   check('E game.lifeUp に持つ', /\.\.\.\(lifeUp \? \{ lifeUp: true, lifeSlot \} : \{\}\)/.test(s84));
-  check('E 終わりは game.lifeUp で倍率を決め、ビートP・周回・経験値に同じ倍率を渡す',
+  check('E 終わりは game.lifeUp で倍率を決め、ビートP・周回・経験値に同じ倍率を渡す(イベント期間の倍とは掛け算・card-event-bonus-check)',
     /const lifeMult = game\.lifeUp && !game\.demo \? CARD_LIFE_UP_MULT : 1;/.test(s84)
-    && /cardCpuReward\(fresh\.daily, game\.level, outcome, facts, lifeMult\)/.test(s84)
-    && /cardCpuLoops\(game\.level, outcome, facts, lifeMult\)/.test(s84)
-    && /cardLevelEntries\(\{ kind: 'cpu', level: game\.level, outcome, debug, mult: lifeMult \}\)/.test(s84));
+    && /cardCpuReward\(fresh\.daily, game\.level, outcome, facts, lifeMult \* evMult\)/.test(s84)
+    && /cardCpuLoops\(game\.level, outcome, facts, lifeMult \* evMult\)/.test(s84)
+    && /cardLevelEntries\(\{ kind: 'cpu', level: game\.level, outcome, debug, mult: lifeMult, event: evMult \}\)/.test(s84));
   check('E 口は typeof で確かめてから呼ぶ(口が無ければ上げない)',
     /typeof assistantLifeAtCard === 'function' \? assistantLifeAtCard\(id\) === true : false/.test(s84) && /typeof assistantLifeCardIds === 'function'/.test(s84) && /typeof assistantLifeOnCardMatch === 'function'/.test(s84));
   check('E 対戦の画面から assistantLifeNow を呼ばない', !/assistantLifeNow\s*\(/.test(s84));
   check('E 助手ライフへ「対戦した」を知らせる', /cardLifeOnMatch\(\{ assistantId: game\.who, won: outcome === 'win', at: Date\.now\(\) \}\)/.test(s84));
-  check('F 帯は 1.5倍で増えたときだけ', /const cardResultLifeUp = \(r\) => [^\n]*r\.got > r\.base/.test(s84) && /\{cardResultLifeUp\(r\) && <div data-card-result-life-up/.test(s84));
+  check('F 帯は 1.5倍で増えたときだけ', /const cardResultLifeUp = \(r\) => [^\n]*r\.got > r\.base/.test(s84) && /\{cardResultLifeUp\(r\) && result\.lifeUp && <div data-card-result-life-up/.test(s84));
   check('F 「〜の勝ち」の行は倍にする前の数', /: \{cardResultCut\(r\) \? `\$\{r\.full\} → \$\{cardResultPlain\(r\)\}` : cardResultPlain\(r\)\}/.test(s84));
 }
 // ---- G ----
