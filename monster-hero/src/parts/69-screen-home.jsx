@@ -354,6 +354,8 @@ function HomeScreen({
   onOpenXmasEvent = null,
   // クリスマスのレイドのボス(ジャックと同じ置き方・押すとイベントページの「レイド」タブ)。出すかどうかは 60-app.jsx が決める
   raidXmasVisible = false, raidXmasEventId = '', onOpenRaidXmas = null,
+  // クリスマスのイベントページの入口(台帳 r1126-014)。{ onOpen, preOpen }。null なら出さない(11/28 10:00〜12/31 4:00 に 60-app.jsx が渡す)
+  xmasEntry = null,
   // 助手とおしゃべり(2026-10-14)。公開の印 assistantChat が立つまでは null(ボタンを出さない)
   onOpenAssistantChat = null,
   // MFバトルカードの入口(案A・左の列のいちばん下)。公開の印 cardBattle が立ち、公開のお話を見た人だけ(60-app.jsx が決める)
@@ -436,6 +438,10 @@ function HomeScreen({
     return ()=>clearInterval(id);
   },[homeStripCount]);
   const homeStripShow=homeStripCount?homeStripIdx%homeStripCount:0;
+  // クリスマスのイベントの入口(r1126-014)。形は 79-screen-xmas-event.jsx の xmasHomeEntryVariant。
+  //   帯の形('banner'/'card')のときは細バナーの場所に置き、同じ中身の「クリスマスイベント」の細バナーは出さない
+  const xmasEntryVariant=xmasEntry&&typeof xmasHomeEntryVariant==='function'?xmasHomeEntryVariant():null;
+  const xmasEntryInStrip=!!xmasEntry&&(xmasEntryVariant==='banner'||xmasEntryVariant==='card');
   // HOMEの助手コメントを出すか(2026-11-17 あっくん「助手のコメントのオンオフ」)。設定は 21-assistant.jsx の
   // HOME_ASSISTANT_COMMENT_STORE(既定は入)。「切」のときは吹き出しの枠ごと描かず、そのぶん広場が広くなる
   const homeComment=useHomeAssistantComment();
@@ -465,7 +471,10 @@ function HomeScreen({
         </header>
         {/* 期間ものの細バナー(2026-11-17 ホーム一新)。イベントと公式杯を、上の帯の下の1本に集約する。
             両方あるときはカルーセルで切り替わる(homeStripShow)。近日公開の予告はバトルカードのカード側へ移した */}
-        {homeStripCount>0&&<div className="mh-home-event-strip" data-home-event-strip>
+        {xmasEntryInStrip&&<div className="mh-home-event-strip" data-home-xmas-entry-strip style={xmasEntryVariant==='banner'?{width:'calc(100% - 78px)'}:undefined}>
+          <HomeXmasEventEntry onOpen={xmasEntry.onOpen} preOpen={!!xmasEntry.preOpen} variant={xmasEntryVariant}/>
+        </div>}
+        {homeStripCount>0&&!(xmasEntryInStrip&&homeEventCampaign&&homeEventCampaign.id==='xmas_2026'&&!homeCardTour)&&<div className="mh-home-event-strip" data-home-event-strip>
           {homeEventCampaign&&homeStripShow===0&&<button type="button" data-home-event-banner className="mh-home-event-banner" onClick={homeEventCampaign.id==='xmas_2026'&&typeof onOpenXmasEvent==='function'?onOpenXmasEvent:openChangelog} aria-label={`${homeEventCampaign.banner.title}${homeEventCampaign.banner.title2||''} ${homeEventCampaign.banner.sub}`}>
             {/* title2 … 題の2行目(2026-11-14「本オープン記念」だけでは何の本オープンか分からないため、題を2行に分けられるようにした) */}
             {/* 2026-11-23 r1119-131 社長「右の時計の手前まで横に伸ばし、行数を減らして縦を詰める」: 1行目に題と期間(sub)、2行目に副題(title2)。
@@ -482,6 +491,7 @@ function HomeScreen({
             時刻は当初スタック末尾だったが、同日あっくん指示「時計は右上の角に」で先頭(=右上の角)へ移動 */}
         <div className="mh-home-side-stack">
           {typeof TimeOfDayClock==='function'&&<TimeOfDayClock home/>}
+          {xmasEntry&&xmasEntryVariant==='tile'&&<HomeXmasEventEntry onOpen={xmasEntry.onOpen} preOpen={!!xmasEntry.preOpen} variant="tile"/>}
           <button onClick={openChangelog} className="mh-home-side-btn mh-home-update" aria-label="更新履歴"><span className="mh-home-side-ic"><RefreshCcw size={19}/></span><span className="mh-home-side-lb">更新履歴</span>{hasUnreadChangelog&&<em className="mh-unread-badge" aria-label="未読あり">!</em>}</button>
           <button onClick={openMissions} className={`mh-home-side-btn mh-home-mission${spotClass('reward')}`} aria-label="ミッション"><span className="mh-home-side-ic"><List size={20}/></span><span className="mh-home-side-lb">ミッション</span>
             {missionClaimableCount(normalizeMissions(missions))>0&&<em>{missionClaimableCount(normalizeMissions(missions))}</em>}

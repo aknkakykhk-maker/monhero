@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 112334ba865a1068
+// generated-sha256: e48b577c66fe5fe9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -52254,6 +52254,8 @@ function HomeScreen({
   onOpenXmasEvent = null,
   // クリスマスのレイドのボス(ジャックと同じ置き方・押すとイベントページの「レイド」タブ)。出すかどうかは 60-app.jsx が決める
   raidXmasVisible = false, raidXmasEventId = '', onOpenRaidXmas = null,
+  // クリスマスのイベントページの入口(台帳 r1126-014)。{ onOpen, preOpen }。null なら出さない(11/28 10:00〜12/31 4:00 に 60-app.jsx が渡す)
+  xmasEntry = null,
   // 助手とおしゃべり(2026-10-14)。公開の印 assistantChat が立つまでは null(ボタンを出さない)
   onOpenAssistantChat = null,
   // MFバトルカードの入口(案A・左の列のいちばん下)。公開の印 cardBattle が立ち、公開のお話を見た人だけ(60-app.jsx が決める)
@@ -52336,6 +52338,10 @@ function HomeScreen({
     return ()=>clearInterval(id);
   },[homeStripCount]);
   const homeStripShow=homeStripCount?homeStripIdx%homeStripCount:0;
+  // クリスマスのイベントの入口(r1126-014)。形は 79-screen-xmas-event.jsx の xmasHomeEntryVariant。
+  //   帯の形('banner'/'card')のときは細バナーの場所に置き、同じ中身の「クリスマスイベント」の細バナーは出さない
+  const xmasEntryVariant=xmasEntry&&typeof xmasHomeEntryVariant==='function'?xmasHomeEntryVariant():null;
+  const xmasEntryInStrip=!!xmasEntry&&(xmasEntryVariant==='banner'||xmasEntryVariant==='card');
   // HOMEの助手コメントを出すか(2026-11-17 あっくん「助手のコメントのオンオフ」)。設定は 21-assistant.jsx の
   // HOME_ASSISTANT_COMMENT_STORE(既定は入)。「切」のときは吹き出しの枠ごと描かず、そのぶん広場が広くなる
   const homeComment=useHomeAssistantComment();
@@ -52365,7 +52371,10 @@ function HomeScreen({
         </header>
         {/* 期間ものの細バナー(2026-11-17 ホーム一新)。イベントと公式杯を、上の帯の下の1本に集約する。
             両方あるときはカルーセルで切り替わる(homeStripShow)。近日公開の予告はバトルカードのカード側へ移した */}
-        {homeStripCount>0&&<div className="mh-home-event-strip" data-home-event-strip>
+        {xmasEntryInStrip&&<div className="mh-home-event-strip" data-home-xmas-entry-strip style={xmasEntryVariant==='banner'?{width:'calc(100% - 78px)'}:undefined}>
+          <HomeXmasEventEntry onOpen={xmasEntry.onOpen} preOpen={!!xmasEntry.preOpen} variant={xmasEntryVariant}/>
+        </div>}
+        {homeStripCount>0&&!(xmasEntryInStrip&&homeEventCampaign&&homeEventCampaign.id==='xmas_2026'&&!homeCardTour)&&<div className="mh-home-event-strip" data-home-event-strip>
           {homeEventCampaign&&homeStripShow===0&&<button type="button" data-home-event-banner className="mh-home-event-banner" onClick={homeEventCampaign.id==='xmas_2026'&&typeof onOpenXmasEvent==='function'?onOpenXmasEvent:openChangelog} aria-label={`${homeEventCampaign.banner.title}${homeEventCampaign.banner.title2||''} ${homeEventCampaign.banner.sub}`}>
             {/* title2 … 題の2行目(2026-11-14「本オープン記念」だけでは何の本オープンか分からないため、題を2行に分けられるようにした) */}
             {/* 2026-11-23 r1119-131 社長「右の時計の手前まで横に伸ばし、行数を減らして縦を詰める」: 1行目に題と期間(sub)、2行目に副題(title2)。
@@ -52382,6 +52391,7 @@ function HomeScreen({
             時刻は当初スタック末尾だったが、同日あっくん指示「時計は右上の角に」で先頭(=右上の角)へ移動 */}
         <div className="mh-home-side-stack">
           {typeof TimeOfDayClock==='function'&&<TimeOfDayClock home/>}
+          {xmasEntry&&xmasEntryVariant==='tile'&&<HomeXmasEventEntry onOpen={xmasEntry.onOpen} preOpen={!!xmasEntry.preOpen} variant="tile"/>}
           <button onClick={openChangelog} className="mh-home-side-btn mh-home-update" aria-label="更新履歴"><span className="mh-home-side-ic"><RefreshCcw size={19}/></span><span className="mh-home-side-lb">更新履歴</span>{hasUnreadChangelog&&<em className="mh-unread-badge" aria-label="未読あり">!</em>}</button>
           <button onClick={openMissions} className={`mh-home-side-btn mh-home-mission${spotClass('reward')}`} aria-label="ミッション"><span className="mh-home-side-ic"><List size={20}/></span><span className="mh-home-side-lb">ミッション</span>
             {missionClaimableCount(normalizeMissions(missions))>0&&<em>{missionClaimableCount(normalizeMissions(missions))}</em>}
@@ -67329,7 +67339,8 @@ const XmasBonusTab = () => (
 //  tab / onTab … いまのタブ(App が持つ。バトルなどから戻ったときも同じタブに帰る)
 //  raid        … RaidJackScreen へそのまま渡す物(ev・ways・onChallenge など)
 //  storyVersion… 読んだ印が変わったら App が増やす(物語タブが読み直す)
-const XmasEventScreen = ({ tab = 'story', onTab, onBack, forced = false, raid = null, storyVersion = 0, fightWays = [], onReadChapter, onFightChapter }) => {
+//  preOpen     … 開幕(11/30 10:00)より前。序章だけ読める。レイド・ボーナスのタブは「11/30 10:00 から」と出す(台帳 r1126-014)
+const XmasEventScreen = ({ tab = 'story', onTab, onBack, forced = false, preOpen = false, raid = null, storyVersion = 0, fightWays = [], onReadChapter, onFightChapter }) => {
   useXmasEventCss();
   const head = (
     <div data-xmas-event-head className="mx-auto w-full max-w-2xl shrink-0">
@@ -67344,17 +67355,107 @@ const XmasEventScreen = ({ tab = 'story', onTab, onBack, forced = false, raid = 
       <ScreenTabs items={XMAS_EVENT_TABS} value={tab} onChange={(id) => onTab && onTab(id)} />
     </div>
   );
-  if (tab === 'raid' && raid) return <RaidJackScreen key="raid-xmas" {...raid} head={head} shellClass="mh-xmas-shell" />;
+  if (tab === 'raid' && raid && !preOpen) return <RaidJackScreen key="raid-xmas" {...raid} head={head} shellClass="mh-xmas-shell" />;
   return (
     <div className={`${SCREEN_SHELL_CLASS} mh-xmas-shell overflow-hidden [@media(orientation:landscape)_and_(max-height:520px)]:overflow-y-auto mh-scroll`} data-xmas-event={tab}>
       {head}
       <div className={`${SCREEN_LIST_CLASS} [@media(orientation:landscape)_and_(max-height:520px)]:flex-none [@media(orientation:landscape)_and_(max-height:520px)]:overflow-visible`}>
         <div className="mx-auto w-full max-w-2xl pb-2">
-          {tab === 'bonus' ? <XmasBonusTab />
+          {preOpen && tab !== 'story' ? (
+            <div data-xmas-event-preopen={tab} className="mh-xmas-frame mt-2 rounded-2xl bg-[#0a1430]/95 px-4 py-6 text-center">
+              <XmasHolly size={40} className="mx-auto mb-2" />
+              <div className="mh-xmas-title text-[18px] font-black">{xmasEventDateLabel(RAID_XMAS_EVENT.startAt)} から</div>
+              <p className="mt-2 text-[12px] font-bold leading-relaxed text-slate-200" style={JA_LABEL_STYLE}>{jaWrap(tab === 'raid' ? 'レイドはイベントの開幕と同時に始まります。いまは「物語」の序章が読めます' : '期間中のボーナスは、イベントの開幕と同時にかかります')}</p>
+            </div>
+          ) : tab === 'bonus' ? <XmasBonusTab />
             : <XmasStoryTab version={storyVersion} allOpen={forced} fightWays={fightWays} onRead={onReadChapter} onFight={onFightChapter} />}
         </div>
       </div>
     </div>
+  );
+};
+
+// ---- HOME の入口(台帳 r1126-014・社長「目立つように作ったほうがいい」) ----
+//  ひと目でクリスマスのイベントと分かる札。ポスターの絵を切り抜き、金の縁・柊・ゆっくり光るきらめきを付ける。
+//  形は3つ(どれにするかは社長が選ぶ。決まったら XMAS_HOME_ENTRY_VARIANT だけ替える):
+//    'banner' … 上の帯の場所に大きな横長の札(右の丸ボタンの列にはかからない幅)
+//    'tile'   … 右の丸ボタンの列のいちばん上(時計の下)に縦長の札
+//    'card'   … 左上に中くらいの札(絵の切り抜き+題)
+//  出すのは 11/28 10:00(序章が開く)から 12/31 4:00 まで。11/30 10:00 までは「序章公開中」と出す
+const XMAS_HOME_ENTRY_VARIANT = 'banner';
+const xmasHomeEntryVariant = () => {
+  const v = typeof window !== 'undefined' && window.__mhXmasEntryVariant;   // 止め絵を撮るときだけ外から替える(保存しない)
+  return v === 'banner' || v === 'tile' || v === 'card' ? v : XMAS_HOME_ENTRY_VARIANT;
+};
+// イベントページを開けるか: 序章が開く時刻から、イベントの終わりまで
+const xmasEventPageOpenAt = (nowMs) => {
+  const at = Date.parse(XMAS_STORY_PROLOGUE_OPEN_AT);
+  return Number.isFinite(nowMs) && nowMs >= at && raidXmasWindowAt(nowMs) !== 'after';
+};
+const XMAS_HOME_ENTRY_CSS = `
+.mh-xmas-entry { position: relative; display: block; overflow: hidden; padding: 0; border: 2px solid #f0c96c; border-radius: 12px; background: #0b1733;
+  box-shadow: 0 0 0 2px #6b1218, 0 0 14px #f0c96c66, 0 4px 10px #000a; color: #fff; text-align: left; touch-action: manipulation; transition: transform .1s, filter .1s; }
+.mh-xmas-entry:active { transform: scale(.96); filter: brightness(1.2); }
+.mh-xmas-entry img.mh-xmas-entry-art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+.mh-xmas-entry::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(105deg, transparent 35%, #fff6 48%, transparent 60%);
+  transform: translateX(-120%); animation: mh-xmas-entry-shine 4.5s ease-in-out 1s infinite; }
+@keyframes mh-xmas-entry-shine { 0%, 70% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
+.mh-xmas-entry-spark { position: absolute; width: 8px; height: 8px; pointer-events: none; background: radial-gradient(circle, #fff 0 18%, #fde68a 30%, transparent 62%);
+  clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%); animation: mh-xmas-entry-twinkle 2.4s ease-in-out infinite; }
+@keyframes mh-xmas-entry-twinkle { 0%, 100% { opacity: .15; transform: scale(.6); } 50% { opacity: 1; transform: scale(1.15); } }
+.mh-xmas-entry-title { font-weight: 900; letter-spacing: .04em; background: linear-gradient(180deg, #fff8dc 0%, #f6d37a 55%, #d39a3e 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 1px 0 #5c1414) drop-shadow(0 0 4px #000c); }
+.mh-xmas-entry-sub { display: inline-block; border-radius: 999px; background: #a51c24; border: 1px solid #f0c96c; color: #fff7d6; font-weight: 900; white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) { .mh-xmas-entry::after, .mh-xmas-entry-spark { animation: none; } }
+`;
+const HomeXmasEventEntry = ({ onOpen, preOpen = false, variant = 'banner' }) => {
+  useEffect(() => {
+    if (typeof document === 'undefined' || document.getElementById('mh-xmas-home-entry-css')) return;
+    const tag = document.createElement('style'); tag.id = 'mh-xmas-home-entry-css'; tag.textContent = XMAS_HOME_ENTRY_CSS; document.head.appendChild(tag);
+  }, []);
+  const sub = preOpen ? '序章公開中・11/30 10:00 開幕' : '開催中 〜12/31 3:59';
+  const sparks = [[8, 18, 0], [62, 12, .8], [88, 64, 1.6], [30, 78, 1.2]];
+  const label = `クリスマスイベント 聖夜の名探偵 ${sub}`;
+  if (variant === 'tile') {
+    return (
+      <button type="button" data-home-xmas-entry="tile" className="mh-xmas-entry" onClick={onOpen} aria-label={label} style={{ width: 64, height: 86 }}>
+        <img className="mh-xmas-entry-art" src={XMAS_EVENT_POSTER_IMG} alt="" style={{ objectPosition: '60% 30%' }} />
+        <span aria-hidden="true" style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, transparent 35%, #0b1733e6 72%)' }} />
+        <XmasHolly size={20} className="absolute -left-0.5 -top-0.5" />
+        {sparks.slice(0, 3).map(([x, y, d], i) => <span key={i} aria-hidden="true" className="mh-xmas-entry-spark" style={{ left: `${x}%`, top: `${y * 0.6}%`, animationDelay: `${d}s` }} />)}
+        <span style={{ position: 'absolute', left: 0, right: 0, bottom: 4, textAlign: 'center', lineHeight: 1.1 }}>
+          <b className="mh-xmas-entry-title block text-[11px]">聖夜の<br />名探偵</b>
+          <span className="mh-xmas-entry-sub mt-0.5 px-1 text-[8px]">{preOpen ? '序章' : '開催中'}</span>
+        </span>
+      </button>
+    );
+  }
+  if (variant === 'card') {
+    return (
+      <button type="button" data-home-xmas-entry="card" className="mh-xmas-entry flex items-stretch" onClick={onOpen} aria-label={label} style={{ width: 228, height: 62, display: 'flex' }}>
+        <span className="relative block h-full shrink-0 overflow-hidden" style={{ width: 92 }}>
+          <img className="mh-xmas-entry-art" src={XMAS_EVENT_POSTER_IMG} alt="" style={{ objectPosition: '62% 30%' }} />
+        </span>
+        <span className="relative flex min-w-0 flex-1 flex-col justify-center px-2" style={{ background: 'linear-gradient(90deg, #6b1218, #2a0b10)' }}>
+          <span className="flex items-center gap-1"><XmasHolly size={16} /><b className="mh-xmas-entry-title text-[16px] leading-none">聖夜の名探偵</b></span>
+          <span className="mh-xmas-entry-sub mt-1 w-max px-1.5 py-px text-[10px]">{sub}</span>
+        </span>
+        {sparks.slice(0, 3).map(([x, y, d], i) => <span key={i} aria-hidden="true" className="mh-xmas-entry-spark" style={{ left: `${x}%`, top: `${y}%`, animationDelay: `${d}s` }} />)}
+      </button>
+    );
+  }
+  return (
+    <button type="button" data-home-xmas-entry="banner" className="mh-xmas-entry w-full" onClick={onOpen} aria-label={label} style={{ height: 68 }}>
+      <img className="mh-xmas-entry-art" src={XMAS_EVENT_POSTER_IMG} alt="" style={{ objectPosition: '70% 28%' }} />
+      <span aria-hidden="true" style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, #0b1733f2 0%, #0b1733cc 42%, transparent 72%)' }} />
+      <XmasHolly size={24} className="absolute -left-1 -top-1" />
+      {sparks.map(([x, y, d], i) => <span key={i} aria-hidden="true" className="mh-xmas-entry-spark" style={{ left: `${x}%`, top: `${y}%`, animationDelay: `${d}s` }} />)}
+      <span style={{ position: 'absolute', left: 14, top: 7, right: 8 }}>
+        <span className="block text-[10px] font-black text-amber-100" style={{ textShadow: '0 1px 2px #000' }}>クリスマスイベント</span>
+        <b className="mh-xmas-entry-title block text-[22px] leading-tight">聖夜の名探偵</b>
+        <span className="mh-xmas-entry-sub px-2 py-px text-[10px]">{sub}</span>
+      </span>
+    </button>
   );
 };
 
@@ -146251,7 +146352,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // クリスマスのイベントページを開く(入口: HOME のイベントの札・HOME のボス(⑤で作る)・レイドの確認画面)。開始前はデバッグの強制表示のときだけ
   //   tab: 開くタブ。イベントの札は「物語」、ボスとレイドの確認画面は「レイド」
   const openRaidXmas = async (force = false, tab = 'raid') => {
-    if (!RELEASE_FLAGS.raidXmas && !raidJackDebugForce && force !== true) return;
+    // 11/28 10:00(序章が開く)からはページを開ける。レイド・ボーナスのタブは 11/30 10:00 まで「から」と出す(台帳 r1126-014)
+    if (!RELEASE_FLAGS.raidXmas && !raidJackDebugForce && force !== true && !xmasEventPageOpenAt(Date.now())) return;
     raidEvRef.current = 'xmas'; setRaidEv('xmas');
     raidJackReturnTierRef.current = 0;
     setXmasEventTab(XMAS_EVENT_TABS.some((t) => t.id === tab) ? tab : 'raid');
@@ -148089,6 +148191,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             raidJackEventId={raidJackEventId} onOpenRaidJack={openRaidJack}
             /* クリスマスのイベントの札(台帳 r1126-006)。開始時刻(RELEASE_FLAGS.raidXmas)からだけ、札を押すとイベントページの「物語」を開く */
             onOpenXmasEvent={RELEASE_FLAGS.raidXmas===true?()=>{void openRaidXmas(false,'story');}:null}
+            /* クリスマスのイベントページの目立つ入口(台帳 r1126-014)。序章が開く 11/28 10:00 から、11/30 10:00 までは「序章公開中」 */
+            xmasEntry={xmasEventPageOpenAt(Date.now())||(raidJackDebugForce&&raidEv==='xmas')?{onOpen:()=>{void openRaidXmas(true,'story');},preOpen:RELEASE_FLAGS.raidXmas!==true}:null}
             /* クリスマスのレイドのボス(台帳 r1126-006)。期間中か、デバッグの強制表示でクリスマスを開いたあと。押すとイベントページの「レイド」タブ */
             raidXmasVisible={(RELEASE_FLAGS.raidXmas===true&&raidXmasWindowAt(Date.now())==='open')||(raidJackDebugForce&&raidEv==='xmas')}
             raidXmasEventId={raidJackDebugForce&&!RELEASE_FLAGS.raidXmas?RAID_XMAS_EVENT.debugId:RAID_XMAS_EVENT.id} onOpenRaidXmas={()=>{void openRaidXmas(false,'raid');}}
@@ -150499,7 +150603,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </div>
         )}
 
-        {gameState==='RAID_JACK'&&raidXmasOpen&&(<XmasEventScreen tab={xmasEventTab} onTab={setXmasEventTab} forced={raidJackDebugForce&&!RELEASE_FLAGS.raidXmas}
+        {gameState==='RAID_JACK'&&raidXmasOpen&&(<XmasEventScreen tab={xmasEventTab} onTab={setXmasEventTab} forced={raidJackDebugForce&&!RELEASE_FLAGS.raidXmas} preOpen={!RELEASE_FLAGS.raidXmas&&!raidJackDebugForce}
           onBack={()=>{raidJackReturnTierRef.current=0;setGameState(raidJackDebugForce&&!RELEASE_FLAGS.raidXmas?'RAID_JACK_DEBUG':'HOME');}}
           storyVersion={xmasStoryVersion} fightWays={xmasStoryFightWays} onReadChapter={openXmasStoryChapter} onFightChapter={fightXmasStoryChapter}
           /* レイドのタブの中身(今までのクリスマスのレイド画面そのまま) */

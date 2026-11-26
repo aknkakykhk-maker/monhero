@@ -18579,7 +18579,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // クリスマスのイベントページを開く(入口: HOME のイベントの札・HOME のボス(⑤で作る)・レイドの確認画面)。開始前はデバッグの強制表示のときだけ
   //   tab: 開くタブ。イベントの札は「物語」、ボスとレイドの確認画面は「レイド」
   const openRaidXmas = async (force = false, tab = 'raid') => {
-    if (!RELEASE_FLAGS.raidXmas && !raidJackDebugForce && force !== true) return;
+    // 11/28 10:00(序章が開く)からはページを開ける。レイド・ボーナスのタブは 11/30 10:00 まで「から」と出す(台帳 r1126-014)
+    if (!RELEASE_FLAGS.raidXmas && !raidJackDebugForce && force !== true && !xmasEventPageOpenAt(Date.now())) return;
     raidEvRef.current = 'xmas'; setRaidEv('xmas');
     raidJackReturnTierRef.current = 0;
     setXmasEventTab(XMAS_EVENT_TABS.some((t) => t.id === tab) ? tab : 'raid');
@@ -20417,6 +20418,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             raidJackEventId={raidJackEventId} onOpenRaidJack={openRaidJack}
             /* クリスマスのイベントの札(台帳 r1126-006)。開始時刻(RELEASE_FLAGS.raidXmas)からだけ、札を押すとイベントページの「物語」を開く */
             onOpenXmasEvent={RELEASE_FLAGS.raidXmas===true?()=>{void openRaidXmas(false,'story');}:null}
+            /* クリスマスのイベントページの目立つ入口(台帳 r1126-014)。序章が開く 11/28 10:00 から、11/30 10:00 までは「序章公開中」 */
+            xmasEntry={xmasEventPageOpenAt(Date.now())||(raidJackDebugForce&&raidEv==='xmas')?{onOpen:()=>{void openRaidXmas(true,'story');},preOpen:RELEASE_FLAGS.raidXmas!==true}:null}
             /* クリスマスのレイドのボス(台帳 r1126-006)。期間中か、デバッグの強制表示でクリスマスを開いたあと。押すとイベントページの「レイド」タブ */
             raidXmasVisible={(RELEASE_FLAGS.raidXmas===true&&raidXmasWindowAt(Date.now())==='open')||(raidJackDebugForce&&raidEv==='xmas')}
             raidXmasEventId={raidJackDebugForce&&!RELEASE_FLAGS.raidXmas?RAID_XMAS_EVENT.debugId:RAID_XMAS_EVENT.id} onOpenRaidXmas={()=>{void openRaidXmas(false,'raid');}}
@@ -22827,7 +22830,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </div>
         )}
 
-        {gameState==='RAID_JACK'&&raidXmasOpen&&(<XmasEventScreen tab={xmasEventTab} onTab={setXmasEventTab} forced={raidJackDebugForce&&!RELEASE_FLAGS.raidXmas}
+        {gameState==='RAID_JACK'&&raidXmasOpen&&(<XmasEventScreen tab={xmasEventTab} onTab={setXmasEventTab} forced={raidJackDebugForce&&!RELEASE_FLAGS.raidXmas} preOpen={!RELEASE_FLAGS.raidXmas&&!raidJackDebugForce}
           onBack={()=>{raidJackReturnTierRef.current=0;setGameState(raidJackDebugForce&&!RELEASE_FLAGS.raidXmas?'RAID_JACK_DEBUG':'HOME');}}
           storyVersion={xmasStoryVersion} fightWays={xmasStoryFightWays} onReadChapter={openXmasStoryChapter} onFightChapter={fightXmasStoryChapter}
           /* レイドのタブの中身(今までのクリスマスのレイド画面そのまま) */
