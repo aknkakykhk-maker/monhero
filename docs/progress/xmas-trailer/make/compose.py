@@ -4,7 +4,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageEnhance
 
 REPO, S, OUT = sys.argv[1], sys.argv[2], sys.argv[3]
-W, H, FPS, DUR = 720, 1280, 30, 38.0
+W, H, FPS, DUR = 720, 1280, 30, 43.0
 R = REPO + '/tools/art-sources/promo/xmas-2026/received/'
 IMG = REPO + '/monster-hero/images/'
 def rgba(p): return Image.open(p).convert('RGBA')
@@ -42,7 +42,7 @@ def text_at(base, k, t, t0, t1, y, fade=0.5, rise=14):
     im = TX[k]
     paste_a(base, im, ((W - im.width) / 2, y + (1 - ease((t - t0) / fade)) * rise), a)
 
-TX = {k: txt(k) for k in ['s1', 'band', 's2', 'card', 's3', 's3b', 's4', 's5', 's6a', 's6b', 's7']}
+TX = {k: txt(k) for k in ['s1', 'band', 's2', 'card', 's3', 's3b', 's4', 's5', 's6a', 's6b', 's7', 'v1', 'v2', 'stamp']}
 
 # ── 素材 ──
 home = rgb(R + 'home-background-xmas_v2.png')
@@ -211,7 +211,46 @@ def sc5(t):  # 19-24.4 空になった箱
     img = cover(img.convert('RGB'), lerp(1.0, 1.13, ease(t / 5.4)), W / 2, 760)
     img = ImageEnhance.Brightness(img).enhance(fl).convert('RGBA')
     text_at(img, 's4', t, 1.0, 5.0, 180); return img
-def sc6(t):  # 24-28.8 窓の外の黒い影
+# ── 仲間が、ひとり、またひとり(顔の無い同じ影を 3・4・3 に並べる。台本の並びとは結び付けない) ──
+CW, CH = 140, 180
+def make_card(gray=False):
+    c = Image.new('RGBA', (CW, CH), (0, 0, 0, 0))
+    bg = grad_poly((CW, CH), [(0, 0), (CW, 0), (CW, CH), (0, CH)], (44, 58, 110), (16, 22, 50), 0, CH)
+    m = Image.new('L', (CW, CH), 0); ImageDraw.Draw(m).rounded_rectangle((0, 0, CW - 1, CH - 1), 12, fill=255)
+    c.paste(bg, (0, 0), m)
+    sil = Image.new('L', (CW, CH), 0); d = ImageDraw.Draw(sil)
+    d.ellipse((CW / 2 - 30, 38, CW / 2 + 30, 104), fill=255); d.ellipse((CW / 2 - 58, 108, CW / 2 + 58, 260), fill=255)
+    sil = Image.fromarray(np.minimum(np.array(sil), np.array(m)))
+    c.paste(Image.new('RGBA', (CW, CH), (6, 8, 20, 255)), (0, 0), sil)
+    ImageDraw.Draw(c).rounded_rectangle((1, 1, CW - 2, CH - 2), 12, outline=(214, 178, 90, 255), width=3)
+    if gray:
+        a = np.asarray(c).astype(np.float32); g = a[:, :, :3].mean(axis=2, keepdims=True) * 0.45
+        a[:, :, :3] = g; c = Image.fromarray(a.astype(np.uint8), 'RGBA')
+    return c
+CARD, CARD_G = make_card(), make_card(True)
+SLOTS = []
+for r, (n, y) in enumerate([(3, 330), (4, 530), (3, 730)]):
+    x0 = (W - (n * CW + (n - 1) * 18)) / 2
+    for i in range(n): SLOTS.append((x0 + i * (CW + 18), y))
+STAMPS = [(3, 1.2), (2, 2.5), (8, 3.6)]  # (枠の番号, 押す時刻)
+def sc5b(t):  # 24-29.4 仲間が、ひとり、またひとり
+    img = Image.new('RGBA', (W, H), (0, 0, 0, 255)); img.alpha_composite(box_bg.convert('RGBA').point(lambda v: int(v * 0.6)))
+    shake = 0
+    for k, (x, y) in enumerate(SLOTS):
+        st = dict(STAMPS).get(k)
+        g = 0 if st is None else ease((t - (st - 0.35)) / 0.3)
+        img.alpha_composite(CARD, (int(x), int(y)))
+        if g > 0: paste_a(img, CARD_G, (x, y), g)
+        if st is not None and t >= st:
+            p = min(1, (t - st) / 0.16); sc = lerp(1.9, 1.0, p)
+            sp = TX['stamp'].resize((int(150 * sc), int(75 * sc)), Image.BICUBIC).rotate(-14, expand=True, resample=Image.BICUBIC)
+            paste_a(img, sp, (x + CW / 2 - sp.width / 2, y + CH * 0.62 - sp.height / 2), min(1, p * 1.4))
+            if t - st < 0.22: shake = max(shake, 7 * (1 - (t - st) / 0.22))
+    snow(img, t + 24, 0.3, wind=10)
+    img = cover(img.convert('RGB'), lerp(1.0, 1.06, ease(t / 5.4)), W / 2 + shake * math.sin(t * 90), 640).convert('RGBA')
+    text_at(img, 'v1', t, 1.4, 3.1, 990, fade=0.4); text_at(img, 'v2', t, 3.1, 5.4, 990, fade=0.4)
+    return img
+def sc6(t):  # 29-33.8 窓の外の黒い影
     x0, y0, x1, y1 = WB
     img = Image.new('RGBA', (W, H), (0, 0, 0, 255))
     view = shadow_view.resize((x1 - x0 + 120, int((x1 - x0 + 120) * shadow_view.height / shadow_view.width)), Image.BICUBIC)
@@ -235,7 +274,7 @@ def sc7(t):  # 28.6-33.6 名探偵は、だれだ。
     paste_a(img, det_l, (lerp(-360, -20, pl) + t * 6, 470), pl)
     paste_a(img, det_r, (lerp(W + 40, W - det_r.width + 20, pl) - t * 6, 470), pl)
     shade = Image.new('RGBA', (W, H), (0, 0, 0, 0)); a = np.zeros((H, W), np.uint8); a[:, :] = (np.clip((np.arange(H)[:, None] - 0) / 1, 0, 1) * 0).astype(np.uint8)
-    snow(img, t + 28, 0.7, wind=60)
+    snow(img, t + 33, 0.7, wind=60)
     for k, t0, y in [('s6a', 1.2, 110), ('s6b', 2.2, 260)]:
         if t >= t0:
             p = ease((t - t0) / 0.45); im = TX[k]
@@ -245,14 +284,14 @@ def sc7(t):  # 28.6-33.6 名探偵は、だれだ。
 def sc8(t):  # 33.4-38 題字と開幕
     img = cover(title_bg, lerp(1.12, 1.02, ease(t / 4.6)), title_bg.width / 2, title_bg.height * 0.45)
     img = ImageEnhance.Brightness(img.filter(ImageFilter.GaussianBlur(6))).enhance(0.42).convert('RGBA')
-    snow(img, t + 33, 1.0)
+    snow(img, t + 38, 1.0)
     p = ease(t / 0.9); s = lerp(1.15, 1.0, p)
     lg = title_logo.resize((int(title_logo.width * s), int(title_logo.height * s)), Image.BICUBIC)
     paste_a(img, lg, ((W - lg.width) / 2, 380 - (lg.height - title_logo.height) / 2), p)
     text_at(img, 's7', t, 1.3, 9.0, 720, fade=0.6)
     return img
 
-SCENES = [(0.0, 5.4, sc1), (5.0, 9.4, sc2), (9.0, 14.4, sc3), (14.0, 19.4, sc4), (19.0, 24.4, sc5), (24.0, 28.8, sc6), (28.6, 33.8, sc7), (33.4, 38.0, sc8)]
+SCENES = [(0.0, 5.4, sc1), (5.0, 9.4, sc2), (9.0, 14.4, sc3), (14.0, 19.4, sc4), (19.0, 24.4, sc5), (24.0, 29.4, sc5b), (29.0, 33.8, sc6), (33.6, 38.8, sc7), (38.4, 43.0, sc8)]
 
 def frame(t):
     act = [(a, b, f) for a, b, f in SCENES if a <= t < b]
@@ -264,7 +303,7 @@ def frame(t):
             x = ease((t - a) / (act[i - 1][1] - a)); out = out * (1 - x) + im * x
     out = out * VIG
     fade = min(1, t / 0.8, (DUR - t) / 0.8)
-    if 28.6 <= t < 28.75: out = out + 255 * (1 - (t - 28.6) / 0.15) * 0.7  # 曲の山で光る
+    if 33.6 <= t < 33.75: out = out + 255 * (1 - (t - 33.6) / 0.15) * 0.7  # 曲の山で光る
     out = out * max(0, fade)
     return np.clip(out, 0, 255).astype(np.uint8)
 
