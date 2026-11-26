@@ -20417,6 +20417,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             raidJackEventId={raidJackEventId} onOpenRaidJack={openRaidJack}
             /* クリスマスのイベントの札(台帳 r1126-006)。開始時刻(RELEASE_FLAGS.raidXmas)からだけ、札を押すとイベントページの「物語」を開く */
             onOpenXmasEvent={RELEASE_FLAGS.raidXmas===true?()=>{void openRaidXmas(false,'story');}:null}
+            /* クリスマスのレイドのボス(台帳 r1126-006)。期間中か、デバッグの強制表示でクリスマスを開いたあと。押すとイベントページの「レイド」タブ */
+            raidXmasVisible={(RELEASE_FLAGS.raidXmas===true&&raidXmasWindowAt(Date.now())==='open')||(raidJackDebugForce&&raidEv==='xmas')}
+            raidXmasEventId={raidJackDebugForce&&!RELEASE_FLAGS.raidXmas?RAID_XMAS_EVENT.debugId:RAID_XMAS_EVENT.id} onOpenRaidXmas={()=>{void openRaidXmas(false,'raid');}}
             onOpenAssistantChat={RELEASE_FLAGS.assistantChat===true?()=>setAssistantChatOpen(true):null}
             cardBattleVisible={(EVENT_REPLAY_RELEASE_FLAGS.cardBattle&&cardBattleIntroSeenFlag)||cardBattleDebugHome} onOpenCardBattle={()=>{setCardOrigin('home');setGameState('CARD_TOP');}}
             /* 公開前の予告(社長 2026-10-25)。ふつうのプレイヤーに「近日公開」の札を出し、押すと予告の小窓。公開の印が立てば出なくなり、上のふつうの入口に替わる */

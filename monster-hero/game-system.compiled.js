@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2fd6ab3abd020d62
+// source-sha256: d0792971ee9e583c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -86926,8 +86926,10 @@ const homeRaidSayObstacles = wrap => {
 };
 const HomeRaidJack = ({
   eventId,
-  onOpen
+  onOpen,
+  ev = RAID_EVENT_JACK
 }) => {
+  const isJack = ev.key !== 'xmas';
   const [totals, setTotalsState] = React.useState(() => raidJackCachedTotals(eventId));
   const setTotals = t => {
     raidJackRememberTotals(eventId, t);
@@ -86945,10 +86947,10 @@ const HomeRaidJack = ({
   React.useEffect(() => {
     let alive = true;
     const flush = async () => {
-      if (eventId !== RAID_JACK_EVENT.id) return;
+      if (eventId !== ev.id) return;
       try {
         const id = await ensureBreederId();
-        await raidJackFlushStoredPending(id, eventId);
+        await ev.flushPending(id);
       } catch (e) {}
     };
     const load = async () => {
@@ -87068,15 +87070,15 @@ const HomeRaidJack = ({
     };
   }, []);
   if (totals === undefined) return null;
-  const tiers = RAID_JACK_A_TIERS;
+  const tiers = ev.aTiers;
   const totalOf = i => totals && totals.a && totals.a[i + 1] ? totals.a[i + 1].total : 0;
-  const allDone = raidJackBossDown(totals);
+  const allDone = ev.bossDown(totals);
   const currentIndex = allDone ? -1 : totals ? tiers.findIndex((t, i) => totalOf(i) < t.hp) : 0;
   const tier = tiers[Math.max(0, allDone ? tiers.length - 1 : currentIndex)];
   const left = allDone ? 0 : Math.max(0, tier.hp - totalOf(Math.max(0, currentIndex)));
   const rate = tier.hp > 0 ? Math.max(0, Math.min(1, left / tier.hp)) : 0;
-  const speechLines = raidJackHomeLines(tier.id, rate, allDone);
-  const speech = speechLines[lineNo % speechLines.length];
+  const speechLines = isJack ? raidJackHomeLines(tier.id, rate, allDone) : [];
+  const speech = speechLines.length > 0 ? speechLines[lineNo % speechLines.length] : '';
   const speechAccent = allDone ? '#fdba74' : '#fb923c';
   const tierNo = Number(String(tier.id).slice(1)) || 0;
   const shadowEl = React.createElement("span", {
@@ -87116,7 +87118,7 @@ const HomeRaidJack = ({
         fontSize: '9px'
       } : {})
     }
-  }, allDone ? React.createElement(React.Fragment, null, RAID_JACK_PUMPKIN.name, "が", React.createElement("wbr", null), "遊びに来た！") : React.createElement(React.Fragment, null, tier.name, "が", React.createElement("wbr", null), "あらわれた！")), allDone ? React.createElement("span", {
+  }, allDone ? isJack ? React.createElement(React.Fragment, null, RAID_JACK_PUMPKIN.name, "が", React.createElement("wbr", null), "遊びに来た！") : React.createElement(React.Fragment, null, ev.afterBoss.name, "が", React.createElement("wbr", null), ev.afterBossBadge) : React.createElement(React.Fragment, null, tier.name, "が", React.createElement("wbr", null), "あらわれた！")), allDone && isJack ? React.createElement("span", {
     "data-home-raid-pumpkin-note": true,
     style: {
       display: 'block',
@@ -87165,7 +87167,7 @@ const HomeRaidJack = ({
       opacity: .85
     }
   }, "共有HP ", left.toLocaleString())));
-  return React.createElement(React.Fragment, null, !allDone && React.createElement("div", {
+  return React.createElement(React.Fragment, null, !allDone && ev.aura && React.createElement("div", {
     "aria-hidden": "true",
     "data-home-raid-aura-wrap": true,
     style: HOME_RAID_JACK_AURA_WRAP_STYLE
@@ -87192,7 +87194,7 @@ const HomeRaidJack = ({
     ref: wrapRef,
     "data-home-raid-jack-wrap": true,
     style: HOME_RAID_JACK_WRAP_STYLE
-  }, React.createElement("button", {
+  }, speech && React.createElement("button", {
     type: "button",
     ref: sayRef,
     key: `say${lineNo}`,
@@ -87283,7 +87285,7 @@ const HomeRaidJack = ({
     type: "button",
     "data-home-raid-jack": true,
     onClick: onOpen,
-    "aria-label": allDone ? `${RAID_JACK_PUMPKIN.name}が遊びに来た！タップでレイド画面を開く` : `${tier.name}があらわれた！タップでレイド画面を開く`,
+    "aria-label": allDone ? `${isJack ? RAID_JACK_PUMPKIN.name : ev.afterBoss.name}${isJack ? 'が遊びに来た！' : 'がまだ暴れている！'}タップでレイド画面を開く` : `${tier.name}があらわれた！タップでレイド画面を開く`,
     style: HOME_RAID_JACK_BUTTON_STYLE
   }, React.createElement("span", {
     "data-jack-aura": allDone ? undefined : Number(String(tier.id).slice(1)) || undefined,
@@ -87294,7 +87296,7 @@ const HomeRaidJack = ({
       width: '100%',
       aspectRatio: '1024 / 640'
     }
-  }, allDone ? React.createElement("img", {
+  }, allDone && isJack ? React.createElement("img", {
     className: "mh-home-raid-jack-img",
     src: PUMPKIN_ICON_IMG,
     alt: "",
@@ -87305,6 +87307,22 @@ const HomeRaidJack = ({
       bottom: 0,
       width: `${RAID_JACK_PUMPKIN_ART_SCALE * 100}%`,
       height: 'auto',
+      filter: 'drop-shadow(0 6px 10px #000a)',
+      pointerEvents: 'none'
+    }
+  }) : !isJack ? React.createElement("img", {
+    className: "mh-home-raid-jack-img",
+    "data-home-raid-boss": ev.key,
+    src: allDone ? ev.afterBossImg() : ev.bossImg(),
+    alt: "",
+    draggable: false,
+    style: {
+      position: 'absolute',
+      left: '50%',
+      bottom: 0,
+      height: '135%',
+      width: 'auto',
+      transform: 'translateX(-50%)',
       filter: 'drop-shadow(0 6px 10px #000a)',
       pointerEvents: 'none'
     }
@@ -87377,6 +87395,9 @@ function HomeScreen({
   raidJackEventId,
   onOpenRaidJack,
   onOpenXmasEvent = null,
+  raidXmasVisible = false,
+  raidXmasEventId = '',
+  onOpenRaidXmas = null,
   onOpenAssistantChat = null,
   cardBattleVisible = false,
   onOpenCardBattle = null,
@@ -87495,7 +87516,12 @@ function HomeScreen({
     masuColors: getMasuColors(masu),
     index: index,
     count: homePastureMasumons.length
-  }))), raidJackVisible && React.createElement(HomeRaidJack, {
+  }))), raidXmasVisible && typeof onOpenRaidXmas === 'function' ? React.createElement(HomeRaidJack, {
+    key: "raid-xmas",
+    ev: RAID_EVENT_XMAS,
+    eventId: raidXmasEventId,
+    onOpen: onOpenRaidXmas
+  }) : raidJackVisible && React.createElement(HomeRaidJack, {
     eventId: raidJackEventId,
     onOpen: onOpenRaidJack
   }), React.createElement("header", {
@@ -260682,6 +260708,11 @@ function MonsterHeroGame() {
       onOpenXmasEvent: RELEASE_FLAGS.raidXmas === true ? () => {
         void openRaidXmas(false, 'story');
       } : null,
+      raidXmasVisible: RELEASE_FLAGS.raidXmas === true && raidXmasWindowAt(Date.now()) === 'open' || raidJackDebugForce && raidEv === 'xmas',
+      raidXmasEventId: raidJackDebugForce && !RELEASE_FLAGS.raidXmas ? RAID_XMAS_EVENT.debugId : RAID_XMAS_EVENT.id,
+      onOpenRaidXmas: () => {
+        void openRaidXmas(false, 'raid');
+      },
       onOpenAssistantChat: RELEASE_FLAGS.assistantChat === true ? () => setAssistantChatOpen(true) : null,
       cardBattleVisible: EVENT_REPLAY_RELEASE_FLAGS.cardBattle && cardBattleIntroSeenFlag || cardBattleDebugHome,
       onOpenCardBattle: () => {

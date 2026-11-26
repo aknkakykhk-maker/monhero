@@ -171,7 +171,10 @@ const homeRaidSayObstacles = (wrap) => {
   });
   return out;
 };
-const HomeRaidJack = ({ eventId, onOpen }) => {
+// ev: どのレイドか(36-raid-xmas-api.jsx の RAID_EVENT_JACK / RAID_EVENT_XMAS)。クリスマスはジャックと同じ置き方・同じ開き方(台帳 r1126-006)。
+//   ジャックだけの物(ひとことの台詞・両腕ポーズ・炎のオーラ・ぱんぷきん)はクリスマスでは出さない(台詞などは決まったら ev に足す)
+const HomeRaidJack = ({ eventId, onOpen, ev = RAID_EVENT_JACK }) => {
+  const isJack = ev.key !== 'xmas';
   // 前回取れた段階の合計から描き始める(36-raid-jack-api.jsx の raidJackTotalsCache)。読み込みが終わるまでの間を「男爵・ライフ満タン」にしない
   const [totals, setTotalsState] = React.useState(() => raidJackCachedTotals(eventId));
   const setTotals = (t) => { raidJackRememberTotals(eventId, t); setTotalsState((prev) => (t || prev === undefined ? t : prev)); };
@@ -185,7 +188,7 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
   React.useEffect(() => {
     let alive = true;
     // 通信が弱くて送れなかった与ダメージが端末に残っていれば、ここで送り直す(空なら通信しない)。本番のイベントだけ
-    const flush = async () => { if (eventId !== RAID_JACK_EVENT.id) return; try { const id = await ensureBreederId(); await raidJackFlushStoredPending(id, eventId); } catch (e) { /* 次に開いたときに送り直す */ } };
+    const flush = async () => { if (eventId !== ev.id) return; try { const id = await ensureBreederId(); await ev.flushPending(id); } catch (e) { /* 次に開いたときに送り直す */ } };
     const load = async () => { await flush(); const t = await sbFetchRaidJackTierTotals(eventId); if (alive) setTotals(t); };
     load();
     const id = setInterval(load, 60000);
@@ -249,17 +252,17 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
   // 初めて読み込み中(まだ一度も合計が取れていない)あいだは、段階もライフも分からないので描かない
   if (totals === undefined) return null;
   // いま挑める段階 = まだ共有HPが残っている最初の段階。全部倒していたら「討伐おめでとう」
-  const tiers = RAID_JACK_A_TIERS;
+  const tiers = ev.aTiers;
   const totalOf = (i) => (totals && totals.a && totals.a[i + 1] ? totals.a[i + 1].total : 0);
   // 大王が倒されたか(段階5の合計がライフ以上)で決める。倒されたあとは、小さなぱんぷきんが遊びに来る
-  const allDone = raidJackBossDown(totals);
+  const allDone = ev.bossDown(totals);
   const currentIndex = allDone ? -1 : (totals ? tiers.findIndex((t, i) => totalOf(i) < t.hp) : 0);
   const tier = tiers[Math.max(0, allDone ? tiers.length - 1 : currentIndex)];
   const left = allDone ? 0 : Math.max(0, tier.hp - totalOf(Math.max(0, currentIndex)));
   const rate = tier.hp > 0 ? Math.max(0, Math.min(1, left / tier.hp)) : 0;
   // いま話せるセリフ: 段階(爵位)の話し方 × 残りライフの場面。大王を倒したあとはぱんぷきん(場面なし)
-  const speechLines = raidJackHomeLines(tier.id, rate, allDone);
-  const speech = speechLines[lineNo % speechLines.length];
+  const speechLines = isJack ? raidJackHomeLines(tier.id, rate, allDone) : [];
+  const speech = speechLines.length > 0 ? speechLines[lineNo % speechLines.length] : '';
   const speechAccent = allDone ? '#fdba74' : '#fb923c';
   const tierNo = Number(String(tier.id).slice(1)) || 0;
   // 影と段階・HPの札。本体と、炎の層の見えない枠(高さをそろえるため)の両方で使う
@@ -269,8 +272,8 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
         {/* 「〜が」のあとだけで折る(2026-10-20 窓口「ジャック大王があらわれ／た！」と言葉の途中で折れていた)。
             keep-all で字の間では折らず、<wbr/> の所だけで折る。それでも入らないときだけ anywhere で折る。
             幅360未満の画面は字を9pxにして1行に収める(2026-10-24 窓口「幅320で『ジャック大王／あらわれた』と折れている」) */}
-        <span data-home-raid-jack-title style={{ display:'block', ...JA_WRAP_STYLE, ...(typeof window !== 'undefined' && window.innerWidth < HOME_RAID_SAY_NARROW_VW ? { fontSize:'9px' } : {}) }}>{allDone ? <>{RAID_JACK_PUMPKIN.name}が<wbr/>遊びに来た！</> : <>{tier.name}が<wbr/>あらわれた！</>}</span>
-        {allDone ? <span data-home-raid-pumpkin-note style={{ display:'block', marginTop:'2px', fontSize:'8px', opacity:.9, ...JA_LABEL_STYLE }}>{jaWrap('ジャックを倒した！遊んでダメージを競おう')}</span> : <>
+        <span data-home-raid-jack-title style={{ display:'block', ...JA_WRAP_STYLE, ...(typeof window !== 'undefined' && window.innerWidth < HOME_RAID_SAY_NARROW_VW ? { fontSize:'9px' } : {}) }}>{allDone ? (isJack ? <>{RAID_JACK_PUMPKIN.name}が<wbr/>遊びに来た！</> : <>{ev.afterBoss.name}が<wbr/>{ev.afterBossBadge}</>) : <>{tier.name}が<wbr/>あらわれた！</>}</span>
+        {allDone && isJack ? <span data-home-raid-pumpkin-note style={{ display:'block', marginTop:'2px', fontSize:'8px', opacity:.9, ...JA_LABEL_STYLE }}>{jaWrap('ジャックを倒した！遊んでダメージを競おう')}</span> : <>
         <span style={{ display:'block', height:'7px', marginTop:'3px', borderRadius:'999px', overflow:'hidden', background:'#000a', border:'1px solid #fff3' }} role="progressbar" aria-valuemin={0} aria-valuemax={tier.hp} aria-valuenow={left}>
           <span style={{ display:'block', height:'100%', width:`${rate * 100}%`, background:'#f97316' }} />
         </span>
@@ -284,7 +287,7 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
     <>
     {/* 炎(オーラ)の層。施設の札・みゅあの吹き出し・上の帯より後ろ(HOME_RAID_JACK_AURA_WRAP_STYLE)。
         HOMEのジャックは小さいので、オーラは絵より大きな枠へ広げて描く(段階が上がるほど大きく) */}
-    {!allDone && <div aria-hidden="true" data-home-raid-aura-wrap style={HOME_RAID_JACK_AURA_WRAP_STYLE}>
+    {!allDone && ev.aura && <div aria-hidden="true" data-home-raid-aura-wrap style={HOME_RAID_JACK_AURA_WRAP_STYLE}>
       <div style={HOME_RAID_JACK_AURA_BOX_STYLE}>
         <span data-jack-aura={tierNo || undefined} style={{ position:'relative', display:'block', width:'100%', aspectRatio:'1024 / 640' }}>
           <span style={{ position:'absolute', pointerEvents:'none', visibility:'visible', inset:`${-20 - tierNo * 8}% ${-10 - tierNo * 5}% -6%` }}>
@@ -297,7 +300,7 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
     </div>}
     <div ref={wrapRef} data-home-raid-jack-wrap style={HOME_RAID_JACK_WRAP_STYLE}>
     {/* ひとこと。ジャックの上に出る吹き出し。押すと次のセリフへ(ジャック本体を押すとレイド画面) */}
-    <button type="button" ref={sayRef} key={`say${lineNo}`} data-home-raid-say data-story-pop="1" data-say-side={sayPlace ? sayPlace.side : 'top'} data-say-hidden={sayPlace && sayPlace.hidden ? 'true' : undefined} aria-hidden={sayPlace && sayPlace.hidden ? 'true' : undefined} onClick={() => setLineNo((n) => n + 1)} aria-label="ジャックのひとこと(押すと次のセリフ)"
+    {speech && <button type="button" ref={sayRef} key={`say${lineNo}`} data-home-raid-say data-story-pop="1" data-say-side={sayPlace ? sayPlace.side : 'top'} data-say-hidden={sayPlace && sayPlace.hidden ? 'true' : undefined} aria-hidden={sayPlace && sayPlace.hidden ? 'true' : undefined} onClick={() => setLineNo((n) => n + 1)} aria-label="ジャックのひとこと(押すと次のセリフ)"
       style={{ position:'absolute', ...(sayPlace ? { left:sayPlace.left, top:sayPlace.top, width:sayPlace.width } : { left:'50%', bottom:'100%', marginLeft:-92, marginBottom:'4px', width:184 }),
         padding:'6px 10px', borderRadius:'14px', boxSizing:'border-box',
         border:`2px solid ${speechAccent}`, background:'#1c0a02ee', color:'#ffedd5', fontSize:`${homeRaidSayFont(sayPlace ? sayPlace.width : 184)}px`, fontWeight:900, lineHeight:1.45, textAlign:'left', cursor:'pointer',
@@ -310,16 +313,18 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
       <span aria-hidden="true" data-say-next-row style={{ display:sayInline ? 'none' : 'block', textAlign:'right', fontSize:'8px', opacity:.7 }}>▶ 次</span>
       {/* しっぽはジャックのほうへ向ける(上に置いたら下向き、右に置いたら左向き、左に置いたら右向き) */}
       {(!sayPlace || sayPlace.side === 'top') && <span aria-hidden="true" style={{ position:'absolute', left:sayPlace ? sayPlace.tail : '50%', bottom:-9, marginLeft:-8, width:0, height:0, borderLeft:'8px solid transparent', borderRight:'8px solid transparent', borderTop:`9px solid ${speechAccent}` }} />}
-    </button>
-    <button type="button" data-home-raid-jack onClick={onOpen} aria-label={allDone ? `${RAID_JACK_PUMPKIN.name}が遊びに来た！タップでレイド画面を開く` : `${tier.name}があらわれた！タップでレイド画面を開く`} style={HOME_RAID_JACK_BUTTON_STYLE}>
+    </button>}
+    <button type="button" data-home-raid-jack onClick={onOpen} aria-label={allDone ? `${isJack ? RAID_JACK_PUMPKIN.name : ev.afterBoss.name}${isJack ? 'が遊びに来た！' : 'がまだ暴れている！'}タップでレイド画面を開く` : `${tier.name}があらわれた！タップでレイド画面を開く`} style={HOME_RAID_JACK_BUTTON_STYLE}>
       {/* 通常絵とポーズ絵を重ねて、切り替えは透明度だけで行う(先に両方読み込める・切り替えで枠の高さが変わらない)。
           ポーズ絵は腕が左右に広がるぶん本体が幅の約半分になるので、通常絵を半分の大きさ(RAID_JACK_NORMAL_ART_SCALE)で描いて本体の大きさをそろえる。
           どちらも足もと(本体の下端)をそろえて置く */}
       <span data-jack-aura={allDone ? undefined : (Number(String(tier.id).slice(1)) || undefined)} data-home-raid-pumpkin={allDone ? 'true' : undefined} style={{ position:'relative', display:'block', width:'100%', aspectRatio:'1024 / 640' }}>
         {/* 段階が進むほど派手になるオーラは、施設より後ろの別の層(下の data-home-raid-aura-wrap)で描く */}
         {/* 大王を倒したあとは、小さなぱんぷきんが遊びに来る(オーラ・ポーズ絵なし。跳ねる動きは同じ) */}
-        {allDone ? <img className="mh-home-raid-jack-img" src={PUMPKIN_ICON_IMG} alt="" draggable={false}
-          style={{ position:'absolute', left:`${(1 - RAID_JACK_PUMPKIN_ART_SCALE) * 50}%`, bottom:0, width:`${RAID_JACK_PUMPKIN_ART_SCALE * 100}%`, height:'auto', filter:'drop-shadow(0 6px 10px #000a)', pointerEvents:'none' }} /> : <>
+        {allDone && isJack ? <img className="mh-home-raid-jack-img" src={PUMPKIN_ICON_IMG} alt="" draggable={false}
+          style={{ position:'absolute', left:`${(1 - RAID_JACK_PUMPKIN_ART_SCALE) * 50}%`, bottom:0, width:`${RAID_JACK_PUMPKIN_ART_SCALE * 100}%`, height:'auto', filter:'drop-shadow(0 6px 10px #000a)', pointerEvents:'none' }} />
+        : !isJack ? <img className="mh-home-raid-jack-img" data-home-raid-boss={ev.key} src={allDone ? ev.afterBossImg() : ev.bossImg()} alt="" draggable={false}
+          style={{ position:'absolute', left:'50%', bottom:0, height:'135%', width:'auto', transform:'translateX(-50%)', filter:'drop-shadow(0 6px 10px #000a)', pointerEvents:'none' }} /> : <>
         <img className="mh-home-raid-jack-img" src={JACK_IMG} alt="" draggable={false}
           style={{ position:'absolute', left:`${(1 - RAID_JACK_NORMAL_ART_SCALE) * 50}%`, bottom:0, width:`${RAID_JACK_NORMAL_ART_SCALE * 100}%`, height:'auto', opacity:pose ? 0 : 1, filter:`drop-shadow(0 6px 10px #000a) ${raidJackAuraGlowFilter(Number(String(tier.id).slice(1)) || 0, 0.8)}`, pointerEvents:'none' }} />
         <img className="mh-home-raid-jack-img" src={JACK_POSE_IMG} alt="" draggable={false} aria-hidden="true"
@@ -347,6 +352,8 @@ function HomeScreen({
   raidJackVisible = false, raidJackEventId, onOpenRaidJack,
   // クリスマスのイベントページを開く(台帳 r1126-006)。開始時刻までは null(札は今までどおり更新履歴を開く)
   onOpenXmasEvent = null,
+  // クリスマスのレイドのボス(ジャックと同じ置き方・押すとイベントページの「レイド」タブ)。出すかどうかは 60-app.jsx が決める
+  raidXmasVisible = false, raidXmasEventId = '', onOpenRaidXmas = null,
   // 助手とおしゃべり(2026-10-14)。公開の印 assistantChat が立つまでは null(ボタンを出さない)
   onOpenAssistantChat = null,
   // MFバトルカードの入口(案A・左の列のいちばん下)。公開の印 cardBattle が立ち、公開のお話を見た人だけ(60-app.jsx が決める)
@@ -439,7 +446,8 @@ function HomeScreen({
         <picture className={`mh-home-background ${homeBackgroundReady?'is-ready':''} ${homeBackgroundWide?'is-wide':''} ${homeBackgroundSquare?'is-square':''}`} aria-hidden="true"><img className="mh-home-backdrop" src={homeBackgroundSrc} alt=""/><img className="mh-home-main" src={homeBackgroundSrc} alt=""/></picture>
         <div className="mh-home-masumon-layer" aria-hidden="true">{homePastureMasumons.map((masu,index)=><HomeWalkingMasumon key={masu.id} masu={masu} base={ALL_PLAYER_MONSTERS[masu.baseId]} masuColors={getMasuColors(masu)} index={index} count={homePastureMasumons.length}/>)}</div>
         {/* 設定を光らせるときは、上の帯ごと暗幕より前に出す(帯が z-index を持っていて中だけ前に出せないため) */}
-        {raidJackVisible&&<HomeRaidJack eventId={raidJackEventId} onOpen={onOpenRaidJack}/>}
+        {raidXmasVisible&&typeof onOpenRaidXmas==='function'?<HomeRaidJack key="raid-xmas" ev={RAID_EVENT_XMAS} eventId={raidXmasEventId} onOpen={onOpenRaidXmas}/>
+          :raidJackVisible&&<HomeRaidJack eventId={raidJackEventId} onOpen={onOpenRaidJack}/>}
         <header className={`mh-home-status${spotClass('settings')}`}>
           <button type="button" className="mh-home-player relative" onClick={onOpenProfile} aria-label="プロフィールを開く">
             <HomeProfileIcon src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={profileFrameId}/>
