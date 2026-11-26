@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1dd12a88d2deb5a4
+// generated-sha256: 112334ba865a1068
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -6240,14 +6240,29 @@ const screenThemeCategory = (gameState, rhythmOpen = false) => {
 // 起動直後の先読み(index.html)もこのキーを読むので、キー名と id は変えない。
 // squareSrc は縦横比がほぼ正方形の画面、wideSrc は横長の画面に出す絵。無い絵は縦の絵を切り抜いて出す
 const TITLE_ART_STORAGE_KEY = 'mh_title_art';
+// クリスマス(r1125-061・社長 2026-11-25): from〜until はクリスマスのイベント(RAID_XMAS_START_AT・RAID_XMAS_EVENT.endAt)と同じ。
+//   from より前は選択肢にも出さない(titleArtOptionsAt)。おまかせは from〜until のあいだだけクリスマス、そのあとはクラシック。
+//   自分で選んだ人は until のあとも選んだまま。期間は見るたびに時刻で決める(保存しない)。★index.html の先読みも同じ時刻を持っている
+const TITLE_ART_XMAS_FROM = () => Date.parse(typeof RAID_XMAS_START_AT === 'string' ? RAID_XMAS_START_AT : '2026-11-30T10:00:00+09:00');
+const TITLE_ART_XMAS_UNTIL = () => Date.parse(typeof RAID_XMAS_EVENT === 'object' && RAID_XMAS_EVENT && typeof RAID_XMAS_EVENT.endAt === 'string' ? RAID_XMAS_EVENT.endAt : '2026-12-31T04:00:00+09:00');
 const TITLE_ART_OPTIONS = [
+  { id: 'xmas', label: 'クリスマス', desc: '雪の夜の広場。モッチーたちがクリスマスの装いでお出迎え', src: 'data/images/title-screen-xmas.jpg', squareSrc: 'data/images/title-screen-xmas-square.jpg', wideSrc: 'data/images/title-screen-xmas-wide.jpg', from: TITLE_ART_XMAS_FROM },
   { id: 'halloween', label: 'ハロウィン', desc: '月夜のお城とかぼちゃ。モッチーたちが仮装してお出迎え', src: 'data/images/title-screen-halloween.jpg', squareSrc: 'data/images/title-screen-halloween-square.jpg', wideSrc: 'data/images/title-screen-halloween-wide.jpg' },
   { id: 'classic', label: 'クラシック', desc: 'これまでのタイトル画面', src: 'data/images/title-screen-clean.jpg' },
 ];
 // 'auto'(おまかせ)は季節に合わせる(SCREEN_THEME_HALLOWEEN_UNTIL まではハロウィン、そのあとはクラシック)
 const DEFAULT_TITLE_ART = 'auto';
 const normalizeTitleArt = value => value === 'auto' || TITLE_ART_OPTIONS.some(option => option.id === value) ? value : DEFAULT_TITLE_ART;
-const resolveTitleArt = (value, now = Date.now()) => { const v = normalizeTitleArt(value); return v === 'auto' ? resolveScreenTheme('auto', now) : v; };
+// 選択肢に出す絵(from より前の絵は出さない)。保存の読み方(normalizeTitleArt)は全部の id を受ける
+const titleArtAvailable = (option, now = Date.now()) => !!option && (typeof option.from !== 'function' || now >= option.from());
+const titleArtOptionsAt = (now = Date.now()) => TITLE_ART_OPTIONS.filter(option => titleArtAvailable(option, now));
+const titleArtXmasOpenAt = (now = Date.now()) => now >= TITLE_ART_XMAS_FROM() && now < TITLE_ART_XMAS_UNTIL();
+const resolveTitleArt = (value, now = Date.now()) => {
+  const v = normalizeTitleArt(value);
+  if (v === 'auto') return titleArtXmasOpenAt(now) ? 'xmas' : resolveScreenTheme('auto', now);
+  // まだ出していない絵が入っていたら(時計を戻した等)、おまかせと同じに決める
+  return titleArtAvailable(TITLE_ART_OPTIONS.find(option => option.id === v), now) ? v : resolveScreenTheme('auto', now);
+};
 // 画面の縦横比から、出す絵の形を決める。縦長(941x1672 = 0.56)・ほぼ正方形(1354x1162 = 1.17)・横長(1672x941 = 1.78)の3枚のうち、
 // 比が近いほうを選ぶ(境目は、隣り合う2枚の比の相乗平均。0.81 と 1.44)。折りたたみの横開きの内側(約0.9)は「ほぼ正方形」になる
 // ★index.html の先読みも同じ境目を持っている。変えるときは両方そろえる
@@ -6268,13 +6283,28 @@ const titleArtSrc = (value, shape = 'portrait') => {
 // squareSrc は縦横比がほぼ正方形の画面、wideSrc は横長の画面に出す絵。無い絵は縦の絵を切り抜いて出す
 // (正方形の絵はクラシックだけ。2026-11-17・タブレット縦で両脇にぼかしの帯が出ていたため)
 const HOME_ART_STORAGE_KEY = 'mh_home_art';
+// クリスマス(r1125-059・社長 2026-11-25): from〜until は、クリスマスのイベント(RAID_XMAS_START_AT・RAID_XMAS_EVENT.endAt)と同じ。
+//   from より前は選択肢にも出さない(homeArtOptionsAt)。おまかせは from〜until のあいだだけクリスマス、そのあとはクラシック。
+//   自分で選んだ人は until のあとも選んだまま。期間は見るたびに時刻で決める(保存しない)
+const HOME_ART_XMAS_FROM = () => Date.parse(typeof RAID_XMAS_START_AT === 'string' ? RAID_XMAS_START_AT : '2026-11-30T10:00:00+09:00');
+const HOME_ART_XMAS_UNTIL = () => Date.parse(typeof RAID_XMAS_EVENT === 'object' && RAID_XMAS_EVENT && typeof RAID_XMAS_EVENT.endAt === 'string' ? RAID_XMAS_EVENT.endAt : '2026-12-31T04:00:00+09:00');
 const HOME_ART_OPTIONS = [
+  { id: 'xmas', label: 'クリスマス', desc: '雪の夜、イルミネーションがきらめく村の広場', src: 'data/images/home-background-xmas.jpg', squareSrc: 'data/images/home-background-xmas-square.jpg', wideSrc: 'data/images/home-background-xmas-wide.jpg', from: HOME_ART_XMAS_FROM },
   { id: 'halloween', label: 'ハロウィン', desc: 'かぼちゃの灯りがともる、月夜の村の広場', src: 'data/images/home-background-halloween.jpg', wideSrc: 'data/images/home-background-halloween-wide.jpg' },
   { id: 'classic', label: 'クラシック', desc: 'これまでの村の広場', src: 'data/images/home-background.jpg', squareSrc: 'data/images/home-background-square.jpg', wideSrc: 'data/images/home-background-wide.jpg' },
 ];
 const DEFAULT_HOME_ART = 'auto';
 const normalizeHomeArt = value => value === 'auto' || HOME_ART_OPTIONS.some(option => option.id === value) ? value : DEFAULT_HOME_ART;
-const resolveHomeArt = (value, now = Date.now()) => { const v = normalizeHomeArt(value); return v === 'auto' ? resolveScreenTheme('auto', now) : v; };
+// 選択肢に出す絵(from より前の絵は出さない)。保存の読み方(normalizeHomeArt)は全部の id を受ける
+const homeArtAvailable = (option, now = Date.now()) => !!option && (typeof option.from !== 'function' || now >= option.from());
+const homeArtOptionsAt = (now = Date.now()) => HOME_ART_OPTIONS.filter(option => homeArtAvailable(option, now));
+const homeArtXmasOpenAt = (now = Date.now()) => now >= HOME_ART_XMAS_FROM() && now < HOME_ART_XMAS_UNTIL();
+const resolveHomeArt = (value, now = Date.now()) => {
+  const v = normalizeHomeArt(value);
+  if (v === 'auto') return homeArtXmasOpenAt(now) ? 'xmas' : resolveScreenTheme('auto', now);
+  // まだ出していない絵が入っていたら(時計を戻した等)、おまかせと同じに決める
+  return homeArtAvailable(HOME_ART_OPTIONS.find(option => option.id === v), now) ? v : resolveScreenTheme('auto', now);
+};
 // 形('portrait' / 'square' / 'wide')から出す絵を決める。形の境目は HOME の場面側(69-screen-home.jsx)が決める。
 // 昔の呼び方(真偽値)も受ける: 真なら横長(60-app.jsx の先読みがこの形)
 const homeArtSrc = (value, shape = 'portrait') => {
@@ -44768,12 +44798,18 @@ function ArtPickerModal({ pickerId, heading, note, options, value, resolved, onC
     </ModalSheet>
   );
 }
-// 絵を選ぶ窓の中の並び。縦は上から説明・おまかせ・2枚の絵。横の低い画面は左に説明とおまかせ、右に2枚の絵(r1119-066①)
+// 絵を選ぶ窓の中の並び。縦は上から説明・おまかせ・絵の札(3列)。横の低い画面は左に説明とおまかせ、右に絵の札(3列)。
+// 2026-11-26 r1125-059: 3枚目(クリスマス)が増えて、縦は3枚目が下の段に隠れ、横は3枚目が見えず説明も切れていた。
+//   3列に並べ、横の低い画面では絵を 4:3 に切り抜いて(真ん中を見せる)、札が窓の高さに収まるようにした
 const ART_PICKER_CSS = `
 .mh-art-picker{display:flex;flex-direction:column;gap:12px}
 .mh-art-picker-side{display:flex;flex-direction:column;gap:10px}
-.mh-art-picker-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-@media (orientation:landscape) and (max-height:520px){.mh-art-picker{flex-direction:row;align-items:flex-start}.mh-art-picker-side{flex:1 1 0;min-width:0}.mh-art-picker-grid{flex:none;grid-template-columns:repeat(2,124px)}}
+.mh-art-picker-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+/* 絵の名前は1行に(320幅で「クリスマ/ス」と折れていた)。狭い画面だけ字を少し小さくする */
+.mh-art-picker-grid button>span.block{white-space:nowrap;font-size:clamp(11px,3.4vw,13px)}
+/* 背の低い縦の画面(320×568 など)は絵を 3:4 に短くする(タイトルの窓は説明が長く、3枚目の下が決定の段に隠れていた) */
+@media (orientation:portrait) and (max-height:640px){.mh-art-picker-grid button img{aspect-ratio:3/4}}
+@media (orientation:landscape) and (max-height:520px){.mh-art-picker{flex-direction:row;align-items:flex-start}.mh-art-picker-side{flex:1 1 0;min-width:0}.mh-art-picker-grid{flex:none;grid-template-columns:repeat(3,124px)}.mh-art-picker-grid button img{aspect-ratio:4/3}}
 `;
 const ensureArtPickerCss = () => {
   try {
@@ -44786,8 +44822,10 @@ const ensureArtPickerCss = () => {
 // タイトルとホームの絵も同じ3択でここから変えられる(絵を見て選びたいときは各アレンジ画面から)
 function ScreenThemeModal({ screenTheme, onChange, titleArt, onChangeTitleArt, homeArt, onChangeHomeArt, onClose }) {
   const rows = [
-    { id: 'title', label: 'タイトル画面', value: titleArt, set: onChangeTitleArt },
-    { id: 'home', label: 'ホーム画面', value: homeArt, set: onChangeHomeArt },
+    // タイトルは季節の絵(クリスマスなど・出してよい期間のもの)も選べる(r1125-061)
+    { id: 'title', label: 'タイトル画面', value: titleArt, set: onChangeTitleArt, choices: [...SCREEN_THEME_CHOICES, ...titleArtOptionsAt().filter(option => !SCREEN_THEME_CHOICES.some(choice => choice.id === option.id)).map(option => ({ id: option.id, label: option.label }))] },
+    // ホームも季節の絵(クリスマスなど・出してよい期間のもの)も選べる(r1125-059)
+    { id: 'home', label: 'ホーム画面', value: homeArt, set: onChangeHomeArt, choices: [...SCREEN_THEME_CHOICES, ...homeArtOptionsAt().filter(option => !SCREEN_THEME_CHOICES.some(choice => choice.id === option.id)).map(option => ({ id: option.id, label: option.label }))] },
     ...SCREEN_THEME_READY_CATEGORIES.map(category => ({ ...category, value: screenTheme[category.id], set: choice => onChange(category.id, choice) })),
   ];
   const setAll = choice => { onChangeTitleArt(choice); onChangeHomeArt(choice); onChange('*', choice); };
@@ -44804,7 +44842,7 @@ function ScreenThemeModal({ screenTheme, onChange, titleArt, onChangeTitleArt, h
   return (
     <ModalSheet title="画面テーマ" onClose={cancel} size="wide" dataProps={{'data-screen-theme-picker':'',onPointerDown:e=>e.stopPropagation()}}
       footer={<><ModalSheetButton back onClick={cancel}>やめる</ModalSheetButton><ModalSheetButton kind="go" onClick={onClose} data-screen-theme-ok>決定</ModalSheetButton></>}>
-      <p className="text-[12px] font-bold leading-relaxed text-slate-300" style={JA_LABEL_STYLE}>{jaWrap('画面の種類ごとに見た目を選べます。「おまかせ」は季節に合わせて切り替わり、10月31日まではハロウィン、11月1日からはクラシックになります。')}</p>
+      <p className="text-[12px] font-bold leading-relaxed text-slate-300" style={JA_LABEL_STYLE}>{jaWrap('画面の種類ごとに見た目を選べます。「おまかせ」は季節に合わせて切り替わります。')}</p>
       <div className="mt-2 rounded-xl border border-amber-300/40 bg-amber-500/10 p-2">
         <b className="block text-[12px] font-black text-amber-100">まとめて変える</b>
         <div className="mt-1.5 flex gap-1.5">{SCREEN_THEME_CHOICES.map(choice => <button key={choice.id} type="button" onClick={() => setAll(choice.id)} className={chip(false)}>{choice.label}</button>)}</div>
@@ -44814,7 +44852,7 @@ function ScreenThemeModal({ screenTheme, onChange, titleArt, onChangeTitleArt, h
         <div key={row.id} data-screen-theme-row={row.id} className="rounded-xl border border-white/10 bg-white/5 p-2">
           <b className="block text-[12px] font-black text-white">{row.label}</b>
           {/* 見出しをくり返すだけの説明(「マーケット／マーケット」)は出さない(2026-11-23 API 総点検③ settings-theme) */}{row.desc && row.desc !== row.label && <small className="block text-[10px] font-bold text-slate-400">{row.desc}</small>}
-          <div className="mt-1.5 flex gap-1.5">{SCREEN_THEME_CHOICES.map(choice => <button key={choice.id} type="button" aria-pressed={row.value === choice.id} onClick={() => row.set(choice.id)} className={chip(row.value === choice.id)}>{choice.label}</button>)}</div>
+          <div className="mt-1.5 flex gap-1.5">{(row.choices || SCREEN_THEME_CHOICES).map(choice => <button key={choice.id} type="button" aria-pressed={row.value === choice.id} onClick={() => row.set(choice.id)} className={chip(row.value === choice.id)}>{choice.label}</button>)}</div>
         </div>
       ))}</div>
     </ModalSheet>
@@ -147672,11 +147710,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   ) : showTitleSettings ? (
     <div className="mh-title-modal" {...settingsBackdropProps(()=>setShowTitleSettings(false))}><div className="mh-title-dialog mh-title-dialog--menu"><div className="mh-dialog-head"><h3>設定</h3></div><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowAudioSettings(true)}}>🔊 音量設定 <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowBgmArrangement(true)}}>🎼 BGMアレンジ <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowTitleArt(true)}}>🖼️ タイトル画像アレンジ <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowHomeArt(true)}}>🏡 ホーム画面アレンジ <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowScreenTheme(true)}}>🎃 画面テーマ <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowBackup(true)}}>🛡️ データ引き継ぎ <ChevronRight size={18}/></button><button className="mh-dialog-close" data-mh-back onClick={()=>setShowTitleSettings(false)}>閉じる</button></div></div>
   ) : showTitleArt ? (
-    <ArtPickerModal pickerId="title" heading="タイトル画像アレンジ" note="タイトル画面に出す絵を選べます。次に開いたときもこの絵で始まります。「ハロウィン」は、横画面では横長の絵になります。" options={TITLE_ART_OPTIONS} value={titleArt} resolved={resolveTitleArt(titleArt)} onChange={changeTitleArt} onClose={()=>setShowTitleArt(false)}/>
+    <ArtPickerModal pickerId="title" heading="タイトル画像アレンジ" note="タイトル画面に出す絵を選べます。次に開いたときもこの絵で始まります。「クラシック」のほかは、横画面では横長の絵になります。" options={titleArtOptionsAt()} value={titleArt} resolved={resolveTitleArt(titleArt)} onChange={changeTitleArt} onClose={()=>setShowTitleArt(false)}/>
   ) : showScreenTheme ? (
     <ScreenThemeModal screenTheme={screenTheme} onChange={changeScreenTheme} titleArt={titleArt} onChangeTitleArt={changeTitleArt} homeArt={homeArt} onChangeHomeArt={changeHomeArt} onClose={()=>setShowScreenTheme(false)}/>
   ) : showHomeArt ? (
-    <ArtPickerModal pickerId="home" heading="ホーム画面アレンジ" note="ホーム画面の背景を選べます。横画面では、どちらの絵も横長の絵になります。" options={HOME_ART_OPTIONS} value={homeArt} resolved={resolveHomeArt(homeArt)} onChange={changeHomeArt} onClose={()=>setShowHomeArt(false)}/>
+    <ArtPickerModal pickerId="home" heading="ホーム画面アレンジ" note="ホーム画面の背景を選べます。横画面では、どの絵も横長の絵になります。" options={homeArtOptionsAt()} value={homeArt} resolved={resolveHomeArt(homeArt)} onChange={changeHomeArt} onClose={()=>setShowHomeArt(false)}/>
   ) : showAudioSettings ? (
     <div className="mh-title-modal" {...settingsBackdropProps(()=>setShowAudioSettings(false))}><div className="mh-title-dialog" style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}><div className="mh-dialog-head"><h3>音量設定</h3></div><button className="mh-dialog-choice" onClick={toggleQuickMute}>{audioMuted?'🔇 音がオフです':'🔊 音はオンです'}</button><VolumeSlider label="SE" icon="🔔" value={seVolume} onChange={changeSeVolume} gradient="from-cyan-500 to-indigo-500" thumbRing="border-indigo-400"/><VolumeSlider label="BGM" icon="🎵" value={bgmVolume} onChange={changeBgmVolume} gradient="from-fuchsia-500 to-pink-500" thumbRing="border-fuchsia-400"/><button className="mh-dialog-choice mt-3" aria-expanded={showAudioDiag} onClick={()=>setShowAudioDiag(v=>!v)}>🔧 音が出ないとき {showAudioDiag?'▲':'▼'}</button>{showAudioDiag&&<><AudioTroubleshootPanel info={audioDiag} peak={audioDiagPeak} muted={audioMuted} onTest={testAudioOutput} onRepair={repairAudioOutput} repairing={audioRepairing}/><ReloadLogPanel/></>}<button className="mh-dialog-close" data-mh-back onClick={()=>setShowAudioSettings(false)}>閉じる</button></div></div>
   ) : showBgmArrangement ? (
