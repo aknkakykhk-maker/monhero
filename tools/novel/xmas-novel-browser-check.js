@@ -162,6 +162,53 @@ const CASES = CASES_ALL.filter((c) => !ONLY || c.shot === ONLY);
       check(`④ ${vp.label}: 実行時エラーが無い`, errors.length === 0, errors.slice(0, 2).join(' / '));
       await ctx.close();
     }
+    // ⑤ イベントページの物語タブからの入口(時計をずらす)。11/28 は序章だけ・本編は「11/30 10:00 から」/ 11/30 10:05 は「事件簿を開く」で起動画面が開く
+    if (!ONLY || ONLY === 'tate') for (const [iso, open] of [['2026-11-28T10:05:00+09:00', false], ['2026-11-30T10:05:00+09:00', true]]) {
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
+      const page = await ctx.newPage();
+      const errors = [];
+      page.on('pageerror', (e) => errors.push(String(e)));
+      await page.route(/supabase\.co/, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+      await page.addInitScript({ content: `(() => { const off = Date.parse(${JSON.stringify(iso)}) - Date.now(); const RD = Date;
+        class D extends RD { constructor(...a) { if (a.length === 0) super(RD.now() + off); else super(...a); } static now() { return RD.now() + off; } }
+        D.parse = RD.parse; D.UTC = RD.UTC; window.Date = D; })();` });
+      await page.addInitScript(() => {
+        const put = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+        put('mh_breeder_name', '検査ブリーダー'); put('mh_breeder_icon', '🐣'); put('mh_onboarded', true); put('mh_tutorial_seen_v1', true);
+        put('mh_battle_tutorial_seen_v1', true); put('mh_battle_tutorial_guide_shown_v1', true); put('mh_masu_migrated', true);
+        put('mh_inherited_unique_level_compensation_v1', true); put('mh_inherited_unique_level_compensation_pending_v1', false); put('mh_first_battle_done_v1', true);
+      });
+      await page.addInitScript(seeds.eventStorySeed()); await page.addInitScript(seeds.updateNoticeSeed()); await page.addInitScript(seeds.loginBonusDoneSeed()); await page.addInitScript(seeds.oneTimeNoticeSeed());
+      await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
+      await page.getByRole('button', { name: 'TAP TO START' }).click({ timeout: 60000 });
+      await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
+      await page.waitForTimeout(4000);
+      for (let i = 0; i < 8; i++) {
+        const btn = page.getByRole('button', { name: /受け取る|閉じる|(?:始|はじ)める|OK/ }).first();
+        if (await btn.count() === 0 || !(await btn.isVisible().catch(() => false))) break;
+        await btn.dispatchEvent('click').catch(() => {});
+        await page.waitForTimeout(250);
+      }
+      const entry = page.locator('[data-home-xmas-entry]').first();
+      await entry.waitFor({ timeout: 15000 }).catch(() => {});
+      await entry.dispatchEvent('click').catch(() => {});
+      await page.locator('[data-xmas-story]').waitFor({ timeout: 10000 }).catch(() => {});
+      const st = await page.evaluate(() => ({ btn: document.querySelectorAll('[data-xmas-novel-open]').length, soon: /本編は 11\/30/.test((document.querySelector('[data-xmas-story]') || {}).textContent || '') ? 1 : 0,
+        prologue: document.querySelectorAll('[data-xmas-story-chapter="xs00"]').length, ch1: document.querySelectorAll('[data-xmas-story-chapter="xs01"]').length }));
+      const label = open ? '⑤ 11/30 10:05' : '⑤ 11/28 10:05';
+      if (open) {
+        check(`${label}: 物語タブに「事件簿を開く」と序章の読み返しがある(毎日の話の行は無い)`, st.btn === 1 && st.prologue === 1 && st.ch1 === 0, JSON.stringify(st));
+        if (SHOT_DIR) { await page.waitForTimeout(500); await page.screenshot({ path: path.join(SHOT_DIR, 'tate-20-storytab-open.jpg'), type: 'jpeg', quality: 80 }); }
+        await page.locator('[data-xmas-novel-open]').dispatchEvent('click');
+        await page.locator('[data-xmas-novel-title]').waitFor({ timeout: 8000 }).catch(() => {});
+        check(`${label}: 押すと事件簿の起動画面が開く`, await page.locator('[data-xmas-novel-title]').count() === 1);
+      } else {
+        check(`${label}: 開幕までは本編の入口を出さず「本編は 11/30 10:00 から」と序章だけ`, st.btn === 0 && st.soon === 1 && st.prologue === 1, JSON.stringify(st));
+        if (SHOT_DIR) { await page.waitForTimeout(500); await page.screenshot({ path: path.join(SHOT_DIR, 'tate-21-storytab-preopen.jpg'), type: 'jpeg', quality: 80 }); }
+      }
+      check(`${label}: 実行時エラーが無い`, errors.length === 0, errors.slice(0, 2).join(' / '));
+      await ctx.close();
+    }
   } finally {
     await browser.close(); server.close();
   }

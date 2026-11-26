@@ -115,6 +115,7 @@ walk(E.xmasNovelFreshCur(S), 0, []);
 // 着けないエンディングは、台本の「次」の書き損じのことが多いので注意に出す(1つも着けなければ止める)
 const unreached = endingsAll.filter((e) => !reached.has(e));
 if (!reached.size) fail('どのエンディングにも着かない');
+unreached.forEach((e) => fail(`エンディング ${e} に着く道が無い(台本の「次」を確かめる)`));
 // どの道でも通らない場面(台本の「次」の書き損じのことが多い)。台本係へ知らせる注意で、止めない
 const unvisited = S.scenes.filter((s) => !visited.has(s.id) && !(s.rows || []).every((r) => r.t === 'flag')).map((s) => s.id);
 

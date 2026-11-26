@@ -3,7 +3,7 @@
 // 入口は openXmasNovel(opts) の関数1つ(イベントページの物語タブなどから呼ぶ)。App の状態は使わず、自分で body に重ねて開き、閉じたら片づける。
 //   opts.playerName … 台詞の {name} に入れる名前 / opts.onClose() … 閉じたあと / opts.force … 期間の外でも開く(デバッグ・検査だけ)
 //   遊べるのはイベントの期間中だけ(xmasNovelPlayableAt)。期間の外は開かずに false を返す。保存の記録は消さない
-// 保存は新しいキー mh_xmas_novel_v1 だけ(ほかのキーは読まない・書かない・⑦)。形は xmasNovelNormalize。
+// 保存は新しいキー mh_xmas_novel_v1 だけ(書くのはこれだけ・⑦)。ほかに読むのは、台詞の {name} に入れるブリーダー名(mh_breeder_name)だけ。形は xmasNovelNormalize。
 // 見た目: 暗めの紺と雪・金の細い縁・明朝寄りの見出し。縦・横・タブレットで、立ち絵と文の箱の置き方を変える。動きは prefers-reduced-motion で止める
 
 const XMAS_NOVEL_CSS = `
@@ -334,9 +334,12 @@ const xmasNovelNameOf = (row) => {
 // {name} … プレイヤーの名前 / {犯人にした人} … 推理で選んだ人(xmasNovelFillCtx で渡す)
 let xmasNovelFillCtx = { accused: '' };
 const xmasNovelFill = (text, playerName) => String(text || '').replace(/\{name\}/g, playerName || 'あなた').replace(/\{犯人にした人\}/g, xmasNovelFillCtx.accused || '……');
+// シルエットの笑い声(tools/novel/xmas-novel-laugh.py で合成した音・鳴らすときに初めて読む)
+const XMAS_NOVEL_LAUGH_SE = 'audio/se-xmas-novel-laugh.mp3';
 const xmasNovelSe = (kind) => {
   try {
     if (typeof Audio_ === 'undefined' || !Audio_ || !Audio_.se) return;
+    if (kind === 'laugh' && typeof Audio_.playSeFile === 'function') { void Audio_.playSeFile(XMAS_NOVEL_LAUGH_SE); return; }
     const map = { clap: 'join', laugh: 'enemySpecial', bell: 'levelUp', impact: 'enemyAttack', music: 'heal', tap: 'tap', clue: 'card', ok: 'victory', ng: 'guard' };
     const fn = Audio_.se[map[kind] || 'tap'];
     if (typeof fn === 'function') fn();
@@ -386,8 +389,16 @@ const xmasNovelDateText = (iso) => {
 // ---- 画面 ----
 const XMAS_NOVEL_AUTO_MS = [0, 1800, 1000];
 // script … 検査で仮の台本を渡すときだけ(ふだんは渡さない)
-const XmasNovelScreen = ({ playerName = '', onClose, script = null }) => {
+const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = null }) => {
   useXmasNovelCss();
+  // 台詞の {name}: 渡されなければブリーダー名を読むだけ(書かない)
+  const [playerName, setPlayerName] = useState(playerNameProp);
+  useEffect(() => {
+    if (playerNameProp) return undefined;
+    let alive = true;
+    storeGet('mh_breeder_name', '', false).then((n) => { if (alive && typeof n === 'string' && n.trim()) setPlayerName(n.trim().slice(0, 24)); }).catch(() => {});
+    return () => { alive = false; };
+  }, [playerNameProp]);
   const S = script || XMAS_NOVEL_SCRIPT;
   const [save, setSave] = useState(null);
   const [mode, setMode] = useState('title'); // title / read / endings / chapters
