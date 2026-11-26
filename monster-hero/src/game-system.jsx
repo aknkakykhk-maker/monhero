@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5f602599493c2184
+// generated-sha256: 7b2d451f9a1ecf85
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -6283,13 +6283,28 @@ const titleArtSrc = (value, shape = 'portrait') => {
 // squareSrc は縦横比がほぼ正方形の画面、wideSrc は横長の画面に出す絵。無い絵は縦の絵を切り抜いて出す
 // (正方形の絵はクラシックだけ。2026-11-17・タブレット縦で両脇にぼかしの帯が出ていたため)
 const HOME_ART_STORAGE_KEY = 'mh_home_art';
+// クリスマス(r1125-059・社長 2026-11-25): from〜until は、クリスマスのイベント(RAID_XMAS_START_AT・RAID_XMAS_EVENT.endAt)と同じ。
+//   from より前は選択肢にも出さない(homeArtOptionsAt)。おまかせは from〜until のあいだだけクリスマス、そのあとはクラシック。
+//   自分で選んだ人は until のあとも選んだまま。期間は見るたびに時刻で決める(保存しない)
+const HOME_ART_XMAS_FROM = () => Date.parse(typeof RAID_XMAS_START_AT === 'string' ? RAID_XMAS_START_AT : '2026-11-30T10:00:00+09:00');
+const HOME_ART_XMAS_UNTIL = () => Date.parse(typeof RAID_XMAS_EVENT === 'object' && RAID_XMAS_EVENT && typeof RAID_XMAS_EVENT.endAt === 'string' ? RAID_XMAS_EVENT.endAt : '2026-12-31T04:00:00+09:00');
 const HOME_ART_OPTIONS = [
+  { id: 'xmas', label: 'クリスマス', desc: '雪の夜、イルミネーションがきらめく村の広場', src: 'data/images/home-background-xmas.jpg', squareSrc: 'data/images/home-background-xmas-square.jpg', wideSrc: 'data/images/home-background-xmas-wide.jpg', from: HOME_ART_XMAS_FROM },
   { id: 'halloween', label: 'ハロウィン', desc: 'かぼちゃの灯りがともる、月夜の村の広場', src: 'data/images/home-background-halloween.jpg', wideSrc: 'data/images/home-background-halloween-wide.jpg' },
   { id: 'classic', label: 'クラシック', desc: 'これまでの村の広場', src: 'data/images/home-background.jpg', squareSrc: 'data/images/home-background-square.jpg', wideSrc: 'data/images/home-background-wide.jpg' },
 ];
 const DEFAULT_HOME_ART = 'auto';
 const normalizeHomeArt = value => value === 'auto' || HOME_ART_OPTIONS.some(option => option.id === value) ? value : DEFAULT_HOME_ART;
-const resolveHomeArt = (value, now = Date.now()) => { const v = normalizeHomeArt(value); return v === 'auto' ? resolveScreenTheme('auto', now) : v; };
+// 選択肢に出す絵(from より前の絵は出さない)。保存の読み方(normalizeHomeArt)は全部の id を受ける
+const homeArtAvailable = (option, now = Date.now()) => !!option && (typeof option.from !== 'function' || now >= option.from());
+const homeArtOptionsAt = (now = Date.now()) => HOME_ART_OPTIONS.filter(option => homeArtAvailable(option, now));
+const homeArtXmasOpenAt = (now = Date.now()) => now >= HOME_ART_XMAS_FROM() && now < HOME_ART_XMAS_UNTIL();
+const resolveHomeArt = (value, now = Date.now()) => {
+  const v = normalizeHomeArt(value);
+  if (v === 'auto') return homeArtXmasOpenAt(now) ? 'xmas' : resolveScreenTheme('auto', now);
+  // まだ出していない絵が入っていたら(時計を戻した等)、おまかせと同じに決める
+  return homeArtAvailable(HOME_ART_OPTIONS.find(option => option.id === v), now) ? v : resolveScreenTheme('auto', now);
+};
 // 形('portrait' / 'square' / 'wide')から出す絵を決める。形の境目は HOME の場面側(69-screen-home.jsx)が決める。
 // 昔の呼び方(真偽値)も受ける: 真なら横長(60-app.jsx の先読みがこの形)
 const homeArtSrc = (value, shape = 'portrait') => {
@@ -44682,7 +44697,8 @@ function ScreenThemeModal({ screenTheme, onChange, titleArt, onChangeTitleArt, h
   const rows = [
     // タイトルは季節の絵(クリスマスなど・出してよい期間のもの)も選べる(r1125-061)
     { id: 'title', label: 'タイトル画面', value: titleArt, set: onChangeTitleArt, choices: [...SCREEN_THEME_CHOICES, ...titleArtOptionsAt().filter(option => !SCREEN_THEME_CHOICES.some(choice => choice.id === option.id)).map(option => ({ id: option.id, label: option.label }))] },
-    { id: 'home', label: 'ホーム画面', value: homeArt, set: onChangeHomeArt },
+    // ホームも季節の絵(クリスマスなど・出してよい期間のもの)も選べる(r1125-059)
+    { id: 'home', label: 'ホーム画面', value: homeArt, set: onChangeHomeArt, choices: [...SCREEN_THEME_CHOICES, ...homeArtOptionsAt().filter(option => !SCREEN_THEME_CHOICES.some(choice => choice.id === option.id)).map(option => ({ id: option.id, label: option.label }))] },
     ...SCREEN_THEME_READY_CATEGORIES.map(category => ({ ...category, value: screenTheme[category.id], set: choice => onChange(category.id, choice) })),
   ];
   const setAll = choice => { onChangeTitleArt(choice); onChangeHomeArt(choice); onChange('*', choice); };
@@ -147217,7 +147233,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   ) : showScreenTheme ? (
     <ScreenThemeModal screenTheme={screenTheme} onChange={changeScreenTheme} titleArt={titleArt} onChangeTitleArt={changeTitleArt} homeArt={homeArt} onChangeHomeArt={changeHomeArt} onClose={()=>setShowScreenTheme(false)}/>
   ) : showHomeArt ? (
-    <ArtPickerModal pickerId="home" heading="ホーム画面アレンジ" note="ホーム画面の背景を選べます。横画面では、どちらの絵も横長の絵になります。" options={HOME_ART_OPTIONS} value={homeArt} resolved={resolveHomeArt(homeArt)} onChange={changeHomeArt} onClose={()=>setShowHomeArt(false)}/>
+    <ArtPickerModal pickerId="home" heading="ホーム画面アレンジ" note="ホーム画面の背景を選べます。横画面では、どの絵も横長の絵になります。" options={homeArtOptionsAt()} value={homeArt} resolved={resolveHomeArt(homeArt)} onChange={changeHomeArt} onClose={()=>setShowHomeArt(false)}/>
   ) : showAudioSettings ? (
     <div className="mh-title-modal" {...settingsBackdropProps(()=>setShowAudioSettings(false))}><div className="mh-title-dialog" style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}><div className="mh-dialog-head"><h3>音量設定</h3></div><button className="mh-dialog-choice" onClick={toggleQuickMute}>{audioMuted?'🔇 音がオフです':'🔊 音はオンです'}</button><VolumeSlider label="SE" icon="🔔" value={seVolume} onChange={changeSeVolume} gradient="from-cyan-500 to-indigo-500" thumbRing="border-indigo-400"/><VolumeSlider label="BGM" icon="🎵" value={bgmVolume} onChange={changeBgmVolume} gradient="from-fuchsia-500 to-pink-500" thumbRing="border-fuchsia-400"/><button className="mh-dialog-choice mt-3" aria-expanded={showAudioDiag} onClick={()=>setShowAudioDiag(v=>!v)}>🔧 音が出ないとき {showAudioDiag?'▲':'▼'}</button>{showAudioDiag&&<><AudioTroubleshootPanel info={audioDiag} peak={audioDiagPeak} muted={audioMuted} onTest={testAudioOutput} onRepair={repairAudioOutput} repairing={audioRepairing}/><ReloadLogPanel/></>}<button className="mh-dialog-close" data-mh-back onClick={()=>setShowAudioSettings(false)}>閉じる</button></div></div>
   ) : showBgmArrangement ? (

@@ -386,7 +386,8 @@ function ScreenThemeModal({ screenTheme, onChange, titleArt, onChangeTitleArt, h
   const rows = [
     // タイトルは季節の絵(クリスマスなど・出してよい期間のもの)も選べる(r1125-061)
     { id: 'title', label: 'タイトル画面', value: titleArt, set: onChangeTitleArt, choices: [...SCREEN_THEME_CHOICES, ...titleArtOptionsAt().filter(option => !SCREEN_THEME_CHOICES.some(choice => choice.id === option.id)).map(option => ({ id: option.id, label: option.label }))] },
-    { id: 'home', label: 'ホーム画面', value: homeArt, set: onChangeHomeArt },
+    // ホームも季節の絵(クリスマスなど・出してよい期間のもの)も選べる(r1125-059)
+    { id: 'home', label: 'ホーム画面', value: homeArt, set: onChangeHomeArt, choices: [...SCREEN_THEME_CHOICES, ...homeArtOptionsAt().filter(option => !SCREEN_THEME_CHOICES.some(choice => choice.id === option.id)).map(option => ({ id: option.id, label: option.label }))] },
     ...SCREEN_THEME_READY_CATEGORIES.map(category => ({ ...category, value: screenTheme[category.id], set: choice => onChange(category.id, choice) })),
   ];
   const setAll = choice => { onChangeTitleArt(choice); onChangeHomeArt(choice); onChange('*', choice); };
