@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5ad523fac4e713c6
+// source-sha256: d7cc0dc7af50cf1d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -122786,8 +122786,9 @@ const XMAS_NOVEL_CSS = `
   box-shadow: 0 0 0 1px rgba(232,196,106,.75), 0 0 0 4px rgba(10,20,48,.9), 0 0 0 5px rgba(232,196,106,.35), 0 12px 30px rgba(0,0,0,.55); }
 .mh-nv-name { position: absolute; top: -15px; left: 16px; padding: 3px 16px; border-radius: 6px; font-size: 15px; font-weight: 800; letter-spacing: .08em;
   background: linear-gradient(180deg, #1b2c5c, #0c1636); color: #f8e3a4; box-shadow: 0 0 0 1px rgba(232,196,106,.85); }
-.mh-nv-text { font-size: 17px; line-height: 1.75; font-weight: 600; white-space: pre-wrap; min-height: 3.5em; word-break: normal; line-break: strict; overflow-wrap: anywhere; }
-.mh-nv-text.band { text-align: center; color: #dfe6ff; font-style: normal; }
+.mh-nv-text { font-size: 17px; line-height: 1.75; font-weight: 600; white-space: pre-wrap; min-height: 3.5em; text-align: left; word-break: normal; line-break: normal; overflow-wrap: anywhere; text-wrap: wrap; }
+.mh-nv-plain { text-align: left; word-break: normal; line-break: normal; overflow-wrap: anywhere; text-wrap: wrap; }
+.mh-nv-text.band { text-align: left; color: #dfe6ff; font-style: normal; }
 .mh-nv-note { margin-top: 2px; font-size: 11px; color: #9fb0d8; }
 .mh-nv-next { position: absolute; right: 14px; bottom: 8px; width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-top: 9px solid #e8c46a; animation: mh-nv-bob 1s ease-in-out infinite; }
 @keyframes mh-nv-bob { 50% { transform: translateY(4px); } }
@@ -122839,7 +122840,7 @@ const XMAS_NOVEL_CSS = `
 .mh-nv-fig.laugh svg, .mh-nv-fig.laugh .mh-nv-boss { animation: mh-nv-laugh .25s ease-in-out 6; }
 @keyframes mh-nv-laugh { 50% { transform: translateY(-4px) scaleY(1.03); } }
 .mh-nv-person .flower { position: absolute; top: 30%; left: 50%; transform: translateX(-50%); font-size: 16px; color: #fff; text-shadow: 0 0 6px #fff; }
-.mh-nv-choice { width: 100%; min-height: 52px; padding: 10px 14px; border-radius: 12px; font-size: 15px; font-weight: 800; color: #fff3d0; text-align: center;
+.mh-nv-choice { width: 100%; min-height: 52px; padding: 10px 14px; border-radius: 12px; font-size: 15px; font-weight: 800; color: #fff3d0; text-align: left; word-break: normal; line-break: normal; overflow-wrap: anywhere; text-wrap: wrap;
   background: linear-gradient(180deg, rgba(27,44,92,.95), rgba(10,20,52,.95)); box-shadow: 0 0 0 1px #e8c46a, 0 6px 16px rgba(0,0,0,.45); }
 .mh-nv-choice:active { transform: scale(.98); }
 .mh-nv-curtain { position: absolute; inset: 0; z-index: 4; pointer-events: none; transform: translateY(-102%);
@@ -124098,9 +124099,8 @@ const XmasNovelScreen = ({
     }, React.createElement("div", {
       className: "mh-nv-serif mh-nv-gold mb-2 text-[17px] font-black"
     }, "はじめから遊びますか？"), React.createElement("p", {
-      className: "mb-3 text-[12px] leading-relaxed text-slate-200",
-      style: JA_LABEL_STYLE
-    }, jaWrap('いまの続きの場所は消えます。エンドヒストリー・一発で当てた記録・読んだ印はそのまま残ります')), React.createElement("div", {
+      className: "mh-nv-plain mb-3 text-[12px] leading-relaxed text-slate-200"
+    }, "いまの続きの場所は消えます。エンドヒストリー・一発で当てた記録・読んだ印はそのまま残ります"), React.createElement("div", {
       className: "space-y-2"
     }, React.createElement("button", {
       type: "button",
@@ -124176,9 +124176,8 @@ const XmasNovelScreen = ({
     }, React.createElement("div", {
       className: "mh-nv-serif mh-nv-gold text-center text-[22px] font-black"
     }, "章から"), React.createElement("p", {
-      className: "mt-1 text-center text-[11px] text-slate-300",
-      style: JA_LABEL_STYLE
-    }, jaWrap('その章に入ったときの手がかりと選んだことから、読み直せます')), React.createElement("div", {
+      className: "mh-nv-plain mt-1 text-[11px] text-slate-300"
+    }, "その章に入ったときの手がかりと選んだことから、読み直せます"), React.createElement("div", {
       className: "mh-nv-rule"
     }), React.createElement("ul", {
       className: "space-y-2"
@@ -124368,9 +124367,8 @@ const XmasNovelScreen = ({
   }, got.add ? '手がかり帳に書き足した' : '手がかりを手に入れた'), React.createElement("div", {
     className: "mh-nv-serif mh-nv-gold mt-1 text-[20px] font-black"
   }, "【", got.n, "】"), React.createElement("p", {
-    className: "mt-1 text-[12px] leading-relaxed text-slate-100",
-    style: JA_LABEL_STYLE
-  }, jaWrap(got.d))), card && React.createElement("div", {
+    className: "mh-nv-plain mt-1 whitespace-pre-wrap text-[12px] leading-relaxed text-slate-100"
+  }, got.d)), card && React.createElement("div", {
     className: "mh-nv-card",
     "data-xmas-novel-card": card.kind,
     onClick: advance
@@ -124479,7 +124477,7 @@ const XmasNovelScreen = ({
   }, l.who && React.createElement("div", {
     className: "mh-nv-serif text-[11px] font-black text-amber-200"
   }, l.who), React.createElement("div", {
-    className: l.who ? 'text-slate-100' : 'text-center text-slate-300'
+    className: `mh-nv-plain ${l.who ? 'text-slate-100' : 'text-slate-300'}`
   }, l.text))) : React.createElement("div", {
     className: "text-[12px] text-slate-400"
   }, "まだありません")), React.createElement("button", {
@@ -124548,16 +124546,15 @@ const XmasNovelScreen = ({
     "data-xmas-novel-extra": x.key,
     onClick: () => answer(q, x.key)
   }, x.x)), q.once && React.createElement("div", {
-    className: "mt-2 text-center text-[11px] font-bold text-rose-200"
+    className: "mh-nv-plain mt-2 text-[11px] font-bold text-rose-200"
   }, "選んだら、やり直しはできません"), React.createElement("button", {
     type: "button",
     className: "mh-nv-btn wide mt-3",
     onClick: () => setSheet(null)
   }, "話をもう一度見る")), q && q.kind === 'action' && React.createElement(React.Fragment, null, React.createElement("div", {
     "data-xmas-novel-question": q.id,
-    className: "mh-nv-serif mh-nv-gold mb-3 text-center text-[17px] font-black",
-    style: JA_LABEL_STYLE
-  }, jaWrap(xmasNovelFill(q.x, playerName))), React.createElement("div", {
+    className: "mh-nv-plain mh-nv-serif mh-nv-gold mb-3 text-[17px] font-black"
+  }, xmasNovelFill(q.x, playerName)), React.createElement("div", {
     className: "space-y-2.5"
   }, xmasNovelOptionsOf(q, xmasNovelCtx(S, st.cur)).map(o => React.createElement("button", {
     type: "button",
@@ -124566,7 +124563,7 @@ const XmasNovelScreen = ({
     "data-xmas-novel-option": o.i,
     onClick: () => answer(q, o.i)
   }, xmasNovelFill(o.x, playerName)))), q.once && React.createElement("div", {
-    className: "mt-2 text-center text-[11px] font-bold text-rose-200"
+    className: "mh-nv-plain mt-2 text-[11px] font-bold text-rose-200"
   }, "選んだら、やり直しはできません")), sheet === 'menu' && React.createElement(React.Fragment, null, React.createElement("div", {
     className: "mh-nv-serif mh-nv-gold mb-3 text-center text-[18px] font-black"
   }, "メニュー"), React.createElement("div", {
