@@ -519,6 +519,8 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   get monsucStoryEp2() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.monheroSuccess === true; },
   // 個人杯のお話(2026-10-31)。公開の印は 99-card-cup.jsx の cardCupOpen(あとの部品なので見るたびに引く)
   get cardCup() { return typeof cardCupOpen === 'function' && cardCupOpen() === true; },
+  // クリスマスのひとりで進める物語の序章(xmas_story_00・台帳 r1126-013)。11/28 10:00 から読める(17-release の RELEASE_FLAGS.xmasStoryPrologue)
+  get xmasStoryPrologue() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.xmasStoryPrologue === true; },
 });
 const eventReplayReleased = (event) => !event?.releaseFlag || EVENT_REPLAY_RELEASE_FLAGS[event.releaseFlag] === true;
 // 画面に並べるイベント回想。3か所(プロフィール・回想一覧・再生)が同じ並びを見るための唯一の入口
@@ -564,6 +566,8 @@ const EVENT_REPLAY_GROUPS = Object.freeze([
   // えるびんの歌のお話(2026-11-21 社長 r1119-079。新曲 Desert Crown と一緒に出る)
   { id:'erubin_song', genre:'song', emoji:'🏜️', label:'えるびんの歌', note:'えるびんが初めて作った曲のお話', color:'#d6b47a' },
   { id:'kiki_song', genre:'song', emoji:'🎹', label:'ききの初めての曲', note:'ききが初めて作った曲のお話', color:'#f9a8d4' },
+  // クリスマスのイベント「聖夜の名探偵」(2026-11-28 序章から・台帳 r1126-013)。読む所はイベントページの「物語」タブ。回想には読んだ話だけ並ぶ
+  { id:'xmas', genre:'event', emoji:'🎄', label:'聖夜の名探偵', note:'雪山のペンションのお話', color:'#f0c96c' },
   { id:'halloween', genre:'event', emoji:'🎃', label:'ハロウィン・ナイト', note:'レイドバトルとジャックのお話', color:'#fb923c' },
   { id:'update', genre:'play', emoji:'✨', label:'新しい遊びのお話', note:'新しい遊びができたときの案内', color:'#e879f9' },
   { id:'beat_point', genre:'event', emoji:'🎵', label:'ビートP', note:'ビートPと交換所のお話', color:'#34d399' },
