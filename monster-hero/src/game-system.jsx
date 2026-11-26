@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fc214bc1b65981f8
+// generated-sha256: 7c99c3705143d44c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -68511,7 +68511,7 @@ const XMAS_NOVEL_CSS = `
 .mh-nv-person[data-fresh] .stamp, .mh-nv-person[data-fresh] .santa, .mh-nv-person[data-fresh] .flower { animation: mh-nv-stamp .5s cubic-bezier(.2,1.6,.4,1) both; }
 @keyframes mh-nv-fresh { 0% { transform: scale(1); } 30% { transform: scale(1.08); } 100% { transform: scale(1); } }
 @keyframes mh-nv-stamp { from { opacity: 0; scale: 2.2; } to { opacity: 1; scale: 1; } }
-.mh-nv-fig.laugh svg { animation: mh-nv-laugh .25s ease-in-out 6; }
+.mh-nv-fig.laugh svg, .mh-nv-fig.laugh .mh-nv-boss { animation: mh-nv-laugh .25s ease-in-out 6; }
 @keyframes mh-nv-laugh { 50% { transform: translateY(-4px) scaleY(1.03); } }
 .mh-nv-person .flower { position: absolute; top: 30%; left: 50%; transform: translateX(-50%); font-size: 16px; color: #fff; text-shadow: 0 0 6px #fff; }
 .mh-nv-choice { width: 100%; min-height: 52px; padding: 10px 14px; border-radius: 12px; font-size: 15px; font-weight: 800; color: #fff3d0; text-align: center;
@@ -68526,6 +68526,18 @@ const XMAS_NOVEL_CSS = `
 @keyframes mh-nv-curtain-down { from { transform: translateY(-102%); } to { transform: translateY(0); } }
 @keyframes mh-nv-curtain-up { from { transform: translateY(0); } to { transform: translateY(-102%); } }
 @media (prefers-reduced-motion: reduce) { .mh-nv-curtain[data-st='down'] { animation: none; transform: none; } .mh-nv-curtain[data-st='up'] { animation: none; } }
+.mh-nv-fx.bleed { background:
+    radial-gradient(60% 45% at 0% 10%, rgba(150,0,12,.85), transparent 70%), radial-gradient(55% 40% at 100% 30%, rgba(130,0,10,.8), transparent 70%),
+    radial-gradient(70% 45% at 15% 100%, rgba(140,0,12,.85), transparent 70%), radial-gradient(50% 35% at 95% 95%, rgba(120,0,8,.75), transparent 70%);
+  animation: mh-nv-bleed 2.4s ease-out both; }
+@keyframes mh-nv-bleed { 0% { opacity: 0; transform: scale(1.35); filter: blur(6px); } 25% { opacity: 1; transform: scale(1); filter: blur(0); } 70% { opacity: .9; } 100% { opacity: 0; } }
+.mh-nv-fallen { position: absolute; left: 50%; bottom: 24%; width: min(80vw, 520px); transform: translateX(-50%); z-index: 4; filter: drop-shadow(0 0 2px rgba(190,200,230,.35)); pointer-events: none; animation: mh-nv-fade 1.2s ease both; }
+.mh-nv-boss { position: relative; height: 86%; aspect-ratio: 985 / 1347; max-width: 100%; }
+.mh-nv-boss img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; filter: brightness(0) drop-shadow(0 0 10px rgba(180,0,20,.55)) !important; animation: none !important; }
+.mh-nv-boss .eye { position: absolute; top: 34.5%; width: 7%; height: 3.2%; border-radius: 50%; transform: translate(-50%, -50%);
+  background: radial-gradient(circle, #fff3f3 0%, #ff2a3a 35%, rgba(255,0,30,.0) 75%); box-shadow: 0 0 18px 6px rgba(255,20,40,.75); animation: mh-nv-eye 2.6s ease-in-out infinite; }
+@keyframes mh-nv-eye { 0%, 100% { opacity: .85; } 50% { opacity: 1; } 92% { opacity: .1; } }
+@media (prefers-reduced-motion: reduce) { .mh-nv-fx.bleed { animation-duration: .01s; } .mh-nv-boss .eye { animation: none; } }
 .mh-nv-boot { background: #030407; }
 .mh-nv-noise { position: absolute; inset: -20%; pointer-events: none; opacity: .13; z-index: 1;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='160' height='160' filter='url(%23n)' opacity='.9'/></svg>");
@@ -68640,11 +68652,11 @@ const xmasNovelIsSilhouette = (row) => !!(row && /黒いサンタのシルエッ
 const xmasNovelIsLaugh = (row) => !!(row && /ふふ|あはは|ははは/.test(row.x || ''));
 const XmasNovelFigure = ({ row, dim = false }) => {
   const [broken, setBroken] = useState(0);
-  if (row && row.t === 'band' && xmasNovelIsSilhouette(row)) return <div className={`mh-nv-fig${dim ? ' dim' : ''}`} key={`band-${row.id}`}><XmasNovelShadow tone="#000" hat label="黒いサンタ" /></div>;
+  if (row && row.t === 'band' && xmasNovelIsSilhouette(row)) return <div className={`mh-nv-fig${dim ? ' dim' : ''}`} key={`band-${row.id}`}><XmasNovelBossShadow /></div>;
   if (!row || row.t !== 'line') return null;
   const key = `${row.w || row.n}-${row.e || ''}`;
   const laugh = row.n === '？？？' && xmasNovelIsLaugh(row);
-  if (row.n === '？？？' || !row.w) return row.n === '？？？' ? <div className={`mh-nv-fig${dim ? ' dim' : ''}${laugh ? ' laugh' : ''}`} key={key}><XmasNovelShadow tone={laugh ? '#000' : '#1c2240'} hat={laugh} label="？？？" /></div> : null;
+  if (row.n === '？？？' || !row.w) return row.n === '？？？' ? <div className={`mh-nv-fig${dim ? ' dim' : ''}${laugh ? ' laugh' : ''}`} key={key}>{laugh ? <XmasNovelBossShadow /> : <XmasNovelShadow tone="#1c2240" label="？？？" />}</div> : null;
   if (row.w === 'watson') return <div className="mh-nv-fig" key={key}><XmasNovelLaptop /></div>;
   const c = xmasNovelCastOf(row.w);
   const fig = xmasNovelFigureSrc(row.w, row.e);
@@ -68667,6 +68679,27 @@ const xmasNovelFaceOf = (id) => {
 };
 
 // ---- 人の並び(パネル・人を選ぶ問い) ----
+// 倒れた影(死ぬ場面。死体の絵は使わず、人型の影が横たわる)
+const XmasNovelFallen = () => (
+  <svg className="mh-nv-fallen" viewBox="0 0 300 80" aria-label="倒れた影" data-xmas-novel-fallen>
+    <defs><radialGradient id="mh-nv-fallen-g" cx="50%" cy="60%" r="60%"><stop offset="0%" stopColor="rgba(0,0,0,.95)" /><stop offset="100%" stopColor="rgba(0,0,0,.55)" /></radialGradient></defs>
+    <ellipse cx="150" cy="66" rx="140" ry="12" fill="rgba(0,0,0,.45)" />
+    <circle cx="42" cy="46" r="17" fill="url(#mh-nv-fallen-g)" />
+    <path d="M60 40 C90 30 160 30 200 38 L262 44 C274 46 274 56 262 58 L200 60 C160 66 92 66 60 56 Z" fill="url(#mh-nv-fallen-g)" />
+    <path d="M110 58 C120 70 150 72 165 66" stroke="rgba(0,0,0,.8)" strokeWidth="9" fill="none" strokeLinecap="round" />
+  </svg>
+);
+// 黒いサンタの影(バッドエンドのシルエット)。レイドのボスの絵を黒く塗りつぶし、目だけ赤く光らせる。絵が無ければ簡単な影
+const XmasNovelBossShadow = () => {
+  const src = typeof RAID_XMAS_BOSS_IMG !== 'undefined' ? RAID_XMAS_BOSS_IMG : '';
+  if (!src) return <XmasNovelShadow tone="#000" hat label="黒いサンタ" />;
+  return (
+    <div className="mh-nv-boss" data-xmas-novel-boss-shadow aria-label="黒いサンタの影">
+      <img src={src} alt="" draggable={false} />
+      <span className="eye" style={{ left: '41%' }} /><span className="eye" style={{ left: '58%' }} />
+    </div>
+  );
+};
 // 黒いサンタの判(バッドエンド。赤い丸の中に、黒いサンタの影)
 const XmasNovelSantaStamp = () => (
   <svg viewBox="0 0 40 40" width="100%" height="100%" aria-hidden="true">
@@ -68838,7 +68871,8 @@ const XmasNovelScreen = ({ playerName = '', onClose, script = null }) => {
     unreadRef.current = !!(r.k && !s.read.includes(r.k));
     if (r.k && !s.read.includes(r.k)) s = { ...s, read: [...s.read, r.k] };
     if (r.t === 'band' && Array.isArray(r.fx)) {
-      const vis = r.fx.find((f) => ['dark', 'white', 'red', 'light'].includes(f));
+      const vis = r.fx.find((f) => ['dark', 'white', 'red', 'light', 'bleed'].includes(f));
+      if (r.fx.includes('bleed') && r.fx.includes('red')) setTimeout(() => setFx({ kind: 'bleed', n: Date.now() }), 380); // 赤く光ってから、にじむ
       setFx(vis ? { kind: vis, n: Date.now() } : null);
       if (r.fx.includes('shake')) setShake((n) => n + 1);
       if (r.fx.includes('curtainDown')) setCurtain('down');
@@ -69103,6 +69137,7 @@ const XmasNovelScreen = ({ playerName = '', onClose, script = null }) => {
         {(bg.snow || !bg.img) && <><div className="mh-nv-snow" />{bg.snow && <div className="mh-nv-snow b" />}</>}
         {!darkNow && (isLine || (isBand && xmasNovelIsSilhouette(row))) && <XmasNovelFigure row={row} />}
         {fx && <div key={fx.n} className={`mh-nv-fx ${fx.kind}`} />}
+        {isBand && Array.isArray(row.fx) && row.fx.includes('fallen') && <XmasNovelFallen />}
         {inside && <div className="mh-nv-crt" data-xmas-novel-inside />}
         {transit && <div key={transit.n} className="mh-nv-transit" data-dir={transit.dir} data-xmas-novel-transit={transit.dir} onAnimationEnd={(e) => { if (e.target === e.currentTarget) setTransit(null); }}><div className="scr" /><div className="mh-nv-noise" /><div className="mh-nv-scan" /></div>}
         {curtain && <div key={`curtain-${curtain}`} className="mh-nv-curtain" data-st={curtain} data-xmas-novel-curtain={curtain} />}

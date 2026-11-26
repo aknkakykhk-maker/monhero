@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ab21f902b3061d21
+// source-sha256: f82208cdd03eddee
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -119046,7 +119046,7 @@ const XMAS_NOVEL_CSS = `
 .mh-nv-person[data-fresh] .stamp, .mh-nv-person[data-fresh] .santa, .mh-nv-person[data-fresh] .flower { animation: mh-nv-stamp .5s cubic-bezier(.2,1.6,.4,1) both; }
 @keyframes mh-nv-fresh { 0% { transform: scale(1); } 30% { transform: scale(1.08); } 100% { transform: scale(1); } }
 @keyframes mh-nv-stamp { from { opacity: 0; scale: 2.2; } to { opacity: 1; scale: 1; } }
-.mh-nv-fig.laugh svg { animation: mh-nv-laugh .25s ease-in-out 6; }
+.mh-nv-fig.laugh svg, .mh-nv-fig.laugh .mh-nv-boss { animation: mh-nv-laugh .25s ease-in-out 6; }
 @keyframes mh-nv-laugh { 50% { transform: translateY(-4px) scaleY(1.03); } }
 .mh-nv-person .flower { position: absolute; top: 30%; left: 50%; transform: translateX(-50%); font-size: 16px; color: #fff; text-shadow: 0 0 6px #fff; }
 .mh-nv-choice { width: 100%; min-height: 52px; padding: 10px 14px; border-radius: 12px; font-size: 15px; font-weight: 800; color: #fff3d0; text-align: center;
@@ -119061,6 +119061,18 @@ const XMAS_NOVEL_CSS = `
 @keyframes mh-nv-curtain-down { from { transform: translateY(-102%); } to { transform: translateY(0); } }
 @keyframes mh-nv-curtain-up { from { transform: translateY(0); } to { transform: translateY(-102%); } }
 @media (prefers-reduced-motion: reduce) { .mh-nv-curtain[data-st='down'] { animation: none; transform: none; } .mh-nv-curtain[data-st='up'] { animation: none; } }
+.mh-nv-fx.bleed { background:
+    radial-gradient(60% 45% at 0% 10%, rgba(150,0,12,.85), transparent 70%), radial-gradient(55% 40% at 100% 30%, rgba(130,0,10,.8), transparent 70%),
+    radial-gradient(70% 45% at 15% 100%, rgba(140,0,12,.85), transparent 70%), radial-gradient(50% 35% at 95% 95%, rgba(120,0,8,.75), transparent 70%);
+  animation: mh-nv-bleed 2.4s ease-out both; }
+@keyframes mh-nv-bleed { 0% { opacity: 0; transform: scale(1.35); filter: blur(6px); } 25% { opacity: 1; transform: scale(1); filter: blur(0); } 70% { opacity: .9; } 100% { opacity: 0; } }
+.mh-nv-fallen { position: absolute; left: 50%; bottom: 24%; width: min(80vw, 520px); transform: translateX(-50%); z-index: 4; filter: drop-shadow(0 0 2px rgba(190,200,230,.35)); pointer-events: none; animation: mh-nv-fade 1.2s ease both; }
+.mh-nv-boss { position: relative; height: 86%; aspect-ratio: 985 / 1347; max-width: 100%; }
+.mh-nv-boss img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; filter: brightness(0) drop-shadow(0 0 10px rgba(180,0,20,.55)) !important; animation: none !important; }
+.mh-nv-boss .eye { position: absolute; top: 34.5%; width: 7%; height: 3.2%; border-radius: 50%; transform: translate(-50%, -50%);
+  background: radial-gradient(circle, #fff3f3 0%, #ff2a3a 35%, rgba(255,0,30,.0) 75%); box-shadow: 0 0 18px 6px rgba(255,20,40,.75); animation: mh-nv-eye 2.6s ease-in-out infinite; }
+@keyframes mh-nv-eye { 0%, 100% { opacity: .85; } 50% { opacity: 1; } 92% { opacity: .1; } }
+@media (prefers-reduced-motion: reduce) { .mh-nv-fx.bleed { animation-duration: .01s; } .mh-nv-boss .eye { animation: none; } }
 .mh-nv-boot { background: #030407; }
 .mh-nv-noise { position: absolute; inset: -20%; pointer-events: none; opacity: .13; z-index: 1;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='160' height='160' filter='url(%23n)' opacity='.9'/></svg>");
@@ -119292,20 +119304,15 @@ const XmasNovelFigure = ({
   if (row && row.t === 'band' && xmasNovelIsSilhouette(row)) return React.createElement("div", {
     className: `mh-nv-fig${dim ? ' dim' : ''}`,
     key: `band-${row.id}`
-  }, React.createElement(XmasNovelShadow, {
-    tone: "#000",
-    hat: true,
-    label: "黒いサンタ"
-  }));
+  }, React.createElement(XmasNovelBossShadow, null));
   if (!row || row.t !== 'line') return null;
   const key = `${row.w || row.n}-${row.e || ''}`;
   const laugh = row.n === '？？？' && xmasNovelIsLaugh(row);
   if (row.n === '？？？' || !row.w) return row.n === '？？？' ? React.createElement("div", {
     className: `mh-nv-fig${dim ? ' dim' : ''}${laugh ? ' laugh' : ''}`,
     key: key
-  }, React.createElement(XmasNovelShadow, {
-    tone: laugh ? '#000' : '#1c2240',
-    hat: laugh,
+  }, laugh ? React.createElement(XmasNovelBossShadow, null) : React.createElement(XmasNovelShadow, {
+    tone: "#1c2240",
     label: "？？？"
   })) : null;
   if (row.w === 'watson') return React.createElement("div", {
@@ -119340,6 +119347,70 @@ const xmasNovelFaceOf = id => {
     return dir ? `${dir}/face/${id}_normal.PNG` : '';
   }
   return c.face || '';
+};
+const XmasNovelFallen = () => React.createElement("svg", {
+  className: "mh-nv-fallen",
+  viewBox: "0 0 300 80",
+  "aria-label": "倒れた影",
+  "data-xmas-novel-fallen": true
+}, React.createElement("defs", null, React.createElement("radialGradient", {
+  id: "mh-nv-fallen-g",
+  cx: "50%",
+  cy: "60%",
+  r: "60%"
+}, React.createElement("stop", {
+  offset: "0%",
+  stopColor: "rgba(0,0,0,.95)"
+}), React.createElement("stop", {
+  offset: "100%",
+  stopColor: "rgba(0,0,0,.55)"
+}))), React.createElement("ellipse", {
+  cx: "150",
+  cy: "66",
+  rx: "140",
+  ry: "12",
+  fill: "rgba(0,0,0,.45)"
+}), React.createElement("circle", {
+  cx: "42",
+  cy: "46",
+  r: "17",
+  fill: "url(#mh-nv-fallen-g)"
+}), React.createElement("path", {
+  d: "M60 40 C90 30 160 30 200 38 L262 44 C274 46 274 56 262 58 L200 60 C160 66 92 66 60 56 Z",
+  fill: "url(#mh-nv-fallen-g)"
+}), React.createElement("path", {
+  d: "M110 58 C120 70 150 72 165 66",
+  stroke: "rgba(0,0,0,.8)",
+  strokeWidth: "9",
+  fill: "none",
+  strokeLinecap: "round"
+}));
+const XmasNovelBossShadow = () => {
+  const src = typeof RAID_XMAS_BOSS_IMG !== 'undefined' ? RAID_XMAS_BOSS_IMG : '';
+  if (!src) return React.createElement(XmasNovelShadow, {
+    tone: "#000",
+    hat: true,
+    label: "黒いサンタ"
+  });
+  return React.createElement("div", {
+    className: "mh-nv-boss",
+    "data-xmas-novel-boss-shadow": true,
+    "aria-label": "黒いサンタの影"
+  }, React.createElement("img", {
+    src: src,
+    alt: "",
+    draggable: false
+  }), React.createElement("span", {
+    className: "eye",
+    style: {
+      left: '41%'
+    }
+  }), React.createElement("span", {
+    className: "eye",
+    style: {
+      left: '58%'
+    }
+  }));
 };
 const XmasNovelSantaStamp = () => React.createElement("svg", {
   viewBox: "0 0 40 40",
@@ -119623,7 +119694,11 @@ const XmasNovelScreen = ({
       read: [...s.read, r.k]
     };
     if (r.t === 'band' && Array.isArray(r.fx)) {
-      const vis = r.fx.find(f => ['dark', 'white', 'red', 'light'].includes(f));
+      const vis = r.fx.find(f => ['dark', 'white', 'red', 'light', 'bleed'].includes(f));
+      if (r.fx.includes('bleed') && r.fx.includes('red')) setTimeout(() => setFx({
+        kind: 'bleed',
+        n: Date.now()
+      }), 380);
       setFx(vis ? {
         kind: vis,
         n: Date.now()
@@ -120164,7 +120239,7 @@ const XmasNovelScreen = ({
   }), fx && React.createElement("div", {
     key: fx.n,
     className: `mh-nv-fx ${fx.kind}`
-  }), inside && React.createElement("div", {
+  }), isBand && Array.isArray(row.fx) && row.fx.includes('fallen') && React.createElement(XmasNovelFallen, null), inside && React.createElement("div", {
     className: "mh-nv-crt",
     "data-xmas-novel-inside": true
   }), transit && React.createElement("div", {

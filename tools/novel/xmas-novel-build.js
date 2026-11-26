@@ -33,7 +33,7 @@ const BGM_MARKS = {
   ボ: 'original_boss', なし: 'silence', 止: 'silence',
 };
 // 帯の頭の印 → 演出
-const FX_TAGS = { 幕が下りる: 'curtainDown', 幕がおりる: 'curtainDown', 幕が上がる: 'curtainUp', 幕があがる: 'curtainUp', 暗転: 'dark', 白転: 'white', 明転: 'light', ゆれ: 'shake', 揺れ: 'shake', 赤: 'red', 赤い一瞬: 'red', 題字: 'title', 章: 'chapter', 効果音: 'se', 悲鳴: 'se', 帯: 'band', 雪: 'snow' };
+const FX_TAGS = { 赤いにじみ: 'bleed', 倒れた影: 'fallen', 赤く光る: 'red', 幕が下りる: 'curtainDown', 幕がおりる: 'curtainDown', 幕が上がる: 'curtainUp', 幕があがる: 'curtainUp', 暗転: 'dark', 白転: 'white', 明転: 'light', ゆれ: 'shake', 揺れ: 'shake', 赤: 'red', 赤い一瞬: 'red', 題字: 'title', 章: 'chapter', 効果音: 'se', 悲鳴: 'se', 帯: 'band', 雪: 'snow' };
 const ENDING_KIND = { G: 'good', N: 'normal', B: 'bad', A: 'another' };
 const CHAPTER_NO = { 序章: 0, 終章: 9 };
 
@@ -281,6 +281,11 @@ const parseRow = (cells, where) => {
       if (!m || !FX_TAGS[m[1]]) break;
       fx.push(FX_TAGS[m[1]]); s = s.slice(m[0].length);
     }
+    // (演出:赤いにじみ)(演出:赤く光る)(演出:倒れた影)… 死ぬ場面の演出(社長 2026-11-26「文章ははっきり、絵は演出で」)。文のどこにあってもよい
+    s = s.replace(/[(（]演出\s*[:：]\s*([^)）]+)[)）]/g, (_, w) => {
+      w.split(/[・、,\s]+/).forEach((x) => { const k = /にじみ|血/.test(x) ? 'bleed' : /倒れた影|倒れ/.test(x) ? 'fallen' : /赤/.test(x) ? 'red' : /暗転/.test(x) ? 'dark' : /白/.test(x) ? 'white' : /ゆれ|揺れ/.test(x) ? 'shake' : ''; if (k) fx.push(k); else if (x) note(where, `知らない演出「${x}」`); });
+      return '';
+    }).trim();
     // 文の中の(…幕が下りる)(…幕が上がる)も演出(「(効果音)パチパチ……(幕が下りる)」「カーン(開演の鐘。幕が上がる)」)
     if (/幕が(下|お)りる/.test(s)) fx.push('curtainDown');
     if (/幕が(上|あ)がる/.test(s)) fx.push('curtainUp');

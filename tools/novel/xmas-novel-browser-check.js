@@ -110,6 +110,8 @@ const CASES = CASES_ALL.filter((c) => !ONLY || c.shot === ONLY);
         } else {
           if (s.got) { seen.clue++; if (!shots.has('clue')) { shots.add('clue'); await shot('03-clue'); } }
           if (s.who) seen.line++;
+          if (await page.evaluate(() => !!document.querySelector('.mh-nv-fx.bleed'))) { seen.bleed = (seen.bleed || 0) + 1; if (!shots.has('bleed')) { shots.add('bleed'); if (SHOT_DIR) await page.screenshot({ path: path.join(SHOT_DIR, `${vp.shot}-16-bleed.jpg`), type: 'jpeg', quality: 80 }); } }
+          if (await page.evaluate(() => !!document.querySelector('[data-xmas-novel-fallen]'))) { seen.fallen = (seen.fallen || 0) + 1; if (!shots.has('fallen')) { shots.add('fallen'); await shot('17-fallen'); } }
           if (s.panel && !shots.has('panel')) { shots.add('panel'); await shot('03-panel'); }
           if (vp.full && s.who === 'ソラシド' && !shots.has('line')) { shots.add('line'); await tap('.mh-nv-stage'); await shot('03-line'); }
           await tap('.mh-nv-stage');
@@ -117,7 +119,7 @@ const CASES = CASES_ALL.filter((c) => !ONLY || c.shot === ONLY);
         await page.waitForTimeout(40);
       }
       check(`② ${vp.label}: 最後のエンディングまで通して読めた`, !!ending, ending || '着かなかった');
-      check(`② ${vp.label}: 章の札・台詞・手がかり・行動の選択・突きつけ(まちがい1回)・人を選ぶ・外側からゲームの中への切り替えが出た`, seen.chapter > 0 && seen.line > 0 && seen.clue > 0 && seen.action > 0 && seen.present > 0 && seen.wrong > 0 && seen.person > 0 && seen.transit > 0, JSON.stringify(seen));
+      check(`② ${vp.label}: 章の札・台詞・手がかり・行動の選択・突きつけ(まちがい1回)・人を選ぶ・外側からゲームの中への切り替え・赤いにじみ・倒れた影が出た`, seen.chapter > 0 && seen.line > 0 && seen.clue > 0 && seen.action > 0 && seen.present > 0 && seen.wrong > 0 && seen.person > 0 && seen.transit > 0 && seen.bleed > 0 && seen.fallen > 0, JSON.stringify(seen));
       await shot('07-ending');
 
       // ③
