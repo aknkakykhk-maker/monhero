@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a63bf9252aa0b51b
+// source-sha256: dd2f517475364978
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -17249,6 +17249,10 @@ const giftTitleDisplay = gift => {
   };
   if (gift?.source === 'raidJack') return {
     label: 'ジャック報酬',
+    title
+  };
+  if (gift?.source === 'raidXmas') return {
+    label: 'レイド報酬',
     title
   };
   if (gift?.source === 'assistantBond') return {
@@ -63814,7 +63818,7 @@ const sbCountRaidJackAhead = async (kind, tier, myTotal, eventId) => {
   const m = /\/(\d+)$/.exec(String(range || ''));
   return m ? Number(m[1]) : null;
 };
-const raidJackCollectDueRewards = async (state, breederId, eventId, nowMs) => {
+const raidJackCollectDueRewards = async (state, breederId, eventId, nowMs, ev = null) => {
   const none = {
     ok: false,
     due: [],
@@ -63822,7 +63826,12 @@ const raidJackCollectDueRewards = async (state, breederId, eventId, nowMs) => {
   };
   const id = raidJackSafeId(breederId);
   if (!id) return none;
-  const windowState = raidJackWindowAt(nowMs);
+  const rules = ev && typeof ev === 'object' ? ev : {};
+  const aTiers = Array.isArray(rules.aTiers) ? rules.aTiers : RAID_JACK_A_TIERS;
+  const bTiers = Array.isArray(rules.bTiers) ? rules.bTiers : RAID_JACK_B_TIERS;
+  const rewards = rules.rewards || RAID_JACK_REWARDS;
+  const rewardTitle = typeof rules.rewardTitle === 'function' ? rules.rewardTitle : raidJackRewardTitle;
+  const windowState = (typeof rules.windowAt === 'function' ? rules.windowAt : raidJackWindowAt)(nowMs);
   if (windowState === 'before') return {
     ok: true,
     due: [],
@@ -63847,30 +63856,30 @@ const raidJackCollectDueRewards = async (state, breederId, eventId, nowMs) => {
     });
   };
   const mineA = i => self.a[i + 1] || 0;
-  if (Object.values(self.a).some(v => v > 0)) add(raidJackClaimId('part_a'), raidJackRewardTitle('part_a'), RAID_JACK_REWARDS.participation);
-  if (self.bTotal > 0) add(raidJackClaimId('part_b'), raidJackRewardTitle('part_b'), RAID_JACK_REWARDS.participation);
-  for (let i = 0; i < RAID_JACK_A_TIERS.length; i += 1) {
+  if (Object.values(self.a).some(v => v > 0)) add(raidJackClaimId('part_a'), rewardTitle('part_a'), rewards.participation);
+  if (self.bTotal > 0) add(raidJackClaimId('part_b'), rewardTitle('part_b'), rewards.participation);
+  for (let i = 0; i < aTiers.length; i += 1) {
     const total = totals.a[i + 1] ? totals.a[i + 1].total : 0;
-    const defeated = total >= RAID_JACK_A_TIERS[i].hp;
+    const defeated = total >= aTiers[i].hp;
     if (!defeated || mineA(i) <= 0) continue;
-    add(raidJackClaimId('clear_a', i), raidJackRewardTitle('clear_a', i), RAID_JACK_REWARDS.aClear[i]);
+    add(raidJackClaimId('clear_a', i), rewardTitle('clear_a', i), rewards.aClear[i]);
     const rankId = raidJackClaimId('rank_a', i);
-    if ((i < RAID_JACK_A_TIERS.length - 1 || windowState === 'after') && !claimed.has(rankId) && !claimed.has(raidJackNoneId(rankId))) {
+    if ((i < aTiers.length - 1 || windowState === 'after') && !claimed.has(rankId) && !claimed.has(raidJackNoneId(rankId))) {
       const top = await sbFetchRaidJackContributions(i + 1, RAID_JACK_REWARD_RANKS, eventId);
       if (!top) continue;
       const place = top.findIndex(r => r.breederId === id);
-      if (place >= 0) add(rankId, raidJackRewardTitle('rank_a', i, place + 1), RAID_JACK_REWARDS.aRank[i][place], place + 1);else noneIds.push(raidJackNoneId(rankId));
+      if (place >= 0) add(rankId, rewardTitle('rank_a', i, place + 1), rewards.aRank[i][place], place + 1);else noneIds.push(raidJackNoneId(rankId));
     }
   }
-  RAID_JACK_B_TIERS.forEach((tier, i) => {
-    if (norm.b.defeated.includes(tier.id)) add(raidJackClaimId('clear_b', i), raidJackRewardTitle('clear_b', i), RAID_JACK_REWARDS.bClear[i]);
+  bTiers.forEach((tier, i) => {
+    if (norm.b.defeated.includes(tier.id)) add(raidJackClaimId('clear_b', i), rewardTitle('clear_b', i), rewards.bClear[i]);
   });
   const finalId = raidJackClaimId('final_b');
   if (windowState === 'after' && self.bTotal > 0 && !claimed.has(finalId) && !claimed.has(raidJackNoneId(finalId))) {
     const top = await sbFetchRaidJackBRanking(RAID_JACK_REWARD_RANKS, eventId);
     if (top) {
       const place = top.findIndex(r => r.breederId === id);
-      if (place >= 0) add(finalId, raidJackRewardTitle('final_b', 0, place + 1), RAID_JACK_REWARDS.bFinal[place], place + 1);else noneIds.push(raidJackNoneId(finalId));
+      if (place >= 0) add(finalId, rewardTitle('final_b', 0, place + 1), rewards.bFinal[place], place + 1);else noneIds.push(raidJackNoneId(finalId));
     }
   }
   return {
@@ -64366,6 +64375,23 @@ const raidXmasFlushStoredPending = async breederId => {
     return 0;
   }
 };
+const raidXmasRewardTitle = (kind, tierIndex, rank) => {
+  const at = list => list[Math.min(Math.max(tierIndex || 0, 0), list.length - 1)].name;
+  if (kind === 'part_a') return `${RAID_XMAS_EVENT.name} レイドバトル 参加賞`;
+  if (kind === 'part_b') return `${RAID_XMAS_EVENT.name} グランドスラム 参加賞`;
+  if (kind === 'clear_a') return `${at(RAID_XMAS_A_TIERS)} 討伐報酬`;
+  if (kind === 'rank_a') return `${at(RAID_XMAS_A_TIERS)} 貢献${rank}位の報酬`;
+  if (kind === 'clear_b') return `${at(RAID_XMAS_B_TIERS)} 初討伐報酬`;
+  return `${RAID_XMAS_EVENT.name} グランドスラム 累計ダメージ${rank}位の報酬`;
+};
+const raidXmasRewardRules = () => ({
+  aTiers: RAID_XMAS_A_TIERS,
+  bTiers: RAID_XMAS_B_TIERS,
+  rewards: RAID_XMAS_REWARDS,
+  windowAt: raidXmasWindowAt,
+  rewardTitle: raidXmasRewardTitle
+});
+const raidXmasGiftId = claimId => `${RAID_XMAS_EVENT.id}_${claimId}`;
 const raidEventShortName = (bossWord, name) => String(name || '').replace(`${bossWord}・`, '').replace(bossWord, '').trim();
 const RAID_EVENT_JACK = Object.freeze({
   key: 'jack',
@@ -114490,7 +114516,7 @@ const XMAS_NOVEL_SCRIPT = {
     }, {
       "id": "1-1-2",
       "t": "band",
-      "x": "11月30日。雪の山道を、半日のぼった先",
+      "x": "12月18日。雪の山道を、半日のぼった先",
       "k": "C1-1:1-1-2"
     }, {
       "id": "1-1-3",
@@ -114524,7 +114550,7 @@ const XMAS_NOVEL_SCRIPT = {
       "id": "1-1-7",
       "t": "line",
       "w": "watson",
-      "x": "記録しました。11月30日、15時12分。……電波は、ここから弱くなります",
+      "x": "記録しました。12月18日、15時12分。……電波は、ここから弱くなります",
       "k": "C1-1:1-1-7"
     }, {
       "id": "1-1-8",
@@ -115832,7 +115858,7 @@ const XMAS_NOVEL_SCRIPT = {
     }, {
       "id": "4-1-3",
       "t": "band",
-      "x": "2階の奥。イチーカが、古い鍵をまわす",
+      "x": "その夜おそく。2階の奥。イチーカが、古い鍵をまわす",
       "k": "C4-1:4-1-3"
     }, {
       "id": "4-1-4",
@@ -117777,7 +117803,7 @@ const XMAS_NOVEL_SCRIPT = {
       "id": "8-3-9",
       "t": "line",
       "w": "kyuko",
-      "x": "……ごめん、ドラちゃん。いちばん、ひどいことした",
+      "x": "……ごめん、ドラちゃん。服は、2着用意してたんだ。1着を、ドラちゃんのかばんに入れた。……いちばん、ひどいことした",
       "e": "troubled",
       "k": "C8-3:8-3-9"
     }, {
@@ -119090,7 +119116,7 @@ const XMAS_NOVEL_SCRIPT = {
     }, {
       "id": "N-2",
       "t": "band",
-      "x": "12月24日。雪がやみ、ふもとから、人がのぼってきた",
+      "x": "12月27日。クリスマスは、もう過ぎていた。雪がやみ、ふもとから、人がのぼってきた",
       "k": "END-N:N-2"
     }, {
       "id": "N-3",
@@ -119293,7 +119319,7 @@ const XMAS_NOVEL_SCRIPT = {
     }, {
       "id": "A-2",
       "t": "band",
-      "x": "12月24日。雪がやみ、ふもとから人がのぼってきた",
+      "x": "雪がやみ、ふもとから人がのぼってきた",
       "k": "END-A:A-2"
     }, {
       "id": "A-3",
@@ -247420,6 +247446,8 @@ function MonsterHeroGame() {
   const debugResultRef = useRef(false);
   const raidJackRunRef = useRef(null);
   const raidJackClaimingRef = useRef(false);
+  const raidXmasClaimingRef = useRef(false);
+  const raidXmasLastClaimRef = useRef(0);
   const raidJackLastClaimRef = useRef(0);
   const raidJackDamageRef = useRef(0);
   const tacticsRaidPresentLevel = turn => Math.max(0, Math.floor((Number(turn) || 0) / 2));
@@ -249491,7 +249519,7 @@ function MonsterHeroGame() {
   const FLOWER3_RANKING_EVENT_ID = 'flower3_2026_11_23';
   const FLOWER3_OPEN_STORY_ID = 'flower3_2026_ep1';
   const FLOWER3_THANKS_STORY_ID = 'flower3_2026_ep8';
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, ...FLOWER3_STORY_IDS, FLOWER3_THANKS_STORY_ID, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, ERUBIN_JOIN_STORY_ID, CARD_CUP_STORY_ID, RHYTHM_GRAND_OPEN_TEASER_STORY_ID, RHYTHM_GRAND_OPEN_STORY_ID, MONSUC_BETA_EP1_STORY_ID, MONSUC_BETA_EP2_STORY_ID, SPARKLING_PINK_STORY_ID, KYUKO_WINTER_STORY_ID, KIKI_TWINTAIL_STORY_ID, BEYOND_SAME_SKY_STORY_ID, DESERT_CROWN_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...RAID_XMAS_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, ...FLOWER3_STORY_IDS, FLOWER3_THANKS_STORY_ID, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, ERUBIN_JOIN_STORY_ID, CARD_CUP_STORY_ID, RHYTHM_GRAND_OPEN_TEASER_STORY_ID, RHYTHM_GRAND_OPEN_STORY_ID, MONSUC_BETA_EP1_STORY_ID, MONSUC_BETA_EP2_STORY_ID, SPARKLING_PINK_STORY_ID, KYUKO_WINTER_STORY_ID, KIKI_TWINTAIL_STORY_ID, BEYOND_SAME_SKY_STORY_ID, DESERT_CROWN_STORY_ID];
   const RHYTHM_EVENT_STORY_BY_EVENT = {
     [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_STORY_ID,
     [SYMPHONY_EVENT_ID]: SYMPHONY_STORY_ID,
@@ -250137,16 +250165,27 @@ function MonsterHeroGame() {
           raidProgressStoryId = null;
         }
       }
+      let raidXmasStoryId = null;
+      if (RELEASE_FLAGS.raidXmas === true) {
+        if (notPlayedYet(RAID_XMAS_STORY_START_ID)) raidXmasStoryId = RAID_XMAS_STORY_START_ID;else if (Object.values(RAID_XMAS_STORY_AFTER_TIER).some(notPlayedYet) || notPlayedYet(RAID_XMAS_ENDING_CLEARED_ID) && notPlayedYet(RAID_XMAS_ENDING_NOTCLEARED_ID)) {
+          try {
+            const xmasTotals = await raidXmasFetchTotals(RAID_XMAS_EVENT.id);
+            raidXmasStoryId = raidXmasStoryCandidates(xmasTotals, Date.now()).find(id => notPlayedYet(id)) || null;
+          } catch (e) {
+            raidXmasStoryId = null;
+          }
+        }
+      }
       const halloweenStoryId = RELEASE_FLAGS.rhythmEventPoints === true ? halloweenNightStoryIdsAt(Date.now()).find(id => notPlayedYet(id)) || null : null;
       const pandoraWingsStoryId = RELEASE_FLAGS.rhythmWeeklyRanking === true ? [...pandoraWingsStoryIdsAt(Date.now()), ...flower3StoryIdsAt(Date.now())].find(id => notPlayedYet(id)) || null : null;
       if (!liveEvent) {
-        if (raidStartStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_STORY_START_ID);else if (raidHowtoReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);else if (raidRhythmStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_RHYTHM_STORY_ID);else if (raidProgressStoryId) setRhythmEventStoryPending(prev => prev || raidProgressStoryId);else if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);else if (pandoraWingsStoryId) setRhythmEventStoryPending(prev => prev || pandoraWingsStoryId);else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);else if (multiFriendsStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);else if (masuCallStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MASU_CALL_STORY_ID);else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
+        if (raidStartStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_STORY_START_ID);else if (raidHowtoReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);else if (raidRhythmStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_RHYTHM_STORY_ID);else if (raidProgressStoryId) setRhythmEventStoryPending(prev => prev || raidProgressStoryId);else if (raidXmasStoryId) setRhythmEventStoryPending(prev => prev || raidXmasStoryId);else if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);else if (pandoraWingsStoryId) setRhythmEventStoryPending(prev => prev || pandoraWingsStoryId);else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);else if (multiFriendsStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);else if (masuCallStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MASU_CALL_STORY_ID);else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
         return;
       }
       const liveStoryId = rhythmEventStoryIdFor(liveEvent);
       if (liveStoryId && notPlayedYet(liveStoryId)) {
         setRhythmEventStoryPending(prev => prev || liveStoryId);
-      } else if (raidStartStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_STORY_START_ID);else if (raidHowtoReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);else if (raidRhythmStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_RHYTHM_STORY_ID);else if (raidProgressStoryId) setRhythmEventStoryPending(prev => prev || raidProgressStoryId);else if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);else if (pandoraWingsStoryId) setRhythmEventStoryPending(prev => prev || pandoraWingsStoryId);else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);else if (multiFriendsStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);else if (masuCallStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MASU_CALL_STORY_ID);else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
+      } else if (raidStartStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_STORY_START_ID);else if (raidHowtoReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);else if (raidRhythmStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_RHYTHM_STORY_ID);else if (raidProgressStoryId) setRhythmEventStoryPending(prev => prev || raidProgressStoryId);else if (raidXmasStoryId) setRhythmEventStoryPending(prev => prev || raidXmasStoryId);else if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);else if (pandoraWingsStoryId) setRhythmEventStoryPending(prev => prev || pandoraWingsStoryId);else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);else if (multiFriendsStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);else if (masuCallStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MASU_CALL_STORY_ID);else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
       if (rhythmEventLiveCatchUpRef.current) return;
       rhythmEventLiveCatchUpRef.current = true;
       try {
@@ -253311,6 +253350,7 @@ function MonsterHeroGame() {
     flower3Ep8Seen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(FLOWER3_THANKS_STORY_ID),
     ...Object.fromEntries(HALLOWEEN_NIGHT_STORIES.map(story => [`halloweenNightPart${story.part}Seen`, Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(story.id)])),
     ...Object.fromEntries(RAID_JACK_STORY_IDS.map(id => [raidJackStoryUnlockKey(id), Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(id)])),
+    ...Object.fromEntries((typeof EVENT_REPLAYS !== 'undefined' && Array.isArray(EVENT_REPLAYS) ? EVENT_REPLAYS : []).filter(ev => ev && RAID_XMAS_STORY_IDS.includes(ev.id)).map(ev => [ev.unlockedKey, Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(ev.id)])),
     rhythmMultiFriendsSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_MULTI_FRIENDS_STORY_ID),
     rhythmMasuCallSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_MASU_CALL_STORY_ID),
     raidJackHowtoSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RAID_JACK_HOWTO_STORY_ID),
@@ -265121,6 +265161,7 @@ function MonsterHeroGame() {
     raidJackRunRef.current = null;
     raidJackDamageRef.current = 0;
     raidJackLastClaimRef.current = 0;
+    raidXmasLastClaimRef.current = 0;
     setRaidJackResult(null);
     returnToHome();
     setRunMode(BATTLE_MODE_CHALLENGE);
@@ -265316,6 +265357,7 @@ function MonsterHeroGame() {
   };
   const exitRaidJackRhythmResult = (toDebug = false) => {
     raidJackLastClaimRef.current = 0;
+    raidXmasLastClaimRef.current = 0;
     setRaidJackResult(null);
     setGameState(toDebug ? 'RAID_JACK_DEBUG' : 'RAID_JACK');
   };
@@ -265504,7 +265546,67 @@ function MonsterHeroGame() {
     setXmasEventTab('story');
     setGameState('RAID_JACK');
   };
-  const claimRaidXmasRewards = async () => 0;
+  const claimRaidXmasRewards = async () => {
+    if (RELEASE_FLAGS.raidXmas !== true || raidJackDebugForce) return 0;
+    if (raidXmasClaimingRef.current) return 0;
+    raidXmasClaimingRef.current = true;
+    try {
+      const breederId = await ensureBreederId();
+      if (!breederId) return 0;
+      const state = await raidXmasLoadState();
+      const found = await raidJackCollectDueRewards(state, breederId, RAID_XMAS_EVENT.id, Date.now(), raidXmasRewardRules());
+      if (!found.ok || found.due.length === 0 && found.noneIds.length === 0) return 0;
+      const savedGifts = await storeGet('mh_gifts', [], false);
+      const beforeGifts = Array.isArray(savedGifts) ? savedGifts : [];
+      let nextGifts = beforeGifts;
+      let granted = 0;
+      found.due.forEach(entry => {
+        const gift = {
+          id: raidXmasGiftId(entry.id),
+          title: entry.title,
+          source: 'raidXmas',
+          rewards: raidJackRewardGiftItems(entry.reward)
+        };
+        const result = grantGiftOnce(nextGifts, gift);
+        if (result.granted) {
+          nextGifts = result.gifts;
+          granted += 1;
+        }
+      });
+      const nextState = raidJackNormalizeState({
+        ...state,
+        claimed: [...state.claimed, ...found.due.map(entry => entry.id), ...found.due.filter(entry => entry.place).map(entry => raidJackPlaceId(entry.id, entry.place)), ...found.noneIds]
+      });
+      const saved = await saveStoredValuesOrRollback([{
+        key: 'mh_gifts',
+        before: beforeGifts,
+        next: nextGifts
+      }, {
+        key: RAID_XMAS_STORAGE_KEY,
+        before: state,
+        next: nextState
+      }], storeGet, storeSet);
+      if (!saved) {
+        console.error('[raid-xmas-reward] save failed');
+        return 0;
+      }
+      if (granted > 0) setGifts(nextGifts);
+      return granted;
+    } catch (error) {
+      return 0;
+    } finally {
+      raidXmasClaimingRef.current = false;
+    }
+  };
+  useEffect(() => {
+    if (gameState !== 'HOME') return;
+    if (RELEASE_FLAGS.raidXmas !== true || raidJackDebugForce) return;
+    const now = Date.now();
+    if (raidXmasWindowAt(now) === 'before') return;
+    if (now - raidXmasLastClaimRef.current < 300000) return;
+    raidXmasLastClaimRef.current = now;
+    void claimRaidXmasRewards();
+  }, [gameState]);
   const dismissRaidJackGuide = () => {
     setRaidJackGuideSeen(true);
     if (!raidJackDebugForce) storeSet(RAID_JACK_GUIDE_KEY, true, false);
