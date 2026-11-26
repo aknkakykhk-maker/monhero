@@ -87,6 +87,8 @@ const speakerOf = (name) => {
   const n = stripMd(name);
   if (/^[？?]{3}$/.test(n)) return { secret: true };
   if (n === '全員' || n === 'みんな') return { n, crowd: true };
+  // 過去編だけの人は名前だけ(「ももすけの母」を、頭の「ももすけ」で本人の顔にしない)
+  if (PAST_SPEAKERS.includes(n)) return { n };
   const hit = SPEAKERS.find(([ja]) => n === ja || n.startsWith(ja));
   return hit ? { w: hit[1] } : { n };
 };
