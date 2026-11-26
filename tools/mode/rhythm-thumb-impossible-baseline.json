@@ -366,7 +366,31 @@
   "kimimachi_loop/MASTER/landscape": 0,
   "kimimachi_loop/MASTER/portrait": 0,
   "kimimachi_loop/HELL/landscape": 0,
-  "kimimachi_loop/HELL/portrait": 0
+  "kimimachi_loop/HELL/portrait": 0,
+  "kiss_mystery/MASTER/landscape": 0,
+  "kiss_mystery/MASTER/portrait": 0,
+  "kiss_mystery/HELL/landscape": 0,
+  "kiss_mystery/HELL/portrait": 0,
+  "kiss_mystery_short/MASTER/landscape": 0,
+  "kiss_mystery_short/MASTER/portrait": 0,
+  "kiss_mystery_short/HELL/landscape": 0,
+  "kiss_mystery_short/HELL/portrait": 1,
+  "dear_santa/MASTER/landscape": 0,
+  "dear_santa/MASTER/portrait": 0,
+  "dear_santa/HELL/landscape": 0,
+  "dear_santa/HELL/portrait": 4,
+  "dear_santa_short/MASTER/landscape": 1,
+  "dear_santa_short/MASTER/portrait": 1,
+  "dear_santa_short/HELL/landscape": 0,
+  "dear_santa_short/HELL/portrait": 0,
+  "winter_fall/MASTER/landscape": 0,
+  "winter_fall/MASTER/portrait": 0,
+  "winter_fall/HELL/landscape": 0,
+  "winter_fall/HELL/portrait": 1,
+  "winter_fall_short/MASTER/landscape": 0,
+  "winter_fall_short/MASTER/portrait": 0,
+  "winter_fall_short/HELL/landscape": 0,
+  "winter_fall_short/HELL/portrait": 0
  },
  "history": [
   {
@@ -418,6 +442,11 @@
    "at": "2026-11-22T17:57",
    "reason": "main取り込みに伴う再生成(台帳 r1119-119/120・Battle #5 非表示マージ)",
    "changed": 8
+  },
+  {
+   "at": "2026-11-26T14:04",
+   "reason": "新曲 Kissからはじまるミステリー・Dear Santa・winter fall(原曲と short ver.)を公開",
+   "changed": 24
   }
  ]
 }

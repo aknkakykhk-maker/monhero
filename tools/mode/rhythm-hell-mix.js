@@ -101,9 +101,9 @@ const SONGS={sheriruth:{marker:'sheriruth-v3',zero:711.6-2594.75,beat:324.342,le
   kimimachi_loop:{marker:'kimimachi-loop-v3',zero:764.8,beat:360.038,levelRe:/const kimimachiLoopHellChart=mhChart\((\d+),/,source:'audio',variant:1,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true,levelSettle:true},
   kiss_mystery:{marker:'kiss-mystery-v3',zero:2245,beat:535.6665,levelRe:/const kissMysteryHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true},
   kiss_mystery_short:{marker:'kiss-mystery-short-v3',zero:2245,beat:535.6665,levelRe:/const kissMysteryShortHellChart=mhChart\((\d+),/,source:'audio',variant:1,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true},
-  // 2026-11-26 社長(台帳 r1126-036)「Dear Santa は HELL だけ軽く」(Lv.60 前後): 拾う量を減らす(全編 0.8・ショート 0.72。付けないと Lv.73・75)
+  // 2026-11-26 社長(台帳 r1126-036)「Dear Santa は HELL だけ軽く」(Lv.60 前後): 拾う量を減らす(全編 0.8・ショート 0.73。付けないと Lv.73・75)
   dear_santa:{marker:'dear-santa-v3',zero:2799,beat:299.985,levelRe:/const dearSantaHellChart=mhChart\((\d+),/,source:'audio',variant:1,hellDensity:0.8,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true},
-  dear_santa_short:{marker:'dear-santa-short-v3',zero:2799,beat:299.985,levelRe:/const dearSantaShortHellChart=mhChart\((\d+),/,source:'audio',variant:1,hellDensity:0.72,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true},
+  dear_santa_short:{marker:'dear-santa-short-v3',zero:2799,beat:299.985,levelRe:/const dearSantaShortHellChart=mhChart\((\d+),/,source:'audio',variant:1,hellDensity:0.73,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true},
   winter_fall:{marker:'winter-fall-v3',zero:2010,beat:361.2499,levelRe:/const winterFallHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true},
   winter_fall_short:{marker:'winter-fall-short-v3',zero:2010,beat:361.2499,levelRe:/const winterFallShortHellChart=mhChart\((\d+),/,source:'audio',variant:1,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true},
   megalovania_sans:{marker:'megalovania-sans-v3',zero:200.5,beat:250,levelRe:/const megalovaniaSansHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true},

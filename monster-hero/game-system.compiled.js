@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a159853c700efb7e
+// source-sha256: cb3b499a868525da
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -65200,7 +65200,10 @@ const RHYTHM_SONG_PRICES = Object.freeze({
   amakakeru_tsubasa: 500,
   beyond_the_same_sky: 500,
   desert_crown: 500,
-  walkure: 500
+  walkure: 500,
+  kiss_mystery: 500,
+  dear_santa: 500,
+  winter_fall: 500
 });
 const RHYTHM_SONG_BUNDLE_OWNER = Object.freeze({
   departure_short: 'departure',
@@ -65212,7 +65215,10 @@ const RHYTHM_SONG_BUNDLE_OWNER = Object.freeze({
   dr_wily_stage_1_okkussenman: 'dr_wily_stage_1',
   erfolg_piano: 'erfolg',
   beyond_the_same_sky_short: 'beyond_the_same_sky',
-  walkure_short: 'walkure'
+  walkure_short: 'walkure',
+  kiss_mystery_short: 'kiss_mystery',
+  dear_santa_short: 'dear_santa',
+  winter_fall_short: 'winter_fall'
 });
 const rhythmSongOwnerId = songId => {
   const id = String(songId || '');
