@@ -288,11 +288,17 @@ const sbCountRaidJackAhead = async (kind, tier, myTotal, eventId) => {
 //   ・B 順位: 期間が終わったとき、累計ダメージの上位5人に自分が入っていれば。
 // 上位5人に入っていなかった人は「入っていなかった」印(_none)を残し、毎回問い合わせ直さない。
 // 返り値 { ok, due:[{id,title,reward}], noneIds:[...] }。通信できないとき ok:false(何も配らない)
-const raidJackCollectDueRewards = async (state, breederId, eventId, nowMs) => {
+//   ev: イベントごとの違い(クリスマスは raidXmasRewardRules())。省くとジャック(これまでと同じ動き)
+const raidJackCollectDueRewards = async (state, breederId, eventId, nowMs, ev = null) => {
   const none = { ok: false, due: [], noneIds: [] };
   const id = raidJackSafeId(breederId);
   if (!id) return none;
-  const windowState = raidJackWindowAt(nowMs);
+  const rules = ev && typeof ev === 'object' ? ev : {};
+  const aTiers = Array.isArray(rules.aTiers) ? rules.aTiers : RAID_JACK_A_TIERS;
+  const bTiers = Array.isArray(rules.bTiers) ? rules.bTiers : RAID_JACK_B_TIERS;
+  const rewards = rules.rewards || RAID_JACK_REWARDS;
+  const rewardTitle = typeof rules.rewardTitle === 'function' ? rules.rewardTitle : raidJackRewardTitle;
+  const windowState = (typeof rules.windowAt === 'function' ? rules.windowAt : raidJackWindowAt)(nowMs);
   if (windowState === 'before') return { ok: true, due: [], noneIds: [] };
   const norm = raidJackNormalizeState(state);
   const claimed = new Set(norm.claimed);
@@ -302,32 +308,32 @@ const raidJackCollectDueRewards = async (state, breederId, eventId, nowMs) => {
   const noneIds = [];
   const add = (claimId, title, reward, place) => { if (!claimed.has(claimId)) due.push(place ? { id: claimId, title, reward, place } : { id: claimId, title, reward }); };
   const mineA = (i) => self.a[i + 1] || 0;
-  if (Object.values(self.a).some((v) => v > 0)) add(raidJackClaimId('part_a'), raidJackRewardTitle('part_a'), RAID_JACK_REWARDS.participation);
-  if (self.bTotal > 0) add(raidJackClaimId('part_b'), raidJackRewardTitle('part_b'), RAID_JACK_REWARDS.participation);
-  for (let i = 0; i < RAID_JACK_A_TIERS.length; i += 1) {
+  if (Object.values(self.a).some((v) => v > 0)) add(raidJackClaimId('part_a'), rewardTitle('part_a'), rewards.participation);
+  if (self.bTotal > 0) add(raidJackClaimId('part_b'), rewardTitle('part_b'), rewards.participation);
+  for (let i = 0; i < aTiers.length; i += 1) {
     const total = totals.a[i + 1] ? totals.a[i + 1].total : 0;
-    const defeated = total >= RAID_JACK_A_TIERS[i].hp;
+    const defeated = total >= aTiers[i].hp;
     if (!defeated || mineA(i) <= 0) continue;
-    add(raidJackClaimId('clear_a', i), raidJackRewardTitle('clear_a', i), RAID_JACK_REWARDS.aClear[i]);
+    add(raidJackClaimId('clear_a', i), rewardTitle('clear_a', i), rewards.aClear[i]);
     // 順位は、男爵〜公爵=倒れたとき / 大王=期間が終わったとき(大王は倒れたあとも貢献が続く)
     const rankId = raidJackClaimId('rank_a', i);
-    if ((i < RAID_JACK_A_TIERS.length - 1 || windowState === 'after') && !claimed.has(rankId) && !claimed.has(raidJackNoneId(rankId))) {
+    if ((i < aTiers.length - 1 || windowState === 'after') && !claimed.has(rankId) && !claimed.has(raidJackNoneId(rankId))) {
       const top = await sbFetchRaidJackContributions(i + 1, RAID_JACK_REWARD_RANKS, eventId);
       if (!top) continue;
       const place = top.findIndex((r) => r.breederId === id);
-      if (place >= 0) add(rankId, raidJackRewardTitle('rank_a', i, place + 1), RAID_JACK_REWARDS.aRank[i][place], place + 1);
+      if (place >= 0) add(rankId, rewardTitle('rank_a', i, place + 1), rewards.aRank[i][place], place + 1);
       else noneIds.push(raidJackNoneId(rankId));
     }
   }
-  RAID_JACK_B_TIERS.forEach((tier, i) => {
-    if (norm.b.defeated.includes(tier.id)) add(raidJackClaimId('clear_b', i), raidJackRewardTitle('clear_b', i), RAID_JACK_REWARDS.bClear[i]);
+  bTiers.forEach((tier, i) => {
+    if (norm.b.defeated.includes(tier.id)) add(raidJackClaimId('clear_b', i), rewardTitle('clear_b', i), rewards.bClear[i]);
   });
   const finalId = raidJackClaimId('final_b');
   if (windowState === 'after' && self.bTotal > 0 && !claimed.has(finalId) && !claimed.has(raidJackNoneId(finalId))) {
     const top = await sbFetchRaidJackBRanking(RAID_JACK_REWARD_RANKS, eventId);
     if (top) {
       const place = top.findIndex((r) => r.breederId === id);
-      if (place >= 0) add(finalId, raidJackRewardTitle('final_b', 0, place + 1), RAID_JACK_REWARDS.bFinal[place], place + 1);
+      if (place >= 0) add(finalId, rewardTitle('final_b', 0, place + 1), rewards.bFinal[place], place + 1);
       else noneIds.push(raidJackNoneId(finalId));
     }
   }

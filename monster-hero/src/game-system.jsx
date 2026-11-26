@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5302325b71667364
+// generated-sha256: 955ca46ec5e86245
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -11994,6 +11994,8 @@ const giftTitleDisplay = (gift) => {
   if (gift?.source === 'rhythmEvent') return { label:'ランキング報酬', title };
   // イベント・レイドボス「ジャック」の報酬(2026-10-04)
   if (gift?.source === 'raidJack') return { label:'ジャック報酬', title };
+  // クリスマスのレイドの報酬(2026-11-26)
+  if (gift?.source === 'raidXmas') return { label:'レイド報酬', title };
   // 助手の仲良し度の節目のごほうび(2026-10-21)
   if (gift?.source === 'assistantBond') return { label:'仲良し度', title };
   // 助手のお話のおみやげ(2026-10-27 ソラシド)
@@ -38825,11 +38827,17 @@ const sbCountRaidJackAhead = async (kind, tier, myTotal, eventId) => {
 //   ・B 順位: 期間が終わったとき、累計ダメージの上位5人に自分が入っていれば。
 // 上位5人に入っていなかった人は「入っていなかった」印(_none)を残し、毎回問い合わせ直さない。
 // 返り値 { ok, due:[{id,title,reward}], noneIds:[...] }。通信できないとき ok:false(何も配らない)
-const raidJackCollectDueRewards = async (state, breederId, eventId, nowMs) => {
+//   ev: イベントごとの違い(クリスマスは raidXmasRewardRules())。省くとジャック(これまでと同じ動き)
+const raidJackCollectDueRewards = async (state, breederId, eventId, nowMs, ev = null) => {
   const none = { ok: false, due: [], noneIds: [] };
   const id = raidJackSafeId(breederId);
   if (!id) return none;
-  const windowState = raidJackWindowAt(nowMs);
+  const rules = ev && typeof ev === 'object' ? ev : {};
+  const aTiers = Array.isArray(rules.aTiers) ? rules.aTiers : RAID_JACK_A_TIERS;
+  const bTiers = Array.isArray(rules.bTiers) ? rules.bTiers : RAID_JACK_B_TIERS;
+  const rewards = rules.rewards || RAID_JACK_REWARDS;
+  const rewardTitle = typeof rules.rewardTitle === 'function' ? rules.rewardTitle : raidJackRewardTitle;
+  const windowState = (typeof rules.windowAt === 'function' ? rules.windowAt : raidJackWindowAt)(nowMs);
   if (windowState === 'before') return { ok: true, due: [], noneIds: [] };
   const norm = raidJackNormalizeState(state);
   const claimed = new Set(norm.claimed);
@@ -38839,32 +38847,32 @@ const raidJackCollectDueRewards = async (state, breederId, eventId, nowMs) => {
   const noneIds = [];
   const add = (claimId, title, reward, place) => { if (!claimed.has(claimId)) due.push(place ? { id: claimId, title, reward, place } : { id: claimId, title, reward }); };
   const mineA = (i) => self.a[i + 1] || 0;
-  if (Object.values(self.a).some((v) => v > 0)) add(raidJackClaimId('part_a'), raidJackRewardTitle('part_a'), RAID_JACK_REWARDS.participation);
-  if (self.bTotal > 0) add(raidJackClaimId('part_b'), raidJackRewardTitle('part_b'), RAID_JACK_REWARDS.participation);
-  for (let i = 0; i < RAID_JACK_A_TIERS.length; i += 1) {
+  if (Object.values(self.a).some((v) => v > 0)) add(raidJackClaimId('part_a'), rewardTitle('part_a'), rewards.participation);
+  if (self.bTotal > 0) add(raidJackClaimId('part_b'), rewardTitle('part_b'), rewards.participation);
+  for (let i = 0; i < aTiers.length; i += 1) {
     const total = totals.a[i + 1] ? totals.a[i + 1].total : 0;
-    const defeated = total >= RAID_JACK_A_TIERS[i].hp;
+    const defeated = total >= aTiers[i].hp;
     if (!defeated || mineA(i) <= 0) continue;
-    add(raidJackClaimId('clear_a', i), raidJackRewardTitle('clear_a', i), RAID_JACK_REWARDS.aClear[i]);
+    add(raidJackClaimId('clear_a', i), rewardTitle('clear_a', i), rewards.aClear[i]);
     // 順位は、男爵〜公爵=倒れたとき / 大王=期間が終わったとき(大王は倒れたあとも貢献が続く)
     const rankId = raidJackClaimId('rank_a', i);
-    if ((i < RAID_JACK_A_TIERS.length - 1 || windowState === 'after') && !claimed.has(rankId) && !claimed.has(raidJackNoneId(rankId))) {
+    if ((i < aTiers.length - 1 || windowState === 'after') && !claimed.has(rankId) && !claimed.has(raidJackNoneId(rankId))) {
       const top = await sbFetchRaidJackContributions(i + 1, RAID_JACK_REWARD_RANKS, eventId);
       if (!top) continue;
       const place = top.findIndex((r) => r.breederId === id);
-      if (place >= 0) add(rankId, raidJackRewardTitle('rank_a', i, place + 1), RAID_JACK_REWARDS.aRank[i][place], place + 1);
+      if (place >= 0) add(rankId, rewardTitle('rank_a', i, place + 1), rewards.aRank[i][place], place + 1);
       else noneIds.push(raidJackNoneId(rankId));
     }
   }
-  RAID_JACK_B_TIERS.forEach((tier, i) => {
-    if (norm.b.defeated.includes(tier.id)) add(raidJackClaimId('clear_b', i), raidJackRewardTitle('clear_b', i), RAID_JACK_REWARDS.bClear[i]);
+  bTiers.forEach((tier, i) => {
+    if (norm.b.defeated.includes(tier.id)) add(raidJackClaimId('clear_b', i), rewardTitle('clear_b', i), rewards.bClear[i]);
   });
   const finalId = raidJackClaimId('final_b');
   if (windowState === 'after' && self.bTotal > 0 && !claimed.has(finalId) && !claimed.has(raidJackNoneId(finalId))) {
     const top = await sbFetchRaidJackBRanking(RAID_JACK_REWARD_RANKS, eventId);
     if (top) {
       const place = top.findIndex((r) => r.breederId === id);
-      if (place >= 0) add(finalId, raidJackRewardTitle('final_b', 0, place + 1), RAID_JACK_REWARDS.bFinal[place], place + 1);
+      if (place >= 0) add(finalId, rewardTitle('final_b', 0, place + 1), rewards.bFinal[place], place + 1);
       else noneIds.push(raidJackNoneId(finalId));
     }
   }
@@ -39299,6 +39307,27 @@ const raidXmasFlushStoredPending = async (breederId) => {
     return before - next.pending.length;
   } catch (e) { return 0; }
 };
+
+// ---- 報酬の受け取り(表はジャックと同じ・社長決定。判定は raidJackCollectDueRewards にこの規則を渡して使う) ----
+//  ・段階のライフ・期間・題名だけクリスマスのもの。受け取り済みの印は mh_raid_xmas_v1 の claimed(ジャックの記録とは別)
+//  ・ギフトの id はイベント id から作る(raid_xmas_2026_part_a など)。ジャックのギフト(raid_jack_2026_…)とぶつからない
+const raidXmasRewardTitle = (kind, tierIndex, rank) => {
+  const at = (list) => list[Math.min(Math.max(tierIndex || 0, 0), list.length - 1)].name;
+  if (kind === 'part_a') return `${RAID_XMAS_EVENT.name} レイドバトル 参加賞`;
+  if (kind === 'part_b') return `${RAID_XMAS_EVENT.name} グランドスラム 参加賞`;
+  if (kind === 'clear_a') return `${at(RAID_XMAS_A_TIERS)} 討伐報酬`;
+  if (kind === 'rank_a') return `${at(RAID_XMAS_A_TIERS)} 貢献${rank}位の報酬`;
+  if (kind === 'clear_b') return `${at(RAID_XMAS_B_TIERS)} 初討伐報酬`;
+  return `${RAID_XMAS_EVENT.name} グランドスラム 累計ダメージ${rank}位の報酬`;
+};
+const raidXmasRewardRules = () => ({
+  aTiers: RAID_XMAS_A_TIERS,
+  bTiers: RAID_XMAS_B_TIERS,
+  rewards: RAID_XMAS_REWARDS,
+  windowAt: raidXmasWindowAt,
+  rewardTitle: raidXmasRewardTitle,
+});
+const raidXmasGiftId = (claimId) => `${RAID_XMAS_EVENT.id}_${claimId}`;
 
 // ===== レイドの定義(def)。レイド画面(79-screen-raid-jack.jsx)と本体(60-app.jsx)は、ここを読んでジャックとクリスマスを同じ流れで動かす =====
 //  ・ジャックの定義は、これまで画面・本体に直接書いていた値を集めただけ(ジャックの見え方・動きは変えない)。
@@ -133383,6 +133412,8 @@ function MonsterHeroGame() {
   // 結果は finishRaidJack が raid_jack_hits(新しい表)と mh_raid_jack_v1(新しいキー)へだけ書く。
   const raidJackRunRef = useRef(null);
   const raidJackClaimingRef = useRef(false);    // 報酬の受け取りを同時に2つ走らせない
+  const raidXmasClaimingRef = useRef(false);    // クリスマスの報酬の受け取りを同時に2つ走らせない(ジャックとは別)
+  const raidXmasLastClaimRef = useRef(0);       // クリスマスの報酬の問い合わせ(ジャックと同じく5分あける)
   const raidJackLastClaimRef = useRef(0);       // HOMEへ戻るたびに問い合わせ直さない(5分あける。戦闘のあとは0に戻して今すぐ確かめる)
   const raidJackDamageRef = useRef(0);          // ジャックへ出したダメージの累計(オーバーキルも含む・実際に出した分すべて)
   // レイドバトル(A)のEXスキルは、EXを持つ味方ごとに2回まで(専用ルール。2026-10-04 ユーザー指示で1回から変更)。ほかの戦いは今までどおり
@@ -148166,6 +148197,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const exitRaidJack = (toDebug=false) => {
     raidJackRunRef.current=null; raidJackDamageRef.current=0;
     raidJackLastClaimRef.current=0;   // 倒した直後の報酬を、HOMEへ戻ったらすぐ確かめる
+    raidXmasLastClaimRef.current=0;
     setRaidJackResult(null);
     returnToHome();
     setRunMode(BATTLE_MODE_CHALLENGE);
@@ -148281,6 +148313,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // レイドの結果(モンヒロビート)を閉じてレイド画面へ戻る
   const exitRaidJackRhythmResult = (toDebug = false) => {
     raidJackLastClaimRef.current = 0;   // 倒した直後の報酬を、すぐ確かめる
+    raidXmasLastClaimRef.current = 0;
     setRaidJackResult(null);
     setGameState(toDebug ? 'RAID_JACK_DEBUG' : 'RAID_JACK');
   };
@@ -148432,8 +148465,51 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setXmasEventTab('story');
     setGameState('RAID_JACK');
   };
-  // クリスマスの報酬の受け取り(次の PR で作る)。いまは何も届けない
-  const claimRaidXmasRewards = async () => 0;
+  // クリスマスの報酬を受け取れるぶんだけギフトで届ける(報酬はジャックと同じ表・社長決定・BUILD.md「報酬」)。
+  //   ★受け取り済みの印はクリスマスの記録 mh_raid_xmas_v1 の claimed に足す。ジャックの mh_raid_jack_v1 には読みも書きもしない(CLAUDE.md ⑦)
+  //   ★ギフトの id は「raid_xmas_2026_<報酬のid>」(ジャックの raid_jack_2026_… とぶつからない)。grantGiftOnce と claimed の二重の印で、二度は届かない
+  //   ★ギフトと印は同じ取引で保存する(どちらか失敗したら両方元へ戻る)。デバッグの強制表示中・公開前は届けない
+  //   ジャックにあった「デバッグの印の修復・取り下げ」は要らない(クリスマスはデバッグの回を本番の記録に書かない作りで始めた)
+  const claimRaidXmasRewards = async () => {
+    if (RELEASE_FLAGS.raidXmas !== true || raidJackDebugForce) return 0;
+    if (raidXmasClaimingRef.current) return 0;
+    raidXmasClaimingRef.current = true;
+    try {
+      const breederId = await ensureBreederId();
+      if (!breederId) return 0;
+      const state = await raidXmasLoadState();
+      const found = await raidJackCollectDueRewards(state, breederId, RAID_XMAS_EVENT.id, Date.now(), raidXmasRewardRules());
+      if (!found.ok || (found.due.length === 0 && found.noneIds.length === 0)) return 0;
+      const savedGifts = await storeGet('mh_gifts', [], false);
+      const beforeGifts = Array.isArray(savedGifts) ? savedGifts : [];
+      let nextGifts = beforeGifts;
+      let granted = 0;
+      found.due.forEach((entry) => {
+        const gift = { id:raidXmasGiftId(entry.id), title:entry.title, source:'raidXmas', rewards:raidJackRewardGiftItems(entry.reward) };
+        const result = grantGiftOnce(nextGifts, gift);
+        if (result.granted) { nextGifts = result.gifts; granted += 1; }
+      });
+      const nextState = raidJackNormalizeState({ ...state, claimed:[...state.claimed, ...found.due.map(entry=>entry.id), ...found.due.filter(entry=>entry.place).map(entry=>raidJackPlaceId(entry.id,entry.place)), ...found.noneIds] });
+      const saved = await saveStoredValuesOrRollback([
+        { key:'mh_gifts', before:beforeGifts, next:nextGifts },
+        { key:RAID_XMAS_STORAGE_KEY, before:state, next:nextState },
+      ], storeGet, storeSet);
+      if (!saved) { console.error('[raid-xmas-reward] save failed'); return 0; }
+      if (granted > 0) setGifts(nextGifts);
+      return granted;
+    } catch (error) { return 0; }
+    finally { raidXmasClaimingRef.current = false; }
+  };
+  // HOMEにいるとき、クリスマスの報酬を受け取れるか確かめる(期間が終わると入口が消えるので、終了後の順位報酬もここで届く)
+  useEffect(() => {
+    if (gameState !== 'HOME') return;
+    if (RELEASE_FLAGS.raidXmas !== true || raidJackDebugForce) return;
+    const now = Date.now();
+    if (raidXmasWindowAt(now) === 'before') return;
+    if (now - raidXmasLastClaimRef.current < 300000) return;
+    raidXmasLastClaimRef.current = now;
+    void claimRaidXmasRewards();
+  }, [gameState]);
   // 追加の挑戦を1回ぶん買う。ビートP(1回100P)を払って mh_raid_jack_v1 の extra を増やす。
   // 払ったあとに記録が保存できなければ、ビートPを戻す(払っただけで回数が増えない事故を作らない)。
   // デバッグの強制表示中は、実際のビートPを減らさない

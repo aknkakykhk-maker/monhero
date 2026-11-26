@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3c1ea070323594c8
+// source-sha256: 3a52e3a1046c5ade
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -17249,6 +17249,10 @@ const giftTitleDisplay = gift => {
   };
   if (gift?.source === 'raidJack') return {
     label: 'ジャック報酬',
+    title
+  };
+  if (gift?.source === 'raidXmas') return {
+    label: 'レイド報酬',
     title
   };
   if (gift?.source === 'assistantBond') return {
@@ -63814,7 +63818,7 @@ const sbCountRaidJackAhead = async (kind, tier, myTotal, eventId) => {
   const m = /\/(\d+)$/.exec(String(range || ''));
   return m ? Number(m[1]) : null;
 };
-const raidJackCollectDueRewards = async (state, breederId, eventId, nowMs) => {
+const raidJackCollectDueRewards = async (state, breederId, eventId, nowMs, ev = null) => {
   const none = {
     ok: false,
     due: [],
@@ -63822,7 +63826,12 @@ const raidJackCollectDueRewards = async (state, breederId, eventId, nowMs) => {
   };
   const id = raidJackSafeId(breederId);
   if (!id) return none;
-  const windowState = raidJackWindowAt(nowMs);
+  const rules = ev && typeof ev === 'object' ? ev : {};
+  const aTiers = Array.isArray(rules.aTiers) ? rules.aTiers : RAID_JACK_A_TIERS;
+  const bTiers = Array.isArray(rules.bTiers) ? rules.bTiers : RAID_JACK_B_TIERS;
+  const rewards = rules.rewards || RAID_JACK_REWARDS;
+  const rewardTitle = typeof rules.rewardTitle === 'function' ? rules.rewardTitle : raidJackRewardTitle;
+  const windowState = (typeof rules.windowAt === 'function' ? rules.windowAt : raidJackWindowAt)(nowMs);
   if (windowState === 'before') return {
     ok: true,
     due: [],
@@ -63847,30 +63856,30 @@ const raidJackCollectDueRewards = async (state, breederId, eventId, nowMs) => {
     });
   };
   const mineA = i => self.a[i + 1] || 0;
-  if (Object.values(self.a).some(v => v > 0)) add(raidJackClaimId('part_a'), raidJackRewardTitle('part_a'), RAID_JACK_REWARDS.participation);
-  if (self.bTotal > 0) add(raidJackClaimId('part_b'), raidJackRewardTitle('part_b'), RAID_JACK_REWARDS.participation);
-  for (let i = 0; i < RAID_JACK_A_TIERS.length; i += 1) {
+  if (Object.values(self.a).some(v => v > 0)) add(raidJackClaimId('part_a'), rewardTitle('part_a'), rewards.participation);
+  if (self.bTotal > 0) add(raidJackClaimId('part_b'), rewardTitle('part_b'), rewards.participation);
+  for (let i = 0; i < aTiers.length; i += 1) {
     const total = totals.a[i + 1] ? totals.a[i + 1].total : 0;
-    const defeated = total >= RAID_JACK_A_TIERS[i].hp;
+    const defeated = total >= aTiers[i].hp;
     if (!defeated || mineA(i) <= 0) continue;
-    add(raidJackClaimId('clear_a', i), raidJackRewardTitle('clear_a', i), RAID_JACK_REWARDS.aClear[i]);
+    add(raidJackClaimId('clear_a', i), rewardTitle('clear_a', i), rewards.aClear[i]);
     const rankId = raidJackClaimId('rank_a', i);
-    if ((i < RAID_JACK_A_TIERS.length - 1 || windowState === 'after') && !claimed.has(rankId) && !claimed.has(raidJackNoneId(rankId))) {
+    if ((i < aTiers.length - 1 || windowState === 'after') && !claimed.has(rankId) && !claimed.has(raidJackNoneId(rankId))) {
       const top = await sbFetchRaidJackContributions(i + 1, RAID_JACK_REWARD_RANKS, eventId);
       if (!top) continue;
       const place = top.findIndex(r => r.breederId === id);
-      if (place >= 0) add(rankId, raidJackRewardTitle('rank_a', i, place + 1), RAID_JACK_REWARDS.aRank[i][place], place + 1);else noneIds.push(raidJackNoneId(rankId));
+      if (place >= 0) add(rankId, rewardTitle('rank_a', i, place + 1), rewards.aRank[i][place], place + 1);else noneIds.push(raidJackNoneId(rankId));
     }
   }
-  RAID_JACK_B_TIERS.forEach((tier, i) => {
-    if (norm.b.defeated.includes(tier.id)) add(raidJackClaimId('clear_b', i), raidJackRewardTitle('clear_b', i), RAID_JACK_REWARDS.bClear[i]);
+  bTiers.forEach((tier, i) => {
+    if (norm.b.defeated.includes(tier.id)) add(raidJackClaimId('clear_b', i), rewardTitle('clear_b', i), rewards.bClear[i]);
   });
   const finalId = raidJackClaimId('final_b');
   if (windowState === 'after' && self.bTotal > 0 && !claimed.has(finalId) && !claimed.has(raidJackNoneId(finalId))) {
     const top = await sbFetchRaidJackBRanking(RAID_JACK_REWARD_RANKS, eventId);
     if (top) {
       const place = top.findIndex(r => r.breederId === id);
-      if (place >= 0) add(finalId, raidJackRewardTitle('final_b', 0, place + 1), RAID_JACK_REWARDS.bFinal[place], place + 1);else noneIds.push(raidJackNoneId(finalId));
+      if (place >= 0) add(finalId, rewardTitle('final_b', 0, place + 1), rewards.bFinal[place], place + 1);else noneIds.push(raidJackNoneId(finalId));
     }
   }
   return {
@@ -64366,6 +64375,23 @@ const raidXmasFlushStoredPending = async breederId => {
     return 0;
   }
 };
+const raidXmasRewardTitle = (kind, tierIndex, rank) => {
+  const at = list => list[Math.min(Math.max(tierIndex || 0, 0), list.length - 1)].name;
+  if (kind === 'part_a') return `${RAID_XMAS_EVENT.name} レイドバトル 参加賞`;
+  if (kind === 'part_b') return `${RAID_XMAS_EVENT.name} グランドスラム 参加賞`;
+  if (kind === 'clear_a') return `${at(RAID_XMAS_A_TIERS)} 討伐報酬`;
+  if (kind === 'rank_a') return `${at(RAID_XMAS_A_TIERS)} 貢献${rank}位の報酬`;
+  if (kind === 'clear_b') return `${at(RAID_XMAS_B_TIERS)} 初討伐報酬`;
+  return `${RAID_XMAS_EVENT.name} グランドスラム 累計ダメージ${rank}位の報酬`;
+};
+const raidXmasRewardRules = () => ({
+  aTiers: RAID_XMAS_A_TIERS,
+  bTiers: RAID_XMAS_B_TIERS,
+  rewards: RAID_XMAS_REWARDS,
+  windowAt: raidXmasWindowAt,
+  rewardTitle: raidXmasRewardTitle
+});
+const raidXmasGiftId = claimId => `${RAID_XMAS_EVENT.id}_${claimId}`;
 const raidEventShortName = (bossWord, name) => String(name || '').replace(`${bossWord}・`, '').replace(bossWord, '').trim();
 const RAID_EVENT_JACK = Object.freeze({
   key: 'jack',
@@ -247344,6 +247370,8 @@ function MonsterHeroGame() {
   const debugResultRef = useRef(false);
   const raidJackRunRef = useRef(null);
   const raidJackClaimingRef = useRef(false);
+  const raidXmasClaimingRef = useRef(false);
+  const raidXmasLastClaimRef = useRef(0);
   const raidJackLastClaimRef = useRef(0);
   const raidJackDamageRef = useRef(0);
   const tacticsRaidPresentLevel = turn => Math.max(0, Math.floor((Number(turn) || 0) / 2));
@@ -265057,6 +265085,7 @@ function MonsterHeroGame() {
     raidJackRunRef.current = null;
     raidJackDamageRef.current = 0;
     raidJackLastClaimRef.current = 0;
+    raidXmasLastClaimRef.current = 0;
     setRaidJackResult(null);
     returnToHome();
     setRunMode(BATTLE_MODE_CHALLENGE);
@@ -265252,6 +265281,7 @@ function MonsterHeroGame() {
   };
   const exitRaidJackRhythmResult = (toDebug = false) => {
     raidJackLastClaimRef.current = 0;
+    raidXmasLastClaimRef.current = 0;
     setRaidJackResult(null);
     setGameState(toDebug ? 'RAID_JACK_DEBUG' : 'RAID_JACK');
   };
@@ -265440,7 +265470,67 @@ function MonsterHeroGame() {
     setXmasEventTab('story');
     setGameState('RAID_JACK');
   };
-  const claimRaidXmasRewards = async () => 0;
+  const claimRaidXmasRewards = async () => {
+    if (RELEASE_FLAGS.raidXmas !== true || raidJackDebugForce) return 0;
+    if (raidXmasClaimingRef.current) return 0;
+    raidXmasClaimingRef.current = true;
+    try {
+      const breederId = await ensureBreederId();
+      if (!breederId) return 0;
+      const state = await raidXmasLoadState();
+      const found = await raidJackCollectDueRewards(state, breederId, RAID_XMAS_EVENT.id, Date.now(), raidXmasRewardRules());
+      if (!found.ok || found.due.length === 0 && found.noneIds.length === 0) return 0;
+      const savedGifts = await storeGet('mh_gifts', [], false);
+      const beforeGifts = Array.isArray(savedGifts) ? savedGifts : [];
+      let nextGifts = beforeGifts;
+      let granted = 0;
+      found.due.forEach(entry => {
+        const gift = {
+          id: raidXmasGiftId(entry.id),
+          title: entry.title,
+          source: 'raidXmas',
+          rewards: raidJackRewardGiftItems(entry.reward)
+        };
+        const result = grantGiftOnce(nextGifts, gift);
+        if (result.granted) {
+          nextGifts = result.gifts;
+          granted += 1;
+        }
+      });
+      const nextState = raidJackNormalizeState({
+        ...state,
+        claimed: [...state.claimed, ...found.due.map(entry => entry.id), ...found.due.filter(entry => entry.place).map(entry => raidJackPlaceId(entry.id, entry.place)), ...found.noneIds]
+      });
+      const saved = await saveStoredValuesOrRollback([{
+        key: 'mh_gifts',
+        before: beforeGifts,
+        next: nextGifts
+      }, {
+        key: RAID_XMAS_STORAGE_KEY,
+        before: state,
+        next: nextState
+      }], storeGet, storeSet);
+      if (!saved) {
+        console.error('[raid-xmas-reward] save failed');
+        return 0;
+      }
+      if (granted > 0) setGifts(nextGifts);
+      return granted;
+    } catch (error) {
+      return 0;
+    } finally {
+      raidXmasClaimingRef.current = false;
+    }
+  };
+  useEffect(() => {
+    if (gameState !== 'HOME') return;
+    if (RELEASE_FLAGS.raidXmas !== true || raidJackDebugForce) return;
+    const now = Date.now();
+    if (raidXmasWindowAt(now) === 'before') return;
+    if (now - raidXmasLastClaimRef.current < 300000) return;
+    raidXmasLastClaimRef.current = now;
+    void claimRaidXmasRewards();
+  }, [gameState]);
   const dismissRaidJackGuide = () => {
     setRaidJackGuideSeen(true);
     if (!raidJackDebugForce) storeSet(RAID_JACK_GUIDE_KEY, true, false);

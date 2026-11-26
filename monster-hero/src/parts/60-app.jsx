@@ -3595,6 +3595,8 @@ function MonsterHeroGame() {
   // 結果は finishRaidJack が raid_jack_hits(新しい表)と mh_raid_jack_v1(新しいキー)へだけ書く。
   const raidJackRunRef = useRef(null);
   const raidJackClaimingRef = useRef(false);    // 報酬の受け取りを同時に2つ走らせない
+  const raidXmasClaimingRef = useRef(false);    // クリスマスの報酬の受け取りを同時に2つ走らせない(ジャックとは別)
+  const raidXmasLastClaimRef = useRef(0);       // クリスマスの報酬の問い合わせ(ジャックと同じく5分あける)
   const raidJackLastClaimRef = useRef(0);       // HOMEへ戻るたびに問い合わせ直さない(5分あける。戦闘のあとは0に戻して今すぐ確かめる)
   const raidJackDamageRef = useRef(0);          // ジャックへ出したダメージの累計(オーバーキルも含む・実際に出した分すべて)
   // レイドバトル(A)のEXスキルは、EXを持つ味方ごとに2回まで(専用ルール。2026-10-04 ユーザー指示で1回から変更)。ほかの戦いは今までどおり
@@ -18378,6 +18380,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const exitRaidJack = (toDebug=false) => {
     raidJackRunRef.current=null; raidJackDamageRef.current=0;
     raidJackLastClaimRef.current=0;   // 倒した直後の報酬を、HOMEへ戻ったらすぐ確かめる
+    raidXmasLastClaimRef.current=0;
     setRaidJackResult(null);
     returnToHome();
     setRunMode(BATTLE_MODE_CHALLENGE);
@@ -18493,6 +18496,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // レイドの結果(モンヒロビート)を閉じてレイド画面へ戻る
   const exitRaidJackRhythmResult = (toDebug = false) => {
     raidJackLastClaimRef.current = 0;   // 倒した直後の報酬を、すぐ確かめる
+    raidXmasLastClaimRef.current = 0;
     setRaidJackResult(null);
     setGameState(toDebug ? 'RAID_JACK_DEBUG' : 'RAID_JACK');
   };
@@ -18644,8 +18648,51 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setXmasEventTab('story');
     setGameState('RAID_JACK');
   };
-  // クリスマスの報酬の受け取り(次の PR で作る)。いまは何も届けない
-  const claimRaidXmasRewards = async () => 0;
+  // クリスマスの報酬を受け取れるぶんだけギフトで届ける(報酬はジャックと同じ表・社長決定・BUILD.md「報酬」)。
+  //   ★受け取り済みの印はクリスマスの記録 mh_raid_xmas_v1 の claimed に足す。ジャックの mh_raid_jack_v1 には読みも書きもしない(CLAUDE.md ⑦)
+  //   ★ギフトの id は「raid_xmas_2026_<報酬のid>」(ジャックの raid_jack_2026_… とぶつからない)。grantGiftOnce と claimed の二重の印で、二度は届かない
+  //   ★ギフトと印は同じ取引で保存する(どちらか失敗したら両方元へ戻る)。デバッグの強制表示中・公開前は届けない
+  //   ジャックにあった「デバッグの印の修復・取り下げ」は要らない(クリスマスはデバッグの回を本番の記録に書かない作りで始めた)
+  const claimRaidXmasRewards = async () => {
+    if (RELEASE_FLAGS.raidXmas !== true || raidJackDebugForce) return 0;
+    if (raidXmasClaimingRef.current) return 0;
+    raidXmasClaimingRef.current = true;
+    try {
+      const breederId = await ensureBreederId();
+      if (!breederId) return 0;
+      const state = await raidXmasLoadState();
+      const found = await raidJackCollectDueRewards(state, breederId, RAID_XMAS_EVENT.id, Date.now(), raidXmasRewardRules());
+      if (!found.ok || (found.due.length === 0 && found.noneIds.length === 0)) return 0;
+      const savedGifts = await storeGet('mh_gifts', [], false);
+      const beforeGifts = Array.isArray(savedGifts) ? savedGifts : [];
+      let nextGifts = beforeGifts;
+      let granted = 0;
+      found.due.forEach((entry) => {
+        const gift = { id:raidXmasGiftId(entry.id), title:entry.title, source:'raidXmas', rewards:raidJackRewardGiftItems(entry.reward) };
+        const result = grantGiftOnce(nextGifts, gift);
+        if (result.granted) { nextGifts = result.gifts; granted += 1; }
+      });
+      const nextState = raidJackNormalizeState({ ...state, claimed:[...state.claimed, ...found.due.map(entry=>entry.id), ...found.due.filter(entry=>entry.place).map(entry=>raidJackPlaceId(entry.id,entry.place)), ...found.noneIds] });
+      const saved = await saveStoredValuesOrRollback([
+        { key:'mh_gifts', before:beforeGifts, next:nextGifts },
+        { key:RAID_XMAS_STORAGE_KEY, before:state, next:nextState },
+      ], storeGet, storeSet);
+      if (!saved) { console.error('[raid-xmas-reward] save failed'); return 0; }
+      if (granted > 0) setGifts(nextGifts);
+      return granted;
+    } catch (error) { return 0; }
+    finally { raidXmasClaimingRef.current = false; }
+  };
+  // HOMEにいるとき、クリスマスの報酬を受け取れるか確かめる(期間が終わると入口が消えるので、終了後の順位報酬もここで届く)
+  useEffect(() => {
+    if (gameState !== 'HOME') return;
+    if (RELEASE_FLAGS.raidXmas !== true || raidJackDebugForce) return;
+    const now = Date.now();
+    if (raidXmasWindowAt(now) === 'before') return;
+    if (now - raidXmasLastClaimRef.current < 300000) return;
+    raidXmasLastClaimRef.current = now;
+    void claimRaidXmasRewards();
+  }, [gameState]);
   // 追加の挑戦を1回ぶん買う。ビートP(1回100P)を払って mh_raid_jack_v1 の extra を増やす。
   // 払ったあとに記録が保存できなければ、ビートPを戻す(払っただけで回数が増えない事故を作らない)。
   // デバッグの強制表示中は、実際のビートPを減らさない
