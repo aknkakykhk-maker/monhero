@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 97dd9f27f615a34b
+// source-sha256: 455a93f087646fdf
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -131181,8 +131181,8 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       top: 0.1495,
       eye: 0.3352,
       chin: 0.4305,
-      m: 0.799,
-      cx: 0.5309,
+      m: 0.709,
+      cx: 0.5304,
       above: 0.95
     }
   },
