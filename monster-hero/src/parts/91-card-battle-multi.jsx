@@ -1458,6 +1458,7 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
             {r.verify === 'ng' && <div className="text-[12px] font-bold text-slate-300">無効の試合なので、ビートPとクイック周回は入りません</div>}
             {got && (<>
               <div data-card-pvp-reward className="text-[13px] font-black text-amber-200">もらったビートP: {got.point}</div>
+              {got.eventMult > 1 && typeof CARD_EVENT_BONUS !== 'undefined' && <div data-card-pvp-event-bonus className="mt-1 text-[12px] font-black text-emerald-200" style={JA_LABEL_STYLE}>{jaWrap(`🎄 ${CARD_EVENT_BONUS.name}のあいだは ${CARD_EVENT_BONUS.label}`)}</div>}
               {got.short && <div className="mt-1 text-[12px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('自分のターンを3回やる前に終わったので、ビートPとクイック周回は入りません')}</div>}
               {!got.short && got.loops > 0 && (
                 <div data-card-quick-loops={got.quick ? got.loops : 0} className="mt-2 rounded-xl border border-sky-300/40 bg-sky-500/10 px-2 py-1.5">
