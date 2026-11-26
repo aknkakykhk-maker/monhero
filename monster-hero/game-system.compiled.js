@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 37dc6d8c3b9d5b2f
+// source-sha256: dc543c680a8a770b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -112731,6 +112731,8 @@ const RaidJackPrepScreen = ({
   }, "この編成で挑戦する"))));
 };
 const XMAS_EVENT_POSTER_IMG = 'images/events/xmas-2026-event-wide.jpg';
+const XMAS_EVENT_POSTER_OPEN_IMG = null;
+const XMAS_EVENT_TITLE_BAND_BG = 'images/story-bg/xmas_mountain_road.jpg';
 const XMAS_EVENT_TABS = Object.freeze([{
   id: 'story',
   label: '物語',
@@ -113222,6 +113224,7 @@ const XmasEventScreen = ({
 }) => {
   useXmasEventCss();
   const raidShown = tab === 'raid' && !!raid && !preOpen;
+  const posterOpen = !preOpen;
   const [notice, setNotice] = useState('');
   const cardCheckingRef = useRef(false);
   const onChallenge = (kind, tierIndex, way) => {
@@ -113275,7 +113278,43 @@ const XmasEventScreen = ({
   }), React.createElement("div", {
     "data-xmas-event-poster": true,
     className: `mh-xmas-frame mx-auto mb-2 w-fit max-w-full overflow-hidden rounded-xl bg-slate-950 ${raidShown ? '[@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`
+  }, posterOpen ? React.createElement("div", {
+    "data-xmas-event-title-band": true,
+    className: "relative overflow-hidden",
+    style: {
+      width: raidShown ? 'min(100vw - 32px, 26vh)' : 'min(100vw - 32px, 48vh)',
+      aspectRatio: '2 / 1'
+    }
   }, React.createElement("img", {
+    src: XMAS_EVENT_POSTER_OPEN_IMG || XMAS_EVENT_TITLE_BAND_BG,
+    alt: "",
+    className: "absolute inset-0 h-full w-full object-cover",
+    style: {
+      objectPosition: '50% 40%'
+    }
+  }), !XMAS_EVENT_POSTER_OPEN_IMG && React.createElement("span", {
+    className: "absolute inset-0 flex flex-col items-center justify-center text-center",
+    style: {
+      background: 'radial-gradient(80% 70% at 50% 55%, #0b1733cc 0%, #0b173388 55%, transparent 100%)'
+    }
+  }, React.createElement("span", {
+    className: `font-black text-amber-100 ${raidShown ? 'text-[8px]' : 'text-[11px]'}`,
+    style: {
+      letterSpacing: '.2em',
+      textShadow: '0 1px 3px #000'
+    }
+  }, "クリスマスイベント"), React.createElement("b", {
+    className: `mh-xmas-title leading-tight ${raidShown ? 'text-[20px]' : 'text-[38px]'}`,
+    style: {
+      fontFamily: "'Hiragino Mincho ProN', 'Yu Mincho', serif",
+      filter: 'drop-shadow(0 2px 2px #000) drop-shadow(0 0 6px #000a)'
+    }
+  }, "聖夜の名探偵"), React.createElement("span", {
+    className: `font-bold text-amber-50 ${raidShown ? 'text-[7px]' : 'text-[11px]'}`,
+    style: {
+      textShadow: '0 1px 3px #000'
+    }
+  }, "～雪山ペンションと消えたプレゼント～"))) : React.createElement("img", {
     src: XMAS_EVENT_POSTER_IMG,
     alt: "クリスマスイベント 聖夜の名探偵",
     className: `block h-auto w-auto max-w-full ${raidShown ? 'max-h-[13vh]' : 'max-h-[24vh]'}`
@@ -119847,8 +119886,12 @@ const xmasNovelTintOf = (n, b) => {
 };
 const xmasNovelBgOf = name => {
   const n = String(name || '').split('→')[0];
-  if (/^[a-z0-9_]+$/.test(n)) return {
-    img: `images/story-bg/${n}.jpg`
+  const raw = n.match(/^([a-z0-9_]+)(?=$|[(（])/);
+  if (raw) return {
+    img: `images/story-bg/${raw[1]}.jpg`
+  };
+  if (/ゲーム機をかこむ/.test(n)) return {
+    img: `images/story-bg/${/夜/.test(n) ? 'monhero_night' : 'monhero_plaza_evening'}.jpg`
   };
   const b = XMAS_NOVEL_BG.find(x => x.re.test(n));
   if (!b) return XMAS_NOVEL_BG_DEFAULT;
@@ -280092,7 +280135,7 @@ function MonsterHeroGame() {
       } : r);
       const isGuestWho = id => {
         const w = assistantById(id);
-        return !!w && w.role === 'ゲスト';
+        return !!w && w.role === 'ゲスト' && !w.speakBottom;
       };
       const hiddenUntil = Array.isArray(event && event.hideUntilFirstLine) ? event.hideUntilFirstLine : [];
       const storyBase = id => typeof storyBaseWho === 'function' ? storyBaseWho(id) : typeof id === 'string' ? id.split('@')[0] : id;
