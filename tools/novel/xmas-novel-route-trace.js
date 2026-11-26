@@ -78,6 +78,14 @@ const trace = (side) => {
     if (res.then && res.then.to) st = E.xmasNovelSettle(S, E.xmasNovelJump(S, c, res.then.to));
     else st = E.xmasNovelStep(S, { ...c });
   }
+  // 真グッドのあとに開く過去編(r1126-046)も、続けてたどる
+  S.chapters.filter((c) => c.past).forEach((c) => {
+    const first = S.scenes.find((x) => x.chapter === c.id);
+    if (!first) return;
+    lines.push({ t: 'choice', id: '', x: `(真グッドのあと「章から」で開く)${c.disp} ${c.title}` });
+    let ps = E.xmasNovelSettle(S, { ...E.xmasNovelFreshCur(S), scene: first.id, idx: 0 });
+    for (let n = 0; n < 2000 && ps.row; n += 1) { push(ps.row, ps.cur.scene); ps = E.xmasNovelStep(S, ps.cur); }
+  });
   return lines;
 };
 
