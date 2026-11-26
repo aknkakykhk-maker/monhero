@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 11437b2b7b2a3870
+// source-sha256: eb1639d2344ce3f0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -64047,7 +64047,7 @@ const XMAS_STORY_CHAPTERS = Object.freeze([Object.freeze({
   prologue: true,
   openAt: XMAS_STORY_PROLOGUE_OPEN_AT,
   type: 'read',
-  title: '雪の招待状',
+  title: 'とどいたゲーム',
   scriptId: 'xmas_story_00'
 }), ...XMAS_STORY_LIST.map(([title, type], i) => Object.freeze({
   id: `xs${String(i + 1).padStart(2, '0')}`,
@@ -279156,6 +279156,14 @@ function MonsterHeroGame() {
           break;
         }
       }
+      let storyFrame = null;
+      for (let i = step; i >= 0; i--) {
+        const l = script[i];
+        if (l && typeof l.frame === 'string') {
+          storyFrame = l.frame === 'none' ? null : l.frame;
+          break;
+        }
+      }
       const storySceneImg = storyScene && typeof STORY_SCENE_IMAGES !== 'undefined' ? STORY_SCENE_IMAGES[storyScene] || null : null;
       const storyStill = typeof line.still === 'string' && typeof STORY_SCENE_IMAGES !== 'undefined' ? line.still : null;
       const storyStillImg = storyStill ? STORY_SCENE_IMAGES[storyStill] || null : null;
@@ -279459,14 +279467,17 @@ function MonsterHeroGame() {
         "aria-modal": "true",
         "aria-label": `イベント回想: ${storyTitleNow || ''}`
       }, storySceneImg && React.createElement("div", {
-        key: storyScene,
+        key: `${storyScene}:${storyFrame || ''}`,
         "data-story-bg": storyScene,
+        "data-story-bg-frame": storyFrame || undefined,
         "data-story-bg-fx": fx === 'fall' ? 'fall' : undefined,
         "aria-hidden": "true",
         style: {
           '--story-bg': `url("${storySceneImg}")`
         }
-      }), storyStillImg && React.createElement("div", {
+      }, storyFrame === 'game' && React.createElement("span", {
+        "data-story-bg-frame-label": true
+      }, "モンヒロ事件簿")), storyStillImg && React.createElement("div", {
         key: `still:${storyStill}`,
         "data-story-still": storyStill,
         "data-story-still-has-tate": storyStillTate ? '' : undefined,
@@ -279640,7 +279651,8 @@ function MonsterHeroGame() {
       }))), line.fxText && !storyOpening && !eventReplay.ending && React.createElement("div", {
         key: `banner${step}-${eventReplay.opened ? 1 : 0}`,
         "data-story-banner": true,
-        className: "px-4 py-2.5 text-center text-[17px] font-black",
+        "data-story-banner-big": line.bandBig ? '' : undefined,
+        className: `text-center font-black ${line.bandBig ? 'px-5 py-5 text-[24px] leading-snug' : 'px-4 py-2.5 text-[17px]'}`,
         style: {
           position: 'absolute',
           top: storyStillImg ? 'calc(env(safe-area-inset-top) + 42px)' : 'max(44px, calc((100% - var(--story-sheet-h, 50%)) / 2))',
@@ -279653,9 +279665,15 @@ function MonsterHeroGame() {
           borderRadius: 14,
           boxShadow: '0 4px 18px rgba(0,0,0,.45)',
           textShadow: `0 0 2px #000, 0 1px 3px rgba(0,0,0,.95), 0 0 12px rgba(${fxColors[fx] || '255,255,255'},.75)`,
-          animation: storyStillImg ? 'storyBanner .7s ease-out both, storyStillBannerAway .8s ease-in 4.2s forwards' : 'storyBanner .7s ease-out both'
+          animation: storyStillImg ? 'storyBanner .7s ease-out both, storyStillBannerAway .8s ease-in 4.2s forwards' : 'storyBanner .7s ease-out both',
+          ...(line.bandBig ? {
+            color: '#fde68a',
+            background: 'linear-gradient(180deg, rgba(40,8,12,.92), rgba(2,6,23,.92))',
+            border: '2px solid #f0c96c',
+            boxShadow: '0 0 0 2px rgba(107,18,24,.9), 0 0 28px rgba(240,201,108,.55), 0 6px 22px rgba(0,0,0,.6)'
+          } : {})
         }
-      }, storyCenter(line.fxText, storyBoxW - 64, 17))), React.createElement("div", {
+      }, storyCenter(line.fxText, storyBoxW - (line.bandBig ? 80 : 64), line.bandBig ? 24 : 17))), React.createElement("div", {
         ref: storyMeasureRef('--story-sheet-h', 'height'),
         onClick: next,
         "data-story-sheet": true,
@@ -285979,6 +285997,17 @@ const createAnimationStyle = () => {
     @media (orientation: portrait) { [data-story-bg]::before { bottom: 30%; -webkit-mask-image: linear-gradient(180deg, #000 80%, transparent 100%); mask-image: linear-gradient(180deg, #000 80%, transparent 100%); } }
     @keyframes storySceneIn { 0% { opacity: 0; } 100% { opacity: 1; } }
     /* fx:'fall' … 穴へ落ちていく。背景が上へ流れながら暗くなる(行の holdMs のあいだに終わる長さ) */
+    /* ゲームの中の場面(台本の frame:'game'・2026-11-26 クリスマスの序章 r1126-022 追記7)。背景を古いゲームの画面のわくに入れ、走査線を重ねる。
+       縦はわくの下を台詞の窓の上にそろえる(--story-sheet-h)。背の低い横は画面いっぱいのわく */
+    [data-story-bg][data-story-bg-frame="game"] { background: radial-gradient(ellipse at 50% 40%, #1d1830 0%, #07060d 75%); }
+    [data-story-bg][data-story-bg-frame="game"]::before, [data-story-bg][data-story-bg-frame="game"]::after { top: calc(env(safe-area-inset-top) + 12px); left: 12px; right: 12px; bottom: calc(var(--story-sheet-h, 40%) + 12px); border-radius: 14px; -webkit-mask-image: none; mask-image: none; }
+    [data-story-bg][data-story-bg-frame="game"]::before { filter: saturate(.78) contrast(1.06) sepia(.12); box-shadow: 0 0 0 6px #2a2440, 0 0 0 9px #8a7fb0, 0 0 0 11px #120f1f, 0 10px 30px #000; }
+    [data-story-bg][data-story-bg-frame="game"]::after { background: repeating-linear-gradient(180deg, rgba(0,0,0,.16) 0 1px, transparent 1px 3px), radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(0,0,0,.5) 100%); }
+    [data-story-bg-frame-label] { position: absolute; z-index: 1; left: 50%; transform: translateX(-50%); top: calc(env(safe-area-inset-top) + 4px); padding: 1px 10px; border-radius: 999px; background: #120f1f; border: 1px solid #8a7fb0; color: #d9d2f5; font-size: 10px; font-weight: 900; letter-spacing: .2em; white-space: nowrap; }
+    @media (orientation: landscape) and (max-height: 520px) {
+      [data-story-bg][data-story-bg-frame="game"]::before, [data-story-bg][data-story-bg-frame="game"]::after { top: 14px; left: 14px; right: 14px; bottom: 14px; }
+      [data-story-bg-frame-label] { top: 6px; }
+    }
     [data-story-bg][data-story-bg-fx="fall"] { animation: storySceneFall 2.4s cubic-bezier(.55,0,.8,.4) both; }
     @keyframes storySceneFall { 0% { transform: none; filter: none; } 100% { transform: translateY(-85%) scale(1.25); filter: brightness(0); } }
     @media (prefers-reduced-motion: reduce) { [data-story-bg], [data-story-bg][data-story-bg-fx="fall"] { animation-duration: .01s !important; } }

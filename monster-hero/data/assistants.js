@@ -13023,66 +13023,65 @@ const DESERT_CROWN_STORY = [
   { who:'erubin',   e:'happy',    t:'遊んでもらえたら、うれしいな。これからも、よろしくね☺️' },
 ];
 const DESERT_CROWN_STORY_CALLS = { mua: 'るびちん／ひめちん', kiki: 'えるびんさん／みゅあちん', momosuke: 'えるちゃん', dra: 'ビンビン', atsu: 'エルちゃん', kyuko: 'えるニキ', sorashido: 'えるさん', erubin: 'ききさん／ドラちゃん' };
-// ---- クリスマスのイベント「聖夜の名探偵」序章 ～雪の招待状～(2026-11-28 10:00 から・台帳 r1126-012/013) ----
+// ---- クリスマスのイベント「聖夜の名探偵」序章 ～とどいたゲーム～(2026-11-28 10:00 から・台帳 r1126-012/013・r1126-022 追記7 で書き直し) ----
 // 台本は docs/progress/event-xmas-2026/SCRIPT.md の「## 序章」(台詞は台本のまま)。読む所はイベントページの「物語」タブ(79-screen-xmas-event.jsx)。
+//   外側(助手たち本人。広場で謎のゲームソフトが届く)→ 題字の大きな帯(bandBig)→ ゲームの中(frame:'game' で背景を古いゲームの画面のわくに入れる)。
 //   0-1 の帯(題)は幕開けの題字で出す。band:true の行は話し手のいない帯の行(fxText を帯で出し、下の窓は直前の台詞を薄く残す)。
 //   ワトソンくんは顔なし(STORY_GUEST_SPEAKERS の watson)。助手の顔はクリスマス衣装(EVENT_REPLAYS の costumes)。
-//   背景: 台本 §5 の新しい背景 #18(招待状のアップ)・#19(雪の町の朝)はまだ無いので、台本どおり今ある monhero_plaza / monhero_town で代える
+//   背景: 「ゲーム機をかこむ助手たち」・雪の町の絵はまだ無いので、台本どおり今ある monhero_plaza / monhero_plaza_evening / monhero_town で代える
 const XMAS_STORY_00 = [
-  // ---- 場面1 いつもの広場(曲: 日) ----
-  { band:true, bg:'monhero_plaza', bgm:'default', fxText:'11月の終わり。モンヒロの広場' },
+  // ---- OUT-0-1 差出人のない小包(外側・曲: 日) ----
+  { band:true, bg:'monhero_plaza', bgm:'default', frame:'none', fxText:'11月の終わり。モンヒロの広場' },
   { who:'mua',       e:'excited',  t:'ねえねえ、あつくん！ もうすぐクリスマスぢゃん！ 今年はなにする？' },
-  { who:'atsu',      e:'happy',    t:'みゅあ、気が早いって笑 ……でも、なんか、でっかいことしたいよね' },
-  { who:'sorashido', e:'normal',   t:'クリスマスまで、あと27日です。……ワトソンくん、予定の表を出してください' },
-  { who:'watson',                  t:'表を出しました。12月24日は、まだ空いています' },
-  { who:'dra',       e:'happy',    t:'空いてるなら、ごちそうで埋めようぜ。えへへ' },
-  { who:'momosuke',  e:'wink',     t:'ドラちゃんは、いつも食べることばっかりw' },
-  { who:'kyuko',     e:'normal',   t:'ほい、ほい……♪(ベンチで、小さな音を合わせている)' },
-  { who:'erubin',    e:'normal',   t:'……みんなでクリスマスか。にぎやかで、いいね' },
-  // ---- 場面2 雪のひとひら(曲: 日) ----
-  { band:true, fxText:'晴れた空から、雪がひとひら。ふわりと、みゅあの手のひらに落ちる' },
-  { who:'mua',       e:'surprise', t:'……え、雪？ ちがう、これ、封筒！？ 雪の結晶の形してる！' },
+  { who:'atsu',      e:'happy',    t:'みゅあ、気が早いって笑 ……ん？ ベンチの上に、なんか置いてある' },
+  { band:true, fxText:'茶色い紙に包まれた、小さな小包。宛名は「モンヒロの助手のみなさまへ」。差出人の欄は、空っぽ' },
+  { who:'kiki',      e:'troubled', t:'差出人が、書いてないでつ……' },
+  { who:'sorashido', e:'normal',   t:'ワトソンくん、送り状を調べてください' },
+  { who:'watson',                  t:'消印がありません。……だれかが、直接ここへ置いたようです' },
+  { who:'dra',       e:'excited',  t:'開けてみようぜ！ 食い物かもしれないし。えへへ' },
+  { band:true, fxText:'中には、古いゲームソフトが1本。ラベルには『モンヒロ事件簿 ―呪いのセーブデータ― 十三番目の鐘』', holdMs:1500 },
+  { who:'momosuke',  e:'troubled', t:'呪いの……セーブデータ？ ちょっとこわいんだけどw' },
+  { who:'erubin',    e:'normal',   t:'……古いね。だれのだろう' },
+  // ---- OUT-0-2 1件だけのセーブデータ(外側・曲: 不) ----
+  { band:true, bg:'monhero_plaza_evening', bgm:'melo_dullahan_clockwork', fxText:'起動すると、セーブデータが1件だけ。名前の欄は、文字がにじんで読めない' },
+  { who:'sorashido', e:'normal',   t:'だれかが、途中まで遊んだデータ……でしょうか' },
+  { who:'watson',                  t:'保存された日付は、読みとれません' },
+  { who:'atsu',      e:'normal',   t:'じゃあ、新しく始めるか。……『はじめから』' },
+  { band:true, fxText:'画面に、雪山のペンションと、登場人物の紹介が流れる' },
+  { who:'mua',       e:'surprise', t:'……え、待って。この子、あたしにそっくり！' },
+  { who:'dra',       e:'surprise', t:'おでもいる！ 帽子まで同じだぞ！' },
+  { who:'kyuko',     e:'happy',    t:'ほい、俺までいるじゃん笑 ……髪の色まで、そっくりだよぉ' },
+  { who:'sorashido', e:'normal',   t:'……全員です。自分たちが、ひとり残らず' },
+  { who:'erubin',    e:'troubled', t:'俺のことまで、知ってるのかな……' },
+  { who:'atsu',      e:'excited',  t:'おもしろそうじゃん！ みんなで解こうよ、この事件！' },
+  { who:'mua',       e:'happy',    t:'あつくんが遊ぶなら、あたしも！ 助手として、となりで見てる！' },
+  // 題字の場面は大きな帯(bandBig)
+  { band:true, bandBig:true, fxText:'画面いっぱいに、題字 ——『モンヒロ事件簿 ―呪いのセーブデータ― 十三番目の鐘』', holdMs:2000 },
+  // ---- C0-1 雪の招待状(ゲームの中・曲: 日) ----
+  { band:true, bg:'monhero_plaza', bgm:'default', frame:'game', fxText:'——ゲームの中。11月の終わり。モンヒロの広場' },
+  { band:true, fxText:'晴れた空から、雪がひとひら。それは、雪の結晶の形をした封筒だった' },
   { who:'kiki',      e:'surprise', t:'ひんやりしてまつ……。宛名は『モンヒロの助手のみなさまへ』でつ' },
-  { who:'atsu',      e:'normal',   t:'俺ら全員あて？ みゅあ、読んで' },
-  { band:true, fxText:'招待状——『モンヒロの助手のみなさまへ。雪山のペンション・シュプールで、クリスマス会をいたしませんか。にぎやかな歌声が、山の上まで届いておりました』', holdMs:1500 },
-  { band:true, fxText:'『おひとりひとつ、プレゼントをお持ちください。24日の夜に、みんなで開けましょう。仮装もどうぞ。世話役のもちまると、お待ちしております。——シュプールのオーナー イチーカ』', holdMs:1500 },
+  { band:true, fxText:'招待状——『雪山のペンション・シュプールで、クリスマス会をいたしませんか。おひとりひとつ、プレゼントの箱をお持ちください。24日の夜に、みんなで開けましょう。——シュプールのオーナー イチーカ』', holdMs:1500 },
   { who:'momosuke',  e:'excited',  t:'雪山のペンションでクリスマス会！？ かわいすぎ〜♡' },
-  { who:'dra',       e:'normal',   t:'世話役の……もちまる？ どんなやつだろうな。ごちそう作るやつだといいな' },
-  // ---- 場面3 行く？ 行かない？(曲: 日) ----
-  { who:'kiki',      e:'troubled', bg:'monhero_plaza_evening', t:'でも……雪山でつよね。冬は、雪が深いって聞きまつ' },
-  { who:'watson',                  t:'地図を確かめました。ふもとから、山道で半日。12月は雪の多い時期です。念のため、多めの防寒具をおすすめします' },
-  { who:'sorashido', e:'normal',   t:'ワトソンくんの言うとおりです。準備さえすれば、行けない所ではありません' },
-  { who:'atsu',      e:'excited',  t:'じゃあ決まり！ 行こう！ ……みゅあも行くよね？' },
-  { who:'mua',       e:'happy',    t:'あたりまえぢゃん！ あつくんが行くとこなら、どこでもついてく！' },
-  { who:'erubin',    e:'troubled', t:'……俺も、行っていいのかな。来たばかりだし、みんなの邪魔にならないかなって' },
+  { who:'erubin',    e:'troubled', t:'……俺も、行っていいのかな。来たばかりだし' },
   { who:'kyuko',     e:'normal',   t:'宛名、『助手のみなさま』だよぉ。えるニキも、ちゃんと入ってる' },
   { who:'erubin',    e:'happy',    t:'……そっか。ありがとう、きゅうこちゃん' },
-  { who:'kyuko',     e:'normal',   t:'(……雪山のペンション、かぁ。いいね)' },
-  // ---- 場面4 プレゼントえらび(曲: 日) ----
-  { band:true, bg:'monhero_town', fxText:'次の日。町の店先' },
-  { who:'mua',       e:'wink',     t:'あたしのプレゼントは決まってるの。……あと、毛糸もいっぱい買っちゃった♪ なにに使うかは、ナイショ！' },
-  { who:'kiki',      e:'normal',   t:'私は、緑のリボンで包みまつ。ほどけないように、2回結びまつ' },
+  // ---- C0-2 出発の朝(ゲームの中・曲: 温) ----
+  { band:true, bg:'monhero_town', bgm:'close_to_your_heart_alt', fxText:'次の日。プレゼントえらび。みゅあは、毛糸をどっさり買いこんでいる' },
+  { who:'mua',       e:'wink',     t:'なにに使うかは、ナイショ！' },
   { who:'dra',       e:'excited',  t:'なあ、みんな何にした？ 箱、ちょっと振らせてくれよ' },
   { who:'momosuke',  e:'angry',    t:'だめ！ ドラちゃん、当日まで振るの禁止w' },
-  { who:'kyuko',     e:'normal',   t:'俺は、でっかいケースを持ってくよぉ。……中身？ 楽器だよ、楽器笑' },
-  { who:'atsu',      e:'wink',     t:'仮装、どうしよ。……いや、俺のは当日まで秘密ね笑' },
-  { who:'sorashido', e:'wink',     t:'自分も、当日まで秘密にします笑' },
-  { who:'watson',                  t:'おふたりとも、同じ店の、同じ売り場から出てきました。……記録だけしておきます' },
-  // ---- 場面5 出発の朝(曲: 温) ----
-  { band:true, bgm:'close_to_your_heart_alt', fxText:'出発の朝。町に、今年はじめての雪が降りはじめた' },
-  { who:'erubin',    e:'normal',   t:'……雪だ。砂漠の人間には、ちょっとまぶしいかな' },
-  { who:'mua',       e:'happy',    t:'あつくん、手袋持った？ マフラーは？ 助手として、忘れ物チェックするからね！' },
-  { who:'atsu',      e:'happy',    t:'もう助手のつもりなの？笑 ……よろしくね、みゅあ' },
+  { band:true, fxText:'出発の朝。町に、今年はじめての雪が降りはじめた' },
   { who:'sorashido', e:'normal',   t:'全員、そろいました。プレゼントは8つ。……ワトソンくん、出発の時刻を記録してください' },
-  { who:'watson',                  t:'記録しました。11月30日、朝。行き先、ペンション・シュプール' },
+  { who:'watson',                  t:'記録しました。行き先、ペンション・シュプール' },
   { band:true, fxText:'——遠い雪山の上。だれもいないホールで、古い柱時計が、ひとつ鳴った', holdMs:1500 },
 ];
-const XMAS_STORY_CALLS = { mua: 'あつくん', atsu: 'みゅあ', sorashido: 'ワトソンくん', momosuke: 'ドラちゃん', kyuko: 'えるニキ', erubin: 'きゅうこちゃん' };
+const XMAS_STORY_CALLS = { mua: 'あつくん', sorashido: 'ワトソンくん', momosuke: 'ドラちゃん', kyuko: 'えるニキ', erubin: 'きゅうこちゃん' };
 // 助手の顔はクリスマス衣装(images/assistant/santa/face/・data/breeder.js の *_santa_2026)。会話のあいだだけ着る
 const XMAS_STORY_COSTUMES = Object.freeze({ mua:'mua_santa_2026', kiki:'kiki_santa_2026', momosuke:'momosuke_santa_2026', dra:'dra_santa_2026', atsu:'atsu_santa_2026', kyuko:'kyuko_santa_2026', sorashido:'sorashido_santa_2026', erubin:'erubin_santa_2026' });
 const EVENT_REPLAYS = [
   // クリスマスのイベント「聖夜の名探偵」序章(2026-11-28 10:00 から・台帳 r1126-013)。イベントページの「物語」タブから読む。回想には、読んだあとに並ぶ(xmasStory00Seen)
-  { id: 'xmas_story_00', date: '2026-11-28 10:00', title: '聖夜の名探偵 序章 ～雪の招待状～', script: XMAS_STORY_00, calls: XMAS_STORY_CALLS, unlockedKey: 'xmasStory00Seen', costumes: XMAS_STORY_COSTUMES, releaseFlag: 'xmasStoryPrologue', group: 'xmas' },
+  { id: 'xmas_story_00', date: '2026-11-28 10:00', title: '聖夜の名探偵 序章 ～とどいたゲーム～', script: XMAS_STORY_00, calls: XMAS_STORY_CALLS, unlockedKey: 'xmasStory00Seen', costumes: XMAS_STORY_COSTUMES, releaseFlag: 'xmasStoryPrologue', group: 'xmas' },
   // あつとみゅあの歌のお話(2026-11-22 社長 r1119-076)。新曲 Beyond the Same Sky と一緒に出る。更新のあとに初めて HOME に着いたときに1回流れ、あとは回想から読める。台本は BEYOND_SAME_SKY_STORY
   { id: 'beyond_same_sky_story', date: '2026-11-22 12:00', title: '同じ空の先へ ～Beyond the Same Sky～', script: BEYOND_SAME_SKY_STORY, calls: BEYOND_SAME_SKY_STORY_CALLS, unlockedKey: 'beyondSameSkyStorySeen', group: 'wof_song' },
   // えるびんの歌のお話(2026-11-21 社長 r1119-079)。新曲 Desert Crown と一緒に出る。「同じ空の先へ」を見たあと、次に HOME に着いたときに1回流れ、あとは回想から読める。台本は DESERT_CROWN_STORY

@@ -1,12 +1,12 @@
 #!/usr/bin/env node
-// クリスマスのイベント「聖夜の名探偵」序章 ～雪の招待状～(xmas_story_00・台帳 r1126-013)を、時計をずらした実際のブラウザで確かめる。
+// クリスマスのイベント「聖夜の名探偵」序章 ～とどいたゲーム～(xmas_story_00・台帳 r1126-013)を、時計をずらした実際のブラウザで確かめる。
 //
 //   node tools/battle/xmas-prologue-browser-check.js
 //   SHOT_DIR=<フォルダ> を付けると、序章を読んでいる所(縦・横)と、読んだあとの一覧の写真を残す
 //
 //   ① 11/28 9:59 … 序章はまだ読めない(公開の印が偽・回想の並びに無い・HOME にイベントの入口が無い)
 //   ② 11/28 10:05(開幕の前)… HOME の入口からイベントページを開き、物語タブの序章の「お話を読む」で読める
-//   ③ 帯の行は帯(data-story-banner)で出る・ワトソンくんは顔なし(名前と吹き出しだけ)・助手の顔はクリスマス衣装(santa/face)
+//   ③ 帯の行は帯(data-story-banner)で出る・題字は大きな帯・外側の場面はわく無し、ゲームの中は古いゲームの画面のわく・ワトソンくんは顔なし(名前と吹き出しだけ)・助手の顔はクリスマス衣装(santa/face)
 //   ④ 最後まで送ると、一覧の序章が「読んだ」になり、読んだ印(mh_xmas_story_v1 の cleared に xs00)が付く・実行時エラーが無い
 const http = require('http'), path = require('path'), fs = require('fs');
 const seeds = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
@@ -84,7 +84,7 @@ const CASES = [
       const row = page.locator('[data-xmas-story-chapter="xs00"]');
       await row.waitFor({ timeout: 10000 }).catch(() => {});
       const rowText = await row.innerText().catch(() => '');
-      check(`② ${vp.label}: 物語タブに序章「雪の招待状」が開いている`, /雪の招待状/.test(rowText) && (await row.getAttribute('data-status')) !== 'locked', rowText.replace(/\s+/g, ' '));
+      check(`② ${vp.label}: 物語タブに序章「とどいたゲーム」が開いている`, /とどいたゲーム/.test(rowText) && (await row.getAttribute('data-status')) !== 'locked', rowText.replace(/\s+/g, ' '));
       const row1 = await page.locator('[data-xmas-story-chapter="xs01"]').getAttribute('data-status').catch(() => '');
       check(`② ${vp.label}: 第1話はまだ鍵`, row1 === 'locked', row1);
       await row.dispatchEvent('click');
@@ -98,7 +98,7 @@ const CASES = [
       await page.waitForTimeout(1500);
       await page.locator('[data-story-opening-card]').dispatchEvent('click').catch(() => {});
       await page.waitForTimeout(900);
-      let bandSeen = 0, watsonOk = null, santaOk = null, last = -1;
+      let bandSeen = 0, watsonOk = null, santaOk = null, last = -1, bigOk = false, outFrame = null, inFrame = null;
       for (let i = 0; i < 200; i++) {
         if (await page.locator('[data-story-ending]').count() > 0 || await story.count() === 0) break;
         const step = Number(await story.getAttribute('data-story-step').catch(() => -1));
@@ -107,14 +107,15 @@ const CASES = [
           const banner = await page.locator('[data-story-banner]').count();
           const t = await story.innerText().catch(() => '');
           if (banner > 0) bandSeen++;
-          if (step === 0) await shot('1-band');
-          if (watsonOk == null && /表を出しました/.test(t)) {
+          const frame = await page.evaluate(() => document.querySelector('[data-story-bg]')?.getAttribute('data-story-bg-frame') || '');
+          if (/起動すると/.test(t)) { outFrame = frame; await shot('1-out'); }
+          if (await page.locator('[data-story-banner-big]').count() > 0) { bigOk = /十三番目の鐘/.test(await page.locator('[data-story-banner-big]').innerText()); await page.waitForTimeout(600); await shot('2-title'); }
+          if (/ゲームの中。11月/.test(t)) { inFrame = frame; await shot('3-in'); }
+          if (watsonOk == null && /消印がありません/.test(t)) {
             // ワトソンくん: 顔の欄が無く、名前の札と吹き出しだけ
             watsonOk = await page.evaluate(() => !document.querySelector('[data-story-guest="watson"]') && !!document.querySelector('[data-story-guest-bubble]') && /ワトソンくん/.test(document.querySelector('[data-story-guest-bubble]').innerText));
             santaOk = await page.evaluate(() => [...document.querySelectorAll('[data-story-speaker] img')].some((im) => /assistant\/santa\/face\//.test(im.getAttribute('src') || '')));
-            await shot('2-watson');
           }
-          if (/封筒！？/.test(t)) await shot('3-mua');
           if (/招待状——/.test(t)) await shot('4-letter');
         }
         await page.waitForTimeout(80);
@@ -124,9 +125,11 @@ const CASES = [
         if (Number(await story.getAttribute('data-story-step').catch(() => -1)) === step) await page.waitForTimeout(1400);
       }
       check(`③ ${vp.label}: 帯の行が帯で出る`, bandSeen >= 6, `${bandSeen} 行`);
+      check(`③ ${vp.label}: 外側の場面はわく無し・ゲームの中は古いゲームの画面のわく`, outFrame === '' && inFrame === 'game', `外側「${outFrame}」中「${inFrame}」`);
+      check(`③ ${vp.label}: 題字は大きな帯`, bigOk);
       check(`③ ${vp.label}: ワトソンくんは顔なし(名前と吹き出しだけ)`, watsonOk === true);
       check(`③ ${vp.label}: 助手の顔はクリスマス衣装`, santaOk === true);
-      check(`④ ${vp.label}: 最後(${last + 1} 行目)まで送れた`, last + 1 === 42, `${last + 1}`);
+      check(`④ ${vp.label}: 最後(${last + 1} 行目)まで送れた`, last + 1 === 40, `${last + 1}`);
       const ending = page.locator('[data-story-ending]');
       await ending.waitFor({ timeout: 8000 }).catch(() => {});
       await page.waitForTimeout(2500);
