@@ -72,10 +72,10 @@ const CHANGELOG = [
     pinUntil:'2026-11-30T10:00:00+09:00',
     pinEmoji:'🎄',
     image: 'images/events/xmas-2026-notice.jpg?v=789f225e7916',
-    // 2026-11-26 社長「土曜日の告知のときに場面場面で予告動画というかそういう感じのもいれたいね」(r1126-010)。お話の絵・助手のクリスマスの立ち絵・イベントの曲「Kissからはじまるミステリー」でつないだ予告編(48秒・届いたゲーム『モンヒロ事件簿』の起動画面のカットつき)。
+    // 2026-11-26 社長「土曜日の告知のときに場面場面で予告動画というかそういう感じのもいれたいね」(r1126-010)。お話の絵・助手のクリスマスの立ち絵・イベントの曲「Kissからはじまるミステリー」でつないだ予告編(59秒・届いたゲーム『モンヒロ事件簿』の起動画面と、事件簿の実際の画面を挟んだ第5版)。
     //   第1話の範囲(招待状・ペンション)と、ポスターに出ている影だけ。ボスの名前・犯人・誰が消えるかは出さない。作り方は docs/promo/VIDEOS.md
-    video: 'movies/xmas-2026-trailer.mp4?v=bdf8d72af281',
-    videoPoster: 'images/events/xmas-2026-trailer-poster.jpg?v=ba3d384de4a5',
+    video: 'movies/xmas-2026-trailer.mp4?v=f4a5a828edbc',
+    videoPoster: 'images/events/xmas-2026-trailer-poster.jpg?v=8a9ae79c6a53',
     assistantNotice: {
       id:'update_notice_xmas_2026_notice_v1', type:'content',
       notifyFrom:'2026-11-28T10:00:00+09:00',

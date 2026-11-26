@@ -4,7 +4,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageEnhance
 
 REPO, S, OUT = sys.argv[1], sys.argv[2], sys.argv[3]
-W, H, FPS, DUR = 720, 1280, 30, 48.2
+W, H, FPS, DUR = 720, 1280, 30, 59.0
 R = REPO + '/tools/art-sources/promo/xmas-2026/received/'
 IMG = REPO + '/monster-hero/images/'
 def rgba(p): return Image.open(p).convert('RGBA')
@@ -335,7 +335,31 @@ def sc8(t):  # 33.4-38 題字と開幕
     text_at(img, 's7', t, 1.3, 9.0, 720, fade=0.6)
     return img
 
-SCENES = [(0.0, 5.4, sc1), (5.0, 9.4, sc2), (9.0, 14.4, sc3), (14.0, 19.4, sc4), (19.0, 24.4, sc5), (24.0, 29.4, sc5b), (29.0, 33.8, sc6), (33.6, 38.8, sc7), (38.4, 44.0, sc7b), (43.6, 48.2, sc8)]
+# ── 事件簿のゲーム画面を挟む(第5版・r1126-045。360×640 を2倍で撮った実際の画面) ──
+GS = S + '/v5/shots/'
+GIMG = {k: rgb(GS + k + '.png') for k in ['c1-band', 'clue', 'q3a', 'a1', 'kime-atsu', 'kime-sora']}
+def game_frame(im, t, dur):
+    img = cover(im, lerp(1.0, 1.04, ease(t / dur)), W / 2, H / 2)
+    a = np.asarray(img).astype(np.float32)
+    a[::3] *= 0.9  # うすい走査線(ゲームの画面だと分かるように)
+    if t < 0.28:  # 入るときの砂あらしと横ずれ
+        k = 1 - t / 0.28
+        for y0 in range(0, H, 40): a[y0:y0 + 40] = np.roll(a[y0:y0 + 40], int(nrng.integers(-50, 50) * k), axis=1)
+        a = a * (1 - 0.6 * k) + nrng.integers(0, 255, (H // 4, W // 4, 1)).repeat(4, 0).repeat(4, 1).astype(np.float32) * 0.6 * k
+    return Image.fromarray(np.clip(a, 0, 255).astype(np.uint8)).convert('RGBA')
+def gshot(k, dur):
+    return lambda t: game_frame(GIMG[k], t, dur)
+def gkime(t):  # 決め台詞を2つ続けて(あいだは白く光る)
+    im = GIMG['kime-atsu'] if t < 1.6 else GIMG['kime-sora']
+    tt = t if t < 1.6 else t - 1.6
+    f = game_frame(im, tt + (0.3 if t < 1.6 else 0), 1.6)
+    if t < 0.12 or 1.6 <= t < 1.72:
+        w = Image.new('RGBA', (W, H), (255, 255, 255, int(200 * (1 - ((t if t < 1.6 else t - 1.6) / 0.12))))); f.alpha_composite(w)
+    return f
+SCENES = [(0.0, 5.4, sc1), (5.0, 9.4, sc2), (9.0, 11.4, gshot('c1-band', 2.4)), (11.0, 16.4, sc3), (16.0, 21.4, sc4), (21.0, 26.4, sc5),
+          (26.0, 28.4, gshot('clue', 2.4)), (28.0, 33.4, sc5b), (33.0, 35.4, gshot('q3a', 2.4)), (35.0, 39.8, sc6), (39.6, 44.8, sc7),
+          (44.4, 46.8, gshot('a1', 2.4)), (46.4, 49.6, gkime), (49.2, 54.8, sc7b), (54.4, 59.0, sc8)]
+T_DARK, T_HIT = 16.0 + 3.5, 39.6  # 曲のつなぎ目(はずだった/名探偵は)
 
 def frame(t):
     act = [(a, b, f) for a, b, f in SCENES if a <= t < b]
@@ -347,11 +371,12 @@ def frame(t):
             x = ease((t - a) / (act[i - 1][1] - a)); out = out * (1 - x) + im * x
     out = out * VIG
     fade = min(1, t / 0.8, (DUR - t) / 0.8)
-    if 33.6 <= t < 33.75: out = out + 255 * (1 - (t - 33.6) / 0.15) * 0.7  # 曲の山で光る
+    if T_HIT <= t < T_HIT + 0.15: out = out + 255 * (1 - (t - T_HIT) / 0.15) * 0.7  # 曲の山で光る
     out = out * max(0, fade)
     return np.clip(out, 0, 255).astype(np.uint8)
 
 if __name__ == '__main__':
+    if sys.argv[3] == 'times': print(T_DARK, T_HIT, DUR); sys.exit()
     only = [float(x) for x in sys.argv[4].split(',')] if len(sys.argv) > 4 else None
     if only:
         for t in only: Image.fromarray(frame(t)).save(f'{OUT}_{t:05.1f}.jpg', quality=90)
