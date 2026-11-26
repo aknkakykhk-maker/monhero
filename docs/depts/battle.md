@@ -31,6 +31,9 @@ node tools/ctx.js brief               いまの状態
 - `monster-hero/src/parts/78-screen-raid-jack-debug.jsx`
 - `monster-hero/src/parts/79-screen-raid-jack.jsx`
 - `monster-hero/src/parts/79-screen-xmas-event.jsx`
+- `monster-hero/src/parts/79-screen-xmas-novel.jsx`
+- `monster-hero/src/parts/79-xmas-novel-engine.jsx`
+- `monster-hero/src/parts/79-xmas-novel-script.jsx`
 - `monster-hero/src/parts/56-monhero-success-cup.jsx`
 - `monster-hero/src/parts/56-monhero-success-arena.jsx`
 - `monster-hero/data/enemy-monsters.js`
