@@ -4,7 +4,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageEnhance
 
 REPO, S, OUT = sys.argv[1], sys.argv[2], sys.argv[3]
-W, H, FPS, DUR = 720, 1280, 30, 48.2
+W, H, FPS, DUR = 720, 1280, 30, 59.0
 R = REPO + '/tools/art-sources/promo/xmas-2026/received/'
 IMG = REPO + '/monster-hero/images/'
 def rgba(p): return Image.open(p).convert('RGBA')
@@ -42,7 +42,7 @@ def text_at(base, k, t, t0, t1, y, fade=0.5, rise=14):
     im = TX[k]
     paste_a(base, im, ((W - im.width) / 2, y + (1 - ease((t - t0) / fade)) * rise), a)
 
-TX = {k: txt(k) for k in ['s1', 'band', 's2', 'card', 's3', 's3b', 's4', 's5', 's6a', 's6b', 's7', 'v1', 'v2', 'stamp', 'parcel', 'cart', 'crt', 'crt_sub', 'crt_press', 'tv', 'g1']}
+TX = {k: txt(k) for k in ['s1', 'band', 's2', 'card', 's3', 's3b', 's4', 's4b', 's5', 's6a', 's6b', 's7', 'v1', 'v2', 'stamp', 'parcel', 'cart', 'crt', 'crt_sub', 'crt_press', 'tv', 'g1']}
 
 # ── 素材 ──
 home = rgb(R + 'home-background-xmas_v2.png')
@@ -204,14 +204,26 @@ def sc4(t, dim=0):  # 14-19.4 みんなが集まる(横に流す)
         a[:, :, :3] = (a[:, :, :3] * (1 - d * 0.8) + g * d * 0.8) * (1 - d * 0.55) + np.array([5, 10, 40]) * d * 0.3
         img = Image.fromarray(np.clip(a, 0, 255).astype(np.uint8), 'RGBA')
     text_at(img, 's3', t, 0.5, 3.3, 110); text_at(img, 's3b', t, 3.5, 5.4, 150, fade=0.6); return img
-def sc5(t):  # 19-24.4 空になった箱
-    img = box_bg.copy().convert('RGBA'); img.alpha_composite(box_layer)
-    fl = 1.0
-    if t < 0.9: fl = [0.2, 0.2, 0.8, 0.3, 1, 1, 0.6, 1, 1][int(t * 10)]
-    img = cover(img.convert('RGB'), lerp(1.0, 1.13, ease(t / 5.4)), W / 2, 760)
-    img = ImageEnhance.Brightness(img).enhance(fl).convert('RGBA')
-    text_at(img, 's4', t, 1.0, 5.0, 180); return img
-# ── 仲間が、ひとり、またひとり(顔の無い同じ影を 3・4・3 に並べる。台本の並びとは結び付けない) ──
+HALL = rgb(S + '/v5/shots/hall.png').crop((0, 110, 720, 980))
+HALL = HALL.resize((int(720 * 1280 / 870), 1280), Image.LANCZOS)
+def sc5(t):  # 零時の鐘と停電(事件簿の広間の柱時計)
+    cx, cy = 370 * HALL.width / 720, (620 - 110) * 1280 / 870
+    sc = lerp(1.0, 1.45, ease(t / 5.4)); sh = 0
+    for b in (0.6, 1.3, 2.0):
+        if 0 <= t - b < 0.25: sh = 6 * (1 - (t - b) / 0.25)
+    img = cover(HALL, sc, lerp(HALL.width / 2, cx, ease(t / 3)) + sh * math.sin(t * 80), lerp(640, cy, ease(t / 3)))
+    a = np.asarray(img).astype(np.float32)
+    lit = 1.0
+    if 2.6 <= t < 3.3: lit = [1, .25, .9, .12, .6, .05, .3][int((t - 2.6) / 0.1)]
+    elif t >= 3.3: lit = 0.0
+    dark = a * np.array([0.22, 0.27, 0.45]) + np.array([2, 4, 14])
+    a = a * lit + dark * (1 - lit)
+    for b in (0.6, 1.3, 2.0):
+        if 0 <= t - b < 0.4: a = a * (1 + 0.12 * (1 - (t - b) / 0.4))
+    img = Image.fromarray(np.clip(a, 0, 255).astype(np.uint8)).convert('RGBA')
+    text_at(img, 's4', t, 0.5, 2.6, 150, fade=0.4); text_at(img, 's4b', t, 3.3, 5.4, 150, fade=0.4)
+    return img
+# ── 仲間が、ひとり、またひとり(顔の無い同じ影を 4・4・4 に並べる。台本の並びとは結び付けない) ──
 CW, CH = 140, 180
 def make_card(gray=False):
     c = Image.new('RGBA', (CW, CH), (0, 0, 0, 0))
@@ -229,10 +241,22 @@ def make_card(gray=False):
     return c
 CARD, CARD_G = make_card(), make_card(True)
 SLOTS = []
-for r, (n, y) in enumerate([(3, 330), (4, 530), (3, 730)]):
-    x0 = (W - (n * CW + (n - 1) * 18)) / 2
-    for i in range(n): SLOTS.append((x0 + i * (CW + 18), y))
-STAMPS = [(3, 1.2), (2, 2.5), (8, 3.6)]  # (枠の番号, 押す時刻)
+for r, (n, y) in enumerate([(4, 300), (4, 500), (4, 700)]):
+    x0 = (W - (n * CW + (n - 1) * 16)) / 2
+    for i in range(n): SLOTS.append((x0 + i * (CW + 16), y))
+STAMPS = [(5, 1.2), (2, 2.5), (8, 3.6)]  # (枠の番号, 暗くなる時刻)。台本のパネルの並び(6人ずつ2段)とは結び付かない
+def make_flower():
+    f = Image.new('RGBA', (240, 240), (0, 0, 0, 0)); d = ImageDraw.Draw(f)
+    d.line([(120, 128), (150, 230)], fill=(70, 120, 70, 255), width=7)
+    d.ellipse((140, 170, 185, 195), fill=(80, 135, 80, 255))
+    for k in range(6):
+        p = Image.new('RGBA', (240, 240), (0, 0, 0, 0)); pd = ImageDraw.Draw(p)
+        pd.ellipse((104, 40, 136, 122), fill=(250, 250, 246, 255), outline=(205, 210, 215, 255), width=2)
+        f.alpha_composite(p.rotate(k * 60, center=(120, 120), resample=Image.BICUBIC))
+    d.ellipse((106, 106, 134, 134), fill=(245, 225, 140, 255))
+    f = f.filter(ImageFilter.GaussianBlur(0.6))
+    return f.resize((112, 112), Image.LANCZOS).rotate(-18, expand=True, resample=Image.BICUBIC)
+FLOWER = make_flower()
 def sc5b(t):  # 24-29.4 仲間が、ひとり、またひとり
     img = Image.new('RGBA', (W, H), (0, 0, 0, 255)); img.alpha_composite(box_bg.convert('RGBA').point(lambda v: int(v * 0.6)))
     shake = 0
@@ -241,11 +265,10 @@ def sc5b(t):  # 24-29.4 仲間が、ひとり、またひとり
         g = 0 if st is None else ease((t - (st - 0.35)) / 0.3)
         img.alpha_composite(CARD, (int(x), int(y)))
         if g > 0: paste_a(img, CARD_G, (x, y), g)
+        if g > 0: paste_a(img, Image.new('RGBA', (CW, CH), (0, 0, 0, 255)), (x, y), 0.35 * g)
         if st is not None and t >= st:
-            p = min(1, (t - st) / 0.16); sc = lerp(1.9, 1.0, p)
-            sp = TX['stamp'].resize((int(150 * sc), int(75 * sc)), Image.BICUBIC).rotate(-14, expand=True, resample=Image.BICUBIC)
-            paste_a(img, sp, (x + CW / 2 - sp.width / 2, y + CH * 0.62 - sp.height / 2), min(1, p * 1.4))
-            if t - st < 0.22: shake = max(shake, 7 * (1 - (t - st) / 0.22))
+            p = ease((t - st) / 0.5)
+            paste_a(img, FLOWER, (x + CW / 2 - FLOWER.width / 2, y + CH * 0.66 - FLOWER.height / 2 + (1 - p) * -24), p)
     snow(img, t + 24, 0.3, wind=10)
     img = cover(img.convert('RGB'), lerp(1.0, 1.06, ease(t / 5.4)), W / 2 + shake * math.sin(t * 90), 640).convert('RGBA')
     text_at(img, 'v1', t, 1.4, 3.1, 990, fade=0.4); text_at(img, 'v2', t, 3.1, 5.4, 990, fade=0.4)
@@ -262,7 +285,11 @@ def sc6(t):  # 29-33.8 窓の外の黒い影
     gi = int(150 + 100 * (0.5 + 0.5 * math.sin(t * 5)))
     ImageDraw.Draw(glow).ellipse((ex - 50, ey - 22, ex + 70, ey + 22), fill=gi)
     gl = Image.new('RGBA', (W, H), (255, 30, 30, 255)); gl.putalpha(glow.filter(ImageFilter.GaussianBlur(18)))
-    img.alpha_composite(gl); img.alpha_composite(win_frost); img.alpha_composite(win_frame)
+    img.alpha_composite(gl)
+    bl = Image.new('RGBA', (W, H), (0, 0, 0, 0)); snow(bl, t + 3, 1.0, wind=320); snow(bl, t + 9, 1.0, wind=260)
+    hm = Image.new('L', (W, H), 0); ImageDraw.Draw(hm).rectangle((x0, y0, x1, y1), fill=255)
+    bl.putalpha(Image.fromarray(np.minimum(np.array(bl.getchannel('A')), np.array(hm)))); img.alpha_composite(bl)
+    img.alpha_composite(win_frost); img.alpha_composite(win_frame)
     room = Image.new('RGBA', (W, H), (40, 60, 120, 60)); img.alpha_composite(room)
     sc = lerp(1.0, 1.35, ease(t / 4.8))
     sh = 6 * math.sin(t * 37) * max(0, 1 - t * 2)
@@ -335,7 +362,31 @@ def sc8(t):  # 33.4-38 題字と開幕
     text_at(img, 's7', t, 1.3, 9.0, 720, fade=0.6)
     return img
 
-SCENES = [(0.0, 5.4, sc1), (5.0, 9.4, sc2), (9.0, 14.4, sc3), (14.0, 19.4, sc4), (19.0, 24.4, sc5), (24.0, 29.4, sc5b), (29.0, 33.8, sc6), (33.6, 38.8, sc7), (38.4, 44.0, sc7b), (43.6, 48.2, sc8)]
+# ── 事件簿のゲーム画面を挟む(第5版・r1126-045。360×640 を2倍で撮った実際の画面) ──
+GS = S + '/v5/shots/'
+GIMG = {k: rgb(GS + k + '.png') for k in ['c1-band', 'clue', 'q3a', 'a1', 'kime-atsu', 'kime-sora']}
+def game_frame(im, t, dur):
+    img = cover(im, lerp(1.0, 1.04, ease(t / dur)), W / 2, H / 2)
+    a = np.asarray(img).astype(np.float32)
+    a[::3] *= 0.9  # うすい走査線(ゲームの画面だと分かるように)
+    if t < 0.28:  # 入るときの砂あらしと横ずれ
+        k = 1 - t / 0.28
+        for y0 in range(0, H, 40): a[y0:y0 + 40] = np.roll(a[y0:y0 + 40], int(nrng.integers(-50, 50) * k), axis=1)
+        a = a * (1 - 0.6 * k) + nrng.integers(0, 255, (H // 4, W // 4, 1)).repeat(4, 0).repeat(4, 1).astype(np.float32) * 0.6 * k
+    return Image.fromarray(np.clip(a, 0, 255).astype(np.uint8)).convert('RGBA')
+def gshot(k, dur):
+    return lambda t: game_frame(GIMG[k], t, dur)
+def gkime(t):  # 決め台詞を2つ続けて(あいだは白く光る)
+    im = GIMG['kime-atsu'] if t < 1.6 else GIMG['kime-sora']
+    tt = t if t < 1.6 else t - 1.6
+    f = game_frame(im, tt + (0.3 if t < 1.6 else 0), 1.6)
+    if t < 0.12 or 1.6 <= t < 1.72:
+        w = Image.new('RGBA', (W, H), (255, 255, 255, int(200 * (1 - ((t if t < 1.6 else t - 1.6) / 0.12))))); f.alpha_composite(w)
+    return f
+SCENES = [(0.0, 5.4, sc1), (5.0, 9.4, sc2), (9.0, 11.4, gshot('c1-band', 2.4)), (11.0, 16.4, sc3), (16.0, 21.4, sc4), (21.0, 26.4, sc5),
+          (26.0, 28.4, gshot('clue', 2.4)), (28.0, 33.4, sc5b), (33.0, 35.4, gshot('q3a', 2.4)), (35.0, 39.8, sc6), (39.6, 44.8, sc7),
+          (44.4, 46.8, gshot('a1', 2.4)), (46.4, 49.6, gkime), (49.2, 54.8, sc7b), (54.4, 59.0, sc8)]
+T_DARK, T_HIT = 16.0 + 3.5, 39.6  # 曲のつなぎ目(はずだった/名探偵は)
 
 def frame(t):
     act = [(a, b, f) for a, b, f in SCENES if a <= t < b]
@@ -347,11 +398,12 @@ def frame(t):
             x = ease((t - a) / (act[i - 1][1] - a)); out = out * (1 - x) + im * x
     out = out * VIG
     fade = min(1, t / 0.8, (DUR - t) / 0.8)
-    if 33.6 <= t < 33.75: out = out + 255 * (1 - (t - 33.6) / 0.15) * 0.7  # 曲の山で光る
+    if T_HIT <= t < T_HIT + 0.15: out = out + 255 * (1 - (t - T_HIT) / 0.15) * 0.7  # 曲の山で光る
     out = out * max(0, fade)
     return np.clip(out, 0, 255).astype(np.uint8)
 
 if __name__ == '__main__':
+    if sys.argv[3] == 'times': print(T_DARK, T_HIT, DUR); sys.exit()
     only = [float(x) for x in sys.argv[4].split(',')] if len(sys.argv) > 4 else None
     if only:
         for t in only: Image.fromarray(frame(t)).save(f'{OUT}_{t:05.1f}.jpg', quality=90)
