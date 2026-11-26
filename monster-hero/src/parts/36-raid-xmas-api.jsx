@@ -201,7 +201,7 @@ const RAID_EVENT_XMAS = Object.freeze({
   tiers: raidXmasTiers,
   tierAt: raidXmasTierAt,
   afterBoss: RAID_XMAS_AFTER_BOSS,
-  afterBossBadge: 'まだ暴れている',
+  afterBossBadge: 'あそびに来た',     // 最後の段階のあとは正気に戻った普通のサンタ(ぱんぷきんと同じ形・社長決定 r1126-024)
   afterBossNote: '共有ライフは無限です。毎回いっぱいのライフから戦い、与えたダメージが累計に足されます',
   lockedNote: `前の段階の${RAID_XMAS_EVENT.name}を止めると姿をあらわします`,
   lastTierWord: '最後の段階',
@@ -220,7 +220,7 @@ const RAID_EVENT_XMAS = Object.freeze({
   saveState: raidXmasSaveState,
   flushPending: (meId) => raidXmasFlushStoredPending(meId),
   bossImg: () => RAID_XMAS_BOSS_IMG,
-  afterBossImg: () => RAID_XMAS_BOSS_IMG,
+  afterBossImg: () => RAID_XMAS_SANTA_IMG,
   aura: false,
 });
 const raidEventDef = (key) => (key === 'xmas' ? RAID_EVENT_XMAS : RAID_EVENT_JACK);
