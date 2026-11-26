@@ -62,6 +62,64 @@ const CHANGELOG = [
       'くわしくは、開催の日にお知らせします。',
     ],
   },
+  // クリスマスイベントの新曲「winter fall」(2026-11-26 社長・台帳 r1126-023/036。レイドバトル曲。開幕の 11/30 10:00 から出す)
+  {
+    date: "2026-11-26 23:09", type:'update', group:'rhythm', status:'new', visibleFrom:'2026-11-30T10:00:00+09:00',
+    title:'新曲「winter fall」（原曲＋short ver.）を追加しました',
+    image:'images/song-art/winter-fall.jpg?v=8c34fc190369',
+    items:[
+      'モンヒロビートに「winter fall」を追加しました。原曲（4分52秒・BPM 166）と short ver.（1分46秒・BPM 166）の、2バージョンの曲組です。',
+      '原曲のレベルは EASY Lv.8 ／ NORMAL Lv.10 ／ HARD Lv.15 ／ EXPERT Lv.28 ／ MASTER Lv.33 ／ HELL Lv.45 です。',
+      '原曲のノーツ数は 448 ／ 530 ／ 736 ／ 1155 ／ 1257 ／ 1186 です。',
+      'short ver. のレベルは EASY Lv.7 ／ NORMAL Lv.9 ／ HARD Lv.13 ／ EXPERT Lv.26 ／ MASTER Lv.32 ／ HELL Lv.41 です。',
+      'short ver. のノーツ数は 143 ／ 173 ／ 240 ／ 378 ／ 413 ／ 398 です。',
+      '譜面は版ごとに違います。曲えらびの版タブで切り替えて遊べます。',
+      'この曲はビートP500で買って遊びます。買うと原曲と short ver. の両方で遊べます。曲えらびの「🔒 500P」か、ビートP交換所の「曲」から買えます。',
+    ],
+    assistantNotice:{ id:'update_notice_winter_fall_v1', type:'content', notifyFrom:'2026-11-30T10:00:00+09:00' },
+  },
+  // クリスマスイベントの新曲「Dear Santa」(2026-11-26 社長・台帳 r1126-023/036。期間中のHOME BGM。開幕の 11/30 10:00 から出す)
+  {
+    date: "2026-11-26 23:09", type:'update', group:'rhythm', status:'new', visibleFrom:'2026-11-30T10:00:00+09:00',
+    title:'新曲「Dear Santa」（原曲＋short ver.）を追加しました',
+    image:'images/song-art/dear-santa.jpg?v=a243e93b30d2',
+    items:[
+      'モンヒロビートに「Dear Santa」を追加しました。原曲（3分39秒・BPM 200）と short ver.（1分29秒・BPM 200）の、2バージョンの曲組です。',
+      '原曲のレベルは EASY Lv.10 ／ NORMAL Lv.12 ／ HARD Lv.21 ／ EXPERT Lv.30 ／ MASTER Lv.40 ／ HELL Lv.62 です。',
+      '原曲のノーツ数は 473 ／ 537 ／ 729 ／ 909 ／ 995 ／ 963 です。',
+      'short ver. のレベルは EASY Lv.10 ／ NORMAL Lv.12 ／ HARD Lv.24 ／ EXPERT Lv.30 ／ MASTER Lv.41 ／ HELL Lv.57 です。',
+      'short ver. のノーツ数は 186 ／ 213 ／ 287 ／ 339 ／ 403 ／ 340 です。',
+      '譜面は版ごとに違います。曲えらびの版タブで切り替えて遊べます。',
+      'この曲はビートP500で買って遊びます。買うと原曲と short ver. の両方で遊べます。曲えらびの「🔒 500P」か、ビートP交換所の「曲」から買えます。',
+    ],
+    assistantNotice:{ id:'update_notice_dear_santa_v1', type:'content', notifyFrom:'2026-11-30T10:00:00+09:00' },
+  },
+  // クリスマスイベントの新曲「Kissからはじまるミステリー」(2026-11-26 社長・台帳 r1126-015/023/036。イベントページの曲。開幕の 11/30 10:00 から出す)
+  {
+    date: "2026-11-26 23:09", type:'update', group:'rhythm', status:'new', visibleFrom:'2026-11-30T10:00:00+09:00',
+    title:'新曲「Kissからはじまるミステリー」（原曲＋short ver.）を追加しました',
+    image:'images/song-art/kiss-mystery.jpg?v=043890725b48',
+    items:[
+      'モンヒロビートに「Kissからはじまるミステリー」を追加しました。原曲（5分06秒・BPM 112）と short ver.（2分43秒・BPM 112）の、2バージョンの曲組です。',
+      '原曲のレベルは EASY Lv.6 ／ NORMAL Lv.7 ／ HARD Lv.10 ／ EXPERT Lv.19 ／ MASTER Lv.29 ／ HELL Lv.43 です。',
+      '原曲のノーツ数は 328 ／ 407 ／ 549 ／ 871 ／ 1044 ／ 1333 です。',
+      'short ver. のレベルは EASY Lv.6 ／ NORMAL Lv.8 ／ HARD Lv.10 ／ EXPERT Lv.19 ／ MASTER Lv.28 ／ HELL Lv.43 です。',
+      'short ver. のノーツ数は 174 ／ 212 ／ 290 ／ 463 ／ 555 ／ 709 です。',
+      '譜面は版ごとに違います。曲えらびの版タブで切り替えて遊べます。',
+      'この曲はビートP500で買って遊びます。買うと原曲と short ver. の両方で遊べます。曲えらびの「🔒 500P」か、ビートP交換所の「曲」から買えます。',
+    ],
+    assistantNotice:{ id:'update_notice_kiss_mystery_v1', type:'content', notifyFrom:'2026-11-30T10:00:00+09:00' },
+  },
+  // クリスマスイベントの間の曲(台帳 r1126-023 追記1)。開幕の 11/30 10:00 から出す
+  {
+    date: "2026-11-26 23:09", type:'update', group:'other', status:'new', visibleFrom:'2026-11-30T10:00:00+09:00',
+    title:'クリスマスイベントのあいだ、HOMEとレイドの曲が変わります',
+    items:[
+      'クリスマスイベントのあいだ（12/31 3:59まで）は、HOMEで「Dear Santa」が流れます。BGMアレンジの「HOME BGM」をデフォルトのままにしているときだけで、ほかの曲を選んでいるときは選んだ曲のままです。',
+      'レイドのボスとの戦いでは「winter fall」が流れます（モンヒロバトルの戦いとMFバトルカードの対戦）。',
+      'イベントが終わると元の曲に戻ります。',
+    ],
+  },
   { date: "2026-11-26 11:13", type:'update', group:'ui', status:'new', visibleFrom:'2026-11-30T10:00:00+09:00',
     title:'タイトル画面・ホーム画面に「クリスマス」の絵が入りました',
     items:[
