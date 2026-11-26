@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7167ae5baf9c372a
+// source-sha256: b4d2afa8ea3409e7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -119593,6 +119593,11 @@ const XMAS_NOVEL_CSS = `
   background: radial-gradient(circle, #fff3f3 0%, #ff2a3a 35%, rgba(255,0,30,.0) 75%); box-shadow: 0 0 18px 6px rgba(255,20,40,.75); animation: mh-nv-eye 2.6s ease-in-out infinite; }
 @keyframes mh-nv-eye { 0%, 100% { opacity: .85; } 50% { opacity: 1; } 92% { opacity: .1; } }
 @media (prefers-reduced-motion: reduce) { .mh-nv-fx.bleed { animation-duration: .01s; } .mh-nv-boss .eye { animation: none; } }
+.mh-nv-card:has(.mh-nv-gameover) { background: radial-gradient(120% 70% at 50% 45%, rgba(70,0,8,.92), rgba(4,0,2,.98)); }
+.mh-nv-gameover-title { font-family: 'Hiragino Mincho ProN', 'Yu Mincho', serif; font-size: min(44px, 10vw); white-space: nowrap; font-weight: 900; letter-spacing: .08em; color: #e0192e;
+  text-shadow: 0 0 18px rgba(255,0,30,.6), 2px 0 rgba(255,80,80,.4), -2px 0 rgba(120,0,0,.6); margin-bottom: 10px; animation: mh-nv-gameover 1.6s ease both; }
+@keyframes mh-nv-gameover { 0% { opacity: 0; filter: blur(6px); transform: scale(1.3); } 60% { opacity: 1; filter: blur(0); transform: none; } }
+.mh-nv-red { color: #ff5a64; text-shadow: 0 0 12px rgba(255,0,30,.45), 0 2px 2px rgba(0,0,0,.6); }
 .mh-nv-boot { background: #030407; }
 .mh-nv-noise { position: absolute; inset: -20%; pointer-events: none; opacity: .13; z-index: 1;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='160' height='160' filter='url(%23n)' opacity='.9'/></svg>");
@@ -120920,9 +120925,12 @@ const XmasNovelScreen = ({
       } : {})
     };
     return React.createElement("div", {
-      className: "w-full max-w-sm",
+      className: `w-full max-w-sm${card.ending.kind === 'forced' ? ' mh-nv-gameover' : ''}`,
       "data-xmas-novel-ending-card": card.ending.id
-    }, React.createElement("div", {
+    }, card.ending.kind === 'forced' && React.createElement("div", {
+      className: "mh-nv-gameover-title",
+      "data-xmas-novel-gameover": true
+    }, "GAME OVER"), React.createElement("div", {
       className: "mh-nv-serif text-[13px] tracking-[0.4em]",
       style: {
         color: kind.tone
@@ -120930,7 +120938,7 @@ const XmasNovelScreen = ({
     }, /エンド$/.test(kind.label) ? kind.label : `${kind.label} END`), React.createElement("div", {
       className: "mh-nv-rule"
     }), React.createElement("div", {
-      className: "mh-nv-serif mh-nv-gold text-[28px] font-black leading-tight"
+      className: `mh-nv-serif text-[28px] font-black leading-tight ${card.ending.kind === 'forced' ? 'mh-nv-red' : 'mh-nv-gold'}`
     }, "「", card.ending.name, "」"), React.createElement("div", {
       className: "mh-nv-rule"
     }), !card.replay && React.createElement("div", {

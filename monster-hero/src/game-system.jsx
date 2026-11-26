@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 608fb5d7b7f42742
+// generated-sha256: e854a5d375dbb4fe
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -68616,6 +68616,11 @@ const XMAS_NOVEL_CSS = `
   background: radial-gradient(circle, #fff3f3 0%, #ff2a3a 35%, rgba(255,0,30,.0) 75%); box-shadow: 0 0 18px 6px rgba(255,20,40,.75); animation: mh-nv-eye 2.6s ease-in-out infinite; }
 @keyframes mh-nv-eye { 0%, 100% { opacity: .85; } 50% { opacity: 1; } 92% { opacity: .1; } }
 @media (prefers-reduced-motion: reduce) { .mh-nv-fx.bleed { animation-duration: .01s; } .mh-nv-boss .eye { animation: none; } }
+.mh-nv-card:has(.mh-nv-gameover) { background: radial-gradient(120% 70% at 50% 45%, rgba(70,0,8,.92), rgba(4,0,2,.98)); }
+.mh-nv-gameover-title { font-family: 'Hiragino Mincho ProN', 'Yu Mincho', serif; font-size: min(44px, 10vw); white-space: nowrap; font-weight: 900; letter-spacing: .08em; color: #e0192e;
+  text-shadow: 0 0 18px rgba(255,0,30,.6), 2px 0 rgba(255,80,80,.4), -2px 0 rgba(120,0,0,.6); margin-bottom: 10px; animation: mh-nv-gameover 1.6s ease both; }
+@keyframes mh-nv-gameover { 0% { opacity: 0; filter: blur(6px); transform: scale(1.3); } 60% { opacity: 1; filter: blur(0); transform: none; } }
+.mh-nv-red { color: #ff5a64; text-shadow: 0 0 12px rgba(255,0,30,.45), 0 2px 2px rgba(0,0,0,.6); }
 .mh-nv-boot { background: #030407; }
 .mh-nv-noise { position: absolute; inset: -20%; pointer-events: none; opacity: .13; z-index: 1;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='160' height='160' filter='url(%23n)' opacity='.9'/></svg>");
@@ -69284,10 +69289,11 @@ const XmasNovelScreen = ({ playerName = '', onClose, script = null }) => {
           {card.kind === 'ending' && (() => {
             const kind = { ...(XMAS_NOVEL_ENDING_KINDS[card.ending.kind] || XMAS_NOVEL_ENDING_KINDS.normal), ...(card.ending.label ? { label: card.ending.label } : {}) };
             return (
-              <div className="w-full max-w-sm" data-xmas-novel-ending-card={card.ending.id}>
+              <div className={`w-full max-w-sm${card.ending.kind === 'forced' ? ' mh-nv-gameover' : ''}`} data-xmas-novel-ending-card={card.ending.id}>
+                {card.ending.kind === 'forced' && <div className="mh-nv-gameover-title" data-xmas-novel-gameover>GAME OVER</div>}
                 <div className="mh-nv-serif text-[13px] tracking-[0.4em]" style={{ color: kind.tone }}>{/エンド$/.test(kind.label) ? kind.label : `${kind.label} END`}</div>
                 <div className="mh-nv-rule" />
-                <div className="mh-nv-serif mh-nv-gold text-[28px] font-black leading-tight">「{card.ending.name}」</div>
+                <div className={`mh-nv-serif text-[28px] font-black leading-tight ${card.ending.kind === 'forced' ? 'mh-nv-red' : 'mh-nv-gold'}`}>「{card.ending.name}」</div>
                 <div className="mh-nv-rule" />
                 {!card.replay && <div className="text-[12px] text-slate-200">{card.fresh ? 'エンドヒストリーに記録しました' : 'エンドヒストリーに記録ずみ'}</div>}
                 {!card.replay && <div className="mt-1 text-[11px] text-slate-300">推理の問い 一発で当てた数 {card.count} / {card.total}</div>}
