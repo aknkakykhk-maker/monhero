@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ea8347247971c713
+// source-sha256: dc543c680a8a770b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -114609,7 +114609,7 @@ const XMAS_NOVEL_SCRIPT = {
       "id": "1-1-10",
       "t": "line",
       "w": "kyuko",
-      "x": "ほい、なんでもないよぉ。……きれいだなって思っただけ笑",
+      "x": "なんでもないって。……きれいだなって思っただけ笑",
       "e": "happy",
       "k": "C1-1:1-1-10"
     }]
@@ -114637,7 +114637,7 @@ const XMAS_NOVEL_SCRIPT = {
       "id": "1-2-3",
       "t": "line",
       "w": "dra",
-      "x": "ごはんの係！ もちまる、おで、おまえとは仲良くなれそうだ。えへへ",
+      "x": "ごはんの係！ もちまる、おで、おまえとは仲良くなれそうだ",
       "e": "excited",
       "k": "C1-2:1-2-3"
     }, {
@@ -115961,7 +115961,7 @@ const XMAS_NOVEL_SCRIPT = {
       "id": "4-1-13",
       "t": "line",
       "w": "kyuko",
-      "x": "(戸口に立って、写真を見ている)……ほい。……かわいい子だね",
+      "x": "(戸口に立って、写真を見ている)……かわいい子だね",
       "e": "normal",
       "k": "C4-1:4-1-13"
     }]
@@ -116147,7 +116147,7 @@ const XMAS_NOVEL_SCRIPT = {
       "id": "4-4-3",
       "t": "line",
       "w": "kyuko",
-      "x": "ほい。古い時計、好きだからさ",
+      "x": "古い時計、好きだからさ。……ねじを巻いてると、なんか落ち着くんだ",
       "e": "normal",
       "k": "C4-4:4-4-3"
     }, {
@@ -117148,9 +117148,9 @@ const XMAS_NOVEL_SCRIPT = {
     }, {
       "id": "6-7-5",
       "t": "band",
-      "x": "……キャアッ……！(吹雪の向こうで、悲鳴)",
+      "x": "……うわあっ……！(吹雪の向こうで、叫び声)",
       "fx": ["se"],
-      "se": "impact",
+      "se": "tap",
       "k": "C6-7:6-7-5"
     }, {
       "id": "6-7-6",
@@ -119477,7 +119477,7 @@ const XMAS_NOVEL_SCRIPT = {
     }, {
       "id": "B-4",
       "t": "band",
-      "x": "……キャアッ！(2階で、悲鳴)",
+      "x": "……っ！(2階で、短い悲鳴)",
       "fx": ["se"],
       "se": "impact",
       "k": "END-B:B-4"
