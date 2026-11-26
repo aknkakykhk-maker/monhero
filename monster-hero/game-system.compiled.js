@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5a0e2cb7b0436cd2
+// source-sha256: cb1f54addcb0f874
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -64025,35 +64025,35 @@ const xmasStoryReachedNo = progress => {
 const XMAS_STORY_CAST = Object.freeze([{
   id: 'atsu',
   name: 'あつ',
-  face: 'images/assistant/santa/face/atsu_normal.PNG'
+  santa: true
 }, {
   id: 'sorashido',
   name: 'ソラシド',
-  face: 'images/assistant/santa/face/sorashido_normal.PNG'
+  santa: true
 }, {
   id: 'myua',
   name: 'みゅあ',
-  face: 'images/assistant/santa/face/myua_normal.PNG'
+  santa: true
 }, {
   id: 'kiki',
   name: 'きき',
-  face: 'images/assistant/santa/face/kiki_normal.PNG'
+  santa: true
 }, {
   id: 'momosuke',
   name: 'ももすけ',
-  face: 'images/assistant/santa/face/momosuke_normal.PNG'
+  santa: true
 }, {
   id: 'dra',
   name: 'ドラ',
-  face: 'images/assistant/santa/face/dra_normal.PNG'
+  santa: true
 }, {
   id: 'kyuko',
   name: 'きゅうこ',
-  face: 'images/assistant/santa/face/kyuko_normal.PNG'
+  santa: true
 }, {
   id: 'erubin',
   name: 'えるびん',
-  face: 'images/assistant/santa/face/erubin_normal.PNG'
+  santa: true
 }, {
   id: 'ichika',
   name: 'イチーカ',
@@ -64063,6 +64063,12 @@ const XMAS_STORY_CAST = Object.freeze([{
   name: 'もちまる',
   face: 'images/monster-icons/face/mocchi.png'
 }]);
+const xmasCastFaceOf = c => {
+  if (!c) return '';
+  if (!c.santa) return c.face || '';
+  const dir = typeof STORY_OUTFIT_DIRS !== 'undefined' && STORY_OUTFIT_DIRS && STORY_OUTFIT_DIRS.santa;
+  return dir ? `${dir}/face/${c.id}_normal.PNG` : '';
+};
 const XMAS_STORY_MISSING = Object.freeze([{
   id: 'momosuke',
   at: 7,
@@ -112709,7 +112715,7 @@ const XmasCastPanel = ({
     }, React.createElement("div", {
       className: `relative mx-auto aspect-square w-full overflow-hidden rounded-md border ${away ? 'border-slate-600 bg-slate-800' : 'border-amber-200/50 bg-slate-700'} ${compact ? 'max-w-[46px]' : 'max-w-[64px]'}`
     }, React.createElement("img", {
-      src: c.face,
+      src: xmasCastFaceOf(c),
       alt: "",
       className: "h-full w-full object-cover object-top"
     }), away && React.createElement("span", {

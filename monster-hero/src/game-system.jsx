@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a6cae7d90235469b
+// generated-sha256: 789d729e94de83e0
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -39070,19 +39070,25 @@ const xmasStoryReachedNo = (progress) => {
 };
 
 // ---- 登場人物パネル(10人・台帳 r1125-063。並びは SCRIPT.md §3 の仮) ----
-//  face: 顔の絵(助手はサンタ衣装の顔・イチーカはスネグーラチカ・もちまるはモッチー)
+//  face: 顔の絵(イチーカはスネグーラチカ・もちまるはモッチー)。santa: 助手のサンタ衣装の顔(置き場は data/assistants.js の STORY_OUTFIT_DIRS.santa。パスを画面へ直書きしない)
 const XMAS_STORY_CAST = Object.freeze([
-  { id: 'atsu', name: 'あつ', face: 'images/assistant/santa/face/atsu_normal.PNG' },
-  { id: 'sorashido', name: 'ソラシド', face: 'images/assistant/santa/face/sorashido_normal.PNG' },
-  { id: 'myua', name: 'みゅあ', face: 'images/assistant/santa/face/myua_normal.PNG' },
-  { id: 'kiki', name: 'きき', face: 'images/assistant/santa/face/kiki_normal.PNG' },
-  { id: 'momosuke', name: 'ももすけ', face: 'images/assistant/santa/face/momosuke_normal.PNG' },
-  { id: 'dra', name: 'ドラ', face: 'images/assistant/santa/face/dra_normal.PNG' },
-  { id: 'kyuko', name: 'きゅうこ', face: 'images/assistant/santa/face/kyuko_normal.PNG' },
-  { id: 'erubin', name: 'えるびん', face: 'images/assistant/santa/face/erubin_normal.PNG' },
+  { id: 'atsu', name: 'あつ', santa: true },
+  { id: 'sorashido', name: 'ソラシド', santa: true },
+  { id: 'myua', name: 'みゅあ', santa: true },
+  { id: 'kiki', name: 'きき', santa: true },
+  { id: 'momosuke', name: 'ももすけ', santa: true },
+  { id: 'dra', name: 'ドラ', santa: true },
+  { id: 'kyuko', name: 'きゅうこ', santa: true },
+  { id: 'erubin', name: 'えるびん', santa: true },
   { id: 'ichika', name: 'イチーカ', face: 'images/monster-icons/face/snegurochka.png' },
   { id: 'mochimaru', name: 'もちまる', face: 'images/monster-icons/face/mocchi.png' },
 ]);
+const xmasCastFaceOf = (c) => {
+  if (!c) return '';
+  if (!c.santa) return c.face || '';
+  const dir = typeof STORY_OUTFIT_DIRS !== 'undefined' && STORY_OUTFIT_DIRS && STORY_OUTFIT_DIRS.santa;
+  return dir ? `${dir}/face/${c.id}_normal.PNG` : '';
+};
 // いなくなる人(第3案・社長 2026-11-26)。at = いなくなる話 / found = 見つかる話 / box = プレゼントの箱も空になるか(もちまるは空にならない)
 const XMAS_STORY_MISSING = Object.freeze([
   { id: 'momosuke', at: 7, found: 25, box: true },
@@ -67073,7 +67079,7 @@ const XmasCastPanel = ({ no, animate = false, compact = false }) => {
           return (
             <div key={c.id} data-xmas-cast-face={c.id} data-away={away ? '' : undefined} data-newly={newly ? '' : undefined} className="min-w-0 text-center">
               <div className={`relative mx-auto aspect-square w-full overflow-hidden rounded-md border ${away ? 'border-slate-600 bg-slate-800' : 'border-amber-200/50 bg-slate-700'} ${compact ? 'max-w-[46px]' : 'max-w-[64px]'}`}>
-                <img src={c.face} alt="" className="h-full w-full object-cover object-top" />
+                <img src={xmasCastFaceOf(c)} alt="" className="h-full w-full object-cover object-top" />
                 {away && (
                   <span data-xmas-cast-stamp aria-label="ゆくえ不明" className="absolute inset-0 m-auto flex h-max w-max flex-col items-center rounded border-2 border-rose-500 bg-white/80 px-0.5 text-[10px] font-black leading-none text-rose-600"><span className="py-px">ゆくえ</span><span className="py-px">不明</span></span>
                 )}

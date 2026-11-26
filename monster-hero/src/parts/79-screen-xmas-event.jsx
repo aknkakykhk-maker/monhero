@@ -80,7 +80,7 @@ const XmasCastPanel = ({ no, animate = false, compact = false }) => {
           return (
             <div key={c.id} data-xmas-cast-face={c.id} data-away={away ? '' : undefined} data-newly={newly ? '' : undefined} className="min-w-0 text-center">
               <div className={`relative mx-auto aspect-square w-full overflow-hidden rounded-md border ${away ? 'border-slate-600 bg-slate-800' : 'border-amber-200/50 bg-slate-700'} ${compact ? 'max-w-[46px]' : 'max-w-[64px]'}`}>
-                <img src={c.face} alt="" className="h-full w-full object-cover object-top" />
+                <img src={xmasCastFaceOf(c)} alt="" className="h-full w-full object-cover object-top" />
                 {away && (
                   <span data-xmas-cast-stamp aria-label="ゆくえ不明" className="absolute inset-0 m-auto flex h-max w-max flex-col items-center rounded border-2 border-rose-500 bg-white/80 px-0.5 text-[10px] font-black leading-none text-rose-600"><span className="py-px">ゆくえ</span><span className="py-px">不明</span></span>
                 )}

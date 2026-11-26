@@ -177,19 +177,25 @@ const xmasStoryReachedNo = (progress) => {
 };
 
 // ---- 登場人物パネル(10人・台帳 r1125-063。並びは SCRIPT.md §3 の仮) ----
-//  face: 顔の絵(助手はサンタ衣装の顔・イチーカはスネグーラチカ・もちまるはモッチー)
+//  face: 顔の絵(イチーカはスネグーラチカ・もちまるはモッチー)。santa: 助手のサンタ衣装の顔(置き場は data/assistants.js の STORY_OUTFIT_DIRS.santa。パスを画面へ直書きしない)
 const XMAS_STORY_CAST = Object.freeze([
-  { id: 'atsu', name: 'あつ', face: 'images/assistant/santa/face/atsu_normal.PNG' },
-  { id: 'sorashido', name: 'ソラシド', face: 'images/assistant/santa/face/sorashido_normal.PNG' },
-  { id: 'myua', name: 'みゅあ', face: 'images/assistant/santa/face/myua_normal.PNG' },
-  { id: 'kiki', name: 'きき', face: 'images/assistant/santa/face/kiki_normal.PNG' },
-  { id: 'momosuke', name: 'ももすけ', face: 'images/assistant/santa/face/momosuke_normal.PNG' },
-  { id: 'dra', name: 'ドラ', face: 'images/assistant/santa/face/dra_normal.PNG' },
-  { id: 'kyuko', name: 'きゅうこ', face: 'images/assistant/santa/face/kyuko_normal.PNG' },
-  { id: 'erubin', name: 'えるびん', face: 'images/assistant/santa/face/erubin_normal.PNG' },
+  { id: 'atsu', name: 'あつ', santa: true },
+  { id: 'sorashido', name: 'ソラシド', santa: true },
+  { id: 'myua', name: 'みゅあ', santa: true },
+  { id: 'kiki', name: 'きき', santa: true },
+  { id: 'momosuke', name: 'ももすけ', santa: true },
+  { id: 'dra', name: 'ドラ', santa: true },
+  { id: 'kyuko', name: 'きゅうこ', santa: true },
+  { id: 'erubin', name: 'えるびん', santa: true },
   { id: 'ichika', name: 'イチーカ', face: 'images/monster-icons/face/snegurochka.png' },
   { id: 'mochimaru', name: 'もちまる', face: 'images/monster-icons/face/mocchi.png' },
 ]);
+const xmasCastFaceOf = (c) => {
+  if (!c) return '';
+  if (!c.santa) return c.face || '';
+  const dir = typeof STORY_OUTFIT_DIRS !== 'undefined' && STORY_OUTFIT_DIRS && STORY_OUTFIT_DIRS.santa;
+  return dir ? `${dir}/face/${c.id}_normal.PNG` : '';
+};
 // いなくなる人(第3案・社長 2026-11-26)。at = いなくなる話 / found = 見つかる話 / box = プレゼントの箱も空になるか(もちまるは空にならない)
 const XMAS_STORY_MISSING = Object.freeze([
   { id: 'momosuke', at: 7, found: 25, box: true },
