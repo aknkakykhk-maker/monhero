@@ -410,6 +410,20 @@
       "role": "画面: クリスマスイベント「聖夜の名探偵」のイベントページ(題・ポスター・期間・タブ 物語/レイド/ボーナス)。物語=登場人物パネル XmasCastPanel と話の一覧(mh_xmas_story_v1)、レイド=RaidJackScreen を head つきで入れる、ボーナス=期間中のボーナスの一覧。gameState は RAID_JACK のまま"
     },
     {
+      "file": "79-xmas-novel-engine.jsx",
+      "role": "クリスマスのミステリーノベル「聖夜の名探偵」(r1126-022)の進め方。登場人物・条件・場面の行き先・問いの答え・一発目の成績・保存 mh_xmas_novel_v1 の正規化。純粋な計算とデータ",
+      "pure": true
+    },
+    {
+      "file": "79-xmas-novel-script.jsx",
+      "role": "クリスマスのミステリーノベルの台本データ(生成物。直すのは SCRIPT.md・作り直しは tools/novel/xmas-novel-build.js)",
+      "pure": true
+    },
+    {
+      "file": "79-screen-xmas-novel.jsx",
+      "role": "クリスマスのミステリーノベルの再生画面(背景・曲・立ち絵・演出・オート・既読スキップ・ログ・手がかり帳・選択・エンディングの記録)と入口 openXmasNovel(関数1つ・body に重ねて開く)"
+    },
+    {
       "file": "56-assistant-chat.jsx",
       "role": "助手とおしゃべりの窓(AssistantChatWindow)。中継役へ送るだけで、会話は端末の新しいキーにだけ置く。公開の印 assistantChat の後ろ"
     },

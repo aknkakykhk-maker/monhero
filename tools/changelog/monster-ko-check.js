@@ -11,7 +11,8 @@ const ROOT=path.resolve(__dirname,'..','..');
 let parser;try{parser=require(path.join(ROOT,'tools/node_modules/@babel/parser'));}catch{console.log('NG: @babel/parser が無い(cd tools && npm install)');process.exit(1);}
 const DIALOG_FILES=new Set(['monster-hero/data/assistants.js','monster-hero/src/parts/83-card-battle-lines.jsx','monster-hero/src/parts/33-rhythm-buddy-persona.jsx',
   'monster-hero/src/parts/32-sorashido-copy.jsx','monster-hero/src/parts/83-card-battle-vs.jsx','monster-hero/src/parts/91-card-battle-multi.jsx',
-  'monster-hero/src/parts/56-assistant-life-finds.jsx']); // 拾い物・贈り物の助手のひとこと(2026-11-14 ナカヨシ)
+  'monster-hero/src/parts/56-assistant-life-finds.jsx', // 拾い物・贈り物の助手のひとこと(2026-11-14 ナカヨシ)
+  'monster-hero/src/parts/79-xmas-novel-script.jsx']); // クリスマスのノベルの台本(台詞と地の文の生成物・2026-11-26)
 const files=['monster-hero/data/help.js','monster-hero/data/changelog.js','monster-hero/data/breeder.js','monster-hero/data/rhythm-event.js','monster-hero/data/ally-monsters.js','monster-hero/data/lineages.js',
   ...fs.readdirSync(path.join(ROOT,'monster-hero/src/parts')).filter(f=>f.endsWith('.jsx')).map(f=>`monster-hero/src/parts/${f}`)].filter(f=>!DIALOG_FILES.has(f));
 const EXCL=/様子|調子|梯子|帽子|扇子|椅子|王子|双子|女子|男子|団子|菓子|拍子|粒子|原子|電子|分子|冊子|格子|種子|子供|子ども|息子|弟子|振り?子|骨子|面子|利子|因子|子守|黒子|障子|迷子|親子|子会社|子音|子分|子孫|子連れ|子犬|子猫|子羊|遺伝子|女の子|男の子|お子|っ子|餃子|柚子|茄子|椰子|獅子|玉子|子規|玖子/;
@@ -44,7 +45,10 @@ const DIALOG_KO=new RegExp('子(?:たち|ら(?![しい]))|子ほど|(?:どの|�
 // 開催中のイベントで見送った台詞は、2026-11-09 のイベント終了後に言い換えた(パンドラとふたつの翼 EP3・EP7)。見送りが要るときはここへ { text, until, why } を足す
 const DIALOG_KO_HOLD=[];
 const dialogFound=[],held=[];
+// クリスマスのノベルの台本は人(12年前の女の子など)の話で、モンスターを「子」と呼ぶ場面ではないので、台詞の形も見ない(2026-11-26)
+const DIALOG_PEOPLE_STORY=new Set(['monster-hero/src/parts/79-xmas-novel-script.jsx']);
 for(const f of DIALOG_FILES){
+  if(DIALOG_PEOPLE_STORY.has(f))continue;
   if(!fs.existsSync(path.join(ROOT,f)))continue;
   const src=fs.readFileSync(path.join(ROOT,f),'utf8');
   const ast=parser.parse(src,{sourceType:'script',plugins:['jsx'],errorRecovery:true});

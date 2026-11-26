@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "b9fb4f09eb48",
-  "packs": {"beat":{"bytes":311557065,"count":166},"battle":{"bytes":748758500,"count":1846},"card":{"bytes":38085297,"count":1046},"all":{"bytes":1098400862,"count":3058},"core":{"bytes":26063401,"count":25}},
+  "id": "a78aa6da133a",
+  "packs": {"beat":{"bytes":311557065,"count":166},"battle":{"bytes":751607874,"count":1848},"card":{"bytes":38085297,"count":1046},"all":{"bytes":1101250236,"count":3060},"core":{"bytes":26319772,"count":25}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"b43d691d4773","size":2833344,"pack":"beat"},
@@ -2623,6 +2623,8 @@
     "images/story-bg/monhero_town.jpg": {"v":"802681764caa","size":77045,"pack":"battle"},
     "images/story-bg/monsuc_farm.webp": {"v":"923e3efc44ed","size":640608,"pack":"battle"},
     "images/story-bg/monsuc_gate.jpg": {"v":"73a1779eec12","size":241216,"pack":"battle"},
+    "images/story-guests/kuroba_stand.png": {"v":"fc37798575e8","size":1198120,"pack":"battle"},
+    "images/story-guests/shirase_stand.png": {"v":"2f8600ddefa3","size":1651254,"pack":"battle"},
     "images/success/arena/arena-cup.png": {"v":"48ba5a2f8765","size":204451,"pack":"battle"},
     "images/success/arena/arena-debut.png": {"v":"a4276a821cc5","size":219956,"pack":"battle"},
     "images/success/arena/arena-hero.png": {"v":"cb3d50e8c8de","size":186747,"pack":"battle"},
@@ -3063,7 +3065,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"e8693b661dcc","size":321157,"pack":"core"},
+    "tailwind.css": {"v":"736a91b1b9f4","size":321450,"pack":"core"},
     "data/images/images-ally.js": {"v":"7fcc9331d4b6","size":92225,"pack":"core"},
     "data/images/images-enemy.js": {"v":"0d3643e9bc69","size":3262,"pack":"core"},
     "data/ally-monsters.js": {"v":"6737b7dced48","size":60894,"pack":"core"},
@@ -3085,6 +3087,6 @@
     "data/assistant-masmon-techs.js": {"v":"353cf73676a6","size":113841,"pack":"core"},
     "data/assistant-life-rel-talks.js": {"v":"cde51ded5428","size":225977,"pack":"core"},
     "data/success-sounds.js": {"v":"9692dd51493a","size":19367,"pack":"core"},
-    "game-system.compiled.js": {"v":"cceef9db79ed","size":12578907,"pack":"core"}
+    "game-system.compiled.js": {"v":"b8000d96c0c1","size":12834985,"pack":"core"}
   }
 }
