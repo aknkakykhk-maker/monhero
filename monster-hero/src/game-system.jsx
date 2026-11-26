@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: da5ad0484c3f9f43
+// generated-sha256: 380896792feaa4aa
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -526,6 +526,8 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   get monsucStoryEp2() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.monheroSuccess === true; },
   // 個人杯のお話(2026-10-31)。公開の印は 99-card-cup.jsx の cardCupOpen(あとの部品なので見るたびに引く)
   get cardCup() { return typeof cardCupOpen === 'function' && cardCupOpen() === true; },
+  // クリスマスのひとりで進める物語の序章(xmas_story_00・台帳 r1126-013)。11/28 10:00 から読める(17-release の RELEASE_FLAGS.xmasStoryPrologue)
+  get xmasStoryPrologue() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.xmasStoryPrologue === true; },
 });
 const eventReplayReleased = (event) => !event?.releaseFlag || EVENT_REPLAY_RELEASE_FLAGS[event.releaseFlag] === true;
 // 画面に並べるイベント回想。3か所(プロフィール・回想一覧・再生)が同じ並びを見るための唯一の入口
@@ -571,6 +573,8 @@ const EVENT_REPLAY_GROUPS = Object.freeze([
   // えるびんの歌のお話(2026-11-21 社長 r1119-079。新曲 Desert Crown と一緒に出る)
   { id:'erubin_song', genre:'song', emoji:'🏜️', label:'えるびんの歌', note:'えるびんが初めて作った曲のお話', color:'#d6b47a' },
   { id:'kiki_song', genre:'song', emoji:'🎹', label:'ききの初めての曲', note:'ききが初めて作った曲のお話', color:'#f9a8d4' },
+  // クリスマスのイベント「聖夜の名探偵」(2026-11-28 序章から・台帳 r1126-013)。読む所はイベントページの「物語」タブ。回想には読んだ話だけ並ぶ
+  { id:'xmas', genre:'event', emoji:'🎄', label:'聖夜の名探偵', note:'雪山のペンションのお話', color:'#f0c96c' },
   { id:'halloween', genre:'event', emoji:'🎃', label:'ハロウィン・ナイト', note:'レイドバトルとジャックのお話', color:'#fb923c' },
   { id:'update', genre:'play', emoji:'✨', label:'新しい遊びのお話', note:'新しい遊びができたときの案内', color:'#e879f9' },
   { id:'beat_point', genre:'event', emoji:'🎵', label:'ビートP', note:'ビートPと交換所のお話', color:'#34d399' },
@@ -10710,6 +10714,8 @@ const XMAS_COSTUME_START_AT = '2026-11-30T10:00:00+09:00';
 // クリスマスのレイド(r1119-172)の開始時刻。35-raid-xmas.jsx の RAID_XMAS_EVENT.startAt と同じ値(食い違いは tools/battle/raid-xmas-check.js が見る)。
 //   RELEASE_FLAGS.raidXmas はこの時刻まで偽を返す(見るたびに数え直す)。入口・HOMEのボス・ヘルプ・更新履歴はこれを見る
 const RAID_XMAS_START_AT = '2026-11-30T10:00:00+09:00';
+// クリスマスのひとりで進める物語の序章(台帳 r1126-012/013)。RELEASE_FLAGS.xmasStoryPrologue は 35-raid-xmas.jsx の XMAS_STORY_PROLOGUE_OPEN_AT(11/28 10:00)まで偽を返す。
+//   序章のお話(EVENT_REPLAYS の xmas_story_00)の releaseFlag が見る。開幕(raidXmas)より前でも、この時刻からは序章だけ読める
 const RAID_JACK_PUBLIC_RELEASE = true;
 // レイドバトルの「モンヒロビートで挑戦する」(2026-10-06)。ダメージの仕様が固まるまで一時止めていた(ユーザー指示)が、仕様の確定・実装・サブストーリー(ドラのビート)の用意ができたので、
 // 2026-10-06 にユーザーの「出して」で公開した。偽にすると、レイド画面のボタン・サブストーリー・更新履歴・ヘルプの説明が出なくなる(デバッグの強制表示では、確認のためボタンだけ出る)
@@ -10879,7 +10885,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, get rhythmGrandOpen() { try { return RHYTHM_GRAND_OPEN_RELEASE === true && Date.now() >= Date.parse(RHYTHM_GRAND_OPEN_START_AT); } catch (e) { return false; } },
   // クリスマスイベントのモンヒロビート5倍(data/rhythm-event.js の xmas_2026・台帳 r1119-172 追記・追跡 r1125-044)の期間だけ真。
   // ヘルプの説明を開始の 11/30 10:00 まで出さず、12/31 4:00 に下げる。見るたびに数え直す(読み込み時に決めない)
-  get rhythmXmasBoost() { try { const c = typeof rhythmEventPointCampaignAt === 'function' ? rhythmEventPointCampaignAt(Date.now()) : null; return !!c && c.id === 'xmas_2026'; } catch (e) { return false; } }, rhythmGrandOpenTeaser:RHYTHM_GRAND_OPEN_TEASER_RELEASE, rhythmMulti:RHYTHM_MULTI_PUBLIC_RELEASE, friends:FRIENDS_PUBLIC_RELEASE, raidJackRhythm: RAID_JACK_RHYTHM_PUBLIC_RELEASE, get raidJack() { try { return RAID_JACK_PUBLIC_RELEASE === true && Date.now() >= Date.parse(RAID_JACK_START_AT); } catch (e) { return false; } }, get xmasBattleBonus() { try { return typeof xmasBattleBonusRateAt === 'function' && xmasBattleBonusRateAt(Date.now()) > 1; } catch (e) { return false; } }, get raidXmas() { try { return Date.now() >= Date.parse(RAID_XMAS_START_AT); } catch (e) { return false; } }, get xmasCostume() { try { return Date.now() >= Date.parse(XMAS_COSTUME_START_AT); } catch (e) { return false; } }, get cardXmasBonus() { try { return typeof cardEventBonusOn === 'function' && cardEventBonusOn() === true; } catch (e) { return false; } }, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
+  get rhythmXmasBoost() { try { const c = typeof rhythmEventPointCampaignAt === 'function' ? rhythmEventPointCampaignAt(Date.now()) : null; return !!c && c.id === 'xmas_2026'; } catch (e) { return false; } }, rhythmGrandOpenTeaser:RHYTHM_GRAND_OPEN_TEASER_RELEASE, rhythmMulti:RHYTHM_MULTI_PUBLIC_RELEASE, friends:FRIENDS_PUBLIC_RELEASE, raidJackRhythm: RAID_JACK_RHYTHM_PUBLIC_RELEASE, get raidJack() { try { return RAID_JACK_PUBLIC_RELEASE === true && Date.now() >= Date.parse(RAID_JACK_START_AT); } catch (e) { return false; } }, get xmasBattleBonus() { try { return typeof xmasBattleBonusRateAt === 'function' && xmasBattleBonusRateAt(Date.now()) > 1; } catch (e) { return false; } }, get raidXmas() { try { return Date.now() >= Date.parse(RAID_XMAS_START_AT); } catch (e) { return false; } }, get xmasStoryPrologue() { try { return Date.now() >= Date.parse(XMAS_STORY_PROLOGUE_OPEN_AT); } catch (e) { return false; } }, get xmasCostume() { try { return Date.now() >= Date.parse(XMAS_COSTUME_START_AT); } catch (e) { return false; } }, get cardXmasBonus() { try { return typeof cardEventBonusOn === 'function' && cardEventBonusOn() === true; } catch (e) { return false; } }, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
 // releaseFlag = そのフラグが立つまで出さない。unreleasedFlag = そのフラグが立ったら出さない。
 // 逆向きの名札が要るのは「準備中です」の案内で、公開したあとも残っていると
 // 遊べているのに準備中の項目が並ぶ(ヘルプのモンヒロビートで実際にそうなっていた・2026-09-06)。
@@ -15517,7 +15523,7 @@ const STORY_OPENING_STYLE = 'iris';
 //   final … 「終章」(ハロウィンのエンディングA/B・パンドラ第8話)。次のお話は出さず「おしまい」にする
 const storyEpisodeTitleParts = (title) => {
   const t = String(title || '').trim();
-  const m = t.match(/^(.*?)\s*(第[\d.]+[話部][^～\s]*|終章)\s*(～.*～)?\s*$/);
+  const m = t.match(/^(.*?)\s*(第[\d.]+[話部][^～\s]*|終章|序章)\s*(～.*～)?\s*$/);
   if (m) return { series: m[1] || '', ep: m[2] || '', sub: m[3] || '', serial: true, final: /終章/.test(m[2] || '') };
   const s = t.match(/^(.*?)\s*(～.*～)\s*$/);
   return s ? { series: '', ep: s[1] || t, sub: s[2] || '', serial: false, final: false } : { series: '', ep: t, sub: '', serial: false, final: false };
@@ -39067,10 +39073,10 @@ const XMAS_STORY_LIST = Object.freeze([
 ]);
 // 第2話から: 12/(話-1) 4:00 JST(第25話 = 12/24)
 const xmasStoryOpenAtOf = (no) => (no <= 1 ? RAID_XMAS_EVENT.startAt : `2026-12-${String(no - 1).padStart(2, '0')}T04:00:00+09:00`);
-// 序章(台帳 r1126-012・社長): 第1話の前。イチーカから招待状が届いて行くまで。11/28 の開催予告のときから開く(時刻 10:00 は仮)。中身は台本ができてから
+// 序章(台帳 r1126-012・社長): 第1話の前。イチーカから招待状が届いて行くまで。11/28 の開催予告のときから開く(時刻 10:00 は仮)。お話は data/assistants.js の XMAS_STORY_00(EVENT_REPLAYS の xmas_story_00)
 const XMAS_STORY_PROLOGUE_OPEN_AT = '2026-11-28T10:00:00+09:00';
 const XMAS_STORY_CHAPTERS = Object.freeze([
-  Object.freeze({ id: 'xs00', no: 0, prologue: true, openAt: XMAS_STORY_PROLOGUE_OPEN_AT, type: 'read', title: '序章', scriptId: 'xmas_story_00' }),
+  Object.freeze({ id: 'xs00', no: 0, prologue: true, openAt: XMAS_STORY_PROLOGUE_OPEN_AT, type: 'read', title: '雪の招待状', scriptId: 'xmas_story_00' }),
   ...XMAS_STORY_LIST.map(([title, type], i) => Object.freeze({
     id: `xs${String(i + 1).padStart(2, '0')}`,
     no: i + 1,
@@ -131387,6 +131393,13 @@ function MonsterHeroGame() {
   const [xmasEventTab, setXmasEventTab] = useState('story');
   // ひとりで進める物語の読んだ印(mh_xmas_story_v1)が変わったら増やす。物語タブが読み直す
   const [xmasStoryVersion, setXmasStoryVersion] = useState(0);
+  // 読んだ話の id(イベント回想の解放 xmasStory00Seen に使う。読み直すのは読んだ印が変わったときだけ)
+  const [xmasStoryClearedIds, setXmasStoryClearedIds] = useState([]);
+  useEffect(() => {
+    let alive = true;
+    if (typeof xmasStoryLoad === 'function') void xmasStoryLoad().then((p) => { if (alive) setXmasStoryClearedIds(Array.isArray(p && p.cleared) ? p.cleared : []); });
+    return () => { alive = false; };
+  }, [xmasStoryVersion]);
   const raidJackOpen = !raidXmasOpen;
   const raidCurEventId = raidEv === 'xmas' ? (raidJackDebugForce ? RAID_XMAS_EVENT.debugId : RAID_XMAS_EVENT.id) : raidJackEventId;
   // クリスマスのデバッグの強制表示は、ジャックと同じ切り替え(レイドの確認画面)に合わせる
@@ -137161,6 +137174,8 @@ function MonsterHeroGame() {
     kikiTwintailStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(KIKI_TWINTAIL_STORY_ID),
     beyondSameSkyStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(BEYOND_SAME_SKY_STORY_ID),
     desertCrownStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(DESERT_CROWN_STORY_ID),
+    // クリスマスの序章(イベントページで読んだら、回想にも並ぶ。読んだ印は mh_xmas_story_v1)
+    xmasStory00Seen: Array.isArray(xmasStoryClearedIds) && xmasStoryClearedIds.includes('xs00'),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID) };
   // alwaysUnlocked のイベントは、本編でまだ見ていなくても回想から見られる
   const isEventReplayUnlocked = (event) => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
@@ -153127,20 +153142,24 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const cast=storyCastOf(script).filter(who=>who.role!=='ゲスト')
           .filter(who=>!hiddenUntil.includes(who.id)||script.slice(0,step+1).some(l=>l&&storyBase(l.who)===who.id));
         let stageIdx=-1;
-        for(let i=step;i>=0;i--){const l=script[i];if(l.stage==='none'){stageIdx=-1;break;}if(l.stage||isGuestWho(l.who)){stageIdx=i;break;}}
+        // 顔を出さない話し手(noFace・クリスマスのルーペ)は、話している行だけ上に出す(ジャックのように残し続けない)
+        for(let i=step;i>=0;i--){const l=script[i];if(l.stage==='none'){stageIdx=-1;break;}if(l.stage||isGuestWho(l.who)){stageIdx=(i<step&&!l.stage&&assistantById(l.who).noFace)?-1:i;break;}}
         const stageLine=stageIdx>=0?script[stageIdx]:null;
         const stageGuest=stageLine&&!storyStillImg?assistantById(stageLine.stage||stageLine.who):null;
         const stageName=stageLine&&stageGuest?((stageLine.stage?stageLine.stageName:stageLine.name)||stageGuest.name):'';
         const stageTier=['男爵','子爵','伯爵','公爵','大王'].findIndex(t=>stageName.includes(t))+1;
         // 一枚絵の行はステージを出さないので、ゲストの台詞も下の欄に出す
         const speakingGuest=isGuestWho(line.who)&&!storyStillImg;
+        // 帯の行(band:true・話し手のいない地の文。2026-11-26 クリスマスの序章 r1126-013)。帯(fxText)だけを出し、下の窓は直前の助手の台詞を薄く残す
+        const bandLine=!!line.band;
+        const dimBottom=speakingGuest||bandLine;
         let bubbleIdx=-1;
         for(let i=step;i>=0;i--){if(isGuestWho(script[i].who)){bubbleIdx=i;break;}}
         const bubbleLine=(bubbleIdx>=0&&bubbleIdx>=stageIdx&&stageGuest)?script[bubbleIdx]:null;
         let assistIdx=-1;
-        for(let i=step;i>=0;i--){if(!isGuestWho(script[i].who)){assistIdx=i;break;}}
+        for(let i=step;i>=0;i--){if(!isGuestWho(script[i].who)&&!script[i].band){assistIdx=i;break;}}
         // ジャックが話しているあいだ、下の箱には直前の助手の台詞を薄く残す(流れが分かる)。まだ助手が話していなければ案内を出す
-        const bottomLine=speakingGuest?(assistIdx>=0?script[assistIdx]:null):line;
+        const bottomLine=dimBottom?(assistIdx>=0?script[assistIdx]:null):line;
         const bottomSpeaker=bottomLine?assistantById(bottomLine.who):speaker;
         const fx=(storyZones&&storySub>0)?null:(line.fx||null);
         // ★お話の真ん中に出すモンスター(2026-10-27 社長「推しに会える夜」)。台本の行の monsters:[{ id, pose }] は、次に monsters を書いた行まで続く(monsters:[] で消す)。
@@ -153198,7 +153217,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           if(storyPageCache[i]) return storyPageCache[i];
           const l=script[i];
           const w=l?assistantById(l.who):null;
-          const text=l&&w?speakText(l,w):'';
+          const text=l&&w&&!l.band?speakText(l,w):'';
           const pages=storyZones&&typeof storySplitPages==='function'?storySplitPages(text,isGuestWho(l&&l.who)?storyCplBubble:storyCplBottom,3):[text];
           storyPageCache[i]=pages;
           return pages;
@@ -153316,17 +153335,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           {stageGuest&&(
             <div ref={storyMeasureRef('--story-stage-bottom','bottom')} data-story-stage className="pointer-events-none" data-story-shake={(fx==='transform'||fx==='rankup')?step%2:undefined} style={{position:'absolute',top:'calc(env(safe-area-inset-top) + 13vh)',left:0,right:0,zIndex:3}}>
               <div className="mx-auto flex w-full max-w-md items-start gap-2 px-3">
-                <div key={`${stageGuest.id}:${stageName}`} data-story-guest={stageGuest.id} data-story-fx={fx||undefined} className="shrink-0 text-center" style={{animation:fx==='shrink'?'storyShrink .9s ease-out both':fx==='transform'||fx==='rankup'?'storyGrow .9s ease-out both':'storyStageIn .45s ease-out both'}}>
+                {/* 顔を出さない話し手(noFace・クリスマスのルーペ)は、顔の欄を出さず、名前の札と吹き出しだけ */}
+                {!stageGuest.noFace&&<div key={`${stageGuest.id}:${stageName}`} data-story-guest={stageGuest.id} data-story-fx={fx||undefined} className="shrink-0 text-center" style={{animation:fx==='shrink'?'storyShrink .9s ease-out both':fx==='transform'||fx==='rankup'?'storyGrow .9s ease-out both':'storyStageIn .45s ease-out both'}}>
                   <span data-jack-aura={stageTier||undefined} style={{position:'relative',display:'block',width:96,height:96,filter:(stageTier>0&&typeof raidJackAuraGlowFilter==='function')?raidJackAuraGlowFilter(stageTier,.4):undefined}}>
                     {stageTier>0&&typeof JackAuraLayer==='function'&&<JackAuraLayer tier={stageTier} limit={8}/>}
                     <span style={{position:'relative',zIndex:1,display:'block',opacity:speakingGuest?1:.55,filter:speakingGuest?`drop-shadow(0 0 10px ${stageGuest.accent})`:'brightness(.7)',transition:'opacity .2s, filter .2s'}}><AssistantFace who={stageGuest} size={92} accent={stageGuest.accent} expression={speakingGuest?line.e:'normal'}/></span>
                   </span>
                   <span className="mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-black" style={{color:speakingGuest?'#0f172a':stageGuest.accent,background:speakingGuest?stageGuest.accent:'rgba(15,23,42,.8)',transition:'background .2s, color .2s'}}>{stageName}</span>
-                </div>
+                </div>}
                 {bubbleLine&&(
                   <div key={`b${bubbleIdx}${bubbleIdx===step?`-${storyCurSub}`:''}`} data-story-guest-bubble data-story-pop={speakingGuest?'1':undefined} className="relative min-w-0 flex-1 rounded-2xl border-2 bg-slate-900/95 px-3 py-2" style={{borderColor:stageGuest.accent,opacity:speakingGuest?1:.4,boxShadow:speakingGuest?`0 0 0 2px ${stageGuest.accent}55, 0 0 20px ${stageGuest.accent}88`:'none',marginTop:8,animation:speakingGuest?'storyPop .3s ease-out both':undefined}}>
                     {/* 話している人の顔を指すしっぽ */}
-                    <span aria-hidden="true" style={{position:'absolute',left:-9,top:22,width:0,height:0,borderTop:'8px solid transparent',borderBottom:'8px solid transparent',borderRight:`9px solid ${stageGuest.accent}`}}/>
+                    {!stageGuest.noFace&&<span aria-hidden="true" style={{position:'absolute',left:-9,top:22,width:0,height:0,borderTop:'8px solid transparent',borderBottom:'8px solid transparent',borderRight:`9px solid ${stageGuest.accent}`}}/>}
                     <span className="inline-block rounded-full px-2 py-0.5 text-[10px] font-black" style={{color:'#0f172a',background:stageGuest.accent}}>{bubbleLine.name||stageGuest.name}</span>
                     <span className="mt-1 block text-[14px] font-bold leading-relaxed text-white" style={storyLineStyle(storyZones?storyTextAt(bubbleIdx,stageGuest):'',storyCapBubble)}>{storyZones?storyLineNodes(storyTextAt(bubbleIdx,stageGuest),storyCapBubble):bubbleLines(speakText(bubbleLine,stageGuest))}</span>
                   </div>
@@ -153366,7 +153386,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <div ref={storyMeasureRef('--story-sheet-h','height')} onClick={next} data-story-sheet data-story-shake={(fx==='transform'||fx==='rankup')?step%2:undefined} className="relative flex w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] flex-col overflow-hidden rounded-t-3xl border-t-2 border-x-2 border-fuchsia-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))',pointerEvents:'auto',zIndex:1,...(eventReplay.ending?{opacity:0,visibility:'hidden',transition:'opacity .5s ease-out, visibility 0s linear .5s'}:{})}}>
             {/* 締め(終わりの札)のあいだは台詞の窓を消す(2026-11-22 点検 #7059: 半透明の幕ごしに窓の「閉じる」と題が透けて二重に見えた・r1119-080) */}
             <div data-story-body className="min-h-0 flex-1 overflow-y-auto mh-scroll">
-            <p className="mb-2 text-center text-[10px] font-black tracking-widest text-fuchsia-300">{eventReplay.live?'':'回想・'}{storyTitleNow||''}</p>
+            <p className="mb-2 text-center text-[10px] font-black tracking-widest text-fuchsia-300">{eventReplay.live||eventReplay.xmasChapter?'':'回想・'}{storyTitleNow||''}</p>
             {/* 話し手の顔の列。5人以上のお話では1段4人ずつに折り返し、顔も少し小さくする
                 (2026-10-23 社長「枠からはみ出してる。縦のスペース空いてるんだから2列にするとかしてちゃんと見た目よくして」。
                 きゅうこの加入のお話は7人で、話している子が大きくなると左右の端が枠の外へ切れていた)。
@@ -153399,10 +153419,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div data-story-speaker-row={storyZones?'':undefined} className={storyZones?'flex items-start gap-2':undefined}>
             {/* 話している助手の顔(上部ゾーンのゲストと同じ大きさ・名前の札は顔の下)。ゲストが話しているあいだは、直前の助手を暗く残す */}
             {storyZones&&bottomLine&&<div key={`face-${bottomSpeaker.id}`} data-story-speaker={bottomSpeaker.id} className="shrink-0 text-center">
-              <span style={{display:'block',opacity:speakingGuest?.55:1,filter:speakingGuest?'brightness(.7)':`drop-shadow(0 0 10px ${bottomSpeaker.accent})`,transition:'opacity .2s, filter .2s'}}><AssistantFace who={bottomSpeaker} size={92} accent={bottomSpeaker.accent} expression={!speakingGuest&&bottomLine===line?line.e:'normal'}/></span>
-              <span className="mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-black" style={{color:speakingGuest?bottomSpeaker.accent:'#0f172a',background:speakingGuest?'rgba(15,23,42,.8)':bottomSpeaker.accent}}>{bottomLine.name||bottomSpeaker.name}</span>
+              <span style={{display:'block',opacity:dimBottom?.55:1,filter:dimBottom?'brightness(.7)':`drop-shadow(0 0 10px ${bottomSpeaker.accent})`,transition:'opacity .2s, filter .2s'}}><AssistantFace who={bottomSpeaker} size={92} accent={bottomSpeaker.accent} expression={!dimBottom&&bottomLine===line?line.e:'normal'}/></span>
+              <span className="mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-black" style={{color:dimBottom?bottomSpeaker.accent:'#0f172a',background:dimBottom?'rgba(15,23,42,.8)':bottomSpeaker.accent}}>{bottomLine.name||bottomSpeaker.name}</span>
             </div>}
-            {bottomLine?<div key={speakingGuest?'keep':`x${step}-${storyCurSub}`} data-story-pop={speakingGuest?undefined:'1'} className={`rounded-2xl border-2 bg-slate-900 px-3 py-3${storyZones?' min-w-0 flex-1':''}`} data-story-line-box style={{borderColor:bottomSpeaker.accent,opacity:speakingGuest?.4:1,boxShadow:speakingGuest?'none':`0 0 16px ${bottomSpeaker.accent}55`,transition:'opacity .18s',animation:speakingGuest?undefined:'storyPop .28s ease-out both'}}>
+            {bottomLine?<div key={dimBottom?'keep':`x${step}-${storyCurSub}`} data-story-pop={dimBottom?undefined:'1'} className={`rounded-2xl border-2 bg-slate-900 px-3 py-3${storyZones?' min-w-0 flex-1':''}`} data-story-line-box style={{borderColor:bottomSpeaker.accent,opacity:dimBottom?.4:1,boxShadow:dimBottom?'none':`0 0 16px ${bottomSpeaker.accent}55`,transition:'opacity .18s',animation:dimBottom?undefined:'storyPop .28s ease-out both'}}>
               <span className="inline-block rounded-full px-2 py-0.5 text-[10px] font-black" style={{color:'#0f172a',background:bottomSpeaker.accent}}>{bottomLine.name||bottomSpeaker.name}</span>
               {/* ★{name} は、そのとき話している助手の呼び方へ置き換える。
                   ここを素の {line.t} で出していたため、画面に {name} がそのまま出ていた

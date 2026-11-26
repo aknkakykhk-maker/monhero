@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b7afe87ffca7c380
+// source-sha256: 05b68c315be69a27
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -693,6 +693,9 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   },
   get cardCup() {
     return typeof cardCupOpen === 'function' && cardCupOpen() === true;
+  },
+  get xmasStoryPrologue() {
+    return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.xmasStoryPrologue === true;
   }
 });
 const eventReplayReleased = event => !event?.releaseFlag || EVENT_REPLAY_RELEASE_FLAGS[event.releaseFlag] === true;
@@ -755,6 +758,13 @@ const EVENT_REPLAY_GROUPS = Object.freeze([{
   label: 'ききの初めての曲',
   note: 'ききが初めて作った曲のお話',
   color: '#f9a8d4'
+}, {
+  id: 'xmas',
+  genre: 'event',
+  emoji: '🎄',
+  label: '聖夜の名探偵',
+  note: '雪山のペンションのお話',
+  color: '#f0c96c'
 }, {
   id: 'halloween',
   genre: 'event',
@@ -15976,6 +15986,13 @@ const RELEASE_FLAGS = {
       return false;
     }
   },
+  get xmasStoryPrologue() {
+    try {
+      return Date.now() >= Date.parse(XMAS_STORY_PROLOGUE_OPEN_AT);
+    } catch (e) {
+      return false;
+    }
+  },
   get xmasCostume() {
     try {
       return Date.now() >= Date.parse(XMAS_COSTUME_START_AT);
@@ -22560,7 +22577,7 @@ const STORY_ENDING_STYLE = 'pull';
 const STORY_OPENING_STYLE = 'iris';
 const storyEpisodeTitleParts = title => {
   const t = String(title || '').trim();
-  const m = t.match(/^(.*?)\s*(第[\d.]+[話部][^～\s]*|終章)\s*(～.*～)?\s*$/);
+  const m = t.match(/^(.*?)\s*(第[\d.]+[話部][^～\s]*|終章|序章)\s*(～.*～)?\s*$/);
   if (m) return {
     series: m[1] || '',
     ep: m[2] || '',
@@ -64030,7 +64047,7 @@ const XMAS_STORY_CHAPTERS = Object.freeze([Object.freeze({
   prologue: true,
   openAt: XMAS_STORY_PROLOGUE_OPEN_AT,
   type: 'read',
-  title: '序章',
+  title: '雪の招待状',
   scriptId: 'xmas_story_00'
 }), ...XMAS_STORY_LIST.map(([title, type], i) => Object.freeze({
   id: `xs${String(i + 1).padStart(2, '0')}`,
@@ -239442,6 +239459,16 @@ function MonsterHeroGame() {
   const raidXmasOpen = raidEv === 'xmas';
   const [xmasEventTab, setXmasEventTab] = useState('story');
   const [xmasStoryVersion, setXmasStoryVersion] = useState(0);
+  const [xmasStoryClearedIds, setXmasStoryClearedIds] = useState([]);
+  useEffect(() => {
+    let alive = true;
+    if (typeof xmasStoryLoad === 'function') void xmasStoryLoad().then(p => {
+      if (alive) setXmasStoryClearedIds(Array.isArray(p && p.cleared) ? p.cleared : []);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [xmasStoryVersion]);
   const raidJackOpen = !raidXmasOpen;
   const raidCurEventId = raidEv === 'xmas' ? raidJackDebugForce ? RAID_XMAS_EVENT.debugId : RAID_XMAS_EVENT.id : raidJackEventId;
   useEffect(() => {
@@ -245306,6 +245333,7 @@ function MonsterHeroGame() {
     kikiTwintailStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(KIKI_TWINTAIL_STORY_ID),
     beyondSameSkyStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(BEYOND_SAME_SKY_STORY_ID),
     desertCrownStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(DESERT_CROWN_STORY_ID),
+    xmasStory00Seen: Array.isArray(xmasStoryClearedIds) && xmasStoryClearedIds.includes('xs00'),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID)
   };
   const isEventReplayUnlocked = event => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
@@ -271978,7 +272006,7 @@ function MonsterHeroGame() {
           break;
         }
         if (l.stage || isGuestWho(l.who)) {
-          stageIdx = i;
+          stageIdx = i < step && !l.stage && assistantById(l.who).noFace ? -1 : i;
           break;
         }
       }
@@ -271987,6 +272015,8 @@ function MonsterHeroGame() {
       const stageName = stageLine && stageGuest ? (stageLine.stage ? stageLine.stageName : stageLine.name) || stageGuest.name : '';
       const stageTier = ['男爵', '子爵', '伯爵', '公爵', '大王'].findIndex(t => stageName.includes(t)) + 1;
       const speakingGuest = isGuestWho(line.who) && !storyStillImg;
+      const bandLine = !!line.band;
+      const dimBottom = speakingGuest || bandLine;
       let bubbleIdx = -1;
       for (let i = step; i >= 0; i--) {
         if (isGuestWho(script[i].who)) {
@@ -271997,12 +272027,12 @@ function MonsterHeroGame() {
       const bubbleLine = bubbleIdx >= 0 && bubbleIdx >= stageIdx && stageGuest ? script[bubbleIdx] : null;
       let assistIdx = -1;
       for (let i = step; i >= 0; i--) {
-        if (!isGuestWho(script[i].who)) {
+        if (!isGuestWho(script[i].who) && !script[i].band) {
           assistIdx = i;
           break;
         }
       }
-      const bottomLine = speakingGuest ? assistIdx >= 0 ? script[assistIdx] : null : line;
+      const bottomLine = dimBottom ? assistIdx >= 0 ? script[assistIdx] : null : line;
       const bottomSpeaker = bottomLine ? assistantById(bottomLine.who) : speaker;
       const fx = storyZones && storySub > 0 ? null : line.fx || null;
       let monstersIdx = -1;
@@ -272091,7 +272121,7 @@ function MonsterHeroGame() {
         if (storyPageCache[i]) return storyPageCache[i];
         const l = script[i];
         const w = l ? assistantById(l.who) : null;
-        const text = l && w ? speakText(l, w) : '';
+        const text = l && w && !l.band ? speakText(l, w) : '';
         const pages = storyZones && typeof storySplitPages === 'function' ? storySplitPages(text, isGuestWho(l && l.who) ? storyCplBubble : storyCplBottom, 3) : [text];
         storyPageCache[i] = pages;
         return pages;
@@ -272267,7 +272297,7 @@ function MonsterHeroGame() {
         }
       }, React.createElement("div", {
         className: "mx-auto flex w-full max-w-md items-start gap-2 px-3"
-      }, React.createElement("div", {
+      }, !stageGuest.noFace && React.createElement("div", {
         key: `${stageGuest.id}:${stageName}`,
         "data-story-guest": stageGuest.id,
         "data-story-fx": fx || undefined,
@@ -272320,7 +272350,7 @@ function MonsterHeroGame() {
           marginTop: 8,
           animation: speakingGuest ? 'storyPop .3s ease-out both' : undefined
         }
-      }, React.createElement("span", {
+      }, !stageGuest.noFace && React.createElement("span", {
         "aria-hidden": "true",
         style: {
           position: 'absolute',
@@ -272432,7 +272462,7 @@ function MonsterHeroGame() {
         className: "min-h-0 flex-1 overflow-y-auto mh-scroll"
       }, React.createElement("p", {
         className: "mb-2 text-center text-[10px] font-black tracking-widest text-fuchsia-300"
-      }, eventReplay.live ? '' : '回想・', storyTitleNow || ''), (() => {
+      }, eventReplay.live || eventReplay.xmasChapter ? '' : '回想・', storyTitleNow || ''), (() => {
         if (storyZones && !storyKeepRow) return null;
         const tiny = storyZones;
         const atStart = Array.isArray(event && event.castAtStart) ? event.castAtStart : [];
@@ -272493,32 +272523,32 @@ function MonsterHeroGame() {
       }, React.createElement("span", {
         style: {
           display: 'block',
-          opacity: speakingGuest ? .55 : 1,
-          filter: speakingGuest ? 'brightness(.7)' : `drop-shadow(0 0 10px ${bottomSpeaker.accent})`,
+          opacity: dimBottom ? .55 : 1,
+          filter: dimBottom ? 'brightness(.7)' : `drop-shadow(0 0 10px ${bottomSpeaker.accent})`,
           transition: 'opacity .2s, filter .2s'
         }
       }, React.createElement(AssistantFace, {
         who: bottomSpeaker,
         size: 92,
         accent: bottomSpeaker.accent,
-        expression: !speakingGuest && bottomLine === line ? line.e : 'normal'
+        expression: !dimBottom && bottomLine === line ? line.e : 'normal'
       })), React.createElement("span", {
         className: "mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-black",
         style: {
-          color: speakingGuest ? bottomSpeaker.accent : '#0f172a',
-          background: speakingGuest ? 'rgba(15,23,42,.8)' : bottomSpeaker.accent
+          color: dimBottom ? bottomSpeaker.accent : '#0f172a',
+          background: dimBottom ? 'rgba(15,23,42,.8)' : bottomSpeaker.accent
         }
       }, bottomLine.name || bottomSpeaker.name)), bottomLine ? React.createElement("div", {
-        key: speakingGuest ? 'keep' : `x${step}-${storyCurSub}`,
-        "data-story-pop": speakingGuest ? undefined : '1',
+        key: dimBottom ? 'keep' : `x${step}-${storyCurSub}`,
+        "data-story-pop": dimBottom ? undefined : '1',
         className: `rounded-2xl border-2 bg-slate-900 px-3 py-3${storyZones ? ' min-w-0 flex-1' : ''}`,
         "data-story-line-box": true,
         style: {
           borderColor: bottomSpeaker.accent,
-          opacity: speakingGuest ? .4 : 1,
-          boxShadow: speakingGuest ? 'none' : `0 0 16px ${bottomSpeaker.accent}55`,
+          opacity: dimBottom ? .4 : 1,
+          boxShadow: dimBottom ? 'none' : `0 0 16px ${bottomSpeaker.accent}55`,
           transition: 'opacity .18s',
-          animation: speakingGuest ? undefined : 'storyPop .28s ease-out both'
+          animation: dimBottom ? undefined : 'storyPop .28s ease-out both'
         }
       }, React.createElement("span", {
         className: "inline-block rounded-full px-2 py-0.5 text-[10px] font-black",
