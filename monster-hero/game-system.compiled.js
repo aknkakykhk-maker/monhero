@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2f7c99f204f576a5
+// source-sha256: 3ed85f0bf40c0478
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -64051,7 +64051,7 @@ const XMAS_STORY_CHAPTERS = Object.freeze([Object.freeze({
   prologue: true,
   openAt: XMAS_STORY_PROLOGUE_OPEN_AT,
   type: 'read',
-  title: 'とどいたゲーム',
+  title: '届いたゲーム',
   scriptId: 'xmas_story_00'
 }), ...XMAS_STORY_LIST.map(([title, type], i) => Object.freeze({
   id: `xs${String(i + 1).padStart(2, '0')}`,
@@ -114056,7 +114056,7 @@ const XMAS_NOVEL_SCRIPT = {
     "no": 0,
     "label": "序章",
     "disp": "序章",
-    "title": "とどいたゲーム"
+    "title": "届いたゲーム"
   }, {
     "id": "OUT",
     "no": 98,
@@ -114148,7 +114148,7 @@ const XMAS_NOVEL_SCRIPT = {
     "rows": [{
       "id": "0-1",
       "t": "band",
-      "x": "聖夜の名探偵 序章 〜とどいたゲーム〜",
+      "x": "聖夜の名探偵 序章 〜届いたゲーム〜",
       "k": "OUT-0-1:0-1"
     }, {
       "id": "0-2",

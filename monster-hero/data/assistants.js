@@ -13032,7 +13032,7 @@ const DESERT_CROWN_STORY = [
   { who:'erubin',   e:'happy',    t:'遊んでもらえたら、うれしいな。これからも、よろしくね☺️' },
 ];
 const DESERT_CROWN_STORY_CALLS = { mua: 'るびちん／ひめちん', kiki: 'えるびんさん／みゅあちん', momosuke: 'えるちゃん', dra: 'ビンビン', atsu: 'エルちゃん', kyuko: 'えるニキ', sorashido: 'えるさん', erubin: 'ききさん／ドラちゃん' };
-// ---- クリスマスのイベント「聖夜の名探偵」序章 ～とどいたゲーム～(2026-11-28 10:00 から・台帳 r1126-012/013・r1126-022 追記7 で書き直し) ----
+// ---- クリスマスのイベント「聖夜の名探偵」序章 ～届いたゲーム～(2026-11-28 10:00 から・台帳 r1126-012/013・r1126-022 追記7 で書き直し) ----
 // 台本は docs/progress/event-xmas-2026/SCRIPT.md の「## 序章」(台詞は台本のまま)。読む所はイベントページの「物語」タブ(79-screen-xmas-event.jsx)。
 //   外側(助手たち本人。広場で謎のゲームソフトが届く)→ 題字の大きな帯(bandBig)→ ゲームの中(frame:'game' で背景を古いゲームの画面のわくに入れる)。
 //   0-1 の帯(題)は幕開けの題字で出す。band:true の行は話し手のいない帯の行(fxText を帯で出し、下の窓は直前の台詞を薄く残す)。
@@ -13408,7 +13408,7 @@ const RAID_XMAS_ENDING_NOTCLEARED = [
 const RAID_XMAS_STORY_CALLS = { mua: 'ひめちん／もも／黒羽さん', kiki: 'みゅあちん／ドラさん／白瀬さん', momosuke: 'みゅあねぇ／黒羽さん', dra: '靴下さん', atsu: 'エルちゃん／黒羽のおじさん', kyuko: '白瀬さん', erubin: 'あっくん／白瀬さん', kuroba: '白瀬／きみ', shirase: '◯◯さん／黒羽さん', mochimaru: 'オーナー', ichika: '—' };
 const EVENT_REPLAYS = [
   // クリスマスのイベント「聖夜の名探偵」序章(2026-11-28 10:00 から・台帳 r1126-013)。イベントページの「物語」タブから読む。回想には、読んだあとに並ぶ(xmasStory00Seen)
-  { id: 'xmas_story_00', date: '2026-11-28 10:00', title: '聖夜の名探偵 序章 ～とどいたゲーム～', script: XMAS_STORY_00, calls: XMAS_STORY_CALLS, unlockedKey: 'xmasStory00Seen', costumes: XMAS_STORY_COSTUMES, releaseFlag: 'xmasStoryPrologue', group: 'xmas' },
+  { id: 'xmas_story_00', date: '2026-11-28 10:00', title: '聖夜の名探偵 序章 ～届いたゲーム～', script: XMAS_STORY_00, calls: XMAS_STORY_CALLS, unlockedKey: 'xmasStory00Seen', costumes: XMAS_STORY_COSTUMES, releaseFlag: 'xmasStoryPrologue', group: 'xmas' },
   // クリスマスのレイド「もうひとつの聖夜」(r1126-026)。導入=レイド開始 / 第1〜5話=段階(咎・戒・罰・断罪・煉獄)を倒したあと / 終章=期間終了後(煉獄まで倒せたかで2本)。
   //   id は 35-raid-xmas.jsx の RAID_XMAS_STORY_IDS と同じ。公開の印 raidXmas(11/30 10:00)まで回想にも出さない。date は回想の並び順にだけ使う(1分ずつ振る)
   { id: 'raid_xmas_story_1b', date: '2026-11-30 10:00', title: '聖夜の名探偵 レイド 導入 ～もうひとつの聖夜～', script: RAID_XMAS_STORY_1B, calls: RAID_XMAS_STORY_CALLS, unlockedKey: 'raidXmasStory1bSeen', costumes: XMAS_STORY_COSTUMES, releaseFlag: 'raidXmas', group: 'xmas' },
