@@ -28,7 +28,9 @@ for(const id of RHYTHM_DEMO_SONG_IDS){const song=RHYTHM_SONGS.find(s=>s.songId==
 const loose=[...byName].filter(([,list])=>list.length>1&&new Set(list.map(rhythmSongVersionHead)).size>1);
 ok('表示名が同じ公開曲は、どれも同じ組に入っている',!loose.length,loose.map(([name,list])=>`${name}: ${list.join(' / ')}`).join(' ・ '));
 // 時刻が来るまで出さない曲(RHYTHM_SONG_RELEASE_AT)は、一覧の行に数えない(2026-10-04)
-const expectedRows=RHYTHM_DEMO_SONG_IDS.filter(id=>rhythmSongReleased(id)).length-GROUPS.reduce((sum,group)=>sum+group.length-1,0);
+// 組も同じ。まだ時刻が来ていない版は一覧に出ないので、出ている版だけで数える(2026-11-26 クリスマスの3曲は 11/30 10:00 から)
+const OPEN_GROUPS=GROUPS.map(group=>group.filter(([id])=>rhythmSongReleased(id))).filter(group=>group.length);
+const expectedRows=RHYTHM_DEMO_SONG_IDS.filter(id=>rhythmSongReleased(id)).length-OPEN_GROUPS.reduce((sum,group)=>sum+group.length-1,0);
 
 const MIME={'.html':'text/html','.js':'text/javascript','.json':'application/json','.css':'text/css','.png':'image/png','.jpg':'image/jpeg','.webp':'image/webp','.svg':'image/svg+xml','.mp3':'audio/mpeg'};
 (async()=>{
@@ -58,7 +60,7 @@ const MIME={'.html':'text/html','.js':'text/javascript','.json':'application/jso
     const q=(sel,attr)=>page.evaluate(([s,a])=>[...document.querySelectorAll(s)].map(el=>el.getAttribute(a)),[sel,attr]);
     const rows=await q('#version-probe [data-rhythm-song-row]','data-rhythm-song-row');
     ok(`一覧の行は組ごとに1つ(${expectedRows}行)`,rows.length===expectedRows,`${rows.length}行`);
-    for(const group of GROUPS){
+    for(const group of OPEN_GROUPS.filter(group=>group.length>=2)){
       const [head]=group[0],others=group.slice(1).map(([id])=>id);
       ok(`${head}: 原曲の行があり、ほかの版は行にならない`,rows.includes(head)&&others.every(id=>!rows.includes(id)));
     }
