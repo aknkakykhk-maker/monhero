@@ -14,7 +14,7 @@ const ROOT = '/home/user/monhero';
 const OUT = path.resolve(process.argv[2] || 'shots');
 const PORT = 8000 + Math.floor(Math.random() * 900);
 const SHOTS = [
-  { name: 'hall', row: '1-2-4', side: 0, tap: 0 },
+  { name: 'p-save', row: '0-13', side: 0, tap: 1 },
 ];
 
 const ctx = vm.createContext({});
