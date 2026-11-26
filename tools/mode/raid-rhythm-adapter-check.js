@@ -123,11 +123,13 @@ const fake = (over = {}) => {
     await b.run.lifePromise;
     check('クリスマス: 演出のライフは同じ表をその eventId で引く', ctx.__fetched === 'raid_xmas_debug');
     const r = await rr.raidRhythmFinish(b.run, { damage: 100, score: 777 }, { displayName: '曲A' }, { id: 'EASY' });
-    check('クリスマス: raidXmasAddDamage に source rhythm・kind a・式は raidXmasRhythmDamageOf', added.length === 1 && added[0].source === 'rhythm' && added[0].kind === 'a' && added[0].damage === 200 && added[0].hitId === 'rxhit001' && added[0].eventId === 'raid_xmas_debug' && added[0].detail.songName === '曲A' && added[0].detail.score === 777);
+    check('クリスマス: raidXmasAddDamage に source rhythm・kind a・式は raidXmasRhythmDamageOf・バトルの記録は score だけ', added.length === 1 && added[0].source === 'rhythm' && added[0].kind === 'a' && added[0].damage === 200 && added[0].hitId === 'rxhit001' && added[0].eventId === 'raid_xmas_debug' && added[0].detail.songName === '曲A' && added[0].detail.score === 777 && added[0].log && added[0].log.score === 777);
     check('クリスマス: 結果は向こうの中身(ライフ)に way rhythm を付けて返す・表へ直接送らない', r.way === 'rhythm' && r.lifeLeft === 600 && r.eventKey === 'xmas' && !sent.some((y) => y.hit.hitId === 'rxhit001'));
     check('クリスマス: 同じ run は二度足さない', (await rr.raidRhythmFinish(b.run, { damage: 1 }, null, { id: 'EASY' })) === null && added.length === 1);
     const g = rr.raidRhythmGiveUpResult(b.run, x, 1);
     check('クリスマス: 途中でやめた結果は BUILD.md §3 の形(damage 0・outcome sent・detail)', g.way === 'rhythm' && g.damage === 0 && g.outcome === 'sent' && g.tierIndex === 1 && !!g.detail);
+    const xb = rr.raidRhythmAdapter('xmas', { ...xctx, bossDown: (t) => !!(t && t.down) });
+    check('クリスマス: 最後の段階を倒したかは raidXmasBossDown で見る', xb.infiniteAt({ down: true, a: {} }, 1) === true && xb.infiniteAt({ down: true, a: {} }, 0) === false && xb.infiniteAt({ a: {} }, 1) === false);
     const x2 = rr.raidRhythmAdapter('xmas', { ...xctx, useTry: async () => ({ ok: false }) });
     check('クリスマス: 回数を使えなければ始めない', (await rr.raidRhythmBeginRun(x2, 0)).run === null);
     const x3 = rr.raidRhythmAdapter('xmas', { ...xctx, addDamage: async () => { throw new Error('x'); } });
