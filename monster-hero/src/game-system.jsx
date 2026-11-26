@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 439e0905e0f7edc4
+// generated-sha256: 0650cf255239ed0b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -38381,7 +38381,10 @@ const raidJackMakeEnemy = (kind, tierIndex, mode, opts = {}) => {
     return { ...base, name: t.name, maxHp: t.hp, hp: t.hp, atk: t.atk, raidJackTier: xt.id, raidXmas: true, emoji: '🎅',
       normal: sn.normal, special: sn.special,
       actions: { ...(base.actions || {}), sweep: sn.sweep, rush: sn.rush, pierce: sn.pierce, roar: sn.roar, allout: sn.allout },
-      imgUrl: (typeof RAID_XMAS_BOSS_IMG !== 'undefined' ? RAID_XMAS_BOSS_IMG : base.imgUrl), poseImgUrl: null };
+      // 最後の段階を倒したあと(after)は、正気に戻った普通のサンタの絵(ジャックのぱんぷきんと同じ形・社長決定 r1126-024)
+      imgUrl: (after
+        ? (typeof RAID_XMAS_SANTA_IMG !== 'undefined' ? RAID_XMAS_SANTA_IMG : base.imgUrl)
+        : (typeof RAID_XMAS_BOSS_IMG !== 'undefined' ? RAID_XMAS_BOSS_IMG : base.imgUrl)), poseImgUrl: null };
   }
   const tier = raidJackTierAt(kind, tierIndex);
   const enemy = createBattleEnemy(1, 'Normal', 'Jack', tier.power, 1, { mode, actionCount: tier.actionCount });
@@ -38941,7 +38944,7 @@ const raidJackRevokeUnearned = async (state, gifts, breederId, eventId) => {
 //  ・サーバーはジャックと同じ表 raid_jack_hits を、イベントid raid_xmas_2026 で使う(デバッグは raid_xmas_debug)。
 //  ・端末の保存は新しいキー mh_raid_xmas_v1(形は mh_raid_jack_v1 と同じ)。ジャックのキーには触らない。
 //  ・与ダメージの入口は battle / rhythm / card の3つ。レイドバトル(A)の回数は3つで共通。グランドスラム(B)はバトルだけ。
-//  ・ボスの名前・絵は仮(社長が後で渡す)。画面は RAID_XMAS_EVENT.name と段階の name を読み、直書きしない。
+//  ・ボスの名前は「黒いサンタ」(社長決定 r1126-024)。画面は RAID_XMAS_EVENT.name と段階の name を読み、直書きしない。
 //  ・数字は仮(ジャックの最後の数字と同じ)。社長が決めたら、この下の表だけ差し替える。
 //  ・開催中かどうかは、見るたびに raidXmasWindowAt(Date.now()) で数え直す。
 //  ・公開フラグ RELEASE_FLAGS.raidXmas(開始時刻を過ぎたら真)が偽のあいだは、入口もヘルプ・更新履歴も出さない。
@@ -38951,7 +38954,7 @@ const RAID_XMAS_EVENT = Object.freeze({
   id: 'raid_xmas_2026',
   debugId: 'raid_xmas_debug',
   title: '聖夜の名探偵',                 // イベントの名前(社長決定 2026-11-25)。副題の案は「〜雪山ペンションと消えたプレゼント〜」
-  name: '黒いサンタ(仮)',               // ボスの名前(仮・社長の返事待ち)。ボスは「サンタ」が覚醒した「覚醒サンタ」
+  name: '黒いサンタ',                   // ボスの名前(社長決定 r1126-024)。ボスは「サンタ」が覚醒した「覚醒サンタ」
   startAt: '2026-11-30T10:00:00+09:00',
   endAt: '2026-12-31T04:00:00+09:00',
   storageKey: 'mh_raid_xmas_v1',
@@ -38968,18 +38971,20 @@ const RAID_XMAS_TURNS = 20;
 //   段階4・5はジャックの1.2倍(4,200万 / 9,600万)
 const RAID_XMAS_A_HPS = Object.freeze([8750000, 16000000, 40000000, 42000000, 96000000]);
 const RAID_XMAS_A_ATKS = Object.freeze([350, 500, 600, 800, 1000]);
-const RAID_XMAS_A_NAMES = Object.freeze(['黒いサンタ(仮)・一', '黒いサンタ(仮)・二', '黒いサンタ(仮)・三', '黒いサンタ(仮)・四', '黒いサンタ(仮)・五']);
+// 段階の名前(社長決定 r1126-024)
+const RAID_XMAS_A_NAMES = Object.freeze(['黒いサンタ・咎', '黒いサンタ・戒', '黒いサンタ・罰', '黒いサンタ・断罪', '黒いサンタ・煉獄']);
 const RAID_XMAS_A_TIERS = Object.freeze(RAID_XMAS_A_NAMES.map((name, i) =>
   raidJackTier(`a${i + 1}`, name, [5.0, 6.5, 8.0, 10.0, 13.0][i], [3, 4, 5, 5, 5][i], RAID_XMAS_A_ATKS[i] / RAID_JACK_BASE.atk, RAID_XMAS_A_HPS[i])));
 // 最後の段階を倒したあと: 共有ライフは無限(倒した扱いにしない)・1戦のライフ 455万・攻撃力 700。サーバーへ送る段階は 5 のまま
-const RAID_XMAS_AFTER_BOSS = raidJackTier('a6', '黒いサンタ(仮)・聖夜', 13.0, 5, 1.0, 4550000);
+// 正気に戻った普通の「サンタ」(ジャックのぱんぷきんと同じ形・社長決定 r1126-024)。絵は RAID_XMAS_SANTA_IMG
+const RAID_XMAS_AFTER_BOSS = raidJackTier('a6', 'サンタ', 13.0, 5, 1.0, 4550000);
 // B: グランドスラム(個人・累計)。倍率 0.2 / 2 / 10 / 40 / 100
 const RAID_XMAS_B_TIERS = Object.freeze([
-  raidJackTier('b1', '初級 黒いサンタ(仮)', 0.2, 3),
-  raidJackTier('b2', '中級 黒いサンタ(仮)', 2, 4),
-  raidJackTier('b3', '上級 黒いサンタ(仮)', 10, 5),
-  raidJackTier('b4', '超級 黒いサンタ(仮)', 40, 5),
-  raidJackTier('b5', '極級 黒いサンタ(仮)', 100, 5),
+  raidJackTier('b1', '初級 黒いサンタ', 0.2, 3),
+  raidJackTier('b2', '中級 黒いサンタ', 2, 4),
+  raidJackTier('b3', '上級 黒いサンタ', 10, 5),
+  raidJackTier('b4', '超級 黒いサンタ', 40, 5),
+  raidJackTier('b5', '極級 黒いサンタ', 100, 5),
 ]);
 const raidXmasTiers = (kind) => (kind === 'b' ? RAID_XMAS_B_TIERS : RAID_XMAS_A_TIERS);
 const raidXmasTierAt = (kind, index) => {
@@ -39348,7 +39353,7 @@ const RAID_EVENT_XMAS = Object.freeze({
   tiers: raidXmasTiers,
   tierAt: raidXmasTierAt,
   afterBoss: RAID_XMAS_AFTER_BOSS,
-  afterBossBadge: 'まだ暴れている',
+  afterBossBadge: 'あそびに来た',     // 最後の段階のあとは正気に戻った普通のサンタ(ぱんぷきんと同じ形・社長決定 r1126-024)
   afterBossNote: '共有ライフは無限です。毎回いっぱいのライフから戦い、与えたダメージが累計に足されます',
   lockedNote: `前の段階の${RAID_XMAS_EVENT.name}を止めると姿をあらわします`,
   lastTierWord: '最後の段階',
@@ -39367,7 +39372,7 @@ const RAID_EVENT_XMAS = Object.freeze({
   saveState: raidXmasSaveState,
   flushPending: (meId) => raidXmasFlushStoredPending(meId),
   bossImg: () => RAID_XMAS_BOSS_IMG,
-  afterBossImg: () => RAID_XMAS_BOSS_IMG,
+  afterBossImg: () => RAID_XMAS_SANTA_IMG,
   aura: false,
 });
 const raidEventDef = (key) => (key === 'xmas' ? RAID_EVENT_XMAS : RAID_EVENT_JACK);
@@ -40823,7 +40828,8 @@ const raidRhythmFxOf = (run, info, result, difficulty) => {
     score: Math.max(0, Math.floor(Number(result && result.score) || 0)), damage: raidRhythmDamageOf(adapter, result, difficulty),
     assist: !!(result && result.assist === true),
     lifeBefore: info && Number.isFinite(info.lifeBefore) ? info.lifeBefore : null, max: tier.hp, pumpkin: !!(info && info.pumpkin),
-    bossImg: adapter.bossImg || null };
+    // 最後の段階を倒したあと(pumpkin)は、あとの姿の絵(クリスマスは普通のサンタ・r1126-024)。ジャックは null のまま(演出側でぱんぷきん)
+    bossImg: (info && info.pumpkin && adapter.afterBossImg) ? adapter.afterBossImg : (adapter.bossImg || null) };
 };
 
 // 演奏が最後まで終わった: スコアをダメージに換えて、バトルと同じ表へ送る。戻り値は結果画面の中身
@@ -40952,6 +40958,8 @@ const raidXmasRhythmAdapter = (ctx) => {
     screen: ctx.screen || 'RAID_JACK',
     icon: '🎄',
     bossImg: ctx.bossImg || null,
+    // 最後の段階を倒したあとの絵(普通のサンタ・r1126-024)。ctx に無ければ data/images/images-enemy.js の RAID_XMAS_SANTA_IMG
+    afterBossImg: ctx.afterBossImg || (typeof RAID_XMAS_SANTA_IMG !== 'undefined' ? RAID_XMAS_SANTA_IMG : null),
     tierCount: tiers.length || 1,
     tierAt: (i) => (typeof ctx.tierAt === 'function' ? ctx.tierAt(i) : tiers[i]) || { id: '', name: '', hp: 0 },
     infiniteName: ctx.infiniteName || '',
@@ -52229,7 +52237,7 @@ const HomeRaidJack = ({ eventId, onOpen, ev = RAID_EVENT_JACK }) => {
       {/* しっぽはジャックのほうへ向ける(上に置いたら下向き、右に置いたら左向き、左に置いたら右向き) */}
       {(!sayPlace || sayPlace.side === 'top') && <span aria-hidden="true" style={{ position:'absolute', left:sayPlace ? sayPlace.tail : '50%', bottom:-9, marginLeft:-8, width:0, height:0, borderLeft:'8px solid transparent', borderRight:'8px solid transparent', borderTop:`9px solid ${speechAccent}` }} />}
     </button>}
-    <button type="button" data-home-raid-jack onClick={onOpen} aria-label={allDone ? `${isJack ? RAID_JACK_PUMPKIN.name : ev.afterBoss.name}${isJack ? 'が遊びに来た！' : 'がまだ暴れている！'}タップでレイド画面を開く` : `${tier.name}があらわれた！タップでレイド画面を開く`} style={HOME_RAID_JACK_BUTTON_STYLE}>
+    <button type="button" data-home-raid-jack onClick={onOpen} aria-label={allDone ? `${isJack ? RAID_JACK_PUMPKIN.name : ev.afterBoss.name}が遊びに来た！タップでレイド画面を開く` : `${tier.name}があらわれた！タップでレイド画面を開く`} style={HOME_RAID_JACK_BUTTON_STYLE}>
       {/* 通常絵とポーズ絵を重ねて、切り替えは透明度だけで行う(先に両方読み込める・切り替えで枠の高さが変わらない)。
           ポーズ絵は腕が左右に広がるぶん本体が幅の約半分になるので、通常絵を半分の大きさ(RAID_JACK_NORMAL_ART_SCALE)で描いて本体の大きさをそろえる。
           どちらも足もと(本体の下端)をそろえて置く */}

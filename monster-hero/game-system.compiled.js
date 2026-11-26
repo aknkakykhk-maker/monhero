@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c8b57311b06a9c69
+// source-sha256: 64743e57bd68c815
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -63151,7 +63151,7 @@ const raidJackMakeEnemy = (kind, tierIndex, mode, opts = {}) => {
         roar: sn.roar,
         allout: sn.allout
       },
-      imgUrl: typeof RAID_XMAS_BOSS_IMG !== 'undefined' ? RAID_XMAS_BOSS_IMG : base.imgUrl,
+      imgUrl: after ? typeof RAID_XMAS_SANTA_IMG !== 'undefined' ? RAID_XMAS_SANTA_IMG : base.imgUrl : typeof RAID_XMAS_BOSS_IMG !== 'undefined' ? RAID_XMAS_BOSS_IMG : base.imgUrl,
       poseImgUrl: null
     };
   }
@@ -63967,7 +63967,7 @@ const RAID_XMAS_EVENT = Object.freeze({
   id: 'raid_xmas_2026',
   debugId: 'raid_xmas_debug',
   title: '聖夜の名探偵',
-  name: '黒いサンタ(仮)',
+  name: '黒いサンタ',
   startAt: '2026-11-30T10:00:00+09:00',
   endAt: '2026-12-31T04:00:00+09:00',
   storageKey: 'mh_raid_xmas_v1'
@@ -63979,10 +63979,10 @@ const RAID_XMAS_EXTRA_COST_BEAT_P = 300;
 const RAID_XMAS_TURNS = 20;
 const RAID_XMAS_A_HPS = Object.freeze([8750000, 16000000, 40000000, 42000000, 96000000]);
 const RAID_XMAS_A_ATKS = Object.freeze([350, 500, 600, 800, 1000]);
-const RAID_XMAS_A_NAMES = Object.freeze(['黒いサンタ(仮)・一', '黒いサンタ(仮)・二', '黒いサンタ(仮)・三', '黒いサンタ(仮)・四', '黒いサンタ(仮)・五']);
+const RAID_XMAS_A_NAMES = Object.freeze(['黒いサンタ・咎', '黒いサンタ・戒', '黒いサンタ・罰', '黒いサンタ・断罪', '黒いサンタ・煉獄']);
 const RAID_XMAS_A_TIERS = Object.freeze(RAID_XMAS_A_NAMES.map((name, i) => raidJackTier(`a${i + 1}`, name, [5.0, 6.5, 8.0, 10.0, 13.0][i], [3, 4, 5, 5, 5][i], RAID_XMAS_A_ATKS[i] / RAID_JACK_BASE.atk, RAID_XMAS_A_HPS[i])));
-const RAID_XMAS_AFTER_BOSS = raidJackTier('a6', '黒いサンタ(仮)・聖夜', 13.0, 5, 1.0, 4550000);
-const RAID_XMAS_B_TIERS = Object.freeze([raidJackTier('b1', '初級 黒いサンタ(仮)', 0.2, 3), raidJackTier('b2', '中級 黒いサンタ(仮)', 2, 4), raidJackTier('b3', '上級 黒いサンタ(仮)', 10, 5), raidJackTier('b4', '超級 黒いサンタ(仮)', 40, 5), raidJackTier('b5', '極級 黒いサンタ(仮)', 100, 5)]);
+const RAID_XMAS_AFTER_BOSS = raidJackTier('a6', 'サンタ', 13.0, 5, 1.0, 4550000);
+const RAID_XMAS_B_TIERS = Object.freeze([raidJackTier('b1', '初級 黒いサンタ', 0.2, 3), raidJackTier('b2', '中級 黒いサンタ', 2, 4), raidJackTier('b3', '上級 黒いサンタ', 10, 5), raidJackTier('b4', '超級 黒いサンタ', 40, 5), raidJackTier('b5', '極級 黒いサンタ', 100, 5)]);
 const raidXmasTiers = kind => kind === 'b' ? RAID_XMAS_B_TIERS : RAID_XMAS_A_TIERS;
 const raidXmasTierAt = (kind, index) => {
   const list = raidXmasTiers(kind);
@@ -64415,7 +64415,7 @@ const RAID_EVENT_XMAS = Object.freeze({
   tiers: raidXmasTiers,
   tierAt: raidXmasTierAt,
   afterBoss: RAID_XMAS_AFTER_BOSS,
-  afterBossBadge: 'まだ暴れている',
+  afterBossBadge: 'あそびに来た',
   afterBossNote: '共有ライフは無限です。毎回いっぱいのライフから戦い、与えたダメージが累計に足されます',
   lockedNote: `前の段階の${RAID_XMAS_EVENT.name}を止めると姿をあらわします`,
   lastTierWord: '最後の段階',
@@ -64434,7 +64434,7 @@ const RAID_EVENT_XMAS = Object.freeze({
   saveState: raidXmasSaveState,
   flushPending: meId => raidXmasFlushStoredPending(meId),
   bossImg: () => RAID_XMAS_BOSS_IMG,
-  afterBossImg: () => RAID_XMAS_BOSS_IMG,
+  afterBossImg: () => RAID_XMAS_SANTA_IMG,
   aura: false
 });
 const raidEventDef = key => key === 'xmas' ? RAID_EVENT_XMAS : RAID_EVENT_JACK;
@@ -66649,7 +66649,7 @@ const raidRhythmFxOf = (run, info, result, difficulty) => {
     lifeBefore: info && Number.isFinite(info.lifeBefore) ? info.lifeBefore : null,
     max: tier.hp,
     pumpkin: !!(info && info.pumpkin),
-    bossImg: adapter.bossImg || null
+    bossImg: info && info.pumpkin && adapter.afterBossImg ? adapter.afterBossImg : adapter.bossImg || null
   };
 };
 const raidRhythmFinish = async (run, result, song, difficulty) => {
@@ -66875,6 +66875,7 @@ const raidXmasRhythmAdapter = ctx => {
     screen: ctx.screen || 'RAID_JACK',
     icon: '🎄',
     bossImg: ctx.bossImg || null,
+    afterBossImg: ctx.afterBossImg || (typeof RAID_XMAS_SANTA_IMG !== 'undefined' ? RAID_XMAS_SANTA_IMG : null),
     tierCount: tiers.length || 1,
     tierAt: i => (typeof ctx.tierAt === 'function' ? ctx.tierAt(i) : tiers[i]) || {
       id: '',
@@ -87368,7 +87369,7 @@ const HomeRaidJack = ({
     type: "button",
     "data-home-raid-jack": true,
     onClick: onOpen,
-    "aria-label": allDone ? `${isJack ? RAID_JACK_PUMPKIN.name : ev.afterBoss.name}${isJack ? 'が遊びに来た！' : 'がまだ暴れている！'}タップでレイド画面を開く` : `${tier.name}があらわれた！タップでレイド画面を開く`,
+    "aria-label": allDone ? `${isJack ? RAID_JACK_PUMPKIN.name : ev.afterBoss.name}が遊びに来た！タップでレイド画面を開く` : `${tier.name}があらわれた！タップでレイド画面を開く`,
     style: HOME_RAID_JACK_BUTTON_STYLE
   }, React.createElement("span", {
     "data-jack-aura": allDone ? undefined : Number(String(tier.id).slice(1)) || undefined,

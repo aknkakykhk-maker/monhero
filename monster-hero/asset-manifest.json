@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "4160a167c185",
-  "packs": {"beat":{"bytes":311557065,"count":166},"battle":{"bytes":751443024,"count":1849},"card":{"bytes":38085297,"count":1046},"all":{"bytes":1101085386,"count":3061},"core":{"bytes":26363062,"count":25}},
+  "id": "cdd600c5292d",
+  "packs": {"beat":{"bytes":311557065,"count":166},"battle":{"bytes":752656330,"count":1850},"card":{"bytes":38085297,"count":1046},"all":{"bytes":1102298692,"count":3062},"core":{"bytes":26363567,"count":25}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"b43d691d4773","size":2833344,"pack":"beat"},
@@ -2071,6 +2071,7 @@
     "images/enemies/naga.png": {"v":"318937e614cf","size":6118,"pack":"battle"},
     "images/enemies/nyarlathotep.png": {"v":"784ba273ad33","size":12094,"pack":"battle"},
     "images/enemies/santa-black.png": {"v":"79767188ad99","size":1149810,"pack":"battle"},
+    "images/enemies/santa-red.png": {"v":"4e7a8ced1a5e","size":1213306,"pack":"battle"},
     "images/enemies/splatter.png": {"v":"fc268b0fd810","size":9486,"pack":"battle"},
     "images/events/card-battle-teaser.jpg": {"v":"dc64e1718761","size":110400,"pack":"battle"},
     "images/events/dreamy-dye-preview.jpg": {"v":"bfaca221c64c","size":69448,"pack":"battle"},
@@ -3066,9 +3067,9 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"a3026e4eafce","size":321765,"pack":"core"},
+    "tailwind.css": {"v":"8d0e6974c725","size":321765,"pack":"core"},
     "data/images/images-ally.js": {"v":"7fcc9331d4b6","size":92225,"pack":"core"},
-    "data/images/images-enemy.js": {"v":"0d3643e9bc69","size":3262,"pack":"core"},
+    "data/images/images-enemy.js": {"v":"360f32b5807d","size":3612,"pack":"core"},
     "data/ally-monsters.js": {"v":"6737b7dced48","size":60894,"pack":"core"},
     "data/lineages.js": {"v":"81f342c471d9","size":26476,"pack":"core"},
     "data/breeder.js": {"v":"dd6dcf03b3f4","size":157983,"pack":"core"},
@@ -3088,6 +3089,6 @@
     "data/assistant-masmon-techs.js": {"v":"353cf73676a6","size":113841,"pack":"core"},
     "data/assistant-life-rel-talks.js": {"v":"cde51ded5428","size":225977,"pack":"core"},
     "data/success-sounds.js": {"v":"9692dd51493a","size":19367,"pack":"core"},
-    "game-system.compiled.js": {"v":"436a4d07ab3e","size":12837007,"pack":"core"}
+    "game-system.compiled.js": {"v":"083f1375ad6b","size":12837162,"pack":"core"}
   }
 }
