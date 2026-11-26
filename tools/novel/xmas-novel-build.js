@@ -134,6 +134,7 @@ const parseSceneHead = (cells, chapter, seq) => {
   const bgRaw = (kv['背景'] || '').split(/→/)[0].trim();
   const scene = { id, chapter: chapter.id, title, cond, bgm, bg: bgRaw || null, next, rows: [] };
   if (condSrc && !cond) scene.jumpOnly = true;
+  if (/^外側/.test(info)) scene.outside = true; // ゲームの外(助手たち本人)の場面
   if (afterM) scene.after = { scene: afterM[1], row: afterM[2] || null };
   // カーテンコールの場面(題か ID に「カーテンコール」「CC」)。エンディングの場面の「次」でつなぐ
   if (/カーテンコール/.test(title) || /(^|-)CC(-|$)/.test(id)) scene.curtain = true;
@@ -366,6 +367,10 @@ const parseScript = (md, srcName) => {
         else chapter = { id: `C${no}`, no, label: cm[1].replace(/\s+/g, ''), disp: cm[2] ? `第${KAN[no] || no}章` : cm[1], title: (cm[3] || '').trim(), fresh: true };
         chapters.push(chapter);
         scene = null; lastQ = null; seq = 0;
+      } else if (started && /^外側/.test(t)) {
+        // 外側(ゲームの外・助手たち本人)の場面の見出し。章の札は出さない(章ID OUT)
+        chapter = { id: 'OUT', no: 98, label: '外側', disp: '', title: ((t.match(/[～〜]\s*([^～〜]+?)\s*[～〜]/) || [])[1] || '').trim(), outside: true };
+        chapters.push(chapter); scene = null; lastQ = null; seq = 0;
       } else chapter = null;
       continue;
     }
@@ -423,9 +428,14 @@ const parseScript = (md, srcName) => {
     } else if (!end.next || !scenes.some((x) => x.id === end.next)) end.next = cc.id;
     delete cc.after;
   });
+  // エンディングのすぐうしろに置いた場面(外側の OUT-G など・「次」の無いエンディング)は、そのエンディングの続き
+  scenes.forEach((sc, i) => {
+    const nx = scenes[i + 1];
+    if (sc.ending && (!sc.next || !scenes.some((x) => x.id === sc.next)) && nx && !nx.ending && nx.chapter === sc.chapter && !nx.after) sc.next = nx.id;
+  });
   const seenCh = new Set();
   const chs = chapters.filter((c) => scenes.some((s) => s.chapter === c.id) && !seenCh.has(c.id) && seenCh.add(c.id));
-  return { v: 1, src: srcName, chapters: chs.map(({ id, no, label, disp, title }) => ({ id, no, label, disp, title })), scenes };
+  return { v: 1, src: srcName, chapters: chs.map(({ id, no, label, disp, title, outside }) => ({ id, no, label, disp, title, ...(outside ? { outside: true } : {}) })), scenes };
 };
 
 // ---- 見直し(行き先・答え・エンディング) ----

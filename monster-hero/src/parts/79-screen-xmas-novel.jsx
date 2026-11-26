@@ -425,7 +425,7 @@ const XmasNovelScreen = ({ playerName = '', onClose, onPerfect, script = null })
       const ch = xmasNovelChapters(S).find((c) => c.id === scene.chapter);
       const opening = lastChapter.current !== null || next.cur.idx === 0;
       lastChapter.current = scene.chapter;
-      if (ch && ch.id !== 'END') {
+      if (ch && ch.id !== 'END' && !ch.outside) {
         if (!s.snaps[ch.id] || next.cur.idx === 0) s = { ...s, snaps: { ...s.snaps, [ch.id]: { scene: scene.id, idx: 0, flags: next.cur.flags, clues: next.cur.clues, ans: next.cur.ans, panel: next.cur.panel || {} } } };
         if (opening) { setCard({ kind: 'chapter', label: xmasNovelChapterLabel(ch), title: ch.title }); setSkip(false); chapterCard = true; }
       }
@@ -600,7 +600,7 @@ const XmasNovelScreen = ({ playerName = '', onClose, onPerfect, script = null })
               <p className="mt-1 text-center text-[11px] text-slate-300" style={JA_LABEL_STYLE}>{jaWrap('その章に入ったときの手がかりと選んだことから、読み直せます')}</p>
               <div className="mh-nv-rule" />
               <ul className="space-y-2">
-                {xmasNovelChapters(S).filter((c) => c.id !== 'END').map((c) => {
+                {xmasNovelChapters(S).filter((c) => c.id !== 'END' && !c.outside).map((c) => {
                   const snap = save.snaps[c.id];
                   return (
                     <li key={c.id}>
