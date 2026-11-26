@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 51ce83add911fc83
+// source-sha256: d7cc0dc7af50cf1d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -113708,6 +113708,7 @@ const xmasNovelNextScene = (script, scene, ctx) => {
     const byScene = xmasNovelResolveScene(script, scene.next, ctx);
     if (byScene) return byScene;
   }
+  if (scene.past) return null;
   const i = scenes.findIndex(s => s.id === scene.id);
   const base = xmasNovelSceneBase(scene.id);
   for (let j = i + 1; j < scenes.length; j += 1) {
@@ -114290,6 +114291,13 @@ const XMAS_NOVEL_SCRIPT = {
     "label": "エンディング",
     "disp": "エンディング",
     "title": ""
+  }, {
+    "id": "C12",
+    "no": 12,
+    "label": "過去編",
+    "disp": "過去編",
+    "title": "12年前の聖夜",
+    "past": true
   }],
   "scenes": [{
     "id": "OUT-0-1",
@@ -115129,7 +115137,7 @@ const XMAS_NOVEL_SCRIPT = {
     "cond": null,
     "bgm": "melo_dullahan_steel_ghost",
     "bg": "夜のホール",
-    "next": "C2-1",
+    "next": "C1-M",
     "rows": [{
       "id": "1-6-1",
       "t": "band",
@@ -115160,13 +115168,119 @@ const XMAS_NOVEL_SCRIPT = {
       "k": "C1-6:1-6-4"
     }]
   }, {
+    "id": "C1-M",
+    "chapter": "C1",
+    "title": "幕間 眠る客",
+    "cond": null,
+    "bgm": "melo_dullahan_steel_ghost",
+    "bg": "黒羽の部屋(夜",
+    "next": "C2-1",
+    "rows": [{
+      "id": "1-M-1",
+      "t": "band",
+      "x": "幕間 〜眠る客〜",
+      "k": "C1-M:1-M-1"
+    }, {
+      "id": "1-M-2",
+      "t": "band",
+      "x": "同じ夜。2階の、黒羽の部屋の前",
+      "k": "C1-M:1-M-2"
+    }, {
+      "id": "1-M-3",
+      "t": "band",
+      "x": "扉の取っ手が、音もなく回る。……鍵は、かかっていなかった",
+      "k": "C1-M:1-M-3"
+    }, {
+      "id": "1-M-4",
+      "t": "band",
+      "x": "暗い部屋に、大きないびき。机の上で、金色の懐中時計が、カチ、カチ、と時を刻んでいる",
+      "k": "C1-M:1-M-4"
+    }, {
+      "id": "1-M-5",
+      "t": "line",
+      "secret": true,
+      "x": "……鍵もかけないで、眠れるんだ。自分だけは大丈夫だって、思ってるんだね",
+      "n": "？？？",
+      "e": "troubled",
+      "k": "C1-M:1-M-5"
+    }, {
+      "id": "1-M-6",
+      "t": "band",
+      "x": "影が、ベッドのわきにかがみこむ。ベッドの下に、黒い革のケースが押しこまれていた",
+      "k": "C1-M:1-M-6"
+    }, {
+      "id": "1-M-7",
+      "t": "band",
+      "x": "カチリ(留め金の外れる、小さな音)",
+      "fx": ["se"],
+      "se": "tap",
+      "k": "C1-M:1-M-7"
+    }, {
+      "id": "1-M-8",
+      "t": "band",
+      "x": "中に、古い楽譜の束。黄ばんだ表紙の、作った人の名前の所だけが、黒いインクで塗りつぶされている",
+      "k": "C1-M:1-M-8"
+    }, {
+      "id": "1-M-9",
+      "t": "line",
+      "secret": true,
+      "x": "(塗りつぶされた所を、指でそっとなぞる)……",
+      "n": "？？？",
+      "e": "troubled",
+      "k": "C1-M:1-M-9"
+    }, {
+      "id": "1-M-10",
+      "t": "line",
+      "secret": true,
+      "x": "……12年。こんな所に、しまいこまれてたんだね",
+      "n": "？？？",
+      "e": "troubled",
+      "k": "C1-M:1-M-10"
+    }, {
+      "id": "1-M-11",
+      "t": "band",
+      "x": "黒羽が、寝返りを打つ。影は、息を止めて動かない",
+      "k": "C1-M:1-M-11"
+    }, {
+      "id": "1-M-12",
+      "t": "band",
+      "x": "……いびきが、また始まった",
+      "k": "C1-M:1-M-12"
+    }, {
+      "id": "1-M-13",
+      "t": "band",
+      "x": "ケースを胸に抱えて、影は廊下へ出る。扉は、来たときと同じように、音もなく閉まった",
+      "k": "C1-M:1-M-13"
+    }, {
+      "id": "1-M-14",
+      "t": "band",
+      "x": "廊下の窓の外で、雪が、少しずつ強くなっていく",
+      "k": "C1-M:1-M-14"
+    }, {
+      "id": "1-M-15",
+      "t": "line",
+      "secret": true,
+      "x": "(黒いカードを1枚、指に挟む)……これは、明日の夜。鐘と一緒に",
+      "n": "？？？",
+      "e": "troubled",
+      "k": "C1-M:1-M-15"
+    }, {
+      "id": "1-M-16",
+      "t": "line",
+      "secret": true,
+      "x": "……もう、止まらないよ",
+      "n": "？？？",
+      "e": "troubled",
+      "k": "C1-M:1-M-16"
+    }]
+  }, {
     "id": "C2-1",
     "chapter": "C2",
     "title": "消えた楽譜",
     "cond": null,
     "bgm": "melo_dullahan_clockwork",
     "bg": "2階の廊下",
-    "next": "C2-2",
+    "next": "C2-M",
     "rows": [{
       "id": "2-1-1",
       "t": "band",
@@ -115241,6 +115355,151 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "うん。……今夜は、気をつけよう",
       "e": "normal",
       "k": "C2-1:2-1-12"
+    }]
+  }, {
+    "id": "C2-M",
+    "chapter": "C2",
+    "title": "幕間 鍵をかけた部屋",
+    "cond": null,
+    "bgm": "melo_dullahan_clockwork",
+    "bg": "黒羽の部屋(夜",
+    "next": "C2-2",
+    "rows": [{
+      "id": "2-M-1",
+      "t": "band",
+      "x": "幕間 〜鍵をかけた部屋〜",
+      "k": "C2-M:2-M-1"
+    }, {
+      "id": "2-M-2",
+      "t": "band",
+      "x": "22時。黒羽の部屋。鍵を二度確かめ、重い椅子を扉の前まで引きずってくる",
+      "k": "C2-M:2-M-2"
+    }, {
+      "id": "2-M-3",
+      "t": "line",
+      "w": "kuroba",
+      "x": "……くだらん。いたずらだ。誰かが、わたしをからかっているだけだ",
+      "k": "C2-M:2-M-3"
+    }, {
+      "id": "2-M-4",
+      "t": "band",
+      "x": "ベッドに腰を下ろす。机の上の懐中時計の音だけが、やけに大きく聞こえる",
+      "k": "C2-M:2-M-4"
+    }, {
+      "id": "2-M-5",
+      "t": "line",
+      "w": "kuroba",
+      "x": "(時計のふたを開け、閉じ、また開ける)……22時4分。0時まで、あと2時間もない",
+      "k": "C2-M:2-M-5"
+    }, {
+      "id": "2-M-6",
+      "t": "line",
+      "w": "kuroba",
+      "x": "12年前の借り、だと？ 借りなど、ない。あれは仕事だ。わたしは、仕事をしただけだ",
+      "k": "C2-M:2-M-6"
+    }, {
+      "id": "2-M-7",
+      "t": "band",
+      "x": "ガタ、ガタ……(吹雪に押されて、窓ガラスが鳴る)",
+      "fx": ["se"],
+      "se": "tap",
+      "k": "C2-M:2-M-7"
+    }, {
+      "id": "2-M-8",
+      "t": "band",
+      "x": "風の音が、細く、長く、誰かのすすり泣きのように聞こえる",
+      "k": "C2-M:2-M-8"
+    }, {
+      "id": "2-M-9",
+      "t": "line",
+      "w": "kuroba",
+      "x": "(耳をふさぐ)……やめろ。……あの夜も、こんな風が吹いていた……",
+      "k": "C2-M:2-M-9"
+    }, {
+      "id": "2-M-10",
+      "t": "band",
+      "x": "ギシ……(廊下の床が、きしむ音)",
+      "fx": ["se"],
+      "se": "tap",
+      "k": "C2-M:2-M-10"
+    }, {
+      "id": "2-M-11",
+      "t": "line",
+      "w": "kuroba",
+      "x": "誰だ！ ……白瀬か？ おい、返事をしろ！",
+      "k": "C2-M:2-M-11"
+    }, {
+      "id": "2-M-12",
+      "t": "band",
+      "x": "返事はない。扉の向こうは、しんと静まりかえっている",
+      "k": "C2-M:2-M-12"
+    }, {
+      "id": "2-M-13",
+      "t": "band",
+      "x": "窓ガラスに、自分の青ざめた顔が映っている。その肩の後ろの暗がりに、雪のように白い何かが、立っているように見えて——",
+      "k": "C2-M:2-M-13"
+    }, {
+      "id": "2-M-14",
+      "t": "line",
+      "w": "kuroba",
+      "x": "ひっ……！",
+      "k": "C2-M:2-M-14"
+    }, {
+      "id": "2-M-15",
+      "t": "band",
+      "x": "振り返る。誰もいない。吹雪が、窓に雪を叩きつけただけだった",
+      "k": "C2-M:2-M-15"
+    }, {
+      "id": "2-M-16",
+      "t": "line",
+      "w": "kuroba",
+      "x": "(ベッドの端をつかんだまま、肩で息をしている)……やっぱり、あいつだ。……あいつの、仕返しなんだ",
+      "k": "C2-M:2-M-16"
+    }, {
+      "id": "2-M-17",
+      "t": "line",
+      "w": "kuroba",
+      "x": "あいつが、わしに、借りを取り立てに来たんだ。あの夜の、あの雪の中から……",
+      "k": "C2-M:2-M-17"
+    }, {
+      "id": "2-M-18",
+      "t": "line",
+      "w": "kuroba",
+      "x": "……ばかな。ばかな！ あいつが、戻ってくるはずがない。あいつは、もう……",
+      "k": "C2-M:2-M-18"
+    }, {
+      "id": "2-M-19",
+      "t": "band",
+      "x": "23時すぎ。扉の下の隙間から、折りたたんだ紙が1枚、すっと差しこまれた",
+      "k": "C2-M:2-M-19"
+    }, {
+      "id": "2-M-20",
+      "t": "line",
+      "w": "kuroba",
+      "x": "(震える手で拾い、開く)……『楽譜を返す。0時の鐘で、裏口へ』",
+      "k": "C2-M:2-M-20"
+    }, {
+      "id": "2-M-21",
+      "t": "line",
+      "w": "kuroba",
+      "x": "……裏口……。よりによって、裏口か",
+      "k": "C2-M:2-M-21"
+    }, {
+      "id": "2-M-22",
+      "t": "band",
+      "x": "紙が、指のあいだから床へ落ちる。黒羽は、しばらく、そのまま動かなかった",
+      "k": "C2-M:2-M-22"
+    }, {
+      "id": "2-M-23",
+      "t": "line",
+      "w": "kuroba",
+      "x": "……あの楽譜さえ戻れば、元どおりだ。時は金なり。取り返せる物は、取り返す",
+      "k": "C2-M:2-M-23"
+    }, {
+      "id": "2-M-24",
+      "t": "band",
+      "x": "黒羽は、のろのろと立ち上がり、灰色のコートに手を伸ばした",
+      "k": "C2-M:2-M-24"
     }]
   }, {
     "id": "C2-2",
@@ -115975,7 +116234,7 @@ const XMAS_NOVEL_SCRIPT = {
     "cond": null,
     "bgm": "melo_sad_song_short",
     "bg": "夜の食堂",
-    "next": "C4-1",
+    "next": "C3-M",
     "rows": [{
       "id": "3-5-1",
       "t": "band",
@@ -116035,6 +116294,112 @@ const XMAS_NOVEL_SCRIPT = {
         "st": "dead"
       }],
       "k": "C3-5:3-5-9"
+    }]
+  }, {
+    "id": "C3-M",
+    "chapter": "C3",
+    "title": "幕間 古い鍵",
+    "cond": null,
+    "bgm": "melo_sad_song_short",
+    "bg": "2階の廊下(夜",
+    "next": "C4-1",
+    "rows": [{
+      "id": "3-M-1",
+      "t": "band",
+      "x": "幕間 〜古い鍵〜",
+      "k": "C3-M:3-M-1"
+    }, {
+      "id": "3-M-2",
+      "t": "band",
+      "x": "夜。2階の奥の、鍵のかかった部屋の前。イチーカが一人、灯りも持たずに立っている",
+      "k": "C3-M:3-M-2"
+    }, {
+      "id": "3-M-3",
+      "t": "band",
+      "x": "手のひらに、古い真鍮の鍵。細い指が、何度もそれを握り直す",
+      "k": "C3-M:3-M-3"
+    }, {
+      "id": "3-M-4",
+      "t": "line",
+      "w": "mochimaru",
+      "x": "……オーナー？ こんな暗い所で、どうしたっちー。廊下は冷えるっちー",
+      "k": "C3-M:3-M-4"
+    }, {
+      "id": "3-M-5",
+      "t": "line",
+      "w": "ichika",
+      "x": "もちまる。……黒羽さまが倒れていたのは、裏口の外でしたね",
+      "k": "C3-M:3-M-5"
+    }, {
+      "id": "3-M-6",
+      "t": "line",
+      "w": "mochimaru",
+      "x": "……うん。あの夜と、同じ所だったっちー",
+      "k": "C3-M:3-M-6"
+    }, {
+      "id": "3-M-7",
+      "t": "line",
+      "w": "ichika",
+      "x": "祖父は、あの夜から、吹雪の夜には裏口のかんぬきを開けておくようになったんです。亡くなるまで、一晩も欠かさずに",
+      "k": "C3-M:3-M-7"
+    }, {
+      "id": "3-M-8",
+      "t": "line",
+      "w": "mochimaru",
+      "x": "知ってるっちー。だから、ぼくも続けてるっちー。外に出た人が、すぐ戻れるように",
+      "k": "C3-M:3-M-8"
+    }, {
+      "id": "3-M-9",
+      "t": "line",
+      "w": "ichika",
+      "x": "……それなのに、また、閉まっていた",
+      "k": "C3-M:3-M-9"
+    }, {
+      "id": "3-M-10",
+      "t": "band",
+      "x": "廊下の窓が、風に揺られて、かたかたと鳴る",
+      "k": "C3-M:3-M-10"
+    }, {
+      "id": "3-M-11",
+      "t": "line",
+      "w": "mochimaru",
+      "x": "その部屋……。ぼく、ほこりを払うだけで、何も動かしてないっちー。オルゴールのねじも、巻いてないっちー",
+      "k": "C3-M:3-M-11"
+    }, {
+      "id": "3-M-12",
+      "t": "line",
+      "w": "ichika",
+      "x": "ええ。あの子がいつ戻ってきても、何も変わっていないように。……そう思って、12年",
+      "k": "C3-M:3-M-12"
+    }, {
+      "id": "3-M-13",
+      "t": "line",
+      "w": "ichika",
+      "x": "でも、黙っていたら、きっと祖父に叱られますね。……みなさんに、この部屋のことをお話ししようと思います",
+      "k": "C3-M:3-M-13"
+    }, {
+      "id": "3-M-14",
+      "t": "line",
+      "w": "mochimaru",
+      "x": "オーナー……。ぼくも、一緒にいるっちー",
+      "k": "C3-M:3-M-14"
+    }, {
+      "id": "3-M-15",
+      "t": "line",
+      "w": "ichika",
+      "x": "ありがとう、もちまる。……ふふっ。あなたは、昔から、いちばんの怖がりなのに",
+      "k": "C3-M:3-M-15"
+    }, {
+      "id": "3-M-16",
+      "t": "line",
+      "w": "mochimaru",
+      "x": "こ、怖いけど……オーナーをひとりにするほうが、もっと怖いっちー",
+      "k": "C3-M:3-M-16"
+    }, {
+      "id": "3-M-17",
+      "t": "band",
+      "x": "イチーカは、鍵を胸の前でぎゅっと握りしめ、ホールのほうへ歩きだした",
+      "k": "C3-M:3-M-17"
     }]
   }, {
     "id": "C4-1",
@@ -116363,7 +116728,7 @@ const XMAS_NOVEL_SCRIPT = {
     "cond": null,
     "bgm": "melo_dullahan_steel_ghost",
     "bg": "夜のホール",
-    "next": "C5-1",
+    "next": "C4-M",
     "rows": [{
       "id": "4-5-1",
       "t": "band",
@@ -116412,6 +116777,104 @@ const XMAS_NOVEL_SCRIPT = {
         "st": "dead"
       }],
       "k": "C4-5:4-5-7"
+    }]
+  }, {
+    "id": "C4-M",
+    "chapter": "C4",
+    "title": "幕間 書きかけの手紙",
+    "cond": null,
+    "bgm": "melo_sad_song_short",
+    "bg": "白瀬の部屋(ろうそく",
+    "next": "C5-1",
+    "rows": [{
+      "id": "4-M-1",
+      "t": "band",
+      "x": "幕間 〜書きかけの手紙〜",
+      "k": "C4-M:4-M-1"
+    }, {
+      "id": "4-M-2",
+      "t": "band",
+      "x": "同じ夜。白瀬の部屋。小さな机の上で、ろうそくの火が揺れている",
+      "k": "C4-M:4-M-2"
+    }, {
+      "id": "4-M-3",
+      "t": "band",
+      "x": "便せんに、何行か書いては、手が止まる。線を引いて消し、また書く",
+      "k": "C4-M:4-M-3"
+    }, {
+      "id": "4-M-4",
+      "t": "line",
+      "w": "shirase",
+      "x": "(小さく読み上げる)……『12年前の夜。わたしは』……",
+      "k": "C4-M:4-M-4"
+    }, {
+      "id": "4-M-5",
+      "t": "band",
+      "x": "ペン先が紙の上で止まったまま、インクが、じわりとにじんでいく",
+      "k": "C4-M:4-M-5"
+    }, {
+      "id": "4-M-6",
+      "t": "line",
+      "w": "shirase",
+      "x": "(首の、音符の形のペンダントに触れる)……さっき、廊下まで聞こえてきた、あのオルゴール。12年、一日も、忘れたことはなかった",
+      "k": "C4-M:4-M-6"
+    }, {
+      "id": "4-M-7",
+      "t": "line",
+      "w": "shirase",
+      "x": "(かすれた声で、口ずさみかける)……♪……",
+      "k": "C4-M:4-M-7"
+    }, {
+      "id": "4-M-8",
+      "t": "band",
+      "x": "最初の一節で、声が途切れる。白瀬は、口もとを両手で覆った",
+      "k": "C4-M:4-M-8"
+    }, {
+      "id": "4-M-9",
+      "t": "line",
+      "w": "shirase",
+      "x": "……やっぱり、歌えない。この歌だけは",
+      "k": "C4-M:4-M-9"
+    }, {
+      "id": "4-M-10",
+      "t": "band",
+      "x": "ボーン(ホールの柱時計が、1回鳴る)",
+      "fx": ["se"],
+      "se": "bell",
+      "k": "C4-M:4-M-10"
+    }, {
+      "id": "4-M-11",
+      "t": "line",
+      "w": "shirase",
+      "x": "(びくりと肩をすくめる)……鐘の音を聞くと、今でも、手が勝手に震えるんです",
+      "k": "C4-M:4-M-11"
+    }, {
+      "id": "4-M-12",
+      "t": "line",
+      "w": "shirase",
+      "x": "(便せんに向かって)……カノンさん。ごめんなさい。……ごめんなさい",
+      "k": "C4-M:4-M-12"
+    }, {
+      "id": "4-M-13",
+      "t": "line",
+      "w": "shirase",
+      "x": "明日。みなさんの前で、全部お話ししよう。……もう、誰かの後ろに隠れるのは、やめにしないと",
+      "k": "C4-M:4-M-13"
+    }, {
+      "id": "4-M-14",
+      "t": "band",
+      "x": "白瀬は、書きかけの便せんを小さく折りたたみ、ケープのポケットにしまった",
+      "k": "C4-M:4-M-14"
+    }, {
+      "id": "4-M-15",
+      "t": "band",
+      "x": "扉の外の廊下を、誰かが、ゆっくりと通り過ぎていく",
+      "k": "C4-M:4-M-15"
+    }, {
+      "id": "4-M-16",
+      "t": "band",
+      "x": "足音は、白瀬の部屋の前で、ほんの少しだけ止まり——また、遠ざかっていった",
+      "k": "C4-M:4-M-16"
     }]
   }, {
     "id": "C5-1",
@@ -116876,7 +117339,7 @@ const XMAS_NOVEL_SCRIPT = {
     "cond": null,
     "bgm": "melo_dullahan_clockwork_alt",
     "bg": "鏡の廊下",
-    "next": "C6-1",
+    "next": "C5-M",
     "rows": [{
       "id": "5-5-1",
       "t": "line",
@@ -116929,6 +117392,125 @@ const XMAS_NOVEL_SCRIPT = {
         "st": "dead"
       }],
       "k": "C5-5:5-5-7"
+    }]
+  }, {
+    "id": "C5-M",
+    "chapter": "C5",
+    "title": "幕間 手をつけないクッキー",
+    "cond": null,
+    "bgm": "melo_dullahan_clockwork",
+    "bg": "台所",
+    "next": "C6-1",
+    "rows": [{
+      "id": "5-M-1",
+      "t": "band",
+      "x": "幕間 〜手をつけないクッキー〜",
+      "k": "C5-M:5-M-1"
+    }, {
+      "id": "5-M-2",
+      "t": "band",
+      "x": "白瀬が見つかった日の昼。台所。ドラが一人、裏口の前の床に、膝を抱えて座っている",
+      "k": "C5-M:5-M-2"
+    }, {
+      "id": "5-M-3",
+      "t": "line",
+      "w": "mochimaru",
+      "x": "ドラさん、ここにいたっちー。……朝ごはん、ひと口も食べてなかったっちー",
+      "k": "C5-M:5-M-3"
+    }, {
+      "id": "5-M-4",
+      "t": "line",
+      "w": "dra",
+      "x": "……腹、減ってないんだ",
+      "e": "troubled",
+      "k": "C5-M:5-M-4"
+    }, {
+      "id": "5-M-5",
+      "t": "line",
+      "w": "mochimaru",
+      "x": "ドラさんがそう言うの、はじめて聞いたっちー……",
+      "k": "C5-M:5-M-5"
+    }, {
+      "id": "5-M-6",
+      "t": "band",
+      "x": "もちまるが、小皿にクッキーを3枚のせて、そっとドラの横に置く。ドラは、手を伸ばさない",
+      "k": "C5-M:5-M-6"
+    }, {
+      "id": "5-M-7",
+      "t": "line",
+      "w": "dra",
+      "x": "なあ、もちまる。……黒羽のおっちゃんがいなくなった夜、おで、ここでクッキー食ってたよな",
+      "e": "normal",
+      "k": "C5-M:5-M-7"
+    }, {
+      "id": "5-M-8",
+      "t": "line",
+      "w": "mochimaru",
+      "x": "うん。夜に食べると、うまさが倍だって、言ってたっちー",
+      "k": "C5-M:5-M-8"
+    }, {
+      "id": "5-M-9",
+      "t": "line",
+      "w": "dra",
+      "x": "あのとき、急に真っ暗になってさ。……それで",
+      "e": "troubled",
+      "k": "C5-M:5-M-9"
+    }, {
+      "id": "5-M-10",
+      "t": "band",
+      "x": "ドラは、裏口のかんぬきを見上げる。何か言いかけて、大きな手で、自分の口をふさいだ",
+      "k": "C5-M:5-M-10"
+    }, {
+      "id": "5-M-11",
+      "t": "line",
+      "w": "mochimaru",
+      "x": "……ドラさん？",
+      "k": "C5-M:5-M-11"
+    }, {
+      "id": "5-M-12",
+      "t": "line",
+      "w": "dra",
+      "x": "……もちまる。知ってることを、知らないふりするのって、悪いことかな",
+      "e": "troubled",
+      "k": "C5-M:5-M-12"
+    }, {
+      "id": "5-M-13",
+      "t": "line",
+      "w": "mochimaru",
+      "x": "ぼくは、うそがつけないっちー。だから、知らないふりも、上手にできないっちー",
+      "k": "C5-M:5-M-13"
+    }, {
+      "id": "5-M-14",
+      "t": "line",
+      "w": "mochimaru",
+      "x": "でも……ドラさんが黙ってるなら、きっと、誰かのためなんだっちー。ぼくは、そう思うっちー",
+      "k": "C5-M:5-M-14"
+    }, {
+      "id": "5-M-15",
+      "t": "line",
+      "w": "dra",
+      "x": "(膝に顔をうずめる)……おで、どうしたらいいんだ……",
+      "e": "crying",
+      "k": "C5-M:5-M-15"
+    }, {
+      "id": "5-M-16",
+      "t": "band",
+      "x": "もちまるは何も言わずに、ドラのとなりに座った。二人のあいだで、クッキーが少しずつ冷めていく",
+      "k": "C5-M:5-M-16"
+    }, {
+      "id": "5-M-17",
+      "t": "line",
+      "w": "dra",
+      "x": "……ありがとな、もちまる。……1枚、もらう",
+      "e": "troubled",
+      "k": "C5-M:5-M-17"
+    }, {
+      "id": "5-M-18",
+      "t": "line",
+      "w": "dra",
+      "x": "(ゆっくりかじって)……うまいな。やっぱり、もちまるは天才だ",
+      "e": "normal",
+      "k": "C5-M:5-M-18"
     }]
   }, {
     "id": "C6-1",
@@ -117592,7 +118174,7 @@ const XMAS_NOVEL_SCRIPT = {
     "cond": null,
     "bgm": "melo_dullahan_steel_ghost",
     "bg": "きゅうこの部屋",
-    "next": "C7-1",
+    "next": "C6-M",
     "rows": [{
       "id": "6-9-1",
       "t": "band",
@@ -117649,6 +118231,105 @@ const XMAS_NOVEL_SCRIPT = {
         "st": "hurt"
       }],
       "k": "C6-9:6-9-6"
+    }]
+  }, {
+    "id": "C6-M",
+    "chapter": "C6",
+    "title": "幕間 帳面の名前",
+    "cond": null,
+    "bgm": "close_to_your_heart_alt",
+    "bg": "ペンションのホール(柱時計",
+    "next": "C7-1",
+    "rows": [{
+      "id": "6-M-1",
+      "t": "band",
+      "x": "幕間 〜帳面の名前〜",
+      "k": "C6-M:6-M-1"
+    }, {
+      "id": "6-M-2",
+      "t": "band",
+      "x": "崖から戻った日の昼。ホールの柱時計の前に、もちまるが帳面を抱えて立っている",
+      "k": "C6-M:6-M-2"
+    }, {
+      "id": "6-M-3",
+      "t": "band",
+      "x": "カチ、カチ、カチ(柱時計は、まだ動いている)",
+      "fx": ["se"],
+      "se": "bell",
+      "k": "C6-M:6-M-3"
+    }, {
+      "id": "6-M-4",
+      "t": "line",
+      "w": "mochimaru",
+      "x": "(帳面をめくる)……『ねじ巻き きゅうこさん』。……毎晩、ちゃんと巻いてくれてたっちー",
+      "k": "C6-M:6-M-4"
+    }, {
+      "id": "6-M-5",
+      "t": "line",
+      "w": "mochimaru",
+      "x": "今夜からは、ぼくが巻いたほうが、いいのかな……",
+      "k": "C6-M:6-M-5"
+    }, {
+      "id": "6-M-6",
+      "t": "band",
+      "x": "ねじ巻きの鍵に手を伸ばしかけて、もちまるは、その手を引っ込める",
+      "k": "C6-M:6-M-6"
+    }, {
+      "id": "6-M-7",
+      "t": "line",
+      "w": "mochimaru",
+      "x": "……ううん。これは、きゅうこさんの仕事だっちー。帰ってきたら、また巻いてもらうっちー",
+      "k": "C6-M:6-M-7"
+    }, {
+      "id": "6-M-8",
+      "t": "band",
+      "x": "帳面を、うしろのほうから、ゆっくりとめくっていく。黄ばんだページ。12年前の、12月24日",
+      "k": "C6-M:6-M-8"
+    }, {
+      "id": "6-M-9",
+      "t": "line",
+      "w": "mochimaru",
+      "x": "……あの夜、ぼく、暖炉でスープを温めて待ってたっちー。カノンさんが戻ってきたら、すぐ飲んでもらえるように",
+      "k": "C6-M:6-M-9"
+    }, {
+      "id": "6-M-10",
+      "t": "line",
+      "w": "mochimaru",
+      "x": "でも、あのスープは、誰も飲まなかったっちー",
+      "k": "C6-M:6-M-10"
+    }, {
+      "id": "6-M-11",
+      "t": "band",
+      "x": "にじんだ字の上に、ぽたりと、しずくが落ちる",
+      "k": "C6-M:6-M-11"
+    }, {
+      "id": "6-M-12",
+      "t": "line",
+      "w": "mochimaru",
+      "x": "ぼく、怖がりだから。あの夜、下で誰かが『黒いサンタ』って叫んだとき、階段の上から、動けなかったっちー",
+      "k": "C6-M:6-M-12"
+    }, {
+      "id": "6-M-13",
+      "t": "line",
+      "w": "mochimaru",
+      "x": "もし、あのとき、ぼくが下りていって、扉を開けてたら……",
+      "k": "C6-M:6-M-13"
+    }, {
+      "id": "6-M-14",
+      "t": "band",
+      "x": "もちまるは、新しいページに、短く書きこむ",
+      "k": "C6-M:6-M-14"
+    }, {
+      "id": "6-M-15",
+      "t": "line",
+      "w": "mochimaru",
+      "x": "(書きながら)……『12月23日。きゅうこさんが、戻らないっちー。でも、ぼくは、待ってるっちー』",
+      "k": "C6-M:6-M-15"
+    }, {
+      "id": "6-M-16",
+      "t": "band",
+      "x": "柱時計の振り子が、ゆっくりと揺れている。誰も、その針を見上げなかった",
+      "k": "C6-M:6-M-16"
     }]
   }, {
     "id": "C7-1",
@@ -121653,6 +122334,431 @@ const XMAS_NOVEL_SCRIPT = {
       "k": "OUT-B:OUT-B-7"
     }],
     "outside": true
+  }, {
+    "id": "C12-1",
+    "chapter": "C12",
+    "title": "ホールの子守歌",
+    "cond": null,
+    "bgm": "close_to_your_heart_alt",
+    "bg": "12年前のペンションのホール",
+    "next": "C12-2",
+    "rows": [{
+      "id": "12-1-1",
+      "t": "band",
+      "x": "過去編 〜12年前の聖夜〜",
+      "k": "C12-1:12-1-1"
+    }, {
+      "id": "12-1-2",
+      "t": "band",
+      "x": "♪……ポロン、ポロロン……(12年前の、12月24日。ペンション・シュプールのホールに、オルゴールの子守歌が流れる)",
+      "fx": ["se"],
+      "se": "music",
+      "k": "C12-1:12-1-2"
+    }, {
+      "id": "12-1-3",
+      "t": "band",
+      "x": "もみの木のそばで、ローズ色の長い髪の女の人が、ねじを巻いている。その膝に、同じ色の長い髪の、小さな子",
+      "k": "C12-1:12-1-3"
+    }, {
+      "id": "12-1-4",
+      "t": "line",
+      "n": "カノン",
+      "x": "はい、少し早いけど、今年のプレゼント。銀の音符をつけてみたの。……この子守歌は、あなたのためだけの歌だからね",
+      "k": "C12-1:12-1-4"
+    }, {
+      "id": "12-1-5",
+      "t": "line",
+      "n": "カノン",
+      "x": "それから、壁の中の秘密の道は、二人だけのないしょ。……ね？",
+      "k": "C12-1:12-1-5"
+    }, {
+      "id": "12-1-6",
+      "t": "line",
+      "n": "幼いきゅうこ",
+      "x": "(小さなオルゴールを両手で抱えて)うん、ないしょ。……お母さんの歌だ",
+      "k": "C12-1:12-1-6"
+    }, {
+      "id": "12-1-7",
+      "t": "line",
+      "n": "幼いイチーカ",
+      "x": "カノンさんのところの子、今年も髪が伸びたのね。ほんとうに、お人形さんみたい",
+      "k": "C12-1:12-1-7"
+    }, {
+      "id": "12-1-8",
+      "t": "band",
+      "x": "パチ、パチ(暖炉の前から、ゆっくりとした拍手。灰色の背広の男と、そのうしろで目を伏せる、若い歌手)",
+      "fx": ["se"],
+      "se": "clap",
+      "k": "C12-1:12-1-8"
+    }, {
+      "id": "12-1-9",
+      "t": "line",
+      "w": "kuroba",
+      "x": "いい曲だ。実にいい。……その曲、わたしの事務所で買い取ろう。値段は、そちらの言い値でかまわん",
+      "k": "C12-1:12-1-9"
+    }, {
+      "id": "12-1-10",
+      "t": "line",
+      "n": "カノン",
+      "x": "ごめんなさい。この曲は、売り物じゃないんです。この子に歌うための歌ですから",
+      "k": "C12-1:12-1-10"
+    }, {
+      "id": "12-1-11",
+      "t": "line",
+      "w": "kuroba",
+      "x": "(懐中時計のふたを、ぱちんと閉じる)……時は金なり、だよ。気が変わったら、いつでも言いたまえ",
+      "k": "C12-1:12-1-11"
+    }],
+    "jumpOnly": true,
+    "past": true
+  }, {
+    "id": "C12-2",
+    "chapter": "C12",
+    "title": "熱",
+    "cond": null,
+    "bgm": "melo_dullahan_clockwork",
+    "bg": "12年前の客室(ろうそく",
+    "next": "C12-3",
+    "rows": [{
+      "id": "12-2-1",
+      "t": "band",
+      "x": "夜。外は、ひどい吹雪になった。灯りが消え、ペンションじゅうが、ろうそくの火だけになる",
+      "k": "C12-2:12-2-1"
+    }, {
+      "id": "12-2-2",
+      "t": "line",
+      "n": "幼いきゅうこ",
+      "x": "(真っ赤な顔で)……お母さん、あつい……",
+      "k": "C12-2:12-2-2"
+    }, {
+      "id": "12-2-3",
+      "t": "line",
+      "n": "カノン",
+      "x": "すごい熱……。お薬、切らしちゃった。ふもとの薬屋さんで、もらってくるね",
+      "k": "C12-2:12-2-3"
+    }, {
+      "id": "12-2-5",
+      "t": "line",
+      "n": "カノン",
+      "x": "この吹雪でも、朝まで待ったら、この子が、もっと苦しくなります。……お願いです。0時の鐘で、裏口を開けて待っていてください。鐘を目印に、戻りますから",
+      "k": "C12-2:12-2-5"
+    }, {
+      "id": "12-2-6",
+      "t": "line",
+      "n": "祖父",
+      "x": "……分かりました。0時の鐘で、必ず開けて待っています",
+      "k": "C12-2:12-2-6"
+    }, {
+      "id": "12-2-7",
+      "t": "line",
+      "n": "カノン",
+      "x": "(子の額をなでる)0時の鐘で戻るからね。……オルゴール、巻いて待っててね",
+      "k": "C12-2:12-2-7"
+    }, {
+      "id": "12-2-8",
+      "t": "line",
+      "n": "幼いきゅうこ",
+      "x": "……うん。はやくね、お母さん",
+      "k": "C12-2:12-2-8"
+    }, {
+      "id": "12-2-9",
+      "t": "band",
+      "x": "廊下の暗がり。半分開いた扉のかげで、黒羽が、その話を聞いていた",
+      "k": "C12-2:12-2-9"
+    }, {
+      "id": "12-2-10",
+      "t": "band",
+      "x": "23時すぎ。誰もいないホールで、黒羽が柱時計のガラス戸を開ける。懐中時計と見比べながら、長い針を、指で押していく",
+      "k": "C12-2:12-2-10"
+    }, {
+      "id": "12-2-11",
+      "t": "line",
+      "w": "kuroba",
+      "x": "……少し、頭を冷やしてもらうだけだ。吹雪の中で、身の程を知ればいい",
+      "k": "C12-2:12-2-11"
+    }, {
+      "id": "12-2-12",
+      "t": "line",
+      "w": "kuroba",
+      "x": "(台所をのぞいて)白瀬。0時の鐘が鳴ったら、裏口のかんぬきを閉めておけ。吹雪が入る",
+      "k": "C12-2:12-2-12"
+    }],
+    "jumpOnly": true,
+    "past": true
+  }, {
+    "id": "C12-3",
+    "chapter": "C12",
+    "title": "ふもとの薬屋",
+    "cond": null,
+    "bgm": "melo_dullahan_steel_ghost",
+    "bg": "12年前の雪の山道(吹雪",
+    "next": "C12-4",
+    "rows": [{
+      "id": "12-3-1",
+      "t": "band",
+      "x": "同じころ。山のふもと。吹雪で、町の店は、どこもいつもより早く戸を閉めていた",
+      "k": "C12-3:12-3-1"
+    }, {
+      "id": "12-3-2",
+      "t": "band",
+      "x": "ドン、ドン、ドン(閉まった薬屋の戸を、叩く音)",
+      "fx": ["se"],
+      "se": "impact",
+      "k": "C12-3:12-3-2"
+    }, {
+      "id": "12-3-3",
+      "t": "line",
+      "n": "カノン",
+      "x": "すみません！ 開けてください！ 子どもが、熱を出しているんです！",
+      "k": "C12-3:12-3-3"
+    }, {
+      "id": "12-3-4",
+      "t": "line",
+      "n": "幼いえるびん",
+      "x": "……お父さん。誰か、戸を叩いてるよ",
+      "k": "C12-3:12-3-4"
+    }, {
+      "id": "12-3-5",
+      "t": "line",
+      "n": "薬屋の主人",
+      "x": "こんな吹雪の晩に、お客なんか来るものか。風の音だよ。……さあ、もう寝なさい",
+      "k": "C12-3:12-3-5"
+    }, {
+      "id": "12-3-6",
+      "t": "band",
+      "x": "戸を叩く音は、いつまでも止まなかった。ようやく戸が開いたとき、雪まみれの女の人は、凍えた手で、何度も頭を下げた",
+      "k": "C12-3:12-3-6"
+    }, {
+      "id": "12-3-7",
+      "t": "line",
+      "n": "カノン",
+      "x": "ありがとうございます……！ 急がなきゃ。0時の鐘に、間に合わない",
+      "k": "C12-3:12-3-7"
+    }],
+    "jumpOnly": true,
+    "past": true
+  }, {
+    "id": "C12-4",
+    "chapter": "C12",
+    "title": "早すぎた鐘",
+    "cond": null,
+    "bgm": "melo_dullahan_clockwork",
+    "bg": "12年前の夜のホール",
+    "next": "C12-5",
+    "rows": [{
+      "id": "12-4-1",
+      "t": "line",
+      "w": "mochimaru",
+      "x": "(暖炉の鍋をかき混ぜて)カノンさんが戻ってきたら、すぐ、あったかいスープを飲んでもらうっちー",
+      "k": "C12-4:12-4-1"
+    }, {
+      "id": "12-4-2",
+      "t": "band",
+      "x": "ボーン……ボーン……(柱時計が、12回鳴る)",
+      "fx": ["se"],
+      "se": "bell",
+      "k": "C12-4:12-4-2"
+    }, {
+      "id": "12-4-3",
+      "t": "line",
+      "w": "mochimaru",
+      "x": "……あれ？ 0時の鐘、なんだか早いっちー",
+      "k": "C12-4:12-4-3"
+    }, {
+      "id": "12-4-4",
+      "t": "band",
+      "x": "暖炉のそばの椅子で、黒羽が、懐中時計のふたをそっと開ける。針は、23時47分",
+      "k": "C12-4:12-4-4"
+    }, {
+      "id": "12-4-5",
+      "t": "band",
+      "x": "ガタン(台所で、白瀬が、言われたとおりに、裏口のかんぬきを下ろす)",
+      "fx": ["se"],
+      "se": "impact",
+      "k": "C12-4:12-4-5"
+    }, {
+      "id": "12-4-6",
+      "t": "line",
+      "n": "祖父",
+      "x": "(ランプを手に、台所へ急いで)鐘だ、裏口を……。……閉まっている？ 誰が……",
+      "k": "C12-4:12-4-6"
+    }, {
+      "id": "12-4-7",
+      "t": "line",
+      "w": "kuroba",
+      "x": "ああ、主人。あの女なら、さっき戻ってきたよ。雪を払って、2階へ上がっていった。だから、閉めさせたんだ",
+      "k": "C12-4:12-4-7"
+    }, {
+      "id": "12-4-8",
+      "t": "band",
+      "x": "祖父は2階へ上がり、カノンの部屋の前で、耳をすませる。扉の向こうから、かすかに、オルゴールの音",
+      "k": "C12-4:12-4-8"
+    }, {
+      "id": "12-4-9",
+      "t": "line",
+      "n": "祖父",
+      "x": "(ほっと息をつく)……親子で、眠ったんだな。起こしてしまっては、かわいそうだ。わしも、少し休ませてもらおう",
+      "k": "C12-4:12-4-9"
+    }, {
+      "id": "12-4-10",
+      "t": "line",
+      "w": "mochimaru",
+      "x": "(帳面に書きつける)……『0時の鐘、なんだか早かったっちー。オーナーが裏口を開けに行ったら、もう、かんぬきが閉まってたっちー』。……ぼく、2階の見回りに行ってくるっちー",
+      "k": "C12-4:12-4-10"
+    }],
+    "jumpOnly": true,
+    "past": true
+  }, {
+    "id": "C12-5",
+    "chapter": "C12",
+    "title": "窓の外の影",
+    "cond": null,
+    "bgm": "melo_dullahan_steel_ghost",
+    "bg": "12年前の夜のホール",
+    "next": "C12-6",
+    "rows": [{
+      "id": "12-5-1",
+      "t": "band",
+      "x": "本当の0時。停電で暖炉の前に集まっていた客たちの、すぐそばの窓。その外に、雪まみれの影が、ふらりと立った",
+      "k": "C12-5:12-5-1"
+    }, {
+      "id": "12-5-2",
+      "t": "line",
+      "n": "幼いももすけ",
+      "x": "ママ、見て！ ……黒いサンタがいる！ 黒いサンタが、こっち見てる！",
+      "k": "C12-5:12-5-2"
+    }, {
+      "id": "12-5-3",
+      "t": "band",
+      "x": "窓ガラスを、雪まみれの手が叩く。吹雪の音にまぎれて、声は、一つも聞こえない",
+      "k": "C12-5:12-5-3"
+    }, {
+      "id": "12-5-4",
+      "t": "line",
+      "w": "momosuke",
+      "x": "見ちゃだめ！ ……やだ、何なの、あれ……！",
+      "k": "C12-5:12-5-4"
+    }, {
+      "id": "12-5-5",
+      "t": "line",
+      "w": "kuroba",
+      "x": "(窓から目をそらして)……開けるな。この吹雪だ。何が入ってくるか分からんぞ",
+      "k": "C12-5:12-5-5"
+    }, {
+      "id": "12-5-6",
+      "t": "band",
+      "x": "大人たちは、泣きじゃくる子を抱いて、暖炉の前から動かなかった。誰も、扉を開けに行かなかった",
+      "k": "C12-5:12-5-6"
+    }, {
+      "id": "12-5-7",
+      "t": "band",
+      "x": "影は、しばらく窓の外に立っていた。それから、よろめくように、裏口のほうへ消えていった",
+      "k": "C12-5:12-5-7"
+    }, {
+      "id": "12-5-8",
+      "t": "band",
+      "x": "2階の部屋。熱にうかされた子が、銀の音符のオルゴールを抱きしめていた。……お母さんの歌が止まらないように、何度も、何度も、ねじを巻いて",
+      "k": "C12-5:12-5-8"
+    }],
+    "jumpOnly": true,
+    "past": true
+  }, {
+    "id": "C12-6",
+    "chapter": "C12",
+    "title": "雪原の朝",
+    "cond": null,
+    "bgm": "melo_sad_song_short",
+    "bg": "12年前の朝の雪原",
+    "next": "C12-7",
+    "rows": [{
+      "id": "12-6-1",
+      "t": "band",
+      "x": "朝。裏口から少し離れた雪の上に、ローズ色の髪の人が、うつ伏せに倒れていた。胸に抱いた薬の包みを、最後まで、しっかりと握ったまま",
+      "fx": ["fallen"],
+      "k": "C12-6:12-6-1"
+    }, {
+      "id": "12-6-2",
+      "t": "line",
+      "n": "祖父",
+      "x": "カノンさん……！ 戻られたと……戻られたと、聞いたのに……！",
+      "k": "C12-6:12-6-2"
+    }, {
+      "id": "12-6-3",
+      "t": "line",
+      "w": "shirase",
+      "x": "(裏口の前で、立ちつくす)……外に、いらしたんですか。……わたしが……わたしが、閉めた……",
+      "k": "C12-6:12-6-3"
+    }, {
+      "id": "12-6-4",
+      "t": "band",
+      "x": "黒羽は、雪原に背を向けた。誰にも聞こえない声で、つぶやく",
+      "k": "C12-6:12-6-4"
+    }, {
+      "id": "12-6-5",
+      "t": "line",
+      "w": "kuroba",
+      "x": "……あいつが悪いんだ。売れと言ったのに。……わたしは、何もしていない。鐘が鳴って、扉が閉まった。それだけだ",
+      "k": "C12-6:12-6-5"
+    }, {
+      "id": "12-6-6",
+      "t": "band",
+      "x": "その日から、ふもとの町で、ひとつの言い伝えがささやかれるようになった。『吹雪の夜、黒いサンタが来て、連れていく』",
+      "k": "C12-6:12-6-6"
+    }, {
+      "id": "12-6-7",
+      "t": "line",
+      "n": "幼いきゅうこ",
+      "x": "(2階の窓に額をつけて、雪原へ走っていく大人たちを見ている)……お母さん。鐘、鳴ったよ。……どうして、戻ってこないの",
+      "k": "C12-6:12-6-7"
+    }],
+    "jumpOnly": true,
+    "past": true
+  }, {
+    "id": "C12-7",
+    "chapter": "C12",
+    "title": "開けておく扉",
+    "cond": null,
+    "bgm": "close_to_your_heart_alt",
+    "bg": "12年前の裏口",
+    "next": null,
+    "rows": [{
+      "id": "12-7-1",
+      "t": "band",
+      "x": "山道があいた日。黒羽は、誰もいないカノンの部屋から、楽譜のケースを持ち去った。次の年、白瀬が歌う『聖夜のロンド』が、町じゅうのラジオから流れた。作った人の名前は、どこにもなかった",
+      "k": "C12-7:12-7-1"
+    }, {
+      "id": "12-7-2",
+      "t": "band",
+      "x": "小さな子は、遠くの親せきに引き取られていった。銀の音符のオルゴールを、胸に抱いて",
+      "k": "C12-7:12-7-2"
+    }, {
+      "id": "12-7-3",
+      "t": "line",
+      "n": "祖父",
+      "x": "カノンさんの部屋は、あのままにしておこう。あの子がいつか戻ってきたとき、迷わないように。……それから、もちまる。これからは、吹雪の夜は、裏口のかんぬきを開けておいておくれ",
+      "k": "C12-7:12-7-3"
+    }, {
+      "id": "12-7-4",
+      "t": "line",
+      "w": "mochimaru",
+      "x": "……はいっちー。外に出た人が、すぐ戻れるように。ぼく、ずっと、そうするっちー",
+      "k": "C12-7:12-7-4"
+    }, {
+      "id": "12-7-5",
+      "t": "band",
+      "x": "♪……ポロン、ポロロン……(——そして、12年後の聖夜。開け放した裏口から、同じ子守歌が、雪の中へ流れていく)",
+      "fx": ["se"],
+      "se": "music",
+      "k": "C12-7:12-7-5"
+    }, {
+      "id": "12-7-6",
+      "t": "band",
+      "x": "過去編 〜12年前の聖夜〜 おしまい",
+      "fx": ["title"],
+      "k": "C12-7:12-7-6"
+    }],
+    "jumpOnly": true,
+    "past": true
   }]
 };
 const XMAS_NOVEL_CSS = `
@@ -121661,6 +122767,7 @@ const XMAS_NOVEL_CSS = `
 .mh-nv-serif { font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'YuMincho', 'Noto Serif JP', 'Shippori Mincho', serif; }
 .mh-nv-stage { position: absolute; inset: 0; }
 .mh-nv-bg { position: absolute; inset: 0; background-size: cover; background-position: center; transition: opacity .6s ease; }
+.mh-nv-bg[data-xmas-novel-bg="past"] { filter: sepia(.75) saturate(.7) contrast(.92) brightness(.92); }
 .mh-nv-bg::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 55%, rgba(0,0,0,.42) 100%), radial-gradient(130% 90% at 50% 40%, transparent 40%, rgba(0,0,0,.72) 100%); }
 .mh-nv-snow { position: absolute; inset: -10% 0 0 0; pointer-events: none; opacity: .55;
   background-image: radial-gradient(1.6px 1.6px at 10% 20%, #fff 50%, transparent 51%), radial-gradient(1.2px 1.2px at 30% 70%, #fff 50%, transparent 51%),
@@ -121679,8 +122786,9 @@ const XMAS_NOVEL_CSS = `
   box-shadow: 0 0 0 1px rgba(232,196,106,.75), 0 0 0 4px rgba(10,20,48,.9), 0 0 0 5px rgba(232,196,106,.35), 0 12px 30px rgba(0,0,0,.55); }
 .mh-nv-name { position: absolute; top: -15px; left: 16px; padding: 3px 16px; border-radius: 6px; font-size: 15px; font-weight: 800; letter-spacing: .08em;
   background: linear-gradient(180deg, #1b2c5c, #0c1636); color: #f8e3a4; box-shadow: 0 0 0 1px rgba(232,196,106,.85); }
-.mh-nv-text { font-size: 17px; line-height: 1.75; font-weight: 600; white-space: pre-wrap; min-height: 3.5em; word-break: normal; line-break: strict; overflow-wrap: anywhere; }
-.mh-nv-text.band { text-align: center; color: #dfe6ff; font-style: normal; }
+.mh-nv-text { font-size: 17px; line-height: 1.75; font-weight: 600; white-space: pre-wrap; min-height: 3.5em; text-align: left; word-break: normal; line-break: normal; overflow-wrap: anywhere; text-wrap: wrap; }
+.mh-nv-plain { text-align: left; word-break: normal; line-break: normal; overflow-wrap: anywhere; text-wrap: wrap; }
+.mh-nv-text.band { text-align: left; color: #dfe6ff; font-style: normal; }
 .mh-nv-note { margin-top: 2px; font-size: 11px; color: #9fb0d8; }
 .mh-nv-next { position: absolute; right: 14px; bottom: 8px; width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-top: 9px solid #e8c46a; animation: mh-nv-bob 1s ease-in-out infinite; }
 @keyframes mh-nv-bob { 50% { transform: translateY(4px); } }
@@ -121732,7 +122840,7 @@ const XMAS_NOVEL_CSS = `
 .mh-nv-fig.laugh svg, .mh-nv-fig.laugh .mh-nv-boss { animation: mh-nv-laugh .25s ease-in-out 6; }
 @keyframes mh-nv-laugh { 50% { transform: translateY(-4px) scaleY(1.03); } }
 .mh-nv-person .flower { position: absolute; top: 30%; left: 50%; transform: translateX(-50%); font-size: 16px; color: #fff; text-shadow: 0 0 6px #fff; }
-.mh-nv-choice { width: 100%; min-height: 52px; padding: 10px 14px; border-radius: 12px; font-size: 15px; font-weight: 800; color: #fff3d0; text-align: center;
+.mh-nv-choice { width: 100%; min-height: 52px; padding: 10px 14px; border-radius: 12px; font-size: 15px; font-weight: 800; color: #fff3d0; text-align: left; word-break: normal; line-break: normal; overflow-wrap: anywhere; text-wrap: wrap;
   background: linear-gradient(180deg, rgba(27,44,92,.95), rgba(10,20,52,.95)); box-shadow: 0 0 0 1px #e8c46a, 0 6px 16px rgba(0,0,0,.45); }
 .mh-nv-choice:active { transform: scale(.98); }
 .mh-nv-curtain { position: absolute; inset: 0; z-index: 4; pointer-events: none; transform: translateY(-102%);
@@ -121833,7 +122941,8 @@ const XMAS_NOVEL_TINT = Object.freeze({
   night: 'linear-gradient(180deg, rgba(6,12,38,.62) 0%, rgba(8,12,34,.5) 100%)',
   candle: 'radial-gradient(60% 55% at 50% 45%, rgba(255,170,70,.16) 0%, rgba(20,10,4,.35) 55%, rgba(4,2,1,.7) 100%)',
   storm: 'linear-gradient(180deg, rgba(40,70,130,.28) 0%, rgba(10,20,50,.18) 100%)',
-  blackout: 'radial-gradient(45% 35% at 50% 40%, rgba(2,4,12,.8) 0%, rgba(0,0,0,.94) 70%)'
+  blackout: 'radial-gradient(45% 35% at 50% 40%, rgba(2,4,12,.8) 0%, rgba(0,0,0,.94) 70%)',
+  past: 'radial-gradient(80% 70% at 50% 45%, rgba(120,84,40,.18) 0%, rgba(70,44,18,.38) 70%, rgba(30,18,6,.72) 100%)'
 });
 const XMAS_NOVEL_BG = Object.freeze([{
   re: /停電|まっくら|真っ暗|暗転/,
@@ -121898,6 +123007,7 @@ const XMAS_NOVEL_BG_DEFAULT = {
   snow: true
 };
 const xmasNovelTintOf = (n, b) => {
+  if (/12年前/.test(n)) return 'past';
   if (b.tint) return b.tint;
   if (/ろうそく/.test(n) && b.img !== 'hall_night') return 'candle';
   if (/夜/.test(n) && b.day) return 'night';
@@ -122989,9 +124099,8 @@ const XmasNovelScreen = ({
     }, React.createElement("div", {
       className: "mh-nv-serif mh-nv-gold mb-2 text-[17px] font-black"
     }, "はじめから遊びますか？"), React.createElement("p", {
-      className: "mb-3 text-[12px] leading-relaxed text-slate-200",
-      style: JA_LABEL_STYLE
-    }, jaWrap('いまの続きの場所は消えます。エンドヒストリー・一発で当てた記録・読んだ印はそのまま残ります')), React.createElement("div", {
+      className: "mh-nv-plain mb-3 text-[12px] leading-relaxed text-slate-200"
+    }, "いまの続きの場所は消えます。エンドヒストリー・一発で当てた記録・読んだ印はそのまま残ります"), React.createElement("div", {
       className: "space-y-2"
     }, React.createElement("button", {
       type: "button",
@@ -123067,14 +124176,17 @@ const XmasNovelScreen = ({
     }, React.createElement("div", {
       className: "mh-nv-serif mh-nv-gold text-center text-[22px] font-black"
     }, "章から"), React.createElement("p", {
-      className: "mt-1 text-center text-[11px] text-slate-300",
-      style: JA_LABEL_STYLE
-    }, jaWrap('その章に入ったときの手がかりと選んだことから、読み直せます')), React.createElement("div", {
+      className: "mh-nv-plain mt-1 text-[11px] text-slate-300"
+    }, "その章に入ったときの手がかりと選んだことから、読み直せます"), React.createElement("div", {
       className: "mh-nv-rule"
     }), React.createElement("ul", {
       className: "space-y-2"
     }, xmasNovelChapters(S).filter(c => c.id !== 'END' && !c.outside).map(c => {
-      const snap = save.snaps[c.id];
+      const pastFirst = c.past ? xmasNovelScenes(S).find(x => x.chapter === c.id) : null;
+      const snap = c.past ? save.endings.includes('END-G') && pastFirst ? {
+        ...xmasNovelFreshCur(S),
+        scene: pastFirst.id
+      } : null : save.snaps[c.id];
       return React.createElement("li", {
         key: c.id
       }, React.createElement("button", {
@@ -123255,9 +124367,8 @@ const XmasNovelScreen = ({
   }, got.add ? '手がかり帳に書き足した' : '手がかりを手に入れた'), React.createElement("div", {
     className: "mh-nv-serif mh-nv-gold mt-1 text-[20px] font-black"
   }, "【", got.n, "】"), React.createElement("p", {
-    className: "mt-1 text-[12px] leading-relaxed text-slate-100",
-    style: JA_LABEL_STYLE
-  }, jaWrap(got.d))), card && React.createElement("div", {
+    className: "mh-nv-plain mt-1 whitespace-pre-wrap text-[12px] leading-relaxed text-slate-100"
+  }, got.d)), card && React.createElement("div", {
     className: "mh-nv-card",
     "data-xmas-novel-card": card.kind,
     onClick: advance
@@ -123306,7 +124417,11 @@ const XmasNovelScreen = ({
       className: "text-[12px] text-slate-200"
     }, card.fresh ? 'エンドヒストリーに記録しました' : 'エンドヒストリーに記録ずみ'), !card.replay && React.createElement("div", {
       className: "mt-1 text-[11px] text-slate-300"
-    }, "推理の問い 一発で当てた数 ", card.count, " / ", card.total), React.createElement("div", {
+    }, "推理の問い 一発で当てた数 ", card.count, " / ", card.total), !card.replay && card.ending.id === 'END-G' && xmasNovelChapters(S).some(c => c.past) && React.createElement("div", {
+      className: "mh-nv-serif mh-nv-gold mt-3 text-[13px] font-black",
+      "data-xmas-novel-past-open": true,
+      style: JA_LABEL_STYLE
+    }, jaWrap('過去編「12年前の聖夜」が、「章から」で読めるようになりました')), React.createElement("div", {
       className: "mt-5 space-y-2"
     }, card.retry && React.createElement("button", {
       type: "button",
@@ -123362,7 +124477,7 @@ const XmasNovelScreen = ({
   }, l.who && React.createElement("div", {
     className: "mh-nv-serif text-[11px] font-black text-amber-200"
   }, l.who), React.createElement("div", {
-    className: l.who ? 'text-slate-100' : 'text-center text-slate-300'
+    className: `mh-nv-plain ${l.who ? 'text-slate-100' : 'text-slate-300'}`
   }, l.text))) : React.createElement("div", {
     className: "text-[12px] text-slate-400"
   }, "まだありません")), React.createElement("button", {
@@ -123431,16 +124546,15 @@ const XmasNovelScreen = ({
     "data-xmas-novel-extra": x.key,
     onClick: () => answer(q, x.key)
   }, x.x)), q.once && React.createElement("div", {
-    className: "mt-2 text-center text-[11px] font-bold text-rose-200"
+    className: "mh-nv-plain mt-2 text-[11px] font-bold text-rose-200"
   }, "選んだら、やり直しはできません"), React.createElement("button", {
     type: "button",
     className: "mh-nv-btn wide mt-3",
     onClick: () => setSheet(null)
   }, "話をもう一度見る")), q && q.kind === 'action' && React.createElement(React.Fragment, null, React.createElement("div", {
     "data-xmas-novel-question": q.id,
-    className: "mh-nv-serif mh-nv-gold mb-3 text-center text-[17px] font-black",
-    style: JA_LABEL_STYLE
-  }, jaWrap(xmasNovelFill(q.x, playerName))), React.createElement("div", {
+    className: "mh-nv-plain mh-nv-serif mh-nv-gold mb-3 text-[17px] font-black"
+  }, xmasNovelFill(q.x, playerName)), React.createElement("div", {
     className: "space-y-2.5"
   }, xmasNovelOptionsOf(q, xmasNovelCtx(S, st.cur)).map(o => React.createElement("button", {
     type: "button",
@@ -123449,7 +124563,7 @@ const XmasNovelScreen = ({
     "data-xmas-novel-option": o.i,
     onClick: () => answer(q, o.i)
   }, xmasNovelFill(o.x, playerName)))), q.once && React.createElement("div", {
-    className: "mt-2 text-center text-[11px] font-bold text-rose-200"
+    className: "mh-nv-plain mt-2 text-[11px] font-bold text-rose-200"
   }, "選んだら、やり直しはできません")), sheet === 'menu' && React.createElement(React.Fragment, null, React.createElement("div", {
     className: "mh-nv-serif mh-nv-gold mb-3 text-center text-[18px] font-black"
   }, "メニュー"), React.createElement("div", {

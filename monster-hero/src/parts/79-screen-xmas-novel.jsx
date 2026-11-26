@@ -12,6 +12,7 @@ const XMAS_NOVEL_CSS = `
 .mh-nv-serif { font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'YuMincho', 'Noto Serif JP', 'Shippori Mincho', serif; }
 .mh-nv-stage { position: absolute; inset: 0; }
 .mh-nv-bg { position: absolute; inset: 0; background-size: cover; background-position: center; transition: opacity .6s ease; }
+.mh-nv-bg[data-xmas-novel-bg="past"] { filter: sepia(.75) saturate(.7) contrast(.92) brightness(.92); }
 .mh-nv-bg::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 55%, rgba(0,0,0,.42) 100%), radial-gradient(130% 90% at 50% 40%, transparent 40%, rgba(0,0,0,.72) 100%); }
 .mh-nv-snow { position: absolute; inset: -10% 0 0 0; pointer-events: none; opacity: .55;
   background-image: radial-gradient(1.6px 1.6px at 10% 20%, #fff 50%, transparent 51%), radial-gradient(1.2px 1.2px at 30% 70%, #fff 50%, transparent 51%),
@@ -30,8 +31,9 @@ const XMAS_NOVEL_CSS = `
   box-shadow: 0 0 0 1px rgba(232,196,106,.75), 0 0 0 4px rgba(10,20,48,.9), 0 0 0 5px rgba(232,196,106,.35), 0 12px 30px rgba(0,0,0,.55); }
 .mh-nv-name { position: absolute; top: -15px; left: 16px; padding: 3px 16px; border-radius: 6px; font-size: 15px; font-weight: 800; letter-spacing: .08em;
   background: linear-gradient(180deg, #1b2c5c, #0c1636); color: #f8e3a4; box-shadow: 0 0 0 1px rgba(232,196,106,.85); }
-.mh-nv-text { font-size: 17px; line-height: 1.75; font-weight: 600; white-space: pre-wrap; min-height: 3.5em; word-break: normal; line-break: strict; overflow-wrap: anywhere; }
-.mh-nv-text.band { text-align: center; color: #dfe6ff; font-style: normal; }
+.mh-nv-text { font-size: 17px; line-height: 1.75; font-weight: 600; white-space: pre-wrap; min-height: 3.5em; text-align: left; word-break: normal; line-break: normal; overflow-wrap: anywhere; text-wrap: wrap; }
+.mh-nv-plain { text-align: left; word-break: normal; line-break: normal; overflow-wrap: anywhere; text-wrap: wrap; }
+.mh-nv-text.band { text-align: left; color: #dfe6ff; font-style: normal; }
 .mh-nv-note { margin-top: 2px; font-size: 11px; color: #9fb0d8; }
 .mh-nv-next { position: absolute; right: 14px; bottom: 8px; width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-top: 9px solid #e8c46a; animation: mh-nv-bob 1s ease-in-out infinite; }
 @keyframes mh-nv-bob { 50% { transform: translateY(4px); } }
@@ -83,7 +85,7 @@ const XMAS_NOVEL_CSS = `
 .mh-nv-fig.laugh svg, .mh-nv-fig.laugh .mh-nv-boss { animation: mh-nv-laugh .25s ease-in-out 6; }
 @keyframes mh-nv-laugh { 50% { transform: translateY(-4px) scaleY(1.03); } }
 .mh-nv-person .flower { position: absolute; top: 30%; left: 50%; transform: translateX(-50%); font-size: 16px; color: #fff; text-shadow: 0 0 6px #fff; }
-.mh-nv-choice { width: 100%; min-height: 52px; padding: 10px 14px; border-radius: 12px; font-size: 15px; font-weight: 800; color: #fff3d0; text-align: center;
+.mh-nv-choice { width: 100%; min-height: 52px; padding: 10px 14px; border-radius: 12px; font-size: 15px; font-weight: 800; color: #fff3d0; text-align: left; word-break: normal; line-break: normal; overflow-wrap: anywhere; text-wrap: wrap;
   background: linear-gradient(180deg, rgba(27,44,92,.95), rgba(10,20,52,.95)); box-shadow: 0 0 0 1px #e8c46a, 0 6px 16px rgba(0,0,0,.45); }
 .mh-nv-choice:active { transform: scale(.98); }
 .mh-nv-curtain { position: absolute; inset: 0; z-index: 4; pointer-events: none; transform: translateY(-102%);
@@ -183,6 +185,8 @@ const XMAS_NOVEL_TINT = Object.freeze({
   candle: 'radial-gradient(60% 55% at 50% 45%, rgba(255,170,70,.16) 0%, rgba(20,10,4,.35) 55%, rgba(4,2,1,.7) 100%)',
   storm: 'linear-gradient(180deg, rgba(40,70,130,.28) 0%, rgba(10,20,50,.18) 100%)',
   blackout: 'radial-gradient(45% 35% at 50% 40%, rgba(2,4,12,.8) 0%, rgba(0,0,0,.94) 70%)',
+  // 12年前(過去編・r1126-046): 古い写真の色。ふちを暗くして、色あせた茶色をかぶせる
+  past: 'radial-gradient(80% 70% at 50% 45%, rgba(120,84,40,.18) 0%, rgba(70,44,18,.38) 70%, rgba(30,18,6,.72) 100%)',
 });
 const XMAS_NOVEL_BG = Object.freeze([
   { re: /停電|まっくら|真っ暗|暗転/, img: 'hall_night', tint: 'blackout' },
@@ -206,6 +210,7 @@ const XMAS_NOVEL_BG = Object.freeze([
 const XMAS_NOVEL_BG_DEFAULT = { grad: 'radial-gradient(120% 80% at 50% 0%, #17305f 0%, #0b1733 50%, #050a1a 100%)', snow: true };
 //  時間の言葉 → かぶせる色。昼の絵(day)だけ夜で暗くする(夜の絵にはかぶせない)
 const xmasNovelTintOf = (n, b) => {
+  if (/12年前/.test(n)) return 'past';
   if (b.tint) return b.tint;
   if (/ろうそく/.test(n) && b.img !== 'hall_night') return 'candle';
   if (/夜/.test(n) && b.day) return 'night';
@@ -780,7 +785,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
                 <div className="mh-nv-sheet" onClick={() => setConfirmNew(false)}>
                   <div className="mh-nv-panel mb-auto mt-auto max-w-sm text-center" onClick={(e) => e.stopPropagation()}>
                     <div className="mh-nv-serif mh-nv-gold mb-2 text-[17px] font-black">はじめから遊びますか？</div>
-                    <p className="mb-3 text-[12px] leading-relaxed text-slate-200" style={JA_LABEL_STYLE}>{jaWrap('いまの続きの場所は消えます。エンドヒストリー・一発で当てた記録・読んだ印はそのまま残ります')}</p>
+                    <p className="mh-nv-plain mb-3 text-[12px] leading-relaxed text-slate-200">いまの続きの場所は消えます。エンドヒストリー・一発で当てた記録・読んだ印はそのまま残ります</p>
                     <div className="space-y-2">
                       <button type="button" className="mh-nv-btn wide" data-xmas-novel-new-ok onClick={() => { setConfirmNew(false); start(xmasNovelFreshCur(S)); }}>はじめから</button>
                       <button type="button" className="mh-nv-btn wide" onClick={() => setConfirmNew(false)}>やめる</button>
@@ -818,11 +823,13 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
           {mode === 'chapters' && (
             <div className="w-full max-w-md" data-xmas-novel-chapter-list>
               <div className="mh-nv-serif mh-nv-gold text-center text-[22px] font-black">章から</div>
-              <p className="mt-1 text-center text-[11px] text-slate-300" style={JA_LABEL_STYLE}>{jaWrap('その章に入ったときの手がかりと選んだことから、読み直せます')}</p>
+              <p className="mh-nv-plain mt-1 text-[11px] text-slate-300">その章に入ったときの手がかりと選んだことから、読み直せます</p>
               <div className="mh-nv-rule" />
               <ul className="space-y-2">
                 {xmasNovelChapters(S).filter((c) => c.id !== 'END' && !c.outside).map((c) => {
-                  const snap = save.snaps[c.id];
+                  // 過去編は、真グッドを見たら開く(はじめの場面から読む・r1126-046)
+                  const pastFirst = c.past ? xmasNovelScenes(S).find((x) => x.chapter === c.id) : null;
+                  const snap = c.past ? (save.endings.includes('END-G') && pastFirst ? { ...xmasNovelFreshCur(S), scene: pastFirst.id } : null) : save.snaps[c.id];
                   return (
                     <li key={c.id}>
                       <button type="button" data-xmas-novel-chapter={c.id} disabled={!snap} className="mh-nv-clue flex items-center gap-3 disabled:opacity-40"
@@ -900,7 +907,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
         <div className="mh-nv-get" data-xmas-novel-got={got.n} onClick={() => setGot(null)}>
           <div className="text-[11px] font-black tracking-widest text-amber-200">{got.add ? '手がかり帳に書き足した' : '手がかりを手に入れた'}</div>
           <div className="mh-nv-serif mh-nv-gold mt-1 text-[20px] font-black">【{got.n}】</div>
-          <p className="mt-1 text-[12px] leading-relaxed text-slate-100" style={JA_LABEL_STYLE}>{jaWrap(got.d)}</p>
+          <p className="mh-nv-plain mt-1 whitespace-pre-wrap text-[12px] leading-relaxed text-slate-100">{got.d}</p>
         </div>
       )}
 
@@ -929,6 +936,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
                 <div className="mh-nv-rule" />
                 {!card.replay && <div className="text-[12px] text-slate-200">{card.fresh ? 'エンドヒストリーに記録しました' : 'エンドヒストリーに記録ずみ'}</div>}
                 {!card.replay && <div className="mt-1 text-[11px] text-slate-300">推理の問い 一発で当てた数 {card.count} / {card.total}</div>}
+                {!card.replay && card.ending.id === 'END-G' && xmasNovelChapters(S).some((c) => c.past) && <div className="mh-nv-serif mh-nv-gold mt-3 text-[13px] font-black" data-xmas-novel-past-open style={JA_LABEL_STYLE}>{jaWrap('過去編「12年前の聖夜」が、「章から」で読めるようになりました')}</div>}
                 <div className="mt-5 space-y-2">
                   {card.retry && <button type="button" className="mh-nv-btn wide mh-nv-serif" data-xmas-novel-retry onClick={() => { setCard(null); start(saveRef.current.cur); }}>{card.ending && card.ending.kind === 'forced' ? '選択の直前からやり直す' : '選び直す'}</button>}
                   {card.replay
@@ -951,7 +959,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
                 {log.length ? log.map((l, i) => (
                   <div key={i} className="text-[13px] leading-relaxed">
                     {l.who && <div className="mh-nv-serif text-[11px] font-black text-amber-200">{l.who}</div>}
-                    <div className={l.who ? 'text-slate-100' : 'text-center text-slate-300'}>{l.text}</div>
+                    <div className={`mh-nv-plain ${l.who ? 'text-slate-100' : 'text-slate-300'}`}>{l.text}</div>
                   </div>
                 )) : <div className="text-[12px] text-slate-400">まだありません</div>}
               </div>
@@ -987,17 +995,17 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
               {(q.extra || []).map((x) => (
                 <button type="button" key={x.key} className="mh-nv-choice mh-nv-serif mt-2" data-xmas-novel-extra={x.key} onClick={() => answer(q, x.key)}>{x.x}</button>
               ))}
-              {q.once && <div className="mt-2 text-center text-[11px] font-bold text-rose-200">選んだら、やり直しはできません</div>}
+              {q.once && <div className="mh-nv-plain mt-2 text-[11px] font-bold text-rose-200">選んだら、やり直しはできません</div>}
               <button type="button" className="mh-nv-btn wide mt-3" onClick={() => setSheet(null)}>話をもう一度見る</button>
             </>)}
             {q && q.kind === 'action' && (<>
-              <div data-xmas-novel-question={q.id} className="mh-nv-serif mh-nv-gold mb-3 text-center text-[17px] font-black" style={JA_LABEL_STYLE}>{jaWrap(xmasNovelFill(q.x, playerName))}</div>
+              <div data-xmas-novel-question={q.id} className="mh-nv-plain mh-nv-serif mh-nv-gold mb-3 text-[17px] font-black">{xmasNovelFill(q.x, playerName)}</div>
               <div className="space-y-2.5">
                 {xmasNovelOptionsOf(q, xmasNovelCtx(S, st.cur)).map((o) => (
                   <button type="button" key={o.i} className="mh-nv-choice mh-nv-serif" data-xmas-novel-option={o.i} onClick={() => answer(q, o.i)}>{xmasNovelFill(o.x, playerName)}</button>
                 ))}
               </div>
-              {q.once && <div className="mt-2 text-center text-[11px] font-bold text-rose-200">選んだら、やり直しはできません</div>}
+              {q.once && <div className="mh-nv-plain mt-2 text-[11px] font-bold text-rose-200">選んだら、やり直しはできません</div>}
             </>)}
             {sheet === 'menu' && (<>
               <div className="mh-nv-serif mh-nv-gold mb-3 text-center text-[18px] font-black">メニュー</div>
