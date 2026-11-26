@@ -267,9 +267,10 @@ const parseRow = (cells, where) => {
   let id = idCell; let cond = null;
   const cm = idCell.match(/^(.*?)\[([^\]]+)\]$/);
   if (cm) { id = cm[1]; cond = parseCond(cm[2]); }
-  // あつ派/ソラシド派(番号の末尾 a / s・第1章の A1 の1つめ/2つめ)
-  else if (/^\d+-\d+-\d+a$/.test(idCell)) cond = { any: [{ all: [{ k: 'f_A1', op: '=', v: 1 }] }] };
-  else if (/^\d+-\d+-\d+s$/.test(idCell)) cond = { any: [{ all: [{ k: 'f_A1', op: '=', v: 2 }] }] };
+  // あつ派/ソラシド派(番号の末尾 a / s・第1章の A1 の1つめ/2つめ)。
+  //   本編の 7-1-3a のほか、強制バッドの 2-X-4a・場面の 7-A-1a・エンドの G-17a・外側の OUT-G-3a も(r1126-043 主役の書き分け)
+  else if (/^(?:[A-Z]+\d*-|\d+-)(?:[0-9A-Z]+-)*\d+a$/.test(idCell)) cond = { any: [{ all: [{ k: 'f_A1', op: '=', v: 1 }] }] };
+  else if (/^(?:[A-Z]+\d*-|\d+-)(?:[0-9A-Z]+-)*\d+s$/.test(idCell)) cond = { any: [{ all: [{ k: 'f_A1', op: '=', v: 2 }] }] };
   // 結びの一言(末尾 g3 = 7問とも / g2 = 4〜6問 / g1 = 3問以下)
   else if (/g3$/.test(idCell)) cond = { any: [{ all: [{ k: 'score', op: '>=', v: 7 }] }] };
   else if (/g2$/.test(idCell)) cond = { any: [{ all: [{ k: 'score', op: '>=', v: 4 }, { k: 'score', op: '<=', v: 6 }] }] };
