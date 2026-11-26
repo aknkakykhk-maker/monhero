@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cb1f54addcb0f874
+// source-sha256: 2fd6ab3abd020d62
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -111889,7 +111889,8 @@ const RaidJackScreen = ({
   renderPlace,
   renderIcon,
   cardClass,
-  head = null
+  head = null,
+  shellClass = ''
 }) => {
   const [tab, setTab] = useState('a');
   const [sel, setSel] = useState(() => ({
@@ -111996,7 +111997,7 @@ const RaidJackScreen = ({
   const closedTier = tab === 'a' && !unlimited && current < tiers.length - 1 && aDefeated(current);
   const challengeLabel = !open ? windowState === 'before' ? 'まだ始まっていません' : '終了しました' : !isOpenTier ? '前の段階を倒すと開きます' : closedTier ? 'この段階は倒されました(次の段階へ)' : remaining <= 0 ? '今日の挑戦回数がありません' : 'この段階に挑戦する';
   return React.createElement("div", {
-    className: `${SCREEN_SHELL_CLASS} overflow-hidden [@media(orientation:landscape)_and_(max-height:520px)]:overflow-y-auto mh-scroll`,
+    className: `${SCREEN_SHELL_CLASS} overflow-hidden [@media(orientation:landscape)_and_(max-height:520px)]:overflow-y-auto mh-scroll ${shellClass}`,
     "data-raid-jack-screen": true
   }, head || React.createElement(ScreenHead, {
     title: React.createElement(RaidJackFitTitle, {
@@ -112586,15 +112587,15 @@ const XMAS_EVENT_POSTER_IMG = 'images/events/xmas-2026-event-wide.jpg';
 const XMAS_EVENT_TABS = Object.freeze([{
   id: 'story',
   label: '物語',
-  color: '#b91c1c'
+  color: '#b4232c'
 }, {
   id: 'raid',
   label: 'レイド',
-  color: '#1d4ed8'
+  color: '#15803d'
 }, {
   id: 'bonus',
   label: 'ボーナス',
-  color: '#047857'
+  color: '#a16207'
 }]);
 const XMAS_EVENT_WEEK = ['日', '月', '火', '水', '木', '金', '土'];
 const xmasEventDateLabel = (iso, withYear = false) => {
@@ -112674,7 +112675,24 @@ const XMAS_EVENT_BONUSES = Object.freeze([{
   big: '',
   body: 'ホームとタイトルがクリスマスの絵になります(設定の「ホーム画面アレンジ」で選べます)'
 }]);
-const XMAS_CAST_CSS = `
+const XMAS_EVENT_CSS = `
+.mh-xmas-shell { position: relative; isolation: isolate; background: radial-gradient(120% 60% at 50% 0%, #17305f 0%, #0b1733 45%, #060b1c 100%); }
+.mh-xmas-shell::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: .55;
+  background-image: radial-gradient(1.6px 1.6px at 12% 18%, #fff 50%, transparent 51%), radial-gradient(1.2px 1.2px at 32% 62%, #fff 50%, transparent 51%),
+    radial-gradient(2px 2px at 58% 28%, #fff 50%, transparent 51%), radial-gradient(1.3px 1.3px at 78% 74%, #fff 50%, transparent 51%),
+    radial-gradient(1.7px 1.7px at 90% 12%, #fff 50%, transparent 51%), radial-gradient(1.1px 1.1px at 45% 90%, #fff 50%, transparent 51%);
+  background-size: 220px 260px; animation: mh-xmas-snow 26s linear infinite; }
+@keyframes mh-xmas-snow { from { background-position: 0 0; } to { background-position: 40px 260px; } }
+.mh-xmas-title { background: linear-gradient(180deg, #fff6d6 0%, #f3cf72 55%, #c8923a 100%); -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: none; letter-spacing: .04em; }
+.mh-xmas-frame { border: 2px solid #e6c068; box-shadow: 0 0 0 2px #5c1414, 0 0 0 3px #e6c06866, 0 6px 16px #0008; }
+.mh-xmas-ribbon { position: relative; background: linear-gradient(180deg, #b3202a 0%, #7d1018 100%); border-top: 1.5px solid #f0c96c; border-bottom: 1.5px solid #f0c96c;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 10px) 50%, 100% 100%, 0 100%, 10px 50%); }
+.mh-xmas-card { background: linear-gradient(180deg, #13213f 0%, #0c162d 100%); border: 1px solid #e6c06855; }
+.mh-xmas-card[data-status="locked"], .mh-xmas-card[data-status="waiting"] { background: #0a1124; border-color: #ffffff12; }
+.mh-xmas-medal { background: radial-gradient(circle at 35% 30%, #fff3c4 0%, #e6c068 45%, #a87424 100%); color: #3a1d05; box-shadow: 0 0 0 2px #5c1414, 0 2px 4px #0008; }
+.mh-xmas-medal[data-dim] { background: #1c2742; color: #64748b; box-shadow: 0 0 0 1px #ffffff1a; }
+.mh-xmas-new { background: linear-gradient(180deg, #e11d48, #9f1239); box-shadow: 0 0 0 1px #f0c96c; }
+@media (prefers-reduced-motion: reduce) { .mh-xmas-shell::before { animation: none; } }
 @keyframes mh-xmas-cast-fade { from { filter: none; } to { filter: grayscale(1) brightness(.7); } }
 @keyframes mh-xmas-cast-stamp { 0% { opacity: 0; transform: rotate(-14deg) scale(2.2); } 60% { opacity: 1; transform: rotate(-14deg) scale(.92); } 100% { opacity: 1; transform: rotate(-14deg) scale(1); } }
 [data-xmas-cast-face][data-away] img { filter: grayscale(1) brightness(.7); }
@@ -112683,26 +112701,89 @@ const XMAS_CAST_CSS = `
 [data-xmas-cast-face][data-newly] [data-xmas-cast-stamp] { animation: mh-xmas-cast-stamp .5s 1.1s ease-out both; }
 @media (prefers-reduced-motion: reduce) { [data-xmas-cast-face] img, [data-xmas-cast-stamp] { animation: none !important; } }
 `;
+const useXmasEventCss = () => {
+  useEffect(() => {
+    if (typeof document === 'undefined' || document.getElementById('mh-xmas-event-css')) return;
+    const tag = document.createElement('style');
+    tag.id = 'mh-xmas-event-css';
+    tag.textContent = XMAS_EVENT_CSS;
+    document.head.appendChild(tag);
+  }, []);
+};
+const XmasHolly = ({
+  size = 22,
+  className = ''
+}) => React.createElement("svg", {
+  width: size,
+  height: size,
+  viewBox: "0 0 32 32",
+  "aria-hidden": "true",
+  className: className
+}, React.createElement("path", {
+  d: "M15 17 C11 9 5 9 2 12 C5 13 5 16 3 18 C7 17 9 20 9 22 C11 19 14 19 15 17Z",
+  fill: "#15803d",
+  stroke: "#0b4d24",
+  strokeWidth: "1"
+}), React.createElement("path", {
+  d: "M17 17 C21 9 27 9 30 12 C27 13 27 16 29 18 C25 17 23 20 23 22 C21 19 18 19 17 17Z",
+  fill: "#16a34a",
+  stroke: "#0b4d24",
+  strokeWidth: "1"
+}), React.createElement("circle", {
+  cx: "13.5",
+  cy: "18.5",
+  r: "3",
+  fill: "#dc2626",
+  stroke: "#7f1d1d",
+  strokeWidth: ".8"
+}), React.createElement("circle", {
+  cx: "18.5",
+  cy: "18.5",
+  r: "3",
+  fill: "#ef4444",
+  stroke: "#7f1d1d",
+  strokeWidth: ".8"
+}), React.createElement("circle", {
+  cx: "16",
+  cy: "14.5",
+  r: "3",
+  fill: "#dc2626",
+  stroke: "#7f1d1d",
+  strokeWidth: ".8"
+}), React.createElement("circle", {
+  cx: "15",
+  cy: "13.6",
+  r: ".9",
+  fill: "#fff",
+  opacity: ".7"
+}));
+const XmasSectionTitle = ({
+  children,
+  right = null
+}) => React.createElement("div", {
+  className: "mb-1.5 flex items-center gap-1.5 px-0.5"
+}, React.createElement(XmasHolly, {
+  size: 18
+}), React.createElement("span", {
+  className: "mh-xmas-title text-[13px] font-black"
+}, children), React.createElement("span", {
+  className: "h-px flex-1 bg-gradient-to-r from-amber-300/50 to-transparent",
+  "aria-hidden": "true"
+}), right);
 const XmasCastPanel = ({
   no,
   animate = false,
   compact = false
 }) => {
-  useEffect(() => {
-    if (typeof document === 'undefined' || document.getElementById('mh-xmas-cast-css')) return;
-    const tag = document.createElement('style');
-    tag.id = 'mh-xmas-cast-css';
-    tag.textContent = XMAS_CAST_CSS;
-    document.head.appendChild(tag);
-  }, []);
+  useXmasEventCss();
   const at = xmasStoryCastAt(no);
   if (!at.shown) return null;
   return React.createElement("section", {
     "data-xmas-cast-panel": no,
     "aria-label": "登場人物",
-    className: "rounded-2xl border border-amber-200/30 bg-slate-950/80 p-2"
-  }, React.createElement("div", {
-    className: "grid grid-cols-5 gap-1.5"
+    className: "mh-xmas-frame rounded-2xl bg-[#0a1430]/95 px-2 pb-2 pt-1.5"
+  }, React.createElement(XmasSectionTitle, null, "登場人物"), React.createElement("div", {
+    className: "grid grid-cols-5 gap-x-1.5 gap-y-1"
   }, XMAS_STORY_CAST.map(c => {
     const away = at.missing.includes(c.id);
     const newly = animate && at.newly.includes(c.id);
@@ -112713,7 +112794,7 @@ const XmasCastPanel = ({
       "data-newly": newly ? '' : undefined,
       className: "min-w-0 text-center"
     }, React.createElement("div", {
-      className: `relative mx-auto aspect-square w-full overflow-hidden rounded-md border ${away ? 'border-slate-600 bg-slate-800' : 'border-amber-200/50 bg-slate-700'} ${compact ? 'max-w-[46px]' : 'max-w-[64px]'}`
+      className: `relative mx-auto aspect-square w-full overflow-hidden rounded-md border-2 ${away ? 'border-slate-600 bg-slate-800' : 'border-[#f3e3b3] bg-[#2a3a62]'} ${compact ? 'max-w-[48px]' : 'max-w-[66px]'}`
     }, React.createElement("img", {
       src: xmasCastFaceOf(c),
       alt: "",
@@ -112721,21 +112802,21 @@ const XmasCastPanel = ({
     }), away && React.createElement("span", {
       "data-xmas-cast-stamp": true,
       "aria-label": "ゆくえ不明",
-      className: "absolute inset-0 m-auto flex h-max w-max flex-col items-center rounded border-2 border-rose-500 bg-white/80 px-0.5 text-[10px] font-black leading-none text-rose-600"
+      className: "absolute inset-0 m-auto flex h-max w-max flex-col items-center rounded border-2 border-rose-500 bg-white/85 px-0.5 text-[10px] font-black leading-none text-rose-600"
     }, React.createElement("span", {
       className: "py-px"
     }, "ゆくえ"), React.createElement("span", {
       className: "py-px"
     }, "不明"))), React.createElement("div", {
-      className: `mt-0.5 truncate text-[10px] font-black ${away ? 'text-slate-500' : 'text-slate-100'}`
+      className: `mt-0.5 truncate text-[10px] font-black ${away ? 'text-slate-500' : 'text-amber-50'}`
     }, c.name));
   })), React.createElement("div", {
     "data-xmas-cast-band": true,
-    className: "mt-1.5 rounded-lg bg-black/50 py-1 text-center text-[11px] font-black text-amber-100"
+    className: "mh-xmas-ribbon mt-1.5 py-1 text-center text-[11px] font-black text-amber-50"
   }, "のこった人 ", React.createElement("b", {
-    className: "text-white"
-  }, at.left), "人 / 空になった箱 ", React.createElement("b", {
-    className: "text-white"
+    className: "text-[13px] text-white"
+  }, at.left), "人 ／ 空になった箱 ", React.createElement("b", {
+    className: "text-[13px] text-white"
   }, at.emptyBoxes), "つ"));
 };
 const xmasStoryHasScript = chapter => typeof EVENT_REPLAYS !== 'undefined' && Array.isArray(EVENT_REPLAYS) && EVENT_REPLAYS.some(e => e && e.id === chapter.scriptId);
@@ -112744,6 +112825,16 @@ const XMAS_STORY_WAY_LABELS = Object.freeze({
   rhythm: 'モンヒロビート',
   card: 'MFバトルカード'
 });
+const XmasTypeTag = ({
+  type,
+  dim = false
+}) => React.createElement("span", {
+  className: `inline-flex min-h-[22px] shrink-0 items-center gap-0.5 rounded-full px-2 text-[10px] font-black ${type === 'fight' ? 'bg-orange-700 text-orange-50' : 'bg-indigo-700 text-indigo-50'} ${dim ? 'opacity-40' : ''}`
+}, type === 'fight' ? React.createElement(Sword, {
+  size: 11
+}) : React.createElement(BookOpen, {
+  size: 11
+}), type === 'fight' ? '戦う' : '読む');
 const XmasStoryTab = ({
   version = 0,
   allOpen = false,
@@ -112767,6 +112858,7 @@ const XmasStoryTab = ({
     className: "py-6 text-center text-[11px] text-slate-300"
   }, "読み込み中…");
   const reached = xmasStoryReachedNo(progress);
+  const readCount = XMAS_STORY_CHAPTERS.filter(c => progress.cleared.includes(c.id)).length;
   const chapter = sel ? XMAS_STORY_CHAPTERS.find(c => c.id === sel) : null;
   const select = c => {
     setSel(c.id);
@@ -112774,16 +112866,25 @@ const XmasStoryTab = ({
   };
   return React.createElement("div", {
     "data-xmas-story": true,
-    className: "space-y-2"
+    className: "space-y-3"
   }, React.createElement(XmasCastPanel, {
     no: reached,
     compact: true
-  }), React.createElement("ol", {
+  }), React.createElement("section", null, React.createElement(XmasSectionTitle, {
+    right: React.createElement("span", {
+      className: "text-[10px] font-black text-amber-100/80"
+    }, readCount, " / ", XMAS_STORY_CHAPTERS.length, " 話")
+  }, "ひとりで進める物語"), React.createElement("p", {
+    className: "mb-2 px-0.5 text-[10px] font-bold leading-relaxed text-slate-300",
+    style: JA_LABEL_STYLE
+  }, jaWrap('毎日1話ずつ開きます。開いた話は、いつでも読み返せます')), React.createElement("ol", {
     "data-xmas-story-list": true,
     className: "space-y-1.5"
   }, XMAS_STORY_CHAPTERS.map(c => {
     const st = xmasStoryStatusOf(c, progress, nowMs, allOpen);
-    const can = st !== 'locked' && st !== 'waiting';
+    const locked = st === 'locked';
+    const can = !locked && st !== 'waiting';
+    const prev = XMAS_STORY_CHAPTERS[c.no - 2];
     return React.createElement("li", {
       key: c.id
     }, React.createElement("button", {
@@ -112792,51 +112893,83 @@ const XmasStoryTab = ({
       "data-status": st,
       disabled: !can,
       onClick: () => select(c),
-      className: `flex w-full min-h-[52px] items-center gap-2 rounded-xl border px-2.5 py-1.5 text-left active:scale-[0.99] disabled:active:scale-100 ${can ? 'border-amber-200/30 bg-slate-900/80' : 'border-white/5 bg-slate-950/60'}`
+      className: "mh-xmas-card flex w-full min-h-[56px] items-center gap-2.5 rounded-xl px-2.5 py-2 text-left active:scale-[0.99] disabled:active:scale-100"
     }, React.createElement("span", {
-      className: `w-12 shrink-0 text-[11px] font-black ${can ? 'text-amber-200' : 'text-slate-500'}`
-    }, "第", c.no, "話"), React.createElement("span", {
+      className: "mh-xmas-medal flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-full leading-none",
+      "data-dim": can ? undefined : ''
+    }, React.createElement("small", {
+      className: "text-[10px] font-black"
+    }, "第"), React.createElement("b", {
+      className: "text-[14px] font-black"
+    }, c.no)), React.createElement("span", {
       className: "min-w-0 flex-1"
     }, React.createElement("span", {
-      className: `block truncate text-[13px] font-black ${can ? 'text-white' : 'text-slate-500'}`
-    }, st === 'locked' ? '？？？' : c.title), st === 'locked' && React.createElement("span", {
-      className: "flex items-center gap-1 text-[10px] font-bold text-slate-400"
+      className: `block truncate text-[14px] font-black ${can ? 'text-white' : 'text-slate-500'}`
+    }, locked ? `第${c.no}話 〜？？？〜` : c.title), locked && React.createElement("span", {
+      className: "mt-0.5 flex items-center gap-1 text-[10px] font-bold text-slate-400"
     }, React.createElement(Lock, {
       size: 11
     }), xmasEventDateLabel(c.openAt), " に開きます"), st === 'waiting' && React.createElement("span", {
-      className: "flex items-center gap-1 text-[10px] font-bold text-slate-400"
+      className: "mt-0.5 flex items-center gap-1 text-[10px] font-bold text-slate-400"
     }, React.createElement(Lock, {
       size: 11
-    }), "前の話を", XMAS_STORY_CHAPTERS[c.no - 2] && XMAS_STORY_CHAPTERS[c.no - 2].type === 'fight' ? '進める' : '読む', "と選べます")), React.createElement("span", {
-      className: `shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black ${c.type === 'fight' ? 'bg-orange-700 text-white' : 'bg-indigo-700 text-white'} ${can ? '' : 'opacity-40'}`
-    }, c.type === 'fight' ? '戦う' : '読む'), React.createElement("span", {
-      className: "w-11 shrink-0 text-center text-[10px] font-black"
+    }), "前の話を", prev && prev.type === 'fight' ? '進める' : '読む', "と選べます"), can && React.createElement("span", {
+      className: "mt-1 flex items-center gap-1.5"
+    }, React.createElement(XmasTypeTag, {
+      type: c.type
+    }))), !locked && st === 'waiting' && React.createElement(XmasTypeTag, {
+      type: c.type,
+      dim: true
+    }), React.createElement("span", {
+      className: "flex w-12 shrink-0 justify-center text-[10px] font-black"
     }, st === 'cleared' ? React.createElement("span", {
-      className: "text-emerald-300"
-    }, c.type === 'fight' ? 'クリア' : '読んだ') : st === 'new' ? React.createElement("span", {
-      className: "rounded bg-rose-600 px-1 py-0.5 text-white"
-    }, "NEW") : null)));
-  })), chapter && React.createElement("div", {
+      "data-xmas-story-done": true,
+      className: "flex flex-col items-center text-emerald-300"
+    }, React.createElement(Check, {
+      size: 16
+    }), c.type === 'fight' ? 'クリア' : '読んだ') : st === 'new' ? React.createElement("span", {
+      className: "mh-xmas-new rounded px-1.5 py-0.5 text-white"
+    }, "NEW") : can ? React.createElement(ChevronRight, {
+      size: 18,
+      className: "text-amber-200/80"
+    }) : null)));
+  }))), chapter && React.createElement("div", {
     "data-xmas-story-sheet": chapter.id,
-    className: "fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3 sm:items-center",
+    className: "fixed inset-0 z-[80] flex items-end justify-center bg-black/65 p-3 sm:items-center",
     onClick: () => setSel(null)
   }, React.createElement("div", {
     role: "dialog",
     "aria-label": `第${chapter.no}話 ${chapter.title}`,
-    className: "w-full max-w-md rounded-2xl border-2 border-amber-200/40 bg-slate-900 p-4",
+    className: "mh-xmas-frame w-full max-w-md rounded-2xl bg-gradient-to-b from-[#16264a] to-[#0b1530] p-4",
     onClick: e => e.stopPropagation()
   }, React.createElement("div", {
-    className: "text-[11px] font-black text-amber-200"
-  }, "第", chapter.no, "話・", chapter.type === 'fight' ? '戦う' : '読む'), React.createElement("div", {
-    className: "mb-3 text-[17px] font-black text-white"
-  }, chapter.title), xmasStoryHasScript(chapter) ? React.createElement("button", {
+    className: "mb-3 flex items-center gap-3"
+  }, React.createElement("span", {
+    className: "mh-xmas-medal flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-full leading-none"
+  }, React.createElement("small", {
+    className: "text-[10px] font-black"
+  }, "第"), React.createElement("b", {
+    className: "text-[17px] font-black"
+  }, chapter.no)), React.createElement("div", {
+    className: "min-w-0"
+  }, React.createElement("div", {
+    className: "mb-0.5"
+  }, React.createElement(XmasTypeTag, {
+    type: chapter.type
+  })), React.createElement("div", {
+    className: "mh-xmas-title text-[18px] font-black leading-tight",
+    style: JA_LABEL_STYLE
+  }, jaWrap(chapter.title))), React.createElement(XmasHolly, {
+    size: 28,
+    className: "ml-auto shrink-0"
+  })), xmasStoryHasScript(chapter) ? React.createElement("button", {
     type: "button",
     "data-xmas-story-read": true,
     onClick: () => {
       setSel(null);
       onRead && onRead(chapter);
     },
-    className: "mb-2 flex w-full min-h-[48px] items-center justify-center gap-1.5 rounded-xl border-2 border-indigo-300/60 bg-indigo-700 text-[14px] font-black text-white active:scale-95"
+    className: "mb-2 flex w-full min-h-[50px] items-center justify-center gap-1.5 rounded-xl border-2 border-indigo-200/70 bg-indigo-700 text-[14px] font-black text-white active:scale-95"
   }, React.createElement(BookOpen, {
     size: 18
   }), "お話を読む") : React.createElement("div", {
@@ -112846,8 +112979,9 @@ const XmasStoryTab = ({
     "data-xmas-story-ways": true,
     className: "mb-2 space-y-1.5"
   }, React.createElement("div", {
-    className: "text-[11px] font-bold text-slate-300"
-  }, "好きな遊びを選んで、勝つと次の話へ進めます"), ['battle', 'rhythm', 'card'].map(way => {
+    className: "text-[11px] font-bold text-amber-100",
+    style: JA_LABEL_STYLE
+  }, jaWrap('好きな遊びを選んで、勝つと次の話へ進めます')), ['battle', 'rhythm', 'card'].map(way => {
     const ready = fightWays.includes(way);
     return React.createElement("button", {
       type: "button",
@@ -112858,8 +112992,10 @@ const XmasStoryTab = ({
         setSel(null);
         onFight && onFight(chapter, way);
       },
-      className: "flex w-full min-h-[44px] items-center justify-center rounded-xl border-2 border-orange-300/60 bg-orange-700 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400"
-    }, XMAS_STORY_WAY_LABELS[way], "で戦う", ready ? '' : '(準備中)');
+      className: "flex w-full min-h-[46px] items-center justify-center gap-1.5 rounded-xl border-2 border-orange-200/70 bg-orange-700 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400"
+    }, React.createElement(Sword, {
+      size: 15
+    }), XMAS_STORY_WAY_LABELS[way], "で戦う", ready ? '' : '(準備中)');
   })), React.createElement("button", {
     type: "button",
     "data-xmas-story-sheet-close": true,
@@ -112870,14 +113006,15 @@ const XmasStoryTab = ({
 const XmasBonusTab = () => React.createElement("div", {
   "data-xmas-bonus": true,
   className: "space-y-2"
-}, React.createElement("div", {
-  className: "rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[11px] font-bold leading-relaxed text-slate-200"
-}, "イベントの期間中は、どれも自動でかかります"), XMAS_EVENT_BONUSES.map(b => React.createElement("div", {
+}, React.createElement(XmasSectionTitle, null, "期間中のボーナス"), React.createElement("p", {
+  className: "px-0.5 text-[10px] font-bold leading-relaxed text-slate-300",
+  style: JA_LABEL_STYLE
+}, jaWrap('イベントの期間中は、どれも自動でかかります')), XMAS_EVENT_BONUSES.map(b => React.createElement("div", {
   key: b.id,
   "data-xmas-bonus-item": b.id,
-  className: `flex items-center gap-3 rounded-2xl border-2 p-3 ${b.tone}`
+  className: `flex items-center gap-3 rounded-2xl border-2 p-3 shadow-lg shadow-black/30 ${b.tone}`
 }, React.createElement("span", {
-  className: "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-black/30"
+  className: "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-amber-200/40 bg-black/35"
 }, b.icon()), React.createElement("div", {
   className: "min-w-0 flex-1"
 }, React.createElement("div", {
@@ -112886,7 +113023,7 @@ const XmasBonusTab = () => React.createElement("div", {
   className: "text-[13px] font-black text-white",
   style: JA_LABEL_STYLE
 }, jaWrap(b.title)), b.big && React.createElement("b", {
-  className: "shrink-0 text-[18px] font-black text-amber-200"
+  className: "mh-xmas-title shrink-0 text-[20px] font-black"
 }, b.big)), React.createElement("p", {
   className: "mt-0.5 text-[11px] font-bold leading-snug",
   style: JA_LABEL_STYLE
@@ -112902,25 +113039,31 @@ const XmasEventScreen = ({
   onReadChapter,
   onFightChapter
 }) => {
+  useXmasEventCss();
   const head = React.createElement("div", {
     "data-xmas-event-head": true,
-    className: "shrink-0"
+    className: "mx-auto w-full max-w-2xl shrink-0"
   }, React.createElement(ScreenHead, {
-    title: "聖夜の名探偵",
-    accent: "text-amber-100",
+    title: React.createElement("span", {
+      className: "flex items-center gap-1"
+    }, React.createElement(XmasHolly, {
+      size: 24
+    }), React.createElement("span", {
+      className: "mh-xmas-title"
+    }, "聖夜の名探偵")),
     onBack: onBack,
     compact: true,
     note: forced ? '(デバッグ表示・開始前でも見えます)' : ''
   }), React.createElement("div", {
     "data-xmas-event-poster": true,
-    className: "mx-auto mb-1.5 w-fit max-w-full overflow-hidden rounded-2xl border border-amber-300/40 bg-slate-950"
+    className: "mh-xmas-frame mx-auto mb-2 w-fit max-w-full overflow-hidden rounded-xl bg-slate-950"
   }, React.createElement("img", {
     src: XMAS_EVENT_POSTER_IMG,
     alt: "クリスマスイベント 聖夜の名探偵",
     className: `block h-auto w-auto max-w-full ${tab === 'raid' ? 'max-h-[13vh]' : 'max-h-[24vh]'}`
   })), React.createElement("div", {
     "data-xmas-event-period": true,
-    className: "mb-2 rounded-lg border border-amber-300/40 bg-red-950/70 px-2 py-1 text-center text-[11px] font-black text-amber-100"
+    className: "mh-xmas-ribbon mx-auto mb-2 max-w-md px-5 py-1 text-center text-[11px] font-black text-amber-50"
   }, "開催期間 ", xmasEventPeriodText()), React.createElement(ScreenTabs, {
     items: XMAS_EVENT_TABS,
     value: tab,
@@ -112929,20 +113072,23 @@ const XmasEventScreen = ({
   if (tab === 'raid' && raid) return React.createElement(RaidJackScreen, _extends({
     key: "raid-xmas"
   }, raid, {
-    head: head
+    head: head,
+    shellClass: "mh-xmas-shell"
   }));
   return React.createElement("div", {
-    className: `${SCREEN_SHELL_CLASS} overflow-hidden [@media(orientation:landscape)_and_(max-height:520px)]:overflow-y-auto mh-scroll`,
+    className: `${SCREEN_SHELL_CLASS} mh-xmas-shell overflow-hidden [@media(orientation:landscape)_and_(max-height:520px)]:overflow-y-auto mh-scroll`,
     "data-xmas-event": tab
   }, head, React.createElement("div", {
     className: `${SCREEN_LIST_CLASS} [@media(orientation:landscape)_and_(max-height:520px)]:flex-none [@media(orientation:landscape)_and_(max-height:520px)]:overflow-visible`
+  }, React.createElement("div", {
+    className: "mx-auto w-full max-w-2xl pb-2"
   }, tab === 'bonus' ? React.createElement(XmasBonusTab, null) : React.createElement(XmasStoryTab, {
     version: storyVersion,
     allOpen: forced,
     fightWays: fightWays,
     onRead: onReadChapter,
     onFight: onFightChapter
-  })));
+  }))));
 };
 const ASSISTANT_CHAT_URL = `${SUPABASE_URL}/functions/v1/assistant-chat`;
 const ASSISTANT_CHAT_LOG_KEY = 'mh_assistant_chat_log_v1';

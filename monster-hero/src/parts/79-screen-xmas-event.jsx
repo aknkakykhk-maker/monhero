@@ -10,9 +10,9 @@
 const XMAS_EVENT_POSTER_IMG = 'images/events/xmas-2026-event-wide.jpg';
 
 const XMAS_EVENT_TABS = Object.freeze([
-  { id: 'story', label: '物語', color: '#b91c1c' },
-  { id: 'raid', label: 'レイド', color: '#1d4ed8' },
-  { id: 'bonus', label: 'ボーナス', color: '#047857' },
+  { id: 'story', label: '物語', color: '#b4232c' },
+  { id: 'raid', label: 'レイド', color: '#15803d' },
+  { id: 'bonus', label: 'ボーナス', color: '#a16207' },
 ]);
 
 // 日時を「12/1(火) 4:00」の形で(日本時間)
@@ -51,11 +51,27 @@ const XMAS_EVENT_BONUSES = Object.freeze([
     title: 'ホーム・タイトルのクリスマスの絵', big: '', body: 'ホームとタイトルがクリスマスの絵になります(設定の「ホーム画面アレンジ」で選べます)' },
 ]);
 
-// ---- 登場人物パネル(推理ドラマの登場人物パネル風・台帳 r1125-063) ----
-//  no: 読み終えた話の番号。はじめてだれかがいなくなる話より前は何も出さない(社長 2026-11-26)
-//  いなくなった人は白黒+「ゆくえ不明」のはんこ。帯に「のこった人 ◯人 / 空になった箱 ◯つ」(10人みんなを数える)
-//  animate: その話でいなくなった人だけ、色が抜けてはんこが押される動き(お話の終わりで使う。一覧では動かさない)
-const XMAS_CAST_CSS = `
+// ---- 見た目(クリスマスの飾り・台帳 r1126-006 社長「作りをもっと丁寧に」) ----
+//  雪(背景の粒・ゆっくり落ちる)・柊・金の縁・リボンの帯。ハロウィンのレイド画面と同じ画面の骨組み(SCREEN_SHELL_CLASS・ScreenHead・ScreenTabs)の上に飾りだけ足す。
+//  動きは prefers-reduced-motion で止める。CSS は <head> に1回だけ入れる(画面の DOM に <style> を混ぜない)
+const XMAS_EVENT_CSS = `
+.mh-xmas-shell { position: relative; isolation: isolate; background: radial-gradient(120% 60% at 50% 0%, #17305f 0%, #0b1733 45%, #060b1c 100%); }
+.mh-xmas-shell::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: .55;
+  background-image: radial-gradient(1.6px 1.6px at 12% 18%, #fff 50%, transparent 51%), radial-gradient(1.2px 1.2px at 32% 62%, #fff 50%, transparent 51%),
+    radial-gradient(2px 2px at 58% 28%, #fff 50%, transparent 51%), radial-gradient(1.3px 1.3px at 78% 74%, #fff 50%, transparent 51%),
+    radial-gradient(1.7px 1.7px at 90% 12%, #fff 50%, transparent 51%), radial-gradient(1.1px 1.1px at 45% 90%, #fff 50%, transparent 51%);
+  background-size: 220px 260px; animation: mh-xmas-snow 26s linear infinite; }
+@keyframes mh-xmas-snow { from { background-position: 0 0; } to { background-position: 40px 260px; } }
+.mh-xmas-title { background: linear-gradient(180deg, #fff6d6 0%, #f3cf72 55%, #c8923a 100%); -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: none; letter-spacing: .04em; }
+.mh-xmas-frame { border: 2px solid #e6c068; box-shadow: 0 0 0 2px #5c1414, 0 0 0 3px #e6c06866, 0 6px 16px #0008; }
+.mh-xmas-ribbon { position: relative; background: linear-gradient(180deg, #b3202a 0%, #7d1018 100%); border-top: 1.5px solid #f0c96c; border-bottom: 1.5px solid #f0c96c;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 10px) 50%, 100% 100%, 0 100%, 10px 50%); }
+.mh-xmas-card { background: linear-gradient(180deg, #13213f 0%, #0c162d 100%); border: 1px solid #e6c06855; }
+.mh-xmas-card[data-status="locked"], .mh-xmas-card[data-status="waiting"] { background: #0a1124; border-color: #ffffff12; }
+.mh-xmas-medal { background: radial-gradient(circle at 35% 30%, #fff3c4 0%, #e6c068 45%, #a87424 100%); color: #3a1d05; box-shadow: 0 0 0 2px #5c1414, 0 2px 4px #0008; }
+.mh-xmas-medal[data-dim] { background: #1c2742; color: #64748b; box-shadow: 0 0 0 1px #ffffff1a; }
+.mh-xmas-new { background: linear-gradient(180deg, #e11d48, #9f1239); box-shadow: 0 0 0 1px #f0c96c; }
+@media (prefers-reduced-motion: reduce) { .mh-xmas-shell::before { animation: none; } }
 @keyframes mh-xmas-cast-fade { from { filter: none; } to { filter: grayscale(1) brightness(.7); } }
 @keyframes mh-xmas-cast-stamp { 0% { opacity: 0; transform: rotate(-14deg) scale(2.2); } 60% { opacity: 1; transform: rotate(-14deg) scale(.92); } 100% { opacity: 1; transform: rotate(-14deg) scale(1); } }
 [data-xmas-cast-face][data-away] img { filter: grayscale(1) brightness(.7); }
@@ -64,34 +80,63 @@ const XMAS_CAST_CSS = `
 [data-xmas-cast-face][data-newly] [data-xmas-cast-stamp] { animation: mh-xmas-cast-stamp .5s 1.1s ease-out both; }
 @media (prefers-reduced-motion: reduce) { [data-xmas-cast-face] img, [data-xmas-cast-stamp] { animation: none !important; } }
 `;
-const XmasCastPanel = ({ no, animate = false, compact = false }) => {
+const useXmasEventCss = () => {
   useEffect(() => {
-    if (typeof document === 'undefined' || document.getElementById('mh-xmas-cast-css')) return;
-    const tag = document.createElement('style'); tag.id = 'mh-xmas-cast-css'; tag.textContent = XMAS_CAST_CSS; document.head.appendChild(tag);
+    if (typeof document === 'undefined' || document.getElementById('mh-xmas-event-css')) return;
+    const tag = document.createElement('style'); tag.id = 'mh-xmas-event-css'; tag.textContent = XMAS_EVENT_CSS; document.head.appendChild(tag);
   }, []);
+};
+// 柊(葉2枚と実3つ)。飾りなので読み上げない
+const XmasHolly = ({ size = 22, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true" className={className}>
+    <path d="M15 17 C11 9 5 9 2 12 C5 13 5 16 3 18 C7 17 9 20 9 22 C11 19 14 19 15 17Z" fill="#15803d" stroke="#0b4d24" strokeWidth="1" />
+    <path d="M17 17 C21 9 27 9 30 12 C27 13 27 16 29 18 C25 17 23 20 23 22 C21 19 18 19 17 17Z" fill="#16a34a" stroke="#0b4d24" strokeWidth="1" />
+    <circle cx="13.5" cy="18.5" r="3" fill="#dc2626" stroke="#7f1d1d" strokeWidth=".8" />
+    <circle cx="18.5" cy="18.5" r="3" fill="#ef4444" stroke="#7f1d1d" strokeWidth=".8" />
+    <circle cx="16" cy="14.5" r="3" fill="#dc2626" stroke="#7f1d1d" strokeWidth=".8" />
+    <circle cx="15" cy="13.6" r=".9" fill="#fff" opacity=".7" />
+  </svg>
+);
+// 小見出し(柊+金の字)。物語・ボーナスの区切りに使う
+const XmasSectionTitle = ({ children, right = null }) => (
+  <div className="mb-1.5 flex items-center gap-1.5 px-0.5">
+    <XmasHolly size={18} />
+    <span className="mh-xmas-title text-[13px] font-black">{children}</span>
+    <span className="h-px flex-1 bg-gradient-to-r from-amber-300/50 to-transparent" aria-hidden="true" />
+    {right}
+  </div>
+);
+
+// ---- 登場人物パネル(推理ドラマの登場人物パネル風・台帳 r1125-063) ----
+//  no: 読み終えた話の番号。はじめてだれかがいなくなる話より前は何も出さない(社長 2026-11-26)
+//  いなくなった人は白黒+「ゆくえ不明」のはんこ。帯に「のこった人 ◯人 / 空になった箱 ◯つ」(10人みんなを数える)
+//  animate: その話でいなくなった人だけ、色が抜けてはんこが押される動き(お話の終わりで使う。一覧では動かさない)
+const XmasCastPanel = ({ no, animate = false, compact = false }) => {
+  useXmasEventCss();
   const at = xmasStoryCastAt(no);
   if (!at.shown) return null;
   return (
-    <section data-xmas-cast-panel={no} aria-label="登場人物" className="rounded-2xl border border-amber-200/30 bg-slate-950/80 p-2">
-      <div className="grid grid-cols-5 gap-1.5">
+    <section data-xmas-cast-panel={no} aria-label="登場人物" className="mh-xmas-frame rounded-2xl bg-[#0a1430]/95 px-2 pb-2 pt-1.5">
+      <XmasSectionTitle>登場人物</XmasSectionTitle>
+      <div className="grid grid-cols-5 gap-x-1.5 gap-y-1">
         {XMAS_STORY_CAST.map((c) => {
           const away = at.missing.includes(c.id);
           const newly = animate && at.newly.includes(c.id);
           return (
             <div key={c.id} data-xmas-cast-face={c.id} data-away={away ? '' : undefined} data-newly={newly ? '' : undefined} className="min-w-0 text-center">
-              <div className={`relative mx-auto aspect-square w-full overflow-hidden rounded-md border ${away ? 'border-slate-600 bg-slate-800' : 'border-amber-200/50 bg-slate-700'} ${compact ? 'max-w-[46px]' : 'max-w-[64px]'}`}>
+              <div className={`relative mx-auto aspect-square w-full overflow-hidden rounded-md border-2 ${away ? 'border-slate-600 bg-slate-800' : 'border-[#f3e3b3] bg-[#2a3a62]'} ${compact ? 'max-w-[48px]' : 'max-w-[66px]'}`}>
                 <img src={xmasCastFaceOf(c)} alt="" className="h-full w-full object-cover object-top" />
                 {away && (
-                  <span data-xmas-cast-stamp aria-label="ゆくえ不明" className="absolute inset-0 m-auto flex h-max w-max flex-col items-center rounded border-2 border-rose-500 bg-white/80 px-0.5 text-[10px] font-black leading-none text-rose-600"><span className="py-px">ゆくえ</span><span className="py-px">不明</span></span>
+                  <span data-xmas-cast-stamp aria-label="ゆくえ不明" className="absolute inset-0 m-auto flex h-max w-max flex-col items-center rounded border-2 border-rose-500 bg-white/85 px-0.5 text-[10px] font-black leading-none text-rose-600"><span className="py-px">ゆくえ</span><span className="py-px">不明</span></span>
                 )}
               </div>
-              <div className={`mt-0.5 truncate text-[10px] font-black ${away ? 'text-slate-500' : 'text-slate-100'}`}>{c.name}</div>
+              <div className={`mt-0.5 truncate text-[10px] font-black ${away ? 'text-slate-500' : 'text-amber-50'}`}>{c.name}</div>
             </div>
           );
         })}
       </div>
-      <div data-xmas-cast-band className="mt-1.5 rounded-lg bg-black/50 py-1 text-center text-[11px] font-black text-amber-100">
-        のこった人 <b className="text-white">{at.left}</b>人 / 空になった箱 <b className="text-white">{at.emptyBoxes}</b>つ
+      <div data-xmas-cast-band className="mh-xmas-ribbon mt-1.5 py-1 text-center text-[11px] font-black text-amber-50">
+        のこった人 <b className="text-[13px] text-white">{at.left}</b>人 ／ 空になった箱 <b className="text-[13px] text-white">{at.emptyBoxes}</b>つ
       </div>
     </section>
   );
@@ -101,6 +146,11 @@ const XmasCastPanel = ({ no, animate = false, compact = false }) => {
 const xmasStoryHasScript = (chapter) => typeof EVENT_REPLAYS !== 'undefined' && Array.isArray(EVENT_REPLAYS)
   && EVENT_REPLAYS.some((e) => e && e.id === chapter.scriptId);
 const XMAS_STORY_WAY_LABELS = Object.freeze({ battle: 'モンヒロバトル', rhythm: 'モンヒロビート', card: 'MFバトルカード' });
+const XmasTypeTag = ({ type, dim = false }) => (
+  <span className={`inline-flex min-h-[22px] shrink-0 items-center gap-0.5 rounded-full px-2 text-[10px] font-black ${type === 'fight' ? 'bg-orange-700 text-orange-50' : 'bg-indigo-700 text-indigo-50'} ${dim ? 'opacity-40' : ''}`}>
+    {type === 'fight' ? <Sword size={11} /> : <BookOpen size={11} />}{type === 'fight' ? '戦う' : '読む'}
+  </span>
+);
 
 const XmasStoryTab = ({ version = 0, allOpen = false, fightWays = [], onRead, onFight }) => {
   const [progress, setProgress] = useState(null);
@@ -113,6 +163,7 @@ const XmasStoryTab = ({ version = 0, allOpen = false, fightWays = [], onRead, on
   }, [version]);
   if (!progress) return <div className="py-6 text-center text-[11px] text-slate-300">読み込み中…</div>;
   const reached = xmasStoryReachedNo(progress);
+  const readCount = XMAS_STORY_CHAPTERS.filter((c) => progress.cleared.includes(c.id)).length;
   const chapter = sel ? XMAS_STORY_CHAPTERS.find((c) => c.id === sel) : null;
   const select = (c) => {
     setSel(c.id);
@@ -120,40 +171,57 @@ const XmasStoryTab = ({ version = 0, allOpen = false, fightWays = [], onRead, on
     void xmasStoryMarkSeen(c.id).then((p) => setProgress(p));
   };
   return (
-    <div data-xmas-story className="space-y-2">
+    <div data-xmas-story className="space-y-3">
       <XmasCastPanel no={reached} compact />
-      <ol data-xmas-story-list className="space-y-1.5">
-        {XMAS_STORY_CHAPTERS.map((c) => {
-          const st = xmasStoryStatusOf(c, progress, nowMs, allOpen);
-          const can = st !== 'locked' && st !== 'waiting';
-          return (
-            <li key={c.id}>
-              <button type="button" data-xmas-story-chapter={c.id} data-status={st} disabled={!can} onClick={() => select(c)}
-                className={`flex w-full min-h-[52px] items-center gap-2 rounded-xl border px-2.5 py-1.5 text-left active:scale-[0.99] disabled:active:scale-100 ${can ? 'border-amber-200/30 bg-slate-900/80' : 'border-white/5 bg-slate-950/60'}`}>
-                <span className={`w-12 shrink-0 text-[11px] font-black ${can ? 'text-amber-200' : 'text-slate-500'}`}>第{c.no}話</span>
-                <span className="min-w-0 flex-1">
-                  <span className={`block truncate text-[13px] font-black ${can ? 'text-white' : 'text-slate-500'}`}>{st === 'locked' ? '？？？' : c.title}</span>
-                  {st === 'locked' && <span className="flex items-center gap-1 text-[10px] font-bold text-slate-400"><Lock size={11} />{xmasEventDateLabel(c.openAt)} に開きます</span>}
-                  {st === 'waiting' && <span className="flex items-center gap-1 text-[10px] font-bold text-slate-400"><Lock size={11} />前の話を{XMAS_STORY_CHAPTERS[c.no - 2] && XMAS_STORY_CHAPTERS[c.no - 2].type === 'fight' ? '進める' : '読む'}と選べます</span>}
-                </span>
-                <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black ${c.type === 'fight' ? 'bg-orange-700 text-white' : 'bg-indigo-700 text-white'} ${can ? '' : 'opacity-40'}`}>{c.type === 'fight' ? '戦う' : '読む'}</span>
-                <span className="w-11 shrink-0 text-center text-[10px] font-black">
-                  {st === 'cleared' ? <span className="text-emerald-300">{c.type === 'fight' ? 'クリア' : '読んだ'}</span>
-                    : st === 'new' ? <span className="rounded bg-rose-600 px-1 py-0.5 text-white">NEW</span> : null}
-                </span>
-              </button>
-            </li>
-          );
-        })}
-      </ol>
+      <section>
+        <XmasSectionTitle right={<span className="text-[10px] font-black text-amber-100/80">{readCount} / {XMAS_STORY_CHAPTERS.length} 話</span>}>ひとりで進める物語</XmasSectionTitle>
+        <p className="mb-2 px-0.5 text-[10px] font-bold leading-relaxed text-slate-300" style={JA_LABEL_STYLE}>{jaWrap('毎日1話ずつ開きます。開いた話は、いつでも読み返せます')}</p>
+        <ol data-xmas-story-list className="space-y-1.5">
+          {XMAS_STORY_CHAPTERS.map((c) => {
+            const st = xmasStoryStatusOf(c, progress, nowMs, allOpen);
+            const locked = st === 'locked';
+            const can = !locked && st !== 'waiting';
+            const prev = XMAS_STORY_CHAPTERS[c.no - 2];
+            return (
+              <li key={c.id}>
+                <button type="button" data-xmas-story-chapter={c.id} data-status={st} disabled={!can} onClick={() => select(c)}
+                  className="mh-xmas-card flex w-full min-h-[56px] items-center gap-2.5 rounded-xl px-2.5 py-2 text-left active:scale-[0.99] disabled:active:scale-100">
+                  <span className="mh-xmas-medal flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-full leading-none" data-dim={can ? undefined : ''}>
+                    <small className="text-[10px] font-black">第</small><b className="text-[14px] font-black">{c.no}</b>
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    {/* まだ開いていない話は、題も「読む/戦う」も出さない(ネタバレになるため・社長 2026-11-26) */}
+                    <span className={`block truncate text-[14px] font-black ${can ? 'text-white' : 'text-slate-500'}`}>{locked ? `第${c.no}話 〜？？？〜` : c.title}</span>
+                    {locked && <span className="mt-0.5 flex items-center gap-1 text-[10px] font-bold text-slate-400"><Lock size={11} />{xmasEventDateLabel(c.openAt)} に開きます</span>}
+                    {st === 'waiting' && <span className="mt-0.5 flex items-center gap-1 text-[10px] font-bold text-slate-400"><Lock size={11} />前の話を{prev && prev.type === 'fight' ? '進める' : '読む'}と選べます</span>}
+                    {can && <span className="mt-1 flex items-center gap-1.5"><XmasTypeTag type={c.type} /></span>}
+                  </span>
+                  {!locked && st === 'waiting' && <XmasTypeTag type={c.type} dim />}
+                  <span className="flex w-12 shrink-0 justify-center text-[10px] font-black">
+                    {st === 'cleared' ? <span data-xmas-story-done className="flex flex-col items-center text-emerald-300"><Check size={16} />{c.type === 'fight' ? 'クリア' : '読んだ'}</span>
+                      : st === 'new' ? <span className="mh-xmas-new rounded px-1.5 py-0.5 text-white">NEW</span>
+                      : can ? <ChevronRight size={18} className="text-amber-200/80" /> : null}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+      </section>
       {chapter && (
-        <div data-xmas-story-sheet={chapter.id} className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3 sm:items-center" onClick={() => setSel(null)}>
-          <div role="dialog" aria-label={`第${chapter.no}話 ${chapter.title}`} className="w-full max-w-md rounded-2xl border-2 border-amber-200/40 bg-slate-900 p-4" onClick={(e) => e.stopPropagation()}>
-            <div className="text-[11px] font-black text-amber-200">第{chapter.no}話・{chapter.type === 'fight' ? '戦う' : '読む'}</div>
-            <div className="mb-3 text-[17px] font-black text-white">{chapter.title}</div>
+        <div data-xmas-story-sheet={chapter.id} className="fixed inset-0 z-[80] flex items-end justify-center bg-black/65 p-3 sm:items-center" onClick={() => setSel(null)}>
+          <div role="dialog" aria-label={`第${chapter.no}話 ${chapter.title}`} className="mh-xmas-frame w-full max-w-md rounded-2xl bg-gradient-to-b from-[#16264a] to-[#0b1530] p-4" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-3 flex items-center gap-3">
+              <span className="mh-xmas-medal flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-full leading-none"><small className="text-[10px] font-black">第</small><b className="text-[17px] font-black">{chapter.no}</b></span>
+              <div className="min-w-0">
+                <div className="mb-0.5"><XmasTypeTag type={chapter.type} /></div>
+                <div className="mh-xmas-title text-[18px] font-black leading-tight" style={JA_LABEL_STYLE}>{jaWrap(chapter.title)}</div>
+              </div>
+              <XmasHolly size={28} className="ml-auto shrink-0" />
+            </div>
             {xmasStoryHasScript(chapter) ? (
               <button type="button" data-xmas-story-read onClick={() => { setSel(null); onRead && onRead(chapter); }}
-                className="mb-2 flex w-full min-h-[48px] items-center justify-center gap-1.5 rounded-xl border-2 border-indigo-300/60 bg-indigo-700 text-[14px] font-black text-white active:scale-95">
+                className="mb-2 flex w-full min-h-[50px] items-center justify-center gap-1.5 rounded-xl border-2 border-indigo-200/70 bg-indigo-700 text-[14px] font-black text-white active:scale-95">
                 <BookOpen size={18} />お話を読む
               </button>
             ) : (
@@ -161,13 +229,13 @@ const XmasStoryTab = ({ version = 0, allOpen = false, fightWays = [], onRead, on
             )}
             {chapter.type === 'fight' && (
               <div data-xmas-story-ways className="mb-2 space-y-1.5">
-                <div className="text-[11px] font-bold text-slate-300">好きな遊びを選んで、勝つと次の話へ進めます</div>
+                <div className="text-[11px] font-bold text-amber-100" style={JA_LABEL_STYLE}>{jaWrap('好きな遊びを選んで、勝つと次の話へ進めます')}</div>
                 {['battle', 'rhythm', 'card'].map((way) => {
                   const ready = fightWays.includes(way);
                   return (
                     <button type="button" key={way} data-xmas-story-way={way} disabled={!ready} onClick={() => { setSel(null); onFight && onFight(chapter, way); }}
-                      className="flex w-full min-h-[44px] items-center justify-center rounded-xl border-2 border-orange-300/60 bg-orange-700 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400">
-                      {XMAS_STORY_WAY_LABELS[way]}で戦う{ready ? '' : '(準備中)'}
+                      className="flex w-full min-h-[46px] items-center justify-center gap-1.5 rounded-xl border-2 border-orange-200/70 bg-orange-700 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400">
+                      <Sword size={15} />{XMAS_STORY_WAY_LABELS[way]}で戦う{ready ? '' : '(準備中)'}
                     </button>
                   );
                 })}
@@ -185,14 +253,15 @@ const XmasStoryTab = ({ version = 0, allOpen = false, fightWays = [], onRead, on
 // ---- ボーナスタブ ----
 const XmasBonusTab = () => (
   <div data-xmas-bonus className="space-y-2">
-    <div className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[11px] font-bold leading-relaxed text-slate-200">イベントの期間中は、どれも自動でかかります</div>
+    <XmasSectionTitle>期間中のボーナス</XmasSectionTitle>
+    <p className="px-0.5 text-[10px] font-bold leading-relaxed text-slate-300" style={JA_LABEL_STYLE}>{jaWrap('イベントの期間中は、どれも自動でかかります')}</p>
     {XMAS_EVENT_BONUSES.map((b) => (
-      <div key={b.id} data-xmas-bonus-item={b.id} className={`flex items-center gap-3 rounded-2xl border-2 p-3 ${b.tone}`}>
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-black/30">{b.icon()}</span>
+      <div key={b.id} data-xmas-bonus-item={b.id} className={`flex items-center gap-3 rounded-2xl border-2 p-3 shadow-lg shadow-black/30 ${b.tone}`}>
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-amber-200/40 bg-black/35">{b.icon()}</span>
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-2">
             <span className="text-[13px] font-black text-white" style={JA_LABEL_STYLE}>{jaWrap(b.title)}</span>
-            {b.big && <b className="shrink-0 text-[18px] font-black text-amber-200">{b.big}</b>}
+            {b.big && <b className="mh-xmas-title shrink-0 text-[20px] font-black">{b.big}</b>}
           </div>
           <p className="mt-0.5 text-[11px] font-bold leading-snug" style={JA_LABEL_STYLE}>{jaWrap(b.body)}</p>
         </div>
@@ -206,25 +275,29 @@ const XmasBonusTab = () => (
 //  raid        … RaidJackScreen へそのまま渡す物(ev・ways・onChallenge など)
 //  storyVersion… 読んだ印が変わったら App が増やす(物語タブが読み直す)
 const XmasEventScreen = ({ tab = 'story', onTab, onBack, forced = false, raid = null, storyVersion = 0, fightWays = [], onReadChapter, onFightChapter }) => {
+  useXmasEventCss();
   const head = (
-    <div data-xmas-event-head className="shrink-0">
-      <ScreenHead title="聖夜の名探偵" accent="text-amber-100" onBack={onBack} compact note={forced ? '(デバッグ表示・開始前でも見えます)' : ''} />
-      <div data-xmas-event-poster className="mx-auto mb-1.5 w-fit max-w-full overflow-hidden rounded-2xl border border-amber-300/40 bg-slate-950">
+    <div data-xmas-event-head className="mx-auto w-full max-w-2xl shrink-0">
+      <ScreenHead title={<span className="flex items-center gap-1"><XmasHolly size={24} /><span className="mh-xmas-title">聖夜の名探偵</span></span>}
+        onBack={onBack} compact note={forced ? '(デバッグ表示・開始前でも見えます)' : ''} />
+      <div data-xmas-event-poster className="mh-xmas-frame mx-auto mb-2 w-fit max-w-full overflow-hidden rounded-xl bg-slate-950">
         <img src={XMAS_EVENT_POSTER_IMG} alt="クリスマスイベント 聖夜の名探偵" className={`block h-auto w-auto max-w-full ${tab === 'raid' ? 'max-h-[13vh]' : 'max-h-[24vh]'}`} />
       </div>
-      <div data-xmas-event-period className="mb-2 rounded-lg border border-amber-300/40 bg-red-950/70 px-2 py-1 text-center text-[11px] font-black text-amber-100">
+      <div data-xmas-event-period className="mh-xmas-ribbon mx-auto mb-2 max-w-md px-5 py-1 text-center text-[11px] font-black text-amber-50">
         開催期間 {xmasEventPeriodText()}
       </div>
       <ScreenTabs items={XMAS_EVENT_TABS} value={tab} onChange={(id) => onTab && onTab(id)} />
     </div>
   );
-  if (tab === 'raid' && raid) return <RaidJackScreen key="raid-xmas" {...raid} head={head} />;
+  if (tab === 'raid' && raid) return <RaidJackScreen key="raid-xmas" {...raid} head={head} shellClass="mh-xmas-shell" />;
   return (
-    <div className={`${SCREEN_SHELL_CLASS} overflow-hidden [@media(orientation:landscape)_and_(max-height:520px)]:overflow-y-auto mh-scroll`} data-xmas-event={tab}>
+    <div className={`${SCREEN_SHELL_CLASS} mh-xmas-shell overflow-hidden [@media(orientation:landscape)_and_(max-height:520px)]:overflow-y-auto mh-scroll`} data-xmas-event={tab}>
       {head}
       <div className={`${SCREEN_LIST_CLASS} [@media(orientation:landscape)_and_(max-height:520px)]:flex-none [@media(orientation:landscape)_and_(max-height:520px)]:overflow-visible`}>
-        {tab === 'bonus' ? <XmasBonusTab />
-          : <XmasStoryTab version={storyVersion} allOpen={forced} fightWays={fightWays} onRead={onReadChapter} onFight={onFightChapter} />}
+        <div className="mx-auto w-full max-w-2xl pb-2">
+          {tab === 'bonus' ? <XmasBonusTab />
+            : <XmasStoryTab version={storyVersion} allOpen={forced} fightWays={fightWays} onRead={onReadChapter} onFight={onFightChapter} />}
+        </div>
       </div>
     </div>
   );
