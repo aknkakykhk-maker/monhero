@@ -50,3 +50,5 @@ const JACK_ICON_IMG = "images/raid/jack-icon.png?v=03c637e855ac";
 const PUMPKIN_ICON_IMG = "images/raid/pumpkin-icon.png?v=f836641ae5ca";
 // クリスマスのレイドのボス「覚醒サンタ」(黒・にらみ目の版。社長決定 #7610)。元の絵は tools/art-sources/raid-xmas-2026/received/santa_black_kakusei_glare.png(縁の赤いにじみだけ落とした・目元は触らない)
 const RAID_XMAS_BOSS_IMG = "images/enemies/santa-black.png?v=79767188ad99";
+// クリスマスのレイドで最後の段階を倒したあとに出る、正気に戻った普通の「サンタ」(赤・うさぎ耳。社長決定 r1126-024)。元の絵は tools/art-sources/raid-xmas-2026/received/santa_red.png(透明な余白を落としただけ)
+const RAID_XMAS_SANTA_IMG = "images/enemies/santa-red.png?v=4e7a8ced1a5e";

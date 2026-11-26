@@ -88,7 +88,7 @@ assert(source.includes('const MIA_EXACT_REGION_2BIT =')&&source.includes("baseId
   const fs2 = require('fs');
   const path2 = require('path');
   const { REPO_ROOT } = require('../harness');
-  const refs = [...new Set([...source.matchAll(/["'`](images\/[^"'`\s)?]+\.(?:png|jpe?g|webp|PNG))(?:\?[^"'`\s)]*)?["'`]/g)].map(m => m[1]))];
+  const refs = [...new Set([...source.matchAll(/["'`](images\/[^"'`\s)?]+\.(?:png|jpe?g|webp|PNG))(?:\?[^"'`\s)]*)?["'`]/g)].map(m => m[1]))].filter(rel => !rel.includes('${'));
   const missing = refs.filter(rel => !fs2.existsSync(path2.join(REPO_ROOT, 'monster-hero', rel)));
   assert(missing.length === 0, `ゲーム本体が参照する画像が配信フォルダに実在する（欠け: ${missing.join(' / ')}）`);
 }

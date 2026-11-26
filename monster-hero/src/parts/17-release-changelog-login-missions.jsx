@@ -1322,6 +1322,8 @@ const giftTitleDisplay = (gift) => {
   if (gift?.source === 'rhythmEvent') return { label:'ランキング報酬', title };
   // イベント・レイドボス「ジャック」の報酬(2026-10-04)
   if (gift?.source === 'raidJack') return { label:'ジャック報酬', title };
+  // クリスマスのレイドの報酬(2026-11-26)
+  if (gift?.source === 'raidXmas') return { label:'レイド報酬', title };
   // 助手の仲良し度の節目のごほうび(2026-10-21)
   if (gift?.source === 'assistantBond') return { label:'仲良し度', title };
   // 助手のお話のおみやげ(2026-10-27 ソラシド)

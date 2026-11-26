@@ -127,6 +127,27 @@ const raidXmasFlushStoredPending = async (breederId) => {
   } catch (e) { return 0; }
 };
 
+// ---- 報酬の受け取り(表はジャックと同じ・社長決定。判定は raidJackCollectDueRewards にこの規則を渡して使う) ----
+//  ・段階のライフ・期間・題名だけクリスマスのもの。受け取り済みの印は mh_raid_xmas_v1 の claimed(ジャックの記録とは別)
+//  ・ギフトの id はイベント id から作る(raid_xmas_2026_part_a など)。ジャックのギフト(raid_jack_2026_…)とぶつからない
+const raidXmasRewardTitle = (kind, tierIndex, rank) => {
+  const at = (list) => list[Math.min(Math.max(tierIndex || 0, 0), list.length - 1)].name;
+  if (kind === 'part_a') return `${RAID_XMAS_EVENT.name} レイドバトル 参加賞`;
+  if (kind === 'part_b') return `${RAID_XMAS_EVENT.name} グランドスラム 参加賞`;
+  if (kind === 'clear_a') return `${at(RAID_XMAS_A_TIERS)} 討伐報酬`;
+  if (kind === 'rank_a') return `${at(RAID_XMAS_A_TIERS)} 貢献${rank}位の報酬`;
+  if (kind === 'clear_b') return `${at(RAID_XMAS_B_TIERS)} 初討伐報酬`;
+  return `${RAID_XMAS_EVENT.name} グランドスラム 累計ダメージ${rank}位の報酬`;
+};
+const raidXmasRewardRules = () => ({
+  aTiers: RAID_XMAS_A_TIERS,
+  bTiers: RAID_XMAS_B_TIERS,
+  rewards: RAID_XMAS_REWARDS,
+  windowAt: raidXmasWindowAt,
+  rewardTitle: raidXmasRewardTitle,
+});
+const raidXmasGiftId = (claimId) => `${RAID_XMAS_EVENT.id}_${claimId}`;
+
 // ===== レイドの定義(def)。レイド画面(79-screen-raid-jack.jsx)と本体(60-app.jsx)は、ここを読んでジャックとクリスマスを同じ流れで動かす =====
 //  ・ジャックの定義は、これまで画面・本体に直接書いていた値を集めただけ(ジャックの見え方・動きは変えない)。
 //  ・クリスマスの数字・名前は 35-raid-xmas.jsx。ここは並べ替えるだけ(数字を書き写さない)。
@@ -180,7 +201,7 @@ const RAID_EVENT_XMAS = Object.freeze({
   tiers: raidXmasTiers,
   tierAt: raidXmasTierAt,
   afterBoss: RAID_XMAS_AFTER_BOSS,
-  afterBossBadge: 'まだ暴れている',
+  afterBossBadge: 'あそびに来た',     // 最後の段階のあとは正気に戻った普通のサンタ(ぱんぷきんと同じ形・社長決定 r1126-024)
   afterBossNote: '共有ライフは無限です。毎回いっぱいのライフから戦い、与えたダメージが累計に足されます',
   lockedNote: `前の段階の${RAID_XMAS_EVENT.name}を止めると姿をあらわします`,
   lastTierWord: '最後の段階',
@@ -199,7 +220,7 @@ const RAID_EVENT_XMAS = Object.freeze({
   saveState: raidXmasSaveState,
   flushPending: (meId) => raidXmasFlushStoredPending(meId),
   bossImg: () => RAID_XMAS_BOSS_IMG,
-  afterBossImg: () => RAID_XMAS_BOSS_IMG,
+  afterBossImg: () => RAID_XMAS_SANTA_IMG,
   aura: false,
 });
 const raidEventDef = (key) => (key === 'xmas' ? RAID_EVENT_XMAS : RAID_EVENT_JACK);

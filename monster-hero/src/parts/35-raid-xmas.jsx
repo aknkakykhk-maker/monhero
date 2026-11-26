@@ -6,7 +6,7 @@
 //  ・サーバーはジャックと同じ表 raid_jack_hits を、イベントid raid_xmas_2026 で使う(デバッグは raid_xmas_debug)。
 //  ・端末の保存は新しいキー mh_raid_xmas_v1(形は mh_raid_jack_v1 と同じ)。ジャックのキーには触らない。
 //  ・与ダメージの入口は battle / rhythm / card の3つ。レイドバトル(A)の回数は3つで共通。グランドスラム(B)はバトルだけ。
-//  ・ボスの名前・絵は仮(社長が後で渡す)。画面は RAID_XMAS_EVENT.name と段階の name を読み、直書きしない。
+//  ・ボスの名前は「黒いサンタ」(社長決定 r1126-024)。画面は RAID_XMAS_EVENT.name と段階の name を読み、直書きしない。
 //  ・数字は仮(ジャックの最後の数字と同じ)。社長が決めたら、この下の表だけ差し替える。
 //  ・開催中かどうかは、見るたびに raidXmasWindowAt(Date.now()) で数え直す。
 //  ・公開フラグ RELEASE_FLAGS.raidXmas(開始時刻を過ぎたら真)が偽のあいだは、入口もヘルプ・更新履歴も出さない。
@@ -16,7 +16,7 @@ const RAID_XMAS_EVENT = Object.freeze({
   id: 'raid_xmas_2026',
   debugId: 'raid_xmas_debug',
   title: '聖夜の名探偵',                 // イベントの名前(社長決定 2026-11-25)。副題の案は「〜雪山ペンションと消えたプレゼント〜」
-  name: '黒いサンタ(仮)',               // ボスの名前(仮・社長の返事待ち)。ボスは「サンタ」が覚醒した「覚醒サンタ」
+  name: '黒いサンタ',                   // ボスの名前(社長決定 r1126-024)。ボスは「サンタ」が覚醒した「覚醒サンタ」
   startAt: '2026-11-30T10:00:00+09:00',
   endAt: '2026-12-31T04:00:00+09:00',
   storageKey: 'mh_raid_xmas_v1',
@@ -33,18 +33,20 @@ const RAID_XMAS_TURNS = 20;
 //   段階4・5はジャックの1.2倍(4,200万 / 9,600万)
 const RAID_XMAS_A_HPS = Object.freeze([8750000, 16000000, 40000000, 42000000, 96000000]);
 const RAID_XMAS_A_ATKS = Object.freeze([350, 500, 600, 800, 1000]);
-const RAID_XMAS_A_NAMES = Object.freeze(['黒いサンタ(仮)・一', '黒いサンタ(仮)・二', '黒いサンタ(仮)・三', '黒いサンタ(仮)・四', '黒いサンタ(仮)・五']);
+// 段階の名前(社長決定 r1126-024)
+const RAID_XMAS_A_NAMES = Object.freeze(['黒いサンタ・咎', '黒いサンタ・戒', '黒いサンタ・罰', '黒いサンタ・断罪', '黒いサンタ・煉獄']);
 const RAID_XMAS_A_TIERS = Object.freeze(RAID_XMAS_A_NAMES.map((name, i) =>
   raidJackTier(`a${i + 1}`, name, [5.0, 6.5, 8.0, 10.0, 13.0][i], [3, 4, 5, 5, 5][i], RAID_XMAS_A_ATKS[i] / RAID_JACK_BASE.atk, RAID_XMAS_A_HPS[i])));
 // 最後の段階を倒したあと: 共有ライフは無限(倒した扱いにしない)・1戦のライフ 455万・攻撃力 700。サーバーへ送る段階は 5 のまま
-const RAID_XMAS_AFTER_BOSS = raidJackTier('a6', '黒いサンタ(仮)・聖夜', 13.0, 5, 1.0, 4550000);
+// 正気に戻った普通の「サンタ」(ジャックのぱんぷきんと同じ形・社長決定 r1126-024)。絵は RAID_XMAS_SANTA_IMG
+const RAID_XMAS_AFTER_BOSS = raidJackTier('a6', 'サンタ', 13.0, 5, 1.0, 4550000);
 // B: グランドスラム(個人・累計)。倍率 0.2 / 2 / 10 / 40 / 100
 const RAID_XMAS_B_TIERS = Object.freeze([
-  raidJackTier('b1', '初級 黒いサンタ(仮)', 0.2, 3),
-  raidJackTier('b2', '中級 黒いサンタ(仮)', 2, 4),
-  raidJackTier('b3', '上級 黒いサンタ(仮)', 10, 5),
-  raidJackTier('b4', '超級 黒いサンタ(仮)', 40, 5),
-  raidJackTier('b5', '極級 黒いサンタ(仮)', 100, 5),
+  raidJackTier('b1', '初級 黒いサンタ', 0.2, 3),
+  raidJackTier('b2', '中級 黒いサンタ', 2, 4),
+  raidJackTier('b3', '上級 黒いサンタ', 10, 5),
+  raidJackTier('b4', '超級 黒いサンタ', 40, 5),
+  raidJackTier('b5', '極級 黒いサンタ', 100, 5),
 ]);
 const raidXmasTiers = (kind) => (kind === 'b' ? RAID_XMAS_B_TIERS : RAID_XMAS_A_TIERS);
 const raidXmasTierAt = (kind, index) => {
@@ -144,7 +146,7 @@ const xmasStoryOpenAtOf = (no) => (no <= 1 ? RAID_XMAS_EVENT.startAt : `2026-12-
 // 序章(台帳 r1126-012・社長): 第1話の前。イチーカから招待状が届いて行くまで。11/28 の開催予告のときから開く(時刻 10:00 は仮)。お話は data/assistants.js の XMAS_STORY_00(EVENT_REPLAYS の xmas_story_00)
 const XMAS_STORY_PROLOGUE_OPEN_AT = '2026-11-28T10:00:00+09:00';
 const XMAS_STORY_CHAPTERS = Object.freeze([
-  Object.freeze({ id: 'xs00', no: 0, prologue: true, openAt: XMAS_STORY_PROLOGUE_OPEN_AT, type: 'read', title: 'とどいたゲーム', scriptId: 'xmas_story_00' }),
+  Object.freeze({ id: 'xs00', no: 0, prologue: true, openAt: XMAS_STORY_PROLOGUE_OPEN_AT, type: 'read', title: '届いたゲーム', scriptId: 'xmas_story_00' }),
   ...XMAS_STORY_LIST.map(([title, type], i) => Object.freeze({
     id: `xs${String(i + 1).padStart(2, '0')}`,
     no: i + 1,
