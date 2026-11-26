@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a627a3ecba692f7f
+// source-sha256: 2fef24c1c1c25697
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -114490,7 +114490,7 @@ const XMAS_NOVEL_SCRIPT = {
     }, {
       "id": "1-1-2",
       "t": "band",
-      "x": "11月30日。雪の山道を、半日のぼった先",
+      "x": "12月18日。雪の山道を、半日のぼった先",
       "k": "C1-1:1-1-2"
     }, {
       "id": "1-1-3",
@@ -114524,7 +114524,7 @@ const XMAS_NOVEL_SCRIPT = {
       "id": "1-1-7",
       "t": "line",
       "w": "watson",
-      "x": "記録しました。11月30日、15時12分。……電波は、ここから弱くなります",
+      "x": "記録しました。12月18日、15時12分。……電波は、ここから弱くなります",
       "k": "C1-1:1-1-7"
     }, {
       "id": "1-1-8",
@@ -115832,7 +115832,7 @@ const XMAS_NOVEL_SCRIPT = {
     }, {
       "id": "4-1-3",
       "t": "band",
-      "x": "2階の奥。イチーカが、古い鍵をまわす",
+      "x": "その夜おそく。2階の奥。イチーカが、古い鍵をまわす",
       "k": "C4-1:4-1-3"
     }, {
       "id": "4-1-4",
@@ -117777,7 +117777,7 @@ const XMAS_NOVEL_SCRIPT = {
       "id": "8-3-9",
       "t": "line",
       "w": "kyuko",
-      "x": "……ごめん、ドラちゃん。いちばん、ひどいことした",
+      "x": "……ごめん、ドラちゃん。服は、2着用意してたんだ。1着を、ドラちゃんのかばんに入れた。……いちばん、ひどいことした",
       "e": "troubled",
       "k": "C8-3:8-3-9"
     }, {
@@ -119090,7 +119090,7 @@ const XMAS_NOVEL_SCRIPT = {
     }, {
       "id": "N-2",
       "t": "band",
-      "x": "12月24日。雪がやみ、ふもとから、人がのぼってきた",
+      "x": "12月27日。クリスマスは、もう過ぎていた。雪がやみ、ふもとから、人がのぼってきた",
       "k": "END-N:N-2"
     }, {
       "id": "N-3",
@@ -119293,7 +119293,7 @@ const XMAS_NOVEL_SCRIPT = {
     }, {
       "id": "A-2",
       "t": "band",
-      "x": "12月24日。雪がやみ、ふもとから人がのぼってきた",
+      "x": "雪がやみ、ふもとから人がのぼってきた",
       "k": "END-A:A-2"
     }, {
       "id": "A-3",
