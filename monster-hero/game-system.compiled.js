@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d389d9c28d9f2532
+// source-sha256: 0ae06c6ea44dc24e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -122271,6 +122271,24 @@ const xmasNovelSe = kind => {
     if (typeof fn === 'function') fn();
   } catch (e) {}
 };
+const XMAS_NOVEL_BGM_SHIFT = Object.freeze({
+  'END-G': [['G-10', 'melo_dear_santa']]
+});
+const xmasNovelBgmAt = (scene, idx) => {
+  if (!scene) return '';
+  let key = scene.bgm || '';
+  const rows = Array.isArray(scene.rows) ? scene.rows : [];
+  const at = Number.isFinite(idx) ? idx : 0;
+  const shifts = XMAS_NOVEL_BGM_SHIFT[scene.id] || [];
+  for (let i = 0; i <= at && i < rows.length; i += 1) {
+    const r = rows[i];
+    if (r && r.bgm) key = r.bgm;
+    shifts.forEach(([rowId, k]) => {
+      if (r && r.id === rowId) key = k;
+    });
+  }
+  return key;
+};
 const xmasNovelBgm = key => {
   try {
     if (typeof Audio_ === 'undefined' || !Audio_) return;
@@ -122552,9 +122570,12 @@ const XmasNovelScreen = ({
     }
     lastSceneRef.current = scene || null;
     if (scene && scene.curtain) setCurtain(c => c || 'down');
-    if (scene && scene.bgm && scene.bgm !== lastBgm.current) {
-      lastBgm.current = scene.bgm;
-      xmasNovelBgm(scene.bgm);
+    {
+      const want = xmasNovelBgmAt(scene, next.cur ? next.cur.idx : 0);
+      if (want && want !== lastBgm.current) {
+        lastBgm.current = want;
+        xmasNovelBgm(want);
+      }
     }
     if (scene && scene.chapter !== lastChapter.current) {
       const ch = xmasNovelChapters(S).find(c => c.id === scene.chapter);
