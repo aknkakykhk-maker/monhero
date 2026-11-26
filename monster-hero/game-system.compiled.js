@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d29c00a6869c2fc9
+// source-sha256: 51ce83add911fc83
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -122061,7 +122061,88 @@ const XmasNovelLaptop = () => React.createElement("svg", {
 }));
 const xmasNovelIsSilhouette = row => !!(row && /黒いサンタのシルエット|黒いサンタの影/.test(row.x || ''));
 const xmasNovelIsLaugh = row => !!(row && /ふふ|あはは|ははは/.test(row.x || ''));
-const XmasNovelFigure = ({
+const XMAS_NOVEL_CHIN = Object.freeze({
+  atsu: 0.46,
+  myua: 0.47,
+  sorashido: 0.46,
+  kiki: 0.47,
+  momosuke: 0.47,
+  dra: 0.76,
+  kyuko: 0.47,
+  erubin: 0.47,
+  ichika: 0.30,
+  mochimaru: 0.35,
+  kuroba: 0.50,
+  shirase: 0.50,
+  shadow: 0.42,
+  boss: 0.40
+});
+const XmasNovelLift = ({
+  chin,
+  children
+}) => {
+  const ref = useRef(null);
+  useEffect(() => {
+    const wrap = ref.current;
+    const fig = wrap && wrap.firstElementChild;
+    if (!fig || !Number.isFinite(chin)) return undefined;
+    let lift = 0;
+    let raf = 0;
+    const fit = () => {
+      raf = 0;
+      const art = fig.firstElementChild;
+      const box = document.querySelector('[data-xmas-novel-box]');
+      if (!art || !box) return;
+      const a = art.getBoundingClientRect();
+      const b = box.getBoundingClientRect();
+      if (!a.height || !b.height) return;
+      const overlapX = Math.min(a.right, b.right) - Math.max(a.left, b.left) > a.width * 0.2;
+      const need = overlapX ? a.top + a.height * chin - (b.top - 6) : -lift;
+      const next = Math.max(0, Math.round(lift + need));
+      if (Math.abs(next - lift) < 1) return;
+      lift = next;
+      fig.style.translate = lift ? `0 ${-lift}px` : '';
+    };
+    const later = () => {
+      if (!raf) raf = requestAnimationFrame(fit);
+    };
+    later();
+    const art = fig.firstElementChild;
+    if (art && art.tagName === 'IMG') art.addEventListener('load', later);
+    const box = document.querySelector('[data-xmas-novel-box]');
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(later) : null;
+    if (ro) {
+      if (box) ro.observe(box);
+      ro.observe(fig);
+    }
+    window.addEventListener('resize', later);
+    return () => {
+      if (raf) cancelAnimationFrame(raf);
+      if (art && art.tagName === 'IMG') art.removeEventListener('load', later);
+      if (ro) ro.disconnect();
+      window.removeEventListener('resize', later);
+    };
+  }, [chin]);
+  return React.createElement("div", {
+    ref: ref,
+    style: {
+      display: 'contents'
+    }
+  }, children);
+};
+const XmasNovelFigure = props => {
+  const {
+    row
+  } = props;
+  const who = !row ? '' : row.t === 'band' ? 'boss' : row.n === '？？？' ? xmasNovelIsLaugh(row) ? 'boss' : 'shadow' : row.w || '';
+  const inner = React.createElement(XmasNovelFigureArt, props);
+  const chin = XMAS_NOVEL_CHIN[who] || (who && who !== 'watson' ? XMAS_NOVEL_CHIN.shadow : NaN);
+  return React.createElement(XmasNovelLift, {
+    chin: chin,
+    key: `${who}-${row && row.e || ''}`
+  }, inner);
+};
+const XmasNovelFigureArt = ({
   row,
   dim = false
 }) => {
