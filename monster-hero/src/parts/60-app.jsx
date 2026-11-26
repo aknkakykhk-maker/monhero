@@ -5642,7 +5642,7 @@ function MonsterHeroGame() {
   const FLOWER3_RANKING_EVENT_ID = 'flower3_2026_11_23'; // data/rhythm-event.js の FLOWER3_EVENT_ID と同じ(閉幕の会話の検査が本体の中で引く)
   const FLOWER3_OPEN_STORY_ID = 'flower3_2026_ep1';
   const FLOWER3_THANKS_STORY_ID = 'flower3_2026_ep8';
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, ...FLOWER3_STORY_IDS, FLOWER3_THANKS_STORY_ID, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, ERUBIN_JOIN_STORY_ID, CARD_CUP_STORY_ID, RHYTHM_GRAND_OPEN_TEASER_STORY_ID, RHYTHM_GRAND_OPEN_STORY_ID, MONSUC_BETA_EP1_STORY_ID, MONSUC_BETA_EP2_STORY_ID, SPARKLING_PINK_STORY_ID, KYUKO_WINTER_STORY_ID, KIKI_TWINTAIL_STORY_ID, BEYOND_SAME_SKY_STORY_ID, DESERT_CROWN_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...RAID_XMAS_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, ...FLOWER3_STORY_IDS, FLOWER3_THANKS_STORY_ID, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, ERUBIN_JOIN_STORY_ID, CARD_CUP_STORY_ID, RHYTHM_GRAND_OPEN_TEASER_STORY_ID, RHYTHM_GRAND_OPEN_STORY_ID, MONSUC_BETA_EP1_STORY_ID, MONSUC_BETA_EP2_STORY_ID, SPARKLING_PINK_STORY_ID, KYUKO_WINTER_STORY_ID, KIKI_TWINTAIL_STORY_ID, BEYOND_SAME_SKY_STORY_ID, DESERT_CROWN_STORY_ID];
   // ★イベントid → そのイベントの会話id。**イベントを足したらここへ1行足す。**
   //   以前はここが第1回のidの直書きで、第2回が始まっても第1回の会話が流れる形になっていた
   //   (2026-09-17に第2回を足したときに直した)。書かなかったイベントでは会話は流れない。
@@ -6289,6 +6289,19 @@ function MonsterHeroGame() {
           raidProgressStoryId = raidJackStoryCandidates(raidTotals, Date.now()).find(id => notPlayedYet(id)) || null;
         } catch (e) { raidProgressStoryId = null; }
       }
+      // クリスマスのレイド「もうひとつの聖夜」のお話(r1126-026・台本 docs/progress/event-xmas-2026/SCRIPT.md)。みんなに1回ずつ。
+      //   導入=レイドの開始(RELEASE_FLAGS.raidXmas・11/30 10:00)のあと / 第1〜5話=段階を倒したあと / 終章=期間が終わったあと(煉獄まで倒せたかで2本の片方)。
+      //   開始より前は RELEASE_FLAGS.raidXmas が偽なので並べない(見るたびに時刻で数え直す)。共有の合計は見回りのたびに取り直す(取れなければ今回は出さない)
+      let raidXmasStoryId = null;
+      if (RELEASE_FLAGS.raidXmas === true) {
+        if (notPlayedYet(RAID_XMAS_STORY_START_ID)) raidXmasStoryId = RAID_XMAS_STORY_START_ID;
+        else if (Object.values(RAID_XMAS_STORY_AFTER_TIER).some(notPlayedYet) || (notPlayedYet(RAID_XMAS_ENDING_CLEARED_ID) && notPlayedYet(RAID_XMAS_ENDING_NOTCLEARED_ID))) {
+          try {
+            const xmasTotals = await raidXmasFetchTotals(RAID_XMAS_EVENT.id);
+            raidXmasStoryId = raidXmasStoryCandidates(xmasTotals, Date.now()).find(id => notPlayedYet(id)) || null;
+          } catch (e) { raidXmasStoryId = null; }
+        }
+      }
       // ハロウィン・ナイトのお話。時刻が来ていて、まだ見ていない部のうち、いちばん古いもの
       const halloweenStoryId = RELEASE_FLAGS.rhythmEventPoints === true
         ? (halloweenNightStoryIdsAt(Date.now()).find(id => notPlayedYet(id)) || null) : null;
@@ -6300,6 +6313,7 @@ function MonsterHeroGame() {
         else if (raidHowtoReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);
         else if (raidRhythmStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_RHYTHM_STORY_ID);
         else if (raidProgressStoryId) setRhythmEventStoryPending(prev => prev || raidProgressStoryId);
+        else if (raidXmasStoryId) setRhythmEventStoryPending(prev => prev || raidXmasStoryId);
         else if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);
         else if (pandoraWingsStoryId) setRhythmEventStoryPending(prev => prev || pandoraWingsStoryId);
         else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);
@@ -6318,6 +6332,7 @@ function MonsterHeroGame() {
       else if (raidHowtoReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);
       else if (raidRhythmStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_RHYTHM_STORY_ID);
       else if (raidProgressStoryId) setRhythmEventStoryPending(prev => prev || raidProgressStoryId);
+      else if (raidXmasStoryId) setRhythmEventStoryPending(prev => prev || raidXmasStoryId);
       else if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);
       else if (pandoraWingsStoryId) setRhythmEventStoryPending(prev => prev || pandoraWingsStoryId);
       else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);
@@ -9401,6 +9416,8 @@ function MonsterHeroGame() {
     ...Object.fromEntries(HALLOWEEN_NIGHT_STORIES.map(story => [`halloweenNightPart${story.part}Seen`, Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(story.id)])),
     // ジャックのストーリー(1.5部〜終章)。見たかは同じ配列(rhythmEventStorySeen)へ id を入れて持つ(新しいキーは作らない)
     ...Object.fromEntries(RAID_JACK_STORY_IDS.map(id => [raidJackStoryUnlockKey(id), Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(id)])),
+    // クリスマスのレイドのお話(raid_xmas_story_*)。見た印の名前は EVENT_REPLAYS の unlockedKey(raidXmasStory1bSeen など)
+    ...Object.fromEntries((typeof EVENT_REPLAYS !== 'undefined' && Array.isArray(EVENT_REPLAYS) ? EVENT_REPLAYS : []).filter(ev => ev && RAID_XMAS_STORY_IDS.includes(ev.id)).map(ev => [ev.unlockedKey, Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(ev.id)])),
     rhythmMultiFriendsSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_MULTI_FRIENDS_STORY_ID),
     rhythmMasuCallSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_MASU_CALL_STORY_ID),
     raidJackHowtoSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RAID_JACK_HOWTO_STORY_ID),

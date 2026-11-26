@@ -171,6 +171,21 @@ const totalsBody = (a1) => JSON.stringify([{ kind: 'a', tier: 1, total_damage: a
       a7.left === 9 && a7.emptyBoxes === 1 && a16.left === 6 && a16.emptyBoxes === 3 && a25.left === 10 && a25.emptyBoxes === 0);
     check('並び: 10人', S.XMAS_STORY_CAST.length === 10);
   }
+  {
+    // レイドのお話(raid_xmas_story_*・r1126-026)が、データにあり・開始の印で出し分けられ・HOME の見回りで流れるようにつながっているか
+    const app = read('monster-hero/src/parts/60-app.jsx');
+    const core = read('monster-hero/src/parts/10-core.jsx');
+    const data = read('monster-hero/data/assistants.js');
+    const ids = ['raid_xmas_story_1b', 'raid_xmas_story_2', 'raid_xmas_story_3', 'raid_xmas_story_4', 'raid_xmas_story_5', 'raid_xmas_story_6', 'raid_xmas_ending_cleared', 'raid_xmas_ending_notcleared'];
+    check('お話: 8本とも EVENT_REPLAYS にあり、公開の印は raidXmas', ids.every((id) => new RegExp(`\\{ id: '${id}'[^\\n]*releaseFlag: 'raidXmas'`).test(data)));
+    check('お話: 回想の出し分けの表に raidXmas がある(開始より前は回想にも出ない)', /get raidXmas\(\) \{ return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS\.raidXmas === true; \}/.test(core));
+    check('お話: 見た印を残すお話の一覧に入っている', app.includes('...RAID_JACK_STORY_IDS, ...RAID_XMAS_STORY_IDS,'));
+    check('お話: 見回りは開始の印のあとだけ・段階の合計から候補を出す',
+      app.includes('if (RELEASE_FLAGS.raidXmas === true) {') && app.includes('raidXmasStoryCandidates(xmasTotals, Date.now())'));
+    check('お話: 待ち行列の2つの並び(開催中のビートのイベントがある/ない)の両方に入っている',
+      (app.match(/else if \(raidXmasStoryId\) setRhythmEventStoryPending\(prev => prev \|\| raidXmasStoryId\);/g) || []).length === 2);
+    check('お話: 回想の見た印の表に入っている', app.includes('RAID_XMAS_STORY_IDS.includes(ev.id)).map(ev => [ev.unlockedKey'));
+  }
   console.log(failed ? `\nNG ${failed} 件` : '\nOK: クリスマスのレイドの定義と回数・与ダメージの口');
   process.exit(failed ? 1 : 0);
 })();
