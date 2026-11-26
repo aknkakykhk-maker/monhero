@@ -41,7 +41,7 @@ const make = (nowIso) => {
     },
   };
   vm.createContext(ctx);
-  vm.runInContext(`${src}\nthis.o={RAID_XMAS_EVENT,RAID_XMAS_SOURCES,RAID_XMAS_A_TIERS,RAID_XMAS_B_TIERS,RAID_XMAS_STORY_IDS,raidXmasWindowAt,raidXmasUseTry,raidXmasAddDamage,raidXmasLoadState,raidXmasSetDebug,raidXmasStoryCandidates,raidJackNormalizePending,sbSendRaidJackHit,RAID_XMAS_SKILL_NAMES,RAID_JACK_SKILL_NAMES,xmasBattleBonusRateAt};`, ctx);
+  vm.runInContext(`${src}\nthis.o={story:{XMAS_STORY_CHAPTERS,XMAS_STORY_CAST,xmasStoryStatusOf,xmasStoryNormalize,xmasStoryCastAt,xmasStoryMarkSeen,xmasStoryMarkCleared},RAID_XMAS_EVENT,RAID_XMAS_SOURCES,RAID_XMAS_A_TIERS,RAID_XMAS_B_TIERS,RAID_XMAS_STORY_IDS,raidXmasWindowAt,raidXmasUseTry,raidXmasAddDamage,raidXmasLoadState,raidXmasSetDebug,raidXmasStoryCandidates,raidJackNormalizePending,sbSendRaidJackHit,RAID_XMAS_SKILL_NAMES,RAID_JACK_SKILL_NAMES,xmasBattleBonusRateAt};`, ctx);
   return { o: ctx.o, calls, store, setResponder: (f) => { responder = f; } };
 };
 const OPEN = '2026-12-01T12:00:00+09:00';
@@ -145,6 +145,30 @@ const totalsBody = (a1) => JSON.stringify([{ kind: 'a', tier: 1, total_damage: a
     check('ごほうび1.5倍: 倍率の元(runRewardMultipliers)には掛けない(モンヒロビートの周回の報酬に重ならない)', !/xmasBattleBonus/.test(body('runRewardMultipliers', 900)));
     check('ごほうび1.5倍: プロのランぶんの周回数に掛ける', /proQuickLoopsFor\([^;]*\* xmasBattleBonusRateAt\(Date\.now\(\)\)\)/.test(body('awardProRunQuickLoops', 1500)));
     check('ごほうび1.5倍: 結果のまとめの札に🎄の一言', /data-xmas-battle-bonus/.test(read(P + '27-result-widgets.jsx')) && /xmasBonus: xmasBonus > 1 \? xmasBonus : null/.test(award + body('awardRunRewards', 12000)));
+  }
+  // ---- ひとりで進める物語(イベントページの「物語」タブ・台帳 r1126-006) ----
+  {
+    const t = make('2026-12-01T12:00:00+09:00');
+    const S = t.o.story;
+    const C = S.XMAS_STORY_CHAPTERS;
+    check('物語: 25話・第1話は開始と同時・第2話は 12/1 4:00・第25話は 12/24 4:00',
+      C.length === 25 && C[0].openAt === '2026-11-30T10:00:00+09:00' && C[1].openAt === '2026-12-01T04:00:00+09:00' && C[24].openAt === '2026-12-24T04:00:00+09:00');
+    const now = Date.parse('2026-12-01T12:00:00+09:00');
+    const st = (i, p, all) => S.xmasStoryStatusOf(C[i], p, now, all);
+    check('物語: 日時の前は locked・前の話がまだなら waiting・開いたら new',
+      st(2, {}) === 'locked' && st(1, {}) === 'waiting' && st(0, {}) === 'new' && st(1, { cleared: ['xs01'] }) === 'new' && st(0, { seen: ['xs01'] }) === 'open');
+    check('物語: デバッグの強制表示は日時も順番も見ない', st(10, {}, true) === 'new');
+    check('物語: 壊れた保存値は既定へ戻す', JSON.stringify(S.xmasStoryNormalize({ cleared: 'x', seen: [1, 'xs01', 'xs01', 'zz'] })) === '{"v":1,"cleared":[],"seen":["xs01"],"rewardClaimed":false}');
+    await S.xmasStoryMarkSeen('xs01');
+    const r = await S.xmasStoryMarkCleared('xs01');
+    check('物語: 読んだ印は新しいキー mh_xmas_story_v1 だけに書く',
+      r.ok && Object.keys(t.store).join(',') === 'mh_xmas_story_v1' && t.store.mh_xmas_story_v1.cleared[0] === 'xs01');
+    check('物語: 知らない話の印は書かない', (await S.xmasStoryMarkCleared('nope')).ok === false && t.store.mh_xmas_story_v1.cleared.length === 1);
+    const a6 = S.xmasStoryCastAt(6), a7 = S.xmasStoryCastAt(7), a16 = S.xmasStoryCastAt(16), a25 = S.xmasStoryCastAt(25);
+    check('並び: はじめてだれかがいなくなった第7話から出す(第6話までは出さない)', !a6.shown && a7.shown && a7.newly.join() === 'momosuke');
+    check('並び: 帯は10人みんなを数える(第7話 9人/1つ・第16話 6人/3つ・第25話 10人/0つ)',
+      a7.left === 9 && a7.emptyBoxes === 1 && a16.left === 6 && a16.emptyBoxes === 3 && a25.left === 10 && a25.emptyBoxes === 0);
+    check('並び: 10人', S.XMAS_STORY_CAST.length === 10);
   }
   console.log(failed ? `\nNG ${failed} 件` : '\nOK: クリスマスのレイドの定義と回数・与ダメージの口');
   process.exit(failed ? 1 : 0);

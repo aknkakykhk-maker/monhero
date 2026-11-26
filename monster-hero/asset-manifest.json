@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "b1f6794605db",
-  "packs": {"beat":{"bytes":311557065,"count":166},"battle":{"bytes":740437712,"count":1837},"card":{"bytes":38085297,"count":1046},"all":{"bytes":1090080074,"count":3049},"core":{"bytes":26004358,"count":25}},
+  "id": "b26ca5ebf716",
+  "packs": {"beat":{"bytes":311557065,"count":166},"battle":{"bytes":741063066,"count":1838},"card":{"bytes":38085297,"count":1046},"all":{"bytes":1090705428,"count":3050},"core":{"bytes":26029002,"count":25}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"b43d691d4773","size":2833344,"pack":"beat"},
@@ -2112,6 +2112,7 @@
     "images/events/rhythm-grand-open-teaser.jpg": {"v":"45ae90cee48b","size":197841,"pack":"battle"},
     "images/events/spooky-dye-preview.jpg": {"v":"5f2023b32279","size":67687,"pack":"battle"},
     "images/events/spooky-profile.jpg": {"v":"998671fd3d0b","size":134035,"pack":"battle"},
+    "images/events/xmas-2026-event-wide.jpg": {"v":"4c99b2d7addd","size":625354,"pack":"battle"},
     "images/events/xmas-2026-notice.jpg": {"v":"789f225e7916","size":530555,"pack":"battle"},
     "images/events/yggdrasil-dye-preview.jpg": {"v":"1fc38d84ced6","size":77069,"pack":"battle"},
     "images/events/yggdrasil-lineage-notice.jpg": {"v":"bdf973efa1bc","size":119475,"pack":"battle"},
@@ -3054,7 +3055,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"6b41c43c46a7","size":319705,"pack":"core"},
+    "tailwind.css": {"v":"cfae1a96fbf9","size":320243,"pack":"core"},
     "data/images/images-ally.js": {"v":"7fcc9331d4b6","size":92225,"pack":"core"},
     "data/images/images-enemy.js": {"v":"0d3643e9bc69","size":3262,"pack":"core"},
     "data/ally-monsters.js": {"v":"6737b7dced48","size":60894,"pack":"core"},
@@ -3076,6 +3077,6 @@
     "data/assistant-masmon-techs.js": {"v":"353cf73676a6","size":113841,"pack":"core"},
     "data/assistant-life-rel-talks.js": {"v":"cde51ded5428","size":225977,"pack":"core"},
     "data/success-sounds.js": {"v":"9692dd51493a","size":19367,"pack":"core"},
-    "game-system.compiled.js": {"v":"d1d6c0ae5560","size":12531911,"pack":"core"}
+    "game-system.compiled.js": {"v":"34c18458b444","size":12556017,"pack":"core"}
   }
 }

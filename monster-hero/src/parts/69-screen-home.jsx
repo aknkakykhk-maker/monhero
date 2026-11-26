@@ -345,6 +345,8 @@ function HomeScreen({
   onOpenBattle, onOpenManagement, onOpenMarket, onOpenProfile, onOpenRhythm, onOpenSettings,
   onOpenTemple, openChangelog, openGiftBox, openMissions, profileFrameId, resolveIconUrl, spotClass,
   raidJackVisible = false, raidJackEventId, onOpenRaidJack,
+  // クリスマスのイベントページを開く(台帳 r1126-006)。開始時刻までは null(札は今までどおり更新履歴を開く)
+  onOpenXmasEvent = null,
   // 助手とおしゃべり(2026-10-14)。公開の印 assistantChat が立つまでは null(ボタンを出さない)
   onOpenAssistantChat = null,
   // MFバトルカードの入口(案A・左の列のいちばん下)。公開の印 cardBattle が立ち、公開のお話を見た人だけ(60-app.jsx が決める)
@@ -456,7 +458,7 @@ function HomeScreen({
         {/* 期間ものの細バナー(2026-11-17 ホーム一新)。イベントと公式杯を、上の帯の下の1本に集約する。
             両方あるときはカルーセルで切り替わる(homeStripShow)。近日公開の予告はバトルカードのカード側へ移した */}
         {homeStripCount>0&&<div className="mh-home-event-strip" data-home-event-strip>
-          {homeEventCampaign&&homeStripShow===0&&<button type="button" data-home-event-banner className="mh-home-event-banner" onClick={openChangelog} aria-label={`${homeEventCampaign.banner.title}${homeEventCampaign.banner.title2||''} ${homeEventCampaign.banner.sub}`}>
+          {homeEventCampaign&&homeStripShow===0&&<button type="button" data-home-event-banner className="mh-home-event-banner" onClick={homeEventCampaign.id==='xmas_2026'&&typeof onOpenXmasEvent==='function'?onOpenXmasEvent:openChangelog} aria-label={`${homeEventCampaign.banner.title}${homeEventCampaign.banner.title2||''} ${homeEventCampaign.banner.sub}`}>
             {/* title2 … 題の2行目(2026-11-14「本オープン記念」だけでは何の本オープンか分からないため、題を2行に分けられるようにした) */}
             {/* 2026-11-23 r1119-131 社長「右の時計の手前まで横に伸ばし、行数を減らして縦を詰める」: 1行目に題と期間(sub)、2行目に副題(title2)。
                 幅が足りない端末では期間だけが題の下へ折り返す(.r1 の flex-wrap) */}

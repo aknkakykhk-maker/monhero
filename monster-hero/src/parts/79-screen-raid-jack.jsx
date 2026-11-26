@@ -283,7 +283,7 @@ const RAID_WAY_BUTTONS = Object.freeze({
   rhythm: { label: 'モンヒロビートで', data: 'data-raid-jack-challenge-rhythm', tone: 'border-fuchsia-300/70 bg-fuchsia-800' },
   card: { label: 'バトルカードで', data: 'data-raid-challenge-card', tone: 'border-sky-300/70 bg-sky-800' },
 });
-const RaidJackScreen = ({ ev = RAID_EVENT_JACK, ways = null, initialTier = 0, onBack, onChallenge, onPurchase, onClaimRewards, beatPoints = 0, eventId, forced = false, unlimited = false, guideVisible = false, onDismissGuide, renderPlace, renderIcon, cardClass }) => {
+const RaidJackScreen = ({ ev = RAID_EVENT_JACK, ways = null, initialTier = 0, onBack, onChallenge, onPurchase, onClaimRewards, beatPoints = 0, eventId, forced = false, unlimited = false, guideVisible = false, onDismissGuide, renderPlace, renderIcon, cardClass, head = null }) => {
   const [tab, setTab] = useState('a');
   const [sel, setSel] = useState(() => ({ a: Math.min(Math.max(Math.floor(Number(initialTier) || 0), 0), ev.aTiers.length - 1), b: 0 }));   // モンヒロビート挑戦から戻ったときは、挑んでいた段階を選んだまま
   const [state, setState] = useState(() => raidJackDefaultState());
@@ -387,8 +387,9 @@ const RaidJackScreen = ({ ev = RAID_EVENT_JACK, ways = null, initialTier = 0, on
     <div className={`${SCREEN_SHELL_CLASS} overflow-hidden [@media(orientation:landscape)_and_(max-height:520px)]:overflow-y-auto mh-scroll`} data-raid-jack-screen>
       {/* 横向きの背の低い画面(844×390 など)では、上の札だけで高さを使い切り、一覧が0になって挑戦のボタンが画面の下の外に出ていた
           (送ることもできず挑戦できない。ダメダシ見回り 10/26 raid #1)。その画面だけ、画面ごと下へ送れる形にする */}
-      <ScreenHead title={<RaidJackFitTitle text={ev.title} />} icon={ev.icon} accent="text-orange-200" onBack={onBack}
-        note={forced ? '(デバッグ表示・別のイベントIDの記録)' : ev.note} />
+      {/* head: クリスマスのイベントページ(79-screen-xmas-event.jsx)が、題・ポスター・タブをこの位置に入れる。ジャックは渡さない(今までどおり) */}
+      {head || <ScreenHead title={<RaidJackFitTitle text={ev.title} />} icon={ev.icon} accent="text-orange-200" onBack={onBack}
+        note={forced ? '(デバッグ表示・別のイベントIDの記録)' : ev.note} />}
       {guideVisible && (
         <div data-raid-jack-guide className="mb-2 shrink-0">
           <AssistantBubble scene="raidJackIntro" compact />
