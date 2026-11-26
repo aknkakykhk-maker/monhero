@@ -76348,7 +76348,7 @@ const RHYTHM_SONG_ENTRIES = [
     displayName:'Kissからはじまるミステリー',
     bgmTrackId:'melo_kiss_mystery',
     // 2026-11-26 追加。クリスマスイベントの曲(約5分4秒・BPM 112)。イベントページの曲と同じ音源。ジャケットはあつとソラシド
-    artwork:'images/song-art/kiss-mystery.jpg',
+    artwork:'images/song-art/kiss-mystery.jpg?v=043890725b48',
     difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
       id,kissMysteryCharts[id]||emptyRhythmChart()
     ])))
@@ -76359,7 +76359,7 @@ const RHYTHM_SONG_ENTRIES = [
     subtitle:'short ver.',
     bgmTrackId:'melo_kiss_mystery_short',
     // 2026-11-26 追加。「Kissからはじまるミステリー」のショート版(約2分41秒・原曲の頭から)。ジャケットは原曲と同じ絵
-    artwork:'images/song-art/kiss-mystery.jpg',
+    artwork:'images/song-art/kiss-mystery.jpg?v=043890725b48',
     difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
       id,kissMysteryShortCharts[id]||emptyRhythmChart()
     ])))
@@ -76369,7 +76369,7 @@ const RHYTHM_SONG_ENTRIES = [
     displayName:'Dear Santa',
     bgmTrackId:'melo_dear_santa',
     // 2026-11-26 追加。クリスマスイベントのイベントBGM(約3分37秒・BPM 200)
-    artwork:'images/song-art/dear-santa.jpg',
+    artwork:'images/song-art/dear-santa.jpg?v=a243e93b30d2',
     difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
       id,dearSantaCharts[id]||emptyRhythmChart()
     ])))
@@ -76380,7 +76380,7 @@ const RHYTHM_SONG_ENTRIES = [
     subtitle:'short ver.',
     bgmTrackId:'melo_dear_santa_short',
     // 2026-11-26 追加。「Dear Santa」のショート版(約1分27秒・原曲の頭から)。ジャケットは原曲と同じ絵
-    artwork:'images/song-art/dear-santa.jpg',
+    artwork:'images/song-art/dear-santa.jpg?v=a243e93b30d2',
     difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
       id,dearSantaShortCharts[id]||emptyRhythmChart()
     ])))
@@ -76390,7 +76390,7 @@ const RHYTHM_SONG_ENTRIES = [
     displayName:'winter fall',
     bgmTrackId:'melo_winter_fall',
     // 2026-11-26 追加。クリスマスイベントのレイドバトル曲(約4分50秒・BPM 166)
-    artwork:'images/song-art/winter-fall.jpg',
+    artwork:'images/song-art/winter-fall.jpg?v=8c34fc190369',
     difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
       id,winterFallCharts[id]||emptyRhythmChart()
     ])))
@@ -76401,7 +76401,7 @@ const RHYTHM_SONG_ENTRIES = [
     subtitle:'short ver.',
     bgmTrackId:'melo_winter_fall_short',
     // 2026-11-26 追加。「winter fall」のショート版(約1分44秒・原曲の頭から)。ジャケットは原曲と同じ絵
-    artwork:'images/song-art/winter-fall.jpg',
+    artwork:'images/song-art/winter-fall.jpg?v=8c34fc190369',
     difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
       id,winterFallShortCharts[id]||emptyRhythmChart()
     ])))

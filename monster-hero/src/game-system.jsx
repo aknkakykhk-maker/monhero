@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5acaa7fe17d9e833
+// generated-sha256: 23ae5dd9017148cc
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -4915,6 +4915,12 @@ const BGM_TRACKS = [
   { id:'melo_crazy_party_night_full', name:'Crazy Party Night ～ぱんぷきんの逆襲～ full', creator:'オリジナル', src:'audio/bgm-crazy-party-night-full.mp3', gain:1, loop:true },
   // クリスマスイベント「聖夜の名探偵」のイベントページの曲(2026-11-26 社長・台帳 r1126-015)。5分4秒。元の音源は tools/art-sources/song-audio/kiss_mystery/
   { id:'melo_kiss_mystery', name:'Kissからはじまるミステリー', creator:'オリジナル', src:'audio/bgm-kiss-mystery.mp3', gain:1, loop:true },
+  // クリスマスイベントの3曲(2026-11-26 社長・台帳 r1126-023)。モンヒロビートの曲でもある(頭に2秒の無音を足した版)。元の音源は tools/art-sources/song-audio/<kiss_mystery|dear_santa|winter_fall>/
+  { id:'melo_kiss_mystery_short', name:'Kissからはじまるミステリー short ver.', creator:'オリジナル', src:'audio/bgm-kiss-mystery-short.mp3', gain:1, loop:true },
+  { id:'melo_dear_santa', name:'Dear Santa', creator:'オリジナル', src:'audio/bgm-dear-santa.mp3', gain:1, loop:true },
+  { id:'melo_dear_santa_short', name:'Dear Santa short ver.', creator:'オリジナル', src:'audio/bgm-dear-santa-short.mp3', gain:1, loop:true },
+  { id:'melo_winter_fall', name:'winter fall', creator:'オリジナル', src:'audio/bgm-winter-fall.mp3', gain:1, loop:true },
+  { id:'melo_winter_fall_short', name:'winter fall short ver.', creator:'オリジナル', src:'audio/bgm-winter-fall-short.mp3', gain:1, loop:true },
   { id:'melo_emerald_rush', name:'Emerald Rush', creator:'オリジナル', src:'audio/bgm-emerald-rush.mp3', gain:1, loop:true },
   { id:'melo_wrath_of_the_thorn_king', name:'Wrath of the Thorn King「茨の王の怒り」', creator:'オリジナル', src:'audio/bgm-wrath-of-the-thorn-king.mp3', gain:1, loop:true },
   { id:'melo_monster', name:'Monster', creator:'オリジナル', src:'audio/bgm-monster.mp3', gain:1, loop:true },
@@ -6479,6 +6485,8 @@ const Audio_ = (() => {
     "audio/bgm-crazy-party-night-full.mp3": "88a00b2a4fa0",
     "audio/bgm-crazy-party-night.mp3": "45e7252c400e",
     "audio/bgm-crossing-field.mp3": "1e2e7cc1d3d5",
+    "audio/bgm-dear-santa-short.mp3": "5cc7bd38da68",
+    "audio/bgm-dear-santa.mp3": "1d5245547349",
     "audio/bgm-departure-short.mp3": "d2dcbe5c72a8",
     "audio/bgm-departure.mp3": "ad4d5a6838c8",
     "audio/bgm-desert-crown.mp3": "1a440c813bbb",
@@ -6517,7 +6525,8 @@ const Audio_ = (() => {
     "audio/bgm-kiki-issen-short.mp3": "add607be5bec",
     "audio/bgm-kimimachi-loop.mp3": "1be296a6cdb3",
     "audio/bgm-kindan-no-resistance.mp3": "efca5c01d0b7",
-    "audio/bgm-kiss-mystery.mp3": "8ccb87dfc4ad",
+    "audio/bgm-kiss-mystery-short.mp3": "104ce98f9f90",
+    "audio/bgm-kiss-mystery.mp3": "4decd41ac6c2",
     "audio/bgm-lamia.mp3": "faaab8302652",
     "audio/bgm-light-player-short.mp3": "5d59fb7eb1fb",
     "audio/bgm-light-player.mp3": "c07830c2e774",
@@ -6578,6 +6587,8 @@ const Audio_ = (() => {
     "audio/bgm-tsuki-ga-michiru-mae-ni.mp3": "74eb2d433abd",
     "audio/bgm-walkure-short.mp3": "4ac3e2f2af3e",
     "audio/bgm-walkure.mp3": "c0643f725dff",
+    "audio/bgm-winter-fall-short.mp3": "619d095a922a",
+    "audio/bgm-winter-fall.mp3": "7ba38a0b2856",
     "audio/bgm-wrath-of-the-thorn-king.mp3": "d1ea326a4ee2",
     "audio/bgm-zenbu-hissatsuwaza.mp3": "5b91503c1743",
     "audio/jingle-victory.mp3": "689c9715a824",
@@ -39162,6 +39173,12 @@ const xmasStoryCastAt = (no) => {
 
 // イベントページ(レイドの準備画面も)を開いているあいだの曲(台帳 r1126-015)。閉じると画面の曲へ戻る。BGM を切っている人には鳴らない(ふだんの BGM と同じ口)
 const XMAS_EVENT_BGM_TRACK = 'melo_kiss_mystery';
+// クリスマスイベントの期間(11/30 10:00〜12/31 3:59)だけの曲(台帳 r1126-023)。期間の外は今までの曲。開催中かは見るたびに数え直す
+//  ・ホームのBGM「Dear Santa」(台帳 r1126-023 追記1): HOME の曲(プロフィール・持ち物など HOME の曲を続ける画面も)。BGMアレンジでデフォルトのままの人だけ(自分で選んだ曲は替えない)
+//  ・レイドバトル曲「winter fall」: レイドのボスとの戦いの最中(モンヒロバトルの戦闘・MFバトルカードの対戦)
+const XMAS_HOME_BGM_TRACK = 'melo_dear_santa';
+const XMAS_RAID_BATTLE_BGM_TRACK = 'melo_winter_fall';
+const xmasEventBgmOpenAt = (nowMs) => raidXmasWindowAt(nowMs) === 'open';
 
 // ---- part: 36-raid-xmas-api.jsx ----
 // ===== クリスマスのレイドの回数・与ダメージ(3つの入口で共通の口) =====
@@ -118529,7 +118546,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       const intro = { mode: 'assistant', foe: { who: null, name: bossName, icon: null, frame: null, line: null, deckName: CARD_RAID_BOSS.deckName, monsters: vsMons(st, CARD_CPU) },
         me: { name: myName, deckName: deck.name || null, monsters: vsMons(st, CARD_ME) } };
       setGame({ key: `raid-${seed}`, st, who: 'raid', level: tier.level, settings: save.settings, intro, raid: { tier: Math.max(0, Math.floor(Number(rc.tierIndex) || 0)), tierName: rc.tierName || '', bossName, run: rc } });
-      onBgm && onBgm(cardBgmOf(cardCpuPlaylistOf(save.cpuPlaylist, 'kyuko')));
+      // レイドのボスとの対戦はクリスマスのレイドバトル曲「winter fall」(台帳 r1126-023)。曲が無いときは今までどおり
+      onBgm && onBgm(typeof XMAS_RAID_BATTLE_BGM_TRACK === 'string' && BGM_TRACK_BY_ID[XMAS_RAID_BATTLE_BGM_TRACK] ? XMAS_RAID_BATTLE_BGM_TRACK : cardBgmOf(cardCpuPlaylistOf(save.cpuPlaylist, 'kyuko')));
       onNavigate('CARD_BATTLE');
     } finally { raidStartingRef.current = false; }
   };
@@ -136456,7 +136474,8 @@ function MonsterHeroGame() {
     // 助手ライフの画面(HOME・プロフィール・持ち物の上に開く)は「風がそよぐ場所」(2026-11-07 社長)
     if (assistantLifeOpenNow && (state === 'HOME' || state === 'PROFILE' || state === 'ITEM_INVENTORY') && typeof ASSISTANT_LIFE_BGM_TRACK === 'string') return ASSISTANT_LIFE_BGM_TRACK;
     // イベント・レイドボス「ジャック」: ジャックとの戦いは Monster(全編)、レイド画面・段階えらび・編成はぱんぷきんの曲に固定する
-    if (state === 'BATTLE' && raidJackRunRef.current) return RAID_JACK_BATTLE_BGM_TRACK;
+    // クリスマスのレイドの戦いは「winter fall」(台帳 r1126-023)
+    if (state === 'BATTLE' && raidJackRunRef.current) return raidJackRunRef.current.ev === 'xmas' ? XMAS_RAID_BATTLE_BGM_TRACK : RAID_JACK_BATTLE_BGM_TRACK;
     // クリスマスはイベントページ(物語・レイド・ボーナス)とレイドの準備画面で「Kissからはじまるミステリー」(台帳 r1126-015)
     if (RAID_JACK_BGM_STATES.includes(state)) return raidEvRef.current === 'xmas' ? XMAS_EVENT_BGM_TRACK : RAID_JACK_BGM_TRACK;
     // HOMEの曲は、イベント中だけ(ユーザーが曲を選んでいないとき)ぱんぷきんの曲にする。終わったら元の曲へ戻る。
@@ -136465,7 +136484,9 @@ function MonsterHeroGame() {
     // 更新履歴には「イベント中はHOMEのBGMもこの曲」と書いていたのに、ジャックの開催中しか切り替えていなかった)
     const halloweenNightOpen = Date.now() >= Date.parse(HALLOWEEN_NIGHT_START_AT) && Date.now() < Date.parse(HALLOWEEN_NIGHT_END_AT);
     const homeBgm = (((RELEASE_FLAGS.raidJack === true && raidJackWindowAt(Date.now()) === 'open') || raidJackDebugForce || halloweenNightOpen)
-      && bgmArrangement.home === DEFAULT_BGM_ARRANGEMENT.home) ? RAID_JACK_BGM_TRACK : bgmArrangement.home;
+      && bgmArrangement.home === DEFAULT_BGM_ARRANGEMENT.home) ? RAID_JACK_BGM_TRACK
+      // クリスマスイベントの期間は「Dear Santa」(台帳 r1126-023・デフォルトのままの人だけ)
+      : (xmasEventBgmOpenAt(Date.now()) && bgmArrangement.home === DEFAULT_BGM_ARRANGEMENT.home) ? XMAS_HOME_BGM_TRACK : bgmArrangement.home;
     if (isGameOver) return bgmArrangement.gameOver;
     if (!debugBattleRef.current && currentWave === 10 && (state === 'WAVE_RESULT' || state === 'CHAMPION')) {
       // AUTO∞は最終リザルトでも直前の戦闘BGMを継続する。設定をONにした場合だけ従来のクリアBGMへ切り替える。

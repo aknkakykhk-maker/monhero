@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 54c78bdfc0ec5d90
+// source-sha256: 1aea56435fe19f85
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -6315,6 +6315,41 @@ const BGM_TRACKS = [{
   gain: 1,
   loop: true
 }, {
+  id: 'melo_kiss_mystery_short',
+  name: 'Kissからはじまるミステリー short ver.',
+  creator: 'オリジナル',
+  src: 'audio/bgm-kiss-mystery-short.mp3',
+  gain: 1,
+  loop: true
+}, {
+  id: 'melo_dear_santa',
+  name: 'Dear Santa',
+  creator: 'オリジナル',
+  src: 'audio/bgm-dear-santa.mp3',
+  gain: 1,
+  loop: true
+}, {
+  id: 'melo_dear_santa_short',
+  name: 'Dear Santa short ver.',
+  creator: 'オリジナル',
+  src: 'audio/bgm-dear-santa-short.mp3',
+  gain: 1,
+  loop: true
+}, {
+  id: 'melo_winter_fall',
+  name: 'winter fall',
+  creator: 'オリジナル',
+  src: 'audio/bgm-winter-fall.mp3',
+  gain: 1,
+  loop: true
+}, {
+  id: 'melo_winter_fall_short',
+  name: 'winter fall short ver.',
+  creator: 'オリジナル',
+  src: 'audio/bgm-winter-fall-short.mp3',
+  gain: 1,
+  loop: true
+}, {
   id: 'melo_emerald_rush',
   name: 'Emerald Rush',
   creator: 'オリジナル',
@@ -8614,6 +8649,8 @@ const Audio_ = (() => {
     "audio/bgm-crazy-party-night-full.mp3": "88a00b2a4fa0",
     "audio/bgm-crazy-party-night.mp3": "45e7252c400e",
     "audio/bgm-crossing-field.mp3": "1e2e7cc1d3d5",
+    "audio/bgm-dear-santa-short.mp3": "5cc7bd38da68",
+    "audio/bgm-dear-santa.mp3": "1d5245547349",
     "audio/bgm-departure-short.mp3": "d2dcbe5c72a8",
     "audio/bgm-departure.mp3": "ad4d5a6838c8",
     "audio/bgm-desert-crown.mp3": "1a440c813bbb",
@@ -8652,7 +8689,8 @@ const Audio_ = (() => {
     "audio/bgm-kiki-issen-short.mp3": "add607be5bec",
     "audio/bgm-kimimachi-loop.mp3": "1be296a6cdb3",
     "audio/bgm-kindan-no-resistance.mp3": "efca5c01d0b7",
-    "audio/bgm-kiss-mystery.mp3": "8ccb87dfc4ad",
+    "audio/bgm-kiss-mystery-short.mp3": "104ce98f9f90",
+    "audio/bgm-kiss-mystery.mp3": "4decd41ac6c2",
     "audio/bgm-lamia.mp3": "faaab8302652",
     "audio/bgm-light-player-short.mp3": "5d59fb7eb1fb",
     "audio/bgm-light-player.mp3": "c07830c2e774",
@@ -8713,6 +8751,8 @@ const Audio_ = (() => {
     "audio/bgm-tsuki-ga-michiru-mae-ni.mp3": "74eb2d433abd",
     "audio/bgm-walkure-short.mp3": "4ac3e2f2af3e",
     "audio/bgm-walkure.mp3": "c0643f725dff",
+    "audio/bgm-winter-fall-short.mp3": "619d095a922a",
+    "audio/bgm-winter-fall.mp3": "7ba38a0b2856",
     "audio/bgm-wrath-of-the-thorn-king.mp3": "d1ea326a4ee2",
     "audio/bgm-zenbu-hissatsuwaza.mp3": "5b91503c1743",
     "audio/jingle-victory.mp3": "689c9715a824",
@@ -64170,6 +64210,9 @@ const xmasStoryCastAt = no => {
   };
 };
 const XMAS_EVENT_BGM_TRACK = 'melo_kiss_mystery';
+const XMAS_HOME_BGM_TRACK = 'melo_dear_santa';
+const XMAS_RAID_BATTLE_BGM_TRACK = 'melo_winter_fall';
+const xmasEventBgmOpenAt = nowMs => raidXmasWindowAt(nowMs) === 'open';
 const raidXmasLoadState = async () => {
   try {
     return raidJackNormalizeState(await storeGet(RAID_XMAS_STORAGE_KEY, null, false));
@@ -221587,7 +221630,7 @@ const CardBattleScreen = ({
           run: rc
         }
       });
-      onBgm && onBgm(cardBgmOf(cardCpuPlaylistOf(save.cpuPlaylist, 'kyuko')));
+      onBgm && onBgm(typeof XMAS_RAID_BATTLE_BGM_TRACK === 'string' && BGM_TRACK_BY_ID[XMAS_RAID_BATTLE_BGM_TRACK] ? XMAS_RAID_BATTLE_BGM_TRACK : cardBgmOf(cardCpuPlaylistOf(save.cpuPlaylist, 'kyuko')));
       onNavigate('CARD_BATTLE');
     } finally {
       raidStartingRef.current = false;
@@ -250411,10 +250454,10 @@ function MonsterHeroGame() {
     if (eventBgmScene) return bgmArrangementWithEventDefault(bgmArrangement, eventBgmScene);
     if (battleBgmOverlay) return typeof battleBgmOverlay === 'string' && typeof BGM_TRACK_BY_ID !== 'undefined' && BGM_TRACK_BY_ID[battleBgmOverlay] ? battleBgmOverlay : bgmArrangement.battle || DEFAULT_BGM_ARRANGEMENT.battle;
     if (assistantLifeOpenNow && (state === 'HOME' || state === 'PROFILE' || state === 'ITEM_INVENTORY') && typeof ASSISTANT_LIFE_BGM_TRACK === 'string') return ASSISTANT_LIFE_BGM_TRACK;
-    if (state === 'BATTLE' && raidJackRunRef.current) return RAID_JACK_BATTLE_BGM_TRACK;
+    if (state === 'BATTLE' && raidJackRunRef.current) return raidJackRunRef.current.ev === 'xmas' ? XMAS_RAID_BATTLE_BGM_TRACK : RAID_JACK_BATTLE_BGM_TRACK;
     if (RAID_JACK_BGM_STATES.includes(state)) return raidEvRef.current === 'xmas' ? XMAS_EVENT_BGM_TRACK : RAID_JACK_BGM_TRACK;
     const halloweenNightOpen = Date.now() >= Date.parse(HALLOWEEN_NIGHT_START_AT) && Date.now() < Date.parse(HALLOWEEN_NIGHT_END_AT);
-    const homeBgm = (RELEASE_FLAGS.raidJack === true && raidJackWindowAt(Date.now()) === 'open' || raidJackDebugForce || halloweenNightOpen) && bgmArrangement.home === DEFAULT_BGM_ARRANGEMENT.home ? RAID_JACK_BGM_TRACK : bgmArrangement.home;
+    const homeBgm = (RELEASE_FLAGS.raidJack === true && raidJackWindowAt(Date.now()) === 'open' || raidJackDebugForce || halloweenNightOpen) && bgmArrangement.home === DEFAULT_BGM_ARRANGEMENT.home ? RAID_JACK_BGM_TRACK : xmasEventBgmOpenAt(Date.now()) && bgmArrangement.home === DEFAULT_BGM_ARRANGEMENT.home ? XMAS_HOME_BGM_TRACK : bgmArrangement.home;
     if (isGameOver) return bgmArrangement.gameOver;
     if (!debugBattleRef.current && currentWave === 10 && (state === 'WAVE_RESULT' || state === 'CHAMPION')) {
       if (allowKeep && autoRepeatRef.current && bgmArrangement.autoRepeatResultBgm !== 'on') return '__keep_battle_bgm__';
