@@ -1,0 +1,131 @@
+{
+ "_note": "正本全身絵の顔ランドマーク実測 (キー = リポジトリパス)。eye/chin は画素座標 [x, y]。sha256 は実測したファイルのもの — 正本が差し替わってハッシュが変わると、この記録は自動的に無効 (stale) になり、再実測するまでアイコン生成は始まらない。自動検出 (YuNet / アニメ顔カスケード) はこの画風では誤検出・未検出が多く使えないため、実測を正とする (検出器は候補提示のみ)。",
+ "monster-hero/images/assistant/fullbody/momosuke_halloween__angry.png": {
+  "chin": [
+   498.0,
+   500.6
+  ],
+  "eye": [
+   484.1,
+   389.8
+  ],
+  "measured": "2026-11-26 AI目視測定 (上部42%クロップ上で目の中点とあご先を測定)",
+  "sha256": "117d2d0e7cee9539bc32109c3a6b093989c4e0ebd95b3f49b4d14c30836cecb0",
+  "size": [
+   992,
+   2000
+  ]
+ },
+ "monster-hero/images/assistant/fullbody/momosuke_halloween__crying.png": {
+  "chin": [
+   518.9,
+   535.9
+  ],
+  "eye": [
+   508.1,
+   428.4
+  ],
+  "measured": "2026-11-26 AI目視測定",
+  "sha256": "38144251acc252130e42e6682bed3d0706348deb4a0ce5323c813343556a2035",
+  "size": [
+   979,
+   2000
+  ]
+ },
+ "monster-hero/images/assistant/fullbody/momosuke_halloween__excited.png": {
+  "chin": [
+   582.5,
+   485.5
+  ],
+  "eye": [
+   555.3,
+   365.4
+  ],
+  "measured": "2026-11-26 AI目視測定",
+  "sha256": "9971fa539fa70a14eb52bd09c5fe7e1d84375644b51f44e7860c7dfb8a9a75b8",
+  "size": [
+   1131,
+   2000
+  ]
+ },
+ "monster-hero/images/assistant/fullbody/momosuke_halloween__happy.png": {
+  "chin": [
+   573.0,
+   446.9
+  ],
+  "eye": [
+   520.0,
+   339.4
+  ],
+  "measured": "2026-11-26 AI目視測定",
+  "sha256": "bc498a872069544e12ab364f3a8be54c58285bf6419ac0920250082e5e1f957f",
+  "size": [
+   1038,
+   2000
+  ]
+ },
+ "monster-hero/images/assistant/fullbody/momosuke_halloween__normal.png": {
+  "chin": [
+   255.6,
+   200.8
+  ],
+  "eye": [
+   244.4,
+   151.4
+  ],
+  "measured": "2026-11-26 AI目視測定 (高解像度マスター 938x1798 で測定し、ゲーム版が exactly 1/2 のため比例換算)",
+  "sha256": "0c18108584e210af0ab6be8bcf26a64d74445ea5c491a40b0726e1ddf622db9b",
+  "size": [
+   469,
+   899
+  ]
+ },
+ "monster-hero/images/assistant/fullbody/momosuke_halloween__surprise.png": {
+  "chin": [
+   499.9,
+   451.9
+  ],
+  "eye": [
+   492.5,
+   333.5
+  ],
+  "measured": "2026-11-26 AI目視測定",
+  "sha256": "3f669f02ac4e8c684d6475c84b70ca9f9b0e7117b7d1819754b55054ad0f49ba",
+  "size": [
+   924,
+   2000
+  ]
+ },
+ "monster-hero/images/assistant/fullbody/momosuke_halloween__troubled.png": {
+  "chin": [
+   506.3,
+   506.5
+  ],
+  "eye": [
+   484.9,
+   384.7
+  ],
+  "measured": "2026-11-26 AI目視測定",
+  "sha256": "53a9054b0161b4febbf23dd4d4fbbc67821b127e2506a1fb7f801fe70a891f3c",
+  "size": [
+   929,
+   2000
+  ]
+ },
+ "monster-hero/images/assistant/fullbody/momosuke_halloween__wink.png": {
+  "chin": [
+   458.3,
+   452.8
+  ],
+  "eye": [
+   434.0,
+   343.6
+  ],
+  "measured": "2026-11-26 AI目視測定",
+  "sha256": "7a0f68ec5370f458b0d7400a13a5e5ded350e2ecfb94246fe91ef7dac8b713bb",
+  "size": [
+   971,
+   2000
+  ]
+ }
+}
