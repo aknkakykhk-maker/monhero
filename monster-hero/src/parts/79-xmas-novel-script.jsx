@@ -1,7 +1,7 @@
 // ===== クリスマスのミステリーノベルの台本データ(生成物・手で直さない) =====
 // 直すのは台本 docs/progress/event-xmas-2026/SCRIPT.md。作り直し: node tools/novel/xmas-novel-build.js(書き方は docs/progress/xmas-novel/FORMAT.md)
 // 形: { v, src, chapters:[{id,no,label,title}], scenes:[{id,chapter,title,cond,bgm,bg,next,ending?,rows:[行]}] }。行の t は line/band/clue/panel/flag/q
-const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md","chapters":[{"id":"C0","no":0,"label":"序章","disp":"序章","title":"とどいたゲーム"},
+const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md","chapters":[{"id":"C0","no":0,"label":"序章","disp":"序章","title":"届いたゲーム"},
 {"id":"OUT","no":98,"label":"外側","disp":"","title":"画面の前で","outside":true},
 {"id":"C1","no":1,"label":"第1章","disp":"第一章","title":"ペンション・シュプール"},
 {"id":"C2","no":2,"label":"第2章","disp":"第二章","title":"十二の鐘"},
@@ -14,7 +14,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"C9","no":9,"label":"終章","disp":"終章","title":"聖夜の鐘"},
 {"id":"C10","no":10,"label":"第8章","disp":"第八章","title":"消えていく灯"},
 {"id":"C11","no":11,"label":"第9章","disp":"第九章","title":"二度目の推理"},
-{"id":"END","no":99,"label":"エンディング","disp":"エンディング","title":""}],"scenes":[{"id":"OUT-0-1","chapter":"C0","title":"差出人のない小包","cond":null,"bgm":"kaze_ga_soyogu","bg":"monhero_plaza","next":"OUT-0-2","rows":[{"id":"0-1","t":"band","x":"聖夜の名探偵 序章 〜とどいたゲーム〜","k":"OUT-0-1:0-1"},
+{"id":"END","no":99,"label":"エンディング","disp":"エンディング","title":""}],"scenes":[{"id":"OUT-0-1","chapter":"C0","title":"差出人のない小包","cond":null,"bgm":"kaze_ga_soyogu","bg":"monhero_plaza","next":"OUT-0-2","rows":[{"id":"0-1","t":"band","x":"聖夜の名探偵 序章 〜届いたゲーム〜","k":"OUT-0-1:0-1"},
 {"id":"0-2","t":"band","x":"11月の終わり。モンヒロの広場","k":"OUT-0-1:0-2"},
 {"id":"0-3","t":"line","w":"myua","x":"ねえねえ、あつくん！ もうすぐクリスマスぢゃん！ 今年はなにする？","e":"excited","k":"OUT-0-1:0-3"},
 {"id":"0-4","t":"line","w":"atsu","x":"みゅあ、気が早いって笑 ……ん？ ベンチの上に、なんか置いてある","e":"happy","k":"OUT-0-1:0-4"},
