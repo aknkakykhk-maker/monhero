@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 734faad3111723d1
+// generated-sha256: 5be0b17b025c5e26
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -68813,7 +68813,11 @@ const xmasNovelTintOf = (n, b) => {
 };
 const xmasNovelBgOf = (name) => {
   const n = String(name || '').split('→')[0]; // 「A→B」は A から始める(B へ変わる行は XMAS_NOVEL_BG_SHIFT)
-  if (/^[a-z0-9_]+$/.test(n)) return { img: `images/story-bg/${n}.jpg` };
+  // 「monhero_plaza(画面のわくの中)」のように、絵の名前のうしろに説明が付く物も、頭の絵の名前で出す(無地になっていた・2026-11-26 窓口)
+  const raw = n.match(/^([a-z0-9_]+)(?=$|[(（])/);
+  if (raw) return { img: `images/story-bg/${raw[1]}.jpg` };
+  // 外側の場面「ゲーム機をかこむ助手たち」は、台本の最初の外側の場面(monhero_plaza_evening)と同じ広場で出す。夜は夜の広場
+  if (/ゲーム機をかこむ/.test(n)) return { img: `images/story-bg/${/夜/.test(n) ? 'monhero_night' : 'monhero_plaza_evening'}.jpg` };
   const b = XMAS_NOVEL_BG.find((x) => x.re.test(n));
   if (!b) return XMAS_NOVEL_BG_DEFAULT;
   const tint = xmasNovelTintOf(n, b);
@@ -155316,7 +155320,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const finishOpening=()=>setEventReplay(r=>r&&!r.opened?{...r,opened:true,shownAt:Date.now()}:r);
         // ゲスト(ジャック・ぱんぷきん)は、下の助手の列には入れない。初めて話す行(か stage で呼ばれる行)から、画面の上部の「ステージ」に出る
         //  (2026-10-04・ユーザー指示「はじめからジャックやぱんぷきんが会話画面にいるのは違和感。出すタイミングをちゃんと」)
-        const isGuestWho=(id)=>{const w=assistantById(id);return !!w&&w.role==='ゲスト';};
+        // speakBottom の客(クリスマスの泊まり客など)は、助手と同じ下の欄で話す(上の段に出さない・2026-11-26)
+        const isGuestWho=(id)=>{const w=assistantById(id);return !!w&&w.role==='ゲスト'&&!w.speakBottom;};
         // hideUntilFirstLine に書いた助手は、初めて話す行までは下の列にも出さない(登場の場面で顔を伏せる。2026-10-22 社長「あつの顔は『呼んだ？』で登場するまで伏せる」)
         const hiddenUntil=Array.isArray(event&&event.hideUntilFirstLine)?event.hideUntilFirstLine:[];
         // 顔の列の人を、いまの行までで最後に話したときの姿(衣装・シークレット)で出す(2026-11-05 えるびん)

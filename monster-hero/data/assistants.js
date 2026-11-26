@@ -11301,13 +11301,14 @@ const STORY_GUEST_SPEAKERS = [
   // クリスマスのイベント「聖夜の名探偵」(2026-11-28 序章から・台帳 r1126-013)のワトソンくん(台本の初めの名前はルーペ)。ソラシドのノートパソコンの AI。顔は出さず、名前と台詞だけ(noFace)
   { id: 'watson', name: 'ワトソンくん', role: 'ゲスト', emoji: '💻', accent: '#67e8f9', image: null, noFace: true, expressions: [], defaultExpression: 'normal' },
   // クリスマスのレイド「もうひとつの聖夜」(RAID_XMAS_STORY_*・r1126-026)の話し手。表情の絵は1枚(expressions は空)。
+  //   speakBottom: 上の段(ボスの舞台)ではなく、助手と同じ下の欄で話す(ゲストが話す間、下に前の人の台詞が残って、だれが話しているか分かりにくかった・2026-11-26 窓口)
   //   絵が読めないときは AssistantFace が絵文字で出す(謎の客2人の顔は、社長が渡した顔の絵からほかの助手と同じ寄り具合に切り出した物・r1126-033)
-  { id: 'ichika', name: 'イチーカ', role: 'ゲスト', emoji: '❄️', accent: '#93c5fd', image: 'images/monster-icons/face/snegurochka.png', expressions: [], defaultExpression: 'normal' },
-  { id: 'mochimaru', name: 'もちまる', role: 'ゲスト', emoji: '🍡', accent: '#fca5a5', image: 'images/monster-icons/face/mocchi.png', expressions: [], defaultExpression: 'normal' },
-  { id: 'kuroba', name: '黒羽', role: 'ゲスト', emoji: '🕰️', accent: '#94a3b8', image: 'images/story-guests/kuroba_face.png', expressions: [], defaultExpression: 'normal' },
-  { id: 'shirase', name: '白瀬', role: 'ゲスト', emoji: '🧤', accent: '#f87171', image: 'images/story-guests/shirase_face.png', expressions: [], defaultExpression: 'normal' },
+  { id: 'ichika', name: 'イチーカ', role: 'ゲスト', speakBottom: true, emoji: '❄️', accent: '#93c5fd', image: 'images/monster-icons/face/snegurochka.png', expressions: [], defaultExpression: 'normal' },
+  { id: 'mochimaru', name: 'もちまる', role: 'ゲスト', speakBottom: true, emoji: '🍡', accent: '#fca5a5', image: 'images/monster-icons/face/mocchi.png', expressions: [], defaultExpression: 'normal' },
+  { id: 'kuroba', name: '黒羽', role: 'ゲスト', speakBottom: true, emoji: '🕰️', accent: '#94a3b8', image: 'images/story-guests/kuroba_face.png', expressions: [], defaultExpression: 'normal' },
+  { id: 'shirase', name: '白瀬', role: 'ゲスト', speakBottom: true, emoji: '🧤', accent: '#f87171', image: 'images/story-guests/shirase_face.png', expressions: [], defaultExpression: 'normal' },
   // 赤いサンタは、まだゲームの中に絵が無いので絵文字で出す。黒いサンタはレイドのボスの絵(行の name で段階の名前に上書きする)
-  { id: 'xmas_santa', name: 'サンタ', role: 'ゲスト', emoji: '🎅', accent: '#ef4444', image: null, expressions: [], defaultExpression: 'normal' },
+  { id: 'xmas_santa', name: 'サンタ', role: 'ゲスト', speakBottom: true, emoji: '🎅', accent: '#ef4444', image: null, expressions: [], defaultExpression: 'normal' },
   { id: 'xmas_kurosanta', name: '黒いサンタ', role: 'ゲスト', emoji: '🎅', accent: '#7f1d1d', image: (typeof RAID_XMAS_BOSS_IMG !== 'undefined' ? RAID_XMAS_BOSS_IMG : null), imageFit: 'contain', expressions: [], defaultExpression: 'normal' },
 ];
 
@@ -13411,14 +13412,14 @@ const EVENT_REPLAYS = [
   { id: 'xmas_story_00', date: '2026-11-28 10:00', title: '聖夜の名探偵 序章 ～届いたゲーム～', script: XMAS_STORY_00, calls: XMAS_STORY_CALLS, unlockedKey: 'xmasStory00Seen', costumes: XMAS_STORY_COSTUMES, releaseFlag: 'xmasStoryPrologue', group: 'xmas' },
   // クリスマスのレイド「もうひとつの聖夜」(r1126-026)。導入=レイド開始 / 第1〜5話=段階(咎・戒・罰・断罪・煉獄)を倒したあと / 終章=期間終了後(煉獄まで倒せたかで2本)。
   //   id は 35-raid-xmas.jsx の RAID_XMAS_STORY_IDS と同じ。公開の印 raidXmas(11/30 10:00)まで回想にも出さない。date は回想の並び順にだけ使う(1分ずつ振る)
-  { id: 'raid_xmas_story_1b', date: '2026-11-30 10:00', title: '聖夜の名探偵 レイド 導入 ～もうひとつの聖夜～', script: RAID_XMAS_STORY_1B, calls: RAID_XMAS_STORY_CALLS, unlockedKey: 'raidXmasStory1bSeen', costumes: XMAS_STORY_COSTUMES, releaseFlag: 'raidXmas', group: 'xmas' },
-  { id: 'raid_xmas_story_2', date: '2026-11-30 10:01', title: '聖夜の名探偵 レイド 第1話 ～落ちたひとつ～', script: RAID_XMAS_STORY_2, calls: RAID_XMAS_STORY_CALLS, unlockedKey: 'raidXmasStory2Seen', costumes: XMAS_STORY_COSTUMES, releaseFlag: 'raidXmas', group: 'xmas' },
-  { id: 'raid_xmas_story_3', date: '2026-11-30 10:02', title: '聖夜の名探偵 レイド 第2話 ～ゆれる声～', script: RAID_XMAS_STORY_3, calls: RAID_XMAS_STORY_CALLS, unlockedKey: 'raidXmasStory3Seen', costumes: XMAS_STORY_COSTUMES, releaseFlag: 'raidXmas', group: 'xmas' },
-  { id: 'raid_xmas_story_4', date: '2026-11-30 10:03', title: '聖夜の名探偵 レイド 第3話 ～赤い色～', script: RAID_XMAS_STORY_4, calls: RAID_XMAS_STORY_CALLS, unlockedKey: 'raidXmasStory4Seen', costumes: XMAS_STORY_COSTUMES, releaseFlag: 'raidXmas', group: 'xmas' },
-  { id: 'raid_xmas_story_5', date: '2026-11-30 10:04', title: '聖夜の名探偵 レイド 第4話 ～聞きおぼえのある曲～', script: RAID_XMAS_STORY_5, calls: RAID_XMAS_STORY_CALLS, unlockedKey: 'raidXmasStory5Seen', costumes: XMAS_STORY_COSTUMES, releaseFlag: 'raidXmas', group: 'xmas' },
-  { id: 'raid_xmas_story_6', date: '2026-11-30 10:05', title: '聖夜の名探偵 レイド 第5話 ～ありがとうの声～', script: RAID_XMAS_STORY_6, calls: RAID_XMAS_STORY_CALLS, unlockedKey: 'raidXmasStory6Seen', costumes: XMAS_STORY_COSTUMES, releaseFlag: 'raidXmas', group: 'xmas' },
-  { id: 'raid_xmas_ending_cleared', date: '2026-12-31 04:00', title: '聖夜の名探偵 レイド 終章 ～メリークリスマス(煉獄まで倒せた)～', script: RAID_XMAS_ENDING_CLEARED, calls: RAID_XMAS_STORY_CALLS, unlockedKey: 'raidXmasEndingClearedSeen', costumes: XMAS_STORY_COSTUMES, releaseFlag: 'raidXmas', group: 'xmas' },
-  { id: 'raid_xmas_ending_notcleared', date: '2026-12-31 04:01', title: '聖夜の名探偵 レイド 終章 ～おそくなったサンタ(煉獄には届かなかった)～', script: RAID_XMAS_ENDING_NOTCLEARED, calls: RAID_XMAS_STORY_CALLS, unlockedKey: 'raidXmasEndingNotclearedSeen', costumes: XMAS_STORY_COSTUMES, releaseFlag: 'raidXmas', group: 'xmas' },
+  { id: 'raid_xmas_story_1b', date: '2026-11-30 10:00', title: '聖夜の名探偵 もうひとつの聖夜 ～はじまり～', script: RAID_XMAS_STORY_1B, calls: RAID_XMAS_STORY_CALLS, unlockedKey: 'raidXmasStory1bSeen', costumes: XMAS_STORY_COSTUMES, releaseFlag: 'raidXmas', group: 'xmas' },
+  { id: 'raid_xmas_story_2', date: '2026-11-30 10:01', title: '聖夜の名探偵 もうひとつの聖夜 第1話 ～落ちたひとつ～', script: RAID_XMAS_STORY_2, calls: RAID_XMAS_STORY_CALLS, unlockedKey: 'raidXmasStory2Seen', costumes: XMAS_STORY_COSTUMES, releaseFlag: 'raidXmas', group: 'xmas' },
+  { id: 'raid_xmas_story_3', date: '2026-11-30 10:02', title: '聖夜の名探偵 もうひとつの聖夜 第2話 ～ゆれる声～', script: RAID_XMAS_STORY_3, calls: RAID_XMAS_STORY_CALLS, unlockedKey: 'raidXmasStory3Seen', costumes: XMAS_STORY_COSTUMES, releaseFlag: 'raidXmas', group: 'xmas' },
+  { id: 'raid_xmas_story_4', date: '2026-11-30 10:03', title: '聖夜の名探偵 もうひとつの聖夜 第3話 ～赤い色～', script: RAID_XMAS_STORY_4, calls: RAID_XMAS_STORY_CALLS, unlockedKey: 'raidXmasStory4Seen', costumes: XMAS_STORY_COSTUMES, releaseFlag: 'raidXmas', group: 'xmas' },
+  { id: 'raid_xmas_story_5', date: '2026-11-30 10:04', title: '聖夜の名探偵 もうひとつの聖夜 第4話 ～聞きおぼえのある曲～', script: RAID_XMAS_STORY_5, calls: RAID_XMAS_STORY_CALLS, unlockedKey: 'raidXmasStory5Seen', costumes: XMAS_STORY_COSTUMES, releaseFlag: 'raidXmas', group: 'xmas' },
+  { id: 'raid_xmas_story_6', date: '2026-11-30 10:05', title: '聖夜の名探偵 もうひとつの聖夜 第5話 ～ありがとうの声～', script: RAID_XMAS_STORY_6, calls: RAID_XMAS_STORY_CALLS, unlockedKey: 'raidXmasStory6Seen', costumes: XMAS_STORY_COSTUMES, releaseFlag: 'raidXmas', group: 'xmas' },
+  { id: 'raid_xmas_ending_cleared', date: '2026-12-31 04:00', title: '聖夜の名探偵 もうひとつの聖夜 終章 ～メリークリスマス(煉獄まで倒せた)～', script: RAID_XMAS_ENDING_CLEARED, calls: RAID_XMAS_STORY_CALLS, unlockedKey: 'raidXmasEndingClearedSeen', costumes: XMAS_STORY_COSTUMES, releaseFlag: 'raidXmas', group: 'xmas' },
+  { id: 'raid_xmas_ending_notcleared', date: '2026-12-31 04:01', title: '聖夜の名探偵 もうひとつの聖夜 終章 ～おそくなったサンタ(煉獄には届かなかった)～', script: RAID_XMAS_ENDING_NOTCLEARED, calls: RAID_XMAS_STORY_CALLS, unlockedKey: 'raidXmasEndingNotclearedSeen', costumes: XMAS_STORY_COSTUMES, releaseFlag: 'raidXmas', group: 'xmas' },
   // あつとみゅあの歌のお話(2026-11-22 社長 r1119-076)。新曲 Beyond the Same Sky と一緒に出る。更新のあとに初めて HOME に着いたときに1回流れ、あとは回想から読める。台本は BEYOND_SAME_SKY_STORY
   { id: 'beyond_same_sky_story', date: '2026-11-22 12:00', title: '同じ空の先へ ～Beyond the Same Sky～', script: BEYOND_SAME_SKY_STORY, calls: BEYOND_SAME_SKY_STORY_CALLS, unlockedKey: 'beyondSameSkyStorySeen', group: 'wof_song' },
   // えるびんの歌のお話(2026-11-21 社長 r1119-079)。新曲 Desert Crown と一緒に出る。「同じ空の先へ」を見たあと、次に HOME に着いたときに1回流れ、あとは回想から読める。台本は DESERT_CROWN_STORY

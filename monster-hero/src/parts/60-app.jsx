@@ -25445,7 +25445,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const finishOpening=()=>setEventReplay(r=>r&&!r.opened?{...r,opened:true,shownAt:Date.now()}:r);
         // ゲスト(ジャック・ぱんぷきん)は、下の助手の列には入れない。初めて話す行(か stage で呼ばれる行)から、画面の上部の「ステージ」に出る
         //  (2026-10-04・ユーザー指示「はじめからジャックやぱんぷきんが会話画面にいるのは違和感。出すタイミングをちゃんと」)
-        const isGuestWho=(id)=>{const w=assistantById(id);return !!w&&w.role==='ゲスト';};
+        // speakBottom の客(クリスマスの泊まり客など)は、助手と同じ下の欄で話す(上の段に出さない・2026-11-26)
+        const isGuestWho=(id)=>{const w=assistantById(id);return !!w&&w.role==='ゲスト'&&!w.speakBottom;};
         // hideUntilFirstLine に書いた助手は、初めて話す行までは下の列にも出さない(登場の場面で顔を伏せる。2026-10-22 社長「あつの顔は『呼んだ？』で登場するまで伏せる」)
         const hiddenUntil=Array.isArray(event&&event.hideUntilFirstLine)?event.hideUntilFirstLine:[];
         // 顔の列の人を、いまの行までで最後に話したときの姿(衣装・シークレット)で出す(2026-11-05 えるびん)
