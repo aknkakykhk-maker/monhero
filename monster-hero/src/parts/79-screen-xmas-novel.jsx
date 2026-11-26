@@ -326,7 +326,9 @@ const xmasNovelNameOf = (row) => {
   const c = xmasNovelCastOf(row.w);
   return c ? c.name : '';
 };
-const xmasNovelFill = (text, playerName) => String(text || '').replace(/\{name\}/g, playerName || 'あなた');
+// {name} … プレイヤーの名前 / {犯人にした人} … 推理で選んだ人(xmasNovelFillCtx で渡す)
+let xmasNovelFillCtx = { accused: '' };
+const xmasNovelFill = (text, playerName) => String(text || '').replace(/\{name\}/g, playerName || 'あなた').replace(/\{犯人にした人\}/g, xmasNovelFillCtx.accused || '……');
 const xmasNovelSe = (kind) => {
   try {
     if (typeof Audio_ === 'undefined' || !Audio_ || !Audio_.se) return;
@@ -428,6 +430,8 @@ const XmasNovelScreen = ({ playerName = '', onClose, script = null }) => {
     onClose && onClose();
   };
 
+  // 台詞の {犯人にした人}: いちばんあとの「人を選ぶ」推理で選んだ人の名前
+  { const acc = st && st.cur ? xmasNovelAccusedOf(S, st.cur) : null; const c = acc ? xmasNovelCastOf(acc) : null; xmasNovelFillCtx = { accused: c ? c.name : '' }; }
   // いまの行(返しを読んでいる間は返しの行)
   const row = reply ? reply.list[reply.i] : st && st.row;
   const text = row ? xmasNovelFill(row.x, playerName) : '';
@@ -779,7 +783,7 @@ const XmasNovelScreen = ({ playerName = '', onClose, script = null }) => {
                 {!card.replay && <div className="text-[12px] text-slate-200">{card.fresh ? 'エンドヒストリーに記録しました' : 'エンドヒストリーに記録ずみ'}</div>}
                 {!card.replay && <div className="mt-1 text-[11px] text-slate-300">推理の問い 一発で当てた数 {card.count} / {card.total}</div>}
                 <div className="mt-5 space-y-2">
-                  {card.retry && <button type="button" className="mh-nv-btn wide mh-nv-serif" data-xmas-novel-retry onClick={() => { setCard(null); start(saveRef.current.cur); }}>選び直す</button>}
+                  {card.retry && <button type="button" className="mh-nv-btn wide mh-nv-serif" data-xmas-novel-retry onClick={() => { setCard(null); start(saveRef.current.cur); }}>{card.ending && card.ending.kind === 'forced' ? '選択の直前からやり直す' : '選び直す'}</button>}
                   {card.replay
                     ? <button type="button" className="mh-nv-btn wide mh-nv-serif" data-xmas-novel-to-endings onClick={() => { setCard(null); setSt(null); replayRef.current = false; xmasNovelLoad(S).then((v) => { saveRef.current = v; setSave(v); }); setMode('endings'); }}>エンドヒストリーへ</button>
                     : <button type="button" className="mh-nv-btn wide mh-nv-serif" data-xmas-novel-to-title onClick={() => { setCard(null); setSt(null); setMode('title'); }}>タイトルへ</button>}

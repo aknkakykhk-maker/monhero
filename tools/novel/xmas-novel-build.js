@@ -34,7 +34,7 @@ const BGM_MARKS = {
 };
 // 帯の頭の印 → 演出
 const FX_TAGS = { 赤いにじみ: 'bleed', 倒れた影: 'fallen', 赤く光る: 'red', 幕が下りる: 'curtainDown', 幕がおりる: 'curtainDown', 幕が上がる: 'curtainUp', 幕があがる: 'curtainUp', 暗転: 'dark', 白転: 'white', 明転: 'light', ゆれ: 'shake', 揺れ: 'shake', 赤: 'red', 赤い一瞬: 'red', 題字: 'title', 章: 'chapter', 効果音: 'se', 悲鳴: 'se', 帯: 'band', 雪: 'snow' };
-const ENDING_KIND = { G: 'good', N: 'normal', B: 'bad', A: 'another' };
+const ENDING_KIND = { G: 'good', N: 'normal', B: 'bad', A: 'another', X: 'forced' };
 const CHAPTER_NO = { 序章: 0, 終章: 9 };
 
 const warn = [];
@@ -96,7 +96,7 @@ const parseSceneHead = (cells, chapter, seq) => {
   const head = stripMd(cells[1]);
   const info = stripMd(cells[3]);
   let id; let title;
-  const m = head.match(/^((?:C\d+-[0-9A-Za-z]+)|(?:END-[A-Z]+(?:-[0-9A-Za-z]+)*)|(?:[A-Z]{2,}\d*-[0-9A-Za-z-]+))\s*(.*)$/);
+  const m = head.match(/^((?:C\d+-[0-9A-Za-z]+)|(?:END-[A-Z]+\d*(?:-[0-9A-Za-z]+)*)|(?:[A-Z]{2,}\d*-[0-9A-Za-z-]+))\s*(.*)$/);
   if (m) { id = m[1]; title = m[2].trim(); }
   else {
     const n = head.match(/場面\s*(\d+)/);
@@ -127,8 +127,10 @@ const parseSceneHead = (cells, chapter, seq) => {
   const cond = condSrc && condOk ? parseCond(condSrc) : null;
   const nextRaw = (kv['次'] || '').trim();
   // 「G-10(そのままクリスマス会へ)」のように、ID のうしろの覚え書きは読み飛ばす
-  const nextTok = (nextRaw.match(/^([A-Za-z0-9][0-9A-Za-z-]*)/) || [])[1] || '';
-  const next = /^(C\d+-[0-9A-Za-z]+|END-[A-Z]+(?:-[0-9A-Za-z]+)*|END|Q\d+[a-z]+|A\d+[a-z]*|[A-Z]{2,}\d*-[0-9A-Za-z-]+|[A-Z]-\d+[a-z0-9]*)$/.test(nextTok) ? nextTok : null;
+  // 「「選択の直前からやり直す」で A2 へ」… やり直しの行き先(選択の行)
+  const retryM = nextRaw.match(/やり直す[^A-Z]*?([AQ]\d+[a-z]*)\s*へ/);
+  const nextTok = retryM ? retryM[1] : (nextRaw.match(/^([A-Za-z0-9][0-9A-Za-z-]*)/) || [])[1] || '';
+  const next = /^(C\d+-[0-9A-Za-z]+|END-[A-Z]+\d*(?:-[0-9A-Za-z]+)*|END|Q\d+[a-z]+|A\d+[a-z]*|[A-Z]{2,}\d*-[0-9A-Za-z-]+|[A-Z]-\d+[a-z0-9]*)$/.test(nextTok) ? nextTok : null;
   // カーテンコールの差しこみ: 「END-G の G-9 のあと」「END-N のあと」
   const afterM = condSrc.match(/(END-[A-Z]+)(?:\s*の\s*([A-Z]-[0-9a-z]+))?\s*のあと/);
   const bgRaw = (kv['背景'] || '').split(/→/)[0].trim();
@@ -138,7 +140,7 @@ const parseSceneHead = (cells, chapter, seq) => {
   if (afterM) scene.after = { scene: afterM[1], row: afterM[2] || null };
   // カーテンコールの場面(題か ID に「カーテンコール」「CC」)。エンディングの場面の「次」でつなぐ
   if (/カーテンコール/.test(title) || /(^|-)CC(-|$)/.test(id)) scene.curtain = true;
-  const em = !scene.curtain && id.match(/^END-([A-Z]+)$/);
+  const em = !scene.curtain && id.match(/^END-([A-Z]+)\d*$/);
   if (em) {
     // 名前は見出しの題か、「### END-G 真グッド「…」」の小見出しから
     const src = title || (chapter.endingNames && chapter.endingNames[id]) || '';
@@ -157,6 +159,7 @@ const takeRouteNote = (seg) => {
   if (arrow < 0) return { seg, note: '' };
   const open = Math.max(seg.lastIndexOf('(', arrow), seg.lastIndexOf('（', arrow));
   if (open < 0) return { seg, note: '' };
+  if (!seg.slice(open + 1, arrow).trim()) return { seg, note: '' }; // 「(→5-3-7 へ)」は選択肢の行き先(書き添えではない)
   return { seg: seg.slice(0, open).trim(), note: seg.slice(open + 1).replace(/[)）]\s*$/, '') };
 };
 const routeKeyOf = (lhs) => {
@@ -173,7 +176,7 @@ const parseRoutes = (note, where) => {
   note.split(/。/).forEach((part) => {
     const m = part.match(/^(.*?)→\s*(.*)$/);
     if (!m) return;
-    const to = (m[2].match(/(C\d+-[0-9A-Za-z]+|END-[A-Z]+|Q\d+[a-z]+)/) || [])[1];
+    const to = (m[2].match(/(C\d+-[0-9A-Za-z]+|END-[A-Z]+\d*|Q\d+[a-z]+)/) || [])[1];
     if (!to) return;
     m[1].split(/[・、,]/).forEach((l) => { const k = routeKeyOf(l.trim()); if (k) route[k] = to; else if (l.trim()) note && notes(where, `行き先の「${l.trim()}」が分からない`); });
   });
@@ -290,7 +293,8 @@ const parseRow = (cells, where) => {
     if (/幕が(下|お)りる/.test(s)) fx.push('curtainDown');
     if (/幕が(上|あ)がる/.test(s)) fx.push('curtainUp');
     // 終わりの(…)は書いた人への覚え(画面に出さない)。「出す」「画面」「声の主」「確認」「幕が」を含むものだけ外す
-    s = s.replace(/[(（][^)）]*(出す|画面|声の主|確認|ここ|幕が)[^)）]*[)）]\s*$/, '').trim();
+    s = s.replace(/[(（][^)）]*(出す|画面|声の主|確認|ここ|幕が|やり直す)[^)）]*[)）]\s*$/, '').trim();
+    if (!s && !fx.length) return null; // 書いた人への覚えだけの帯は出さない
     row.t = 'band'; row.x = s;
     const uniq = [...new Set(fx.filter((f) => f !== 'band'))];
     if (uniq.length) row.fx = uniq;
@@ -362,7 +366,7 @@ const parseScript = (md, srcName) => {
     if (h) {
       const t = h[1].trim();
       if (/みんなで進む話|レイド/.test(t)) { chapter = null; continue; }
-      const cm = t.replace(/^後半\s*/, '').match(/^(序章|終章|第\s*(\d+)\s*章|エンディング|カーテンコール)\s*(?:[～〜]\s*([^～〜]+?)\s*[～〜])?/);
+      const cm = t.replace(/^後半\s*/, '').replace(/^強制バッド.*$/, 'エンディング').match(/^(序章|終章|第\s*(\d+)\s*章|エンディング|カーテンコール)\s*(?:[～〜]\s*([^～〜]+?)\s*[～〜])?/);
       if (cm) {
         started = true;
         const no = cm[2] ? Number(cm[2]) : CHAPTER_NO[cm[1]];
@@ -379,8 +383,8 @@ const parseScript = (md, srcName) => {
       } else chapter = null;
       continue;
     }
-    const eh = line.match(/^###\s+(END-[A-Z]+)\s+(.*)$/);
-    if (eh && chapter && chapter.endingNames) { chapter.endingNames[eh[1]] = eh[2].replace(/[(（][^)）]*[)）]\s*$/, '').trim(); continue; }
+    const eh = line.match(/^###\s+(END-[A-Z]+\d*)\s+(.*)$/) || line.match(/^###\s+C\d+-X\s*→\s*(END-X\d+)\s*(.*)$/);
+    if (eh && chapter && chapter.endingNames) { chapter.endingNames[eh[1]] = `${/^END-X/.test(eh[1]) ? '強制バッド' : ''}${eh[2].replace(/[(（][^)）]*[)）]\s*$/, '').trim()}`; continue; }
     if (!started || !chapter || !/^\|/.test(line)) continue;
     const cells = line.replace(/^\|/, '').replace(/\|\s*$/, '').split('|').map((c) => c.trim());
     if (cells.length < 4 || /^-+$/.test(cells[0].replace(/\s/g, '')) || cells[0] === '番号') continue;
@@ -436,7 +440,8 @@ const parseScript = (md, srcName) => {
   // エンディングのすぐうしろに置いた場面(外側の OUT-G など・「次」の無いエンディング)は、そのエンディングの続き
   scenes.forEach((sc, i) => {
     const nx = scenes[i + 1];
-    if (sc.ending && (!sc.next || !scenes.some((x) => x.id === sc.next)) && nx && !nx.ending && nx.chapter === sc.chapter && !nx.after) sc.next = nx.id;
+    const nextIsRow = sc.next && scenes.some((x) => x.rows.some((r) => r.id.replace(/\[.*$/, '') === sc.next));
+    if (sc.ending && !nextIsRow && (!sc.next || !scenes.some((x) => x.id === sc.next)) && nx && !nx.ending && nx.chapter === sc.chapter && !nx.after && !/-X$/.test(nx.id)) sc.next = nx.id;
   });
   const seenCh = new Set();
   const chs = chapters.filter((c) => scenes.some((s) => s.chapter === c.id) && !seenCh.has(c.id) && seenCh.add(c.id));

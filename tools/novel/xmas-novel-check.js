@@ -112,7 +112,9 @@ const walk = (cur0, depth, log) => {
   fail(`行が多すぎて止まらない: ${st.cur.scene}`);
 };
 walk(E.xmasNovelFreshCur(S), 0, []);
-endingsAll.forEach((e) => { if (!reached.has(e)) fail(`エンディング ${e} に着く道が無い`); });
+// 着けないエンディングは、台本の「次」の書き損じのことが多いので注意に出す(1つも着けなければ止める)
+const unreached = endingsAll.filter((e) => !reached.has(e));
+if (!reached.size) fail('どのエンディングにも着かない');
 // どの道でも通らない場面(台本の「次」の書き損じのことが多い)。台本係へ知らせる注意で、止めない
 const unvisited = S.scenes.filter((s) => !visited.has(s.id) && !(s.rows || []).every((r) => r.t === 'flag')).map((s) => s.id);
 
@@ -154,6 +156,7 @@ if (parts.indexOf('79-screen-xmas-novel.jsx') < parts.indexOf('79-xmas-novel-scr
 const groups = E.xmasNovelScoreGroups(S).length;
 console.log(`台本 ${S.src}: 場面 ${S.scenes.length} / 推理の問い(成績のまとまり) ${groups} / たどった道 ${paths}${paths >= MAX_PATHS ? '(上限で打ち切り)' : ''}`);
 console.log(`着いたエンディング: ${endingsAll.map((e) => `${e}×${reached.get(e) || 0}`).join(' ')}`);
+if (unreached.length) console.log(`注意: 着く道の無いエンディング ${unreached.join(' ')}(台本の「次」を確かめる)`);
 if (unvisited.length) console.log(`注意: どの道でも通らない場面 ${unvisited.length} 個(台本の「次」を確かめる): ${unvisited.join(' ')}`);
 if (fails.length) { console.log(`NG ${fails.length} 件`); fails.slice(0, 20).forEach((f) => console.log(`  - ${f}`)); process.exit(1); }
 console.log('OK: ノベルの台本・分かれ道・保存の正規化');

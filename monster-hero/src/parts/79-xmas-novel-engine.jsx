@@ -243,7 +243,7 @@ const xmasNovelAnswer = (script, cur, q, pick) => {
     const ok = Array.isArray(q.answer) && q.answer.includes(pick);
     const route = q.route || {};
     const to = route[key] || route['*'] || null;
-    const next = { ...cur, ans: { ...(cur.ans || {}), [q.id]: { t: tries, f: was ? was.f === true : ok, w: (was && was.w ? was.w : 0) + (ok ? 0 : 1), done: true, ...(q.kind === 'action' ? { pick } : {}) } } };
+    const next = { ...cur, ans: { ...(cur.ans || {}), [q.id]: { t: tries, f: was ? was.f === true : ok, w: (was && was.w ? was.w : 0) + (ok ? 0 : 1), done: true, pick } } };
     if (q.kind === 'action') next.flags = { ...(cur.flags || {}), [`f_${q.id}`]: pick + 1 };
     const replies = ok && xmasNovelPickReplies(q, 'ok').length ? xmasNovelPickReplies(q, 'ok') : xmasNovelPickReplies(q, q.kind === 'action' ? String(pick + 1) : String(pick));
     const rto = xmasNovelRepliesTo(replies);
@@ -291,6 +291,15 @@ const xmasNovelRepliesTo = (replies) => {
 const xmasNovelOptionsOf = (q, ctx) => (Array.isArray(q && q.options) ? q.options : [])
   .map((o, i) => ({ ...o, i }))
   .filter((o) => xmasNovelCondOk(o.c, ctx));
+// いちばんあとに「人を選ぶ」推理で選んだ人(台詞の {犯人にした人})。選んでいなければ null
+const xmasNovelAccusedOf = (script, cur) => {
+  let found = null;
+  xmasNovelScenes(script).forEach((s) => (s.rows || []).forEach((r) => {
+    const a = r && r.t === 'q' && r.kind === 'person' && cur && cur.ans ? cur.ans[r.id] : null;
+    if (a && typeof a.pick === 'string' && xmasNovelCastOf(a.pick)) found = a.pick;
+  }));
+  return found;
+};
 // 人を選ぶ問いの候補(12人)
 const xmasNovelPersonChoices = () => XMAS_NOVEL_CAST.map((c) => ({ id: c.id, name: c.name }));
 
@@ -317,7 +326,7 @@ const xmasNovelNormalizeCur = (raw, script) => {
   const ans = {};
   if (raw.ans && typeof raw.ans === 'object') Object.keys(raw.ans).forEach((k) => {
     const a = raw.ans[k];
-    if (a && typeof a === 'object' && Number.isFinite(a.t)) ans[k] = { t: Math.max(1, Math.floor(a.t)), f: a.f === true, ...(Number.isFinite(a.w) && a.w >= 0 ? { w: Math.floor(a.w) } : {}), ...(a.done ? { done: true } : {}), ...(Number.isInteger(a.pick) ? { pick: a.pick } : {}) };
+    if (a && typeof a === 'object' && Number.isFinite(a.t)) ans[k] = { t: Math.max(1, Math.floor(a.t)), f: a.f === true, ...(Number.isFinite(a.w) && a.w >= 0 ? { w: Math.floor(a.w) } : {}), ...(a.done ? { done: true } : {}), ...(Number.isInteger(a.pick) || (typeof a.pick === 'string' && a.pick.length < 40) ? { pick: a.pick } : {}) };
   });
   const idx = Number.isInteger(raw.idx) && raw.idx >= 0 ? raw.idx : 0;
   const panel = {};
@@ -370,4 +379,5 @@ const XMAS_NOVEL_ENDING_KINDS = Object.freeze({
   normal: { label: 'ノーマルグッド', tone: '#b9c7e6' },
   bad: { label: 'バッドエンド', tone: '#e07a7a' },
   another: { label: '偽りエンド', tone: '#e8a95b' },
+  forced: { label: '強制バッド', tone: '#b0303a' },
 });
