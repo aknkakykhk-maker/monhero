@@ -40,6 +40,8 @@ const CHANGELOG = [
     //   本番用のポスターと開幕のお知らせは、ボスの名前が決まってから別に足す。ボスの名前・正体・敵の数字は書かない
     date: "2026-11-28 10:00", type:'event', group:'other', title:'【開催予告】クリスマスイベント『聖夜の名探偵』を開催します', status:'new',
     visibleFrom:'2026-11-28T10:00:00+09:00',
+    // 開始前の予告なので、固定の札は「📅 開催予定」(17-release の changelogEventUpcoming・台帳 r1126-038)。11/30 10:00 からは pinUntil で固定を外れる
+    eventStartAt:'2026-11-30T10:00:00+09:00',
     pinUntil:'2026-11-30T10:00:00+09:00',
     pinEmoji:'🎄',
     image: 'images/events/xmas-2026-notice.jpg?v=789f225e7916',
