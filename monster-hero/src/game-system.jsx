@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e48b577c66fe5fe9
+// generated-sha256: f9ebad9b2c42ecbe
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -67407,6 +67407,15 @@ const XMAS_HOME_ENTRY_CSS = `
   -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 1px 0 #5c1414) drop-shadow(0 0 4px #000c); }
 .mh-xmas-entry-sub { display: inline-block; border-radius: 999px; background: #a51c24; border: 1px solid #f0c96c; color: #fff7d6; font-weight: 900; white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) { .mh-xmas-entry::after, .mh-xmas-entry-spark { animation: none; } }
+/* 背の低い横画面: 上の帯は小さく(ボスの頭・右の列にかけない)、右の列の札は列の左へ出す(ギフトを施設の札の裏へ押し出さない) */
+@media (orientation: landscape) and (max-height: 520px) {
+  .mh-xmas-entry[data-home-xmas-entry="banner"] { height: 50px !important; max-width: 290px; }
+  .mh-xmas-entry[data-home-xmas-entry="banner"] [data-xmas-entry-kicker] { display: none; }
+  .mh-xmas-entry[data-home-xmas-entry="banner"] .mh-xmas-entry-title { font-size: 17px; }
+  [data-home-xmas-entry-strip] { width: auto !important; }
+  .mh-xmas-entry[data-home-xmas-entry="tile"] { position: absolute !important; right: 112px; top: 0; }
+  .mh-xmas-entry[data-home-xmas-entry="card"] { height: 50px !important; }
+}
 `;
 const HomeXmasEventEntry = ({ onOpen, preOpen = false, variant = 'banner' }) => {
   useEffect(() => {
@@ -67432,12 +67441,12 @@ const HomeXmasEventEntry = ({ onOpen, preOpen = false, variant = 'banner' }) => 
   }
   if (variant === 'card') {
     return (
-      <button type="button" data-home-xmas-entry="card" className="mh-xmas-entry flex items-stretch" onClick={onOpen} aria-label={label} style={{ width: 228, height: 62, display: 'flex' }}>
-        <span className="relative block h-full shrink-0 overflow-hidden" style={{ width: 92 }}>
+      <button type="button" data-home-xmas-entry="card" className="mh-xmas-entry flex items-stretch" onClick={onOpen} aria-label={label} style={{ width: 252, height: 62, display: 'flex' }}>
+        <span className="relative block h-full shrink-0 overflow-hidden" style={{ width: 84 }}>
           <img className="mh-xmas-entry-art" src={XMAS_EVENT_POSTER_IMG} alt="" style={{ objectPosition: '62% 30%' }} />
         </span>
         <span className="relative flex min-w-0 flex-1 flex-col justify-center px-2" style={{ background: 'linear-gradient(90deg, #6b1218, #2a0b10)' }}>
-          <span className="flex items-center gap-1"><XmasHolly size={16} /><b className="mh-xmas-entry-title text-[16px] leading-none">聖夜の名探偵</b></span>
+          <span className="flex items-center gap-1"><XmasHolly size={16} /><b className="mh-xmas-entry-title whitespace-nowrap text-[16px] leading-none">聖夜の名探偵</b></span>
           <span className="mh-xmas-entry-sub mt-1 w-max px-1.5 py-px text-[10px]">{sub}</span>
         </span>
         {sparks.slice(0, 3).map(([x, y, d], i) => <span key={i} aria-hidden="true" className="mh-xmas-entry-spark" style={{ left: `${x}%`, top: `${y}%`, animationDelay: `${d}s` }} />)}
@@ -67445,14 +67454,14 @@ const HomeXmasEventEntry = ({ onOpen, preOpen = false, variant = 'banner' }) => 
     );
   }
   return (
-    <button type="button" data-home-xmas-entry="banner" className="mh-xmas-entry w-full" onClick={onOpen} aria-label={label} style={{ height: 68 }}>
+    <button type="button" data-home-xmas-entry="banner" className="mh-xmas-entry w-full" onClick={onOpen} aria-label={label} style={{ height: 80 }}>
       <img className="mh-xmas-entry-art" src={XMAS_EVENT_POSTER_IMG} alt="" style={{ objectPosition: '70% 28%' }} />
       <span aria-hidden="true" style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, #0b1733f2 0%, #0b1733cc 42%, transparent 72%)' }} />
       <XmasHolly size={24} className="absolute -left-1 -top-1" />
       {sparks.map(([x, y, d], i) => <span key={i} aria-hidden="true" className="mh-xmas-entry-spark" style={{ left: `${x}%`, top: `${y}%`, animationDelay: `${d}s` }} />)}
-      <span style={{ position: 'absolute', left: 14, top: 7, right: 8 }}>
-        <span className="block text-[10px] font-black text-amber-100" style={{ textShadow: '0 1px 2px #000' }}>クリスマスイベント</span>
-        <b className="mh-xmas-entry-title block text-[22px] leading-tight">聖夜の名探偵</b>
+      <span style={{ position: 'absolute', left: 14, top: 6, right: 8, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
+        <span data-xmas-entry-kicker className="block text-[10px] font-black text-amber-100" style={{ textShadow: '0 1px 2px #000' }}>クリスマスイベント</span>
+        <b className="mh-xmas-entry-title block whitespace-nowrap text-[22px] leading-none">聖夜の名探偵</b>
         <span className="mh-xmas-entry-sub px-2 py-px text-[10px]">{sub}</span>
       </span>
     </button>

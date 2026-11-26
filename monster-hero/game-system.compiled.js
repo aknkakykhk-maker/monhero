@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1f593d3a28c2011f
+// source-sha256: d346b00aba94c06f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -113226,6 +113226,15 @@ const XMAS_HOME_ENTRY_CSS = `
   -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 1px 0 #5c1414) drop-shadow(0 0 4px #000c); }
 .mh-xmas-entry-sub { display: inline-block; border-radius: 999px; background: #a51c24; border: 1px solid #f0c96c; color: #fff7d6; font-weight: 900; white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) { .mh-xmas-entry::after, .mh-xmas-entry-spark { animation: none; } }
+/* 背の低い横画面: 上の帯は小さく(ボスの頭・右の列にかけない)、右の列の札は列の左へ出す(ギフトを施設の札の裏へ押し出さない) */
+@media (orientation: landscape) and (max-height: 520px) {
+  .mh-xmas-entry[data-home-xmas-entry="banner"] { height: 50px !important; max-width: 290px; }
+  .mh-xmas-entry[data-home-xmas-entry="banner"] [data-xmas-entry-kicker] { display: none; }
+  .mh-xmas-entry[data-home-xmas-entry="banner"] .mh-xmas-entry-title { font-size: 17px; }
+  [data-home-xmas-entry-strip] { width: auto !important; }
+  .mh-xmas-entry[data-home-xmas-entry="tile"] { position: absolute !important; right: 112px; top: 0; }
+  .mh-xmas-entry[data-home-xmas-entry="card"] { height: 50px !important; }
+}
 `;
 const HomeXmasEventEntry = ({
   onOpen,
@@ -113302,14 +113311,14 @@ const HomeXmasEventEntry = ({
       onClick: onOpen,
       "aria-label": label,
       style: {
-        width: 228,
+        width: 252,
         height: 62,
         display: 'flex'
       }
     }, React.createElement("span", {
       className: "relative block h-full shrink-0 overflow-hidden",
       style: {
-        width: 92
+        width: 84
       }
     }, React.createElement("img", {
       className: "mh-xmas-entry-art",
@@ -113328,7 +113337,7 @@ const HomeXmasEventEntry = ({
     }, React.createElement(XmasHolly, {
       size: 16
     }), React.createElement("b", {
-      className: "mh-xmas-entry-title text-[16px] leading-none"
+      className: "mh-xmas-entry-title whitespace-nowrap text-[16px] leading-none"
     }, "聖夜の名探偵")), React.createElement("span", {
       className: "mh-xmas-entry-sub mt-1 w-max px-1.5 py-px text-[10px]"
     }, sub)), sparks.slice(0, 3).map(([x, y, d], i) => React.createElement("span", {
@@ -113349,7 +113358,7 @@ const HomeXmasEventEntry = ({
     onClick: onOpen,
     "aria-label": label,
     style: {
-      height: 68
+      height: 80
     }
   }, React.createElement("img", {
     className: "mh-xmas-entry-art",
@@ -113381,16 +113390,21 @@ const HomeXmasEventEntry = ({
     style: {
       position: 'absolute',
       left: 14,
-      top: 7,
-      right: 8
+      top: 6,
+      right: 8,
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'flex-start',
+      gap: 2
     }
   }, React.createElement("span", {
+    "data-xmas-entry-kicker": true,
     className: "block text-[10px] font-black text-amber-100",
     style: {
       textShadow: '0 1px 2px #000'
     }
   }, "クリスマスイベント"), React.createElement("b", {
-    className: "mh-xmas-entry-title block text-[22px] leading-tight"
+    className: "mh-xmas-entry-title block whitespace-nowrap text-[22px] leading-none"
   }, "聖夜の名探偵"), React.createElement("span", {
     className: "mh-xmas-entry-sub px-2 py-px text-[10px]"
   }, sub)));
