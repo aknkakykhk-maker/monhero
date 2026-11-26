@@ -78,6 +78,12 @@ const BGM_TRACKS = [
   { id:'melo_crazy_party_night_full', name:'Crazy Party Night ～ぱんぷきんの逆襲～ full', creator:'オリジナル', src:'audio/bgm-crazy-party-night-full.mp3', gain:1, loop:true },
   // クリスマスイベント「聖夜の名探偵」のイベントページの曲(2026-11-26 社長・台帳 r1126-015)。5分4秒。元の音源は tools/art-sources/song-audio/kiss_mystery/
   { id:'melo_kiss_mystery', name:'Kissからはじまるミステリー', creator:'オリジナル', src:'audio/bgm-kiss-mystery.mp3', gain:1, loop:true },
+  // クリスマスイベントの3曲(2026-11-26 社長・台帳 r1126-023)。モンヒロビートの曲でもある(頭に2秒の無音を足した版)。元の音源は tools/art-sources/song-audio/<kiss_mystery|dear_santa|winter_fall>/
+  { id:'melo_kiss_mystery_short', name:'Kissからはじまるミステリー short ver.', creator:'オリジナル', src:'audio/bgm-kiss-mystery-short.mp3', gain:1, loop:true },
+  { id:'melo_dear_santa', name:'Dear Santa', creator:'オリジナル', src:'audio/bgm-dear-santa.mp3', gain:1, loop:true },
+  { id:'melo_dear_santa_short', name:'Dear Santa short ver.', creator:'オリジナル', src:'audio/bgm-dear-santa-short.mp3', gain:1, loop:true },
+  { id:'melo_winter_fall', name:'winter fall', creator:'オリジナル', src:'audio/bgm-winter-fall.mp3', gain:1, loop:true },
+  { id:'melo_winter_fall_short', name:'winter fall short ver.', creator:'オリジナル', src:'audio/bgm-winter-fall-short.mp3', gain:1, loop:true },
   { id:'melo_emerald_rush', name:'Emerald Rush', creator:'オリジナル', src:'audio/bgm-emerald-rush.mp3', gain:1, loop:true },
   { id:'melo_wrath_of_the_thorn_king', name:'Wrath of the Thorn King「茨の王の怒り」', creator:'オリジナル', src:'audio/bgm-wrath-of-the-thorn-king.mp3', gain:1, loop:true },
   { id:'melo_monster', name:'Monster', creator:'オリジナル', src:'audio/bgm-monster.mp3', gain:1, loop:true },

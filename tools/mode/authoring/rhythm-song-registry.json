@@ -2181,6 +2181,90 @@
     "subdivisionsPerBeat": 4,
     "source": "detected"
    }
+  },
+  "kiss_mystery": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-kiss-mystery.mp3",
+   "chartRevision": 42,
+   "audioSha256": "4decd41ac6c2a53329733202f3aa46f3d60acc0e5f2b0a9f498ebc53a00475b8",
+   "durationMs": 305816,
+   "analyzedTiming": {
+    "bpm": 112.01,
+    "beatZeroMs": 2245,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
+  },
+  "kiss_mystery_short": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-kiss-mystery-short.mp3",
+   "chartRevision": 42,
+   "audioSha256": "104ce98f9f901d9c98380a7773a9747ff9da093f8161f7a145679a7685897fe7",
+   "durationMs": 163474,
+   "analyzedTiming": {
+    "bpm": 112.01,
+    "beatZeroMs": 2245,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
+  },
+  "dear_santa": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-dear-santa.mp3",
+   "chartRevision": 42,
+   "audioSha256": "1d5245547349348b902b8b6edcca8c34fe795f8e7afa25e0d103e5a9a0985139",
+   "durationMs": 218906,
+   "analyzedTiming": {
+    "bpm": 200.01,
+    "beatZeroMs": 2799,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
+  },
+  "dear_santa_short": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-dear-santa-short.mp3",
+   "chartRevision": 42,
+   "audioSha256": "5cc7bd38da681f0e292e480bab9423a965be07d7c117feef87f18ec41474ccae",
+   "durationMs": 88973,
+   "analyzedTiming": {
+    "bpm": 200.01,
+    "beatZeroMs": 2799,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
+  },
+  "winter_fall": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-winter-fall.mp3",
+   "chartRevision": 42,
+   "audioSha256": "7ba38a0b28566ca56740b3b28f2dd37ed869c2afabbc883f0aeef18f3ed7e482",
+   "durationMs": 291866,
+   "analyzedTiming": {
+    "bpm": 166.09,
+    "beatZeroMs": 2010,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
+  },
+  "winter_fall_short": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-winter-fall-short.mp3",
+   "chartRevision": 42,
+   "audioSha256": "619d095a922aaa58a890f43b0afc17cd68c624692e3a835a237d8177f9a32d22",
+   "durationMs": 106449,
+   "analyzedTiming": {
+    "bpm": 166.09,
+    "beatZeroMs": 2010,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
   }
  }
 }

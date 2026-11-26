@@ -4144,7 +4144,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       const intro = { mode: 'assistant', foe: { who: null, name: bossName, icon: null, frame: null, line: null, deckName: CARD_RAID_BOSS.deckName, monsters: vsMons(st, CARD_CPU) },
         me: { name: myName, deckName: deck.name || null, monsters: vsMons(st, CARD_ME) } };
       setGame({ key: `raid-${seed}`, st, who: 'raid', level: tier.level, settings: save.settings, intro, raid: { tier: Math.max(0, Math.floor(Number(rc.tierIndex) || 0)), tierName: rc.tierName || '', bossName, run: rc } });
-      onBgm && onBgm(cardBgmOf(cardCpuPlaylistOf(save.cpuPlaylist, 'kyuko')));
+      // レイドのボスとの対戦はクリスマスのレイドバトル曲「winter fall」(台帳 r1126-023)。曲が無いときは今までどおり
+      onBgm && onBgm(typeof XMAS_RAID_BATTLE_BGM_TRACK === 'string' && BGM_TRACK_BY_ID[XMAS_RAID_BATTLE_BGM_TRACK] ? XMAS_RAID_BATTLE_BGM_TRACK : cardBgmOf(cardCpuPlaylistOf(save.cpuPlaylist, 'kyuko')));
       onNavigate('CARD_BATTLE');
     } finally { raidStartingRef.current = false; }
   };

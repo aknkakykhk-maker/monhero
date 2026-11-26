@@ -6714,7 +6714,8 @@ function MonsterHeroGame() {
     // 助手ライフの画面(HOME・プロフィール・持ち物の上に開く)は「風がそよぐ場所」(2026-11-07 社長)
     if (assistantLifeOpenNow && (state === 'HOME' || state === 'PROFILE' || state === 'ITEM_INVENTORY') && typeof ASSISTANT_LIFE_BGM_TRACK === 'string') return ASSISTANT_LIFE_BGM_TRACK;
     // イベント・レイドボス「ジャック」: ジャックとの戦いは Monster(全編)、レイド画面・段階えらび・編成はぱんぷきんの曲に固定する
-    if (state === 'BATTLE' && raidJackRunRef.current) return RAID_JACK_BATTLE_BGM_TRACK;
+    // クリスマスのレイドの戦いは「winter fall」(台帳 r1126-023)
+    if (state === 'BATTLE' && raidJackRunRef.current) return raidJackRunRef.current.ev === 'xmas' ? XMAS_RAID_BATTLE_BGM_TRACK : RAID_JACK_BATTLE_BGM_TRACK;
     // クリスマスはイベントページ(物語・レイド・ボーナス)とレイドの準備画面で「Kissからはじまるミステリー」(台帳 r1126-015)
     if (RAID_JACK_BGM_STATES.includes(state)) return raidEvRef.current === 'xmas' ? XMAS_EVENT_BGM_TRACK : RAID_JACK_BGM_TRACK;
     // HOMEの曲は、イベント中だけ(ユーザーが曲を選んでいないとき)ぱんぷきんの曲にする。終わったら元の曲へ戻る。
@@ -6723,7 +6724,9 @@ function MonsterHeroGame() {
     // 更新履歴には「イベント中はHOMEのBGMもこの曲」と書いていたのに、ジャックの開催中しか切り替えていなかった)
     const halloweenNightOpen = Date.now() >= Date.parse(HALLOWEEN_NIGHT_START_AT) && Date.now() < Date.parse(HALLOWEEN_NIGHT_END_AT);
     const homeBgm = (((RELEASE_FLAGS.raidJack === true && raidJackWindowAt(Date.now()) === 'open') || raidJackDebugForce || halloweenNightOpen)
-      && bgmArrangement.home === DEFAULT_BGM_ARRANGEMENT.home) ? RAID_JACK_BGM_TRACK : bgmArrangement.home;
+      && bgmArrangement.home === DEFAULT_BGM_ARRANGEMENT.home) ? RAID_JACK_BGM_TRACK
+      // クリスマスイベントの期間は「Dear Santa」(台帳 r1126-023・デフォルトのままの人だけ)
+      : (xmasEventBgmOpenAt(Date.now()) && bgmArrangement.home === DEFAULT_BGM_ARRANGEMENT.home) ? XMAS_HOME_BGM_TRACK : bgmArrangement.home;
     if (isGameOver) return bgmArrangement.gameOver;
     if (!debugBattleRef.current && currentWave === 10 && (state === 'WAVE_RESULT' || state === 'CHAMPION')) {
       // AUTO∞は最終リザルトでも直前の戦闘BGMを継続する。設定をONにした場合だけ従来のクリアBGMへ切り替える。
