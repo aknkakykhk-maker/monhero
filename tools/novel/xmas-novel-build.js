@@ -33,7 +33,7 @@ const BGM_MARKS = {
   ボ: 'original_boss', なし: 'silence', 止: 'silence',
 };
 // 帯の頭の印 → 演出
-const FX_TAGS = { 暗転: 'dark', 白転: 'white', 明転: 'light', ゆれ: 'shake', 揺れ: 'shake', 赤: 'red', 赤い一瞬: 'red', 題字: 'title', 章: 'chapter', 効果音: 'se', 悲鳴: 'se', 帯: 'band', 雪: 'snow' };
+const FX_TAGS = { 幕が下りる: 'curtainDown', 幕がおりる: 'curtainDown', 幕が上がる: 'curtainUp', 幕があがる: 'curtainUp', 暗転: 'dark', 白転: 'white', 明転: 'light', ゆれ: 'shake', 揺れ: 'shake', 赤: 'red', 赤い一瞬: 'red', 題字: 'title', 章: 'chapter', 効果音: 'se', 悲鳴: 'se', 帯: 'band', 雪: 'snow' };
 const ENDING_KIND = { G: 'good', N: 'normal', B: 'bad', A: 'another' };
 const CHAPTER_NO = { 序章: 0, 終章: 9 };
 
@@ -95,7 +95,7 @@ const parseSceneHead = (cells, chapter, seq) => {
   const head = stripMd(cells[1]);
   const info = stripMd(cells[3]);
   let id; let title;
-  const m = head.match(/^((?:C\d+-[0-9A-Za-z]+)|(?:END-[A-Z]+))\s*(.*)$/);
+  const m = head.match(/^((?:C\d+-[0-9A-Za-z]+)|(?:END-[A-Z]+(?:-[0-9A-Za-z]+)*)|(?:[A-Z]{2,}\d*-[0-9A-Za-z-]+))\s*(.*)$/);
   if (m) { id = m[1]; title = m[2].trim(); }
   else {
     const n = head.match(/場面\s*(\d+)/);
@@ -125,11 +125,13 @@ const parseSceneHead = (cells, chapter, seq) => {
   const condOk = /^[\sf_\w=<>!&|,、]*$|かつ|または/.test(condSrc) && /f_\w+|score|clues/.test(condSrc);
   const cond = condSrc && condOk ? parseCond(condSrc) : null;
   const nextRaw = (kv['次'] || '').trim();
-  const next = /^(C\d+-[0-9A-Za-z]+|END-[A-Z]+|END|Q\d+[a-z]+|A\d+[a-z]*)$/.test(nextRaw) ? nextRaw : null;
+  const next = /^(C\d+-[0-9A-Za-z]+|END-[A-Z]+(?:-[0-9A-Za-z]+)*|END|Q\d+[a-z]+|A\d+[a-z]*|[A-Z]{2,}\d*-[0-9A-Za-z-]+)$/.test(nextRaw) ? nextRaw : null;
   const bgRaw = (kv['背景'] || '').split(/→/)[0].trim();
   const scene = { id, chapter: chapter.id, title, cond, bgm, bg: bgRaw || null, next, rows: [] };
   if (condSrc && !cond) scene.jumpOnly = true;
-  const em = id.match(/^END-([A-Z]+)/);
+  // カーテンコールの場面(題か ID に「カーテンコール」「CC」)。エンディングの場面の「次」でつなぐ
+  if (/カーテンコール/.test(title) || /(^|-)CC(-|$)/.test(id)) scene.curtain = true;
+  const em = !scene.curtain && id.match(/^END-([A-Z]+)$/);
   if (em) {
     // 名前は見出しの題か、「### END-G 真グッド「…」」の小見出しから
     const src = title || (chapter.endingNames && chapter.endingNames[id]) || '';
@@ -344,12 +346,13 @@ const parseScript = (md, srcName) => {
     if (h) {
       const t = h[1].trim();
       if (/みんなで進む話|レイド/.test(t)) { chapter = null; continue; }
-      const cm = t.replace(/^後半\s*/, '').match(/^(序章|終章|第\s*(\d+)\s*章|エンディング)\s*(?:[～〜]\s*([^～〜]+?)\s*[～〜])?/);
+      const cm = t.replace(/^後半\s*/, '').match(/^(序章|終章|第\s*(\d+)\s*章|エンディング|カーテンコール)\s*(?:[～〜]\s*([^～〜]+?)\s*[～〜])?/);
       if (cm) {
         started = true;
         const no = cm[2] ? Number(cm[2]) : CHAPTER_NO[cm[1]];
         const KAN = ['〇', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
-        if (cm[1] === 'エンディング') { chapter = { id: 'END', no: 99, label: 'エンディング', disp: 'エンディング', title: '', endingNames: {} }; }
+        if (cm[1] === 'カーテンコール') { chapter = { id: 'END', no: 99, label: 'エンディング', disp: 'カーテンコール', title: '', endingNames: {} }; }
+        else if (cm[1] === 'エンディング') { chapter = { id: 'END', no: 99, label: 'エンディング', disp: 'エンディング', title: '', endingNames: {} }; }
         else chapter = { id: `C${no}`, no, label: cm[1].replace(/\s+/g, ''), disp: cm[2] ? `第${KAN[no] || no}章` : cm[1], title: (cm[3] || '').trim(), fresh: true };
         chapters.push(chapter);
         scene = null; lastQ = null; seq = 0;

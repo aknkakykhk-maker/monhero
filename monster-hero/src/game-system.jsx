@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8ff28c6f32122ed8
+// generated-sha256: d66fcdb3b6c8d0b0
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -67643,7 +67643,14 @@ const xmasNovelSettle = (script, cur) => {
     let i = Math.max(0, Number(c.idx) || 0);
     while (i < rows.length && !xmasNovelCondOk(rows[i] && rows[i].c, ctx)) i += 1;
     if (i < rows.length) return { cur: { ...c, idx: i }, row: rows[i], scene, ending: null };
-    if (xmasNovelIsEnding(scene)) return { cur: { ...c, idx: rows.length }, row: null, scene, ending: scene.ending };
+    // エンディングの場面のあと、「次」が場面(カーテンコール)ならそこへ続け、終わったところでエンディングの札を出す
+    if (xmasNovelIsEnding(scene) || c.end) {
+      const endScene = xmasNovelIsEnding(scene) ? scene : xmasNovelSceneById(script, c.end);
+      const follow = scene.next && scene.next !== 'END' ? xmasNovelResolveScene(script, scene.next, ctx) : null;
+      if (follow && follow.id !== scene.id && !xmasNovelIsEnding(follow)) { c = { ...c, scene: follow.id, idx: 0, end: endScene ? endScene.id : c.end }; continue; }
+      const { end, ...rest } = c;
+      return { cur: { ...rest, idx: rows.length }, row: null, scene: endScene || scene, ending: endScene ? endScene.ending : null };
+    }
     const next = xmasNovelNextScene(script, scene, ctx);
     if (!next) return { cur: { ...c, idx: rows.length }, row: null, scene, ending: null };
     c = { ...c, scene: next.id, idx: 0 };
@@ -67746,7 +67753,8 @@ const xmasNovelNormalizeCur = (raw, script) => {
   const idx = Number.isInteger(raw.idx) && raw.idx >= 0 ? raw.idx : 0;
   const panel = {};
   if (raw.panel && typeof raw.panel === 'object') Object.keys(raw.panel).forEach((k) => { if (xmasNovelCastOf(k) && XMAS_NOVEL_PANEL_STATES.includes(raw.panel[k])) panel[k] = raw.panel[k]; });
-  return { scene: raw.scene, idx, flags, clues, ans, panel };
+  const end = typeof raw.end === 'string' && (!script || xmasNovelSceneById(script, raw.end)) ? raw.end : null;
+  return { scene: raw.scene, idx, flags, clues, ans, panel, ...(end ? { end } : {}) };
 };
 const xmasNovelNormalize = (raw, script = null) => {
   const r = raw && typeof raw === 'object' ? raw : {};
@@ -68463,6 +68471,15 @@ const XMAS_NOVEL_CSS = `
 .mh-nv-choice { width: 100%; min-height: 52px; padding: 10px 14px; border-radius: 12px; font-size: 15px; font-weight: 800; color: #fff3d0; text-align: center;
   background: linear-gradient(180deg, rgba(27,44,92,.95), rgba(10,20,52,.95)); box-shadow: 0 0 0 1px #e8c46a, 0 6px 16px rgba(0,0,0,.45); }
 .mh-nv-choice:active { transform: scale(.98); }
+.mh-nv-curtain { position: absolute; inset: 0; z-index: 4; pointer-events: none; transform: translateY(-102%);
+  background: repeating-linear-gradient(90deg, #5a0710 0px, #9e1424 22px, #c62a3a 34px, #9e1424 46px, #5a0710 68px);
+  box-shadow: inset 0 -26px 0 #c99a3c, inset 0 -30px 0 #6b4a14, 0 10px 30px rgba(0,0,0,.6); }
+.mh-nv-curtain::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 14%; background: linear-gradient(180deg, #4a050c, #8e1220 70%, #c99a3c 72%, #6b4a14 76%, transparent 77%); }
+.mh-nv-curtain[data-st='down'] { animation: mh-nv-curtain-down 1.6s cubic-bezier(.45,.05,.3,1) both; }
+.mh-nv-curtain[data-st='up'] { animation: mh-nv-curtain-up 1.6s cubic-bezier(.45,.05,.3,1) both; }
+@keyframes mh-nv-curtain-down { from { transform: translateY(-102%); } to { transform: translateY(0); } }
+@keyframes mh-nv-curtain-up { from { transform: translateY(0); } to { transform: translateY(-102%); } }
+@media (prefers-reduced-motion: reduce) { .mh-nv-curtain[data-st='down'] { animation: none; transform: none; } .mh-nv-curtain[data-st='up'] { animation: none; } }
 @media (orientation: landscape) and (max-height: 560px) {
   .mh-nv-fig { left: 4%; transform: none; height: 96%; width: min(40vw, 420px); }
   .mh-nv-box { left: auto; right: 10px; transform: none; width: min(calc(60vw - 10px), 760px); min-height: 110px; padding-top: 20px; }
@@ -68671,6 +68688,13 @@ const xmasNovelPerfectState = async () => {
   return { perfect: xmasNovelIsPerfect(XMAS_NOVEL_SCRIPT, save), count: xmasNovelPerfectCount(XMAS_NOVEL_SCRIPT, save), total: xmasNovelScoreGroups(XMAS_NOVEL_SCRIPT).length, titleSent: save.titleSent, endings: save.endings };
 };
 
+// エンディングのあとにカーテンコールの場面がつながっているか
+const xmasNovelHasCurtain = (script, endingId) => {
+  const sc = xmasNovelSceneById(script, endingId);
+  const nx = sc && sc.next ? xmasNovelSceneById(script, sc.next) : null;
+  return !!(nx && nx.curtain);
+};
+
 // ---- 画面 ----
 const XMAS_NOVEL_AUTO_MS = [0, 1800, 1000];
 // script … 検査で仮の台本を渡すときだけ(ふだんは渡さない)
@@ -68684,6 +68708,8 @@ const XmasNovelScreen = ({ playerName = '', onClose, onPerfect, script = null })
   const [shown, setShown] = useState(0); // 文字送りで出した字数
   const [fx, setFx] = useState(null); // { kind, n }
   const [shake, setShake] = useState(0);
+  const [curtain, setCurtain] = useState(null); // 'down'(下りて閉じたまま)/ 'up'(上がっていく)
+  const replayRef = useRef(false); // エンディングの記録から見返している(進み具合・記録は書かない)
   const [cards, setCards] = useState([]); // 札の並び { kind:'chapter'|'title'|'band'|'ending', ... }。先頭を出す
   const card = cards[0] || null;
   const setCard = (c) => setCards((list) => (c ? [...list, c] : []));
@@ -68708,6 +68734,7 @@ const XmasNovelScreen = ({ playerName = '', onClose, onPerfect, script = null })
   }, []);
   const persist = (next, now = false) => {
     saveRef.current = next; setSave(next);
+    if (replayRef.current) return; // 見返しは保存しない
     if (storeTimer.current) clearTimeout(storeTimer.current);
     if (now) { void xmasNovelStore(next, S); return; }
     storeTimer.current = setTimeout(() => { void xmasNovelStore(saveRef.current, S); }, 400);
@@ -68733,6 +68760,8 @@ const XmasNovelScreen = ({ playerName = '', onClose, onPerfect, script = null })
       const vis = r.fx.find((f) => ['dark', 'white', 'red', 'light'].includes(f));
       setFx(vis ? { kind: vis, n: Date.now() } : null);
       if (r.fx.includes('shake')) setShake((n) => n + 1);
+      if (r.fx.includes('curtainDown')) setCurtain('down');
+      if (r.fx.includes('curtainUp')) { setCurtain('up'); setTimeout(() => setCurtain((c) => (c === 'up' ? null : c)), 1700); }
       if (r.se) xmasNovelSe(r.se);
       if (r.fx.includes('title') || r.fx.includes('chapter')) { setCard({ kind: r.fx.includes('title') ? 'title' : 'band', text: r.x }); setShown(99999); return s; }
     } else setFx((f) => (f && f.kind === 'dark' ? null : f));
@@ -68751,7 +68780,9 @@ const XmasNovelScreen = ({ playerName = '', onClose, onPerfect, script = null })
     if (!next.row && next.ending) {
       const scene = next.scene;
       const ending = next.ending;
-      const after = scene && scene.next ? xmasNovelJump(S, next.cur, scene.next) : null;
+      // 「選び直す」はエンディングの「次」が問いの行(Q7a)のときだけ。場面(カーテンコール)へは settle が続けて入る
+      const after = !replayRef.current && scene && scene.next && !xmasNovelSceneById(S, scene.next) && xmasNovelFindRow(S, scene.next) ? xmasNovelJump(S, next.cur, scene.next) : null;
+      if (replayRef.current) { setSt(next); setSkip(false); setSheet(null); setCard({ kind: 'ending', ending, replay: true }); return; }
       s = { ...s, endings: s.endings.includes(ending.id) ? s.endings : [...s.endings, ending.id], cur: after };
       let perfectNow = false;
       if (!s.titleSent && xmasNovelIsPerfect(S, s)) {
@@ -68792,7 +68823,9 @@ const XmasNovelScreen = ({ playerName = '', onClose, onPerfect, script = null })
     // フラグの行は見せずに次へ
     if (next.row.t === 'flag') setTimeout(() => arrive(xmasNovelStep(S, cur)), 0);
   };
-  const start = (cur) => {
+  const start = (cur, replay = false) => {
+    replayRef.current = replay;
+    setCurtain(null);
     lastBgm.current = null; lastChapter.current = null;
     setLog([]); setCard(null); setSheet(null); setGot(null); setFx(null); setSkip(false);
     setMode('read');
@@ -68929,10 +68962,11 @@ const XmasNovelScreen = ({ playerName = '', onClose, onPerfect, script = null })
                   const seen = save.endings.includes(e.id);
                   const kind = { ...(XMAS_NOVEL_ENDING_KINDS[e.kind] || XMAS_NOVEL_ENDING_KINDS.normal), ...(e.label ? { label: e.label } : {}) };
                   return (
-                    <li key={e.id} data-xmas-novel-ending={e.id} data-seen={seen ? '' : undefined} className="mh-nv-clue flex items-center gap-3">
+                    <li key={e.id} data-xmas-novel-ending={e.id} data-seen={seen ? '' : undefined} className="mh-nv-clue flex flex-wrap items-center gap-3">
                       <span className="mh-nv-serif shrink-0 rounded px-2 py-0.5 text-[11px] font-black" style={{ color: '#0a0f20', background: seen ? kind.tone : '#3a4466' }}>{seen ? kind.label : '？？？'}</span>
                       <span className="mh-nv-serif min-w-0 flex-1 truncate text-[15px] font-black">{seen ? `「${e.name}」` : '――まだ見ていない結末'}</span>
-                      {seen && <Check size={16} className="shrink-0 text-amber-200" />}
+                      {seen && <button type="button" className="mh-nv-btn shrink-0" data-xmas-novel-replay={e.id}
+                        onClick={() => start({ ...xmasNovelFreshCur(S), scene: e.id, idx: 0 }, true)}>{xmasNovelHasCurtain(S, e.id) ? '見返す(カーテンコールまで)' : '見返す'}</button>}
                     </li>
                   );
                 })}
@@ -68981,6 +69015,7 @@ const XmasNovelScreen = ({ playerName = '', onClose, onPerfect, script = null })
         {(bg.snow || !bg.img) && <><div className="mh-nv-snow" />{bg.snow && <div className="mh-nv-snow b" />}</>}
         {!darkNow && (isLine || (isBand && xmasNovelIsSilhouette(row))) && <XmasNovelFigure row={row} />}
         {fx && <div key={fx.n} className={`mh-nv-fx ${fx.kind}`} />}
+        {curtain && <div key={`curtain-${curtain}`} className="mh-nv-curtain" data-st={curtain} data-xmas-novel-curtain={curtain} />}
         {row && row.t === 'panel' && (
           <div className="absolute inset-x-0 top-[12%] z-[5] mx-auto w-[min(94vw,640px)] rounded-2xl p-3" data-xmas-novel-panel style={{ background: 'rgba(4,8,22,.88)', boxShadow: '0 0 0 1px #e8c46a' }}>
             <div className="mh-nv-serif mh-nv-gold mb-2 text-center text-[15px] font-black">登場人物</div>
@@ -69042,12 +69077,14 @@ const XmasNovelScreen = ({ playerName = '', onClose, onPerfect, script = null })
                 <div className="mh-nv-rule" />
                 <div className="mh-nv-serif mh-nv-gold text-[28px] font-black leading-tight">「{card.ending.name}」</div>
                 <div className="mh-nv-rule" />
-                <div className="text-[12px] text-slate-200">エンディングの記録に残しました</div>
-                <div className="mt-1 text-[11px] text-slate-300">推理の問い 一発で当てた数 {card.count} / {card.total}</div>
+                {!card.replay && <div className="text-[12px] text-slate-200">エンディングの記録に残しました</div>}
+                {!card.replay && <div className="mt-1 text-[11px] text-slate-300">推理の問い 一発で当てた数 {card.count} / {card.total}</div>}
                 {card.perfect && <div data-xmas-novel-perfect className="mh-nv-serif mh-nv-gold mt-3 text-[15px] font-black">全部の問いを一発で当てた名探偵</div>}
                 <div className="mt-5 space-y-2">
                   {card.retry && <button type="button" className="mh-nv-btn wide mh-nv-serif" data-xmas-novel-retry onClick={() => { setCard(null); start(saveRef.current.cur); }}>選び直す</button>}
-                  <button type="button" className="mh-nv-btn wide mh-nv-serif" data-xmas-novel-to-title onClick={() => { setCard(null); setSt(null); setMode('title'); }}>タイトルへ</button>
+                  {card.replay
+                    ? <button type="button" className="mh-nv-btn wide mh-nv-serif" data-xmas-novel-to-endings onClick={() => { setCard(null); setSt(null); replayRef.current = false; xmasNovelLoad(S).then((v) => { saveRef.current = v; setSave(v); }); setMode('endings'); }}>エンディングの記録へ</button>
+                    : <button type="button" className="mh-nv-btn wide mh-nv-serif" data-xmas-novel-to-title onClick={() => { setCard(null); setSt(null); setMode('title'); }}>タイトルへ</button>}
                 </div>
               </div>
             );

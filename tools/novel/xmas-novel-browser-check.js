@@ -133,6 +133,23 @@ const CASES = CASES_ALL.filter((c) => !ONLY || c.shot === ONLY);
       check(`③ ${vp.label}: エンディングの記録に、見たものだけ名前が出る`, seenList === 1, `見た ${seenList}`);
       await shot('08-ending-list');
 
+      // ③-2 エンディングの記録から見返す(カーテンコールまで)。幕が下りる/上がる演出が出て、保存は変わらない
+      const before = await page.evaluate(() => localStorage.getItem('mh_xmas_novel_v1'));
+      await tap(`[data-xmas-novel-replay="${ending}"]`);
+      let curtainSeen = 0; let replayEnd = null;
+      for (let i = 0; i < 120; i++) {
+        const s = await look();
+        if (await page.evaluate(() => !!document.querySelector('[data-xmas-novel-curtain]'))) { curtainSeen++; if (curtainSeen === 1) await shot('12-curtain'); }
+        if (s.end) { replayEnd = s.end; break; }
+        if (s.card) await tap('[data-xmas-novel-card]'); else await tap('.mh-nv-stage');
+        await page.waitForTimeout(120);
+      }
+      const after = await page.evaluate(() => localStorage.getItem('mh_xmas_novel_v1'));
+      check(`③ ${vp.label}: 記録から見返すと、カーテンコールまで流れて幕が出る`, replayEnd === ending && curtainSeen > 0, `end=${replayEnd} 幕=${curtainSeen}`);
+      check(`③ ${vp.label}: 見返しでは保存が変わらない`, before === after);
+      await tap('[data-xmas-novel-to-endings]');
+      await page.waitForTimeout(300);
+
       // ④
       await page.locator('[data-xmas-novel-close]').click();
       await page.waitForTimeout(300);

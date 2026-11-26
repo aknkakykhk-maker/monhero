@@ -199,7 +199,14 @@ const xmasNovelSettle = (script, cur) => {
     let i = Math.max(0, Number(c.idx) || 0);
     while (i < rows.length && !xmasNovelCondOk(rows[i] && rows[i].c, ctx)) i += 1;
     if (i < rows.length) return { cur: { ...c, idx: i }, row: rows[i], scene, ending: null };
-    if (xmasNovelIsEnding(scene)) return { cur: { ...c, idx: rows.length }, row: null, scene, ending: scene.ending };
+    // エンディングの場面のあと、「次」が場面(カーテンコール)ならそこへ続け、終わったところでエンディングの札を出す
+    if (xmasNovelIsEnding(scene) || c.end) {
+      const endScene = xmasNovelIsEnding(scene) ? scene : xmasNovelSceneById(script, c.end);
+      const follow = scene.next && scene.next !== 'END' ? xmasNovelResolveScene(script, scene.next, ctx) : null;
+      if (follow && follow.id !== scene.id && !xmasNovelIsEnding(follow)) { c = { ...c, scene: follow.id, idx: 0, end: endScene ? endScene.id : c.end }; continue; }
+      const { end, ...rest } = c;
+      return { cur: { ...rest, idx: rows.length }, row: null, scene: endScene || scene, ending: endScene ? endScene.ending : null };
+    }
     const next = xmasNovelNextScene(script, scene, ctx);
     if (!next) return { cur: { ...c, idx: rows.length }, row: null, scene, ending: null };
     c = { ...c, scene: next.id, idx: 0 };
@@ -302,7 +309,8 @@ const xmasNovelNormalizeCur = (raw, script) => {
   const idx = Number.isInteger(raw.idx) && raw.idx >= 0 ? raw.idx : 0;
   const panel = {};
   if (raw.panel && typeof raw.panel === 'object') Object.keys(raw.panel).forEach((k) => { if (xmasNovelCastOf(k) && XMAS_NOVEL_PANEL_STATES.includes(raw.panel[k])) panel[k] = raw.panel[k]; });
-  return { scene: raw.scene, idx, flags, clues, ans, panel };
+  const end = typeof raw.end === 'string' && (!script || xmasNovelSceneById(script, raw.end)) ? raw.end : null;
+  return { scene: raw.scene, idx, flags, clues, ans, panel, ...(end ? { end } : {}) };
 };
 const xmasNovelNormalize = (raw, script = null) => {
   const r = raw && typeof raw === 'object' ? raw : {};
