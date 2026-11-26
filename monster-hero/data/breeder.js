@@ -1579,7 +1579,14 @@ const setAssistantCostumeWornNow = (worn) => { ASSISTANT_COSTUME_WORN_NOW = (wor
 // 会話を閉じたら空へ戻る。アプリが描くたびに入れ直す(2026-10-04・ユーザー指摘「コスプレ版になってない」)
 let ASSISTANT_COSTUME_STORY_NOW = {};
 const setAssistantCostumeStoryNow = (map) => { ASSISTANT_COSTUME_STORY_NOW = (map && typeof map === 'object') ? map : {}; };
-const assistantCostumeWornFor = (assistantId) => assistantCostumeById(ASSISTANT_COSTUME_STORY_NOW[assistantId] || ASSISTANT_COSTUME_WORN_NOW[assistantId]);
+// 会話のあいだだけ着る服は、売り出しの前でも着る(2026-11-26 クリスマスの序章は 11/28 から読めて、サンタの服の売り出しは 11/30・台帳 r1126-013)。
+//   その助手の服であることは確かめる。着替え・ショップの判定(assistantCostumeById)は今までどおり売り出しのあとだけ
+const assistantCostumeStoryFor = (assistantId) => {
+  const id = ASSISTANT_COSTUME_STORY_NOW[assistantId];
+  const costume = id ? ASSISTANT_COSTUMES.find(c => c && c.id === id) : null;
+  return costume && costume.assistantId === assistantId ? costume : null;
+};
+const assistantCostumeWornFor = (assistantId) => assistantCostumeStoryFor(assistantId) || assistantCostumeById(ASSISTANT_COSTUME_WORN_NOW[assistantId]);
 // 服の絵のパス。kind は 'face'(吹き出しの丸い顔)か 'full'(立ち絵)。服の絵が決まらないときは null(呼ぶ側が元の服へ落とす)
 const assistantCostumeImage = (who, expression, kind) => {
   const costume = who && assistantCostumeWornFor(who.id);
