@@ -27,7 +27,7 @@ catch (e) { fail(`生成物が台本と違う(node tools/novel/xmas-novel-build.
 const ctx = vm.createContext({});
 vm.runInContext(`${fs.readFileSync(P('79-xmas-novel-engine.jsx'), 'utf8')}\n${fs.readFileSync(P('79-xmas-novel-script.jsx'), 'utf8')}
 this.E = { XMAS_NOVEL_SCRIPT, xmasNovelFreshCur, xmasNovelSettle, xmasNovelStep, xmasNovelAnswer, xmasNovelApplyRow, xmasNovelJump, xmasNovelOptionsOf,
-  xmasNovelCtx, xmasNovelPersonChoices, xmasNovelNormalize, xmasNovelScoreGroups, xmasNovelIsPerfect, xmasNovelRecordFirst };`, ctx);
+  xmasNovelCtx, xmasNovelPersonChoices, xmasNovelNormalize, xmasNovelScoreGroups, xmasNovelRecordFirst, xmasNovelRecordEnding, xmasNovelPlayableAt, XMAS_NOVEL_GAME };`, ctx);
 const E = ctx.E;
 const S = SAMPLE_MODE ? require('./xmas-novel-build.js').parseScript(fs.readFileSync(path.join(ROOT, 'docs/progress/xmas-novel/SAMPLE.md'), 'utf8'), 'docs/progress/xmas-novel/SAMPLE.md') : E.XMAS_NOVEL_SCRIPT;
 const endingsAll = S.scenes.filter((s) => s.ending).map((s) => s.ending.id);
@@ -130,6 +130,15 @@ bad.forEach((b, i) => {
     if (i === 5 && (!n.cur || n.cur.flags.f_b !== undefined || n.cur.flags.bad !== undefined || n.cur.clues.length !== 1)) fail('正規化: 壊れたフラグ・手がかりが残った');
   } catch (e) { fail(`正規化 ${i}: 落ちた ${e.message}`); }
 });
+// エンドヒストリー: はじめて見た日時だけ残る・壊れた日時は捨てる
+let eh = E.xmasNovelNormalize({ endAt: { 'END-G': 'x', 'END-B': '2026-12-01T00:00:00Z', bad: '2026-12-01T00:00:00Z' } }, S);
+if (eh.endAt['END-G'] || !eh.endAt['END-B'] || eh.endAt.bad) fail('正規化: エンドヒストリーの日時が直らない');
+eh = E.xmasNovelRecordEnding(eh, 'END-B', '2026-12-09T00:00:00Z');
+if (eh.endAt['END-B'] !== '2026-12-01T00:00:00Z' || eh.endings.length !== 1) fail('エンドヒストリー: 2回目に見た日時で上書きした');
+// 遊べる期間(11/30 10:00〜12/31 3:59)
+const at = (iso) => E.xmasNovelPlayableAt(Date.parse(iso));
+if (at('2026-11-30T09:59:00+09:00') || !at('2026-11-30T10:00:00+09:00') || !at('2026-12-31T03:59:00+09:00') || at('2026-12-31T04:00:00+09:00')) fail('遊べる期間の境目がちがう');
+if (!E.XMAS_NOVEL_GAME || !E.XMAS_NOVEL_GAME.series || !E.XMAS_NOVEL_GAME.sub) fail('ゲームの名前(XMAS_NOVEL_GAME)が無い');
 // 一発目の記録は、2回目から書き変えない
 let sv = E.xmasNovelNormalize(null, S);
 sv = E.xmasNovelRecordFirst(sv, 'Qx', false); sv = E.xmasNovelRecordFirst(sv, 'Qx', true);
@@ -137,7 +146,7 @@ if (sv.first.Qx.f !== false) fail('一発目の記録が、読み直しで書き
 
 // 4. 画面の入口
 const screen = fs.readFileSync(P('79-screen-xmas-novel.jsx'), 'utf8');
-['const openXmasNovel', 'const XmasNovelScreen', 'XMAS_NOVEL_STORAGE_KEY'].forEach((w) => { if (!screen.includes(w)) fail(`画面の部品に ${w} が無い`); });
+['const openXmasNovel', 'const XmasNovelScreen', 'XMAS_NOVEL_STORAGE_KEY', 'xmasNovelPlayableAt(Date.now())'].forEach((w) => { if (!screen.includes(w)) fail(`画面の部品に ${w} が無い`); });
 const parts = JSON.parse(fs.readFileSync(P('parts.json'), 'utf8')).parts.map((p) => p.file);
 ['79-xmas-novel-engine.jsx', '79-xmas-novel-script.jsx', '79-screen-xmas-novel.jsx'].forEach((f) => { if (!parts.includes(f)) fail(`parts.json に ${f} が無い`); });
 if (parts.indexOf('79-screen-xmas-novel.jsx') < parts.indexOf('79-xmas-novel-script.jsx')) fail('parts.json: 画面が台本データより前にある');

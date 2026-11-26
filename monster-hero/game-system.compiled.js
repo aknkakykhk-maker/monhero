@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7af1cd69e453b01d
+// source-sha256: 11437b2b7b2a3870
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -113323,6 +113323,18 @@ const HomeXmasEventEntry = ({
   }, sub)));
 };
 const XMAS_NOVEL_STORAGE_KEY = 'mh_xmas_novel_v1';
+const XMAS_NOVEL_GAME = Object.freeze({
+  series: 'モンヒロ事件簿',
+  title: '呪いのセーブデータ',
+  sub: '十三番目の鐘'
+});
+const XMAS_NOVEL_OPEN_AT = '2026-11-30T10:00:00+09:00';
+const XMAS_NOVEL_CLOSE_AT = '2026-12-31T04:00:00+09:00';
+const xmasNovelPlayableAt = nowMs => {
+  const a = Date.parse(XMAS_NOVEL_OPEN_AT);
+  const b = Date.parse(XMAS_NOVEL_CLOSE_AT);
+  return Number.isFinite(nowMs) && nowMs >= a && nowMs < b;
+};
 const XMAS_NOVEL_CAST = Object.freeze([{
   id: 'atsu',
   name: 'あつ',
@@ -113371,13 +113383,17 @@ const XMAS_NOVEL_CAST = Object.freeze([{
   id: 'kuroba',
   name: '黒羽',
   full: '黒羽 宗一郎',
-  kind: 'shadow',
+  kind: 'guest',
+  art: 'images/story-guests/kuroba_stand.png',
+  face: 'images/story-guests/kuroba_stand.png',
   tone: '#3b3f4a'
 }, {
   id: 'shirase',
   name: '白瀬',
   full: '白瀬 雪絵',
-  kind: 'shadow',
+  kind: 'guest',
+  art: 'images/story-guests/shirase_stand.png',
+  face: 'images/story-guests/shirase_stand.png',
   tone: '#5a6a86'
 }]);
 const XMAS_NOVEL_SPEAKERS_EXTRA = Object.freeze([{
@@ -113889,6 +113905,11 @@ const xmasNovelNormalize = (raw, script = null) => {
     }, script);
     if (c) snaps[k] = c;
   });
+  const endAt = {};
+  if (r.endAt && typeof r.endAt === 'object') Object.keys(r.endAt).forEach(k => {
+    const t = r.endAt[k];
+    if (/^END-[A-Z]+$/.test(k) && typeof t === 'string' && Number.isFinite(Date.parse(t))) endAt[k] = t;
+  });
   return {
     v: 1,
     cur: xmasNovelNormalizeCur(r.cur, script),
@@ -113896,7 +113917,7 @@ const xmasNovelNormalize = (raw, script = null) => {
     endings: strs(r.endings, 50),
     first,
     snaps,
-    titleSent: r.titleSent === true,
+    endAt,
     auto: [0, 1, 2].includes(r.auto) ? r.auto : 0
   };
 };
@@ -113913,25 +113934,33 @@ const xmasNovelRecordFirst = (save, qid, ok) => {
   };
 };
 const xmasNovelPerfectCount = (script, save) => xmasNovelScoreOf(script, save && save.first);
-const xmasNovelIsPerfect = (script, save) => {
-  const total = xmasNovelScoreGroups(script).length;
-  return total > 0 && xmasNovelPerfectCount(script, save) === total;
+const xmasNovelRecordEnding = (save, endingId, iso) => {
+  const endings = save.endings.includes(endingId) ? save.endings : [...save.endings, endingId];
+  const endAt = save.endAt && save.endAt[endingId] ? save.endAt : {
+    ...(save.endAt || {}),
+    [endingId]: iso
+  };
+  return {
+    ...save,
+    endings,
+    endAt
+  };
 };
 const XMAS_NOVEL_ENDING_KINDS = Object.freeze({
   good: {
-    label: 'グッド',
+    label: '真グッド',
     tone: '#f5d27a'
   },
   normal: {
-    label: 'ノーマル',
+    label: 'ノーマルグッド',
     tone: '#b9c7e6'
   },
   bad: {
-    label: 'バッド',
+    label: 'バッドエンド',
     tone: '#e07a7a'
   },
   another: {
-    label: 'あつルート',
+    label: '偽りエンド',
     tone: '#e8a95b'
   }
 });
@@ -119032,6 +119061,37 @@ const XMAS_NOVEL_CSS = `
 @keyframes mh-nv-curtain-down { from { transform: translateY(-102%); } to { transform: translateY(0); } }
 @keyframes mh-nv-curtain-up { from { transform: translateY(0); } to { transform: translateY(-102%); } }
 @media (prefers-reduced-motion: reduce) { .mh-nv-curtain[data-st='down'] { animation: none; transform: none; } .mh-nv-curtain[data-st='up'] { animation: none; } }
+.mh-nv-boot { background: #030407; }
+.mh-nv-noise { position: absolute; inset: -20%; pointer-events: none; opacity: .13; z-index: 1;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='160' height='160' filter='url(%23n)' opacity='.9'/></svg>");
+  animation: mh-nv-noise .35s steps(3) infinite; }
+@keyframes mh-nv-noise { 0% { transform: translate(0, 0); } 33% { transform: translate(-7%, 4%); } 66% { transform: translate(5%, -6%); } 100% { transform: translate(0, 0); } }
+.mh-nv-scan { position: absolute; inset: 0; pointer-events: none; z-index: 2; background: repeating-linear-gradient(0deg, rgba(0,0,0,.38) 0 1px, transparent 1px 3px); }
+.mh-nv-boot > .absolute { z-index: 3; }
+.mh-nv-boot .mh-nv-top { z-index: 6; } /* 閉じるボタンを本文の層より上に(押せるように) */
+.mh-nv-boot-logo { animation: mh-nv-flicker 4s infinite; }
+.mh-nv-boot-series { font-size: 40px; font-weight: 900; letter-spacing: .08em; color: #ece6d6; line-height: 1.15;
+  text-shadow: 2px 0 rgba(255,20,60,.55), -2px 0 rgba(0,200,255,.45), 0 0 18px rgba(255,255,255,.25); }
+.mh-nv-boot-title { margin-top: 6px; font-size: 15px; font-weight: 800; letter-spacing: .12em; color: #c9b38a; }
+.mh-nv-boot-sub { font-size: 26px; font-weight: 900; letter-spacing: .2em; color: #f3d98e; text-shadow: 0 0 14px rgba(232,196,106,.4); }
+.mh-nv-boot-press { color: #9aa3b8; animation: mh-nv-blink 1.4s steps(2) infinite; }
+.mh-nv-boot-btn { background: rgba(0,0,0,.65); color: #ece6d6; box-shadow: 0 0 0 1px rgba(200,180,130,.6); }
+@keyframes mh-nv-flicker { 0%, 92%, 100% { opacity: 1; transform: none; } 93% { opacity: .55; transform: translateX(2px); } 95% { opacity: 1; transform: translateX(-1px); } 97% { opacity: .8; } }
+@keyframes mh-nv-blink { 50% { opacity: .2; } }
+.mh-nv-history { padding: 10px 12px; }
+.mh-nv-crt { position: absolute; inset: 0; pointer-events: none; z-index: 3; background: repeating-linear-gradient(0deg, rgba(0,0,0,.18) 0 1px, transparent 1px 3px);
+  box-shadow: inset 0 0 90px rgba(0,0,0,.55); }
+.mh-nv-transit { position: absolute; inset: 0; z-index: 8; pointer-events: none; overflow: hidden; background: #000; }
+.mh-nv-transit .scr { position: absolute; left: 50%; top: 45%; width: 70vmin; height: 52vmin; transform: translate(-50%, -50%); border-radius: 10px;
+  background: radial-gradient(circle, rgba(200,230,255,.9), rgba(60,90,140,.6) 60%, rgba(0,0,0,.9)); box-shadow: 0 0 0 6px #222, 0 0 40px rgba(150,200,255,.5); }
+.mh-nv-transit[data-dir='in'] { animation: mh-nv-tin 1.1s ease both; }
+.mh-nv-transit[data-dir='in'] .scr { animation: mh-nv-zoom-in 1.1s cubic-bezier(.6,0,.4,1) both; }
+.mh-nv-transit[data-dir='out'] { animation: mh-nv-tin 1.1s ease both; }
+.mh-nv-transit[data-dir='out'] .scr { animation: mh-nv-zoom-out 1.1s cubic-bezier(.6,0,.4,1) both; }
+@keyframes mh-nv-tin { 0% { opacity: 0; } 15% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes mh-nv-zoom-in { 0% { transform: translate(-50%, -50%) scale(.6); } 100% { transform: translate(-50%, -50%) scale(4); opacity: .2; } }
+@keyframes mh-nv-zoom-out { 0% { transform: translate(-50%, -50%) scale(4); opacity: .2; } 100% { transform: translate(-50%, -50%) scale(.6); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .mh-nv-noise, .mh-nv-boot-logo, .mh-nv-boot-press { animation: none; } .mh-nv-transit { animation-duration: .01s !important; } }
 @media (orientation: landscape) and (max-height: 560px) {
   .mh-nv-fig { left: 4%; transform: none; height: 96%; width: min(40vw, 420px); }
   .mh-nv-box { left: auto; right: 10px; transform: none; width: min(calc(60vw - 10px), 760px); min-height: 110px; padding-top: 20px; }
@@ -119121,7 +119181,7 @@ const xmasNovelFigureSrc = (who, e) => {
       fallback: `${dir}/${who}_${face}.PNG`
     };
   }
-  if (c.kind === 'monster') return {
+  if (c.kind === 'monster' || c.kind === 'guest') return {
     src: c.art
   };
   return null;
@@ -119378,6 +119438,7 @@ const xmasNovelPanelStates = (panel, row) => {
 const XMAS_NOVEL_KANJI = ['〇', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
 const xmasNovelChapterLabel = ch => {
   if (!ch) return '';
+  if (ch.outside) return '';
   if (ch.disp) return ch.disp;
   if (ch.id === 'END') return 'エンディング';
   if (ch.no === 0) return '序章';
@@ -119459,26 +119520,26 @@ const xmasNovelStore = async (save, script = XMAS_NOVEL_SCRIPT) => {
     return false;
   }
 };
-const xmasNovelPerfectState = async () => {
+const xmasNovelRecordState = async () => {
   const save = await xmasNovelLoad();
   return {
-    perfect: xmasNovelIsPerfect(XMAS_NOVEL_SCRIPT, save),
+    endings: save.endings,
+    endAt: save.endAt,
     count: xmasNovelPerfectCount(XMAS_NOVEL_SCRIPT, save),
-    total: xmasNovelScoreGroups(XMAS_NOVEL_SCRIPT).length,
-    titleSent: save.titleSent,
-    endings: save.endings
+    total: xmasNovelScoreGroups(XMAS_NOVEL_SCRIPT).length
   };
 };
-const xmasNovelHasCurtain = (script, endingId) => {
-  const sc = xmasNovelSceneById(script, endingId);
-  const nx = sc && sc.next ? xmasNovelSceneById(script, sc.next) : null;
-  return !!(nx && nx.curtain);
+const xmasNovelDateText = iso => {
+  const ms = Date.parse(iso);
+  if (!Number.isFinite(ms)) return '';
+  const d = new Date(ms + 9 * 3600000);
+  const p2 = n => String(n).padStart(2, '0');
+  return `${d.getUTCFullYear()}/${p2(d.getUTCMonth() + 1)}/${p2(d.getUTCDate())} ${p2(d.getUTCHours())}:${p2(d.getUTCMinutes())}`;
 };
 const XMAS_NOVEL_AUTO_MS = [0, 1800, 1000];
 const XmasNovelScreen = ({
   playerName = '',
   onClose,
-  onPerfect,
   script = null
 }) => {
   useXmasNovelCss();
@@ -119491,6 +119552,7 @@ const XmasNovelScreen = ({
   const [fx, setFx] = useState(null);
   const [shake, setShake] = useState(0);
   const [curtain, setCurtain] = useState(null);
+  const [transit, setTransit] = useState(null);
   const replayRef = useRef(false);
   const lastSceneRef = useRef(null);
   const [cards, setCards] = useState([]);
@@ -119624,25 +119686,11 @@ const XmasNovelScreen = ({
         });
         return;
       }
+      const firstTime = !s.endings.includes(ending.id);
       s = {
-        ...s,
-        endings: s.endings.includes(ending.id) ? s.endings : [...s.endings, ending.id],
+        ...xmasNovelRecordEnding(s, ending.id, new Date().toISOString()),
         cur: after
       };
-      let perfectNow = false;
-      if (!s.titleSent && xmasNovelIsPerfect(S, s)) {
-        perfectNow = true;
-        try {
-          const sent = onPerfect ? onPerfect({
-            count: xmasNovelPerfectCount(S, s),
-            endings: s.endings
-          }) : false;
-          if (sent === true) s = {
-            ...s,
-            titleSent: true
-          };
-        } catch (e) {}
-      }
       persist(s, true);
       setSt(next);
       setSkip(false);
@@ -119651,7 +119699,7 @@ const XmasNovelScreen = ({
         kind: 'ending',
         ending,
         retry: !!after,
-        perfect: perfectNow,
+        fresh: firstTime,
         count: xmasNovelPerfectCount(S, s),
         total: xmasNovelScoreGroups(S).length
       });
@@ -119668,6 +119716,13 @@ const XmasNovelScreen = ({
     }
     const scene = next.scene;
     let chapterCard = false;
+    if (scene && lastSceneRef.current && !!lastSceneRef.current.outside !== !!scene.outside) {
+      setTransit({
+        dir: scene.outside ? 'out' : 'in',
+        n: Date.now()
+      });
+      xmasNovelSe('tap');
+    }
     if (scene && lastSceneRef.current && lastSceneRef.current.curtain && !scene.curtain) {
       setCurtain(c => c === 'down' ? 'up' : c);
       setTimeout(() => setCurtain(c => c === 'up' ? null : c), 1700);
@@ -119735,6 +119790,7 @@ const XmasNovelScreen = ({
   const start = (cur, replay = false) => {
     replayRef.current = replay;
     setCurtain(null);
+    setTransit(null);
     lastBgm.current = null;
     lastChapter.current = null;
     setLog([]);
@@ -119890,19 +119946,16 @@ const XmasNovelScreen = ({
   const clues = st && st.cur && st.cur.clues || [];
   const endingsAll = xmasNovelScenes(S).filter(s => s.ending).map(s => s.ending);
   const perfectTotal = xmasNovelScoreGroups(S).length;
+  const inside = !!(scene && !scene.outside);
   if (mode !== 'read') {
+    const seenCount = endingsAll.filter(e => save.endings.includes(e.id)).length;
     return React.createElement("div", {
-      className: "mh-nv",
+      className: "mh-nv mh-nv-boot",
       "data-xmas-novel": mode
     }, React.createElement("div", {
-      className: "mh-nv-bg",
-      style: {
-        background: XMAS_NOVEL_BG_DEFAULT.grad
-      }
+      className: "mh-nv-noise"
     }), React.createElement("div", {
-      className: "mh-nv-snow"
-    }), React.createElement("div", {
-      className: "mh-nv-snow b"
+      className: "mh-nv-scan"
     }), React.createElement("div", {
       className: "mh-nv-top"
     }, React.createElement("span", {
@@ -119921,40 +119974,43 @@ const XmasNovelScreen = ({
       className: "w-full max-w-sm text-center",
       "data-xmas-novel-title": true
     }, React.createElement("div", {
-      className: "mh-nv-serif text-[13px] tracking-[0.4em] text-slate-300"
-    }, "MYSTERY NOVEL"), React.createElement("div", {
-      className: "mh-nv-rule"
-    }), React.createElement("h1", {
-      className: "mh-nv-serif mh-nv-gold text-[34px] font-black leading-tight sm:text-[42px]"
-    }, "聖夜の名探偵"), React.createElement("div", {
-      className: "mh-nv-serif mt-1 text-[13px] text-slate-200"
-    }, "〜雪山ペンションと消えたプレゼント〜"), React.createElement("div", {
+      className: "mh-nv-boot-logo",
+      "data-xmas-novel-game": XMAS_NOVEL_GAME.series
+    }, React.createElement("div", {
+      className: "mh-nv-serif mh-nv-boot-series"
+    }, XMAS_NOVEL_GAME.series), React.createElement("div", {
+      className: "mh-nv-serif mh-nv-boot-title"
+    }, "―", XMAS_NOVEL_GAME.title, "―"), React.createElement("div", {
       className: "mh-nv-rule"
     }), React.createElement("div", {
-      className: "mt-6 space-y-2.5"
+      className: "mh-nv-serif mh-nv-boot-sub"
+    }, XMAS_NOVEL_GAME.sub)), React.createElement("div", {
+      className: "mh-nv-boot-press mt-5 text-[11px] tracking-[0.3em]"
+    }, "SELECT"), React.createElement("div", {
+      className: "mt-3 space-y-2.5"
     }, save.cur && React.createElement("button", {
       type: "button",
-      className: "mh-nv-btn wide mh-nv-serif",
+      className: "mh-nv-btn wide mh-nv-serif mh-nv-boot-btn",
       "data-xmas-novel-continue": true,
       onClick: () => start(save.cur)
     }, "つづきから"), React.createElement("button", {
       type: "button",
-      className: "mh-nv-btn wide mh-nv-serif",
+      className: "mh-nv-btn wide mh-nv-serif mh-nv-boot-btn",
       "data-xmas-novel-new": true,
       onClick: () => save.cur ? setConfirmNew(true) : start(xmasNovelFreshCur(S))
-    }, "最初から"), React.createElement("button", {
+    }, "はじめから"), React.createElement("button", {
       type: "button",
-      className: "mh-nv-btn wide mh-nv-serif",
+      className: "mh-nv-btn wide mh-nv-serif mh-nv-boot-btn",
       "data-xmas-novel-chapters": true,
       disabled: !Object.keys(save.snaps).length,
       onClick: () => setMode('chapters')
-    }, "章を選んで読む"), React.createElement("button", {
+    }, "章から"), React.createElement("button", {
       type: "button",
-      className: "mh-nv-btn wide mh-nv-serif",
+      className: "mh-nv-btn wide mh-nv-serif mh-nv-boot-btn",
       "data-xmas-novel-endings": true,
       onClick: () => setMode('endings')
-    }, "エンディングの記録 ", save.endings.filter(id => endingsAll.some(e => e.id === id)).length, " / ", endingsAll.length)), React.createElement("div", {
-      className: "mt-4 text-[11px] text-slate-300"
+    }, "エンドヒストリー ", seenCount, " / ", endingsAll.length)), React.createElement("div", {
+      className: "mt-4 text-[10px] text-slate-400"
     }, "推理の問い 一発で当てた数 ", xmasNovelPerfectCount(S, save), " / ", perfectTotal), confirmNew && React.createElement("div", {
       className: "mh-nv-sheet",
       onClick: () => setConfirmNew(false)
@@ -119963,10 +120019,10 @@ const XmasNovelScreen = ({
       onClick: e => e.stopPropagation()
     }, React.createElement("div", {
       className: "mh-nv-serif mh-nv-gold mb-2 text-[17px] font-black"
-    }, "最初から読みますか？"), React.createElement("p", {
+    }, "はじめから遊びますか？"), React.createElement("p", {
       className: "mb-3 text-[12px] leading-relaxed text-slate-200",
       style: JA_LABEL_STYLE
-    }, jaWrap('いまの続きの場所は消えます。見たエンディング・一発で当てた記録・読んだ印はそのまま残ります')), React.createElement("div", {
+    }, jaWrap('いまの続きの場所は消えます。エンドヒストリー・一発で当てた記録・読んだ印はそのまま残ります')), React.createElement("div", {
       className: "space-y-2"
     }, React.createElement("button", {
       type: "button",
@@ -119976,7 +120032,7 @@ const XmasNovelScreen = ({
         setConfirmNew(false);
         start(xmasNovelFreshCur(S));
       }
-    }, "最初から"), React.createElement("button", {
+    }, "はじめから"), React.createElement("button", {
       type: "button",
       className: "mh-nv-btn wide",
       onClick: () => setConfirmNew(false)
@@ -119984,8 +120040,8 @@ const XmasNovelScreen = ({
       className: "w-full max-w-md",
       "data-xmas-novel-ending-list": true
     }, React.createElement("div", {
-      className: "mh-nv-serif mh-nv-gold text-center text-[22px] font-black"
-    }, "エンディングの記録"), React.createElement("div", {
+      className: "mh-nv-serif mh-nv-gold text-center text-[22px] font-black tracking-widest"
+    }, "エンドヒストリー"), React.createElement("div", {
       className: "mh-nv-rule"
     }), React.createElement("ul", {
       className: "space-y-2"
@@ -119997,29 +120053,41 @@ const XmasNovelScreen = ({
           label: e.label
         } : {})
       };
+      const at = save.endAt && save.endAt[e.id];
       return React.createElement("li", {
         key: e.id,
         "data-xmas-novel-ending": e.id,
         "data-seen": seen ? '' : undefined,
-        className: "mh-nv-clue flex flex-wrap items-center gap-3"
+        className: "mh-nv-clue mh-nv-history",
+        style: seen ? {
+          boxShadow: `0 0 0 1px ${kind.tone}`
+        } : undefined
+      }, React.createElement("div", {
+        className: "flex items-center gap-2"
       }, React.createElement("span", {
-        className: "mh-nv-serif shrink-0 rounded px-2 py-0.5 text-[11px] font-black",
+        className: "mh-nv-serif shrink-0 rounded px-2 py-0.5 text-[10px] font-black",
         style: {
           color: '#0a0f20',
           background: seen ? kind.tone : '#3a4466'
         }
-      }, seen ? kind.label : '？？？'), React.createElement("span", {
-        className: "mh-nv-serif min-w-0 flex-1 truncate text-[15px] font-black"
-      }, seen ? `「${e.name}」` : '――まだ見ていない結末'), seen && React.createElement("button", {
+      }, seen ? kind.label : '？？？'), seen && at && React.createElement("span", {
+        className: "ml-auto text-[10px] font-bold text-slate-300",
+        "data-xmas-novel-ending-at": true
+      }, xmasNovelDateText(at))), React.createElement("div", {
+        className: "mh-nv-serif mt-1 text-[17px] font-black leading-snug",
+        style: {
+          color: seen ? kind.tone : '#5b6585'
+        }
+      }, seen ? `「${e.name}」` : '？？？'), seen && React.createElement("button", {
         type: "button",
-        className: "mh-nv-btn shrink-0",
+        className: "mh-nv-btn mt-2",
         "data-xmas-novel-replay": e.id,
         onClick: () => start({
           ...xmasNovelFreshCur(S),
           scene: e.id,
           idx: 0
         }, true)
-      }, xmasNovelHasCurtain(S, e.id) ? '見返す(カーテンコールまで)' : '見返す'));
+      }, "見返す"));
     })), React.createElement("button", {
       type: "button",
       className: "mh-nv-btn wide mt-4",
@@ -120029,7 +120097,7 @@ const XmasNovelScreen = ({
       "data-xmas-novel-chapter-list": true
     }, React.createElement("div", {
       className: "mh-nv-serif mh-nv-gold text-center text-[22px] font-black"
-    }, "章を選んで読む"), React.createElement("p", {
+    }, "章から"), React.createElement("p", {
       className: "mt-1 text-center text-[11px] text-slate-300",
       style: JA_LABEL_STYLE
     }, jaWrap('その章に入ったときの手がかりと選んだことから、読み直せます')), React.createElement("div", {
@@ -120096,7 +120164,24 @@ const XmasNovelScreen = ({
   }), fx && React.createElement("div", {
     key: fx.n,
     className: `mh-nv-fx ${fx.kind}`
-  }), curtain && React.createElement("div", {
+  }), inside && React.createElement("div", {
+    className: "mh-nv-crt",
+    "data-xmas-novel-inside": true
+  }), transit && React.createElement("div", {
+    key: transit.n,
+    className: "mh-nv-transit",
+    "data-dir": transit.dir,
+    "data-xmas-novel-transit": transit.dir,
+    onAnimationEnd: e => {
+      if (e.target === e.currentTarget) setTransit(null);
+    }
+  }, React.createElement("div", {
+    className: "scr"
+  }), React.createElement("div", {
+    className: "mh-nv-noise"
+  }), React.createElement("div", {
+    className: "mh-nv-scan"
+  })), curtain && React.createElement("div", {
     key: `curtain-${curtain}`,
     className: "mh-nv-curtain",
     "data-st": curtain,
@@ -120137,7 +120222,7 @@ const XmasNovelScreen = ({
     className: "mh-nv-top"
   }, React.createElement("span", {
     className: "mh-nv-where mh-nv-serif"
-  }, chapter ? `${xmasNovelChapterLabel(chapter)}　${chapter.title}` : '', scene && scene.title ? `　/　${scene.title}` : ''), React.createElement("button", {
+  }, chapter && !chapter.outside ? `${xmasNovelChapterLabel(chapter)}　${chapter.title}　/　` : '', scene && scene.title ? scene.title : ''), React.createElement("button", {
     type: "button",
     className: "mh-nv-btn",
     "data-xmas-novel-open-book": true,
@@ -120245,12 +120330,9 @@ const XmasNovelScreen = ({
       className: "mh-nv-rule"
     }), !card.replay && React.createElement("div", {
       className: "text-[12px] text-slate-200"
-    }, "エンディングの記録に残しました"), !card.replay && React.createElement("div", {
+    }, card.fresh ? 'エンドヒストリーに記録しました' : 'エンドヒストリーに記録ずみ'), !card.replay && React.createElement("div", {
       className: "mt-1 text-[11px] text-slate-300"
-    }, "推理の問い 一発で当てた数 ", card.count, " / ", card.total), card.perfect && React.createElement("div", {
-      "data-xmas-novel-perfect": true,
-      className: "mh-nv-serif mh-nv-gold mt-3 text-[15px] font-black"
-    }, "全部の問いを一発で当てた名探偵"), React.createElement("div", {
+    }, "推理の問い 一発で当てた数 ", card.count, " / ", card.total), React.createElement("div", {
       className: "mt-5 space-y-2"
     }, card.retry && React.createElement("button", {
       type: "button",
@@ -120274,7 +120356,7 @@ const XmasNovelScreen = ({
         });
         setMode('endings');
       }
-    }, "エンディングの記録へ") : React.createElement("button", {
+    }, "エンドヒストリーへ") : React.createElement("button", {
       type: "button",
       className: "mh-nv-btn wide mh-nv-serif",
       "data-xmas-novel-to-title": true,
@@ -120423,6 +120505,7 @@ let xmasNovelHost = null;
 const openXmasNovel = (opts = {}) => {
   if (typeof document === 'undefined' || typeof ReactDOM === 'undefined' || !ReactDOM.createRoot) return false;
   if (xmasNovelHost) return true;
+  if (!opts.force && !xmasNovelPlayableAt(Date.now())) return false;
   const el = document.createElement('div');
   el.setAttribute('data-xmas-novel-host', '');
   document.body.appendChild(el);
@@ -120449,7 +120532,6 @@ const openXmasNovel = (opts = {}) => {
   root.render(React.createElement(XmasNovelScreen, {
     playerName: opts.playerName || '',
     onClose: done,
-    onPerfect: opts.onPerfect,
     script: opts.script || null
   }));
   return true;

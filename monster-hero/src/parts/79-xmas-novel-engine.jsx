@@ -8,6 +8,16 @@
 
 const XMAS_NOVEL_STORAGE_KEY = 'mh_xmas_novel_v1';
 
+// 届いたゲームの名前(社長 2026-11-26)。シリーズ名・副題は、次のお話でここだけ差し替えて使い回す
+const XMAS_NOVEL_GAME = Object.freeze({ series: 'モンヒロ事件簿', title: '呪いのセーブデータ', sub: '十三番目の鐘' });
+// 遊べるのはイベントの期間中だけ(11/30 10:00〜12/31 3:59)。期間が終わっても保存の記録は消さない
+const XMAS_NOVEL_OPEN_AT = '2026-11-30T10:00:00+09:00';
+const XMAS_NOVEL_CLOSE_AT = '2026-12-31T04:00:00+09:00';
+const xmasNovelPlayableAt = (nowMs) => {
+  const a = Date.parse(XMAS_NOVEL_OPEN_AT); const b = Date.parse(XMAS_NOVEL_CLOSE_AT);
+  return Number.isFinite(nowMs) && nowMs >= a && nowMs < b;
+};
+
 // 登場人物(パネル・人を選ぶ問い・立ち絵の名前)。並びは SCRIPT.md の D(12人を6人ずつ2段)
 //   kind: 'assistant' = 助手(サンタの立ち絵) / 'monster' = 絵が1枚(art) / 'shadow' = 絵がまだ無い(影の立ち絵)
 const XMAS_NOVEL_CAST = Object.freeze([
@@ -21,8 +31,9 @@ const XMAS_NOVEL_CAST = Object.freeze([
   { id: 'erubin', name: 'えるびん', kind: 'assistant' },
   { id: 'ichika', name: 'イチーカ', kind: 'monster', art: 'images/monsters/snegurochka.png', face: 'images/monster-icons/face/snegurochka.png' },
   { id: 'mochimaru', name: 'もちまる', kind: 'monster', art: 'images/monsters/mocchi.png', face: 'images/monster-icons/face/mocchi.png' },
-  { id: 'kuroba', name: '黒羽', full: '黒羽 宗一郎', kind: 'shadow', tone: '#3b3f4a' },
-  { id: 'shirase', name: '白瀬', full: '白瀬 雪絵', kind: 'shadow', tone: '#5a6a86' },
+  // 謎の客2人(2026-11-26 届いた絵・余白だけ切りそろえた。表情は1枚)
+  { id: 'kuroba', name: '黒羽', full: '黒羽 宗一郎', kind: 'guest', art: 'images/story-guests/kuroba_stand.png', face: 'images/story-guests/kuroba_stand.png', tone: '#3b3f4a' },
+  { id: 'shirase', name: '白瀬', full: '白瀬 雪絵', kind: 'guest', art: 'images/story-guests/shirase_stand.png', face: 'images/story-guests/shirase_stand.png', tone: '#5a6a86' },
 ]);
 // 話し手だけの人(パネルには出ない)
 const XMAS_NOVEL_SPEAKERS_EXTRA = Object.freeze([
@@ -296,7 +307,7 @@ const xmasNovelChapterOfScene = (script, sceneId) => {
 //    read: [行の読んだ印(場面ID:行ID)],
 //    endings: [見たエンディングID], first: {問いID:{f:一発目で当てたか}}(一番はじめに答えたときだけ書く・読み直しで変えない),
 //    snaps: {章ID: 章に入ったときの {flags, clues, ans}}(章から読み直す),
-//    titleSent: 全部一発の称号を渡したか, auto: オートの速さ(0=切 1=ふつう 2=はやい) }
+//    endAt: {エンディングID: はじめて見た日時(ISO)}(エンドヒストリー), auto: オートの速さ(0=切 1=ふつう 2=はやい) }
 const xmasNovelNormalizeCur = (raw, script) => {
   if (!raw || typeof raw !== 'object') return null;
   if (typeof raw.scene !== 'string' || (script && !xmasNovelSceneById(script, raw.scene))) return null;
@@ -326,6 +337,8 @@ const xmasNovelNormalize = (raw, script = null) => {
     const c = xmasNovelNormalizeCur({ ...s, scene: typeof s.scene === 'string' ? s.scene : '' }, script);
     if (c) snaps[k] = c;
   });
+  const endAt = {};
+  if (r.endAt && typeof r.endAt === 'object') Object.keys(r.endAt).forEach((k) => { const t = r.endAt[k]; if (/^END-[A-Z]+$/.test(k) && typeof t === 'string' && Number.isFinite(Date.parse(t))) endAt[k] = t; });
   return {
     v: 1,
     cur: xmasNovelNormalizeCur(r.cur, script),
@@ -333,26 +346,28 @@ const xmasNovelNormalize = (raw, script = null) => {
     endings: strs(r.endings, 50),
     first,
     snaps,
-    titleSent: r.titleSent === true,
+    endAt,
     auto: [0, 1, 2].includes(r.auto) ? r.auto : 0,
   };
 };
-// 一番はじめの答えを記録(読み直しでは書き変えない)。称号は「一発目だけで数える」(r1126-021)
+// 一番はじめの答えを記録(読み直しでは書き変えない)。一発で当てた数は記録だけ(称号はやめた・r1126-022 の決め)
 const xmasNovelRecordFirst = (save, qid, ok) => {
   if (!save || !qid || (save.first && save.first[qid])) return save;
   return { ...save, first: { ...(save.first || {}), [qid]: { f: !!ok } } };
 };
-// 全部一発で当てたか(称号の口)。問いが1つも無い台本では偽
+// 一番はじめの答えで、一発で当てた数(記録だけ)
 const xmasNovelPerfectCount = (script, save) => xmasNovelScoreOf(script, save && save.first);
-const xmasNovelIsPerfect = (script, save) => {
-  const total = xmasNovelScoreGroups(script).length;
-  return total > 0 && xmasNovelPerfectCount(script, save) === total;
+// エンドヒストリーに記録(はじめて見た日時だけ残す)
+const xmasNovelRecordEnding = (save, endingId, iso) => {
+  const endings = save.endings.includes(endingId) ? save.endings : [...save.endings, endingId];
+  const endAt = save.endAt && save.endAt[endingId] ? save.endAt : { ...(save.endAt || {}), [endingId]: iso };
+  return { ...save, endings, endAt };
 };
 
 // エンディングの種類の名前(一覧の札)
 const XMAS_NOVEL_ENDING_KINDS = Object.freeze({
-  good: { label: 'グッド', tone: '#f5d27a' },
-  normal: { label: 'ノーマル', tone: '#b9c7e6' },
-  bad: { label: 'バッド', tone: '#e07a7a' },
-  another: { label: 'あつルート', tone: '#e8a95b' },
+  good: { label: '真グッド', tone: '#f5d27a' },
+  normal: { label: 'ノーマルグッド', tone: '#b9c7e6' },
+  bad: { label: 'バッドエンド', tone: '#e07a7a' },
+  another: { label: '偽りエンド', tone: '#e8a95b' },
 });

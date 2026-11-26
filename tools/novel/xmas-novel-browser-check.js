@@ -59,9 +59,9 @@ const CASES = CASES_ALL.filter((c) => !ONLY || c.shot === ONLY);
       const keysBefore = await page.evaluate(() => Object.keys(localStorage).sort());
 
       // ①
-      const opened = await page.evaluate((script) => { window.__nvScript = script; window.__nvClosed = 0; window.__nvPerfect = 0; return openXmasNovel({ script, playerName: 'テスト', onClose: () => { window.__nvClosed += 1; }, onPerfect: () => { window.__nvPerfect += 1; return true; } }); }, SAMPLE_SCRIPT);
+      const opened = await page.evaluate((script) => { window.__nvScript = script; window.__nvClosed = 0; window.__nvPerfect = 0; const outside = openXmasNovel({ script, playerName: 'テスト' }); return { outside, opened: openXmasNovel({ script, force: true, playerName: 'テスト', onClose: () => { window.__nvClosed += 1; } }) }; }, SAMPLE_SCRIPT);
       await page.locator('[data-xmas-novel-title]').waitFor({ timeout: 8000 }).catch(() => {});
-      check(`① ${vp.label}: openXmasNovel でタイトルが開く`, opened === true && await page.locator('[data-xmas-novel-title]').count() === 1);
+      check(`① ${vp.label}: 期間の外は開かず(false)、force で起動画面が開く`, opened.outside === false && opened.opened === true && await page.locator('[data-xmas-novel-title]').count() === 1);
       await shot('01-title');
 
       // ②
@@ -86,6 +86,7 @@ const CASES = CASES_ALL.filter((c) => !ONLY || c.shot === ONLY);
         const s = await look();
         if (i % 25 === 0) say(`${vp.label}: ${i}手目 ${s.scene} ${s.row}`);
         if (s.end) { ending = s.end; break; }
+        if (await page.evaluate(() => !!document.querySelector('[data-xmas-novel-transit]'))) { seen.transit = (seen.transit || 0) + 1; if (!shots.has('transit')) { shots.add('transit'); if (SHOT_DIR) await page.screenshot({ path: path.join(SHOT_DIR, `${vp.shot}-03-transit.jpg`), type: 'jpeg', quality: 80 }); } }
         if (s.sheet === 'present') {
           seen.present++;
           if (vp.full && !shots.has('present')) { shots.add('present'); await shot('05-present'); }
@@ -116,7 +117,7 @@ const CASES = CASES_ALL.filter((c) => !ONLY || c.shot === ONLY);
         await page.waitForTimeout(40);
       }
       check(`② ${vp.label}: 最後のエンディングまで通して読めた`, !!ending, ending || '着かなかった');
-      check(`② ${vp.label}: 章の札・台詞・手がかり・行動の選択・突きつけ(まちがい1回)・人を選ぶが出た`, seen.chapter > 0 && seen.line > 0 && seen.clue > 0 && seen.action > 0 && seen.present > 0 && seen.wrong > 0 && seen.person > 0, JSON.stringify(seen));
+      check(`② ${vp.label}: 章の札・台詞・手がかり・行動の選択・突きつけ(まちがい1回)・人を選ぶ・外側からゲームの中への切り替えが出た`, seen.chapter > 0 && seen.line > 0 && seen.clue > 0 && seen.action > 0 && seen.present > 0 && seen.wrong > 0 && seen.person > 0 && seen.transit > 0, JSON.stringify(seen));
       await shot('07-ending');
 
       // ③
@@ -130,7 +131,8 @@ const CASES = CASES_ALL.filter((c) => !ONLY || c.shot === ONLY);
       await page.locator('[data-xmas-novel-to-title]').click();
       await page.locator('[data-xmas-novel-endings]').click();
       const seenList = await page.locator('[data-xmas-novel-ending][data-seen]').count();
-      check(`③ ${vp.label}: エンディングの記録に、見たものだけ名前が出る`, seenList === 1, `見た ${seenList}`);
+      const atText = await page.locator('[data-xmas-novel-ending-at]').first().innerText().catch(() => '');
+      check(`③ ${vp.label}: エンドヒストリーに、見たものだけ名前と日時が出る(見ていないのは？？？)`, seenList === 1 && /^\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}$/.test(atText), `見た ${seenList} 日時 ${atText}`);
       await shot('08-ending-list');
 
       // ③-2 エンディングの記録から見返す(カーテンコールまで)。幕が下りる/上がる演出が出て、保存は変わらない
