@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1f31f97a4f67ee04
+// generated-sha256: 556d6142fed9012e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -39076,7 +39076,7 @@ const xmasStoryOpenAtOf = (no) => (no <= 1 ? RAID_XMAS_EVENT.startAt : `2026-12-
 // 序章(台帳 r1126-012・社長): 第1話の前。イチーカから招待状が届いて行くまで。11/28 の開催予告のときから開く(時刻 10:00 は仮)。お話は data/assistants.js の XMAS_STORY_00(EVENT_REPLAYS の xmas_story_00)
 const XMAS_STORY_PROLOGUE_OPEN_AT = '2026-11-28T10:00:00+09:00';
 const XMAS_STORY_CHAPTERS = Object.freeze([
-  Object.freeze({ id: 'xs00', no: 0, prologue: true, openAt: XMAS_STORY_PROLOGUE_OPEN_AT, type: 'read', title: '雪の招待状', scriptId: 'xmas_story_00' }),
+  Object.freeze({ id: 'xs00', no: 0, prologue: true, openAt: XMAS_STORY_PROLOGUE_OPEN_AT, type: 'read', title: 'とどいたゲーム', scriptId: 'xmas_story_00' }),
   ...XMAS_STORY_LIST.map(([title, type], i) => Object.freeze({
     id: `xs${String(i + 1).padStart(2, '0')}`,
     no: i + 1,
@@ -153110,6 +153110,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // 場面の背景(台本の行の bg:'名前'。次に bg を書いた行まで続き、bg:'none' で消す。2026-11-05 共通の背景)
         let storyScene=null;
         for(let i=step;i>=0;i--){const l=script[i];if(l&&typeof l.bg==='string'){storyScene=l.bg==='none'?null:l.bg;break;}}
+        // 背景のわく(台本の行の frame:'game'。次に frame を書いた行まで続き、frame:'none' で消す)。
+        //   クリスマスの序章(2026-11-26 r1126-022 追記7): 助手たちが遊ぶゲームの中の場面は、古いゲームの画面のわくの中に背景を出す(外側の場面と分ける・70-bootstrap.jsx)
+        let storyFrame=null;
+        for(let i=step;i>=0;i--){const l=script[i];if(l&&typeof l.frame==='string'){storyFrame=l.frame==='none'?null:l.frame;break;}}
         // 絵は data/breeder.js の STORY_SCENE_IMAGES(名前 → 絵)。表に無い名前は出さない
         const storySceneImg=storyScene&&typeof STORY_SCENE_IMAGES!=='undefined'?(STORY_SCENE_IMAGES[storyScene]||null):null;
         // 一枚絵(台本の行の still:'名前'・2026-11-23 r1119-115)。その行だけ背景の上に絵を出し、上のステージ・真ん中のモンスターを消す(次の行に still が無ければ戻る)。
@@ -153317,8 +153321,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         <div data-event-story={eventReplay.id} data-story-has-stage={stageGuest?'1':undefined} data-story-still-on={storyStillImg?'':undefined} data-story-step={step} data-story-zones={storyZones?(storyKeepRow?'facerow':'face'):undefined} data-story-ending-pull={eventReplay.ending&&STORY_ENDING_STYLE==='pull'?'':undefined} data-story-opening={storyOpening?storyOpeningStyle:undefined} className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${storyTitleNow||''}`}>
           {/* 場面の背景(台本の行の bg)。場面が替わると key が替わり、ふわっと切り替わる。fx:'fall' の行では、
               穴へ落ちていくように背景が上へ流れて暗くなる(70-bootstrap.jsx の [data-story-bg]) */}
-          {storySceneImg&&<div key={storyScene} data-story-bg={storyScene} data-story-bg-fx={fx==='fall'?'fall':undefined} aria-hidden="true"
-            style={{'--story-bg':`url("${storySceneImg}")`}}/>}
+          {storySceneImg&&<div key={`${storyScene}:${storyFrame||''}`} data-story-bg={storyScene} data-story-bg-frame={storyFrame||undefined} data-story-bg-fx={fx==='fall'?'fall':undefined} aria-hidden="true"
+            style={{'--story-bg':`url("${storySceneImg}")`}}>{storyFrame==='game'&&<span data-story-bg-frame-label>モンヒロ事件簿</span>}</div>}
           {storyStillImg&&<div key={`still:${storyStill}`} data-story-still={storyStill} data-story-still-has-tate={storyStillTate?'':undefined} aria-hidden="true"
             style={{'--story-still':`url("${storyStillImg}")`,...(storyStillTate?{'--story-still-tate':`url("${storyStillTate}")`}:{})}}><div data-story-still-area><img data-story-still-img src={storyStillImg} alt="" draggable={false}/></div>
             {storyStillTate&&<img data-story-still-tate src={storyStillTate} alt="" draggable={false}/>}</div>}
@@ -153378,7 +153382,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {/* 場面の説明は、幕開けの札が開いてから出し直す(札の裏で動きが終わって、最初の行の説明が見えなかった) */}
               {/* 2026-11-14 社長「早く消えて見逃す」「色が見にくい」(r1114-080): 消さずに次へ進むまで残す。暗い帯を敷き、縁取りの影で明るい背景でも読めるようにした。
                   残すと横向きで台詞の窓に重なって台詞が隠れたので、置き場は「台詞の窓より上の空いている所の真ん中」(窓の高さ --story-sheet-h から) */}
-              {line.fxText&&!storyOpening&&!eventReplay.ending&&<div key={`banner${step}-${eventReplay.opened?1:0}`} data-story-banner className="px-4 py-2.5 text-center text-[17px] font-black" style={{position:'absolute',top:storyStillImg?'calc(env(safe-area-inset-top) + 42px)':'max(44px, calc((100% - var(--story-sheet-h, 50%)) / 2))',left:'50%',width:'calc(100% - 32px)',maxWidth:'26rem',color:'#fff',background:'rgba(2,6,23,.74)',border:`1px solid rgba(${fxColors[fx]||'255,255,255'},.45)`,borderRadius:14,boxShadow:'0 4px 18px rgba(0,0,0,.45)',textShadow:`0 0 2px #000, 0 1px 3px rgba(0,0,0,.95), 0 0 12px rgba(${fxColors[fx]||'255,255,255'},.75)`,animation:storyStillImg?'storyBanner .7s ease-out both, storyStillBannerAway .8s ease-in 4.2s forwards':'storyBanner .7s ease-out both'}}>{storyCenter(line.fxText,storyBoxW-64,17)}</div>}
+              {line.fxText&&!storyOpening&&!eventReplay.ending&&<div key={`banner${step}-${eventReplay.opened?1:0}`} data-story-banner data-story-banner-big={line.bandBig?'':undefined} className={`text-center font-black ${line.bandBig?'px-5 py-5 text-[24px] leading-snug':'px-4 py-2.5 text-[17px]'}`} style={{position:'absolute',top:storyStillImg?'calc(env(safe-area-inset-top) + 42px)':'max(44px, calc((100% - var(--story-sheet-h, 50%)) / 2))',left:'50%',width:'calc(100% - 32px)',maxWidth:'26rem',color:'#fff',background:'rgba(2,6,23,.74)',border:`1px solid rgba(${fxColors[fx]||'255,255,255'},.45)`,borderRadius:14,boxShadow:'0 4px 18px rgba(0,0,0,.45)',textShadow:`0 0 2px #000, 0 1px 3px rgba(0,0,0,.95), 0 0 12px rgba(${fxColors[fx]||'255,255,255'},.75)`,animation:storyStillImg?'storyBanner .7s ease-out both, storyStillBannerAway .8s ease-in 4.2s forwards':'storyBanner .7s ease-out both',...(line.bandBig?{color:'#fde68a',background:'linear-gradient(180deg, rgba(40,8,12,.92), rgba(2,6,23,.92))',border:'2px solid #f0c96c',boxShadow:'0 0 0 2px rgba(107,18,24,.9), 0 0 28px rgba(240,201,108,.55), 0 6px 22px rgba(0,0,0,.6)'}:{})}}>{storyCenter(line.fxText,storyBoxW-(line.bandBig?80:64),line.bandBig?24:17)}</div>}
             </div>
           )}
           {/* ★ボタンの列はいつも窓の中に出す(2026-10-27 844×390 の横向きで、台詞が5行になると「次へ」「スキップ」が画面の外へ出て押せなかった)。
@@ -158132,6 +158136,17 @@ const createAnimationStyle = () => {
     @media (orientation: portrait) { [data-story-bg]::before { bottom: 30%; -webkit-mask-image: linear-gradient(180deg, #000 80%, transparent 100%); mask-image: linear-gradient(180deg, #000 80%, transparent 100%); } }
     @keyframes storySceneIn { 0% { opacity: 0; } 100% { opacity: 1; } }
     /* fx:'fall' … 穴へ落ちていく。背景が上へ流れながら暗くなる(行の holdMs のあいだに終わる長さ) */
+    /* ゲームの中の場面(台本の frame:'game'・2026-11-26 クリスマスの序章 r1126-022 追記7)。背景を古いゲームの画面のわくに入れ、走査線を重ねる。
+       縦はわくの下を台詞の窓の上にそろえる(--story-sheet-h)。背の低い横は画面いっぱいのわく */
+    [data-story-bg][data-story-bg-frame="game"] { background: radial-gradient(ellipse at 50% 40%, #1d1830 0%, #07060d 75%); }
+    [data-story-bg][data-story-bg-frame="game"]::before, [data-story-bg][data-story-bg-frame="game"]::after { top: calc(env(safe-area-inset-top) + 12px); left: 12px; right: 12px; bottom: calc(var(--story-sheet-h, 40%) + 12px); border-radius: 14px; -webkit-mask-image: none; mask-image: none; }
+    [data-story-bg][data-story-bg-frame="game"]::before { filter: saturate(.78) contrast(1.06) sepia(.12); box-shadow: 0 0 0 6px #2a2440, 0 0 0 9px #8a7fb0, 0 0 0 11px #120f1f, 0 10px 30px #000; }
+    [data-story-bg][data-story-bg-frame="game"]::after { background: repeating-linear-gradient(180deg, rgba(0,0,0,.16) 0 1px, transparent 1px 3px), radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(0,0,0,.5) 100%); }
+    [data-story-bg-frame-label] { position: absolute; z-index: 1; left: 50%; transform: translateX(-50%); top: calc(env(safe-area-inset-top) + 4px); padding: 1px 10px; border-radius: 999px; background: #120f1f; border: 1px solid #8a7fb0; color: #d9d2f5; font-size: 10px; font-weight: 900; letter-spacing: .2em; white-space: nowrap; }
+    @media (orientation: landscape) and (max-height: 520px) {
+      [data-story-bg][data-story-bg-frame="game"]::before, [data-story-bg][data-story-bg-frame="game"]::after { top: 14px; left: 14px; right: 14px; bottom: 14px; }
+      [data-story-bg-frame-label] { top: 6px; }
+    }
     [data-story-bg][data-story-bg-fx="fall"] { animation: storySceneFall 2.4s cubic-bezier(.55,0,.8,.4) both; }
     @keyframes storySceneFall { 0% { transform: none; filter: none; } 100% { transform: translateY(-85%) scale(1.25); filter: brightness(0); } }
     @media (prefers-reduced-motion: reduce) { [data-story-bg], [data-story-bg][data-story-bg-fx="fall"] { animation-duration: .01s !important; } }
