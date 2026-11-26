@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 64bbc7f989cc7235
+// source-sha256: 3ed85f0bf40c0478
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -113174,6 +113174,14 @@ const XmasBonusTab = () => React.createElement("div", {
   className: "mt-0.5 text-[11px] font-bold leading-snug",
   style: JA_LABEL_STYLE
 }, jaWrap(b.body))))));
+const xmasCardStarterReady = async () => {
+  if (typeof CARD_SAVE_KEYS === 'undefined' || typeof cardNormalizeStarter !== 'function') return true;
+  try {
+    return !!cardNormalizeStarter(await storeGet(CARD_SAVE_KEYS.starter, null));
+  } catch (e) {
+    return true;
+  }
+};
 const XmasEventScreen = ({
   tab = 'story',
   onTab,
@@ -113187,9 +113195,46 @@ const XmasEventScreen = ({
   onFightChapter
 }) => {
   useXmasEventCss();
+  const raidShown = tab === 'raid' && !!raid && !preOpen;
+  const [notice, setNotice] = useState('');
+  const cardCheckingRef = useRef(false);
+  const onChallenge = (kind, tierIndex, way) => {
+    if (!raid || typeof raid.onChallenge !== 'function') return;
+    if (way !== 'card') {
+      raid.onChallenge(kind, tierIndex, way);
+      return;
+    }
+    if (cardCheckingRef.current) return;
+    cardCheckingRef.current = true;
+    void xmasCardStarterReady().then(ok => {
+      cardCheckingRef.current = false;
+      if (ok) raid.onChallenge(kind, tierIndex, way);else setNotice('バトルカードで挑むには、MFバトルカードのスターターが要ります。HOME の「MFバトルカード」でスターターを受け取ってから挑戦してください');
+    });
+  };
+  const noticeSheet = notice ? React.createElement("div", {
+    "data-xmas-event-notice": true,
+    className: "fixed inset-0 z-[80] flex items-center justify-center bg-black/65 p-4",
+    onClick: () => setNotice('')
+  }, React.createElement("div", {
+    role: "dialog",
+    "aria-label": "お知らせ",
+    className: "mh-xmas-frame w-full max-w-sm rounded-2xl bg-gradient-to-b from-[#16264a] to-[#0b1530] p-4 text-center",
+    onClick: e => e.stopPropagation()
+  }, React.createElement(XmasHolly, {
+    size: 32,
+    className: "mx-auto mb-1"
+  }), React.createElement("p", {
+    className: "mb-3 text-[13px] font-bold leading-relaxed text-amber-50",
+    style: JA_LABEL_STYLE
+  }, jaWrap(notice)), React.createElement("button", {
+    type: "button",
+    "data-xmas-event-notice-close": true,
+    onClick: () => setNotice(''),
+    className: "w-full min-h-[44px] rounded-xl border border-white/15 bg-slate-800 text-[13px] font-black text-slate-100 active:scale-95"
+  }, "閉じる"))) : null;
   const head = React.createElement("div", {
     "data-xmas-event-head": true,
-    className: "mx-auto w-full max-w-2xl shrink-0"
+    className: `mx-auto w-full shrink-0 ${raidShown ? '' : 'max-w-2xl'}`
   }, React.createElement(ScreenHead, {
     title: React.createElement("span", {
       className: "flex items-center gap-1"
@@ -113203,11 +113248,11 @@ const XmasEventScreen = ({
     note: forced ? '(デバッグ表示・開始前でも見えます)' : ''
   }), React.createElement("div", {
     "data-xmas-event-poster": true,
-    className: "mh-xmas-frame mx-auto mb-2 w-fit max-w-full overflow-hidden rounded-xl bg-slate-950"
+    className: `mh-xmas-frame mx-auto mb-2 w-fit max-w-full overflow-hidden rounded-xl bg-slate-950 ${raidShown ? '[@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`
   }, React.createElement("img", {
     src: XMAS_EVENT_POSTER_IMG,
     alt: "クリスマスイベント 聖夜の名探偵",
-    className: `block h-auto w-auto max-w-full ${tab === 'raid' ? 'max-h-[13vh]' : 'max-h-[24vh]'}`
+    className: `block h-auto w-auto max-w-full ${raidShown ? 'max-h-[13vh]' : 'max-h-[24vh]'}`
   })), React.createElement("div", {
     "data-xmas-event-period": true,
     className: "mh-xmas-ribbon mx-auto mb-2 max-w-md px-5 py-1 text-center text-[11px] font-black text-amber-50"
@@ -113216,12 +113261,13 @@ const XmasEventScreen = ({
     value: tab,
     onChange: id => onTab && onTab(id)
   }));
-  if (tab === 'raid' && raid && !preOpen) return React.createElement(RaidJackScreen, _extends({
+  if (raidShown) return React.createElement(React.Fragment, null, React.createElement(RaidJackScreen, _extends({
     key: "raid-xmas"
   }, raid, {
+    onChallenge: onChallenge,
     head: head,
     shellClass: "mh-xmas-shell"
-  }));
+  })), noticeSheet);
   return React.createElement("div", {
     className: `${SCREEN_SHELL_CLASS} mh-xmas-shell overflow-hidden [@media(orientation:landscape)_and_(max-height:520px)]:overflow-y-auto mh-scroll`,
     "data-xmas-event": tab
@@ -113274,6 +113320,8 @@ const XMAS_HOME_ENTRY_CSS = `
   .mh-xmas-entry[data-home-xmas-entry="banner"] [data-xmas-entry-kicker] { display: none; }
   .mh-xmas-entry[data-home-xmas-entry="banner"] .mh-xmas-entry-title { font-size: 16px; }
   .mh-xmas-entry[data-home-xmas-entry="banner"] .mh-xmas-entry-sub { font-size: 9px; padding: 0 6px; }
+  /* ほかのイベントの細い帯(11/29 までのハナウタ・ノートなど)が上に並ぶときは、その帯の下へずらす(題が帯に隠れて切れていた・2026-11-26 動線の点検) */
+  [data-home-xmas-entry-strip]:has(~ [data-home-event-strip]) { top: calc(102px + env(safe-area-inset-top)); }
 }
 `;
 const HomeXmasEventEntry = ({

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 37fa66df0d8de2c5
+// generated-sha256: 10ee32a6777c4d01
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -67379,14 +67379,46 @@ const XmasBonusTab = () => (
 //  raid        … RaidJackScreen へそのまま渡す物(ev・ways・onChallenge など)
 //  storyVersion… 読んだ印が変わったら App が増やす(物語タブが読み直す)
 //  preOpen     … 開幕(11/30 10:00)より前。序章だけ読める。レイド・ボーナスのタブは「11/30 10:00 から」と出す(台帳 r1126-014)
+// バトルカードで挑めるか(スターターを受け取ったか)。カードの保存を読むだけ(書かない)。読めないときは挑ませる(カードの画面が確かめ直す)
+const xmasCardStarterReady = async () => {
+  if (typeof CARD_SAVE_KEYS === 'undefined' || typeof cardNormalizeStarter !== 'function') return true;
+  try { return !!cardNormalizeStarter(await storeGet(CARD_SAVE_KEYS.starter, null)); } catch (e) { return true; }
+};
 const XmasEventScreen = ({ tab = 'story', onTab, onBack, forced = false, preOpen = false, raid = null, storyVersion = 0, fightWays = [], onReadChapter, onFightChapter }) => {
   useXmasEventCss();
+  // レイドの中身を出しているか(開幕の前は「11/30 10:00 から」の札だけ)
+  const raidShown = tab === 'raid' && !!raid && !preOpen;
+  // バトルカードで挑む前に、スターターを受け取ったかを確かめる。無い人はカードの画面が開いてすぐ閉じ、押しても何も起きないように見えていた(2026-11-26 動線の点検)
+  const [notice, setNotice] = useState('');
+  const cardCheckingRef = useRef(false);
+  const onChallenge = (kind, tierIndex, way) => {
+    if (!raid || typeof raid.onChallenge !== 'function') return;
+    if (way !== 'card') { raid.onChallenge(kind, tierIndex, way); return; }
+    if (cardCheckingRef.current) return;
+    cardCheckingRef.current = true;
+    void xmasCardStarterReady().then((ok) => {
+      cardCheckingRef.current = false;
+      if (ok) raid.onChallenge(kind, tierIndex, way);
+      else setNotice('バトルカードで挑むには、MFバトルカードのスターターが要ります。HOME の「MFバトルカード」でスターターを受け取ってから挑戦してください');
+    });
+  };
+  const noticeSheet = notice ? (
+    <div data-xmas-event-notice className="fixed inset-0 z-[80] flex items-center justify-center bg-black/65 p-4" onClick={() => setNotice('')}>
+      <div role="dialog" aria-label="お知らせ" className="mh-xmas-frame w-full max-w-sm rounded-2xl bg-gradient-to-b from-[#16264a] to-[#0b1530] p-4 text-center" onClick={(e) => e.stopPropagation()}>
+        <XmasHolly size={32} className="mx-auto mb-1" />
+        <p className="mb-3 text-[13px] font-bold leading-relaxed text-amber-50" style={JA_LABEL_STYLE}>{jaWrap(notice)}</p>
+        <button type="button" data-xmas-event-notice-close onClick={() => setNotice('')}
+          className="w-full min-h-[44px] rounded-xl border border-white/15 bg-slate-800 text-[13px] font-black text-slate-100 active:scale-95">閉じる</button>
+      </div>
+    </div>
+  ) : null;
   const head = (
-    <div data-xmas-event-head className="mx-auto w-full max-w-2xl shrink-0">
+    <div data-xmas-event-head className={`mx-auto w-full shrink-0 ${raidShown ? '' : 'max-w-2xl'}`}>
       <ScreenHead title={<span className="flex items-center gap-1"><XmasHolly size={24} /><span className="mh-xmas-title">聖夜の名探偵</span></span>}
         onBack={onBack} compact note={forced ? '(デバッグ表示・開始前でも見えます)' : ''} />
-      <div data-xmas-event-poster className="mh-xmas-frame mx-auto mb-2 w-fit max-w-full overflow-hidden rounded-xl bg-slate-950">
-        <img src={XMAS_EVENT_POSTER_IMG} alt="クリスマスイベント 聖夜の名探偵" className={`block h-auto w-auto max-w-full ${tab === 'raid' ? 'max-h-[13vh]' : 'max-h-[24vh]'}`} />
+      {/* レイドの中身を出すときは小さく。背の低い横画面では、レイドの一覧が見えるように出さない(題と期間とタブだけ) */}
+      <div data-xmas-event-poster className={`mh-xmas-frame mx-auto mb-2 w-fit max-w-full overflow-hidden rounded-xl bg-slate-950 ${raidShown ? '[@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`}>
+        <img src={XMAS_EVENT_POSTER_IMG} alt="クリスマスイベント 聖夜の名探偵" className={`block h-auto w-auto max-w-full ${raidShown ? 'max-h-[13vh]' : 'max-h-[24vh]'}`} />
       </div>
       <div data-xmas-event-period className="mh-xmas-ribbon mx-auto mb-2 max-w-md px-5 py-1 text-center text-[11px] font-black text-amber-50">
         開催期間 {xmasEventPeriodText()}
@@ -67394,7 +67426,7 @@ const XmasEventScreen = ({ tab = 'story', onTab, onBack, forced = false, preOpen
       <ScreenTabs items={XMAS_EVENT_TABS} value={tab} onChange={(id) => onTab && onTab(id)} />
     </div>
   );
-  if (tab === 'raid' && raid && !preOpen) return <RaidJackScreen key="raid-xmas" {...raid} head={head} shellClass="mh-xmas-shell" />;
+  if (raidShown) return <><RaidJackScreen key="raid-xmas" {...raid} onChallenge={onChallenge} head={head} shellClass="mh-xmas-shell" />{noticeSheet}</>;
   return (
     <div className={`${SCREEN_SHELL_CLASS} mh-xmas-shell overflow-hidden [@media(orientation:landscape)_and_(max-height:520px)]:overflow-y-auto mh-scroll`} data-xmas-event={tab}>
       {head}
@@ -67446,6 +67478,8 @@ const XMAS_HOME_ENTRY_CSS = `
   .mh-xmas-entry[data-home-xmas-entry="banner"] [data-xmas-entry-kicker] { display: none; }
   .mh-xmas-entry[data-home-xmas-entry="banner"] .mh-xmas-entry-title { font-size: 16px; }
   .mh-xmas-entry[data-home-xmas-entry="banner"] .mh-xmas-entry-sub { font-size: 9px; padding: 0 6px; }
+  /* ほかのイベントの細い帯(11/29 までのハナウタ・ノートなど)が上に並ぶときは、その帯の下へずらす(題が帯に隠れて切れていた・2026-11-26 動線の点検) */
+  [data-home-xmas-entry-strip]:has(~ [data-home-event-strip]) { top: calc(102px + env(safe-area-inset-top)); }
 }
 `;
 const HomeXmasEventEntry = ({ onOpen, preOpen = false }) => {
