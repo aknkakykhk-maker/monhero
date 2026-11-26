@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 259acf200b56f704
+// source-sha256: 2f9ba8883315b3c1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -72654,8 +72654,10 @@ function ArtPickerModal({
 const ART_PICKER_CSS = `
 .mh-art-picker{display:flex;flex-direction:column;gap:12px}
 .mh-art-picker-side{display:flex;flex-direction:column;gap:10px}
-.mh-art-picker-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-@media (orientation:landscape) and (max-height:520px){.mh-art-picker{flex-direction:row;align-items:flex-start}.mh-art-picker-side{flex:1 1 0;min-width:0}.mh-art-picker-grid{flex:none;grid-template-columns:repeat(2,124px)}}
+.mh-art-picker-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+/* 絵の名前は1行に(320幅で「クリスマ/ス」と折れていた)。狭い画面だけ字を少し小さくする */
+.mh-art-picker-grid button>span.block{white-space:nowrap;font-size:clamp(11px,3.4vw,13px)}
+@media (orientation:landscape) and (max-height:520px){.mh-art-picker{flex-direction:row;align-items:flex-start}.mh-art-picker-side{flex:1 1 0;min-width:0}.mh-art-picker-grid{flex:none;grid-template-columns:repeat(3,124px)}.mh-art-picker-grid button img{aspect-ratio:4/3}}
 `;
 const ensureArtPickerCss = () => {
   try {
