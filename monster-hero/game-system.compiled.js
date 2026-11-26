@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 67485f348b41cb09
+// source-sha256: 060431cd101ebd73
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -6893,6 +6893,22 @@ const BGM_UNRELEASED_TRACKS = Object.freeze([{
   loop: true
 }]);
 const BGM_TRACK_BY_ID = Object.fromEntries(BGM_TRACKS.map(track => [track.id, track]));
+const BGM_TRACK_LISTED_FROM = Object.freeze({
+  melo_kiss_mystery_short: '2026-11-30T10:00:00+09:00',
+  melo_dear_santa: '2026-11-30T10:00:00+09:00',
+  melo_dear_santa_short: '2026-11-30T10:00:00+09:00',
+  melo_winter_fall: '2026-11-30T10:00:00+09:00',
+  melo_winter_fall_short: '2026-11-30T10:00:00+09:00'
+});
+const bgmTrackListed = (track, nowMs = Date.now()) => {
+  const id = track && track.id;
+  if (!id) return false;
+  const from = BGM_TRACK_LISTED_FROM[id];
+  if (!from) return true;
+  const ms = Date.parse(from);
+  return Number.isFinite(ms) && Number(nowMs) >= ms;
+};
+const bgmListedTracks = (nowMs = Date.now()) => BGM_TRACKS.filter(track => bgmTrackListed(track, nowMs));
 BGM_PROTO_TRACKS.forEach(track => {
   if (!BGM_TRACK_BY_ID[track.id]) BGM_TRACK_BY_ID[track.id] = track;
 });
@@ -214988,7 +215004,7 @@ const cardCpuPlaylistOf = (playlist, who) => {
   return list.length ? list : CARD_AI_BGM[who] ? [CARD_AI_BGM[who]] : [];
 };
 const cardIsBgmTrack = id => typeof BGM_TRACKS !== 'undefined' && BGM_TRACKS.some(t => t.id === id);
-const cardBgmAllTracks = () => typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS.map(t => t.id) : [];
+const cardBgmAllTracks = () => typeof bgmListedTracks === 'function' ? bgmListedTracks().map(t => t.id) : typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS.map(t => t.id) : [];
 const cardBgmOf = v => {
   if (v === CARD_BGM_RANDOM) return cardBgmAllTracks();
   if (Array.isArray(v) && v.includes(CARD_BGM_RANDOM)) return cardBgmAllTracks();
@@ -219803,7 +219819,8 @@ const CardPlaylistRows = ({
   tag
 }) => {
   const tracks = typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : [];
-  const choices = keep => tracks.filter(t => t.id === keep || !list.includes(t.id));
+  const listed = t => typeof bgmTrackListed !== 'function' || bgmTrackListed(t);
+  const choices = keep => tracks.filter(t => t.id === keep || listed(t) && !list.includes(t.id));
   const selectClass = 'min-h-[44px] min-w-0 flex-1 rounded-xl border border-white/15 bg-slate-950 px-2 py-2 text-xs text-white';
   if (list.length === 1 && list[0] === CARD_BGM_RANDOM) {
     return React.createElement("div", {
@@ -223288,7 +223305,7 @@ const CardBattleScreen = ({
       className: "min-h-[44px] min-w-0 flex-1 rounded-xl border border-white/15 bg-slate-950 px-2 py-2 text-xs text-white"
     }, React.createElement("option", {
       value: CARD_BGM_RANDOM
-    }, "ランダム(毎回ちがう曲)"), (typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : []).map(t => React.createElement("option", {
+    }, "ランダム(毎回ちがう曲)"), (typeof bgmListedTracks === 'function' ? bgmListedTracks() : typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : []).map(t => React.createElement("option", {
       key: t.id,
       value: t.id
     }, t.name, t.id === (CARD_BGM_DEFAULT[k] || CARD_BGM_DEFAULT.pvp) ? '(初めの曲)' : ''))), bgmPreview && (save.bgm[k] === CARD_BGM_RANDOM ? React.createElement("button", {
@@ -268227,7 +268244,7 @@ function MonsterHeroGame() {
       value: bgmArrangement[scene],
       onChange: e => changeBgmArrangement(scene, e.target.value),
       className: "min-w-0 min-h-[44px] w-full basis-full bg-slate-950 border border-white/15 rounded-xl px-2 py-3 text-xs text-white"
-    }, BGM_TRACKS.map(track => React.createElement("option", {
+    }, bgmListedTracks().map(track => React.createElement("option", {
       key: track.id,
       value: track.id
     }, track.name, track.id === DEFAULT_BGM_ARRANGEMENT[scene] ? '（デフォルト）' : ''))), React.createElement("button", {
@@ -269005,7 +269022,7 @@ function MonsterHeroGame() {
       className: "mt-1 w-full min-h-[48px] rounded-xl border border-white/15 bg-slate-900 px-3 text-sm text-white"
     }, React.createElement("option", {
       value: "__none__"
-    }, "BGMなし"), BGM_TRACKS.map(track => React.createElement("option", {
+    }, "BGMなし"), bgmListedTracks().map(track => React.createElement("option", {
       key: track.id,
       value: track.id
     }, track.name)))), React.createElement("p", {

@@ -187,6 +187,26 @@ const BGM_UNRELEASED_TRACKS = Object.freeze([
   { id:'melo_battle_5_short', name:'Battle #5 short ver.', creator:'オリジナル', src:'audio/bgm-battle-5-short.mp3', gain:1, loop:true },
 ]);
 const BGM_TRACK_BY_ID = Object.fromEntries(BGM_TRACKS.map(track => [track.id, track]));
+// 曲を選ぶ一覧(BGMアレンジ・自動戦闘のBGM・MFバトルカードの対戦BGMとその「おまかせ」)に出すかどうか(2026-11-26 ミハリの指摘・PR #7771)。
+// 公開を止めている曲(Battle #5)は、はじめから BGM_TRACKS に入れていない(上の BGM_UNRELEASED_TRACKS)。鳴らす口(BGM_TRACK_BY_ID)は絞らない。HOME やレイドの曲として決まった時刻から鳴らす物は、一覧に出る前でも鳴らせる。
+//  ・BGM_TRACK_LISTED_FROM … 一覧に出しはじめる時刻。モンヒロビートの RHYTHM_SONG_RELEASE_AT と同じ時刻にそろえる。見るたびに数え直す(CLAUDE.md ⑥-4)
+const BGM_TRACK_LISTED_FROM = Object.freeze({
+  // クリスマスイベントの曲(台帳 r1126-023)。開幕の 11/30 10:00 から(Kiss の全編はイベントページの曲として先に入っているので外さない)
+  melo_kiss_mystery_short: '2026-11-30T10:00:00+09:00',
+  melo_dear_santa: '2026-11-30T10:00:00+09:00',
+  melo_dear_santa_short: '2026-11-30T10:00:00+09:00',
+  melo_winter_fall: '2026-11-30T10:00:00+09:00',
+  melo_winter_fall_short: '2026-11-30T10:00:00+09:00',
+});
+const bgmTrackListed = (track, nowMs = Date.now()) => {
+  const id = track && track.id;
+  if (!id) return false;
+  const from = BGM_TRACK_LISTED_FROM[id];
+  if (!from) return true;
+  const ms = Date.parse(from);
+  return Number.isFinite(ms) && Number(nowMs) >= ms;
+};
+const bgmListedTracks = (nowMs = Date.now()) => BGM_TRACKS.filter((track) => bgmTrackListed(track, nowMs));
 BGM_PROTO_TRACKS.forEach(track => { if (!BGM_TRACK_BY_ID[track.id]) BGM_TRACK_BY_ID[track.id] = track; });
 BGM_UNRELEASED_TRACKS.forEach(track => { if (!BGM_TRACK_BY_ID[track.id]) BGM_TRACK_BY_ID[track.id] = track; });
 const BGM_TRACK_BY_KEY = Object.fromEntries(BGM_TRACKS.filter(track => track.legacyKey).map(track => [track.legacyKey, track]));
