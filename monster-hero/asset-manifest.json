@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "id": "d0b3745d693c",
+  "id": "504be44584d3",
   "packs": {"beat":{"bytes":331569515,"count":175},"battle":{"bytes":753627878,"count":1867},"card":{"bytes":38085297,"count":1046},"all":{"bytes":1123282690,"count":3088},"core":{"bytes":26877973,"count":25}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
@@ -3106,7 +3106,7 @@
     "data/rhythm-geometry-calibration.js": {"v":"02534cca12f6","size":15552,"pack":"core"},
     "data/rhythm-result-replay-remount.js": {"v":"381554180360","size":5743,"pack":"core"},
     "data/rhythm-event.js": {"v":"8a3dac1f38a2","size":109714,"pack":"core"},
-    "data/changelog.js": {"v":"3431db74c46d","size":2051684,"pack":"core"},
+    "data/changelog.js": {"v":"3c04ac6b5827","size":2051684,"pack":"core"},
     "data/help.js": {"v":"c1520c9b9390","size":923311,"pack":"core"},
     "data/mhsave-backup.js": {"v":"7845a4fd261f","size":14703,"pack":"core"},
     "data/rhythm-step3-release.js": {"v":"ae1d7f73f23a","size":8517,"pack":"core"},
