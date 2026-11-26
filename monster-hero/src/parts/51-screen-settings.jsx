@@ -369,6 +369,8 @@ const ART_PICKER_CSS = `
 .mh-art-picker-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 /* 絵の名前は1行に(320幅で「クリスマ/ス」と折れていた)。狭い画面だけ字を少し小さくする */
 .mh-art-picker-grid button>span.block{white-space:nowrap;font-size:clamp(11px,3.4vw,13px)}
+/* 背の低い縦の画面(320×568 など)は絵を 3:4 に短くする(タイトルの窓は説明が長く、3枚目の下が決定の段に隠れていた) */
+@media (orientation:portrait) and (max-height:640px){.mh-art-picker-grid button img{aspect-ratio:3/4}}
 @media (orientation:landscape) and (max-height:520px){.mh-art-picker{flex-direction:row;align-items:flex-start}.mh-art-picker-side{flex:1 1 0;min-width:0}.mh-art-picker-grid{flex:none;grid-template-columns:repeat(3,124px)}.mh-art-picker-grid button img{aspect-ratio:4/3}}
 `;
 const ensureArtPickerCss = () => {
