@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 95cc859b07b953a2
+// generated-sha256: 5302325b71667364
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -39084,7 +39084,7 @@ const xmasStoryOpenAtOf = (no) => (no <= 1 ? RAID_XMAS_EVENT.startAt : `2026-12-
 // 序章(台帳 r1126-012・社長): 第1話の前。イチーカから招待状が届いて行くまで。11/28 の開催予告のときから開く(時刻 10:00 は仮)。お話は data/assistants.js の XMAS_STORY_00(EVENT_REPLAYS の xmas_story_00)
 const XMAS_STORY_PROLOGUE_OPEN_AT = '2026-11-28T10:00:00+09:00';
 const XMAS_STORY_CHAPTERS = Object.freeze([
-  Object.freeze({ id: 'xs00', no: 0, prologue: true, openAt: XMAS_STORY_PROLOGUE_OPEN_AT, type: 'read', title: 'とどいたゲーム', scriptId: 'xmas_story_00' }),
+  Object.freeze({ id: 'xs00', no: 0, prologue: true, openAt: XMAS_STORY_PROLOGUE_OPEN_AT, type: 'read', title: '届いたゲーム', scriptId: 'xmas_story_00' }),
   ...XMAS_STORY_LIST.map(([title, type], i) => Object.freeze({
     id: `xs${String(i + 1).padStart(2, '0')}`,
     no: i + 1,
@@ -67379,14 +67379,46 @@ const XmasBonusTab = () => (
 //  raid        … RaidJackScreen へそのまま渡す物(ev・ways・onChallenge など)
 //  storyVersion… 読んだ印が変わったら App が増やす(物語タブが読み直す)
 //  preOpen     … 開幕(11/30 10:00)より前。序章だけ読める。レイド・ボーナスのタブは「11/30 10:00 から」と出す(台帳 r1126-014)
+// バトルカードで挑めるか(スターターを受け取ったか)。カードの保存を読むだけ(書かない)。読めないときは挑ませる(カードの画面が確かめ直す)
+const xmasCardStarterReady = async () => {
+  if (typeof CARD_SAVE_KEYS === 'undefined' || typeof cardNormalizeStarter !== 'function') return true;
+  try { return !!cardNormalizeStarter(await storeGet(CARD_SAVE_KEYS.starter, null)); } catch (e) { return true; }
+};
 const XmasEventScreen = ({ tab = 'story', onTab, onBack, forced = false, preOpen = false, raid = null, storyVersion = 0, fightWays = [], onReadChapter, onFightChapter }) => {
   useXmasEventCss();
+  // レイドの中身を出しているか(開幕の前は「11/30 10:00 から」の札だけ)
+  const raidShown = tab === 'raid' && !!raid && !preOpen;
+  // バトルカードで挑む前に、スターターを受け取ったかを確かめる。無い人はカードの画面が開いてすぐ閉じ、押しても何も起きないように見えていた(2026-11-26 動線の点検)
+  const [notice, setNotice] = useState('');
+  const cardCheckingRef = useRef(false);
+  const onChallenge = (kind, tierIndex, way) => {
+    if (!raid || typeof raid.onChallenge !== 'function') return;
+    if (way !== 'card') { raid.onChallenge(kind, tierIndex, way); return; }
+    if (cardCheckingRef.current) return;
+    cardCheckingRef.current = true;
+    void xmasCardStarterReady().then((ok) => {
+      cardCheckingRef.current = false;
+      if (ok) raid.onChallenge(kind, tierIndex, way);
+      else setNotice('バトルカードで挑むには、MFバトルカードのスターターが要ります。HOME の「MFバトルカード」でスターターを受け取ってから挑戦してください');
+    });
+  };
+  const noticeSheet = notice ? (
+    <div data-xmas-event-notice className="fixed inset-0 z-[80] flex items-center justify-center bg-black/65 p-4" onClick={() => setNotice('')}>
+      <div role="dialog" aria-label="お知らせ" className="mh-xmas-frame w-full max-w-sm rounded-2xl bg-gradient-to-b from-[#16264a] to-[#0b1530] p-4 text-center" onClick={(e) => e.stopPropagation()}>
+        <XmasHolly size={32} className="mx-auto mb-1" />
+        <p className="mb-3 text-[13px] font-bold leading-relaxed text-amber-50" style={JA_LABEL_STYLE}>{jaWrap(notice)}</p>
+        <button type="button" data-xmas-event-notice-close onClick={() => setNotice('')}
+          className="w-full min-h-[44px] rounded-xl border border-white/15 bg-slate-800 text-[13px] font-black text-slate-100 active:scale-95">閉じる</button>
+      </div>
+    </div>
+  ) : null;
   const head = (
-    <div data-xmas-event-head className="mx-auto w-full max-w-2xl shrink-0">
+    <div data-xmas-event-head className={`mx-auto w-full shrink-0 ${raidShown ? '' : 'max-w-2xl'}`}>
       <ScreenHead title={<span className="flex items-center gap-1"><XmasHolly size={24} /><span className="mh-xmas-title">聖夜の名探偵</span></span>}
         onBack={onBack} compact note={forced ? '(デバッグ表示・開始前でも見えます)' : ''} />
-      <div data-xmas-event-poster className="mh-xmas-frame mx-auto mb-2 w-fit max-w-full overflow-hidden rounded-xl bg-slate-950">
-        <img src={XMAS_EVENT_POSTER_IMG} alt="クリスマスイベント 聖夜の名探偵" className={`block h-auto w-auto max-w-full ${tab === 'raid' ? 'max-h-[13vh]' : 'max-h-[24vh]'}`} />
+      {/* レイドの中身を出すときは小さく。背の低い横画面では、レイドの一覧が見えるように出さない(題と期間とタブだけ) */}
+      <div data-xmas-event-poster className={`mh-xmas-frame mx-auto mb-2 w-fit max-w-full overflow-hidden rounded-xl bg-slate-950 ${raidShown ? '[@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`}>
+        <img src={XMAS_EVENT_POSTER_IMG} alt="クリスマスイベント 聖夜の名探偵" className={`block h-auto w-auto max-w-full ${raidShown ? 'max-h-[13vh]' : 'max-h-[24vh]'}`} />
       </div>
       <div data-xmas-event-period className="mh-xmas-ribbon mx-auto mb-2 max-w-md px-5 py-1 text-center text-[11px] font-black text-amber-50">
         開催期間 {xmasEventPeriodText()}
@@ -67394,7 +67426,7 @@ const XmasEventScreen = ({ tab = 'story', onTab, onBack, forced = false, preOpen
       <ScreenTabs items={XMAS_EVENT_TABS} value={tab} onChange={(id) => onTab && onTab(id)} />
     </div>
   );
-  if (tab === 'raid' && raid && !preOpen) return <RaidJackScreen key="raid-xmas" {...raid} head={head} shellClass="mh-xmas-shell" />;
+  if (raidShown) return <><RaidJackScreen key="raid-xmas" {...raid} onChallenge={onChallenge} head={head} shellClass="mh-xmas-shell" />{noticeSheet}</>;
   return (
     <div className={`${SCREEN_SHELL_CLASS} mh-xmas-shell overflow-hidden [@media(orientation:landscape)_and_(max-height:520px)]:overflow-y-auto mh-scroll`} data-xmas-event={tab}>
       {head}
@@ -67446,6 +67478,8 @@ const XMAS_HOME_ENTRY_CSS = `
   .mh-xmas-entry[data-home-xmas-entry="banner"] [data-xmas-entry-kicker] { display: none; }
   .mh-xmas-entry[data-home-xmas-entry="banner"] .mh-xmas-entry-title { font-size: 16px; }
   .mh-xmas-entry[data-home-xmas-entry="banner"] .mh-xmas-entry-sub { font-size: 9px; padding: 0 6px; }
+  /* ほかのイベントの細い帯(11/29 までのハナウタ・ノートなど)が上に並ぶときは、その帯の下へずらす(題が帯に隠れて切れていた・2026-11-26 動線の点検) */
+  [data-home-xmas-entry-strip]:has(~ [data-home-event-strip]) { top: calc(102px + env(safe-area-inset-top)); }
 }
 `;
 const HomeXmasEventEntry = ({ onOpen, preOpen = false }) => {
@@ -67505,9 +67539,9 @@ const XMAS_NOVEL_CAST = Object.freeze([
   { id: 'erubin', name: 'えるびん', kind: 'assistant' },
   { id: 'ichika', name: 'イチーカ', kind: 'monster', art: 'images/monsters/snegurochka.png', face: 'images/monster-icons/face/snegurochka.png' },
   { id: 'mochimaru', name: 'もちまる', kind: 'monster', art: 'images/monsters/mocchi.png', face: 'images/monster-icons/face/mocchi.png' },
-  // 謎の客2人(2026-11-26 届いた絵・余白だけ切りそろえた。表情は1枚)
-  { id: 'kuroba', name: '黒羽', full: '黒羽 宗一郎', kind: 'guest', art: 'images/story-guests/kuroba_stand.png', face: 'images/story-guests/kuroba_stand.png', tone: '#3b3f4a' },
-  { id: 'shirase', name: '白瀬', full: '白瀬 雪絵', kind: 'guest', art: 'images/story-guests/shirase_stand.png', face: 'images/story-guests/shirase_stand.png', tone: '#5a6a86' },
+  // 謎の客2人(2026-11-26 届いた絵・余白だけ切りそろえた。表情は1枚)。顔は、社長が渡した顔の絵からほかの人と同じ寄り具合に切り出した物(r1126-033)
+  { id: 'kuroba', name: '黒羽', full: '黒羽 宗一郎', kind: 'guest', art: 'images/story-guests/kuroba_stand.png', face: 'images/story-guests/kuroba_face.png', tone: '#3b3f4a' },
+  { id: 'shirase', name: '白瀬', full: '白瀬 雪絵', kind: 'guest', art: 'images/story-guests/shirase_stand.png', face: 'images/story-guests/shirase_face.png', tone: '#5a6a86' },
 ]);
 // 話し手だけの人(パネルには出ない)
 const XMAS_NOVEL_SPEAKERS_EXTRA = Object.freeze([
@@ -67860,7 +67894,7 @@ const XMAS_NOVEL_ENDING_KINDS = Object.freeze({
 // ===== クリスマスのミステリーノベルの台本データ(生成物・手で直さない) =====
 // 直すのは台本 docs/progress/event-xmas-2026/SCRIPT.md。作り直し: node tools/novel/xmas-novel-build.js(書き方は docs/progress/xmas-novel/FORMAT.md)
 // 形: { v, src, chapters:[{id,no,label,title}], scenes:[{id,chapter,title,cond,bgm,bg,next,ending?,rows:[行]}] }。行の t は line/band/clue/panel/flag/q
-const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md","chapters":[{"id":"C0","no":0,"label":"序章","disp":"序章","title":"とどいたゲーム"},
+const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md","chapters":[{"id":"C0","no":0,"label":"序章","disp":"序章","title":"届いたゲーム"},
 {"id":"OUT","no":98,"label":"外側","disp":"","title":"画面の前で","outside":true},
 {"id":"C1","no":1,"label":"第1章","disp":"第一章","title":"ペンション・シュプール"},
 {"id":"C2","no":2,"label":"第2章","disp":"第二章","title":"十二の鐘"},
@@ -67873,7 +67907,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"C9","no":9,"label":"終章","disp":"終章","title":"聖夜の鐘"},
 {"id":"C10","no":10,"label":"第8章","disp":"第八章","title":"消えていく灯"},
 {"id":"C11","no":11,"label":"第9章","disp":"第九章","title":"二度目の推理"},
-{"id":"END","no":99,"label":"エンディング","disp":"エンディング","title":""}],"scenes":[{"id":"OUT-0-1","chapter":"C0","title":"差出人のない小包","cond":null,"bgm":"kaze_ga_soyogu","bg":"monhero_plaza","next":"OUT-0-2","rows":[{"id":"0-1","t":"band","x":"聖夜の名探偵 序章 〜とどいたゲーム〜","k":"OUT-0-1:0-1"},
+{"id":"END","no":99,"label":"エンディング","disp":"エンディング","title":""}],"scenes":[{"id":"OUT-0-1","chapter":"C0","title":"差出人のない小包","cond":null,"bgm":"kaze_ga_soyogu","bg":"monhero_plaza","next":"OUT-0-2","rows":[{"id":"0-1","t":"band","x":"聖夜の名探偵 序章 〜届いたゲーム〜","k":"OUT-0-1:0-1"},
 {"id":"0-2","t":"band","x":"11月の終わり。モンヒロの広場","k":"OUT-0-1:0-2"},
 {"id":"0-3","t":"line","w":"myua","x":"ねえねえ、あつくん！ もうすぐクリスマスぢゃん！ 今年はなにする？","e":"excited","k":"OUT-0-1:0-3"},
 {"id":"0-4","t":"line","w":"atsu","x":"みゅあ、気が早いって笑 ……ん？ ベンチの上に、なんか置いてある","e":"happy","k":"OUT-0-1:0-4"},
@@ -67920,12 +67954,12 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"OUT-1-4","t":"line","w":"atsu","x":"上書きできない？ ……まあいいや。続き、いこう","e":"normal","k":"OUT-1:OUT-1-4"},
 {"id":"OUT-1-5","t":"band","x":"——ゲームの中へ","k":"OUT-1:OUT-1-5"}],"outside":true},
 {"id":"C1-1","chapter":"C1","title":"雪の山道","cond":null,"bgm":"close_to_your_heart_alt","bg":"雪の山道","next":"C1-2","rows":[{"id":"1-1-1","t":"band","x":"聖夜の名探偵 第1章 〜ペンション・シュプール〜","k":"C1-1:1-1-1"},
-{"id":"1-1-2","t":"band","x":"11月30日。雪の山道を、半日のぼった先","k":"C1-1:1-1-2"},
+{"id":"1-1-2","t":"band","x":"12月18日。雪の山道を、半日のぼった先","k":"C1-1:1-1-2"},
 {"id":"1-1-3","t":"line","w":"myua","x":"見えた！ あつくん、あれぢゃない！？ 屋根まで雪で真っ白！","e":"excited","k":"C1-1:1-1-3"},
 {"id":"1-1-4","t":"line","w":"atsu","x":"でっか！ 雪山のペンションって、それだけでワクワクする笑","e":"happy","k":"C1-1:1-1-4"},
 {"id":"1-1-5","t":"line","w":"erubin","x":"……静かだね。雪が、音を全部すいこんでるみたい","e":"normal","k":"C1-1:1-1-5"},
 {"id":"1-1-6","t":"line","w":"sorashido","x":"ワトソンくん、到着の時刻を","e":"normal","k":"C1-1:1-1-6"},
-{"id":"1-1-7","t":"line","w":"watson","x":"記録しました。11月30日、15時12分。……電波は、ここから弱くなります","k":"C1-1:1-1-7"},
+{"id":"1-1-7","t":"line","w":"watson","x":"記録しました。12月18日、15時12分。……電波は、ここから弱くなります","k":"C1-1:1-1-7"},
 {"id":"1-1-8","t":"line","w":"kyuko","x":"(ペンションを見上げて、少しのあいだ、立ち止まっている)","e":"normal","k":"C1-1:1-1-8"},
 {"id":"1-1-9","t":"line","w":"momosuke","x":"きゅうちゃん、どしたの？ 寒い？w","e":"normal","k":"C1-1:1-1-9"},
 {"id":"1-1-10","t":"line","w":"kyuko","x":"ほい、なんでもないよぉ。……きれいだなって思っただけ笑","e":"happy","k":"C1-1:1-1-10"}]},
@@ -68086,7 +68120,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"3-5-9","t":"panel","x":"","ops":[{"id":"kuroba","st":"dead"}],"k":"C3-5:3-5-9"}]},
 {"id":"C4-1","chapter":"C4","title":"開かずの部屋","cond":null,"bgm":"melo_sad_song_short","bg":"開かずの部屋","next":"C4-2","rows":[{"id":"4-1-1","t":"band","x":"聖夜の名探偵 第4章 〜開かずの部屋〜","k":"C4-1:4-1-1"},
 {"id":"4-1-2","t":"line","w":"ichika","x":"……みなさんに、見ていただきたい部屋があります","k":"C4-1:4-1-2"},
-{"id":"4-1-3","t":"band","x":"2階の奥。イチーカが、古い鍵をまわす","k":"C4-1:4-1-3"},
+{"id":"4-1-3","t":"band","x":"その夜おそく。2階の奥。イチーカが、古い鍵をまわす","k":"C4-1:4-1-3"},
 {"id":"4-1-4","t":"band","x":"小さなベッド。木の作業机。机の上に、ねじの止まったオルゴール。窓ぎわに、写真立て","k":"C4-1:4-1-4"},
 {"id":"4-1-5","t":"line","w":"ichika","x":"12年前のクリスマスに亡くなった方の部屋です。オルゴールを作る人で、カノンさんといいました。小さなお子さんと、毎年ここへ来てくださって","k":"C4-1:4-1-5"},
 {"id":"4-1-6","t":"band","x":"写真。ローズ色の長い髪の女の人と、同じ色の長い髪の、女の子のように見える小さな子。日に焼けて、ふたりの顔は白くぼやけている","k":"C4-1:4-1-6"},
@@ -68309,7 +68343,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"8-3-6","t":"line","w":"kiki","x":"白瀬さんは……手紙に、ごめんなさいって、書いてまちた……","e":"crying","k":"C8-3:8-3-6"},
 {"id":"8-3-7","t":"line","w":"kyuko","x":"だから、同じ夜を、もう一度作った。同じ鐘。同じ扉。同じ寒さ。……そうしたら、お母さんの寒さが、少しは分かってもらえると思った","e":"normal","k":"C8-3:8-3-7"},
 {"id":"8-3-8","t":"line","w":"dra","x":"きゅうこちゃん……。おでのかばんに、服を入れたのも……","e":"crying","k":"C8-3:8-3-8"},
-{"id":"8-3-9","t":"line","w":"kyuko","x":"……ごめん、ドラちゃん。いちばん、ひどいことした","e":"troubled","k":"C8-3:8-3-9"},
+{"id":"8-3-9","t":"line","w":"kyuko","x":"……ごめん、ドラちゃん。服は、2着用意してたんだ。1着を、ドラちゃんのかばんに入れた。……いちばん、ひどいことした","e":"troubled","k":"C8-3:8-3-9"},
 {"id":"8-3-10","t":"line","w":"dra","x":"……知ってたんだ、おで。黒羽のおっちゃんがいなくなった夜、停電の台所で、裏口から戻ってきた黒い服の人と、すれちがった。ろうそくの灯りで、ローズ色の髪が見えた","e":"crying","k":"C8-3:8-3-10"},
 {"id":"8-3-11","t":"line","w":"dra","x":"きゅうこちゃん、泣いてた。……だから、おで、なにも見てないことにした。だれかが犯人にされるなら、おででいいって思ったんだ","e":"crying","k":"C8-3:8-3-11"},
 {"id":"8-3-12","t":"line","w":"momosuke","x":"ドラちゃんの、ばか……！","e":"crying","k":"C8-3:8-3-12"},
@@ -68470,7 +68504,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"OUT-G-6","t":"line","w":"atsu","x":"次の事件……？","e":"surprise","k":"OUT-G:OUT-G-6"},
 {"id":"OUT-G-7","t":"band","x":"——モンヒロ事件簿、つづく","k":"OUT-G:OUT-G-7"}],"outside":true},
 {"id":"END-N","chapter":"END","title":"","cond":null,"bgm":"melo_sad_song_short","bg":"ペンションのホール(朝","next":"OUT-N","rows":[{"id":"N-1","t":"band","x":"聖夜の名探偵 エンディング「とどかなかった鐘」","k":"END-N:N-1"},
-{"id":"N-2","t":"band","x":"12月24日。雪がやみ、ふもとから、人がのぼってきた","k":"END-N:N-2"},
+{"id":"N-2","t":"band","x":"12月27日。クリスマスは、もう過ぎていた。雪がやみ、ふもとから、人がのぼってきた","k":"END-N:N-2"},
 {"id":"N-3","t":"band","x":"ホール。ソラシドが、柱時計の針を、正しい時刻に合わせなおす","k":"END-N:N-3"},
 {"id":"N-4","t":"band","x":"ボーン……(正しい鐘。亡くなった5人のために、みんなで目をとじる)","fx":["se"],"se":"bell","k":"END-N:N-4"},
 {"id":"N-5","t":"band","x":"もみの木の下に、持ち主のいない箱が、いくつも","k":"END-N:N-5"},
@@ -68493,7 +68527,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"OUT-N-3","t":"line","w":"erubin","x":"……俺もだね","e":"troubled","k":"OUT-N:OUT-N-3"},
 {"id":"OUT-N-4","t":"line","w":"atsu","x":"もう一回。……今度は、もっと早く、たどり着く","e":"normal","k":"OUT-N:OUT-N-4"}],"outside":true},
 {"id":"END-A","chapter":"END","title":"","cond":null,"bgm":"melo_sad_song_short","bg":"雪の山道(朝","next":"OUT-A","rows":[{"id":"A-1","t":"band","x":"聖夜の名探偵 エンディング「偽りの解決」","k":"END-A:A-1"},
-{"id":"A-2","t":"band","x":"12月24日。雪がやみ、ふもとから人がのぼってきた","k":"END-A:A-2"},
+{"id":"A-2","t":"band","x":"雪がやみ、ふもとから人がのぼってきた","k":"END-A:A-2"},
 {"id":"A-3","t":"band","x":"ドラは、だれとも目を合わせずに、山道を下りていく","k":"END-A:A-3"},
 {"id":"A-4","t":"line","w":"atsu","x":"……これで、終わったんだよね","e":"troubled","k":"END-A:A-4"},
 {"id":"A-5","t":"line","w":"myua","x":"……うん。……でも、ドラケン、なんで、あんなにおだやかな顔……","e":"troubled","k":"END-A:A-5"},
@@ -135396,7 +135430,7 @@ function MonsterHeroGame() {
   const FLOWER3_RANKING_EVENT_ID = 'flower3_2026_11_23'; // data/rhythm-event.js の FLOWER3_EVENT_ID と同じ(閉幕の会話の検査が本体の中で引く)
   const FLOWER3_OPEN_STORY_ID = 'flower3_2026_ep1';
   const FLOWER3_THANKS_STORY_ID = 'flower3_2026_ep8';
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, ...FLOWER3_STORY_IDS, FLOWER3_THANKS_STORY_ID, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, ERUBIN_JOIN_STORY_ID, CARD_CUP_STORY_ID, RHYTHM_GRAND_OPEN_TEASER_STORY_ID, RHYTHM_GRAND_OPEN_STORY_ID, MONSUC_BETA_EP1_STORY_ID, MONSUC_BETA_EP2_STORY_ID, SPARKLING_PINK_STORY_ID, KYUKO_WINTER_STORY_ID, KIKI_TWINTAIL_STORY_ID, BEYOND_SAME_SKY_STORY_ID, DESERT_CROWN_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...RAID_XMAS_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, ...FLOWER3_STORY_IDS, FLOWER3_THANKS_STORY_ID, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, ERUBIN_JOIN_STORY_ID, CARD_CUP_STORY_ID, RHYTHM_GRAND_OPEN_TEASER_STORY_ID, RHYTHM_GRAND_OPEN_STORY_ID, MONSUC_BETA_EP1_STORY_ID, MONSUC_BETA_EP2_STORY_ID, SPARKLING_PINK_STORY_ID, KYUKO_WINTER_STORY_ID, KIKI_TWINTAIL_STORY_ID, BEYOND_SAME_SKY_STORY_ID, DESERT_CROWN_STORY_ID];
   // ★イベントid → そのイベントの会話id。**イベントを足したらここへ1行足す。**
   //   以前はここが第1回のidの直書きで、第2回が始まっても第1回の会話が流れる形になっていた
   //   (2026-09-17に第2回を足したときに直した)。書かなかったイベントでは会話は流れない。
@@ -136043,6 +136077,19 @@ function MonsterHeroGame() {
           raidProgressStoryId = raidJackStoryCandidates(raidTotals, Date.now()).find(id => notPlayedYet(id)) || null;
         } catch (e) { raidProgressStoryId = null; }
       }
+      // クリスマスのレイド「もうひとつの聖夜」のお話(r1126-026・台本 docs/progress/event-xmas-2026/SCRIPT.md)。みんなに1回ずつ。
+      //   導入=レイドの開始(RELEASE_FLAGS.raidXmas・11/30 10:00)のあと / 第1〜5話=段階を倒したあと / 終章=期間が終わったあと(煉獄まで倒せたかで2本の片方)。
+      //   開始より前は RELEASE_FLAGS.raidXmas が偽なので並べない(見るたびに時刻で数え直す)。共有の合計は見回りのたびに取り直す(取れなければ今回は出さない)
+      let raidXmasStoryId = null;
+      if (RELEASE_FLAGS.raidXmas === true) {
+        if (notPlayedYet(RAID_XMAS_STORY_START_ID)) raidXmasStoryId = RAID_XMAS_STORY_START_ID;
+        else if (Object.values(RAID_XMAS_STORY_AFTER_TIER).some(notPlayedYet) || (notPlayedYet(RAID_XMAS_ENDING_CLEARED_ID) && notPlayedYet(RAID_XMAS_ENDING_NOTCLEARED_ID))) {
+          try {
+            const xmasTotals = await raidXmasFetchTotals(RAID_XMAS_EVENT.id);
+            raidXmasStoryId = raidXmasStoryCandidates(xmasTotals, Date.now()).find(id => notPlayedYet(id)) || null;
+          } catch (e) { raidXmasStoryId = null; }
+        }
+      }
       // ハロウィン・ナイトのお話。時刻が来ていて、まだ見ていない部のうち、いちばん古いもの
       const halloweenStoryId = RELEASE_FLAGS.rhythmEventPoints === true
         ? (halloweenNightStoryIdsAt(Date.now()).find(id => notPlayedYet(id)) || null) : null;
@@ -136054,6 +136101,7 @@ function MonsterHeroGame() {
         else if (raidHowtoReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);
         else if (raidRhythmStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_RHYTHM_STORY_ID);
         else if (raidProgressStoryId) setRhythmEventStoryPending(prev => prev || raidProgressStoryId);
+        else if (raidXmasStoryId) setRhythmEventStoryPending(prev => prev || raidXmasStoryId);
         else if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);
         else if (pandoraWingsStoryId) setRhythmEventStoryPending(prev => prev || pandoraWingsStoryId);
         else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);
@@ -136072,6 +136120,7 @@ function MonsterHeroGame() {
       else if (raidHowtoReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);
       else if (raidRhythmStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_RHYTHM_STORY_ID);
       else if (raidProgressStoryId) setRhythmEventStoryPending(prev => prev || raidProgressStoryId);
+      else if (raidXmasStoryId) setRhythmEventStoryPending(prev => prev || raidXmasStoryId);
       else if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);
       else if (pandoraWingsStoryId) setRhythmEventStoryPending(prev => prev || pandoraWingsStoryId);
       else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);
@@ -139155,6 +139204,8 @@ function MonsterHeroGame() {
     ...Object.fromEntries(HALLOWEEN_NIGHT_STORIES.map(story => [`halloweenNightPart${story.part}Seen`, Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(story.id)])),
     // ジャックのストーリー(1.5部〜終章)。見たかは同じ配列(rhythmEventStorySeen)へ id を入れて持つ(新しいキーは作らない)
     ...Object.fromEntries(RAID_JACK_STORY_IDS.map(id => [raidJackStoryUnlockKey(id), Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(id)])),
+    // クリスマスのレイドのお話(raid_xmas_story_*)。見た印の名前は EVENT_REPLAYS の unlockedKey(raidXmasStory1bSeen など)
+    ...Object.fromEntries((typeof EVENT_REPLAYS !== 'undefined' && Array.isArray(EVENT_REPLAYS) ? EVENT_REPLAYS : []).filter(ev => ev && RAID_XMAS_STORY_IDS.includes(ev.id)).map(ev => [ev.unlockedKey, Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(ev.id)])),
     rhythmMultiFriendsSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_MULTI_FRIENDS_STORY_ID),
     rhythmMasuCallSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_MASU_CALL_STORY_ID),
     raidJackHowtoSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RAID_JACK_HOWTO_STORY_ID),

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// クリスマスのイベント「聖夜の名探偵」序章 ～とどいたゲーム～(xmas_story_00・台帳 r1126-013)を、時計をずらした実際のブラウザで確かめる。
+// クリスマスのイベント「聖夜の名探偵」序章 ～届いたゲーム～(xmas_story_00・台帳 r1126-013)を、時計をずらした実際のブラウザで確かめる。
 //
 //   node tools/battle/xmas-prologue-browser-check.js
 //   SHOT_DIR=<フォルダ> を付けると、序章を読んでいる所(縦・横)と、読んだあとの一覧の写真を残す
@@ -84,7 +84,7 @@ const CASES = [
       const row = page.locator('[data-xmas-story-chapter="xs00"]');
       await row.waitFor({ timeout: 10000 }).catch(() => {});
       const rowText = await row.innerText().catch(() => '');
-      check(`② ${vp.label}: 物語タブに序章「とどいたゲーム」が開いている`, /とどいたゲーム/.test(rowText) && (await row.getAttribute('data-status')) !== 'locked', rowText.replace(/\s+/g, ' '));
+      check(`② ${vp.label}: 物語タブに序章「届いたゲーム」が開いている`, /届いたゲーム/.test(rowText) && (await row.getAttribute('data-status')) !== 'locked', rowText.replace(/\s+/g, ' '));
       const row1Count = await page.locator('[data-xmas-story-chapter="xs01"]').count();
       const note = await page.locator('[data-xmas-story]').innerText().catch(() => '');
       check(`② ${vp.label}: 開幕までは序章だけを見せる(第1話の行が無い・説明は「本編は 11/30 10:00 から」)`, row1Count === 0 && /序章が読めます/.test(note) && /本編は 11\/30/.test(note) && !/毎日/.test(note), note.replace(/\s+/g, ' ').slice(0, 80));

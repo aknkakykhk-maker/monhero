@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5e08886349a7deab
+// source-sha256: 3c1ea070323594c8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -64051,7 +64051,7 @@ const XMAS_STORY_CHAPTERS = Object.freeze([Object.freeze({
   prologue: true,
   openAt: XMAS_STORY_PROLOGUE_OPEN_AT,
   type: 'read',
-  title: 'とどいたゲーム',
+  title: '届いたゲーム',
   scriptId: 'xmas_story_00'
 }), ...XMAS_STORY_LIST.map(([title, type], i) => Object.freeze({
   id: `xs${String(i + 1).padStart(2, '0')}`,
@@ -113174,6 +113174,14 @@ const XmasBonusTab = () => React.createElement("div", {
   className: "mt-0.5 text-[11px] font-bold leading-snug",
   style: JA_LABEL_STYLE
 }, jaWrap(b.body))))));
+const xmasCardStarterReady = async () => {
+  if (typeof CARD_SAVE_KEYS === 'undefined' || typeof cardNormalizeStarter !== 'function') return true;
+  try {
+    return !!cardNormalizeStarter(await storeGet(CARD_SAVE_KEYS.starter, null));
+  } catch (e) {
+    return true;
+  }
+};
 const XmasEventScreen = ({
   tab = 'story',
   onTab,
@@ -113187,9 +113195,46 @@ const XmasEventScreen = ({
   onFightChapter
 }) => {
   useXmasEventCss();
+  const raidShown = tab === 'raid' && !!raid && !preOpen;
+  const [notice, setNotice] = useState('');
+  const cardCheckingRef = useRef(false);
+  const onChallenge = (kind, tierIndex, way) => {
+    if (!raid || typeof raid.onChallenge !== 'function') return;
+    if (way !== 'card') {
+      raid.onChallenge(kind, tierIndex, way);
+      return;
+    }
+    if (cardCheckingRef.current) return;
+    cardCheckingRef.current = true;
+    void xmasCardStarterReady().then(ok => {
+      cardCheckingRef.current = false;
+      if (ok) raid.onChallenge(kind, tierIndex, way);else setNotice('バトルカードで挑むには、MFバトルカードのスターターが要ります。HOME の「MFバトルカード」でスターターを受け取ってから挑戦してください');
+    });
+  };
+  const noticeSheet = notice ? React.createElement("div", {
+    "data-xmas-event-notice": true,
+    className: "fixed inset-0 z-[80] flex items-center justify-center bg-black/65 p-4",
+    onClick: () => setNotice('')
+  }, React.createElement("div", {
+    role: "dialog",
+    "aria-label": "お知らせ",
+    className: "mh-xmas-frame w-full max-w-sm rounded-2xl bg-gradient-to-b from-[#16264a] to-[#0b1530] p-4 text-center",
+    onClick: e => e.stopPropagation()
+  }, React.createElement(XmasHolly, {
+    size: 32,
+    className: "mx-auto mb-1"
+  }), React.createElement("p", {
+    className: "mb-3 text-[13px] font-bold leading-relaxed text-amber-50",
+    style: JA_LABEL_STYLE
+  }, jaWrap(notice)), React.createElement("button", {
+    type: "button",
+    "data-xmas-event-notice-close": true,
+    onClick: () => setNotice(''),
+    className: "w-full min-h-[44px] rounded-xl border border-white/15 bg-slate-800 text-[13px] font-black text-slate-100 active:scale-95"
+  }, "閉じる"))) : null;
   const head = React.createElement("div", {
     "data-xmas-event-head": true,
-    className: "mx-auto w-full max-w-2xl shrink-0"
+    className: `mx-auto w-full shrink-0 ${raidShown ? '' : 'max-w-2xl'}`
   }, React.createElement(ScreenHead, {
     title: React.createElement("span", {
       className: "flex items-center gap-1"
@@ -113203,11 +113248,11 @@ const XmasEventScreen = ({
     note: forced ? '(デバッグ表示・開始前でも見えます)' : ''
   }), React.createElement("div", {
     "data-xmas-event-poster": true,
-    className: "mh-xmas-frame mx-auto mb-2 w-fit max-w-full overflow-hidden rounded-xl bg-slate-950"
+    className: `mh-xmas-frame mx-auto mb-2 w-fit max-w-full overflow-hidden rounded-xl bg-slate-950 ${raidShown ? '[@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`
   }, React.createElement("img", {
     src: XMAS_EVENT_POSTER_IMG,
     alt: "クリスマスイベント 聖夜の名探偵",
-    className: `block h-auto w-auto max-w-full ${tab === 'raid' ? 'max-h-[13vh]' : 'max-h-[24vh]'}`
+    className: `block h-auto w-auto max-w-full ${raidShown ? 'max-h-[13vh]' : 'max-h-[24vh]'}`
   })), React.createElement("div", {
     "data-xmas-event-period": true,
     className: "mh-xmas-ribbon mx-auto mb-2 max-w-md px-5 py-1 text-center text-[11px] font-black text-amber-50"
@@ -113216,12 +113261,13 @@ const XmasEventScreen = ({
     value: tab,
     onChange: id => onTab && onTab(id)
   }));
-  if (tab === 'raid' && raid && !preOpen) return React.createElement(RaidJackScreen, _extends({
+  if (raidShown) return React.createElement(React.Fragment, null, React.createElement(RaidJackScreen, _extends({
     key: "raid-xmas"
   }, raid, {
+    onChallenge: onChallenge,
     head: head,
     shellClass: "mh-xmas-shell"
-  }));
+  })), noticeSheet);
   return React.createElement("div", {
     className: `${SCREEN_SHELL_CLASS} mh-xmas-shell overflow-hidden [@media(orientation:landscape)_and_(max-height:520px)]:overflow-y-auto mh-scroll`,
     "data-xmas-event": tab
@@ -113274,6 +113320,8 @@ const XMAS_HOME_ENTRY_CSS = `
   .mh-xmas-entry[data-home-xmas-entry="banner"] [data-xmas-entry-kicker] { display: none; }
   .mh-xmas-entry[data-home-xmas-entry="banner"] .mh-xmas-entry-title { font-size: 16px; }
   .mh-xmas-entry[data-home-xmas-entry="banner"] .mh-xmas-entry-sub { font-size: 9px; padding: 0 6px; }
+  /* ほかのイベントの細い帯(11/29 までのハナウタ・ノートなど)が上に並ぶときは、その帯の下へずらす(題が帯に隠れて切れていた・2026-11-26 動線の点検) */
+  [data-home-xmas-entry-strip]:has(~ [data-home-event-strip]) { top: calc(102px + env(safe-area-inset-top)); }
 }
 `;
 const HomeXmasEventEntry = ({
@@ -113411,7 +113459,7 @@ const XMAS_NOVEL_CAST = Object.freeze([{
   full: '黒羽 宗一郎',
   kind: 'guest',
   art: 'images/story-guests/kuroba_stand.png',
-  face: 'images/story-guests/kuroba_stand.png',
+  face: 'images/story-guests/kuroba_face.png',
   tone: '#3b3f4a'
 }, {
   id: 'shirase',
@@ -113419,7 +113467,7 @@ const XMAS_NOVEL_CAST = Object.freeze([{
   full: '白瀬 雪絵',
   kind: 'guest',
   art: 'images/story-guests/shirase_stand.png',
-  face: 'images/story-guests/shirase_stand.png',
+  face: 'images/story-guests/shirase_face.png',
   tone: '#5a6a86'
 }]);
 const XMAS_NOVEL_SPEAKERS_EXTRA = Object.freeze([{
@@ -114008,7 +114056,7 @@ const XMAS_NOVEL_SCRIPT = {
     "no": 0,
     "label": "序章",
     "disp": "序章",
-    "title": "とどいたゲーム"
+    "title": "届いたゲーム"
   }, {
     "id": "OUT",
     "no": 98,
@@ -114100,7 +114148,7 @@ const XMAS_NOVEL_SCRIPT = {
     "rows": [{
       "id": "0-1",
       "t": "band",
-      "x": "聖夜の名探偵 序章 〜とどいたゲーム〜",
+      "x": "聖夜の名探偵 序章 〜届いたゲーム〜",
       "k": "OUT-0-1:0-1"
     }, {
       "id": "0-2",
@@ -114442,7 +114490,7 @@ const XMAS_NOVEL_SCRIPT = {
     }, {
       "id": "1-1-2",
       "t": "band",
-      "x": "11月30日。雪の山道を、半日のぼった先",
+      "x": "12月18日。雪の山道を、半日のぼった先",
       "k": "C1-1:1-1-2"
     }, {
       "id": "1-1-3",
@@ -114476,7 +114524,7 @@ const XMAS_NOVEL_SCRIPT = {
       "id": "1-1-7",
       "t": "line",
       "w": "watson",
-      "x": "記録しました。11月30日、15時12分。……電波は、ここから弱くなります",
+      "x": "記録しました。12月18日、15時12分。……電波は、ここから弱くなります",
       "k": "C1-1:1-1-7"
     }, {
       "id": "1-1-8",
@@ -115784,7 +115832,7 @@ const XMAS_NOVEL_SCRIPT = {
     }, {
       "id": "4-1-3",
       "t": "band",
-      "x": "2階の奥。イチーカが、古い鍵をまわす",
+      "x": "その夜おそく。2階の奥。イチーカが、古い鍵をまわす",
       "k": "C4-1:4-1-3"
     }, {
       "id": "4-1-4",
@@ -117729,7 +117777,7 @@ const XMAS_NOVEL_SCRIPT = {
       "id": "8-3-9",
       "t": "line",
       "w": "kyuko",
-      "x": "……ごめん、ドラちゃん。いちばん、ひどいことした",
+      "x": "……ごめん、ドラちゃん。服は、2着用意してたんだ。1着を、ドラちゃんのかばんに入れた。……いちばん、ひどいことした",
       "e": "troubled",
       "k": "C8-3:8-3-9"
     }, {
@@ -119042,7 +119090,7 @@ const XMAS_NOVEL_SCRIPT = {
     }, {
       "id": "N-2",
       "t": "band",
-      "x": "12月24日。雪がやみ、ふもとから、人がのぼってきた",
+      "x": "12月27日。クリスマスは、もう過ぎていた。雪がやみ、ふもとから、人がのぼってきた",
       "k": "END-N:N-2"
     }, {
       "id": "N-3",
@@ -119245,7 +119293,7 @@ const XMAS_NOVEL_SCRIPT = {
     }, {
       "id": "A-2",
       "t": "band",
-      "x": "12月24日。雪がやみ、ふもとから人がのぼってきた",
+      "x": "雪がやみ、ふもとから人がのぼってきた",
       "k": "END-A:A-2"
     }, {
       "id": "A-3",
@@ -249367,7 +249415,7 @@ function MonsterHeroGame() {
   const FLOWER3_RANKING_EVENT_ID = 'flower3_2026_11_23';
   const FLOWER3_OPEN_STORY_ID = 'flower3_2026_ep1';
   const FLOWER3_THANKS_STORY_ID = 'flower3_2026_ep8';
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, ...FLOWER3_STORY_IDS, FLOWER3_THANKS_STORY_ID, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, ERUBIN_JOIN_STORY_ID, CARD_CUP_STORY_ID, RHYTHM_GRAND_OPEN_TEASER_STORY_ID, RHYTHM_GRAND_OPEN_STORY_ID, MONSUC_BETA_EP1_STORY_ID, MONSUC_BETA_EP2_STORY_ID, SPARKLING_PINK_STORY_ID, KYUKO_WINTER_STORY_ID, KIKI_TWINTAIL_STORY_ID, BEYOND_SAME_SKY_STORY_ID, DESERT_CROWN_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...RAID_XMAS_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, ...FLOWER3_STORY_IDS, FLOWER3_THANKS_STORY_ID, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, ERUBIN_JOIN_STORY_ID, CARD_CUP_STORY_ID, RHYTHM_GRAND_OPEN_TEASER_STORY_ID, RHYTHM_GRAND_OPEN_STORY_ID, MONSUC_BETA_EP1_STORY_ID, MONSUC_BETA_EP2_STORY_ID, SPARKLING_PINK_STORY_ID, KYUKO_WINTER_STORY_ID, KIKI_TWINTAIL_STORY_ID, BEYOND_SAME_SKY_STORY_ID, DESERT_CROWN_STORY_ID];
   const RHYTHM_EVENT_STORY_BY_EVENT = {
     [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_STORY_ID,
     [SYMPHONY_EVENT_ID]: SYMPHONY_STORY_ID,
@@ -250013,16 +250061,27 @@ function MonsterHeroGame() {
           raidProgressStoryId = null;
         }
       }
+      let raidXmasStoryId = null;
+      if (RELEASE_FLAGS.raidXmas === true) {
+        if (notPlayedYet(RAID_XMAS_STORY_START_ID)) raidXmasStoryId = RAID_XMAS_STORY_START_ID;else if (Object.values(RAID_XMAS_STORY_AFTER_TIER).some(notPlayedYet) || notPlayedYet(RAID_XMAS_ENDING_CLEARED_ID) && notPlayedYet(RAID_XMAS_ENDING_NOTCLEARED_ID)) {
+          try {
+            const xmasTotals = await raidXmasFetchTotals(RAID_XMAS_EVENT.id);
+            raidXmasStoryId = raidXmasStoryCandidates(xmasTotals, Date.now()).find(id => notPlayedYet(id)) || null;
+          } catch (e) {
+            raidXmasStoryId = null;
+          }
+        }
+      }
       const halloweenStoryId = RELEASE_FLAGS.rhythmEventPoints === true ? halloweenNightStoryIdsAt(Date.now()).find(id => notPlayedYet(id)) || null : null;
       const pandoraWingsStoryId = RELEASE_FLAGS.rhythmWeeklyRanking === true ? [...pandoraWingsStoryIdsAt(Date.now()), ...flower3StoryIdsAt(Date.now())].find(id => notPlayedYet(id)) || null : null;
       if (!liveEvent) {
-        if (raidStartStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_STORY_START_ID);else if (raidHowtoReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);else if (raidRhythmStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_RHYTHM_STORY_ID);else if (raidProgressStoryId) setRhythmEventStoryPending(prev => prev || raidProgressStoryId);else if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);else if (pandoraWingsStoryId) setRhythmEventStoryPending(prev => prev || pandoraWingsStoryId);else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);else if (multiFriendsStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);else if (masuCallStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MASU_CALL_STORY_ID);else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
+        if (raidStartStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_STORY_START_ID);else if (raidHowtoReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);else if (raidRhythmStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_RHYTHM_STORY_ID);else if (raidProgressStoryId) setRhythmEventStoryPending(prev => prev || raidProgressStoryId);else if (raidXmasStoryId) setRhythmEventStoryPending(prev => prev || raidXmasStoryId);else if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);else if (pandoraWingsStoryId) setRhythmEventStoryPending(prev => prev || pandoraWingsStoryId);else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);else if (multiFriendsStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);else if (masuCallStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MASU_CALL_STORY_ID);else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
         return;
       }
       const liveStoryId = rhythmEventStoryIdFor(liveEvent);
       if (liveStoryId && notPlayedYet(liveStoryId)) {
         setRhythmEventStoryPending(prev => prev || liveStoryId);
-      } else if (raidStartStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_STORY_START_ID);else if (raidHowtoReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);else if (raidRhythmStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_RHYTHM_STORY_ID);else if (raidProgressStoryId) setRhythmEventStoryPending(prev => prev || raidProgressStoryId);else if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);else if (pandoraWingsStoryId) setRhythmEventStoryPending(prev => prev || pandoraWingsStoryId);else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);else if (multiFriendsStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);else if (masuCallStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MASU_CALL_STORY_ID);else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
+      } else if (raidStartStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_STORY_START_ID);else if (raidHowtoReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);else if (raidRhythmStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_RHYTHM_STORY_ID);else if (raidProgressStoryId) setRhythmEventStoryPending(prev => prev || raidProgressStoryId);else if (raidXmasStoryId) setRhythmEventStoryPending(prev => prev || raidXmasStoryId);else if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);else if (pandoraWingsStoryId) setRhythmEventStoryPending(prev => prev || pandoraWingsStoryId);else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);else if (multiFriendsStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);else if (masuCallStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MASU_CALL_STORY_ID);else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
       if (rhythmEventLiveCatchUpRef.current) return;
       rhythmEventLiveCatchUpRef.current = true;
       try {
@@ -253187,6 +253246,7 @@ function MonsterHeroGame() {
     flower3Ep8Seen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(FLOWER3_THANKS_STORY_ID),
     ...Object.fromEntries(HALLOWEEN_NIGHT_STORIES.map(story => [`halloweenNightPart${story.part}Seen`, Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(story.id)])),
     ...Object.fromEntries(RAID_JACK_STORY_IDS.map(id => [raidJackStoryUnlockKey(id), Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(id)])),
+    ...Object.fromEntries((typeof EVENT_REPLAYS !== 'undefined' && Array.isArray(EVENT_REPLAYS) ? EVENT_REPLAYS : []).filter(ev => ev && RAID_XMAS_STORY_IDS.includes(ev.id)).map(ev => [ev.unlockedKey, Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(ev.id)])),
     rhythmMultiFriendsSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_MULTI_FRIENDS_STORY_ID),
     rhythmMasuCallSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_MASU_CALL_STORY_ID),
     raidJackHowtoSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RAID_JACK_HOWTO_STORY_ID),
