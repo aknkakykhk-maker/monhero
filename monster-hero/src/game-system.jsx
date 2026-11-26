@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2a5bfeeb3de3cb79
+// generated-sha256: 9f7683db55e34471
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -67399,7 +67399,7 @@ const XMAS_HOME_ENTRY_CSS = `
 @media (prefers-reduced-motion: reduce) { .mh-xmas-entry::after, .mh-xmas-entry-spark { animation: none; } }
 /* 背の低い横画面: 帯は右の丸ボタンの列の左の空きへ小さく置く(ボスの頭・みゅあの吹き出し・施設の札にかけない) */
 @media (orientation: landscape) and (max-height: 520px) {
-  [data-home-xmas-entry-strip] { position: absolute !important; right: 112px; top: calc(62px + env(safe-area-inset-top)); width: 176px !important; margin: 0 !important; }
+  [data-home-xmas-entry-strip] { position: absolute !important; left: auto !important; right: 112px; top: calc(62px + env(safe-area-inset-top)); width: 176px !important; margin: 0 !important; }
   .mh-xmas-entry[data-home-xmas-entry="banner"] { height: 54px !important; }
   .mh-xmas-entry[data-home-xmas-entry="banner"] [data-xmas-entry-kicker] { display: none; }
   .mh-xmas-entry[data-home-xmas-entry="banner"] .mh-xmas-entry-title { font-size: 16px; }
