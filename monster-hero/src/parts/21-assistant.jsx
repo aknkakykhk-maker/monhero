@@ -80,7 +80,7 @@ const STORY_OPENING_STYLE = 'iris';
 //   final … 「終章」(ハロウィンのエンディングA/B・パンドラ第8話)。次のお話は出さず「おしまい」にする
 const storyEpisodeTitleParts = (title) => {
   const t = String(title || '').trim();
-  const m = t.match(/^(.*?)\s*(第[\d.]+[話部][^～\s]*|終章)\s*(～.*～)?\s*$/);
+  const m = t.match(/^(.*?)\s*(第[\d.]+[話部][^～\s]*|終章|序章)\s*(～.*～)?\s*$/);
   if (m) return { series: m[1] || '', ep: m[2] || '', sub: m[3] || '', serial: true, final: /終章/.test(m[2] || '') };
   const s = t.match(/^(.*?)\s*(～.*～)\s*$/);
   return s ? { series: '', ep: s[1] || t, sub: s[2] || '', serial: false, final: false } : { series: '', ep: t, sub: '', serial: false, final: false };
