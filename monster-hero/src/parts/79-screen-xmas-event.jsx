@@ -163,14 +163,17 @@ const XmasStoryTab = ({ version = 0, allOpen = false, fightWays = [], onRead, on
   }, [version]);
   if (!progress) return <div className="py-6 text-center text-[11px] text-slate-300">読み込み中…</div>;
   const reached = xmasStoryReachedNo(progress);
-  const readCount = XMAS_STORY_CHAPTERS.filter((c) => progress.cleared.includes(c.id)).length;
   const chapter = sel ? XMAS_STORY_CHAPTERS.find((c) => c.id === sel) : null;
   // 本編の開幕(11/30 10:00)より前は序章だけを見せる(台帳 r1126-022・本編はひとつのコンテンツで 11/30 に出る。毎日1話ずつ開く形はやめた)
   const preMain = !allOpen && !(nowMs >= Date.parse(RAID_XMAS_EVENT.startAt));
-  const shownChapters = preMain ? XMAS_STORY_CHAPTERS.filter((c) => c.prologue) : XMAS_STORY_CHAPTERS;
+  // 本編はミステリーノベル『モンヒロ事件簿』(79-screen-xmas-novel.jsx の openXmasNovel)。ここに並べるのは序章だけ(台帳 r1126-022)
+  const shownChapters = XMAS_STORY_CHAPTERS.filter((c) => c.prologue);
   const storyNote = preMain
     ? `${xmasEventDateLabel(XMAS_STORY_PROLOGUE_OPEN_AT)} から序章が読めます。本編は ${xmasEventDateLabel(RAID_XMAS_EVENT.startAt)} から始まります`
-    : '読んだ話は、いつでも読み返せます';
+    : '序章は、いつでも読み返せます';
+  // 本編の入口: 開幕から期間の終わりまで(デバッグの強制表示では、期間の外でも開く)
+  const novelOpen = typeof openXmasNovel === 'function' && (allOpen || (typeof xmasNovelPlayableAt === 'function' && xmasNovelPlayableAt(nowMs)));
+  const novelEnded = !allOpen && typeof XMAS_NOVEL_CLOSE_AT !== 'undefined' && nowMs >= Date.parse(XMAS_NOVEL_CLOSE_AT);
   const select = (c) => {
     setSel(c.id);
     // 開いた印(NEW を消す)。押した話だけ
@@ -178,9 +181,19 @@ const XmasStoryTab = ({ version = 0, allOpen = false, fightWays = [], onRead, on
   };
   return (
     <div data-xmas-story className="space-y-3">
+      {!preMain && (
+        <section data-xmas-novel-entry>
+          <button type="button" data-xmas-novel-open disabled={!novelOpen} onClick={() => { if (novelOpen) openXmasNovel({ force: allOpen }); }}
+            className="mh-xmas-frame relative flex w-full min-h-[92px] flex-col items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-b from-[#0d0d16] to-[#050508] px-4 py-3 text-center active:scale-[0.99] disabled:opacity-60 disabled:active:scale-100">
+            <span className="text-[10px] font-black tracking-[0.3em] text-slate-400">{typeof XMAS_NOVEL_GAME !== 'undefined' ? `${XMAS_NOVEL_GAME.series} ―${XMAS_NOVEL_GAME.title}―` : ''}</span>
+            <span className="mh-xmas-title mt-0.5 text-[24px] font-black leading-tight" style={{ fontFamily: "'Hiragino Mincho ProN', 'Yu Mincho', serif" }}>事件簿を開く</span>
+            <span className="mt-0.5 text-[11px] font-bold text-amber-100/90">{novelEnded ? '遊べる期間は終わりました(記録は残っています)' : typeof XMAS_NOVEL_GAME !== 'undefined' ? `副題「${XMAS_NOVEL_GAME.sub}」` : ''}</span>
+          </button>
+        </section>
+      )}
       <XmasCastPanel no={reached} compact />
       <section>
-        <XmasSectionTitle right={preMain ? null : <span className="text-[10px] font-black text-amber-100/80">{readCount} / {XMAS_STORY_CHAPTERS.length} 話</span>}>ひとりで進める物語</XmasSectionTitle>
+        <XmasSectionTitle>{preMain ? 'ひとりで進める物語' : '序章を読み返す'}</XmasSectionTitle>
         <p className="mb-2 px-0.5 text-[10px] font-bold leading-relaxed text-slate-300" style={JA_LABEL_STYLE}>{jaWrap(storyNote)}</p>
         <ol data-xmas-story-list className="space-y-1.5">
           {shownChapters.map((c) => {

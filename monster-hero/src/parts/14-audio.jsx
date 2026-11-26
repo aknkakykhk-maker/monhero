@@ -256,6 +256,7 @@ const Audio_ = (() => {
     "audio/bgm-zenbu-hissatsuwaza.mp3": "5b91503c1743",
     "audio/jingle-victory.mp3": "689c9715a824",
     "audio/se-awakened-moo-apocalypse.mp3": "3ed18e30e8e7",
+    "audio/se-xmas-novel-laugh.mp3": "3d471d7fc744",
     "audio/綺季一閃_～花雪に舞う詠姫～.mp3": "099d201c53b1",
 // </audio-cache-keys>
   };

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b4d2afa8ea3409e7
+// source-sha256: 54c78bdfc0ec5d90
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -8717,6 +8717,7 @@ const Audio_ = (() => {
     "audio/bgm-zenbu-hissatsuwaza.mp3": "5b91503c1743",
     "audio/jingle-victory.mp3": "689c9715a824",
     "audio/se-awakened-moo-apocalypse.mp3": "3ed18e30e8e7",
+    "audio/se-xmas-novel-laugh.mp3": "3d471d7fc744",
     "audio/綺季一閃_～花雪に舞う詠姫～.mp3": "099d201c53b1"
   };
   const audioUrlWithKey = url => {
@@ -112974,11 +112975,12 @@ const XmasStoryTab = ({
     className: "py-6 text-center text-[11px] text-slate-300"
   }, "読み込み中…");
   const reached = xmasStoryReachedNo(progress);
-  const readCount = XMAS_STORY_CHAPTERS.filter(c => progress.cleared.includes(c.id)).length;
   const chapter = sel ? XMAS_STORY_CHAPTERS.find(c => c.id === sel) : null;
   const preMain = !allOpen && !(nowMs >= Date.parse(RAID_XMAS_EVENT.startAt));
-  const shownChapters = preMain ? XMAS_STORY_CHAPTERS.filter(c => c.prologue) : XMAS_STORY_CHAPTERS;
-  const storyNote = preMain ? `${xmasEventDateLabel(XMAS_STORY_PROLOGUE_OPEN_AT)} から序章が読めます。本編は ${xmasEventDateLabel(RAID_XMAS_EVENT.startAt)} から始まります` : '読んだ話は、いつでも読み返せます';
+  const shownChapters = XMAS_STORY_CHAPTERS.filter(c => c.prologue);
+  const storyNote = preMain ? `${xmasEventDateLabel(XMAS_STORY_PROLOGUE_OPEN_AT)} から序章が読めます。本編は ${xmasEventDateLabel(RAID_XMAS_EVENT.startAt)} から始まります` : '序章は、いつでも読み返せます';
+  const novelOpen = typeof openXmasNovel === 'function' && (allOpen || typeof xmasNovelPlayableAt === 'function' && xmasNovelPlayableAt(nowMs));
+  const novelEnded = !allOpen && typeof XMAS_NOVEL_CLOSE_AT !== 'undefined' && nowMs >= Date.parse(XMAS_NOVEL_CLOSE_AT);
   const select = c => {
     setSel(c.id);
     void xmasStoryMarkSeen(c.id).then(p => setProgress(p));
@@ -112986,14 +112988,31 @@ const XmasStoryTab = ({
   return React.createElement("div", {
     "data-xmas-story": true,
     className: "space-y-3"
-  }, React.createElement(XmasCastPanel, {
+  }, !preMain && React.createElement("section", {
+    "data-xmas-novel-entry": true
+  }, React.createElement("button", {
+    type: "button",
+    "data-xmas-novel-open": true,
+    disabled: !novelOpen,
+    onClick: () => {
+      if (novelOpen) openXmasNovel({
+        force: allOpen
+      });
+    },
+    className: "mh-xmas-frame relative flex w-full min-h-[92px] flex-col items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-b from-[#0d0d16] to-[#050508] px-4 py-3 text-center active:scale-[0.99] disabled:opacity-60 disabled:active:scale-100"
+  }, React.createElement("span", {
+    className: "text-[10px] font-black tracking-[0.3em] text-slate-400"
+  }, typeof XMAS_NOVEL_GAME !== 'undefined' ? `${XMAS_NOVEL_GAME.series} ―${XMAS_NOVEL_GAME.title}―` : ''), React.createElement("span", {
+    className: "mh-xmas-title mt-0.5 text-[24px] font-black leading-tight",
+    style: {
+      fontFamily: "'Hiragino Mincho ProN', 'Yu Mincho', serif"
+    }
+  }, "事件簿を開く"), React.createElement("span", {
+    className: "mt-0.5 text-[11px] font-bold text-amber-100/90"
+  }, novelEnded ? '遊べる期間は終わりました(記録は残っています)' : typeof XMAS_NOVEL_GAME !== 'undefined' ? `副題「${XMAS_NOVEL_GAME.sub}」` : ''))), React.createElement(XmasCastPanel, {
     no: reached,
     compact: true
-  }), React.createElement("section", null, React.createElement(XmasSectionTitle, {
-    right: preMain ? null : React.createElement("span", {
-      className: "text-[10px] font-black text-amber-100/80"
-    }, readCount, " / ", XMAS_STORY_CHAPTERS.length, " 話")
-  }, "ひとりで進める物語"), React.createElement("p", {
+  }), React.createElement("section", null, React.createElement(XmasSectionTitle, null, preMain ? 'ひとりで進める物語' : '序章を読み返す'), React.createElement("p", {
     className: "mb-2 px-0.5 text-[10px] font-bold leading-relaxed text-slate-300",
     style: JA_LABEL_STYLE
   }, jaWrap(storyNote)), React.createElement("ol", {
@@ -116893,7 +116912,7 @@ const XMAS_NOVEL_SCRIPT = {
     "cond": null,
     "bgm": "melo_dullahan_clockwork_alt",
     "bg": "壁の中の通り道",
-    "next": "C7-1",
+    "next": "C6-7",
     "rows": [{
       "id": "6-6-1",
       "t": "line",
@@ -120051,9 +120070,14 @@ let xmasNovelFillCtx = {
   accused: ''
 };
 const xmasNovelFill = (text, playerName) => String(text || '').replace(/\{name\}/g, playerName || 'あなた').replace(/\{犯人にした人\}/g, xmasNovelFillCtx.accused || '……');
+const XMAS_NOVEL_LAUGH_SE = 'audio/se-xmas-novel-laugh.mp3';
 const xmasNovelSe = kind => {
   try {
     if (typeof Audio_ === 'undefined' || !Audio_ || !Audio_.se) return;
+    if (kind === 'laugh' && typeof Audio_.playSeFile === 'function') {
+      void Audio_.playSeFile(XMAS_NOVEL_LAUGH_SE);
+      return;
+    }
     const map = {
       clap: 'join',
       laugh: 'enemySpecial',
@@ -120137,11 +120161,22 @@ const xmasNovelDateText = iso => {
 };
 const XMAS_NOVEL_AUTO_MS = [0, 1800, 1000];
 const XmasNovelScreen = ({
-  playerName = '',
+  playerName: playerNameProp = '',
   onClose,
   script = null
 }) => {
   useXmasNovelCss();
+  const [playerName, setPlayerName] = useState(playerNameProp);
+  useEffect(() => {
+    if (playerNameProp) return undefined;
+    let alive = true;
+    storeGet('mh_breeder_name', '', false).then(n => {
+      if (alive && typeof n === 'string' && n.trim()) setPlayerName(n.trim().slice(0, 24));
+    }).catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [playerNameProp]);
   const S = script || XMAS_NOVEL_SCRIPT;
   const [save, setSave] = useState(null);
   const [mode, setMode] = useState('title');

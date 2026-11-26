@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "a78aa6da133a",
-  "packs": {"beat":{"bytes":311557065,"count":166},"battle":{"bytes":751607874,"count":1848},"card":{"bytes":38085297,"count":1046},"all":{"bytes":1101250236,"count":3060},"core":{"bytes":26319772,"count":25}},
+  "id": "b51ad9245305",
+  "packs": {"beat":{"bytes":311557065,"count":166},"battle":{"bytes":751663506,"count":1849},"card":{"bytes":38085297,"count":1046},"all":{"bytes":1101305868,"count":3061},"core":{"bytes":26322001,"count":25}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"b43d691d4773","size":2833344,"pack":"beat"},
@@ -130,6 +130,7 @@
     "audio/bgm-zenbu-hissatsuwaza.mp3": {"v":"5b91503c1743","size":2832768,"pack":"beat"},
     "audio/jingle-victory.mp3": {"v":"689c9715a824","size":78273,"pack":"battle"},
     "audio/se-awakened-moo-apocalypse.mp3": {"v":"3ed18e30e8e7","size":82124,"pack":"battle"},
+    "audio/se-xmas-novel-laugh.mp3": {"v":"3d471d7fc744","size":55632,"pack":"battle"},
     "audio/綺季一閃_～花雪に舞う詠姫～.mp3": {"v":"099d201c53b1","size":6083756,"pack":"beat"},
     "data/images/home-background-halloween-wide.jpg": {"v":"393c6aedc743","size":493619,"pack":"battle"},
     "data/images/home-background-halloween.jpg": {"v":"79c502aaaa1f","size":386465,"pack":"battle"},
@@ -3065,7 +3066,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"736a91b1b9f4","size":321450,"pack":"core"},
+    "tailwind.css": {"v":"20848aacbb99","size":321765,"pack":"core"},
     "data/images/images-ally.js": {"v":"7fcc9331d4b6","size":92225,"pack":"core"},
     "data/images/images-enemy.js": {"v":"0d3643e9bc69","size":3262,"pack":"core"},
     "data/ally-monsters.js": {"v":"6737b7dced48","size":60894,"pack":"core"},
@@ -3087,6 +3088,6 @@
     "data/assistant-masmon-techs.js": {"v":"353cf73676a6","size":113841,"pack":"core"},
     "data/assistant-life-rel-talks.js": {"v":"cde51ded5428","size":225977,"pack":"core"},
     "data/success-sounds.js": {"v":"9692dd51493a","size":19367,"pack":"core"},
-    "game-system.compiled.js": {"v":"b8000d96c0c1","size":12834985,"pack":"core"}
+    "game-system.compiled.js": {"v":"6c2b455151e3","size":12836899,"pack":"core"}
   }
 }

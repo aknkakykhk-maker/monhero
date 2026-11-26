@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e854a5d375dbb4fe
+// generated-sha256: 5acaa7fe17d9e833
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -6582,6 +6582,7 @@ const Audio_ = (() => {
     "audio/bgm-zenbu-hissatsuwaza.mp3": "5b91503c1743",
     "audio/jingle-victory.mp3": "689c9715a824",
     "audio/se-awakened-moo-apocalypse.mp3": "3ed18e30e8e7",
+    "audio/se-xmas-novel-laugh.mp3": "3d471d7fc744",
     "audio/綺季一閃_～花雪に舞う詠姫～.mp3": "099d201c53b1",
 // </audio-cache-keys>
   };
@@ -67237,14 +67238,17 @@ const XmasStoryTab = ({ version = 0, allOpen = false, fightWays = [], onRead, on
   }, [version]);
   if (!progress) return <div className="py-6 text-center text-[11px] text-slate-300">読み込み中…</div>;
   const reached = xmasStoryReachedNo(progress);
-  const readCount = XMAS_STORY_CHAPTERS.filter((c) => progress.cleared.includes(c.id)).length;
   const chapter = sel ? XMAS_STORY_CHAPTERS.find((c) => c.id === sel) : null;
   // 本編の開幕(11/30 10:00)より前は序章だけを見せる(台帳 r1126-022・本編はひとつのコンテンツで 11/30 に出る。毎日1話ずつ開く形はやめた)
   const preMain = !allOpen && !(nowMs >= Date.parse(RAID_XMAS_EVENT.startAt));
-  const shownChapters = preMain ? XMAS_STORY_CHAPTERS.filter((c) => c.prologue) : XMAS_STORY_CHAPTERS;
+  // 本編はミステリーノベル『モンヒロ事件簿』(79-screen-xmas-novel.jsx の openXmasNovel)。ここに並べるのは序章だけ(台帳 r1126-022)
+  const shownChapters = XMAS_STORY_CHAPTERS.filter((c) => c.prologue);
   const storyNote = preMain
     ? `${xmasEventDateLabel(XMAS_STORY_PROLOGUE_OPEN_AT)} から序章が読めます。本編は ${xmasEventDateLabel(RAID_XMAS_EVENT.startAt)} から始まります`
-    : '読んだ話は、いつでも読み返せます';
+    : '序章は、いつでも読み返せます';
+  // 本編の入口: 開幕から期間の終わりまで(デバッグの強制表示では、期間の外でも開く)
+  const novelOpen = typeof openXmasNovel === 'function' && (allOpen || (typeof xmasNovelPlayableAt === 'function' && xmasNovelPlayableAt(nowMs)));
+  const novelEnded = !allOpen && typeof XMAS_NOVEL_CLOSE_AT !== 'undefined' && nowMs >= Date.parse(XMAS_NOVEL_CLOSE_AT);
   const select = (c) => {
     setSel(c.id);
     // 開いた印(NEW を消す)。押した話だけ
@@ -67252,9 +67256,19 @@ const XmasStoryTab = ({ version = 0, allOpen = false, fightWays = [], onRead, on
   };
   return (
     <div data-xmas-story className="space-y-3">
+      {!preMain && (
+        <section data-xmas-novel-entry>
+          <button type="button" data-xmas-novel-open disabled={!novelOpen} onClick={() => { if (novelOpen) openXmasNovel({ force: allOpen }); }}
+            className="mh-xmas-frame relative flex w-full min-h-[92px] flex-col items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-b from-[#0d0d16] to-[#050508] px-4 py-3 text-center active:scale-[0.99] disabled:opacity-60 disabled:active:scale-100">
+            <span className="text-[10px] font-black tracking-[0.3em] text-slate-400">{typeof XMAS_NOVEL_GAME !== 'undefined' ? `${XMAS_NOVEL_GAME.series} ―${XMAS_NOVEL_GAME.title}―` : ''}</span>
+            <span className="mh-xmas-title mt-0.5 text-[24px] font-black leading-tight" style={{ fontFamily: "'Hiragino Mincho ProN', 'Yu Mincho', serif" }}>事件簿を開く</span>
+            <span className="mt-0.5 text-[11px] font-bold text-amber-100/90">{novelEnded ? '遊べる期間は終わりました(記録は残っています)' : typeof XMAS_NOVEL_GAME !== 'undefined' ? `副題「${XMAS_NOVEL_GAME.sub}」` : ''}</span>
+          </button>
+        </section>
+      )}
       <XmasCastPanel no={reached} compact />
       <section>
-        <XmasSectionTitle right={preMain ? null : <span className="text-[10px] font-black text-amber-100/80">{readCount} / {XMAS_STORY_CHAPTERS.length} 話</span>}>ひとりで進める物語</XmasSectionTitle>
+        <XmasSectionTitle>{preMain ? 'ひとりで進める物語' : '序章を読み返す'}</XmasSectionTitle>
         <p className="mb-2 px-0.5 text-[10px] font-bold leading-relaxed text-slate-300" style={JA_LABEL_STYLE}>{jaWrap(storyNote)}</p>
         <ol data-xmas-story-list className="space-y-1.5">
           {shownChapters.map((c) => {
@@ -68190,7 +68204,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"6-5-7","t":"line","w":"erubin","x":"カメラ、取られちゃった。……ごめん。でも、写真は、ソラくんのパソコンに送ってあるよ","e":"troubled","k":"C6-5:6-5-7"},
 {"id":"6-5-8","t":"line","w":"watson","x":"写真は、わたしのところに残っています","k":"C6-5:6-5-8"},{"t":"q","id":"Q6b","kind":"present","x":"黒いサンタは、えるびんから、なにを取ろうとした？ わけを示す手がかりを、手がかり帳から1つ突きつけよう","replies":{"x1":[{"id":"Q6b-x1","t":"line","w":"watson","x":"その手がかりは、えるびんさんが持っていた物ではありません"}],"x2":[{"id":"Q6b-x2","t":"line","w":"myua","x":"るびちんが、鏡の廊下で撮った……","e":"troubled"}],"x3":[{"id":"Q6b-x3","t":"line","w":"erubin","x":"カメラの中の、あの1枚……","e":"troubled"}],"near":[{"id":"Q6b-near","t":"line","w":"sorashido","x":"鏡の廊下までは合っています。……そこで、えるさんが残した物は？","e":"normal"}],"ok":[{"id":"Q6b-ok","t":"line","w":"sorashido","x":"はい。黒いサンタは、あの写真を消したかった。……写っていた影は、見られたら困る、だれかです","e":"normal"}]},"label":"推理の問い⑥","score":true,"answer":["えるびんの写真"],"k":"C6-5:Q6b","near":["ほこりのない鏡のふち"]},
 {"id":"6-5-9","t":"band","x":"はしごの下。血のしずくのそばに、なにか小さな物が光っている","k":"C6-5:6-5-9"}]},
-{"id":"C6-6","chapter":"C6","title":"銀の音符","cond":null,"bgm":"melo_dullahan_clockwork_alt","bg":"壁の中の通り道","next":"C7-1","rows":[{"id":"6-6-1","t":"line","w":"myua","x":"あつくん、これ！ 銀色の……音符の飾り！","e":"normal","k":"C6-6:6-6-1"},
+{"id":"C6-6","chapter":"C6","title":"銀の音符","cond":null,"bgm":"melo_dullahan_clockwork_alt","bg":"壁の中の通り道","next":"C6-7","rows":[{"id":"6-6-1","t":"line","w":"myua","x":"あつくん、これ！ 銀色の……音符の飾り！","e":"normal","k":"C6-6:6-6-1"},
 {"id":"6-6-1c","t":"clue","clue":"銀の音符の飾り","x":"通り道のはしごのそばに落ちていた、銀色の音符の飾り。黒いサンタが落とした物","k":"C6-6:6-6-1c"},
 {"id":"6-6-2","t":"line","w":"sorashido","x":"……この形、どこかで見たことがあります","e":"normal","k":"C6-6:6-6-2"},
 {"id":"6-6-3","t":"line","w":"atsu","x":"……分かった。全部、つながった気がする","e":"normal","k":"C6-6:6-6-3"},
@@ -68512,7 +68526,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 // 入口は openXmasNovel(opts) の関数1つ(イベントページの物語タブなどから呼ぶ)。App の状態は使わず、自分で body に重ねて開き、閉じたら片づける。
 //   opts.playerName … 台詞の {name} に入れる名前 / opts.onClose() … 閉じたあと / opts.force … 期間の外でも開く(デバッグ・検査だけ)
 //   遊べるのはイベントの期間中だけ(xmasNovelPlayableAt)。期間の外は開かずに false を返す。保存の記録は消さない
-// 保存は新しいキー mh_xmas_novel_v1 だけ(ほかのキーは読まない・書かない・⑦)。形は xmasNovelNormalize。
+// 保存は新しいキー mh_xmas_novel_v1 だけ(書くのはこれだけ・⑦)。ほかに読むのは、台詞の {name} に入れるブリーダー名(mh_breeder_name)だけ。形は xmasNovelNormalize。
 // 見た目: 暗めの紺と雪・金の細い縁・明朝寄りの見出し。縦・横・タブレットで、立ち絵と文の箱の置き方を変える。動きは prefers-reduced-motion で止める
 
 const XMAS_NOVEL_CSS = `
@@ -68843,9 +68857,12 @@ const xmasNovelNameOf = (row) => {
 // {name} … プレイヤーの名前 / {犯人にした人} … 推理で選んだ人(xmasNovelFillCtx で渡す)
 let xmasNovelFillCtx = { accused: '' };
 const xmasNovelFill = (text, playerName) => String(text || '').replace(/\{name\}/g, playerName || 'あなた').replace(/\{犯人にした人\}/g, xmasNovelFillCtx.accused || '……');
+// シルエットの笑い声(tools/novel/xmas-novel-laugh.py で合成した音・鳴らすときに初めて読む)
+const XMAS_NOVEL_LAUGH_SE = 'audio/se-xmas-novel-laugh.mp3';
 const xmasNovelSe = (kind) => {
   try {
     if (typeof Audio_ === 'undefined' || !Audio_ || !Audio_.se) return;
+    if (kind === 'laugh' && typeof Audio_.playSeFile === 'function') { void Audio_.playSeFile(XMAS_NOVEL_LAUGH_SE); return; }
     const map = { clap: 'join', laugh: 'enemySpecial', bell: 'levelUp', impact: 'enemyAttack', music: 'heal', tap: 'tap', clue: 'card', ok: 'victory', ng: 'guard' };
     const fn = Audio_.se[map[kind] || 'tap'];
     if (typeof fn === 'function') fn();
@@ -68895,8 +68912,16 @@ const xmasNovelDateText = (iso) => {
 // ---- 画面 ----
 const XMAS_NOVEL_AUTO_MS = [0, 1800, 1000];
 // script … 検査で仮の台本を渡すときだけ(ふだんは渡さない)
-const XmasNovelScreen = ({ playerName = '', onClose, script = null }) => {
+const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = null }) => {
   useXmasNovelCss();
+  // 台詞の {name}: 渡されなければブリーダー名を読むだけ(書かない)
+  const [playerName, setPlayerName] = useState(playerNameProp);
+  useEffect(() => {
+    if (playerNameProp) return undefined;
+    let alive = true;
+    storeGet('mh_breeder_name', '', false).then((n) => { if (alive && typeof n === 'string' && n.trim()) setPlayerName(n.trim().slice(0, 24)); }).catch(() => {});
+    return () => { alive = false; };
+  }, [playerNameProp]);
   const S = script || XMAS_NOVEL_SCRIPT;
   const [save, setSave] = useState(null);
   const [mode, setMode] = useState('title'); // title / read / endings / chapters
