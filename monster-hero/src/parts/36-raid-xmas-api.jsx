@@ -204,3 +204,29 @@ const RAID_EVENT_XMAS = Object.freeze({
 });
 const raidEventDef = (key) => (key === 'xmas' ? RAID_EVENT_XMAS : RAID_EVENT_JACK);
 const raidEventTierShort = (ev, tier) => raidEventShortName((ev || RAID_EVENT_JACK).bossWord, tier && tier.name);
+
+// ---- ひとりで進める物語の進み具合(新しいキー mh_xmas_story_v1・台帳 r1126-006) ----
+//  レイドの記録(mh_raid_xmas_v1)とは別のキー。ほかのキーには書かない(⑦)
+const xmasStoryLoad = async () => {
+  try { return xmasStoryNormalize(await storeGet(XMAS_STORY_STORAGE_KEY, null, false)); } catch (e) { return xmasStoryNormalize(null); }
+};
+const xmasStorySave = async (progress) => {
+  try { await storeSet(XMAS_STORY_STORAGE_KEY, xmasStoryNormalize(progress), false); return true; } catch (e) { return false; }
+};
+// 開いた印(NEW を消す)。すでに付いていれば書かない
+const xmasStoryMarkSeen = async (chapterId) => {
+  const p = await xmasStoryLoad();
+  if (p.seen.includes(chapterId) || !XMAS_STORY_CHAPTERS.some((c) => c.id === chapterId)) return p;
+  const next = { ...p, seen: [...p.seen, chapterId] };
+  await xmasStorySave(next);
+  return next;
+};
+// 読んだ(戦う話は勝った)印。負けたときは何も書かない(何度でも挑める)
+const xmasStoryMarkCleared = async (chapterId) => {
+  const p = await xmasStoryLoad();
+  if (!XMAS_STORY_CHAPTERS.some((c) => c.id === chapterId)) return { ok: false, progress: p };
+  if (p.cleared.includes(chapterId)) return { ok: true, progress: p, already: true };
+  const next = { ...p, cleared: [...p.cleared, chapterId], seen: p.seen.includes(chapterId) ? p.seen : [...p.seen, chapterId] };
+  const ok = await xmasStorySave(next);
+  return { ok, progress: ok ? next : p };
+};

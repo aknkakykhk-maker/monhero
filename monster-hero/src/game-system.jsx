@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 19fef400505f4dd1
+// generated-sha256: da5ad0484c3f9f43
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -4909,6 +4909,8 @@ const BGM_TRACKS = [
   { id:'melo_kiki_issen_short', name:'綺季一閃 ～花雪に舞う詠姫～ short ver.', creator:'オリジナル', src:'audio/bgm-kiki-issen-short.mp3', gain:1, loop:true },
   { id:'melo_crazy_party_night', name:'Crazy Party Night ～ぱんぷきんの逆襲～', creator:'オリジナル', src:'audio/bgm-crazy-party-night.mp3', gain:1, loop:true },
   { id:'melo_crazy_party_night_full', name:'Crazy Party Night ～ぱんぷきんの逆襲～ full', creator:'オリジナル', src:'audio/bgm-crazy-party-night-full.mp3', gain:1, loop:true },
+  // クリスマスイベント「聖夜の名探偵」のイベントページの曲(2026-11-26 社長・台帳 r1126-015)。5分4秒。元の音源は tools/art-sources/song-audio/kiss_mystery/
+  { id:'melo_kiss_mystery', name:'Kissからはじまるミステリー', creator:'オリジナル', src:'audio/bgm-kiss-mystery.mp3', gain:1, loop:true },
   { id:'melo_emerald_rush', name:'Emerald Rush', creator:'オリジナル', src:'audio/bgm-emerald-rush.mp3', gain:1, loop:true },
   { id:'melo_wrath_of_the_thorn_king', name:'Wrath of the Thorn King「茨の王の怒り」', creator:'オリジナル', src:'audio/bgm-wrath-of-the-thorn-king.mp3', gain:1, loop:true },
   { id:'melo_monster', name:'Monster', creator:'オリジナル', src:'audio/bgm-monster.mp3', gain:1, loop:true },
@@ -6240,14 +6242,29 @@ const screenThemeCategory = (gameState, rhythmOpen = false) => {
 // 起動直後の先読み(index.html)もこのキーを読むので、キー名と id は変えない。
 // squareSrc は縦横比がほぼ正方形の画面、wideSrc は横長の画面に出す絵。無い絵は縦の絵を切り抜いて出す
 const TITLE_ART_STORAGE_KEY = 'mh_title_art';
+// クリスマス(r1125-061・社長 2026-11-25): from〜until はクリスマスのイベント(RAID_XMAS_START_AT・RAID_XMAS_EVENT.endAt)と同じ。
+//   from より前は選択肢にも出さない(titleArtOptionsAt)。おまかせは from〜until のあいだだけクリスマス、そのあとはクラシック。
+//   自分で選んだ人は until のあとも選んだまま。期間は見るたびに時刻で決める(保存しない)。★index.html の先読みも同じ時刻を持っている
+const TITLE_ART_XMAS_FROM = () => Date.parse(typeof RAID_XMAS_START_AT === 'string' ? RAID_XMAS_START_AT : '2026-11-30T10:00:00+09:00');
+const TITLE_ART_XMAS_UNTIL = () => Date.parse(typeof RAID_XMAS_EVENT === 'object' && RAID_XMAS_EVENT && typeof RAID_XMAS_EVENT.endAt === 'string' ? RAID_XMAS_EVENT.endAt : '2026-12-31T04:00:00+09:00');
 const TITLE_ART_OPTIONS = [
+  { id: 'xmas', label: 'クリスマス', desc: '雪の夜の広場。モッチーたちがクリスマスの装いでお出迎え', src: 'data/images/title-screen-xmas.jpg', squareSrc: 'data/images/title-screen-xmas-square.jpg', wideSrc: 'data/images/title-screen-xmas-wide.jpg', from: TITLE_ART_XMAS_FROM },
   { id: 'halloween', label: 'ハロウィン', desc: '月夜のお城とかぼちゃ。モッチーたちが仮装してお出迎え', src: 'data/images/title-screen-halloween.jpg', squareSrc: 'data/images/title-screen-halloween-square.jpg', wideSrc: 'data/images/title-screen-halloween-wide.jpg' },
   { id: 'classic', label: 'クラシック', desc: 'これまでのタイトル画面', src: 'data/images/title-screen-clean.jpg' },
 ];
 // 'auto'(おまかせ)は季節に合わせる(SCREEN_THEME_HALLOWEEN_UNTIL まではハロウィン、そのあとはクラシック)
 const DEFAULT_TITLE_ART = 'auto';
 const normalizeTitleArt = value => value === 'auto' || TITLE_ART_OPTIONS.some(option => option.id === value) ? value : DEFAULT_TITLE_ART;
-const resolveTitleArt = (value, now = Date.now()) => { const v = normalizeTitleArt(value); return v === 'auto' ? resolveScreenTheme('auto', now) : v; };
+// 選択肢に出す絵(from より前の絵は出さない)。保存の読み方(normalizeTitleArt)は全部の id を受ける
+const titleArtAvailable = (option, now = Date.now()) => !!option && (typeof option.from !== 'function' || now >= option.from());
+const titleArtOptionsAt = (now = Date.now()) => TITLE_ART_OPTIONS.filter(option => titleArtAvailable(option, now));
+const titleArtXmasOpenAt = (now = Date.now()) => now >= TITLE_ART_XMAS_FROM() && now < TITLE_ART_XMAS_UNTIL();
+const resolveTitleArt = (value, now = Date.now()) => {
+  const v = normalizeTitleArt(value);
+  if (v === 'auto') return titleArtXmasOpenAt(now) ? 'xmas' : resolveScreenTheme('auto', now);
+  // まだ出していない絵が入っていたら(時計を戻した等)、おまかせと同じに決める
+  return titleArtAvailable(TITLE_ART_OPTIONS.find(option => option.id === v), now) ? v : resolveScreenTheme('auto', now);
+};
 // 画面の縦横比から、出す絵の形を決める。縦長(941x1672 = 0.56)・ほぼ正方形(1354x1162 = 1.17)・横長(1672x941 = 1.78)の3枚のうち、
 // 比が近いほうを選ぶ(境目は、隣り合う2枚の比の相乗平均。0.81 と 1.44)。折りたたみの横開きの内側(約0.9)は「ほぼ正方形」になる
 // ★index.html の先読みも同じ境目を持っている。変えるときは両方そろえる
@@ -6496,6 +6513,7 @@ const Audio_ = (() => {
     "audio/bgm-kiki-issen-short.mp3": "add607be5bec",
     "audio/bgm-kimimachi-loop.mp3": "1be296a6cdb3",
     "audio/bgm-kindan-no-resistance.mp3": "efca5c01d0b7",
+    "audio/bgm-kiss-mystery.mp3": "8ccb87dfc4ad",
     "audio/bgm-lamia.mp3": "faaab8302652",
     "audio/bgm-light-player-short.mp3": "5d59fb7eb1fb",
     "audio/bgm-light-player.mp3": "c07830c2e774",
@@ -39034,6 +39052,110 @@ const raidXmasStoryCandidates = (totals, nowMs) => {
 const XMAS_BATTLE_BONUS_RATE = 1.5;
 const xmasBattleBonusRateAt = (nowMs) => (raidXmasWindowAt(nowMs) === 'open' ? XMAS_BATTLE_BONUS_RATE : 1);
 
+// ---- ひとりで進める物語(イベントページの「物語」タブ・台帳 r1126-006) ----
+//  ・話はイベントページから選んで読む。自動では流さない(社長 2026-11-25)。開いた話はいつでも読み返せる
+//  ・開く日時: 序章は 11/28(開催予告)から、第1話は開始と同時(11/30 10:00)、第2話からは毎日 4:00(1日の区切りと同じ)に1話ずつ(仮)
+//  ・前の話を読んだ(戦う話は勝った)ら次が選べる。戦う話はバトル・モンヒロビート・バトルカードのどれかで勝つと進む
+//  ・題と「読む/戦う」は台本の全話一覧(第3案・docs/progress/event-xmas-2026/SCRIPT.md §0)の仮。台本が決まったらこの表だけ直す
+//  ・お話の中身は data/assistants.js の EVENT_REPLAYS に scriptId の id で入れる(入るまでは「準備中」と出す)
+const XMAS_STORY_LIST = Object.freeze([
+  ['招待状', 'read'], ['雪の音', 'fight'], ['夜中の足音', 'read'], ['開かずの部屋', 'read'], ['窓の外の影', 'fight'],
+  ['柱時計', 'read'], ['十二の鐘', 'read'], ['足あとの先', 'fight'], ['ふたつめの空箱', 'read'], ['見張り番', 'fight'],
+  ['閉じたノート', 'read'], ['ふたりの探偵助手', 'read'], ['鏡の中', 'read'], ['影の行進', 'fight'], ['みんなで眠る夜', 'read'],
+  ['見回りのランタン', 'read'], ['雪の上の砂', 'fight'], ['13の鐘', 'fight'], ['そろう手がかり', 'read'], ['謎はすべて解けた!', 'read'],
+  ['おでじゃない', 'read'], ['そろいすぎた手がかり', 'read'], ['最後の手がかり', 'fight'], ['真実はいつもひとつ!', 'read'], ['やり直しのクリスマス会', 'read'],
+]);
+// 第2話から: 12/(話-1) 4:00 JST(第25話 = 12/24)
+const xmasStoryOpenAtOf = (no) => (no <= 1 ? RAID_XMAS_EVENT.startAt : `2026-12-${String(no - 1).padStart(2, '0')}T04:00:00+09:00`);
+// 序章(台帳 r1126-012・社長): 第1話の前。イチーカから招待状が届いて行くまで。11/28 の開催予告のときから開く(時刻 10:00 は仮)。中身は台本ができてから
+const XMAS_STORY_PROLOGUE_OPEN_AT = '2026-11-28T10:00:00+09:00';
+const XMAS_STORY_CHAPTERS = Object.freeze([
+  Object.freeze({ id: 'xs00', no: 0, prologue: true, openAt: XMAS_STORY_PROLOGUE_OPEN_AT, type: 'read', title: '序章', scriptId: 'xmas_story_00' }),
+  ...XMAS_STORY_LIST.map(([title, type], i) => Object.freeze({
+    id: `xs${String(i + 1).padStart(2, '0')}`,
+    no: i + 1,
+    openAt: xmasStoryOpenAtOf(i + 1),
+    type,
+    title,
+    scriptId: `xmas_story_${String(i + 1).padStart(2, '0')}`,
+  })),
+]);
+// 前の話(並びの1つ前。序章の前は無い)
+const xmasStoryPrevOf = (chapter) => {
+  const i = XMAS_STORY_CHAPTERS.findIndex((c) => c.id === chapter.id);
+  return i > 0 ? XMAS_STORY_CHAPTERS[i - 1] : null;
+};
+const XMAS_STORY_STORAGE_KEY = 'mh_xmas_story_v1';
+// 保存の形 { v:1, cleared:[id], seen:[id], rewardClaimed:false }。壊れていても既定へ戻す(⑦)
+const xmasStoryNormalize = (raw) => {
+  const ids = new Set(XMAS_STORY_CHAPTERS.map((c) => c.id));
+  const list = (v) => (Array.isArray(v) ? [...new Set(v.filter((x) => typeof x === 'string' && ids.has(x)))] : []);
+  const r = raw && typeof raw === 'object' ? raw : {};
+  return { v: 1, cleared: list(r.cleared), seen: list(r.seen), rewardClaimed: r.rewardClaimed === true };
+};
+// 1話の状態: 'locked'(日時がまだ)/ 'waiting'(前の話がまだ)/ 'new'(開いた・まだ開いていない)/ 'open'(開いたことがある)/ 'cleared'(読んだ・勝った)
+//   allOpen: デバッグの強制表示(日時も順番も見ない)
+const xmasStoryStatusOf = (chapter, progress, nowMs, allOpen = false) => {
+  const p = xmasStoryNormalize(progress);
+  if (p.cleared.includes(chapter.id)) return 'cleared';
+  if (!allOpen) {
+    const at = Date.parse(chapter.openAt);
+    if (!Number.isFinite(at) || !Number.isFinite(nowMs) || nowMs < at) return 'locked';
+    const prev = xmasStoryPrevOf(chapter);
+    if (prev && !p.cleared.includes(prev.id)) return 'waiting';
+  }
+  return p.seen.includes(chapter.id) ? 'open' : 'new';
+};
+// 読んだ(戦う話は勝った)いちばん先の話の番号(0 = まだ1話も)
+const xmasStoryReachedNo = (progress) => {
+  const p = xmasStoryNormalize(progress);
+  return XMAS_STORY_CHAPTERS.reduce((n, c) => (p.cleared.includes(c.id) ? Math.max(n, c.no) : n), 0);
+};
+
+// ---- 登場人物パネル(10人・台帳 r1125-063。並びは SCRIPT.md §3 の仮) ----
+//  face: 顔の絵(イチーカはスネグーラチカ・もちまるはモッチー)。santa: 助手のサンタ衣装の顔(置き場は data/assistants.js の STORY_OUTFIT_DIRS.santa。パスを画面へ直書きしない)
+const XMAS_STORY_CAST = Object.freeze([
+  { id: 'atsu', name: 'あつ', santa: true },
+  { id: 'sorashido', name: 'ソラシド', santa: true },
+  { id: 'myua', name: 'みゅあ', santa: true },
+  { id: 'kiki', name: 'きき', santa: true },
+  { id: 'momosuke', name: 'ももすけ', santa: true },
+  { id: 'dra', name: 'ドラ', santa: true },
+  { id: 'kyuko', name: 'きゅうこ', santa: true },
+  { id: 'erubin', name: 'えるびん', santa: true },
+  { id: 'ichika', name: 'イチーカ', face: 'images/monster-icons/face/snegurochka.png' },
+  { id: 'mochimaru', name: 'もちまる', face: 'images/monster-icons/face/mocchi.png' },
+]);
+const xmasCastFaceOf = (c) => {
+  if (!c) return '';
+  if (!c.santa) return c.face || '';
+  const dir = typeof STORY_OUTFIT_DIRS !== 'undefined' && STORY_OUTFIT_DIRS && STORY_OUTFIT_DIRS.santa;
+  return dir ? `${dir}/face/${c.id}_normal.PNG` : '';
+};
+// いなくなる人(第3案・社長 2026-11-26)。at = いなくなる話 / found = 見つかる話 / box = プレゼントの箱も空になるか(もちまるは空にならない)
+const XMAS_STORY_MISSING = Object.freeze([
+  { id: 'momosuke', at: 7, found: 25, box: true },
+  { id: 'kyuko', at: 9, found: 24, box: true },
+  { id: 'erubin', at: 13, found: 25, box: true },
+  { id: 'mochimaru', at: 16, found: 25, box: false },
+]);
+// その話を読み終えたところでの並び。shown: パネルを出すか(はじめてだれかがいなくなった話から)
+const xmasStoryCastAt = (no) => {
+  const n = Number.isFinite(no) ? Math.floor(no) : 0;
+  const away = XMAS_STORY_MISSING.filter((m) => m.at <= n && n < m.found);
+  const firstAt = Math.min(...XMAS_STORY_MISSING.map((m) => m.at));
+  return {
+    shown: n >= firstAt,
+    missing: away.map((m) => m.id),
+    newly: XMAS_STORY_MISSING.filter((m) => m.at === n).map((m) => m.id),
+    left: XMAS_STORY_CAST.length - away.length,
+    emptyBoxes: away.filter((m) => m.box).length,
+  };
+};
+
+// イベントページ(レイドの準備画面も)を開いているあいだの曲(台帳 r1126-015)。閉じると画面の曲へ戻る。BGM を切っている人には鳴らない(ふだんの BGM と同じ口)
+const XMAS_EVENT_BGM_TRACK = 'melo_kiss_mystery';
+
 // ---- part: 36-raid-xmas-api.jsx ----
 // ===== クリスマスのレイドの回数・与ダメージ(3つの入口で共通の口) =====
 // つなぎ目の正本: docs/progress/event-xmas-2026/BUILD.md(§2 回数・§3 ダメージを足す関数)
@@ -39241,6 +39363,32 @@ const RAID_EVENT_XMAS = Object.freeze({
 });
 const raidEventDef = (key) => (key === 'xmas' ? RAID_EVENT_XMAS : RAID_EVENT_JACK);
 const raidEventTierShort = (ev, tier) => raidEventShortName((ev || RAID_EVENT_JACK).bossWord, tier && tier.name);
+
+// ---- ひとりで進める物語の進み具合(新しいキー mh_xmas_story_v1・台帳 r1126-006) ----
+//  レイドの記録(mh_raid_xmas_v1)とは別のキー。ほかのキーには書かない(⑦)
+const xmasStoryLoad = async () => {
+  try { return xmasStoryNormalize(await storeGet(XMAS_STORY_STORAGE_KEY, null, false)); } catch (e) { return xmasStoryNormalize(null); }
+};
+const xmasStorySave = async (progress) => {
+  try { await storeSet(XMAS_STORY_STORAGE_KEY, xmasStoryNormalize(progress), false); return true; } catch (e) { return false; }
+};
+// 開いた印(NEW を消す)。すでに付いていれば書かない
+const xmasStoryMarkSeen = async (chapterId) => {
+  const p = await xmasStoryLoad();
+  if (p.seen.includes(chapterId) || !XMAS_STORY_CHAPTERS.some((c) => c.id === chapterId)) return p;
+  const next = { ...p, seen: [...p.seen, chapterId] };
+  await xmasStorySave(next);
+  return next;
+};
+// 読んだ(戦う話は勝った)印。負けたときは何も書かない(何度でも挑める)
+const xmasStoryMarkCleared = async (chapterId) => {
+  const p = await xmasStoryLoad();
+  if (!XMAS_STORY_CHAPTERS.some((c) => c.id === chapterId)) return { ok: false, progress: p };
+  if (p.cleared.includes(chapterId)) return { ok: true, progress: p, already: true };
+  const next = { ...p, cleared: [...p.cleared, chapterId], seen: p.seen.includes(chapterId) ? p.seen : [...p.seen, chapterId] };
+  const ok = await xmasStorySave(next);
+  return { ok, progress: ok ? next : p };
+};
 
 // ---- part: 37-raid-jack-aura.jsx ----
 // ===== ジャックのオーラ(段階1〜5でどんどん派手に・バトル/HOME/段階えらびで共通) =====
@@ -44680,8 +44828,9 @@ const ensureArtPickerCss = () => {
 // タイトルとホームの絵も同じ3択でここから変えられる(絵を見て選びたいときは各アレンジ画面から)
 function ScreenThemeModal({ screenTheme, onChange, titleArt, onChangeTitleArt, homeArt, onChangeHomeArt, onClose }) {
   const rows = [
-    { id: 'title', label: 'タイトル画面', value: titleArt, set: onChangeTitleArt },
-    // ホームだけは季節の絵(クリスマスなど・出してよい期間のもの)も選べる(r1125-059)
+    // タイトルは季節の絵(クリスマスなど・出してよい期間のもの)も選べる(r1125-061)
+    { id: 'title', label: 'タイトル画面', value: titleArt, set: onChangeTitleArt, choices: [...SCREEN_THEME_CHOICES, ...titleArtOptionsAt().filter(option => !SCREEN_THEME_CHOICES.some(choice => choice.id === option.id)).map(option => ({ id: option.id, label: option.label }))] },
+    // ホームも季節の絵(クリスマスなど・出してよい期間のもの)も選べる(r1125-059)
     { id: 'home', label: 'ホーム画面', value: homeArt, set: onChangeHomeArt, choices: [...SCREEN_THEME_CHOICES, ...homeArtOptionsAt().filter(option => !SCREEN_THEME_CHOICES.some(choice => choice.id === option.id)).map(option => ({ id: option.id, label: option.label }))] },
     ...SCREEN_THEME_READY_CATEGORIES.map(category => ({ ...category, value: screenTheme[category.id], set: choice => onChange(category.id, choice) })),
   ];
@@ -51928,7 +52077,10 @@ const homeRaidSayObstacles = (wrap) => {
   });
   return out;
 };
-const HomeRaidJack = ({ eventId, onOpen }) => {
+// ev: どのレイドか(36-raid-xmas-api.jsx の RAID_EVENT_JACK / RAID_EVENT_XMAS)。クリスマスはジャックと同じ置き方・同じ開き方(台帳 r1126-006)。
+//   ジャックだけの物(ひとことの台詞・両腕ポーズ・炎のオーラ・ぱんぷきん)はクリスマスでは出さない(台詞などは決まったら ev に足す)
+const HomeRaidJack = ({ eventId, onOpen, ev = RAID_EVENT_JACK }) => {
+  const isJack = ev.key !== 'xmas';
   // 前回取れた段階の合計から描き始める(36-raid-jack-api.jsx の raidJackTotalsCache)。読み込みが終わるまでの間を「男爵・ライフ満タン」にしない
   const [totals, setTotalsState] = React.useState(() => raidJackCachedTotals(eventId));
   const setTotals = (t) => { raidJackRememberTotals(eventId, t); setTotalsState((prev) => (t || prev === undefined ? t : prev)); };
@@ -51942,7 +52094,7 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
   React.useEffect(() => {
     let alive = true;
     // 通信が弱くて送れなかった与ダメージが端末に残っていれば、ここで送り直す(空なら通信しない)。本番のイベントだけ
-    const flush = async () => { if (eventId !== RAID_JACK_EVENT.id) return; try { const id = await ensureBreederId(); await raidJackFlushStoredPending(id, eventId); } catch (e) { /* 次に開いたときに送り直す */ } };
+    const flush = async () => { if (eventId !== ev.id) return; try { const id = await ensureBreederId(); await ev.flushPending(id); } catch (e) { /* 次に開いたときに送り直す */ } };
     const load = async () => { await flush(); const t = await sbFetchRaidJackTierTotals(eventId); if (alive) setTotals(t); };
     load();
     const id = setInterval(load, 60000);
@@ -52006,17 +52158,17 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
   // 初めて読み込み中(まだ一度も合計が取れていない)あいだは、段階もライフも分からないので描かない
   if (totals === undefined) return null;
   // いま挑める段階 = まだ共有HPが残っている最初の段階。全部倒していたら「討伐おめでとう」
-  const tiers = RAID_JACK_A_TIERS;
+  const tiers = ev.aTiers;
   const totalOf = (i) => (totals && totals.a && totals.a[i + 1] ? totals.a[i + 1].total : 0);
   // 大王が倒されたか(段階5の合計がライフ以上)で決める。倒されたあとは、小さなぱんぷきんが遊びに来る
-  const allDone = raidJackBossDown(totals);
+  const allDone = ev.bossDown(totals);
   const currentIndex = allDone ? -1 : (totals ? tiers.findIndex((t, i) => totalOf(i) < t.hp) : 0);
   const tier = tiers[Math.max(0, allDone ? tiers.length - 1 : currentIndex)];
   const left = allDone ? 0 : Math.max(0, tier.hp - totalOf(Math.max(0, currentIndex)));
   const rate = tier.hp > 0 ? Math.max(0, Math.min(1, left / tier.hp)) : 0;
   // いま話せるセリフ: 段階(爵位)の話し方 × 残りライフの場面。大王を倒したあとはぱんぷきん(場面なし)
-  const speechLines = raidJackHomeLines(tier.id, rate, allDone);
-  const speech = speechLines[lineNo % speechLines.length];
+  const speechLines = isJack ? raidJackHomeLines(tier.id, rate, allDone) : [];
+  const speech = speechLines.length > 0 ? speechLines[lineNo % speechLines.length] : '';
   const speechAccent = allDone ? '#fdba74' : '#fb923c';
   const tierNo = Number(String(tier.id).slice(1)) || 0;
   // 影と段階・HPの札。本体と、炎の層の見えない枠(高さをそろえるため)の両方で使う
@@ -52026,8 +52178,8 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
         {/* 「〜が」のあとだけで折る(2026-10-20 窓口「ジャック大王があらわれ／た！」と言葉の途中で折れていた)。
             keep-all で字の間では折らず、<wbr/> の所だけで折る。それでも入らないときだけ anywhere で折る。
             幅360未満の画面は字を9pxにして1行に収める(2026-10-24 窓口「幅320で『ジャック大王／あらわれた』と折れている」) */}
-        <span data-home-raid-jack-title style={{ display:'block', ...JA_WRAP_STYLE, ...(typeof window !== 'undefined' && window.innerWidth < HOME_RAID_SAY_NARROW_VW ? { fontSize:'9px' } : {}) }}>{allDone ? <>{RAID_JACK_PUMPKIN.name}が<wbr/>遊びに来た！</> : <>{tier.name}が<wbr/>あらわれた！</>}</span>
-        {allDone ? <span data-home-raid-pumpkin-note style={{ display:'block', marginTop:'2px', fontSize:'8px', opacity:.9, ...JA_LABEL_STYLE }}>{jaWrap('ジャックを倒した！遊んでダメージを競おう')}</span> : <>
+        <span data-home-raid-jack-title style={{ display:'block', ...JA_WRAP_STYLE, ...(typeof window !== 'undefined' && window.innerWidth < HOME_RAID_SAY_NARROW_VW ? { fontSize:'9px' } : {}) }}>{allDone ? (isJack ? <>{RAID_JACK_PUMPKIN.name}が<wbr/>遊びに来た！</> : <>{ev.afterBoss.name}が<wbr/>{ev.afterBossBadge}</>) : <>{tier.name}が<wbr/>あらわれた！</>}</span>
+        {allDone && isJack ? <span data-home-raid-pumpkin-note style={{ display:'block', marginTop:'2px', fontSize:'8px', opacity:.9, ...JA_LABEL_STYLE }}>{jaWrap('ジャックを倒した！遊んでダメージを競おう')}</span> : <>
         <span style={{ display:'block', height:'7px', marginTop:'3px', borderRadius:'999px', overflow:'hidden', background:'#000a', border:'1px solid #fff3' }} role="progressbar" aria-valuemin={0} aria-valuemax={tier.hp} aria-valuenow={left}>
           <span style={{ display:'block', height:'100%', width:`${rate * 100}%`, background:'#f97316' }} />
         </span>
@@ -52041,7 +52193,7 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
     <>
     {/* 炎(オーラ)の層。施設の札・みゅあの吹き出し・上の帯より後ろ(HOME_RAID_JACK_AURA_WRAP_STYLE)。
         HOMEのジャックは小さいので、オーラは絵より大きな枠へ広げて描く(段階が上がるほど大きく) */}
-    {!allDone && <div aria-hidden="true" data-home-raid-aura-wrap style={HOME_RAID_JACK_AURA_WRAP_STYLE}>
+    {!allDone && ev.aura && <div aria-hidden="true" data-home-raid-aura-wrap style={HOME_RAID_JACK_AURA_WRAP_STYLE}>
       <div style={HOME_RAID_JACK_AURA_BOX_STYLE}>
         <span data-jack-aura={tierNo || undefined} style={{ position:'relative', display:'block', width:'100%', aspectRatio:'1024 / 640' }}>
           <span style={{ position:'absolute', pointerEvents:'none', visibility:'visible', inset:`${-20 - tierNo * 8}% ${-10 - tierNo * 5}% -6%` }}>
@@ -52054,7 +52206,7 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
     </div>}
     <div ref={wrapRef} data-home-raid-jack-wrap style={HOME_RAID_JACK_WRAP_STYLE}>
     {/* ひとこと。ジャックの上に出る吹き出し。押すと次のセリフへ(ジャック本体を押すとレイド画面) */}
-    <button type="button" ref={sayRef} key={`say${lineNo}`} data-home-raid-say data-story-pop="1" data-say-side={sayPlace ? sayPlace.side : 'top'} data-say-hidden={sayPlace && sayPlace.hidden ? 'true' : undefined} aria-hidden={sayPlace && sayPlace.hidden ? 'true' : undefined} onClick={() => setLineNo((n) => n + 1)} aria-label="ジャックのひとこと(押すと次のセリフ)"
+    {speech && <button type="button" ref={sayRef} key={`say${lineNo}`} data-home-raid-say data-story-pop="1" data-say-side={sayPlace ? sayPlace.side : 'top'} data-say-hidden={sayPlace && sayPlace.hidden ? 'true' : undefined} aria-hidden={sayPlace && sayPlace.hidden ? 'true' : undefined} onClick={() => setLineNo((n) => n + 1)} aria-label="ジャックのひとこと(押すと次のセリフ)"
       style={{ position:'absolute', ...(sayPlace ? { left:sayPlace.left, top:sayPlace.top, width:sayPlace.width } : { left:'50%', bottom:'100%', marginLeft:-92, marginBottom:'4px', width:184 }),
         padding:'6px 10px', borderRadius:'14px', boxSizing:'border-box',
         border:`2px solid ${speechAccent}`, background:'#1c0a02ee', color:'#ffedd5', fontSize:`${homeRaidSayFont(sayPlace ? sayPlace.width : 184)}px`, fontWeight:900, lineHeight:1.45, textAlign:'left', cursor:'pointer',
@@ -52067,16 +52219,18 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
       <span aria-hidden="true" data-say-next-row style={{ display:sayInline ? 'none' : 'block', textAlign:'right', fontSize:'8px', opacity:.7 }}>▶ 次</span>
       {/* しっぽはジャックのほうへ向ける(上に置いたら下向き、右に置いたら左向き、左に置いたら右向き) */}
       {(!sayPlace || sayPlace.side === 'top') && <span aria-hidden="true" style={{ position:'absolute', left:sayPlace ? sayPlace.tail : '50%', bottom:-9, marginLeft:-8, width:0, height:0, borderLeft:'8px solid transparent', borderRight:'8px solid transparent', borderTop:`9px solid ${speechAccent}` }} />}
-    </button>
-    <button type="button" data-home-raid-jack onClick={onOpen} aria-label={allDone ? `${RAID_JACK_PUMPKIN.name}が遊びに来た！タップでレイド画面を開く` : `${tier.name}があらわれた！タップでレイド画面を開く`} style={HOME_RAID_JACK_BUTTON_STYLE}>
+    </button>}
+    <button type="button" data-home-raid-jack onClick={onOpen} aria-label={allDone ? `${isJack ? RAID_JACK_PUMPKIN.name : ev.afterBoss.name}${isJack ? 'が遊びに来た！' : 'がまだ暴れている！'}タップでレイド画面を開く` : `${tier.name}があらわれた！タップでレイド画面を開く`} style={HOME_RAID_JACK_BUTTON_STYLE}>
       {/* 通常絵とポーズ絵を重ねて、切り替えは透明度だけで行う(先に両方読み込める・切り替えで枠の高さが変わらない)。
           ポーズ絵は腕が左右に広がるぶん本体が幅の約半分になるので、通常絵を半分の大きさ(RAID_JACK_NORMAL_ART_SCALE)で描いて本体の大きさをそろえる。
           どちらも足もと(本体の下端)をそろえて置く */}
       <span data-jack-aura={allDone ? undefined : (Number(String(tier.id).slice(1)) || undefined)} data-home-raid-pumpkin={allDone ? 'true' : undefined} style={{ position:'relative', display:'block', width:'100%', aspectRatio:'1024 / 640' }}>
         {/* 段階が進むほど派手になるオーラは、施設より後ろの別の層(下の data-home-raid-aura-wrap)で描く */}
         {/* 大王を倒したあとは、小さなぱんぷきんが遊びに来る(オーラ・ポーズ絵なし。跳ねる動きは同じ) */}
-        {allDone ? <img className="mh-home-raid-jack-img" src={PUMPKIN_ICON_IMG} alt="" draggable={false}
-          style={{ position:'absolute', left:`${(1 - RAID_JACK_PUMPKIN_ART_SCALE) * 50}%`, bottom:0, width:`${RAID_JACK_PUMPKIN_ART_SCALE * 100}%`, height:'auto', filter:'drop-shadow(0 6px 10px #000a)', pointerEvents:'none' }} /> : <>
+        {allDone && isJack ? <img className="mh-home-raid-jack-img" src={PUMPKIN_ICON_IMG} alt="" draggable={false}
+          style={{ position:'absolute', left:`${(1 - RAID_JACK_PUMPKIN_ART_SCALE) * 50}%`, bottom:0, width:`${RAID_JACK_PUMPKIN_ART_SCALE * 100}%`, height:'auto', filter:'drop-shadow(0 6px 10px #000a)', pointerEvents:'none' }} />
+        : !isJack ? <img className="mh-home-raid-jack-img" data-home-raid-boss={ev.key} src={allDone ? ev.afterBossImg() : ev.bossImg()} alt="" draggable={false}
+          style={{ position:'absolute', left:'50%', bottom:0, height:'135%', width:'auto', transform:'translateX(-50%)', filter:'drop-shadow(0 6px 10px #000a)', pointerEvents:'none' }} /> : <>
         <img className="mh-home-raid-jack-img" src={JACK_IMG} alt="" draggable={false}
           style={{ position:'absolute', left:`${(1 - RAID_JACK_NORMAL_ART_SCALE) * 50}%`, bottom:0, width:`${RAID_JACK_NORMAL_ART_SCALE * 100}%`, height:'auto', opacity:pose ? 0 : 1, filter:`drop-shadow(0 6px 10px #000a) ${raidJackAuraGlowFilter(Number(String(tier.id).slice(1)) || 0, 0.8)}`, pointerEvents:'none' }} />
         <img className="mh-home-raid-jack-img" src={JACK_POSE_IMG} alt="" draggable={false} aria-hidden="true"
@@ -52102,6 +52256,12 @@ function HomeScreen({
   onOpenBattle, onOpenManagement, onOpenMarket, onOpenProfile, onOpenRhythm, onOpenSettings,
   onOpenTemple, openChangelog, openGiftBox, openMissions, profileFrameId, resolveIconUrl, spotClass,
   raidJackVisible = false, raidJackEventId, onOpenRaidJack,
+  // クリスマスのイベントページを開く(台帳 r1126-006)。開始時刻までは null(札は今までどおり更新履歴を開く)
+  onOpenXmasEvent = null,
+  // クリスマスのレイドのボス(ジャックと同じ置き方・押すとイベントページの「レイド」タブ)。出すかどうかは 60-app.jsx が決める
+  raidXmasVisible = false, raidXmasEventId = '', onOpenRaidXmas = null,
+  // クリスマスのイベントページの入口(台帳 r1126-014)。{ onOpen, preOpen }。null なら出さない(11/28 10:00〜12/31 4:00 に 60-app.jsx が渡す)
+  xmasEntry = null,
   // 助手とおしゃべり(2026-10-14)。公開の印 assistantChat が立つまでは null(ボタンを出さない)
   onOpenAssistantChat = null,
   // MFバトルカードの入口(案A・左の列のいちばん下)。公開の印 cardBattle が立ち、公開のお話を見た人だけ(60-app.jsx が決める)
@@ -52184,6 +52344,8 @@ function HomeScreen({
     return ()=>clearInterval(id);
   },[homeStripCount]);
   const homeStripShow=homeStripCount?homeStripIdx%homeStripCount:0;
+  // クリスマスのイベントの入口(r1126-014・社長の選択は「上の大きな帯」)。細バナーの場所に置き、同じ中身の「クリスマスイベント」の細バナーは出さない
+  const xmasEntryInStrip=!!xmasEntry;
   // HOMEの助手コメントを出すか(2026-11-17 あっくん「助手のコメントのオンオフ」)。設定は 21-assistant.jsx の
   // HOME_ASSISTANT_COMMENT_STORE(既定は入)。「切」のときは吹き出しの枠ごと描かず、そのぶん広場が広くなる
   const homeComment=useHomeAssistantComment();
@@ -52194,7 +52356,8 @@ function HomeScreen({
         <picture className={`mh-home-background ${homeBackgroundReady?'is-ready':''} ${homeBackgroundWide?'is-wide':''} ${homeBackgroundSquare?'is-square':''}`} aria-hidden="true"><img className="mh-home-backdrop" src={homeBackgroundSrc} alt=""/><img className="mh-home-main" src={homeBackgroundSrc} alt=""/></picture>
         <div className="mh-home-masumon-layer" aria-hidden="true">{homePastureMasumons.map((masu,index)=><HomeWalkingMasumon key={masu.id} masu={masu} base={ALL_PLAYER_MONSTERS[masu.baseId]} masuColors={getMasuColors(masu)} index={index} count={homePastureMasumons.length}/>)}</div>
         {/* 設定を光らせるときは、上の帯ごと暗幕より前に出す(帯が z-index を持っていて中だけ前に出せないため) */}
-        {raidJackVisible&&<HomeRaidJack eventId={raidJackEventId} onOpen={onOpenRaidJack}/>}
+        {raidXmasVisible&&typeof onOpenRaidXmas==='function'?<HomeRaidJack key="raid-xmas" ev={RAID_EVENT_XMAS} eventId={raidXmasEventId} onOpen={onOpenRaidXmas}/>
+          :raidJackVisible&&<HomeRaidJack eventId={raidJackEventId} onOpen={onOpenRaidJack}/>}
         <header className={`mh-home-status${spotClass('settings')}`}>
           <button type="button" className="mh-home-player relative" onClick={onOpenProfile} aria-label="プロフィールを開く">
             <HomeProfileIcon src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={profileFrameId}/>
@@ -52212,8 +52375,11 @@ function HomeScreen({
         </header>
         {/* 期間ものの細バナー(2026-11-17 ホーム一新)。イベントと公式杯を、上の帯の下の1本に集約する。
             両方あるときはカルーセルで切り替わる(homeStripShow)。近日公開の予告はバトルカードのカード側へ移した */}
-        {homeStripCount>0&&<div className="mh-home-event-strip" data-home-event-strip>
-          {homeEventCampaign&&homeStripShow===0&&<button type="button" data-home-event-banner className="mh-home-event-banner" onClick={openChangelog} aria-label={`${homeEventCampaign.banner.title}${homeEventCampaign.banner.title2||''} ${homeEventCampaign.banner.sub}`}>
+        {xmasEntryInStrip&&<div className="mh-home-event-strip" data-home-xmas-entry-strip style={{width:'calc(100% - 78px)'}}>
+          <HomeXmasEventEntry onOpen={xmasEntry.onOpen} preOpen={!!xmasEntry.preOpen}/>
+        </div>}
+        {homeStripCount>0&&!(xmasEntryInStrip&&homeEventCampaign&&homeEventCampaign.id==='xmas_2026'&&!homeCardTour)&&<div className="mh-home-event-strip" data-home-event-strip>
+          {homeEventCampaign&&homeStripShow===0&&<button type="button" data-home-event-banner className="mh-home-event-banner" onClick={homeEventCampaign.id==='xmas_2026'&&typeof onOpenXmasEvent==='function'?onOpenXmasEvent:openChangelog} aria-label={`${homeEventCampaign.banner.title}${homeEventCampaign.banner.title2||''} ${homeEventCampaign.banner.sub}`}>
             {/* title2 … 題の2行目(2026-11-14「本オープン記念」だけでは何の本オープンか分からないため、題を2行に分けられるようにした) */}
             {/* 2026-11-23 r1119-131 社長「右の時計の手前まで横に伸ばし、行数を減らして縦を詰める」: 1行目に題と期間(sub)、2行目に副題(title2)。
                 幅が足りない端末では期間だけが題の下へ折り返す(.r1 の flex-wrap) */}
@@ -66410,7 +66576,7 @@ const RAID_WAY_BUTTONS = Object.freeze({
   rhythm: { label: 'モンヒロビートで', data: 'data-raid-jack-challenge-rhythm', tone: 'border-fuchsia-300/70 bg-fuchsia-800' },
   card: { label: 'バトルカードで', data: 'data-raid-challenge-card', tone: 'border-sky-300/70 bg-sky-800' },
 });
-const RaidJackScreen = ({ ev = RAID_EVENT_JACK, ways = null, initialTier = 0, onBack, onChallenge, onPurchase, onClaimRewards, beatPoints = 0, eventId, forced = false, unlimited = false, guideVisible = false, onDismissGuide, renderPlace, renderIcon, cardClass }) => {
+const RaidJackScreen = ({ ev = RAID_EVENT_JACK, ways = null, initialTier = 0, onBack, onChallenge, onPurchase, onClaimRewards, beatPoints = 0, eventId, forced = false, unlimited = false, guideVisible = false, onDismissGuide, renderPlace, renderIcon, cardClass, head = null, shellClass = '' }) => {
   const [tab, setTab] = useState('a');
   const [sel, setSel] = useState(() => ({ a: Math.min(Math.max(Math.floor(Number(initialTier) || 0), 0), ev.aTiers.length - 1), b: 0 }));   // モンヒロビート挑戦から戻ったときは、挑んでいた段階を選んだまま
   const [state, setState] = useState(() => raidJackDefaultState());
@@ -66511,11 +66677,12 @@ const RaidJackScreen = ({ ev = RAID_EVENT_JACK, ways = null, initialTier = 0, on
     : !isOpenTier ? '前の段階を倒すと開きます' : closedTier ? 'この段階は倒されました(次の段階へ)' : remaining <= 0 ? '今日の挑戦回数がありません' : 'この段階に挑戦する';
 
   return (
-    <div className={`${SCREEN_SHELL_CLASS} overflow-hidden [@media(orientation:landscape)_and_(max-height:520px)]:overflow-y-auto mh-scroll`} data-raid-jack-screen>
+    <div className={`${SCREEN_SHELL_CLASS} overflow-hidden [@media(orientation:landscape)_and_(max-height:520px)]:overflow-y-auto mh-scroll ${shellClass}`} data-raid-jack-screen>
       {/* 横向きの背の低い画面(844×390 など)では、上の札だけで高さを使い切り、一覧が0になって挑戦のボタンが画面の下の外に出ていた
           (送ることもできず挑戦できない。ダメダシ見回り 10/26 raid #1)。その画面だけ、画面ごと下へ送れる形にする */}
-      <ScreenHead title={<RaidJackFitTitle text={ev.title} />} icon={ev.icon} accent="text-orange-200" onBack={onBack}
-        note={forced ? '(デバッグ表示・別のイベントIDの記録)' : ev.note} />
+      {/* head: クリスマスのイベントページ(79-screen-xmas-event.jsx)が、題・ポスター・タブをこの位置に入れる。ジャックは渡さない(今までどおり) */}
+      {head || <ScreenHead title={<RaidJackFitTitle text={ev.title} />} icon={ev.icon} accent="text-orange-200" onBack={onBack}
+        note={forced ? '(デバッグ表示・別のイベントIDの記録)' : ev.note} />}
       {guideVisible && (
         <div data-raid-jack-guide className="mb-2 shrink-0">
           <AssistantBubble scene="raidJackIntro" compact />
@@ -66895,6 +67062,376 @@ const RaidJackPrepScreen = ({ ev = RAID_EVENT_JACK, kind, tierIndex, candidates,
         )}
       </div>
     </div>
+  );
+};
+
+// ---- part: 79-screen-xmas-event.jsx ----
+// ===== クリスマスイベント「聖夜の名探偵」のイベントページ(台帳 r1126-006・社長 2026-11-26「この形で作る」) =====
+// 上: 題・戻る・横長のポスター・開催期間の帯 / タブ: 物語・レイド・ボーナス
+//  ・物語: 登場人物パネル(はじめてだれかがいなくなった話を読んでから)と話の一覧。話は選んで読む(自動では流さない)
+//  ・レイド: クリスマスのレイド画面(79-screen-raid-jack.jsx の RaidJackScreen)をそのまま入れる。上の題・ポスター・タブは head で渡す
+//  ・ボーナス: 期間中のボーナスの一覧(絵文字は使わずアイコン)
+// 入口は App の openRaidXmas(HOME のイベントの札・デバッグ)。開始時刻まで(RELEASE_FLAGS.raidXmas が偽)は出さない。
+// gameState はレイドと同じ 'RAID_JACK'(バトル・ビート・カードから戻るときに setGameState('RAID_JACK') でここへ帰る)。
+
+// ポスター(いまは「開催予告」の絵の仮。帯の無い本番用の絵が来たら、この1行のファイルだけ差し替える)
+const XMAS_EVENT_POSTER_IMG = 'images/events/xmas-2026-event-wide.jpg';
+
+const XMAS_EVENT_TABS = Object.freeze([
+  { id: 'story', label: '物語', color: '#b4232c' },
+  { id: 'raid', label: 'レイド', color: '#15803d' },
+  { id: 'bonus', label: 'ボーナス', color: '#a16207' },
+]);
+
+// 日時を「12/1(火) 4:00」の形で(日本時間)
+const XMAS_EVENT_WEEK = ['日', '月', '火', '水', '木', '金', '土'];
+const xmasEventDateLabel = (iso, withYear = false) => {
+  const ms = Date.parse(iso);
+  if (!Number.isFinite(ms)) return '';
+  const d = new Date(ms + 9 * 3600000);
+  const y = withYear ? `${d.getUTCFullYear()}/` : '';
+  return `${y}${d.getUTCMonth() + 1}/${d.getUTCDate()}(${XMAS_EVENT_WEEK[d.getUTCDay()]}) ${d.getUTCHours()}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
+};
+// 終わりは 4:00 ちょうどなので、画面には1分前の 3:59 と出す(ポスター・告知と同じ)
+const xmasEventPeriodText = () => `${xmasEventDateLabel(RAID_XMAS_EVENT.startAt, true)} 〜 ${xmasEventDateLabel(new Date(Date.parse(RAID_XMAS_EVENT.endAt) - 60000).toISOString())}`;
+
+// ボーナスのアイコン(10-core.jsx の _icon に無い形だけ、ここで描く)
+const XMAS_EVENT_ICON_PATHS = {
+  music: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+  shirt: '<path d="M20.4 3.5 16 2a4 4 0 0 1-8 0L3.6 3.5a2 2 0 0 0-1.3 2.2l.6 3.5a1 1 0 0 0 1 .8H6v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V10h2.2a1 1 0 0 0 1-.8l.6-3.5a2 2 0 0 0-1.4-2.2z"/>',
+  picture: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/>',
+};
+const XmasEventIcon = ({ name, size = 22 }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+    strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" dangerouslySetInnerHTML={{ __html: XMAS_EVENT_ICON_PATHS[name] || '' }} />
+);
+
+const XMAS_EVENT_BONUSES = Object.freeze([
+  { id: 'rhythm', icon: () => <XmasEventIcon name="music" />, tone: 'border-fuchsia-300/50 bg-fuchsia-950/40 text-fuchsia-100',
+    title: 'モンヒロビート', big: '5倍', body: 'もらえるビートPと、クイックの∞周回を回しながら遊ぶと入る周回数が5倍になります' },
+  { id: 'card', icon: () => <Layers size={22} />, tone: 'border-sky-300/50 bg-sky-950/40 text-sky-100',
+    title: 'MFバトルカード', big: '1.5倍', body: '対戦のごほうび(ビートP・カードランクの経験値・クイック周回)が1.5倍になります' },
+  { id: 'battle', icon: () => <Sword size={22} />, tone: 'border-orange-300/50 bg-orange-950/40 text-orange-100',
+    title: 'モンヒロバトル', big: '1.5倍', body: 'バトルでもらえる経験値とダイヤが1.5倍になります' },
+  { id: 'costume', icon: () => <XmasEventIcon name="shirt" />, tone: 'border-rose-300/50 bg-rose-950/40 text-rose-100',
+    title: '助手のクリスマスきせかえ', big: '', body: '助手のサンタ姿のきせかえが登場します' },
+  { id: 'art', icon: () => <XmasEventIcon name="picture" />, tone: 'border-emerald-300/50 bg-emerald-950/40 text-emerald-100',
+    title: 'ホーム・タイトルのクリスマスの絵', big: '', body: 'ホームとタイトルがクリスマスの絵になります(設定の「ホーム画面アレンジ」で選べます)' },
+]);
+
+// ---- 見た目(クリスマスの飾り・台帳 r1126-006 社長「作りをもっと丁寧に」) ----
+//  雪(背景の粒・ゆっくり落ちる)・柊・金の縁・リボンの帯。ハロウィンのレイド画面と同じ画面の骨組み(SCREEN_SHELL_CLASS・ScreenHead・ScreenTabs)の上に飾りだけ足す。
+//  動きは prefers-reduced-motion で止める。CSS は <head> に1回だけ入れる(画面の DOM に <style> を混ぜない)
+const XMAS_EVENT_CSS = `
+.mh-xmas-shell { position: relative; isolation: isolate; background: radial-gradient(120% 60% at 50% 0%, #17305f 0%, #0b1733 45%, #060b1c 100%); }
+.mh-xmas-shell::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: .55;
+  background-image: radial-gradient(1.6px 1.6px at 12% 18%, #fff 50%, transparent 51%), radial-gradient(1.2px 1.2px at 32% 62%, #fff 50%, transparent 51%),
+    radial-gradient(2px 2px at 58% 28%, #fff 50%, transparent 51%), radial-gradient(1.3px 1.3px at 78% 74%, #fff 50%, transparent 51%),
+    radial-gradient(1.7px 1.7px at 90% 12%, #fff 50%, transparent 51%), radial-gradient(1.1px 1.1px at 45% 90%, #fff 50%, transparent 51%);
+  background-size: 220px 260px; animation: mh-xmas-snow 26s linear infinite; }
+@keyframes mh-xmas-snow { from { background-position: 0 0; } to { background-position: 40px 260px; } }
+.mh-xmas-title { background: linear-gradient(180deg, #fff6d6 0%, #f3cf72 55%, #c8923a 100%); -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: none; letter-spacing: .04em; }
+.mh-xmas-frame { border: 2px solid #e6c068; box-shadow: 0 0 0 2px #5c1414, 0 0 0 3px #e6c06866, 0 6px 16px #0008; }
+.mh-xmas-ribbon { position: relative; background: linear-gradient(180deg, #b3202a 0%, #7d1018 100%); border-top: 1.5px solid #f0c96c; border-bottom: 1.5px solid #f0c96c;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 10px) 50%, 100% 100%, 0 100%, 10px 50%); }
+.mh-xmas-card { background: linear-gradient(180deg, #13213f 0%, #0c162d 100%); border: 1px solid #e6c06855; }
+.mh-xmas-card[data-status="locked"], .mh-xmas-card[data-status="waiting"] { background: #0a1124; border-color: #ffffff12; }
+.mh-xmas-medal { background: radial-gradient(circle at 35% 30%, #fff3c4 0%, #e6c068 45%, #a87424 100%); color: #3a1d05; box-shadow: 0 0 0 2px #5c1414, 0 2px 4px #0008; }
+.mh-xmas-medal[data-dim] { background: #1c2742; color: #64748b; box-shadow: 0 0 0 1px #ffffff1a; }
+.mh-xmas-new { background: linear-gradient(180deg, #e11d48, #9f1239); box-shadow: 0 0 0 1px #f0c96c; }
+@media (prefers-reduced-motion: reduce) { .mh-xmas-shell::before { animation: none; } }
+@keyframes mh-xmas-cast-fade { from { filter: none; } to { filter: grayscale(1) brightness(.7); } }
+@keyframes mh-xmas-cast-stamp { 0% { opacity: 0; transform: rotate(-14deg) scale(2.2); } 60% { opacity: 1; transform: rotate(-14deg) scale(.92); } 100% { opacity: 1; transform: rotate(-14deg) scale(1); } }
+[data-xmas-cast-face][data-away] img { filter: grayscale(1) brightness(.7); }
+[data-xmas-cast-face][data-away][data-newly] img { animation: mh-xmas-cast-fade 1.2s ease-out both; }
+[data-xmas-cast-stamp] { transform: rotate(-14deg); }
+[data-xmas-cast-face][data-newly] [data-xmas-cast-stamp] { animation: mh-xmas-cast-stamp .5s 1.1s ease-out both; }
+@media (prefers-reduced-motion: reduce) { [data-xmas-cast-face] img, [data-xmas-cast-stamp] { animation: none !important; } }
+`;
+const useXmasEventCss = () => {
+  useEffect(() => {
+    if (typeof document === 'undefined' || document.getElementById('mh-xmas-event-css')) return;
+    const tag = document.createElement('style'); tag.id = 'mh-xmas-event-css'; tag.textContent = XMAS_EVENT_CSS; document.head.appendChild(tag);
+  }, []);
+};
+// 柊(葉2枚と実3つ)。飾りなので読み上げない
+const XmasHolly = ({ size = 22, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true" className={className}>
+    <path d="M15 17 C11 9 5 9 2 12 C5 13 5 16 3 18 C7 17 9 20 9 22 C11 19 14 19 15 17Z" fill="#15803d" stroke="#0b4d24" strokeWidth="1" />
+    <path d="M17 17 C21 9 27 9 30 12 C27 13 27 16 29 18 C25 17 23 20 23 22 C21 19 18 19 17 17Z" fill="#16a34a" stroke="#0b4d24" strokeWidth="1" />
+    <circle cx="13.5" cy="18.5" r="3" fill="#dc2626" stroke="#7f1d1d" strokeWidth=".8" />
+    <circle cx="18.5" cy="18.5" r="3" fill="#ef4444" stroke="#7f1d1d" strokeWidth=".8" />
+    <circle cx="16" cy="14.5" r="3" fill="#dc2626" stroke="#7f1d1d" strokeWidth=".8" />
+    <circle cx="15" cy="13.6" r=".9" fill="#fff" opacity=".7" />
+  </svg>
+);
+// 小見出し(柊+金の字)。物語・ボーナスの区切りに使う
+const XmasSectionTitle = ({ children, right = null }) => (
+  <div className="mb-1.5 flex items-center gap-1.5 px-0.5">
+    <XmasHolly size={18} />
+    <span className="mh-xmas-title text-[13px] font-black">{children}</span>
+    <span className="h-px flex-1 bg-gradient-to-r from-amber-300/50 to-transparent" aria-hidden="true" />
+    {right}
+  </div>
+);
+
+// ---- 登場人物パネル(推理ドラマの登場人物パネル風・台帳 r1125-063) ----
+//  no: 読み終えた話の番号。はじめてだれかがいなくなる話より前は何も出さない(社長 2026-11-26)
+//  いなくなった人は白黒+「ゆくえ不明」のはんこ。帯に「のこった人 ◯人 / 空になった箱 ◯つ」(10人みんなを数える)
+//  animate: その話でいなくなった人だけ、色が抜けてはんこが押される動き(お話の終わりで使う。一覧では動かさない)
+const XmasCastPanel = ({ no, animate = false, compact = false }) => {
+  useXmasEventCss();
+  const at = xmasStoryCastAt(no);
+  if (!at.shown) return null;
+  return (
+    <section data-xmas-cast-panel={no} aria-label="登場人物" className="mh-xmas-frame rounded-2xl bg-[#0a1430]/95 px-2 pb-2 pt-1.5">
+      <XmasSectionTitle>登場人物</XmasSectionTitle>
+      <div className="grid grid-cols-5 gap-x-1.5 gap-y-1">
+        {XMAS_STORY_CAST.map((c) => {
+          const away = at.missing.includes(c.id);
+          const newly = animate && at.newly.includes(c.id);
+          return (
+            <div key={c.id} data-xmas-cast-face={c.id} data-away={away ? '' : undefined} data-newly={newly ? '' : undefined} className="min-w-0 text-center">
+              <div className={`relative mx-auto aspect-square w-full overflow-hidden rounded-md border-2 ${away ? 'border-slate-600 bg-slate-800' : 'border-[#f3e3b3] bg-[#2a3a62]'} ${compact ? 'max-w-[48px]' : 'max-w-[66px]'}`}>
+                <img src={xmasCastFaceOf(c)} alt="" className="h-full w-full object-cover object-top" />
+                {away && (
+                  <span data-xmas-cast-stamp aria-label="ゆくえ不明" className="absolute inset-0 m-auto flex h-max w-max flex-col items-center rounded border-2 border-rose-500 bg-white/85 px-0.5 text-[10px] font-black leading-none text-rose-600"><span className="py-px">ゆくえ</span><span className="py-px">不明</span></span>
+                )}
+              </div>
+              <div className={`mt-0.5 truncate text-[10px] font-black ${away ? 'text-slate-500' : 'text-amber-50'}`}>{c.name}</div>
+            </div>
+          );
+        })}
+      </div>
+      <div data-xmas-cast-band className="mh-xmas-ribbon mt-1.5 py-1 text-center text-[11px] font-black text-amber-50">
+        のこった人 <b className="text-[13px] text-white">{at.left}</b>人 ／ 空になった箱 <b className="text-[13px] text-white">{at.emptyBoxes}</b>つ
+      </div>
+    </section>
+  );
+};
+
+// ---- 物語タブ ----
+const xmasStoryHasScript = (chapter) => typeof EVENT_REPLAYS !== 'undefined' && Array.isArray(EVENT_REPLAYS)
+  && EVENT_REPLAYS.some((e) => e && e.id === chapter.scriptId);
+const XMAS_STORY_WAY_LABELS = Object.freeze({ battle: 'モンヒロバトル', rhythm: 'モンヒロビート', card: 'MFバトルカード' });
+const XmasTypeTag = ({ type, dim = false }) => (
+  <span className={`inline-flex min-h-[22px] shrink-0 items-center gap-0.5 rounded-full px-2 text-[10px] font-black ${type === 'fight' ? 'bg-orange-700 text-orange-50' : 'bg-indigo-700 text-indigo-50'} ${dim ? 'opacity-40' : ''}`}>
+    {type === 'fight' ? <Sword size={11} /> : <BookOpen size={11} />}{type === 'fight' ? '戦う' : '読む'}
+  </span>
+);
+
+const XmasStoryTab = ({ version = 0, allOpen = false, fightWays = [], onRead, onFight }) => {
+  const [progress, setProgress] = useState(null);
+  const [sel, setSel] = useState(null);
+  const nowMs = Date.now();
+  useEffect(() => {
+    let alive = true;
+    xmasStoryLoad().then((p) => { if (alive) setProgress(p); });
+    return () => { alive = false; };
+  }, [version]);
+  if (!progress) return <div className="py-6 text-center text-[11px] text-slate-300">読み込み中…</div>;
+  const reached = xmasStoryReachedNo(progress);
+  const readCount = XMAS_STORY_CHAPTERS.filter((c) => progress.cleared.includes(c.id)).length;
+  const chapter = sel ? XMAS_STORY_CHAPTERS.find((c) => c.id === sel) : null;
+  const select = (c) => {
+    setSel(c.id);
+    // 開いた印(NEW を消す)。押した話だけ
+    void xmasStoryMarkSeen(c.id).then((p) => setProgress(p));
+  };
+  return (
+    <div data-xmas-story className="space-y-3">
+      <XmasCastPanel no={reached} compact />
+      <section>
+        <XmasSectionTitle right={<span className="text-[10px] font-black text-amber-100/80">{readCount} / {XMAS_STORY_CHAPTERS.length} 話</span>}>ひとりで進める物語</XmasSectionTitle>
+        <p className="mb-2 px-0.5 text-[10px] font-bold leading-relaxed text-slate-300" style={JA_LABEL_STYLE}>{jaWrap('毎日1話ずつ開きます。開いた話は、いつでも読み返せます')}</p>
+        <ol data-xmas-story-list className="space-y-1.5">
+          {XMAS_STORY_CHAPTERS.map((c) => {
+            const st = xmasStoryStatusOf(c, progress, nowMs, allOpen);
+            const locked = st === 'locked';
+            const can = !locked && st !== 'waiting';
+            const prev = xmasStoryPrevOf(c);
+            return (
+              <li key={c.id}>
+                <button type="button" data-xmas-story-chapter={c.id} data-status={st} disabled={!can} onClick={() => select(c)}
+                  className="mh-xmas-card flex w-full min-h-[56px] items-center gap-2.5 rounded-xl px-2.5 py-2 text-left active:scale-[0.99] disabled:active:scale-100">
+                  <span className="mh-xmas-medal flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-full leading-none" data-dim={can ? undefined : ''}>
+                    {c.prologue ? <b className="text-[12px] font-black">序章</b> : <><small className="text-[10px] font-black">第</small><b className="text-[14px] font-black">{c.no}</b></>}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    {/* まだ開いていない話は、題も「読む/戦う」も出さない(ネタバレになるため・社長 2026-11-26) */}
+                    <span className={`block truncate text-[14px] font-black ${can ? 'text-white' : 'text-slate-500'}`}>{locked ? `${c.prologue ? '序章' : `第${c.no}話`} 〜？？？〜` : c.title}</span>
+                    {locked && <span className="mt-0.5 flex items-center gap-1 text-[10px] font-bold text-slate-400"><Lock size={11} />{xmasEventDateLabel(c.openAt)} に開きます</span>}
+                    {st === 'waiting' && <span className="mt-0.5 flex items-center gap-1 text-[10px] font-bold text-slate-400"><Lock size={11} />前の話を{prev && prev.type === 'fight' ? '進める' : '読む'}と選べます</span>}
+                    {can && <span className="mt-1 flex items-center gap-1.5"><XmasTypeTag type={c.type} /></span>}
+                  </span>
+                  {!locked && st === 'waiting' && <XmasTypeTag type={c.type} dim />}
+                  <span className="flex w-12 shrink-0 justify-center text-[10px] font-black">
+                    {st === 'cleared' ? <span data-xmas-story-done className="flex flex-col items-center text-emerald-300"><Check size={16} />{c.type === 'fight' ? 'クリア' : '読んだ'}</span>
+                      : st === 'new' ? <span className="mh-xmas-new rounded px-1.5 py-0.5 text-white">NEW</span>
+                      : can ? <ChevronRight size={18} className="text-amber-200/80" /> : null}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+      </section>
+      {chapter && (
+        <div data-xmas-story-sheet={chapter.id} className="fixed inset-0 z-[80] flex items-end justify-center bg-black/65 p-3 sm:items-center" onClick={() => setSel(null)}>
+          <div role="dialog" aria-label={chapter.prologue ? chapter.title : `第${chapter.no}話 ${chapter.title}`} className="mh-xmas-frame w-full max-w-md rounded-2xl bg-gradient-to-b from-[#16264a] to-[#0b1530] p-4" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-3 flex items-center gap-3">
+              <span className="mh-xmas-medal flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-full leading-none">{chapter.prologue ? <b className="text-[13px] font-black">序章</b> : <><small className="text-[10px] font-black">第</small><b className="text-[17px] font-black">{chapter.no}</b></>}</span>
+              <div className="min-w-0">
+                <div className="mb-0.5"><XmasTypeTag type={chapter.type} /></div>
+                <div className="mh-xmas-title text-[18px] font-black leading-tight" style={JA_LABEL_STYLE}>{jaWrap(chapter.title)}</div>
+              </div>
+              <XmasHolly size={28} className="ml-auto shrink-0" />
+            </div>
+            {xmasStoryHasScript(chapter) ? (
+              <button type="button" data-xmas-story-read onClick={() => { setSel(null); onRead && onRead(chapter); }}
+                className="mb-2 flex w-full min-h-[50px] items-center justify-center gap-1.5 rounded-xl border-2 border-indigo-200/70 bg-indigo-700 text-[14px] font-black text-white active:scale-95">
+                <BookOpen size={18} />お話を読む
+              </button>
+            ) : (
+              <div data-xmas-story-pending className="mb-2 rounded-xl border border-white/10 bg-black/30 p-3 text-center text-[11px] font-bold text-slate-300">この話のお話は準備中です</div>
+            )}
+            {chapter.type === 'fight' && (
+              <div data-xmas-story-ways className="mb-2 space-y-1.5">
+                <div className="text-[11px] font-bold text-amber-100" style={JA_LABEL_STYLE}>{jaWrap('好きな遊びを選んで、勝つと次の話へ進めます')}</div>
+                {['battle', 'rhythm', 'card'].map((way) => {
+                  const ready = fightWays.includes(way);
+                  return (
+                    <button type="button" key={way} data-xmas-story-way={way} disabled={!ready} onClick={() => { setSel(null); onFight && onFight(chapter, way); }}
+                      className="flex w-full min-h-[46px] items-center justify-center gap-1.5 rounded-xl border-2 border-orange-200/70 bg-orange-700 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400">
+                      <Sword size={15} />{XMAS_STORY_WAY_LABELS[way]}で戦う{ready ? '' : '(準備中)'}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            <button type="button" data-xmas-story-sheet-close onClick={() => setSel(null)}
+              className="w-full min-h-[44px] rounded-xl border border-white/15 bg-slate-800 text-[12px] font-black text-slate-200 active:scale-95">閉じる</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ---- ボーナスタブ ----
+const XmasBonusTab = () => (
+  <div data-xmas-bonus className="space-y-2">
+    <XmasSectionTitle>期間中のボーナス</XmasSectionTitle>
+    <p className="px-0.5 text-[10px] font-bold leading-relaxed text-slate-300" style={JA_LABEL_STYLE}>{jaWrap('イベントの期間中は、どれも自動でかかります')}</p>
+    {XMAS_EVENT_BONUSES.map((b) => (
+      <div key={b.id} data-xmas-bonus-item={b.id} className={`flex items-center gap-3 rounded-2xl border-2 p-3 shadow-lg shadow-black/30 ${b.tone}`}>
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-amber-200/40 bg-black/35">{b.icon()}</span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="text-[13px] font-black text-white" style={JA_LABEL_STYLE}>{jaWrap(b.title)}</span>
+            {b.big && <b className="mh-xmas-title shrink-0 text-[20px] font-black">{b.big}</b>}
+          </div>
+          <p className="mt-0.5 text-[11px] font-bold leading-snug" style={JA_LABEL_STYLE}>{jaWrap(b.body)}</p>
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
+// ---- ページ ----
+//  tab / onTab … いまのタブ(App が持つ。バトルなどから戻ったときも同じタブに帰る)
+//  raid        … RaidJackScreen へそのまま渡す物(ev・ways・onChallenge など)
+//  storyVersion… 読んだ印が変わったら App が増やす(物語タブが読み直す)
+//  preOpen     … 開幕(11/30 10:00)より前。序章だけ読める。レイド・ボーナスのタブは「11/30 10:00 から」と出す(台帳 r1126-014)
+const XmasEventScreen = ({ tab = 'story', onTab, onBack, forced = false, preOpen = false, raid = null, storyVersion = 0, fightWays = [], onReadChapter, onFightChapter }) => {
+  useXmasEventCss();
+  const head = (
+    <div data-xmas-event-head className="mx-auto w-full max-w-2xl shrink-0">
+      <ScreenHead title={<span className="flex items-center gap-1"><XmasHolly size={24} /><span className="mh-xmas-title">聖夜の名探偵</span></span>}
+        onBack={onBack} compact note={forced ? '(デバッグ表示・開始前でも見えます)' : ''} />
+      <div data-xmas-event-poster className="mh-xmas-frame mx-auto mb-2 w-fit max-w-full overflow-hidden rounded-xl bg-slate-950">
+        <img src={XMAS_EVENT_POSTER_IMG} alt="クリスマスイベント 聖夜の名探偵" className={`block h-auto w-auto max-w-full ${tab === 'raid' ? 'max-h-[13vh]' : 'max-h-[24vh]'}`} />
+      </div>
+      <div data-xmas-event-period className="mh-xmas-ribbon mx-auto mb-2 max-w-md px-5 py-1 text-center text-[11px] font-black text-amber-50">
+        開催期間 {xmasEventPeriodText()}
+      </div>
+      <ScreenTabs items={XMAS_EVENT_TABS} value={tab} onChange={(id) => onTab && onTab(id)} />
+    </div>
+  );
+  if (tab === 'raid' && raid && !preOpen) return <RaidJackScreen key="raid-xmas" {...raid} head={head} shellClass="mh-xmas-shell" />;
+  return (
+    <div className={`${SCREEN_SHELL_CLASS} mh-xmas-shell overflow-hidden [@media(orientation:landscape)_and_(max-height:520px)]:overflow-y-auto mh-scroll`} data-xmas-event={tab}>
+      {head}
+      <div className={`${SCREEN_LIST_CLASS} [@media(orientation:landscape)_and_(max-height:520px)]:flex-none [@media(orientation:landscape)_and_(max-height:520px)]:overflow-visible`}>
+        <div className="mx-auto w-full max-w-2xl pb-2">
+          {preOpen && tab !== 'story' ? (
+            <div data-xmas-event-preopen={tab} className="mh-xmas-frame mt-2 rounded-2xl bg-[#0a1430]/95 px-4 py-6 text-center">
+              <XmasHolly size={40} className="mx-auto mb-2" />
+              <div className="mh-xmas-title text-[18px] font-black">{xmasEventDateLabel(RAID_XMAS_EVENT.startAt)} から</div>
+              <p className="mt-2 text-[12px] font-bold leading-relaxed text-slate-200" style={JA_LABEL_STYLE}>{jaWrap(tab === 'raid' ? 'レイドはイベントの開幕と同時に始まります。いまは「物語」の序章が読めます' : '期間中のボーナスは、イベントの開幕と同時にかかります')}</p>
+            </div>
+          ) : tab === 'bonus' ? <XmasBonusTab />
+            : <XmasStoryTab version={storyVersion} allOpen={forced} fightWays={fightWays} onRead={onReadChapter} onFight={onFightChapter} />}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ---- HOME の入口(台帳 r1126-014・社長「目立つように作ったほうがいい」) ----
+//  ひと目でクリスマスのイベントと分かる札。ポスターの絵を切り抜き、金の縁・柊・ゆっくり光るきらめきを付ける。
+//  形は「上の大きな帯」(社長の選択 2026-11-26・案A)。細バナーの場所に置き、右の丸ボタンの列にはかからない幅にする。
+//  背の低い横画面では、ボスの頭にかからないよう、右の丸ボタンの列の左の空きへ小さく置く
+//  出すのは 11/28 10:00(序章が開く)から 12/31 4:00 まで。11/30 10:00 までは「序章公開中」と出す
+// イベントページを開けるか: 序章が開く時刻から、イベントの終わりまで
+const xmasEventPageOpenAt = (nowMs) => {
+  const at = Date.parse(XMAS_STORY_PROLOGUE_OPEN_AT);
+  return Number.isFinite(nowMs) && nowMs >= at && raidXmasWindowAt(nowMs) !== 'after';
+};
+const XMAS_HOME_ENTRY_CSS = `
+.mh-xmas-entry { position: relative; display: block; overflow: hidden; padding: 0; border: 2px solid #f0c96c; border-radius: 12px; background: #0b1733;
+  box-shadow: 0 0 0 2px #6b1218, 0 0 14px #f0c96c66, 0 4px 10px #000a; color: #fff; text-align: left; touch-action: manipulation; transition: transform .1s, filter .1s; }
+.mh-xmas-entry:active { transform: scale(.96); filter: brightness(1.2); }
+.mh-xmas-entry img.mh-xmas-entry-art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+.mh-xmas-entry::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(105deg, transparent 35%, #fff6 48%, transparent 60%);
+  transform: translateX(-120%); animation: mh-xmas-entry-shine 4.5s ease-in-out 1s infinite; }
+@keyframes mh-xmas-entry-shine { 0%, 70% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
+.mh-xmas-entry-spark { position: absolute; width: 8px; height: 8px; pointer-events: none; background: radial-gradient(circle, #fff 0 18%, #fde68a 30%, transparent 62%);
+  clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%); animation: mh-xmas-entry-twinkle 2.4s ease-in-out infinite; }
+@keyframes mh-xmas-entry-twinkle { 0%, 100% { opacity: .15; transform: scale(.6); } 50% { opacity: 1; transform: scale(1.15); } }
+.mh-xmas-entry-title { font-weight: 900; letter-spacing: .04em; background: linear-gradient(180deg, #fff8dc 0%, #f6d37a 55%, #d39a3e 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 1px 0 #5c1414) drop-shadow(0 0 4px #000c); }
+.mh-xmas-entry-sub { display: inline-block; border-radius: 999px; background: #a51c24; border: 1px solid #f0c96c; color: #fff7d6; font-weight: 900; white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) { .mh-xmas-entry::after, .mh-xmas-entry-spark { animation: none; } }
+/* 背の低い横画面: 帯は右の丸ボタンの列の左の空きへ小さく置く(ボスの頭・みゅあの吹き出し・施設の札にかけない) */
+@media (orientation: landscape) and (max-height: 520px) {
+  [data-home-xmas-entry-strip] { position: absolute !important; left: auto !important; right: 112px; top: calc(62px + env(safe-area-inset-top)); width: 176px !important; margin: 0 !important; }
+  .mh-xmas-entry[data-home-xmas-entry="banner"] { height: 54px !important; }
+  .mh-xmas-entry[data-home-xmas-entry="banner"] [data-xmas-entry-kicker] { display: none; }
+  .mh-xmas-entry[data-home-xmas-entry="banner"] .mh-xmas-entry-title { font-size: 16px; }
+  .mh-xmas-entry[data-home-xmas-entry="banner"] .mh-xmas-entry-sub { font-size: 9px; padding: 0 6px; }
+}
+`;
+const HomeXmasEventEntry = ({ onOpen, preOpen = false }) => {
+  useEffect(() => {
+    if (typeof document === 'undefined' || document.getElementById('mh-xmas-home-entry-css')) return;
+    const tag = document.createElement('style'); tag.id = 'mh-xmas-home-entry-css'; tag.textContent = XMAS_HOME_ENTRY_CSS; document.head.appendChild(tag);
+  }, []);
+  const sub = preOpen ? '序章公開中・11/30 10:00 開幕' : '開催中 〜12/31 3:59';
+  const sparks = [[8, 18, 0], [62, 12, .8], [88, 64, 1.6], [30, 78, 1.2]];
+  const label = `クリスマスイベント 聖夜の名探偵 ${sub}`;
+  return (
+    <button type="button" data-home-xmas-entry="banner" className="mh-xmas-entry w-full" onClick={onOpen} aria-label={label} style={{ height: 80 }}>
+      <img className="mh-xmas-entry-art" src={XMAS_EVENT_POSTER_IMG} alt="" style={{ objectPosition: '70% 28%' }} />
+      <span aria-hidden="true" style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, #0b1733f2 0%, #0b1733cc 42%, transparent 72%)' }} />
+      <XmasHolly size={24} className="absolute -left-1 -top-1" />
+      {sparks.map(([x, y, d], i) => <span key={i} aria-hidden="true" className="mh-xmas-entry-spark" style={{ left: `${x}%`, top: `${y}%`, animationDelay: `${d}s` }} />)}
+      <span style={{ position: 'absolute', left: 14, top: 6, right: 8, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
+        <span data-xmas-entry-kicker className="block text-[10px] font-black text-amber-100" style={{ textShadow: '0 1px 2px #000' }}>クリスマスイベント</span>
+        <b className="mh-xmas-entry-title block whitespace-nowrap text-[22px] leading-none">聖夜の名探偵</b>
+        <span className="mh-xmas-entry-sub px-2 py-px text-[10px]">{sub}</span>
+      </span>
+    </button>
   );
 };
 
@@ -130845,6 +131382,11 @@ function MonsterHeroGame() {
   const raidEvRef = useRef('jack');
   const raidDef = raidEventDef(raidEv);
   const raidXmasOpen = raidEv === 'xmas';
+  // クリスマスのイベントページ(79-screen-xmas-event.jsx・台帳 r1126-006)のいまのタブ('story' | 'raid' | 'bonus')。
+  //   バトル・ビート・カードから setGameState('RAID_JACK') で戻ったときも、同じタブへ帰る
+  const [xmasEventTab, setXmasEventTab] = useState('story');
+  // ひとりで進める物語の読んだ印(mh_xmas_story_v1)が変わったら増やす。物語タブが読み直す
+  const [xmasStoryVersion, setXmasStoryVersion] = useState(0);
   const raidJackOpen = !raidXmasOpen;
   const raidCurEventId = raidEv === 'xmas' ? (raidJackDebugForce ? RAID_XMAS_EVENT.debugId : RAID_XMAS_EVENT.id) : raidJackEventId;
   // クリスマスのデバッグの強制表示は、ジャックと同じ切り替え(レイドの確認画面)に合わせる
@@ -133915,7 +134457,8 @@ function MonsterHeroGame() {
     if (assistantLifeOpenNow && (state === 'HOME' || state === 'PROFILE' || state === 'ITEM_INVENTORY') && typeof ASSISTANT_LIFE_BGM_TRACK === 'string') return ASSISTANT_LIFE_BGM_TRACK;
     // イベント・レイドボス「ジャック」: ジャックとの戦いは Monster(全編)、レイド画面・段階えらび・編成はぱんぷきんの曲に固定する
     if (state === 'BATTLE' && raidJackRunRef.current) return RAID_JACK_BATTLE_BGM_TRACK;
-    if (RAID_JACK_BGM_STATES.includes(state) && raidEvRef.current !== 'xmas') return RAID_JACK_BGM_TRACK;   // クリスマスのレイド画面は、曲が届くまで HOME の曲
+    // クリスマスはイベントページ(物語・レイド・ボーナス)とレイドの準備画面で「Kissからはじまるミステリー」(台帳 r1126-015)
+    if (RAID_JACK_BGM_STATES.includes(state)) return raidEvRef.current === 'xmas' ? XMAS_EVENT_BGM_TRACK : RAID_JACK_BGM_TRACK;
     // HOMEの曲は、イベント中だけ(ユーザーが曲を選んでいないとき)ぱんぷきんの曲にする。終わったら元の曲へ戻る。
     // 開催中かは見るたびに数え直す(読み込み時に1回だけ決めない)
     // ハロウィン・ナイト(10/4〜11/1)のあいだも同じ曲にする(2026-10-04・ユーザー指摘「ホーム音楽がぱんぷきんのはずなのにデフォルトでもならない」。
@@ -145783,12 +146326,45 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     try { setRaidJackGuideSeen((await storeGet(RAID_JACK_GUIDE_KEY, false, false)) === true); } catch (e) { setRaidJackGuideSeen(true); }
     setGameState('RAID_JACK');
   };
-  // クリスマスのレイド画面を開く(入口: HOME のボス(⑤で作る)・レイドの確認画面)。開始前はデバッグの強制表示のときだけ
-  const openRaidXmas = async (force = false) => {
-    if (!RELEASE_FLAGS.raidXmas && !raidJackDebugForce && force !== true) return;
+  // クリスマスのイベントページを開く(入口: HOME のイベントの札・HOME のボス(⑤で作る)・レイドの確認画面)。開始前はデバッグの強制表示のときだけ
+  //   tab: 開くタブ。イベントの札は「物語」、ボスとレイドの確認画面は「レイド」
+  const openRaidXmas = async (force = false, tab = 'raid') => {
+    // 11/28 10:00(序章が開く)からはページを開ける。レイド・ボーナスのタブは 11/30 10:00 まで「から」と出す(台帳 r1126-014)
+    if (!RELEASE_FLAGS.raidXmas && !raidJackDebugForce && force !== true && !xmasEventPageOpenAt(Date.now())) return;
     raidEvRef.current = 'xmas'; setRaidEv('xmas');
     raidJackReturnTierRef.current = 0;
+    setXmasEventTab(XMAS_EVENT_TABS.some((t) => t.id === tab) ? tab : 'raid');
     setRhythmEventPoints(await loadRhythmEventPoints());
+    setGameState('RAID_JACK');
+  };
+  // ひとりで進める物語(イベントページの「物語」タブ)。話は選んで読む(自動では流さない)。
+  //   読む話は、最後まで読む(飛ばしても)と「読んだ」。戦う話は、お話を読んだだけでは進まず、勝つと completeXmasStoryChapter で進む
+  const openXmasStoryChapter = (chapter) => {
+    if (!chapter || !chapter.scriptId) return;
+    setEventReplay({ id: chapter.scriptId, step: 0, xmasChapter: chapter.id, xmasType: chapter.type, debug: raidJackDebugForce && !RELEASE_FLAGS.raidXmas });
+  };
+  const finishXmasStoryRead = (replay) => {
+    if (!replay || !replay.xmasChapter || replay.xmasType !== 'read') return;
+    void xmasStoryMarkCleared(replay.xmasChapter).then(() => setXmasStoryVersion((v) => v + 1));
+  };
+  // 戦う話の入口。バトル・ビート・カードの各部が App に startXmasStoryBattle / startXmasStoryRhythm / startXmasStoryCard を置くと選べる(BUILD.md §5)
+  const xmasStoryFightWays = [
+    ...(typeof startXmasStoryBattle === 'function' ? ['battle'] : []),
+    ...(typeof startXmasStoryRhythm === 'function' ? ['rhythm'] : []),
+    ...(typeof startXmasStoryCard === 'function' ? ['card'] : []),
+  ];
+  const fightXmasStoryChapter = (chapter, way) => {
+    if (!chapter) return;
+    if (way === 'battle' && typeof startXmasStoryBattle === 'function') { void startXmasStoryBattle(chapter.id); return; }
+    if (way === 'rhythm' && typeof startXmasStoryRhythm === 'function') { void startXmasStoryRhythm(chapter.id); return; }
+    if (way === 'card' && typeof startXmasStoryCard === 'function') void startXmasStoryCard(chapter.id);
+  };
+  // 戦う話が終わったら各部が呼ぶ(BUILD.md §5)。勝ちなら印を付ける。勝ち負けどちらもイベントページの「物語」へ戻す(負けは何度でも挑める)
+  const completeXmasStoryChapter = async (chapterId, result = {}) => {
+    if (result && result.won === true) await xmasStoryMarkCleared(chapterId);
+    setXmasStoryVersion((v) => v + 1);
+    raidEvRef.current = 'xmas'; setRaidEv('xmas');
+    setXmasEventTab('story');
     setGameState('RAID_JACK');
   };
   // クリスマスの報酬の受け取り(次の PR で作る)。いまは何も届けない
@@ -147213,7 +147789,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   ) : showTitleSettings ? (
     <div className="mh-title-modal" {...settingsBackdropProps(()=>setShowTitleSettings(false))}><div className="mh-title-dialog mh-title-dialog--menu"><div className="mh-dialog-head"><h3>設定</h3></div><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowAudioSettings(true)}}>🔊 音量設定 <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowBgmArrangement(true)}}>🎼 BGMアレンジ <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowTitleArt(true)}}>🖼️ タイトル画像アレンジ <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowHomeArt(true)}}>🏡 ホーム画面アレンジ <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowScreenTheme(true)}}>🎃 画面テーマ <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowBackup(true)}}>🛡️ データ引き継ぎ <ChevronRight size={18}/></button><button className="mh-dialog-close" data-mh-back onClick={()=>setShowTitleSettings(false)}>閉じる</button></div></div>
   ) : showTitleArt ? (
-    <ArtPickerModal pickerId="title" heading="タイトル画像アレンジ" note="タイトル画面に出す絵を選べます。次に開いたときもこの絵で始まります。「ハロウィン」は、横画面では横長の絵になります。" options={TITLE_ART_OPTIONS} value={titleArt} resolved={resolveTitleArt(titleArt)} onChange={changeTitleArt} onClose={()=>setShowTitleArt(false)}/>
+    <ArtPickerModal pickerId="title" heading="タイトル画像アレンジ" note="タイトル画面に出す絵を選べます。次に開いたときもこの絵で始まります。「クラシック」のほかは、横画面では横長の絵になります。" options={titleArtOptionsAt()} value={titleArt} resolved={resolveTitleArt(titleArt)} onChange={changeTitleArt} onClose={()=>setShowTitleArt(false)}/>
   ) : showScreenTheme ? (
     <ScreenThemeModal screenTheme={screenTheme} onChange={changeScreenTheme} titleArt={titleArt} onChangeTitleArt={changeTitleArt} homeArt={homeArt} onChangeHomeArt={changeHomeArt} onClose={()=>setShowScreenTheme(false)}/>
   ) : showHomeArt ? (
@@ -147590,6 +148166,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             resolveIconUrl={resolveIconUrl} spotClass={spotClass}
             raidJackVisible={(RELEASE_FLAGS.raidJack===true&&raidJackWindowAt(Date.now())==='open')||raidJackDebugForce}
             raidJackEventId={raidJackEventId} onOpenRaidJack={openRaidJack}
+            /* クリスマスのイベントの札(台帳 r1126-006)。開始時刻(RELEASE_FLAGS.raidXmas)からだけ、札を押すとイベントページの「物語」を開く */
+            onOpenXmasEvent={RELEASE_FLAGS.raidXmas===true?()=>{void openRaidXmas(false,'story');}:null}
+            /* クリスマスのイベントページの目立つ入口(台帳 r1126-014)。序章が開く 11/28 10:00 から、11/30 10:00 までは「序章公開中」 */
+            xmasEntry={xmasEventPageOpenAt(Date.now())||(raidJackDebugForce&&raidEv==='xmas')?{onOpen:()=>{void openRaidXmas(true,'story');},preOpen:RELEASE_FLAGS.raidXmas!==true}:null}
+            /* クリスマスのレイドのボス(台帳 r1126-006)。期間中か、デバッグの強制表示でクリスマスを開いたあと。押すとイベントページの「レイド」タブ */
+            raidXmasVisible={(RELEASE_FLAGS.raidXmas===true&&raidXmasWindowAt(Date.now())==='open')||(raidJackDebugForce&&raidEv==='xmas')}
+            raidXmasEventId={raidJackDebugForce&&!RELEASE_FLAGS.raidXmas?RAID_XMAS_EVENT.debugId:RAID_XMAS_EVENT.id} onOpenRaidXmas={()=>{void openRaidXmas(false,'raid');}}
             onOpenAssistantChat={RELEASE_FLAGS.assistantChat===true?()=>setAssistantChatOpen(true):null}
             cardBattleVisible={(EVENT_REPLAY_RELEASE_FLAGS.cardBattle&&cardBattleIntroSeenFlag)||cardBattleDebugHome} onOpenCardBattle={()=>{setCardOrigin('home');setGameState('CARD_TOP');}}
             /* 公開前の予告(社長 2026-10-25)。ふつうのプレイヤーに「近日公開」の札を出し、押すと予告の小窓。公開の印が立てば出なくなり、上のふつうの入口に替わる */
@@ -149997,14 +150580,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </div>
         )}
 
-        {gameState==='RAID_JACK'&&raidXmasOpen&&(<RaidJackScreen key="raid-xmas" ev={RAID_EVENT_XMAS}
-          /* 挑み方: バトルはバトル部。モンヒロビート・バトルカードはビート部・カード部が startRaidXmasRhythm / startRaidXmasCard を App に置いたら出る(BUILD.md §4) */
-          ways={['battle',...(typeof startRaidXmasRhythm === 'function'?['rhythm']:[]),...(typeof startRaidXmasCard === 'function'?['card']:[])]}
-          initialTier={raidJackReturnTierRef.current}
+        {gameState==='RAID_JACK'&&raidXmasOpen&&(<XmasEventScreen tab={xmasEventTab} onTab={setXmasEventTab} forced={raidJackDebugForce&&!RELEASE_FLAGS.raidXmas} preOpen={!RELEASE_FLAGS.raidXmas&&!raidJackDebugForce}
           onBack={()=>{raidJackReturnTierRef.current=0;setGameState(raidJackDebugForce&&!RELEASE_FLAGS.raidXmas?'RAID_JACK_DEBUG':'HOME');}}
-          onChallenge={(kind,tierIndex,way)=>{raidJackReturnTierRef.current=tierIndex;if(kind==='a'&&way==='rhythm'){if(typeof startRaidXmasRhythm === 'function')void startRaidXmasRhythm(tierIndex);return;}if(kind==='a'&&way==='card'){if(typeof startRaidXmasCard === 'function')void startRaidXmasCard(tierIndex);return;}setRaidJackPrep({kind,tierIndex});setGameState('RAID_JACK_PREP');}}
-          onPurchase={purchaseRaidJackExtra} onClaimRewards={claimRaidXmasRewards} beatPoints={rhythmEventPoints} eventId={raidCurEventId} forced={raidJackDebugForce} unlimited={raidJackDebugForce&&!raidJackDebugRealRules}
-          renderPlace={rankingPlace} renderIcon={rankingBreederIcon} cardClass={rankingCardClass}/>)}
+          storyVersion={xmasStoryVersion} fightWays={xmasStoryFightWays} onReadChapter={openXmasStoryChapter} onFightChapter={fightXmasStoryChapter}
+          /* レイドのタブの中身(今までのクリスマスのレイド画面そのまま) */
+          raid={{ev:RAID_EVENT_XMAS,
+            /* 挑み方: バトルはバトル部。モンヒロビート・バトルカードはビート部・カード部が startRaidXmasRhythm / startRaidXmasCard を App に置いたら出る(BUILD.md §4) */
+            ways:['battle',...(typeof startRaidXmasRhythm === 'function'?['rhythm']:[]),...(typeof startRaidXmasCard === 'function'?['card']:[])],
+            initialTier:raidJackReturnTierRef.current,
+            onBack:()=>{raidJackReturnTierRef.current=0;setGameState(raidJackDebugForce&&!RELEASE_FLAGS.raidXmas?'RAID_JACK_DEBUG':'HOME');},
+            onChallenge:(kind,tierIndex,way)=>{raidJackReturnTierRef.current=tierIndex;if(kind==='a'&&way==='rhythm'){if(typeof startRaidXmasRhythm === 'function')void startRaidXmasRhythm(tierIndex);return;}if(kind==='a'&&way==='card'){if(typeof startRaidXmasCard === 'function')void startRaidXmasCard(tierIndex);return;}setRaidJackPrep({kind,tierIndex});setGameState('RAID_JACK_PREP');},
+            onPurchase:purchaseRaidJackExtra,onClaimRewards:claimRaidXmasRewards,beatPoints:rhythmEventPoints,eventId:raidCurEventId,forced:raidJackDebugForce,unlimited:raidJackDebugForce&&!raidJackDebugRealRules,
+            renderPlace:rankingPlace,renderIcon:rankingBreederIcon,cardClass:rankingCardClass}}/>)}
         {gameState==='RAID_JACK'&&raidJackOpen&&(<RaidJackScreen
           initialTier={raidJackReturnTierRef.current}
           onBack={()=>{raidJackReturnTierRef.current=0;setGameState(raidJackDebugForce&&!RELEASE_FLAGS.raidJack?'RAID_JACK_DEBUG':'HOME');}}
@@ -152672,6 +153259,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             setRhythmHellGuide({page:0,debugList:!!eventReplay.debugList,fromList:!!eventReplay.fromList});
             setEventReplay(null);return;
           }
+          // クリスマスのひとりで進める物語: 読む話は最後まで読んだら「読んだ」(戦う話は勝つまで進まない)
+          if(eventReplay.xmasChapter) finishXmasStoryRead(eventReplay);
           if(eventReplay.debugList) setShowDebugStoryList(true);
           if(eventReplay.fromList) setShowEventReplayList(true);
           setEventReplay(null);
@@ -152693,6 +153282,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           if(eventReplay.live&&!eventReplay.debug&&event&&(event.id===RAID_JACK_ENDING_CLEARED_ID||event.id===RAID_JACK_ENDING_NOTCLEARED_ID)) markRaidJackEndingReplayed();
           // MFバトルカードのはじまりは、飛ばしたら HOME のまま(入口から入れる)
           if(eventReplay.live&&!eventReplay.debug&&event&&event.id===CARD_BATTLE_INTRO_STORY_ID) markCardBattleIntroSeen();
+          // クリスマスのひとりで進める物語は、イベントページから自分で選んで開いた話なので、飛ばしても「読んだ」にする(いつでも読み返せる)
+          if(eventReplay.xmasChapter) finishXmasStoryRead(eventReplay);
           // HELL のお話は飛ばしても説明は出す(遊び方は飛ばさずに知ってほしい)。見たにするのは本編で流したときだけ
           if(event&&event.id===RHYTHM_HELL_STORY_ID){
             if(eventReplay.live&&!eventReplay.debug) markRhythmHellStorySeen();

@@ -191,6 +191,7 @@ const Audio_ = (() => {
     "audio/bgm-kiki-issen-short.mp3": "add607be5bec",
     "audio/bgm-kimimachi-loop.mp3": "1be296a6cdb3",
     "audio/bgm-kindan-no-resistance.mp3": "efca5c01d0b7",
+    "audio/bgm-kiss-mystery.mp3": "8ccb87dfc4ad",
     "audio/bgm-lamia.mp3": "faaab8302652",
     "audio/bgm-light-player-short.mp3": "5d59fb7eb1fb",
     "audio/bgm-light-player.mp3": "c07830c2e774",

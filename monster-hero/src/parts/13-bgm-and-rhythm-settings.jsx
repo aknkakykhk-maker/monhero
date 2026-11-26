@@ -76,6 +76,8 @@ const BGM_TRACKS = [
   { id:'melo_kiki_issen_short', name:'綺季一閃 ～花雪に舞う詠姫～ short ver.', creator:'オリジナル', src:'audio/bgm-kiki-issen-short.mp3', gain:1, loop:true },
   { id:'melo_crazy_party_night', name:'Crazy Party Night ～ぱんぷきんの逆襲～', creator:'オリジナル', src:'audio/bgm-crazy-party-night.mp3', gain:1, loop:true },
   { id:'melo_crazy_party_night_full', name:'Crazy Party Night ～ぱんぷきんの逆襲～ full', creator:'オリジナル', src:'audio/bgm-crazy-party-night-full.mp3', gain:1, loop:true },
+  // クリスマスイベント「聖夜の名探偵」のイベントページの曲(2026-11-26 社長・台帳 r1126-015)。5分4秒。元の音源は tools/art-sources/song-audio/kiss_mystery/
+  { id:'melo_kiss_mystery', name:'Kissからはじまるミステリー', creator:'オリジナル', src:'audio/bgm-kiss-mystery.mp3', gain:1, loop:true },
   { id:'melo_emerald_rush', name:'Emerald Rush', creator:'オリジナル', src:'audio/bgm-emerald-rush.mp3', gain:1, loop:true },
   { id:'melo_wrath_of_the_thorn_king', name:'Wrath of the Thorn King「茨の王の怒り」', creator:'オリジナル', src:'audio/bgm-wrath-of-the-thorn-king.mp3', gain:1, loop:true },
   { id:'melo_monster', name:'Monster', creator:'オリジナル', src:'audio/bgm-monster.mp3', gain:1, loop:true },
@@ -1407,14 +1409,29 @@ const screenThemeCategory = (gameState, rhythmOpen = false) => {
 // 起動直後の先読み(index.html)もこのキーを読むので、キー名と id は変えない。
 // squareSrc は縦横比がほぼ正方形の画面、wideSrc は横長の画面に出す絵。無い絵は縦の絵を切り抜いて出す
 const TITLE_ART_STORAGE_KEY = 'mh_title_art';
+// クリスマス(r1125-061・社長 2026-11-25): from〜until はクリスマスのイベント(RAID_XMAS_START_AT・RAID_XMAS_EVENT.endAt)と同じ。
+//   from より前は選択肢にも出さない(titleArtOptionsAt)。おまかせは from〜until のあいだだけクリスマス、そのあとはクラシック。
+//   自分で選んだ人は until のあとも選んだまま。期間は見るたびに時刻で決める(保存しない)。★index.html の先読みも同じ時刻を持っている
+const TITLE_ART_XMAS_FROM = () => Date.parse(typeof RAID_XMAS_START_AT === 'string' ? RAID_XMAS_START_AT : '2026-11-30T10:00:00+09:00');
+const TITLE_ART_XMAS_UNTIL = () => Date.parse(typeof RAID_XMAS_EVENT === 'object' && RAID_XMAS_EVENT && typeof RAID_XMAS_EVENT.endAt === 'string' ? RAID_XMAS_EVENT.endAt : '2026-12-31T04:00:00+09:00');
 const TITLE_ART_OPTIONS = [
+  { id: 'xmas', label: 'クリスマス', desc: '雪の夜の広場。モッチーたちがクリスマスの装いでお出迎え', src: 'data/images/title-screen-xmas.jpg', squareSrc: 'data/images/title-screen-xmas-square.jpg', wideSrc: 'data/images/title-screen-xmas-wide.jpg', from: TITLE_ART_XMAS_FROM },
   { id: 'halloween', label: 'ハロウィン', desc: '月夜のお城とかぼちゃ。モッチーたちが仮装してお出迎え', src: 'data/images/title-screen-halloween.jpg', squareSrc: 'data/images/title-screen-halloween-square.jpg', wideSrc: 'data/images/title-screen-halloween-wide.jpg' },
   { id: 'classic', label: 'クラシック', desc: 'これまでのタイトル画面', src: 'data/images/title-screen-clean.jpg' },
 ];
 // 'auto'(おまかせ)は季節に合わせる(SCREEN_THEME_HALLOWEEN_UNTIL まではハロウィン、そのあとはクラシック)
 const DEFAULT_TITLE_ART = 'auto';
 const normalizeTitleArt = value => value === 'auto' || TITLE_ART_OPTIONS.some(option => option.id === value) ? value : DEFAULT_TITLE_ART;
-const resolveTitleArt = (value, now = Date.now()) => { const v = normalizeTitleArt(value); return v === 'auto' ? resolveScreenTheme('auto', now) : v; };
+// 選択肢に出す絵(from より前の絵は出さない)。保存の読み方(normalizeTitleArt)は全部の id を受ける
+const titleArtAvailable = (option, now = Date.now()) => !!option && (typeof option.from !== 'function' || now >= option.from());
+const titleArtOptionsAt = (now = Date.now()) => TITLE_ART_OPTIONS.filter(option => titleArtAvailable(option, now));
+const titleArtXmasOpenAt = (now = Date.now()) => now >= TITLE_ART_XMAS_FROM() && now < TITLE_ART_XMAS_UNTIL();
+const resolveTitleArt = (value, now = Date.now()) => {
+  const v = normalizeTitleArt(value);
+  if (v === 'auto') return titleArtXmasOpenAt(now) ? 'xmas' : resolveScreenTheme('auto', now);
+  // まだ出していない絵が入っていたら(時計を戻した等)、おまかせと同じに決める
+  return titleArtAvailable(TITLE_ART_OPTIONS.find(option => option.id === v), now) ? v : resolveScreenTheme('auto', now);
+};
 // 画面の縦横比から、出す絵の形を決める。縦長(941x1672 = 0.56)・ほぼ正方形(1354x1162 = 1.17)・横長(1672x941 = 1.78)の3枚のうち、
 // 比が近いほうを選ぶ(境目は、隣り合う2枚の比の相乗平均。0.81 と 1.44)。折りたたみの横開きの内側(約0.9)は「ほぼ正方形」になる
 // ★index.html の先読みも同じ境目を持っている。変えるときは両方そろえる

@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "064196e6dc36",
-  "packs": {"beat":{"bytes":311557065,"count":166},"battle":{"bytes":742044965,"count":1841},"card":{"bytes":38085297,"count":1046},"all":{"bytes":1091687327,"count":3053},"core":{"bytes":26006765,"count":25}},
+  "id": "36aa8ce871db",
+  "packs": {"beat":{"bytes":311557065,"count":166},"battle":{"bytes":748758504,"count":1846},"card":{"bytes":38085297,"count":1046},"all":{"bytes":1098400866,"count":3058},"core":{"bytes":26050266,"count":25}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"b43d691d4773","size":2833344,"pack":"beat"},
@@ -65,6 +65,7 @@
     "audio/bgm-kiki-issen-short.mp3": {"v":"add607be5bec","size":3113795,"pack":"beat"},
     "audio/bgm-kimimachi-loop.mp3": {"v":"1be296a6cdb3","size":3886848,"pack":"beat"},
     "audio/bgm-kindan-no-resistance.mp3": {"v":"efca5c01d0b7","size":1961280,"pack":"beat"},
+    "audio/bgm-kiss-mystery.mp3": {"v":"8ccb87dfc4ad","size":4861745,"pack":"battle"},
     "audio/bgm-lamia.mp3": {"v":"faaab8302652","size":2295849,"pack":"beat"},
     "audio/bgm-light-player-short.mp3": {"v":"5d59fb7eb1fb","size":2409534,"pack":"beat"},
     "audio/bgm-light-player.mp3": {"v":"c07830c2e774","size":4301217,"pack":"beat"},
@@ -142,6 +143,9 @@
     "data/images/title-screen-halloween-square.jpg": {"v":"0c063aa9bc1b","size":422077,"pack":"battle"},
     "data/images/title-screen-halloween-wide.jpg": {"v":"a5a04d125370","size":364966,"pack":"battle"},
     "data/images/title-screen-halloween.jpg": {"v":"d63064f3f579","size":368790,"pack":"battle"},
+    "data/images/title-screen-xmas-square.jpg": {"v":"4628d3e0bd2c","size":438432,"pack":"battle"},
+    "data/images/title-screen-xmas-wide.jpg": {"v":"f9c056f6f221","size":410114,"pack":"battle"},
+    "data/images/title-screen-xmas.jpg": {"v":"d7444964decf","size":377894,"pack":"battle"},
     "images/assistant/atsu_angry.PNG": {"v":"34d64dc9fa92","size":174773,"pack":"battle"},
     "images/assistant/atsu_crying.PNG": {"v":"578d67efe73a","size":176272,"pack":"battle"},
     "images/assistant/atsu_excited.PNG": {"v":"1cfd7faf13a7","size":176399,"pack":"battle"},
@@ -2115,6 +2119,7 @@
     "images/events/rhythm-grand-open-teaser.jpg": {"v":"45ae90cee48b","size":197841,"pack":"battle"},
     "images/events/spooky-dye-preview.jpg": {"v":"5f2023b32279","size":67687,"pack":"battle"},
     "images/events/spooky-profile.jpg": {"v":"998671fd3d0b","size":134035,"pack":"battle"},
+    "images/events/xmas-2026-event-wide.jpg": {"v":"4c99b2d7addd","size":625354,"pack":"battle"},
     "images/events/xmas-2026-notice.jpg": {"v":"789f225e7916","size":530555,"pack":"battle"},
     "images/events/xmas-2026-trailer-poster.jpg": {"v":"606a5e02dd1d","size":120360,"pack":"battle"},
     "images/events/yggdrasil-dye-preview.jpg": {"v":"1fc38d84ced6","size":77069,"pack":"battle"},
@@ -3058,7 +3063,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"6d2e660e3a76","size":319705,"pack":"core"},
+    "tailwind.css": {"v":"222c2797e68b","size":321157,"pack":"core"},
     "data/images/images-ally.js": {"v":"7fcc9331d4b6","size":92225,"pack":"core"},
     "data/images/images-enemy.js": {"v":"0d3643e9bc69","size":3262,"pack":"core"},
     "data/ally-monsters.js": {"v":"6737b7dced48","size":60894,"pack":"core"},
@@ -3071,8 +3076,8 @@
     "data/rhythm-geometry-calibration.js": {"v":"02534cca12f6","size":15552,"pack":"core"},
     "data/rhythm-result-replay-remount.js": {"v":"381554180360","size":5743,"pack":"core"},
     "data/rhythm-event.js": {"v":"8a3dac1f38a2","size":109714,"pack":"core"},
-    "data/changelog.js": {"v":"e58b395f1416","size":2040802,"pack":"core"},
-    "data/help.js": {"v":"8c8e9832db60","size":915006,"pack":"core"},
+    "data/changelog.js": {"v":"b2c0326425b9","size":2041712,"pack":"core"},
+    "data/help.js": {"v":"a75c65c63c6f","size":915170,"pack":"core"},
     "data/mhsave-backup.js": {"v":"7845a4fd261f","size":14703,"pack":"core"},
     "data/rhythm-step3-release.js": {"v":"ae1d7f73f23a","size":8517,"pack":"core"},
     "data/assistants.js": {"v":"dfd0ebc5bdeb","size":2232648,"pack":"core"},
@@ -3080,6 +3085,6 @@
     "data/assistant-masmon-techs.js": {"v":"353cf73676a6","size":113841,"pack":"core"},
     "data/assistant-life-rel-talks.js": {"v":"cde51ded5428","size":225977,"pack":"core"},
     "data/success-sounds.js": {"v":"9692dd51493a","size":19367,"pack":"core"},
-    "game-system.compiled.js": {"v":"4518f6d5065e","size":12533741,"pack":"core"}
+    "game-system.compiled.js": {"v":"ef2a36e5d07b","size":12574716,"pack":"core"}
   }
 }
