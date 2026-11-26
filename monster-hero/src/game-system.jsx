@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4b78295f0c486bd8
+// generated-sha256: eefdc370021ed50c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -4917,6 +4917,12 @@ const BGM_TRACKS = [
   { id:'melo_crazy_party_night_full', name:'Crazy Party Night ～ぱんぷきんの逆襲～ full', creator:'オリジナル', src:'audio/bgm-crazy-party-night-full.mp3', gain:1, loop:true },
   // クリスマスイベント「聖夜の名探偵」のイベントページの曲(2026-11-26 社長・台帳 r1126-015)。5分4秒。元の音源は tools/art-sources/song-audio/kiss_mystery/
   { id:'melo_kiss_mystery', name:'Kissからはじまるミステリー', creator:'オリジナル', src:'audio/bgm-kiss-mystery.mp3', gain:1, loop:true },
+  // クリスマスイベントの3曲(2026-11-26 社長・台帳 r1126-023)。モンヒロビートの曲でもある(頭に2秒の無音を足した版)。元の音源は tools/art-sources/song-audio/<kiss_mystery|dear_santa|winter_fall>/
+  { id:'melo_kiss_mystery_short', name:'Kissからはじまるミステリー short ver.', creator:'オリジナル', src:'audio/bgm-kiss-mystery-short.mp3', gain:1, loop:true },
+  { id:'melo_dear_santa', name:'Dear Santa', creator:'オリジナル', src:'audio/bgm-dear-santa.mp3', gain:1, loop:true },
+  { id:'melo_dear_santa_short', name:'Dear Santa short ver.', creator:'オリジナル', src:'audio/bgm-dear-santa-short.mp3', gain:1, loop:true },
+  { id:'melo_winter_fall', name:'winter fall', creator:'オリジナル', src:'audio/bgm-winter-fall.mp3', gain:1, loop:true },
+  { id:'melo_winter_fall_short', name:'winter fall short ver.', creator:'オリジナル', src:'audio/bgm-winter-fall-short.mp3', gain:1, loop:true },
   { id:'melo_emerald_rush', name:'Emerald Rush', creator:'オリジナル', src:'audio/bgm-emerald-rush.mp3', gain:1, loop:true },
   { id:'melo_wrath_of_the_thorn_king', name:'Wrath of the Thorn King「茨の王の怒り」', creator:'オリジナル', src:'audio/bgm-wrath-of-the-thorn-king.mp3', gain:1, loop:true },
   { id:'melo_monster', name:'Monster', creator:'オリジナル', src:'audio/bgm-monster.mp3', gain:1, loop:true },
@@ -5020,6 +5026,26 @@ const BGM_UNRELEASED_TRACKS = Object.freeze([
   { id:'melo_battle_5_short', name:'Battle #5 short ver.', creator:'オリジナル', src:'audio/bgm-battle-5-short.mp3', gain:1, loop:true },
 ]);
 const BGM_TRACK_BY_ID = Object.fromEntries(BGM_TRACKS.map(track => [track.id, track]));
+// 曲を選ぶ一覧(BGMアレンジ・自動戦闘のBGM・MFバトルカードの対戦BGMとその「おまかせ」)に出すかどうか(2026-11-26 ミハリの指摘・PR #7771)。
+// 公開を止めている曲(Battle #5)は、はじめから BGM_TRACKS に入れていない(上の BGM_UNRELEASED_TRACKS)。鳴らす口(BGM_TRACK_BY_ID)は絞らない。HOME やレイドの曲として決まった時刻から鳴らす物は、一覧に出る前でも鳴らせる。
+//  ・BGM_TRACK_LISTED_FROM … 一覧に出しはじめる時刻。モンヒロビートの RHYTHM_SONG_RELEASE_AT と同じ時刻にそろえる。見るたびに数え直す(CLAUDE.md ⑥-4)
+const BGM_TRACK_LISTED_FROM = Object.freeze({
+  // クリスマスイベントの曲(台帳 r1126-023)。開幕の 11/30 10:00 から(Kiss の全編はイベントページの曲として先に入っているので外さない)
+  melo_kiss_mystery_short: '2026-11-30T10:00:00+09:00',
+  melo_dear_santa: '2026-11-30T10:00:00+09:00',
+  melo_dear_santa_short: '2026-11-30T10:00:00+09:00',
+  melo_winter_fall: '2026-11-30T10:00:00+09:00',
+  melo_winter_fall_short: '2026-11-30T10:00:00+09:00',
+});
+const bgmTrackListed = (track, nowMs = Date.now()) => {
+  const id = track && track.id;
+  if (!id) return false;
+  const from = BGM_TRACK_LISTED_FROM[id];
+  if (!from) return true;
+  const ms = Date.parse(from);
+  return Number.isFinite(ms) && Number(nowMs) >= ms;
+};
+const bgmListedTracks = (nowMs = Date.now()) => BGM_TRACKS.filter((track) => bgmTrackListed(track, nowMs));
 BGM_PROTO_TRACKS.forEach(track => { if (!BGM_TRACK_BY_ID[track.id]) BGM_TRACK_BY_ID[track.id] = track; });
 BGM_UNRELEASED_TRACKS.forEach(track => { if (!BGM_TRACK_BY_ID[track.id]) BGM_TRACK_BY_ID[track.id] = track; });
 const BGM_TRACK_BY_KEY = Object.fromEntries(BGM_TRACKS.filter(track => track.legacyKey).map(track => [track.legacyKey, track]));
@@ -6481,6 +6507,8 @@ const Audio_ = (() => {
     "audio/bgm-crazy-party-night-full.mp3": "88a00b2a4fa0",
     "audio/bgm-crazy-party-night.mp3": "45e7252c400e",
     "audio/bgm-crossing-field.mp3": "1e2e7cc1d3d5",
+    "audio/bgm-dear-santa-short.mp3": "5cc7bd38da68",
+    "audio/bgm-dear-santa.mp3": "1d5245547349",
     "audio/bgm-departure-short.mp3": "d2dcbe5c72a8",
     "audio/bgm-departure.mp3": "ad4d5a6838c8",
     "audio/bgm-desert-crown.mp3": "1a440c813bbb",
@@ -6519,7 +6547,8 @@ const Audio_ = (() => {
     "audio/bgm-kiki-issen-short.mp3": "add607be5bec",
     "audio/bgm-kimimachi-loop.mp3": "1be296a6cdb3",
     "audio/bgm-kindan-no-resistance.mp3": "efca5c01d0b7",
-    "audio/bgm-kiss-mystery.mp3": "8ccb87dfc4ad",
+    "audio/bgm-kiss-mystery-short.mp3": "104ce98f9f90",
+    "audio/bgm-kiss-mystery.mp3": "4decd41ac6c2",
     "audio/bgm-lamia.mp3": "faaab8302652",
     "audio/bgm-light-player-short.mp3": "5d59fb7eb1fb",
     "audio/bgm-light-player.mp3": "c07830c2e774",
@@ -6580,6 +6609,8 @@ const Audio_ = (() => {
     "audio/bgm-tsuki-ga-michiru-mae-ni.mp3": "74eb2d433abd",
     "audio/bgm-walkure-short.mp3": "4ac3e2f2af3e",
     "audio/bgm-walkure.mp3": "c0643f725dff",
+    "audio/bgm-winter-fall-short.mp3": "619d095a922a",
+    "audio/bgm-winter-fall.mp3": "7ba38a0b2856",
     "audio/bgm-wrath-of-the-thorn-king.mp3": "d1ea326a4ee2",
     "audio/bgm-zenbu-hissatsuwaza.mp3": "5b91503c1743",
     "audio/jingle-victory.mp3": "689c9715a824",
@@ -34521,6 +34552,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:battle_5': [['excited', '3:12からいちばん強いの来るぢゃん！ そこから最後までアガりっぱなし♪']],
     'listen:beyond_the_same_sky': [['excited', '2:59からいちばん強い所が3回も来るの！ 最後まで走り切るぢゃん♪']],
     'listen:brand_new_sky': [['excited', '1:19からいちばん強いところ、みんなで一緒に跳んでほしいの！']],
+    'listen:dear_santa': [['excited', '1:24でいちばん強いとこ来るの！ 後半は何回もアガるぢゃん♪']],
     'listen:departure': [['excited', '3:59からいちばん強くなるの！ ずっとアガるよ♪']],
     'listen:desert_crown': [['excited', '1:07からいちばん強いの！ 最後までずっと全開なのー♪']],
     'listen:dr_wily_stage_1': [['excited', 'サビは0:44から！ ここから一気にいちばん強くなるの、まぢでアガるぢゃん♪']],
@@ -34533,6 +34565,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:gourmet_race_dx': [['excited', '1:14からのサビ、いちばん強い音が押し寄せるぢゃん！ テンション上がるよ♪']],
     'listen:hopes_and_dreams': [['excited', '1:15と1:55と2:11がいちばん強いの！ ずっとアガるのー♪']],
     'listen:kimimachi_loop': [['excited', '1:00でいきなりいちばん強くなるの！ ここ、まぢテンション上がるー♪']],
+    'listen:kiss_mystery': [['excited', '2:32でいちばん強いとこ来るの！ 4:07でもう一回アガるぢゃん♪']],
     'listen:mf_ichika_mix': [['excited', 'サビは1:48から！ そこからテンションまぢ上がるやつ♪']],
     'listen:monster_hero': [['excited', '1:50からずーっといちばん強いの！ 最後までアゲてこ♪']],
     'listen:monster_hero_another': [['excited', 'こっちもサビは1:49から！ 最後までずっと盛り上がるの♪']],
@@ -34588,6 +34621,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:evans': [['surprise', '0:59でいきなり強くなるとこ、ドキッとするぢゃんｗ']],
     'listen:humanoid': [['excited', '0:57から30秒、ずっとサビなの！ ここまぢでアガる♪']],
     'listen:walkure': [['excited', '1:37でいちばん強いとこ来るの！ そこからずっとアガるぢゃん♪']],
+    'listen:winter_fall': [['excited', '1:10でいちばん強いとこ来るの！ そこからずっとアガるぢゃん♪']],
     'listen:zenbu_hissatsuwaza': [['excited', '1:31からいちばん強いの！ 最後まで全開で駆け抜けるやつなのー♪']],
   },
   kiki: {
@@ -34620,6 +34654,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:battle_5': [['normal', '最初の19秒は静かで、音が少しずつ入ってくる所がきれいです♪']],
     'listen:beyond_the_same_sky': [['normal', '2:06でふっと静かになる所、空がひらけるみたいできれいです♪']],
     'listen:brand_new_sky': [['happy', 'BPM146で、ずっと前へ前へ走っていく感じでつ']],
+    'listen:dear_santa': [['normal', '最初の静かな所から始まって、1:29でまたすっと引くのがきれいです♪']],
     'listen:departure': [['normal', '最初の静かなところ、そっと始まってきれいでつ']],
     'listen:desert_crown': [['normal', '頭の静かなところ、砂の上をゆっくり歩くみたいできれいでつ']],
     'listen:dr_wily_stage_1': [['normal', '1:13で一度ふつうに戻る所も、静かできれいでつ']],
@@ -34632,6 +34667,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:gourmet_race_dx': [['normal', '1:30で音がすっと引くところ、静かでとてもきれいです♪']],
     'listen:hopes_and_dreams': [['normal', '最初の2秒からの静かなところ、星空みたいできれいでつ']],
     'listen:kimimachi_loop': [['normal', '頭の静かなところから、少しずつ近づいてくる感じがかわいいでつ']],
+    'listen:kiss_mystery': [['normal', '2:41からの静かな所、音がすっと引いてとてもきれいです♪']],
     'listen:mf_ichika_mix': [['normal', '2分25秒の曲でつ。終わりの手前の盛り上がりまで、ていねいにいきましょう']],
     'listen:monster_hero': [['normal', '最初の45秒くらいは静かなんでつ。そこから少しずつ強くなっていきます']],
     'listen:monster_hero_another': [['normal', '0:48までは、静かな時間が長いんでつ。そこが好きです']],
@@ -34687,6 +34723,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:evans': [['normal', '0:27で静かになるところ、きれいな間ですね']],
     'listen:humanoid': [['normal', '0:25で一度静かになるところ、すっとした感じが好きでつ']],
     'listen:walkure': [['normal', '5:02からの静かな所、音がすっと引いてとてもきれいです♪']],
+    'listen:winter_fall': [['normal', '0:02から0:24までの静かな始まり、とてもきれいです♪']],
     'listen:zenbu_hissatsuwaza': [['normal', '1:03の静かなところで一回ひと息つけるでつ。そこからまた全力でつ']],
   },
   momosuke: {
@@ -34719,6 +34756,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:battle_5': [['excited', '1:04も2:53も強め！ 何度も盛り上がるの、ももは大好き♡']],
     'listen:beyond_the_same_sky': [['excited', '0:49から一気に強くなるの！ ももはここでもうわくわくしちゃう♡']],
     'listen:brand_new_sky': [['excited', '2:20でもう一回いちばん強くなるの、最後まで最高潮だよ♡']],
+    'listen:dear_santa': [['excited', '2:30も2:58も3:16もいちばん強い！ ももはこの勢いが大好き♡']],
     'listen:departure': [['excited', '4:36でもう一回いちばん強くなるの！！ 最高だよ♡']],
     'listen:desert_crown': [['excited', '1:07と2:02がいちばん強いよ♡ 後半はずっと最高潮だよ♡']],
     'listen:dr_wily_stage_1': [['excited', '1:58から2回目のサビ！！ 最後までいちばん強いまま駆け抜けるの、最高♡']],
@@ -34731,6 +34769,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:gourmet_race_dx': [['excited', '1:14でいちばん強くなるの、ももはここが大好き♡']],
     'listen:hopes_and_dreams': [['excited', 'いちばん強いところが3回もあるよ♡ 最高潮だよ♡']],
     'listen:kimimachi_loop': [['excited', '1:00と2:02と2:32、いちばん強いところが3回あるよ♡ 何回でも会いに来てね♡']],
+    'listen:kiss_mystery': [['excited', '0:58から強めになって、2:32でいちばん強い！ この勢い大好き♡']],
     'listen:mf_ichika_mix': [['excited', '1:48からがいちばん盛り上がるとこ！！ そこでももが決めるね♡']],
     'listen:monster_hero': [['excited', '1:50からいちばん強いとこが続くの！！ 最高に盛り上がるやつ♡']],
     'listen:monster_hero_another': [['excited', '1:49からの盛り上がり、もとの曲に負けてないよ！！']],
@@ -34786,6 +34825,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:evans': [['excited', '1:33からのサビ！！ 短いけど、ぎゅっと詰まってるの！！']],
     'listen:humanoid': [['excited', '0:57からのサビで、もう最高潮！！ 一緒に盛り上がろ♡']],
     'listen:walkure': [['excited', '2:20も2:39もいちばん強い！ ももはこの勢いが大好き♡']],
+    'listen:winter_fall': [['excited', '2:22も2:48も3:07もいちばん強い！ ももはこの勢いが大好き♡']],
     'listen:zenbu_hissatsuwaza': [['excited', 'サビは1:31から最後までだよ♡ ずっと最高潮で止まらないよ♡']],
   },
   dra: {
@@ -34818,6 +34858,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:battle_5': [['normal', '4分12秒の長い戦いだな。BPM170で一気に駆け抜けるぞ']],
     'listen:beyond_the_same_sky': [['normal', 'BPM178で4分を超える長い曲だな。息の配分が大事だ']],
     'listen:brand_new_sky': [['happy', '強く打つ音が多いな。2分半、走り切るぞ']],
+    'listen:dear_santa': [['normal', 'BPM200で駆け抜けるからな。3分半の短い冒険だ']],
     'listen:departure': [['happy', 'BPM156で強い音がいっぱいだぞ。旅の出発みたいだな']],
     'listen:desert_crown': [['happy', 'BPM100でじっくり進む旅だな。2分半、砂漠を越えるぞ']],
     'listen:dr_wily_stage_1': [['normal', 'BPM180は速いな。おでの冒険も駆け足になるやつだな']],
@@ -34830,6 +34871,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:gourmet_race_dx': [['happy', '0:12から強めの音で駆け出すぞ。レースの始まりみたいだな']],
     'listen:hopes_and_dreams': [['happy', 'BPM171で走るぞ。夜の大冒険みたいでいいな']],
     'listen:kimimachi_loop': [['happy', 'BPM167で弾むように進むな。2分42秒、最後まで走り抜けるぞ']],
+    'listen:kiss_mystery': [['normal', '5分ある長めの冒険だな。BPM112でじっくり進むからな']],
     'listen:mf_ichika_mix': [['happy', 'サビは1:48から2:14までだな。そこまでは体力をとっとけよ']],
     'listen:monster_hero': [['happy', '静かに始まって、だんだん強くなる。冒険の始まりみたいな曲だな']],
     'listen:monster_hero_another': [['normal', '0:48で急に強くなるからな。そこで置いていかれるなよ']],
@@ -34885,6 +34927,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:evans': [['surprise', '2分もないのにLv.44だぞ。短くて濃い冒険だな']],
     'listen:humanoid': [['troubled', 'Lv.50だぞ。短いけど、おでには大冒険だな']],
     'listen:walkure': [['normal', '11分32秒もある長い冒険だな。BPM216で駆け抜けるからな']],
+    'listen:winter_fall': [['normal', '5分近くある長い冒険だな。BPM166で駆け抜けるからな']],
     'listen:zenbu_hissatsuwaza': [['happy', 'BPM193の全力疾走だな。2分足らずで一気に突っ切るぞ']],
   },
   atsu: {
@@ -34917,6 +34960,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:battle_5': [['happy', '4:00までいちばん強いまま押して、4:06で静かに締めるのいいよね笑']],
     'listen:beyond_the_same_sky': [['happy', '3:49から静かに降りていく終わり方、余韻が残っていいよね笑']],
     'listen:brand_new_sky': [['happy', '0:46で強めに上がってから、1:19で一気にひらける流れがいいね']],
+    'listen:dear_santa': [['happy', '3:16でいちばん強いところを決めて、最後に静かに締めるのいいよね笑']],
     'listen:departure': [['happy', '4:48でスッと静かに終わるの、きれいだよね笑']],
     'listen:desert_crown': [['happy', '2:02からもう一回いちばん強くなって、そのまま締めるのいいね']],
     'listen:dr_wily_stage_1': [['happy', '2:29から静かに締めるの、余韻があっていいよね笑']],
@@ -34929,6 +34973,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:gourmet_race_dx': [['happy', '1:51で静かに終わるの、締めがきれいだね笑']],
     'listen:hopes_and_dreams': [['happy', '2:59で静かに終わるの、余韻があっていいよね笑']],
     'listen:kimimachi_loop': [['happy', '2:22で一回静かになってから、2:32でもう一回いちばん強くなるのずるいね笑']],
+    'listen:kiss_mystery': [['happy', '4:07からいちばん強いまま、最後まで押し切るの熱いよね笑']],
     'listen:mf_ichika_mix': [['wink', '自分の大会の曲はちょっと照れる笑 でも1:48からのサビは全力でいくよ！']],
     'listen:monster_hero': [['happy', '最後の2:30でいきなり静かになるから、きれいに締めよ笑']],
     'listen:monster_hero_another': [['happy', 'サビは2:34まで続くから、最後の1秒までちゃんと締めよ！']],
@@ -34984,6 +35029,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:evans': [['happy', '1:45ですっと静かに締めるとこ、かっこいい笑']],
     'listen:humanoid': [['happy', '1:33で静かに締めるとこ、きれいだよね笑']],
     'listen:walkure': [['happy', '8:12からいちばん強いまま、最後まで押し切るの熱いよね笑']],
+    'listen:winter_fall': [['happy', '3:58でいちばん強いところを越えて、最後に静かに締めるのいいよね笑']],
     'listen:zenbu_hissatsuwaza': [['happy', '1:45でもう一回いちばん強くなって、そのまま締めるのいいね笑']],
   },
   kyuko: {
@@ -35016,6 +35062,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:battle_5': [['happy', '静かと強めを繰り返して、最後にいちばん強い所を持ってくる構成なんだよね〜']],
     'listen:beyond_the_same_sky': [['happy', '強めの山が何度も来て、2:59・3:20・3:43で頂点が続くんだよね〜。後半勝負だよ']],
     'listen:brand_new_sky': [['happy', '静か→ふつう→強め→いちばん強いって、きれいに上がっていく構成なんだよね〜']],
+    'listen:dear_santa': [['happy', '静かに始めて0:54から強めを重ねる。1:24の山からの落とし方が効いてるんだよね〜']],
     'listen:departure': [['happy', '1:51でいったん落として、2:04からまた上げるのがいいんだよね〜']],
     'listen:desert_crown': [['happy', '静か→ふつう→強めって少しずつ上がって、1:07で爆発する構成なんだよね〜']],
     'listen:dr_wily_stage_1': [['happy', '0:44と1:58、二度サビが来る構成がいいんだよね〜。1:13で一度落とすのも効いてる']],
@@ -35028,6 +35075,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:gourmet_race_dx': [['happy', '1:14のサビのあと1:30で一度静かになる。構成が効いてるんだよね〜']],
     'listen:hopes_and_dreams': [['happy', '0:47でいったん落として、1:10からまた上げるのがいいんだよね〜']],
     'listen:kimimachi_loop': [['happy', '静か→ふつう→いちばん強いを何度もくり返す構成なんだよね〜 名前どおりループしてる笑']],
+    'listen:kiss_mystery': [['happy', '0:15で静かにためて0:58で強める。2:41で落としてまた上げる構成が効いてるんだよね〜']],
     'listen:mf_ichika_mix': [['normal', 'サビは1:48から2:14。終わりの近くに山があるから、前半はためていこ']],
     'listen:monster_hero': [['normal', '0:46でふつう、0:57で強め、1:50でいちばん強い。段の上がり方がきれいなんだよねぇ']],
     'listen:monster_hero_another': [['normal', '0:48で強くなって、1:14で一回ふつうに戻るんだよねぇ。そこが休みどころ']],
@@ -35083,6 +35131,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:evans': [['happy', '好きなんだよね〜。0:59で一回山を見せて、1:33で本番なの笑']],
     'listen:humanoid': [['normal', '強め→静か→強め、を2回やってからサビに入るんだよねぇ']],
     'listen:walkure': [['happy', '4:33で一回静かに落として、8:12でまた一番上まで上げる。構成が効いてるんだよね〜']],
+    'listen:winter_fall': [['happy', '1:37でいったん落として、2:22でまた一番上まで上げる。構成が効いてるんだよね〜']],
     'listen:zenbu_hissatsuwaza': [['happy', '0:34で強めに入って、1:03で一回静かにして、1:31で爆発する構成なんだよね〜']],
   },
   sorashido: {
@@ -35115,6 +35164,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:battle_5': [['normal', 'BPM170で912ノーツ。強い音55%・軽い音5%、数字でも力押しだぜ・・・！']],
     'listen:beyond_the_same_sky': [['normal', 'BPM178で1060ノーツ、Lv.33。強い音41%・軽い音8%の、力強い配分です・・・！']],
     'listen:brand_new_sky': [['normal', 'BPM146です。強く打つ音が48%・・・！ 元気な音です']],
+    'listen:dear_santa': [['normal', 'BPM200、強い音47%・軽い音6%。速くて強く打つ配分だぜ・・・！']],
     'listen:departure': [['normal', 'BPM156です。強く打つ音が45%・・・！ 力強いです']],
     'listen:desert_crown': [['normal', 'BPM100です。強く打つ音が40%・・・！ どっしりした音です']],
     'listen:dr_wily_stage_1': [['normal', 'BPM180で863ノーツ、Lv.43。強い音16%・軽い音9%の混ざり具合です・・・！']],
@@ -35127,6 +35177,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:gourmet_race_dx': [['normal', 'BPM160です。強い音67%に軽い音6%、力のこもった配分です']],
     'listen:hopes_and_dreams': [['normal', 'BPM171です。強く打つ音が48%・・・！ ガツンとくる音です']],
     'listen:kimimachi_loop': [['normal', 'BPM167です。強い音が32%・・・！ 軽やかなのに芯のある音です']],
+    'listen:kiss_mystery': [['normal', 'BPM112、強い音39%・軽い音2%。力強い音が主役の配分だぜ・・・！']],
     'listen:mf_ichika_mix': [['excited', 'いちばん上はLv.23で434ノーツです・・・！ サビは1:48からですね笑']],
     'listen:monster_hero': [['excited', '強く打つ音が62%、軽い音は3%です・・・！ 553ノーツ、全部数えたいです笑']],
     'listen:monster_hero_another': [['happy', 'BPMはおよそ171。もとの曲より少しだけゆっくりです笑']],
@@ -35182,6 +35233,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:evans': [['normal', 'BPM185で563ノーツ、Lv.44。1:48でこの数は濃いですね']],
     'listen:humanoid': [['excited', '好きな曲です！ BPM159で606ノーツ、Lv.50。全部計算済みです・・・！']],
     'listen:walkure': [['normal', 'BPM216で3460ノーツ！ 強い音54%・軽い音3%、力で押し切る配分だぜ・・・！']],
+    'listen:winter_fall': [['normal', 'BPM166、強い音46%・軽い音6%。力で押していく配分だぜ・・・！']],
     'listen:zenbu_hissatsuwaza': [['normal', 'BPM193です。強く打つ音が46%・・・！ 叩きごたえのある音です']],
   },
   erubin: {
@@ -35214,6 +35266,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:battle_5': [['normal', '0:47の静かな所は落ち着くね。戦いの前のひと息って感じかな']],
     'listen:beyond_the_same_sky': [['normal', '2:06の静かな所でひと息つけるかな。そのあと後半の山に備えよう']],
     'listen:brand_new_sky': [['normal', '2:07で少し落ち着いてから最後に戻ってくるところ、ぐっとくるね']],
+    'listen:dear_santa': [['normal', '1:29の静かな所は落ち着くね。速い曲だし、そこで息を整えようかな']],
     'listen:departure': [['normal', '0:45の静かなところ、ひと息つけるね']],
     'listen:desert_crown': [['normal', '始まりの静かなところ、落ち着いて入っていけるね']],
     'listen:dr_wily_stage_1': [['normal', '1:13でふつうに戻る所、ひと息つけるね。そのあとまた強くなるしね']],
@@ -35226,6 +35279,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:gourmet_race_dx': [['normal', '0:48のふつうな所と1:30の静かな所は落ち着くね。息を整えられるかな']],
     'listen:hopes_and_dreams': [['normal', '0:47の静かなところ、ひと息つけるね']],
     'listen:kimimachi_loop': [['normal', '1:31から強めになって、2:02へつながっていく流れがきれいだね']],
+    'listen:kiss_mystery': [['normal', '2:41や4:56の静かな所は落ち着くね。そこで息を整えようかな']],
     'listen:mf_ichika_mix': [['happy', '2分半くらいの曲だね。サビの1:48までは、落ち着いて合わせようか']],
     'listen:monster_hero': [['normal', 'はじめの静かなところで、気持ちを落ち着けておくといいよ']],
     'listen:monster_hero_another': [['happy', '1:14から少し落ち着く所があるね。そこでひと息つこうか']],
@@ -35281,6 +35335,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:evans': [['happy', '1:45で静かに終わる所、聞き終わってほっとするね']],
     'listen:humanoid': [['normal', '1:27で強めに落ちる所、少しほっとできるね']],
     'listen:walkure': [['normal', '5:14や6:33の静かな所は落ち着くね。長い曲だし、そこで息を整えようかな']],
+    'listen:winter_fall': [['normal', '1:37や3:13の落ち着いた所でひと息。長い曲だし、そこで整えようかな']],
     'listen:zenbu_hissatsuwaza': [['normal', '1:03の静かなところ、ここで落ち着いて息を整えようね']],
   },
 });
@@ -39177,6 +39232,12 @@ const xmasStoryCastAt = (no) => {
 
 // イベントページ(レイドの準備画面も)を開いているあいだの曲(台帳 r1126-015)。閉じると画面の曲へ戻る。BGM を切っている人には鳴らない(ふだんの BGM と同じ口)
 const XMAS_EVENT_BGM_TRACK = 'melo_kiss_mystery';
+// クリスマスイベントの期間(11/30 10:00〜12/31 3:59)だけの曲(台帳 r1126-023)。期間の外は今までの曲。開催中かは見るたびに数え直す
+//  ・ホームのBGM「Dear Santa」(台帳 r1126-023 追記1): HOME の曲(プロフィール・持ち物など HOME の曲を続ける画面も)。BGMアレンジでデフォルトのままの人だけ(自分で選んだ曲は替えない)
+//  ・レイドバトル曲「winter fall」: レイドのボスとの戦いの最中(モンヒロバトルの戦闘・MFバトルカードの対戦)
+const XMAS_HOME_BGM_TRACK = 'melo_dear_santa';
+const XMAS_RAID_BATTLE_BGM_TRACK = 'melo_winter_fall';
+const xmasEventBgmOpenAt = (nowMs) => raidXmasWindowAt(nowMs) === 'open';
 
 // ---- part: 36-raid-xmas-api.jsx ----
 // ===== クリスマスのレイドの回数・与ダメージ(3つの入口で共通の口) =====
@@ -40020,16 +40081,16 @@ const sbPutBeatRank = (row) => sbPutPlayerRank('beat', row);
 // ★有料の曲の足し方は rhythm-song-add スキルの「有料の曲にするとき」。この表に1行足すだけで、画面・交換所・助手が従う
 const RHYTHM_SONG_OWNED_KEY = 'mh_rhythm_owned_songs_v1';
 const RHYTHM_SONG_DEFAULT_PRICE = 500;
-// 有料の曲: { 曲の id: ビートP }。2026-11-14 の新曲3つから(departure!・RPG・Midnight Studio。LAMIA・サウダージ・メガロバニアは無料のまま)
+// 有料の曲: { 曲の id: ビートP }。2026-11-26 クリスマスの3曲も有料(台帳 r1126-036・ショート版は全編といっしょに開く)。2026-11-14 の新曲3つから(departure!・RPG・Midnight Studio。LAMIA・サウダージ・メガロバニアは無料のまま)
 // ★Battle #5 は公開を止めている間(2026-11-23 社長決定・台帳 r1119-120)、ここと下の組の表のどちらにも入れない。
 //   解禁するときに battle_5: 500 と battle_5_short: 'battle_5' を、公開曲の一覧(RHYTHM_DEMO_SONG_IDS)と必ず同じ変更で戻す
 //   (一覧だけ戻して値段が無いと、印の無い曲=無料の曲として出てしまう)
-const RHYTHM_SONG_PRICES = Object.freeze({ departure: 500, rpg: 500, midnight_studio: 500, hopes_and_dreams: 500, sparkling_pink_overture: 500, seasons_of_a_little_plaza: 500, eiyuu_no_akashi: 500, gourmet_race_64: 500, dr_wily_stage_1: 500, erfolg: 500, amakakeru_tsubasa: 500, beyond_the_same_sky: 500, desert_crown: 500, walkure: 500 });
+const RHYTHM_SONG_PRICES = Object.freeze({ departure: 500, rpg: 500, midnight_studio: 500, hopes_and_dreams: 500, sparkling_pink_overture: 500, seasons_of_a_little_plaza: 500, eiyuu_no_akashi: 500, gourmet_race_64: 500, dr_wily_stage_1: 500, erfolg: 500, amakakeru_tsubasa: 500, beyond_the_same_sky: 500, desert_crown: 500, walkure: 500, kiss_mystery: 500, dear_santa: 500, winter_fall: 500 });
 // 1曲の値段で、組の別の版(short ver.)もいっしょに遊べる(2026-11-14 社長「1曲500で両方ついてくる」)。{ 別の版の id: 買う曲の id }。
 // 保存するのは買った曲(全編)の id だけ。別の版は、全編を持っていれば開く(保存の形は変えない)
 // 2026-11-19 英雄の証も同じ形にそろえた(ミラクル☆ミルクティ版 → 戦闘版。交換所で2枚に分かれて出ていたのを1枚・500Pで両版に)
 // 2026-11-19 Dr.WILY STAGE 1 も同じ形(おっくせんまん版 → 原曲。曲組500P・両版開放で、交換所では1枚のカードだけ出す)
-const RHYTHM_SONG_BUNDLE_OWNER = Object.freeze({ departure_short: 'departure', rpg_short: 'rpg', midnight_studio_short: 'midnight_studio', hopes_and_dreams_short: 'hopes_and_dreams', gourmet_race_dx: 'gourmet_race_64', eiyuu_no_akashi_milktea: 'eiyuu_no_akashi', dr_wily_stage_1_okkussenman: 'dr_wily_stage_1', erfolg_piano: 'erfolg', beyond_the_same_sky_short: 'beyond_the_same_sky', walkure_short: 'walkure' });
+const RHYTHM_SONG_BUNDLE_OWNER = Object.freeze({ departure_short: 'departure', rpg_short: 'rpg', midnight_studio_short: 'midnight_studio', hopes_and_dreams_short: 'hopes_and_dreams', gourmet_race_dx: 'gourmet_race_64', eiyuu_no_akashi_milktea: 'eiyuu_no_akashi', dr_wily_stage_1_okkussenman: 'dr_wily_stage_1', erfolg_piano: 'erfolg', beyond_the_same_sky_short: 'beyond_the_same_sky', walkure_short: 'walkure', kiss_mystery_short: 'kiss_mystery', dear_santa_short: 'dear_santa', winter_fall_short: 'winter_fall' });
 const rhythmSongOwnerId = (songId) => { const id = String(songId || ''); return RHYTHM_SONG_BUNDLE_OWNER[id] || id; };
 const rhythmSongHasBundle = (songId) => Object.values(RHYTHM_SONG_BUNDLE_OWNER).includes(rhythmSongOwnerId(songId));
 // 購入で一緒に開く版の songId(持ち主自身は除く)。バンドルの表が正本
@@ -114780,7 +114841,8 @@ const cardCpuPlaylistOf = (playlist, who) => {
 };
 const cardIsBgmTrack = (id) => typeof BGM_TRACKS !== 'undefined' && BGM_TRACKS.some((t) => t.id === id);
 // 鳴らす曲(onBgm に渡す形)。ランダム(CARD_BGM_RANDOM)は選べる曲ぜんぶの並び → 60-app が開くたび・対戦を始めるたびにシャッフルして流す
-const cardBgmAllTracks = () => (typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS.map((t) => t.id) : []);
+// 「おまかせ」で選ぶ曲は、一覧に出している曲だけ(公開を止めている曲・時刻前の曲は入れない。13-bgm の bgmListedTracks)
+const cardBgmAllTracks = () => (typeof bgmListedTracks === 'function' ? bgmListedTracks().map((t) => t.id) : typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS.map((t) => t.id) : []);
 const cardBgmOf = (v) => {
   if (v === CARD_BGM_RANDOM) return cardBgmAllTracks();
   if (Array.isArray(v) && v.includes(CARD_BGM_RANDOM)) return cardBgmAllTracks();
@@ -117722,7 +117784,9 @@ const CardAssistantArt = ({ src, alt, className = '', style = null, knownBox = n
 // 同じ曲は選べない(ほかの行で使っている曲は一覧に出さない)。1曲だけのときは外せない(0曲にしない)
 const CardPlaylistRows = ({ list, onChange, bgmPreview, tag }) => {
   const tracks = typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : [];
-  const choices = (keep) => tracks.filter((t) => t.id === keep || !list.includes(t.id));
+  // 一覧に出すのは bgmListedTracks の曲だけ(公開を止めている曲・時刻前の曲は出さない)。いま選んでいる曲(keep)は消さずに残す
+  const listed = (t) => typeof bgmTrackListed !== 'function' || bgmTrackListed(t);
+  const choices = (keep) => tracks.filter((t) => t.id === keep || (listed(t) && !list.includes(t.id)));
   const selectClass = 'min-h-[44px] min-w-0 flex-1 rounded-xl border border-white/15 bg-slate-950 px-2 py-2 text-xs text-white';
   // ランダム(選べる曲ぜんぶから、毎回ちがう順で)。並びは [CARD_BGM_RANDOM] の1つだけ
   if (list.length === 1 && list[0] === CARD_BGM_RANDOM) {
@@ -118773,7 +118837,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       const intro = { mode: 'assistant', foe: { who: null, name: bossName, icon: null, frame: null, line: null, deckName: CARD_RAID_BOSS.deckName, monsters: vsMons(st, CARD_CPU) },
         me: { name: myName, deckName: deck.name || null, monsters: vsMons(st, CARD_ME) } };
       setGame({ key: `raid-${seed}`, st, who: 'raid', level: tier.level, settings: save.settings, intro, raid: { tier: Math.max(0, Math.floor(Number(rc.tierIndex) || 0)), tierName: rc.tierName || '', bossName, run: rc } });
-      onBgm && onBgm(cardBgmOf(cardCpuPlaylistOf(save.cpuPlaylist, 'kyuko')));
+      // レイドのボスとの対戦はクリスマスのレイドバトル曲「winter fall」(台帳 r1126-023)。曲が無いときは今までどおり
+      onBgm && onBgm(typeof XMAS_RAID_BATTLE_BGM_TRACK === 'string' && BGM_TRACK_BY_ID[XMAS_RAID_BATTLE_BGM_TRACK] ? XMAS_RAID_BATTLE_BGM_TRACK : cardBgmOf(cardCpuPlaylistOf(save.cpuPlaylist, 'kyuko')));
       onNavigate('CARD_BATTLE');
     } finally { raidStartingRef.current = false; }
   };
@@ -119392,7 +119457,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
                   <select data-card-bgm-select={k} aria-label={`${label}のBGM`} value={save.bgm[k]} onChange={(e) => { void persist({ bgm: normalizeCardBgm({ ...save.bgm, [k]: e.target.value }, cardIsBgmTrack) }); }}
                     className="min-h-[44px] min-w-0 flex-1 rounded-xl border border-white/15 bg-slate-950 px-2 py-2 text-xs text-white">
                     <option value={CARD_BGM_RANDOM}>ランダム(毎回ちがう曲)</option>
-                    {(typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : []).map((t) => <option key={t.id} value={t.id}>{t.name}{t.id === (CARD_BGM_DEFAULT[k] || CARD_BGM_DEFAULT.pvp) ? '(初めの曲)' : ''}</option>)}
+                    {(typeof bgmListedTracks === 'function' ? bgmListedTracks() : typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : []).map((t) => <option key={t.id} value={t.id}>{t.name}{t.id === (CARD_BGM_DEFAULT[k] || CARD_BGM_DEFAULT.pvp) ? '(初めの曲)' : ''}</option>)}
                   </select>
                   {/* ランダムの試聴は1曲を選んで流す(鳴っていれば止める) */}
                   {bgmPreview && (save.bgm[k] === CARD_BGM_RANDOM
@@ -136717,7 +136782,8 @@ function MonsterHeroGame() {
     // 助手ライフの画面(HOME・プロフィール・持ち物の上に開く)は「風がそよぐ場所」(2026-11-07 社長)
     if (assistantLifeOpenNow && (state === 'HOME' || state === 'PROFILE' || state === 'ITEM_INVENTORY') && typeof ASSISTANT_LIFE_BGM_TRACK === 'string') return ASSISTANT_LIFE_BGM_TRACK;
     // イベント・レイドボス「ジャック」: ジャックとの戦いは Monster(全編)、レイド画面・段階えらび・編成はぱんぷきんの曲に固定する
-    if (state === 'BATTLE' && raidJackRunRef.current) return RAID_JACK_BATTLE_BGM_TRACK;
+    // クリスマスのレイドの戦いは「winter fall」(台帳 r1126-023)
+    if (state === 'BATTLE' && raidJackRunRef.current) return raidJackRunRef.current.ev === 'xmas' ? XMAS_RAID_BATTLE_BGM_TRACK : RAID_JACK_BATTLE_BGM_TRACK;
     // クリスマスはイベントページ(物語・レイド・ボーナス)とレイドの準備画面で「Kissからはじまるミステリー」(台帳 r1126-015)
     if (RAID_JACK_BGM_STATES.includes(state)) return raidEvRef.current === 'xmas' ? XMAS_EVENT_BGM_TRACK : RAID_JACK_BGM_TRACK;
     // HOMEの曲は、イベント中だけ(ユーザーが曲を選んでいないとき)ぱんぷきんの曲にする。終わったら元の曲へ戻る。
@@ -136726,7 +136792,9 @@ function MonsterHeroGame() {
     // 更新履歴には「イベント中はHOMEのBGMもこの曲」と書いていたのに、ジャックの開催中しか切り替えていなかった)
     const halloweenNightOpen = Date.now() >= Date.parse(HALLOWEEN_NIGHT_START_AT) && Date.now() < Date.parse(HALLOWEEN_NIGHT_END_AT);
     const homeBgm = (((RELEASE_FLAGS.raidJack === true && raidJackWindowAt(Date.now()) === 'open') || raidJackDebugForce || halloweenNightOpen)
-      && bgmArrangement.home === DEFAULT_BGM_ARRANGEMENT.home) ? RAID_JACK_BGM_TRACK : bgmArrangement.home;
+      && bgmArrangement.home === DEFAULT_BGM_ARRANGEMENT.home) ? RAID_JACK_BGM_TRACK
+      // クリスマスイベントの期間は「Dear Santa」(台帳 r1126-023・デフォルトのままの人だけ)
+      : (xmasEventBgmOpenAt(Date.now()) && bgmArrangement.home === DEFAULT_BGM_ARRANGEMENT.home) ? XMAS_HOME_BGM_TRACK : bgmArrangement.home;
     if (isGameOver) return bgmArrangement.gameOver;
     if (!debugBattleRef.current && currentWave === 10 && (state === 'WAVE_RESULT' || state === 'CHAMPION')) {
       // AUTO∞は最終リザルトでも直前の戦闘BGMを継続する。設定をONにした場合だけ従来のクリアBGMへ切り替える。
@@ -150120,7 +150188,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       ['autoVictoryJingle','AUTO時 敵撃破ファンファーレ'],
       ['autoPostWaveBgm','AUTO時 強化フェーズBGM'],
       ['autoRepeatResultBgm','AUTO∞ 最終リザルトBGM'],
-    ].map(([scene,label])=><label key={scene} className="block text-left"><span className="text-xs font-black text-slate-300">{label}</span><div className="mt-1"><select aria-label={label} value={bgmArrangement[scene]} onChange={e=>changeBgmArrangement(scene,e.target.value)} className="w-full min-h-[44px] bg-slate-950 border border-white/15 rounded-xl px-2 py-3 text-xs text-white"><option value="off">OFF（戦闘BGMを途切れさせない）</option><option value="on">ON（従来どおり）</option></select></div></label>)}{items.map(([scene,label])=><label key={scene} className="block text-left"><span className="text-xs font-black text-slate-300">{label}</span>{/* 曲の欄は1行ぜんぶ使い、試聴・デフォルトはその下に並べる(横に並べると 320〜390 幅で曲名が「HOMEテー」と切れていた。2026-10-26 ダメダシの見回り) */}<div className="flex flex-wrap gap-2 mt-1"><select aria-label={`${selected.id==='battle'?`${selectedMode.label} `:''}${label}`} value={bgmArrangement[scene]} onChange={e=>changeBgmArrangement(scene,e.target.value)} className="min-w-0 min-h-[44px] w-full basis-full bg-slate-950 border border-white/15 rounded-xl px-2 py-3 text-xs text-white">{BGM_TRACKS.map(track=><option key={track.id} value={track.id}>{track.name}{track.id===DEFAULT_BGM_ARRANGEMENT[scene]?'（デフォルト）':''}</option>)}</select><button type="button" aria-label={`${label}を試聴`} onClick={()=>toggleBgmPreview(bgmArrangement[scene])} className="flex-1 min-h-[44px] rounded-xl bg-indigo-700 px-2 text-xs font-black">{previewTrackId===bgmArrangement[scene]?'停止':'試聴'}</button>{/* 場面ごとにデフォルトの曲へ戻す(下の「デフォルトに戻す」は全部の場面がまとめて戻る)。すでにデフォルトなら押せない。
+    ].map(([scene,label])=><label key={scene} className="block text-left"><span className="text-xs font-black text-slate-300">{label}</span><div className="mt-1"><select aria-label={label} value={bgmArrangement[scene]} onChange={e=>changeBgmArrangement(scene,e.target.value)} className="w-full min-h-[44px] bg-slate-950 border border-white/15 rounded-xl px-2 py-3 text-xs text-white"><option value="off">OFF（戦闘BGMを途切れさせない）</option><option value="on">ON（従来どおり）</option></select></div></label>)}{items.map(([scene,label])=><label key={scene} className="block text-left"><span className="text-xs font-black text-slate-300">{label}</span>{/* 曲の欄は1行ぜんぶ使い、試聴・デフォルトはその下に並べる(横に並べると 320〜390 幅で曲名が「HOMEテー」と切れていた。2026-10-26 ダメダシの見回り) */}<div className="flex flex-wrap gap-2 mt-1"><select aria-label={`${selected.id==='battle'?`${selectedMode.label} `:''}${label}`} value={bgmArrangement[scene]} onChange={e=>changeBgmArrangement(scene,e.target.value)} className="min-w-0 min-h-[44px] w-full basis-full bg-slate-950 border border-white/15 rounded-xl px-2 py-3 text-xs text-white">{bgmListedTracks().map(track=><option key={track.id} value={track.id}>{track.name}{track.id===DEFAULT_BGM_ARRANGEMENT[scene]?'（デフォルト）':''}</option>)}</select><button type="button" aria-label={`${label}を試聴`} onClick={()=>toggleBgmPreview(bgmArrangement[scene])} className="flex-1 min-h-[44px] rounded-xl bg-indigo-700 px-2 text-xs font-black">{previewTrackId===bgmArrangement[scene]?'停止':'試聴'}</button>{/* 場面ごとにデフォルトの曲へ戻す(下の「デフォルトに戻す」は全部の場面がまとめて戻る)。すでにデフォルトなら押せない。
    押せないときは「デフォルト中」と出して、壊れた札ではなく「いまデフォルト」だと分かるようにする */}<button type="button" data-bgm-scene-default={scene} aria-label={`${label}をデフォルトの曲にする`} disabled={bgmArrangement[scene]===DEFAULT_BGM_ARRANGEMENT[scene]} onClick={()=>changeBgmArrangement(scene,DEFAULT_BGM_ARRANGEMENT[scene])} className="flex-1 min-h-[44px] rounded-xl bg-slate-700 px-2 text-xs font-black disabled:bg-transparent disabled:border disabled:border-white/15 disabled:text-slate-400">{bgmArrangement[scene]===DEFAULT_BGM_ARRANGEMENT[scene]?'デフォルト中':'デフォルトにする'}</button></div></label>)}</div></>})()}<button className="mh-dialog-choice mt-4" onClick={()=>setBgmArrangement({...DEFAULT_BGM_ARRANGEMENT})}>デフォルトに戻す</button>{/* 閉じるは窓の下の固い帯に置く(浮いた丸ボタンが一覧の「試聴」「デフォルト中」と曲名の欄に重なって押せなかった。2026-11-23 API 総点検③ settings-bgm) */}<div data-bgm-close-band className="sticky -bottom-[18px] z-[2] -mb-[18px] flex shrink-0 justify-center border-t border-white/10 bg-[#0f172a] pt-2 pb-[18px]"><button className="mh-dialog-close" data-mh-back style={{position:'static',margin:0,boxShadow:'0 3px 0 #0009'}} onClick={closeBgmArrangement}>閉じる</button></div></div></div>
   ) : showBackup ? (
     <div className="mh-title-modal" {...settingsBackdropProps(()=>setShowBackup(false))}><div className="mh-title-dialog"><div className="mh-dialog-head"><h3>データ引き継ぎ</h3></div><div className="mh-changelog-tabs"><button className={backupTab==='export'?'active':''} onClick={()=>setBackupTab('export')}>バックアップ</button><button className={backupTab==='import'?'active':''} onClick={()=>setBackupTab('import')}>復元</button></div>{/* 大事なボタンを使い方より上に置く(320・375 で開いたとき、窓の下で切れていた。2026-10-26 ダメダシの見回り s03) */}{backupTab==='export'?<><button data-mhsave-action="export" className="mh-dialog-choice mh-button mh-button-primary justify-center text-center" style={{justifyContent:'center'}} onClick={saveBackupFile}><span style={{...JA_LABEL_STYLE,textAlign:'center'}}>{jaWrap('バックアップファイルを保存（.mhsave）')}</span></button><div style={{background:'rgba(15,23,42,.72)',border:'1px solid rgba(255,255,255,.12)',borderRadius:12,padding:'12px 14px',margin:'10px 0',textAlign:'left',fontSize:12,lineHeight:1.65,color:'#e2e8f0'}}><div style={{fontWeight:900,color:'#fff',marginBottom:4}}>使い方</div><div>1. 上の「バックアップファイルを保存」を押す</div><div>2. iPhone / iPadは共有メニューで「ファイルに保存」を選ぶ</div><div>3. Android / PCはダウンロードフォルダへ直接保存されます</div><div>4. 端末間で移すときはGoogle Driveなどへ同じファイルを置く</div><div style={{marginTop:8,fontWeight:900,color:'#fff'}}>保存ファイル名</div><code style={{display:'block',marginTop:2,wordBreak:'break-all',color:'#c4b5fd'}}>MonsterHero_Backup_YYYYMMDD_HHMM.mhsave</code><div style={{marginTop:6,color:'#94a3b8'}}>※ YYYYMMDD_HHMM は保存した日時に置き換わります。</div></div>{backupCode&&<textarea readOnly value={backupCode}/>}<button className="mh-dialog-choice justify-center text-center" style={{justifyContent:'center'}} onClick={generateBackupCode}><span style={{...JA_LABEL_STYLE,textAlign:'center'}}>{jaWrap('バックアップコードを作成')}</span></button></>:<><button data-mhsave-action="import" className="mh-dialog-choice justify-center text-center" style={{justifyContent:'center'}} onClick={restoreFromBackupFile}><span style={{...JA_LABEL_STYLE,textAlign:'center'}}>{jaWrap('バックアップファイルから復元（.mhsave）')}</span></button><div style={{background:'rgba(15,23,42,.72)',border:'1px solid rgba(255,255,255,.12)',borderRadius:12,padding:'12px 14px',margin:'10px 0',textAlign:'left',fontSize:12,lineHeight:1.65,color:'#e2e8f0'}}><div style={{fontWeight:900,color:'#fff',marginBottom:4}}>使い方</div><div>1. 上の「バックアップファイルから復元」を押す</div><div>2. 保存した <code style={{color:'#c4b5fd'}}>MonsterHero_Backup_....mhsave</code> を選ぶ</div><div>3. 復元後、ゲームは自動で再読み込みされます</div><div style={{marginTop:7,color:'#fbbf24'}}>※ 選んだバックアップ内のデータで現在のセーブが上書きされます。</div></div><textarea value={restoreInput} onChange={e=>setRestoreInput(e.target.value)} placeholder="バックアップコードを貼り付け"/><button className="mh-dialog-choice justify-center text-center" style={{justifyContent:'center'}} onClick={restoreFromBackupCode}><span style={{...JA_LABEL_STYLE,textAlign:'center'}}>{jaWrap('このコードで復元する')}</span></button></>}{restoreMsg&&<p>{restoreMsg}</p>}<button className="mh-dialog-close" data-mh-back onClick={()=>setShowBackup(false)}>閉じる</button></div></div>
@@ -150436,7 +150504,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       {updateNotice}{storageTroubleNotice}
       {/* ランの途中ならどの画面でも出し続ける。gameState==='BATTLE' に限っていたため、
           敵を倒してWAVE_RESULTへ移った瞬間に消えて、曲を選べなくなっていた */}
-      {showAutoBgmPicker&&isRunStage(gameState)&&<div data-auto-bgm-picker className="fixed inset-0 flex items-end justify-center bg-black/55 p-3" style={{zIndex:2147483647}} onClick={()=>setShowAutoBgmPicker(false)}><div className="w-full max-w-sm rounded-2xl border border-indigo-300/40 bg-slate-950 p-4 text-left shadow-2xl" onClick={e=>e.stopPropagation()}><div className="flex items-center justify-between gap-2 mb-3"><div><div className="text-sm font-black text-white">BGM / 音量</div><div className="text-[10px] text-slate-400">{ultraEcoSession?'超省エネ中：SEはOFF固定':(autoBattle||autoRepeat)?'AUTO中のBGMを一時変更':'このバトル中のBGMを一時変更'}</div></div></div><div className="mb-2">{ultraEcoSession?<div className="rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs font-black text-slate-400">🔕 SE 0　超省エネ中はOFF固定</div>:<VolumeSlider label="SE" icon="🔔" value={seVolume} onChange={changeSeVolume} gradient="from-cyan-500 to-indigo-500" thumbRing="border-indigo-400"/>}</div><div className="mb-3"><VolumeSlider label="BGM" icon="🎵" value={bgmVolume} onChange={changeBgmVolume} gradient="from-fuchsia-500 to-pink-500" thumbRing="border-fuchsia-400"/></div><label className="block"><span className="text-xs font-black text-slate-300">再生するBGM</span><select aria-label="バトル中に再生するBGM" value={autoBgmOverride||(autoBattle||autoRepeat?bgmArrangement.autoBattle:bgmKeyForState(gameState,wave,enemy?.id,(waveHistory||[]).length>0,hp<=0||gaveUp))} onChange={e=>selectAutoRuntimeBgm(e.target.value)} className="mt-1 w-full min-h-[48px] rounded-xl border border-white/15 bg-slate-900 px-3 text-sm text-white"><option value="__none__">BGMなし</option>{BGM_TRACKS.map(track=><option key={track.id} value={track.id}>{track.name}</option>)}</select></label><p className="mt-2 text-[10px] leading-relaxed text-slate-400">BGMの一時選択は保存済みBGMアレンジを変更しません。SE/BGM音量はHOMEの音量設定と共通です。</p><button type="button" onClick={()=>setShowAutoBgmPicker(false)} className="mt-3 min-h-[48px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200 active:scale-[.98]">閉じる</button></div></div>}
+      {showAutoBgmPicker&&isRunStage(gameState)&&<div data-auto-bgm-picker className="fixed inset-0 flex items-end justify-center bg-black/55 p-3" style={{zIndex:2147483647}} onClick={()=>setShowAutoBgmPicker(false)}><div className="w-full max-w-sm rounded-2xl border border-indigo-300/40 bg-slate-950 p-4 text-left shadow-2xl" onClick={e=>e.stopPropagation()}><div className="flex items-center justify-between gap-2 mb-3"><div><div className="text-sm font-black text-white">BGM / 音量</div><div className="text-[10px] text-slate-400">{ultraEcoSession?'超省エネ中：SEはOFF固定':(autoBattle||autoRepeat)?'AUTO中のBGMを一時変更':'このバトル中のBGMを一時変更'}</div></div></div><div className="mb-2">{ultraEcoSession?<div className="rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs font-black text-slate-400">🔕 SE 0　超省エネ中はOFF固定</div>:<VolumeSlider label="SE" icon="🔔" value={seVolume} onChange={changeSeVolume} gradient="from-cyan-500 to-indigo-500" thumbRing="border-indigo-400"/>}</div><div className="mb-3"><VolumeSlider label="BGM" icon="🎵" value={bgmVolume} onChange={changeBgmVolume} gradient="from-fuchsia-500 to-pink-500" thumbRing="border-fuchsia-400"/></div><label className="block"><span className="text-xs font-black text-slate-300">再生するBGM</span><select aria-label="バトル中に再生するBGM" value={autoBgmOverride||(autoBattle||autoRepeat?bgmArrangement.autoBattle:bgmKeyForState(gameState,wave,enemy?.id,(waveHistory||[]).length>0,hp<=0||gaveUp))} onChange={e=>selectAutoRuntimeBgm(e.target.value)} className="mt-1 w-full min-h-[48px] rounded-xl border border-white/15 bg-slate-900 px-3 text-sm text-white"><option value="__none__">BGMなし</option>{bgmListedTracks().map(track=><option key={track.id} value={track.id}>{track.name}</option>)}</select></label><p className="mt-2 text-[10px] leading-relaxed text-slate-400">BGMの一時選択は保存済みBGMアレンジを変更しません。SE/BGM音量はHOMEの音量設定と共通です。</p><button type="button" onClick={()=>setShowAutoBgmPicker(false)} className="mt-3 min-h-[48px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200 active:scale-[.98]">閉じる</button></div></div>}
       {/* AUTO∞の超省エネ中は、BATTLEから中間画面・CHAMPION・次周まで同じ暗さを保つ。 */}
       {/* モンビーを開いている間は外す。曲えらびや譜面まで暗いままだと遊べない
           (超省エネはバトルを見ないための暗幕なので、見る画面へ移ったら役目が終わる) */}
