@@ -398,6 +398,25 @@ const xmasNovelSe = (kind) => {
     if (typeof fn === 'function') fn();
   } catch (e) { /* 音が出せなくても読み進める */ }
 };
+//  場面の途中で曲を変える所(台本の「切→温」のうち、新曲を当てた所・台帳 r1126-039)。場面ID → [その行から先, 曲の鍵]
+//  END-G: 屋根裏の会場のやり直しのクリスマス会と本物のサンタのそり(「温 ★」)から Dear Santa。それより前のせつない所は今の曲のまま
+const XMAS_NOVEL_BGM_SHIFT = Object.freeze({
+  'END-G': [['G-10', 'melo_dear_santa']],
+});
+//  いまの行で鳴らす曲: 場面の曲 → その場面のいまの行までに出てきた行の曲・上の表の曲(あとのものが勝つ)
+const xmasNovelBgmAt = (scene, idx) => {
+  if (!scene) return '';
+  let key = scene.bgm || '';
+  const rows = Array.isArray(scene.rows) ? scene.rows : [];
+  const at = Number.isFinite(idx) ? idx : 0;
+  const shifts = XMAS_NOVEL_BGM_SHIFT[scene.id] || [];
+  for (let i = 0; i <= at && i < rows.length; i += 1) {
+    const r = rows[i];
+    if (r && r.bgm) key = r.bgm;
+    shifts.forEach(([rowId, k]) => { if (r && r.id === rowId) key = k; });
+  }
+  return key;
+};
 const xmasNovelBgm = (key) => {
   try {
     if (typeof Audio_ === 'undefined' || !Audio_) return;
@@ -556,7 +575,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
     if (scene && lastSceneRef.current && lastSceneRef.current.curtain && !scene.curtain) { setCurtain((c) => (c === 'down' ? 'up' : c)); setTimeout(() => setCurtain((c) => (c === 'up' ? null : c)), 1700); }
     lastSceneRef.current = scene || null;
     if (scene && scene.curtain) setCurtain((c) => c || 'down'); // カーテンコールは幕の前(途中から読んでも幕を下ろしておく)
-    if (scene && scene.bgm && scene.bgm !== lastBgm.current) { lastBgm.current = scene.bgm; xmasNovelBgm(scene.bgm); }
+    { const want = xmasNovelBgmAt(scene, next.cur ? next.cur.idx : 0); if (want && want !== lastBgm.current) { lastBgm.current = want; xmasNovelBgm(want); } }
     if (scene && scene.chapter !== lastChapter.current) {
       const ch = xmasNovelChapters(S).find((c) => c.id === scene.chapter);
       const opening = lastChapter.current !== null || next.cur.idx === 0;
