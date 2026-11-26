@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d502754705bfb2fc
+// source-sha256: af56261b235c3700
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -15943,6 +15943,13 @@ const RELEASE_FLAGS = {
   get xmasCostume() {
     try {
       return Date.now() >= Date.parse(XMAS_COSTUME_START_AT);
+    } catch (e) {
+      return false;
+    }
+  },
+  get cardXmasBonus() {
+    try {
+      return typeof cardEventBonusOn === 'function' && cardEventBonusOn() === true;
     } catch (e) {
       return false;
     }
@@ -201244,6 +201251,26 @@ const cardSharePolicy = (tactics, levelId, opts = {}) => {
     aces: t.aces.slice()
   };
 };
+const CARD_EVENT_BONUS = Object.freeze({
+  id: 'xmas_2026',
+  name: 'クリスマスイベント',
+  startAt: '2026-11-30T10:00:00+09:00',
+  endAt: '2026-12-31T04:00:00+09:00',
+  mult: 1.5,
+  label: '1.5倍'
+});
+let cardEventBonusForce = false;
+const cardEventBonusOn = (nowMs = Date.now()) => {
+  if (cardEventBonusForce === true) return true;
+  const t = Number(nowMs);
+  if (!Number.isFinite(t)) return false;
+  return t >= Date.parse(CARD_EVENT_BONUS.startAt) && t < Date.parse(CARD_EVENT_BONUS.endAt);
+};
+const cardEventBonusMult = (nowMs = Date.now()) => cardEventBonusOn(nowMs) ? CARD_EVENT_BONUS.mult : 1;
+const cardEventBonusApply = (n, ev = 1) => {
+  const v = Number.isFinite(n) ? n : 0;
+  return Number.isFinite(ev) && ev > 1 && v > 0 ? Math.round(v * ev) : v;
+};
 const CARD_TOUR_SINGLE_MAX = 9;
 const CARD_TOUR_GROUP_SIZE = 5;
 const CARD_TOUR_MIN_SEATS = 4;
@@ -212107,14 +212134,16 @@ const CardBattleScreen = ({
         const ar = await cardAutoRewardLoad();
         const paid = ar.left > 0;
         const half = cardCpuReward(fresh.daily, CARD_SHARE_REWARD_LEVEL, outcome, facts);
-        const point = paid ? Math.floor(half.base / 2) : 0;
-        const loops = paid ? Math.floor(cardCpuLoops(CARD_SHARE_REWARD_LEVEL, outcome, facts) / 2) : 0;
+        const evMult = Number.isFinite(game.eventMult) && game.eventMult > 1 ? game.eventMult : 1;
+        const point = paid ? cardEventBonusApply(Math.floor(half.base / 2), evMult) : 0;
+        const loops = paid ? cardEventBonusApply(Math.floor(cardCpuLoops(CARD_SHARE_REWARD_LEVEL, outcome, facts) / 2), evMult) : 0;
         const levelGain = paid && typeof cardLevelEntries === 'function' ? await cardLevelEntries({
           kind: 'cpu',
           level: CARD_SHARE_REWARD_LEVEL,
           outcome,
           debug,
-          auto: true
+          auto: true,
+          event: evMult
         }) : {
           entries: []
         };
@@ -212153,6 +212182,7 @@ const CardBattleScreen = ({
           got: point,
           bonus: 0,
           total: point,
+          eventMult: paid && point > 0 ? evMult : 1,
           full: paid ? Math.floor(half.full / 2) : 0,
           daily: fresh.daily
         };
@@ -212186,13 +212216,18 @@ const CardBattleScreen = ({
       if (game.share) {
         const facts = cardResultFacts(st, CARD_ME);
         const fresh = await freshCardSave();
-        const reward = cardCpuReward(fresh.daily, CARD_SHARE_REWARD_LEVEL, outcome, facts);
-        const loops = cardCpuLoops(CARD_SHARE_REWARD_LEVEL, outcome, facts);
+        const evMult = Number.isFinite(game.eventMult) && game.eventMult > 1 ? game.eventMult : 1;
+        const reward = {
+          ...cardCpuReward(fresh.daily, CARD_SHARE_REWARD_LEVEL, outcome, facts, evMult),
+          eventMult: evMult
+        };
+        const loops = cardCpuLoops(CARD_SHARE_REWARD_LEVEL, outcome, facts, evMult);
         const levelGain = typeof cardLevelEntries === 'function' ? await cardLevelEntries({
           kind: 'cpu',
           level: CARD_SHARE_REWARD_LEVEL,
           outcome,
-          debug
+          debug,
+          event: evMult
         }) : {
           entries: []
         };
@@ -212308,9 +212343,13 @@ const CardBattleScreen = ({
       const facts = cardResultFacts(st, CARD_ME);
       const fresh = await freshCardSave();
       const lifeMult = game.lifeUp && !game.demo ? CARD_LIFE_UP_MULT : 1;
-      const reward = cardCpuReward(fresh.daily, game.level, outcome, facts, lifeMult);
+      const evMult = !game.demo && Number.isFinite(game.eventMult) && game.eventMult > 1 ? game.eventMult : 1;
+      const reward = {
+        ...cardCpuReward(fresh.daily, game.level, outcome, facts, lifeMult * evMult),
+        eventMult: evMult
+      };
       const lifeEntry = lifeMult > 1 && reward.lifeUp === true && Number.isFinite(game.lifeSlot) ? await cardLifeRewardEntry(game.who, game.lifeSlot) : null;
-      const loops = cardCpuLoops(game.level, outcome, facts, lifeMult);
+      const loops = cardCpuLoops(game.level, outcome, facts, lifeMult * evMult);
       const rankable = !!(rank && rank.send) && !debug;
       const nextRecord = cardRecordAfter(fresh.record, {
         who: game.who,
@@ -212366,7 +212405,8 @@ const CardBattleScreen = ({
         level: game.level,
         outcome,
         debug,
-        mult: lifeMult
+        mult: lifeMult,
+        event: evMult
       }) : {
         entries: []
       };
@@ -212642,6 +212682,7 @@ const CardBattleScreen = ({
       settings: save.settings,
       intro: auto && auto.quick ? null : intro,
       cpuSameBlood: !!cpuDeck.sameBlood,
+      eventMult: cup ? 1 : cardEventBonusMult(),
       ...(lifeUp ? {
         lifeUp: true,
         lifeSlot
@@ -213406,7 +213447,14 @@ const CardBattleScreen = ({
   }
   if (view === 'pvp') {
     const pvpReward = async r => {
-      const base = cardPvpReward(r.reward, r.facts);
+      const pvpEv = typeof CARD_PVP !== 'undefined' && CARD_PVP.get().cup ? 1 : cardEventBonusMult();
+      const base0 = cardPvpReward(r.reward, r.facts);
+      const base = {
+        ...base0,
+        point: cardEventBonusApply(base0.point, pvpEv),
+        loops: cardEventBonusApply(base0.loops, pvpEv),
+        eventMult: base0.point > 0 || base0.loops > 0 ? pvpEv : 1
+      };
       const fresh = await freshCardSave();
       const daily = fresh.daily;
       const record = fresh.record;
@@ -213420,7 +213468,8 @@ const CardBattleScreen = ({
       const levelGain = typeof cardLevelEntries === 'function' && (r.reward === 'win' || r.reward === 'lose') ? await cardLevelEntries({
         kind: 'pvp',
         outcome: r.reward,
-        debug
+        debug,
+        event: pvpEv
       }) : {
         entries: []
       };
@@ -213955,13 +214004,17 @@ const CardBattleScreen = ({
     }, "もらったビートP: ", r.total, cardResultLifeUp(r) && React.createElement("span", {
       "data-card-result-life-plain": true,
       className: "ml-1 text-[11px] font-bold text-slate-300"
-    }, "(ふだん ", cardResultPlain(r) + (r.bonus || 0), ")")), cardResultLifeUp(r) && React.createElement("div", {
+    }, "(ふだん ", cardResultPlain(r) + (r.bonus || 0), ")")), r.eventMult > 1 && React.createElement("div", {
+      "data-card-result-event-bonus": true,
+      className: "my-1.5 rounded-xl border-2 border-emerald-300 bg-emerald-950/80 px-2.5 py-1.5 text-[13px] font-black leading-snug text-emerald-100",
+      style: JA_LABEL_STYLE
+    }, React.createElement("p", null, jaWrap(`🎄 ${CARD_EVENT_BONUS.name}のあいだは、ビートP・カードランクの経験値・クイック周回が ${CARD_EVENT_BONUS.label}`))), cardResultLifeUp(r) && result.lifeUp && React.createElement("div", {
       "data-card-result-life-up": true,
       className: "my-1.5 rounded-xl border-2 border-amber-300 bg-amber-950/80 px-2.5 py-1.5 text-[13px] font-black leading-snug text-amber-200",
       style: JA_LABEL_STYLE
     }, React.createElement("p", null, jaWrap(`🃏 カード部屋の${a ? a.name : '助手'}と対戦しました`)), React.createElement("p", {
       className: "text-[12px] text-white"
-    }, jaWrap(`ビートP・カードランクの経験値・クイック周回 ${CARD_LIFE_UP_LABEL}(${cardResultPlain(r)} → ${r.got})`))), React.createElement("div", {
+    }, jaWrap(`ビートP・カードランクの経験値・クイック周回 ${CARD_LIFE_UP_LABEL}${r.eventMult > 1 ? '' : `(${cardResultPlain(r)} → ${r.got})`}`))), React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-slate-300"
     }, cardBattleLevelLabel(result.level, result.share), "の", win ? '勝ち' : result.outcome === 'lose' ? '負け' : '投了', ": ", cardResultCut(r) ? `${r.full} → ${cardResultPlain(r)}` : cardResultPlain(r)), cardResultCut(r) && React.createElement("div", {
       "data-card-result-cut": true,
@@ -214843,7 +214896,16 @@ const CardBattleScreen = ({
       });
       setView('deckPick');
     }
-  }, "ボス", i + 1))), React.createElement("select", {
+  }, "ボス", i + 1))), React.createElement("button", {
+    type: "button",
+    "data-card-event-bonus-debug": true,
+    className: "mh-button mh-button-secondary min-h-[40px] w-full rounded-xl border border-emerald-400/40 bg-slate-800 text-[11px] font-black",
+    onClick: () => {
+      Audio_.fgSe.tap();
+      cardEventBonusForce = !cardEventBonusForce;
+      setNotice(cardEventBonusForce ? `${CARD_EVENT_BONUS.name}の倍を入れました(次の対戦から・読み込み直すと切れます)` : `${CARD_EVENT_BONUS.name}の倍を切りました`);
+    }
+  }, "イベントの倍(入/切)"), React.createElement("select", {
     "data-card-result-demo-who": true,
     value: demoWho,
     onChange: e => setDemoWho(e.target.value),
@@ -222324,7 +222386,11 @@ const CardPvpLobby = ({
     }, "無効の試合なので、ビートPとクイック周回は入りません"), got && React.createElement(React.Fragment, null, React.createElement("div", {
       "data-card-pvp-reward": true,
       className: "text-[13px] font-black text-amber-200"
-    }, "もらったビートP: ", got.point), got.short && React.createElement("div", {
+    }, "もらったビートP: ", got.point), got.eventMult > 1 && typeof CARD_EVENT_BONUS !== 'undefined' && React.createElement("div", {
+      "data-card-pvp-event-bonus": true,
+      className: "mt-1 text-[12px] font-black text-emerald-200",
+      style: JA_LABEL_STYLE
+    }, jaWrap(`🎄 ${CARD_EVENT_BONUS.name}のあいだは ${CARD_EVENT_BONUS.label}`)), got.short && React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-slate-400",
       style: JA_LABEL_STYLE
     }, jaWrap('自分のターンを3回やる前に終わったので、ビートPとクイック周回は入りません')), !got.short && got.loops > 0 && React.createElement("div", {
@@ -227483,7 +227549,8 @@ const cardLevelAfter = (prev, {
   outcome,
   today: today0,
   auto = false,
-  mult = 1
+  mult = 1,
+  event = 1
 }) => {
   const cur = cardNormalizeLevel(prev);
   const today = cardDayCarry(cur.day, today0);
@@ -227497,7 +227564,9 @@ const cardLevelAfter = (prev, {
     level,
     outcome
   });
-  const base = !auto && Number.isFinite(mult) && mult > 1 && base0 > 0 ? Math.round(base0 * mult) : base0;
+  const baseRoom = !auto && Number.isFinite(mult) && mult > 1 && base0 > 0 ? Math.round(base0 * mult) : base0;
+  const ev = Number.isFinite(event) && event > 1 ? event : 1;
+  const base = ev > 1 && base0 > 0 ? Math.round(base0 * (baseRoom > base0 ? mult : 1) * ev) : baseRoom;
   if (!base) return {
     next: cur,
     tickets: 0,
@@ -227515,9 +227584,12 @@ const cardLevelAfter = (prev, {
   const parts = [{
     label: outcome === 'win' ? '勝ち' : '負け',
     xp: base0
-  }, ...(base > base0 ? [{
+  }, ...(baseRoom > base0 ? [{
     label: `カード部屋の助手と対戦(${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : '倍'})`,
-    xp: base - base0
+    xp: baseRoom - base0
+  }] : []), ...(base > baseRoom ? [{
+    label: `${typeof CARD_EVENT_BONUS !== 'undefined' ? CARD_EVENT_BONUS.name : 'イベント'}(${typeof CARD_EVENT_BONUS !== 'undefined' ? CARD_EVENT_BONUS.label : '倍'})`,
+    xp: base - baseRoom
   }] : []), ...(first ? [{
     label: 'その日初めての勝ち',
     xp: CARD_LEVEL_XP.firstWin
@@ -227921,7 +227993,8 @@ const cardLevelEntries = async ({
   outcome,
   debug = false,
   auto = false,
-  mult = 1
+  mult = 1,
+  event = 1
 }) => {
   if (!cardTacticsOpen() && !debug) return {
     entries: [],
@@ -227943,6 +228016,7 @@ const cardLevelEntries = async ({
     outcome,
     auto,
     mult,
+    event,
     today: typeof cardTodayJst === 'function' ? cardTodayJst() : ''
   });
   if (!gain.add) return {
