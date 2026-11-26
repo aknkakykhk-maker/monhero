@@ -31,6 +31,7 @@ const S = E.XMAS_NOVEL_SCRIPT;
 const endingsAll = S.scenes.filter((s) => s.ending).map((s) => s.ending.id);
 const reached = new Map();
 let paths = 0; let stuck = 0;
+const visited = new Set();
 const MAX_PATHS = 4000;
 
 // 返しを読んだあと then のとおりに進める(画面の XmasNovelScreen と同じ手順)
@@ -57,6 +58,7 @@ const walk = (cur0, depth, log) => {
       return;
     }
     const row = st.row;
+    visited.add(st.cur.scene);
     if (row.t !== 'q') { st = E.xmasNovelStep(S, E.xmasNovelApplyRow(st.cur, row)); continue; }
     // 問い: 分かれる
     const tries = [];
@@ -70,8 +72,14 @@ const walk = (cur0, depth, log) => {
         const have = clueNames(st.cur);
         if (!ans.some((a) => have.includes(a))) { fail(`${row.id}: 正解の手がかり(${ans.join(' / ')})が、この問いまでに手がかり帳にたまっていない(道: ${log.slice(-4).join(' > ')})`); return; }
         const wrong = have.find((n) => !ans.includes(n));
-        tries.push([ans.find((a) => have.includes(a))]);
+        // 一発目でフラグが決まる問いだけ分ける(ほかは、まちがえてから正解の1本道。行き先は変わらないので道の数を増やさない)
+        if (row.first || !wrong) tries.push([ans.find((a) => have.includes(a))]);
         if (wrong) tries.push([wrong, ans.find((a) => have.includes(a))]);
+      } else if (row.once) {
+        // やり直しのない推理: 正解・行き先の決まった人・ほかの人・「まだ決めない」を1回ずつ
+        const people = E.xmasNovelPersonChoices().map((p) => p.id);
+        const keys = new Set([ans[0], ...Object.keys(row.route || {}).filter((k) => k !== '*' && !/^o\d/.test(k)), people.find((p) => !ans.includes(p) && !(row.route || {})[p]), ...(row.extra || []).map((x) => x.key)]);
+        keys.forEach((k) => { if (k) tries.push([k]); });
       } else {
         const people = E.xmasNovelPersonChoices().map((p) => p.id);
         tries.push([ans[0]]);
@@ -99,6 +107,8 @@ const walk = (cur0, depth, log) => {
 };
 walk(E.xmasNovelFreshCur(S), 0, []);
 endingsAll.forEach((e) => { if (!reached.has(e)) fail(`エンディング ${e} に着く道が無い`); });
+// どの道でも通らない場面(台本の「次」の書き損じのことが多い)。台本係へ知らせる注意で、止めない
+const unvisited = S.scenes.filter((s) => !visited.has(s.id) && !(s.rows || []).every((r) => r.t === 'flag')).map((s) => s.id);
 
 // 3. 保存の正規化
 const bad = [null, 1, 'x', [], { v: 9, cur: { scene: 'C99-9', idx: -3 }, read: 'no', endings: [1, 'END-G', 'END-G'], first: { Q: { f: 'yes' } }, snaps: { C1: 3, zz: {} }, auto: 7 },
@@ -128,5 +138,6 @@ if (parts.indexOf('79-screen-xmas-novel.jsx') < parts.indexOf('79-xmas-novel-scr
 const groups = E.xmasNovelScoreGroups(S).length;
 console.log(`台本 ${S.src}: 場面 ${S.scenes.length} / 推理の問い(成績のまとまり) ${groups} / たどった道 ${paths}${paths >= MAX_PATHS ? '(上限で打ち切り)' : ''}`);
 console.log(`着いたエンディング: ${endingsAll.map((e) => `${e}×${reached.get(e) || 0}`).join(' ')}`);
+if (unvisited.length) console.log(`注意: どの道でも通らない場面 ${unvisited.length} 個(台本の「次」を確かめる): ${unvisited.join(' ')}`);
 if (fails.length) { console.log(`NG ${fails.length} 件`); fails.slice(0, 20).forEach((f) => console.log(`  - ${f}`)); process.exit(1); }
 console.log('OK: ノベルの台本・分かれ道・保存の正規化');

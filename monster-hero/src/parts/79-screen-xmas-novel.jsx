@@ -215,6 +215,7 @@ const xmasNovelPanelStates = (row) => {
 const XMAS_NOVEL_KANJI = ['〇', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
 const xmasNovelChapterLabel = (ch) => {
   if (!ch) return '';
+  if (ch.disp) return ch.disp;
   if (ch.id === 'END') return 'エンディング';
   if (ch.no === 0) return '序章';
   if (ch.no === 9 && /終章/.test(ch.label)) return '終章';
@@ -255,12 +256,12 @@ const XMAS_NOVEL_ICONS = {
 };
 
 // ---- 保存 ----
-const xmasNovelLoad = async () => {
-  try { return xmasNovelNormalize(await storeGet(XMAS_NOVEL_STORAGE_KEY, null, false), XMAS_NOVEL_SCRIPT); }
-  catch (e) { return xmasNovelNormalize(null, XMAS_NOVEL_SCRIPT); }
+const xmasNovelLoad = async (script = XMAS_NOVEL_SCRIPT) => {
+  try { return xmasNovelNormalize(await storeGet(XMAS_NOVEL_STORAGE_KEY, null, false), script); }
+  catch (e) { return xmasNovelNormalize(null, script); }
 };
-const xmasNovelStore = async (save) => {
-  try { await storeSet(XMAS_NOVEL_STORAGE_KEY, xmasNovelNormalize(save, XMAS_NOVEL_SCRIPT), false); return true; } catch (e) { return false; }
+const xmasNovelStore = async (save, script = XMAS_NOVEL_SCRIPT) => {
+  try { await storeSet(XMAS_NOVEL_STORAGE_KEY, xmasNovelNormalize(save, script), false); return true; } catch (e) { return false; }
 };
 // 称号の口のための読み口: 全部一発で当てたか・何問か・称号を渡したか(ほかの画面からも呼べる)
 const xmasNovelPerfectState = async () => {
@@ -270,9 +271,10 @@ const xmasNovelPerfectState = async () => {
 
 // ---- 画面 ----
 const XMAS_NOVEL_AUTO_MS = [0, 1800, 1000];
-const XmasNovelScreen = ({ playerName = '', onClose, onPerfect }) => {
+// script … 検査で仮の台本を渡すときだけ(ふだんは渡さない)
+const XmasNovelScreen = ({ playerName = '', onClose, onPerfect, script = null }) => {
   useXmasNovelCss();
-  const S = XMAS_NOVEL_SCRIPT;
+  const S = script || XMAS_NOVEL_SCRIPT;
   const [save, setSave] = useState(null);
   const [mode, setMode] = useState('title'); // title / read / endings / chapters
   const [st, setSt] = useState(null); // xmasNovelSettle の結果(いまの行)
@@ -298,18 +300,18 @@ const XmasNovelScreen = ({ playerName = '', onClose, onPerfect }) => {
   useEffect(() => {
     let alive = true;
     try { prevBgm.current = typeof Audio_ !== 'undefined' && Audio_.currentBgmKey ? Audio_.currentBgmKey() : null; } catch (e) { prevBgm.current = null; }
-    xmasNovelLoad().then((s) => { if (alive) { saveRef.current = s; setSave(s); } });
+    xmasNovelLoad(S).then((s) => { if (alive) { saveRef.current = s; setSave(s); } });
     xmasNovelBgm('melo_kiss_mystery');
     return () => { alive = false; if (storeTimer.current) clearTimeout(storeTimer.current); };
   }, []);
   const persist = (next, now = false) => {
     saveRef.current = next; setSave(next);
     if (storeTimer.current) clearTimeout(storeTimer.current);
-    if (now) { void xmasNovelStore(next); return; }
-    storeTimer.current = setTimeout(() => { void xmasNovelStore(saveRef.current); }, 400);
+    if (now) { void xmasNovelStore(next, S); return; }
+    storeTimer.current = setTimeout(() => { void xmasNovelStore(saveRef.current, S); }, 400);
   };
   const close = () => {
-    if (storeTimer.current) { clearTimeout(storeTimer.current); void xmasNovelStore(saveRef.current); }
+    if (storeTimer.current) { clearTimeout(storeTimer.current); void xmasNovelStore(saveRef.current, S); }
     try { if (prevBgm.current && typeof Audio_ !== 'undefined') Audio_.playBGM(prevBgm.current); } catch (e) { /* 戻せなくても閉じる */ }
     onClose && onClose();
   };
@@ -332,6 +334,7 @@ const XmasNovelScreen = ({ playerName = '', onClose, onPerfect }) => {
       if (r.se) xmasNovelSe(r.se);
       if (r.fx.includes('title') || r.fx.includes('chapter')) { setCard({ kind: r.fx.includes('title') ? 'title' : 'band', text: r.x }); setShown(99999); return s; }
     } else setFx((f) => (f && f.kind === 'dark' ? null : f));
+    if (r.bgm && r.bgm !== lastBgm.current) { lastBgm.current = r.bgm; xmasNovelBgm(r.bgm); }
     if (r.t === 'clue') { setGot({ n: r.clue, d: r.x, add: !!r.add }); xmasNovelSe('clue'); }
     if (r.t === 'line' || r.t === 'band') setLog((l) => [...l.slice(-299), { who: r.t === 'line' ? xmasNovelNameOf(r) : '', text: xmasNovelFill(r.x, playerName) }]);
     if (r.t === 'q' && !opts.quiet && !opts.held) setSheet({ kind: r.kind, q: r });
@@ -429,7 +432,7 @@ const XmasNovelScreen = ({ playerName = '', onClose, onPerfect }) => {
   const answer = (q, pick) => {
     const res = xmasNovelAnswer(S, st.cur, q, pick);
     let s = saveRef.current;
-    if (q.kind !== 'action') { s = xmasNovelRecordFirst(s, q.id, res.ok); xmasNovelSe(res.ok ? 'ok' : 'ng'); }
+    if (q.score) { s = xmasNovelRecordFirst(s, q.id, res.ok); xmasNovelSe(res.ok ? 'ok' : 'ng'); }
     setSheet(null);
     persist({ ...s, cur: res.cur });
     const list = (res.replies || []);
@@ -517,7 +520,7 @@ const XmasNovelScreen = ({ playerName = '', onClose, onPerfect }) => {
               <ul className="space-y-2">
                 {endingsAll.map((e) => {
                   const seen = save.endings.includes(e.id);
-                  const kind = XMAS_NOVEL_ENDING_KINDS[e.kind] || XMAS_NOVEL_ENDING_KINDS.normal;
+                  const kind = { ...(XMAS_NOVEL_ENDING_KINDS[e.kind] || XMAS_NOVEL_ENDING_KINDS.normal), ...(e.label ? { label: e.label } : {}) };
                   return (
                     <li key={e.id} data-xmas-novel-ending={e.id} data-seen={seen ? '' : undefined} className="mh-nv-clue flex items-center gap-3">
                       <span className="mh-nv-serif shrink-0 rounded px-2 py-0.5 text-[11px] font-black" style={{ color: '#0a0f20', background: seen ? kind.tone : '#3a4466' }}>{seen ? kind.label : '？？？'}</span>
@@ -625,10 +628,10 @@ const XmasNovelScreen = ({ playerName = '', onClose, onPerfect }) => {
             <div className="mh-nv-rule" />
           </>)}
           {card.kind === 'ending' && (() => {
-            const kind = XMAS_NOVEL_ENDING_KINDS[card.ending.kind] || XMAS_NOVEL_ENDING_KINDS.normal;
+            const kind = { ...(XMAS_NOVEL_ENDING_KINDS[card.ending.kind] || XMAS_NOVEL_ENDING_KINDS.normal), ...(card.ending.label ? { label: card.ending.label } : {}) };
             return (
               <div className="w-full max-w-sm" data-xmas-novel-ending-card={card.ending.id}>
-                <div className="mh-nv-serif text-[13px] tracking-[0.5em]" style={{ color: kind.tone }}>{kind.label} END</div>
+                <div className="mh-nv-serif text-[13px] tracking-[0.4em]" style={{ color: kind.tone }}>{/エンド$/.test(kind.label) ? kind.label : `${kind.label} END`}</div>
                 <div className="mh-nv-rule" />
                 <div className="mh-nv-serif mh-nv-gold text-[28px] font-black leading-tight">「{card.ending.name}」</div>
                 <div className="mh-nv-rule" />
@@ -688,6 +691,10 @@ const XmasNovelScreen = ({ playerName = '', onClose, onPerfect }) => {
                 {xmasNovelFill(q.x, playerName)}
               </div>
               <div className="mh-nv-scroll"><XmasNovelCast onPick={(id) => answer(q, id)} /></div>
+              {(q.extra || []).map((x) => (
+                <button type="button" key={x.key} className="mh-nv-choice mh-nv-serif mt-2" data-xmas-novel-extra={x.key} onClick={() => answer(q, x.key)}>{x.x}</button>
+              ))}
+              {q.once && <div className="mt-2 text-center text-[11px] font-bold text-rose-200">選んだら、やり直しはできません</div>}
               <button type="button" className="mh-nv-btn wide mt-3" onClick={() => setSheet(null)}>話をもう一度見る</button>
             </>)}
             {q && q.kind === 'action' && (<>
@@ -697,6 +704,7 @@ const XmasNovelScreen = ({ playerName = '', onClose, onPerfect }) => {
                   <button type="button" key={o.i} className="mh-nv-choice mh-nv-serif" data-xmas-novel-option={o.i} onClick={() => answer(q, o.i)}>{xmasNovelFill(o.x, playerName)}</button>
                 ))}
               </div>
+              {q.once && <div className="mt-2 text-center text-[11px] font-bold text-rose-200">選んだら、やり直しはできません</div>}
             </>)}
             {sheet === 'menu' && (<>
               <div className="mh-nv-serif mh-nv-gold mb-3 text-center text-[18px] font-black">メニュー</div>
@@ -729,6 +737,6 @@ const openXmasNovel = (opts = {}) => {
     setTimeout(() => { try { h.root.unmount(); } catch (e) { /* 片づけに失敗しても画面は消す */ } try { h.el.remove(); } catch (e) { /* 同上 */ } }, 0);
     try { opts.onClose && opts.onClose(); } catch (e) { /* 呼び出し元の失敗は持ちこまない */ }
   };
-  root.render(<XmasNovelScreen playerName={opts.playerName || ''} onClose={done} onPerfect={opts.onPerfect} />);
+  root.render(<XmasNovelScreen playerName={opts.playerName || ''} onClose={done} onPerfect={opts.onPerfect} script={opts.script || null} />);
   return true;
 };

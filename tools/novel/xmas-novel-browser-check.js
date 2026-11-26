@@ -21,6 +21,8 @@ const serve = () => new Promise((r) => { const s = http.createServer((req, res) 
   if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); res.end(); return; }
   res.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' }); fs.createReadStream(f).pipe(res); }); s.listen(PORT, () => r(s)); });
 const ONLY = process.env.NV_ONLY || '';
+// 本番の台本は長いので、通しで遊ぶのは仮の台本(SAMPLE.md)で。openXmasNovel の script に渡す(検査だけの引数)
+const SAMPLE_SCRIPT = (() => { const b = require('./xmas-novel-build.js'); return b.parseScript(fs.readFileSync(path.join(ROOT, 'docs/progress/xmas-novel/SAMPLE.md'), 'utf8'), 'docs/progress/xmas-novel/SAMPLE.md'); })();
 const CASES_ALL = [
   { label: '縦', viewport: { width: 390, height: 844 }, isMobile: true, shot: 'tate', full: true },
   { label: '横', viewport: { width: 844, height: 390 }, isMobile: true, shot: 'yoko' },
@@ -57,7 +59,7 @@ const CASES = CASES_ALL.filter((c) => !ONLY || c.shot === ONLY);
       const keysBefore = await page.evaluate(() => Object.keys(localStorage).sort());
 
       // ①
-      const opened = await page.evaluate(() => { window.__nvClosed = 0; window.__nvPerfect = 0; return openXmasNovel({ playerName: 'テスト', onClose: () => { window.__nvClosed += 1; }, onPerfect: () => { window.__nvPerfect += 1; return true; } }); });
+      const opened = await page.evaluate((script) => { window.__nvScript = script; window.__nvClosed = 0; window.__nvPerfect = 0; return openXmasNovel({ script, playerName: 'テスト', onClose: () => { window.__nvClosed += 1; }, onPerfect: () => { window.__nvPerfect += 1; return true; } }); }, SAMPLE_SCRIPT);
       await page.locator('[data-xmas-novel-title]').waitFor({ timeout: 8000 }).catch(() => {});
       check(`① ${vp.label}: openXmasNovel でタイトルが開く`, opened === true && await page.locator('[data-xmas-novel-title]').count() === 1);
       await shot('01-title');
@@ -78,7 +80,7 @@ const CASES = CASES_ALL.filter((c) => !ONLY || c.shot === ONLY);
           scene: root && root.getAttribute('data-scene'), row: root && root.getAttribute('data-row') };
       });
       const tap = (sel) => page.evaluate((s) => { const e = document.querySelector(s); if (e) e.click(); return !!e; }, sel);
-      const answerOf = (id) => page.evaluate((qid) => { for (const s of XMAS_NOVEL_SCRIPT.scenes) for (const r of s.rows) if (r.id === qid) return r.answer || []; return []; }, id);
+      const answerOf = (id) => page.evaluate((qid) => { for (const s of window.__nvScript.scenes) for (const r of s.rows) if (r.id === qid) return r.answer || []; return []; }, id);
       const tried = new Set();
       for (let i = 0; i < 400; i++) {
         const s = await look();

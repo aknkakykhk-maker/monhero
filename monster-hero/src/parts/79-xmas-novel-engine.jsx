@@ -89,7 +89,7 @@ const xmasNovelCtx = (script, cur) => ({ flags: (cur && cur.flags) || {}, clues:
 const xmasNovelResolveScene = (script, id, ctx) => {
   const scenes = xmasNovelScenes(script);
   const first = scenes.find((s) => s.id === id);
-  if (first && xmasNovelCondOk(first.cond, ctx)) return first;
+  if (first && (first.jumpOnly || xmasNovelCondOk(first.cond, ctx))) return first; // 行き先でだけ入る場面は、名指しされたら入る
   const base = xmasNovelSceneBase(id);
   return scenes.find((s) => xmasNovelSceneBase(s.id) === base && s.id !== id && xmasNovelCondOk(s.cond, ctx)) || null;
 };
@@ -111,6 +111,7 @@ const xmasNovelNextScene = (script, scene, ctx) => {
   for (let j = i + 1; j < scenes.length; j += 1) {
     const s = scenes[j];
     if (xmasNovelIsEnding(s)) break;
+    if (s.jumpOnly) continue; // 問いの行き先でだけ入る場面(C7-A など)は、並びでは入らない
     if (xmasNovelSceneBase(s.id) === base && s.id !== scene.id) continue; // 自分の仲間(分かれた別の側)は飛ばす
     if (xmasNovelCondOk(s.cond, ctx)) return s;
   }
@@ -198,12 +199,25 @@ const xmasNovelAnswer = (script, cur, q, pick) => {
   if (!q || q.t !== 'q') return { cur, ok: false, replies: [], then: 'next' };
   const was = (cur.ans && cur.ans[q.id]) || null;
   const tries = (was ? was.t : 0) + 1;
+  // やり直しのない推理(1回目・2回目の推理): 選んだら、その答えの行き先へ(返しは正解の -ok か、選んだ人の返しだけ)
+  if (q.once) {
+    const key = q.kind === 'action' ? `o${pick}` : String(pick);
+    const ok = Array.isArray(q.answer) && q.answer.includes(pick);
+    const route = q.route || {};
+    const to = route[key] || route['*'] || null;
+    const next = { ...cur, ans: { ...(cur.ans || {}), [q.id]: { t: tries, f: was ? was.f === true : ok, w: (was && was.w ? was.w : 0) + (ok ? 0 : 1), done: true, ...(q.kind === 'action' ? { pick } : {}) } } };
+    if (q.kind === 'action') next.flags = { ...(cur.flags || {}), [`f_${q.id}`]: pick + 1 };
+    const replies = ok && xmasNovelPickReplies(q, 'ok').length ? xmasNovelPickReplies(q, 'ok') : xmasNovelPickReplies(q, q.kind === 'action' ? String(pick + 1) : String(pick));
+    const rto = xmasNovelRepliesTo(replies);
+    return { cur: next, ok, replies, then: rto ? { to: rto } : to ? { to } : 'next' };
+  }
   if (q.kind === 'action') {
     const ctx = xmasNovelCtx(script, cur);
     const opts = xmasNovelOptionsOf(q, ctx);
     const opt = opts.find((o) => o.i === pick) || null;
     if (!opt) return { cur, ok: false, replies: [], then: 'retry' };
-    const next = { ...cur, flags: xmasNovelSetFlags(cur.flags, opt.set), ans: { ...(cur.ans || {}), [q.id]: { t: tries, f: true, pick: opt.i } } };
+    // 選んだ番号は f_<問いID> にも残す(A1 の1つめ/2つめ = あつ派/ソラシド派の行 a / s)
+    const next = { ...cur, flags: { ...xmasNovelSetFlags(cur.flags, opt.set), [`f_${q.id}`]: opt.i + 1 }, ans: { ...(cur.ans || {}), [q.id]: { t: tries, f: true, pick: opt.i } } };
     const replies = xmasNovelPickReplies(q, String(opt.i + 1));
     const lastTo = xmasNovelRepliesTo(replies);
     return { cur: next, ok: true, replies, then: opt.to ? { to: opt.to } : lastTo ? { to: lastTo } : 'next' };

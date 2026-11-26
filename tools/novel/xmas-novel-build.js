@@ -95,7 +95,7 @@ const parseSceneHead = (cells, chapter, seq) => {
   const head = stripMd(cells[1]);
   const info = stripMd(cells[3]);
   let id; let title;
-  const m = head.match(/^((?:C\d+-\d+[a-z]?)|(?:END-[A-Z]+))\s*(.*)$/);
+  const m = head.match(/^((?:C\d+-[0-9A-Za-z]+)|(?:END-[A-Z]+))\s*(.*)$/);
   if (m) { id = m[1]; title = m[2].trim(); }
   else {
     const n = head.match(/場面\s*(\d+)/);
@@ -112,61 +112,118 @@ const parseSceneHead = (cells, chapter, seq) => {
   const bgmRaw = kv['曲'] || '';
   let bgm = null;
   if (bgmRaw) {
-    const idm = bgmRaw.match(/[a-z][a-z0-9_]+/);
+    const idm = bgmRaw.split(/→/)[0].match(/[a-z][a-z0-9_]+/);
     if (idm) bgm = idm[0];
     else if (/★/.test(bgmRaw)) bgm = 'melo_kiss_mystery';
     else {
-      const mark = Object.keys(BGM_MARKS).find((k) => bgmRaw.startsWith(k));
+      const mark = Object.keys(BGM_MARKS).find((k) => bgmRaw.split(/→/)[0].trim().startsWith(k));
       if (mark) bgm = BGM_MARKS[mark]; else note(id, `曲の印「${bgmRaw}」が分からない`);
     }
   }
-  const scene = { id, chapter: chapter.id, title, cond: parseCond(kv['条件']), bgm, bg: kv['背景'] || null, next: kv['次'] || null, rows: [] };
+  // 条件が文で書いてある場面(「Q7a でドラを選んだ」など)は、問いの行き先でだけ入る場面(jumpOnly)にする
+  const condSrc = kv['条件'] || '';
+  const condOk = /^[\sf_\w=<>!&|,、]*$|かつ|または/.test(condSrc) && /f_\w+|score|clues/.test(condSrc);
+  const cond = condSrc && condOk ? parseCond(condSrc) : null;
+  const nextRaw = (kv['次'] || '').trim();
+  const next = /^(C\d+-[0-9A-Za-z]+|END-[A-Z]+|END|Q\d+[a-z]+|A\d+[a-z]*)$/.test(nextRaw) ? nextRaw : null;
+  const bgRaw = (kv['背景'] || '').split(/→/)[0].trim();
+  const scene = { id, chapter: chapter.id, title, cond, bgm, bg: bgRaw || null, next, rows: [] };
+  if (condSrc && !cond) scene.jumpOnly = true;
   const em = id.match(/^END-([A-Z]+)/);
   if (em) {
-    const nameM = title.match(/^(グッド|ノーマル|バッド|あつルート)?\s*[「『]?([^」』]*)[」』]?/);
-    scene.ending = { id, kind: ENDING_KIND[em[1]] || 'normal', name: (nameM && nameM[2]) || title };
+    // 名前は見出しの題か、「### END-G 真グッド「…」」の小見出しから
+    const src = title || (chapter.endingNames && chapter.endingNames[id]) || '';
+    const nameM = src.match(/^([^「『]*?)\s*[「『]([^」』]*)[」』]/);
+    scene.ending = { id, kind: ENDING_KIND[em[1]] || 'normal', label: nameM ? nameM[1].trim() : '', name: nameM ? nameM[2] : src };
   }
   return scene;
 };
 
 // ---- 選択の行 ----
+//  突きつけ / 人を選ぶ / 行動 / やり直しのない推理(行き先の書き添え「(ドラ → C7-A へ。きゅうこ → Q7m へ。ほか → C7-B へ)」がある問い)
+const CIRCLED = '①②③④⑤⑥⑦⑧⑨';
+// 「(… → … へ。…)」の書き添えを切り出す(中に括弧があってもよい)
+const takeRouteNote = (seg) => {
+  const arrow = seg.indexOf('→');
+  if (arrow < 0) return { seg, note: '' };
+  const open = Math.max(seg.lastIndexOf('(', arrow), seg.lastIndexOf('（', arrow));
+  if (open < 0) return { seg, note: '' };
+  return { seg: seg.slice(0, open).trim(), note: seg.slice(open + 1).replace(/[)）]\s*$/, '') };
+};
+const routeKeyOf = (lhs) => {
+  const t = lhs.replace(/[(（][^)）]*[)）]/g, '').trim();
+  if (/^(ほかの人|ほか|それ以外|そのほか)$/.test(t)) return '*';
+  if (/まだ決めない/.test(t)) return '__undecided';
+  const c = CIRCLED.indexOf(t[0]);
+  if (c >= 0 && t.length === 1) return `o${c}`;
+  const sp = speakerOf(t);
+  return sp.w || null;
+};
+const parseRoutes = (note, where) => {
+  const route = {};
+  note.split(/。/).forEach((part) => {
+    const m = part.match(/^(.*?)→\s*(.*)$/);
+    if (!m) return;
+    const to = (m[2].match(/(C\d+-[0-9A-Za-z]+|END-[A-Z]+|Q\d+[a-z]+)/) || [])[1];
+    if (!to) return;
+    m[1].split(/[・、,]/).forEach((l) => { const k = routeKeyOf(l.trim()); if (k) route[k] = to; else if (l.trim()) note && notes(where, `行き先の「${l.trim()}」が分からない`); });
+  });
+  return route;
+};
+const notes = (where, msg) => note(where, msg);
+const NOSCORE = /2回目|推理の問い⑦|数えない/;
 const parseQuestion = (id, raw) => {
   const text = stripMd(raw);
-  const segs = text.split(/\s+\/\s+/);
+  let segs = text.split(/\s+\/\s+/);
+  const last = takeRouteNote(segs[segs.length - 1]);
+  segs[segs.length - 1] = last.seg;
   const tagText = (segs[0].match(/^((?:【[^】]*】\s*)*)/) || ['', ''])[1];
-  const prompt = segs[0].slice(tagText.length).trim();
-  const answerSegs = segs.slice(1).filter((s) => /【正解】|正解の手がかり/.test(s));
-  const rest = segs.slice(1).filter((s) => !/【正解】|正解の手がかり/.test(s));
-  const answers = [];
-  // 【正解】のあとは、「 / 」で並べた残りもみな正解(【正解】A / B)
-  let inAnswer = false;
-  segs.slice(1).forEach((s) => {
-    if (/【正解】/.test(s)) inAnswer = true;
-    if (inAnswer) s.replace(/^.*【正解】/, '').split(/\s*[/／]\s*/).forEach((a) => { const v = a.replace(/[【】]/g, '').replace(/^正解の手がかり\s*[:：]\s*/, '').trim(); if (v) answers.push(v); });
-  });
-  const isAction = /^A/.test(id) || /【行動/.test(tagText);
-  const isPerson = !isAction && (/人を選ぶ|1段目/.test(tagText));
+  let prompt = segs[0].slice(tagText.length).trim();
+  const pc = cleanLine(prompt.replace(/[(（][^)）]*[)）]\s*$/, '')); prompt = pc.text;
+  const isAction = /^A/.test(id) || /【行動|動機を選ぶ/.test(tagText);
+  const isPerson = !isAction && /人を選ぶ|1段目/.test(tagText);
   const firstM = tagText.match(/一発目で決まる[\s:：]*(f_\w+)?/);
   const q = { t: 'q', id, kind: isAction ? 'action' : isPerson ? 'person' : 'present', x: prompt, replies: {} };
-  if (/最後の問い/.test(tagText)) q.group = 'final';
-  if (!isAction) q.score = true;
-  if (firstM) { q.first = firstM[1] || null; if (!firstM[1]) note(id, '【一発目で決まる】のフラグの名前が無い(【一発目で決まる f_kuroba】の形)'); }
   const label = (tagText.match(/【([^】]*)】/) || [])[1];
-  if (label) q.label = label.replace(/・?一発目で決まる[\s:：]*(f_\w+)?/, '').replace(/・?人を選ぶ/, '').trim();
+  if (label) q.label = label.replace(/・?一発目で決まる[\s:：]*(f_\w+)?/, '').replace(/・?人を選ぶ/, '').replace(/・?動機を選ぶ/, '').trim();
+  if (/最後の問い|1回目の推理/.test(tagText)) q.group = 'final';
+  if (!/^A/.test(id) && !NOSCORE.test(tagText)) q.score = true;
+  if (firstM) { q.first = firstM[1] || null; if (!firstM[1]) note(id, '【一発目で決まる】のフラグの名前が無い(【一発目で決まる f_kuroba】の形)'); }
+  if (last.note) { q.route = parseRoutes(last.note, id); q.once = true; }
+  const rest = segs.slice(1);
   if (isAction) {
-    q.options = rest.map((o) => {
-      let s = o; const opt = {};
-      s = s.replace(/\[([^\]]*)\]/g, (_, c) => { opt.c = parseCond(c); return ''; });
-      s = s.replace(/\{([^}]*)\}/g, (_, c) => { opt.set = parseSets(c); return ''; });
-      const t = takeTo(s); if (t.to) opt.to = t.to;
-      opt.x = t.text.trim();
+    q.options = rest.filter((o) => !/^正解の手がかり/.test(o)).map((o, i) => {
+      let t = o; const opt = {};
+      if (/【正解】/.test(t)) { (q.answer = q.answer || []).push(i); t = t.replace(/【正解】/g, ''); }
+      t = t.replace(/\[([^\]]*)\]/g, (_, c) => { opt.c = parseCond(c); return ''; });
+      t = t.replace(/\{([^}]*)\}/g, (_, c) => { opt.set = parseSets(c); return ''; });
+      const tt = takeTo(t); if (tt.to) opt.to = tt.to;
+      opt.x = tt.text.replace(new RegExp(`^[${CIRCLED}]\\s*`), '').trim();
       return opt;
     });
     if (!q.options.length) note(id, '行動の選択肢が無い(「 / 」で区切る)');
-  } else {
-    q.answer = isPerson ? answers.map((a) => { const sp = speakerOf(a); if (!sp.w) note(id, `正解の人「${a}」が分からない`); return sp.w || a; }) : answers;
-    if (!answers.length) note(id, '【正解】が無い');
+    if (!q.answer) delete q.score;
+    return q;
   }
+  const answers = [];
+  if (isPerson && rest.length > 2) {
+    // 人の名前を並べて書く形(Q7a): 【正解】の付いた人が正解。人でない物(「まだ決めない」)は選択肢を足す
+    rest.forEach((o) => {
+      const ok = /【正解】/.test(o);
+      const name = o.replace(/【正解】/g, '').trim();
+      const sp = speakerOf(name.replace(/[(（].*$/, ''));
+      if (sp.w) { if (ok) answers.push(sp.w); }
+      else if (name) (q.extra = q.extra || []).push({ key: /まだ決めない/.test(name) ? '__undecided' : `x${(q.extra || []).length}`, x: name.replace(/[(（]([^)）]*)[)）]/, '($1)') });
+    });
+  } else {
+    let inAnswer = false;
+    rest.forEach((sg) => {
+      if (/【正解】/.test(sg)) inAnswer = true;
+      if (inAnswer) sg.replace(/^.*【正解】/, '').split(/\s*[/／]\s*/).forEach((a) => { const v = a.replace(/[【】]/g, '').replace(/^正解の手がかり\s*[:：]\s*/, '').trim(); if (v) answers.push(isPerson ? (speakerOf(v).w || v) : v); });
+    });
+  }
+  q.answer = answers;
+  if (!answers.length) note(id, '【正解】が無い');
   return q;
 };
 
@@ -179,6 +236,13 @@ const parseRow = (cells, where) => {
   let id = idCell; let cond = null;
   const cm = idCell.match(/^(.*?)\[([^\]]+)\]$/);
   if (cm) { id = cm[1]; cond = parseCond(cm[2]); }
+  // あつ派/ソラシド派(番号の末尾 a / s・第1章の A1 の1つめ/2つめ)
+  else if (/^\d+-\d+-\d+a$/.test(idCell)) cond = { any: [{ all: [{ k: 'f_A1', op: '=', v: 1 }] }] };
+  else if (/^\d+-\d+-\d+s$/.test(idCell)) cond = { any: [{ all: [{ k: 'f_A1', op: '=', v: 2 }] }] };
+  // 結びの一言(末尾 g3 = 7問とも / g2 = 4〜6問 / g1 = 3問以下)
+  else if (/g3$/.test(idCell)) cond = { any: [{ all: [{ k: 'score', op: '>=', v: 7 }] }] };
+  else if (/g2$/.test(idCell)) cond = { any: [{ all: [{ k: 'score', op: '>=', v: 4 }, { k: 'score', op: '<=', v: 6 }] }] };
+  else if (/g1$/.test(idCell) && /^[A-Z]-/.test(idCell)) cond = { any: [{ all: [{ k: 'score', op: '<=', v: 3 }] }] };
   const row = { id: idCell };
   if (cond) row.c = cond;
   if (who === '選択') return { ...parseQuestion(id, raw), ...(cond ? { c: cond } : {}), id: idCell };
@@ -219,7 +283,10 @@ const parseRow = (cells, where) => {
   if (sp.n) note(where, `知らない話し手「${sp.n}」(名前だけ出す)`);
   if (sp.secret) { line.n = '？？？'; delete line.w; }
   if (face && face !== '—' && face !== '-') { if (EXPRESSIONS.includes(face)) line.e = face; else note(where, `知らない表情「${face}」`); }
-  if (memo && !sp.secret && !/声の主/.test(memo)) line.note = memo;
+  const bgmM = memo && memo.match(/曲[:：]\s*([^\s)）]+)/);
+  if (bgmM) { const mk = Object.keys(BGM_MARKS).find((k) => bgmM[1].startsWith(k)); line.bgm = bgmM[1].includes('★') ? 'melo_kiss_mystery' : mk ? BGM_MARKS[mk] : bgmM[1]; }
+  const memo2 = memo ? memo.replace(/[(（]?曲[:：][^)）]*[)）]?/, '').replace(/^\s*(あつ派|ソラシド派|[0-9〜]+問[^)）]*のとき|7問とも一発のとき)\s*/, '').trim() : '';
+  if (memo2 && !sp.secret && !/声の主/.test(memo2)) line.note = memo2;
   return line;
 };
 // 返しの行(Q2a-x1 など)。頭の(…のとき)は外し、(もう一度選ぶ)(→…へ)は読み取って外す
@@ -253,17 +320,20 @@ const parseScript = (md, srcName) => {
     if (h) {
       const t = h[1].trim();
       if (/みんなで進む話|レイド/.test(t)) { chapter = null; continue; }
-      const cm = t.match(/^(序章|終章|第\s*(\d+)\s*章|エンディング)\s*(?:[～〜]\s*([^～〜]+?)\s*[～〜])?/);
+      const cm = t.replace(/^後半\s*/, '').match(/^(序章|終章|第\s*(\d+)\s*章|エンディング)\s*(?:[～〜]\s*([^～〜]+?)\s*[～〜])?/);
       if (cm) {
         started = true;
         const no = cm[2] ? Number(cm[2]) : CHAPTER_NO[cm[1]];
-        if (cm[1] === 'エンディング') { chapter = { id: 'END', no: 99, label: 'エンディング', title: '' }; }
-        else chapter = { id: `C${no}`, no, label: cm[1].replace(/\s+/g, ''), title: (cm[3] || '').trim() };
-        if (!chapters.some((c) => c.id === chapter.id)) chapters.push(chapter);
+        const KAN = ['〇', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
+        if (cm[1] === 'エンディング') { chapter = { id: 'END', no: 99, label: 'エンディング', disp: 'エンディング', title: '', endingNames: {} }; }
+        else chapter = { id: `C${no}`, no, label: cm[1].replace(/\s+/g, ''), disp: cm[2] ? `第${KAN[no] || no}章` : cm[1], title: (cm[3] || '').trim(), fresh: true };
+        chapters.push(chapter);
         scene = null; lastQ = null; seq = 0;
       } else chapter = null;
       continue;
     }
+    const eh = line.match(/^###\s+(END-[A-Z]+)\s+(.*)$/);
+    if (eh && chapter && chapter.endingNames) { chapter.endingNames[eh[1]] = eh[2].replace(/[(（][^)）]*[)）]\s*$/, '').trim(); continue; }
     if (!started || !chapter || !/^\|/.test(line)) continue;
     const cells = line.replace(/^\|/, '').replace(/\|\s*$/, '').split('|').map((c) => c.trim());
     if (cells.length < 4 || /^-+$/.test(cells[0].replace(/\s/g, '')) || cells[0] === '番号') continue;
@@ -271,6 +341,10 @@ const parseScript = (md, srcName) => {
       // 見出しの行(番号が空)。「戦う」の見出しはノベルでは使わない
       if (/^\*\*戦う\*\*$/.test(cells[1])) continue;
       seq += 1;
+      // 見出しの章番号と場面IDがちがう章(後半 第8章 = C10)は、場面IDのほうに合わせる
+      const sid = stripMd(cells[1]).match(/^C(\d+)-/);
+      if (sid && chapter.fresh && chapter.id !== `C${sid[1]}` && chapter.id !== 'END') { chapter.id = `C${sid[1]}`; chapter.no = Number(sid[1]); }
+      chapter.fresh = false;
       scene = parseSceneHead(cells, chapter, seq);
       if (scenes.some((s) => s.id === scene.id)) note(scene.id, '場面IDが2回ある');
       scenes.push(scene); lastQ = null;
@@ -288,7 +362,9 @@ const parseScript = (md, srcName) => {
     scene.rows.push(row);
     lastQ = row.t === 'q' ? row : null;
   }
-  return { v: 1, src: srcName, chapters: chapters.filter((c) => scenes.some((s) => s.chapter === c.id)).map(({ id, no, label, title }) => ({ id, no, label, title })), scenes };
+    const seenCh = new Set();
+  const chs = chapters.filter((c) => scenes.some((s) => s.chapter === c.id) && !seenCh.has(c.id) && seenCh.add(c.id));
+  return { v: 1, src: srcName, chapters: chs.map(({ id, no, label, disp, title }) => ({ id, no, label, disp, title })), scenes };
 };
 
 // ---- 見直し(行き先・答え・エンディング) ----
@@ -309,11 +385,13 @@ const lint = (data) => {
       if (r.kind === 'present') {
         (r.answer || []).forEach((a) => { if (!clueNames.has(a)) note(r.id, `正解の手がかり「${a}」が手がかりの行に無い`); });
         (r.near || []).forEach((a) => { if (!clueNames.has(a)) note(r.id, `近い手がかり「${a}」が手がかりの行に無い`); });
-        if (!r.replies.ok) note(r.id, '正解の返し(-ok)が無い');
-        if (!r.replies.x1) note(r.id, 'まちがいの返し(-x1)が無い');
+        if (!r.replies.ok && !r.once) note(r.id, '正解の返し(-ok)が無い');
+        if (!r.replies.x1 && !r.once) note(r.id, 'まちがいの返し(-x1)が無い');
       }
       Object.values(r.replies).forEach((list) => list.forEach((x) => { if (x.to && !okTo(x.to)) note(r.id, `行き先「${x.to}」が台本に無い`); }));
       (r.options || []).forEach((o) => { if (o.to && !okTo(o.to)) note(r.id, `行き先「${o.to}」が台本に無い`); });
+      Object.entries(r.route || {}).forEach(([k, to]) => { if (!okTo(to)) note(r.id, `行き先「${k} → ${to}」が台本に無い`); });
+      if (r.once && !(r.route || {})['*'] && r.kind === 'person') note(r.id, 'やり直しのない推理に「ほかの人 →」の行き先が無い');
     });
   });
   if (!data.scenes.some((s) => s.ending)) note('全体', 'エンディング(END-)の場面が無い');
