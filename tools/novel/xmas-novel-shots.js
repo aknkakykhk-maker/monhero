@@ -3,6 +3,7 @@
 //   保存(mh_xmas_novel_v1)の「続き」を、撮りたい場面・行・派(f_A1)にして開き、「続きから」を押して撮る。
 //   撮る物は下の SHOTS。行は台本の番号(7-1-3a など)で書く
 // 使い方: node tools/novel/xmas-novel-shots.js <出力ディレクトリ>   (縦 390×844・2倍)
+//         node tools/novel/xmas-novel-shots.js <出力ディレクトリ> --r1126-046   幕間と過去編(r1126-046)の組を撮る
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -25,6 +26,21 @@ const SHOTS = [
   { name: '09-c8-sora', row: '8-1-15s', side: 2, label: 'ソラシド派 第8章「真実はいつもひとつ!」' },
   { name: '10-c8-past', row: '8-3-12', side: 1, label: '第8章 12年前(ももすけ)' },
 ];
+// 幕間と過去編(r1126-046)。list: 起動画面の「章から」の一覧(真グッドを見たあと)を撮る
+const SHOTS_046 = [
+  { name: '01-m1-secret', row: '1-M-8', side: 1, label: '幕間 眠る客(？？？)' },
+  { name: '02-m2-kuroba', row: '2-M-16', side: 1, label: '幕間 鍵をかけた部屋(黒羽「あいつ」)' },
+  { name: '03-m3-ichika', row: '3-M-7', side: 2, label: '幕間 古い鍵(イチーカ)' },
+  { name: '04-m4-shirase', row: '4-M-12', side: 2, label: '幕間 書きかけの手紙(白瀬)' },
+  { name: '05-m5-dra', row: '5-M-12', side: 1, label: '幕間 手をつけないクッキー(ドラ)' },
+  { name: '06-m6-mochi', row: '6-M-9', side: 2, label: '幕間 帳面の名前(もちまる)' },
+  { name: '07-past-list', list: true, label: '「章から」の一覧(過去編が開いた)' },
+  { name: '08-past-kuroba', row: '12-1-9', side: 0, label: '過去編 ホールの子守歌(黒羽)' },
+  { name: '09-past-lie', row: '12-4-7', side: 0, label: '過去編 早すぎた鐘(黒羽のうそ)' },
+  { name: '10-past-shirase', row: '12-6-3', side: 0, label: '過去編 雪原の朝(白瀬)' },
+  { name: '11-past-mochi', row: '12-7-4', side: 0, label: '過去編 開けておく扉(もちまる)' },
+];
+const LIST = process.argv.includes('--r1126-046') ? SHOTS_046 : SHOTS;
 
 const ctx = vm.createContext({});
 vm.runInContext(`${fs.readFileSync(path.join(ROOT, 'monster-hero/src/parts/79-xmas-novel-script.jsx'), 'utf8')}\nthis.S = XMAS_NOVEL_SCRIPT;`, ctx);
@@ -45,8 +61,8 @@ const serve = () => new Promise((r) => { const s = http.createServer((req, res) 
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   let bad = 0;
   try {
-    for (const sh of SHOTS) {
-      const at = where(sh.row);
+    for (const sh of LIST) {
+      const at = sh.list ? { scene: 'C1-1', idx: 0 } : where(sh.row);
       if (!at) { console.log(`NG: ${sh.row} が台本に無い`); bad += 1; continue; }
       const page = await (await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 })).newPage();
       const errors = []; page.on('pageerror', (e) => errors.push(String(e)));
@@ -57,14 +73,15 @@ const serve = () => new Promise((r) => { const s = http.createServer((req, res) 
         put('mh_battle_tutorial_seen_v1', true); put('mh_battle_tutorial_guide_shown_v1', true); put('mh_masu_migrated', true);
         put('mh_inherited_unique_level_compensation_v1', true); put('mh_inherited_unique_level_compensation_pending_v1', false); put('mh_first_battle_done_v1', true);
         put('mh_xmas_novel_v1', seed);
-      }, { cur: { scene: at.scene, idx: at.idx, flags: sh.side ? { f_A1: sh.side } : {}, clues: [], ans: {}, panel: {} } });
+      }, { cur: sh.list ? null : { scene: at.scene, idx: at.idx, flags: sh.side ? { f_A1: sh.side } : {}, clues: [], ans: {}, panel: {} },
+        ...(sh.list || LIST === SHOTS_046 ? { endings: ['END-G'], snaps: { C1: { scene: 'C1-1', idx: 0, flags: {}, clues: [], ans: {}, panel: {} } } } : {}) });
       await page.addInitScript(seeds.eventStorySeed()); await page.addInitScript(seeds.updateNoticeSeed()); await page.addInitScript(seeds.loginBonusDoneSeed()); await page.addInitScript(seeds.oneTimeNoticeSeed());
       await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
       await page.getByRole('button', { name: 'TAP TO START' }).click({ timeout: 60000 });
       await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
       await page.getByRole('button', { name: 'モンヒロバトル', exact: true }).waitFor({ timeout: 30000 });
       await page.evaluate(() => openXmasNovel({ force: true, playerName: 'テスト' }));
-      await page.locator('[data-xmas-novel-continue]').click({ timeout: 8000 });
+      await page.locator(sh.list ? '[data-xmas-novel-chapters]' : '[data-xmas-novel-continue]').click({ timeout: 8000 });
       await page.waitForTimeout(2600);
       // 文字送りを最後まで(1回だけ叩く。問いの行はそのまま)
       const row = await page.evaluate(() => { const r = document.querySelector('[data-xmas-novel]'); return r ? r.getAttribute('data-row') : null; });

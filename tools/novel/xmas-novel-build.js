@@ -21,6 +21,8 @@ const SPEAKERS = [
   ['ソラシド', 'sorashido'], ['えるびん', 'erubin'], ['イチーカ', 'ichika'], ['もちまる', 'mochimaru'],
   ['黒羽', 'kuroba'], ['白瀬', 'shirase'], ['ワトソンくん', 'watson'],
 ];
+// 過去編(12年前の聖夜)だけに出る、立ち絵の無い話し手(名前だけ出す。注意に出さない・r1126-046)
+const PAST_SPEAKERS = ['カノン', '祖父', '幼いきゅうこ', '幼いイチーカ', '幼いももすけ', 'ももすけの母', '薬屋の主人', '幼いえるびん'];
 // 返しの行の英字(-dora など) → 人のid
 const PERSON_KEYS = { dora: 'dra', dra: 'dra', mua: 'myua', myua: 'myua', miyua: 'myua', atsu: 'atsu', kiki: 'kiki', momo: 'momosuke', momosuke: 'momosuke',
   kyuko: 'kyuko', sorashido: 'sorashido', sora: 'sorashido', erubin: 'erubin', elvin: 'erubin', ichika: 'ichika', ichiika: 'ichika',
@@ -137,6 +139,8 @@ const parseSceneHead = (cells, chapter, seq) => {
   const scene = { id, chapter: chapter.id, title, cond, bgm, bg: bgRaw || null, next, rows: [] };
   if (condSrc && !cond) scene.jumpOnly = true;
   if (/^外側/.test(info)) scene.outside = true; // ゲームの外(助手たち本人)の場面
+  // 過去編(真グッドを見たあと「章から」で読む章)の場面は、並びでは入らない。最後の場面のあとは起動画面へ戻る(r1126-046)
+  if (chapter.past) { scene.past = true; scene.jumpOnly = true; }
   if (afterM) scene.after = { scene: afterM[1], row: afterM[2] || null };
   // カーテンコールの場面(題か ID に「カーテンコール」「CC」)。エンディングの場面の「次」でつなぐ
   if (/カーテンコール/.test(title) || /(^|-)CC(-|$)/.test(id)) scene.curtain = true;
@@ -326,7 +330,7 @@ const parseRow = (cells, where) => {
   const sp = speakerOf(who);
   const { text, note: memo } = cleanLine(stripMd(raw));
   const line = { ...row, t: 'line', ...sp, x: text };
-  if (sp.n && !sp.crowd) note(where, `知らない話し手「${sp.n}」(名前だけ出す)`);
+  if (sp.n && !sp.crowd && !PAST_SPEAKERS.includes(sp.n)) note(where, `知らない話し手「${sp.n}」(名前だけ出す)`);
   delete line.crowd;
   if (sp.secret) { line.n = '？？？'; delete line.w; }
   if (face && face !== '—' && face !== '-') { if (EXPRESSIONS.includes(face)) line.e = face; else note(where, `知らない表情「${face}」`); }
@@ -367,6 +371,12 @@ const parseScript = (md, srcName) => {
     if (h) {
       const t = h[1].trim();
       if (/みんなで進む話|レイド/.test(t)) { chapter = null; continue; }
+      // 過去編 ～12年前の聖夜～(真グッドのあとに開く章。章ID C12・r1126-046)
+      if (started && /^過去編/.test(t)) {
+        chapter = { id: 'C12', no: 12, label: '過去編', disp: '過去編', title: ((t.match(/[～〜]\s*([^～〜]+?)\s*[～〜]/) || [])[1] || '').trim(), past: true };
+        chapters.push(chapter); scene = null; lastQ = null; seq = 0;
+        continue;
+      }
       const cm = t.replace(/^後半\s*/, '').replace(/^強制バッド.*$/, 'エンディング').match(/^(序章|終章|第\s*(\d+)\s*章|エンディング|カーテンコール)\s*(?:[～〜]\s*([^～〜]+?)\s*[～〜])?/);
       if (cm) {
         started = true;
@@ -446,7 +456,7 @@ const parseScript = (md, srcName) => {
   });
   const seenCh = new Set();
   const chs = chapters.filter((c) => scenes.some((s) => s.chapter === c.id) && !seenCh.has(c.id) && seenCh.add(c.id));
-  return { v: 1, src: srcName, chapters: chs.map(({ id, no, label, disp, title, outside }) => ({ id, no, label, disp, title, ...(outside ? { outside: true } : {}) })), scenes };
+  return { v: 1, src: srcName, chapters: chs.map(({ id, no, label, disp, title, outside, past }) => ({ id, no, label, disp, title, ...(outside ? { outside: true } : {}), ...(past ? { past: true } : {}) })), scenes };
 };
 
 // ---- 見直し(行き先・答え・エンディング) ----
