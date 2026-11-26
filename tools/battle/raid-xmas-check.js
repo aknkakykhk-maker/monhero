@@ -151,12 +151,13 @@ const totalsBody = (a1) => JSON.stringify([{ kind: 'a', tier: 1, total_damage: a
     const t = make('2026-12-01T12:00:00+09:00');
     const S = t.o.story;
     const C = S.XMAS_STORY_CHAPTERS;
-    check('物語: 25話・第1話は開始と同時・第2話は 12/1 4:00・第25話は 12/24 4:00',
-      C.length === 25 && C[0].openAt === '2026-11-30T10:00:00+09:00' && C[1].openAt === '2026-12-01T04:00:00+09:00' && C[24].openAt === '2026-12-24T04:00:00+09:00');
+    check('物語: 序章+25話・序章は 11/28・第1話は開始と同時・第2話は 12/1 4:00・第25話は 12/24 4:00',
+      C.length === 26 && C[0].id === 'xs00' && C[0].openAt === '2026-11-28T10:00:00+09:00' && C[1].openAt === '2026-11-30T10:00:00+09:00' && C[2].openAt === '2026-12-01T04:00:00+09:00' && C[25].openAt === '2026-12-24T04:00:00+09:00');
     const now = Date.parse('2026-12-01T12:00:00+09:00');
     const st = (i, p, all) => S.xmasStoryStatusOf(C[i], p, now, all);
-    check('物語: 日時の前は locked・前の話がまだなら waiting・開いたら new',
-      st(2, {}) === 'locked' && st(1, {}) === 'waiting' && st(0, {}) === 'new' && st(1, { cleared: ['xs01'] }) === 'new' && st(0, { seen: ['xs01'] }) === 'open');
+    check('物語: 日時の前は locked・前の話がまだなら waiting・開いたら new(序章を読むと第1話)',
+      st(3, {}) === 'locked' && st(1, {}) === 'waiting' && st(0, {}) === 'new' && st(1, { cleared: ['xs00'] }) === 'new'
+      && st(2, { cleared: ['xs00'] }) === 'waiting' && st(2, { cleared: ['xs00', 'xs01'] }) === 'new' && st(0, { seen: ['xs00'] }) === 'open');
     check('物語: デバッグの強制表示は日時も順番も見ない', st(10, {}, true) === 'new');
     check('物語: 壊れた保存値は既定へ戻す', JSON.stringify(S.xmasStoryNormalize({ cleared: 'x', seen: [1, 'xs01', 'xs01', 'zz'] })) === '{"v":1,"cleared":[],"seen":["xs01"],"rewardClaimed":false}');
     await S.xmasStoryMarkSeen('xs01');

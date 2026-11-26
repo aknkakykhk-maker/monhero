@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d0792971ee9e583c
+// source-sha256: f3eba5ce47697fd6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -63987,14 +63987,27 @@ const XMAS_BATTLE_BONUS_RATE = 1.5;
 const xmasBattleBonusRateAt = nowMs => raidXmasWindowAt(nowMs) === 'open' ? XMAS_BATTLE_BONUS_RATE : 1;
 const XMAS_STORY_LIST = Object.freeze([['招待状', 'read'], ['雪の音', 'fight'], ['夜中の足音', 'read'], ['開かずの部屋', 'read'], ['窓の外の影', 'fight'], ['柱時計', 'read'], ['十二の鐘', 'read'], ['足あとの先', 'fight'], ['ふたつめの空箱', 'read'], ['見張り番', 'fight'], ['閉じたノート', 'read'], ['ふたりの探偵助手', 'read'], ['鏡の中', 'read'], ['影の行進', 'fight'], ['みんなで眠る夜', 'read'], ['見回りのランタン', 'read'], ['雪の上の砂', 'fight'], ['13の鐘', 'fight'], ['そろう手がかり', 'read'], ['謎はすべて解けた!', 'read'], ['おでじゃない', 'read'], ['そろいすぎた手がかり', 'read'], ['最後の手がかり', 'fight'], ['真実はいつもひとつ!', 'read'], ['やり直しのクリスマス会', 'read']]);
 const xmasStoryOpenAtOf = no => no <= 1 ? RAID_XMAS_EVENT.startAt : `2026-12-${String(no - 1).padStart(2, '0')}T04:00:00+09:00`;
-const XMAS_STORY_CHAPTERS = Object.freeze(XMAS_STORY_LIST.map(([title, type], i) => Object.freeze({
+const XMAS_STORY_PROLOGUE_OPEN_AT = '2026-11-28T10:00:00+09:00';
+const XMAS_STORY_CHAPTERS = Object.freeze([Object.freeze({
+  id: 'xs00',
+  no: 0,
+  prologue: true,
+  openAt: XMAS_STORY_PROLOGUE_OPEN_AT,
+  type: 'read',
+  title: '序章',
+  scriptId: 'xmas_story_00'
+}), ...XMAS_STORY_LIST.map(([title, type], i) => Object.freeze({
   id: `xs${String(i + 1).padStart(2, '0')}`,
   no: i + 1,
   openAt: xmasStoryOpenAtOf(i + 1),
   type,
   title,
   scriptId: `xmas_story_${String(i + 1).padStart(2, '0')}`
-})));
+}))]);
+const xmasStoryPrevOf = chapter => {
+  const i = XMAS_STORY_CHAPTERS.findIndex(c => c.id === chapter.id);
+  return i > 0 ? XMAS_STORY_CHAPTERS[i - 1] : null;
+};
 const XMAS_STORY_STORAGE_KEY = 'mh_xmas_story_v1';
 const xmasStoryNormalize = raw => {
   const ids = new Set(XMAS_STORY_CHAPTERS.map(c => c.id));
@@ -64013,7 +64026,7 @@ const xmasStoryStatusOf = (chapter, progress, nowMs, allOpen = false) => {
   if (!allOpen) {
     const at = Date.parse(chapter.openAt);
     if (!Number.isFinite(at) || !Number.isFinite(nowMs) || nowMs < at) return 'locked';
-    const prev = XMAS_STORY_CHAPTERS[chapter.no - 2];
+    const prev = xmasStoryPrevOf(chapter);
     if (prev && !p.cleared.includes(prev.id)) return 'waiting';
   }
   return p.seen.includes(chapter.id) ? 'open' : 'new';
@@ -112910,7 +112923,7 @@ const XmasStoryTab = ({
     const st = xmasStoryStatusOf(c, progress, nowMs, allOpen);
     const locked = st === 'locked';
     const can = !locked && st !== 'waiting';
-    const prev = XMAS_STORY_CHAPTERS[c.no - 2];
+    const prev = xmasStoryPrevOf(c);
     return React.createElement("li", {
       key: c.id
     }, React.createElement("button", {
@@ -112923,15 +112936,17 @@ const XmasStoryTab = ({
     }, React.createElement("span", {
       className: "mh-xmas-medal flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-full leading-none",
       "data-dim": can ? undefined : ''
-    }, React.createElement("small", {
+    }, c.prologue ? React.createElement("b", {
+      className: "text-[12px] font-black"
+    }, "序章") : React.createElement(React.Fragment, null, React.createElement("small", {
       className: "text-[10px] font-black"
     }, "第"), React.createElement("b", {
       className: "text-[14px] font-black"
-    }, c.no)), React.createElement("span", {
+    }, c.no))), React.createElement("span", {
       className: "min-w-0 flex-1"
     }, React.createElement("span", {
       className: `block truncate text-[14px] font-black ${can ? 'text-white' : 'text-slate-500'}`
-    }, locked ? `第${c.no}話 〜？？？〜` : c.title), locked && React.createElement("span", {
+    }, locked ? `${c.prologue ? '序章' : `第${c.no}話`} 〜？？？〜` : c.title), locked && React.createElement("span", {
       className: "mt-0.5 flex items-center gap-1 text-[10px] font-bold text-slate-400"
     }, React.createElement(Lock, {
       size: 11
@@ -112965,18 +112980,20 @@ const XmasStoryTab = ({
     onClick: () => setSel(null)
   }, React.createElement("div", {
     role: "dialog",
-    "aria-label": `第${chapter.no}話 ${chapter.title}`,
+    "aria-label": chapter.prologue ? chapter.title : `第${chapter.no}話 ${chapter.title}`,
     className: "mh-xmas-frame w-full max-w-md rounded-2xl bg-gradient-to-b from-[#16264a] to-[#0b1530] p-4",
     onClick: e => e.stopPropagation()
   }, React.createElement("div", {
     className: "mb-3 flex items-center gap-3"
   }, React.createElement("span", {
     className: "mh-xmas-medal flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-full leading-none"
-  }, React.createElement("small", {
+  }, chapter.prologue ? React.createElement("b", {
+    className: "text-[13px] font-black"
+  }, "序章") : React.createElement(React.Fragment, null, React.createElement("small", {
     className: "text-[10px] font-black"
   }, "第"), React.createElement("b", {
     className: "text-[17px] font-black"
-  }, chapter.no)), React.createElement("div", {
+  }, chapter.no))), React.createElement("div", {
     className: "min-w-0"
   }, React.createElement("div", {
     className: "mb-0.5"

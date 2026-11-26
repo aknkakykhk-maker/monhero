@@ -128,7 +128,7 @@ const xmasBattleBonusRateAt = (nowMs) => (raidXmasWindowAt(nowMs) === 'open' ? X
 
 // ---- ひとりで進める物語(イベントページの「物語」タブ・台帳 r1126-006) ----
 //  ・話はイベントページから選んで読む。自動では流さない(社長 2026-11-25)。開いた話はいつでも読み返せる
-//  ・開く日時: 第1話は開始と同時(11/30 10:00)、第2話からは毎日 4:00(1日の区切りと同じ)に1話ずつ(仮)
+//  ・開く日時: 序章は 11/28(開催予告)から、第1話は開始と同時(11/30 10:00)、第2話からは毎日 4:00(1日の区切りと同じ)に1話ずつ(仮)
 //  ・前の話を読んだ(戦う話は勝った)ら次が選べる。戦う話はバトル・モンヒロビート・バトルカードのどれかで勝つと進む
 //  ・題と「読む/戦う」は台本の全話一覧(第3案・docs/progress/event-xmas-2026/SCRIPT.md §0)の仮。台本が決まったらこの表だけ直す
 //  ・お話の中身は data/assistants.js の EVENT_REPLAYS に scriptId の id で入れる(入るまでは「準備中」と出す)
@@ -141,14 +141,24 @@ const XMAS_STORY_LIST = Object.freeze([
 ]);
 // 第2話から: 12/(話-1) 4:00 JST(第25話 = 12/24)
 const xmasStoryOpenAtOf = (no) => (no <= 1 ? RAID_XMAS_EVENT.startAt : `2026-12-${String(no - 1).padStart(2, '0')}T04:00:00+09:00`);
-const XMAS_STORY_CHAPTERS = Object.freeze(XMAS_STORY_LIST.map(([title, type], i) => Object.freeze({
-  id: `xs${String(i + 1).padStart(2, '0')}`,
-  no: i + 1,
-  openAt: xmasStoryOpenAtOf(i + 1),
-  type,
-  title,
-  scriptId: `xmas_story_${String(i + 1).padStart(2, '0')}`,
-})));
+// 序章(台帳 r1126-012・社長): 第1話の前。イチーカから招待状が届いて行くまで。11/28 の開催予告のときから開く(時刻 10:00 は仮)。中身は台本ができてから
+const XMAS_STORY_PROLOGUE_OPEN_AT = '2026-11-28T10:00:00+09:00';
+const XMAS_STORY_CHAPTERS = Object.freeze([
+  Object.freeze({ id: 'xs00', no: 0, prologue: true, openAt: XMAS_STORY_PROLOGUE_OPEN_AT, type: 'read', title: '序章', scriptId: 'xmas_story_00' }),
+  ...XMAS_STORY_LIST.map(([title, type], i) => Object.freeze({
+    id: `xs${String(i + 1).padStart(2, '0')}`,
+    no: i + 1,
+    openAt: xmasStoryOpenAtOf(i + 1),
+    type,
+    title,
+    scriptId: `xmas_story_${String(i + 1).padStart(2, '0')}`,
+  })),
+]);
+// 前の話(並びの1つ前。序章の前は無い)
+const xmasStoryPrevOf = (chapter) => {
+  const i = XMAS_STORY_CHAPTERS.findIndex((c) => c.id === chapter.id);
+  return i > 0 ? XMAS_STORY_CHAPTERS[i - 1] : null;
+};
 const XMAS_STORY_STORAGE_KEY = 'mh_xmas_story_v1';
 // 保存の形 { v:1, cleared:[id], seen:[id], rewardClaimed:false }。壊れていても既定へ戻す(⑦)
 const xmasStoryNormalize = (raw) => {
@@ -165,7 +175,7 @@ const xmasStoryStatusOf = (chapter, progress, nowMs, allOpen = false) => {
   if (!allOpen) {
     const at = Date.parse(chapter.openAt);
     if (!Number.isFinite(at) || !Number.isFinite(nowMs) || nowMs < at) return 'locked';
-    const prev = XMAS_STORY_CHAPTERS[chapter.no - 2];
+    const prev = xmasStoryPrevOf(chapter);
     if (prev && !p.cleared.includes(prev.id)) return 'waiting';
   }
   return p.seen.includes(chapter.id) ? 'open' : 'new';

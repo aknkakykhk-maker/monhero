@@ -181,17 +181,17 @@ const XmasStoryTab = ({ version = 0, allOpen = false, fightWays = [], onRead, on
             const st = xmasStoryStatusOf(c, progress, nowMs, allOpen);
             const locked = st === 'locked';
             const can = !locked && st !== 'waiting';
-            const prev = XMAS_STORY_CHAPTERS[c.no - 2];
+            const prev = xmasStoryPrevOf(c);
             return (
               <li key={c.id}>
                 <button type="button" data-xmas-story-chapter={c.id} data-status={st} disabled={!can} onClick={() => select(c)}
                   className="mh-xmas-card flex w-full min-h-[56px] items-center gap-2.5 rounded-xl px-2.5 py-2 text-left active:scale-[0.99] disabled:active:scale-100">
                   <span className="mh-xmas-medal flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-full leading-none" data-dim={can ? undefined : ''}>
-                    <small className="text-[10px] font-black">第</small><b className="text-[14px] font-black">{c.no}</b>
+                    {c.prologue ? <b className="text-[12px] font-black">序章</b> : <><small className="text-[10px] font-black">第</small><b className="text-[14px] font-black">{c.no}</b></>}
                   </span>
                   <span className="min-w-0 flex-1">
                     {/* まだ開いていない話は、題も「読む/戦う」も出さない(ネタバレになるため・社長 2026-11-26) */}
-                    <span className={`block truncate text-[14px] font-black ${can ? 'text-white' : 'text-slate-500'}`}>{locked ? `第${c.no}話 〜？？？〜` : c.title}</span>
+                    <span className={`block truncate text-[14px] font-black ${can ? 'text-white' : 'text-slate-500'}`}>{locked ? `${c.prologue ? '序章' : `第${c.no}話`} 〜？？？〜` : c.title}</span>
                     {locked && <span className="mt-0.5 flex items-center gap-1 text-[10px] font-bold text-slate-400"><Lock size={11} />{xmasEventDateLabel(c.openAt)} に開きます</span>}
                     {st === 'waiting' && <span className="mt-0.5 flex items-center gap-1 text-[10px] font-bold text-slate-400"><Lock size={11} />前の話を{prev && prev.type === 'fight' ? '進める' : '読む'}と選べます</span>}
                     {can && <span className="mt-1 flex items-center gap-1.5"><XmasTypeTag type={c.type} /></span>}
@@ -210,9 +210,9 @@ const XmasStoryTab = ({ version = 0, allOpen = false, fightWays = [], onRead, on
       </section>
       {chapter && (
         <div data-xmas-story-sheet={chapter.id} className="fixed inset-0 z-[80] flex items-end justify-center bg-black/65 p-3 sm:items-center" onClick={() => setSel(null)}>
-          <div role="dialog" aria-label={`第${chapter.no}話 ${chapter.title}`} className="mh-xmas-frame w-full max-w-md rounded-2xl bg-gradient-to-b from-[#16264a] to-[#0b1530] p-4" onClick={(e) => e.stopPropagation()}>
+          <div role="dialog" aria-label={chapter.prologue ? chapter.title : `第${chapter.no}話 ${chapter.title}`} className="mh-xmas-frame w-full max-w-md rounded-2xl bg-gradient-to-b from-[#16264a] to-[#0b1530] p-4" onClick={(e) => e.stopPropagation()}>
             <div className="mb-3 flex items-center gap-3">
-              <span className="mh-xmas-medal flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-full leading-none"><small className="text-[10px] font-black">第</small><b className="text-[17px] font-black">{chapter.no}</b></span>
+              <span className="mh-xmas-medal flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-full leading-none">{chapter.prologue ? <b className="text-[13px] font-black">序章</b> : <><small className="text-[10px] font-black">第</small><b className="text-[17px] font-black">{chapter.no}</b></>}</span>
               <div className="min-w-0">
                 <div className="mb-0.5"><XmasTypeTag type={chapter.type} /></div>
                 <div className="mh-xmas-title text-[18px] font-black leading-tight" style={JA_LABEL_STYLE}>{jaWrap(chapter.title)}</div>

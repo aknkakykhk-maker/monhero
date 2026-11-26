@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fb7bf90f99a6e4db
+// generated-sha256: 1dd12a88d2deb5a4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -39021,7 +39021,7 @@ const xmasBattleBonusRateAt = (nowMs) => (raidXmasWindowAt(nowMs) === 'open' ? X
 
 // ---- ひとりで進める物語(イベントページの「物語」タブ・台帳 r1126-006) ----
 //  ・話はイベントページから選んで読む。自動では流さない(社長 2026-11-25)。開いた話はいつでも読み返せる
-//  ・開く日時: 第1話は開始と同時(11/30 10:00)、第2話からは毎日 4:00(1日の区切りと同じ)に1話ずつ(仮)
+//  ・開く日時: 序章は 11/28(開催予告)から、第1話は開始と同時(11/30 10:00)、第2話からは毎日 4:00(1日の区切りと同じ)に1話ずつ(仮)
 //  ・前の話を読んだ(戦う話は勝った)ら次が選べる。戦う話はバトル・モンヒロビート・バトルカードのどれかで勝つと進む
 //  ・題と「読む/戦う」は台本の全話一覧(第3案・docs/progress/event-xmas-2026/SCRIPT.md §0)の仮。台本が決まったらこの表だけ直す
 //  ・お話の中身は data/assistants.js の EVENT_REPLAYS に scriptId の id で入れる(入るまでは「準備中」と出す)
@@ -39034,14 +39034,24 @@ const XMAS_STORY_LIST = Object.freeze([
 ]);
 // 第2話から: 12/(話-1) 4:00 JST(第25話 = 12/24)
 const xmasStoryOpenAtOf = (no) => (no <= 1 ? RAID_XMAS_EVENT.startAt : `2026-12-${String(no - 1).padStart(2, '0')}T04:00:00+09:00`);
-const XMAS_STORY_CHAPTERS = Object.freeze(XMAS_STORY_LIST.map(([title, type], i) => Object.freeze({
-  id: `xs${String(i + 1).padStart(2, '0')}`,
-  no: i + 1,
-  openAt: xmasStoryOpenAtOf(i + 1),
-  type,
-  title,
-  scriptId: `xmas_story_${String(i + 1).padStart(2, '0')}`,
-})));
+// 序章(台帳 r1126-012・社長): 第1話の前。イチーカから招待状が届いて行くまで。11/28 の開催予告のときから開く(時刻 10:00 は仮)。中身は台本ができてから
+const XMAS_STORY_PROLOGUE_OPEN_AT = '2026-11-28T10:00:00+09:00';
+const XMAS_STORY_CHAPTERS = Object.freeze([
+  Object.freeze({ id: 'xs00', no: 0, prologue: true, openAt: XMAS_STORY_PROLOGUE_OPEN_AT, type: 'read', title: '序章', scriptId: 'xmas_story_00' }),
+  ...XMAS_STORY_LIST.map(([title, type], i) => Object.freeze({
+    id: `xs${String(i + 1).padStart(2, '0')}`,
+    no: i + 1,
+    openAt: xmasStoryOpenAtOf(i + 1),
+    type,
+    title,
+    scriptId: `xmas_story_${String(i + 1).padStart(2, '0')}`,
+  })),
+]);
+// 前の話(並びの1つ前。序章の前は無い)
+const xmasStoryPrevOf = (chapter) => {
+  const i = XMAS_STORY_CHAPTERS.findIndex((c) => c.id === chapter.id);
+  return i > 0 ? XMAS_STORY_CHAPTERS[i - 1] : null;
+};
 const XMAS_STORY_STORAGE_KEY = 'mh_xmas_story_v1';
 // 保存の形 { v:1, cleared:[id], seen:[id], rewardClaimed:false }。壊れていても既定へ戻す(⑦)
 const xmasStoryNormalize = (raw) => {
@@ -39058,7 +39068,7 @@ const xmasStoryStatusOf = (chapter, progress, nowMs, allOpen = false) => {
   if (!allOpen) {
     const at = Date.parse(chapter.openAt);
     if (!Number.isFinite(at) || !Number.isFinite(nowMs) || nowMs < at) return 'locked';
-    const prev = XMAS_STORY_CHAPTERS[chapter.no - 2];
+    const prev = xmasStoryPrevOf(chapter);
     if (prev && !p.cleared.includes(prev.id)) return 'waiting';
   }
   return p.seen.includes(chapter.id) ? 'open' : 'new';
@@ -67188,17 +67198,17 @@ const XmasStoryTab = ({ version = 0, allOpen = false, fightWays = [], onRead, on
             const st = xmasStoryStatusOf(c, progress, nowMs, allOpen);
             const locked = st === 'locked';
             const can = !locked && st !== 'waiting';
-            const prev = XMAS_STORY_CHAPTERS[c.no - 2];
+            const prev = xmasStoryPrevOf(c);
             return (
               <li key={c.id}>
                 <button type="button" data-xmas-story-chapter={c.id} data-status={st} disabled={!can} onClick={() => select(c)}
                   className="mh-xmas-card flex w-full min-h-[56px] items-center gap-2.5 rounded-xl px-2.5 py-2 text-left active:scale-[0.99] disabled:active:scale-100">
                   <span className="mh-xmas-medal flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-full leading-none" data-dim={can ? undefined : ''}>
-                    <small className="text-[10px] font-black">第</small><b className="text-[14px] font-black">{c.no}</b>
+                    {c.prologue ? <b className="text-[12px] font-black">序章</b> : <><small className="text-[10px] font-black">第</small><b className="text-[14px] font-black">{c.no}</b></>}
                   </span>
                   <span className="min-w-0 flex-1">
                     {/* まだ開いていない話は、題も「読む/戦う」も出さない(ネタバレになるため・社長 2026-11-26) */}
-                    <span className={`block truncate text-[14px] font-black ${can ? 'text-white' : 'text-slate-500'}`}>{locked ? `第${c.no}話 〜？？？〜` : c.title}</span>
+                    <span className={`block truncate text-[14px] font-black ${can ? 'text-white' : 'text-slate-500'}`}>{locked ? `${c.prologue ? '序章' : `第${c.no}話`} 〜？？？〜` : c.title}</span>
                     {locked && <span className="mt-0.5 flex items-center gap-1 text-[10px] font-bold text-slate-400"><Lock size={11} />{xmasEventDateLabel(c.openAt)} に開きます</span>}
                     {st === 'waiting' && <span className="mt-0.5 flex items-center gap-1 text-[10px] font-bold text-slate-400"><Lock size={11} />前の話を{prev && prev.type === 'fight' ? '進める' : '読む'}と選べます</span>}
                     {can && <span className="mt-1 flex items-center gap-1.5"><XmasTypeTag type={c.type} /></span>}
@@ -67217,9 +67227,9 @@ const XmasStoryTab = ({ version = 0, allOpen = false, fightWays = [], onRead, on
       </section>
       {chapter && (
         <div data-xmas-story-sheet={chapter.id} className="fixed inset-0 z-[80] flex items-end justify-center bg-black/65 p-3 sm:items-center" onClick={() => setSel(null)}>
-          <div role="dialog" aria-label={`第${chapter.no}話 ${chapter.title}`} className="mh-xmas-frame w-full max-w-md rounded-2xl bg-gradient-to-b from-[#16264a] to-[#0b1530] p-4" onClick={(e) => e.stopPropagation()}>
+          <div role="dialog" aria-label={chapter.prologue ? chapter.title : `第${chapter.no}話 ${chapter.title}`} className="mh-xmas-frame w-full max-w-md rounded-2xl bg-gradient-to-b from-[#16264a] to-[#0b1530] p-4" onClick={(e) => e.stopPropagation()}>
             <div className="mb-3 flex items-center gap-3">
-              <span className="mh-xmas-medal flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-full leading-none"><small className="text-[10px] font-black">第</small><b className="text-[17px] font-black">{chapter.no}</b></span>
+              <span className="mh-xmas-medal flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-full leading-none">{chapter.prologue ? <b className="text-[13px] font-black">序章</b> : <><small className="text-[10px] font-black">第</small><b className="text-[17px] font-black">{chapter.no}</b></>}</span>
               <div className="min-w-0">
                 <div className="mb-0.5"><XmasTypeTag type={chapter.type} /></div>
                 <div className="mh-xmas-title text-[18px] font-black leading-tight" style={JA_LABEL_STYLE}>{jaWrap(chapter.title)}</div>
