@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d346b00aba94c06f
+// source-sha256: 8824a596873ced2e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -87544,8 +87544,7 @@ function HomeScreen({
     return () => clearInterval(id);
   }, [homeStripCount]);
   const homeStripShow = homeStripCount ? homeStripIdx % homeStripCount : 0;
-  const xmasEntryVariant = xmasEntry && typeof xmasHomeEntryVariant === 'function' ? xmasHomeEntryVariant() : null;
-  const xmasEntryInStrip = !!xmasEntry && (xmasEntryVariant === 'banner' || xmasEntryVariant === 'card');
+  const xmasEntryInStrip = !!xmasEntry;
   const homeComment = useHomeAssistantComment();
   return React.createElement("main", {
     ref: homeSceneRef,
@@ -87636,13 +87635,12 @@ function HomeScreen({
   }), React.createElement("span", null, "設定")))), xmasEntryInStrip && React.createElement("div", {
     className: "mh-home-event-strip",
     "data-home-xmas-entry-strip": true,
-    style: xmasEntryVariant === 'banner' ? {
+    style: {
       width: 'calc(100% - 78px)'
-    } : undefined
+    }
   }, React.createElement(HomeXmasEventEntry, {
     onOpen: xmasEntry.onOpen,
-    preOpen: !!xmasEntry.preOpen,
-    variant: xmasEntryVariant
+    preOpen: !!xmasEntry.preOpen
   })), homeStripCount > 0 && !(xmasEntryInStrip && homeEventCampaign && homeEventCampaign.id === 'xmas_2026' && !homeCardTour) && React.createElement("div", {
     className: "mh-home-event-strip",
     "data-home-event-strip": true
@@ -87676,10 +87674,6 @@ function HomeScreen({
     className: "mh-home-side-stack"
   }, typeof TimeOfDayClock === 'function' && React.createElement(TimeOfDayClock, {
     home: true
-  }), xmasEntry && xmasEntryVariant === 'tile' && React.createElement(HomeXmasEventEntry, {
-    onOpen: xmasEntry.onOpen,
-    preOpen: !!xmasEntry.preOpen,
-    variant: "tile"
   }), React.createElement("button", {
     onClick: openChangelog,
     className: "mh-home-side-btn mh-home-update",
@@ -113202,11 +113196,6 @@ const XmasEventScreen = ({
     onFight: onFightChapter
   }))));
 };
-const XMAS_HOME_ENTRY_VARIANT = 'banner';
-const xmasHomeEntryVariant = () => {
-  const v = typeof window !== 'undefined' && window.__mhXmasEntryVariant;
-  return v === 'banner' || v === 'tile' || v === 'card' ? v : XMAS_HOME_ENTRY_VARIANT;
-};
 const xmasEventPageOpenAt = nowMs => {
   const at = Date.parse(XMAS_STORY_PROLOGUE_OPEN_AT);
   return Number.isFinite(nowMs) && nowMs >= at && raidXmasWindowAt(nowMs) !== 'after';
@@ -113226,20 +113215,18 @@ const XMAS_HOME_ENTRY_CSS = `
   -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 1px 0 #5c1414) drop-shadow(0 0 4px #000c); }
 .mh-xmas-entry-sub { display: inline-block; border-radius: 999px; background: #a51c24; border: 1px solid #f0c96c; color: #fff7d6; font-weight: 900; white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) { .mh-xmas-entry::after, .mh-xmas-entry-spark { animation: none; } }
-/* 背の低い横画面: 上の帯は小さく(ボスの頭・右の列にかけない)、右の列の札は列の左へ出す(ギフトを施設の札の裏へ押し出さない) */
+/* 背の低い横画面: 帯は右の丸ボタンの列の左の空きへ小さく置く(ボスの頭・みゅあの吹き出し・施設の札にかけない) */
 @media (orientation: landscape) and (max-height: 520px) {
-  .mh-xmas-entry[data-home-xmas-entry="banner"] { height: 50px !important; max-width: 290px; }
+  [data-home-xmas-entry-strip] { position: absolute !important; right: 112px; top: calc(62px + env(safe-area-inset-top)); width: 176px !important; margin: 0 !important; }
+  .mh-xmas-entry[data-home-xmas-entry="banner"] { height: 54px !important; }
   .mh-xmas-entry[data-home-xmas-entry="banner"] [data-xmas-entry-kicker] { display: none; }
-  .mh-xmas-entry[data-home-xmas-entry="banner"] .mh-xmas-entry-title { font-size: 17px; }
-  [data-home-xmas-entry-strip] { width: auto !important; }
-  .mh-xmas-entry[data-home-xmas-entry="tile"] { position: absolute !important; right: 112px; top: 0; }
-  .mh-xmas-entry[data-home-xmas-entry="card"] { height: 50px !important; }
+  .mh-xmas-entry[data-home-xmas-entry="banner"] .mh-xmas-entry-title { font-size: 16px; }
+  .mh-xmas-entry[data-home-xmas-entry="banner"] .mh-xmas-entry-sub { font-size: 9px; padding: 0 6px; }
 }
 `;
 const HomeXmasEventEntry = ({
   onOpen,
-  preOpen = false,
-  variant = 'banner'
+  preOpen = false
 }) => {
   useEffect(() => {
     if (typeof document === 'undefined' || document.getElementById('mh-xmas-home-entry-css')) return;
@@ -113251,106 +113238,6 @@ const HomeXmasEventEntry = ({
   const sub = preOpen ? '序章公開中・11/30 10:00 開幕' : '開催中 〜12/31 3:59';
   const sparks = [[8, 18, 0], [62, 12, .8], [88, 64, 1.6], [30, 78, 1.2]];
   const label = `クリスマスイベント 聖夜の名探偵 ${sub}`;
-  if (variant === 'tile') {
-    return React.createElement("button", {
-      type: "button",
-      "data-home-xmas-entry": "tile",
-      className: "mh-xmas-entry",
-      onClick: onOpen,
-      "aria-label": label,
-      style: {
-        width: 64,
-        height: 86
-      }
-    }, React.createElement("img", {
-      className: "mh-xmas-entry-art",
-      src: XMAS_EVENT_POSTER_IMG,
-      alt: "",
-      style: {
-        objectPosition: '60% 30%'
-      }
-    }), React.createElement("span", {
-      "aria-hidden": "true",
-      style: {
-        position: 'absolute',
-        inset: 0,
-        background: 'linear-gradient(180deg, transparent 35%, #0b1733e6 72%)'
-      }
-    }), React.createElement(XmasHolly, {
-      size: 20,
-      className: "absolute -left-0.5 -top-0.5"
-    }), sparks.slice(0, 3).map(([x, y, d], i) => React.createElement("span", {
-      key: i,
-      "aria-hidden": "true",
-      className: "mh-xmas-entry-spark",
-      style: {
-        left: `${x}%`,
-        top: `${y * 0.6}%`,
-        animationDelay: `${d}s`
-      }
-    })), React.createElement("span", {
-      style: {
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        bottom: 4,
-        textAlign: 'center',
-        lineHeight: 1.1
-      }
-    }, React.createElement("b", {
-      className: "mh-xmas-entry-title block text-[11px]"
-    }, "聖夜の", React.createElement("br", null), "名探偵"), React.createElement("span", {
-      className: "mh-xmas-entry-sub mt-0.5 px-1 text-[8px]"
-    }, preOpen ? '序章' : '開催中')));
-  }
-  if (variant === 'card') {
-    return React.createElement("button", {
-      type: "button",
-      "data-home-xmas-entry": "card",
-      className: "mh-xmas-entry flex items-stretch",
-      onClick: onOpen,
-      "aria-label": label,
-      style: {
-        width: 252,
-        height: 62,
-        display: 'flex'
-      }
-    }, React.createElement("span", {
-      className: "relative block h-full shrink-0 overflow-hidden",
-      style: {
-        width: 84
-      }
-    }, React.createElement("img", {
-      className: "mh-xmas-entry-art",
-      src: XMAS_EVENT_POSTER_IMG,
-      alt: "",
-      style: {
-        objectPosition: '62% 30%'
-      }
-    })), React.createElement("span", {
-      className: "relative flex min-w-0 flex-1 flex-col justify-center px-2",
-      style: {
-        background: 'linear-gradient(90deg, #6b1218, #2a0b10)'
-      }
-    }, React.createElement("span", {
-      className: "flex items-center gap-1"
-    }, React.createElement(XmasHolly, {
-      size: 16
-    }), React.createElement("b", {
-      className: "mh-xmas-entry-title whitespace-nowrap text-[16px] leading-none"
-    }, "聖夜の名探偵")), React.createElement("span", {
-      className: "mh-xmas-entry-sub mt-1 w-max px-1.5 py-px text-[10px]"
-    }, sub)), sparks.slice(0, 3).map(([x, y, d], i) => React.createElement("span", {
-      key: i,
-      "aria-hidden": "true",
-      className: "mh-xmas-entry-spark",
-      style: {
-        left: `${x}%`,
-        top: `${y}%`,
-        animationDelay: `${d}s`
-      }
-    })));
-  }
   return React.createElement("button", {
     type: "button",
     "data-home-xmas-entry": "banner",

@@ -312,16 +312,9 @@ const XmasEventScreen = ({ tab = 'story', onTab, onBack, forced = false, preOpen
 
 // ---- HOME の入口(台帳 r1126-014・社長「目立つように作ったほうがいい」) ----
 //  ひと目でクリスマスのイベントと分かる札。ポスターの絵を切り抜き、金の縁・柊・ゆっくり光るきらめきを付ける。
-//  形は3つ(どれにするかは社長が選ぶ。決まったら XMAS_HOME_ENTRY_VARIANT だけ替える):
-//    'banner' … 上の帯の場所に大きな横長の札(右の丸ボタンの列にはかからない幅)
-//    'tile'   … 右の丸ボタンの列のいちばん上(時計の下)に縦長の札
-//    'card'   … 左上に中くらいの札(絵の切り抜き+題)
+//  形は「上の大きな帯」(社長の選択 2026-11-26・案A)。細バナーの場所に置き、右の丸ボタンの列にはかからない幅にする。
+//  背の低い横画面では、ボスの頭にかからないよう、右の丸ボタンの列の左の空きへ小さく置く
 //  出すのは 11/28 10:00(序章が開く)から 12/31 4:00 まで。11/30 10:00 までは「序章公開中」と出す
-const XMAS_HOME_ENTRY_VARIANT = 'banner';
-const xmasHomeEntryVariant = () => {
-  const v = typeof window !== 'undefined' && window.__mhXmasEntryVariant;   // 止め絵を撮るときだけ外から替える(保存しない)
-  return v === 'banner' || v === 'tile' || v === 'card' ? v : XMAS_HOME_ENTRY_VARIANT;
-};
 // イベントページを開けるか: 序章が開く時刻から、イベントの終わりまで
 const xmasEventPageOpenAt = (nowMs) => {
   const at = Date.parse(XMAS_STORY_PROLOGUE_OPEN_AT);
@@ -342,17 +335,16 @@ const XMAS_HOME_ENTRY_CSS = `
   -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 1px 0 #5c1414) drop-shadow(0 0 4px #000c); }
 .mh-xmas-entry-sub { display: inline-block; border-radius: 999px; background: #a51c24; border: 1px solid #f0c96c; color: #fff7d6; font-weight: 900; white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) { .mh-xmas-entry::after, .mh-xmas-entry-spark { animation: none; } }
-/* 背の低い横画面: 上の帯は小さく(ボスの頭・右の列にかけない)、右の列の札は列の左へ出す(ギフトを施設の札の裏へ押し出さない) */
+/* 背の低い横画面: 帯は右の丸ボタンの列の左の空きへ小さく置く(ボスの頭・みゅあの吹き出し・施設の札にかけない) */
 @media (orientation: landscape) and (max-height: 520px) {
-  .mh-xmas-entry[data-home-xmas-entry="banner"] { height: 50px !important; max-width: 290px; }
+  [data-home-xmas-entry-strip] { position: absolute !important; right: 112px; top: calc(62px + env(safe-area-inset-top)); width: 176px !important; margin: 0 !important; }
+  .mh-xmas-entry[data-home-xmas-entry="banner"] { height: 54px !important; }
   .mh-xmas-entry[data-home-xmas-entry="banner"] [data-xmas-entry-kicker] { display: none; }
-  .mh-xmas-entry[data-home-xmas-entry="banner"] .mh-xmas-entry-title { font-size: 17px; }
-  [data-home-xmas-entry-strip] { width: auto !important; }
-  .mh-xmas-entry[data-home-xmas-entry="tile"] { position: absolute !important; right: 112px; top: 0; }
-  .mh-xmas-entry[data-home-xmas-entry="card"] { height: 50px !important; }
+  .mh-xmas-entry[data-home-xmas-entry="banner"] .mh-xmas-entry-title { font-size: 16px; }
+  .mh-xmas-entry[data-home-xmas-entry="banner"] .mh-xmas-entry-sub { font-size: 9px; padding: 0 6px; }
 }
 `;
-const HomeXmasEventEntry = ({ onOpen, preOpen = false, variant = 'banner' }) => {
+const HomeXmasEventEntry = ({ onOpen, preOpen = false }) => {
   useEffect(() => {
     if (typeof document === 'undefined' || document.getElementById('mh-xmas-home-entry-css')) return;
     const tag = document.createElement('style'); tag.id = 'mh-xmas-home-entry-css'; tag.textContent = XMAS_HOME_ENTRY_CSS; document.head.appendChild(tag);
@@ -360,34 +352,6 @@ const HomeXmasEventEntry = ({ onOpen, preOpen = false, variant = 'banner' }) => 
   const sub = preOpen ? '序章公開中・11/30 10:00 開幕' : '開催中 〜12/31 3:59';
   const sparks = [[8, 18, 0], [62, 12, .8], [88, 64, 1.6], [30, 78, 1.2]];
   const label = `クリスマスイベント 聖夜の名探偵 ${sub}`;
-  if (variant === 'tile') {
-    return (
-      <button type="button" data-home-xmas-entry="tile" className="mh-xmas-entry" onClick={onOpen} aria-label={label} style={{ width: 64, height: 86 }}>
-        <img className="mh-xmas-entry-art" src={XMAS_EVENT_POSTER_IMG} alt="" style={{ objectPosition: '60% 30%' }} />
-        <span aria-hidden="true" style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, transparent 35%, #0b1733e6 72%)' }} />
-        <XmasHolly size={20} className="absolute -left-0.5 -top-0.5" />
-        {sparks.slice(0, 3).map(([x, y, d], i) => <span key={i} aria-hidden="true" className="mh-xmas-entry-spark" style={{ left: `${x}%`, top: `${y * 0.6}%`, animationDelay: `${d}s` }} />)}
-        <span style={{ position: 'absolute', left: 0, right: 0, bottom: 4, textAlign: 'center', lineHeight: 1.1 }}>
-          <b className="mh-xmas-entry-title block text-[11px]">聖夜の<br />名探偵</b>
-          <span className="mh-xmas-entry-sub mt-0.5 px-1 text-[8px]">{preOpen ? '序章' : '開催中'}</span>
-        </span>
-      </button>
-    );
-  }
-  if (variant === 'card') {
-    return (
-      <button type="button" data-home-xmas-entry="card" className="mh-xmas-entry flex items-stretch" onClick={onOpen} aria-label={label} style={{ width: 252, height: 62, display: 'flex' }}>
-        <span className="relative block h-full shrink-0 overflow-hidden" style={{ width: 84 }}>
-          <img className="mh-xmas-entry-art" src={XMAS_EVENT_POSTER_IMG} alt="" style={{ objectPosition: '62% 30%' }} />
-        </span>
-        <span className="relative flex min-w-0 flex-1 flex-col justify-center px-2" style={{ background: 'linear-gradient(90deg, #6b1218, #2a0b10)' }}>
-          <span className="flex items-center gap-1"><XmasHolly size={16} /><b className="mh-xmas-entry-title whitespace-nowrap text-[16px] leading-none">聖夜の名探偵</b></span>
-          <span className="mh-xmas-entry-sub mt-1 w-max px-1.5 py-px text-[10px]">{sub}</span>
-        </span>
-        {sparks.slice(0, 3).map(([x, y, d], i) => <span key={i} aria-hidden="true" className="mh-xmas-entry-spark" style={{ left: `${x}%`, top: `${y}%`, animationDelay: `${d}s` }} />)}
-      </button>
-    );
-  }
   return (
     <button type="button" data-home-xmas-entry="banner" className="mh-xmas-entry w-full" onClick={onOpen} aria-label={label} style={{ height: 80 }}>
       <img className="mh-xmas-entry-art" src={XMAS_EVENT_POSTER_IMG} alt="" style={{ objectPosition: '70% 28%' }} />
