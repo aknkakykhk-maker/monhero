@@ -15125,7 +15125,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const fxSkill = intent.variant || (intent.type==='SPECIAL' ? 'special' : 'normal');
         // ★技ごとの動きを持つ敵は、連続はり手・上手投げなどを見せきる長さだけ待つ(tacticsEnemyMotionMs)。
         //   ムーも動きを持つときは技ごとの長さ(全画面の演出を見せきる長さ)になる
-        const motionEnemyId = isTacticsMode(runMode)&&!ecoBattleView ? (enemy?.raidJackPumpkin?'Pumpkin':enemy?.id) : null;
+        const motionEnemyId = isTacticsMode(runMode)&&!ecoBattleView ? tacticsEnemyMotionKey(enemy) : null;
         // ★必殺技ムービーを持つ敵(覚醒ムー)の必殺技は、画面を切り替えてムービーを流してから当てる
         //   (2026-09-25 ユーザー指示)。流すのは設定が「流す」のときだけ。演奏で止まったぶんの追いつき中は流さない。
         //   ムービーは戦闘の速さに合わせて縮めない(「下手に短くしないでおけ」)。

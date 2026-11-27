@@ -55,7 +55,8 @@ const raidXmasTierAt = (kind, index) => {
   return list[Math.min(Math.max(i, 0), list.length - 1)];
 };
 
-// ボス(覚醒サンタ)の技の名前(社長決定 2026-11-25・台帳 r1125-058)。動き(rush/sweep/roar/pierce/allout)と本数 3/4/5/5/5 はジャックのまま。
+// ボス(覚醒サンタ)の技の名前(社長決定 2026-11-25・台帳 r1125-058)。技の種類(rush/sweep/roar/pierce/allout)と本数 3/4/5/5/5 はジャックのまま。
+//   見せ方(動き・エフェクト)はサンタの物(71-screen-battle.jsx の TACTICS_ENEMY_MOTION_SETS.santa・r1126-075)
 //   名前だけを 35-raid-jack.jsx の raidJackMakeEnemy(opts.ev === 'xmas')で敵へ写す。ジャックの RAID_JACK_SKILL_NAMES・敵データ Jack は変えない。
 //   「X’マス」の「’」は全角の右シングル引用符(U+2019)
 const RAID_XMAS_SKILL_NAMES = Object.freeze({

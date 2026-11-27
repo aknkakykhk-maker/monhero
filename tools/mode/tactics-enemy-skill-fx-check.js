@@ -51,7 +51,8 @@ const stage = slice(battle, 'const TacticsEnemyStageFx =', 'const kindOfTacticsS
 check('帯・閃光・フィニッシュは覚醒ムー以外・軽量表示でないときだけ出す',
   stage.includes('!isMoo && !lite && !afterMovie && TACTICS_ENEMY_BANNER_SKILLS.includes(skill)')
   && stage.includes('!isMoo && !lite && TACTICS_ENEMY_FLASH_SKILLS.includes(skill)')
-  && stage.includes('!isMoo && !lite && strikes'));
+  // フィニッシュだけは覚醒サンタ(id が Jack なのでムー扱い)にも出す(r1126-075)。例外はサンタだけ
+  && stage.includes('(!isMoo || santa) && !lite && strikes') && stage.includes("const santa = motion === 'santa';"));
 check('フィニッシュは狙われた枠(geo.slots)ごとに、当たる瞬間(hit)に合わせて出す',
   stage.includes('geo.slots.map((t) =>') && stage.includes('const hitMs = Math.round(ms * hit);') && stage.includes('<SpecialFinish parts={parts} offset='));
 check('全体攻撃は覚醒ムー以外でも画面を暗くする', stage.includes("(!isMoo && skill === 'allout')"));
