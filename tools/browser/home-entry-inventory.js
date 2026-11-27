@@ -60,7 +60,8 @@ const CONTENT = [
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   fs.mkdirSync(SHOT_DIR, { recursive: true });
   const out = [];
-  for (const sc of SCREENS) {
+  const ONLY = (process.env.ONLY || '').split(',').filter(Boolean);
+  for (const sc of SCREENS.filter((x) => !ONLY.length || ONLY.includes(x.id))) {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 1 });
     const page = await ctx.newPage();
     await page.route(/supabase\.co/, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
@@ -106,6 +107,7 @@ const CONTENT = [
           return t;
         }).filter(Boolean);
       });
+      if (process.env.DUMP) console.log(await page.evaluate(new Function(`return (${process.env.DUMP})`)()).catch((e) => String(e)));
       const hits = [];
       for (const t of [...new Set(items)]) for (const [c, re] of CONTENT) if (re.test(t)) { hits.push({ content: c, label: t }); break; }
       out.push({ screen: sc.id, label: sc.label, note, count: items.length, hits });
