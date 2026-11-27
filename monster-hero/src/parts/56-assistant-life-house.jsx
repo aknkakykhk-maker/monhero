@@ -1870,8 +1870,10 @@ function AssistantLifeHomeFaces({ metIds }) {
       const names = list.map(id => { const who = assistantById(id); return who ? who.name : id; }).join('・');
       return (
         <div key={f} data-assistant-life-home-faces={f} data-assistant-life-home-faces-ids={list.join(',')} className="pointer-events-none fixed" style={{ zIndex: 40, left, top, width: rowW, height: rowW }}>
-          <button type="button" data-assistant-life-home-badge={f} aria-label={`${names}がいます。助手ライフを開く`} onClick={() => { ASSISTANT_LIFE_STORE.set({ open: true, focus: shown[0] }); }}
-            className="pointer-events-auto relative flex items-center justify-center rounded-full active:scale-95" style={{ width: rowW, height: rowW }}>
+          {/* 2026-11-27 台帳 r1126-073 追記2(入口の整理③): 点は押せない印にした。点のあたりを押しても、下の入口(ビート・バトルなど)が開く。
+              助手ライフへは HOME の小さな丸「助手ライフ」1つから入る。開発部が窓口の判断で出し方だけ変えた */}
+          <span role="img" data-assistant-life-home-badge={f} aria-label={`${names}がいます`}
+            className="pointer-events-none relative flex items-center justify-center rounded-full" style={{ width: rowW, height: rowW }}>
             <span data-assistant-life-home-dot aria-hidden="true" className="block rounded-full border-2 border-white bg-rose-500 shadow" style={{ width: 14, height: 14 }}/>
             <span className="sr-only">{shown.map((id, i) => { const who = assistantById(id); if (!who) return null; const w = assistantLifeWhereOf(life, id); const lonely = w && w.reason === 'lonely';
               const spent = f === 'card' && !!assistantLifeCardSpent(id);
@@ -1881,7 +1883,7 @@ function AssistantLifeHomeFaces({ metIds }) {
                   {spent && <AssistantLifeSpentMark size={size}/>}
                 </span>); })}
             {extra > 0 && <span data-assistant-life-home-faces-extra={extra} className="shrink-0 rounded-full bg-slate-100 px-1 font-black text-slate-900 shadow" style={{ marginLeft: 2, fontSize: 9, lineHeight: '14px' }}>+{extra}</span>}</span>
-          </button>
+          </span>
         </div>); })}
     {rects.card && cardUp && <span data-assistant-life-home-card-up className="pointer-events-none fixed rounded-full bg-amber-300 font-black text-slate-950 shadow" style={{ zIndex: 40, left: rects.card.x + 4, top: rects.card.y + 4, fontSize: 11, lineHeight: 1.35, padding: '2px 7px', border: '1px solid #fff3c4' }}>UP</span>}
     {rects.life && typeof AssistantLifeFriendHomeBadge === 'function' && <AssistantLifeFriendHomeBadge rect={rects.life} dockTop={rects.__dockTop}/>}
