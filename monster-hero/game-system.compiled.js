@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: eeccaf2aa387f1ad
+// source-sha256: b156453e111e604d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -88567,7 +88567,8 @@ function HomeUpdateGuideOverlay({
     },
     role: "dialog",
     "aria-modal": "true",
-    "aria-label": notice.title
+    "aria-label": notice.title,
+    "data-home-update-guide": true
   }, React.createElement("div", {
     className: "w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4",
     style: {
@@ -88587,7 +88588,9 @@ function HomeUpdateGuideOverlay({
   }), React.createElement("h2", {
     className: "mb-1 text-center text-base font-black text-pink-200",
     style: typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined
-  }, typeof jaWrap === 'function' ? jaWrap(notice.title) : notice.title), React.createElement("p", {
+  }, typeof XmasNovelWrap === 'function' ? React.createElement(XmasNovelWrap, {
+    text: notice.title
+  }) : typeof jaWrap === 'function' ? jaWrap(notice.title) : notice.title), React.createElement("p", {
     className: "mb-3 text-center text-[10px] font-bold text-slate-400"
   }, page + 1, " / ", pages.length), React.createElement("div", {
     className: "flex items-end gap-2"
@@ -88599,7 +88602,12 @@ function HomeUpdateGuideOverlay({
   }), React.createElement("div", {
     className: "flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-3 text-[13px] font-bold leading-relaxed text-white",
     style: bubbleWrapStyle()
-  }, bubbleWrap(assistantSpeakText(pageText, breederName, assistantBondLevelNow, assistantCallStyle, selectedAssistantId)))), !last ? React.createElement("button", {
+  }, (() => {
+    const t = assistantSpeakText(pageText, breederName, assistantBondLevelNow, assistantCallStyle, selectedAssistantId);
+    return typeof t === 'string' && typeof XmasNovelWrap === 'function' ? React.createElement(XmasNovelWrap, {
+      text: t
+    }) : bubbleWrap(t);
+  })())), !last ? React.createElement("button", {
     onClick: () => setUpdateGuidePage(page + 1),
     className: "mt-4 min-h-[50px] w-full rounded-2xl bg-pink-500 text-sm font-black text-slate-950"
   }, "次へ") : React.createElement("div", {
@@ -127692,8 +127700,8 @@ const xmasNovelBgm = key => {
     if (typeof Audio_.fadeToBGM === 'function') Audio_.fadeToBGM(key, 700);else Audio_.playBGM(key);
   } catch (e) {}
 };
-const XMAS_NOVEL_KEEP_BASE = ['黒いサンタ', '聖夜のロンド', '十三番目の鐘', '十二の鐘', 'ペンション・シュプール', '聖夜の名探偵', '名探偵', '手がかり帳', '12年前の聖夜', '12年前', '12年後', 'ワトソンくん', 'エンドヒストリー', 'セーブデータ', 'ノートパソコン', 'メリークリスマス', 'クリスマス会', 'クリスマス', 'モンヒロ', 'オルゴール', 'ミステリーノベル', '呪いのセーブデータ', 'モンヒロ事件簿', 'ポロロン', 'ローズ色', '銀の音符', '懐中時計', '子守歌', '招待状', 'サンタの帽子'];
-const XMAS_NOVEL_KEEP_MAX = 16;
+const XMAS_NOVEL_KEEP_BASE = ['黒いサンタ', '聖夜のロンド', '十三番目の鐘', '十二の鐘', 'ペンション・シュプール', '聖夜の名探偵', '名探偵', '手がかり帳', '12年前の聖夜', '12年前', '12年後', 'ワトソンくん', 'エンドヒストリー', 'セーブデータ', 'ノートパソコン', 'メリークリスマス', 'クリスマス会', 'クリスマス', 'モンヒロ', 'オルゴール', 'ミステリーノベル', '呪いのセーブデータ', 'モンヒロ事件簿', 'ポロロン', 'ローズ色', '銀の音符', '懐中時計', '子守歌', '招待状', 'サンタの帽子', 'MFバトルカード', 'モンヒロビート', 'モンヒロバトル', 'ビートP', 'カードポイント'];
+const XMAS_NOVEL_KEEP_MAX = 18;
 let _xmasNovelKeepWords = null;
 const xmasNovelKeepWords = () => {
   if (_xmasNovelKeepWords) return _xmasNovelKeepWords;
@@ -127719,12 +127727,18 @@ const xmasNovelKeepWords = () => {
   _xmasNovelKeepWords = [...set].filter(w => typeof w === 'string' && [...w].length >= 2 && [...w].length <= XMAS_NOVEL_KEEP_MAX).sort((a, b) => b.length - a.length);
   return _xmasNovelKeepWords;
 };
-const XMAS_NOVEL_KEEP_RES = [/\d{1,2}\/\d{1,2}(?:[(（][月火水木金土日](?:・祝)?[)）])?(?:[ 　]?\d{1,2}:\d{2})?/g, /\d{1,2}:\d{2}/g, /[「『【][^「」『』【】\n]{1,12}[」』】]/g, /(?:約|第|残り[ 　]?)?[0-9０-９]+(?:[.．][0-9０-９]+)?[ 　]?(?:センチ|メートル|キロ|ミリ|時間|人目|番目|通目|号室|人|年|時|分|秒|個|つ|回|日|月|歳|才|枚|本|通|度|階|号|じ|cm|m|%|％)/g, /[一二三四五六七八九十百千]+(?:番目|人目|通目|時間|人|年|つ|回|度|階|日|分|時|本|枚|個|通)/g, /(?:…|‥|—|―){2,}[、。！？!?]*/g, /[〜～][^〜～\s]{1,12}[〜～]/g];
+const XMAS_NOVEL_KEEP_RES = [/\d{1,2}\/\d{1,2}(?:[(（][月火水木金土日](?:・祝)?[)）])?(?:[ 　]?\d{1,2}:\d{2})?/g, /\d{1,2}:\d{2}/g, /[「『【][^「」『』【】\n]{1,24}[」』】]/g, /(?:約|第|残り[ 　]?)?(?:[0-9０-９]+(?:[.．][0-9０-９]+)?[ 　]?(?:センチ|メートル|キロ|ミリ|時間|人目|番目|通目|号室|人|年|時|分|秒|個|つ|回|日|月|歳|才|枚|本|通|度|階|号|じ|倍|cm|m|%|％))+/g, /[0-9０-９]+[ァ-ヶー]{2,}/g, /[A-Za-z][A-Za-z0-9#.'&!?-]*(?:[ ][A-Za-z0-9#.'&!?-]+)+/g, /[一二三四五六七八九十百千]+(?:番目|人目|通目|時間|人|年|つ|回|度|階|日|分|時|本|枚|個|通)/g, /(?:…|‥|—|―){2,}[、。！？!?]*/g, /[〜～][^〜～\s]{1,12}[〜～]/g];
 const xmasNovelGramBreak = (s, i) => {
   const b = s.slice(0, i),
     a = s.slice(i);
-  return /て$/.test(b) && /^[^るたはぁぃぅぇぉっゃゅょー]/.test(a) || /[A-Za-z0-9０-９ァ-ヶー」』）)一-龯々][はがをにもへとでのや]$/.test(b) || /^[はがをにもへのとや]/.test(a) && /[ぁ-ゖー]{2}$/.test(b) && !/[はがをにもへ]$/.test(b) || /で$/.test(b) && /^[^すしきもはるぁぃぅぇぉっゃゅょー]/.test(a) || /(?:から|まで|けど|ので|のに|ても|でも|には|では|とは|って|たら|れば|ながら|けれど|より|だけ|ほど|など|ように|ような|という|か|を)$/.test(b) || /^(?:です|でし|でしょ|だっ|だった|だよ|だね|だろ|じゃ|ように|ような|こと|もの|ため|わけ|はず|べき|かも|かな|なの|なん|ちゃん|くん|さん|ん[だでじ]|の(?:た|に|で|だ|か))/.test(a) || /[くし]$/.test(b) && /^(?:な[るりっられ]|し[たてよま])/.test(a) || /^[おご]/.test(a) && /[ぁ-ゖ一-龯]/.test(s[i + 1] || '');
+  return /て$/.test(b) && /^[^るたはぁぃぅぇぉっゃゅょー]/.test(a) || /[A-Za-z0-9０-９ァ-ヶー」』）)一-龯々][はがをにもへとでのや]$/.test(b) || /^[はがをにもへのとや]/.test(a) && /[ぁ-ゖー]{2}$/.test(b) && !/[はがをにもへ]$/.test(b) || /で$/.test(b) && /^[^すしきもはるぁぃぅぇぉっゃゅょー]/.test(a) || /(?:から|まで|けど|ので|のに|ても|でも|には|では|とは|(?<![一-龯々])って|たら|れば|ながら|けれど|より|だけ|ほど|など|ように|ような|という|か|を)$/.test(b) || /^(?:です|でし|でしょ|だっ|だった|だよ|だね|だろ|じゃ|ように|ような|こと|もの|ため|わけ|はず|べき|かも|かな|なの|なん|ちゃん|くん|さん|ん[だでじ]|の(?:た|に|で|だ|か))/.test(a) || /[くし]$/.test(b) && /^(?:な[るりっられ]|し[たてよま])/.test(a) || /^[おご]/.test(a) && /[ぁ-ゖ一-龯]/.test(s[i + 1] || '');
 };
+const xmasNovelBracketFits = (s, m, max) => {
+  let e = m.index + m[0].length;
+  while (e < s.length && /[、。！？!?]/.test(s[e])) e++;
+  return xmasNovelWidth(s.slice(m.index, e)) <= max;
+};
+const xmasNovelWidth = t => [...String(t)].reduce((n, c) => n + (/[\x20-\x7e]/.test(c) ? 0.55 : 1), 0);
 const xmasNovelIsKana = (s, i) => /[ぁ-ゖゝゞ]/.test(s[i] || '') || s[i] === 'ー' && i > 0 && /[ぁ-ゖ]/.test(s[i - 1]);
 let _xmasNovelSeg;
 const xmasNovelSegments = s => {
@@ -127766,9 +127780,9 @@ const xmasNovelWrapPlan = (text, max = XMAS_NOVEL_KEEP_MAX) => {
     br.add(m.index);
     br.add(m.index + m[0].length);
   }
-  const len = (a, b) => [...s.slice(a, b)].length;
+  const len = (a, b) => xmasNovelWidth(s.slice(a, b));
   const spans = [];
-  for (const re of XMAS_NOVEL_KEEP_RES) for (const m of s.matchAll(re)) if (!/^[「『【]/.test(m[0]) || [...m[0]].length <= max) spans.push([m.index, m.index + m[0].length]);
+  for (const re of XMAS_NOVEL_KEEP_RES) for (const m of s.matchAll(re)) if (!/^[「『【]/.test(m[0]) || xmasNovelBracketFits(s, m, max)) spans.push([m.index, m.index + m[0].length]);
   for (const w of xmasNovelKeepWords()) if ([...w].length <= max) for (let i = s.indexOf(w); i >= 0; i = s.indexOf(w, i + 1)) spans.push([i, i + w.length]);
   for (const b of [...br]) if (b <= 0 || b >= s.length || spans.some(([a, e]) => b > a && b < e)) br.delete(b);
   const segAt = xmasNovelSegments(s);
@@ -127784,7 +127798,7 @@ const xmasNovelWrapPlan = (text, max = XMAS_NOVEL_KEEP_MAX) => {
     }
     let best = -1;
     for (let q = lo + 1; q < hi; q++) {
-      if (q === b || spans.some(([x, e]) => q > x && q < e) || /^[、。！？!?」』）)…‥ー]/.test(s.slice(q)) || /[「『（(]$/.test(s.slice(0, q))) continue;
+      if (q === b || spans.some(([x, e]) => q > x && q < e) || /^[、。，．,.」』）)】〕〉》…‥ー〜～・：；ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ！？!?]/.test(s.slice(q)) || /[「『（(]$/.test(s.slice(0, q))) continue;
       if (xmasNovelBadBreak(s, q, segAt)) continue;
       if (len(lo, q) > max || len(q, hi) > max) continue;
       if (best < 0 || Math.abs(q - b) < Math.abs(best - b)) best = q;
@@ -127794,22 +127808,34 @@ const xmasNovelWrapPlan = (text, max = XMAS_NOVEL_KEEP_MAX) => {
       br.add(best);
     }
   }
-  {
+  const NO_START = /^[、。，．,.」』）)】〕〉》…‥ー〜～・：；ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ！？!?]/;
+  const okAt = (q, inSpanOk) => segAt.has(q) && !xmasNovelBadBreak(s, q, segAt) && !NO_START.test(s.slice(q)) && !/[「『（(【]$/.test(s.slice(0, q)) && !spans.some(([x, e]) => q > x && q < e && (!inSpanOk || !/^[「『【]/.test(s.slice(x, e))));
+  for (const inSpanOk of [false, true]) {
     const sorted = [0, ...[...br].sort((x, y) => x - y), s.length];
     for (let k = 1; k < sorted.length; k++) {
       const lo = sorted[k - 1],
         hi = sorted[k];
       if (len(lo, hi) <= max || /^\s+$/.test(s.slice(lo, hi))) continue;
       let start = lo,
-        lastOk = -1;
+        lastOk = -1,
+        lastGood = -1;
+      const pick = () => lastGood > start ? lastGood : lastOk;
       for (let q = lo + 1; q < hi; q++) {
         if (len(start, q) > max) {
-          if (lastOk > start) {
-            br.add(lastOk);
-            start = lastOk;
+          const c = pick();
+          if (c > start) {
+            br.add(c);
+            start = c;
           } else break;
         }
-        if (segAt.has(q) && !xmasNovelBadBreak(s, q, segAt) && !spans.some(([x, e]) => q > x && q < e) && !/^[、。！？!?」』）)…‥ー]/.test(s.slice(q)) && !/[「『（(]$/.test(s.slice(0, q))) lastOk = q;
+        if (okAt(q, inSpanOk)) {
+          lastOk = q;
+          if (/[、。！？!?」』）)]$/.test(s.slice(0, q)) || xmasNovelGramBreak(s, q)) lastGood = q;
+        }
+      }
+      if (len(start, hi) > max) {
+        const c = pick();
+        if (c > start) br.add(c);
       }
     }
   }
@@ -127824,7 +127850,7 @@ const xmasNovelWrapPlan = (text, max = XMAS_NOVEL_KEEP_MAX) => {
       space: true
     });else plan.push({
       t,
-      keep: [...t].length <= max,
+      keep: xmasNovelWidth(t) <= max,
       space: false
     });
   }
@@ -261050,7 +261076,12 @@ function MonsterHeroGame() {
     }, React.createElement("h2", {
       className: "mb-1 text-center text-base font-black text-pink-200",
       style: bubbleWrapStyle()
-    }, bubbleWrap(notice.title)), React.createElement("p", {
+    }, (() => {
+      const t = notice.title;
+      return typeof t === 'string' && typeof XmasNovelWrap === 'function' ? React.createElement(XmasNovelWrap, {
+        text: t
+      }) : bubbleWrap(t);
+    })()), React.createElement("p", {
       className: "mb-3 text-center text-[10px] font-bold text-slate-400"
     }, page + 1, " / ", pages.length), React.createElement("div", {
       className: "flex items-end gap-2"
@@ -261062,7 +261093,12 @@ function MonsterHeroGame() {
     }), React.createElement("div", {
       className: "flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-3 text-[13px] font-bold leading-relaxed text-white",
       style: bubbleWrapStyle()
-    }, bubbleWrap(assistantSpeakText(pages[page], breederName, assistantBondLevelNow, assistantCallStyle, selectedAssistantId)))), !last ? React.createElement("button", {
+    }, (() => {
+      const t = assistantSpeakText(pages[page], breederName, assistantBondLevelNow, assistantCallStyle, selectedAssistantId);
+      return typeof t === 'string' && typeof XmasNovelWrap === 'function' ? React.createElement(XmasNovelWrap, {
+        text: t
+      }) : bubbleWrap(t);
+    })())), !last ? React.createElement("button", {
       onClick: () => setAssistantUnlockPage(page + 1),
       className: "mt-4 min-h-[50px] w-full rounded-2xl bg-pink-500 text-sm font-black text-slate-950"
     }, "次へ") : React.createElement("div", {
@@ -287941,7 +287977,12 @@ function MonsterHeroGame() {
       }), React.createElement("div", {
         className: "flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-3 text-[13px] font-bold leading-relaxed text-white",
         style: bubbleWrapStyle()
-      }, bubbleWrap(assistantSpeakText(text, breederName, lv, assistantCallStyles.mua || null, 'mua')))), React.createElement("button", {
+      }, (() => {
+        const t = assistantSpeakText(text, breederName, lv, assistantCallStyles.mua || null, 'mua');
+        return typeof t === 'string' && typeof XmasNovelWrap === 'function' ? React.createElement(XmasNovelWrap, {
+          text: t
+        }) : bubbleWrap(t);
+      })())), React.createElement("button", {
         type: "button",
         onClick: () => markMonsucStorySkip('shownAt'),
         className: "mt-4 min-h-[50px] w-full rounded-2xl bg-pink-500 text-sm font-black text-slate-950 active:scale-[.98]"
