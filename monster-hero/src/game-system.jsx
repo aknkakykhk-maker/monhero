@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3cf37648856118ce
+// generated-sha256: 42d6869a1d62e7cb
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -69600,7 +69600,7 @@ const XmasNovelLaptop = () => (
     <path d="M8 140 L232 140 L218 158 L22 158 Z" fill="#1b2a52" stroke="#e8c46a" strokeWidth="2" />
   </svg>
 );
-// シルエットの笑い(名前を伏せた声で「ふふ」「あはは」)。笑い声の音源はまだ無いので、いまはボスの技の音で代える
+// シルエットの笑い(名前を伏せた声で「ふふ」「あはは」)。笑い声は audio/se-xmas-novel-laugh.mp3(XMAS_NOVEL_LAUGH_SE)で鳴らす
 const xmasNovelIsSilhouette = (row) => !!(row && /黒いサンタのシルエット|黒いサンタの影/.test(row.x || ''));
 const xmasNovelIsLaugh = (row) => !!(row && /ふふ|あはは|ははは/.test(row.x || ''));
 // ---- 立ち絵の見せ方(r1126-067) ----
