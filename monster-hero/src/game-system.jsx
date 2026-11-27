@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d7e471e7d7761693
+// generated-sha256: b5a0c8655bb9eb92
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -69172,6 +69172,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"1-O-24","t":"line","w":"erubin","x":"きゅうこちゃん、ケーキ、ここ空いてるよ。一緒に食べようか","e":"happy","k":"C1-O:1-O-24"},
 {"id":"1-O-25","t":"line","w":"kyuko","x":"(黒いサンタの帽子をかぶったまま、ケーキをほおばって)……なんか、もう、どうでもよくなっちゃったよぉ笑","e":"happy","k":"C1-O:1-O-25"},
 {"id":"1-O-26","t":"line","w":"dra","x":"きゅうこちゃん、鼻にクリーム、ついてるぞ。えへへ","e":"happy","k":"C1-O:1-O-26"},
+{"id":"1-O-26b","t":"line","w":"kyuko","x":"(鼻のクリームをぬぐって、みんなの顔を見回して)……みんなとこうしてるの、なんか、いいね。来年も、こうしてたいなぁ","e":"happy","k":"C1-O:1-O-26b"},
 {"id":"1-O-27","t":"band","x":"その夜、ペンション・シュプールでは、誰もいなくならなかった。——黒いサンタが、7人もいたのに","k":"C1-O:1-O-27"}],"jumpOnly":true},
 {"id":"END-O","chapter":"END","title":"おまけ「黒いサンタが七人いる」","cond":null,"bgm":"close_to_your_heart_alt","bg":"ペンションのホール","next":"OUT-O","rows":[{"id":"O-1","t":"band","x":"聖夜の名探偵 エンディング「黒いサンタが七人いる」","k":"END-O:O-1"},
 {"id":"O-2","t":"band","x":"次の朝。ホールのソファで、7人の黒いサンタが、毛布にくるまって、仲良く眠っていた","k":"END-O:O-2"},
