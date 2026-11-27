@@ -203,7 +203,7 @@ const RAID_EVENT_XMAS = Object.freeze({
   afterBoss: RAID_XMAS_AFTER_BOSS,
   afterBossBadge: 'あそびに来た',     // 最後の段階のあとは正気に戻った普通のサンタ(ぱんぷきんと同じ形・社長決定 r1126-024)
   afterBossNote: '共有ライフは無限です。毎回いっぱいのライフから戦い、与えたダメージが累計に足されます',
-  lockedNote: `前の段階の${RAID_XMAS_EVENT.name}を止めると姿をあらわします`,
+  lockedNote: `前の段階の${RAID_XMAS_EVENT.name}を止めると姿を現します`,
   lastTierWord: '最後の段階',
   rankNote: '段階1〜4は倒れた時点、最後の段階は期間の終わりに順位が決まります',
   endLabel: '12/31 4:00',
