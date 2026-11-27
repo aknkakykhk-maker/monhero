@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6cc5bfd50c233462
+// source-sha256: 036764b2caa7e4f5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -67707,6 +67707,25 @@ const jaKeepKanaRuns = (s, chunks, segs, {
   }
   return out.join('​');
 };
+const JA_WRAP_NO_BREAK = [/\d{1,4}\/\d{1,2}(?:\/\d{1,2})?(?:[(（][月火水木金土日](?:・祝)?[)）])?/g, /\d{1,2}:\d{2}/g, /聖夜の名探偵|名探偵|エンドヒストリー|手がかり帳|鐘が鳴る夜/g];
+const jaWrapUnbreak = marked => {
+  if (typeof marked !== 'string' || !marked.includes('​')) return marked;
+  const plain = marked.replace(/​/g, '');
+  const spans = [];
+  for (const re of JA_WRAP_NO_BREAK) for (const m of plain.matchAll(re)) spans.push([m.index, m.index + m[0].length]);
+  if (!spans.length) return marked;
+  let pos = 0,
+    out = '';
+  for (const ch of marked) {
+    if (ch === '​') {
+      if (!spans.some(([a, b]) => pos > a && pos < b)) out += ch;
+      continue;
+    }
+    out += ch;
+    pos += ch.length;
+  }
+  return out;
+};
 const jaWrapPoints = text => {
   const s = String(text ?? '');
   if (!s) return s;
@@ -67830,11 +67849,11 @@ const jaWrapPoints = text => {
       const m = chunks[k].match(/^(.*[ァ-ヶー])([ぁ-ゖ].*)$/s);
       if (m && visible(m[1].split(/\s/).pop() + m[2].split(/\s/)[0]) > 7 && letters(m[1]) >= 2 && letters(m[2]) >= 2) chunks.splice(k, 1, m[1], m[2]);
     }
-    return jaKeepKanaRuns(s, chunks, segs, {
+    return jaWrapUnbreak(jaKeepKanaRuns(s, chunks, segs, {
       visible,
       letters,
       inKeepWord
-    });
+    }));
   } catch {
     return s;
   }
@@ -88386,7 +88405,7 @@ function HomeUpdateGuideBundle({
     expression: "happy"
   }), React.createElement("div", {
     className: "flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 p-2.5 text-sm font-bold text-white"
-  }, "新しいお知らせが", updateGuideQueue.length, "件あるよ♪ 読みたいものだけ「くわしく」で開いてね。")), React.createElement("div", {
+  }, "新しいお知らせが", updateGuideQueue.length, "件あるよ♪ 読みたいものだけ「詳しく」で開いてね。")), React.createElement("div", {
     className: "mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto"
   }, updateGuideQueue.map(n => React.createElement("div", {
     key: n.id,
@@ -88395,8 +88414,9 @@ function HomeUpdateGuideBundle({
   }, React.createElement("div", {
     className: "min-w-0 flex-1"
   }, React.createElement("div", {
-    className: "text-[13px] font-black leading-snug text-pink-200"
-  }, n.title), React.createElement("div", {
+    className: "text-[13px] font-black leading-snug text-pink-200",
+    style: typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined
+  }, typeof jaWrap === 'function' ? jaWrap(n.title) : n.title), React.createElement("div", {
     className: "mt-0.5 truncate text-[10px] font-bold text-slate-400"
   }, headline(n))), React.createElement("button", {
     type: "button",
@@ -88471,8 +88491,9 @@ function HomeUpdateGuideOverlay({
     decoding: "async",
     className: "mb-3 w-full max-h-[42vh] rounded-2xl border border-pink-400/50 object-contain"
   }), React.createElement("h2", {
-    className: "mb-1 text-center text-base font-black text-pink-200"
-  }, notice.title), React.createElement("p", {
+    className: "mb-1 text-center text-base font-black text-pink-200",
+    style: typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined
+  }, typeof jaWrap === 'function' ? jaWrap(notice.title) : notice.title), React.createElement("p", {
     className: "mb-3 text-center text-[10px] font-bold text-slate-400"
   }, page + 1, " / ", pages.length), React.createElement("div", {
     className: "flex items-end gap-2"
@@ -257073,8 +257094,9 @@ function MonsterHeroGame() {
         paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
       }
     }, React.createElement("h2", {
-      className: "mb-1 text-center text-base font-black text-pink-200"
-    }, notice.title), React.createElement("p", {
+      className: "mb-1 text-center text-base font-black text-pink-200",
+      style: bubbleWrapStyle()
+    }, bubbleWrap(notice.title)), React.createElement("p", {
       className: "mb-3 text-center text-[10px] font-bold text-slate-400"
     }, page + 1, " / ", pages.length), React.createElement("div", {
       className: "flex items-end gap-2"
