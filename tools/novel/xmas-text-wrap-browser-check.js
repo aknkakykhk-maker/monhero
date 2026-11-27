@@ -15,7 +15,7 @@
 // 文の元(ここに名前を書いておくと、run-checks --changed がこの検査を選ぶ。文を足したときに落ちる):
 //   monster-hero/data/assistants.js(お話)・monster-hero/data/changelog.js・monster-hero/data/help.js・
 //   79-screen-xmas-event.jsx・79-screen-xmas-novel.jsx・79-xmas-novel-script.jsx・35-raid-xmas.jsx・21-assistant.jsx・41-screen-ui.jsx
-const DATA_FILES = [path.join('monster-hero', 'data', 'assistants.js'), path.join('monster-hero', 'data', 'changelog.js'), path.join('monster-hero', 'data', 'help.js')];
+const DATA_FILES = ['monster-hero/data/assistants.js', 'monster-hero/data/changelog.js', 'monster-hero/data/help.js'];
 void DATA_FILES;
 const http = require('http'), path = require('path'), fs = require('fs');
 const seeds = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
