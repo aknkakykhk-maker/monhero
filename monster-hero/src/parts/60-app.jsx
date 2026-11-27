@@ -3476,35 +3476,45 @@ function MonsterHeroGame() {
   // 不具合情報タブで未読(NEW)へ戻るのを防ぐ
   // 約900件を見比べるので、既読が変わったときだけ数え直す(描画のたびに作り直さない)
   // 「イベント」タブ(2026-11-23 r1119-113)。開催中・開催予定の札はこのタブにだけ出す。
-  //   印(!)は、まだ見ていない札があるあいだだけ付ける。既読は今ある mh_changelog_seen_ids_<その項目のタブ> へ足す(キーは増やさない)。
-  //   札になっている項目は、更新情報タブを見ただけでは既読にしない(イベントタブを開くまで印を残す)。
+  //   印は、まだ開いていない札があるあいだだけ付ける。既読は今ある mh_changelog_seen_ids_<その項目のタブ> へ足す(キーは増やさない)。
+  //   札になっている項目は、更新情報タブを見ただけでは既読にしない。
+  //   2026-11-27 r1126-068 社長「イベントにびっくりついてるけどどれかわからない」→ 札ごとに「NEW」を付け、その札を開いたら既読にする
+  //   (タブを見ただけでは消さない)。タブの印の数と札の「NEW」の数は、どちらもここの changelogUnreadIds.event から作るので必ず合う。
+  //   並べる札(changelogEventCards)もここで1回だけ作り、描画はそれを使う(時刻の境目で札の顔ぶれと印がずれないように)。
   //   開催中かは時刻で変わるので、窓を開くたびに数え直す(showChangelog を依存に入れている)
-  const { changelogUnreadIds, changelogUnread, changelogPinnedIds } = useMemo(() => {
+  const { changelogUnreadIds, changelogUnread, changelogPinnedIds, changelogEventCards } = useMemo(() => {
     const changelogSeenAnyTab = new Set(CHANGELOG_TYPES.flatMap(type => changelogSeen[type] || []));
-    const pinnedIds = changelogPinnedEntries().map(entry => entry.id);
+    const eventCards = changelogPinnedEntries();
+    const pinnedIds = eventCards.map(entry => entry.id);
     const pinnedSet = new Set(pinnedIds);
     const unreadIds = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, CHANGELOG_IDS_BY_TYPE[type].filter(id=>!changelogSeenAnyTab.has(id) && !pinnedSet.has(id))]));
     unreadIds.event = pinnedIds.filter(id => !changelogSeenAnyTab.has(id));
     const unread = Object.fromEntries(Object.keys(unreadIds).map(type => [type, unreadIds[type].length>0]));
-    return { changelogUnreadIds: unreadIds, changelogUnread: unread, changelogPinnedIds: pinnedSet };
+    return { changelogUnreadIds: unreadIds, changelogUnread: unread, changelogPinnedIds: pinnedSet, changelogEventCards: eventCards };
   }, [changelogSeen, showChangelog]);
   const hasUnreadChangelog = changelogUnread.update || changelogUnread.issue || changelogUnread.event;
+  // イベントタブの札を1枚開いたら、その項目だけ既読にする(2026-11-27 r1126-068)。
+  //   その項目が属するタブの既読(mh_changelog_seen_ids_update / _issue)へ足す。保存のしかた・キーは前と同じ
+  const markChangelogEventSeen = (id) => {
+    if (!changelogUnreadIds.event.includes(id)) return;
+    const entry = CHANGELOG_ENTRIES.find(e => e.id === id);
+    if (!entry) return;
+    const tab = CHANGELOG_ISSUE_TAB_TYPES.includes(entry.type) ? 'issue' : 'update';
+    const next = Array.from(new Set([...(changelogSeen[tab]||[]).filter(x=>CHANGELOG_ALL_IDS.has(x)), id]));
+    storeSet(`mh_changelog_seen_ids_${tab}`, next, false);
+    setChangelogSeen(prev => ({ ...prev, [tab]: next }));
+  };
+  // 残り時間(「あと◯日」)を、イベントタブを見ているあいだは30秒ごとに描き直す
+  const [changelogClock, setChangelogClock] = useState(() => Date.now());
+  useEffect(() => {
+    if (!showChangelog || changelogTab !== 'event') return undefined;
+    setChangelogClock(Date.now());
+    const timer = setInterval(() => setChangelogClock(Date.now()), 30000);
+    return () => clearInterval(timer);
+  }, [showChangelog, changelogTab]);
   const markChangelogTabSeen = (type) => {
     if (type === 'event') {
-      // 札の項目を、その項目が属するタブの既読へ足す(更新情報の項目なら mh_changelog_seen_ids_update)
-      if (!changelogUnreadIds.event.length) return;
-      const byTab = {};
-      CHANGELOG_ENTRIES.forEach(entry => {
-        if (!changelogUnreadIds.event.includes(entry.id)) return;
-        const tab = CHANGELOG_ISSUE_TAB_TYPES.includes(entry.type) ? 'issue' : 'update';
-        (byTab[tab] = byTab[tab] || []).push(entry.id);
-      });
-      const next = {};
-      Object.keys(byTab).forEach(tab => {
-        next[tab] = Array.from(new Set([...(changelogSeen[tab]||[]).filter(id=>CHANGELOG_ALL_IDS.has(id)), ...byTab[tab]]));
-        storeSet(`mh_changelog_seen_ids_${tab}`, next[tab], false);
-      });
-      setChangelogSeen(prev => ({ ...prev, ...next }));
+      // イベントタブは、タブを見ただけでは既読にしない(札を開いたときに markChangelogEventSeen。2026-11-27 r1126-068)
       return;
     }
     const ids = CHANGELOG_IDS_BY_TYPE[type].filter(id => !changelogPinnedIds.has(id));
@@ -15174,7 +15184,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const fxSkill = intent.variant || (intent.type==='SPECIAL' ? 'special' : 'normal');
         // ★技ごとの動きを持つ敵は、連続はり手・上手投げなどを見せきる長さだけ待つ(tacticsEnemyMotionMs)。
         //   ムーも動きを持つときは技ごとの長さ(全画面の演出を見せきる長さ)になる
-        const motionEnemyId = isTacticsMode(runMode)&&!ecoBattleView ? (enemy?.raidJackPumpkin?'Pumpkin':enemy?.id) : null;
+        const motionEnemyId = isTacticsMode(runMode)&&!ecoBattleView ? tacticsEnemyMotionKey(enemy) : null;
         // ★必殺技ムービーを持つ敵(覚醒ムー)の必殺技は、画面を切り替えてムービーを流してから当てる
         //   (2026-09-25 ユーザー指示)。流すのは設定が「流す」のときだけ。演奏で止まったぶんの追いつき中は流さない。
         //   ムービーは戦闘の速さに合わせて縮めない(「下手に短くしないでおけ」)。
@@ -20061,7 +20071,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           見た目は .mh-title-dialog--changelog(70-bootstrap.jsx)。見出しの帯・タブ・一覧(ここだけ送る)・閉じるの4段で、閉じるはいつも同じ所。
           横・小さい横は、左の列に見出し・タブ・閉じる、右の列に一覧。お知らせの中身と既読の印は変えていない */}
       <div className="mh-title-dialog mh-title-dialog--changelog" role="dialog" aria-modal="true" aria-label="更新履歴"><div className="mh-dialog-head"><h3>✦ 更新履歴</h3></div>
-        <div className="mh-changelog-tabs">{[{key:'update',label:'更新情報'},{key:'event',label:'イベント'},{key:'issue',label:'不具合情報'}].map(t=><button key={t.key} type="button" aria-pressed={changelogTab===t.key} onClick={()=>selectChangelogTab(t.key)} className={changelogTab===t.key?'active':''}>{t.label}{changelogUnread[t.key]&&<em className="mh-unread-badge" aria-label="未読あり">!</em>}</button>)}</div>
+        <div className="mh-changelog-tabs">{[{key:'update',label:'更新情報'},{key:'event',label:'イベント'},{key:'issue',label:'不具合情報'}].map(t=><button key={t.key} type="button" aria-pressed={changelogTab===t.key} onClick={()=>selectChangelogTab(t.key)} className={changelogTab===t.key?'active':''}>{t.label}{changelogUnread[t.key]&&(t.key==='event'
+          // イベントタブの印は、まだ開いていない札の数(札の「NEW」と同じ数。2026-11-27 r1126-068)
+          ?<em className="mh-unread-badge" data-changelog-event-unread={changelogUnreadIds.event.length} aria-label={`まだ開いていないイベント${changelogUnreadIds.event.length}件`}>{changelogUnreadIds.event.length}</em>
+          :<em className="mh-unread-badge" aria-label="未読あり">!</em>)}</button>)}</div>
         {/* data/changelog.js の読み込みに失敗すると中身が0件になる。黙って空にすると
             「更新履歴が壊れた」としか分からないので、読み込み直せることをここで伝える */}
         <div className="mh-changelog-list" data-changelog-list>{CHANGELOG_ENTRIES.length===0
@@ -20080,22 +20093,48 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             // 「イベント期間中はこれを常に1番上に出しといて」)。日付やまとめの並びとは別。終わったら自然に消えて、あとは普通の行として残る。
             // 開催中かは描くたびに数え直す(changelogEventLive)。ふだんは他の行と同じく閉じておき、押すと中身(告知画像・本文)が開く
             // 2026-11-23 r1119-113 社長「更新内容が見づらい」→ 札は「イベント」タブへ移した(開催中が上・開催予定が下。changelogPinnedEntries)
-            const pinnedEvents = changelogTab==='event' ? changelogPinnedEntries() : [];
+            const pinnedEvents = changelogTab==='event' ? changelogEventCards : [];
             if (changelogTab==='event' && pinnedEvents.length===0) return <p className="mh-changelog-empty" data-changelog-event-empty>いま開催中・開催予定のイベントはありません。</p>;
-            return [...pinnedEvents.map(c=>(
-              <details key={`pinned-${c.id}`} data-changelog-pinned className="mh-changelog-pinned"
-                style={{margin:'0 0 10px',border:'2px solid #fb923c',borderRadius:16,background:'linear-gradient(135deg,#431407,#3b0764)',padding:'8px 10px'}}>
-                <summary style={{cursor:'pointer',listStyle:'none',display:'flex',alignItems:'center',gap:8,fontWeight:900,fontSize:13,color:'#ffedd5'}}>
-                  {/* 札の絵文字はイベントごと(pinEmoji)。書いていない項目は 🎉(ハロウィンの 🎃 のままだった。2026-11-03) */}
-                  {/* 予告(開始前)の項目は eventStartAt を書く。その時刻より前は「📅 開催予定」(2026-11-22 社長が本番で「開催前なのに開催中」を見つけた)。
-                      書いていない項目(これまでのイベント)は今までどおり「開催中」。時刻は描くたびに数え直す */}
-                  <span data-changelog-pinned-badge style={{background:'#f97316',color:'#1c1917',borderRadius:999,padding:'1px 8px',fontSize:11,flexShrink:0}}>{changelogEventUpcoming(c)?'📅 開催予定':`${typeof c.pinEmoji==='string'&&c.pinEmoji?c.pinEmoji:'🎉'} 開催中`}</span>
-                  {/* 固定表示の見出しは短くする。先頭の【期間限定】と末尾の「〜を開催します」は、「開催中」の札と重なるので落とす(本文の見出しはそのまま)。
-                      幅の狭い画面(320)で「レイドボス戦「…」と名前が切れていたので、切らずに折り返す(2026-10-27 ダメダシくんの見回り) */}
-                  {/* pinTitle を書いた項目は、固定の札だけその短い題(2026-11-10 社長「モンヒロビート本オープン記念 これだけにしといて」)。一覧の行と本文の題はそのまま */}
-                  <span data-changelog-pinned-title style={{flex:1,minWidth:0,lineHeight:1.3,wordBreak:'keep-all',overflowWrap:'anywhere'}}>{typeof c.pinTitle==='string'&&c.pinTitle?c.pinTitle:String(c.title||'').replace(/^【[^】]*】/,'').replace(/を開催(します)?$/,'')}</span>
-                  <small style={{flexShrink:0,fontSize:10,color:'#fdba74'}}>詳細 ▼</small>
+            const eventUnread = new Set(changelogUnreadIds.event||[]);
+            // 2026-11-27 r1126-068 社長「イベントにびっくりついてるけどどれかわからない。てか表示方法もっとなんとかならない？」→ 札を作り直した。
+            //   ・上にイベントの絵の横長の帯(絵の無い項目は今までの色の札のまま)。その下に短い題を1行(changelogEventListTitle)
+            //   ・期間「11/28(土) 10:00 〜 12/31(木) 3:59」と残り「あと◯日」「開幕まであと◯時間」(changelogEventPeriodLabel / changelogEventRemainLabel)
+            //   ・まだ開いていない札に「NEW」。札を開いたら既読(markChangelogEventSeen)。タブの数字と同じ数になる
+            //   ・並びは開催中(終わりが近い順)→開催予定(開幕が近い順)。changelogPinnedEntries
+            return [...pinnedEvents.map(c=>{
+              const upcoming=changelogEventUpcoming(c,changelogClock);
+              const period=changelogEventPeriodLabel(c);
+              const remain=changelogEventRemainLabel(c,changelogClock);
+              const isNew=eventUnread.has(c.id);
+              const banner=typeof c.image==='string'&&c.image?c.image:'';
+              const listTitle=changelogEventListTitle(c);
+              return (
+              <details key={`pinned-${c.id}`} data-changelog-pinned data-changelog-event-new={isNew?'1':'0'} className="mh-changelog-pinned"
+                onToggle={e=>{ if (e.currentTarget.open) markChangelogEventSeen(c.id); }}
+                style={{margin:'0 0 10px',border:`2px solid ${isNew?'#f87171':'#fb923c'}`,borderRadius:16,background:'linear-gradient(135deg,#431407,#3b0764)',padding:banner?0:'8px 10px',overflow:'hidden'}}>
+                <summary aria-label={`${listTitle}${upcoming?'(開催予定)':'(開催中)'}${isNew?'・未読':''}`} style={{cursor:'pointer',listStyle:'none',display:'block',fontWeight:900,color:'#ffedd5'}}>
+                  {banner&&<span style={{position:'relative',display:'block'}}>
+                    {/* 帯は絵の真ん中より少し上を見せる(題字が上にある絵が多い)。項目ごとに bannerPos で変えられる */}
+                    <img data-changelog-pinned-banner src={banner} alt="" aria-hidden="true" onError={e=>{e.currentTarget.style.display='none';}} loading="lazy" decoding="async"
+                      style={{display:'block',width:'100%',aspectRatio:'3 / 1',maxHeight:'min(110px, 22vh)',objectFit:'cover',objectPosition:typeof c.bannerPos==='string'&&c.bannerPos?c.bannerPos:'50% 35%'}}/>
+                    {isNew&&<em data-changelog-event-new-mark style={{position:'absolute',top:6,left:6,fontStyle:'normal',background:'#ef4444',color:'#fff',borderRadius:999,padding:'1px 8px',fontSize:11,boxShadow:'0 2px 6px rgba(0,0,0,.5)'}}>NEW</em>}
+                  </span>}
+                  <span style={{display:'flex',alignItems:'center',gap:6,padding:banner?'6px 10px 0':0,fontSize:13}}>
+                    {/* 札の絵文字はイベントごと(pinEmoji)。書いていない項目は 🎉(ハロウィンの 🎃 のままだった。2026-11-03) */}
+                    {/* 予告(開始前)の項目は eventStartAt を書く。その時刻より前は「📅 開催予定」(2026-11-22 社長が本番で「開催前なのに開催中」を見つけた)。
+                        書いていない項目(これまでのイベント)は今までどおり「開催中」。時刻は描くたびに数え直す */}
+                    <span data-changelog-pinned-badge style={{background:upcoming?'#38bdf8':'#f97316',color:'#1c1917',borderRadius:999,padding:'1px 8px',fontSize:11,flexShrink:0}}>{changelogEventUpcoming(c)?'📅 開催予定':`${typeof c.pinEmoji==='string'&&c.pinEmoji?c.pinEmoji:'🎉'} 開催中`}</span>
+                    {/* 題は1行(長い物は「…」)。listTitle を書いた項目はそれ(更新情報タブの題・本文の題は変えない) */}
+                    <span data-changelog-pinned-title style={{flex:1,minWidth:0,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',lineHeight:1.4}}>{listTitle}</span>
+                    {!banner&&isNew&&<em data-changelog-event-new-mark style={{fontStyle:'normal',background:'#ef4444',color:'#fff',borderRadius:999,padding:'1px 7px',fontSize:10,flexShrink:0}}>NEW</em>}
+                  </span>
+                  <span style={{display:'flex',alignItems:'center',flexWrap:'wrap',gap:'2px 8px',padding:banner?'3px 10px 8px':'4px 0 0',fontSize:11,fontWeight:800,color:'#fdba74'}}>
+                    {period&&<span data-changelog-event-period style={{whiteSpace:'nowrap'}}>{period}</span>}
+                    {remain&&<span data-changelog-event-remain style={{whiteSpace:'nowrap',background:'rgba(0,0,0,.35)',color:upcoming?'#bae6fd':'#fde68a',borderRadius:999,padding:'0 7px'}}>{remain}</span>}
+                    <small style={{marginLeft:'auto',fontSize:10,color:'#fdba74',whiteSpace:'nowrap'}}>詳細 ▼</small>
+                  </span>
                 </summary>
+                <div style={{padding:banner?'0 10px 8px':0}}>
                 {c.image&&<img data-changelog-pinned-image src={c.image} alt={`${c.title}のお知らせ`} onError={e=>{e.currentTarget.style.display='none';}} loading="lazy" decoding="async" style={{width:'100%',borderRadius:12,margin:'8px 0 4px'}}/>}
                 {/* 予告動画も、固定の札の中で見られるようにする(下の一覧の行と同じ) */}
                 {typeof c.video==='string'&&c.video&&<figure data-changelog-pinned-video style={{margin:'6px 0'}}>
@@ -20103,7 +20142,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <ChangelogVideo src={c.video} poster={typeof c.videoPoster==='string'?c.videoPoster:undefined}/>
                 </figure>}
                 {(c.items||[]).map((x,j)=><p key={j} style={{fontSize:12,color:'#fed7aa',margin:'3px 0'}}>・{x}</p>)}
-              </details>)),
+                </div>
+              </details>);}),
             ...rows.map(row=>{
               const open=changelogOpenId===row.key;
               const unreadCount=row.entries.filter(entry=>unreadHere.has(entry.id)).length;

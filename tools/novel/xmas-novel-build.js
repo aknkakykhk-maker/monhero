@@ -28,6 +28,8 @@ const PERSON_KEYS = { dora: 'dra', dra: 'dra', mua: 'myua', myua: 'myua', miyua:
   kyuko: 'kyuko', sorashido: 'sorashido', sora: 'sorashido', erubin: 'erubin', elvin: 'erubin', ichika: 'ichika', ichiika: 'ichika',
   mochimaru: 'mochimaru', mochi: 'mochimaru', kuroba: 'kuroba', shirase: 'shirase' };
 const EXPRESSIONS = ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited'];
+// 眠った顔はドラだけ(絵が santa/dra_sleep.PNG にしかない・r1126-077)
+const SLEEP_FACE_WHO = ['dra'];
 // 曲の印(SCRIPT.md §5)→ 曲のid。★ は推理の山場の新曲
 const BGM_MARKS = {
   日: 'kaze_ga_soyogu', 不: 'melo_dullahan_clockwork', 怖: 'melo_dullahan_steel_ghost', 推: 'melo_dullahan_clockwork_alt',
@@ -36,6 +38,8 @@ const BGM_MARKS = {
 };
 // 帯の頭の印 → 演出
 const FX_TAGS = { 赤いにじみ: 'bleed', 倒れた影: 'fallen', 赤く光る: 'red', 幕が下りる: 'curtainDown', 幕がおりる: 'curtainDown', 幕が上がる: 'curtainUp', 幕があがる: 'curtainUp', 暗転: 'dark', 白転: 'white', 明転: 'light', ゆれ: 'shake', 揺れ: 'shake', 赤: 'red', 赤い一瞬: 'red', 題字: 'title', 章: 'chapter', 効果音: 'se', 悲鳴: 'se', 帯: 'band', 雪: 'snow', 手紙: 'letter' };
+// 音の印(〔音:鐘〕など・r1126-066)→ 画面の xmasNovelSe の種類
+const SOUND_MARKS = { 鐘: 'bell', 時計: 'tick', 柱時計: 'tick', 手紙: 'letter' };
 // (手紙) … 紙の手紙を赤い字で浮かべる(文の「／」で改行・r1126-058)
 const ENDING_KIND = { G: 'good', N: 'normal', B: 'bad', A: 'another', X: 'forced', M: 'accuse', O: 'omake' };
 const CHAPTER_NO = { 序章: 0, 終章: 9 };
@@ -296,7 +300,8 @@ const parseRow = (cells, where) => {
   else if (/g1$/.test(idCell) && /^[A-Z]-/.test(idCell)) cond = { any: [{ all: [{ k: 'score', op: '<=', v: 3 }] }] };
   const row = { id: idCell };
   if (cond) row.c = cond;
-  if (who === '選択') return { ...parseQuestion(id, raw), ...(cond ? { c: cond } : {}), id: idCell };
+  // 条件つきの選択の行(`A7[f_A1=2]`)は、問いのIDを条件の前まで(f_A7。保存の正規化 /^f_\w+$/ で消えない・r1126-077)
+  if (who === '選択') return { ...parseQuestion(id, raw), ...(cond ? { c: cond } : {}), id: cm ? id : idCell };
   if (who === '帯' || who === '演出') {
     let s = stripMd(raw); const fx = [];
     // 〔遺体:黒羽〕… 亡くなっているのが見つかる行。その人の立ち絵を黒い影にして倒し、血だまりを広げる(r1126-065)。
@@ -308,6 +313,16 @@ const parseRow = (cells, where) => {
       if (w) body = w; else note(where, `遺体の印の人が分からない「${k}」`);
       return '';
     }).trim();
+    // 〔音:鐘〕〔音:時計〕〔音:手紙〕… その行で鳴らす効果音(r1126-066)。鐘は「ボーン」、時計は「カチ」の数だけ鳴らす(3回まで)。
+    //   〔音:鐘×2〕のように回数も書ける。行のどこに書いてもよい(画面には出さない)
+    let snd = ''; let sndN = 0;
+    s = s.replace(/〔音\s*[:：]\s*([^〕×xX]+?)\s*(?:[×xX]\s*(\d+))?\s*〕/g, (_, n, c) => {
+      const k = SOUND_MARKS[n.trim()];
+      if (!k) { note(where, `知らない音の印「${n.trim()}」`); return ''; }
+      snd = k; sndN = c ? Number(c) : 0;
+      return '';
+    }).trim();
+    if (snd && !sndN) sndN = snd === 'bell' ? (s.match(/ボーン/g) || []).length : snd === 'tick' ? (s.match(/カチ(?![リャッ])/g) || []).length : 1;
     for (;;) {
       const m = s.match(/^[(（]([^)）]+)[)）]\s*/);
       if (!m || !FX_TAGS[m[1]]) break;
@@ -329,7 +344,8 @@ const parseRow = (cells, where) => {
     if (uniq.length) row.fx = uniq;
     if (body) row.body = body;
     if (frame) row.f = frame;
-    if (fx.includes('se')) row.se = /パチパチ|拍手/.test(s) ? 'clap' : /鐘|時計/.test(s) ? 'bell' : /悲鳴|ドン|バタン|ガタン|ブツン|ザザッ/.test(s) ? 'impact' : /オルゴール|♪/.test(s) ? 'music' : 'tap';
+    if (snd) { row.se = snd; const c = Math.max(1, Math.min(3, sndN || 1)); if (c > 1) row.seN = c; }
+    else if (fx.includes('se')) row.se = /パチパチ|拍手/.test(s) ? 'clap' : /悲鳴|ドン|バタン|ガタン|ブツン|ザザッ/.test(s) ? 'impact' : /オルゴール|♪/.test(s) ? 'music' : 'tap';
     return row;
   }
   if (who === '手がかり') {
@@ -360,7 +376,7 @@ const parseRow = (cells, where) => {
   if (sp.n && !sp.crowd && !PAST_SPEAKERS.includes(sp.n)) note(where, `知らない話し手「${sp.n}」(名前だけ出す)`);
   delete line.crowd;
   if (sp.secret) { line.n = '？？？'; delete line.w; }
-  if (face && face !== '—' && face !== '-') { if (EXPRESSIONS.includes(face)) line.e = face; else note(where, `知らない表情「${face}」`); }
+  if (face && face !== '—' && face !== '-') { if (EXPRESSIONS.includes(face) || (face === 'sleep' && SLEEP_FACE_WHO.includes(sp.w))) line.e = face; else note(where, `知らない表情「${face}」`); }
   const bgmM = memo && memo.match(/曲[:：]\s*([^\s)）]+)/);
   if (bgmM) { const mk = Object.keys(BGM_MARKS).find((k) => bgmM[1].startsWith(k)); line.bgm = bgmM[1].includes('★') ? 'melo_kiss_mystery' : mk ? BGM_MARKS[mk] : bgmM[1]; }
   const memo2 = memo ? memo.replace(/[(（]?曲[:：][^)）]*[)）]?/, '').replace(/^\s*(あつ派|ソラシド派|[0-9〜]+問[^)）]*のとき|7問とも一発のとき)\s*/, '').trim() : '';

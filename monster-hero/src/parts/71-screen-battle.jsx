@@ -400,7 +400,11 @@ const TACTICS_ENEMY_MOTIONS = Object.freeze({
   AwakenedMoo: 'awakenedMoo',
   // イベント・レイドボス「ジャック」(ドクドクと同じネンドロ種。ぴょこぴょこ跳ねる)
   Jack: 'jack',
+  // クリスマスのレイドボス「覚醒サンタ」(enemy.raidXmas のときだけ。id は Jack のまま・数字と当たり方はジャックと同じ)
+  Santa: 'santa',
 });
+// 動きの表を引くときの敵の名前。ぱんぷきん・クリスマスのボスは id が Jack のままなので、ここで分ける
+const tacticsEnemyMotionKey = (enemy) => (!enemy ? null : enemy.raidJackPumpkin ? 'Pumpkin' : enemy.raidXmas ? 'Santa' : enemy.id);
 // 技ごとの動きの長さ(ミリ秒)。ここに無い技は今までどおり(通常攻撃 450 / 必殺技 1100)。
 // 戦闘の待ち時間(60-app)もこの値を使うので、CSS の --em-dur / animation の長さと必ずそろえる。
 // ★ムー(覚醒ムー)は攻撃の待ちが 900 で決まっているので、ここは通らない(CSS も 900 にしてある)
@@ -489,6 +493,15 @@ const TACTICS_ENEMY_MOTION_SETS = Object.freeze({
     normal:['lunge','burst','🎃','shoot'], sweep:['lunge',null,'👻','shoot'], rush:['flurry','burst','🎃','shoot'], pierce:['spin','slash'],
     special:['leap','ring','🍬','rain'], allout:['dash','widebeam','👻','shoot'], roar:['rise','aura','🌙','rise'],
     regen:['heal','sparkle'], charge:['power','aura'], pierceCharge:['stance','lock'] } },
+  // 覚醒サンタ(クリスマスのレイドボス・r1126-075): 重く息をして構える。雪・黒いプレゼント・鐘・ソリ
+  //   正拳・闇 … 突いて雪の拳を飛ばす / 瞬黒撃 … 一瞬で踏み込み、黒い十字の斬り跡と雪が散る
+  //   超宝屁 … 揺れて毒々しい光の粒を出し、プレゼントが味方へ飛ぶ(id が Jack なのでムーと同じく光の玉で飛ばす) / 超飛び蹴り … 跳んで蹴り落とす
+  //   超暗けい … 溜めて黒い掌の気を通す / 怪しこの夜 … 力を解き放ち、鐘が鳴りながら立ちのぼる
+  //   X’マスプレデター … 横へ駆け、ソリが味方全員へ突っ込み、黒いプレゼントと雪が散る
+  santa: { idle:'menace', skills:{
+    normal:['jab','burst','❄️','shoot'], sweep:['sway','sparkle','🎁','shoot'], rush:['leap','burst','🦵','shoot'], pierce:['windup','beam','🖤','rise'],
+    special:['dash','slash'], allout:['dash','widebeam','🛷','shoot'], roar:['rise','aura','🔔','rise'],
+    regen:['heal','sparkle'], charge:['power','aura'], pierceCharge:['stance','lock'] } },
   // 覚醒ムー(竜): 待機は今までの浮遊のまま。技ごとの動きだけ付ける
   awakenedMoo: { idle:null, skills:{
     normal:['swing','slash'], sweep:['dash','arc'], rush:['flurry','burst'], pierce:['windup','beam'],
@@ -512,6 +525,7 @@ const TACTICS_ENEMY_STRIKE_LOOK = Object.freeze({
   awakenedMoo: { impact:'nova' },
   jack: { impact:'stamp', mark:'🎃' },
   pumpkin: { impact:'stamp', mark:'🎃' },
+  santa: { impact:'stamp', mark:'❄️' },
 });
 const TACTICS_ENEMY_NO_STRIKE_SKILLS = Object.freeze(['roar','charge','pierceCharge','regen']);
 // 覚醒ムーの全画面の演出で、技の名前を大きく出す技(2026-09-24 ユーザー指示「技名のカットイン」)
@@ -709,6 +723,9 @@ const TACTICS_ENEMY_FINISH = Object.freeze({
   // ぱんぷきん: ジャックと同じ飾り(めいどのトリート=お菓子の星とカボチャの火 / おばけパレード=おばけの行列)
   pumpkin:      { special:[{t:'bits',n:14,shape:'star',dist:140,d:280},{t:'bits',n:12,shape:'flame',dist:110,d:330,fall:true},{t:'ring',d:300,r:3.4}],
                   allout:[{t:'blade',a:0,len:420,w:16,d:240},{t:'bits',n:16,shape:'spark',dist:130,d:260},{t:'wave',d:300},{t:'ring',d:340,r:3.6,flat:.45}] },
+  // 覚醒サンタ: 瞬黒撃=交差する黒い斬り跡と雪 / X’マスプレデター=横切る光・黒いプレゼントと雪が降る
+  santa:        { special:[{t:'blade',a:-35,len:380,w:12,d:220},{t:'blade',a:35,len:380,w:12,d:280},{t:'bits',n:12,shape:'snow',dist:140,d:300},{t:'ring',d:320,r:3.6,void:true}],
+                  allout:[{t:'blade',a:0,len:440,w:16,d:240},{t:'bits',n:10,shape:'gift',dist:140,d:270},{t:'bits',n:12,shape:'snow',dist:120,d:320,fall:true},{t:'ring',d:340,r:3.8,flat:.45}] },
   // スプラッター(斧の処刑人): エクスキューション=巨大な斧の一閃と血しぶき / デスエナジー=赤い炎
   splatter:     { special:[{t:'blade',a:-58,len:440,w:16,d:240},{t:'col',w:44,h:440,d:320,sky:true},{t:'bits',n:12,shape:'drop',dist:130,d:340},{t:'ring',d:340,r:3.6}],
                   allout:[{t:'col',w:60,h:400,d:260,flame:true},{t:'bits',n:14,shape:'spark',dist:120,d:300},{t:'ring',d:300,r:3.8,flat:.45}] },
@@ -744,6 +761,9 @@ const TacticsEnemyStageFx = ({ fx, motion, isMoo, enemyId, skillLabel, lite = fa
   const trail = skill === 'pierce' ? 'beam' : (skill === 'sweep' && !isMoo) ? 'wave' : (look.trail || 'orb');
   const shot = spec && spec[3] === 'shoot' ? spec[2] : (isMoo && skill === 'sweep' ? '👊' : (look.shot || null));
   const big = skill === 'special' || skill === 'allout' || isMoo;
+  // 覚醒サンタ(id は Jack なのでムーと同じ全画面の演出を通る)だけ、降る物・横切る物・稲妻を雪・ソリ・鐘に替え、
+  //   瞬黒撃・X’マスプレデターの締めの飾り(TACTICS_ENEMY_FINISH.santa)も出す。ジャック・ムーは今までどおり
+  const santa = motion === 'santa';
   const at = (frac) => `${Math.round(ms * Math.max(0, frac))}ms`;
   const { sx, sy, sr } = geo;
   return ReactDOM.createPortal(
@@ -771,8 +791,8 @@ const TacticsEnemyStageFx = ({ fx, motion, isMoo, enemyId, skillLabel, lite = fa
       {!isMoo && !lite && TACTICS_ENEMY_FLASH_SKILLS.includes(skill) && (
         <div data-enemy-flash style={{ animationDelay: at(hit) }}/>
       )}
-      {!isMoo && !lite && strikes && (() => {
-        const parts = skill === 'pierce' ? TACTICS_ENEMY_PIERCE_FINISH : ((TACTICS_ENEMY_FINISH[motion] || {})[skill] || null);
+      {(!isMoo || santa) && !lite && strikes && (() => {
+        const parts = (skill === 'pierce' && !isMoo) ? TACTICS_ENEMY_PIERCE_FINISH : ((TACTICS_ENEMY_FINISH[motion] || {})[skill] || null);
         if (!parts) return null;
         const hitMs = Math.round(ms * hit);
         return geo.slots.map((t) => (
@@ -793,13 +813,13 @@ const TacticsEnemyStageFx = ({ fx, motion, isMoo, enemyId, skillLabel, lite = fa
           animationDelay: at(0.25 + k * 0.07), animationDuration: '380ms' }}/>
       ))}
       {isMoo && !lite && !afterMovie && skill === 'special' && [0, 1, 2, 3, 4, 5, 6, 7].map((k) => (
-        <i key={k} data-moo-meteor style={{ left: `${8 + ((k * 29) % 90)}%`, animationDelay: at(0.18 + k * 0.07) }}>☄️</i>
+        <i key={k} data-moo-meteor style={{ left: `${8 + ((k * 29) % 90)}%`, animationDelay: at(0.18 + k * 0.07) }}>{santa ? '❄️' : '☄️'}</i>
       ))}
       {isMoo && !lite && skill === 'allout' && [0, 1, 2].map((k) => (
-        <i key={k} data-moo-tornado style={{ top: `${44 + k * 14}%`, animationDelay: at(0.22 + k * 0.1) }}>🌪️</i>
+        <i key={k} data-moo-tornado style={{ top: `${44 + k * 14}%`, animationDelay: at(0.22 + k * 0.1) }}>{santa ? '🛷' : '🌪️'}</i>
       ))}
       {isMoo && !lite && skill === 'roar' && [0, 1, 2, 3, 4, 5].map((k) => (
-        <i key={k} data-moo-bolt style={{ left: `${6 + ((k * 41) % 86)}%`, top: `${8 + ((k * 53) % 70)}%`, animationDelay: at(0.18 + k * 0.08) }}>⚡</i>
+        <i key={k} data-moo-bolt style={{ left: `${6 + ((k * 41) % 86)}%`, top: `${8 + ((k * 53) % 70)}%`, animationDelay: at(0.18 + k * 0.08) }}>{santa ? '🔔' : '⚡'}</i>
       ))}
       {isMoo && !lite && skill === 'regen' && <><i data-moo-heaven/>{[0, 1, 2, 3, 4, 5].map((k) => (
         <i key={k} data-moo-feather style={{ left: `${20 + k * 12}%`, animationDelay: at(0.1 + k * 0.08) }}>{k % 2 ? '✨' : '🪶'}</i>
@@ -1848,7 +1868,7 @@ function BattleScreen({
   // 敵ごとの動き方(2026-09-24 ユーザー指示「敵のグラフィックを攻撃時にアニメーション化」「待機時間も動いてるように」
   // 「まずはカワズモーで」「タクティクスだけ」)。絵は1枚のまま、待機・攻撃・ためる・やられの動きを CSS で付ける。
   // ★ここに無い敵は今までどおり。足すときは TACTICS_ENEMY_MOTIONS に1行と、70-bootstrap の CSS を足す
-  const enemyMotion = tacticsNewLayout && !ecoBattleView ? (TACTICS_ENEMY_MOTIONS[enemy?.raidJackPumpkin ? 'Pumpkin' : enemy?.id] || null) : null;
+  const enemyMotion = tacticsNewLayout && !ecoBattleView ? (TACTICS_ENEMY_MOTIONS[tacticsEnemyMotionKey(enemy)] || null) : null;
   // 必殺技ムービーを持つ敵との戦いに入ったら、読み込みを始めておく(流すのは 60-app が決める)。
   // ★設定で「流さない」にしている人・省エネの軽量表示では読まない(通信量を使わせない)
   const bossMovieSrc = battleFx.specialMovie === 'ON' && !ecoBattleView && typeof enemy?.specialMovie === 'string' ? enemy.specialMovie : null;
@@ -2493,7 +2513,7 @@ function BattleScreen({
             {/* 敵の技の全画面の演出(攻撃が味方の枠まで届く・必殺技で暗くなる・覚醒ムーのカットインなど) */}
             {/* ボスの必殺技ムービー(画面を切り替えて流す)。流すかどうかは 60-app が playBossMovie で決める */}
             <BossMovieLayer shake={battleFx.shake!=='OFF'}/>
-            {enemyMotion&&<TacticsEnemyStageFx fx={enemyAttackFx} motion={enemyMotion} isMoo={enemyIsMoo} enemyId={enemy?.raidJackPumpkin?'Pumpkin':enemy?.id} skillLabel={enemySkillName?.label||null} lite={fxLoad==='LIGHT'}/>}
+            {enemyMotion&&<TacticsEnemyStageFx fx={enemyAttackFx} motion={enemyMotion} isMoo={enemyIsMoo} enemyId={tacticsEnemyMotionKey(enemy)} skillLabel={enemySkillName?.label||null} lite={fxLoad==='LIGHT'}/>}
             {/* ★覚醒ムーのカットインが出ている技は、上の小さな技名の札を出さない(同じ名前が2か所に出る) */}
             {enemySkillName&&!(enemyIsMoo&&emSet&&enemyAttackFx?.skill&&TACTICS_MOO_CUTIN_SKILLS.includes(enemyAttackFx.skill))&&ReactDOM.createPortal(
               <div data-battle-float className="fixed left-1/2 -translate-x-1/2 pointer-events-none whitespace-nowrap" style={{top:'14%',zIndex:65000,animation:liteBattleView?undefined:'skillNamePop 350ms ease-out forwards'}}>

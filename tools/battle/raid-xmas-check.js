@@ -225,6 +225,29 @@ const totalsBody = (a1) => JSON.stringify([{ kind: 'a', tier: 1, total_damage: a
       (app.match(/else if \(raidXmasStoryId\) setRhythmEventStoryPending\(prev => prev \|\| raidXmasStoryId\);/g) || []).length === 2);
     check('お話: 回想の見た印の表に入っている', app.includes('RAID_XMAS_STORY_IDS.includes(ev.id)).map(ev => [ev.unlockedKey'));
   }
+  {
+    // 覚醒サンタの技の見せ方(r1126-075): xmas のときだけ santa の動きへ分かれ、ジャック・ぱんぷきんはそのまま
+    const scr = read(P + '71-screen-battle.jsx'); const css = read(P + '70-bootstrap.jsx');
+    const app2 = read(P + '60-app.jsx');
+    check('技の見せ方: 動きの表を引く名前は raidXmas のとき Santa(ぱんぷきんが先・ほかは id のまま)',
+      scr.includes("const tacticsEnemyMotionKey = (enemy) => (!enemy ? null : enemy.raidJackPumpkin ? 'Pumpkin' : enemy.raidXmas ? 'Santa' : enemy.id);")
+      && scr.includes("Santa: 'santa',") && scr.includes("Jack: 'jack',") && scr.includes("Pumpkin: 'pumpkin',"));
+    check('技の見せ方: 画面・全画面の演出・待ち時間の3か所が同じ名前の引き方を使う',
+      scr.includes('(TACTICS_ENEMY_MOTIONS[tacticsEnemyMotionKey(enemy)] || null)') && scr.includes('enemyId={tacticsEnemyMotionKey(enemy)}')
+      && app2.includes('isTacticsMode(runMode)&&!ecoBattleView ? tacticsEnemyMotionKey(enemy) : null;'));
+    const setOf = (k) => { const m = scr.match(new RegExp(`\\n  ${k}: \\{ idle:[^\\n]*\\n[^\\n]*\\n[^\\n]*\\n[^\\n]*\\} \\},`)); return m ? m[0] : ''; };
+    const santa = setOf('santa');
+    check('技の見せ方: santa は7つの技(normal/special/sweep/rush/pierce/roar/allout)を全部持つ',
+      !!santa && ['normal', 'special', 'sweep', 'rush', 'pierce', 'roar', 'allout'].every((k) => new RegExp(`\\b${k}:\\[`).test(santa)), santa.slice(0, 60));
+    check('技の見せ方: ジャックの組み合わせは元のまま', setOf('jack').includes("normal:['swing','arc','🎃','shoot'], sweep:['lunge',null,'👻','shoot'], rush:['flurry','burst','🎃','shoot'], pierce:['spin','slash']")
+      && setOf('jack').includes("special:['leap','ring','🍬','rain'], allout:['dash','widebeam','👻','shoot'], roar:['rise','aura','🌙','rise']"));
+    check('技の見せ方: santa の当たりの形・締めの飾り・色・枠の大きさがある',
+      scr.includes("santa: { impact:'stamp', mark:'❄️' },") && /\n  santa: +\{ special:\[/.test(scr)
+      && css.includes('[data-enemy-motion="santa"] { --em-c:') && css.includes('[data-moo-stage="true"][data-enemy-motion="santa"]')
+      && css.includes('.fin-shape--snow {') && css.includes('.fin-shape--gift {'));
+    check('技の見せ方: 技の長さは全員共通の表のまま(サンタ専用の長さを作らない=待ち時間・進行はジャックと同じ)',
+      scr.includes("const ms = !motion ? null : motion === 'awakenedMoo' ? TACTICS_MOO_SKILL_MS[skill] : TACTICS_ENEMY_SKILL_MS_DEFAULT[skill];"));
+  }
   console.log(failed ? `\nNG ${failed} 件` : '\nOK: クリスマスのレイドの定義と回数・与ダメージの口');
   process.exit(failed ? 1 : 0);
 })();

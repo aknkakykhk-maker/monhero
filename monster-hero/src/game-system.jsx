@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f0e7cfb3d03745f2
+// generated-sha256: d9d6b190f579de97
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -11148,11 +11148,61 @@ const changelogEventLive = (entry, nowMs = Date.now()) => {
   if (Number.isFinite(pinUntil) && nowMs >= pinUntil) return false;
   return Number.isFinite(until) && nowMs < until && (!Number.isFinite(from) || nowMs >= from);
 };
+// 「イベント」タブの札の期間(2026-11-27 r1126-068 社長「表示方法もっとなんとかならない？」)。{ from, until } はミリ秒(分からなければ NaN)。
+//   eventStartAt / eventEndAt を書いた項目はそれを使う。書いていなければ:
+//   ・イベント … 助手の告知の期間(notifyFrom〜notifyUntil)。予告(pinUntil あり)の notifyUntil は開幕の時刻なので、終わりには使わない
+//   ・pinTop:{ until } のお知らせ(記念の期間など) … 出はじめ(visibleFrom)〜 until。pinTop:{ days } は札を出す日数なので期間にしない
+const changelogEventPeriod = (entry) => {
+  const ms = (value) => (typeof value === 'string' ? Date.parse(value) : NaN);
+  let from = ms(entry && entry.eventStartAt), until = ms(entry && entry.eventEndAt);
+  if (entry && entry.type === 'event' && entry.assistantNotice) {
+    if (!Number.isFinite(from)) from = ms(entry.assistantNotice.notifyFrom || entry.visibleFrom);
+    if (!Number.isFinite(until) && !entry.pinUntil) until = ms(entry.assistantNotice.notifyUntil);
+  } else if (entry && entry.pinTop && typeof entry.pinTop === 'object' && entry.pinTop.until) {
+    if (!Number.isFinite(from)) from = ms(entry.visibleFrom);
+    if (!Number.isFinite(until)) until = ms(entry.pinTop.until);
+  }
+  return { from: Number.isFinite(from) ? from : NaN, until: Number.isFinite(until) ? until : NaN };
+};
+// 日本時間で「11/28(土) 10:00」。終わりの時刻がちょうど◯時00分なら1分前(「12/31(木) 3:59」。4:00 には終わっているため)
+const changelogEventTimeLabel = (ms, isEnd = false) => {
+  if (!Number.isFinite(ms)) return '';
+  const shown = isEnd && ms % 3600000 === 0 ? ms - 60000 : ms;
+  const d = new Date(shown + 9 * 3600000);
+  return `${d.getUTCMonth() + 1}/${d.getUTCDate()}(${'日月火水木金土'[d.getUTCDay()]}) ${d.getUTCHours()}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
+};
+const changelogEventPeriodLabel = (entry) => {
+  const { from, until } = changelogEventPeriod(entry);
+  return Number.isFinite(from) && Number.isFinite(until) ? `${changelogEventTimeLabel(from)} 〜 ${changelogEventTimeLabel(until, true)}` : '';
+};
+// 残り時間。開催中は「あと◯日」(1日を切ったら「あと◯時間」・1時間を切ったら「あと◯分」)、開催予定は「開幕まであと◯日/時間/分」。分からなければ ''
+const changelogEventRemainLabel = (entry, nowMs = Date.now()) => {
+  const { from, until } = changelogEventPeriod(entry);
+  const upcoming = changelogEventUpcoming(entry, nowMs);
+  const target = upcoming ? from : until;
+  if (!Number.isFinite(target) || target <= nowMs) return '';
+  const left = target - nowMs;
+  const text = left >= 86400000 ? `あと${Math.floor(left / 86400000)}日` : left >= 3600000 ? `あと${Math.floor(left / 3600000)}時間` : `あと${Math.max(1, Math.ceil(left / 60000))}分`;
+  return upcoming ? `開幕まで${text}` : text;
+};
+// 一覧の札の題(1行)。listTitle を書いた項目はそれ。無ければ pinTitle、それも無ければ題から【…】と「がはじまりました」「を開催します」を落とす。
+//   更新情報タブの題・本文の題は変えない(札だけの短い名前)
+const changelogEventListTitle = (entry) => {
+  if (entry && typeof entry.listTitle === 'string' && entry.listTitle) return entry.listTitle;
+  if (entry && typeof entry.pinTitle === 'string' && entry.pinTitle) return entry.pinTitle;
+  return String((entry && entry.title) || '').replace(/^【[^】]*】/, '').replace(/\s*(が|を)?(はじまりました|始まりました|開催します|開催)[!！]?$/, '').trim();
+};
 // 「イベント」タブに並べる札(2026-11-23 r1119-113)。開催中を上、開催予定(eventStartAt より前)を下にする。
-//   それぞれの中は一覧と同じ並び(新しい順)。時刻で変わるので、呼ぶたびに数え直す
+//   開催中は終わりが近い順(終わりの分からない物はその下・新しい順)、開催予定は開幕が近い順(2026-11-27 r1126-068)。
+//   時刻で変わるので、呼ぶたびに数え直す
 const changelogPinnedEntries = (nowMs = Date.now()) => {
   const live = CHANGELOG_ENTRIES.filter(entry => changelogEventLive(entry, nowMs));
-  return [...live.filter(entry => !changelogEventUpcoming(entry, nowMs)), ...live.filter(entry => changelogEventUpcoming(entry, nowMs))];
+  const by = (key) => (a, b) => {
+    const x = changelogEventPeriod(a)[key], y = changelogEventPeriod(b)[key];
+    if (Number.isFinite(x) && Number.isFinite(y)) return x - y;
+    return Number.isFinite(x) ? -1 : Number.isFinite(y) ? 1 : 0;
+  };
+  return [...live.filter(entry => !changelogEventUpcoming(entry, nowMs)).sort(by('until')), ...live.filter(entry => changelogEventUpcoming(entry, nowMs)).sort(by('from'))];
 };
 
 // 更新履歴のエントリに書いた外部リンク(link:{url,label})を、出してよい形だけ通す。
@@ -38446,7 +38496,8 @@ const raidJackUnlockedCount = (kind, defeatedIds) => {
 
 // 戦闘に出すジャック本体。ライフ・攻撃は段階の値をそのまま使う(35,000×倍率×10 の端数ずれを避けるため上書きする)。
 // 技の本数は actionCount で直接指定する(再生なし。3/4/5/5/5)。createBattleEnemy は 22-enemy-and-bond-entries.jsx
-// opts.ev === 'xmas' のときはクリスマスのボス(段階は 35-raid-xmas.jsx・絵は RAID_XMAS_BOSS_IMG)。技と動きはジャックの物を借りる(仮)
+// opts.ev === 'xmas' のときはクリスマスのボス(段階は 35-raid-xmas.jsx・絵は RAID_XMAS_BOSS_IMG)。技の数字・本数・当たり方はジャックと同じ。
+//   技の動きとエフェクトは raidXmas の印で 71-screen-battle.jsx の santa の組み合わせへ分かれる(tacticsEnemyMotionKey・r1126-075)
 const raidJackMakeEnemy = (kind, tierIndex, mode, opts = {}) => {
   if (opts.ev === 'xmas') {
     const xt = raidXmasTierAt(kind, tierIndex);
@@ -39077,7 +39128,8 @@ const raidXmasTierAt = (kind, index) => {
   return list[Math.min(Math.max(i, 0), list.length - 1)];
 };
 
-// ボス(覚醒サンタ)の技の名前(社長決定 2026-11-25・台帳 r1125-058)。動き(rush/sweep/roar/pierce/allout)と本数 3/4/5/5/5 はジャックのまま。
+// ボス(覚醒サンタ)の技の名前(社長決定 2026-11-25・台帳 r1125-058)。技の種類(rush/sweep/roar/pierce/allout)と本数 3/4/5/5/5 はジャックのまま。
+//   見せ方(動き・エフェクト)はサンタの物(71-screen-battle.jsx の TACTICS_ENEMY_MOTION_SETS.santa・r1126-075)
 //   名前だけを 35-raid-jack.jsx の raidJackMakeEnemy(opts.ev === 'xmas')で敵へ写す。ジャックの RAID_JACK_SKILL_NAMES・敵データ Jack は変えない。
 //   「X’マス」の「’」は全角の右シングル引用符(U+2019)
 const RAID_XMAS_SKILL_NAMES = Object.freeze({
@@ -41785,6 +41837,8 @@ const JA_WRAP_NO_BREAK = [
   /\d{1,4}\/\d{1,2}(?:\/\d{1,2})?(?:[(（][月火水木金土日](?:・祝)?[)）])?/g,
   /\d{1,2}:\d{2}/g,
   /聖夜の名探偵|名探偵|エンドヒストリー|手がかり帳|鐘が鳴る夜/g,
+  // 事件簿とクリスマスのお話の名前(2026-11-27 r1126-071「黒いサン／タ」)。お話の画面(レイド・イベントのお話)も jaWrap の折り目を使うので、ここで外す
+  /黒いサンタ|聖夜のロンド|十三番目の鐘|十二の鐘|招待状|ワトソンくん/g,
 ];
 const jaWrapUnbreak = (marked) => {
   if (typeof marked !== 'string' || !marked.includes('​')) return marked;
@@ -53243,7 +53297,11 @@ const TACTICS_ENEMY_MOTIONS = Object.freeze({
   AwakenedMoo: 'awakenedMoo',
   // イベント・レイドボス「ジャック」(ドクドクと同じネンドロ種。ぴょこぴょこ跳ねる)
   Jack: 'jack',
+  // クリスマスのレイドボス「覚醒サンタ」(enemy.raidXmas のときだけ。id は Jack のまま・数字と当たり方はジャックと同じ)
+  Santa: 'santa',
 });
+// 動きの表を引くときの敵の名前。ぱんぷきん・クリスマスのボスは id が Jack のままなので、ここで分ける
+const tacticsEnemyMotionKey = (enemy) => (!enemy ? null : enemy.raidJackPumpkin ? 'Pumpkin' : enemy.raidXmas ? 'Santa' : enemy.id);
 // 技ごとの動きの長さ(ミリ秒)。ここに無い技は今までどおり(通常攻撃 450 / 必殺技 1100)。
 // 戦闘の待ち時間(60-app)もこの値を使うので、CSS の --em-dur / animation の長さと必ずそろえる。
 // ★ムー(覚醒ムー)は攻撃の待ちが 900 で決まっているので、ここは通らない(CSS も 900 にしてある)
@@ -53332,6 +53390,15 @@ const TACTICS_ENEMY_MOTION_SETS = Object.freeze({
     normal:['lunge','burst','🎃','shoot'], sweep:['lunge',null,'👻','shoot'], rush:['flurry','burst','🎃','shoot'], pierce:['spin','slash'],
     special:['leap','ring','🍬','rain'], allout:['dash','widebeam','👻','shoot'], roar:['rise','aura','🌙','rise'],
     regen:['heal','sparkle'], charge:['power','aura'], pierceCharge:['stance','lock'] } },
+  // 覚醒サンタ(クリスマスのレイドボス・r1126-075): 重く息をして構える。雪・黒いプレゼント・鐘・ソリ
+  //   正拳・闇 … 突いて雪の拳を飛ばす / 瞬黒撃 … 一瞬で踏み込み、黒い十字の斬り跡と雪が散る
+  //   超宝屁 … 揺れて毒々しい光の粒を出し、プレゼントが味方へ飛ぶ(id が Jack なのでムーと同じく光の玉で飛ばす) / 超飛び蹴り … 跳んで蹴り落とす
+  //   超暗けい … 溜めて黒い掌の気を通す / 怪しこの夜 … 力を解き放ち、鐘が鳴りながら立ちのぼる
+  //   X’マスプレデター … 横へ駆け、ソリが味方全員へ突っ込み、黒いプレゼントと雪が散る
+  santa: { idle:'menace', skills:{
+    normal:['jab','burst','❄️','shoot'], sweep:['sway','sparkle','🎁','shoot'], rush:['leap','burst','🦵','shoot'], pierce:['windup','beam','🖤','rise'],
+    special:['dash','slash'], allout:['dash','widebeam','🛷','shoot'], roar:['rise','aura','🔔','rise'],
+    regen:['heal','sparkle'], charge:['power','aura'], pierceCharge:['stance','lock'] } },
   // 覚醒ムー(竜): 待機は今までの浮遊のまま。技ごとの動きだけ付ける
   awakenedMoo: { idle:null, skills:{
     normal:['swing','slash'], sweep:['dash','arc'], rush:['flurry','burst'], pierce:['windup','beam'],
@@ -53355,6 +53422,7 @@ const TACTICS_ENEMY_STRIKE_LOOK = Object.freeze({
   awakenedMoo: { impact:'nova' },
   jack: { impact:'stamp', mark:'🎃' },
   pumpkin: { impact:'stamp', mark:'🎃' },
+  santa: { impact:'stamp', mark:'❄️' },
 });
 const TACTICS_ENEMY_NO_STRIKE_SKILLS = Object.freeze(['roar','charge','pierceCharge','regen']);
 // 覚醒ムーの全画面の演出で、技の名前を大きく出す技(2026-09-24 ユーザー指示「技名のカットイン」)
@@ -53552,6 +53620,9 @@ const TACTICS_ENEMY_FINISH = Object.freeze({
   // ぱんぷきん: ジャックと同じ飾り(めいどのトリート=お菓子の星とカボチャの火 / おばけパレード=おばけの行列)
   pumpkin:      { special:[{t:'bits',n:14,shape:'star',dist:140,d:280},{t:'bits',n:12,shape:'flame',dist:110,d:330,fall:true},{t:'ring',d:300,r:3.4}],
                   allout:[{t:'blade',a:0,len:420,w:16,d:240},{t:'bits',n:16,shape:'spark',dist:130,d:260},{t:'wave',d:300},{t:'ring',d:340,r:3.6,flat:.45}] },
+  // 覚醒サンタ: 瞬黒撃=交差する黒い斬り跡と雪 / X’マスプレデター=横切る光・黒いプレゼントと雪が降る
+  santa:        { special:[{t:'blade',a:-35,len:380,w:12,d:220},{t:'blade',a:35,len:380,w:12,d:280},{t:'bits',n:12,shape:'snow',dist:140,d:300},{t:'ring',d:320,r:3.6,void:true}],
+                  allout:[{t:'blade',a:0,len:440,w:16,d:240},{t:'bits',n:10,shape:'gift',dist:140,d:270},{t:'bits',n:12,shape:'snow',dist:120,d:320,fall:true},{t:'ring',d:340,r:3.8,flat:.45}] },
   // スプラッター(斧の処刑人): エクスキューション=巨大な斧の一閃と血しぶき / デスエナジー=赤い炎
   splatter:     { special:[{t:'blade',a:-58,len:440,w:16,d:240},{t:'col',w:44,h:440,d:320,sky:true},{t:'bits',n:12,shape:'drop',dist:130,d:340},{t:'ring',d:340,r:3.6}],
                   allout:[{t:'col',w:60,h:400,d:260,flame:true},{t:'bits',n:14,shape:'spark',dist:120,d:300},{t:'ring',d:300,r:3.8,flat:.45}] },
@@ -53587,6 +53658,9 @@ const TacticsEnemyStageFx = ({ fx, motion, isMoo, enemyId, skillLabel, lite = fa
   const trail = skill === 'pierce' ? 'beam' : (skill === 'sweep' && !isMoo) ? 'wave' : (look.trail || 'orb');
   const shot = spec && spec[3] === 'shoot' ? spec[2] : (isMoo && skill === 'sweep' ? '👊' : (look.shot || null));
   const big = skill === 'special' || skill === 'allout' || isMoo;
+  // 覚醒サンタ(id は Jack なのでムーと同じ全画面の演出を通る)だけ、降る物・横切る物・稲妻を雪・ソリ・鐘に替え、
+  //   瞬黒撃・X’マスプレデターの締めの飾り(TACTICS_ENEMY_FINISH.santa)も出す。ジャック・ムーは今までどおり
+  const santa = motion === 'santa';
   const at = (frac) => `${Math.round(ms * Math.max(0, frac))}ms`;
   const { sx, sy, sr } = geo;
   return ReactDOM.createPortal(
@@ -53614,8 +53688,8 @@ const TacticsEnemyStageFx = ({ fx, motion, isMoo, enemyId, skillLabel, lite = fa
       {!isMoo && !lite && TACTICS_ENEMY_FLASH_SKILLS.includes(skill) && (
         <div data-enemy-flash style={{ animationDelay: at(hit) }}/>
       )}
-      {!isMoo && !lite && strikes && (() => {
-        const parts = skill === 'pierce' ? TACTICS_ENEMY_PIERCE_FINISH : ((TACTICS_ENEMY_FINISH[motion] || {})[skill] || null);
+      {(!isMoo || santa) && !lite && strikes && (() => {
+        const parts = (skill === 'pierce' && !isMoo) ? TACTICS_ENEMY_PIERCE_FINISH : ((TACTICS_ENEMY_FINISH[motion] || {})[skill] || null);
         if (!parts) return null;
         const hitMs = Math.round(ms * hit);
         return geo.slots.map((t) => (
@@ -53636,13 +53710,13 @@ const TacticsEnemyStageFx = ({ fx, motion, isMoo, enemyId, skillLabel, lite = fa
           animationDelay: at(0.25 + k * 0.07), animationDuration: '380ms' }}/>
       ))}
       {isMoo && !lite && !afterMovie && skill === 'special' && [0, 1, 2, 3, 4, 5, 6, 7].map((k) => (
-        <i key={k} data-moo-meteor style={{ left: `${8 + ((k * 29) % 90)}%`, animationDelay: at(0.18 + k * 0.07) }}>☄️</i>
+        <i key={k} data-moo-meteor style={{ left: `${8 + ((k * 29) % 90)}%`, animationDelay: at(0.18 + k * 0.07) }}>{santa ? '❄️' : '☄️'}</i>
       ))}
       {isMoo && !lite && skill === 'allout' && [0, 1, 2].map((k) => (
-        <i key={k} data-moo-tornado style={{ top: `${44 + k * 14}%`, animationDelay: at(0.22 + k * 0.1) }}>🌪️</i>
+        <i key={k} data-moo-tornado style={{ top: `${44 + k * 14}%`, animationDelay: at(0.22 + k * 0.1) }}>{santa ? '🛷' : '🌪️'}</i>
       ))}
       {isMoo && !lite && skill === 'roar' && [0, 1, 2, 3, 4, 5].map((k) => (
-        <i key={k} data-moo-bolt style={{ left: `${6 + ((k * 41) % 86)}%`, top: `${8 + ((k * 53) % 70)}%`, animationDelay: at(0.18 + k * 0.08) }}>⚡</i>
+        <i key={k} data-moo-bolt style={{ left: `${6 + ((k * 41) % 86)}%`, top: `${8 + ((k * 53) % 70)}%`, animationDelay: at(0.18 + k * 0.08) }}>{santa ? '🔔' : '⚡'}</i>
       ))}
       {isMoo && !lite && skill === 'regen' && <><i data-moo-heaven/>{[0, 1, 2, 3, 4, 5].map((k) => (
         <i key={k} data-moo-feather style={{ left: `${20 + k * 12}%`, animationDelay: at(0.1 + k * 0.08) }}>{k % 2 ? '✨' : '🪶'}</i>
@@ -54691,7 +54765,7 @@ function BattleScreen({
   // 敵ごとの動き方(2026-09-24 ユーザー指示「敵のグラフィックを攻撃時にアニメーション化」「待機時間も動いてるように」
   // 「まずはカワズモーで」「タクティクスだけ」)。絵は1枚のまま、待機・攻撃・ためる・やられの動きを CSS で付ける。
   // ★ここに無い敵は今までどおり。足すときは TACTICS_ENEMY_MOTIONS に1行と、70-bootstrap の CSS を足す
-  const enemyMotion = tacticsNewLayout && !ecoBattleView ? (TACTICS_ENEMY_MOTIONS[enemy?.raidJackPumpkin ? 'Pumpkin' : enemy?.id] || null) : null;
+  const enemyMotion = tacticsNewLayout && !ecoBattleView ? (TACTICS_ENEMY_MOTIONS[tacticsEnemyMotionKey(enemy)] || null) : null;
   // 必殺技ムービーを持つ敵との戦いに入ったら、読み込みを始めておく(流すのは 60-app が決める)。
   // ★設定で「流さない」にしている人・省エネの軽量表示では読まない(通信量を使わせない)
   const bossMovieSrc = battleFx.specialMovie === 'ON' && !ecoBattleView && typeof enemy?.specialMovie === 'string' ? enemy.specialMovie : null;
@@ -55336,7 +55410,7 @@ function BattleScreen({
             {/* 敵の技の全画面の演出(攻撃が味方の枠まで届く・必殺技で暗くなる・覚醒ムーのカットインなど) */}
             {/* ボスの必殺技ムービー(画面を切り替えて流す)。流すかどうかは 60-app が playBossMovie で決める */}
             <BossMovieLayer shake={battleFx.shake!=='OFF'}/>
-            {enemyMotion&&<TacticsEnemyStageFx fx={enemyAttackFx} motion={enemyMotion} isMoo={enemyIsMoo} enemyId={enemy?.raidJackPumpkin?'Pumpkin':enemy?.id} skillLabel={enemySkillName?.label||null} lite={fxLoad==='LIGHT'}/>}
+            {enemyMotion&&<TacticsEnemyStageFx fx={enemyAttackFx} motion={enemyMotion} isMoo={enemyIsMoo} enemyId={tacticsEnemyMotionKey(enemy)} skillLabel={enemySkillName?.label||null} lite={fxLoad==='LIGHT'}/>}
             {/* ★覚醒ムーのカットインが出ている技は、上の小さな技名の札を出さない(同じ名前が2か所に出る) */}
             {enemySkillName&&!(enemyIsMoo&&emSet&&enemyAttackFx?.skill&&TACTICS_MOO_CUTIN_SKILLS.includes(enemyAttackFx.skill))&&ReactDOM.createPortal(
               <div data-battle-float className="fixed left-1/2 -translate-x-1/2 pointer-events-none whitespace-nowrap" style={{top:'14%',zIndex:65000,animation:liteBattleView?undefined:'skillNamePop 350ms ease-out forwards'}}>
@@ -67697,8 +67771,8 @@ const XMAS_NOVEL_CAST = Object.freeze([
   { id: 'ichika', name: 'イチーカ', kind: 'monster', art: 'images/monsters/snegurochka.png', face: 'images/monster-icons/face/snegurochka.png' },
   { id: 'mochimaru', name: 'もちまる', kind: 'monster', art: 'images/monsters/mocchi.png', face: 'images/monster-icons/face/mocchi.png' },
   // 謎の客2人(2026-11-26 届いた絵・余白だけ切りそろえた。表情は1枚)。顔は、社長が渡した顔の絵からほかの人と同じ寄り具合に切り出した物(r1126-033)
-  { id: 'kuroba', name: '黒羽', full: '黒羽 宗一郎', kind: 'guest', art: 'images/story-guests/kuroba_stand.png', face: 'images/story-guests/kuroba_face.png', tone: '#3b3f4a' },
-  { id: 'shirase', name: '白瀬', full: '白瀬 雪絵', kind: 'guest', art: 'images/story-guests/shirase_stand.png', face: 'images/story-guests/shirase_face.png', tone: '#5a6a86' },
+  { id: 'kuroba', name: '黒羽', full: '黒羽 宗一郎', kind: 'guest', art: 'images/story-guests/kuroba_full.png', face: 'images/story-guests/kuroba_face.png', tone: '#3b3f4a' },
+  { id: 'shirase', name: '白瀬', full: '白瀬 雪絵', kind: 'guest', art: 'images/story-guests/shirase_full.png', face: 'images/story-guests/shirase_face.png', tone: '#5a6a86' },
 ]);
 // 話し手だけの人(パネルには出ない)
 const XMAS_NOVEL_SPEAKERS_EXTRA = Object.freeze([
@@ -68097,7 +68171,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"0-23","t":"line","w":"atsu","x":"面白そうじゃん！ みんなで解こうよ、この事件！","e":"excited","k":"OUT-0-2:0-23"},
 {"id":"0-24","t":"line","w":"myua","x":"あつくんが遊ぶなら、あたしも！ 助手として、隣で見てる！","e":"happy","k":"OUT-0-2:0-24"},
 {"id":"0-24b","t":"line","w":"sorashido","x":"では、自分はワトソンくんと、記録を取りながら解きます。……どちらが先に解くか、勝負ですね笑","e":"normal","k":"OUT-0-2:0-24b"},
-{"id":"0-25","t":"band","x":"画面いっぱいに、題字 ——『モンヒロ事件簿 ―呪いのセーブデータ― 十三番目の鐘』","k":"OUT-0-2:0-25"}],"frame":"far","outside":true},
+{"id":"0-25","t":"band","x":"画面いっぱいに、題字 ——『モンヒロ事件簿 ―呪いのセーブデータ― 十三番目の鐘』","se":"bell","k":"OUT-0-2:0-25"}],"frame":"far","outside":true},
 {"id":"C0-1","chapter":"C0","title":"雪の招待状","cond":null,"bgm":"kaze_ga_soyogu","bg":"monhero_plaza(画面のわくの中","next":"C0-2","rows":[{"id":"0-26","t":"band","x":"——ゲームの中。11月の終わり。モンヒロの広場","k":"C0-1:0-26"},
 {"id":"0-27","t":"band","x":"晴れた空から、雪がひとひら。それは、雪の結晶の形をした封筒だった","k":"C0-1:0-27"},
 {"id":"0-28","t":"line","w":"kiki","x":"ひんやりしてまつ……。宛名は『モンヒロの助手のみなさまへ』でつ","e":"surprise","k":"C0-1:0-28"},
@@ -68186,13 +68260,13 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"1-5-14a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"atsu","x":"よっしゃ、{name}は俺チームね！ みゅあと3人で、勘で突っ走ろ笑","e":"excited","k":"C1-5:1-5-14a"},
 {"id":"1-5-14s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"sorashido","x":"ありがとうございます、{name}。ワトソンくんと3人で、記録から繋ぎましょう笑","e":"happy","k":"C1-5:1-5-14s"}],"frame":"far"},
 {"id":"C1-6","chapter":"C1","title":"最初の夜","cond":null,"bgm":"melo_dullahan_steel_ghost","bg":"夜のホール","next":"C1-M","rows":[{"id":"1-6-1","t":"band","x":"夜。みんなが眠った後。暖炉の火だけが、ホールを照らしている","k":"C1-6:1-6-1"},
-{"id":"1-6-2","t":"band","x":"カチ、カチ、カチ(柱時計の針が、ゆっくり動く音)","fx":["se"],"se":"bell","k":"C1-6:1-6-2"},
+{"id":"1-6-2","t":"band","x":"カチ、カチ、カチ(柱時計の針が、ゆっくり動く音)","fx":["se"],"se":"tick","seN":3,"k":"C1-6:1-6-2"},
 {"id":"1-6-3","t":"line","secret":true,"x":"……やっと、そろった。12年、かかったね","f":"close","n":"？？？","e":"troubled","k":"C1-6:1-6-3"},
 {"id":"1-6-4","t":"panel","x":"登場人物 12人","missing":[],"hurt":[],"dead":[],"k":"C1-6:1-6-4"}]},
 {"id":"C1-M","chapter":"C1","title":"幕間 眠る客","cond":null,"bgm":"melo_dullahan_steel_ghost","bg":"黒羽の部屋(夜","next":"C2-1","rows":[{"id":"1-M-1","t":"band","x":"幕間 〜眠る客〜","k":"C1-M:1-M-1"},
 {"id":"1-M-2","t":"band","x":"同じ夜。2階の、黒羽の部屋の前","k":"C1-M:1-M-2"},
 {"id":"1-M-3","t":"band","x":"扉の取っ手が、音もなく回る。……鍵は、かかっていなかった","k":"C1-M:1-M-3"},
-{"id":"1-M-4","t":"band","x":"暗い部屋に、大きないびき。机の上で、金色の懐中時計が、カチ、カチ、と時を刻んでいる","k":"C1-M:1-M-4"},
+{"id":"1-M-4","t":"band","x":"暗い部屋に、大きないびき。机の上で、金色の懐中時計が、カチ、カチ、と時を刻んでいる","se":"tick","seN":2,"k":"C1-M:1-M-4"},
 {"id":"1-M-5","t":"line","secret":true,"x":"……鍵もかけないで、眠れるんだ。自分だけは大丈夫だって、思ってるんだね","n":"？？？","e":"troubled","k":"C1-M:1-M-5"},
 {"id":"1-M-6","t":"band","x":"影が、ベッドの脇にかがみこむ。ベッドの下に、黒い革のケースが押しこまれていた","k":"C1-M:1-M-6"},
 {"id":"1-M-7","t":"band","x":"カチリ(留め金の外れる、小さな音)","fx":["se"],"se":"tap","k":"C1-M:1-M-7"},
@@ -68221,10 +68295,10 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"2-L-2a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"atsu","x":"みんな、これ……。俺の部屋の、枕の上に置いてあった","e":"surprise","k":"C2-L:2-L-2a"},
 {"id":"2-L-2s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"sorashido","x":"みなさん、これを。……自分の部屋の、枕の上に置いてありました","e":"surprise","k":"C2-L:2-L-2s"},
 {"id":"2-L-3","t":"band","x":"カサ……(封を切る音)","fx":["se"],"se":"tap","k":"C2-L:2-L-3"},
-{"id":"2-L-4","t":"band","x":"こんや　0じの　かねが／なったら／ひとり　かえって　こない／——黒いサンタ","fx":["letter","bleed"],"k":"C2-L:2-L-4"},
+{"id":"2-L-4","t":"band","x":"こんや　0じの　かねが／なったら／ひとり　かえって　こない／——黒いサンタ","fx":["letter","bleed"],"se":"letter","k":"C2-L:2-L-4"},
 {"id":"2-L-5","t":"band","x":"……","k":"C2-L:2-L-5"},
 {"id":"2-L-6","t":"band","x":"誰も、声を出さなかった。暖炉の薪が、ぱちりと小さく爆ぜる","k":"C2-L:2-L-6"},
-{"id":"2-L-7","t":"band","x":"カチ、カチ、カチ(柱時計の針の音だけが、やけに大きい)","fx":["se"],"se":"bell","k":"C2-L:2-L-7"},
+{"id":"2-L-7","t":"band","x":"カチ、カチ、カチ(柱時計の針の音だけが、やけに大きい)","fx":["se"],"se":"tick","seN":3,"k":"C2-L:2-L-7"},
 {"id":"2-L-8","t":"band","x":"誰かが、誰かの顔を見る。その目が、また別の誰かへ移っていく","k":"C2-L:2-L-8"},
 {"id":"2-L-9","t":"line","w":"momosuke","x":"……やだ。……やだよ、こんなの……","e":"crying","k":"C2-L:2-L-9"},
 {"id":"2-L-10a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"myua","x":"赤い字……。血みたい……","e":"crying","k":"C2-L:2-L-10a"},
@@ -68269,7 +68343,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"C2-3","chapter":"C2","title":"十二の鐘","cond":null,"bgm":"melo_dullahan_steel_ghost","bg":"ペンションのホール","next":"C2-4","rows":[{"id":"2-3-1","t":"band","x":"ホール。暖炉の前で、ソラシドがノートパソコンを開いている","k":"C2-3:2-3-1"},
 {"id":"2-3-2","t":"line","w":"sorashido","x":"ワトソンくん、今の時刻を","e":"normal","k":"C2-3:2-3-2"},
 {"id":"2-3-3","t":"line","w":"watson","x":"……すみません。山の中で、時刻の合わせが切れていました。合わせ直しています","k":"C2-3:2-3-3"},
-{"id":"2-3-4","t":"band","x":"ボーン……ボーン……(柱時計が、12回鳴る)","fx":["se"],"se":"bell","k":"C2-3:2-3-4"},
+{"id":"2-3-4","t":"band","x":"ボーン……ボーン……(柱時計が、12回鳴る)","fx":["se"],"se":"bell","seN":2,"k":"C2-3:2-3-4"},
 {"id":"2-3-5","t":"line","w":"atsu","x":"……0時？ なんか、今日、早くない？","e":"troubled","k":"C2-3:2-3-5"},
 {"id":"2-3-6","t":"line","w":"watson","x":"合わせ直しの途中で、鐘の時刻は記録できませんでした。……ただ、わたしの時計では、まだ0時になっていません。柱時計が、進んでいるようです","k":"C2-3:2-3-6"},
 {"id":"2-3-6c","t":"clue","clue":"早く鳴った鐘","x":"柱時計の0時の鐘が、ワトソンくんの時計より早く鳴った(何分早いかは、まだ分からない)","k":"C2-3:2-3-6c"},
@@ -68577,7 +68651,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"erubin","st":"hurt"}],"k":"C6-9:6-9-6"}]},
 {"id":"C6-M","chapter":"C6","title":"幕間 帳面の名前","cond":null,"bgm":"close_to_your_heart_alt","bg":"ペンションのホール(柱時計","next":"C7-1","rows":[{"id":"6-M-1","t":"band","x":"幕間 〜帳面の名前〜","k":"C6-M:6-M-1"},
 {"id":"6-M-2","t":"band","x":"崖から戻った日の昼。ホールの柱時計の前に、もちまるが帳面を抱えて立っている","k":"C6-M:6-M-2"},
-{"id":"6-M-3","t":"band","x":"カチ、カチ、カチ(柱時計は、まだ動いている)","fx":["se"],"se":"bell","k":"C6-M:6-M-3"},
+{"id":"6-M-3","t":"band","x":"カチ、カチ、カチ(柱時計は、まだ動いている)","fx":["se"],"se":"tick","seN":3,"k":"C6-M:6-M-3"},
 {"id":"6-M-4","t":"line","w":"mochimaru","x":"(帳面をめくる)……『ねじ巻き きゅうこさん』。……毎晩、ちゃんと巻いてくれてたっちー","k":"C6-M:6-M-4"},
 {"id":"6-M-5","t":"line","w":"mochimaru","x":"今夜からは、ぼくが巻いたほうが、いいのかな……","k":"C6-M:6-M-5"},
 {"id":"6-M-6","t":"band","x":"ねじ巻きの鍵に手を伸ばしかけて、もちまるは、その手を引っこめる","k":"C6-M:6-M-6"},
@@ -68617,7 +68691,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"7-1-13s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"atsu","x":"黒いサンタは——ドラちゃんだ","f":"close","e":"normal","k":"C7-1:7-1-13s"},
 {"id":"7-1-14","t":"line","w":"dra","x":"(握ったリボンを見つめて、黙っている)……おで、は……","f":"close","e":"troubled","k":"C7-1:7-1-14"},
 {"id":"7-1-15a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"atsu","x":"(黙って、銀の音符の飾りを、手の中で転がしている)","e":"troubled","k":"C7-1:7-1-15a"},
-{"id":"7-1-15s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"sorashido","x":"(黙って、ワトソンくんの画面を見ている)","e":"troubled","k":"C7-1:7-1-15s"}]},
+{"id":"7-1-15s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"sorashido","x":"(黙って、ワトソンくんの画面を見ている)","e":"troubled","k":"C7-1:7-1-15s"},{"t":"q","id":"A7","kind":"action","x":"ドラは、リボンを握ったまま、何も言わない。このまま黙っていたら、ドラが黒いサンタに決まってしまう——","replies":{},"label":"行動の選択","options":[{"to":"C7-2","x":"このまま、1回目の推理へ進む"},{"to":"C7-W","x":"ワトソンくんの「奥の手」で、ドラの口を借りる"}],"c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"k":"C7-1:A7"}]},
 {"id":"C7-2","chapter":"C7","title":"1回目の推理","cond":null,"bgm":"melo_kiss_mystery","bg":"ペンションのホール","next":"Q7a","rows":[{"id":"7-2-1","t":"band","x":"黒いサンタは、誰なのか。今決めるか、もっと考えるか。{name}の答えは——","k":"C7-2:7-2-1"},{"t":"q","id":"Q7a","kind":"person","x":"黒いサンタの正体は、誰？ 登場人物パネルの12人(亡くなった人・いなくなった人も含む)から1人を選ぶか、「まだ決めない」を選ぼう","replies":{"ok":[{"id":"Q7a-ok","t":"band","x":"{name}が指さしたのは、きゅうこの名前だった。——では、きゅうこは、なぜ、こんなことを？","to":"Q7m"}]},"label":"1回目の推理 1段目","group":"final","score":true,"route":{"dra":"C7-A","kyuko":"Q7m","momosuke":"C7-P1","mochimaru":"C7-P2","kuroba":"C7-P3","shirase":"C7-P3","atsu":"C7-4a","sorashido":"C7-5a","*":"C7-B","__undecided":"C7-B"},"once":true,"extra":[{"key":"__undecided","x":"まだ決めない(もっと考える)"}],"answer":["kyuko"],"k":"C7-2:Q7a"},{"t":"q","id":"Q7m","kind":"action","x":"きゅうこが黒いサンタになったわけは？","replies":{},"label":"1回目の推理 2段目","group":"final","score":true,"route":{"o3":"C8-1","*":"C7-B"},"once":true,"answer":[3],"options":[{"x":"24日のプレゼントを、独り占めしたかった"},{"x":"言い伝えの黒いサンタを、本当にしたかった"},{"x":"ドラに罪を着せたかった"},{"x":"12年前の聖夜、母を雪の中に閉め出した人たちに、同じ寒さを味わわせたかった"},{"x":"ペンションを、自分の物にしたかった"}],"k":"C7-2:Q7m"}]},
 {"id":"C7-A","chapter":"C7","title":"偽りの解決","cond":null,"bgm":"melo_sad_song_short","bg":"ペンションのホール","next":"END-A","rows":[{"id":"7-A-1a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"sorashido","x":"……ドラさん。あなたなんですね","e":"normal","k":"C7-A:7-A-1a"},
 {"id":"7-A-1s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"atsu","x":"……ドラちゃん。きみなんでしょ","e":"normal","k":"C7-A:7-A-1s"},
@@ -68649,7 +68723,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"7-P1-10","t":"band","x":"灯りを手に追いかけたが、ももすけの背中は、三歩先で、白い闇にのまれた。吹雪の音が、呼ぶ声を、全部さらっていく","k":"C7-P1:7-P1-10"},
 {"id":"7-P1-11","t":"line","w":"mochimaru","x":"……裏口、開けておくっちー。ももすけさんが、戻ってこられるように","k":"C7-P1:7-P1-11"},
 {"id":"7-P1-12","t":"band","x":"その夜。誰も眠らずに、台所で裏口の扉を見ていた。ホールの暖炉の火だけが、誰もいない木の下を照らしていた","k":"C7-P1:7-P1-12"},
-{"id":"7-P1-13","t":"band","x":"ボーン……ボーン……(柱時計が、0時の鐘を打つ)","fx":["se"],"se":"bell","k":"C7-P1:7-P1-13"},
+{"id":"7-P1-13","t":"band","x":"ボーン……ボーン……(柱時計が、0時の鐘を打つ)","fx":["se"],"se":"bell","seN":2,"k":"C7-P1:7-P1-13"},
 {"id":"7-P1-14","t":"band","x":"鐘が鳴りやんでも、裏口の扉は、一度も開かなかった","k":"C7-P1:7-P1-14"}],"jumpOnly":true},
 {"id":"C7-P2","chapter":"C7","title":"火の番","cond":null,"bgm":"melo_sad_song_short","bg":"ペンションのホール","next":"END-M2","rows":[{"id":"7-P2-1","t":"band","x":"{name}が指さしたのは、もちまるの名前だった","k":"C7-P2:7-P2-1"},
 {"id":"7-P2-2","t":"line","w":"mochimaru","x":"……ぼくだっちー……？","k":"C7-P2:7-P2-2"},
@@ -68663,7 +68737,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"7-P2-9","t":"line","w":"kiki","x":"もちまるさん……","e":"troubled","k":"C7-P2:7-P2-9"},
 {"id":"7-P2-10","t":"band","x":"その夜。暖炉の火の番をする人は、誰もいなかった","k":"C7-P2:7-P2-10"},
 {"id":"7-P2-11","t":"band","x":"薪が尽き、火が細くなり、やがて、ホールの灯りは、暖炉の赤い灰だけになった","k":"C7-P2:7-P2-11"},
-{"id":"7-P2-12","t":"band","x":"カチ、カチ、カチ(冷えきったホールに、柱時計の音だけが響く)","fx":["se"],"se":"bell","k":"C7-P2:7-P2-12"}],"jumpOnly":true},
+{"id":"7-P2-12","t":"band","x":"カチ、カチ、カチ(冷えきったホールに、柱時計の音だけが響く)","fx":["se"],"se":"tick","seN":3,"k":"C7-P2:7-P2-12"}],"jumpOnly":true},
 {"id":"C7-P3","chapter":"C7","title":"死者の名前","cond":null,"bgm":"melo_dullahan_clockwork","bg":"ペンションのホール","next":"END-M3","rows":[{"id":"7-P3-1","t":"band","x":"{name}が指さしたのは、もう亡くなった人の名前だった","k":"C7-P3:7-P3-1"},
 {"id":"7-P3-2","t":"line","w":"myua","x":"え……？ でも、その人、もう……","e":"surprise","k":"C7-P3:7-P3-2"},
 {"id":"7-P3-3a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"atsu","x":"……死んだ人が、黒いサンタ？","e":"troubled","k":"C7-P3:7-P3-3a"},
@@ -68678,8 +68752,8 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"7-P3-9a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"atsu","x":"(銀の音符の飾りを握ったまま、何か言いかけて……やめる)","e":"troubled","k":"C7-P3:7-P3-9a"},
 {"id":"7-P3-9s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"sorashido","x":"(ワトソンくんの画面を閉じかけて、手を止める)","e":"troubled","k":"C7-P3:7-P3-9s"},
 {"id":"7-P3-10","t":"band","x":"その夜。ホールには、誰もいなかった。もみの木の下の箱だけが、暖炉の残り火に照らされていた","k":"C7-P3:7-P3-10"},
-{"id":"7-P3-11","t":"band","x":"ボーン……ボーン……(0時の鐘)","fx":["se"],"se":"bell","k":"C7-P3:7-P3-11"},
-{"id":"7-P3-12","t":"band","x":"……ギィ(鐘が鳴りやんだ後、2階の廊下の奥で、窓の開く音)","fx":["se"],"se":"bell","k":"C7-P3:7-P3-12"}],"jumpOnly":true},
+{"id":"7-P3-11","t":"band","x":"ボーン……ボーン……(0時の鐘)","fx":["se"],"se":"bell","seN":2,"k":"C7-P3:7-P3-11"},
+{"id":"7-P3-12","t":"band","x":"……ギィ(鐘が鳴りやんだ後、2階の廊下の奥で、窓の開く音)","fx":["se"],"se":"tap","k":"C7-P3:7-P3-12"}],"jumpOnly":true},
 {"id":"C7-4a","chapter":"C7","title":"探偵の帽子","cond":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"bgm":"melo_sad_song_short","bg":"ペンションのホール","next":"END-M4","rows":[{"id":"7-4-1","t":"band","x":"{name}が指さしたのは、あつの名前だった","k":"C7-4a:7-4-1"},
 {"id":"7-4-2","t":"line","w":"atsu","x":"……え。俺？","e":"surprise","k":"C7-4a:7-4-2"},
 {"id":"7-4-3","t":"line","w":"myua","x":"ちょ、{name}！？ なんで、あつくんなの！？","e":"surprise","k":"C7-4a:7-4-3"},
@@ -68717,6 +68791,54 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"7-5b-7","t":"line","w":"sorashido","x":"一人は危ないと言ったのは、自分です。……それでも、一人でなければ、証明になりません。……ワトソンくん、記録を","f":"close","e":"normal","k":"C7-5b:7-5b-7"},
 {"id":"7-5b-8","t":"line","w":"watson","x":"……記録を始めます","k":"C7-5b:7-5b-8"},
 {"id":"7-5b-9","t":"band","x":"ソラシドは、暖炉脇の板を外し、ノートパソコンの灯りだけを頼りに、壁の中の通り道へ入っていった","k":"C7-5b:7-5b-9"}]},
+{"id":"C7-W","chapter":"C7","title":"奥の手","cond":null,"bgm":"kaze_ga_soyogu","bg":"ペンションのホール","next":"END-O2","rows":[{"id":"7-W-1","t":"band","x":"ソラシドは、ワトソンくんの画面に、小さく打ちこんだ。『奥の手を』","k":"C7-W:7-W-1"},
+{"id":"7-W-2","t":"line","w":"watson","x":"……本当に、使うのですか。ソラシドさん","k":"C7-W:7-W-2"},
+{"id":"7-W-3","t":"line","w":"sorashido","x":"(小声で)ドラさんは、何かを守るために、黙っています。……なら、ドラさんの口を、少しだけお借りします","f":"close","e":"troubled","k":"C7-W:7-W-3"},
+{"id":"7-W-4","t":"band","x":"ソラシドは、ノートパソコンを抱えたまま、ドラの背中へ、そっと回りこんだ","k":"C7-W:7-W-4"},
+{"id":"7-W-5","t":"line","w":"sorashido","x":"あれれ〜？ ドラさんの帽子から、何か落ちましたよ〜？","e":"excited","k":"C7-W:7-W-5"},
+{"id":"7-W-6","t":"line","w":"atsu","x":"……ばこっちゃん？ 急にどうしたの、その声笑","e":"surprise","k":"C7-W:7-W-6"},
+{"id":"7-W-7","t":"line","w":"dra","x":"ん？ おでの帽子が、どうし——","e":"surprise","k":"C7-W:7-W-7"},
+{"id":"7-W-8","t":"band","x":"プシュッ(ワトソンくんの横の差しこみ口から、細い針が1本、飛び出した)","fx":["se"],"se":"tap","k":"C7-W:7-W-8"},
+{"id":"7-W-9","t":"line","w":"watson","x":"ノートパソコン型麻酔銃。……命中しました","k":"C7-W:7-W-9"},
+{"id":"7-W-10","t":"line","w":"dra","x":"……ふにゃ……おで、急に……ねむ……","e":"sleep","k":"C7-W:7-W-10"},
+{"id":"7-W-11","t":"band","x":"ドラは、ふらふらと三歩歩いて、暖炉の前のひじかけ椅子に、すとんと腰を落とした。腕を組み、うつむいたまま動かない","k":"C7-W:7-W-11"},
+{"id":"7-W-12","t":"line","w":"momosuke","x":"ドラちゃん！？ え、寝た！？ 今！？w","e":"surprise","k":"C7-W:7-W-12"},
+{"id":"7-W-13","t":"band","x":"ソラシドは、椅子の背もたれの後ろに、さっとしゃがみこんだ。ワトソンくんの画面に『変声機能 ドラさん』の文字","k":"C7-W:7-W-13"},
+{"id":"7-W-14","t":"line","w":"dra","x":"(ワトソンくんのスピーカーから、少し低い、ドラの声)……みんな、聞いてくれ。おでが黒いサンタじゃないわけを、今から話す","f":"close","e":"sleep","bgm":"melo_kiss_mystery","k":"C7-W:7-W-14"},
+{"id":"7-W-15","t":"line","w":"myua","x":"ドラケンがしゃべった！？ 寝たまま！？","e":"surprise","k":"C7-W:7-W-15"},
+{"id":"7-W-16","t":"line","w":"kiki","x":"目、閉じてまつ……。口も、動いてないでつ……","e":"surprise","k":"C7-W:7-W-16"},
+{"id":"7-W-17","t":"line","w":"dra","x":"……これが、おでの本気だ。目を閉じたほうが、よく見えるんだな","e":"sleep","k":"C7-W:7-W-17"},
+{"id":"7-W-18","t":"line","w":"atsu","x":"(椅子の後ろを、じっと見ている)……うん。続けて、ドラちゃん笑","e":"troubled","k":"C7-W:7-W-18"},
+{"id":"7-W-19","t":"line","w":"dra","x":"まず、おでの帽子を、振ってみろ","e":"sleep","k":"C7-W:7-W-19"},
+{"id":"7-W-20","t":"band","x":"ももすけがドラの帽子を持ち上げて振ると、ぱらぱらと、クッキーのくずが床に落ちた","k":"C7-W:7-W-20"},
+{"id":"7-W-21","t":"line","w":"mochimaru","x":"……ぼくのクッキーだっちー。ドラさんが通った後は、いつも、くずでどこを通ったか分かるっちー","k":"C7-W:7-W-21"},
+{"id":"7-W-22","t":"line","w":"dra","x":"そうだ。おでは、つまみ食いの名人だ。帽子にも、ポケットにも、いつも、くずが入ってる。……夜中の台所で、みゅあも見たろ","e":"sleep","k":"C7-W:7-W-22"},
+{"id":"7-W-23","t":"line","w":"myua","x":"……うん。ドラケン、23時すぎに、もちまるんのクッキー食べてた","e":"normal","k":"C7-W:7-W-23"},
+{"id":"7-W-24","t":"line","w":"dra","x":"じゃあ、ワトソンくん、写真を——……じゃなかった。ソラシドのパソコン、写真を出してくれ","e":"sleep","k":"C7-W:7-W-24"},
+{"id":"7-W-25","t":"line","w":"watson","x":"はい。ドラさんのかばんから出た、黒いサンタの服です。袖・ポケット・フードの中まで、撮ってあります。……クッキーのくずは、0個です","k":"C7-W:7-W-25"},
+{"id":"7-W-26","t":"line","w":"watson","x":"それから、通り道で撮った写真。裏口から暖炉わきまで、くずは1つも写っていません","k":"C7-W:7-W-26"},
+{"id":"7-W-27","t":"line","w":"dra","x":"黒いサンタは、その服を着て、毎晩、通り道を歩いてた。おでが着てたなら、ポケットはくずでいっぱいで、通り道も、くずだらけのはずだ","e":"sleep","k":"C7-W:7-W-27"},
+{"id":"7-W-28","t":"line","w":"dra","x":"くずが1つもない。……つまり、その服を着てたのは、おでじゃない","f":"close","e":"sleep","k":"C7-W:7-W-28"},
+{"id":"7-W-29","t":"line","w":"erubin","x":"……筋は、通ってるね。ドラちゃんが一晩でもあの服を着たら、くずが残らないわけがないかな","e":"normal","k":"C7-W:7-W-29"},
+{"id":"7-W-30","t":"line","w":"dra","x":"真実は、いつもひと——","e":"sleep","k":"C7-W:7-W-30"},
+{"id":"7-W-31","t":"line","w":"dra","x":"……おでの腹は、いつもぺこぺこだ！","f":"close","e":"sleep","k":"C7-W:7-W-31"},
+{"id":"7-W-32","t":"line","w":"atsu","x":"言い直した笑","e":"happy","k":"C7-W:7-W-32"},
+{"id":"7-W-33","t":"line","w":"kiki","x":"(ぱちぱちと拍手して)名推理でつ……！","e":"happy","k":"C7-W:7-W-33"},
+{"id":"7-W-34","t":"line","w":"dra","x":"それで、本当の黒いサンタは——","e":"sleep","k":"C7-W:7-W-34"},
+{"id":"7-W-35","t":"band","x":"ピー……","fx":["se"],"se":"tap","k":"C7-W:7-W-35"},
+{"id":"7-W-36","t":"line","w":"dra","x":"(スピーカーから、ソラシドの、とっさのいびきの声まね)……ぐぅ……ぐぅ……","e":"sleep","k":"C7-W:7-W-36"},
+{"id":"7-W-37","t":"line","w":"myua","x":"……寝た！？ 今、いちばん大事なとこで寝た！？","e":"troubled","k":"C7-W:7-W-37"},
+{"id":"7-W-38","t":"band","x":"あつだけが、椅子の後ろをのぞきこんだ。ソラシドが、人差し指を口に当てて、首を横に振っている","k":"C7-W:7-W-38"},
+{"id":"7-W-39","t":"line","w":"atsu","x":"……うん。今日は、ここまでにしとこ笑","e":"happy","k":"C7-W:7-W-39"},
+{"id":"7-W-40","t":"band","x":"しばらくして、ドラが、大きなあくびをした","k":"C7-W:7-W-40"},
+{"id":"7-W-41","t":"line","w":"dra","x":"……ふが？ ……あれ。おで、寝てたか？","e":"surprise","k":"C7-W:7-W-41"},
+{"id":"7-W-42","t":"line","w":"momosuke","x":"ドラちゃん、すごかったよ！ 寝たまま、ドラちゃんが犯人じゃないって、解いちゃったんだよ〜♡","e":"excited","k":"C7-W:7-W-42"},
+{"id":"7-W-43","t":"line","w":"dra","x":"お、おでが……解いたのか？","f":"close","e":"surprise","k":"C7-W:7-W-43"},
+{"id":"7-W-44","t":"line","w":"kiki","x":"はい。お見事でちた。目を閉じたままの、名推理でつ","e":"happy","k":"C7-W:7-W-44"},
+{"id":"7-W-45","t":"line","w":"dra","x":"……えへへ。おで、天才だったのか","e":"happy","k":"C7-W:7-W-45"},
+{"id":"7-W-46","t":"line","w":"ichika","x":"ふふっ。今夜は、名探偵さんに、温かいココアをいれましょうね","k":"C7-W:7-W-46"},
+{"id":"7-W-47","t":"line","w":"sorashido","x":"(椅子の後ろから、何もなかった顔で出てきて)……みなさん、何かありましたか？","e":"happy","k":"C7-W:7-W-47"},
+{"id":"7-W-48","t":"line","w":"atsu","x":"ばこっちゃん、それはさすがに無理ある笑","e":"happy","k":"C7-W:7-W-48"}],"jumpOnly":true},
 {"id":"C8-1","chapter":"C8","title":"ひとつずつ","cond":null,"bgm":"melo_kiss_mystery","bg":"ペンションのホール","next":"C8-2","rows":[{"id":"8-1-1","t":"band","x":"聖夜の名探偵 第8章 〜本当の名探偵〜","k":"C8-1:8-1-1"},
 {"id":"8-1-2a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"atsu","x":"……うん。ばこっちゃんの推理の筋道は、合ってた。おかしいのは、手がかりのほうなんだ","e":"normal","k":"C8-1:8-1-2a"},
 {"id":"8-1-2s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"sorashido","x":"その通りです。……あつさんの推理の筋道は、正しかった。おかしいのは、手がかりのほうです","e":"normal","k":"C8-1:8-1-2s"},
@@ -68949,7 +69071,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"X3-3","t":"band","x":"","k":"END-X3:X3-3"}],"ending":{"id":"END-X3","kind":"forced","label":"強制バッド","name":"再び閉ざされた扉"}},
 {"id":"C2-Y","chapter":"END","title":"灯りを消した部屋","cond":null,"bgm":"melo_dullahan_steel_ghost","bg":"2階の廊下","next":"END-X4","rows":[{"id":"2-Y-1a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"band","x":"あつは、灯りを消した自分の部屋で、扉の陰に座りこんだ。「来るなら、来い」","k":"C2-Y:2-Y-1a"},
 {"id":"2-Y-1s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"band","x":"ソラシドは、灯りを消した自分の部屋で、ノートパソコンの画面を伏せ、扉の陰に座った","k":"C2-Y:2-Y-1s"},
-{"id":"2-Y-2","t":"band","x":"カチ、カチ、カチ(下の柱時計の音が、床板ごしに、かすかに響く)","fx":["se"],"se":"bell","k":"C2-Y:2-Y-2"},
+{"id":"2-Y-2","t":"band","x":"カチ、カチ、カチ(下の柱時計の音が、床板ごしに、かすかに響く)","fx":["se"],"se":"tick","seN":3,"k":"C2-Y:2-Y-2"},
 {"id":"2-Y-3","t":"band","x":"23時すぎ。廊下の床板が、きし、と小さく鳴った","k":"C2-Y:2-Y-3"},
 {"id":"2-Y-4a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"atsu","x":"(扉を細く開けて、息を止める)","e":"normal","k":"C2-Y:2-Y-4a"},
 {"id":"2-Y-4s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"watson","x":"(伏せた画面に、小さな文字だけが出る)……廊下に、誰かいます","k":"C2-Y:2-Y-4s"},
@@ -68970,7 +69092,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"2-Y-16a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"sorashido","x":"……『ひとり、かえってこない』。……あつさんが、一人に、なったから……","e":"troubled","k":"C2-Y:2-Y-16a"},
 {"id":"2-Y-15s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"atsu","x":"ばこっちゃん……！ なんで、一人で待ってたんだよ……！","e":"crying","k":"C2-Y:2-Y-15s"},
 {"id":"2-Y-16s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"watson","x":"……ソラシドさんの、応答がありません。……記録を、続けられません","k":"C2-Y:2-Y-16s"},
-{"id":"2-Y-17","t":"band","x":"ボーン……ボーン……(その時、柱時計が、0時の鐘を打ち始めた)","fx":["se"],"se":"bell","k":"C2-Y:2-Y-17"}],"frame":"close","jumpOnly":true},
+{"id":"2-Y-17","t":"band","x":"ボーン……ボーン……(その時、柱時計が、0時の鐘を打ち始めた)","fx":["se"],"se":"bell","seN":2,"k":"C2-Y:2-Y-17"}],"frame":"close","jumpOnly":true},
 {"id":"END-X4","chapter":"END","title":"","cond":null,"bgm":"melo_sad_song_short","bg":null,"next":"A2b","rows":[{"id":"X4-1","t":"band","x":"聖夜の名探偵 エンディング「鐘を待たずに」","k":"END-X4:X4-1"},
 {"id":"X4-2","t":"band","x":"——0時の鐘を待たずに、一人目は、帰ってこなかった","k":"END-X4:X4-2"},
 {"id":"X4-3","t":"band","x":"","k":"END-X4:X4-3"}],"ending":{"id":"END-X4","kind":"forced","label":"強制バッド","name":"鐘を待たずに"}},
@@ -69018,7 +69140,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"M3-4","t":"line","w":"myua","x":"るびちん……！ るびちん、どこ……！","e":"crying","k":"END-M3:M3-4"},
 {"id":"M3-5","t":"line","w":"mochimaru","x":"……もみの木の下の、えるびんさんの箱が、なくなってるっちー……","k":"END-M3:M3-5"},
 {"id":"M3-6","t":"band","x":"箱のあった所に、赤い字の紙が1枚","k":"END-M3:M3-6"},
-{"id":"M3-7","t":"band","x":"おばけの　せいに　したね／つぎの　かねで／また　ひとり／——黒いサンタ","fx":["letter","bleed"],"k":"END-M3:M3-7"},
+{"id":"M3-7","t":"band","x":"おばけの　せいに　したね／つぎの　かねで／また　ひとり／——黒いサンタ","fx":["letter","bleed"],"se":"letter","k":"END-M3:M3-7"},
 {"id":"M3-8","t":"panel","x":"","ops":[{"id":"erubin","st":"missing"}],"k":"END-M3:M3-8"},
 {"id":"M3-9","t":"band","x":"——その名前を指さしたのは、{name}だった","k":"END-M3:M3-9"}],"frame":"close","ending":{"id":"END-M3","kind":"accuse","label":"名指しエンド","name":"死者の名前"}},
 {"id":"END-M4","chapter":"END","title":"","cond":null,"bgm":"melo_sad_song_short","bg":"夜のホール","next":null,"rows":[{"id":"M4-1","t":"band","x":"聖夜の名探偵 エンディング「閉じこめられた名探偵」","k":"END-M4:M4-1"},
@@ -69138,7 +69260,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"OUT-A-4","t":"line","w":"sorashido","x":"記録しておきます。……もう一度、遊ぶべきかもしれません","e":"normal","k":"OUT-A:OUT-A-4"}],"outside":true},
 {"id":"END-B","chapter":"END","title":"","cond":null,"bgm":"melo_dullahan_steel_ghost","bg":"夜のホール","next":"OUT-B","rows":[{"id":"B-1","t":"band","x":"聖夜の名探偵 エンディング「誰もいない聖夜」","k":"END-B:B-1"},
 {"id":"B-1b","t":"line","w":"ichika","x":"……雪が、このままやんでいれば。あと1日で、山道があくはずです","k":"END-B:B-1b"},
-{"id":"B-2","t":"band","x":"ボーン……ボーン……(その夜。柱時計が、また早く鳴る)","fx":["se"],"se":"bell","k":"END-B:B-2"},
+{"id":"B-2","t":"band","x":"ボーン……ボーン……(その夜。柱時計が、また早く鳴る)","fx":["se"],"se":"bell","seN":2,"k":"END-B:B-2"},
 {"id":"B-3","t":"band","x":"ブツン(停電)","fx":["se"],"se":"impact","k":"END-B:B-3"},
 {"id":"B-4","t":"band","x":"……っ！(2階で、短い悲鳴)","fx":["se"],"se":"impact","k":"END-B:B-4"},
 {"id":"B-5","t":"band","x":"朝。鍵をかけた部屋の扉は、閉まったまま。……なのに、2階の廊下の床に、赤黒い筋が1本、階段のほうへ伸びていた","fx":["red"],"k":"END-B:B-5"},
@@ -69187,7 +69309,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"1-O-19","t":"band","x":"0時の少し前。柱時計のねじを巻こうとしたきゅうこの手を、ききがそっと止めた","k":"C1-O:1-O-19"},
 {"id":"1-O-20","t":"line","w":"kiki","x":"きゅうこさん、柱時計は、さっきもちまるさんが合わせてくれたでつ。今夜は、きっちり0時に鳴りまつよ","e":"happy","k":"C1-O:1-O-20"},
 {"id":"1-O-21","t":"line","w":"kyuko","x":"……あ、そう……なんだ。……ほい","e":"troubled","k":"C1-O:1-O-21"},
-{"id":"1-O-22","t":"band","x":"ボーン……ボーン……(柱時計が、ちょうど0時に、12回鳴る)","fx":["se"],"se":"bell","k":"C1-O:1-O-22"},
+{"id":"1-O-22","t":"band","x":"ボーン……ボーン……(柱時計が、ちょうど0時に、12回鳴る)","fx":["se"],"se":"bell","seN":2,"k":"C1-O:1-O-22"},
 {"id":"1-O-23","t":"band","x":"「メリークリスマス！」","k":"C1-O:1-O-23"},
 {"id":"1-O-24","t":"line","w":"erubin","x":"きゅうこちゃん、ケーキ、ここ空いてるよ。一緒に食べようか","e":"happy","k":"C1-O:1-O-24"},
 {"id":"1-O-25","t":"line","w":"kyuko","x":"(黒いサンタの帽子をかぶったまま、ケーキをほおばって)……なんか、もう、どうでもよくなっちゃったよぉ笑","e":"happy","k":"C1-O:1-O-25"},
@@ -69205,6 +69327,20 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"OUT-O-5","t":"line","w":"sorashido","x":"……あれだけ怖い話の後に、こういう終わり方。作った人、分かってますね笑","e":"happy","k":"OUT-O:OUT-O-5"},
 {"id":"OUT-O-6","t":"line","w":"atsu","x":"俺、こっちの終わり方も好きかも笑","e":"happy","k":"OUT-O:OUT-O-6"},
 {"id":"OUT-O-7","t":"band","x":"画面の中で、7人の黒いサンタが、そろって、ぺこりとお辞儀をした","k":"OUT-O:OUT-O-7"}],"frame":"far","outside":true},
+{"id":"END-O2","chapter":"END","title":"おまけ「眠りのドラ」","cond":null,"bgm":"close_to_your_heart_alt","bg":"ペンションのホール","next":"OUT-O2","rows":[{"id":"O2-1","t":"band","x":"聖夜の名探偵 エンディング「眠りのドラ」","k":"END-O2:O2-1"},
+{"id":"O2-2","t":"band","x":"その夜から、ドラは「眠りのドラ」と呼ばれるようになった。謎が出るたびに、みんなが、ひじかけ椅子の前に集まった","k":"END-O2:O2-2"},
+{"id":"O2-3","t":"line","w":"dra","x":"よし。今夜の謎も、おでに任せろ。……ソラシド、あのちくっとするやつ、もう1本くれ","e":"happy","k":"END-O2:O2-3"},
+{"id":"O2-4","t":"line","w":"watson","x":"麻酔の針は、残り0本です。……黒いサンタの正体は、まだ、誰も知りません","k":"END-O2:O2-4"},
+{"id":"O2-5","t":"band","x":"聖夜の名探偵 —— おまけ、おしまい","k":"END-O2:O2-5"}],"ending":{"id":"END-O2","kind":"omake","label":"おまけ","name":"眠りのドラ"}},
+{"id":"OUT-O2","chapter":"END","title":"画面の前で(眠りのドラのあと)","cond":null,"bgm":"close_to_your_heart_alt","bg":"ゲーム機をかこむ助手たち","next":null,"rows":[{"id":"OUT-O2-0","t":"band","x":"画面の前。エンディングの曲に、ドラのいびきの声まねが、まだ重なっている","k":"OUT-O2:OUT-O2-0"},
+{"id":"OUT-O2-1","t":"line","w":"myua","x":"待って、完全にコナンくんのやつぢゃん！ 腕時計じゃなくて、パソコンから針出るの、こわすぎｗ","e":"excited","k":"OUT-O2:OUT-O2-1"},
+{"id":"OUT-O2-2","t":"line","w":"dra","x":"ゲームの中のおで、寝てただけで、名探偵になってた。えへへ","e":"happy","k":"OUT-O2:OUT-O2-2"},
+{"id":"OUT-O2-3","t":"line","w":"sorashido","x":"……自分の声まね、あんなに低かったですか","e":"troubled","k":"OUT-O2:OUT-O2-3"},
+{"id":"OUT-O2-4","t":"line","w":"momosuke","x":"ソラちゃんのいびきのまね、うますぎw","e":"happy","k":"OUT-O2:OUT-O2-4"},
+{"id":"OUT-O2-5","t":"line","w":"kyuko","x":"でもさ、推理はちゃんと合ってるのが、ずるいよねぇ笑","e":"happy","k":"OUT-O2:OUT-O2-5"},
+{"id":"OUT-O2-6","t":"line","w":"atsu","x":"ばこっちゃん、あの機能、本物のパソコンについてないよね？笑","e":"happy","k":"OUT-O2:OUT-O2-6"},
+{"id":"OUT-O2-7","t":"line","w":"sorashido","x":"……ノーコメントです笑","e":"happy","k":"OUT-O2:OUT-O2-7"},
+{"id":"OUT-O2-8","t":"band","x":"画面の中で、ひじかけ椅子のドラが、こくりと船をこいだ","k":"OUT-O2:OUT-O2-8"}],"frame":"far","outside":true},
 {"id":"C12-1","chapter":"C12","title":"ホールの子守歌","cond":null,"bgm":"close_to_your_heart_alt","bg":"12年前のペンションのホール","next":"C12-2","rows":[{"id":"12-1-1","t":"band","x":"過去編 〜12年前の聖夜〜","k":"C12-1:12-1-1"},
 {"id":"12-1-2","t":"band","x":"♪……ポロン、ポロロン……(12年前の、12月24日。ペンション・シュプールのホールに、オルゴールの子守歌が流れる)","fx":["se"],"se":"music","k":"C12-1:12-1-2"},
 {"id":"12-1-3","t":"band","x":"もみの木のそばで、ローズ色の長い髪の女の人が、ねじを巻いている。その膝に、同じ色の長い髪の、小さな子","k":"C12-1:12-1-3"},
@@ -69235,7 +69371,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"12-3-6","t":"band","x":"戸を叩く音は、いつまでもやまなかった。ようやく戸が開いた時、雪まみれの女の人は、凍えた手で、何度も頭を下げた","k":"C12-3:12-3-6"},
 {"id":"12-3-7","t":"line","n":"カノン","x":"ありがとうございます……！ 急がなきゃ。0時の鐘に、間に合わない","k":"C12-3:12-3-7"}],"jumpOnly":true,"past":true},
 {"id":"C12-4","chapter":"C12","title":"早すぎた鐘","cond":null,"bgm":"melo_dullahan_clockwork","bg":"12年前の夜のホール","next":"C12-5","rows":[{"id":"12-4-1","t":"line","w":"mochimaru","x":"(暖炉の鍋をかき混ぜて)カノンさんが戻ってきたら、すぐ、あったかいスープを飲んでもらうっちー","k":"C12-4:12-4-1"},
-{"id":"12-4-2","t":"band","x":"ボーン……ボーン……(柱時計が、12回鳴る)","fx":["se"],"se":"bell","k":"C12-4:12-4-2"},
+{"id":"12-4-2","t":"band","x":"ボーン……ボーン……(柱時計が、12回鳴る)","fx":["se"],"se":"bell","seN":2,"k":"C12-4:12-4-2"},
 {"id":"12-4-3","t":"line","w":"mochimaru","x":"……あれ？ 0時の鐘、なんだか早いっちー","k":"C12-4:12-4-3"},
 {"id":"12-4-4","t":"band","x":"暖炉のそばの椅子で、黒羽が、懐中時計のふたをそっと開ける。針は、23時47分","k":"C12-4:12-4-4"},
 {"id":"12-4-5","t":"band","x":"ガタン(台所で、白瀬が、言われた通りに、裏口のかんぬきを下ろす)","fx":["se"],"se":"impact","k":"C12-4:12-4-5"},
@@ -69306,7 +69442,7 @@ const XMAS_NOVEL_CSS = `
   background: linear-gradient(180deg, #1b2c5c, #0c1636); color: #f8e3a4; box-shadow: 0 0 0 1px rgba(232,196,106,.85); }
 .mh-nv-text { font-size: 17px; line-height: 1.75; font-weight: 600; white-space: pre-wrap; min-height: 3.5em; text-align: left; word-break: normal; line-break: normal; overflow-wrap: anywhere; text-wrap: wrap; }
 .mh-nv-plain { text-align: left; word-break: normal; line-break: normal; overflow-wrap: anywhere; text-wrap: wrap; }
-/* 章の札・題の札の文も左寄せ(事件簿の中の文は左寄せ・幅いっぱいで1文字ずつ折る。飾りの見出しは起動画面の題字とエンドの札だけ・台帳 r1126-048) */
+/* 章の札・題の札の文も左寄せ(事件簿の中の文は左寄せ・r1126-048。折るのは文節の切れ目だけ・XmasNovelWrap・r1126-071。飾りの見出しは起動画面の題字とエンドの札だけ) */
 .mh-nv-cardtext { width: min(100%, 560px); }
 .mh-nv-cardtext .mh-nv-rule { margin: 14px 0; }
 .mh-nv-text.say .mh-nv-say-body { display: block; padding-left: 1em; text-indent: -1em; }
@@ -69585,7 +69721,8 @@ const XMAS_NOVEL_FACES = Object.freeze(['normal', 'happy', 'wink', 'surprise', '
 const xmasNovelFigureSrc = (who, e) => {
   const c = xmasNovelCastOf(who);
   if (!c) return null;
-  const face = XMAS_NOVEL_FACES.includes(e) ? e : 'normal';
+  // 眠った顔(sleep)はドラの顔の絵だけにある(santa/dra_sleep.PNG・r1126-077 眠りのドラ)。ほかの人は normal に戻す
+  const face = XMAS_NOVEL_FACES.includes(e) || (who === 'dra' && e === 'sleep') ? e : 'normal';
   if (c.kind === 'assistant') {
     const dir = typeof STORY_OUTFIT_DIRS !== 'undefined' && STORY_OUTFIT_DIRS && STORY_OUTFIT_DIRS.santa ? STORY_OUTFIT_DIRS.santa : '';
     if (!dir) return null;
@@ -69614,12 +69751,12 @@ const XmasNovelLaptop = () => (
     <path d="M8 140 L232 140 L218 158 L22 158 Z" fill="#1b2a52" stroke="#e8c46a" strokeWidth="2" />
   </svg>
 );
-// シルエットの笑い(名前を伏せた声で「ふふ」「あはは」)。笑い声の音源はまだ無いので、いまはボスの技の音で代える
+// シルエットの笑い(名前を伏せた声で「ふふ」「あはは」)。笑い声は audio/se-xmas-novel-laugh.mp3(XMAS_NOVEL_LAUGH_SE)で鳴らす
 const xmasNovelIsSilhouette = (row) => !!(row && /黒いサンタのシルエット|黒いサンタの影/.test(row.x || ''));
 const xmasNovelIsLaugh = (row) => !!(row && /ふふ|あはは|ははは/.test(row.x || ''));
 // ---- 立ち絵の見せ方(r1126-067) ----
 //  寄り(close): 胸から上を大きく / ふだん(normal): 頭から腰 / 引き(far): 全身を小さめ。台本の〔立ち:寄り〕〔立ち:引き〕の印(行 f > 場面 frame > ふだん)。
-//  絵ごとに描かれている範囲が違う(助手は頭〜太もも、謎の客2人は胸から上、モンスターは全身)ので、絵の上から何割の所に胸・腰があるか(chest・waist)と、
+//  絵ごとに描かれている範囲が違う(助手は頭〜太もも、謎の客2人とモンスターは全身)ので、絵の上から何割の所に胸・腰があるか(chest・waist)と、
 //  左右の透明な余白を除いた絵の範囲(l・r)を持つ。文字の箱の上の縁(名札の上)で絵を切って下をぼかすので、箱の裏に体が透けず、名札も手や顔にかからない。
 //  横長の画面で箱が右に寄り重ならないときは、画面の下の縁で切る。絵の縦横の比率は変えない
 const XMAS_NOVEL_FRAMES = Object.freeze(['close', 'normal', 'far']);
@@ -69631,8 +69768,8 @@ const XMAS_NOVEL_MARKS = Object.freeze({
   momosuke: { chest: 0.62, waist: 0.76, l: 0.12, r: 0.93 },
   kyuko: { chest: 0.6, waist: 0.77, l: 0.28, r: 0.9 },
   erubin: { chest: 0.65, waist: 0.94, l: 0.09, r: 0.76 },
-  kuroba: { chest: 0.74, waist: 1, l: 0, r: 1 },
-  shirase: { chest: 0.72, waist: 1, l: 0, r: 1 },
+  kuroba: { chest: 0.22, waist: 0.42, l: 0.04, r: 0.96 }, // 謎の客2人は全身の絵(r1126-076。胸から上の *_stand.png は事件簿では使わない)
+  shirase: { chest: 0.24, waist: 0.38, l: 0.03, r: 0.97 },
   ichika: { chest: 0.42, waist: 0.66, l: 0.32, r: 0.68 },
   mochimaru: { chest: 0.5, waist: 0.75, l: 0.18, r: 0.82 },
   dra: { chest: 1, waist: 1, l: 0.1, r: 0.9 },
@@ -69855,8 +69992,9 @@ const XmasNovelBody = ({ who, scene = '', at = 0, bg = null }) => {
   }, []);
   const c = xmasNovelCastOf(who);
   const src = xmasNovelBodySrc(who);
-  const kind = c ? c.kind : '';
-  const bust = kind === 'guest'; // 胸から上の絵
+  // 謎の客2人も全身の絵になったので、倒れ方は助手と同じ(r1126-076)。胸から上の絵の扱い(bust)は、全身の絵が無い客のときだけ
+  const bust = !!(c && c.kind === 'guest' && !/_full\.png$/.test(c.art || ''));
+  const kind = c ? (c.kind === 'guest' && !bust ? 'assistant' : c.kind) : '';
   const pose = XMAS_NOVEL_BODY_POSE[scene] || 'lie';
   const slump = pose === 'slump';
   const sit = pose === 'sit';
@@ -70012,10 +70150,43 @@ const xmasNovelSe = (kind) => {
     //   se・playSeFile だと事件簿の音まで消える(r1126-072)。口が無い古い作りなら今までの口へ
     const playFile = typeof Audio_.fgPlaySeFile === 'function' ? Audio_.fgPlaySeFile : Audio_.playSeFile;
     if (kind === 'laugh' && typeof playFile === 'function') { void playFile(XMAS_NOVEL_LAUGH_SE); return; }
-    const map = { clap: 'join', laugh: 'enemySpecial', bell: 'levelUp', impact: 'enemyAttack', music: 'heal', tap: 'tap', clue: 'card', ok: 'victory', ng: 'guard' };
+    const map = { clap: 'join', laugh: 'enemySpecial', impact: 'enemyAttack', music: 'heal', tap: 'tap', clue: 'card', ok: 'victory', ng: 'guard' };
     const fn = (Audio_.fgSe || Audio_.se)[map[kind] || 'tap'];
     if (typeof fn === 'function') fn();
   } catch (e) { /* 音が出せなくても読み進める */ }
+};
+// 台本の〔音:鐘〕〔音:時計〕〔音:手紙〕の行の音(r1126-066)。手持ちの効果音だけを使う(新しい音は作らない)。
+//   鐘 = 金属の音(guard)に、低く下がる余韻(trainingFail)を重ねた「ボーン」/ 時計 = 短い針の音(xpTick)/ 手紙 = 不穏にふくらむ音(enemyCharge)。
+//   効果音の音量(seBus)を通るので設定どおりの大きさ。BGM は止めない。
+//   連打しても重ねない: 次の行へ進んだら残りの回数は鳴らさず、同じ音を前の音のすぐあと(hold の間)には鳴らし直さない
+const XMAS_NOVEL_SE_SEQ = Object.freeze({
+  bell: { gap: 1150, hold: 900, play: ['guard', 'trainingFail'] },
+  tick: { gap: 520, hold: 300, play: ['xpTick'] },
+  letter: { gap: 0, hold: 1500, play: ['enemyCharge'] },
+});
+let xmasNovelSeTimers = [];
+let xmasNovelSeLast = { kind: '', at: 0 };
+const xmasNovelSeStop = () => { xmasNovelSeTimers.forEach((t) => clearTimeout(t)); xmasNovelSeTimers = []; };
+const xmasNovelSeHit = (kind) => {
+  try {
+    if (typeof Audio_ === 'undefined' || !Audio_ || !Audio_.se) return;
+    const seq = XMAS_NOVEL_SE_SEQ[kind];
+    xmasNovelSeLast = { kind, at: Date.now() };
+    // 表の画面の口(fgSe)から鳴らす(裏クイックの音を止める印を受けない・r1126-072。上の xmasNovelSe と同じ)
+    seq.play.forEach((name) => { const fn = (Audio_.fgSe || Audio_.se)[name]; if (typeof fn === 'function') fn(); });
+  } catch (e) { /* 音が出せなくても読み進める */ }
+};
+const xmasNovelRowSe = (kind, times) => {
+  xmasNovelSeStop();
+  const seq = XMAS_NOVEL_SE_SEQ[kind];
+  if (!seq) { xmasNovelSe(kind); return; }
+  const n = Math.max(1, Math.min(3, Number.isFinite(times) ? times : 1));
+  const wait = xmasNovelSeLast.kind === kind ? Math.max(0, seq.hold - (Date.now() - xmasNovelSeLast.at)) : 0;
+  for (let i = 0; i < n; i += 1) {
+    const at = wait + i * seq.gap;
+    if (at <= 0) xmasNovelSeHit(kind);
+    else xmasNovelSeTimers.push(setTimeout(() => xmasNovelSeHit(kind), at));
+  }
 };
 //  場面の途中で曲を変える所(台本の「切→温」のうち、新曲を当てた所・台帳 r1126-039)。場面ID → [その行から先, 曲の鍵]
 //  END-G: 屋根裏の会場のやり直しのクリスマス会と本物のサンタのそり(「温 ★」)から Dear Santa。それより前のせつない所は今の曲のまま
@@ -70044,6 +70215,153 @@ const xmasNovelBgm = (key) => {
     if (typeof Audio_.fadeToBGM === 'function') Audio_.fadeToBGM(key, 700); else Audio_.playBGM(key);
   } catch (e) { /* 曲が鳴らせなくても読み進める */ }
 };
+// ==== 改行の位置(台帳 r1126-071)ここから。検査 tools/novel/xmas-novel-wrap-check.js がこの間をそのまま取り出して使う ====
+//  社長「改行位置がめちゃくちゃ、きになる。特にセリフじゃない部分」(「灰色のコー／トの影が」「染みこんでい／く」「黒いサン／タ」)。
+//  前の決め(r1126-048)の「1文字単位で折る」をやめ、文節(言葉のまとまり)の切れ目だけで折る。左寄せ・ぶら下げ・音の行の中央(r1126-052)はそのまま。
+//  ・折ってよい所は、ほかの画面と同じ部品 jaWrapPoints(41-screen-ui.jsx)が決める所と空白
+//  ・そのうえで、名前・固有名詞・手がかりの名前・かぎかっこの中の短い名前・日時・数と単位・「……」の中では折らない
+//  ・折ってよい所と所のあいだは、折らない枠(white-space: nowrap)で包む。ブラウザがほかの所で折れないようにするため
+//  ・文字送りの途中も、文の全部を置いて、まだの字を見えなくするだけ(字が出るたびに改行の位置が動かない)
+const XMAS_NOVEL_KEEP_BASE = [
+  '黒いサンタ', '聖夜のロンド', '十三番目の鐘', '十二の鐘', 'ペンション・シュプール', '聖夜の名探偵', '名探偵', '手がかり帳', '12年前の聖夜', '12年前', '12年後',
+  'ワトソンくん', 'エンドヒストリー', 'セーブデータ', 'ノートパソコン', 'メリークリスマス', 'クリスマス会', 'クリスマス', 'モンヒロ', 'オルゴール', 'ミステリーノベル',
+  '呪いのセーブデータ', 'モンヒロ事件簿', 'ポロロン', 'ローズ色', '銀の音符', '懐中時計', '子守歌', '招待状', 'サンタの帽子',
+];
+// 長い枠は1行に入らず、字が枠の外へ出る。包むのはこの字数まで(縦のいちばん狭い選択肢で1行約18字)
+const XMAS_NOVEL_KEEP_MAX = 16;
+let _xmasNovelKeepWords = null;
+const xmasNovelKeepWords = () => {
+  if (_xmasNovelKeepWords) return _xmasNovelKeepWords;
+  const set = new Set(XMAS_NOVEL_KEEP_BASE);
+  try {
+    // 台本から: 手がかりの名前・章の題・エンドの名前・人の名前(フルネームも)
+    const S = typeof XMAS_NOVEL_SCRIPT !== 'undefined' ? XMAS_NOVEL_SCRIPT : null;
+    if (S) {
+      (S.chapters || []).forEach((c) => { if (c && c.title) set.add(c.title); });
+      (S.scenes || []).forEach((sc) => {
+        if (sc && sc.ending && sc.ending.name) set.add(sc.ending.name);
+        (sc && sc.rows || []).forEach((r) => { if (r && r.t === 'clue' && r.clue) set.add(r.clue); });
+      });
+    }
+    if (typeof XMAS_NOVEL_CAST !== 'undefined') XMAS_NOVEL_CAST.forEach((c) => { if (c.name) set.add(c.name); if (c.full) set.add(c.full); });
+  } catch (e) { /* 一覧が作れなくても、決まりの分だけで折る */ }
+  _xmasNovelKeepWords = [...set].filter((w) => typeof w === 'string' && [...w].length >= 2 && [...w].length <= XMAS_NOVEL_KEEP_MAX).sort((a, b) => b.length - a.length);
+  return _xmasNovelKeepWords;
+};
+// 形で決まる「割らない所」
+const XMAS_NOVEL_KEEP_RES = [
+  // 日時(11/28(土) 10:00・12/25・0:00)
+  /\d{1,2}\/\d{1,2}(?:[(（][月火水木金土日](?:・祝)?[)）])?(?:[ 　]?\d{1,2}:\d{2})?/g,
+  /\d{1,2}:\d{2}/g,
+  // かぎかっこの中の短い名前は、かっこごと(「黒いサンタ」『聖夜のロンド』【二通目の招待状】)
+  /[「『【][^「」『』【】\n]{1,12}[」』】]/g,
+  // 数と単位(30センチ・3人・0じ)。前の「約」「第」「残り 」も
+  /(?:約|第|残り[ 　]?)?[0-9０-９]+(?:[.．][0-9０-９]+)?[ 　]?(?:センチ|メートル|キロ|ミリ|時間|人目|番目|通目|号室|人|年|時|分|秒|個|つ|回|日|月|歳|才|枚|本|通|度|階|号|じ|cm|m|%|％)/g,
+  /[一二三四五六七八九十百千]+(?:番目|人目|通目|時間|人|年|つ|回|度|階|日|分|時|本|枚|個|通)/g,
+  // 三点リーダー・ダッシュの並び(「……」「——」)と、そのすぐあとの句読点
+  /(?:…|‥|—|―){2,}[、。！？!?]*/g,
+  // 「〜届いたゲーム〜」のような題の飾り
+  /[〜～][^〜～\s]{1,12}[〜～]/g,
+];
+// 文の組み立てで切れ目になる所(助詞のあと・「て」のあと・「です」「ように」「こと」の手前など)。ひらがなの続きの中でも、ここなら折ってよい
+const xmasNovelGramBreak = (s, i) => {
+  const b = s.slice(0, i), a = s.slice(i);
+  return (/て$/.test(b) && /^[^るたはぁぃぅぇぉっゃゅょー]/.test(a))
+    || /[A-Za-z0-9０-９ァ-ヶー」』）)一-龯々][はがをにもへとでのや]$/.test(b)
+    || (/^[はがをにもへのとや]/.test(a) && /[ぁ-ゖー]{2}$/.test(b) && !/[はがをにもへ]$/.test(b)) || (/で$/.test(b) && /^[^すしきもはるぁぃぅぇぉっゃゅょー]/.test(a))
+    || /(?:から|まで|けど|ので|のに|ても|でも|には|では|とは|って|たら|れば|ながら|けれど|より|だけ|ほど|など|ように|ような|という|か|を)$/.test(b)
+    || /^(?:です|でし|でしょ|だっ|だった|だよ|だね|だろ|じゃ|ように|ような|こと|もの|ため|わけ|はず|べき|かも|かな|なの|なん|ちゃん|くん|さん|ん[だでじ]|の(?:た|に|で|だ|か))/.test(a)
+    || (/[くし]$/.test(b) && /^(?:な[るりっられ]|し[たてよま])/.test(a))
+    || (/^[おご]/.test(a) && /[ぁ-ゖ一-龯]/.test(s[i + 1] || ''));
+};
+const xmasNovelIsKana = (s, i) => /[ぁ-ゖゝゞ]/.test(s[i] || '') || (s[i] === 'ー' && i > 0 && /[ぁ-ゖ]/.test(s[i - 1]));
+// 道具(Intl.Segmenter)の言葉の区切り。Map(始まりの位置 → 言葉)。道具が無い端末では空(決まりの分だけで見る)
+let _xmasNovelSeg;
+const xmasNovelSegments = (s) => {
+  const m = new Map();
+  try {
+    if (_xmasNovelSeg === undefined) _xmasNovelSeg = (typeof Intl !== 'undefined' && Intl.Segmenter) ? new Intl.Segmenter('ja', { granularity: 'word' }) : null;
+    if (_xmasNovelSeg) for (const x of _xmasNovelSeg.segment(s)) m.set(x.index, x.segment);
+  } catch (e) { /* 区切りが取れなくても折れる */ }
+  return m;
+};
+// ここで折ると言葉の途中になるか: 道具の言葉の切れ目でない所(「巻いて|いない」の「てい」)・ひらがなの言葉の途中(「しまいこ|まれて」)・
+//   漢字・カタカナ・閉じかっこのすぐあとの助詞の手前(「暖炉の前|の」「スピーカー|から、」「(カノン)|と、」。助詞は前の言葉と同じ文節・r1126-077 の点検)
+const xmasNovelBadBreak = (s, b, segAt) => {
+  if (segAt && segAt.size && !segAt.has(b)) return true;
+  if (xmasNovelIsKana(s, b - 1) && xmasNovelIsKana(s, b) && !xmasNovelGramBreak(s, b)) return true;
+  const w = segAt && segAt.get(b);
+  return /[一-龯々ァ-ヶー」』）)A-Za-z0-9０-９]$/.test(s.slice(0, b)) && !!w && /^(?:の|は|が|を|に|へ|と|で|も|や|から|まで|より)$/.test(w);
+};
+const XMAS_NOVEL_PLAN_CACHE = new Map();
+// 文を「折らない枠」に分ける。[{ t: 字, keep: 包むか, space: 空白か }]。max は1つの枠の字数の上限(1行に入る字数より少なく。大きい字の札は小さく)
+const xmasNovelWrapPlan = (text, max = XMAS_NOVEL_KEEP_MAX) => {
+  const s = String(text ?? '');
+  if (!s) return [];
+  const ck = `${max}|${s}`;
+  const hit = XMAS_NOVEL_PLAN_CACHE.get(ck);
+  if (hit) return hit;
+  const br = new Set();
+  let marked = s;
+  try { marked = typeof jaWrapPoints === 'function' ? jaWrapPoints(s) : s; } catch (e) { marked = s; }
+  if (typeof marked !== 'string' || marked.replace(/\u200B/g, '') !== s) marked = s;
+  let pos = 0;
+  for (const ch of marked) { if (ch === '\u200B') br.add(pos); else pos += ch.length; }
+  for (const m of s.matchAll(/\s+/g)) { br.add(m.index); br.add(m.index + m[0].length); }
+  const len = (a, b) => [...s.slice(a, b)].length;
+  const spans = [];
+  // かぎかっこの中の名前は、枠(max)に入るときだけかっこごと包む。入らないときは、名前の一覧と言葉の切れ目に任せる
+  for (const re of XMAS_NOVEL_KEEP_RES) for (const m of s.matchAll(re)) if (!/^[「『【]/.test(m[0]) || [...m[0]].length <= max) spans.push([m.index, m.index + m[0].length]);
+  for (const w of xmasNovelKeepWords()) if ([...w].length <= max) for (let i = s.indexOf(w); i >= 0; i = s.indexOf(w, i + 1)) spans.push([i, i + w.length]);
+  for (const b of [...br]) if (b <= 0 || b >= s.length || spans.some(([a, e]) => b > a && b < e)) br.delete(b);
+  const segAt = xmasNovelSegments(s);
+  // ひらがなの続きの途中(「しまいこ|まれてた」「いてく|れた」)は、文の組み立ての切れ目でなければ外す。つないでも枠に入るときだけ(迷ったら折らない)
+  for (const b of [...br].sort((x, y) => x - y)) {
+    if (!xmasNovelBadBreak(s, b, segAt)) continue;
+    const sorted = [0, ...[...br].sort((x, y) => x - y), s.length];
+    const k = sorted.indexOf(b), lo = sorted[k - 1], hi = sorted[k + 1];
+    if (len(lo, hi) <= max) { br.delete(b); continue; }
+    // つなぐと長すぎるときは、同じかたまりの中の文の組み立ての切れ目(「ねじを|巻いていない」)へ移す。どちらの側も枠に入る所のうち、元の所にいちばん近い所
+    let best = -1;
+    for (let q = lo + 1; q < hi; q++) {
+      if (q === b || spans.some(([x, e]) => q > x && q < e) || /^[、。！？!?」』）)…‥ー]/.test(s.slice(q)) || /[「『（(]$/.test(s.slice(0, q))) continue;
+      if (xmasNovelBadBreak(s, q, segAt)) continue;
+      if (!xmasNovelGramBreak(s, q) && !(/[ぁ-ゖ、]$/.test(s.slice(0, q)) && /^[一-龯ァ-ヶ]/.test(s.slice(q)))) continue;
+      if (len(lo, q) > max || len(q, hi) > max) continue;
+      if (best < 0 || Math.abs(q - b) < Math.abs(best - b)) best = q;
+    }
+    if (best >= 0) { br.delete(b); br.add(best); }
+  }
+  const cuts = [0, ...[...br].sort((a, b) => a - b), s.length];
+  const plan = [];
+  for (let i = 1; i < cuts.length; i++) {
+    const t = s.slice(cuts[i - 1], cuts[i]);
+    if (!t) continue;
+    if (/^\s+$/.test(t)) plan.push({ t, keep: false, space: true });
+    else plan.push({ t, keep: [...t].length <= max, space: false });
+  }
+  if (XMAS_NOVEL_PLAN_CACHE.size > 600) XMAS_NOVEL_PLAN_CACHE.clear();
+  XMAS_NOVEL_PLAN_CACHE.set(ck, plan);
+  return plan;
+};
+// ==== 改行の位置ここまで ====
+const XMAS_NOVEL_NOWRAP = Object.freeze({ whiteSpace: 'nowrap' });
+const XMAS_NOVEL_HIDE = Object.freeze({ visibility: 'hidden' });
+//  shown: 見せる字の数(文字送り)。省くと全部
+const XmasNovelWrap = ({ text, shown, max }) => {
+  const plan = xmasNovelWrapPlan(text, max);
+  const lim = typeof shown === 'number' && Number.isFinite(shown) ? shown : Infinity;
+  let pos = 0;
+  return plan.map((p, i) => {
+    const a = pos; pos += p.t.length;
+    const vis = Math.max(0, Math.min(p.t.length, lim - a));
+    const body = vis >= p.t.length ? p.t : (<>{p.t.slice(0, vis)}<span style={XMAS_NOVEL_HIDE}>{p.t.slice(vis)}</span></>);
+    const prev = plan[i - 1];
+    return (<React.Fragment key={i}>{i > 0 && !p.space && !(prev && prev.space) && <wbr />}{p.keep ? <span data-nv-keep="" style={XMAS_NOVEL_NOWRAP}>{body}</span> : body}</React.Fragment>);
+  });
+};
+// 大きい字の札(章の札・題の札・エンドの札)は1行に入る字が少ないので、枠を小さく(縦 390 で 30px の字は約11字)
+const xmasNovelWrap = (text, max) => <XmasNovelWrap text={text} max={max} />;
 // ---- 文の置き方(台帳 r1126-052): 台詞・地の文・効果音で分ける ----
 //  効果音の帯(台本の「(効果音)」の印 = fx に se): 真ん中寄せ・大きめ・字間をあける。うしろの(説明書き)は小さい2行目に
 const xmasNovelIsSeRow = (row) => !!(row && row.t === 'band' && Array.isArray(row.fx) && row.fx.includes('se'));
@@ -70056,8 +70374,8 @@ const XmasNovelSeText = ({ text, shown }) => {
   const [sound, note] = xmasNovelSplitSe(text);
   const vis = Math.max(0, shown);
   return (<>
-    {sound && <span className="mh-nv-se-sound">{sound.slice(0, vis)}</span>}
-    {note && vis > sound.length && <span className="mh-nv-se-note">{note.slice(0, vis - sound.length - 1)}</span>}
+    {sound && <span className="mh-nv-se-sound"><XmasNovelWrap text={sound} shown={vis} /></span>}
+    {note && vis > sound.length && <span className="mh-nv-se-note"><XmasNovelWrap text={note} shown={vis - sound.length - 1} /></span>}
   </>);
 };
 //  台詞: 「」の中身として出し、2行目からは「の分だけ下げてそろえる(ぶら下げ)。頭の(しぐさ)は小さい前置きの行に。全部が(しぐさ)なら「」を付けない
@@ -70068,11 +70386,12 @@ const xmasNovelSplitLead = (s) => {
 const XmasNovelSayText = ({ text, shown }) => {
   const [lead, body] = xmasNovelSplitLead(text);
   const vis = Math.max(0, shown);
-  if (!body.trim()) return <span className="mh-nv-say-lead only">{text.slice(0, vis)}</span>;
+  if (!body.trim()) return <span className="mh-nv-say-lead only"><XmasNovelWrap text={text} shown={vis} /></span>;
   const bodyVis = body.slice(0, Math.max(0, vis - lead.length));
+  // 「」も文といっしょに置き、まだの字と閉じかっこは見えなくしておく(改行の位置が字送りの途中で動かない・r1126-071)
   return (<>
-    {lead && <span className="mh-nv-say-lead">{lead.slice(0, vis)}</span>}
-    {(bodyVis || !lead || vis > lead.length) && <span className="mh-nv-say-body">「{bodyVis}{vis >= text.length ? '」' : ''}</span>}
+    {lead && <span className="mh-nv-say-lead"><XmasNovelWrap text={lead} shown={vis} /></span>}
+    {(bodyVis || !lead || vis > lead.length) && <span className="mh-nv-say-body"><XmasNovelWrap text={`「${body}」`} shown={vis >= text.length ? Infinity : 1 + bodyVis.length} /></span>}
   </>);
 };
 const XmasNovelIcon = ({ d, size = 18 }) => (
@@ -70153,7 +70472,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
     try { prevBgm.current = typeof Audio_ !== 'undefined' && Audio_.currentBgmKey ? Audio_.currentBgmKey() : null; } catch (e) { prevBgm.current = null; }
     xmasNovelLoad(S).then((s) => { if (alive) { saveRef.current = s; setSave(s); } });
     xmasNovelBgm('melo_kiss_mystery');
-    return () => { alive = false; if (storeTimer.current) clearTimeout(storeTimer.current); };
+    return () => { alive = false; xmasNovelSeStop(); if (storeTimer.current) clearTimeout(storeTimer.current); };
   }, []);
   const persist = (next, now = false) => {
     saveRef.current = next; setSave(next);
@@ -70181,6 +70500,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
     let s = base;
     unreadRef.current = !!(r.k && !s.read.includes(r.k));
     if (r.k && !s.read.includes(r.k)) s = { ...s, read: [...s.read, r.k] };
+    if (r.t === 'band' && r.se) xmasNovelRowSe(r.se, r.seN); else xmasNovelSeStop();
     if (r.t === 'band' && Array.isArray(r.fx)) {
       const vis = r.fx.find((f) => ['dark', 'white', 'red', 'light', 'bleed'].includes(f));
       if (r.fx.includes('bleed') && r.fx.includes('red')) setTimeout(() => setFx({ kind: 'bleed', n: Date.now() }), 380); // 赤く光ってから、にじむ
@@ -70188,7 +70508,6 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
       if (r.fx.includes('shake')) setShake((n) => n + 1);
       if (r.fx.includes('curtainDown')) setCurtain('down');
       if (r.fx.includes('curtainUp')) { setCurtain('up'); setTimeout(() => setCurtain((c) => (c === 'up' ? null : c)), 1700); }
-      if (r.se) xmasNovelSe(r.se);
       if (r.fx.includes('title') || r.fx.includes('chapter')) { setCard({ kind: r.fx.includes('title') ? 'title' : 'band', text: r.x }); setShown(99999); return s; }
     } else setFx((f) => (f && f.kind === 'dark' ? null : f));
     if (r.bgm && r.bgm !== lastBgm.current) { lastBgm.current = r.bgm; xmasNovelBgm(r.bgm); }
@@ -70374,7 +70693,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
                 <div className="mh-nv-sheet" onClick={() => setConfirmNew(false)}>
                   <div className="mh-nv-panel mb-auto mt-auto max-w-sm text-center" onClick={(e) => e.stopPropagation()}>
                     <div className="mh-nv-serif mh-nv-gold mb-2 text-[17px] font-black">はじめから遊びますか？</div>
-                    <p className="mh-nv-plain mb-3 text-[12px] leading-relaxed text-slate-200">いまの続きの場所は消えます。エンドヒストリー・一発で当てた記録・読んだ印はそのまま残ります</p>
+                    <p className="mh-nv-plain mb-3 text-[12px] leading-relaxed text-slate-200">{xmasNovelWrap('いまの続きの場所は消えます。エンドヒストリー・一発で当てた記録・読んだ印はそのまま残ります')}</p>
                     <div className="space-y-2">
                       <button type="button" className="mh-nv-btn wide" data-xmas-novel-new-ok onClick={() => { setConfirmNew(false); start(xmasNovelFreshCur(S)); }}>はじめから</button>
                       <button type="button" className="mh-nv-btn wide" onClick={() => setConfirmNew(false)}>やめる</button>
@@ -70399,7 +70718,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
                         <span className="mh-nv-serif shrink-0 rounded px-2 py-0.5 text-[10px] font-black" style={{ color: '#0a0f20', background: seen ? kind.tone : '#3a4466' }}>{seen ? kind.label : '？？？'}</span>
                         {seen && at && <span className="ml-auto text-[10px] font-bold text-slate-300" data-xmas-novel-ending-at>{xmasNovelDateText(at)}</span>}
                       </div>
-                      <div className="mh-nv-serif mt-1 text-[17px] font-black leading-snug" style={{ color: seen ? kind.tone : '#5b6585' }}>{seen ? `「${e.name}」` : '？？？'}</div>
+                      <div className="mh-nv-serif mt-1 text-[17px] font-black leading-snug" style={{ color: seen ? kind.tone : '#5b6585' }}>{seen ? xmasNovelWrap(`「${e.name}」`) : '？？？'}</div>
                       {seen && <button type="button" className="mh-nv-btn mt-2" data-xmas-novel-replay={e.id}
                         onClick={() => start({ ...xmasNovelFreshCur(S), scene: e.id, idx: 0 }, true)}>見返す</button>}
                     </li>
@@ -70412,7 +70731,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
           {mode === 'chapters' && (
             <div className="my-auto w-full max-w-md" data-xmas-novel-chapter-list>
               <div className="mh-nv-serif mh-nv-gold text-center text-[22px] font-black">章から</div>
-              <p className="mh-nv-plain mt-1 text-[11px] text-slate-300">その章に入ったときの手がかりと選んだことから、読み直せます</p>
+              <p className="mh-nv-plain mt-1 text-[11px] text-slate-300">{xmasNovelWrap('その章に入ったときの手がかりと選んだことから、読み直せます')}</p>
               <div className="mh-nv-rule" />
               <ul className="space-y-2">
                 {xmasNovelChapters(S).filter((c) => c.id !== 'END' && !c.outside).map((c) => {
@@ -70473,13 +70792,13 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
           <div className="mh-nv-box" style={{ zIndex: 5 }} data-xmas-novel-box>
             {name && <div className="mh-nv-name mh-nv-serif">{name}</div>}
             <div className={`mh-nv-text${isBand ? (xmasNovelIsSeRow(row) ? ' se mh-nv-serif' : ` band mh-nv-serif${Array.isArray(row.fx) && row.fx.includes('letter') ? ' letter' : ''}`) : ''}${isLine ? ' say' : ''}`} data-xmas-novel-text data-xmas-novel-kind={isBand ? (xmasNovelIsSeRow(row) ? 'se' : 'band') : isLine ? 'line' : row.t}>
-              {row.t === 'clue' ? `手がかり帳に「${row.clue}」を書きとめた`
-                : row.t === 'panel' ? (row.x || (row.stamp ? '……' : '登場人物'))
-                : row.t === 'q' ? xmasNovelFill(row.x, playerName)
+              {row.t === 'clue' ? xmasNovelWrap(`手がかり帳に「${row.clue}」を書きとめた`)
+                : row.t === 'panel' ? xmasNovelWrap(row.x || (row.stamp ? '……' : '登場人物'))
+                : row.t === 'q' ? xmasNovelWrap(xmasNovelFill(row.x, playerName))
                 : isBand && xmasNovelIsSeRow(row) ? <XmasNovelSeText text={text} shown={shown} />
                 : isLine ? <XmasNovelSayText text={text} shown={shown} />
-                : isBand && Array.isArray(row.fx) && row.fx.includes('letter') ? text.slice(0, shown).replace(/／/g, '　')
-                : text.slice(0, shown)}
+                : isBand && Array.isArray(row.fx) && row.fx.includes('letter') ? <XmasNovelWrap text={text.replace(/／/g, '　')} shown={shown} />
+                : <XmasNovelWrap text={text} shown={shown} />}
             </div>
             {isLine && row.note && !typing && <div className="mh-nv-note">({row.note})</div>}
             {!typing && row.t !== 'q' && <span className="mh-nv-next" />}
@@ -70501,7 +70820,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
         <div className="mh-nv-get" data-xmas-novel-got={got.n} onClick={() => setGot(null)}>
           <div className="text-[11px] font-black tracking-widest text-amber-200">{got.add ? '手がかり帳に書き足した' : '手がかりを手に入れた'}</div>
           <div className="mh-nv-serif mh-nv-gold mt-1 text-[20px] font-black">【{got.n}】</div>
-          <p className="mh-nv-plain mt-1 whitespace-pre-wrap text-[12px] leading-relaxed text-slate-100">{got.d}</p>
+          <p className="mh-nv-plain mt-1 whitespace-pre-wrap text-[12px] leading-relaxed text-slate-100">{xmasNovelWrap(got.d)}</p>
         </div>
       )}
 
@@ -70510,13 +70829,13 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
           {card.kind === 'chapter' && (<div className="mh-nv-plain mh-nv-cardtext">
             <div className="mh-nv-serif text-[15px] tracking-[0.5em] text-slate-200">{card.label}</div>
             <div className="mh-nv-rule" />
-            <div className="mh-nv-serif mh-nv-gold text-[30px] font-black leading-tight sm:text-[38px]">{card.title}</div>
+            <div className="mh-nv-serif mh-nv-gold text-[30px] font-black leading-tight sm:text-[38px]">{xmasNovelWrap(card.title, 10)}</div>
             <div className="mh-nv-rule" />
             <div className="mt-6 text-[11px] text-slate-400">タップで進む</div>
           </div>)}
           {(card.kind === 'title' || card.kind === 'band') && (<div className="mh-nv-plain mh-nv-cardtext">
             <div className="mh-nv-rule" />
-            <div className="mh-nv-serif mh-nv-gold text-[30px] font-black leading-tight sm:text-[40px]">{card.text}</div>
+            <div className="mh-nv-serif mh-nv-gold text-[30px] font-black leading-tight sm:text-[40px]">{xmasNovelWrap(card.text, 10)}</div>
             <div className="mh-nv-rule" />
           </div>)}
           {card.kind === 'ending' && (() => {
@@ -70526,7 +70845,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
                 {card.ending.kind === 'forced' && <div className="mh-nv-gameover-title" data-xmas-novel-gameover>GAME OVER</div>}
                 <div className="mh-nv-serif text-[13px] tracking-[0.4em]" style={{ color: kind.tone }}>{/エンド$/.test(kind.label) ? kind.label : `${kind.label} END`}</div>
                 <div className="mh-nv-rule" />
-                <div className={`mh-nv-serif text-[28px] font-black leading-tight ${card.ending.kind === 'forced' ? 'mh-nv-red' : 'mh-nv-gold'}`}>「{card.ending.name}」</div>
+                <div className={`mh-nv-serif text-[28px] font-black leading-tight ${card.ending.kind === 'forced' ? 'mh-nv-red' : 'mh-nv-gold'}`}>{xmasNovelWrap(`「${card.ending.name}」`, 10)}</div>
                 <div className="mh-nv-rule" />
                 {!card.replay && <div className="text-[12px] text-slate-200">{card.fresh ? 'エンドヒストリーに記録しました' : 'エンドヒストリーに記録ずみ'}</div>}
                 {!card.replay && <div className="mt-1 text-[11px] text-slate-300">推理の問い 一発で当てた数 {card.count} / {card.total}</div>}
@@ -70553,7 +70872,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
                 {log.length ? log.map((l, i) => (
                   <div key={i} className="text-[13px] leading-relaxed">
                     {l.who && <div className="mh-nv-serif text-[11px] font-black text-amber-200">{l.who}</div>}
-                    <div className={`mh-nv-plain ${l.who ? 'text-slate-100' : 'text-slate-300'}`}>{l.text}</div>
+                    <div className={`mh-nv-plain ${l.who ? 'text-slate-100' : 'text-slate-300'}`}>{xmasNovelWrap(l.text)}</div>
                   </div>
                 )) : <div className="text-[12px] text-slate-400">まだありません</div>}
               </div>
@@ -70563,7 +70882,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
               <div className="mh-nv-serif mh-nv-gold text-[18px] font-black">手がかり帳 <span className="text-[12px] text-slate-300">{clues.length}個</span></div>
               {q && <div data-xmas-novel-question={q.id} className="mt-2 rounded-lg p-2 text-[13px] font-bold leading-relaxed" style={{ background: 'rgba(120,20,30,.35)', boxShadow: '0 0 0 1px rgba(232,120,120,.6)' }}>
                 {q.label && <div className="mh-nv-serif text-[11px] font-black text-rose-200">{q.label}</div>}
-                {xmasNovelFill(q.x, playerName)}
+                {xmasNovelWrap(xmasNovelFill(q.x, playerName))}
                 <div className="mt-1 text-[11px] text-rose-100">突きつける手がかりを1つ選ぼう</div>
               </div>}
               <div className="mh-nv-scroll mt-2 flex-1 space-y-2 pr-1">
@@ -70573,7 +70892,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
                       <div className="mh-nv-serif mh-nv-gold min-w-0 flex-1 text-[15px] font-black">【{c.n}】</div>
                       {q && <button type="button" className="mh-nv-btn shrink-0" data-xmas-novel-present={c.n} onClick={() => answer(q, c.n)}>突きつける</button>}
                     </div>
-                    <p className="mt-1 whitespace-pre-wrap text-[12px] leading-relaxed text-slate-200">{c.d}</p>
+                    <p className="mh-nv-plain mt-1 whitespace-pre-wrap text-[12px] leading-relaxed text-slate-200">{xmasNovelWrap(c.d)}</p>
                   </div>
                 )) : <div className="text-[12px] text-slate-400">まだ手がかりはありません</div>}
               </div>
@@ -70583,20 +70902,20 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
             {q && q.kind === 'person' && (<>
               <div data-xmas-novel-question={q.id} className="mb-3 rounded-lg p-2 text-[13px] font-bold leading-relaxed" style={{ background: 'rgba(120,20,30,.35)', boxShadow: '0 0 0 1px rgba(232,120,120,.6)' }}>
                 {q.label && <div className="mh-nv-serif text-[11px] font-black text-rose-200">{q.label}</div>}
-                {xmasNovelFill(q.x, playerName)}
+                {xmasNovelWrap(xmasNovelFill(q.x, playerName))}
               </div>
               <div className="mh-nv-scroll"><XmasNovelCast onPick={(id) => answer(q, id)} /></div>
               {(q.extra || []).map((x) => (
-                <button type="button" key={x.key} className="mh-nv-choice mh-nv-serif mt-2" data-xmas-novel-extra={x.key} onClick={() => answer(q, x.key)}>{x.x}</button>
+                <button type="button" key={x.key} className="mh-nv-choice mh-nv-serif mt-2" data-xmas-novel-extra={x.key} onClick={() => answer(q, x.key)}>{xmasNovelWrap(x.x)}</button>
               ))}
               {q.once && <div className="mh-nv-plain mt-2 text-[11px] font-bold text-rose-200">選んだら、やり直しはできません</div>}
               <button type="button" className="mh-nv-btn wide mt-3" onClick={() => setSheet(null)}>話をもう一度見る</button>
             </>)}
             {q && q.kind === 'action' && (<>
-              <div data-xmas-novel-question={q.id} className="mh-nv-plain mh-nv-serif mh-nv-gold mb-3 text-[17px] font-black">{xmasNovelFill(q.x, playerName)}</div>
+              <div data-xmas-novel-question={q.id} className="mh-nv-plain mh-nv-serif mh-nv-gold mb-3 text-[17px] font-black">{xmasNovelWrap(xmasNovelFill(q.x, playerName))}</div>
               <div className="space-y-2.5">
                 {xmasNovelOptionsOf(q, xmasNovelCtx(S, st.cur, save.endings)).map((o) => (
-                  <button type="button" key={o.i} className="mh-nv-choice mh-nv-serif" data-xmas-novel-option={o.i} onClick={() => answer(q, o.i)}>{xmasNovelFill(o.x, playerName)}</button>
+                  <button type="button" key={o.i} className="mh-nv-choice mh-nv-serif" data-xmas-novel-option={o.i} onClick={() => answer(q, o.i)}>{xmasNovelWrap(xmasNovelFill(o.x, playerName))}</button>
                 ))}
               </div>
               {q.once && <div className="mh-nv-plain mt-2 text-[11px] font-bold text-rose-200">選んだら、やり直しはできません</div>}
@@ -134452,35 +134771,45 @@ function MonsterHeroGame() {
   // 不具合情報タブで未読(NEW)へ戻るのを防ぐ
   // 約900件を見比べるので、既読が変わったときだけ数え直す(描画のたびに作り直さない)
   // 「イベント」タブ(2026-11-23 r1119-113)。開催中・開催予定の札はこのタブにだけ出す。
-  //   印(!)は、まだ見ていない札があるあいだだけ付ける。既読は今ある mh_changelog_seen_ids_<その項目のタブ> へ足す(キーは増やさない)。
-  //   札になっている項目は、更新情報タブを見ただけでは既読にしない(イベントタブを開くまで印を残す)。
+  //   印は、まだ開いていない札があるあいだだけ付ける。既読は今ある mh_changelog_seen_ids_<その項目のタブ> へ足す(キーは増やさない)。
+  //   札になっている項目は、更新情報タブを見ただけでは既読にしない。
+  //   2026-11-27 r1126-068 社長「イベントにびっくりついてるけどどれかわからない」→ 札ごとに「NEW」を付け、その札を開いたら既読にする
+  //   (タブを見ただけでは消さない)。タブの印の数と札の「NEW」の数は、どちらもここの changelogUnreadIds.event から作るので必ず合う。
+  //   並べる札(changelogEventCards)もここで1回だけ作り、描画はそれを使う(時刻の境目で札の顔ぶれと印がずれないように)。
   //   開催中かは時刻で変わるので、窓を開くたびに数え直す(showChangelog を依存に入れている)
-  const { changelogUnreadIds, changelogUnread, changelogPinnedIds } = useMemo(() => {
+  const { changelogUnreadIds, changelogUnread, changelogPinnedIds, changelogEventCards } = useMemo(() => {
     const changelogSeenAnyTab = new Set(CHANGELOG_TYPES.flatMap(type => changelogSeen[type] || []));
-    const pinnedIds = changelogPinnedEntries().map(entry => entry.id);
+    const eventCards = changelogPinnedEntries();
+    const pinnedIds = eventCards.map(entry => entry.id);
     const pinnedSet = new Set(pinnedIds);
     const unreadIds = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, CHANGELOG_IDS_BY_TYPE[type].filter(id=>!changelogSeenAnyTab.has(id) && !pinnedSet.has(id))]));
     unreadIds.event = pinnedIds.filter(id => !changelogSeenAnyTab.has(id));
     const unread = Object.fromEntries(Object.keys(unreadIds).map(type => [type, unreadIds[type].length>0]));
-    return { changelogUnreadIds: unreadIds, changelogUnread: unread, changelogPinnedIds: pinnedSet };
+    return { changelogUnreadIds: unreadIds, changelogUnread: unread, changelogPinnedIds: pinnedSet, changelogEventCards: eventCards };
   }, [changelogSeen, showChangelog]);
   const hasUnreadChangelog = changelogUnread.update || changelogUnread.issue || changelogUnread.event;
+  // イベントタブの札を1枚開いたら、その項目だけ既読にする(2026-11-27 r1126-068)。
+  //   その項目が属するタブの既読(mh_changelog_seen_ids_update / _issue)へ足す。保存のしかた・キーは前と同じ
+  const markChangelogEventSeen = (id) => {
+    if (!changelogUnreadIds.event.includes(id)) return;
+    const entry = CHANGELOG_ENTRIES.find(e => e.id === id);
+    if (!entry) return;
+    const tab = CHANGELOG_ISSUE_TAB_TYPES.includes(entry.type) ? 'issue' : 'update';
+    const next = Array.from(new Set([...(changelogSeen[tab]||[]).filter(x=>CHANGELOG_ALL_IDS.has(x)), id]));
+    storeSet(`mh_changelog_seen_ids_${tab}`, next, false);
+    setChangelogSeen(prev => ({ ...prev, [tab]: next }));
+  };
+  // 残り時間(「あと◯日」)を、イベントタブを見ているあいだは30秒ごとに描き直す
+  const [changelogClock, setChangelogClock] = useState(() => Date.now());
+  useEffect(() => {
+    if (!showChangelog || changelogTab !== 'event') return undefined;
+    setChangelogClock(Date.now());
+    const timer = setInterval(() => setChangelogClock(Date.now()), 30000);
+    return () => clearInterval(timer);
+  }, [showChangelog, changelogTab]);
   const markChangelogTabSeen = (type) => {
     if (type === 'event') {
-      // 札の項目を、その項目が属するタブの既読へ足す(更新情報の項目なら mh_changelog_seen_ids_update)
-      if (!changelogUnreadIds.event.length) return;
-      const byTab = {};
-      CHANGELOG_ENTRIES.forEach(entry => {
-        if (!changelogUnreadIds.event.includes(entry.id)) return;
-        const tab = CHANGELOG_ISSUE_TAB_TYPES.includes(entry.type) ? 'issue' : 'update';
-        (byTab[tab] = byTab[tab] || []).push(entry.id);
-      });
-      const next = {};
-      Object.keys(byTab).forEach(tab => {
-        next[tab] = Array.from(new Set([...(changelogSeen[tab]||[]).filter(id=>CHANGELOG_ALL_IDS.has(id)), ...byTab[tab]]));
-        storeSet(`mh_changelog_seen_ids_${tab}`, next[tab], false);
-      });
-      setChangelogSeen(prev => ({ ...prev, ...next }));
+      // イベントタブは、タブを見ただけでは既読にしない(札を開いたときに markChangelogEventSeen。2026-11-27 r1126-068)
       return;
     }
     const ids = CHANGELOG_IDS_BY_TYPE[type].filter(id => !changelogPinnedIds.has(id));
@@ -146150,7 +146479,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const fxSkill = intent.variant || (intent.type==='SPECIAL' ? 'special' : 'normal');
         // ★技ごとの動きを持つ敵は、連続はり手・上手投げなどを見せきる長さだけ待つ(tacticsEnemyMotionMs)。
         //   ムーも動きを持つときは技ごとの長さ(全画面の演出を見せきる長さ)になる
-        const motionEnemyId = isTacticsMode(runMode)&&!ecoBattleView ? (enemy?.raidJackPumpkin?'Pumpkin':enemy?.id) : null;
+        const motionEnemyId = isTacticsMode(runMode)&&!ecoBattleView ? tacticsEnemyMotionKey(enemy) : null;
         // ★必殺技ムービーを持つ敵(覚醒ムー)の必殺技は、画面を切り替えてムービーを流してから当てる
         //   (2026-09-25 ユーザー指示)。流すのは設定が「流す」のときだけ。演奏で止まったぶんの追いつき中は流さない。
         //   ムービーは戦闘の速さに合わせて縮めない(「下手に短くしないでおけ」)。
@@ -151037,7 +151366,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           見た目は .mh-title-dialog--changelog(70-bootstrap.jsx)。見出しの帯・タブ・一覧(ここだけ送る)・閉じるの4段で、閉じるはいつも同じ所。
           横・小さい横は、左の列に見出し・タブ・閉じる、右の列に一覧。お知らせの中身と既読の印は変えていない */}
       <div className="mh-title-dialog mh-title-dialog--changelog" role="dialog" aria-modal="true" aria-label="更新履歴"><div className="mh-dialog-head"><h3>✦ 更新履歴</h3></div>
-        <div className="mh-changelog-tabs">{[{key:'update',label:'更新情報'},{key:'event',label:'イベント'},{key:'issue',label:'不具合情報'}].map(t=><button key={t.key} type="button" aria-pressed={changelogTab===t.key} onClick={()=>selectChangelogTab(t.key)} className={changelogTab===t.key?'active':''}>{t.label}{changelogUnread[t.key]&&<em className="mh-unread-badge" aria-label="未読あり">!</em>}</button>)}</div>
+        <div className="mh-changelog-tabs">{[{key:'update',label:'更新情報'},{key:'event',label:'イベント'},{key:'issue',label:'不具合情報'}].map(t=><button key={t.key} type="button" aria-pressed={changelogTab===t.key} onClick={()=>selectChangelogTab(t.key)} className={changelogTab===t.key?'active':''}>{t.label}{changelogUnread[t.key]&&(t.key==='event'
+          // イベントタブの印は、まだ開いていない札の数(札の「NEW」と同じ数。2026-11-27 r1126-068)
+          ?<em className="mh-unread-badge" data-changelog-event-unread={changelogUnreadIds.event.length} aria-label={`まだ開いていないイベント${changelogUnreadIds.event.length}件`}>{changelogUnreadIds.event.length}</em>
+          :<em className="mh-unread-badge" aria-label="未読あり">!</em>)}</button>)}</div>
         {/* data/changelog.js の読み込みに失敗すると中身が0件になる。黙って空にすると
             「更新履歴が壊れた」としか分からないので、読み込み直せることをここで伝える */}
         <div className="mh-changelog-list" data-changelog-list>{CHANGELOG_ENTRIES.length===0
@@ -151056,22 +151388,48 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             // 「イベント期間中はこれを常に1番上に出しといて」)。日付やまとめの並びとは別。終わったら自然に消えて、あとは普通の行として残る。
             // 開催中かは描くたびに数え直す(changelogEventLive)。ふだんは他の行と同じく閉じておき、押すと中身(告知画像・本文)が開く
             // 2026-11-23 r1119-113 社長「更新内容が見づらい」→ 札は「イベント」タブへ移した(開催中が上・開催予定が下。changelogPinnedEntries)
-            const pinnedEvents = changelogTab==='event' ? changelogPinnedEntries() : [];
+            const pinnedEvents = changelogTab==='event' ? changelogEventCards : [];
             if (changelogTab==='event' && pinnedEvents.length===0) return <p className="mh-changelog-empty" data-changelog-event-empty>いま開催中・開催予定のイベントはありません。</p>;
-            return [...pinnedEvents.map(c=>(
-              <details key={`pinned-${c.id}`} data-changelog-pinned className="mh-changelog-pinned"
-                style={{margin:'0 0 10px',border:'2px solid #fb923c',borderRadius:16,background:'linear-gradient(135deg,#431407,#3b0764)',padding:'8px 10px'}}>
-                <summary style={{cursor:'pointer',listStyle:'none',display:'flex',alignItems:'center',gap:8,fontWeight:900,fontSize:13,color:'#ffedd5'}}>
-                  {/* 札の絵文字はイベントごと(pinEmoji)。書いていない項目は 🎉(ハロウィンの 🎃 のままだった。2026-11-03) */}
-                  {/* 予告(開始前)の項目は eventStartAt を書く。その時刻より前は「📅 開催予定」(2026-11-22 社長が本番で「開催前なのに開催中」を見つけた)。
-                      書いていない項目(これまでのイベント)は今までどおり「開催中」。時刻は描くたびに数え直す */}
-                  <span data-changelog-pinned-badge style={{background:'#f97316',color:'#1c1917',borderRadius:999,padding:'1px 8px',fontSize:11,flexShrink:0}}>{changelogEventUpcoming(c)?'📅 開催予定':`${typeof c.pinEmoji==='string'&&c.pinEmoji?c.pinEmoji:'🎉'} 開催中`}</span>
-                  {/* 固定表示の見出しは短くする。先頭の【期間限定】と末尾の「〜を開催します」は、「開催中」の札と重なるので落とす(本文の見出しはそのまま)。
-                      幅の狭い画面(320)で「レイドボス戦「…」と名前が切れていたので、切らずに折り返す(2026-10-27 ダメダシくんの見回り) */}
-                  {/* pinTitle を書いた項目は、固定の札だけその短い題(2026-11-10 社長「モンヒロビート本オープン記念 これだけにしといて」)。一覧の行と本文の題はそのまま */}
-                  <span data-changelog-pinned-title style={{flex:1,minWidth:0,lineHeight:1.3,wordBreak:'keep-all',overflowWrap:'anywhere'}}>{typeof c.pinTitle==='string'&&c.pinTitle?c.pinTitle:String(c.title||'').replace(/^【[^】]*】/,'').replace(/を開催(します)?$/,'')}</span>
-                  <small style={{flexShrink:0,fontSize:10,color:'#fdba74'}}>詳細 ▼</small>
+            const eventUnread = new Set(changelogUnreadIds.event||[]);
+            // 2026-11-27 r1126-068 社長「イベントにびっくりついてるけどどれかわからない。てか表示方法もっとなんとかならない？」→ 札を作り直した。
+            //   ・上にイベントの絵の横長の帯(絵の無い項目は今までの色の札のまま)。その下に短い題を1行(changelogEventListTitle)
+            //   ・期間「11/28(土) 10:00 〜 12/31(木) 3:59」と残り「あと◯日」「開幕まであと◯時間」(changelogEventPeriodLabel / changelogEventRemainLabel)
+            //   ・まだ開いていない札に「NEW」。札を開いたら既読(markChangelogEventSeen)。タブの数字と同じ数になる
+            //   ・並びは開催中(終わりが近い順)→開催予定(開幕が近い順)。changelogPinnedEntries
+            return [...pinnedEvents.map(c=>{
+              const upcoming=changelogEventUpcoming(c,changelogClock);
+              const period=changelogEventPeriodLabel(c);
+              const remain=changelogEventRemainLabel(c,changelogClock);
+              const isNew=eventUnread.has(c.id);
+              const banner=typeof c.image==='string'&&c.image?c.image:'';
+              const listTitle=changelogEventListTitle(c);
+              return (
+              <details key={`pinned-${c.id}`} data-changelog-pinned data-changelog-event-new={isNew?'1':'0'} className="mh-changelog-pinned"
+                onToggle={e=>{ if (e.currentTarget.open) markChangelogEventSeen(c.id); }}
+                style={{margin:'0 0 10px',border:`2px solid ${isNew?'#f87171':'#fb923c'}`,borderRadius:16,background:'linear-gradient(135deg,#431407,#3b0764)',padding:banner?0:'8px 10px',overflow:'hidden'}}>
+                <summary aria-label={`${listTitle}${upcoming?'(開催予定)':'(開催中)'}${isNew?'・未読':''}`} style={{cursor:'pointer',listStyle:'none',display:'block',fontWeight:900,color:'#ffedd5'}}>
+                  {banner&&<span style={{position:'relative',display:'block'}}>
+                    {/* 帯は絵の真ん中より少し上を見せる(題字が上にある絵が多い)。項目ごとに bannerPos で変えられる */}
+                    <img data-changelog-pinned-banner src={banner} alt="" aria-hidden="true" onError={e=>{e.currentTarget.style.display='none';}} loading="lazy" decoding="async"
+                      style={{display:'block',width:'100%',aspectRatio:'3 / 1',maxHeight:'min(110px, 22vh)',objectFit:'cover',objectPosition:typeof c.bannerPos==='string'&&c.bannerPos?c.bannerPos:'50% 35%'}}/>
+                    {isNew&&<em data-changelog-event-new-mark style={{position:'absolute',top:6,left:6,fontStyle:'normal',background:'#ef4444',color:'#fff',borderRadius:999,padding:'1px 8px',fontSize:11,boxShadow:'0 2px 6px rgba(0,0,0,.5)'}}>NEW</em>}
+                  </span>}
+                  <span style={{display:'flex',alignItems:'center',gap:6,padding:banner?'6px 10px 0':0,fontSize:13}}>
+                    {/* 札の絵文字はイベントごと(pinEmoji)。書いていない項目は 🎉(ハロウィンの 🎃 のままだった。2026-11-03) */}
+                    {/* 予告(開始前)の項目は eventStartAt を書く。その時刻より前は「📅 開催予定」(2026-11-22 社長が本番で「開催前なのに開催中」を見つけた)。
+                        書いていない項目(これまでのイベント)は今までどおり「開催中」。時刻は描くたびに数え直す */}
+                    <span data-changelog-pinned-badge style={{background:upcoming?'#38bdf8':'#f97316',color:'#1c1917',borderRadius:999,padding:'1px 8px',fontSize:11,flexShrink:0}}>{changelogEventUpcoming(c)?'📅 開催予定':`${typeof c.pinEmoji==='string'&&c.pinEmoji?c.pinEmoji:'🎉'} 開催中`}</span>
+                    {/* 題は1行(長い物は「…」)。listTitle を書いた項目はそれ(更新情報タブの題・本文の題は変えない) */}
+                    <span data-changelog-pinned-title style={{flex:1,minWidth:0,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',lineHeight:1.4}}>{listTitle}</span>
+                    {!banner&&isNew&&<em data-changelog-event-new-mark style={{fontStyle:'normal',background:'#ef4444',color:'#fff',borderRadius:999,padding:'1px 7px',fontSize:10,flexShrink:0}}>NEW</em>}
+                  </span>
+                  <span style={{display:'flex',alignItems:'center',flexWrap:'wrap',gap:'2px 8px',padding:banner?'3px 10px 8px':'4px 0 0',fontSize:11,fontWeight:800,color:'#fdba74'}}>
+                    {period&&<span data-changelog-event-period style={{whiteSpace:'nowrap'}}>{period}</span>}
+                    {remain&&<span data-changelog-event-remain style={{whiteSpace:'nowrap',background:'rgba(0,0,0,.35)',color:upcoming?'#bae6fd':'#fde68a',borderRadius:999,padding:'0 7px'}}>{remain}</span>}
+                    <small style={{marginLeft:'auto',fontSize:10,color:'#fdba74',whiteSpace:'nowrap'}}>詳細 ▼</small>
+                  </span>
                 </summary>
+                <div style={{padding:banner?'0 10px 8px':0}}>
                 {c.image&&<img data-changelog-pinned-image src={c.image} alt={`${c.title}のお知らせ`} onError={e=>{e.currentTarget.style.display='none';}} loading="lazy" decoding="async" style={{width:'100%',borderRadius:12,margin:'8px 0 4px'}}/>}
                 {/* 予告動画も、固定の札の中で見られるようにする(下の一覧の行と同じ) */}
                 {typeof c.video==='string'&&c.video&&<figure data-changelog-pinned-video style={{margin:'6px 0'}}>
@@ -151079,7 +151437,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <ChangelogVideo src={c.video} poster={typeof c.videoPoster==='string'?c.videoPoster:undefined}/>
                 </figure>}
                 {(c.items||[]).map((x,j)=><p key={j} style={{fontSize:12,color:'#fed7aa',margin:'3px 0'}}>・{x}</p>)}
-              </details>)),
+                </div>
+              </details>);}),
             ...rows.map(row=>{
               const open=changelogOpenId===row.key;
               const unreadCount=row.entries.filter(entry=>unreadHere.has(entry.id)).length;
@@ -160329,6 +160688,11 @@ const createAnimationStyle = () => {
     .fin-shape--note::before { content:'♪'; }
     .fin-shape--heart { width:auto; height:auto; background:none; box-shadow:none; border-radius:0; font:900 22px/1 system-ui, sans-serif; color:var(--spm-c1); text-shadow:0 0 8px var(--spm-c2); }
     .fin-shape--heart::before { content:'♥'; }
+    /* 覚醒サンタの雪と黒いプレゼント(TACTICS_ENEMY_FINISH.santa)。雪は文字の形(後ろに文字の形の印を付けて絵文字にしない)、プレゼントは黒い箱に赤いリボン */
+    .fin-shape--snow { width:auto; height:auto; background:none; box-shadow:none; border-radius:0; font:900 20px/1 system-ui, sans-serif; color:#fff; text-shadow:0 0 8px var(--spm-c2); }
+    .fin-shape--snow::before { content:'❄︎'; }
+    .fin-shape--gift { width:16px; height:16px; border-radius:2px; box-shadow:0 0 6px var(--spm-c2);
+      background:linear-gradient(90deg, transparent 42%, var(--spm-c2) 42% 58%, transparent 58%), linear-gradient(0deg, transparent 42%, var(--spm-c2) 42% 58%, transparent 58%), #1c1917; }
     .fin-bit.fin-shape--note:nth-child(3n+1)::before { content:'♫'; }
     .fin-bit.fin-shape--note:nth-child(3n+2)::before { content:'♬'; }
     .fin-fall { left:-14px; top:-420px; width:28px; height:28px; opacity:0; position:absolute; margin-left:var(--x); scale:var(--s);
@@ -161278,6 +161642,7 @@ const createAnimationStyle = () => {
     [data-enemy-motion="awakenedMoo"] { --em-c: 250,204,21; }
     [data-enemy-motion="jack"] { --em-c: 251,146,60; }
     [data-enemy-motion="pumpkin"] { --em-c: 253,186,116; }
+    [data-enemy-motion="santa"] { --em-c: 239,68,68; }
     /* ジャックのオーラ(段階1〜5でどんどん派手に)。色: 橙 → 金橙 → 紫 → 赤 → 虹金。動くのは transform / opacity だけ */
     [data-jack-aura-el] { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
     [data-jack-aura-el] > i { position: absolute; inset: 10% 8% 6%; border-radius: 50%; opacity: 0; will-change: transform, opacity; }
@@ -161558,7 +161923,7 @@ const createAnimationStyle = () => {
     /* ジャックの絵は 1024x880 でほぼ正方形(ムーは横長の 1024x598)。ムーと同じ枠(108vw・最大560px)だと画面を覆い、両腕ポーズの腕も画面から切れるので、
        枠は画面の幅に収める。通常絵は枠の半分の大きさで描く(JACK_NORMAL_BATTLE_STYLE)。
        大きさの指定はJSXの style に書いてあり、検査(moo-notice-visibility-check)がそれを読むので、ここで上書きする */
-    [data-moo-stage="true"][data-enemy-motion="jack"], [data-moo-stage="true"][data-enemy-motion="pumpkin"] { width: min(100vw, 400px) !important; height: min(100vw, 400px) !important; }
+    [data-moo-stage="true"][data-enemy-motion="jack"], [data-moo-stage="true"][data-enemy-motion="pumpkin"], [data-moo-stage="true"][data-enemy-motion="santa"] { width: min(100vw, 400px) !important; height: min(100vw, 400px) !important; }
     [data-tactics-look] [data-enemy-skill] { --em-dur: 450ms; }
     [data-tactics-look] [data-enemy-skill="rush"] { --em-dur: 750ms; }
     [data-tactics-look] [data-enemy-skill="pierce"] { --em-dur: 900ms; }

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 14ab971dae0e6695
+// source-sha256: d50b061dffc4c68b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -16268,9 +16268,61 @@ const changelogEventLive = (entry, nowMs = Date.now()) => {
   if (Number.isFinite(pinUntil) && nowMs >= pinUntil) return false;
   return Number.isFinite(until) && nowMs < until && (!Number.isFinite(from) || nowMs >= from);
 };
+const changelogEventPeriod = entry => {
+  const ms = value => typeof value === 'string' ? Date.parse(value) : NaN;
+  let from = ms(entry && entry.eventStartAt),
+    until = ms(entry && entry.eventEndAt);
+  if (entry && entry.type === 'event' && entry.assistantNotice) {
+    if (!Number.isFinite(from)) from = ms(entry.assistantNotice.notifyFrom || entry.visibleFrom);
+    if (!Number.isFinite(until) && !entry.pinUntil) until = ms(entry.assistantNotice.notifyUntil);
+  } else if (entry && entry.pinTop && typeof entry.pinTop === 'object' && entry.pinTop.until) {
+    if (!Number.isFinite(from)) from = ms(entry.visibleFrom);
+    if (!Number.isFinite(until)) until = ms(entry.pinTop.until);
+  }
+  return {
+    from: Number.isFinite(from) ? from : NaN,
+    until: Number.isFinite(until) ? until : NaN
+  };
+};
+const changelogEventTimeLabel = (ms, isEnd = false) => {
+  if (!Number.isFinite(ms)) return '';
+  const shown = isEnd && ms % 3600000 === 0 ? ms - 60000 : ms;
+  const d = new Date(shown + 9 * 3600000);
+  return `${d.getUTCMonth() + 1}/${d.getUTCDate()}(${'日月火水木金土'[d.getUTCDay()]}) ${d.getUTCHours()}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
+};
+const changelogEventPeriodLabel = entry => {
+  const {
+    from,
+    until
+  } = changelogEventPeriod(entry);
+  return Number.isFinite(from) && Number.isFinite(until) ? `${changelogEventTimeLabel(from)} 〜 ${changelogEventTimeLabel(until, true)}` : '';
+};
+const changelogEventRemainLabel = (entry, nowMs = Date.now()) => {
+  const {
+    from,
+    until
+  } = changelogEventPeriod(entry);
+  const upcoming = changelogEventUpcoming(entry, nowMs);
+  const target = upcoming ? from : until;
+  if (!Number.isFinite(target) || target <= nowMs) return '';
+  const left = target - nowMs;
+  const text = left >= 86400000 ? `あと${Math.floor(left / 86400000)}日` : left >= 3600000 ? `あと${Math.floor(left / 3600000)}時間` : `あと${Math.max(1, Math.ceil(left / 60000))}分`;
+  return upcoming ? `開幕まで${text}` : text;
+};
+const changelogEventListTitle = entry => {
+  if (entry && typeof entry.listTitle === 'string' && entry.listTitle) return entry.listTitle;
+  if (entry && typeof entry.pinTitle === 'string' && entry.pinTitle) return entry.pinTitle;
+  return String(entry && entry.title || '').replace(/^【[^】]*】/, '').replace(/\s*(が|を)?(はじまりました|始まりました|開催します|開催)[!！]?$/, '').trim();
+};
 const changelogPinnedEntries = (nowMs = Date.now()) => {
   const live = CHANGELOG_ENTRIES.filter(entry => changelogEventLive(entry, nowMs));
-  return [...live.filter(entry => !changelogEventUpcoming(entry, nowMs)), ...live.filter(entry => changelogEventUpcoming(entry, nowMs))];
+  const by = key => (a, b) => {
+    const x = changelogEventPeriod(a)[key],
+      y = changelogEventPeriod(b)[key];
+    if (Number.isFinite(x) && Number.isFinite(y)) return x - y;
+    return Number.isFinite(x) ? -1 : Number.isFinite(y) ? 1 : 0;
+  };
+  return [...live.filter(entry => !changelogEventUpcoming(entry, nowMs)).sort(by('until')), ...live.filter(entry => changelogEventUpcoming(entry, nowMs)).sort(by('from'))];
 };
 const changelogSafeLink = link => {
   const url = link && typeof link.url === 'string' ? link.url.trim() : '';
@@ -67732,7 +67784,7 @@ const jaKeepKanaRuns = (s, chunks, segs, {
   }
   return out.join('​');
 };
-const JA_WRAP_NO_BREAK = [/\d{1,4}\/\d{1,2}(?:\/\d{1,2})?(?:[(（][月火水木金土日](?:・祝)?[)）])?/g, /\d{1,2}:\d{2}/g, /聖夜の名探偵|名探偵|エンドヒストリー|手がかり帳|鐘が鳴る夜/g];
+const JA_WRAP_NO_BREAK = [/\d{1,4}\/\d{1,2}(?:\/\d{1,2})?(?:[(（][月火水木金土日](?:・祝)?[)）])?/g, /\d{1,2}:\d{2}/g, /聖夜の名探偵|名探偵|エンドヒストリー|手がかり帳|鐘が鳴る夜/g, /黒いサンタ|聖夜のロンド|十三番目の鐘|十二の鐘|招待状|ワトソンくん/g];
 const jaWrapUnbreak = marked => {
   if (typeof marked !== 'string' || !marked.includes('​')) return marked;
   const plain = marked.replace(/​/g, '');
@@ -89148,8 +89200,10 @@ const TACTICS_ENEMY_MOTIONS = Object.freeze({
   Nyarlathotep: 'nyarlathotep',
   Splatter: 'splatter',
   AwakenedMoo: 'awakenedMoo',
-  Jack: 'jack'
+  Jack: 'jack',
+  Santa: 'santa'
 });
+const tacticsEnemyMotionKey = enemy => !enemy ? null : enemy.raidJackPumpkin ? 'Pumpkin' : enemy.raidXmas ? 'Santa' : enemy.id;
 const TACTICS_ENEMY_SKILL_MS_DEFAULT = Object.freeze({
   rush: 750,
   pierce: 900,
@@ -89346,6 +89400,21 @@ const TACTICS_ENEMY_MOTION_SETS = Object.freeze({
       pierceCharge: ['stance', 'lock']
     }
   },
+  santa: {
+    idle: 'menace',
+    skills: {
+      normal: ['jab', 'burst', '❄️', 'shoot'],
+      sweep: ['sway', 'sparkle', '🎁', 'shoot'],
+      rush: ['leap', 'burst', '🦵', 'shoot'],
+      pierce: ['windup', 'beam', '🖤', 'rise'],
+      special: ['dash', 'slash'],
+      allout: ['dash', 'widebeam', '🛷', 'shoot'],
+      roar: ['rise', 'aura', '🔔', 'rise'],
+      regen: ['heal', 'sparkle'],
+      charge: ['power', 'aura'],
+      pierceCharge: ['stance', 'lock']
+    }
+  },
   awakenedMoo: {
     idle: null,
     skills: {
@@ -89406,6 +89475,10 @@ const TACTICS_ENEMY_STRIKE_LOOK = Object.freeze({
   pumpkin: {
     impact: 'stamp',
     mark: '🎃'
+  },
+  santa: {
+    impact: 'stamp',
+    mark: '❄️'
   }
 });
 const TACTICS_ENEMY_NO_STRIKE_SKILLS = Object.freeze(['roar', 'charge', 'pierceCharge', 'regen']);
@@ -90039,6 +90112,57 @@ const TACTICS_ENEMY_FINISH = Object.freeze({
       flat: .45
     }]
   },
+  santa: {
+    special: [{
+      t: 'blade',
+      a: -35,
+      len: 380,
+      w: 12,
+      d: 220
+    }, {
+      t: 'blade',
+      a: 35,
+      len: 380,
+      w: 12,
+      d: 280
+    }, {
+      t: 'bits',
+      n: 12,
+      shape: 'snow',
+      dist: 140,
+      d: 300
+    }, {
+      t: 'ring',
+      d: 320,
+      r: 3.6,
+      void: true
+    }],
+    allout: [{
+      t: 'blade',
+      a: 0,
+      len: 440,
+      w: 16,
+      d: 240
+    }, {
+      t: 'bits',
+      n: 10,
+      shape: 'gift',
+      dist: 140,
+      d: 270
+    }, {
+      t: 'bits',
+      n: 12,
+      shape: 'snow',
+      dist: 120,
+      d: 320,
+      fall: true
+    }, {
+      t: 'ring',
+      d: 340,
+      r: 3.8,
+      flat: .45
+    }]
+  },
   splatter: {
     special: [{
       t: 'blade',
@@ -90142,6 +90266,7 @@ const TacticsEnemyStageFx = ({
   const trail = skill === 'pierce' ? 'beam' : skill === 'sweep' && !isMoo ? 'wave' : look.trail || 'orb';
   const shot = spec && spec[3] === 'shoot' ? spec[2] : isMoo && skill === 'sweep' ? '👊' : look.shot || null;
   const big = skill === 'special' || skill === 'allout' || isMoo;
+  const santa = motion === 'santa';
   const at = frac => `${Math.round(ms * Math.max(0, frac))}ms`;
   const {
     sx,
@@ -90213,8 +90338,8 @@ const TacticsEnemyStageFx = ({
     style: {
       animationDelay: at(hit)
     }
-  }), !isMoo && !lite && strikes && (() => {
-    const parts = skill === 'pierce' ? TACTICS_ENEMY_PIERCE_FINISH : (TACTICS_ENEMY_FINISH[motion] || {})[skill] || null;
+  }), (!isMoo || santa) && !lite && strikes && (() => {
+    const parts = skill === 'pierce' && !isMoo ? TACTICS_ENEMY_PIERCE_FINISH : (TACTICS_ENEMY_FINISH[motion] || {})[skill] || null;
     if (!parts) return null;
     const hitMs = Math.round(ms * hit);
     return geo.slots.map(t => React.createElement("div", {
@@ -90260,14 +90385,14 @@ const TacticsEnemyStageFx = ({
       left: `${8 + k * 29 % 90}%`,
       animationDelay: at(0.18 + k * 0.07)
     }
-  }, "☄️")), isMoo && !lite && skill === 'allout' && [0, 1, 2].map(k => React.createElement("i", {
+  }, santa ? '❄️' : '☄️')), isMoo && !lite && skill === 'allout' && [0, 1, 2].map(k => React.createElement("i", {
     key: k,
     "data-moo-tornado": true,
     style: {
       top: `${44 + k * 14}%`,
       animationDelay: at(0.22 + k * 0.1)
     }
-  }, "🌪️")), isMoo && !lite && skill === 'roar' && [0, 1, 2, 3, 4, 5].map(k => React.createElement("i", {
+  }, santa ? '🛷' : '🌪️')), isMoo && !lite && skill === 'roar' && [0, 1, 2, 3, 4, 5].map(k => React.createElement("i", {
     key: k,
     "data-moo-bolt": true,
     style: {
@@ -90275,7 +90400,7 @@ const TacticsEnemyStageFx = ({
       top: `${8 + k * 53 % 70}%`,
       animationDelay: at(0.18 + k * 0.08)
     }
-  }, "⚡")), isMoo && !lite && skill === 'regen' && React.createElement(React.Fragment, null, React.createElement("i", {
+  }, santa ? '🔔' : '⚡')), isMoo && !lite && skill === 'regen' && React.createElement(React.Fragment, null, React.createElement("i", {
     "data-moo-heaven": true
   }), [0, 1, 2, 3, 4, 5].map(k => React.createElement("i", {
     key: k,
@@ -92373,7 +92498,7 @@ function BattleScreen({
     });
   }, [infernoShellView?.breakSeq, wave, enemy?.id]);
   const enemyImageOnlyAttack = tacticsNewLayout && !!enemyAttackAnim && !ecoBattleView && enemyAttackFx?.kind !== 'move' && !isMooBoss(enemy?.id);
-  const enemyMotion = tacticsNewLayout && !ecoBattleView ? TACTICS_ENEMY_MOTIONS[enemy?.raidJackPumpkin ? 'Pumpkin' : enemy?.id] || null : null;
+  const enemyMotion = tacticsNewLayout && !ecoBattleView ? TACTICS_ENEMY_MOTIONS[tacticsEnemyMotionKey(enemy)] || null : null;
   const bossMovieSrc = battleFx.specialMovie === 'ON' && !ecoBattleView && typeof enemy?.specialMovie === 'string' ? enemy.specialMovie : null;
   useEffect(() => {
     if (bossMovieSrc) preloadBossMovie(bossMovieSrc);
@@ -93291,7 +93416,7 @@ function BattleScreen({
     fx: enemyAttackFx,
     motion: enemyMotion,
     isMoo: enemyIsMoo,
-    enemyId: enemy?.raidJackPumpkin ? 'Pumpkin' : enemy?.id,
+    enemyId: tacticsEnemyMotionKey(enemy),
     skillLabel: enemySkillName?.label || null,
     lite: fxLoad === 'LIGHT'
   }), enemySkillName && !(enemyIsMoo && emSet && enemyAttackFx?.skill && TACTICS_MOO_CUTIN_SKILLS.includes(enemyAttackFx.skill)) && ReactDOM.createPortal(React.createElement("div", {
@@ -113682,7 +113807,7 @@ const XMAS_NOVEL_CAST = Object.freeze([{
   name: '黒羽',
   full: '黒羽 宗一郎',
   kind: 'guest',
-  art: 'images/story-guests/kuroba_stand.png',
+  art: 'images/story-guests/kuroba_full.png',
   face: 'images/story-guests/kuroba_face.png',
   tone: '#3b3f4a'
 }, {
@@ -113690,7 +113815,7 @@ const XMAS_NOVEL_CAST = Object.freeze([{
   name: '白瀬',
   full: '白瀬 雪絵',
   kind: 'guest',
-  art: 'images/story-guests/shirase_stand.png',
+  art: 'images/story-guests/shirase_full.png',
   face: 'images/story-guests/shirase_face.png',
   tone: '#5a6a86'
 }]);
@@ -114562,6 +114687,7 @@ const XMAS_NOVEL_SCRIPT = {
       "id": "0-25",
       "t": "band",
       "x": "画面いっぱいに、題字 ——『モンヒロ事件簿 ―呪いのセーブデータ― 十三番目の鐘』",
+      "se": "bell",
       "k": "OUT-0-2:0-25"
     }],
     "frame": "far",
@@ -115254,7 +115380,8 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "band",
       "x": "カチ、カチ、カチ(柱時計の針が、ゆっくり動く音)",
       "fx": ["se"],
-      "se": "bell",
+      "se": "tick",
+      "seN": 3,
       "k": "C1-6:1-6-2"
     }, {
       "id": "1-6-3",
@@ -115301,6 +115428,8 @@ const XMAS_NOVEL_SCRIPT = {
       "id": "1-M-4",
       "t": "band",
       "x": "暗い部屋に、大きないびき。机の上で、金色の懐中時計が、カチ、カチ、と時を刻んでいる",
+      "se": "tick",
+      "seN": 2,
       "k": "C1-M:1-M-4"
     }, {
       "id": "1-M-5",
@@ -115521,6 +115650,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "band",
       "x": "こんや　0じの　かねが／なったら／ひとり　かえって　こない／——黒いサンタ",
       "fx": ["letter", "bleed"],
+      "se": "letter",
       "k": "C2-L:2-L-4"
     }, {
       "id": "2-L-5",
@@ -115537,7 +115667,8 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "band",
       "x": "カチ、カチ、カチ(柱時計の針の音だけが、やけに大きい)",
       "fx": ["se"],
-      "se": "bell",
+      "se": "tick",
+      "seN": 3,
       "k": "C2-L:2-L-7"
     }, {
       "id": "2-L-8",
@@ -115924,6 +116055,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "ボーン……ボーン……(柱時計が、12回鳴る)",
       "fx": ["se"],
       "se": "bell",
+      "seN": 2,
       "k": "C2-3:2-3-4"
     }, {
       "id": "2-3-5",
@@ -118648,7 +118780,8 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "band",
       "x": "カチ、カチ、カチ(柱時計は、まだ動いている)",
       "fx": ["se"],
-      "se": "bell",
+      "se": "tick",
+      "seN": 3,
       "k": "C6-M:6-M-3"
     }, {
       "id": "6-M-4",
@@ -119141,6 +119274,30 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "(黙って、ワトソンくんの画面を見ている)",
       "e": "troubled",
       "k": "C7-1:7-1-15s"
+    }, {
+      "t": "q",
+      "id": "A7",
+      "kind": "action",
+      "x": "ドラは、リボンを握ったまま、何も言わない。このまま黙っていたら、ドラが黒いサンタに決まってしまう——",
+      "replies": {},
+      "label": "行動の選択",
+      "options": [{
+        "to": "C7-2",
+        "x": "このまま、1回目の推理へ進む"
+      }, {
+        "to": "C7-W",
+        "x": "ワトソンくんの「奥の手」で、ドラの口を借りる"
+      }],
+      "c": {
+        "any": [{
+          "all": [{
+            "k": "f_A1",
+            "op": "=",
+            "v": 2
+          }]
+        }]
+      },
+      "k": "C7-1:A7"
     }]
   }, {
     "id": "C7-2",
@@ -119559,6 +119716,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "ボーン……ボーン……(柱時計が、0時の鐘を打つ)",
       "fx": ["se"],
       "se": "bell",
+      "seN": 2,
       "k": "C7-P1:7-P1-13"
     }, {
       "id": "7-P1-14",
@@ -119668,7 +119826,8 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "band",
       "x": "カチ、カチ、カチ(冷えきったホールに、柱時計の音だけが響く)",
       "fx": ["se"],
-      "se": "bell",
+      "se": "tick",
+      "seN": 3,
       "k": "C7-P2:7-P2-12"
     }],
     "jumpOnly": true
@@ -119840,13 +119999,14 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "ボーン……ボーン……(0時の鐘)",
       "fx": ["se"],
       "se": "bell",
+      "seN": 2,
       "k": "C7-P3:7-P3-11"
     }, {
       "id": "7-P3-12",
       "t": "band",
       "x": "……ギィ(鐘が鳴りやんだ後、2階の廊下の奥で、窓の開く音)",
       "fx": ["se"],
-      "se": "bell",
+      "se": "tap",
       "k": "C7-P3:7-P3-12"
     }],
     "jumpOnly": true
@@ -120164,6 +120324,338 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "ソラシドは、暖炉脇の板を外し、ノートパソコンの灯りだけを頼りに、壁の中の通り道へ入っていった",
       "k": "C7-5b:7-5b-9"
     }]
+  }, {
+    "id": "C7-W",
+    "chapter": "C7",
+    "title": "奥の手",
+    "cond": null,
+    "bgm": "kaze_ga_soyogu",
+    "bg": "ペンションのホール",
+    "next": "END-O2",
+    "rows": [{
+      "id": "7-W-1",
+      "t": "band",
+      "x": "ソラシドは、ワトソンくんの画面に、小さく打ちこんだ。『奥の手を』",
+      "k": "C7-W:7-W-1"
+    }, {
+      "id": "7-W-2",
+      "t": "line",
+      "w": "watson",
+      "x": "……本当に、使うのですか。ソラシドさん",
+      "k": "C7-W:7-W-2"
+    }, {
+      "id": "7-W-3",
+      "t": "line",
+      "w": "sorashido",
+      "x": "(小声で)ドラさんは、何かを守るために、黙っています。……なら、ドラさんの口を、少しだけお借りします",
+      "f": "close",
+      "e": "troubled",
+      "k": "C7-W:7-W-3"
+    }, {
+      "id": "7-W-4",
+      "t": "band",
+      "x": "ソラシドは、ノートパソコンを抱えたまま、ドラの背中へ、そっと回りこんだ",
+      "k": "C7-W:7-W-4"
+    }, {
+      "id": "7-W-5",
+      "t": "line",
+      "w": "sorashido",
+      "x": "あれれ〜？ ドラさんの帽子から、何か落ちましたよ〜？",
+      "e": "excited",
+      "k": "C7-W:7-W-5"
+    }, {
+      "id": "7-W-6",
+      "t": "line",
+      "w": "atsu",
+      "x": "……ばこっちゃん？ 急にどうしたの、その声笑",
+      "e": "surprise",
+      "k": "C7-W:7-W-6"
+    }, {
+      "id": "7-W-7",
+      "t": "line",
+      "w": "dra",
+      "x": "ん？ おでの帽子が、どうし——",
+      "e": "surprise",
+      "k": "C7-W:7-W-7"
+    }, {
+      "id": "7-W-8",
+      "t": "band",
+      "x": "プシュッ(ワトソンくんの横の差しこみ口から、細い針が1本、飛び出した)",
+      "fx": ["se"],
+      "se": "tap",
+      "k": "C7-W:7-W-8"
+    }, {
+      "id": "7-W-9",
+      "t": "line",
+      "w": "watson",
+      "x": "ノートパソコン型麻酔銃。……命中しました",
+      "k": "C7-W:7-W-9"
+    }, {
+      "id": "7-W-10",
+      "t": "line",
+      "w": "dra",
+      "x": "……ふにゃ……おで、急に……ねむ……",
+      "e": "sleep",
+      "k": "C7-W:7-W-10"
+    }, {
+      "id": "7-W-11",
+      "t": "band",
+      "x": "ドラは、ふらふらと三歩歩いて、暖炉の前のひじかけ椅子に、すとんと腰を落とした。腕を組み、うつむいたまま動かない",
+      "k": "C7-W:7-W-11"
+    }, {
+      "id": "7-W-12",
+      "t": "line",
+      "w": "momosuke",
+      "x": "ドラちゃん！？ え、寝た！？ 今！？w",
+      "e": "surprise",
+      "k": "C7-W:7-W-12"
+    }, {
+      "id": "7-W-13",
+      "t": "band",
+      "x": "ソラシドは、椅子の背もたれの後ろに、さっとしゃがみこんだ。ワトソンくんの画面に『変声機能 ドラさん』の文字",
+      "k": "C7-W:7-W-13"
+    }, {
+      "id": "7-W-14",
+      "t": "line",
+      "w": "dra",
+      "x": "(ワトソンくんのスピーカーから、少し低い、ドラの声)……みんな、聞いてくれ。おでが黒いサンタじゃないわけを、今から話す",
+      "f": "close",
+      "e": "sleep",
+      "bgm": "melo_kiss_mystery",
+      "k": "C7-W:7-W-14"
+    }, {
+      "id": "7-W-15",
+      "t": "line",
+      "w": "myua",
+      "x": "ドラケンがしゃべった！？ 寝たまま！？",
+      "e": "surprise",
+      "k": "C7-W:7-W-15"
+    }, {
+      "id": "7-W-16",
+      "t": "line",
+      "w": "kiki",
+      "x": "目、閉じてまつ……。口も、動いてないでつ……",
+      "e": "surprise",
+      "k": "C7-W:7-W-16"
+    }, {
+      "id": "7-W-17",
+      "t": "line",
+      "w": "dra",
+      "x": "……これが、おでの本気だ。目を閉じたほうが、よく見えるんだな",
+      "e": "sleep",
+      "k": "C7-W:7-W-17"
+    }, {
+      "id": "7-W-18",
+      "t": "line",
+      "w": "atsu",
+      "x": "(椅子の後ろを、じっと見ている)……うん。続けて、ドラちゃん笑",
+      "e": "troubled",
+      "k": "C7-W:7-W-18"
+    }, {
+      "id": "7-W-19",
+      "t": "line",
+      "w": "dra",
+      "x": "まず、おでの帽子を、振ってみろ",
+      "e": "sleep",
+      "k": "C7-W:7-W-19"
+    }, {
+      "id": "7-W-20",
+      "t": "band",
+      "x": "ももすけがドラの帽子を持ち上げて振ると、ぱらぱらと、クッキーのくずが床に落ちた",
+      "k": "C7-W:7-W-20"
+    }, {
+      "id": "7-W-21",
+      "t": "line",
+      "w": "mochimaru",
+      "x": "……ぼくのクッキーだっちー。ドラさんが通った後は、いつも、くずでどこを通ったか分かるっちー",
+      "k": "C7-W:7-W-21"
+    }, {
+      "id": "7-W-22",
+      "t": "line",
+      "w": "dra",
+      "x": "そうだ。おでは、つまみ食いの名人だ。帽子にも、ポケットにも、いつも、くずが入ってる。……夜中の台所で、みゅあも見たろ",
+      "e": "sleep",
+      "k": "C7-W:7-W-22"
+    }, {
+      "id": "7-W-23",
+      "t": "line",
+      "w": "myua",
+      "x": "……うん。ドラケン、23時すぎに、もちまるんのクッキー食べてた",
+      "e": "normal",
+      "k": "C7-W:7-W-23"
+    }, {
+      "id": "7-W-24",
+      "t": "line",
+      "w": "dra",
+      "x": "じゃあ、ワトソンくん、写真を——……じゃなかった。ソラシドのパソコン、写真を出してくれ",
+      "e": "sleep",
+      "k": "C7-W:7-W-24"
+    }, {
+      "id": "7-W-25",
+      "t": "line",
+      "w": "watson",
+      "x": "はい。ドラさんのかばんから出た、黒いサンタの服です。袖・ポケット・フードの中まで、撮ってあります。……クッキーのくずは、0個です",
+      "k": "C7-W:7-W-25"
+    }, {
+      "id": "7-W-26",
+      "t": "line",
+      "w": "watson",
+      "x": "それから、通り道で撮った写真。裏口から暖炉わきまで、くずは1つも写っていません",
+      "k": "C7-W:7-W-26"
+    }, {
+      "id": "7-W-27",
+      "t": "line",
+      "w": "dra",
+      "x": "黒いサンタは、その服を着て、毎晩、通り道を歩いてた。おでが着てたなら、ポケットはくずでいっぱいで、通り道も、くずだらけのはずだ",
+      "e": "sleep",
+      "k": "C7-W:7-W-27"
+    }, {
+      "id": "7-W-28",
+      "t": "line",
+      "w": "dra",
+      "x": "くずが1つもない。……つまり、その服を着てたのは、おでじゃない",
+      "f": "close",
+      "e": "sleep",
+      "k": "C7-W:7-W-28"
+    }, {
+      "id": "7-W-29",
+      "t": "line",
+      "w": "erubin",
+      "x": "……筋は、通ってるね。ドラちゃんが一晩でもあの服を着たら、くずが残らないわけがないかな",
+      "e": "normal",
+      "k": "C7-W:7-W-29"
+    }, {
+      "id": "7-W-30",
+      "t": "line",
+      "w": "dra",
+      "x": "真実は、いつもひと——",
+      "e": "sleep",
+      "k": "C7-W:7-W-30"
+    }, {
+      "id": "7-W-31",
+      "t": "line",
+      "w": "dra",
+      "x": "……おでの腹は、いつもぺこぺこだ！",
+      "f": "close",
+      "e": "sleep",
+      "k": "C7-W:7-W-31"
+    }, {
+      "id": "7-W-32",
+      "t": "line",
+      "w": "atsu",
+      "x": "言い直した笑",
+      "e": "happy",
+      "k": "C7-W:7-W-32"
+    }, {
+      "id": "7-W-33",
+      "t": "line",
+      "w": "kiki",
+      "x": "(ぱちぱちと拍手して)名推理でつ……！",
+      "e": "happy",
+      "k": "C7-W:7-W-33"
+    }, {
+      "id": "7-W-34",
+      "t": "line",
+      "w": "dra",
+      "x": "それで、本当の黒いサンタは——",
+      "e": "sleep",
+      "k": "C7-W:7-W-34"
+    }, {
+      "id": "7-W-35",
+      "t": "band",
+      "x": "ピー……",
+      "fx": ["se"],
+      "se": "tap",
+      "k": "C7-W:7-W-35"
+    }, {
+      "id": "7-W-36",
+      "t": "line",
+      "w": "dra",
+      "x": "(スピーカーから、ソラシドの、とっさのいびきの声まね)……ぐぅ……ぐぅ……",
+      "e": "sleep",
+      "k": "C7-W:7-W-36"
+    }, {
+      "id": "7-W-37",
+      "t": "line",
+      "w": "myua",
+      "x": "……寝た！？ 今、いちばん大事なとこで寝た！？",
+      "e": "troubled",
+      "k": "C7-W:7-W-37"
+    }, {
+      "id": "7-W-38",
+      "t": "band",
+      "x": "あつだけが、椅子の後ろをのぞきこんだ。ソラシドが、人差し指を口に当てて、首を横に振っている",
+      "k": "C7-W:7-W-38"
+    }, {
+      "id": "7-W-39",
+      "t": "line",
+      "w": "atsu",
+      "x": "……うん。今日は、ここまでにしとこ笑",
+      "e": "happy",
+      "k": "C7-W:7-W-39"
+    }, {
+      "id": "7-W-40",
+      "t": "band",
+      "x": "しばらくして、ドラが、大きなあくびをした",
+      "k": "C7-W:7-W-40"
+    }, {
+      "id": "7-W-41",
+      "t": "line",
+      "w": "dra",
+      "x": "……ふが？ ……あれ。おで、寝てたか？",
+      "e": "surprise",
+      "k": "C7-W:7-W-41"
+    }, {
+      "id": "7-W-42",
+      "t": "line",
+      "w": "momosuke",
+      "x": "ドラちゃん、すごかったよ！ 寝たまま、ドラちゃんが犯人じゃないって、解いちゃったんだよ〜♡",
+      "e": "excited",
+      "k": "C7-W:7-W-42"
+    }, {
+      "id": "7-W-43",
+      "t": "line",
+      "w": "dra",
+      "x": "お、おでが……解いたのか？",
+      "f": "close",
+      "e": "surprise",
+      "k": "C7-W:7-W-43"
+    }, {
+      "id": "7-W-44",
+      "t": "line",
+      "w": "kiki",
+      "x": "はい。お見事でちた。目を閉じたままの、名推理でつ",
+      "e": "happy",
+      "k": "C7-W:7-W-44"
+    }, {
+      "id": "7-W-45",
+      "t": "line",
+      "w": "dra",
+      "x": "……えへへ。おで、天才だったのか",
+      "e": "happy",
+      "k": "C7-W:7-W-45"
+    }, {
+      "id": "7-W-46",
+      "t": "line",
+      "w": "ichika",
+      "x": "ふふっ。今夜は、名探偵さんに、温かいココアをいれましょうね",
+      "k": "C7-W:7-W-46"
+    }, {
+      "id": "7-W-47",
+      "t": "line",
+      "w": "sorashido",
+      "x": "(椅子の後ろから、何もなかった顔で出てきて)……みなさん、何かありましたか？",
+      "e": "happy",
+      "k": "C7-W:7-W-47"
+    }, {
+      "id": "7-W-48",
+      "t": "line",
+      "w": "atsu",
+      "x": "ばこっちゃん、それはさすがに無理ある笑",
+      "e": "happy",
+      "k": "C7-W:7-W-48"
+    }],
+    "jumpOnly": true
   }, {
     "id": "C8-1",
     "chapter": "C8",
@@ -122793,7 +123285,8 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "band",
       "x": "カチ、カチ、カチ(下の柱時計の音が、床板ごしに、かすかに響く)",
       "fx": ["se"],
-      "se": "bell",
+      "se": "tick",
+      "seN": 3,
       "k": "C2-Y:2-Y-2"
     }, {
       "id": "2-Y-3",
@@ -123036,6 +123529,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "ボーン……ボーン……(その時、柱時計が、0時の鐘を打ち始めた)",
       "fx": ["se"],
       "se": "bell",
+      "seN": 2,
       "k": "C2-Y:2-Y-17"
     }],
     "frame": "close",
@@ -123512,6 +124006,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "band",
       "x": "おばけの　せいに　したね／つぎの　かねで／また　ひとり／——黒いサンタ",
       "fx": ["letter", "bleed"],
+      "se": "letter",
       "k": "END-M3:M3-7"
     }, {
       "id": "M3-8",
@@ -124659,6 +125154,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "ボーン……ボーン……(その夜。柱時計が、また早く鳴る)",
       "fx": ["se"],
       "se": "bell",
+      "seN": 2,
       "k": "END-B:B-2"
     }, {
       "id": "B-3",
@@ -124992,6 +125488,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "ボーン……ボーン……(柱時計が、ちょうど0時に、12回鳴る)",
       "fx": ["se"],
       "se": "bell",
+      "seN": 2,
       "k": "C1-O:1-O-22"
     }, {
       "id": "1-O-23",
@@ -125124,6 +125621,119 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "band",
       "x": "画面の中で、7人の黒いサンタが、そろって、ぺこりとお辞儀をした",
       "k": "OUT-O:OUT-O-7"
+    }],
+    "frame": "far",
+    "outside": true
+  }, {
+    "id": "END-O2",
+    "chapter": "END",
+    "title": "おまけ「眠りのドラ」",
+    "cond": null,
+    "bgm": "close_to_your_heart_alt",
+    "bg": "ペンションのホール",
+    "next": "OUT-O2",
+    "rows": [{
+      "id": "O2-1",
+      "t": "band",
+      "x": "聖夜の名探偵 エンディング「眠りのドラ」",
+      "k": "END-O2:O2-1"
+    }, {
+      "id": "O2-2",
+      "t": "band",
+      "x": "その夜から、ドラは「眠りのドラ」と呼ばれるようになった。謎が出るたびに、みんなが、ひじかけ椅子の前に集まった",
+      "k": "END-O2:O2-2"
+    }, {
+      "id": "O2-3",
+      "t": "line",
+      "w": "dra",
+      "x": "よし。今夜の謎も、おでに任せろ。……ソラシド、あのちくっとするやつ、もう1本くれ",
+      "e": "happy",
+      "k": "END-O2:O2-3"
+    }, {
+      "id": "O2-4",
+      "t": "line",
+      "w": "watson",
+      "x": "麻酔の針は、残り0本です。……黒いサンタの正体は、まだ、誰も知りません",
+      "k": "END-O2:O2-4"
+    }, {
+      "id": "O2-5",
+      "t": "band",
+      "x": "聖夜の名探偵 —— おまけ、おしまい",
+      "k": "END-O2:O2-5"
+    }],
+    "ending": {
+      "id": "END-O2",
+      "kind": "omake",
+      "label": "おまけ",
+      "name": "眠りのドラ"
+    }
+  }, {
+    "id": "OUT-O2",
+    "chapter": "END",
+    "title": "画面の前で(眠りのドラのあと)",
+    "cond": null,
+    "bgm": "close_to_your_heart_alt",
+    "bg": "ゲーム機をかこむ助手たち",
+    "next": null,
+    "rows": [{
+      "id": "OUT-O2-0",
+      "t": "band",
+      "x": "画面の前。エンディングの曲に、ドラのいびきの声まねが、まだ重なっている",
+      "k": "OUT-O2:OUT-O2-0"
+    }, {
+      "id": "OUT-O2-1",
+      "t": "line",
+      "w": "myua",
+      "x": "待って、完全にコナンくんのやつぢゃん！ 腕時計じゃなくて、パソコンから針出るの、こわすぎｗ",
+      "e": "excited",
+      "k": "OUT-O2:OUT-O2-1"
+    }, {
+      "id": "OUT-O2-2",
+      "t": "line",
+      "w": "dra",
+      "x": "ゲームの中のおで、寝てただけで、名探偵になってた。えへへ",
+      "e": "happy",
+      "k": "OUT-O2:OUT-O2-2"
+    }, {
+      "id": "OUT-O2-3",
+      "t": "line",
+      "w": "sorashido",
+      "x": "……自分の声まね、あんなに低かったですか",
+      "e": "troubled",
+      "k": "OUT-O2:OUT-O2-3"
+    }, {
+      "id": "OUT-O2-4",
+      "t": "line",
+      "w": "momosuke",
+      "x": "ソラちゃんのいびきのまね、うますぎw",
+      "e": "happy",
+      "k": "OUT-O2:OUT-O2-4"
+    }, {
+      "id": "OUT-O2-5",
+      "t": "line",
+      "w": "kyuko",
+      "x": "でもさ、推理はちゃんと合ってるのが、ずるいよねぇ笑",
+      "e": "happy",
+      "k": "OUT-O2:OUT-O2-5"
+    }, {
+      "id": "OUT-O2-6",
+      "t": "line",
+      "w": "atsu",
+      "x": "ばこっちゃん、あの機能、本物のパソコンについてないよね？笑",
+      "e": "happy",
+      "k": "OUT-O2:OUT-O2-6"
+    }, {
+      "id": "OUT-O2-7",
+      "t": "line",
+      "w": "sorashido",
+      "x": "……ノーコメントです笑",
+      "e": "happy",
+      "k": "OUT-O2:OUT-O2-7"
+    }, {
+      "id": "OUT-O2-8",
+      "t": "band",
+      "x": "画面の中で、ひじかけ椅子のドラが、こくりと船をこいだ",
+      "k": "OUT-O2:OUT-O2-8"
     }],
     "frame": "far",
     "outside": true
@@ -125351,6 +125961,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "ボーン……ボーン……(柱時計が、12回鳴る)",
       "fx": ["se"],
       "se": "bell",
+      "seN": 2,
       "k": "C12-4:12-4-2"
     }, {
       "id": "12-4-3",
@@ -125588,7 +126199,7 @@ const XMAS_NOVEL_CSS = `
   background: linear-gradient(180deg, #1b2c5c, #0c1636); color: #f8e3a4; box-shadow: 0 0 0 1px rgba(232,196,106,.85); }
 .mh-nv-text { font-size: 17px; line-height: 1.75; font-weight: 600; white-space: pre-wrap; min-height: 3.5em; text-align: left; word-break: normal; line-break: normal; overflow-wrap: anywhere; text-wrap: wrap; }
 .mh-nv-plain { text-align: left; word-break: normal; line-break: normal; overflow-wrap: anywhere; text-wrap: wrap; }
-/* 章の札・題の札の文も左寄せ(事件簿の中の文は左寄せ・幅いっぱいで1文字ずつ折る。飾りの見出しは起動画面の題字とエンドの札だけ・台帳 r1126-048) */
+/* 章の札・題の札の文も左寄せ(事件簿の中の文は左寄せ・r1126-048。折るのは文節の切れ目だけ・XmasNovelWrap・r1126-071。飾りの見出しは起動画面の題字とエンドの札だけ) */
 .mh-nv-cardtext { width: min(100%, 560px); }
 .mh-nv-cardtext .mh-nv-rule { margin: 14px 0; }
 .mh-nv-text.say .mh-nv-say-body { display: block; padding-left: 1em; text-indent: -1em; }
@@ -125915,7 +126526,7 @@ const XMAS_NOVEL_FACES = Object.freeze(['normal', 'happy', 'wink', 'surprise', '
 const xmasNovelFigureSrc = (who, e) => {
   const c = xmasNovelCastOf(who);
   if (!c) return null;
-  const face = XMAS_NOVEL_FACES.includes(e) ? e : 'normal';
+  const face = XMAS_NOVEL_FACES.includes(e) || who === 'dra' && e === 'sleep' ? e : 'normal';
   if (c.kind === 'assistant') {
     const dir = typeof STORY_OUTFIT_DIRS !== 'undefined' && STORY_OUTFIT_DIRS && STORY_OUTFIT_DIRS.santa ? STORY_OUTFIT_DIRS.santa : '';
     if (!dir) return null;
@@ -126076,16 +126687,16 @@ const XMAS_NOVEL_MARKS = Object.freeze({
     r: 0.76
   },
   kuroba: {
-    chest: 0.74,
-    waist: 1,
-    l: 0,
-    r: 1
+    chest: 0.22,
+    waist: 0.42,
+    l: 0.04,
+    r: 0.96
   },
   shirase: {
-    chest: 0.72,
-    waist: 1,
-    l: 0,
-    r: 1
+    chest: 0.24,
+    waist: 0.38,
+    l: 0.03,
+    r: 0.97
   },
   ichika: {
     chest: 0.42,
@@ -126600,8 +127211,8 @@ const XmasNovelBody = ({
   }, []);
   const c = xmasNovelCastOf(who);
   const src = xmasNovelBodySrc(who);
-  const kind = c ? c.kind : '';
-  const bust = kind === 'guest';
+  const bust = !!(c && c.kind === 'guest' && !/_full\.png$/.test(c.art || ''));
+  const kind = c ? c.kind === 'guest' && !bust ? 'assistant' : c.kind : '';
   const pose = XMAS_NOVEL_BODY_POSE[scene] || 'lie';
   const slump = pose === 'slump';
   const sit = pose === 'sit';
@@ -126960,7 +127571,6 @@ const xmasNovelSe = kind => {
     const map = {
       clap: 'join',
       laugh: 'enemySpecial',
-      bell: 'levelUp',
       impact: 'enemyAttack',
       music: 'heal',
       tap: 'tap',
@@ -126971,6 +127581,60 @@ const xmasNovelSe = kind => {
     const fn = (Audio_.fgSe || Audio_.se)[map[kind] || 'tap'];
     if (typeof fn === 'function') fn();
   } catch (e) {}
+};
+const XMAS_NOVEL_SE_SEQ = Object.freeze({
+  bell: {
+    gap: 1150,
+    hold: 900,
+    play: ['guard', 'trainingFail']
+  },
+  tick: {
+    gap: 520,
+    hold: 300,
+    play: ['xpTick']
+  },
+  letter: {
+    gap: 0,
+    hold: 1500,
+    play: ['enemyCharge']
+  }
+});
+let xmasNovelSeTimers = [];
+let xmasNovelSeLast = {
+  kind: '',
+  at: 0
+};
+const xmasNovelSeStop = () => {
+  xmasNovelSeTimers.forEach(t => clearTimeout(t));
+  xmasNovelSeTimers = [];
+};
+const xmasNovelSeHit = kind => {
+  try {
+    if (typeof Audio_ === 'undefined' || !Audio_ || !Audio_.se) return;
+    const seq = XMAS_NOVEL_SE_SEQ[kind];
+    xmasNovelSeLast = {
+      kind,
+      at: Date.now()
+    };
+    seq.play.forEach(name => {
+      const fn = (Audio_.fgSe || Audio_.se)[name];
+      if (typeof fn === 'function') fn();
+    });
+  } catch (e) {}
+};
+const xmasNovelRowSe = (kind, times) => {
+  xmasNovelSeStop();
+  const seq = XMAS_NOVEL_SE_SEQ[kind];
+  if (!seq) {
+    xmasNovelSe(kind);
+    return;
+  }
+  const n = Math.max(1, Math.min(3, Number.isFinite(times) ? times : 1));
+  const wait = xmasNovelSeLast.kind === kind ? Math.max(0, seq.hold - (Date.now() - xmasNovelSeLast.at)) : 0;
+  for (let i = 0; i < n; i += 1) {
+    const at = wait + i * seq.gap;
+    if (at <= 0) xmasNovelSeHit(kind);else xmasNovelSeTimers.push(setTimeout(() => xmasNovelSeHit(kind), at));
+  }
 };
 const XMAS_NOVEL_BGM_SHIFT = Object.freeze({
   'END-G': [['G-10', 'melo_dear_santa']]
@@ -127001,6 +127665,162 @@ const xmasNovelBgm = key => {
     if (typeof Audio_.fadeToBGM === 'function') Audio_.fadeToBGM(key, 700);else Audio_.playBGM(key);
   } catch (e) {}
 };
+const XMAS_NOVEL_KEEP_BASE = ['黒いサンタ', '聖夜のロンド', '十三番目の鐘', '十二の鐘', 'ペンション・シュプール', '聖夜の名探偵', '名探偵', '手がかり帳', '12年前の聖夜', '12年前', '12年後', 'ワトソンくん', 'エンドヒストリー', 'セーブデータ', 'ノートパソコン', 'メリークリスマス', 'クリスマス会', 'クリスマス', 'モンヒロ', 'オルゴール', 'ミステリーノベル', '呪いのセーブデータ', 'モンヒロ事件簿', 'ポロロン', 'ローズ色', '銀の音符', '懐中時計', '子守歌', '招待状', 'サンタの帽子'];
+const XMAS_NOVEL_KEEP_MAX = 16;
+let _xmasNovelKeepWords = null;
+const xmasNovelKeepWords = () => {
+  if (_xmasNovelKeepWords) return _xmasNovelKeepWords;
+  const set = new Set(XMAS_NOVEL_KEEP_BASE);
+  try {
+    const S = typeof XMAS_NOVEL_SCRIPT !== 'undefined' ? XMAS_NOVEL_SCRIPT : null;
+    if (S) {
+      (S.chapters || []).forEach(c => {
+        if (c && c.title) set.add(c.title);
+      });
+      (S.scenes || []).forEach(sc => {
+        if (sc && sc.ending && sc.ending.name) set.add(sc.ending.name);
+        (sc && sc.rows || []).forEach(r => {
+          if (r && r.t === 'clue' && r.clue) set.add(r.clue);
+        });
+      });
+    }
+    if (typeof XMAS_NOVEL_CAST !== 'undefined') XMAS_NOVEL_CAST.forEach(c => {
+      if (c.name) set.add(c.name);
+      if (c.full) set.add(c.full);
+    });
+  } catch (e) {}
+  _xmasNovelKeepWords = [...set].filter(w => typeof w === 'string' && [...w].length >= 2 && [...w].length <= XMAS_NOVEL_KEEP_MAX).sort((a, b) => b.length - a.length);
+  return _xmasNovelKeepWords;
+};
+const XMAS_NOVEL_KEEP_RES = [/\d{1,2}\/\d{1,2}(?:[(（][月火水木金土日](?:・祝)?[)）])?(?:[ 　]?\d{1,2}:\d{2})?/g, /\d{1,2}:\d{2}/g, /[「『【][^「」『』【】\n]{1,12}[」』】]/g, /(?:約|第|残り[ 　]?)?[0-9０-９]+(?:[.．][0-9０-９]+)?[ 　]?(?:センチ|メートル|キロ|ミリ|時間|人目|番目|通目|号室|人|年|時|分|秒|個|つ|回|日|月|歳|才|枚|本|通|度|階|号|じ|cm|m|%|％)/g, /[一二三四五六七八九十百千]+(?:番目|人目|通目|時間|人|年|つ|回|度|階|日|分|時|本|枚|個|通)/g, /(?:…|‥|—|―){2,}[、。！？!?]*/g, /[〜～][^〜～\s]{1,12}[〜～]/g];
+const xmasNovelGramBreak = (s, i) => {
+  const b = s.slice(0, i),
+    a = s.slice(i);
+  return /て$/.test(b) && /^[^るたはぁぃぅぇぉっゃゅょー]/.test(a) || /[A-Za-z0-9０-９ァ-ヶー」』）)一-龯々][はがをにもへとでのや]$/.test(b) || /^[はがをにもへのとや]/.test(a) && /[ぁ-ゖー]{2}$/.test(b) && !/[はがをにもへ]$/.test(b) || /で$/.test(b) && /^[^すしきもはるぁぃぅぇぉっゃゅょー]/.test(a) || /(?:から|まで|けど|ので|のに|ても|でも|には|では|とは|って|たら|れば|ながら|けれど|より|だけ|ほど|など|ように|ような|という|か|を)$/.test(b) || /^(?:です|でし|でしょ|だっ|だった|だよ|だね|だろ|じゃ|ように|ような|こと|もの|ため|わけ|はず|べき|かも|かな|なの|なん|ちゃん|くん|さん|ん[だでじ]|の(?:た|に|で|だ|か))/.test(a) || /[くし]$/.test(b) && /^(?:な[るりっられ]|し[たてよま])/.test(a) || /^[おご]/.test(a) && /[ぁ-ゖ一-龯]/.test(s[i + 1] || '');
+};
+const xmasNovelIsKana = (s, i) => /[ぁ-ゖゝゞ]/.test(s[i] || '') || s[i] === 'ー' && i > 0 && /[ぁ-ゖ]/.test(s[i - 1]);
+let _xmasNovelSeg;
+const xmasNovelSegments = s => {
+  const m = new Map();
+  try {
+    if (_xmasNovelSeg === undefined) _xmasNovelSeg = typeof Intl !== 'undefined' && Intl.Segmenter ? new Intl.Segmenter('ja', {
+      granularity: 'word'
+    }) : null;
+    if (_xmasNovelSeg) for (const x of _xmasNovelSeg.segment(s)) m.set(x.index, x.segment);
+  } catch (e) {}
+  return m;
+};
+const xmasNovelBadBreak = (s, b, segAt) => {
+  if (segAt && segAt.size && !segAt.has(b)) return true;
+  if (xmasNovelIsKana(s, b - 1) && xmasNovelIsKana(s, b) && !xmasNovelGramBreak(s, b)) return true;
+  const w = segAt && segAt.get(b);
+  return /[一-龯々ァ-ヶー」』）)A-Za-z0-9０-９]$/.test(s.slice(0, b)) && !!w && /^(?:の|は|が|を|に|へ|と|で|も|や|から|まで|より)$/.test(w);
+};
+const XMAS_NOVEL_PLAN_CACHE = new Map();
+const xmasNovelWrapPlan = (text, max = XMAS_NOVEL_KEEP_MAX) => {
+  const s = String(text ?? '');
+  if (!s) return [];
+  const ck = `${max}|${s}`;
+  const hit = XMAS_NOVEL_PLAN_CACHE.get(ck);
+  if (hit) return hit;
+  const br = new Set();
+  let marked = s;
+  try {
+    marked = typeof jaWrapPoints === 'function' ? jaWrapPoints(s) : s;
+  } catch (e) {
+    marked = s;
+  }
+  if (typeof marked !== 'string' || marked.replace(/\u200B/g, '') !== s) marked = s;
+  let pos = 0;
+  for (const ch of marked) {
+    if (ch === '\u200B') br.add(pos);else pos += ch.length;
+  }
+  for (const m of s.matchAll(/\s+/g)) {
+    br.add(m.index);
+    br.add(m.index + m[0].length);
+  }
+  const len = (a, b) => [...s.slice(a, b)].length;
+  const spans = [];
+  for (const re of XMAS_NOVEL_KEEP_RES) for (const m of s.matchAll(re)) if (!/^[「『【]/.test(m[0]) || [...m[0]].length <= max) spans.push([m.index, m.index + m[0].length]);
+  for (const w of xmasNovelKeepWords()) if ([...w].length <= max) for (let i = s.indexOf(w); i >= 0; i = s.indexOf(w, i + 1)) spans.push([i, i + w.length]);
+  for (const b of [...br]) if (b <= 0 || b >= s.length || spans.some(([a, e]) => b > a && b < e)) br.delete(b);
+  const segAt = xmasNovelSegments(s);
+  for (const b of [...br].sort((x, y) => x - y)) {
+    if (!xmasNovelBadBreak(s, b, segAt)) continue;
+    const sorted = [0, ...[...br].sort((x, y) => x - y), s.length];
+    const k = sorted.indexOf(b),
+      lo = sorted[k - 1],
+      hi = sorted[k + 1];
+    if (len(lo, hi) <= max) {
+      br.delete(b);
+      continue;
+    }
+    let best = -1;
+    for (let q = lo + 1; q < hi; q++) {
+      if (q === b || spans.some(([x, e]) => q > x && q < e) || /^[、。！？!?」』）)…‥ー]/.test(s.slice(q)) || /[「『（(]$/.test(s.slice(0, q))) continue;
+      if (xmasNovelBadBreak(s, q, segAt)) continue;
+      if (!xmasNovelGramBreak(s, q) && !(/[ぁ-ゖ、]$/.test(s.slice(0, q)) && /^[一-龯ァ-ヶ]/.test(s.slice(q)))) continue;
+      if (len(lo, q) > max || len(q, hi) > max) continue;
+      if (best < 0 || Math.abs(q - b) < Math.abs(best - b)) best = q;
+    }
+    if (best >= 0) {
+      br.delete(b);
+      br.add(best);
+    }
+  }
+  const cuts = [0, ...[...br].sort((a, b) => a - b), s.length];
+  const plan = [];
+  for (let i = 1; i < cuts.length; i++) {
+    const t = s.slice(cuts[i - 1], cuts[i]);
+    if (!t) continue;
+    if (/^\s+$/.test(t)) plan.push({
+      t,
+      keep: false,
+      space: true
+    });else plan.push({
+      t,
+      keep: [...t].length <= max,
+      space: false
+    });
+  }
+  if (XMAS_NOVEL_PLAN_CACHE.size > 600) XMAS_NOVEL_PLAN_CACHE.clear();
+  XMAS_NOVEL_PLAN_CACHE.set(ck, plan);
+  return plan;
+};
+const XMAS_NOVEL_NOWRAP = Object.freeze({
+  whiteSpace: 'nowrap'
+});
+const XMAS_NOVEL_HIDE = Object.freeze({
+  visibility: 'hidden'
+});
+const XmasNovelWrap = ({
+  text,
+  shown,
+  max
+}) => {
+  const plan = xmasNovelWrapPlan(text, max);
+  const lim = typeof shown === 'number' && Number.isFinite(shown) ? shown : Infinity;
+  let pos = 0;
+  return plan.map((p, i) => {
+    const a = pos;
+    pos += p.t.length;
+    const vis = Math.max(0, Math.min(p.t.length, lim - a));
+    const body = vis >= p.t.length ? p.t : React.createElement(React.Fragment, null, p.t.slice(0, vis), React.createElement("span", {
+      style: XMAS_NOVEL_HIDE
+    }, p.t.slice(vis)));
+    const prev = plan[i - 1];
+    return React.createElement(React.Fragment, {
+      key: i
+    }, i > 0 && !p.space && !(prev && prev.space) && React.createElement("wbr", null), p.keep ? React.createElement("span", {
+      "data-nv-keep": "",
+      style: XMAS_NOVEL_NOWRAP
+    }, body) : body);
+  });
+};
+const xmasNovelWrap = (text, max) => React.createElement(XmasNovelWrap, {
+  text: text,
+  max: max
+});
 const xmasNovelIsSeRow = row => !!(row && row.t === 'band' && Array.isArray(row.fx) && row.fx.includes('se'));
 const xmasNovelSplitSe = s => {
   const i = String(s || '').search(/[(（]/);
@@ -127015,9 +127835,15 @@ const XmasNovelSeText = ({
   const vis = Math.max(0, shown);
   return React.createElement(React.Fragment, null, sound && React.createElement("span", {
     className: "mh-nv-se-sound"
-  }, sound.slice(0, vis)), note && vis > sound.length && React.createElement("span", {
+  }, React.createElement(XmasNovelWrap, {
+    text: sound,
+    shown: vis
+  })), note && vis > sound.length && React.createElement("span", {
     className: "mh-nv-se-note"
-  }, note.slice(0, vis - sound.length - 1)));
+  }, React.createElement(XmasNovelWrap, {
+    text: note,
+    shown: vis - sound.length - 1
+  })));
 };
 const xmasNovelSplitLead = s => {
   const m = String(s || '').match(/^[(（][^)）]*[)）]/);
@@ -127031,13 +127857,22 @@ const XmasNovelSayText = ({
   const vis = Math.max(0, shown);
   if (!body.trim()) return React.createElement("span", {
     className: "mh-nv-say-lead only"
-  }, text.slice(0, vis));
+  }, React.createElement(XmasNovelWrap, {
+    text: text,
+    shown: vis
+  }));
   const bodyVis = body.slice(0, Math.max(0, vis - lead.length));
   return React.createElement(React.Fragment, null, lead && React.createElement("span", {
     className: "mh-nv-say-lead"
-  }, lead.slice(0, vis)), (bodyVis || !lead || vis > lead.length) && React.createElement("span", {
+  }, React.createElement(XmasNovelWrap, {
+    text: lead,
+    shown: vis
+  })), (bodyVis || !lead || vis > lead.length) && React.createElement("span", {
     className: "mh-nv-say-body"
-  }, "「", bodyVis, vis >= text.length ? '」' : ''));
+  }, React.createElement(XmasNovelWrap, {
+    text: `「${body}」`,
+    shown: vis >= text.length ? Infinity : 1 + bodyVis.length
+  })));
 };
 const XmasNovelIcon = ({
   d,
@@ -127154,6 +127989,7 @@ const XmasNovelScreen = ({
     xmasNovelBgm('melo_kiss_mystery');
     return () => {
       alive = false;
+      xmasNovelSeStop();
       if (storeTimer.current) clearTimeout(storeTimer.current);
     };
   }, []);
@@ -127198,6 +128034,7 @@ const XmasNovelScreen = ({
       ...s,
       read: [...s.read, r.k]
     };
+    if (r.t === 'band' && r.se) xmasNovelRowSe(r.se, r.seN);else xmasNovelSeStop();
     if (r.t === 'band' && Array.isArray(r.fx)) {
       const vis = r.fx.find(f => ['dark', 'white', 'red', 'light', 'bleed'].includes(f));
       if (r.fx.includes('bleed') && r.fx.includes('red')) setTimeout(() => setFx({
@@ -127214,7 +128051,6 @@ const XmasNovelScreen = ({
         setCurtain('up');
         setTimeout(() => setCurtain(c => c === 'up' ? null : c), 1700);
       }
-      if (r.se) xmasNovelSe(r.se);
       if (r.fx.includes('title') || r.fx.includes('chapter')) {
         setCard({
           kind: r.fx.includes('title') ? 'title' : 'band',
@@ -127606,7 +128442,7 @@ const XmasNovelScreen = ({
       className: "mh-nv-serif mh-nv-gold mb-2 text-[17px] font-black"
     }, "はじめから遊びますか？"), React.createElement("p", {
       className: "mh-nv-plain mb-3 text-[12px] leading-relaxed text-slate-200"
-    }, "いまの続きの場所は消えます。エンドヒストリー・一発で当てた記録・読んだ印はそのまま残ります"), React.createElement("div", {
+    }, xmasNovelWrap('いまの続きの場所は消えます。エンドヒストリー・一発で当てた記録・読んだ印はそのまま残ります')), React.createElement("div", {
       className: "space-y-2"
     }, React.createElement("button", {
       type: "button",
@@ -127662,7 +128498,7 @@ const XmasNovelScreen = ({
         style: {
           color: seen ? kind.tone : '#5b6585'
         }
-      }, seen ? `「${e.name}」` : '？？？'), seen && React.createElement("button", {
+      }, seen ? xmasNovelWrap(`「${e.name}」`) : '？？？'), seen && React.createElement("button", {
         type: "button",
         className: "mh-nv-btn mt-2",
         "data-xmas-novel-replay": e.id,
@@ -127683,7 +128519,7 @@ const XmasNovelScreen = ({
       className: "mh-nv-serif mh-nv-gold text-center text-[22px] font-black"
     }, "章から"), React.createElement("p", {
       className: "mh-nv-plain mt-1 text-[11px] text-slate-300"
-    }, "その章に入ったときの手がかりと選んだことから、読み直せます"), React.createElement("div", {
+    }, xmasNovelWrap('その章に入ったときの手がかりと選んだことから、読み直せます')), React.createElement("div", {
       className: "mh-nv-rule"
     }), React.createElement("ul", {
       className: "space-y-2"
@@ -127815,13 +128651,19 @@ const XmasNovelScreen = ({
     className: `mh-nv-text${isBand ? xmasNovelIsSeRow(row) ? ' se mh-nv-serif' : ` band mh-nv-serif${Array.isArray(row.fx) && row.fx.includes('letter') ? ' letter' : ''}` : ''}${isLine ? ' say' : ''}`,
     "data-xmas-novel-text": true,
     "data-xmas-novel-kind": isBand ? xmasNovelIsSeRow(row) ? 'se' : 'band' : isLine ? 'line' : row.t
-  }, row.t === 'clue' ? `手がかり帳に「${row.clue}」を書きとめた` : row.t === 'panel' ? row.x || (row.stamp ? '……' : '登場人物') : row.t === 'q' ? xmasNovelFill(row.x, playerName) : isBand && xmasNovelIsSeRow(row) ? React.createElement(XmasNovelSeText, {
+  }, row.t === 'clue' ? xmasNovelWrap(`手がかり帳に「${row.clue}」を書きとめた`) : row.t === 'panel' ? xmasNovelWrap(row.x || (row.stamp ? '……' : '登場人物')) : row.t === 'q' ? xmasNovelWrap(xmasNovelFill(row.x, playerName)) : isBand && xmasNovelIsSeRow(row) ? React.createElement(XmasNovelSeText, {
     text: text,
     shown: shown
   }) : isLine ? React.createElement(XmasNovelSayText, {
     text: text,
     shown: shown
-  }) : isBand && Array.isArray(row.fx) && row.fx.includes('letter') ? text.slice(0, shown).replace(/／/g, '　') : text.slice(0, shown)), isLine && row.note && !typing && React.createElement("div", {
+  }) : isBand && Array.isArray(row.fx) && row.fx.includes('letter') ? React.createElement(XmasNovelWrap, {
+    text: text.replace(/／/g, '　'),
+    shown: shown
+  }) : React.createElement(XmasNovelWrap, {
+    text: text,
+    shown: shown
+  })), isLine && row.note && !typing && React.createElement("div", {
     className: "mh-nv-note"
   }, "(", row.note, ")"), !typing && row.t !== 'q' && React.createElement("span", {
     className: "mh-nv-next"
@@ -127892,7 +128734,7 @@ const XmasNovelScreen = ({
     className: "mh-nv-serif mh-nv-gold mt-1 text-[20px] font-black"
   }, "【", got.n, "】"), React.createElement("p", {
     className: "mh-nv-plain mt-1 whitespace-pre-wrap text-[12px] leading-relaxed text-slate-100"
-  }, got.d)), card && React.createElement("div", {
+  }, xmasNovelWrap(got.d))), card && React.createElement("div", {
     className: "mh-nv-card",
     "data-xmas-novel-card": card.kind,
     onClick: advance
@@ -127904,7 +128746,7 @@ const XmasNovelScreen = ({
     className: "mh-nv-rule"
   }), React.createElement("div", {
     className: "mh-nv-serif mh-nv-gold text-[30px] font-black leading-tight sm:text-[38px]"
-  }, card.title), React.createElement("div", {
+  }, xmasNovelWrap(card.title, 10)), React.createElement("div", {
     className: "mh-nv-rule"
   }), React.createElement("div", {
     className: "mt-6 text-[11px] text-slate-400"
@@ -127914,7 +128756,7 @@ const XmasNovelScreen = ({
     className: "mh-nv-rule"
   }), React.createElement("div", {
     className: "mh-nv-serif mh-nv-gold text-[30px] font-black leading-tight sm:text-[40px]"
-  }, card.text), React.createElement("div", {
+  }, xmasNovelWrap(card.text, 10)), React.createElement("div", {
     className: "mh-nv-rule"
   })), card.kind === 'ending' && (() => {
     const kind = {
@@ -127938,7 +128780,7 @@ const XmasNovelScreen = ({
       className: "mh-nv-rule"
     }), React.createElement("div", {
       className: `mh-nv-serif text-[28px] font-black leading-tight ${card.ending.kind === 'forced' ? 'mh-nv-red' : 'mh-nv-gold'}`
-    }, "「", card.ending.name, "」"), React.createElement("div", {
+    }, xmasNovelWrap(`「${card.ending.name}」`, 10)), React.createElement("div", {
       className: "mh-nv-rule"
     }), !card.replay && React.createElement("div", {
       className: "text-[12px] text-slate-200"
@@ -128005,7 +128847,7 @@ const XmasNovelScreen = ({
     className: "mh-nv-serif text-[11px] font-black text-amber-200"
   }, l.who), React.createElement("div", {
     className: `mh-nv-plain ${l.who ? 'text-slate-100' : 'text-slate-300'}`
-  }, l.text))) : React.createElement("div", {
+  }, xmasNovelWrap(l.text)))) : React.createElement("div", {
     className: "text-[12px] text-slate-400"
   }, "まだありません")), React.createElement("button", {
     type: "button",
@@ -128024,7 +128866,7 @@ const XmasNovelScreen = ({
     }
   }, q.label && React.createElement("div", {
     className: "mh-nv-serif text-[11px] font-black text-rose-200"
-  }, q.label), xmasNovelFill(q.x, playerName), React.createElement("div", {
+  }, q.label), xmasNovelWrap(xmasNovelFill(q.x, playerName)), React.createElement("div", {
     className: "mt-1 text-[11px] text-rose-100"
   }, "突きつける手がかりを1つ選ぼう")), React.createElement("div", {
     className: "mh-nv-scroll mt-2 flex-1 space-y-2 pr-1"
@@ -128042,8 +128884,8 @@ const XmasNovelScreen = ({
     "data-xmas-novel-present": c.n,
     onClick: () => answer(q, c.n)
   }, "突きつける")), React.createElement("p", {
-    className: "mt-1 whitespace-pre-wrap text-[12px] leading-relaxed text-slate-200"
-  }, c.d))) : React.createElement("div", {
+    className: "mh-nv-plain mt-1 whitespace-pre-wrap text-[12px] leading-relaxed text-slate-200"
+  }, xmasNovelWrap(c.d)))) : React.createElement("div", {
     className: "text-[12px] text-slate-400"
   }, "まだ手がかりはありません")), !q && React.createElement("button", {
     type: "button",
@@ -128062,7 +128904,7 @@ const XmasNovelScreen = ({
     }
   }, q.label && React.createElement("div", {
     className: "mh-nv-serif text-[11px] font-black text-rose-200"
-  }, q.label), xmasNovelFill(q.x, playerName)), React.createElement("div", {
+  }, q.label), xmasNovelWrap(xmasNovelFill(q.x, playerName))), React.createElement("div", {
     className: "mh-nv-scroll"
   }, React.createElement(XmasNovelCast, {
     onPick: id => answer(q, id)
@@ -128072,7 +128914,7 @@ const XmasNovelScreen = ({
     className: "mh-nv-choice mh-nv-serif mt-2",
     "data-xmas-novel-extra": x.key,
     onClick: () => answer(q, x.key)
-  }, x.x)), q.once && React.createElement("div", {
+  }, xmasNovelWrap(x.x))), q.once && React.createElement("div", {
     className: "mh-nv-plain mt-2 text-[11px] font-bold text-rose-200"
   }, "選んだら、やり直しはできません"), React.createElement("button", {
     type: "button",
@@ -128081,7 +128923,7 @@ const XmasNovelScreen = ({
   }, "話をもう一度見る")), q && q.kind === 'action' && React.createElement(React.Fragment, null, React.createElement("div", {
     "data-xmas-novel-question": q.id,
     className: "mh-nv-plain mh-nv-serif mh-nv-gold mb-3 text-[17px] font-black"
-  }, xmasNovelFill(q.x, playerName)), React.createElement("div", {
+  }, xmasNovelWrap(xmasNovelFill(q.x, playerName))), React.createElement("div", {
     className: "space-y-2.5"
   }, xmasNovelOptionsOf(q, xmasNovelCtx(S, st.cur, save.endings)).map(o => React.createElement("button", {
     type: "button",
@@ -128089,7 +128931,7 @@ const XmasNovelScreen = ({
     className: "mh-nv-choice mh-nv-serif",
     "data-xmas-novel-option": o.i,
     onClick: () => answer(q, o.i)
-  }, xmasNovelFill(o.x, playerName)))), q.once && React.createElement("div", {
+  }, xmasNovelWrap(xmasNovelFill(o.x, playerName))))), q.once && React.createElement("div", {
     className: "mh-nv-plain mt-2 text-[11px] font-bold text-rose-200"
   }, "選んだら、やり直しはできません")), sheet === 'menu' && React.createElement(React.Fragment, null, React.createElement("div", {
     className: "mh-nv-serif mh-nv-gold mb-3 text-center text-[18px] font-black"
@@ -254194,10 +255036,12 @@ function MonsterHeroGame() {
   const {
     changelogUnreadIds,
     changelogUnread,
-    changelogPinnedIds
+    changelogPinnedIds,
+    changelogEventCards
   } = useMemo(() => {
     const changelogSeenAnyTab = new Set(CHANGELOG_TYPES.flatMap(type => changelogSeen[type] || []));
-    const pinnedIds = changelogPinnedEntries().map(entry => entry.id);
+    const eventCards = changelogPinnedEntries();
+    const pinnedIds = eventCards.map(entry => entry.id);
     const pinnedSet = new Set(pinnedIds);
     const unreadIds = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, CHANGELOG_IDS_BY_TYPE[type].filter(id => !changelogSeenAnyTab.has(id) && !pinnedSet.has(id))]));
     unreadIds.event = pinnedIds.filter(id => !changelogSeenAnyTab.has(id));
@@ -254205,28 +255049,32 @@ function MonsterHeroGame() {
     return {
       changelogUnreadIds: unreadIds,
       changelogUnread: unread,
-      changelogPinnedIds: pinnedSet
+      changelogPinnedIds: pinnedSet,
+      changelogEventCards: eventCards
     };
   }, [changelogSeen, showChangelog]);
   const hasUnreadChangelog = changelogUnread.update || changelogUnread.issue || changelogUnread.event;
+  const markChangelogEventSeen = id => {
+    if (!changelogUnreadIds.event.includes(id)) return;
+    const entry = CHANGELOG_ENTRIES.find(e => e.id === id);
+    if (!entry) return;
+    const tab = CHANGELOG_ISSUE_TAB_TYPES.includes(entry.type) ? 'issue' : 'update';
+    const next = Array.from(new Set([...(changelogSeen[tab] || []).filter(x => CHANGELOG_ALL_IDS.has(x)), id]));
+    storeSet(`mh_changelog_seen_ids_${tab}`, next, false);
+    setChangelogSeen(prev => ({
+      ...prev,
+      [tab]: next
+    }));
+  };
+  const [changelogClock, setChangelogClock] = useState(() => Date.now());
+  useEffect(() => {
+    if (!showChangelog || changelogTab !== 'event') return undefined;
+    setChangelogClock(Date.now());
+    const timer = setInterval(() => setChangelogClock(Date.now()), 30000);
+    return () => clearInterval(timer);
+  }, [showChangelog, changelogTab]);
   const markChangelogTabSeen = type => {
     if (type === 'event') {
-      if (!changelogUnreadIds.event.length) return;
-      const byTab = {};
-      CHANGELOG_ENTRIES.forEach(entry => {
-        if (!changelogUnreadIds.event.includes(entry.id)) return;
-        const tab = CHANGELOG_ISSUE_TAB_TYPES.includes(entry.type) ? 'issue' : 'update';
-        (byTab[tab] = byTab[tab] || []).push(entry.id);
-      });
-      const next = {};
-      Object.keys(byTab).forEach(tab => {
-        next[tab] = Array.from(new Set([...(changelogSeen[tab] || []).filter(id => CHANGELOG_ALL_IDS.has(id)), ...byTab[tab]]));
-        storeSet(`mh_changelog_seen_ids_${tab}`, next[tab], false);
-      });
-      setChangelogSeen(prev => ({
-        ...prev,
-        ...next
-      }));
       return;
     }
     const ids = CHANGELOG_IDS_BY_TYPE[type].filter(id => !changelogPinnedIds.has(id));
@@ -268031,7 +268879,7 @@ function MonsterHeroGame() {
         let tookEnemyAttack = false;
         const fxKind = isMooBoss(enemy?.id) ? 'moo' : intent.type === 'SPECIAL' ? 'special' : 'normal';
         const fxSkill = intent.variant || (intent.type === 'SPECIAL' ? 'special' : 'normal');
-        const motionEnemyId = isTacticsMode(runMode) && !ecoBattleView ? enemy?.raidJackPumpkin ? 'Pumpkin' : enemy?.id : null;
+        const motionEnemyId = isTacticsMode(runMode) && !ecoBattleView ? tacticsEnemyMotionKey(enemy) : null;
         const specialMovieSrc = fxSkill === 'special' && motionEnemyId && typeof enemy?.specialMovie === 'string' && normalizeBattleFxSettings(battleFxSettings).specialMovie === 'ON' && !(catchUpUntilRef.current > Date.now()) ? enemy.specialMovie : null;
         const movieShown = specialMovieSrc ? await playBossMovie(specialMovieSrc, {
           label: intent.label || enemy?.special || '',
@@ -274629,10 +275477,14 @@ function MonsterHeroGame() {
     "aria-pressed": changelogTab === t.key,
     onClick: () => selectChangelogTab(t.key),
     className: changelogTab === t.key ? 'active' : ''
-  }, t.label, changelogUnread[t.key] && React.createElement("em", {
+  }, t.label, changelogUnread[t.key] && (t.key === 'event' ? React.createElement("em", {
+    className: "mh-unread-badge",
+    "data-changelog-event-unread": changelogUnreadIds.event.length,
+    "aria-label": `まだ開いていないイベント${changelogUnreadIds.event.length}件`
+  }, changelogUnreadIds.event.length) : React.createElement("em", {
     className: "mh-unread-badge",
     "aria-label": "未読あり"
-  }, "!")))), React.createElement("div", {
+  }, "!"))))), React.createElement("div", {
     className: "mh-changelog-list",
     "data-changelog-list": true
   }, CHANGELOG_ENTRIES.length === 0 ? React.createElement("p", {
@@ -274642,95 +275494,194 @@ function MonsterHeroGame() {
     const rows = changelogTab === 'event' ? [] : changelogRowsOfTab(changelogTab);
     const unreadHere = new Set(changelogUnreadIds[changelogTab] || []);
     let shownDay = null;
-    const pinnedEvents = changelogTab === 'event' ? changelogPinnedEntries() : [];
+    const pinnedEvents = changelogTab === 'event' ? changelogEventCards : [];
     if (changelogTab === 'event' && pinnedEvents.length === 0) return React.createElement("p", {
       className: "mh-changelog-empty",
       "data-changelog-event-empty": true
     }, "いま開催中・開催予定のイベントはありません。");
-    return [...pinnedEvents.map(c => React.createElement("details", {
-      key: `pinned-${c.id}`,
-      "data-changelog-pinned": true,
-      className: "mh-changelog-pinned",
-      style: {
-        margin: '0 0 10px',
-        border: '2px solid #fb923c',
-        borderRadius: 16,
-        background: 'linear-gradient(135deg,#431407,#3b0764)',
-        padding: '8px 10px'
-      }
-    }, React.createElement("summary", {
-      style: {
-        cursor: 'pointer',
-        listStyle: 'none',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-        fontWeight: 900,
-        fontSize: 13,
-        color: '#ffedd5'
-      }
-    }, React.createElement("span", {
-      "data-changelog-pinned-badge": true,
-      style: {
-        background: '#f97316',
-        color: '#1c1917',
-        borderRadius: 999,
-        padding: '1px 8px',
-        fontSize: 11,
-        flexShrink: 0
-      }
-    }, changelogEventUpcoming(c) ? '📅 開催予定' : `${typeof c.pinEmoji === 'string' && c.pinEmoji ? c.pinEmoji : '🎉'} 開催中`), React.createElement("span", {
-      "data-changelog-pinned-title": true,
-      style: {
-        flex: 1,
-        minWidth: 0,
-        lineHeight: 1.3,
-        wordBreak: 'keep-all',
-        overflowWrap: 'anywhere'
-      }
-    }, typeof c.pinTitle === 'string' && c.pinTitle ? c.pinTitle : String(c.title || '').replace(/^【[^】]*】/, '').replace(/を開催(します)?$/, '')), React.createElement("small", {
-      style: {
-        flexShrink: 0,
-        fontSize: 10,
-        color: '#fdba74'
-      }
-    }, "詳細 ▼")), c.image && React.createElement("img", {
-      "data-changelog-pinned-image": true,
-      src: c.image,
-      alt: `${c.title}のお知らせ`,
-      onError: e => {
-        e.currentTarget.style.display = 'none';
-      },
-      loading: "lazy",
-      decoding: "async",
-      style: {
-        width: '100%',
-        borderRadius: 12,
-        margin: '8px 0 4px'
-      }
-    }), typeof c.video === 'string' && c.video && React.createElement("figure", {
-      "data-changelog-pinned-video": true,
-      style: {
-        margin: '6px 0'
-      }
-    }, React.createElement("figcaption", {
-      style: {
-        fontWeight: 900,
-        fontSize: 12,
-        color: '#ffedd5',
-        margin: '0 0 4px'
-      }
-    }, "▶ 予告動画"), React.createElement(ChangelogVideo, {
-      src: c.video,
-      poster: typeof c.videoPoster === 'string' ? c.videoPoster : undefined
-    })), (c.items || []).map((x, j) => React.createElement("p", {
-      key: j,
-      style: {
-        fontSize: 12,
-        color: '#fed7aa',
-        margin: '3px 0'
-      }
-    }, "・", x)))), ...rows.map(row => {
+    const eventUnread = new Set(changelogUnreadIds.event || []);
+    return [...pinnedEvents.map(c => {
+      const upcoming = changelogEventUpcoming(c, changelogClock);
+      const period = changelogEventPeriodLabel(c);
+      const remain = changelogEventRemainLabel(c, changelogClock);
+      const isNew = eventUnread.has(c.id);
+      const banner = typeof c.image === 'string' && c.image ? c.image : '';
+      const listTitle = changelogEventListTitle(c);
+      return React.createElement("details", {
+        key: `pinned-${c.id}`,
+        "data-changelog-pinned": true,
+        "data-changelog-event-new": isNew ? '1' : '0',
+        className: "mh-changelog-pinned",
+        onToggle: e => {
+          if (e.currentTarget.open) markChangelogEventSeen(c.id);
+        },
+        style: {
+          margin: '0 0 10px',
+          border: `2px solid ${isNew ? '#f87171' : '#fb923c'}`,
+          borderRadius: 16,
+          background: 'linear-gradient(135deg,#431407,#3b0764)',
+          padding: banner ? 0 : '8px 10px',
+          overflow: 'hidden'
+        }
+      }, React.createElement("summary", {
+        "aria-label": `${listTitle}${upcoming ? '(開催予定)' : '(開催中)'}${isNew ? '・未読' : ''}`,
+        style: {
+          cursor: 'pointer',
+          listStyle: 'none',
+          display: 'block',
+          fontWeight: 900,
+          color: '#ffedd5'
+        }
+      }, banner && React.createElement("span", {
+        style: {
+          position: 'relative',
+          display: 'block'
+        }
+      }, React.createElement("img", {
+        "data-changelog-pinned-banner": true,
+        src: banner,
+        alt: "",
+        "aria-hidden": "true",
+        onError: e => {
+          e.currentTarget.style.display = 'none';
+        },
+        loading: "lazy",
+        decoding: "async",
+        style: {
+          display: 'block',
+          width: '100%',
+          aspectRatio: '3 / 1',
+          maxHeight: 'min(110px, 22vh)',
+          objectFit: 'cover',
+          objectPosition: typeof c.bannerPos === 'string' && c.bannerPos ? c.bannerPos : '50% 35%'
+        }
+      }), isNew && React.createElement("em", {
+        "data-changelog-event-new-mark": true,
+        style: {
+          position: 'absolute',
+          top: 6,
+          left: 6,
+          fontStyle: 'normal',
+          background: '#ef4444',
+          color: '#fff',
+          borderRadius: 999,
+          padding: '1px 8px',
+          fontSize: 11,
+          boxShadow: '0 2px 6px rgba(0,0,0,.5)'
+        }
+      }, "NEW")), React.createElement("span", {
+        style: {
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          padding: banner ? '6px 10px 0' : 0,
+          fontSize: 13
+        }
+      }, React.createElement("span", {
+        "data-changelog-pinned-badge": true,
+        style: {
+          background: upcoming ? '#38bdf8' : '#f97316',
+          color: '#1c1917',
+          borderRadius: 999,
+          padding: '1px 8px',
+          fontSize: 11,
+          flexShrink: 0
+        }
+      }, changelogEventUpcoming(c) ? '📅 開催予定' : `${typeof c.pinEmoji === 'string' && c.pinEmoji ? c.pinEmoji : '🎉'} 開催中`), React.createElement("span", {
+        "data-changelog-pinned-title": true,
+        style: {
+          flex: 1,
+          minWidth: 0,
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          lineHeight: 1.4
+        }
+      }, listTitle), !banner && isNew && React.createElement("em", {
+        "data-changelog-event-new-mark": true,
+        style: {
+          fontStyle: 'normal',
+          background: '#ef4444',
+          color: '#fff',
+          borderRadius: 999,
+          padding: '1px 7px',
+          fontSize: 10,
+          flexShrink: 0
+        }
+      }, "NEW")), React.createElement("span", {
+        style: {
+          display: 'flex',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '2px 8px',
+          padding: banner ? '3px 10px 8px' : '4px 0 0',
+          fontSize: 11,
+          fontWeight: 800,
+          color: '#fdba74'
+        }
+      }, period && React.createElement("span", {
+        "data-changelog-event-period": true,
+        style: {
+          whiteSpace: 'nowrap'
+        }
+      }, period), remain && React.createElement("span", {
+        "data-changelog-event-remain": true,
+        style: {
+          whiteSpace: 'nowrap',
+          background: 'rgba(0,0,0,.35)',
+          color: upcoming ? '#bae6fd' : '#fde68a',
+          borderRadius: 999,
+          padding: '0 7px'
+        }
+      }, remain), React.createElement("small", {
+        style: {
+          marginLeft: 'auto',
+          fontSize: 10,
+          color: '#fdba74',
+          whiteSpace: 'nowrap'
+        }
+      }, "詳細 ▼"))), React.createElement("div", {
+        style: {
+          padding: banner ? '0 10px 8px' : 0
+        }
+      }, c.image && React.createElement("img", {
+        "data-changelog-pinned-image": true,
+        src: c.image,
+        alt: `${c.title}のお知らせ`,
+        onError: e => {
+          e.currentTarget.style.display = 'none';
+        },
+        loading: "lazy",
+        decoding: "async",
+        style: {
+          width: '100%',
+          borderRadius: 12,
+          margin: '8px 0 4px'
+        }
+      }), typeof c.video === 'string' && c.video && React.createElement("figure", {
+        "data-changelog-pinned-video": true,
+        style: {
+          margin: '6px 0'
+        }
+      }, React.createElement("figcaption", {
+        style: {
+          fontWeight: 900,
+          fontSize: 12,
+          color: '#ffedd5',
+          margin: '0 0 4px'
+        }
+      }, "▶ 予告動画"), React.createElement(ChangelogVideo, {
+        src: c.video,
+        poster: typeof c.videoPoster === 'string' ? c.videoPoster : undefined
+      })), (c.items || []).map((x, j) => React.createElement("p", {
+        key: j,
+        style: {
+          fontSize: 12,
+          color: '#fed7aa',
+          margin: '3px 0'
+        }
+      }, "・", x))));
+    }), ...rows.map(row => {
       const open = changelogOpenId === row.key;
       const unreadCount = row.entries.filter(entry => unreadHere.has(entry.id)).length;
       const kinds = [];
@@ -292649,6 +293600,11 @@ const createAnimationStyle = () => {
     .fin-shape--note::before { content:'♪'; }
     .fin-shape--heart { width:auto; height:auto; background:none; box-shadow:none; border-radius:0; font:900 22px/1 system-ui, sans-serif; color:var(--spm-c1); text-shadow:0 0 8px var(--spm-c2); }
     .fin-shape--heart::before { content:'♥'; }
+    /* 覚醒サンタの雪と黒いプレゼント(TACTICS_ENEMY_FINISH.santa)。雪は文字の形(後ろに文字の形の印を付けて絵文字にしない)、プレゼントは黒い箱に赤いリボン */
+    .fin-shape--snow { width:auto; height:auto; background:none; box-shadow:none; border-radius:0; font:900 20px/1 system-ui, sans-serif; color:#fff; text-shadow:0 0 8px var(--spm-c2); }
+    .fin-shape--snow::before { content:'❄︎'; }
+    .fin-shape--gift { width:16px; height:16px; border-radius:2px; box-shadow:0 0 6px var(--spm-c2);
+      background:linear-gradient(90deg, transparent 42%, var(--spm-c2) 42% 58%, transparent 58%), linear-gradient(0deg, transparent 42%, var(--spm-c2) 42% 58%, transparent 58%), #1c1917; }
     .fin-bit.fin-shape--note:nth-child(3n+1)::before { content:'♫'; }
     .fin-bit.fin-shape--note:nth-child(3n+2)::before { content:'♬'; }
     .fin-fall { left:-14px; top:-420px; width:28px; height:28px; opacity:0; position:absolute; margin-left:var(--x); scale:var(--s);
@@ -293598,6 +294554,7 @@ const createAnimationStyle = () => {
     [data-enemy-motion="awakenedMoo"] { --em-c: 250,204,21; }
     [data-enemy-motion="jack"] { --em-c: 251,146,60; }
     [data-enemy-motion="pumpkin"] { --em-c: 253,186,116; }
+    [data-enemy-motion="santa"] { --em-c: 239,68,68; }
     /* ジャックのオーラ(段階1〜5でどんどん派手に)。色: 橙 → 金橙 → 紫 → 赤 → 虹金。動くのは transform / opacity だけ */
     [data-jack-aura-el] { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
     [data-jack-aura-el] > i { position: absolute; inset: 10% 8% 6%; border-radius: 50%; opacity: 0; will-change: transform, opacity; }
@@ -293878,7 +294835,7 @@ const createAnimationStyle = () => {
     /* ジャックの絵は 1024x880 でほぼ正方形(ムーは横長の 1024x598)。ムーと同じ枠(108vw・最大560px)だと画面を覆い、両腕ポーズの腕も画面から切れるので、
        枠は画面の幅に収める。通常絵は枠の半分の大きさで描く(JACK_NORMAL_BATTLE_STYLE)。
        大きさの指定はJSXの style に書いてあり、検査(moo-notice-visibility-check)がそれを読むので、ここで上書きする */
-    [data-moo-stage="true"][data-enemy-motion="jack"], [data-moo-stage="true"][data-enemy-motion="pumpkin"] { width: min(100vw, 400px) !important; height: min(100vw, 400px) !important; }
+    [data-moo-stage="true"][data-enemy-motion="jack"], [data-moo-stage="true"][data-enemy-motion="pumpkin"], [data-moo-stage="true"][data-enemy-motion="santa"] { width: min(100vw, 400px) !important; height: min(100vw, 400px) !important; }
     [data-tactics-look] [data-enemy-skill] { --em-dur: 450ms; }
     [data-tactics-look] [data-enemy-skill="rush"] { --em-dur: 750ms; }
     [data-tactics-look] [data-enemy-skill="pierce"] { --em-dur: 900ms; }
