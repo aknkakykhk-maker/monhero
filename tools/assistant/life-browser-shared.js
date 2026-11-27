@@ -100,7 +100,8 @@ const homeDockProblems = (page) => page.evaluate(() => {
   }
   const parts = [];
   const strip = document.querySelector('.mh-home-event-strip'); if (vis(strip)) parts.push({ c: '細バナー', r: R(strip) });
-  for (const e of document.querySelectorAll('.mh-home-side-btn')) if (vis(e)) parts.push({ c: '右端ボタン', r: R(e) });
+  // 2026-11-27 r1126-073: ミッション・ギフトなどはメニュー☰の中。閉じているメニューの中(目に見えない・読み上げだけに残す)は数えない
+  for (const e of document.querySelectorAll('.mh-home-side-btn')) if (vis(e) && !e.closest('.mh-home-menu:not(.is-open)')) parts.push({ c: 'メニューの中のボタン', r: R(e) });
   const band = document.querySelector('.mh-home-band'); if (vis(band)) parts.push({ c: 'イベントの帯', r: R(band) });
   const menuBtn = document.querySelector('.mh-home-menu-btn'); if (vis(menuBtn)) parts.push({ c: 'メニュー', r: R(menuBtn) });
   const fold = document.querySelector('.mh-home-assistant-fold'); if (vis(fold)) parts.push({ c: '助手の顔', r: R(fold) });

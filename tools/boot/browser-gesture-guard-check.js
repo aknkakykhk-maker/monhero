@@ -59,7 +59,7 @@ const seed=()=>{ if (sessionStorage.getItem('s')) return; sessionStorage.setItem
       await page.waitForFunction(()=>document.body?.innerText.includes('TAP TO START'),{timeout:40000});
       await page.getByRole('button',{name:'TAP TO START'}).click({force:true});
       await page.getByRole('button',{name:'トップ画面へ進む'}).click({timeout:30000});
-      await page.waitForFunction(()=>document.querySelector('.mh-home-assistant'),{timeout:40000});
+      await page.waitForFunction(()=>document.querySelector('.mh-home-assistant,.mh-home-assistant-fold'),{timeout:40000});
       for(let i=0;i<14;i++){
         const did=await page.evaluate(()=>{const inO=el=>{for(let e=el;e&&e!==document.body;e=e.parentElement){const st=getComputedStyle(e);if(st.position==='fixed'||(st.position==='absolute'&&Number(st.zIndex)>=40))return true;}return false;};
           const l=[...document.querySelectorAll('button')].filter(b=>inO(b)&&/^(確認|閉じる|OK|受け取る|次へ|(?:分|わ)かった|はい|スキップ|あとで読む)$/.test((b.innerText||'').replace(/\s+/g,' ').trim()));
