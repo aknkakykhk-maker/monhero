@@ -538,12 +538,14 @@ const FRIEND_PLACE_TEXT = Object.freeze({
   rhythmPlay: '🎵 モンヒロビートで演奏中', life: '🏡 助手ライフ',
   // モンヒロビートの合言葉(プライベート)の部屋にいる(2026-11-08 社長・ビート部テンポが friendsSetRoomPrivate を呼ぶ)
   roomPrivate: '🔑 プライベート中',
+  // クリスマスの事件簿・イベントページ(台帳 r1126-072 追記2)。裏クイックが回っていれば「⚡ オート周回中」の下の行に出る
+  xmasNovel: '事件簿を読んでいる', xmasEvent: 'イベントページを見ている',
 });
 // オート周回中・長く操作なし(10分)のときの文。place は今いる画面のまま、records.au(周回中)・records.im(操作なしの分)で足す(バトル部ジンとすり合わせ)
 const FRIEND_AUTO_TEXT = '⚡ オート周回中';
 const FRIEND_IDLE_AUTO_MIN = 10;
 // 長く操作がないときに「◯◯を開いたまま」と書く場所。演奏中・対戦中は変えない
-const FRIEND_IDLE_OPEN_TEXT = Object.freeze({ home: 'ホーム', rhythm: 'モンヒロビート', multi: 'モンヒロビート', room: '部屋', roomPrivate: '合言葉の部屋', card: 'MFバトルカード', masu: 'マスモンの画面', market: 'マーケット', life: '助手ライフ', battle: 'バトル', other: 'ゲーム' });
+const FRIEND_IDLE_OPEN_TEXT = Object.freeze({ xmasNovel: '事件簿', xmasEvent: 'イベントページ', home: 'ホーム', rhythm: 'モンヒロビート', multi: 'モンヒロビート', room: '部屋', roomPrivate: '合言葉の部屋', card: 'MFバトルカード', masu: 'マスモンの画面', market: 'マーケット', life: '助手ライフ', battle: 'バトル', other: 'ゲーム' });
 // 最後に画面へ触れた時刻(端末の中だけ。送るのは「何分たったか」の数だけ)
 let _friendsLastInputAt = Date.now();
 if (typeof window !== 'undefined' && window.addEventListener) {
@@ -553,7 +555,15 @@ const friendsIdleMinutes = (now = Date.now()) => Math.max(0, Math.floor((now - _
 // 「いまの状態をフレンドに見せる」(2026-11-08 社長・既定は入)。切なら place は 'other'(ログイン中)だけを送る
 const FRIEND_PRESENCE_SHOW_KEY = 'mh_friend_presence_show_v1';
 // 表(friend_profiles.place)の決まり(check)に無い場所。表へは 'other' で送り、records.pl に本当の場所を載せる
-const FRIEND_SUB_PLACES = Object.freeze(['card', 'cardBattle', 'room', 'rhythmPlay', 'life', 'roomPrivate']);
+const FRIEND_SUB_PLACES = Object.freeze(['card', 'cardBattle', 'room', 'rhythmPlay', 'life', 'roomPrivate', 'xmasNovel', 'xmasEvent']);
+// クリスマスのイベントページ(画面は RAID_JACK)・その上に重ねて開く事件簿にいるか('event' | 'novel' | '')。App が画面の出入りで知らせる(r1126-072 追記2)
+let _friendsXmasSpot = '';
+const friendsSetXmasSpot = (spot) => {
+  const next = spot === 'novel' || spot === 'event' ? spot : '';
+  if (next === _friendsXmasSpot) return;
+  _friendsXmasSpot = next;
+  try { if (typeof window !== 'undefined') window.dispatchEvent(new Event('mh-friend-spot')); } catch (error) { /* 2分ごとの知らせで届く */ }
+};
 // マルチの部屋で相手を待っているあいだ真(モンヒロビート・MFバトルカードの部屋が立てる)。次にフレンドへ知らせるとき、場所を「部屋で待ち中」にする
 let _friendsRoomWaiting = false;
 const friendsSetRoomWaiting = (on) => { _friendsRoomWaiting = !!on; };
@@ -614,6 +624,8 @@ const friendsPlaceOfScreen = (gameState) => {
   // 助手ライフは HOME の上に開く器(56-assistant-life の data-assistant-life-screen)
   if (name === 'HOME' && typeof document !== 'undefined' && document.querySelector && document.querySelector('[data-assistant-life-screen]')) return 'life';
   if (name === 'HOME') return 'home';
+  if (name === 'RAID_JACK' && _friendsXmasSpot === 'novel') return 'xmasNovel';
+  if (name === 'RAID_JACK' && _friendsXmasSpot === 'event') return 'xmasEvent';
   if (name === 'CARD_BATTLE') return 'cardBattle';
   if (name.startsWith('CARD_')) return 'card';
   if (name === 'RHYTHM_MULTI') return 'multi';
