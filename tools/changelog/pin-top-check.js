@@ -42,7 +42,13 @@ if (grand) {
   // 固定の札の題は短く(2026-11-10 社長「モンヒロビート本オープン記念 これだけにしといて」)。一覧の行の題はそのまま
   check('固定の札の題は「モンヒロビート本オープン記念」', grand.pinTitle === 'モンヒロビート本オープン記念', String(grand.pinTitle));
   const app = fs.readFileSync(path.join(web, 'src/parts/60-app.jsx'), 'utf8');
-  check('固定の札は pinTitle があればそれを出す', /data-changelog-pinned-title[^>]*>\{typeof c\.pinTitle==='string'&&c\.pinTitle\?c\.pinTitle:/.test(app));
+  // 2026-11-27 r1126-068: 札の題は changelogEventListTitle(listTitle → pinTitle → 題から【…】等を落とした物)
+  const part17 = fs.readFileSync(path.join(web, 'src/parts/17-release-changelog-login-missions.jsx'), 'utf8');
+  const lt = part17.match(/const changelogEventListTitle = [\s\S]*?\n\};\n/);
+  const listTitleOf = lt ? vm.runInNewContext(`${lt[0]}; changelogEventListTitle`) : () => '';
+  check('固定の札は pinTitle があればそれを出す', /data-changelog-pinned-title[^>]*>\{listTitle\}/.test(app) && /const listTitle=changelogEventListTitle\(c\)/.test(app)
+    && listTitleOf({ pinTitle: 'A', title: 'B' }) === 'A' && listTitleOf({ listTitle: 'C', pinTitle: 'A', title: 'B' }) === 'C'
+    && listTitleOf({ title: '【開催予告】クリスマスイベント『聖夜の名探偵』を開催します' }) === 'クリスマスイベント『聖夜の名探偵』');
   check('固定は 11/29 23:59 まで(周回5倍の終わり)', grand.pinTop && grand.pinTop.until === '2026-11-29T23:59:00+09:00', JSON.stringify(grand.pinTop));
   const cases = [
     ['2026-11-09T09:59:00+09:00', false, '出はじめの前'],
