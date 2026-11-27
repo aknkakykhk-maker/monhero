@@ -148,6 +148,20 @@
 | 2-1-10 |  | 帯 | バタン、カチャリ(扉が閉まり、内側から鍵の音) |
 | 2-1-11 | <img src="../../../monster-hero/images/assistant/santa/face/myua_troubled.PNG" width="40"> | みゅあ(困り顔) | ……あつくん。あのおじさん、強がってるけど、手、震えてた |
 | 2-1-12 | <img src="../../../monster-hero/images/assistant/santa/face/atsu_normal.PNG" width="40"> | あつ(ふつう) | うん。……今夜は、気をつけよう |
+| 2-L-1 |  | 帯 | 21時。黒羽のいないホールに、みんなが集まっている |
+| 2-L-2s | <img src="../../../monster-hero/images/assistant/santa/face/sorashido_surprise.PNG" width="40"> | ソラシド(驚き) | みなさん、これを。……自分の部屋の、枕の上に置いてありました |
+| 2-L-3 |  | 帯 | カサ……(封を切る音) |
+| 2-L-4 |  | 帯 | こんや　0じの　かねが／なったら／ひとり　かえって　こない／——黒いサンタ |
+| 2-L-5 |  | 帯 | …… |
+| 2-L-6 |  | 帯 | 誰も、声を出さなかった。暖炉の薪が、ぱちりと小さく爆ぜる |
+| 2-L-7 |  | 帯 | カチ、カチ、カチ(柱時計の針の音だけが、やけに大きい) |
+| 2-L-8 |  | 帯 | 誰かが、誰かの顔を見る。その目が、また別の誰かへ移っていく |
+| 2-L-9 | <img src="../../../monster-hero/images/assistant/santa/face/momosuke_crying.PNG" width="40"> | ももすけ(泣き顔) | ……やだ。……やだよ、こんなの…… |
+| 2-L-10s |  | ワトソンくん | ……赤いインクです。血ではありません。ですが、わざと血のように見せています |
+| 2-L-11s | <img src="../../../monster-hero/images/assistant/santa/face/sorashido_normal.PNG" width="40"> | ソラシド(ふつう) | 『かえってこない』……。誰かが、どこかから戻れなくなる、ということでしょうか |
+| 2-L-12 |  | 帯 | 黒羽の部屋の扉を叩いても、「放っておけ！」と怒鳴る声が返ってくるだけだった |
+| 2-L-13s | <img src="../../../monster-hero/images/assistant/santa/face/sorashido_normal.PNG" width="40"> | ソラシド(ふつう) | あつさん。今夜は0時まで、ここで柱時計を見ていましょう。ワトソンくんも一緒に |
+| 2-L-14 |  | 手がかり | 探偵の部屋の枕の上に置かれていた、赤い字の手紙。ひらがなで「こんや 0じの かねが なったら ひとり かえって こない」。差出人は「黒いサンタ」 |
 | 2-M-1 |  | 帯 | 幕間 〜鍵をかけた部屋〜 |
 | 2-M-2 |  | 帯 | 22時。黒羽の部屋。鍵を二度確かめ、重い椅子を扉の前まで引きずってくる |
 | 2-M-3 | <img src="../../../monster-hero/images/story-guests/kuroba_face.png" width="40"> | 黒羽 | ……くだらん。いたずらだ。誰かが、わたしをからかっているだけだ |
@@ -601,6 +615,7 @@
 | 8-3-5s | <img src="../../../monster-hero/images/assistant/santa/face/sorashido_troubled.PNG" width="40"> | ソラシド(困り顔) | ……黒羽さんは、もう、何も答えられません |
 | 8-3-6 | <img src="../../../monster-hero/images/assistant/santa/face/kiki_crying.PNG" width="40"> | きき(泣き顔) | 白瀬さんは……手紙に、ごめんなさいって、書いてまちた…… |
 | 8-3-7 | <img src="../../../monster-hero/images/assistant/santa/face/kyuko_normal.PNG" width="40"> | きゅうこ(ふつう) | だから、同じ夜を、もう一度作った。同じ鐘。同じ扉。同じ寒さ。……そうしたら、お母さんの寒さが、少しは分かってもらえると思った |
+| 8-3-7b | <img src="../../../monster-hero/images/assistant/santa/face/kyuko_troubled.PNG" width="40"> | きゅうこ(困り顔) | 探偵さんの部屋の手紙も、俺。……0時の鐘で、一人帰ってこない。あの夜のお母さんと、同じに。……本当は、誰かに止めてほしかったのかもしれない |
 | 8-3-8 | <img src="../../../monster-hero/images/assistant/santa/face/erubin_troubled.PNG" width="40"> | えるびん(困り顔) | ……『同じ夜』って。あの夜、ほかにも、誰かが……？ |
 | 8-3-9 | <img src="../../../monster-hero/images/assistant/santa/face/kyuko_troubled.PNG" width="40"> | きゅうこ(困り顔) | お母さんは、ふもとの薬屋の戸を、ずっと叩いてたんだ。吹雪で、店は早く閉まってて。……やっと薬をもらえた時には、もう、鐘に間に合わなかった |
 | 8-3-10 | <img src="../../../monster-hero/images/assistant/santa/face/kyuko_troubled.PNG" width="40"> | きゅうこ(困り顔) | 最初の夜、えるニキが白瀬さんに話してるの、聞こえちゃった。……えるニキの家、ふもとの薬屋だったんだ |
