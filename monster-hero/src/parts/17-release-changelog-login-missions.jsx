@@ -436,11 +436,61 @@ const changelogEventLive = (entry, nowMs = Date.now()) => {
   if (Number.isFinite(pinUntil) && nowMs >= pinUntil) return false;
   return Number.isFinite(until) && nowMs < until && (!Number.isFinite(from) || nowMs >= from);
 };
+// 「イベント」タブの札の期間(2026-11-27 r1126-068 社長「表示方法もっとなんとかならない？」)。{ from, until } はミリ秒(分からなければ NaN)。
+//   eventStartAt / eventEndAt を書いた項目はそれを使う。書いていなければ:
+//   ・イベント … 助手の告知の期間(notifyFrom〜notifyUntil)。予告(pinUntil あり)の notifyUntil は開幕の時刻なので、終わりには使わない
+//   ・pinTop:{ until } のお知らせ(記念の期間など) … 出はじめ(visibleFrom)〜 until。pinTop:{ days } は札を出す日数なので期間にしない
+const changelogEventPeriod = (entry) => {
+  const ms = (value) => (typeof value === 'string' ? Date.parse(value) : NaN);
+  let from = ms(entry && entry.eventStartAt), until = ms(entry && entry.eventEndAt);
+  if (entry && entry.type === 'event' && entry.assistantNotice) {
+    if (!Number.isFinite(from)) from = ms(entry.assistantNotice.notifyFrom || entry.visibleFrom);
+    if (!Number.isFinite(until) && !entry.pinUntil) until = ms(entry.assistantNotice.notifyUntil);
+  } else if (entry && entry.pinTop && typeof entry.pinTop === 'object' && entry.pinTop.until) {
+    if (!Number.isFinite(from)) from = ms(entry.visibleFrom);
+    if (!Number.isFinite(until)) until = ms(entry.pinTop.until);
+  }
+  return { from: Number.isFinite(from) ? from : NaN, until: Number.isFinite(until) ? until : NaN };
+};
+// 日本時間で「11/28(土) 10:00」。終わりの時刻がちょうど◯時00分なら1分前(「12/31(木) 3:59」。4:00 には終わっているため)
+const changelogEventTimeLabel = (ms, isEnd = false) => {
+  if (!Number.isFinite(ms)) return '';
+  const shown = isEnd && ms % 3600000 === 0 ? ms - 60000 : ms;
+  const d = new Date(shown + 9 * 3600000);
+  return `${d.getUTCMonth() + 1}/${d.getUTCDate()}(${'日月火水木金土'[d.getUTCDay()]}) ${d.getUTCHours()}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
+};
+const changelogEventPeriodLabel = (entry) => {
+  const { from, until } = changelogEventPeriod(entry);
+  return Number.isFinite(from) && Number.isFinite(until) ? `${changelogEventTimeLabel(from)} 〜 ${changelogEventTimeLabel(until, true)}` : '';
+};
+// 残り時間。開催中は「あと◯日」(1日を切ったら「あと◯時間」・1時間を切ったら「あと◯分」)、開催予定は「開幕まであと◯日/時間/分」。分からなければ ''
+const changelogEventRemainLabel = (entry, nowMs = Date.now()) => {
+  const { from, until } = changelogEventPeriod(entry);
+  const upcoming = changelogEventUpcoming(entry, nowMs);
+  const target = upcoming ? from : until;
+  if (!Number.isFinite(target) || target <= nowMs) return '';
+  const left = target - nowMs;
+  const text = left >= 86400000 ? `あと${Math.floor(left / 86400000)}日` : left >= 3600000 ? `あと${Math.floor(left / 3600000)}時間` : `あと${Math.max(1, Math.ceil(left / 60000))}分`;
+  return upcoming ? `開幕まで${text}` : text;
+};
+// 一覧の札の題(1行)。listTitle を書いた項目はそれ。無ければ pinTitle、それも無ければ題から【…】と「がはじまりました」「を開催します」を落とす。
+//   更新情報タブの題・本文の題は変えない(札だけの短い名前)
+const changelogEventListTitle = (entry) => {
+  if (entry && typeof entry.listTitle === 'string' && entry.listTitle) return entry.listTitle;
+  if (entry && typeof entry.pinTitle === 'string' && entry.pinTitle) return entry.pinTitle;
+  return String((entry && entry.title) || '').replace(/^【[^】]*】/, '').replace(/\s*(が|を)?(はじまりました|始まりました|開催します|開催)[!！]?$/, '').trim();
+};
 // 「イベント」タブに並べる札(2026-11-23 r1119-113)。開催中を上、開催予定(eventStartAt より前)を下にする。
-//   それぞれの中は一覧と同じ並び(新しい順)。時刻で変わるので、呼ぶたびに数え直す
+//   開催中は終わりが近い順(終わりの分からない物はその下・新しい順)、開催予定は開幕が近い順(2026-11-27 r1126-068)。
+//   時刻で変わるので、呼ぶたびに数え直す
 const changelogPinnedEntries = (nowMs = Date.now()) => {
   const live = CHANGELOG_ENTRIES.filter(entry => changelogEventLive(entry, nowMs));
-  return [...live.filter(entry => !changelogEventUpcoming(entry, nowMs)), ...live.filter(entry => changelogEventUpcoming(entry, nowMs))];
+  const by = (key) => (a, b) => {
+    const x = changelogEventPeriod(a)[key], y = changelogEventPeriod(b)[key];
+    if (Number.isFinite(x) && Number.isFinite(y)) return x - y;
+    return Number.isFinite(x) ? -1 : Number.isFinite(y) ? 1 : 0;
+  };
+  return [...live.filter(entry => !changelogEventUpcoming(entry, nowMs)).sort(by('until')), ...live.filter(entry => changelogEventUpcoming(entry, nowMs)).sort(by('from'))];
 };
 
 // 更新履歴のエントリに書いた外部リンク(link:{url,label})を、出してよい形だけ通す。
