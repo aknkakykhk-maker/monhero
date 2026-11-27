@@ -1,0 +1,17 @@
+/* HOME 作り直しの見本(r1126-070)。本物の絵を使った止め絵用。ゲームのコードではない */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { width: 390px; height: 844px; overflow: hidden; font-family: "Hiragino Sans", "Noto Sans CJK JP", "Noto Sans JP", sans-serif; color: #fff; background: #0b1a14; }
+.scene { position: absolute; inset: 0; background: url(../../../../monster-hero/data/images/home-background-xmas.jpg) center 40%/cover; }
+.boss { position: absolute; left: 50%; transform: translateX(-50%); width: 150px; }
+.bossbar { position: absolute; left: 50%; transform: translateX(-50%); background: rgba(40,20,10,.85); border: 1px solid #d9a441; border-radius: 10px; padding: 4px 10px; font-size: 12px; font-weight: 700; white-space: nowrap; text-align: center; }
+.bossbar i { display: block; height: 5px; margin-top: 3px; background: #f07b22; border-radius: 3px; }
+.panel { background: rgba(10,30,22,.88); border: 1.5px solid #c9a94a; border-radius: 14px; }
+.badge { position: absolute; top: -6px; right: -6px; min-width: 18px; height: 18px; border-radius: 9px; background: #e53935; color: #fff; font-size: 11px; font-weight: 800; display: grid; place-items: center; padding: 0 4px; border: 2px solid #fff; }
+.dot { position: absolute; top: -3px; right: -3px; width: 12px; height: 12px; border-radius: 6px; background: #e53935; border: 2px solid #fff; }
+.tile { position: absolute; border-radius: 12px; overflow: hidden; border: 2px solid #c9a94a; background: #1c2b22; }
+.tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.tile b { white-space: nowrap; letter-spacing: -.5px; position: absolute; left: 0; right: 0; bottom: 0; padding: 3px 2px 4px; font-size: 12px; text-align: center; background: linear-gradient(transparent, rgba(0,0,0,.85) 40%); }
+.tag { position: absolute; top: 4px; left: 4px; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 8px; background: #f5b400; color: #3a2200; }
+.face { position: absolute; width: 46px; height: 46px; border-radius: 23px; border: 2px solid #f48fb1; background: #fff url(../../../../monster-hero/images/assistant/face/myua_normal.PNG) center/cover; }
+.note { position: absolute; left: 8px; right: 8px; bottom: 4px; font-size: 10px; color: #ffe; background: rgba(0,0,0,.6); padding: 2px 6px; border-radius: 6px; }
+.label { position: fixed; top: 0; left: 0; right: 0; }

@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>更新履歴の見本</title>
+<!-- r1126-069 更新履歴の点検の「大きな直し」の見本。ゲームには入れない絵の代わり。数字・題は 11/28 10:05 の実物から -->
+<style>
+:root{--bg:#0b1020;--dlg:#0f172a;--card:#111a2e;--line:#ffffff1f;--tx:#e2e8f0;--sub:#94a3b8;--acc:#d97706;--new:#dc2626;--pink:#f472b6;--blue:#60a5fa;--red:#f87171;--ev:#fb923c}
+*{box-sizing:border-box}body{margin:0;background:#05070f;color:var(--tx);font-family:"Noto Sans JP",system-ui,sans-serif;padding:24px;display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start}
+h2{font-size:14px;margin:0 0 8px;color:#fde68a}.cap{font-size:12px;color:var(--sub);margin:6px 0 0;max-width:390px;line-height:1.5}
+.dlg{width:390px;height:760px;background:var(--dlg);border:2px solid #a78bfa88;border-radius:22px;display:flex;flex-direction:column;overflow:hidden}
+.head{min-height:44px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px;background:linear-gradient(180deg,#2b3150,#1b2036);border-bottom:1px solid var(--line);position:relative}
+.head .x{position:absolute;right:12px;color:var(--sub);font-size:18px}
+.tabs{display:flex;gap:3px;margin:10px 12px 0;padding:3px;border-radius:12px;background:#0b1222;border:1px solid #ffffff14}
+.tabs b{flex:1;text-align:center;font-size:12px;padding:11px 0;border-radius:9px;color:var(--sub)}.tabs b.on{background:linear-gradient(180deg,#d97706,#b45309);color:#fff}
+.tabs i{font-style:normal;background:var(--new);color:#fff;border-radius:99px;padding:0 6px;font-size:10px;margin-left:3px}
+.list{flex:1;overflow:hidden;padding:10px 12px;border-top:1px solid var(--line);margin-top:10px}
+.newbar{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:900;color:#fde68a;margin:0 0 8px}
+.newbar span{font-size:11px;color:var(--sub);font-weight:700}
+.hero{border:2px solid var(--ev);border-radius:14px;background:linear-gradient(135deg,#431407,#3b0764);padding:8px;display:flex;gap:8px;margin-bottom:8px}
+.thumb{width:78px;height:78px;border-radius:10px;flex:none;background:linear-gradient(160deg,#1e3a8a,#7c2d12);display:flex;align-items:center;justify-content:center;font-size:30px}
+.hero .t{font-size:13px;font-weight:900;line-height:1.35}.hero .m{font-size:11px;color:#fed7aa;margin-top:3px}
+.btn{display:inline-block;margin-top:5px;background:#f97316;color:#1c1917;border-radius:99px;font-size:11px;font-weight:900;padding:3px 10px}
+.pill{display:inline-block;font-size:10px;font-weight:900;border-radius:99px;padding:1px 7px;border:1px solid}
+.p-new{background:var(--new);color:#fff;border-color:var(--new)}.p-ev{color:var(--ev);border-color:var(--ev)}.p-c{color:var(--pink);border-color:var(--pink)}.p-u{color:var(--blue);border-color:var(--blue)}.p-f{color:var(--red);border-color:var(--red)}
+.songs{display:flex;gap:6px;margin-bottom:8px}.song{flex:1;background:var(--card);border:1px solid #f472b655;border-radius:12px;padding:6px;font-size:10px;font-weight:900;text-align:center}
+.song .thumb{width:100%;height:58px;font-size:22px;margin-bottom:4px;background:linear-gradient(160deg,#1e40af,#93c5fd)}
+.row{display:flex;align-items:center;gap:6px;padding:9px 10px;background:var(--card);border-radius:12px;margin-bottom:6px;font-size:12px;border-left:3px solid transparent}
+.row.u{border-left-color:var(--acc)}.row .e{width:18px;text-align:center}.row .n{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.row .n small{color:var(--sub);font-size:10px;margin-left:4px}.row .c{font-size:10px;color:var(--sub)}
+.read{width:100%;margin:6px 0 10px;background:none;border:1px solid var(--line);border-radius:10px;color:var(--sub);font-size:11px;padding:7px}
+.month{display:flex;justify-content:space-between;padding:9px 10px;border-radius:10px;background:#0b1222;border:1px solid #ffffff14;font-size:12px;font-weight:900;margin-bottom:6px}.month span{color:var(--sub);font-weight:700}
+.day{font-size:10px;color:#c7d2fe;margin:8px 2px 4px;font-family:ui-monospace,monospace}
+.foot{padding:10px;display:flex;justify-content:center}.foot b{background:#334155;border-radius:99px;padding:10px 54px;font-size:15px}
+.search{display:flex;align-items:center;gap:6px;background:#0b1222;border:1px solid #ffffff2a;border-radius:10px;padding:8px 10px;font-size:12px;color:var(--sub);margin-bottom:8px}
+.chips{display:flex;gap:5px;overflow:hidden;margin-bottom:6px}.chips b{flex:none;font-size:11px;padding:4px 9px;border-radius:99px;background:#1e293b;color:var(--sub);border:1px solid #ffffff14}.chips b.on{background:#4c1d95;color:#fff;border-color:#a78bfa}
+.chips em{font-style:normal;font-size:10px;color:var(--sub);align-self:center;flex:none}
+mark{background:#facc1555;color:#fde68a;border-radius:3px;padding:0 1px}
+.tab{width:1180px;height:820px;background:var(--dlg);border:2px solid #a78bfa88;border-radius:22px;display:flex;flex-direction:column;overflow:hidden;transform:scale(.62);transform-origin:top left;margin-bottom:-312px;margin-right:-448px}
+.cols{flex:1;display:flex;min-height:0}.left{width:420px;border-right:1px solid var(--line);padding:12px;overflow:hidden}.right{flex:1;padding:16px 22px;overflow:hidden}
+.right h3{margin:4px 0 10px;font-size:20px}.meta{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--sub)}
+.dimg{width:100%;height:230px;border-radius:14px;background:linear-gradient(160deg,#172554,#7c2d12 70%,#1c1917);display:flex;align-items:center;justify-content:center;font-size:44px;position:relative}.dimg small{position:absolute;right:10px;bottom:8px;font-size:11px;background:#0008;padding:2px 8px;border-radius:99px}
+.kv{display:grid;grid-template-columns:90px 1fr;gap:4px 10px;font-size:14px;margin:12px 0}.kv dt{color:var(--sub)}.kv dd{margin:0}
+.acc{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;font-size:14px}.acc p{margin:6px 0 0;color:#cbd5e1;font-size:13px;line-height:1.6}
+table{border-collapse:collapse;font-size:12px;margin-top:6px}td,th{border:1px solid var(--line);padding:3px 8px;text-align:center}th{color:var(--sub);font-weight:700}
+.sel{outline:2px solid #fbbf24}
+</style></head><body>
+
+<section><h2>大1. 開いて最初の面に「前回からの新着」</h2>
+<div class="dlg"><div class="head">✦ 更新履歴<span class="x">✕</span></div>
+<div class="tabs"><b class="on">更新情報<i>9</i></b><b>イベント<i>1</i></b><b>不具合情報<i>3</i></b></div>
+<div class="list">
+<div class="newbar">前回（11/25）から新しいお知らせ 9件<span>新しい順</span></div>
+<div class="hero"><div class="thumb">🎄</div><div><span class="pill p-new">NEW</span> <span class="pill p-ev">🎄 開催中</span><div class="t">クリスマスイベント『聖夜の名探偵』がはじまりました</div><div class="m">11/28(土) 10:00 〜 12/31(木) 3:59・あと33日</div><span class="btn">イベントへ ▶</span></div></div>
+<div class="songs"><div class="song"><div class="thumb">❄️</div>winter fall<br><span class="pill p-new">NEW</span></div><div class="song"><div class="thumb">🎅</div>Dear Santa<br><span class="pill p-new">NEW</span></div><div class="song"><div class="thumb">💋</div>Kissから…<br><span class="pill p-new">NEW</span></div></div>
+<div class="row u"><span class="e">👗</span><span class="n">助手のクリスマスのきせかえ <small>4件</small></span><span class="pill p-new">NEW</span></div>
+<div class="row u"><span class="e">⚔️</span><span class="n">モンヒロバトルのごほうびが1.5倍 <small>1件</small></span><span class="pill p-new">NEW</span></div>
+<div class="row u"><span class="e">🖥️</span><span class="n">タイトル画面・HOMEにクリスマスの絵 <small>1件</small></span><span class="pill p-new">NEW</span></div>
+<button class="read">✓ ぜんぶ読んだことにする</button>
+<div class="day">これより前</div>
+<div class="row"><span class="e">🎵</span><span class="n">11/25 モンヒロビート <small>1件</small></span><span class="c">›</span></div>
+<div class="row"><span class="e">🎵</span><span class="n">11/24 モンヒロビート <small>8件</small></span><span class="c">›</span></div>
+<div class="row"><span class="e">🎀</span><span class="n">11/24 助手 <small>1件</small></span><span class="c">›</span></div>
+</div><div class="foot"><b>閉じる</b></div></div>
+<p class="cap">いまは同じ所に札が約4枚しか見えず、開幕の知らせは「✦ その他」の札の中で NEW も付かない(now-sp-tate__10-update-list)。新着を大きい札にまとめ、タブの印を数にする。新着が無い日は帯を出さず、いまの一覧と同じ。</p></section>
+
+<section><h2>大2. 探せる一覧(ことば・話題・種類・月でたたむ)</h2>
+<div class="dlg"><div class="head">✦ 更新履歴<span class="x">✕</span></div>
+<div class="tabs"><b class="on">更新情報</b><b>イベント</b><b>不具合情報</b></div>
+<div class="list">
+<div class="search">🔍 <span style="color:var(--tx)">HELL</span><span style="margin-left:auto">✕</span></div>
+<div class="chips"><em>話題</em><b>全部</b><b class="on">🎵 ビート</b><b>⚔️ バトル</b><b>💜 マスモン</b><b>🎀 助手</b><b>🃏 カード</b></div>
+<div class="chips"><em>種類</em><b class="on">全部</b><b>新コンテンツ</b><b>改善</b><b>イベント</b></div>
+<div class="day">当たったお知らせ 14件</div>
+<div class="month">▼ 2026年11月<span>6件</span></div>
+<div class="row u"><span class="e">🎵</span><span class="n">11/25 <mark>HELL</mark> で、地上のノーツが空中の道の…</span><span class="pill p-new">NEW</span></div>
+<div class="row"><span class="e">🎵</span><span class="n">11/24 曲の鑑賞で、はじめから <mark>HELL</mark> まで…</span><span class="c">›</span></div>
+<div class="row"><span class="e">🎵</span><span class="n">11/23 新曲「…」<mark>HELL</mark> Lv.45 ほか</span><span class="c">›</span></div>
+<div class="row"><span class="e">🎵</span><span class="n">11/11 一部の譜面を新しくしました</span><span class="c">›</span></div>
+<div class="month">▶ 2026年10月<span>5件</span></div>
+<div class="month">▶ 2026年9月<span>3件</span></div>
+<div class="month">▶ 2026年7〜8月<span>0件</span></div>
+</div><div class="foot"><b>閉じる</b></div></div>
+<p class="cap">いまは約380行・高さ約56,000pxが1本につながり、たたむ・しぼる・探す手段が無い(now-sp-tate__12-update-list-bottom)。1行は1段に詰め、月でたたむ。ことばは題と箇条の両方から探す。</p></section>
+
+<section><h2>大3. タブレット・横は「左に一覧・右に中身」</h2>
+<div class="tab"><div class="head" style="font-size:18px">✦ 更新履歴<span class="x">✕</span></div>
+<div class="cols"><div class="left">
+<div class="tabs" style="margin:0 0 10px"><b class="on">更新情報<i>9</i></b><b>イベント<i>1</i></b><b>不具合情報<i>3</i></b></div>
+<div class="search">🔍 ことばで探す</div>
+<div class="day">2026-11-28</div>
+<div class="row u sel"><span class="e">🎄</span><span class="n">クリスマスイベントがはじまりました</span><span class="pill p-new">NEW</span></div>
+<div class="row u"><span class="e">🎵</span><span class="n">新曲「winter fall」</span><span class="pill p-new">NEW</span></div>
+<div class="row u"><span class="e">🎵</span><span class="n">新曲「Dear Santa」</span><span class="pill p-new">NEW</span></div>
+<div class="row u"><span class="e">🎵</span><span class="n">新曲「Kissからはじまる…」</span><span class="pill p-new">NEW</span></div>
+<div class="row u"><span class="e">👗</span><span class="n">助手のクリスマスのきせかえ（4件）</span><span class="pill p-new">NEW</span></div>
+<div class="row u"><span class="e">⚔️</span><span class="n">バトルのごほうびが1.5倍</span><span class="pill p-new">NEW</span></div>
+<div class="day">2026-11-27</div>
+<div class="row"><span class="e">🎄</span><span class="n">【予告】クリスマスイベント</span><span class="c">›</span></div>
+<div class="day">2026-11-25</div>
+<div class="row"><span class="e">🎵</span><span class="n">HELL で、地上のノーツが…</span><span class="c">›</span></div>
+<div class="row"><span class="e">🎀</span><span class="n">助手ライフの友情の図から…</span><span class="c">›</span></div>
+</div>
+<div class="right">
+<div class="meta"><span class="pill p-new">NEW</span><span class="pill p-ev">🎄 開催中</span>11/28 10:00</div>
+<h3>クリスマスイベント『聖夜の名探偵』がはじまりました</h3>
+<div class="dimg">🎄🔍<small>押すと大きく</small></div>
+<dl class="kv"><dt>期間</dt><dd>11/28(土) 10:00 〜 12/31(木) 3:59(あと33日)</dd><dt>場所</dt><dd>HOMEの「聖夜の名探偵」</dd></dl>
+<span class="btn" style="font-size:14px;padding:6px 16px">イベントページを開く ▶</span>
+<div class="acc" style="margin-top:12px">▼ 物語<p>・助手たちのもとに届いた謎のゲーム『モンヒロ事件簿』を遊べます。…</p></div>
+<div class="acc">▶ レイド・グランドスラム</div>
+<div class="acc">▶ ボーナス・きせかえ</div>
+<div class="acc">▼ 新曲のレベル(例)<table><tr><th></th><th>EASY</th><th>NORMAL</th><th>HARD</th><th>EXPERT</th><th>MASTER</th><th>HELL</th></tr><tr><th>Lv.</th><td>8</td><td>10</td><td>15</td><td>28</td><td>33</td><td>45</td></tr><tr><th>ノーツ</th><td>448</td><td>530</td><td>736</td><td>1,155</td><td>1,257</td><td>1,186</td></tr></table></div>
+</div></div></div>
+<p class="cap">いまはタブレットでも窓が 440×760 に固定で、縦は画面の約半分、横は真ん中に細く出る(now-tab-tate__10-update-list・now-tab-yoko__10-update-list)。絵も窓の幅いっぱいで1曲で埋まる(open-tab-yoko__13-update-open1)。広い画面は2列にし、絵は高さを決めて押すと大きく。</p></section>
+</body></html>

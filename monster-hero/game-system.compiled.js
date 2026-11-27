@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d9bd4a902a2e722f
+// source-sha256: a334921b60e057b7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -121957,7 +121957,7 @@ const XMAS_NOVEL_SCRIPT = {
     "title": "暗い台所",
     "cond": null,
     "bgm": "melo_dullahan_steel_ghost",
-    "bg": "夜の台所(ろうそく",
+    "bg": "夜の台所(ろうそく)",
     "next": "END-X1",
     "rows": [{
       "id": "2-X-1a",
@@ -122402,7 +122402,7 @@ const XMAS_NOVEL_SCRIPT = {
     "title": "吹雪の裏口",
     "cond": null,
     "bgm": "melo_dullahan_steel_ghost",
-    "bg": "夜の裏口(吹雪",
+    "bg": "夜の裏口(吹雪)",
     "next": "END-X3",
     "rows": [{
       "id": "6-X-1a",
@@ -123314,7 +123314,7 @@ const XMAS_NOVEL_SCRIPT = {
     }, {
       "id": "M2-4",
       "t": "band",
-      "x": "薪小屋の中。もちまるが、最後の一抱えの薪を抱いたまま、うつ伏せに倒れていた。後ろ頭の毛が、赤黒く固まっている",
+      "x": "薪小屋の中。もちまるが、最後の一抱えの薪を抱いたまま、うつ伏せに倒れていた。桃色の後ろ頭が、赤黒く汚れている",
       "fx": ["fallen"],
       "body": "mochimaru",
       "k": "END-M2:M2-4"
@@ -124885,6 +124885,13 @@ const XMAS_NOVEL_SCRIPT = {
       "e": "happy",
       "k": "C1-O:1-O-26"
     }, {
+      "id": "1-O-26b",
+      "t": "line",
+      "w": "kyuko",
+      "x": "(鼻のクリームをぬぐって、みんなの顔を見回して)……みんなとこうしてるの、なんか、いいね。来年も、こうしてたいなぁ",
+      "e": "happy",
+      "k": "C1-O:1-O-26b"
+    }, {
       "id": "1-O-27",
       "t": "band",
       "x": "その夜、ペンション・シュプールでは、誰もいなくならなかった。——黒いサンタが、7人もいたのに",
@@ -125531,18 +125538,18 @@ const XMAS_NOVEL_CSS = `
 .mh-nv-fallen { position: absolute; left: 50%; bottom: 24%; width: min(80vw, 520px); transform: translateX(-50%); z-index: 4; filter: drop-shadow(0 0 2px rgba(190,200,230,.35)); pointer-events: none; animation: mh-nv-fade 1.2s ease both; }
 .mh-nv-body { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
 .mh-nv-body-dim { position: absolute; inset: 0; -webkit-backdrop-filter: grayscale(.9) brightness(.55); backdrop-filter: grayscale(.9) brightness(.55);
-  background: radial-gradient(70% 34% at 50% 74%, rgba(120,0,14,.42), rgba(120,0,14,0) 72%), radial-gradient(120% 90% at 50% 40%, rgba(6,10,34,.35), rgba(0,0,4,.88)); animation: mh-nv-fade 1.4s ease both; }
-.mh-nv-body-lie { --L: min(88vw, 580px, calc(26vh / var(--ar))); --H: calc(var(--L) * var(--ar)); position: absolute; left: 50%; bottom: 27%; width: var(--L); height: calc(var(--L) * var(--ar)); transform: translateX(-50%); }
-.mh-nv-body-lie img { position: absolute; left: 50%; top: 50%; width: calc(var(--L) * var(--ar)); height: var(--L); max-width: none; object-fit: fill;
-  transform: translate(-50%, -50%) rotate(-90deg); animation: mh-nv-body-in 1.6s ease-out both !important;
+  background: radial-gradient(70% 34% at var(--fx, 50%) var(--fy, 74%), rgba(120,0,14,.42), rgba(120,0,14,0) 72%), radial-gradient(120% 90% at 50% 40%, rgba(6,10,34,.35), rgba(0,0,4,.88)); animation: mh-nv-fade 1.4s ease both; }
+.mh-nv-body-lie { position: absolute; }
+.mh-nv-body-lie > img { position: absolute; left: 50%; top: 50%; max-width: none; object-fit: fill; transform: translate(-50%, -50%) rotate(-90deg); animation: mh-nv-body-in 1.6s ease-out both !important;
   filter: brightness(0) drop-shadow(0 0 1px rgba(210,30,40,.75)) drop-shadow(0 0 16px rgba(110,0,12,.6)) !important; }
-.mh-nv-body-lie.bust { --L: min(40vw, 300px, 17vh); transform: translateX(-100%); }
-.mh-nv-body-lie.bust .pool { left: -30%; top: calc(var(--H) * .6); width: calc(var(--L) * 1.9); height: calc(var(--L) * .3); }
-@media (orientation: landscape) { .mh-nv-body-lie { left: 31%; bottom: 22%; } }
-.mh-nv-body-lie img.bust { -webkit-mask-image: linear-gradient(180deg, #000 42%, transparent 80%); mask-image: linear-gradient(180deg, #000 42%, transparent 80%); }
-.mh-nv-body-lie.bust::after { content: ''; position: absolute; left: 52%; top: 22%; width: 120%; height: 62%; border-radius: 40% 50% 50% 40%; background: radial-gradient(60% 60% at 30% 50%, #000 40%, rgba(0,0,0,.85) 62%, rgba(0,0,0,0) 100%); filter: drop-shadow(0 0 10px rgba(110,0,12,.5)); animation: mh-nv-body-in 1.6s ease-out both; }
-.mh-nv-body-lie .pool { position: absolute; left: -14%; top: calc(var(--H) * .62); width: calc(var(--L) * 1.05); height: calc(var(--L) * .16); transform-origin: 18% 40%; filter: drop-shadow(0 0 6px rgba(140,0,16,.55));
+.mh-nv-body-lie > img.cut { -webkit-mask-image: linear-gradient(180deg, #000 50%, transparent 88%); mask-image: linear-gradient(180deg, #000 50%, transparent 88%); }
+.mh-nv-body-lie.sit > img { left: 0; top: 0; transform: none; transform-origin: 50% 100%; -webkit-mask-image: linear-gradient(180deg, #000 62%, transparent 100%); mask-image: linear-gradient(180deg, #000 62%, transparent 100%); }
+.mh-nv-body-lie .ground { position: absolute; left: -12%; right: -12%; bottom: -10%; height: 34%; border-radius: 50%; background: radial-gradient(50% 50% at 50% 50%, rgba(0,0,0,.72), rgba(0,0,0,0) 100%); }
+.mh-nv-body-lie .drift { position: absolute; left: -45%; bottom: -12%; width: 190%; height: 52%; pointer-events: none; filter: blur(1.5px); animation: mh-nv-body-in 1.6s ease-out both; }
+.mh-nv-body-lie.sit.prone .pool { left: -55%; bottom: -6%; width: 120%; height: 30%; }
+.mh-nv-body-lie .pool { position: absolute; left: -20%; bottom: -14%; width: 82%; height: 46%; transform-origin: 30% 50%; filter: drop-shadow(0 0 6px rgba(140,0,16,.55));
   animation: mh-nv-pool 3.2s cubic-bezier(.2,.6,.3,1) .5s both; }
+.mh-nv-body-lie.sit .pool { left: -30%; bottom: -8%; width: 160%; height: 22%; transform-origin: 50% 50%; }
 @keyframes mh-nv-body-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes mh-nv-pool { from { transform: scale(.08, .05); opacity: .6; } to { transform: scale(1); opacity: 1; } }
 .mh-nv-body.again .mh-nv-body-dim, .mh-nv-body.again img, .mh-nv-body.again .pool { animation-duration: .25s !important; animation-delay: 0s !important; }
@@ -125652,6 +125659,9 @@ const XMAS_NOVEL_BG = Object.freeze([{
   img: 'mountain_road',
   snow: true
 }, {
+  re: /薪小屋/,
+  img: 'secret_passage'
+}, {
   re: /雪原|雪の庭|庭|森|足あと|崖/,
   img: 'snowfield_cliff',
   snow: true
@@ -125728,6 +125738,7 @@ const xmasNovelBgOf = name => {
   const tint = xmasNovelTintOf(n, b);
   return {
     img: XMAS_NOVEL_BG_IMG[b.img],
+    key: b.img,
     pos: b.pos,
     tint: tint ? XMAS_NOVEL_TINT[tint] : '',
     tintKind: tint,
@@ -125735,7 +125746,13 @@ const xmasNovelBgOf = name => {
   };
 };
 const XMAS_NOVEL_BG_SHIFT = Object.freeze({
-  'C10-3': [['10-3-4', 'ペンションのホール(朝)'], ['10-3-7', '朝の裏口'], ['10-3-12', 'ペンションのホール(朝)']],
+  'C10-3': [['10-3-4', 'ペンションのホール(朝)'], ['10-3-7', '朝の雪原(裏口の外)'], ['10-3-12', 'ペンションのホール(朝)']],
+  'C5-4': [['5-4-5', '鏡の裏の通り道']],
+  'C10-2': [['10-2-7', '朝の通り道(はしごの下)']],
+  'C2-X': [['2-X-6a', '夜の裏口(ろうそく)']],
+  'C6-X': [['6-X-10a', '明け方の雪原(裏口の外・吹雪)']],
+  'C2-Y': [['2-Y-10', '裏の階段(夜)'], ['2-Y-11', '夜のホール'], ['2-Y-13a', '裏の階段の下']],
+  'END-M2': [['M2-2', '朝の暖炉の前'], ['M2-3', '朝の雪原'], ['M2-4', '朝の薪小屋の中']],
   'END-G': [['G-10', '屋根裏の会場']]
 });
 const xmasNovelSceneBgName = (scene, idx) => {
@@ -126059,37 +126076,279 @@ const xmasNovelBodySrc = who => {
   }
   return c.art || '';
 };
+const XMAS_NOVEL_BODY_FLOOR = Object.freeze({
+  backdoor: {
+    x: 0.5,
+    y: 0.83
+  },
+  kitchen: {
+    x: 0.5,
+    y: 0.84
+  },
+  snowfield_cliff: {
+    x: 0.5,
+    y: 0.82,
+    snow: true
+  },
+  mountain_road: {
+    x: 0.5,
+    y: 0.86,
+    snow: true
+  },
+  secret_passage: {
+    x: 0.52,
+    y: 0.84
+  },
+  mirror_hall: {
+    x: 0.5,
+    y: 0.88,
+    s: 0.9
+  },
+  guest_room: {
+    x: 0.57,
+    y: 0.64,
+    s: 0.8,
+    lift: true
+  },
+  study: {
+    x: 0.5,
+    y: 0.82,
+    desk: {
+      x: 0.47,
+      y: 0.585
+    }
+  },
+  hall_day: {
+    x: 0.5,
+    y: 0.86
+  },
+  hall_night: {
+    x: 0.5,
+    y: 0.86
+  },
+  attic: {
+    x: 0.5,
+    y: 0.86
+  },
+  attic_party: {
+    x: 0.5,
+    y: 0.86
+  },
+  dining: {
+    x: 0.5,
+    y: 0.86
+  },
+  locked_room: {
+    x: 0.5,
+    y: 0.86
+  }
+});
+const XMAS_NOVEL_BODY_FLOOR_DEFAULT = {
+  x: 0.5,
+  y: 0.84
+};
+const XMAS_NOVEL_BODY_POSE = Object.freeze({
+  'C5-4': 'sit',
+  'END-M5': 'sit',
+  'C5-X': 'slump'
+});
+const xmasNovelBodyPlace = ({
+  W,
+  H,
+  bg,
+  pose,
+  kind,
+  ar
+}) => {
+  const f = bg && XMAS_NOVEL_BODY_FLOOR[bg.key] || XMAS_NOVEL_BODY_FLOOR_DEFAULT;
+  const land = W > H;
+  const sc = Math.max(W / 1536, H / 1024);
+  const dw = 1536 * sc;
+  const dh = 1024 * sc;
+  const pxm = String(bg && bg.pos || '').match(/^(\d+)%/);
+  const px = pxm ? Number(pxm[1]) / 100 : 0.5;
+  const ox = (W - dw) * px;
+  const oy = (H - dh) / 2;
+  const k = f.s || 1;
+  let w;
+  let h;
+  if (pose === 'slump') {
+    const d = f.desk || {
+      x: f.x,
+      y: f.y
+    };
+    h = Math.min(0.55 * dh * k, H * (land ? 1.1 : 0.62));
+    w = h * ar;
+    return {
+      ...xmasNovelBodyClamp({
+        X: ox + d.x * dw,
+        Y: oy + d.y * dh,
+        w,
+        hv: h * 0.22,
+        W,
+        H,
+        land,
+        lift: true
+      }),
+      w,
+      h,
+      vis: 0.22,
+      snow: false
+    };
+  }
+  if (pose === 'sit') {
+    const vis = kind === 'guest' ? 0.95 : 0.45;
+    h = (kind === 'guest' ? 0.27 : 0.5) * dh * k;
+    h = Math.min(h, H * (land ? 0.62 : 0.34) / vis);
+    w = h * ar;
+    return {
+      ...xmasNovelBodyClamp({
+        X: ox + f.x * dw,
+        Y: oy + f.y * dh,
+        w,
+        hv: h * vis,
+        W,
+        H,
+        land
+      }),
+      w,
+      h,
+      vis,
+      snow: !!f.snow
+    };
+  }
+  if (kind === 'guest') {
+    h = Math.min(0.26 * dh * k, H * (land ? 0.5 : 0.3));
+    w = h * ar;
+    return {
+      ...xmasNovelBodyClamp({
+        X: ox + f.x * dw,
+        Y: oy + f.y * dh,
+        w,
+        hv: h * 0.5,
+        W,
+        H,
+        land
+      }),
+      w,
+      h,
+      vis: 0.5,
+      snow: !!f.snow
+    };
+  }
+  const len = (kind === 'monster' ? 0.17 : 0.27) * dw * k;
+  w = Math.min(len, W * (land ? 0.36 : 0.82));
+  h = w * ar;
+  return {
+    ...xmasNovelBodyClamp({
+      X: ox + f.x * dw,
+      Y: oy + f.y * dh,
+      w,
+      hv: h,
+      W,
+      H,
+      land,
+      lift: f.lift
+    }),
+    w,
+    h,
+    vis: 1,
+    snow: !!f.snow
+  };
+};
+const xmasNovelBodyClamp = ({
+  X,
+  Y,
+  w,
+  hv,
+  W,
+  H,
+  land,
+  lift
+}) => {
+  const boxTop = H - (land ? 140 : 170);
+  let y = Math.min(Y, land && !lift ? H - 10 : boxTop);
+  let x = X;
+  if (land && y > boxTop) x = Math.min(x, W * 0.4 - w / 2 - 6);
+  x = Math.max(w / 2 + 8, Math.min(W - w / 2 - 8, x));
+  y = Math.max(hv + 50, y);
+  return {
+    left: x - w / 2,
+    bottom: H - y
+  };
+};
 const XmasNovelBody = ({
   who,
   scene = '',
-  at = 0
+  at = 0,
+  bg = null
 }) => {
   const k = `${scene}:${who}`;
   const [again] = useState(() => xmasNovelBodyLast.k === k && Math.abs(at - xmasNovelBodyLast.at) <= 4);
   const [ar, setAr] = useState(0);
   const [broken, setBroken] = useState(false);
+  const [vp, setVp] = useState(() => ({
+    W: typeof window !== 'undefined' ? window.innerWidth : 390,
+    H: typeof window !== 'undefined' ? window.innerHeight : 844
+  }));
   useEffect(() => {
     xmasNovelBodyLast = {
       k,
       at
     };
   }, [k, at]);
+  useEffect(() => {
+    const on = () => setVp({
+      W: window.innerWidth,
+      H: window.innerHeight
+    });
+    window.addEventListener('resize', on);
+    return () => window.removeEventListener('resize', on);
+  }, []);
   const c = xmasNovelCastOf(who);
   const src = xmasNovelBodySrc(who);
-  const bust = !!(c && c.kind === 'guest');
+  const kind = c ? c.kind : '';
+  const bust = kind === 'guest';
+  const pose = XMAS_NOVEL_BODY_POSE[scene] || 'lie';
+  const slump = pose === 'slump';
+  const sit = pose === 'sit';
+  const prone = slump || !sit && bust;
+  const r = ar || (bust ? 1 : kind === 'monster' ? 1 : 0.4);
+  const p = xmasNovelBodyPlace({
+    W: vp.W,
+    H: vp.H,
+    bg,
+    pose,
+    kind,
+    ar: r
+  });
+  const boxH = sit || prone ? p.h * p.vis : p.h;
+  const fx = `${Math.round((p.left + p.w / 2) / vp.W * 100)}%`;
+  const fy = `${Math.round((vp.H - p.bottom) / vp.H * 100)}%`;
+  const fade = sit ? `linear-gradient(180deg, #000 ${Math.round(p.vis * 70)}%, transparent ${Math.round(p.vis * 100)}%)` : '';
   return React.createElement("div", {
     className: `mh-nv-body${again ? ' again' : ''}`,
     "data-xmas-novel-fallen": true,
     "data-xmas-novel-body": who,
-    "aria-label": c ? `${c.name}の倒れた影` : '倒れた影'
+    "data-xmas-novel-body-pose": pose,
+    "aria-label": c ? `${c.name}の倒れた影` : '倒れた影',
+    style: {
+      '--fx': fx,
+      '--fy': fy
+    }
   }, React.createElement("div", {
     className: "mh-nv-body-dim"
   }), React.createElement("div", {
-    className: `mh-nv-body-lie${bust ? ' bust' : ''}`,
+    className: `mh-nv-body-lie${sit ? ' sit' : prone ? ' sit prone' : ''}`,
     style: {
-      '--ar': ar || (bust ? 1 : 0.3)
+      left: p.left,
+      bottom: p.bottom,
+      width: p.w,
+      height: boxH
     }
-  }, React.createElement("svg", {
+  }, React.createElement("div", {
+    className: "ground"
+  }), React.createElement("svg", {
     className: "pool",
     viewBox: "0 0 300 60",
     preserveAspectRatio: "none",
@@ -126115,13 +126374,75 @@ const XmasNovelBody = ({
     src: src,
     alt: "",
     draggable: false,
-    className: bust ? 'bust' : '',
+    style: sit ? {
+      width: p.w,
+      height: p.h,
+      transform: `rotate(${pose === 'slump' ? 16 : 5}deg)`,
+      WebkitMaskImage: fade,
+      maskImage: fade
+    } : slump ? {
+      width: p.w,
+      height: p.h,
+      transformOrigin: '50% 0',
+      transform: 'scaleY(.7) rotate(-3deg)',
+      WebkitMaskImage: 'linear-gradient(180deg, #000 20%, transparent 31%)',
+      maskImage: 'linear-gradient(180deg, #000 20%, transparent 31%)'
+    } : prone ? {
+      width: p.w,
+      height: p.h,
+      transformOrigin: '50% 0',
+      transform: 'scaleY(.62) rotate(-4deg)',
+      WebkitMaskImage: 'linear-gradient(180deg, #000 48%, transparent 74%)',
+      maskImage: 'linear-gradient(180deg, #000 48%, transparent 74%)'
+    } : {
+      width: p.h,
+      height: p.w,
+      ...(kind === 'monster' ? {
+        transform: `translateY(${Math.round(p.h * 0.17)}px) translate(-50%, -50%) rotate(-90deg)`
+      } : {})
+    },
     onLoad: e => {
       const im = e.currentTarget;
       if (im.naturalWidth && im.naturalHeight) setAr(im.naturalWidth / im.naturalHeight);
     },
     onError: () => setBroken(true)
-  }), (!src || broken) && React.createElement(XmasNovelFallen, null)));
+  }), (!src || broken) && React.createElement(XmasNovelFallen, null), prone && !slump && React.createElement("svg", {
+    className: "drift",
+    viewBox: "0 0 100 40",
+    preserveAspectRatio: "none",
+    "aria-hidden": "true"
+  }, React.createElement("defs", null, React.createElement("linearGradient", {
+    id: "mh-nv-drift-g",
+    x1: "0",
+    y1: "0",
+    x2: "0",
+    y2: "1"
+  }, p.snow ? React.createElement(React.Fragment, null, React.createElement("stop", {
+    offset: "0%",
+    stopColor: "#5f6574",
+    stopOpacity: "0"
+  }), React.createElement("stop", {
+    offset: "22%",
+    stopColor: "#5f6574"
+  }), React.createElement("stop", {
+    offset: "100%",
+    stopColor: "#3c404b"
+  })) : React.createElement(React.Fragment, null, React.createElement("stop", {
+    offset: "0%",
+    stopColor: "#000",
+    stopOpacity: ".2"
+  }), React.createElement("stop", {
+    offset: "40%",
+    stopColor: "#000",
+    stopOpacity: ".9"
+  }), React.createElement("stop", {
+    offset: "100%",
+    stopColor: "#000",
+    stopOpacity: "0"
+  })))), React.createElement("path", {
+    d: "M0 40 C10 30 22 22 36 20 C46 16 56 16 66 19 C80 22 92 30 100 40 Z",
+    fill: "url(#mh-nv-drift-g)"
+  }))));
 };
 const XmasNovelBossShadow = () => {
   const src = typeof RAID_XMAS_BOSS_IMG !== 'undefined' ? RAID_XMAS_BOSS_IMG : '';
@@ -127293,6 +127614,7 @@ const XmasNovelScreen = ({
     className: `mh-nv-fx ${fx.kind}`
   }), isBand && row.body && React.createElement(XmasNovelBody, {
     key: `body-${row.body}`,
+    bg: bg,
     who: xmasNovelBodyWho(row.body, st && st.cur && st.cur.flags),
     scene: scene ? scene.id : '',
     at: st && st.cur && Number.isFinite(st.cur.idx) ? st.cur.idx : 0
