@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ee211c78cd035155
+// source-sha256: 6cc5bfd50c233462
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -64133,7 +64133,7 @@ const XMAS_BATTLE_BONUS_RATE = 1.5;
 const xmasBattleBonusRateAt = nowMs => raidXmasWindowAt(nowMs) === 'open' ? XMAS_BATTLE_BONUS_RATE : 1;
 const XMAS_STORY_LIST = Object.freeze([['招待状', 'read'], ['雪の音', 'fight'], ['夜中の足音', 'read'], ['開かずの部屋', 'read'], ['窓の外の影', 'fight'], ['柱時計', 'read'], ['十二の鐘', 'read'], ['足あとの先', 'fight'], ['ふたつめの空箱', 'read'], ['見張り番', 'fight'], ['閉じたノート', 'read'], ['ふたりの探偵助手', 'read'], ['鏡の中', 'read'], ['影の行進', 'fight'], ['みんなで眠る夜', 'read'], ['見回りのランタン', 'read'], ['雪の上の砂', 'fight'], ['13の鐘', 'fight'], ['そろう手がかり', 'read'], ['謎は全て解けた!', 'read'], ['おでじゃない', 'read'], ['そろいすぎた手がかり', 'read'], ['最後の手がかり', 'fight'], ['真実はいつもひとつ!', 'read'], ['やり直しのクリスマス会', 'read']]);
 const xmasStoryOpenAtOf = no => no <= 1 ? RAID_XMAS_EVENT.startAt : `2026-12-${String(no - 1).padStart(2, '0')}T04:00:00+09:00`;
-const XMAS_STORY_PROLOGUE_OPEN_AT = '2026-11-28T10:00:00+09:00';
+const XMAS_STORY_PROLOGUE_OPEN_AT = '2026-11-27T13:00:00+09:00';
 const XMAS_STORY_CHAPTERS = Object.freeze([Object.freeze({
   id: 'xs00',
   no: 0,
@@ -114408,7 +114408,7 @@ const XMAS_NOVEL_SCRIPT = {
       "id": "0-15",
       "t": "line",
       "w": "watson",
-      "x": "保存された日付は、読みとれません",
+      "x": "保存された日付は、読み取れません",
       "k": "OUT-0-2:0-15"
     }, {
       "id": "0-16",
@@ -114461,7 +114461,7 @@ const XMAS_NOVEL_SCRIPT = {
       "id": "0-23",
       "t": "line",
       "w": "atsu",
-      "x": "おもしろそうじゃん！ みんなで解こうよ、この事件！",
+      "x": "面白そうじゃん！ みんなで解こうよ、この事件！",
       "e": "excited",
       "k": "OUT-0-2:0-23"
     }, {
@@ -114471,6 +114471,13 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "あつくんが遊ぶなら、あたしも！ 助手として、隣で見てる！",
       "e": "happy",
       "k": "OUT-0-2:0-24"
+    }, {
+      "id": "0-24b",
+      "t": "line",
+      "w": "sorashido",
+      "x": "では、自分はワトソンくんと、記録を取りながら解きます。……どちらが先に解くか、勝負ですね笑",
+      "e": "normal",
+      "k": "OUT-0-2:0-24b"
     }, {
       "id": "0-25",
       "t": "band",

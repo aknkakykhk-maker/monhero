@@ -4,7 +4,7 @@
 //   node tools/battle/xmas-flow-browser-check.js
 //   SHOT_DIR=<フォルダ> を付けると、縦・横・タブレットの止め絵を残す(HOME・物語・レイド・ボーナス・カードの案内・終了後の HOME)
 //
-//   ① 11/28 10:05(序章だけ): HOME に入口がありボスは無い・物語は序章だけ(事件簿の入口も第1話も無い)・レイドとボーナスは「11/30 10:00 から」・
+//   ① 11/27 13:05(序章だけ): HOME に入口がありボスは無い・物語は序章だけ(事件簿の入口も第1話も無い)・レイドとボーナスは「11/30 10:00 から」・
 //      タブを替えてもポスターの大きさが変わらない・横で入口の帯がほかのイベントの帯に重ならない
 //   ② 11/30 10:05(開催): 入口の二度押しで二重に開かない・HOME のボス → レイドのタブ → 戻ると HOME・
 //      バトルで挑む → 編成 → 戻るとレイド・ビートで挑む → 曲えらび → 戻るとレイド・
@@ -33,7 +33,7 @@ const VPS = [
   { label: '横', shot: 'yoko', viewport: { width: 844, height: 390 } },
   { label: 'タブレット', shot: 'tablet', viewport: { width: 820, height: 1180 } },
 ];
-const PRE = '2026-11-28T10:05:00+09:00', OPEN = '2026-11-30T10:05:00+09:00', AFTER = '2026-12-31T04:05:00+09:00';
+const PRE = '2026-11-27T13:05:00+09:00', OPEN = '2026-11-30T10:05:00+09:00', AFTER = '2026-12-31T04:05:00+09:00';
 (async () => {
   let chromium;
   try { ({ chromium } = require(path.join(ROOT, 'tools', 'node_modules', 'playwright'))); } catch (e) { console.log('SKIP: playwright が入っていないので確かめられません'); process.exit(0); }

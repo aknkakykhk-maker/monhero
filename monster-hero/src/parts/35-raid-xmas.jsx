@@ -144,7 +144,7 @@ const XMAS_STORY_LIST = Object.freeze([
 // 第2話から: 12/(話-1) 4:00 JST(第25話 = 12/24)
 const xmasStoryOpenAtOf = (no) => (no <= 1 ? RAID_XMAS_EVENT.startAt : `2026-12-${String(no - 1).padStart(2, '0')}T04:00:00+09:00`);
 // 序章(台帳 r1126-012・社長): 第1話の前。イチーカから招待状が届いて行くまで。11/28 の開催予告のときから開く(時刻 10:00 は仮)。お話は data/assistants.js の XMAS_STORY_00(EVENT_REPLAYS の xmas_story_00)
-const XMAS_STORY_PROLOGUE_OPEN_AT = '2026-11-28T10:00:00+09:00';
+const XMAS_STORY_PROLOGUE_OPEN_AT = '2026-11-27T13:00:00+09:00'; // 社長の指示で 11/28 10:00 から前倒し(r1126-060)
 const XMAS_STORY_CHAPTERS = Object.freeze([
   Object.freeze({ id: 'xs00', no: 0, prologue: true, openAt: XMAS_STORY_PROLOGUE_OPEN_AT, type: 'read', title: '届いたゲーム', scriptId: 'xmas_story_00' }),
   ...XMAS_STORY_LIST.map(([title, type], i) => Object.freeze({
