@@ -95,12 +95,21 @@ const speakerOf = (name) => {
   return hit ? { w: hit[1] } : { n };
 };
 
+// ---- 立ち絵の見せ方(r1126-067) ----
+//  〔立ち:寄り〕胸から上を大きく(緊迫・告白・推理の決め台詞・泣く所) / 〔立ち:ふだん〕頭から腰(既定) / 〔立ち:引き〕全身を小さめ(登場・集まる所・離れて立つ所)
+//  場面の見出しの行に書くと場面ぜんぶ、台詞の行に書くとその行だけ(行の印が場面の印より強い)
+const FRAME_MARK = /〔\s*立ち\s*[:：]\s*([^〕]+?)\s*〕/g;
+const FRAMES = { 寄り: 'close', ふだん: 'normal', 引き: 'far' };
+const frameOf = (k, where) => { const f = FRAMES[String(k).trim()]; if (!f) note(stripMd(where || ''), `立ち絵の印「${k}」が分からない(寄り・ふだん・引き)`); return f || ''; };
+
 // ---- 場面の見出し ----
 //  第4案: | | **C3-1a 雪の上の影** | | 条件: f_kuroba=0 / 曲: 怖 / 背景: 雪原 / 次: C3-2 |
 //  第3案(序章): | | **場面1** | | **いつもの広場**(曲: 日・背景: `monhero_plaza`) |
 const parseSceneHead = (cells, chapter, seq) => {
   const head = stripMd(cells[1]);
-  const info = stripMd(cells[3]);
+  // 〔立ち:寄り〕〔立ち:引き〕… この場面の立ち絵の見せ方(r1126-067)。印が無ければ「ふだん」(頭から腰)
+  let frame = '';
+  const info = stripMd(cells[3]).replace(FRAME_MARK, (_, k) => { frame = frameOf(k, cells[1]); return ''; }).trim();
   let id; let title;
   const m = head.match(/^((?:C\d+-[0-9A-Za-z]+)|(?:END-[A-Z]+\d*(?:-[0-9A-Za-z]+)*)|(?:[A-Z]{2,}\d*-[0-9A-Za-z-]+))\s*(.*)$/);
   if (m) { id = m[1]; title = m[2].trim(); }
@@ -141,6 +150,7 @@ const parseSceneHead = (cells, chapter, seq) => {
   const afterM = condSrc.match(/(END-[A-Z]+)(?:\s*の\s*([A-Z]-[0-9a-z]+))?\s*のあと/);
   const bgRaw = (kv['背景'] || '').split(/→/)[0].trim();
   const scene = { id, chapter: chapter.id, title, cond, bgm, bg: bgRaw || null, next, rows: [] };
+  if (frame && frame !== 'normal') scene.frame = frame;
   if (condSrc && !cond) scene.jumpOnly = true;
   if (/^外側/.test(info)) scene.outside = true; // ゲームの外(助手たち本人)の場面
   // 過去編(真グッドを見たあと「章から」で読む章)の場面は、並びでは入らない。最後の場面のあとは起動画面へ戻る(r1126-046)
@@ -271,7 +281,8 @@ const parseRow = (cells, where) => {
   const idCell = stripMd(cells[0]);
   const who = stripMd(cells[1]);
   const face = stripMd(cells[2]);
-  const raw = String(cells[3] || '').trim();
+  let frame = '';
+  const raw = String(cells[3] || '').replace(FRAME_MARK, (_, k) => { frame = frameOf(k, where); return ''; }).trim();
   let id = idCell; let cond = null;
   const cm = idCell.match(/^(.*?)\[([^\]]+)\]$/);
   if (cm) { id = cm[1]; cond = parseCond(cm[2]); }
@@ -317,6 +328,7 @@ const parseRow = (cells, where) => {
     const uniq = [...new Set(fx.filter((f) => f !== 'band'))];
     if (uniq.length) row.fx = uniq;
     if (body) row.body = body;
+    if (frame) row.f = frame;
     if (fx.includes('se')) row.se = /パチパチ|拍手/.test(s) ? 'clap' : /鐘|時計/.test(s) ? 'bell' : /悲鳴|ドン|バタン|ガタン|ブツン|ザザッ/.test(s) ? 'impact' : /オルゴール|♪/.test(s) ? 'music' : 'tap';
     return row;
   }
@@ -344,6 +356,7 @@ const parseRow = (cells, where) => {
   const sp = speakerOf(who);
   const { text, note: memo } = cleanLine(stripMd(raw));
   const line = { ...row, t: 'line', ...sp, x: text };
+  if (frame) line.f = frame;
   if (sp.n && !sp.crowd && !PAST_SPEAKERS.includes(sp.n)) note(where, `知らない話し手「${sp.n}」(名前だけ出す)`);
   delete line.crowd;
   if (sp.secret) { line.n = '？？？'; delete line.w; }
