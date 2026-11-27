@@ -8,7 +8,7 @@
 // 見る文: 台本(79-xmas-novel-script.jsx)の全場面の全行(本編・幕間・過去編・全エンド・強制バッド・名指しエンド・おまけ・序章。あつ派・ソラシド派の両方の行)
 //   地の文の帯・台詞(しぐさの前置き+「」の中)・音の行(大きい音+小さい説明)・手がかりを書きとめた行・手がかりの札の説明・手がかり帳・
 //   人の札の文・問い・選択肢・ログ・章の札・題の札・エンドの札とエンドヒストリーの題
-// 幅: 縦(390×844)と横(844×390)。画面と同じ CSS を入れ、同じ枠の中に置く
+// 幅: 縦(390×844)・横(844×390)・タブレット(820×1180)。画面と同じ CSS を入れ、同じ枠の中に置く
 // 言葉の途中とみなす所(部品の決めた折り目とは別に、ここで独立に見る):
 //   ・道具(Intl.Segmenter)の言葉の切れ目でない所(「コー／ト」「い／く」)
 //   ・名前・手がかりの名前・かぎかっこの中の短い名前・日時・数と単位・「……」の中(「黒いサン／タ」「「二通目の招待状」を書／きとめた」は道具の切れ目でもあるので、こちらで見る)
@@ -123,7 +123,7 @@ check('台本の文を集められた', jobs.length > 2000, `${jobs.length}本(�
   let chromium;
   try { ({ chromium } = require(path.join(ROOT, 'tools/node_modules/playwright'))); } catch { console.log('SKIP: playwright が入っていないので確かめられません'); process.exit(failed ? 1 : 0); }
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
-  const VIEWS = [{ label: '縦', width: 390, height: 844 }, { label: '横', width: 844, height: 390 }];
+  const VIEWS = [{ label: '縦', width: 390, height: 844 }, { label: '横', width: 844, height: 390 }, { label: 'タブレット', width: 820, height: 1180 }];
   const modes = BEFORE ? ['before', 'after'] : ['after'];
   const result = {};
   try {

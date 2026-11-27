@@ -921,11 +921,23 @@ const xmasNovelWrapPlan = (text, max = XMAS_NOVEL_KEEP_MAX) => {
     for (let q = lo + 1; q < hi; q++) {
       if (q === b || spans.some(([x, e]) => q > x && q < e) || /^[、。！？!?」』）)…‥ー]/.test(s.slice(q)) || /[「『（(]$/.test(s.slice(0, q))) continue;
       if (xmasNovelBadBreak(s, q, segAt)) continue;
-      if (!xmasNovelGramBreak(s, q) && !(/[ぁ-ゖ、]$/.test(s.slice(0, q)) && /^[一-龯ァ-ヶ]/.test(s.slice(q)))) continue;
       if (len(lo, q) > max || len(q, hi) > max) continue;
       if (best < 0 || Math.abs(q - b) < Math.abs(best - b)) best = q;
     }
     if (best >= 0) { br.delete(b); br.add(best); }
+  }
+  // 枠(max)より長いかたまりは、中の言葉の切れ目で枠に入る長さずつに分ける(ブラウザの好きな所で折らせない・r1126-078 の点検「「お気に入りの魔／法」」)
+  {
+    const sorted = [0, ...[...br].sort((x, y) => x - y), s.length];
+    for (let k = 1; k < sorted.length; k++) {
+      const lo = sorted[k - 1], hi = sorted[k];
+      if (len(lo, hi) <= max || /^\s+$/.test(s.slice(lo, hi))) continue;
+      let start = lo, lastOk = -1;
+      for (let q = lo + 1; q < hi; q++) {
+        if (len(start, q) > max) { if (lastOk > start) { br.add(lastOk); start = lastOk; } else break; }
+        if (segAt.has(q) && !xmasNovelBadBreak(s, q, segAt) && !spans.some(([x, e]) => q > x && q < e) && !/^[、。！？!?」』）)…‥ー]/.test(s.slice(q)) && !/[「『（(]$/.test(s.slice(0, q))) lastOk = q;
+      }
+    }
   }
   const cuts = [0, ...[...br].sort((a, b) => a - b), s.length];
   const plan = [];
