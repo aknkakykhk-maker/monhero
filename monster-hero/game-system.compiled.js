@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 36ccfccc31f8c242
+// source-sha256: 29e3520004d07517
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -131473,6 +131473,49 @@ function AssistantPeerTalk({
       setPeerFolded(false);
     }
   }, [st.homeOpenAt]);
+  const [homeBox, setHomeBox] = React.useState(null);
+  const homeShown = scene === 'home' && !!cur && !homeWaiting && !(peerFolded && !cur.replay);
+  React.useEffect(() => {
+    if (!homeShown || typeof document === 'undefined') {
+      setHomeBox(null);
+      return undefined;
+    }
+    const measure = () => {
+      const face = document.querySelector('main.mh-home-scene .mh-home-assistant-fold, main.mh-home-scene .mh-home-assistant');
+      const dock = document.querySelector('main.mh-home-scene .mh-home-dock');
+      const band = document.querySelector('main.mh-home-scene .mh-home-band');
+      if (!face || !dock) {
+        setHomeBox(null);
+        return;
+      }
+      const f = face.getBoundingClientRect(),
+        d = dock.getBoundingClientRect(),
+        b = band ? band.getBoundingClientRect() : null;
+      const W = window.innerWidth,
+        low = W > window.innerHeight && window.innerHeight < 600;
+      const left = Math.round(low ? Math.max(f.right, b ? b.right : 0) + 8 : Math.max(8, f.left));
+      const top = Math.round(low ? b ? b.top : f.top : f.bottom + 6);
+      const width = Math.round(Math.min(448, W - left - 8));
+      const maxH = Math.round(d.top - top - 6);
+      if (width < 240 || maxH < 120) {
+        setHomeBox(null);
+        return;
+      }
+      setHomeBox(p => p && p.left === left && p.top === top && p.width === width && p.maxH === maxH ? p : {
+        left,
+        top,
+        width,
+        maxH
+      });
+    };
+    measure();
+    const t = setInterval(measure, 800);
+    window.addEventListener('resize', measure);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener('resize', measure);
+    };
+  }, [homeShown]);
   const talkingNow = !!cur && !homeWaiting;
   React.useEffect(() => {
     if (ASSISTANT_PEER_STORE.state.talking !== talkingNow) ASSISTANT_PEER_STORE.set({
@@ -131648,7 +131691,23 @@ function AssistantPeerTalk({
     const t = setTimeout(() => setToast(null), 3200);
     return () => clearTimeout(t);
   }, [toast]);
-  const wrap = (children, attrs = {}) => React.createElement("div", _extends({
+  const wrap = (children, attrs = {}) => homeBox && homeShown ? React.createElement("div", _extends({
+    "data-assistant-peer-home-box": true,
+    className: "fixed pointer-events-none",
+    style: {
+      zIndex: 8500,
+      left: homeBox.left,
+      top: homeBox.top,
+      width: homeBox.width
+    }
+  }, attrs), React.createElement("div", {
+    className: "pointer-events-auto w-full",
+    style: {
+      maxHeight: homeBox.maxH,
+      overflowY: 'auto',
+      overscrollBehavior: 'contain'
+    }
+  }, children)) : React.createElement("div", _extends({
     className: "fixed inset-x-0 flex justify-center px-2 pointer-events-none",
     style: {
       zIndex: typeof ASSISTANT_LIFE_STORE !== 'undefined' && ASSISTANT_LIFE_STORE.state.open ? 9150 : 8500,
@@ -141673,7 +141732,7 @@ function AssistantLifeHomeFaces({
     const shown = list.slice(0, 3);
     const extra = list.length - shown.length;
     void step;
-    const rowW = 22;
+    const rowW = 24;
     const left = r.x + r.w - rowW - 1;
     const top = r.y + 1;
     const names = list.map(id => {
@@ -141701,15 +141760,23 @@ function AssistantLifeHomeFaces({
         width: rowW,
         height: rowW
       }
-    }, React.createElement("span", {
-      "data-assistant-life-home-dot": true,
-      "aria-hidden": "true",
-      className: "block rounded-full border-2 border-white bg-rose-500 shadow",
-      style: {
-        width: 14,
-        height: 14
-      }
-    }), React.createElement("span", {
+    }, (() => {
+      const who = assistantById(shown[0]);
+      return React.createElement("span", {
+        "data-assistant-life-home-dot": true,
+        "data-assistant-life-home-dot-who": shown[0],
+        "aria-hidden": "true",
+        className: "block overflow-hidden rounded-full border-2 border-white bg-slate-900 shadow",
+        style: {
+          width: rowW,
+          height: rowW
+        }
+      }, who && React.createElement(AssistantFace, {
+        who: who,
+        size: rowW - 4,
+        accent: who.accent
+      }));
+    })(), React.createElement("span", {
       className: "sr-only"
     }, shown.map((id, i) => {
       const who = assistantById(id);

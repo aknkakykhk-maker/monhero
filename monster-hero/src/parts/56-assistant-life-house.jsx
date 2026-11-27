@@ -1864,7 +1864,7 @@ function AssistantLifeHomeFaces({ metIds }) {
       // 2026-11-27 台帳 r1126-073(HOME の作り直し・すぐできる直し3): HOME では顔を並べず、入口の右上の内側に赤い点1つだけを出す
       //   (顔は助手ライフの中で見せる)。押すと今までどおり助手ライフを開く。顔の印(data-assistant-life-home-face)は見えない形で残す
       void step;
-      const rowW = 22;
+      const rowW = 24;
       const left = r.x + r.w - rowW - 1;
       const top = r.y + 1;
       const names = list.map(id => { const who = assistantById(id); return who ? who.name : id; }).join('・');
@@ -1874,7 +1874,8 @@ function AssistantLifeHomeFaces({ metIds }) {
               助手ライフへは HOME の小さな丸「助手ライフ」1つから入る。開発部が窓口の判断で出し方だけ変えた */}
           <span role="img" data-assistant-life-home-badge={f} aria-label={`${names}がいます`}
             className="pointer-events-none relative flex items-center justify-center rounded-full" style={{ width: rowW, height: rowW }}>
-            <span data-assistant-life-home-dot aria-hidden="true" className="block rounded-full border-2 border-white bg-rose-500 shadow" style={{ width: 14, height: 14 }}/>
+            {/* 2026-11-28 台帳 r1126-073 追記3: 赤い点は ☰ の赤い数字(お知らせ)と見分けがつかなかったので、そこにいる助手1人の小さい顔の丸を1つにした(何人いても1つ・押せない) */}
+            {(() => { const who = assistantById(shown[0]); return <span data-assistant-life-home-dot data-assistant-life-home-dot-who={shown[0]} aria-hidden="true" className="block overflow-hidden rounded-full border-2 border-white bg-slate-900 shadow" style={{ width: rowW, height: rowW }}>{who && <AssistantFace who={who} size={rowW - 4} accent={who.accent}/>}</span>; })()}
             <span className="sr-only">{shown.map((id, i) => { const who = assistantById(id); if (!who) return null; const w = assistantLifeWhereOf(life, id); const lonely = w && w.reason === 'lonely';
               const spent = f === 'card' && !!assistantLifeCardSpent(id);
               return (

@@ -716,6 +716,32 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
     homeOpenRef.current = at;
     if (cur && !cur.replay) { setHomeOpenedId(cur.talk.id); setPeerFolded(false); }
   }, [st.homeOpenAt]);
+  // HOME で窓を開いたら、押した顔の近くに出す(2026-11-28 台帳 r1126-073 追記3。前は画面の下のまん中に出て、入口の札にかぶった)。
+  //   出す位置だけを HOME の部品の位置から測って決める(中身は変えない)。縦とタブレットは顔の下、背の低い横は帯の右。
+  //   下の入口(ドック)の上端までに収め、収まらない分は窓の中で送る。測れないときは今までどおり画面の下
+  const [homeBox, setHomeBox] = React.useState(null);
+  const homeShown = scene === 'home' && !!cur && !homeWaiting && !(peerFolded && !cur.replay);
+  React.useEffect(() => {
+    if (!homeShown || typeof document === 'undefined') { setHomeBox(null); return undefined; }
+    const measure = () => {
+      const face = document.querySelector('main.mh-home-scene .mh-home-assistant-fold, main.mh-home-scene .mh-home-assistant');
+      const dock = document.querySelector('main.mh-home-scene .mh-home-dock');
+      const band = document.querySelector('main.mh-home-scene .mh-home-band');
+      if (!face || !dock) { setHomeBox(null); return; }
+      const f = face.getBoundingClientRect(), d = dock.getBoundingClientRect(), b = band ? band.getBoundingClientRect() : null;
+      const W = window.innerWidth, low = W > window.innerHeight && window.innerHeight < 600;
+      const left = Math.round(low ? Math.max(f.right, b ? b.right : 0) + 8 : Math.max(8, f.left));
+      const top = Math.round(low ? (b ? b.top : f.top) : f.bottom + 6);
+      const width = Math.round(Math.min(448, W - left - 8));
+      const maxH = Math.round(d.top - top - 6);
+      if (width < 240 || maxH < 120) { setHomeBox(null); return; }
+      setHomeBox((p) => (p && p.left === left && p.top === top && p.width === width && p.maxH === maxH ? p : { left, top, width, maxH }));
+    };
+    measure();
+    const t = setInterval(measure, 800);
+    window.addEventListener('resize', measure);
+    return () => { clearInterval(t); window.removeEventListener('resize', measure); };
+  }, [homeShown]);
   // 掛け合いが流れているあいだは、助手たちの今の帯(56-assistant-life.jsx)を隠す(HOME で印だけのあいだは隠さない)
   const talkingNow = !!cur && !homeWaiting;
   React.useEffect(() => { if (ASSISTANT_PEER_STORE.state.talking !== talkingNow) ASSISTANT_PEER_STORE.set({ talking: talkingNow }); }, [talkingNow]);
@@ -822,12 +848,17 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
   }, [cur, advance, auto.on]);
   React.useEffect(() => { if (!toast) return undefined; const t = setTimeout(() => setToast(null), 3200); return () => clearTimeout(t); }, [toast]);
 
-  const wrap = (children, attrs = {}) => (
+  const wrap = (children, attrs = {}) => (homeBox && homeShown ? (
+    // HOME: 顔の近く(上の homeBox)
+    <div data-assistant-peer-home-box className="fixed pointer-events-none" style={{ zIndex: 8500, left: homeBox.left, top: homeBox.top, width: homeBox.width }} {...attrs}>
+      <div className="pointer-events-auto w-full" style={{ maxHeight: homeBox.maxH, overflowY: 'auto', overscrollBehavior: 'contain' }}>{children}</div>
+    </div>
+  ) : (
     // 助手ライフの画面(z 9000)を開いているときは、その上の場面で流す
     <div className="fixed inset-x-0 flex justify-center px-2 pointer-events-none" style={{ zIndex: (typeof ASSISTANT_LIFE_STORE !== 'undefined' && ASSISTANT_LIFE_STORE.state.open) ? 9150 : 8500, bottom: 'calc(5.5rem + env(safe-area-inset-bottom))' }} {...attrs}>
       <div className="pointer-events-auto w-full max-w-md">{children}</div>
     </div>
-  );
+  ));
   if (!cur) {
     if (!toast) return null;
     const [a, b] = toast.pair.map(id => assistantById(id));

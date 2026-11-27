@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6326c7b860bb161a
+// generated-sha256: c7160c34c5833c68
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -72663,6 +72663,32 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
     homeOpenRef.current = at;
     if (cur && !cur.replay) { setHomeOpenedId(cur.talk.id); setPeerFolded(false); }
   }, [st.homeOpenAt]);
+  // HOME で窓を開いたら、押した顔の近くに出す(2026-11-28 台帳 r1126-073 追記3。前は画面の下のまん中に出て、入口の札にかぶった)。
+  //   出す位置だけを HOME の部品の位置から測って決める(中身は変えない)。縦とタブレットは顔の下、背の低い横は帯の右。
+  //   下の入口(ドック)の上端までに収め、収まらない分は窓の中で送る。測れないときは今までどおり画面の下
+  const [homeBox, setHomeBox] = React.useState(null);
+  const homeShown = scene === 'home' && !!cur && !homeWaiting && !(peerFolded && !cur.replay);
+  React.useEffect(() => {
+    if (!homeShown || typeof document === 'undefined') { setHomeBox(null); return undefined; }
+    const measure = () => {
+      const face = document.querySelector('main.mh-home-scene .mh-home-assistant-fold, main.mh-home-scene .mh-home-assistant');
+      const dock = document.querySelector('main.mh-home-scene .mh-home-dock');
+      const band = document.querySelector('main.mh-home-scene .mh-home-band');
+      if (!face || !dock) { setHomeBox(null); return; }
+      const f = face.getBoundingClientRect(), d = dock.getBoundingClientRect(), b = band ? band.getBoundingClientRect() : null;
+      const W = window.innerWidth, low = W > window.innerHeight && window.innerHeight < 600;
+      const left = Math.round(low ? Math.max(f.right, b ? b.right : 0) + 8 : Math.max(8, f.left));
+      const top = Math.round(low ? (b ? b.top : f.top) : f.bottom + 6);
+      const width = Math.round(Math.min(448, W - left - 8));
+      const maxH = Math.round(d.top - top - 6);
+      if (width < 240 || maxH < 120) { setHomeBox(null); return; }
+      setHomeBox((p) => (p && p.left === left && p.top === top && p.width === width && p.maxH === maxH ? p : { left, top, width, maxH }));
+    };
+    measure();
+    const t = setInterval(measure, 800);
+    window.addEventListener('resize', measure);
+    return () => { clearInterval(t); window.removeEventListener('resize', measure); };
+  }, [homeShown]);
   // 掛け合いが流れているあいだは、助手たちの今の帯(56-assistant-life.jsx)を隠す(HOME で印だけのあいだは隠さない)
   const talkingNow = !!cur && !homeWaiting;
   React.useEffect(() => { if (ASSISTANT_PEER_STORE.state.talking !== talkingNow) ASSISTANT_PEER_STORE.set({ talking: talkingNow }); }, [talkingNow]);
@@ -72769,12 +72795,17 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
   }, [cur, advance, auto.on]);
   React.useEffect(() => { if (!toast) return undefined; const t = setTimeout(() => setToast(null), 3200); return () => clearTimeout(t); }, [toast]);
 
-  const wrap = (children, attrs = {}) => (
+  const wrap = (children, attrs = {}) => (homeBox && homeShown ? (
+    // HOME: 顔の近く(上の homeBox)
+    <div data-assistant-peer-home-box className="fixed pointer-events-none" style={{ zIndex: 8500, left: homeBox.left, top: homeBox.top, width: homeBox.width }} {...attrs}>
+      <div className="pointer-events-auto w-full" style={{ maxHeight: homeBox.maxH, overflowY: 'auto', overscrollBehavior: 'contain' }}>{children}</div>
+    </div>
+  ) : (
     // 助手ライフの画面(z 9000)を開いているときは、その上の場面で流す
     <div className="fixed inset-x-0 flex justify-center px-2 pointer-events-none" style={{ zIndex: (typeof ASSISTANT_LIFE_STORE !== 'undefined' && ASSISTANT_LIFE_STORE.state.open) ? 9150 : 8500, bottom: 'calc(5.5rem + env(safe-area-inset-bottom))' }} {...attrs}>
       <div className="pointer-events-auto w-full max-w-md">{children}</div>
     </div>
-  );
+  ));
   if (!cur) {
     if (!toast) return null;
     const [a, b] = toast.pair.map(id => assistantById(id));
@@ -76966,7 +76997,7 @@ function AssistantLifeHomeFaces({ metIds }) {
       // 2026-11-27 台帳 r1126-073(HOME の作り直し・すぐできる直し3): HOME では顔を並べず、入口の右上の内側に赤い点1つだけを出す
       //   (顔は助手ライフの中で見せる)。押すと今までどおり助手ライフを開く。顔の印(data-assistant-life-home-face)は見えない形で残す
       void step;
-      const rowW = 22;
+      const rowW = 24;
       const left = r.x + r.w - rowW - 1;
       const top = r.y + 1;
       const names = list.map(id => { const who = assistantById(id); return who ? who.name : id; }).join('・');
@@ -76976,7 +77007,8 @@ function AssistantLifeHomeFaces({ metIds }) {
               助手ライフへは HOME の小さな丸「助手ライフ」1つから入る。開発部が窓口の判断で出し方だけ変えた */}
           <span role="img" data-assistant-life-home-badge={f} aria-label={`${names}がいます`}
             className="pointer-events-none relative flex items-center justify-center rounded-full" style={{ width: rowW, height: rowW }}>
-            <span data-assistant-life-home-dot aria-hidden="true" className="block rounded-full border-2 border-white bg-rose-500 shadow" style={{ width: 14, height: 14 }}/>
+            {/* 2026-11-28 台帳 r1126-073 追記3: 赤い点は ☰ の赤い数字(お知らせ)と見分けがつかなかったので、そこにいる助手1人の小さい顔の丸を1つにした(何人いても1つ・押せない) */}
+            {(() => { const who = assistantById(shown[0]); return <span data-assistant-life-home-dot data-assistant-life-home-dot-who={shown[0]} aria-hidden="true" className="block overflow-hidden rounded-full border-2 border-white bg-slate-900 shadow" style={{ width: rowW, height: rowW }}>{who && <AssistantFace who={who} size={rowW - 4} accent={who.accent}/>}</span>; })()}
             <span className="sr-only">{shown.map((id, i) => { const who = assistantById(id); if (!who) return null; const w = assistantLifeWhereOf(life, id); const lonely = w && w.reason === 'lonely';
               const spent = f === 'card' && !!assistantLifeCardSpent(id);
               return (
