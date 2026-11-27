@@ -121,6 +121,8 @@ const SCAN = () => {
         if (prev && r.t > prev.t + Math.min(r.h, prev.h) * 0.6) {
           lines.push([lineStart, i]);
           const b = txt.slice(0, i), a = txt.slice(i), why = [];
+          // 空白で折れたのはふつうはよい。ただし、名前・日時・英字の並びの中の空白(「Dear／Santa」「11/30(月)／0:00」)は崩れ
+          if ((/\s$/.test(b) || /^\s/.test(a)) && spans.some(([x, y]) => i > x && i < y && fits(x, y))) why.push('名前・日時の中の空白');
           if (!/\s$/.test(b) && !/^\s/.test(a) && !/\n$/.test(b)) {
             if (!edges.has(i)) { const [x, y] = segOf(i); if (fits(x, y)) why.push('言葉の途中'); }
             else if (isKana(txt, i - 1) && isKana(txt, i) && !gram(txt, i)) why.push('ひらがなの言葉の途中');
