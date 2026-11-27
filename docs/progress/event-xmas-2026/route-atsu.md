@@ -37,8 +37,8 @@
 | 0-31 | <img src="../../../monster-hero/images/assistant/santa/face/erubin_troubled.PNG" width="40"> | えるびん(困り顔) | ……俺も、行っていいのかな。来たばかりだし |
 | 0-32 | <img src="../../../monster-hero/images/assistant/santa/face/kyuko_normal.PNG" width="40"> | きゅうこ(ふつう) | 宛名、『助手のみなさま』だよぉ。えるニキも、ちゃんと入ってる |
 | 0-33 | <img src="../../../monster-hero/images/assistant/santa/face/erubin_happy.PNG" width="40"> | えるびん(笑顔) | ……そっか。ありがとう、きゅうこちゃん |
-| 0-34 |  | 帯 | 次の日。プレゼント選び。みゅあは、毛糸をどっさり買い込んでいる |
-| 0-35 | <img src="../../../monster-hero/images/assistant/santa/face/myua_wink.PNG" width="40"> | みゅあ(ウインク) | 何に使うかは、ナイショ！ |
+| 0-34 |  | 帯 | 次の日。プレゼント選び。みゅあは、毛糸をどっさり買いこんでいる |
+| 0-35 | <img src="../../../monster-hero/images/assistant/santa/face/myua_wink.PNG" width="40"> | みゅあ(ウインク) | 何に使うかは、ないしょ！ |
 | 0-36 | <img src="../../../monster-hero/images/assistant/santa/face/dra_excited.PNG" width="40"> | ドラ(わくわく) | なあ、みんな何にした？ 箱、ちょっと振らせてくれよ |
 | 0-37 | <img src="../../../monster-hero/images/assistant/santa/face/momosuke_angry.PNG" width="40"> | ももすけ(むくれ顔) | だめ！ ドラちゃん、当日まで振るの禁止w |
 | 0-38 |  | 帯 | 出発の朝。町に、今年初めての雪が降り始めた |
@@ -51,7 +51,7 @@
 | OUT-1-4 | <img src="../../../monster-hero/images/assistant/santa/face/atsu_normal.PNG" width="40"> | あつ(ふつう) | 上書きできない？ ……まあいいや。続き、いこう |
 | OUT-1-5 |  | 帯 | ——ゲームの中へ |
 | 1-1-1 |  | 帯 | 聖夜の名探偵 第1章 〜ペンション・シュプール〜 |
-| 1-1-2 |  | 帯 | 12月18日。町から電車とバスを乗りついで、最後に雪の山道を登った先 |
+| 1-1-2 |  | 帯 | 12月18日。町から電車とバスを乗り継いで、最後に雪の山道を登った先 |
 | 1-1-3 | <img src="../../../monster-hero/images/assistant/santa/face/myua_excited.PNG" width="40"> | みゅあ(わくわく) | 見えた！ あつくん、あれぢゃない！？ 屋根まで雪で真っ白！ |
 | 1-1-4 | <img src="../../../monster-hero/images/assistant/santa/face/atsu_happy.PNG" width="40"> | あつ(笑顔) | でっか！ 雪山のペンションって、それだけでワクワクする笑 |
 | 1-1-5 | <img src="../../../monster-hero/images/assistant/santa/face/erubin_normal.PNG" width="40"> | えるびん(ふつう) | ……静かだね。雪が、音を全部吸いこんでるみたい |
@@ -61,11 +61,11 @@
 | 1-1-9 | <img src="../../../monster-hero/images/assistant/santa/face/momosuke_normal.PNG" width="40"> | ももすけ(ふつう) | きゅうちゃん、どしたの？ 寒い？w |
 | 1-1-10 | <img src="../../../monster-hero/images/assistant/santa/face/kyuko_happy.PNG" width="40"> | きゅうこ(笑顔) | 何でもないって。……きれいだなって思っただけ笑 |
 | 1-2-1 | <img src="../../../monster-hero/images/monster-icons/face/snegurochka.png" width="40"> | イチーカ | ようこそ、ペンション・シュプールへ。オーナーのイチーカです。ふふっ、遠い所を、ありがとうございます |
-| 1-2-2 | <img src="../../../monster-hero/images/monster-icons/face/mocchi.png" width="40"> | もちまる | 世話役のもちまるだっちー！ ごはんと、暖炉と、夜の見回りは、ぼくにまかせてっちー |
+| 1-2-2 | <img src="../../../monster-hero/images/monster-icons/face/mocchi.png" width="40"> | もちまる | 世話役のもちまるだっちー！ ごはんと、暖炉と、夜の見回りは、ぼくに任せてっちー |
 | 1-2-3 | <img src="../../../monster-hero/images/assistant/santa/face/dra_excited.PNG" width="40"> | ドラ(わくわく) | ごはんの係！ もちまる、おで、おまえとは仲良くなれそうだ |
 | 1-2-4 |  | 帯 | ホールの真ん中に、大きなもみの木。その奥の壁に、古い柱時計 |
 | 1-2-5 | <img src="../../../monster-hero/images/monster-icons/face/snegurochka.png" width="40"> | イチーカ | プレゼントは、木の下に置いてくださいね。24日の夜に、みんなで開けましょう |
-| 1-2-6 | <img src="../../../monster-hero/images/monster-icons/face/mocchi.png" width="40"> | もちまる | ぼくは世話役だから、箱は無いっちー。その代わり、毎朝おいしいごはんを作るっちー |
+| 1-2-6 | <img src="../../../monster-hero/images/monster-icons/face/mocchi.png" width="40"> | もちまる | ぼくは世話役だから、箱はないっちー。その代わり、毎朝おいしいごはんを作るっちー |
 | 1-2-7 | <img src="../../../monster-hero/images/assistant/santa/face/kiki_normal.PNG" width="40"> | きき(ふつう) | 私のは、緑のリボンで2回結んでありまつ |
 | 1-2-8 |  | 帯 | 木の下に、助手たちの箱が8つ。にぎやかな色のリボンが、暖炉の火に揺れている |
 | 1-2-9 | <img src="../../../monster-hero/images/assistant/santa/face/atsu_wink.PNG" width="40"> | あつ(ウインク) | で、ばこっちゃん。その格好、俺とかぶってるんだけど笑 |
@@ -73,7 +73,7 @@
 | 1-2-11 |  | ワトソンくん | 記録によれば、お二人は同じ日の同じ時刻に、同じ売り場にいました |
 | 1-2-12 | <img src="../../../monster-hero/images/assistant/santa/face/myua_wink.PNG" width="40"> | みゅあ(ウインク) | はいはい、名探偵が二人！ 助手のあたしは、あつくんのほうね！ |
 | 1-3-1 |  | 帯 | ドン、ドン(玄関の扉を、強く叩く音) |
-| 1-3-2 | <img src="../../../monster-hero/images/story-guests/kuroba_face.png" width="40"> | 黒羽 | 開けたまえ。予約はしてある。……吹雪の中で待たせるとは、時間の無駄だ |
+| 1-3-2 | <img src="../../../monster-hero/images/story-guests/kuroba_face.png" width="40"> | 黒羽 | 開けたまえ。招待状には、部屋は用意してあると書いてあった。……吹雪の中で待たせるとは、時間の無駄だ |
 | 1-3-3 |  | 帯 | 灰色の長いコートの男。後ろに、白いケープの女が、目を伏せて立っている |
 | 1-3-4 | <img src="../../../monster-hero/images/monster-icons/face/snegurochka.png" width="40"> | イチーカ | あの……今日は、貸し切りのはずで……。ご予約のお名前は？ |
 | 1-3-5 | <img src="../../../monster-hero/images/story-guests/kuroba_face.png" width="40"> | 黒羽 | 黒羽だ。黒羽宗一郎。こっちは白瀬。招待状をよこしたのは、そっちだろう |
@@ -100,7 +100,7 @@
 | 1-4-8 | <img src="../../../monster-hero/images/assistant/santa/face/myua_normal.PNG" width="40"> | みゅあ(ふつう) | あと、2階の奥の、鍵のかかった部屋は？ |
 | 1-4-9 | <img src="../../../monster-hero/images/monster-icons/face/snegurochka.png" width="40"> | イチーカ | ……あの部屋だけは、開けないでくださいね。お願いしますよ |
 | 1-4-10 | <img src="../../../monster-hero/images/story-guests/shirase_face.png" width="40"> | 白瀬 | (2階の奥の扉を、じっと見ている) |
-| 1-5-1 | <img src="../../../monster-hero/images/monster-icons/face/mocchi.png" width="40"> | もちまる | とくせいスープだっちー！ おかわりもあるっちー |
+| 1-5-1 | <img src="../../../monster-hero/images/monster-icons/face/mocchi.png" width="40"> | もちまる | 特製スープだっちー！ おかわりもあるっちー |
 | 1-5-2 | <img src="../../../monster-hero/images/assistant/santa/face/dra_happy.PNG" width="40"> | ドラ(笑顔) | うまっ！ もちまる、天才だな！ |
 | 1-5-3 | <img src="../../../monster-hero/images/story-guests/kuroba_face.png" width="40"> | 黒羽 | (懐中時計を見ながら)食事は30分で済ませたまえ。わたしは、無駄な時間がきらいでね |
 | 1-5-4 | <img src="../../../monster-hero/images/assistant/santa/face/dra_angry.PNG" width="40"> | ドラ(むくれ顔) | な、なんだよ、あのおっちゃん…… |
@@ -125,7 +125,7 @@
 | 1-M-3 |  | 帯 | 扉の取っ手が、音もなく回る。……鍵は、かかっていなかった |
 | 1-M-4 |  | 帯 | 暗い部屋に、大きないびき。机の上で、金色の懐中時計が、カチ、カチ、と時を刻んでいる |
 | 1-M-5 |  | ？？？(困り顔) | ……鍵もかけないで、眠れるんだ。自分だけは大丈夫だって、思ってるんだね |
-| 1-M-6 |  | 帯 | 影が、ベッドのわきにかがみこむ。ベッドの下に、黒い革のケースが押しこまれていた |
+| 1-M-6 |  | 帯 | 影が、ベッドの脇にかがみこむ。ベッドの下に、黒い革のケースが押しこまれていた |
 | 1-M-7 |  | 帯 | カチリ(留め金の外れる、小さな音) |
 | 1-M-8 |  | 帯 | 中に、古い楽譜の束。黄ばんだ表紙の、作った人の名前の所だけが、黒いインクで塗りつぶされている |
 | 1-M-9 |  | ？？？(困り顔) | (塗りつぶされた所を、指でそっとなぞる)…… |
@@ -137,7 +137,7 @@
 | 1-M-15 |  | ？？？(困り顔) | (黒いカードを1枚、指に挟む)……これは、明日の夜。鐘と一緒に |
 | 1-M-16 |  | ？？？(困り顔) | ……もう、止まらないよ |
 | 2-1-1 |  | 帯 | 聖夜の名探偵 第2章 〜十二の鐘〜 |
-| 2-1-2 |  | 帯 | 次の夜。2階の廊下に、黒羽の怒鳴り声が響く |
+| 2-1-2 |  | 帯 | 次の夜。ベッドの下をのぞいた黒羽の怒鳴り声が、2階の廊下に響く |
 | 2-1-3 | <img src="../../../monster-hero/images/story-guests/kuroba_face.png" width="40"> | 黒羽 | ない！ わたしの楽譜のケースがない！ 誰だ、わたしの部屋に入ったのは！ |
 | 2-1-4 | <img src="../../../monster-hero/images/assistant/santa/face/atsu_normal.PNG" width="40"> | あつ(ふつう) | 落ち着いて、黒羽のおっちゃん。何がなくなったの？ |
 | 2-1-5 | <img src="../../../monster-hero/images/story-guests/kuroba_face.png" width="40"> | 黒羽 | 古い楽譜だ。……仕事の、大事な物だ |
@@ -173,7 +173,7 @@
 | 2-M-9 | <img src="../../../monster-hero/images/story-guests/kuroba_face.png" width="40"> | 黒羽 | (耳をふさぐ)……やめろ。……あの夜も、こんな風が吹いていた…… |
 | 2-M-10 |  | 帯 | ギシ……(廊下の床が、きしむ音) |
 | 2-M-11 | <img src="../../../monster-hero/images/story-guests/kuroba_face.png" width="40"> | 黒羽 | 誰だ！ ……白瀬か？ おい、返事をしろ！ |
-| 2-M-12 |  | 帯 | 返事はない。扉の向こうは、しんと静まりかえっている |
+| 2-M-12 |  | 帯 | 返事はない。扉の向こうは、しんと静まり返っている |
 | 2-M-13 |  | 帯 | 窓ガラスに、自分の青ざめた顔が映っている。その肩の後ろの暗がりに、雪のように白い何かが、立っているように見えて—— |
 | 2-M-14 | <img src="../../../monster-hero/images/story-guests/kuroba_face.png" width="40"> | 黒羽 | ひっ……！ |
 | 2-M-15 |  | 帯 | 振り返る。誰もいない。吹雪が、窓に雪を叩きつけただけだった |
@@ -183,7 +183,7 @@
 | 2-M-19 |  | 帯 | 23時すぎ。扉の下の隙間から、折りたたんだ紙が1枚、すっと差しこまれた |
 | 2-M-20 | <img src="../../../monster-hero/images/story-guests/kuroba_face.png" width="40"> | 黒羽 | (震える手で拾い、開く)……『楽譜を返す。0時の鐘で、裏口へ』 |
 | 2-M-21 | <img src="../../../monster-hero/images/story-guests/kuroba_face.png" width="40"> | 黒羽 | ……裏口……。よりによって、裏口か |
-| 2-M-22 |  | 帯 | 紙が、指のあいだから床へ落ちる。黒羽は、しばらく、そのまま動かなかった |
+| 2-M-22 |  | 帯 | 紙が、指の間から床へ落ちる。黒羽は、しばらく、そのまま動かなかった |
 | 2-M-23 | <img src="../../../monster-hero/images/story-guests/kuroba_face.png" width="40"> | 黒羽 | ……あの楽譜さえ戻れば、元どおりだ。時は金なり。取り返せる物は、取り返す |
 | 2-M-24 |  | 帯 | 黒羽は、のろのろと立ち上がり、灰色のコートに手を伸ばした |
 | 2-2-1 |  | 帯 | 23時すぎ。台所に、小さな灯り |
@@ -239,6 +239,7 @@
 | 2-5-4 | <img src="../../../monster-hero/images/assistant/santa/face/atsu_angry.PNG" width="40"> | あつ(むくれ顔) | おっさん！ 黒羽のおっさん！ |
 | 2-5-5 | <img src="../../../monster-hero/images/assistant/santa/face/sorashido_troubled.PNG" width="40"> | ソラシド(困り顔) | ……この吹雪では、外へ出たら、自分たちも戻れません……！ |
 | 2-5-6 | <img src="../../../monster-hero/images/assistant/santa/face/myua_crying.PNG" width="40"> | みゅあ(泣き顔) | でも……！ でも、あの声……！ |
+| 2-5-6b |  | 帯 | 吹雪が、扉を押し戻す。かすかな声は、風にかき消されて、どこから聞こえるのかも分からない。もちまるが、震える手で、扉を閉めるしかなかった |
 | 2-5-7 |  | 帯 | 暗転 |
 | 2-5-8 |  | 並び |  |
 | 3-1-1 |  | 帯 | 聖夜の名探偵 第3章 〜雪の上の影〜 |
@@ -254,17 +255,17 @@
 | 3-1-11 | <img src="../../../monster-hero/images/assistant/santa/face/momosuke_crying.PNG" width="40"> | ももすけ(泣き顔) | いやあああっ！！ |
 | 3-1-12 |  | 帯 | ももすけの悲鳴が、雪原に吸いこまれる。誰も、何も言えない |
 | 3-1-13 | <img src="../../../monster-hero/images/monster-icons/face/snegurochka.png" width="40"> | イチーカ | ……あの夜と、同じ場所…… |
-| 3-1-14 |  | 帯 | 黒羽の手のそばに、金色の懐中時計。ガラスにひびが入り、雪が詰まって、針は止まっていた |
+| 3-1-14 |  | 帯 | 裏口の扉の真下に、金色の懐中時計。踏み割られたガラスに雪が詰まって、針は止まっていた |
 | 3-1-15 |  | ワトソンくん | ……針は、23時47分で止まっています |
-| 3-1-15c |  | 手がかり | 黒羽の懐中時計。雪に埋もれて、23時47分で止まっていた |
+| 3-1-15c |  | 手がかり | 黒羽の懐中時計。裏口の扉の真下で、ガラスが踏み割られ、雪に埋もれて、23時47分で止まっていた |
 | 3-1-16 | <img src="../../../monster-hero/images/story-guests/shirase_face.png" width="40"> | 白瀬 | (雪の上に膝をつき、口を押さえたまま、声も出せずにいる) |
 | 3-1-16b |  | 帯 | ホールに戻ると、もみの木の下から、黒羽の箱が消えていた |
 | 3-1-17 |  | 並び |  |
 | 3-2-1 |  | 帯 | 裏口から雪原へ、うっすら雪をかぶった足跡が2筋。一つは黒羽の革靴。もう一つは、大きな長靴 |
 | 3-2-2 | <img src="../../../monster-hero/images/assistant/santa/face/sorashido_normal.PNG" width="40"> | ソラシド(ふつう) | 長靴の足跡は、雪原の真ん中まで行って……そこで、ぷっつり消えています |
 | 3-2-3 | <img src="../../../monster-hero/images/assistant/santa/face/dra_surprise.PNG" width="40"> | ドラ(驚き) | き、消えてる……。空でも飛んだのか？ |
-| 3-2-4 | <img src="../../../monster-hero/images/assistant/santa/face/myua_normal.PNG" width="40"> | みゅあ(ふつう) | あつくん、見て。最後の足跡だけ、ほかより深くない？ |
-| 3-2-4c |  | 手がかり | 雪原の真ん中で消えた長靴の足跡。最後の1つだけ、ほかより深い |
+| 3-2-4 | <img src="../../../monster-hero/images/assistant/santa/face/myua_normal.PNG" width="40"> | みゅあ(ふつう) | あつくん、見て。最後の足跡だけ、ほかより深くて、ふちが二重にぶれてない？ |
+| 3-2-4c |  | 手がかり | 雪原の真ん中で消えた長靴の足跡。最後の1つだけ、ほかより深く、ふちが二重にぶれている |
 | Q3a |  | **選択** | 黒いサンタは、雪原から外へ逃げた？ それとも——。わけを示す手がかりを、手がかり帳から1つ突きつけよう → 深い足跡 |
 | Q3a-ok | <img src="../../../monster-hero/images/assistant/santa/face/sorashido_normal.PNG" width="40"> | ソラシド(ふつう) | はい。同じ足跡を踏んで、後ろ向きに戻ったんです。黒いサンタは、外へ逃げていない。……戻ったのは、このペンションの中です |
 | 3-2-5 | <img src="../../../monster-hero/images/assistant/santa/face/atsu_normal.PNG" width="40"> | あつ(ふつう) | ……この中に、黒いサンタがいる |
@@ -313,7 +314,7 @@
 | 4-1-1 |  | 帯 | 聖夜の名探偵 第4章 〜開かずの部屋〜 |
 | 4-1-2 | <img src="../../../monster-hero/images/monster-icons/face/snegurochka.png" width="40"> | イチーカ | ……みなさんに、見ていただきたい部屋があります |
 | 4-1-3 |  | 帯 | その夜遅く。2階の奥。イチーカが、古い鍵を回す |
-| 4-1-4 |  | 帯 | 小さなベッド。木の作業机。机の上に、ねじの止まったオルゴール。窓ぎわに、写真立て |
+| 4-1-4 |  | 帯 | 小さなベッド。木の作業机。机の上に、ねじの止まったオルゴール。窓際に、写真立て |
 | 4-1-5 | <img src="../../../monster-hero/images/monster-icons/face/snegurochka.png" width="40"> | イチーカ | 12年前のクリスマスに亡くなった方の部屋です。オルゴールを作る人で、カノンさんといいました。小さなお子さんと、毎年ここへ来てくださって |
 | 4-1-6 |  | 帯 | 写真。ローズ色の長い髪の女の人と、同じ色の長い髪の、女の子のように見える小さな子。日に焼けて、二人の顔は白くぼやけている |
 | 4-1-6c |  | 手がかり | 開かずの部屋の写真。ローズ色の髪の女の人(カノン)と、女の子のように見える小さな子。顔は日に焼けて見えない |
@@ -322,14 +323,14 @@
 | 4-1-9 | <img src="../../../monster-hero/images/monster-icons/face/snegurochka.png" width="40"> | イチーカ | 窓の外に見えた雪まみれの影を、誰かが『黒いサンタ』と呼んで……。怖がって、誰も扉を開けなかったそうです。あの言い伝えは、あの夜から始まったんです |
 | 4-1-9b |  | 帯 | ももすけが、急に黙りこんだ。自分でも分からないまま、指先が小さく震えている |
 | 4-1-10 | <img src="../../../monster-hero/images/assistant/santa/face/myua_crying.PNG" width="40"> | みゅあ(泣き顔) | ……そんなの、悲しすぎるぢゃん…… |
-| 4-1-11 | <img src="../../../monster-hero/images/monster-icons/face/snegurochka.png" width="40"> | イチーカ | お子さんは、遠くの親せきに引き取られていきました。わたしはずっと、あの子を女の子だと思っていたんですよ。髪が長くて、かわいらしくて。……いつか戻ってくるかもしれないと思って、この部屋は、ずっとそのままにしてあります |
+| 4-1-11 | <img src="../../../monster-hero/images/monster-icons/face/snegurochka.png" width="40"> | イチーカ | お子さんは、遠くの親戚に引き取られていきました。わたしはずっと、あの子を女の子だと思っていたんですよ。髪が長くて、かわいらしくて。……いつか戻ってくるかもしれないと思って、この部屋は、ずっとそのままにしてあります |
 | 4-1-12 |  | 帯 | 白瀬が、黙って部屋を出ていく |
 | 4-1-13 | <img src="../../../monster-hero/images/assistant/santa/face/kyuko_normal.PNG" width="40"> | きゅうこ(ふつう) | (戸口に立って、写真を見ている)……かわいい子だね |
 | 4-2-1 |  | 帯 | 作業机の上の、古いオルゴール。ねじは止まったまま |
 | 4-2-2 | <img src="../../../monster-hero/images/assistant/santa/face/myua_normal.PNG" width="40"> | みゅあ(ふつう) | イチーカさん。……このオルゴール、鳴らしてみても、いい？ |
 | 4-2-3 | <img src="../../../monster-hero/images/monster-icons/face/snegurochka.png" width="40"> | イチーカ | ……ええ。きっと、カノンさんも喜びます |
 | 4-2-4 |  | 帯 | ♪……ポロン、ポロロン……(小さな、優しい子守歌) |
-| 4-2-5 | <img src="../../../monster-hero/images/monster-icons/face/snegurochka.png" width="40"> | イチーカ | ……この曲。12年ぶりに、聞きました。カノンさんが、毎年ホールで鳴らしてくれた子守歌です |
+| 4-2-5 | <img src="../../../monster-hero/images/monster-icons/face/snegurochka.png" width="40"> | イチーカ | ……この曲。オルゴールの音で聞くのは、12年ぶりです。カノンさんが、毎年ホールで鳴らしてくれた子守歌です |
 | 4-2-6 | <img src="../../../monster-hero/images/assistant/santa/face/myua_surprise.PNG" width="40"> | みゅあ(驚き) | ……あれ？ この曲、あたし、どこかで聞いたことある…… |
 | 4-2-6c |  | 手がかり | 開かずの部屋のオルゴールの子守歌。カノンが毎年ホールで鳴らしていた曲。みゅあは「どこかで聞いたことがある」 |
 | 4-3-1 | <img src="../../../monster-hero/images/monster-icons/face/mocchi.png" width="40"> | もちまる | ……ぼく、帳面のこと、思い出したっちー。12年前も、ぼくはここの世話役だったっちー。帳面は、全部とってあるっちー |
@@ -410,14 +411,14 @@
 | 5-X-4a |  | 帯 | 物音に駆けつけたソラシドが見つけたのは、書斎の机に突っ伏したあつだった |
 | 5-X-5 |  | 帯 | 首には、細いひもの跡が、赤黒く食いこんでいる。ひびの入った画面の上に、血のついた指の跡 |
 | 5-X-6 |  | 帯 | 画面には、途中まで拡大された写真。影の顔の所で、拡大は止まっていた |
-| 5-X-7 |  | 帯 | 机の後ろの本だなが、ほんの少しだけ、壁から浮いていた |
+| 5-X-7 |  | 帯 | 机の後ろの本棚が、ほんの少しだけ、壁から浮いていた |
 | 5-X-8a | <img src="../../../monster-hero/images/assistant/santa/face/sorashido_troubled.PNG" width="40"> | ソラシド(困り顔) | ……あつさん。……あつさん！ ……一人で、行かせるんじゃなかった…… |
 | 5-X-9a | <img src="../../../monster-hero/images/assistant/santa/face/myua_crying.PNG" width="40"> | みゅあ(泣き顔) | あつくん……！ やだ……やだよ、あつくん……！ |
-| X2-1 |  | 帯 | 聖夜の名探偵 エンディング「とぎれた記録」 |
-| X2-2 |  | 帯 | ——証拠に手をかけた名探偵の記録は、そこでとぎれた |
+| X2-1 |  | 帯 | 聖夜の名探偵 エンディング「途切れた記録」 |
+| X2-2 |  | 帯 | ——証拠に手をかけた名探偵の記録は、そこで途切れた |
 | X2-3 |  | 帯 |  |
-| END-X2 |  | **エンド** | **とぎれた記録** |
-| A5 |  | **選択** | 写真の影の正体か、白瀬の居場所か—— → 「写真はあとにして、みんなで冷たい空気の流れをたどる」 |
+| END-X2 |  | **エンド** | **途切れた記録** |
+| A5 |  | **選択** | 写真の影の正体か、白瀬の居場所か—— → 「写真は後にして、みんなで冷たい空気の流れをたどる」 |
 | 5-3-8 | <img src="../../../monster-hero/images/assistant/santa/face/atsu_angry.PNG" width="40"> | あつ(むくれ顔) | 白瀬さんを探す！ どこだ……！ |
 | Q5a |  | **選択** | 白瀬は、どこに閉じこめられている？ 場所を示す手がかりを、手がかり帳から1つ突きつけよう → ほこりのない鏡のふち |
 | Q5a-ok | <img src="../../../monster-hero/images/assistant/santa/face/atsu_normal.PNG" width="40"> | あつ(ふつう) | 鏡だ！ あの1枚だけ、誰かが何度も触ってる。……あれが、扉なんだ！ |
@@ -461,17 +462,17 @@
 | 5-M-13 | <img src="../../../monster-hero/images/monster-icons/face/mocchi.png" width="40"> | もちまる | ぼくは、うそがつけないっちー。だから、知らないふりも、上手にできないっちー |
 | 5-M-14 | <img src="../../../monster-hero/images/monster-icons/face/mocchi.png" width="40"> | もちまる | でも……ドラさんが黙ってるなら、きっと、誰かのためなんだっちー。ぼくは、そう思うっちー |
 | 5-M-15 | <img src="../../../monster-hero/images/assistant/santa/face/dra_crying.PNG" width="40"> | ドラ(泣き顔) | (膝に顔をうずめる)……おで、どうしたらいいんだ…… |
-| 5-M-16 |  | 帯 | もちまるは何も言わずに、ドラのとなりに座った。二人のあいだで、クッキーが少しずつ冷めていく |
+| 5-M-16 |  | 帯 | もちまるは何も言わずに、ドラの隣に座った。二人の間で、クッキーが少しずつ冷めていく |
 | 5-M-17 | <img src="../../../monster-hero/images/assistant/santa/face/dra_troubled.PNG" width="40"> | ドラ(困り顔) | ……ありがとな、もちまる。……1枚、もらう |
 | 5-M-18 | <img src="../../../monster-hero/images/assistant/santa/face/dra_normal.PNG" width="40"> | ドラ(ふつう) | (ゆっくりかじって)……うまいな。やっぱり、もちまるは天才だ |
 | 6-1-1 |  | 帯 | 聖夜の名探偵 第6章 〜壁の中の通り道〜 |
 | 6-1-2 | <img src="../../../monster-hero/images/assistant/santa/face/myua_normal.PNG" width="40"> | みゅあ(ふつう) | ねえ、この暖炉の横の板、叩くと音が軽くない？ コンコンって |
 | 6-1-2c |  | 手がかり | ホールの暖炉脇の板。叩くと、音が軽い |
 | 6-1-3 | <img src="../../../monster-hero/images/assistant/santa/face/atsu_surprise.PNG" width="40"> | あつ(驚き) | 開く……！ 中に、はしごと通り道がある |
-| 6-1-4 |  | 帯 | 通り道は、書斎の本だなの裏・鏡の廊下・ドラの部屋の暖炉へ、枝分かれしている |
+| 6-1-4 |  | 帯 | 通り道は、書斎の本棚の裏・鏡の廊下・ドラの部屋の暖炉・2階の客室の壁の裏、それから裏手の薪小屋の床下へ、枝分かれしている |
 | 6-1-4b |  | 帯 | 上へ伸びるはしごは、屋根裏の手前の板で、行き止まりになっていた |
 | 6-1-5 | <img src="../../../monster-hero/images/assistant/santa/face/sorashido_normal.PNG" width="40"> | ソラシド(ふつう) | 入り口のふちに、緑の毛くず。約2センチ。……裏口のと、ほとんど同じ長さです |
-| 6-1-5c |  | 手がかり | 通り道の入り口のふちにも。どれも約2センチ |
+| 6-1-5c |  | 手がかり | 通り道の入り口のふちにも、緑の毛くず。どれも約2センチ |
 | 6-1-6 | <img src="../../../monster-hero/images/assistant/santa/face/dra_surprise.PNG" width="40"> | ドラ(驚き) | お、おでの部屋の暖炉と、繋がってる……！？ |
 | 6-2-1 |  | 帯 | ドラの部屋に戻ると、かばんの口から、黒い布がのぞいていた |
 | 6-2-2 |  | 帯 | 出てきたのは、黒いサンタの服だった |
@@ -493,14 +494,15 @@
 | 6-4-5 |  | 帯 | けれど、ソラシドが振り向いた時、えるびんの姿は、もう通り道の中だった |
 | 6-5-1 |  | 帯 | ドサッ……！(通り道の奥で、重い物が落ちる音) |
 | 6-5-2 | <img src="../../../monster-hero/images/assistant/santa/face/myua_surprise.PNG" width="40"> | みゅあ(驚き) | るびちん！？ |
-| 6-5-3 |  | 帯 | はしごの下。えるびんが、うずくまっていた。左の足首が、おかしな向きに曲がっている。額が割れて、血が目のわきを流れ、床にぽたぽたと落ちていた |
+| 6-5-3 |  | 帯 | はしごの下。えるびんが、うずくまっていた。左の足首が、おかしな向きに曲がっている。額が割れて、血が目の脇を流れ、床にぽたぽたと落ちていた |
 | 6-5-4 | <img src="../../../monster-hero/images/assistant/santa/face/myua_crying.PNG" width="40"> | みゅあ(泣き顔) | 血……！ るびちん、血が……！ |
 | 6-5-5 | <img src="../../../monster-hero/images/assistant/santa/face/erubin_troubled.PNG" width="40"> | えるびん(困り顔) | ……大丈夫。……はしごの上で、黒いフードの人に、押されて……頭から…… |
 | 6-5-6 |  | 帯 | みゅあが、自分のハンカチで額を押さえる。白いハンカチが、みるみる赤く染まっていく |
-| 6-5-7 | <img src="../../../monster-hero/images/assistant/santa/face/erubin_troubled.PNG" width="40"> | えるびん(困り顔) | カメラ、取られちゃった。……ごめん。でも、写真は、ソラくんのパソコンに送ってあるよ |
-| 6-5-8 |  | ワトソンくん | 写真は、わたしの所に残っています |
+| 6-5-7 | <img src="../../../monster-hero/images/assistant/santa/face/erubin_troubled.PNG" width="40"> | えるびん(困り顔) | カメラ、取られちゃった。……ごめん |
 | Q6b |  | **選択** | 黒いサンタは、えるびんから、何を取ろうとした？ わけを示す手がかりを、手がかり帳から1つ突きつけよう → えるびんの写真 |
 | Q6b-ok | <img src="../../../monster-hero/images/assistant/santa/face/sorashido_normal.PNG" width="40"> | ソラシド(ふつう) | はい。黒いサンタは、あの写真を消したかった。……写っていた影は、見られたら困る、誰かです |
+| 6-5-8b | <img src="../../../monster-hero/images/assistant/santa/face/erubin_troubled.PNG" width="40"> | えるびん(困り顔) | ……でも、写真は、ソラくんのパソコンにも送ってあるよ |
+| 6-5-8c |  | ワトソンくん | 写真は、わたしの所に残っています |
 | 6-5-9 |  | 帯 | はしごの下。血のしずくのそばに、何か小さな物が光っている |
 | 6-6-1 | <img src="../../../monster-hero/images/assistant/santa/face/myua_normal.PNG" width="40"> | みゅあ(ふつう) | あつくん、これ！ 銀色の……音符の飾り！ |
 | 6-6-1c |  | 手がかり | 通り道のはしごのそばに落ちていた、銀色の音符の飾り。黒いサンタが落とした物 |
@@ -522,8 +524,8 @@
 | 6-X-5 |  | 帯 | ガチャン……コン、コン、コン(台所の裏口で、かんぬきの落ちる音。それから、何かを打ちつける音) |
 | 6-X-6 |  | 帯 | 台所へ駆けつけた時、そこには、もう誰もいなかった。かんぬきの上から、太い釘が何本も打ちこまれている |
 | 6-X-7 | <img src="../../../monster-hero/images/assistant/santa/face/myua_crying.PNG" width="40"> | みゅあ(泣き顔) | 開かない……！ かんぬきが、釘で……！ |
-| 6-X-8 |  | 帯 | ドン、ドン、ドン……(扉の外から、叩く音。やがて、弱く、とぎれとぎれに) |
-| 6-X-9 |  | 帯 | もちまるが、釘抜きを探しに走る。道具箱は、空だった。薪割りの斧で扉の板を割れたのは、空が白みはじめたころだった |
+| 6-X-8 |  | 帯 | ドン、ドン、ドン……(扉の外から、叩く音。やがて、弱く、途切れ途切れに) |
+| 6-X-9 |  | 帯 | もちまるが、釘抜きを探しに走る。道具箱は、空だった。薪割りの斧で扉の板を割れたのは、空が白み始めた頃だった |
 | 6-X-10a |  | 帯 | 扉の外。雪に埋もれた探偵の帽子の先で、あつが、扉に手を伸ばしたまま凍りついていた。後ろ頭の髪が、血で固まっている |
 | 6-X-11 |  | 帯 | 扉の板には、新しい赤い手の跡が、黒羽の手の跡の上に重なっていた |
 | 6-X-12a | <img src="../../../monster-hero/images/assistant/santa/face/myua_crying.PNG" width="40"> | みゅあ(泣き顔) | ……あつくん……。あたし、助手なのに……隣に、いなかった…… |
@@ -533,9 +535,9 @@
 | X3-3 |  | 帯 |  |
 | END-X3 |  | **エンド** | **再び閉ざされた扉** |
 | A6 |  | **選択** | 吹雪の中へ出ていったきゅうこを—— → 「裏口を開けたまま、もちまるのランタンを灯して、みんなで待つ」 |
-| 6-7-6 |  | 帯 | 裏口を開け放し、ランタンを灯して待った。吹雪は朝まで止まず、きゅうこは、戻らなかった |
+| 6-7-6 |  | 帯 | 裏口を開け放し、ランタンを灯して待った。吹雪は朝までやまず、きゅうこは、戻らなかった |
 | 6-7-7 |  | 帯 | 暗転 |
-| 6-8-1 |  | 帯 | 朝。吹雪のやんだ雪原。きゅうこの足跡が、裏手の崖へ続いている。薄く雪が積もって、足跡の形は、もうよく分からない |
+| 6-8-1 |  | 帯 | 朝。吹雪のやんだ雪原。きゅうこの足跡が、裏手の崖へ続いている。薄く雪が積もって、足跡の形は、もうよく分からない。裏手の薪小屋の戸の前だけ、雪が踏み固められていた |
 | 6-8-2 |  | 帯 | 崖のふちで、足跡は途切れていた。雪の上に、ローズ色のリボンが一つ |
 | 6-8-3 | <img src="../../../monster-hero/images/assistant/santa/face/momosuke_crying.PNG" width="40"> | ももすけ(泣き顔) | きゅうちゃん……！ きゅうちゃん！！ |
 | 6-8-4 | <img src="../../../monster-hero/images/monster-icons/face/snegurochka.png" width="40"> | イチーカ | ……この下は、深い谷です。雪が溶けるまで、誰も下りられません…… |
@@ -544,8 +546,8 @@
 | 6-8-6c |  | 手がかり | 裏手の崖のふちに落ちていた、きゅうこのローズ色のリボン。足跡は崖で途切れ、形は薄い雪で分からない |
 | 6-9-1 |  | 帯 | ♪……ポロン、ポロロン……(どこかで、オルゴールが鳴っている) |
 | 6-9-2 | <img src="../../../monster-hero/images/assistant/santa/face/myua_surprise.PNG" width="40"> | みゅあ(驚き) | ……この音、きゅきゅの部屋から！ |
-| 6-9-3 |  | 帯 | きゅうこの部屋。誰もいない。机の上で、銀の音符の飾りがいくつもついたオルゴールが、回り続けている。飾りの一つ分だけ、ぽつんと跡が空いている |
-| 6-9-4 | <img src="../../../monster-hero/images/monster-icons/face/mocchi.png" width="40"> | もちまる | オルゴールって、ねじを巻いても、普通はすぐ止まるっちー……。ずっと鳴ってるの、ふしぎだっちー |
+| 6-9-3 |  | 帯 | きゅうこの部屋。誰もいない。机の上で、銀の音符の飾りがいくつもついたオルゴールが、回り続けている。飾りの一つ分だけ、ぽつんと跡が空いている。壁ぎわの羽目板が、ほんの少しだけ浮いていた |
+| 6-9-4 | <img src="../../../monster-hero/images/monster-icons/face/mocchi.png" width="40"> | もちまる | オルゴールって、ねじを巻いても、普通はすぐ止まるっちー……。ずっと鳴ってるの、不思議だっちー |
 | 6-9-4c |  | 手がかり | きゅうこの部屋の、銀の音符の飾りがついたオルゴール(飾りが一つ取れた跡がある)。普通はすぐ止まるのに、きゅうこがいなくなった後も鳴り続けていた |
 | 6-9-5 | <img src="../../../monster-hero/images/assistant/santa/face/atsu_angry.PNG" width="40"> | あつ(むくれ顔) | 黒羽のおっちゃん、白瀬さん、エルちゃん、きゅうこちゃん……。もう、誰にも手は出させない |
 | 6-9-6 |  | 並び |  |
@@ -554,7 +556,7 @@
 | 6-M-3 |  | 帯 | カチ、カチ、カチ(柱時計は、まだ動いている) |
 | 6-M-4 | <img src="../../../monster-hero/images/monster-icons/face/mocchi.png" width="40"> | もちまる | (帳面をめくる)……『ねじ巻き きゅうこさん』。……毎晩、ちゃんと巻いてくれてたっちー |
 | 6-M-5 | <img src="../../../monster-hero/images/monster-icons/face/mocchi.png" width="40"> | もちまる | 今夜からは、ぼくが巻いたほうが、いいのかな…… |
-| 6-M-6 |  | 帯 | ねじ巻きの鍵に手を伸ばしかけて、もちまるは、その手を引っ込める |
+| 6-M-6 |  | 帯 | ねじ巻きの鍵に手を伸ばしかけて、もちまるは、その手を引っこめる |
 | 6-M-7 | <img src="../../../monster-hero/images/monster-icons/face/mocchi.png" width="40"> | もちまる | ……ううん。これは、きゅうこさんの仕事だっちー。帰ってきたら、また巻いてもらうっちー |
 | 6-M-8 |  | 帯 | 帳面を、後ろのほうから、ゆっくりとめくっていく。黄ばんだページ。12年前の、12月24日 |
 | 6-M-9 | <img src="../../../monster-hero/images/monster-icons/face/mocchi.png" width="40"> | もちまる | ……あの夜、ぼく、暖炉でスープを温めて待ってたっちー。カノンさんが戻ってきたら、すぐ飲んでもらえるように |
@@ -575,7 +577,7 @@
 | 7-1-8a | <img src="../../../monster-hero/images/assistant/santa/face/sorashido_normal.PNG" width="40"> | ソラシド(ふつう) | みゅあさん。黒い毛糸のことは、記録を見直しました。鏡の扉の奥に、黒い毛糸は1本もありませんでした。みゅあさんではありません |
 | 7-1-9a | <img src="../../../monster-hero/images/assistant/santa/face/myua_crying.PNG" width="40"> | みゅあ(泣き顔) | ……ありがと…… |
 | 7-1-10a | <img src="../../../monster-hero/images/assistant/santa/face/sorashido_normal.PNG" width="40"> | ソラシド(ふつう) | ききさん。白瀬さんが消えた頃、ききさんは、ずっとホールで見張りのノートを書いていました。あつさんは、黒羽さんの鐘の時、自分の隣にいました |
-| 7-1-11a | <img src="../../../monster-hero/images/assistant/santa/face/sorashido_normal.PNG" width="40"> | ソラシド(ふつう) | ももさんと、もちまるさんは、停電の時、ホールで自分たちといました。えるさんは、襲われた側です |
+| 7-1-11a | <img src="../../../monster-hero/images/assistant/santa/face/sorashido_normal.PNG" width="40"> | ソラシド(ふつう) | ももさんは、停電の時、ホールで自分たちといました。もちまるさんは、閉まった裏口を見つけて知らせてくれた人です。えるさんは、襲われた側です |
 | 7-1-12a | <img src="../../../monster-hero/images/assistant/santa/face/sorashido_troubled.PNG" width="40"> | ソラシド(困り顔) | ……残るのは。毛くずは、裏口と通り道で、どれも緑。通り道は、ドラさんの部屋に繋がっています。かばんに黒いサンタの服。鐘の時、台所に一人。台所は、裏口のすぐ隣です |
 | 7-1-13a | <img src="../../../monster-hero/images/assistant/santa/face/sorashido_normal.PNG" width="40"> | ソラシド(ふつう) | 黒いサンタは——ドラさんです |
 | 7-1-14 | <img src="../../../monster-hero/images/assistant/santa/face/dra_troubled.PNG" width="40"> | ドラ(困り顔) | (握ったリボンを見つめて、黙っている)……おで、は…… |
@@ -592,7 +594,7 @@
 | 8-1-6 | <img src="../../../monster-hero/images/monster-icons/face/mocchi.png" width="40"> | もちまる | ……ねじ巻きは、毎晩、きゅうこさんだったっちー |
 | 8-1-7a | <img src="../../../monster-hero/images/assistant/santa/face/myua_surprise.PNG" width="40"> | みゅあ(驚き) | あつくん、あの銀の音符……！ きゅきゅの部屋のオルゴール、飾りが一つ取れてた！ |
 | 8-1-8a | <img src="../../../monster-hero/images/assistant/santa/face/atsu_normal.PNG" width="40"> | あつ(ふつう) | うん。あの跡に、ぴたりとはまった。はしごの上にいたのは、あのオルゴールの持ち主だよ。……それに、あの子守歌。開かずの部屋のオルゴールと、同じ曲だった |
-| 8-1-9a | <img src="../../../monster-hero/images/assistant/santa/face/atsu_normal.PNG" width="40"> | あつ(ふつう) | 崖のふちで途切れた足跡は、雪で形がもう分からなかった。けど、雪原の時と同じ手なら……同じ足跡を踏んで戻っただけで、崖から落ちてない |
+| 8-1-9a | <img src="../../../monster-hero/images/assistant/santa/face/atsu_normal.PNG" width="40"> | あつ(ふつう) | 崖のふちで途切れた足跡は、雪で形がもう分からなかった。けど、雪原の時と同じ手なら……同じ足跡を踏んで戻っただけで、崖から落ちてない。……戻った先は、裏手の薪小屋。床下から、壁の中の通り道に入れる |
 | 8-1-10a | <img src="../../../monster-hero/images/assistant/santa/face/myua_troubled.PNG" width="40"> | みゅあ(困り顔) | でも、あつくん……それなら、きゅきゅは、今どこに……？ |
 | 8-1-11a | <img src="../../../monster-hero/images/assistant/santa/face/atsu_normal.PNG" width="40"> | あつ(ふつう) | オルゴールって、すぐ止まるでしょ。なのに、きゅうこちゃんがいなくなった後も、ずっと鳴ってた。……消えたはずの人が、近くで巻いてたんだ |
 | 8-1-12a | <img src="../../../monster-hero/images/assistant/santa/face/sorashido_normal.PNG" width="40"> | ソラシド(ふつう) | ……あつさん。最後は、あなたが言ってください。今回は、あなたの番です |
@@ -617,7 +619,7 @@
 | 8-3-7 | <img src="../../../monster-hero/images/assistant/santa/face/kyuko_normal.PNG" width="40"> | きゅうこ(ふつう) | だから、同じ夜を、もう一度作った。同じ鐘。同じ扉。同じ寒さ。……そうしたら、お母さんの寒さが、少しは分かってもらえると思った |
 | 8-3-7b | <img src="../../../monster-hero/images/assistant/santa/face/kyuko_troubled.PNG" width="40"> | きゅうこ(困り顔) | 探偵さんの部屋の手紙も、俺。……0時の鐘で、一人帰ってこない。あの夜のお母さんと、同じに。……本当は、誰かに止めてほしかったのかもしれない |
 | 8-3-8 | <img src="../../../monster-hero/images/assistant/santa/face/erubin_troubled.PNG" width="40"> | えるびん(困り顔) | ……『同じ夜』って。あの夜、ほかにも、誰かが……？ |
-| 8-3-9 | <img src="../../../monster-hero/images/assistant/santa/face/kyuko_troubled.PNG" width="40"> | きゅうこ(困り顔) | お母さんは、ふもとの薬屋の戸を、ずっと叩いてたんだ。吹雪で、店は早く閉まってて。……やっと薬をもらえた時には、もう、鐘に間に合わなかった |
+| 8-3-9 | <img src="../../../monster-hero/images/assistant/santa/face/kyuko_troubled.PNG" width="40"> | きゅうこ(困り顔) | お母さんは、ふもとの薬屋の戸を、ずっと叩いてたんだ。吹雪で、店は早く閉まってて。……やっと薬をもらえて、本当の0時には、ぎりぎり間に合うはずだった |
 | 8-3-10 | <img src="../../../monster-hero/images/assistant/santa/face/kyuko_troubled.PNG" width="40"> | きゅうこ(困り顔) | 最初の夜、えるニキが白瀬さんに話してるの、聞こえちゃった。……えるニキの家、ふもとの薬屋だったんだ |
 | 8-3-11 | <img src="../../../monster-hero/images/assistant/santa/face/erubin_surprise.PNG" width="40"> | えるびん(驚き) | ……俺の、家が…… |
 | 8-3-12 | <img src="../../../monster-hero/images/assistant/santa/face/kyuko_crying.PNG" width="40"> | きゅうこ(泣き顔) | あの夜の宿帳には、ももすけの家族の名前もあった。……ももすけが、あの夜、窓の外のお母さんを『黒いサンタ』って呼んだんだ。だから、誰も扉を開けなかった |
@@ -625,7 +627,7 @@
 | 8-3-14 | <img src="../../../monster-hero/images/assistant/santa/face/kyuko_crying.PNG" width="40"> | きゅうこ(泣き顔) | ……うん。ももすけは、ちっちゃかった。えるニキも。……分かってたんだ。分かってたのに、止まれなかった |
 | 8-3-15 | <img src="../../../monster-hero/images/assistant/santa/face/dra_crying.PNG" width="40"> | ドラ(泣き顔) | きゅうこちゃん……。おでのかばんに、服を入れたのも…… |
 | 8-3-16 | <img src="../../../monster-hero/images/assistant/santa/face/kyuko_troubled.PNG" width="40"> | きゅうこ(困り顔) | ……ごめん、ドラちゃん。服は、2着用意してたんだ。1着を、ドラちゃんのかばんに入れた。……一番、ひどいことした |
-| 8-3-17 | <img src="../../../monster-hero/images/assistant/santa/face/dra_crying.PNG" width="40"> | ドラ(泣き顔) | ……知ってたんだ、おで。黒羽のおっちゃんがいなくなった夜、停電の台所で、裏口から戻ってきた黒い服の人と、すれ違った。ろうそくの灯りで、ローズ色の髪が見えた |
+| 8-3-17 | <img src="../../../monster-hero/images/assistant/santa/face/dra_crying.PNG" width="40"> | ドラ(泣き顔) | ……知ってたんだ、おで。黒羽のおっちゃんがいなくなった夜、停電の台所の奥の食料庫で、クッキーの缶を探してた。出た所で、裏口から戻ってきた黒い服の人と、すれ違った。窓の雪明かりで、ローズ色の髪が見えた |
 | 8-3-18 | <img src="../../../monster-hero/images/assistant/santa/face/dra_crying.PNG" width="40"> | ドラ(泣き顔) | きゅうこちゃん、泣いてた。……だから、おで、何も見てないことにした。誰かが犯人にされるなら、おででいいって思ったんだ |
 | 8-3-19 | <img src="../../../monster-hero/images/assistant/santa/face/momosuke_crying.PNG" width="40"> | ももすけ(泣き顔) | ドラちゃんの、ばか……！ |
 | 8-3-20 | <img src="../../../monster-hero/images/assistant/santa/face/kyuko_crying.PNG" width="40"> | きゅうこ(泣き顔) | ……なんで、そこまで…… |
@@ -693,7 +695,7 @@
 | 12-1-1 |  | 帯 | 過去編 〜12年前の聖夜〜 |
 | 12-1-2 |  | 帯 | ♪……ポロン、ポロロン……(12年前の、12月24日。ペンション・シュプールのホールに、オルゴールの子守歌が流れる) |
 | 12-1-3 |  | 帯 | もみの木のそばで、ローズ色の長い髪の女の人が、ねじを巻いている。その膝に、同じ色の長い髪の、小さな子 |
-| 12-1-4 |  | カノン | はい、少し早いけど、今年のプレゼント。銀の音符をつけてみたの。……この子守歌は、あなたのためだけの歌だからね |
+| 12-1-4 |  | カノン | はい、少し早いけど、今年のプレゼント。銀の音符をつけてみたの。……この子守歌は、ホールでみんなにも聞かせるけど、本当はあなたの歌だからね |
 | 12-1-5 |  | カノン | それから、壁の中の秘密の道は、二人だけのないしょ。……ね？ |
 | 12-1-6 |  | 幼いきゅうこ | (小さなオルゴールを両手で抱えて)うん、ないしょ。……お母さんの歌だ |
 | 12-1-7 |  | 幼いイチーカ | カノンさんの所の子、今年も髪が伸びたのね。本当に、お人形さんみたい |
@@ -717,13 +719,13 @@
 | 12-3-3 |  | カノン | すみません！ 開けてください！ 子どもが、熱を出しているんです！ |
 | 12-3-4 |  | 幼いえるびん | ……お父さん。誰か、戸を叩いてるよ |
 | 12-3-5 |  | 薬屋の主人 | こんな吹雪の晩に、お客なんか来るものか。風の音だよ。……さあ、もう寝なさい |
-| 12-3-6 |  | 帯 | 戸を叩く音は、いつまでも止まなかった。ようやく戸が開いた時、雪まみれの女の人は、凍えた手で、何度も頭を下げた |
+| 12-3-6 |  | 帯 | 戸を叩く音は、いつまでもやまなかった。ようやく戸が開いた時、雪まみれの女の人は、凍えた手で、何度も頭を下げた |
 | 12-3-7 |  | カノン | ありがとうございます……！ 急がなきゃ。0時の鐘に、間に合わない |
 | 12-4-1 | <img src="../../../monster-hero/images/monster-icons/face/mocchi.png" width="40"> | もちまる | (暖炉の鍋をかき混ぜて)カノンさんが戻ってきたら、すぐ、あったかいスープを飲んでもらうっちー |
 | 12-4-2 |  | 帯 | ボーン……ボーン……(柱時計が、12回鳴る) |
 | 12-4-3 | <img src="../../../monster-hero/images/monster-icons/face/mocchi.png" width="40"> | もちまる | ……あれ？ 0時の鐘、なんだか早いっちー |
 | 12-4-4 |  | 帯 | 暖炉のそばの椅子で、黒羽が、懐中時計のふたをそっと開ける。針は、23時47分 |
-| 12-4-5 |  | 帯 | ガタン(台所で、白瀬が、言われたとおりに、裏口のかんぬきを下ろす) |
+| 12-4-5 |  | 帯 | ガタン(台所で、白瀬が、言われた通りに、裏口のかんぬきを下ろす) |
 | 12-4-6 |  | 祖父 | (ランプを手に、台所へ急いで)鐘だ、裏口を……。……閉まっている？ 誰が…… |
 | 12-4-7 | <img src="../../../monster-hero/images/story-guests/kuroba_face.png" width="40"> | 黒羽 | ああ、主人。あの女なら、さっき戻ってきたよ。雪を払って、2階へ上がっていった。だから、閉めさせたんだ |
 | 12-4-8 |  | 帯 | 祖父は2階へ上がり、カノンの部屋の前で、耳をすませる。扉の向こうから、かすかに、オルゴールの音 |
@@ -745,7 +747,7 @@
 | 12-6-6 |  | 帯 | その日から、ふもとの町で、一つの言い伝えがささやかれるようになった。『吹雪の夜、黒いサンタが来て、連れていく』 |
 | 12-6-7 |  | 幼いきゅうこ | (2階の窓に額をつけて、雪原へ走っていく大人たちを見ている)……お母さん。鐘、鳴ったよ。……どうして、戻ってこないの |
 | 12-7-1 |  | 帯 | 山道があいた日。黒羽は、誰もいないカノンの部屋から、楽譜のケースを持ち去った。次の年、白瀬が歌う『聖夜のロンド』が、町じゅうのラジオから流れた。作った人の名前は、どこにもなかった |
-| 12-7-2 |  | 帯 | 小さな子は、遠くの親せきに引き取られていった。銀の音符のオルゴールを、胸に抱いて |
+| 12-7-2 |  | 帯 | 小さな子は、遠くの親戚に引き取られていった。銀の音符のオルゴールを、胸に抱いて |
 | 12-7-3 |  | 祖父 | カノンさんの部屋は、あのままにしておこう。あの子がいつか戻ってきた時、迷わないように。……それから、もちまる。これからは、吹雪の夜は、裏口のかんぬきを開けておいておくれ |
 | 12-7-4 | <img src="../../../monster-hero/images/monster-icons/face/mocchi.png" width="40"> | もちまる | ……はいっちー。外に出た人が、すぐ戻れるように。ぼく、ずっと、そうするっちー |
 | 12-7-5 |  | 帯 | ♪……ポロン、ポロロン……(——そして、12年後の聖夜。開け放した裏口から、同じ子守歌が、雪の中へ流れていく) |
