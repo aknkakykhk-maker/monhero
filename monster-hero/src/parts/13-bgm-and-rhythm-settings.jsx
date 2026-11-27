@@ -193,12 +193,12 @@ const BGM_TRACK_LISTED_FROM = Object.freeze({
   // Battle #5(台帳 r1126-064)。クリスマスイベントの開幕 11/28 10:00 から
   melo_battle_5: '2026-11-28T10:00:00+09:00',
   melo_battle_5_short: '2026-11-28T10:00:00+09:00',
-  // クリスマスイベントの曲(台帳 r1126-023)。開幕の 11/30 10:00 から(Kiss の全編はイベントページの曲として先に入っているので外さない)
-  melo_kiss_mystery_short: '2026-11-30T10:00:00+09:00',
-  melo_dear_santa: '2026-11-30T10:00:00+09:00',
-  melo_dear_santa_short: '2026-11-30T10:00:00+09:00',
-  melo_winter_fall: '2026-11-30T10:00:00+09:00',
-  melo_winter_fall_short: '2026-11-30T10:00:00+09:00',
+  // クリスマスイベントの曲(台帳 r1126-023)。開幕の 11/28 10:00 から(Kiss の全編はイベントページの曲として先に入っているので外さない)
+  melo_kiss_mystery_short: '2026-11-28T10:00:00+09:00',
+  melo_dear_santa: '2026-11-28T10:00:00+09:00',
+  melo_dear_santa_short: '2026-11-28T10:00:00+09:00',
+  melo_winter_fall: '2026-11-28T10:00:00+09:00',
+  melo_winter_fall_short: '2026-11-28T10:00:00+09:00',
 });
 const bgmTrackListed = (track, nowMs = Date.now()) => {
   const id = track && track.id;
@@ -1440,7 +1440,7 @@ const TITLE_ART_STORAGE_KEY = 'mh_title_art';
 // クリスマス(r1125-061・社長 2026-11-25): from〜until はクリスマスのイベント(RAID_XMAS_START_AT・RAID_XMAS_EVENT.endAt)と同じ。
 //   from より前は選択肢にも出さない(titleArtOptionsAt)。おまかせは from〜until のあいだだけクリスマス、そのあとはクラシック。
 //   自分で選んだ人は until のあとも選んだまま。期間は見るたびに時刻で決める(保存しない)。★index.html の先読みも同じ時刻を持っている
-const TITLE_ART_XMAS_FROM = () => Date.parse(typeof RAID_XMAS_START_AT === 'string' ? RAID_XMAS_START_AT : '2026-11-30T10:00:00+09:00');
+const TITLE_ART_XMAS_FROM = () => Date.parse(typeof RAID_XMAS_START_AT === 'string' ? RAID_XMAS_START_AT : '2026-11-28T10:00:00+09:00');
 const TITLE_ART_XMAS_UNTIL = () => Date.parse(typeof RAID_XMAS_EVENT === 'object' && RAID_XMAS_EVENT && typeof RAID_XMAS_EVENT.endAt === 'string' ? RAID_XMAS_EVENT.endAt : '2026-12-31T04:00:00+09:00');
 const TITLE_ART_OPTIONS = [
   { id: 'xmas', label: 'クリスマス', desc: '雪の夜の広場。モッチーたちがクリスマスの装いでお出迎え', src: 'data/images/title-screen-xmas.jpg', squareSrc: 'data/images/title-screen-xmas-square.jpg', wideSrc: 'data/images/title-screen-xmas-wide.jpg', from: TITLE_ART_XMAS_FROM },
@@ -1483,7 +1483,7 @@ const HOME_ART_STORAGE_KEY = 'mh_home_art';
 // クリスマス(r1125-059・社長 2026-11-25): from〜until は、クリスマスのイベント(RAID_XMAS_START_AT・RAID_XMAS_EVENT.endAt)と同じ。
 //   from より前は選択肢にも出さない(homeArtOptionsAt)。おまかせは from〜until のあいだだけクリスマス、そのあとはクラシック。
 //   自分で選んだ人は until のあとも選んだまま。期間は見るたびに時刻で決める(保存しない)
-const HOME_ART_XMAS_FROM = () => Date.parse(typeof RAID_XMAS_START_AT === 'string' ? RAID_XMAS_START_AT : '2026-11-30T10:00:00+09:00');
+const HOME_ART_XMAS_FROM = () => Date.parse(typeof RAID_XMAS_START_AT === 'string' ? RAID_XMAS_START_AT : '2026-11-28T10:00:00+09:00');
 const HOME_ART_XMAS_UNTIL = () => Date.parse(typeof RAID_XMAS_EVENT === 'object' && RAID_XMAS_EVENT && typeof RAID_XMAS_EVENT.endAt === 'string' ? RAID_XMAS_EVENT.endAt : '2026-12-31T04:00:00+09:00');
 const HOME_ART_OPTIONS = [
   { id: 'xmas', label: 'クリスマス', desc: '雪の夜、イルミネーションがきらめく村の広場', src: 'data/images/home-background-xmas.jpg', squareSrc: 'data/images/home-background-xmas-square.jpg', wideSrc: 'data/images/home-background-xmas-wide.jpg', from: HOME_ART_XMAS_FROM },

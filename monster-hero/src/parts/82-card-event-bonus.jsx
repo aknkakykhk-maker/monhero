@@ -6,7 +6,7 @@
 const CARD_EVENT_BONUS = Object.freeze({
   id: 'xmas_2026',
   name: 'クリスマスイベント',
-  startAt: '2026-11-30T10:00:00+09:00',
+  startAt: '2026-11-28T10:00:00+09:00',
   endAt: '2026-12-31T04:00:00+09:00',
   mult: 1.5,
   label: '1.5倍',

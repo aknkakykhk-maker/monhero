@@ -521,7 +521,7 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   get cardCup() { return typeof cardCupOpen === 'function' && cardCupOpen() === true; },
   // クリスマスのひとりで進める物語の序章(xmas_story_00・台帳 r1126-013)。11/27 13:00 から読める(r1126-060 で前倒し)(17-release の RELEASE_FLAGS.xmasStoryPrologue)
   get xmasStoryPrologue() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.xmasStoryPrologue === true; },
-  // クリスマスのレイド「もうひとつの聖夜」のお話(raid_xmas_story_*・r1126-026)。レイドの開始 11/30 10:00 から(17-release の RELEASE_FLAGS.raidXmas・見るたびに時刻で決める)
+  // クリスマスのレイド「もうひとつの聖夜」のお話(raid_xmas_story_*・r1126-026)。レイドの開始 11/28 10:00 から(17-release の RELEASE_FLAGS.raidXmas・見るたびに時刻で決める)
   get raidXmas() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.raidXmas === true; },
 });
 const eventReplayReleased = (event) => !event?.releaseFlag || EVENT_REPLAY_RELEASE_FLAGS[event.releaseFlag] === true;

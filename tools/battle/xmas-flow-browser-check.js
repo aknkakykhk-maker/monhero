@@ -4,9 +4,9 @@
 //   node tools/battle/xmas-flow-browser-check.js
 //   SHOT_DIR=<フォルダ> を付けると、縦・横・タブレットの止め絵を残す(HOME・物語・レイド・ボーナス・カードの案内・終了後の HOME)
 //
-//   ① 11/27 13:05(序章だけ): HOME に入口がありボスは無い・物語は序章だけ(事件簿の入口も第1話も無い)・レイドとボーナスは「11/30 10:00 から」・
+//   ① 11/27 13:05(序章だけ): HOME に入口がありボスは無い・物語は序章だけ(事件簿の入口も第1話も無い)・レイドとボーナスは「11/28 10:00 から」・
 //      タブを替えてもポスターの大きさが変わらない・横で入口の帯がほかのイベントの帯に重ならない
-//   ② 11/30 10:05(開催): 入口の二度押しで二重に開かない・HOME のボス → レイドのタブ → 戻ると HOME・
+//   ② 11/28 10:05(開催): 入口の二度押しで二重に開かない・HOME のボス → レイドのタブ → 戻ると HOME・
 //      バトルで挑む → 編成 → 戻るとレイド・ビートで挑む → 曲えらび → 戻るとレイド・
 //      スターターの無い人がカードで挑むと案内が出る(何も起きないことが無い)・事件簿を開く → 閉じると物語・序章を飛ばすと「読んだ」・
 //      横のレイドのタブは上の部分で高さを使い切らない(ポスターを出さない・幅をそろえる)
@@ -33,7 +33,7 @@ const VPS = [
   { label: '横', shot: 'yoko', viewport: { width: 844, height: 390 } },
   { label: 'タブレット', shot: 'tablet', viewport: { width: 820, height: 1180 } },
 ];
-const PRE = '2026-11-27T13:05:00+09:00', OPEN = '2026-11-30T10:05:00+09:00', AFTER = '2026-12-31T04:05:00+09:00';
+const PRE = '2026-11-27T13:05:00+09:00', OPEN = '2026-11-28T10:05:00+09:00', AFTER = '2026-12-31T04:05:00+09:00';
 (async () => {
   let chromium;
   try { ({ chromium } = require(path.join(ROOT, 'tools', 'node_modules', 'playwright'))); } catch (e) { console.log('SKIP: playwright が入っていないので確かめられません'); process.exit(0); }
@@ -99,7 +99,7 @@ const PRE = '2026-11-27T13:05:00+09:00', OPEN = '2026-11-30T10:05:00+09:00', AFT
         for (const [name, id] of [['レイド', 'raid'], ['ボーナス', 'bonus']]) {
           await tab(name);
           await shot(`pre-${id}`);
-          check(`① ${vp.label}: ${name}は「11/30(月) 10:00 から」だけ`, await page.locator(`[data-xmas-event-preopen="${id}"]`).count() > 0 && await page.locator('[data-raid-jack-footer]').count() === 0);
+          check(`① ${vp.label}: ${name}は「11/28(土) 10:00 から」だけ`, await page.locator(`[data-xmas-event-preopen="${id}"]`).count() > 0 && await page.locator('[data-raid-jack-footer]').count() === 0);
           const p = await box('[data-xmas-event-poster]');
           check(`① ${vp.label}: ${name}に替えてもポスターの大きさが変わらない`, !!p && !!posterStory && Math.abs(p.h - posterStory.h) < 2, `${posterStory && Math.round(posterStory.h)} → ${p && Math.round(p.h)}`);
         }

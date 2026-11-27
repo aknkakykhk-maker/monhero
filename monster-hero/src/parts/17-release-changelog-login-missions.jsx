@@ -41,10 +41,10 @@ const FRIENDS_PUBLIC_RELEASE = true;
 const RAID_JACK_START_AT = '2026-10-05T04:00:00+09:00';
 // クリスマスイベントの衣装(みゅあのサンタ・2026-11-25 r1119-172)の売り出しの時刻。RELEASE_FLAGS.xmasCostume が見るたびに数え直す。
 //   data/breeder.js の ASSISTANT_COSTUME_XMAS_START_AT と同じ値(更新履歴・ヘルプの出し入れに使う。食い違いは tools/market/assistant-costume-check.js が見る)
-const XMAS_COSTUME_START_AT = '2026-11-30T10:00:00+09:00';
+const XMAS_COSTUME_START_AT = '2026-11-28T10:00:00+09:00';
 // クリスマスのレイド(r1119-172)の開始時刻。35-raid-xmas.jsx の RAID_XMAS_EVENT.startAt と同じ値(食い違いは tools/battle/raid-xmas-check.js が見る)。
 //   RELEASE_FLAGS.raidXmas はこの時刻まで偽を返す(見るたびに数え直す)。入口・HOMEのボス・ヘルプ・更新履歴はこれを見る
-const RAID_XMAS_START_AT = '2026-11-30T10:00:00+09:00';
+const RAID_XMAS_START_AT = '2026-11-28T10:00:00+09:00';
 // 新曲「Battle #5」の解禁の時刻(2026-11-27 社長の決定・台帳 r1126-064。クリスマスイベントの開幕と同じ)。RELEASE_FLAGS.battle5 が見る。
 // 曲の公開(data/rhythm-mode.js の RHYTHM_SONG_RELEASE_AT)・BGM の一覧(13-bgm の BGM_TRACK_LISTED_FROM)も同じ時刻
 const BATTLE5_RELEASE_AT = '2026-11-28T10:00:00+09:00';
@@ -219,7 +219,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   // タクティクスのEXスキル。遊べる入口(β版を含む)があって、EXの公開フラグも立っているときだけ
   tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, get rhythmGrandOpen() { try { return RHYTHM_GRAND_OPEN_RELEASE === true && Date.now() >= Date.parse(RHYTHM_GRAND_OPEN_START_AT); } catch (e) { return false; } },
   // クリスマスイベントのモンヒロビート5倍(data/rhythm-event.js の xmas_2026・台帳 r1119-172 追記・追跡 r1125-044)の期間だけ真。
-  // ヘルプの説明を開始の 11/30 10:00 まで出さず、12/31 4:00 に下げる。見るたびに数え直す(読み込み時に決めない)
+  // ヘルプの説明を開始の 11/30 0:00 まで出さず(イベントの開幕 11/28 10:00 より遅い・r1126-063)、12/31 4:00 に下げる。見るたびに数え直す(読み込み時に決めない)
   get rhythmXmasBoost() { try { const c = typeof rhythmEventPointCampaignAt === 'function' ? rhythmEventPointCampaignAt(Date.now()) : null; return !!c && c.id === 'xmas_2026'; } catch (e) { return false; } }, rhythmGrandOpenTeaser:RHYTHM_GRAND_OPEN_TEASER_RELEASE, rhythmMulti:RHYTHM_MULTI_PUBLIC_RELEASE, friends:FRIENDS_PUBLIC_RELEASE, raidJackRhythm: RAID_JACK_RHYTHM_PUBLIC_RELEASE, get raidJack() { try { return RAID_JACK_PUBLIC_RELEASE === true && Date.now() >= Date.parse(RAID_JACK_START_AT); } catch (e) { return false; } }, get xmasBattleBonus() { try { return typeof xmasBattleBonusRateAt === 'function' && xmasBattleBonusRateAt(Date.now()) > 1; } catch (e) { return false; } }, get raidXmas() { try { return Date.now() >= Date.parse(RAID_XMAS_START_AT); } catch (e) { return false; } }, get xmasStoryPrologue() { try { return Date.now() >= Date.parse(XMAS_STORY_PROLOGUE_OPEN_AT); } catch (e) { return false; } }, get xmasCostume() { try { return Date.now() >= Date.parse(XMAS_COSTUME_START_AT); } catch (e) { return false; } }, get cardXmasBonus() { try { return typeof cardEventBonusOn === 'function' && cardEventBonusOn() === true; } catch (e) { return false; } }, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
 // releaseFlag = そのフラグが立つまで出さない。unreleasedFlag = そのフラグが立ったら出さない。
 // 逆向きの名札が要るのは「準備中です」の案内で、公開したあとも残っていると

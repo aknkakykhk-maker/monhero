@@ -4,6 +4,7 @@
 //   撮る物は下の SHOTS。行は台本の番号(7-1-3a など)で書く
 // 使い方: node tools/novel/xmas-novel-shots.js <出力ディレクトリ>   (縦 390×844・2倍)
 //         node tools/novel/xmas-novel-shots.js <出力ディレクトリ> --r1126-046   幕間と過去編(r1126-046)の組を撮る
+//         node tools/novel/xmas-novel-shots.js <出力ディレクトリ> --r1126-065   亡くなった人のシルエット(r1126-065)の組を縦と横で撮る
 //         node tools/novel/xmas-novel-shots.js <出力ディレクトリ> --r1126-062   足した選択肢とエンド(r1126-062)の組を撮る
 'use strict';
 const fs = require('fs');
@@ -84,7 +85,21 @@ const SHOTS_062 = [
   { name: '20-history-few', history: true, endings: ['END-X1', 'END-M1', 'END-M4', 'END-G'], label: 'エンドヒストリー(まだの物は？？？)' },
   { name: '21-history-all', history: true, endings: ALL_ENDS, label: 'エンドヒストリー(全部見たあと)' },
 ];
-const LIST = process.argv.includes('--r1126-062') ? SHOTS_062 : process.argv.includes('--r1126-046') ? SHOTS_046 : process.argv.includes('--r1126-054') ? SHOTS_054 : process.argv.includes('--r1126-058') ? SHOTS_058 : SHOTS;
+// 亡くなっているのが見つかる場面のシルエット(r1126-065)。縦と横で撮る(land: 横 844×390)
+const SHOTS_065 = [];
+[['01-kuroba', '3-1-4', 1, '第3章 黒羽(雪原)'], ['02-kuroba-hands', '3-1-7', 1, '第3章 黒羽の手'], ['03-shirase', '5-4-5', 1, '第5章 白瀬(鏡の裏の通り道)'],
+  ['04-erubin', '10-1-4', 1, '後半 えるびん(客室のベッド)'], ['05-momosuke', '10-2-7', 1, '後半 ももすけ(はしごの下)'], ['06-mochimaru', '10-3-7', 1, '後半 もちまる(裏口の外の雪)'],
+  ['07-x1', '2-X-6a', 1, 'END-X1 裏口の前(あつ)'], ['08-x1-sora', '2-X-7', 2, 'END-X1 裏口の前(ソラシド)'], ['09-x2', '5-X-4a', 1, 'END-X2 書斎'],
+  ['10-x3', '6-X-10a', 1, 'END-X3 扉の外の雪'], ['11-x4', '2-Y-13a', 1, 'END-X4 裏の階段の下'], ['12-x5', '10-X-10a', 1, 'END-X5 はしごの下'],
+  ['13-m2', 'M2-4', 1, 'END-M2 薪小屋のもちまる'], ['14-m5', 'M5-5a', 1, 'END-M5 通り道(ソラシド)'], ['15-m5-atsu', 'M5-5s', 2, 'END-M5 通り道(あつ)']].forEach(([name, row, side, label]) => {
+  SHOTS_065.push({ name: `${name}-tate`, row, side, label: `${label}(縦)` });
+  SHOTS_065.push({ name: `${name}-yoko`, row, side, land: true, label: `${label}(横)` });
+});
+const LIST_ALL = process.argv.includes('--r1126-065') ? SHOTS_065 : process.argv.includes('--r1126-062') ? SHOTS_062 : process.argv.includes('--r1126-046') ? SHOTS_046 : process.argv.includes('--r1126-054') ? SHOTS_054 : process.argv.includes('--r1126-058') ? SHOTS_058 : SHOTS;
+
+//  --only <語>: 名前にその語を含む物だけ撮る(例: --only kuroba)
+const ONLY = process.argv.includes('--only') ? process.argv[process.argv.indexOf('--only') + 1] || '' : '';
+const LIST = ONLY ? LIST_ALL.filter((x) => x.name.includes(ONLY)) : LIST_ALL;
 
 const ctx = vm.createContext({});
 vm.runInContext(`${fs.readFileSync(path.join(ROOT, 'monster-hero/src/parts/79-xmas-novel-script.jsx'), 'utf8')}\nthis.S = XMAS_NOVEL_SCRIPT;`, ctx);
@@ -108,7 +123,7 @@ const serve = () => new Promise((r) => { const s = http.createServer((req, res) 
     for (const sh of LIST) {
       const at = sh.list || sh.history ? { scene: 'C1-1', idx: 0 } : where(sh.row);
       if (!at) { console.log(`NG: ${sh.row} が台本に無い`); bad += 1; continue; }
-      const page = await (await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 })).newPage();
+      const page = await (await browser.newContext({ viewport: sh.land ? { width: 844, height: 390 } : { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 })).newPage();
       const errors = []; page.on('pageerror', (e) => errors.push(String(e)));
       await page.route(/supabase\.co/, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
       await page.addInitScript((seed) => {
@@ -119,7 +134,7 @@ const serve = () => new Promise((r) => { const s = http.createServer((req, res) 
         put('mh_xmas_novel_v1', seed);
       }, { cur: sh.list || sh.history ? null : { scene: at.scene, idx: at.idx, flags: sh.side ? { f_A1: sh.side } : {}, clues: [], ans: {}, panel: {} },
         ...(sh.endings ? { endings: sh.endings, endAt: Object.fromEntries(sh.endings.map((e) => [e, '2026-12-03T12:15:00.000Z'])) } : {}),
-        ...(sh.list || LIST === SHOTS_046 ? { endings: ['END-G'], snaps: { C1: { scene: 'C1-1', idx: 0, flags: {}, clues: [], ans: {}, panel: {} } } } : {}) });
+        ...(sh.list || LIST_ALL === SHOTS_046 ? { endings: ['END-G'], snaps: { C1: { scene: 'C1-1', idx: 0, flags: {}, clues: [], ans: {}, panel: {} } } } : {}) });
       await page.addInitScript(seeds.eventStorySeed()); await page.addInitScript(seeds.updateNoticeSeed()); await page.addInitScript(seeds.loginBonusDoneSeed()); await page.addInitScript(seeds.oneTimeNoticeSeed());
       await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
       await page.getByRole('button', { name: 'TAP TO START' }).click({ timeout: 60000 });

@@ -28,7 +28,7 @@ for(const id of RHYTHM_DEMO_SONG_IDS){const song=RHYTHM_SONGS.find(s=>s.songId==
 const loose=[...byName].filter(([,list])=>list.length>1&&new Set(list.map(rhythmSongVersionHead)).size>1);
 ok('表示名が同じ公開曲は、どれも同じ組に入っている',!loose.length,loose.map(([name,list])=>`${name}: ${list.join(' / ')}`).join(' ・ '));
 // 時刻が来るまで出さない曲(RHYTHM_SONG_RELEASE_AT)は、一覧の行に数えない(2026-10-04)
-// 組も同じ。まだ時刻が来ていない版は一覧に出ないので、出ている版だけで数える(2026-11-26 クリスマスの3曲は 11/30 10:00 から)
+// 組も同じ。まだ時刻が来ていない版は一覧に出ないので、出ている版だけで数える(2026-11-26 クリスマスの3曲は 11/28 10:00 から)
 const OPEN_GROUPS=GROUPS.map(group=>group.filter(([id])=>rhythmSongReleased(id))).filter(group=>group.length);
 const expectedRows=RHYTHM_DEMO_SONG_IDS.filter(id=>rhythmSongReleased(id)).length-OPEN_GROUPS.reduce((sum,group)=>sum+group.length-1,0);
 

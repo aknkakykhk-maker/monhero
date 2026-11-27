@@ -97,11 +97,11 @@ check('ビートP交換所に3着が並び、いま売れるかは見るたび�
   /get available\(\)/.test(rhythmEvent) && /assistantCostumeEverSellsIn\(costume, 'beatPoint'\)/.test(rhythmEvent));
 
 // みゅあのサンタ(2026-11-25 クリスマスイベント r1119-172・ハロウィンと同じ売り方)
-const XS = '2026-11-30T10:00:00+09:00', XE = '2026-12-31T04:00:00+09:00';
+const XS = '2026-11-28T10:00:00+09:00', XE = '2026-12-31T04:00:00+09:00';
 const santaOf = (x) => x.releasedAssistantCostumes().filter(c => c.id === 'mua_santa_2026');
 const kikiSantaOf = (x) => x.releasedAssistantCostumes().filter(c => c.id === 'kiki_santa_2026');
 const xBefore = load('', jst(XS) - 1), xDuring = load('', jst(XS)), xLast = load('', jst(XE) - 1), xAfter = load('', jst(XE));
-check('サンタ: 開始(11/30 10:00)の前は見えず、開始の時刻から見える', santaOf(xBefore).length === 0 && santaOf(xDuring).length === 1);
+check('サンタ: 開始(11/28 10:00)の前は見えず、開始の時刻から見える', santaOf(xBefore).length === 0 && santaOf(xDuring).length === 1);
 check('ももすけのサンタ: 開始の前は見えず、開始から見える・期間中はビートP1000・終わりからダイヤ100000',
   xBefore.releasedAssistantCostumes().every(c => c.id !== 'momosuke_santa_2026') && xDuring.releasedAssistantCostumes().some(c => c.id === 'momosuke_santa_2026')
   && xDuring.assistantCostumeSaleIn(xDuring.assistantCostumeById('momosuke_santa_2026'), 'beatPoint')?.cost === 1000
