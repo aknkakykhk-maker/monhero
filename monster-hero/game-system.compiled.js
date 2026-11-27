@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d895a438bf7a03a2
+// source-sha256: d02dbb2ec25ab1d9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -87143,7 +87143,9 @@ const HOME_V2_CSS = `
 .mh-home-v2 .mh-home-band-next{min-width:0;max-width:72%;min-height:22px;overflow:hidden;padding:2px 9px;border-radius:999px;background:#000a;color:#fffbeb;font-size:11px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}
 .mh-home-v2 .mh-home-assistant{width:70%;max-width:360px;margin:6px 0 0 8px}
 .mh-home-v2 .mh-home-assistant-fold{margin:6px 0 0 8px}
-.mh-home-v2 .mh-home-assistant-show-mark{right:-6px;bottom:-4px}
+.mh-home-v2 .mh-home-assistant-show-mark{right:-8px;bottom:-6px;width:24px;height:24px;font-size:14px;background:#fff!important;box-shadow:0 0 0 2px #e11d48,0 2px 6px #0009;animation:mhHomePeerMark 1.4s ease-in-out infinite}
+@keyframes mhHomePeerMark{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+@media(prefers-reduced-motion:reduce){.mh-home-v2 .mh-home-assistant-show-mark{animation:none}}
 .mh-home-v2 .mh-home-assistant-news-dot{position:absolute;top:1px;right:1px;width:13px;height:13px;border-radius:50%;border:2px solid #fff;background:#e11d48;box-shadow:0 1px 4px #0009}
 .mh-home-v2 .mh-home-peer-mark{position:absolute;left:52px;top:calc(100% + 4px);width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:50%;border:1.5px solid #f9a8d4;background:#1e0b24ee;font-size:16px;box-shadow:0 2px 8px #0009}
 .mh-home-v2 .mh-home-dock{gap:6px;padding:8px 8px calc(8px + env(safe-area-inset-bottom))}
@@ -87921,8 +87923,10 @@ function HomeScreen({
     return !!rhythmLimitedEventAt(Date.now());
   })();
   const homeBandSlides = [];
+  const homeBandEvent = homeEventCampaign && !(xmasEntry && homeEventCampaign.id === 'xmas_2026');
+  if (homeBandEvent && xmasEntry && xmasEntry.preOpen) homeBandSlides.push('event');
   if (xmasEntry) homeBandSlides.push('xmas');
-  if (homeEventCampaign && !(xmasEntry && homeEventCampaign.id === 'xmas_2026')) homeBandSlides.push('event');
+  if (homeBandEvent && !homeBandSlides.includes('event')) homeBandSlides.push('event');
   if (homeCardTour && typeof onOpenCardTour === 'function') homeBandSlides.push('tour');
   const homeBandCount = homeBandSlides.length;
   const [homeBandIdx, setHomeBandIdx] = React.useState(0);

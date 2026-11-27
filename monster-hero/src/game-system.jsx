@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 222165fc5a85d6cf
+// generated-sha256: 1003f37ea287136c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -52251,7 +52251,9 @@ const HOME_V2_CSS = `
 .mh-home-v2 .mh-home-band-next{min-width:0;max-width:72%;min-height:22px;overflow:hidden;padding:2px 9px;border-radius:999px;background:#000a;color:#fffbeb;font-size:11px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}
 .mh-home-v2 .mh-home-assistant{width:70%;max-width:360px;margin:6px 0 0 8px}
 .mh-home-v2 .mh-home-assistant-fold{margin:6px 0 0 8px}
-.mh-home-v2 .mh-home-assistant-show-mark{right:-6px;bottom:-4px}
+.mh-home-v2 .mh-home-assistant-show-mark{right:-8px;bottom:-6px;width:24px;height:24px;font-size:14px;background:#fff!important;box-shadow:0 0 0 2px #e11d48,0 2px 6px #0009;animation:mhHomePeerMark 1.4s ease-in-out infinite}
+@keyframes mhHomePeerMark{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+@media(prefers-reduced-motion:reduce){.mh-home-v2 .mh-home-assistant-show-mark{animation:none}}
 .mh-home-v2 .mh-home-assistant-news-dot{position:absolute;top:1px;right:1px;width:13px;height:13px;border-radius:50%;border:2px solid #fff;background:#e11d48;box-shadow:0 1px 4px #0009}
 .mh-home-v2 .mh-home-peer-mark{position:absolute;left:52px;top:calc(100% + 4px);width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:50%;border:1.5px solid #f9a8d4;background:#1e0b24ee;font-size:16px;box-shadow:0 2px 8px #0009}
 .mh-home-v2 .mh-home-dock{gap:6px;padding:8px 8px calc(8px + env(safe-area-inset-bottom))}
@@ -52693,9 +52695,12 @@ function HomeScreen({
   // 【2026-11-27 HOME の作り直し(台帳 r1126-073・案A＋Bの入口)】上はイベントの帯1枚だけ。2つ目からは帯を横に送る(指で送る・点を押す・
   //   帯の下の「次:」を押す)。手で触らなければ7秒ごとに次へ進み、触ったら20秒は止める。
   //   並び: クリスマスの入口(r1126-014 の大きな帯)→ ほかの開催中のイベント → 公式杯。クリスマスの入口があるときは、同じ中身の「クリスマスイベント」の帯は出さない
+  //   ただしクリスマスがまだ予告(序章だけ)のあいだは、いま遊べるイベントを1枚目にする(API の点検 7・予告より開催中を先に)
   const homeBandSlides=[];
+  const homeBandEvent=homeEventCampaign&&!(xmasEntry&&homeEventCampaign.id==='xmas_2026');
+  if(homeBandEvent&&xmasEntry&&xmasEntry.preOpen)homeBandSlides.push('event');
   if(xmasEntry)homeBandSlides.push('xmas');
-  if(homeEventCampaign&&!(xmasEntry&&homeEventCampaign.id==='xmas_2026'))homeBandSlides.push('event');
+  if(homeBandEvent&&!homeBandSlides.includes('event'))homeBandSlides.push('event');
   if(homeCardTour&&typeof onOpenCardTour==='function')homeBandSlides.push('tour');
   const homeBandCount=homeBandSlides.length;
   const [homeBandIdx,setHomeBandIdx]=React.useState(0);
