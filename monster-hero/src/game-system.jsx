@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d7e471e7d7761693
+// generated-sha256: 15e878554d4183be
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -68281,10 +68281,10 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"C3-1","chapter":"C3","title":"雪の上の影","cond":null,"bgm":"melo_sad_song_short","bg":"朝の雪原","next":"C3-2","rows":[{"id":"3-1-1","t":"band","x":"聖夜の名探偵 第3章 〜雪の上の影〜","k":"C3-1:3-1-1"},
 {"id":"3-1-2","t":"band","x":"朝。吹雪は、真夜中すぎにやんでいた。雪原が、しんと白い","k":"C3-1:3-1-2"},
 {"id":"3-1-3","t":"line","w":"momosuke","x":"……ねえ。あれ、何？ 雪の上……誰か、倒れてる……？","e":"surprise","k":"C3-1:3-1-3"},
-{"id":"3-1-4","t":"band","x":"裏口から少し離れた雪の上に、灰色のコートの影が、うつ伏せに横たわっていた","fx":["fallen"],"k":"C3-1:3-1-4"},
+{"id":"3-1-4","t":"band","x":"裏口から少し離れた雪の上に、灰色のコートの影が、うつ伏せに横たわっていた","fx":["fallen"],"body":"kuroba","k":"C3-1:3-1-4"},
 {"id":"3-1-5","t":"line","w":"atsu","x":"みんなは、ここにいて。……ばこっちゃん、来て","e":"normal","k":"C3-1:3-1-5"},
-{"id":"3-1-6","t":"band","x":"二人が、雪を踏みしめていく。黒羽の体は、一晩で白く凍りついていた。髪にも、まつげにも、霜がびっしりと貼りついている","k":"C3-1:3-1-6"},
-{"id":"3-1-7","t":"band","x":"見開いたままの目が、裏口のほうを向いていた。両手の指先は皮が剥け、爪が剥がれて、凍った血で黒くこわばっている","fx":["red"],"k":"C3-1:3-1-7"},
+{"id":"3-1-6","t":"band","x":"二人が、雪を踏みしめていく。黒羽の体は、一晩で白く凍りついていた。髪にも、まつげにも、霜がびっしりと貼りついている","body":"kuroba","k":"C3-1:3-1-6"},
+{"id":"3-1-7","t":"band","x":"見開いたままの目が、裏口のほうを向いていた。両手の指先は皮が剥け、爪が剥がれて、凍った血で黒くこわばっている","fx":["red"],"body":"kuroba","k":"C3-1:3-1-7"},
 {"id":"3-1-8","t":"line","w":"sorashido","x":"……黒羽さんは、亡くなっています。……体の冷たさから見て、ゆうべの、鐘のすぐ後から、ずっと外にいたんだと思います","e":"troubled","k":"C3-1:3-1-8"},
 {"id":"3-1-9","t":"band","x":"裏口の扉の外側。木の板に、赤黒い手の跡が、いくつも、いくつも、上から下へ引きずられていた","fx":["bleed"],"k":"C3-1:3-1-9"},
 {"id":"3-1-10","t":"line","w":"atsu","x":"……扉を、叩き続けてたんだ。指がこうなるまで。……中に、俺たちがいたのに","e":"troubled","k":"C3-1:3-1-10"},
@@ -68444,9 +68444,9 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"5-4-2c","t":"clue","clue":"赤い手袋","x":"白瀬の赤い毛糸の手袋。朝、鏡の廊下の奥の鏡の下の隙間に、片方挟まっていた","k":"C5-4:5-4-2c"},
 {"id":"5-4-3","t":"line","w":"atsu","x":"……手袋の所、隙間がある。ここに指をかけて、引けば……","e":"normal","k":"C5-4:5-4-3"},
 {"id":"5-4-4","t":"band","x":"ギィ……","fx":["se"],"se":"tap","k":"C5-4:5-4-4"},
-{"id":"5-4-5","t":"band","x":"細く冷たい通り道。白いケープの白瀬が、鏡の裏に背中をつけて、座りこんでいた","fx":["fallen"],"k":"C5-4:5-4-5"},
-{"id":"5-4-6","t":"band","x":"顔は青白く、唇は紫に変わっている。手袋のない右手が、鏡の裏の板に、まだ爪を立てたまま凍りついていた","k":"C5-4:5-4-6"},
-{"id":"5-4-7","t":"band","x":"鏡の裏には、何十本もの、赤い引っかき傷。爪の間から流れた血が、板の上で細い筋になって固まっている","fx":["bleed"],"k":"C5-4:5-4-7"},
+{"id":"5-4-5","t":"band","x":"細く冷たい通り道。白いケープの白瀬が、鏡の裏に背中をつけて、座りこんでいた","fx":["fallen"],"body":"shirase","k":"C5-4:5-4-5"},
+{"id":"5-4-6","t":"band","x":"顔は青白く、唇は紫に変わっている。手袋のない右手が、鏡の裏の板に、まだ爪を立てたまま凍りついていた","body":"shirase","k":"C5-4:5-4-6"},
+{"id":"5-4-7","t":"band","x":"鏡の裏には、何十本もの、赤い引っかき傷。爪の間から流れた血が、板の上で細い筋になって固まっている","fx":["bleed"],"body":"shirase","k":"C5-4:5-4-7"},
 {"id":"5-4-8","t":"line","w":"erubin","x":"白瀬さん……！ 白瀬さん！！","e":"crying","k":"C5-4:5-4-8"},
 {"id":"5-4-9","t":"line","w":"sorashido","x":"……えるさん、触らないでください。……もう、冷たくなっています。ここで、一晩じゅう、鏡をかいて……","e":"troubled","k":"C5-4:5-4-9"},
 {"id":"5-4-10","t":"line","w":"kiki","x":"鏡のすぐ向こうに……私たち、一晩じゅう、ここにいたのに……！ 聞こえなかったでつ……何も……！","e":"crying","k":"C5-4:5-4-10"},
@@ -68785,8 +68785,8 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"C10-1","chapter":"C10","title":"冷たい部屋","cond":null,"bgm":"melo_dullahan_steel_ghost","bg":"えるびんの部屋(朝","next":"C10-2","rows":[{"id":"10-1-1","t":"band","x":"聖夜の名探偵 第8章 〜消えていく灯〜","k":"C10-1:10-1-1"},
 {"id":"10-1-2","t":"band","x":"朝。足を怪我して休んでいたえるびんの部屋の窓が、開いていた","k":"C10-1:10-1-2"},
 {"id":"10-1-3","t":"line","w":"myua","x":"るびちん、朝ごはんだよ……るびちん？","e":"surprise","k":"C10-1:10-1-3"},
-{"id":"10-1-4","t":"band","x":"吹きこんだ雪が、床に白く積もっている。ベッドの上で、えるびんは、毛布をかけたまま、横を向いて動かない","k":"C10-1:10-1-4"},
-{"id":"10-1-5","t":"band","x":"みゅあが毛布に手をかけた。白い枕が、頭の後ろから、赤黒く、ぐっしょりと染まっていた。そばの床に、血のついた燭台が一つ転がっている","fx":["bleed"],"k":"C10-1:10-1-5"},
+{"id":"10-1-4","t":"band","x":"吹きこんだ雪が、床に白く積もっている。ベッドの上で、えるびんは、毛布をかけたまま、横を向いて動かない","body":"erubin","k":"C10-1:10-1-4"},
+{"id":"10-1-5","t":"band","x":"みゅあが毛布に手をかけた。白い枕が、頭の後ろから、赤黒く、ぐっしょりと染まっていた。そばの床に、血のついた燭台が一つ転がっている","fx":["bleed"],"body":"erubin","k":"C10-1:10-1-5"},
 {"id":"10-1-6","t":"line","w":"myua","x":"…………いや……いやあああああっ！！","e":"crying","k":"C10-1:10-1-6"},
 {"id":"10-1-7","t":"line","w":"sorashido","x":"……みゅあさん、見ないで。……後ろから、頭を。眠っている間に……","e":"troubled","k":"C10-1:10-1-7"},
 {"id":"10-1-8","t":"line","w":"atsu","x":"足を怪我して、逃げられないって、分かってて……！","e":"angry","k":"C10-1:10-1-8"},
@@ -68803,10 +68803,10 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"10-2-4","t":"line","w":"dra","x":"(顔を上げ、何か言いかけて……やめる)……もも、今夜は、おでのそばにいろ","e":"troubled","k":"C10-2:10-2-4"},{"t":"q","id":"A10","kind":"action","x":"屋根裏から、いなくなったはずの声——","replies":{},"label":"行動の選択","options":[{"c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"to":"C10-X","x":"あつが、一人で通り道のはしごを上り、屋根裏を確かめる(今なら、声の主に追いつけるかもしれない)"},{"c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"to":"C10-X","x":"ソラシドが、一人で通り道のはしごを上り、屋根裏を確かめる(今なら、声の主に追いつけるかもしれない)"},{"x":"今夜は動かない。ももすけをドラに任せて、みんなでホールにいる"}],"k":"C10-2:A10"},
 {"id":"10-2-5","t":"band","x":"その夜。ドラがうとうとした、ほんの少しの間に","k":"C10-2:10-2-5"},
 {"id":"10-2-6","t":"band","x":"……きゃ……(暗い廊下の奥で、小さな声。それから、重い物が落ちる音)","fx":["se"],"se":"tap","k":"C10-2:10-2-6"},
-{"id":"10-2-7","t":"band","x":"朝。屋根裏へ上る通り道のはしごの下。ももすけが、仰向けに倒れていた","fx":["fallen"],"k":"C10-2:10-2-7"},
-{"id":"10-2-8","t":"band","x":"頭の下に、黒い血だまりが広がって、もう乾きかけている。見開いた目は、はしごの上の暗がりを見上げたまま。お気に入りの髪飾りが、血の中に沈んでいた","fx":["red"],"k":"C10-2:10-2-8"},
+{"id":"10-2-7","t":"band","x":"朝。屋根裏へ上る通り道のはしごの下。ももすけが、仰向けに倒れていた","fx":["fallen"],"body":"momosuke","k":"C10-2:10-2-7"},
+{"id":"10-2-8","t":"band","x":"頭の下に、黒い血だまりが広がって、もう乾きかけている。見開いた目は、はしごの上の暗がりを見上げたまま。お気に入りの髪飾りが、血の中に沈んでいた","fx":["red"],"body":"momosuke","k":"C10-2:10-2-8"},
 {"id":"10-2-9","t":"line","w":"dra","x":"…………もも？ ……もも。……ももぉぉぉぉっ！！","e":"crying","k":"C10-2:10-2-9"},
-{"id":"10-2-10","t":"band","x":"ドラが、ももすけの肩を揺さぶる。その手が、血で赤く濡れていく。誰も、止められない","k":"C10-2:10-2-10"},
+{"id":"10-2-10","t":"band","x":"ドラが、ももすけの肩を揺さぶる。その手が、血で赤く濡れていく。誰も、止められない","body":"momosuke","k":"C10-2:10-2-10"},
 {"id":"10-2-11","t":"line","w":"sorashido","x":"……はしごの上から、落とされています。……屋根裏の声を、確かめに行こうとしたんです","e":"troubled","k":"C10-2:10-2-11"},
 {"id":"10-2-12","t":"line","w":"dra","x":"おでが……おでが、寝ちまったから……！ おでが、ちゃんと……！","e":"crying","k":"C10-2:10-2-12"},
 {"id":"10-2-13","t":"line","w":"mochimaru","x":"……ももすけさんの箱も、木の下から、なくなってるっちー……","k":"C10-2:10-2-13"},
@@ -68819,9 +68819,9 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"10-3-5","t":"line","w":"kiki","x":"帳面の最後の行……『0時5分 ホール。柱時計の前に、誰か』","e":"troubled","k":"C10-3:10-3-5"},
 {"id":"10-3-5c","t":"clue","clue":"帳面の最後の行","x":"柱時計の前に落ちていた、もちまるの帳面。最後の行「0時5分 ホール。柱時計の前に、誰か」","k":"C10-3:10-3-5c"},
 {"id":"10-3-6","t":"band","x":"柱時計の前の床から、裏口のほうへ、赤い点が、ぽつ、ぽつと続いている","fx":["bleed"],"k":"C10-3:10-3-6"},
-{"id":"10-3-7","t":"band","x":"裏口の外の雪の上。もちまるが、ランタンを探すように片手を伸ばしたまま、うつ伏せに倒れていた。後ろ頭の周りの雪だけが、赤く溶けて、くぼんでいる","fx":["fallen"],"k":"C10-3:10-3-7"},
+{"id":"10-3-7","t":"band","x":"裏口の外の雪の上。もちまるが、ランタンを探すように片手を伸ばしたまま、うつ伏せに倒れていた。後ろ頭の周りの雪だけが、赤く溶けて、くぼんでいる","fx":["fallen"],"body":"mochimaru","k":"C10-3:10-3-7"},
 {"id":"10-3-8","t":"line","w":"ichika","x":"もちまる……！ もちまる！！ いや……いやです、もちまる……！","k":"C10-3:10-3-8"},
-{"id":"10-3-9","t":"band","x":"イチーカが雪の上に崩れ落ちる。伸ばしたままの指先のそばに、雪を引っかいた跡。最後の力で、ふもとへ、助けを呼びに行こうとしていたのかもしれない","k":"C10-3:10-3-9"},
+{"id":"10-3-9","t":"band","x":"イチーカが雪の上に崩れ落ちる。伸ばしたままの指先のそばに、雪を引っかいた跡。最後の力で、ふもとへ、助けを呼びに行こうとしていたのかもしれない","body":"mochimaru","k":"C10-3:10-3-9"},
 {"id":"10-3-10","t":"line","w":"sorashido","x":"……柱時計の前で、後ろから殴られて……ここまで、はって逃げてきたんです","e":"troubled","k":"C10-3:10-3-10"},
 {"id":"10-3-11","t":"band","x":"暗転","k":"C10-3:10-3-11"},
 {"id":"10-3-12","t":"band","x":"もみの木の下。箱は、一つも減っていなかった","k":"C10-3:10-3-12"},
@@ -68878,10 +68878,10 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"2-X-3s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"watson","x":"ソラシドさん。応答してください。……ソラシドさん","note":"暗い台所から、ワトソンくんの声だけが聞こえる","k":"C2-X:2-X-3s"},
 {"id":"2-X-4","t":"band","x":"もちまるのろうそくを手に、みんなで台所へ駆けこむ。食料庫の戸の前で、ドラが座りこんでいた","k":"C2-X:2-X-4"},
 {"id":"2-X-5","t":"line","w":"dra","x":"お、おで、食料庫にいて……。真っ暗で、何も、見えなかった……","e":"surprise","k":"C2-X:2-X-5"},
-{"id":"2-X-6a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"band","x":"裏口の前に、あつが、うつ伏せに倒れていた。探偵の帽子が、少し先に転がっている","fx":["fallen"],"k":"C2-X:2-X-6a"},
-{"id":"2-X-6s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"band","x":"裏口の前に、ソラシドが、うつ伏せに倒れていた。そばに、ひびの入ったノートパソコン","fx":["fallen"],"k":"C2-X:2-X-6s"},
-{"id":"2-X-7","t":"band","x":"後ろ頭から流れた血が、床板の隙間に、細く、黒く、染みこんでいく。そばに、血のついた薪が一本","fx":["red"],"k":"C2-X:2-X-7"},
-{"id":"2-X-8","t":"band","x":"裏口のかんぬきは、閉まっていた。伸ばした指先は、かんぬきに届く、ほんの少し手前で止まっている","k":"C2-X:2-X-8"},
+{"id":"2-X-6a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"band","x":"裏口の前に、あつが、うつ伏せに倒れていた。探偵の帽子が、少し先に転がっている","fx":["fallen"],"body":"atsu","k":"C2-X:2-X-6a"},
+{"id":"2-X-6s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"band","x":"裏口の前に、ソラシドが、うつ伏せに倒れていた。そばに、ひびの入ったノートパソコン","fx":["fallen"],"body":"sorashido","k":"C2-X:2-X-6s"},
+{"id":"2-X-7","t":"band","x":"後ろ頭から流れた血が、床板の隙間に、細く、黒く、染みこんでいく。そばに、血のついた薪が一本","fx":["red"],"body":"lead","k":"C2-X:2-X-7"},
+{"id":"2-X-8","t":"band","x":"裏口のかんぬきは、閉まっていた。伸ばした指先は、かんぬきに届く、ほんの少し手前で止まっている","body":"lead","k":"C2-X:2-X-8"},
 {"id":"2-X-9a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"myua","x":"…………あつくん？ ……いや……いやだ……あつくん！！ 目、開けてよ……！","e":"crying","k":"C2-X:2-X-9a"},
 {"id":"2-X-10a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"sorashido","x":"……あつさん……。うそでしょう……。勝負、まだ、ついてないじゃないですか……","e":"troubled","k":"C2-X:2-X-10a"},
 {"id":"2-X-9s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"atsu","x":"ばこっちゃん……！ ばこっちゃん！！ ……なんで、一人で行ったんだよ……！","e":"crying","k":"C2-X:2-X-9s"},
@@ -68894,9 +68894,9 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"5-X-2a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"atsu","x":"……この影、もう少し大きくすれば、顔が……。あと、ちょっと……","e":"normal","k":"C5-X:5-X-2a"},
 {"id":"5-X-2s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"watson","x":"写真を拡大します。……影の輪郭が、見えてきました。……ソラシドさん、後ろの本棚が——","k":"C5-X:5-X-2s"},
 {"id":"5-X-3","t":"band","x":"ギィ……ガシャン！(書斎で、何かが倒れる音)","fx":["se"],"se":"tap","k":"C5-X:5-X-3"},
-{"id":"5-X-4a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"band","x":"物音に駆けつけたソラシドが見つけたのは、書斎の机に突っ伏したあつだった","fx":["fallen"],"k":"C5-X:5-X-4a"},
-{"id":"5-X-4s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"band","x":"物音に駆けつけたあつが見つけたのは、書斎の机に突っ伏したソラシドだった","fx":["fallen"],"k":"C5-X:5-X-4s"},
-{"id":"5-X-5","t":"band","x":"首には、細いひもの跡が、赤黒く食いこんでいる。ひびの入った画面の上に、血のついた指の跡","fx":["bleed"],"k":"C5-X:5-X-5"},
+{"id":"5-X-4a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"band","x":"物音に駆けつけたソラシドが見つけたのは、書斎の机に突っ伏したあつだった","fx":["fallen"],"body":"atsu","k":"C5-X:5-X-4a"},
+{"id":"5-X-4s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"band","x":"物音に駆けつけたあつが見つけたのは、書斎の机に突っ伏したソラシドだった","fx":["fallen"],"body":"sorashido","k":"C5-X:5-X-4s"},
+{"id":"5-X-5","t":"band","x":"首には、細いひもの跡が、赤黒く食いこんでいる。ひびの入った画面の上に、血のついた指の跡","fx":["bleed"],"body":"lead","k":"C5-X:5-X-5"},
 {"id":"5-X-6","t":"band","x":"画面には、途中まで拡大された写真。影の顔の所で、拡大は止まっていた","k":"C5-X:5-X-6"},
 {"id":"5-X-7","t":"band","x":"机の後ろの本棚が、ほんの少しだけ、壁から浮いていた","k":"C5-X:5-X-7"},
 {"id":"5-X-8a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"sorashido","x":"……あつさん。……あつさん！ ……一人で、行かせるんじゃなかった……","e":"troubled","k":"C5-X:5-X-8a"},
@@ -68917,8 +68917,8 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"6-X-7","t":"line","w":"myua","x":"開かない……！ かんぬきが、釘で……！","e":"crying","k":"C6-X:6-X-7"},
 {"id":"6-X-8","t":"band","x":"ドン、ドン、ドン……(扉の外から、叩く音。やがて、弱く、途切れ途切れに)","fx":["se"],"se":"impact","k":"C6-X:6-X-8"},
 {"id":"6-X-9","t":"band","x":"もちまるが、釘抜きを探しに走る。道具箱は、空だった。薪割りの斧で扉の板を割れたのは、空が白み始めた頃だった","k":"C6-X:6-X-9"},
-{"id":"6-X-10a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"band","x":"扉の外。雪に埋もれた探偵の帽子の先で、あつが、扉に手を伸ばしたまま凍りついていた。後ろ頭の髪が、血で固まっている","fx":["bleed"],"k":"C6-X:6-X-10a"},
-{"id":"6-X-10s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"band","x":"扉の外。雪に埋もれた探偵の帽子の先で、ソラシドが、扉に手を伸ばしたまま凍りついていた。後ろ頭の髪が、血で固まっている","fx":["bleed"],"k":"C6-X:6-X-10s"},
+{"id":"6-X-10a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"band","x":"扉の外。雪に埋もれた探偵の帽子の先で、あつが、扉に手を伸ばしたまま凍りついていた。後ろ頭の髪が、血で固まっている","fx":["bleed"],"body":"atsu","k":"C6-X:6-X-10a"},
+{"id":"6-X-10s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"band","x":"扉の外。雪に埋もれた探偵の帽子の先で、ソラシドが、扉に手を伸ばしたまま凍りついていた。後ろ頭の髪が、血で固まっている","fx":["bleed"],"body":"sorashido","k":"C6-X:6-X-10s"},
 {"id":"6-X-11","t":"band","x":"扉の板には、新しい赤い手の跡が、黒羽の手の跡の上に重なっていた","k":"C6-X:6-X-11"},
 {"id":"6-X-12a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"myua","x":"……あつくん……。あたし、助手なのに……隣に、いなかった……","e":"crying","k":"C6-X:6-X-12a"},
 {"id":"6-X-13a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"sorashido","x":"……あつさん。……黒羽さんと、同じ扉で……","e":"troubled","k":"C6-X:6-X-13a"},
@@ -68943,9 +68943,9 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"2-Y-11","t":"band","x":"ホール。柱時計を見張っていた人たちの耳に、裏の階段のほうから、重い物が転がり落ちる音が届いた","k":"C2-Y:2-Y-11"},
 {"id":"2-Y-12a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"myua","x":"今の音……裏の階段のほう……！ あつくん、部屋にいたはずなのに……！","e":"surprise","k":"C2-Y:2-Y-12a"},
 {"id":"2-Y-12s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"atsu","x":"今の……ばこっちゃん！？","e":"surprise","k":"C2-Y:2-Y-12s"},
-{"id":"2-Y-13a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"band","x":"裏の階段の下に、あつが、ねじれたような姿で倒れていた","fx":["fallen"],"k":"C2-Y:2-Y-13a"},
-{"id":"2-Y-13s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"band","x":"裏の階段の下に、ソラシドが、ねじれたような姿で倒れていた。そばに、画面の割れたノートパソコン","fx":["fallen"],"k":"C2-Y:2-Y-13s"},
-{"id":"2-Y-14","t":"band","x":"階段の角から角へ、赤い跡が、一段ごとに続いている。後ろ頭の髪が、ぐっしょりと濡れていた","fx":["bleed"],"k":"C2-Y:2-Y-14"},
+{"id":"2-Y-13a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"band","x":"裏の階段の下に、あつが、ねじれたような姿で倒れていた","fx":["fallen"],"body":"atsu","k":"C2-Y:2-Y-13a"},
+{"id":"2-Y-13s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"band","x":"裏の階段の下に、ソラシドが、ねじれたような姿で倒れていた。そばに、画面の割れたノートパソコン","fx":["fallen"],"body":"sorashido","k":"C2-Y:2-Y-13s"},
+{"id":"2-Y-14","t":"band","x":"階段の角から角へ、赤い跡が、一段ごとに続いている。後ろ頭の髪が、ぐっしょりと濡れていた","fx":["bleed"],"body":"lead","k":"C2-Y:2-Y-14"},
 {"id":"2-Y-15a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"myua","x":"あつくん……！ あつくん！！ ……やだ、目、開けてよ……！","e":"crying","k":"C2-Y:2-Y-15a"},
 {"id":"2-Y-16a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"sorashido","x":"……『ひとり、かえってこない』。……あつさんが、一人に、なったから……","e":"troubled","k":"C2-Y:2-Y-16a"},
 {"id":"2-Y-15s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"atsu","x":"ばこっちゃん……！ なんで、一人で待ってたんだよ……！","e":"crying","k":"C2-Y:2-Y-15s"},
@@ -68967,9 +68967,9 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"10-X-8","t":"band","x":"ガタン……ドサッ","fx":["se"],"se":"impact","k":"C10-X:10-X-8"},
 {"id":"10-X-9a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"myua","x":"あつくん！？ 今の音……あつくん！！","e":"crying","k":"C10-X:10-X-9a"},
 {"id":"10-X-9s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"atsu","x":"ばこっちゃん！？ 返事しろよ、ばこっちゃん！！","e":"crying","k":"C10-X:10-X-9s"},
-{"id":"10-X-10a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"band","x":"はしごの下。あつが、仰向けに倒れていた。頭の下に、黒い血だまりが、ゆっくりと広がっていく","fx":["red"],"k":"C10-X:10-X-10a"},
-{"id":"10-X-10s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"band","x":"はしごの下。ソラシドが、仰向けに倒れていた。頭の下に、黒い血だまりが、ゆっくりと広がっていく","fx":["red"],"k":"C10-X:10-X-10s"},
-{"id":"10-X-11","t":"band","x":"見開いた目は、はしごの上の暗がりを、見上げたままだった。板は、もう、ぴたりと閉じている","k":"C10-X:10-X-11"},
+{"id":"10-X-10a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"band","x":"はしごの下。あつが、仰向けに倒れていた。頭の下に、黒い血だまりが、ゆっくりと広がっていく","fx":["red"],"body":"atsu","k":"C10-X:10-X-10a"},
+{"id":"10-X-10s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"band","x":"はしごの下。ソラシドが、仰向けに倒れていた。頭の下に、黒い血だまりが、ゆっくりと広がっていく","fx":["red"],"body":"sorashido","k":"C10-X:10-X-10s"},
+{"id":"10-X-11","t":"band","x":"見開いた目は、はしごの上の暗がりを、見上げたままだった。板は、もう、ぴたりと閉じている","body":"lead","k":"C10-X:10-X-11"},
 {"id":"10-X-12","t":"line","w":"momosuke","x":"……もものせいだ。ももが、声がしたなんて言ったから……","e":"crying","k":"C10-X:10-X-12"},
 {"id":"10-X-13","t":"line","w":"dra","x":"(はしごの上の暗がりを見上げて、唇をかむ)","e":"troubled","k":"C10-X:10-X-13"},
 {"id":"10-X-14a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"sorashido","x":"……あつさん。あなたは、何を見たんですか……","e":"troubled","k":"C10-X:10-X-14a"},
@@ -68987,7 +68987,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"END-M2","chapter":"END","title":"","cond":null,"bgm":"melo_sad_song_short","bg":"朝の雪原","next":null,"rows":[{"id":"M2-1","t":"band","x":"聖夜の名探偵 エンディング「火の消えた夜」","k":"END-M2:M2-1"},
 {"id":"M2-2","t":"band","x":"朝。凍えて目を覚ますと、冷えた暖炉の前に、薪が山のように積まれていた","k":"END-M2:M2-2"},
 {"id":"M2-3","t":"band","x":"裏口から薪小屋まで、雪の上に、薪を運んで往復した足跡が、何本も重なっていた","k":"END-M2:M2-3"},
-{"id":"M2-4","t":"band","x":"薪小屋の中。もちまるが、最後の一抱えの薪を抱いたまま、うつ伏せに倒れていた。後ろ頭の毛が、赤黒く固まっている","fx":["fallen"],"k":"END-M2:M2-4"},
+{"id":"M2-4","t":"band","x":"薪小屋の中。もちまるが、最後の一抱えの薪を抱いたまま、うつ伏せに倒れていた。後ろ頭の毛が、赤黒く固まっている","fx":["fallen"],"body":"mochimaru","k":"END-M2:M2-4"},
 {"id":"M2-5","t":"band","x":"薪小屋の床板が、一枚だけ、ずれていた","k":"END-M2:M2-5"},
 {"id":"M2-6","t":"line","w":"ichika","x":"……もちまる。……疑われた夜でさえ、あなたは、みんなの火の番を……","k":"END-M2:M2-6"},
 {"id":"M2-7","t":"panel","x":"","ops":[{"id":"mochimaru","st":"dead"}],"k":"END-M2:M2-7"},
@@ -69020,9 +69020,9 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"M5-3s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"myua","x":"あつくん……？ あつくん、返事して……！","e":"crying","k":"END-M5:M5-3s"},
 {"id":"M5-4","t":"band","x":"朝。鏡の扉の奥の、冷えきった通り道","k":"END-M5:M5-4"},
 {"id":"M5-4b","t":"band","x":"後ろ頭の髪に、乾いた血。来た道へ戻る前に殴られ、鏡の扉の奥の行き止まりへ、運びこまれていたのだった","k":"END-M5:M5-4b"},
-{"id":"M5-5a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"band","x":"白瀬が見つかったのと同じ場所で、ソラシドが、壁にもたれて座ったまま、動かなくなっていた。膝の上で、ひびの入った画面が、まだ、かすかに光っている","fx":["fallen"],"k":"END-M5:M5-5a"},
-{"id":"M5-5s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"band","x":"白瀬が見つかったのと同じ場所で、あつが、壁にもたれて座ったまま、動かなくなっていた。消えたランタンを、握りしめたまま","fx":["fallen"],"k":"END-M5:M5-5s"},
-{"id":"M5-6","t":"band","x":"まつげにも、髪にも、白い霜。外から閉められた鏡の扉の内側に、引っかいた跡が、何本も残っていた","fx":["bleed"],"k":"END-M5:M5-6"},
+{"id":"M5-5a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"band","x":"白瀬が見つかったのと同じ場所で、ソラシドが、壁にもたれて座ったまま、動かなくなっていた。膝の上で、ひびの入った画面が、まだ、かすかに光っている","fx":["fallen"],"body":"sorashido","k":"END-M5:M5-5a"},
+{"id":"M5-5s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"band","x":"白瀬が見つかったのと同じ場所で、あつが、壁にもたれて座ったまま、動かなくなっていた。消えたランタンを、握りしめたまま","fx":["fallen"],"body":"atsu","k":"END-M5:M5-5s"},
+{"id":"M5-6","t":"band","x":"まつげにも、髪にも、白い霜。外から閉められた鏡の扉の内側に、引っかいた跡が、何本も残っていた","fx":["bleed"],"body":"partner","k":"END-M5:M5-6"},
 {"id":"M5-7a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"atsu","x":"ばこっちゃん……！ ……俺が、止めてれば……！ 勝負、まだ、ついてないじゃん……！","e":"crying","k":"END-M5:M5-7a"},
 {"id":"M5-8a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"watson","x":"……記録は、鏡の扉の前で、途切れています","k":"END-M5:M5-8a"},
 {"id":"M5-7s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"sorashido","x":"……あつさん。……自分が、腕をつかんででも止めていれば……","e":"troubled","k":"END-M5:M5-7s"},
@@ -69373,6 +69373,24 @@ const XMAS_NOVEL_CSS = `
   animation: mh-nv-bleed 2.4s ease-out both; }
 @keyframes mh-nv-bleed { 0% { opacity: 0; transform: scale(1.35); filter: blur(6px); } 25% { opacity: 1; transform: scale(1); filter: blur(0); } 70% { opacity: .9; } 100% { opacity: 0; } }
 .mh-nv-fallen { position: absolute; left: 50%; bottom: 24%; width: min(80vw, 520px); transform: translateX(-50%); z-index: 4; filter: drop-shadow(0 0 2px rgba(190,200,230,.35)); pointer-events: none; animation: mh-nv-fade 1.2s ease both; }
+.mh-nv-body { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
+.mh-nv-body-dim { position: absolute; inset: 0; -webkit-backdrop-filter: grayscale(.9) brightness(.55); backdrop-filter: grayscale(.9) brightness(.55);
+  background: radial-gradient(70% 34% at 50% 74%, rgba(120,0,14,.42), rgba(120,0,14,0) 72%), radial-gradient(120% 90% at 50% 40%, rgba(6,10,34,.35), rgba(0,0,4,.88)); animation: mh-nv-fade 1.4s ease both; }
+.mh-nv-body-lie { --L: min(88vw, 580px, calc(26vh / var(--ar))); --H: calc(var(--L) * var(--ar)); position: absolute; left: 50%; bottom: 27%; width: var(--L); height: calc(var(--L) * var(--ar)); transform: translateX(-50%); }
+.mh-nv-body-lie img { position: absolute; left: 50%; top: 50%; width: calc(var(--L) * var(--ar)); height: var(--L); max-width: none; object-fit: fill;
+  transform: translate(-50%, -50%) rotate(-90deg); animation: mh-nv-body-in 1.6s ease-out both !important;
+  filter: brightness(0) drop-shadow(0 0 1px rgba(210,30,40,.75)) drop-shadow(0 0 16px rgba(110,0,12,.6)) !important; }
+.mh-nv-body-lie.bust { --L: min(40vw, 300px, 17vh); transform: translateX(-100%); }
+.mh-nv-body-lie.bust .pool { left: -30%; top: calc(var(--H) * .6); width: calc(var(--L) * 1.9); height: calc(var(--L) * .3); }
+@media (orientation: landscape) { .mh-nv-body-lie { left: 31%; bottom: 22%; } }
+.mh-nv-body-lie img.bust { -webkit-mask-image: linear-gradient(180deg, #000 42%, transparent 80%); mask-image: linear-gradient(180deg, #000 42%, transparent 80%); }
+.mh-nv-body-lie.bust::after { content: ''; position: absolute; left: 52%; top: 22%; width: 120%; height: 62%; border-radius: 40% 50% 50% 40%; background: radial-gradient(60% 60% at 30% 50%, #000 40%, rgba(0,0,0,.85) 62%, rgba(0,0,0,0) 100%); filter: drop-shadow(0 0 10px rgba(110,0,12,.5)); animation: mh-nv-body-in 1.6s ease-out both; }
+.mh-nv-body-lie .pool { position: absolute; left: -14%; top: calc(var(--H) * .62); width: calc(var(--L) * 1.05); height: calc(var(--L) * .16); transform-origin: 18% 40%; filter: drop-shadow(0 0 6px rgba(140,0,16,.55));
+  animation: mh-nv-pool 3.2s cubic-bezier(.2,.6,.3,1) .5s both; }
+@keyframes mh-nv-body-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes mh-nv-pool { from { transform: scale(.08, .05); opacity: .6; } to { transform: scale(1); opacity: 1; } }
+.mh-nv-body.again .mh-nv-body-dim, .mh-nv-body.again img, .mh-nv-body.again .pool { animation-duration: .25s !important; animation-delay: 0s !important; }
+@media (prefers-reduced-motion: reduce) { .mh-nv-body-dim, .mh-nv-body-lie img, .mh-nv-body-lie .pool { animation: none !important; } }
 .mh-nv-boss { position: relative; height: 86%; aspect-ratio: 985 / 1347; max-width: 100%; }
 .mh-nv-boss img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; filter: brightness(0) drop-shadow(0 0 10px rgba(180,0,20,.55)) !important; animation: none !important; }
 .mh-nv-boss .eye { position: absolute; top: 34.5%; width: 7%; height: 3.2%; border-radius: 50%; transform: translate(-50%, -50%);
@@ -69658,6 +69676,55 @@ const XmasNovelFallen = () => (
     <path d="M110 58 C120 70 150 72 165 66" stroke="rgba(0,0,0,.8)" strokeWidth="9" fill="none" strokeLinecap="round" />
   </svg>
 );
+// 亡くなっているのが見つかる行(台本の〔遺体:黒羽〕・r1126-065)。その人の絵を真っ黒の影にして横に倒し、床に血だまりが広がる。
+//   色を持つのは血だけ(手本の作品の見せ方・r1126-065 追記1)。背景は暗く冷たくし、床の近くだけ赤くさす。新しい絵は作らない。
+//   助手はサンタのきせかえの全身の絵、謎の客2人・もちまるはいまの画面の絵。lead / partner は A1 で選んだ方 / 選ばなかった方
+let xmasNovelBodyLast = { k: '', at: -9 };
+const xmasNovelBodyWho = (body, flags) => {
+  const lead = flags && flags.f_A1 === 2 ? 'sorashido' : 'atsu';
+  if (body === 'lead') return lead;
+  if (body === 'partner') return lead === 'atsu' ? 'sorashido' : 'atsu';
+  return body || '';
+};
+const xmasNovelBodySrc = (who) => {
+  const c = xmasNovelCastOf(who);
+  if (!c) return '';
+  if (c.kind === 'assistant') {
+    const dir = typeof STORY_OUTFIT_DIRS !== 'undefined' && STORY_OUTFIT_DIRS && STORY_OUTFIT_DIRS.santa ? STORY_OUTFIT_DIRS.santa : '';
+    return dir ? `${dir}/${who}_normal.PNG` : '';
+  }
+  return c.art || '';
+};
+const XmasNovelBody = ({ who, scene = '', at = 0 }) => {
+  const k = `${scene}:${who}`;
+  // 同じ場面で同じ人の影がすぐまた出るとき(間に台詞が1〜2行)は、血が広がり直さないようにする
+  const [again] = useState(() => xmasNovelBodyLast.k === k && Math.abs(at - xmasNovelBodyLast.at) <= 4);
+  const [ar, setAr] = useState(0);
+  const [broken, setBroken] = useState(false);
+  useEffect(() => { xmasNovelBodyLast = { k, at }; }, [k, at]);
+  const c = xmasNovelCastOf(who);
+  const src = xmasNovelBodySrc(who);
+  const bust = !!(c && c.kind === 'guest'); // 胸から上の絵は、胸の切れ目を暗がりにぼかす
+  return (
+    <div className={`mh-nv-body${again ? ' again' : ''}`} data-xmas-novel-fallen data-xmas-novel-body={who} aria-label={c ? `${c.name}の倒れた影` : '倒れた影'}>
+      <div className="mh-nv-body-dim" />
+      <div className={`mh-nv-body-lie${bust ? ' bust' : ''}`} style={{ '--ar': ar || (bust ? 1 : 0.3) }}>
+        <svg className="pool" viewBox="0 0 300 60" preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <radialGradient id="mh-nv-pool-g" cx="30%" cy="42%" r="70%"><stop offset="0%" stopColor="#9a0716" /><stop offset="45%" stopColor="#6a020e" /><stop offset="100%" stopColor="#300006" /></radialGradient>
+          </defs>
+          <path d="M14 30 C8 20 30 14 52 16 C64 8 96 6 118 13 C136 9 160 12 170 19 C188 17 204 22 198 28 C214 27 246 30 262 33 C274 35 272 39 258 39 C236 40 214 38 200 40 C206 48 184 54 160 51 C146 57 112 58 92 53 C70 58 38 55 30 48 C16 46 6 38 14 30 Z" fill="url(#mh-nv-pool-g)" />
+        </svg>
+        {src && !broken && (
+          <img src={src} alt="" draggable={false} className={bust ? 'bust' : ''}
+            onLoad={(e) => { const im = e.currentTarget; if (im.naturalWidth && im.naturalHeight) setAr(im.naturalWidth / im.naturalHeight); }}
+            onError={() => setBroken(true)} />
+        )}
+        {(!src || broken) && <XmasNovelFallen />}
+      </div>
+    </div>
+  );
+};
 // 黒いサンタの影(バッドエンドのシルエット)。レイドのボスの絵を黒く塗りつぶし、目だけ赤く光らせる。絵が無ければ簡単な影
 const XmasNovelBossShadow = () => {
   const src = typeof RAID_XMAS_BOSS_IMG !== 'undefined' ? RAID_XMAS_BOSS_IMG : '';
@@ -70200,7 +70267,8 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
         {(bg.snow || !bg.img) && <><div className="mh-nv-snow" />{bg.snow && <div className="mh-nv-snow b" />}</>}
         {!darkNow && (isLine || (isBand && xmasNovelIsSilhouette(row))) && <XmasNovelFigure row={row} />}
         {fx && <div key={fx.n} className={`mh-nv-fx ${fx.kind}`} />}
-        {isBand && Array.isArray(row.fx) && row.fx.includes('fallen') && <XmasNovelFallen />}
+        {isBand && row.body && <XmasNovelBody key={`body-${row.body}`} who={xmasNovelBodyWho(row.body, st && st.cur && st.cur.flags)} scene={scene ? scene.id : ''} at={st && st.cur && Number.isFinite(st.cur.idx) ? st.cur.idx : 0} />}
+        {isBand && !row.body && Array.isArray(row.fx) && row.fx.includes('fallen') && <XmasNovelFallen />}
         {isBand && Array.isArray(row.fx) && row.fx.includes('letter') && <div key={`letter-${row.id}`} className="mh-nv-letter mh-nv-serif" data-xmas-novel-letter>{String(text).replace(/／/g, '\n')}</div>}
         {inside && <div className="mh-nv-crt" data-xmas-novel-inside />}
         {transit && <div key={transit.n} className="mh-nv-transit" data-dir={transit.dir} data-xmas-novel-transit={transit.dir} onAnimationEnd={(e) => { if (e.target === e.currentTarget) setTransit(null); }}><div className="scr" /><div className="mh-nv-noise" /><div className="mh-nv-scan" /></div>}
