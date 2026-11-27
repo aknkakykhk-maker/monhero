@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0e2a68818dd9940d
+// source-sha256: b3655fc53142c05c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -139067,11 +139067,11 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   },
   'stand-winter': {
     kyuko: {
-      top: 0.0137,
-      eye: 0.3314,
-      chin: 0.4303,
-      m: 0.736,
-      cx: 0.5286
+      top: 0.0146,
+      eye: 0.3312,
+      chin: 0.4299,
+      m: 0.734,
+      cx: 0.5313
     }
   },
   twintail: {

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 90fd8e7f613941a9
+// generated-sha256: 001f0873dde537fa
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -75933,7 +75933,7 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   'stand-card-master': { mua: { top: 0.116, eye: 0.3209, chin: 0.4298, m: 1.01, cx: 0.4725, above: 0.75 } },
   // 冬の装いの寝顔(winter/kyuko_sleep.PNG・392×1440の全身)。目・顎は絵を目盛りつきで測った(2026-11-19)
   winter: { kyuko: { top: 0.004, eye: 0.132, chin: 0.191, m: 0.441 } },
-  'stand-winter': { kyuko: { top: 0.0137, eye: 0.3314, chin: 0.4303, m: 0.736, cx: 0.5286 } },
+  'stand-winter': { kyuko: { top: 0.0146, eye: 0.3312, chin: 0.4299, m: 0.734, cx: 0.5313 } },
   // ききのツインテール(全身画から実測。2026-11-20)。top はリボンを除いた頭のてっぺん、above は大きなリボンが切れないように
   //   2026-11-24 r1119-153 追記4: stand-* の行は、立ち絵を縮めた組で点がずれていたのを直して出し直した(life-stand-from-fullbody.py)。ツインテールの印も目の真ん中・顎の先へ直した
   twintail: { kiki: { top: 0.112, eye: 0.183, chin: 0.244, m: 0.383, above: 0.95 } },
