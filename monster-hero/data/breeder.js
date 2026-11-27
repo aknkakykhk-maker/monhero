@@ -1280,7 +1280,7 @@ const ASSISTANT_DEFAULT_OUTFIT_NAMES = Object.freeze({ sorashido: '馬骨' });
 const assistantDefaultOutfitName = (assistantId) => ASSISTANT_DEFAULT_OUTFIT_NAMES[assistantId] || '元の服';
 // きゅうこの冬服(2026-11-16 社長「これを実装して販売してほしい」)。売り場はダイヤショップ 100,000(ほかの衣装と同じ)。
 //   絵は images/assistant/winter/(立ち絵は stand-winter、全身画は fullbody/kyuko_winter)。お話「冬支度」でも着る(STORY_OUTFIT_DIRS の winter)
-const KYUKO_WINTER_COSTUME_ART = "images/assistant/winter/face/kyuko_happy.PNG?v=68164abb8a1b";
+const KYUKO_WINTER_COSTUME_ART = "images/assistant/winter/face/kyuko_happy.PNG?v=dfbdc00e64c9";
 const kyukoWinterCostume = Object.freeze({
   id: 'kyuko_winter_v1', assistantId: 'kyuko',
   name: '冬の装い', desc: 'きゅうこの冬服。淡いピンクのケーブル編みカーディガンとおそろいのマフラー、ファー付きの冬ブーツです。',
