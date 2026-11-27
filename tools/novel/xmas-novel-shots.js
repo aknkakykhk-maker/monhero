@@ -5,6 +5,7 @@
 // 使い方: node tools/novel/xmas-novel-shots.js <出力ディレクトリ>   (縦 390×844・2倍)
 //         node tools/novel/xmas-novel-shots.js <出力ディレクトリ> --r1126-046   幕間と過去編(r1126-046)の組を撮る
 //         node tools/novel/xmas-novel-shots.js <出力ディレクトリ> --r1126-065   亡くなった人のシルエット(r1126-065)の組を縦と横で撮る
+//         node tools/novel/xmas-novel-shots.js <出力ディレクトリ> --r1126-071   改行の位置(r1126-071)の組を縦と横で撮る
 //         node tools/novel/xmas-novel-shots.js <出力ディレクトリ> --r1126-076   謎の客2人の全身の絵(寄り・ふだん・引き・死の場面)の組を縦と横で撮る
 //         node tools/novel/xmas-novel-shots.js <出力ディレクトリ> --r1126-067   立ち絵の見せ方(寄り・ふだん・引き)の組を縦と横で撮る
 //         node tools/novel/xmas-novel-shots.js <出力ディレクトリ> --r1126-062   足した選択肢とエンド(r1126-062)の組を撮る
@@ -97,6 +98,14 @@ const SHOTS_065 = [];
   SHOTS_065.push({ name: `${name}-tate`, row, side, label: `${label}(縦)` });
   SHOTS_065.push({ name: `${name}-yoko`, row, side, land: true, label: `${label}(横)` });
 });
+// 改行の位置(r1126-071)。直す前と後を並べる。縦と横で撮る
+const SHOTS_071 = [];
+[['01-coat', '3-1-4', 1, '地の文「灰色のコートの影」'], ['02-cake', '1-O-25', 1, 'ト書き「ケーキをほおばって」'], ['03-got', '1-3-12c', 1, '手がかりを手に入れた【二通目の招待状】'],
+  ['04-clue', '4-1-6c', 1, '手がかり帳に書きとめた'], ['05-santa', '11-N-3', 1, '地の文「黒いサンタが座りこんで」'], ['06-say', '7-1-12a', 1, '台詞(ぶら下げ)'],
+  ['07-out', 'OUT-1-3', 0, '外側の台詞「上書きできません」'], ['08-band', '2-M-8', 1, '幕間の地の文'], ['09-say2', '1-5-13', 1, '台詞'], ['10-choice', 'A10', 1, '選択肢']].forEach(([name, row, side, label]) => {
+  SHOTS_071.push({ name: `${name}-tate`, row, side, label: `${label}(縦)` });
+  SHOTS_071.push({ name: `${name}-yoko`, row, side, land: true, label: `${label}(横)` });
+});
 // 立ち絵の見せ方(r1126-067)。寄り・ふだん・引きを縦と横で撮る(前と後を並べる用)
 const SHOTS_067 = [];
 [['1-yori-atsu', '8-1-14a', 1, '寄り 第8章「謎は全て解けた!」(あつ)'], ['2-yori-erubin', '5-4-8', 1, '寄り 第5章 白瀬を見つけたえるびん(泣く)'],
@@ -113,7 +122,7 @@ const SHOTS_076 = [];
   SHOTS_076.push({ name: `${name}-tate`, row, side, label: `${label}(縦)` });
   SHOTS_076.push({ name: `${name}-yoko`, row, side, land: true, label: `${label}(横)` });
 });
-const LIST_ALL = process.argv.includes('--r1126-076') ? SHOTS_076 : process.argv.includes('--r1126-067') ? SHOTS_067 : process.argv.includes('--r1126-065') ? SHOTS_065 : process.argv.includes('--r1126-062') ? SHOTS_062 : process.argv.includes('--r1126-046') ? SHOTS_046 : process.argv.includes('--r1126-054') ? SHOTS_054 : process.argv.includes('--r1126-058') ? SHOTS_058 : SHOTS;
+const LIST_ALL = process.argv.includes('--r1126-071') ? SHOTS_071 : process.argv.includes('--r1126-076') ? SHOTS_076 : process.argv.includes('--r1126-067') ? SHOTS_067 : process.argv.includes('--r1126-065') ? SHOTS_065 : process.argv.includes('--r1126-062') ? SHOTS_062 : process.argv.includes('--r1126-046') ? SHOTS_046 : process.argv.includes('--r1126-054') ? SHOTS_054 : process.argv.includes('--r1126-058') ? SHOTS_058 : SHOTS;
 
 //  --only <語>: 名前にその語を含む物だけ撮る(例: --only kuroba)
 const ONLY = process.argv.includes('--only') ? process.argv[process.argv.indexOf('--only') + 1] || '' : '';
