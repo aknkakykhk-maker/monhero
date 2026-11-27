@@ -2237,6 +2237,11 @@ const createAnimationStyle = () => {
     .fin-shape--note::before { content:'♪'; }
     .fin-shape--heart { width:auto; height:auto; background:none; box-shadow:none; border-radius:0; font:900 22px/1 system-ui, sans-serif; color:var(--spm-c1); text-shadow:0 0 8px var(--spm-c2); }
     .fin-shape--heart::before { content:'♥'; }
+    /* 覚醒サンタの雪と黒いプレゼント(TACTICS_ENEMY_FINISH.santa)。雪は文字の形(後ろに文字の形の印を付けて絵文字にしない)、プレゼントは黒い箱に赤いリボン */
+    .fin-shape--snow { width:auto; height:auto; background:none; box-shadow:none; border-radius:0; font:900 20px/1 system-ui, sans-serif; color:#fff; text-shadow:0 0 8px var(--spm-c2); }
+    .fin-shape--snow::before { content:'❄︎'; }
+    .fin-shape--gift { width:16px; height:16px; border-radius:2px; box-shadow:0 0 6px var(--spm-c2);
+      background:linear-gradient(90deg, transparent 42%, var(--spm-c2) 42% 58%, transparent 58%), linear-gradient(0deg, transparent 42%, var(--spm-c2) 42% 58%, transparent 58%), #1c1917; }
     .fin-bit.fin-shape--note:nth-child(3n+1)::before { content:'♫'; }
     .fin-bit.fin-shape--note:nth-child(3n+2)::before { content:'♬'; }
     .fin-fall { left:-14px; top:-420px; width:28px; height:28px; opacity:0; position:absolute; margin-left:var(--x); scale:var(--s);
@@ -3186,6 +3191,7 @@ const createAnimationStyle = () => {
     [data-enemy-motion="awakenedMoo"] { --em-c: 250,204,21; }
     [data-enemy-motion="jack"] { --em-c: 251,146,60; }
     [data-enemy-motion="pumpkin"] { --em-c: 253,186,116; }
+    [data-enemy-motion="santa"] { --em-c: 239,68,68; }
     /* ジャックのオーラ(段階1〜5でどんどん派手に)。色: 橙 → 金橙 → 紫 → 赤 → 虹金。動くのは transform / opacity だけ */
     [data-jack-aura-el] { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
     [data-jack-aura-el] > i { position: absolute; inset: 10% 8% 6%; border-radius: 50%; opacity: 0; will-change: transform, opacity; }
@@ -3466,7 +3472,7 @@ const createAnimationStyle = () => {
     /* ジャックの絵は 1024x880 でほぼ正方形(ムーは横長の 1024x598)。ムーと同じ枠(108vw・最大560px)だと画面を覆い、両腕ポーズの腕も画面から切れるので、
        枠は画面の幅に収める。通常絵は枠の半分の大きさで描く(JACK_NORMAL_BATTLE_STYLE)。
        大きさの指定はJSXの style に書いてあり、検査(moo-notice-visibility-check)がそれを読むので、ここで上書きする */
-    [data-moo-stage="true"][data-enemy-motion="jack"], [data-moo-stage="true"][data-enemy-motion="pumpkin"] { width: min(100vw, 400px) !important; height: min(100vw, 400px) !important; }
+    [data-moo-stage="true"][data-enemy-motion="jack"], [data-moo-stage="true"][data-enemy-motion="pumpkin"], [data-moo-stage="true"][data-enemy-motion="santa"] { width: min(100vw, 400px) !important; height: min(100vw, 400px) !important; }
     [data-tactics-look] [data-enemy-skill] { --em-dur: 450ms; }
     [data-tactics-look] [data-enemy-skill="rush"] { --em-dur: 750ms; }
     [data-tactics-look] [data-enemy-skill="pierce"] { --em-dur: 900ms; }
