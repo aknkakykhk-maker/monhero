@@ -6,13 +6,13 @@
 - 回した main: **`eb46a544a`**(#7921 のマージ・2026-11-27 23:00 ごろ)
 - 回し方: `node tools/build.js` のあと `node tools/run-checks.js --script <下の61本> --parallel 4 --timeout 600`
 - 結果: **61本 / OK 55 / NG 4 / SKIP 2**(NG の4本は、run-checks が1本ずつ回し直しても NG)
+- 2026-11-28 ビート部(台帳 r1126-083): `assistant/assistant-chat-check.js` ㉓ を直して外した(ヘルプの「SKY SLIDE（桃・青の帯）」を受けるように)。いま残る NG は下の3本
 
-## 元から落ちる物(NG 4本)
+## 元から落ちる物(NG 3本)
 
 | 検査 | 落ちた行の要点 | 原因の見立て |
 | --- | --- | --- |
 | `boot/changelog-order-check.js` | 「書いてある順も日付の新しい順 — 17か所で逆転」 | `changelog.js` に書いてある順が日付の順と17か所で逆。画面は `17-release` で日付順に並べ替えているので、表示は崩れない。前から(#7876 の時点で18か所)。クリスマスの項目を足すと数が1つ前後することがある |
-| `assistant/assistant-chat-check.js` | ㉓「毎回渡す部分に、ヘルプのノーツの見た目の表(TAP 水色・SKY TAP 赤い板など)…が入っている」が NG | 検査が待っている語「SKY SLIDE（青・桃の帯）」「空の判定ライン: 地上の判定ラインより上にある紫の線」が、いまのヘルプ(`help.js`)に無い(ヘルプの書き方が「SKY SLIDE（桃…」などに変わった)。モンヒロビートのヘルプと検査の食い違いで、クリスマスとは関係ない |
 | `assistant/assistant-life-quick-lose-check.js` | ②「負け→始め直し→『止める』で、前の負けの札が出ない — live」が NG | 助手ライフの裏クイックの負けの札。クリスマスの変更は触れていない所(未切り分け・持ち主はビート部/助手部) |
 | `assistant/assistant-life-quick-run-browser-check.js` | ⑧「『詳細』でカードと同じ詳細の窓が助手ライフの上に出る — null」が NG | 助手ライフの裏クイックの「詳細」の窓が出ない。上と同じく、クリスマスの変更とは別の所(未切り分け) |
 
@@ -35,3 +35,15 @@
 - HOME の帯・台詞・裏クイック: `assistant/assistant-season-lines-check.js`・`assistant-chat-check.js`・`battle/quick-run-anywhere-browser-check.js`・`quick-run-anywhere-strip-overlap-check.js`・`assistant/assistant-life-quick-*`・`quick-guide-check.js`・`mode/rhythm-background-run-check.js` ほか
 
 一覧は `node tools/ctx.js checks <語>`(クリスマス・聖夜・事件簿・レイド・裏クイックなど)で引いた物から、クリスマスに直接関わる物を選んだ。main が進んで、この表に無い物が落ちたら、それは新しく落ちた物として切り分ける。
+
+## 2026-11-28 直した物: 「RHYTHM_TOUCH_DIAG_STATS_MAX is not defined」で落ちていた52本(ビート部・r1126-083)
+
+- 原因: 検査が共通で使う `tools/harness.js` の `loadDyeModule` が、本体より先に読むデータに `data/rhythm-mode.js` を入れていなかった。
+  `30-rhythm-play.jsx` の頭の `RHYTHM_TOUCH_DIAG_MON_MAX=RHYTHM_TOUCH_DIAG_STATS_MAX` で止まる。**本番は index.html が `data/rhythm-mode.js` を本体より先に読むので、壊れていなかった**
+- 直し方: `DATA_FILES` に `data/rhythm-mode.js` を index.html と同じ順(`skills.js` の次)で足した。検査は弱めていない
+- `loadDyeModule` を使う52本すべてが落ちていた → 直した後は50本が通る。残り2本はこの名前の先まで進んで、それぞれ中身の NG が見えるようになった(元は手前で止まって隠れていた):
+
+| 検査 | 落ちた行の要点 | 持ち主 |
+| --- | --- | --- |
+| `battle/card-icon-check.js` | 「iconをそのまま描いている箇所が残っていない — ev.icon, t.icon, g.icon, d.icon」 | バトル部 |
+| `ui/screen-effects-check.js` | 「表の目印は…ちょうど1つある — totals.a[prep.tierIndex + 1](2件)…」「表の件数と setTimeout の数が合っている — 172 箇所 / 表 164 行」 | 画面の演出(`40-screen-effects`・開発部) |
