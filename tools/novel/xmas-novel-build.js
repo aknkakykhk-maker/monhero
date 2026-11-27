@@ -37,7 +37,7 @@ const BGM_MARKS = {
 // 帯の頭の印 → 演出
 const FX_TAGS = { 赤いにじみ: 'bleed', 倒れた影: 'fallen', 赤く光る: 'red', 幕が下りる: 'curtainDown', 幕がおりる: 'curtainDown', 幕が上がる: 'curtainUp', 幕があがる: 'curtainUp', 暗転: 'dark', 白転: 'white', 明転: 'light', ゆれ: 'shake', 揺れ: 'shake', 赤: 'red', 赤い一瞬: 'red', 題字: 'title', 章: 'chapter', 効果音: 'se', 悲鳴: 'se', 帯: 'band', 雪: 'snow', 手紙: 'letter' };
 // (手紙) … 紙の手紙を赤い字で浮かべる(文の「／」で改行・r1126-058)
-const ENDING_KIND = { G: 'good', N: 'normal', B: 'bad', A: 'another', X: 'forced' };
+const ENDING_KIND = { G: 'good', N: 'normal', B: 'bad', A: 'another', X: 'forced', M: 'accuse', O: 'omake' };
 const CHAPTER_NO = { 序章: 0, 終章: 9 };
 
 const warn = [];
@@ -50,7 +50,8 @@ const parseCond = (src) => {
   if (!s) return null;
   const any = s.split(/\s*(?:または|\|\||\|| or )\s*/).map((part) => ({
     all: part.split(/\s*(?:かつ|&&|&|、|,| and )\s*/).map((a) => {
-      const m = a.match(/^(f_\w+|score|clues)\s*(>=|<=|!=|=|>|<)\s*(-?\d+)$/);
+      // end_G … そのエンディングを見たことがある(エンドヒストリー)なら 1(r1126-062 おまけの選択肢)
+      const m = a.match(/^(f_\w+|score|clues|end_[A-Z]+\d*)\s*(>=|<=|!=|=|>|<)\s*(-?\d+)$/);
       if (!m) { if (a) note('条件', `読めない「${a}」(f_xxx=1 / score>=7 の形)`); return null; }
       return { k: m[1], op: m[2], v: Number(m[3]) };
     }).filter(Boolean),
@@ -380,7 +381,7 @@ const parseScript = (md, srcName) => {
         chapters.push(chapter); scene = null; lastQ = null; seq = 0;
         continue;
       }
-      const cm = t.replace(/^後半\s*/, '').replace(/^強制バッド.*$/, 'エンディング').match(/^(序章|終章|第\s*(\d+)\s*章|エンディング|カーテンコール)\s*(?:[～〜]\s*([^～〜]+?)\s*[～〜])?/);
+      const cm = t.replace(/^後半\s*/, '').replace(/^(強制バッド|名指しエンド|おまけ).*$/, 'エンディング').match(/^(序章|終章|第\s*(\d+)\s*章|エンディング|カーテンコール)\s*(?:[～〜]\s*([^～〜]+?)\s*[～〜])?/);
       if (cm) {
         started = true;
         const no = cm[2] ? Number(cm[2]) : CHAPTER_NO[cm[1]];
@@ -397,7 +398,7 @@ const parseScript = (md, srcName) => {
       } else chapter = null;
       continue;
     }
-    const eh = line.match(/^###\s+(END-[A-Z]+\d*)\s+(.*)$/) || line.match(/^###\s+C\d+-X\s*→\s*(END-X\d+)\s*(.*)$/);
+    const eh = line.match(/^###\s+(END-[A-Z]+\d*)\s+(.*)$/) || line.match(/^###\s+C\d+-[A-Z]+\s*→\s*(END-X\d+)\s*(.*)$/);
     if (eh && chapter && chapter.endingNames) { chapter.endingNames[eh[1]] = `${/^END-X/.test(eh[1]) ? '強制バッド' : ''}${eh[2].replace(/[(（][^)）]*[)）]\s*$/, '').trim()}`; continue; }
     if (!started || !chapter || !/^\|/.test(line)) continue;
     const cells = line.replace(/^\|/, '').replace(/\|\s*$/, '').split('|').map((c) => c.trim());

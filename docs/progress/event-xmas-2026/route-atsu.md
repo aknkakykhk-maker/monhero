@@ -18,7 +18,7 @@
 | 0-12 | <img src="../../../monster-hero/images/assistant/santa/face/erubin_normal.PNG" width="40"> | えるびん(ふつう) | ……古いね。誰のだろう |
 | 0-13 |  | 帯 | 起動すると、セーブデータが1件だけ。名前の欄は、文字がにじんで読めない |
 | 0-14 | <img src="../../../monster-hero/images/assistant/santa/face/sorashido_normal.PNG" width="40"> | ソラシド(ふつう) | 誰かが、途中まで遊んだデータ……でしょうか |
-| 0-15 |  | ワトソンくん | 保存された日付は、読みとれません |
+| 0-15 |  | ワトソンくん | 保存された日付は、読み取れません |
 | 0-16 | <img src="../../../monster-hero/images/assistant/santa/face/atsu_normal.PNG" width="40"> | あつ(ふつう) | じゃあ、新しく始めるか。……『はじめから』 |
 | 0-17 |  | 帯 | 画面に、雪山のペンションと、登場人物の紹介が流れる |
 | 0-18 | <img src="../../../monster-hero/images/assistant/santa/face/myua_surprise.PNG" width="40"> | みゅあ(驚き) | ……え、待って。この子、あたしにそっくり！ |
@@ -26,8 +26,9 @@
 | 0-20 | <img src="../../../monster-hero/images/assistant/santa/face/kyuko_happy.PNG" width="40"> | きゅうこ(笑顔) | ほい、俺までいるじゃん笑 ……髪の色まで、そっくりだよぉ |
 | 0-21 | <img src="../../../monster-hero/images/assistant/santa/face/sorashido_normal.PNG" width="40"> | ソラシド(ふつう) | ……全員です。自分たちが、一人残らず |
 | 0-22 | <img src="../../../monster-hero/images/assistant/santa/face/erubin_troubled.PNG" width="40"> | えるびん(困り顔) | 俺のことまで、知ってるのかな…… |
-| 0-23 | <img src="../../../monster-hero/images/assistant/santa/face/atsu_excited.PNG" width="40"> | あつ(わくわく) | おもしろそうじゃん！ みんなで解こうよ、この事件！ |
+| 0-23 | <img src="../../../monster-hero/images/assistant/santa/face/atsu_excited.PNG" width="40"> | あつ(わくわく) | 面白そうじゃん！ みんなで解こうよ、この事件！ |
 | 0-24 | <img src="../../../monster-hero/images/assistant/santa/face/myua_happy.PNG" width="40"> | みゅあ(笑顔) | あつくんが遊ぶなら、あたしも！ 助手として、隣で見てる！ |
+| 0-24b | <img src="../../../monster-hero/images/assistant/santa/face/sorashido_normal.PNG" width="40"> | ソラシド(ふつう) | では、自分はワトソンくんと、記録を取りながら解きます。……どちらが先に解くか、勝負ですね笑 |
 | 0-25 |  | 帯 | 画面いっぱいに、題字 ——『モンヒロ事件簿 ―呪いのセーブデータ― 十三番目の鐘』 |
 | 0-26 |  | 帯 | ——ゲームの中。11月の終わり。モンヒロの広場 |
 | 0-27 |  | 帯 | 晴れた空から、雪がひとひら。それは、雪の結晶の形をした封筒だった |
@@ -160,6 +161,29 @@
 | 2-L-10a | <img src="../../../monster-hero/images/assistant/santa/face/myua_crying.PNG" width="40"> | みゅあ(泣き顔) | 赤い字……。血みたい…… |
 | 2-L-11a | <img src="../../../monster-hero/images/assistant/santa/face/atsu_normal.PNG" width="40"> | あつ(ふつう) | ……インクだ。わざと、血みたいに見せてる。……『かえってこない』って、どういう意味だ |
 | 2-L-12 |  | 帯 | 黒羽の部屋の扉を叩いても、「放っておけ！」と怒鳴る声が返ってくるだけだった |
+| A2b |  | **選択** | 手紙が置かれていたのは、探偵の部屋の枕の上。手紙の主は、また、あの部屋へ来るかもしれない—— → 「あつが、灯りを消した自分の部屋で、一人で手紙の主を待ちぶせる」(危ない方) |
+| 2-Y-1a |  | 帯 | あつは、灯りを消した自分の部屋で、扉の陰に座りこんだ。「来るなら、来い」 |
+| 2-Y-2 |  | 帯 | カチ、カチ、カチ(下の柱時計の音が、床板ごしに、かすかに響く) |
+| 2-Y-3 |  | 帯 | 23時すぎ。廊下の床板が、きし、と小さく鳴った |
+| 2-Y-4a | <img src="../../../monster-hero/images/assistant/santa/face/atsu_normal.PNG" width="40"> | あつ(ふつう) | (扉を細く開けて、息を止める) |
+| 2-Y-5 |  | 帯 | 暗い廊下の先。黒いフードをかぶった影が、黒羽の部屋の扉の前にかがみこみ、扉の下へ、折った紙を1枚すべりこませた |
+| 2-Y-6a | <img src="../../../monster-hero/images/assistant/santa/face/atsu_surprise.PNG" width="40"> | あつ(驚き) | (声を殺して)……あれが、手紙の…… |
+| 2-Y-7 |  | 帯 | 影は、音もなく、裏の階段を下りていく。探偵は、靴もはかずに、その後を追った |
+| 2-Y-8 |  | 帯 | 裏の階段の、いちばん下の段。追っていた影が、ふっと消えた |
+| 2-Y-9 |  | 帯 | ゴッ |
+| 2-Y-10 |  | 帯 | 頭の後ろに、重い衝撃。階段の板が、目の前に迫ってくる |
+| 2-Y-11 |  | 帯 | ホール。柱時計を見張っていた人たちの耳に、裏の階段のほうから、重い物が転がり落ちる音が届いた |
+| 2-Y-12a | <img src="../../../monster-hero/images/assistant/santa/face/myua_surprise.PNG" width="40"> | みゅあ(驚き) | 今の音……あつくんの部屋のほう……！ |
+| 2-Y-13a |  | 帯 | 裏の階段の下に、あつが、ねじれたような姿で倒れていた |
+| 2-Y-14 |  | 帯 | 階段の角から角へ、赤い跡が、一段ごとに続いている。後ろ頭の髪が、ぐっしょりと濡れていた |
+| 2-Y-15a | <img src="../../../monster-hero/images/assistant/santa/face/myua_crying.PNG" width="40"> | みゅあ(泣き顔) | あつくん……！ あつくん！！ ……やだ、目、開けてよ……！ |
+| 2-Y-16a | <img src="../../../monster-hero/images/assistant/santa/face/sorashido_troubled.PNG" width="40"> | ソラシド(困り顔) | ……『ひとり、かえってこない』。……あつさんが、一人に、なったから…… |
+| 2-Y-17 |  | 帯 | ボーン……ボーン……(その時、柱時計が、0時の鐘を打ち始めた) |
+| X4-1 |  | 帯 | 聖夜の名探偵 エンディング「鐘を待たずに」 |
+| X4-2 |  | 帯 | ——0時の鐘を待たずに、一人目は、帰ってこなかった |
+| X4-3 |  | 帯 |  |
+| END-X4 |  | **エンド** | **鐘を待たずに** |
+| A2b |  | **選択** | 手紙が置かれていたのは、探偵の部屋の枕の上。手紙の主は、また、あの部屋へ来るかもしれない—— → 「部屋は空けておく。0時まで、みんなでホールの柱時計を見張る(手紙の主は、つかまえられない)」 |
 | 2-L-13a | <img src="../../../monster-hero/images/assistant/santa/face/atsu_normal.PNG" width="40"> | あつ(ふつう) | ばこっちゃん。今夜は0時まで、ここで柱時計を見張ろう。何かあったら、すぐ動けるように |
 | 2-L-14 |  | 手がかり | 探偵の部屋の枕の上に置かれていた、赤い字の手紙。ひらがなで「こんや 0じの かねが なったら ひとり かえって こない」。差出人は「黒いサンタ」 |
 | 2-M-1 |  | 帯 | 幕間 〜鍵をかけた部屋〜 |

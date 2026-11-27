@@ -47,6 +47,8 @@ const xmasNovelCastOf = (id) => XMAS_NOVEL_CAST.find((c) => c.id === id) || XMAS
 const xmasNovelValueOf = (k, ctx) => {
   if (k === 'score') return Number(ctx.score) || 0;
   if (k === 'clues') return Array.isArray(ctx.clues) ? ctx.clues.length : 0;
+  // end_G … そのエンディングを見たことがあれば 1(エンドヒストリー。おまけの選択肢・r1126-062)
+  if (/^end_[A-Z]+\d*$/.test(k)) return Array.isArray(ctx.endings) && ctx.endings.includes(`END-${k.slice(4)}`) ? 1 : 0;
   const v = ctx.flags ? ctx.flags[k] : undefined;
   return Number.isFinite(v) ? v : 0;
 };
@@ -94,7 +96,7 @@ const xmasNovelScoreOf = (script, ans) => {
   const a = ans && typeof ans === 'object' ? ans : {};
   return xmasNovelScoreGroups(script).filter((g) => g.qs.every((q) => a[q] && a[q].f === true)).length;
 };
-const xmasNovelCtx = (script, cur) => ({ flags: (cur && cur.flags) || {}, clues: (cur && cur.clues) || [], score: xmasNovelScoreOf(script, cur && cur.ans) });
+const xmasNovelCtx = (script, cur, endings) => ({ flags: (cur && cur.flags) || {}, clues: (cur && cur.clues) || [], score: xmasNovelScoreOf(script, cur && cur.ans), endings: Array.isArray(endings) ? endings : [] });
 
 // 場面へ入る: id の場面の条件が合わなければ、同じ仲間(C3-1a→C3-1b)で条件の合う場面へ。どれも合わなければ null
 const xmasNovelResolveScene = (script, id, ctx) => {
@@ -235,7 +237,8 @@ const xmasNovelStep = (script, cur) => xmasNovelSettle(script, { ...cur, idx: (N
 //  pick … 突きつけ: 手がかりの名前 / 人を選ぶ: 人のid / 行動: 選択肢の番号(0から)
 //  返り値 { cur, ok, replies:[行], then:'retry'|'next'|{to} }。replies を読ませたあと then のとおりに進める
 const xmasNovelPickReplies = (q, key) => (q.replies && Array.isArray(q.replies[key]) ? q.replies[key] : []);
-const xmasNovelAnswer = (script, cur, q, pick) => {
+// endings … 見たエンディングの一覧(おまけの選択肢など end_G の条件に使う)
+const xmasNovelAnswer = (script, cur, q, pick, endings) => {
   if (!q || q.t !== 'q') return { cur, ok: false, replies: [], then: 'next' };
   const was = (cur.ans && cur.ans[q.id]) || null;
   const tries = (was ? was.t : 0) + 1;
@@ -252,7 +255,7 @@ const xmasNovelAnswer = (script, cur, q, pick) => {
     return { cur: next, ok, replies, then: rto ? { to: rto } : to ? { to } : 'next' };
   }
   if (q.kind === 'action') {
-    const ctx = xmasNovelCtx(script, cur);
+    const ctx = xmasNovelCtx(script, cur, endings);
     const opts = xmasNovelOptionsOf(q, ctx);
     const opt = opts.find((o) => o.i === pick) || null;
     if (!opt) return { cur, ok: false, replies: [], then: 'retry' };
@@ -349,7 +352,7 @@ const xmasNovelNormalize = (raw, script = null) => {
     if (c) snaps[k] = c;
   });
   const endAt = {};
-  if (r.endAt && typeof r.endAt === 'object') Object.keys(r.endAt).forEach((k) => { const t = r.endAt[k]; if (/^END-[A-Z]+$/.test(k) && typeof t === 'string' && Number.isFinite(Date.parse(t))) endAt[k] = t; });
+  if (r.endAt && typeof r.endAt === 'object') Object.keys(r.endAt).forEach((k) => { const t = r.endAt[k]; if (/^END-[A-Z]+\d*$/.test(k) && typeof t === 'string' && Number.isFinite(Date.parse(t))) endAt[k] = t; });
   return {
     v: 1,
     cur: xmasNovelNormalizeCur(r.cur, script),
@@ -382,4 +385,6 @@ const XMAS_NOVEL_ENDING_KINDS = Object.freeze({
   bad: { label: 'バッドエンド', tone: '#e07a7a' },
   another: { label: '偽りエンド', tone: '#e8a95b' },
   forced: { label: '強制バッド', tone: '#b0303a' },
+  accuse: { label: '名指しエンド', tone: '#a78bd8' },
+  omake: { label: 'おまけ', tone: '#7fd6a8' },
 });

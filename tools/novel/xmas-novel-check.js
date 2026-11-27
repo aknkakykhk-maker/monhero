@@ -23,6 +23,8 @@ const SAMPLE_MODE = process.argv.includes('--sample');
 if (!SAMPLE_MODE) try { execFileSync(process.execPath, [path.join(__dirname, 'xmas-novel-build.js'), '--check'], { stdio: 'pipe' }); }
 catch (e) { fail(`生成物が台本と違う(node tools/novel/xmas-novel-build.js で作り直す)\n${String(e.stdout || '').split('\n').slice(-4).join('\n')}`); }
 
+// たどるときは、エンディングを全部見たあとの状態にする(真グッドのあとだけ出る、おまけの選択肢も通る・r1126-062)
+let SEEN = [];
 // 2. 読み込み(純粋な部品なので、そのまま vm で動かせる)
 const ctx = vm.createContext({});
 vm.runInContext(`${fs.readFileSync(P('79-xmas-novel-engine.jsx'), 'utf8')}\n${fs.readFileSync(P('79-xmas-novel-script.jsx'), 'utf8')}
@@ -30,6 +32,7 @@ this.E = { XMAS_NOVEL_SCRIPT, xmasNovelFreshCur, xmasNovelSettle, xmasNovelStep,
   xmasNovelCtx, xmasNovelPersonChoices, xmasNovelNormalize, xmasNovelScoreGroups, xmasNovelRecordFirst, xmasNovelRecordEnding, xmasNovelPlayableAt, XMAS_NOVEL_GAME };`, ctx);
 const E = ctx.E;
 const S = SAMPLE_MODE ? require('./xmas-novel-build.js').parseScript(fs.readFileSync(path.join(ROOT, 'docs/progress/xmas-novel/SAMPLE.md'), 'utf8'), 'docs/progress/xmas-novel/SAMPLE.md') : E.XMAS_NOVEL_SCRIPT;
+SEEN = E.xmasNovelScenes ? E.xmasNovelScenes(S).filter((x) => x.ending).map((x) => x.ending.id) : (S.scenes || []).filter((x) => x.ending).map((x) => x.ending.id);
 const endingsAll = S.scenes.filter((s) => s.ending).map((s) => s.ending.id);
 const reached = new Map();
 let paths = 0; let stuck = 0;
@@ -69,7 +72,10 @@ const walk = (cur0, depth, log) => {
     // 問い: 分かれる
     const tries = [];
     if (row.kind === 'action') {
-      const opts = E.xmasNovelOptionsOf(row, E.xmasNovelCtx(S, st.cur));
+      const opts = E.xmasNovelOptionsOf(row, E.xmasNovelCtx(S, st.cur, SEEN));
+      // 見たエンディングで出る選択肢(おまけ・end_G)は、まだ見ていないときに出ないこと
+      const gated = (row.options || []).filter((o) => JSON.stringify(o.c || '').includes('end_'));
+      if (gated.length && E.xmasNovelOptionsOf(row, E.xmasNovelCtx(S, st.cur, [])).some((o) => gated.some((g) => g.x === o.x))) fail(`${row.id}: エンディングを見る前から、見たあとだけの選択肢が出ている`);
       if (!opts.length) { fail(`${row.id}: 出せる選択肢が1つも無い`); return; }
       opts.forEach((o) => tries.push([o.i]));
     } else {
@@ -98,7 +104,7 @@ const walk = (cur0, depth, log) => {
     tries.forEach((seq) => {
       let cur = st.cur;
       for (const pick of seq) {
-        const res = E.xmasNovelAnswer(S, cur, row, pick);
+        const res = E.xmasNovelAnswer(S, cur, row, pick, SEEN);
         const a = afterAnswer(res, row);
         if (a.again) { cur = a.cur; continue; }
         if (a.jumped) { walk(a.cur, depth, [...log, `${row.id}=${pick}`]); return; }

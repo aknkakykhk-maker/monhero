@@ -504,6 +504,27 @@ const jaKeepKanaRuns = (s, chunks, segs, { visible, letters, inKeepWord }) => {
   }
   return out.join('​');
 };
+// jaWrapPoints の最後に通す。日付・時刻と、割ると読めなくなる名前の中の折り目(U+200B)を外す(2026-11-27 ミハリの開幕前点検 r1126-061)。
+//   道具(Intl.Segmenter)は「12/31」を「12|/|31」、「3:59」を「3:|59」と読み、お知らせで「12/31(木) 3:」「59」と割れていた。
+//   名前は「エンド|ヒストリー」「名探|偵」(長い名前は入れない。後ろの字とひとかたまりになり、句読点の手前で折れる)。外すだけ(折り目を足さない)なので、ほかの文の折れ方は変わらない
+const JA_WRAP_NO_BREAK = [
+  /\d{1,4}\/\d{1,2}(?:\/\d{1,2})?(?:[(（][月火水木金土日](?:・祝)?[)）])?/g,
+  /\d{1,2}:\d{2}/g,
+  /聖夜の名探偵|名探偵|エンドヒストリー|手がかり帳|鐘が鳴る夜/g,
+];
+const jaWrapUnbreak = (marked) => {
+  if (typeof marked !== 'string' || !marked.includes('​')) return marked;
+  const plain = marked.replace(/​/g, '');
+  const spans = [];
+  for (const re of JA_WRAP_NO_BREAK) for (const m of plain.matchAll(re)) spans.push([m.index, m.index + m[0].length]);
+  if (!spans.length) return marked;
+  let pos = 0, out = '';
+  for (const ch of marked) {
+    if (ch === '​') { if (!spans.some(([a, b]) => pos > a && pos < b)) out += ch; continue; }
+    out += ch; pos += ch.length;
+  }
+  return out;
+};
 const jaWrapPoints = (text) => {
   const s = String(text ?? '');
   if (!s) return s;
@@ -651,7 +672,7 @@ const jaWrapPoints = (text) => {
       // 境目を含む部分(空白で区切った中)が7字を超えるときだけ分ける
       if (m && visible(m[1].split(/\s/).pop() + m[2].split(/\s/)[0]) > 7 && letters(m[1]) >= 2 && letters(m[2]) >= 2) chunks.splice(k, 1, m[1], m[2]);
     }
-    return jaKeepKanaRuns(s, chunks, segs, { visible, letters, inKeepWord });
+    return jaWrapUnbreak(jaKeepKanaRuns(s, chunks, segs, { visible, letters, inKeepWord }));
   } catch { return s; }
 };
 // 丸ごと包むのは、吹き出しのいちばん狭い1行(本文104〜112pxで約10字)に入るものだけ(長いと字が吹き出しの外へ出る)。字の無い顔文字だけは14字まで
