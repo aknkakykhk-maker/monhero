@@ -1,0 +1,33 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><link rel="stylesheet" href="common.css"><title>案A</title></head><body>
+<div class="scene"></div>
+<!-- 上の1段: 名前とLv(小)・ダイヤ・メニュー -->
+<div class="panel" style="position:absolute;left:8px;right:8px;top:6px;height:44px;display:flex;align-items:center;gap:8px;padding:0 10px">
+  <div style="width:30px;height:30px;border-radius:15px;border:2px solid #c9a94a;display:grid;place-items:center;font-size:15px">👤</div>
+  <div style="flex:1;line-height:1.1"><div style="font-size:13px;font-weight:800">検査ブリーダー</div><div style="font-size:10px;color:#ffd54f">Lv.1</div></div>
+  <div style="font-size:13px;font-weight:700">💎 0</div>
+  <div style="position:relative;width:34px;height:34px;border-radius:10px;border:1.5px solid #c9a94a;display:grid;place-items:center;font-size:18px">☰<span class="badge">9</span></div>
+</div>
+<!-- イベントの帯: 1枚だけ・横に送ると次のイベント -->
+<div style="position:absolute;left:8px;right:8px;top:56px;height:86px;border-radius:14px;overflow:hidden;border:2px solid #e0b64a">
+  <img src="../../../../monster-hero/images/events/xmas-2026-event-wide.jpg" style="width:100%;height:100%;object-fit:cover;object-position:50% 35%">
+  <div style="position:absolute;left:10px;bottom:8px;font-size:11px;font-weight:800;background:#b71c1c;padding:2px 8px;border-radius:8px">開催中 〜12/31</div>
+  <div style="position:absolute;right:8px;bottom:8px;display:flex;gap:4px"><i style="width:14px;height:6px;border-radius:3px;background:#fff"></i><i style="width:6px;height:6px;border-radius:3px;background:#fff8"></i></div>
+</div>
+<div style="position:absolute;right:12px;top:146px;font-size:10px;color:#fffd;background:#0008;padding:1px 6px;border-radius:6px">◀ 横に送ると「ハナウタ・ノート」</div>
+<!-- 助手は顔の丸だけ。話す時は1行だけ -->
+<div class="face" style="left:12px;top:172px"></div>
+<div style="position:absolute;left:62px;top:182px;max-width:230px;font-size:12px;background:rgba(30,10,40,.85);border:1px solid #f48fb1;border-radius:10px;padding:5px 9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">迷ったらバトル！ やってみるのが…</div>
+<!-- 真ん中: ボス -->
+<img class="boss" src="../../../../monster-hero/images/enemies/santa-black.png" style="top:300px">
+<div class="bossbar" style="top:470px">黒いサンタ・咎があらわれた！<i></i></div>
+<!-- 下: 入口 8つ(札は1種類だけ・顔の丸を出さない) -->
+<div style="position:absolute;left:0;right:0;bottom:0;height:262px;background:linear-gradient(transparent, rgba(0,0,0,.55) 25%)"></div>
+<div class="tile" style="left:8px;top:598px;width:89px;height:116px"><img src="../../../../monster-hero/images/home/facility-success.webp"><span class="tag">β版</span><b style="font-size:11px">モンヒロサクセス</b></div>
+<div class="tile" style="left:103px;top:598px;width:89px;height:116px"><img src="../../../../monster-hero/images/home/facility-battle.webp"><b style="font-size:11px">モンヒロバトル</b></div>
+<div class="tile" style="left:198px;top:598px;width:89px;height:116px"><img src="../../../../monster-hero/images/home/facility-beat.webp"><span class="tag">開催中</span><b style="font-size:11px">モンヒロビート</b></div>
+<div class="tile" style="left:293px;top:598px;width:89px;height:116px"><img src="../../../../monster-hero/images/home/facility-card.webp"><b style="font-size:11px">MFバトルカード</b></div>
+<div class="tile" style="left:8px;top:720px;width:89px;height:116px"><img src="../../../../monster-hero/images/home/facility-management.webp"><b style="font-size:11px">M/B管理</b></div>
+<div class="tile" style="left:103px;top:720px;width:89px;height:116px"><img src="../../../../monster-hero/images/home/facility-temple.webp"><b style="font-size:11px">神殿</b></div>
+<div class="tile" style="left:198px;top:720px;width:89px;height:116px"><img src="../../../../monster-hero/images/home/facility-market.webp"><b style="font-size:11px">マーケット</b></div>
+<div class="tile" style="left:293px;top:720px;width:89px;height:116px"><img src="../../../../monster-hero/images/home/facility-life.webp"><b style="font-size:11px">助手ライフ</b><span class="dot"></span></div>
+</body></html>
