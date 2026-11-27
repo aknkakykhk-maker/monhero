@@ -14,7 +14,12 @@ const ROOT = '/home/user/monhero';
 const OUT = path.resolve(process.argv[2] || 'shots');
 const PORT = 8000 + Math.floor(Math.random() * 900);
 const SHOTS = [
-  { name: 'p-save', row: '0-13', side: 0, tap: 1 },
+  { name: 'c1-band', row: '1-1-1', side: 0, tap: 1 },
+  { name: 'clue', row: '1-3-12c', side: 1 },
+  { name: 'a1', row: 'A1', side: 0 },
+  { name: 'kime-atsu', row: '8-1-14a', side: 1 },
+  { name: 'kime-sora', row: '8-1-15s', side: 2 },
+  { name: 'hall', row: '1-2-4', side: 0 },
 ];
 
 const ctx = vm.createContext({});
