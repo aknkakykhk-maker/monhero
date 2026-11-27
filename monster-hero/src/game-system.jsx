@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: da88234130681057
+// generated-sha256: 258867c039bfc157
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -151424,14 +151424,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   {open&&<div className="mh-changelog-detail" data-changelog-detail>
                     {row.entries.map(c=>(<section key={c.id} className="mh-changelog-item" data-changelog-type={c.type||'update'}>
                       <time>{(c.date||'').slice(11)||c.date}{unreadHere.has(c.id)&&<em>NEW</em>}</time>
-<<<<<<< HEAD
                       <span className="mh-changelog-kind" data-kind={changelogTypeOf(c).tone}>{changelogKindLabelInTab(changelogTypeOf(c),changelogTab)}</span>{/* 札と同じ決め方にする(2026-11-27 r1126-074 小1)。開始前は「📅 開催予定」、絵文字はイベントごと(pinEmoji)。ハロウィンの 🎃 のままだった */}
                       {changelogEventLive(c)&&<span data-changelog-event-live className="mh-changelog-kind" style={{background:changelogEventUpcoming(c)?'#38bdf8':'#f97316',color:'#1c1917',borderColor:'#fdba74',marginLeft:4}}>{changelogEventUpcoming(c)?'📅 開催予定':`${typeof c.pinEmoji==='string'&&c.pinEmoji?c.pinEmoji:'🎉'} 開催中`}</span>}
-                      <b>{c.title}</b>
-=======
-                      <span className="mh-changelog-kind" data-kind={changelogTypeOf(c).tone}>{changelogTypeOf(c).label}</span>{changelogEventLive(c)&&<span data-changelog-event-live className="mh-changelog-kind" style={{background:'#f97316',color:'#1c1917',borderColor:'#fdba74',marginLeft:4}}>🎃 開催中</span>}
                       <b>{typeof c.title==='string'&&typeof XmasNovelWrap==='function'?<XmasNovelWrap text={c.title}/>:c.title}</b>
->>>>>>> origin/main
                       {/* 告知画像があれば本文の上に出す
                           (期間中いつでもここから見返せるように・2026-09-11・ユーザー指示) */}
                       {/* 絵の高さに上限(縦は一覧の約1/3・横は高さの半分ほど)。押すと大きく出す(2026-11-27 r1126-074 小3) */}
