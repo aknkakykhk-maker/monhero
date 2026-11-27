@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 895d8aee1006932d
+// generated-sha256: b9eec30eb685cf3b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -67225,7 +67225,7 @@ const XMAS_EVENT_BONUSES = Object.freeze([
   { id: 'battle', icon: () => <Sword size={22} />, tone: 'border-orange-300/50 bg-orange-950/40 text-orange-100',
     title: 'モンヒロバトル', big: '1.5倍', body: 'バトルでもらえる経験値とダイヤが1.5倍になります' },
   { id: 'costume', icon: () => <XmasEventIcon name="shirt" />, tone: 'border-rose-300/50 bg-rose-950/40 text-rose-100',
-    title: '助手のクリスマスきせかえ', big: '', body: '助手のサンタ姿のきせかえが登場します' },
+    title: '助手のクリスマスきせかえ', big: '', body: '助手8人のクリスマスのきせかえが、ビートP交換所の「着替え」に並びます(ソラシドとあつは探偵の衣装です)' },
   { id: 'art', icon: () => <XmasEventIcon name="picture" />, tone: 'border-emerald-300/50 bg-emerald-950/40 text-emerald-100',
     title: 'ホーム・タイトルのクリスマスの絵', big: '', body: 'ホームとタイトルがクリスマスの絵になります(設定の「ホーム画面アレンジ」で選べます)' },
 ]);
