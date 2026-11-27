@@ -162,8 +162,8 @@ const CASES = CASES_ALL.filter((c) => !ONLY || c.shot === ONLY);
       check(`④ ${vp.label}: 実行時エラーが無い`, errors.length === 0, errors.slice(0, 2).join(' / '));
       await ctx.close();
     }
-    // ⑤ イベントページの物語タブからの入口(時計をずらす)。11/27 13:00 からは序章だけ・本編は「11/30 10:00 から」/ 11/30 10:05 は「事件簿を開く」で起動画面が開く
-    if (!ONLY || ONLY === 'tate') for (const [iso, open] of [['2026-11-27T13:05:00+09:00', false], ['2026-11-30T10:05:00+09:00', true]]) {
+    // ⑤ イベントページの物語タブからの入口(時計をずらす)。11/27 13:00 からは序章だけ・本編は「11/28 10:00 から」/ 11/28 10:05 は「事件簿を開く」で起動画面が開く
+    if (!ONLY || ONLY === 'tate') for (const [iso, open] of [['2026-11-27T13:05:00+09:00', false], ['2026-11-28T10:05:00+09:00', true]]) {
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
       const page = await ctx.newPage();
       const errors = [];
@@ -193,9 +193,9 @@ const CASES = CASES_ALL.filter((c) => !ONLY || c.shot === ONLY);
       await entry.waitFor({ timeout: 15000 }).catch(() => {});
       await entry.dispatchEvent('click').catch(() => {});
       await page.locator('[data-xmas-story]').waitFor({ timeout: 10000 }).catch(() => {});
-      const st = await page.evaluate(() => ({ btn: document.querySelectorAll('[data-xmas-novel-open]').length, soon: /本編は 11\/30/.test((document.querySelector('[data-xmas-story]') || {}).textContent || '') ? 1 : 0,
+      const st = await page.evaluate(() => ({ btn: document.querySelectorAll('[data-xmas-novel-open]').length, soon: /本編は 11\/28/.test((document.querySelector('[data-xmas-story]') || {}).textContent || '') ? 1 : 0,
         prologue: document.querySelectorAll('[data-xmas-story-chapter="xs00"]').length, ch1: document.querySelectorAll('[data-xmas-story-chapter="xs01"]').length }));
-      const label = open ? '⑤ 11/30 10:05' : '⑤ 11/27 13:05';
+      const label = open ? '⑤ 11/28 10:05' : '⑤ 11/27 13:05';
       if (open) {
         check(`${label}: 物語タブに「事件簿を開く」と序章の読み返しがある(毎日の話の行は無い)`, st.btn === 1 && st.prologue === 1 && st.ch1 === 0, JSON.stringify(st));
         if (SHOT_DIR) { await page.waitForTimeout(500); await page.screenshot({ path: path.join(SHOT_DIR, 'tate-20-storytab-open.jpg'), type: 'jpeg', quality: 80 }); }
@@ -203,7 +203,7 @@ const CASES = CASES_ALL.filter((c) => !ONLY || c.shot === ONLY);
         await page.locator('[data-xmas-novel-title]').waitFor({ timeout: 8000 }).catch(() => {});
         check(`${label}: 押すと事件簿の起動画面が開く`, await page.locator('[data-xmas-novel-title]').count() === 1);
       } else {
-        check(`${label}: 開幕までは本編の入口を出さず「本編は 11/30 10:00 から」と序章だけ`, st.btn === 0 && st.soon === 1 && st.prologue === 1, JSON.stringify(st));
+        check(`${label}: 開幕までは本編の入口を出さず「本編は 11/28 10:00 から」と序章だけ`, st.btn === 0 && st.soon === 1 && st.prologue === 1, JSON.stringify(st));
         if (SHOT_DIR) { await page.waitForTimeout(500); await page.screenshot({ path: path.join(SHOT_DIR, 'tate-21-storytab-preopen.jpg'), type: 'jpeg', quality: 80 }); }
       }
       check(`${label}: 実行時エラーが無い`, errors.length === 0, errors.slice(0, 2).join(' / '));
