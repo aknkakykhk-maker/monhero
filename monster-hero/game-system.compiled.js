@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: dadfce369e59d6b2
+// source-sha256: 7d22db584accdedb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -112902,7 +112902,7 @@ const XMAS_EVENT_BONUSES = Object.freeze([{
   tone: 'border-rose-300/50 bg-rose-950/40 text-rose-100',
   title: '助手のクリスマスきせかえ',
   big: '',
-  body: '助手のサンタ姿のきせかえが登場します'
+  body: '助手8人のクリスマスのきせかえが、ビートP交換所の「着替え」に並びます(ソラシドとあつは探偵の衣装です)'
 }, {
   id: 'art',
   icon: () => React.createElement(XmasEventIcon, {
