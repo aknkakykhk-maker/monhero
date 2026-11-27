@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 55a8913b45c24e46
+// source-sha256: 1d6bd36a7e5f0570
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -113664,7 +113664,7 @@ const XMAS_NOVEL_CAST = Object.freeze([{
   name: '黒羽',
   full: '黒羽 宗一郎',
   kind: 'guest',
-  art: 'images/story-guests/kuroba_stand.png',
+  art: 'images/story-guests/kuroba_full.png',
   face: 'images/story-guests/kuroba_face.png',
   tone: '#3b3f4a'
 }, {
@@ -113672,7 +113672,7 @@ const XMAS_NOVEL_CAST = Object.freeze([{
   name: '白瀬',
   full: '白瀬 雪絵',
   kind: 'guest',
-  art: 'images/story-guests/shirase_stand.png',
+  art: 'images/story-guests/shirase_full.png',
   face: 'images/story-guests/shirase_face.png',
   tone: '#5a6a86'
 }]);
@@ -126058,16 +126058,16 @@ const XMAS_NOVEL_MARKS = Object.freeze({
     r: 0.76
   },
   kuroba: {
-    chest: 0.74,
-    waist: 1,
-    l: 0,
-    r: 1
+    chest: 0.22,
+    waist: 0.42,
+    l: 0.04,
+    r: 0.96
   },
   shirase: {
-    chest: 0.72,
-    waist: 1,
-    l: 0,
-    r: 1
+    chest: 0.24,
+    waist: 0.38,
+    l: 0.03,
+    r: 0.97
   },
   ichika: {
     chest: 0.42,
@@ -126582,8 +126582,8 @@ const XmasNovelBody = ({
   }, []);
   const c = xmasNovelCastOf(who);
   const src = xmasNovelBodySrc(who);
-  const kind = c ? c.kind : '';
-  const bust = kind === 'guest';
+  const bust = !!(c && c.kind === 'guest' && !/_full\.png$/.test(c.art || ''));
+  const kind = c ? c.kind === 'guest' && !bust ? 'assistant' : c.kind : '';
   const pose = XMAS_NOVEL_BODY_POSE[scene] || 'lie';
   const slump = pose === 'slump';
   const sit = pose === 'sit';

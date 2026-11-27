@@ -5,6 +5,7 @@
 // 使い方: node tools/novel/xmas-novel-shots.js <出力ディレクトリ>   (縦 390×844・2倍)
 //         node tools/novel/xmas-novel-shots.js <出力ディレクトリ> --r1126-046   幕間と過去編(r1126-046)の組を撮る
 //         node tools/novel/xmas-novel-shots.js <出力ディレクトリ> --r1126-065   亡くなった人のシルエット(r1126-065)の組を縦と横で撮る
+//         node tools/novel/xmas-novel-shots.js <出力ディレクトリ> --r1126-076   謎の客2人の全身の絵(寄り・ふだん・引き・死の場面)の組を縦と横で撮る
 //         node tools/novel/xmas-novel-shots.js <出力ディレクトリ> --r1126-067   立ち絵の見せ方(寄り・ふだん・引き)の組を縦と横で撮る
 //         node tools/novel/xmas-novel-shots.js <出力ディレクトリ> --r1126-062   足した選択肢とエンド(r1126-062)の組を撮る
 'use strict';
@@ -104,7 +105,15 @@ const SHOTS_067 = [];
   SHOTS_067.push({ name: `${name}-tate`, row, side, label: `${label}(縦)` });
   SHOTS_067.push({ name: `${name}-yoko`, row, side, land: true, label: `${label}(横)` });
 });
-const LIST_ALL = process.argv.includes('--r1126-067') ? SHOTS_067 : process.argv.includes('--r1126-065') ? SHOTS_065 : process.argv.includes('--r1126-062') ? SHOTS_062 : process.argv.includes('--r1126-046') ? SHOTS_046 : process.argv.includes('--r1126-054') ? SHOTS_054 : process.argv.includes('--r1126-058') ? SHOTS_058 : SHOTS;
+// 謎の客2人を全身の絵に(r1126-076)。寄り・ふだん・引きと死の場面を縦と横で撮る
+const SHOTS_076 = [];
+[['1-kuroba-yori', '2-M-14', 1, '寄り 幕間 鍵をかけた部屋の黒羽'], ['2-kuroba-fudan', '2-1-3', 1, 'ふだん 第2章 楽譜が消えた黒羽'], ['3-kuroba-hiki', '1-3-2', 1, '引き 第1章 黒羽の登場'],
+  ['4-shirase-yori', '3-5-4', 1, '寄り 第3章 窓辺の白瀬「12年前」'], ['5-shirase-fudan', '3-5-3', 1, 'ふだん 第3章 窓辺の白瀬'], ['6-shirase-hiki', '1-3-6', 1, '引き 第1章 白瀬の登場'],
+  ['7-kuroba-shi', '3-1-4', 1, '死の場面 第3章 黒羽(雪原)'], ['8-kuroba-shi-te', '3-1-7', 1, '死の場面 第3章 黒羽の手'], ['9-shirase-shi', '5-4-5', 1, '死の場面 第5章 白瀬(鏡の裏の通り道)']].forEach(([name, row, side, label]) => {
+  SHOTS_076.push({ name: `${name}-tate`, row, side, label: `${label}(縦)` });
+  SHOTS_076.push({ name: `${name}-yoko`, row, side, land: true, label: `${label}(横)` });
+});
+const LIST_ALL = process.argv.includes('--r1126-076') ? SHOTS_076 : process.argv.includes('--r1126-067') ? SHOTS_067 : process.argv.includes('--r1126-065') ? SHOTS_065 : process.argv.includes('--r1126-062') ? SHOTS_062 : process.argv.includes('--r1126-046') ? SHOTS_046 : process.argv.includes('--r1126-054') ? SHOTS_054 : process.argv.includes('--r1126-058') ? SHOTS_058 : SHOTS;
 
 //  --only <語>: 名前にその語を含む物だけ撮る(例: --only kuroba)
 const ONLY = process.argv.includes('--only') ? process.argv[process.argv.indexOf('--only') + 1] || '' : '';
