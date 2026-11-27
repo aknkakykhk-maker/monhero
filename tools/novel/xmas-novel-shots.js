@@ -4,6 +4,7 @@
 //   撮る物は下の SHOTS。行は台本の番号(7-1-3a など)で書く
 // 使い方: node tools/novel/xmas-novel-shots.js <出力ディレクトリ>   (縦 390×844・2倍)
 //         node tools/novel/xmas-novel-shots.js <出力ディレクトリ> --r1126-046   幕間と過去編(r1126-046)の組を撮る
+//         node tools/novel/xmas-novel-shots.js <出力ディレクトリ> --r1126-062   足した選択肢とエンド(r1126-062)の組を撮る
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -58,7 +59,32 @@ const SHOTS_058 = [
   { name: '03-letter-after', row: '2-L-8', side: 2, label: 'ソラシド派 みんなが黙る間' },
   { name: '04-letter-truth', row: '8-3-7b', side: 1, label: '真ルート きゅうこが手紙を明かす' },
 ];
-const LIST = process.argv.includes('--r1126-046') ? SHOTS_046 : process.argv.includes('--r1126-054') ? SHOTS_054 : process.argv.includes('--r1126-058') ? SHOTS_058 : SHOTS;
+// 選択肢とエンドを足した分(r1126-062)。endings: 見たエンディング(保存に入れておく)/ history: エンドヒストリーの一覧 / tap: 開いてから画面を叩く回数(エンドの札まで進める)
+const ALL_ENDS = ['END-X1', 'END-X2', 'END-X3', 'END-X4', 'END-X5', 'END-M1', 'END-M2', 'END-M3', 'END-M4', 'END-M5', 'END-G', 'END-N', 'END-A', 'END-B', 'END-O'];
+const SHOTS_062 = [
+  { name: '01-a2b-atsu', row: 'A2b', side: 1, label: 'あつ派 予告の手紙のあとの選択(A2b)' },
+  { name: '02-x4-atsu', row: '2-Y-5', side: 1, label: 'あつ派 END-X4 黒いフードの影が紙を差しこむ' },
+  { name: '03-x4-sora', row: '2-Y-13s', side: 2, label: 'ソラシド派 END-X4 裏の階段の下' },
+  { name: '04-q7a', row: 'Q7a', side: 1, label: '1回目の推理 Q7a(人を選ぶ)' },
+  { name: '05-m1', row: '7-P1-8', side: 2, label: 'END-M1 ももすけが吹雪の中へ' },
+  { name: '06-m1-end', row: 'M1-3', side: 2, label: 'END-M1 雪の上の髪飾り' },
+  { name: '07-m2', row: 'M2-4', side: 1, label: 'END-M2 薪小屋のもちまる' },
+  { name: '08-m3', row: 'M3-7', side: 1, label: 'END-M3 二通目の赤い字の手紙' },
+  { name: '09-m4-atsu', row: '7-4-9', side: 1, label: 'あつ派 END-M4 帽子を(プレイヤー)に' },
+  { name: '10-m4-sora', row: '7-5-8', side: 2, label: 'ソラシド派 END-M4 ワトソンくんを(プレイヤー)に' },
+  { name: '11-m5-atsu', row: 'M5-5a', side: 1, label: 'あつ派 END-M5 鏡の扉の奥(ソラシド)' },
+  { name: '12-m5-sora', row: 'M5-5s', side: 2, label: 'ソラシド派 END-M5 鏡の扉の奥(あつ)' },
+  { name: '13-a10-sora', row: 'A10', side: 2, label: 'ソラシド派 後半 屋根裏の声の選択(A10)' },
+  { name: '14-x5-atsu', row: '10-X-5', side: 1, label: 'あつ派 END-X5 板の上の影' },
+  { name: '15-a1-omake', row: 'A1', side: 0, endings: ['END-G'], label: '真グッドのあとの A1(③推理はお休み)' },
+  { name: '16-omake', row: '1-O-13', side: 3, endings: ['END-G'], label: 'おまけ 黒いサンタが7人' },
+  { name: '17-omake-kyuko', row: '1-O-25', side: 3, endings: ['END-G'], label: 'おまけ きゅうこもケーキ' },
+  { name: '18-out-o', row: 'OUT-O-2', side: 3, endings: ['END-G'], label: 'おまけのあと 画面の前' },
+  { name: '19-m1-card', row: 'M1-7', side: 2, tap: 3, label: 'END-M1 エンドの札' },
+  { name: '20-history-few', history: true, endings: ['END-X1', 'END-M1', 'END-M4', 'END-G'], label: 'エンドヒストリー(まだの物は？？？)' },
+  { name: '21-history-all', history: true, endings: ALL_ENDS, label: 'エンドヒストリー(全部見たあと)' },
+];
+const LIST = process.argv.includes('--r1126-062') ? SHOTS_062 : process.argv.includes('--r1126-046') ? SHOTS_046 : process.argv.includes('--r1126-054') ? SHOTS_054 : process.argv.includes('--r1126-058') ? SHOTS_058 : SHOTS;
 
 const ctx = vm.createContext({});
 vm.runInContext(`${fs.readFileSync(path.join(ROOT, 'monster-hero/src/parts/79-xmas-novel-script.jsx'), 'utf8')}\nthis.S = XMAS_NOVEL_SCRIPT;`, ctx);
@@ -80,7 +106,7 @@ const serve = () => new Promise((r) => { const s = http.createServer((req, res) 
   let bad = 0;
   try {
     for (const sh of LIST) {
-      const at = sh.list ? { scene: 'C1-1', idx: 0 } : where(sh.row);
+      const at = sh.list || sh.history ? { scene: 'C1-1', idx: 0 } : where(sh.row);
       if (!at) { console.log(`NG: ${sh.row} が台本に無い`); bad += 1; continue; }
       const page = await (await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 })).newPage();
       const errors = []; page.on('pageerror', (e) => errors.push(String(e)));
@@ -91,7 +117,8 @@ const serve = () => new Promise((r) => { const s = http.createServer((req, res) 
         put('mh_battle_tutorial_seen_v1', true); put('mh_battle_tutorial_guide_shown_v1', true); put('mh_masu_migrated', true);
         put('mh_inherited_unique_level_compensation_v1', true); put('mh_inherited_unique_level_compensation_pending_v1', false); put('mh_first_battle_done_v1', true);
         put('mh_xmas_novel_v1', seed);
-      }, { cur: sh.list ? null : { scene: at.scene, idx: at.idx, flags: sh.side ? { f_A1: sh.side } : {}, clues: [], ans: {}, panel: {} },
+      }, { cur: sh.list || sh.history ? null : { scene: at.scene, idx: at.idx, flags: sh.side ? { f_A1: sh.side } : {}, clues: [], ans: {}, panel: {} },
+        ...(sh.endings ? { endings: sh.endings, endAt: Object.fromEntries(sh.endings.map((e) => [e, '2026-12-03T12:15:00.000Z'])) } : {}),
         ...(sh.list || LIST === SHOTS_046 ? { endings: ['END-G'], snaps: { C1: { scene: 'C1-1', idx: 0, flags: {}, clues: [], ans: {}, panel: {} } } } : {}) });
       await page.addInitScript(seeds.eventStorySeed()); await page.addInitScript(seeds.updateNoticeSeed()); await page.addInitScript(seeds.loginBonusDoneSeed()); await page.addInitScript(seeds.oneTimeNoticeSeed());
       await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
@@ -99,11 +126,12 @@ const serve = () => new Promise((r) => { const s = http.createServer((req, res) 
       await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
       await page.getByRole('button', { name: 'モンヒロバトル', exact: true }).waitFor({ timeout: 30000 });
       await page.evaluate(() => openXmasNovel({ force: true, playerName: 'テスト' }));
-      await page.locator(sh.list ? '[data-xmas-novel-chapters]' : '[data-xmas-novel-continue]').click({ timeout: 8000 });
+      await page.locator(sh.list ? '[data-xmas-novel-chapters]' : sh.history ? '[data-xmas-novel-endings]' : '[data-xmas-novel-continue]').click({ timeout: 8000 });
       await page.waitForTimeout(2600);
       // 文字送りを最後まで(1回だけ叩く。問いの行はそのまま)
       const row = await page.evaluate(() => { const r = document.querySelector('[data-xmas-novel]'); return r ? r.getAttribute('data-row') : null; });
       await page.waitForTimeout(1200);
+      for (let t = 0; t < (sh.tap || 0); t += 1) { await page.mouse.click(195, 640); await page.waitForTimeout(1600); }
       await page.screenshot({ path: path.join(OUT, `${sh.name}.jpg`), type: 'jpeg', quality: 82 });
       console.log(`${errors.length ? 'NG' : 'OK'}: ${sh.name} ${sh.label} — 画面の行 ${row}${errors.length ? ` エラー ${errors[0]}` : ''}`);
       if (errors.length) bad += 1;

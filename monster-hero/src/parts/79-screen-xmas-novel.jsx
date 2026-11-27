@@ -785,7 +785,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
   };
   // 答える
   const answer = (q, pick) => {
-    const res = xmasNovelAnswer(S, st.cur, q, pick);
+    const res = xmasNovelAnswer(S, st.cur, q, pick, (saveRef.current && saveRef.current.endings) || []);
     let s = saveRef.current;
     if (q.score) { s = xmasNovelRecordFirst(s, q.id, res.ok); xmasNovelSe(res.ok ? 'ok' : 'ng'); }
     setSheet(null);
@@ -842,9 +842,10 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
       <div className="mh-nv mh-nv-boot" data-xmas-novel={mode}>
         <div className="mh-nv-noise" /><div className="mh-nv-scan" />
         <div className="mh-nv-top"><span className="mh-nv-where" /><button type="button" className="mh-nv-btn" data-xmas-novel-close onClick={close} aria-label="閉じる"><X size={18} /></button></div>
-        <div className="absolute inset-0 flex flex-col items-center justify-center overflow-y-auto px-4 py-16">
+        {/* 長い一覧(エンドヒストリー15件など)が上ではみ出さないよう、中央寄せは子の my-auto で(justify-center だと上が切れてスクロールで戻れない) */}
+        <div className="absolute inset-0 flex flex-col items-center overflow-y-auto px-4 py-16">
           {mode === 'title' && (
-            <div className="w-full max-w-sm text-center" data-xmas-novel-title>
+            <div className="my-auto w-full max-w-sm text-center" data-xmas-novel-title>
               <div className="mh-nv-boot-logo" data-xmas-novel-game={XMAS_NOVEL_GAME.series}>
                 <div className="mh-nv-serif mh-nv-boot-series">{XMAS_NOVEL_GAME.series}</div>
                 <div className="mh-nv-serif mh-nv-boot-title">―{XMAS_NOVEL_GAME.title}―</div>
@@ -874,7 +875,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
             </div>
           )}
           {mode === 'endings' && (
-            <div className="w-full max-w-md" data-xmas-novel-ending-list>
+            <div className="my-auto w-full max-w-md" data-xmas-novel-ending-list>
               <div className="mh-nv-serif mh-nv-gold text-center text-[22px] font-black tracking-widest">エンドヒストリー</div>
               <div className="mh-nv-rule" />
               <ul className="space-y-2">
@@ -899,7 +900,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
             </div>
           )}
           {mode === 'chapters' && (
-            <div className="w-full max-w-md" data-xmas-novel-chapter-list>
+            <div className="my-auto w-full max-w-md" data-xmas-novel-chapter-list>
               <div className="mh-nv-serif mh-nv-gold text-center text-[22px] font-black">章から</div>
               <p className="mh-nv-plain mt-1 text-[11px] text-slate-300">その章に入ったときの手がかりと選んだことから、読み直せます</p>
               <div className="mh-nv-rule" />
@@ -1083,7 +1084,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
             {q && q.kind === 'action' && (<>
               <div data-xmas-novel-question={q.id} className="mh-nv-plain mh-nv-serif mh-nv-gold mb-3 text-[17px] font-black">{xmasNovelFill(q.x, playerName)}</div>
               <div className="space-y-2.5">
-                {xmasNovelOptionsOf(q, xmasNovelCtx(S, st.cur)).map((o) => (
+                {xmasNovelOptionsOf(q, xmasNovelCtx(S, st.cur, save.endings)).map((o) => (
                   <button type="button" key={o.i} className="mh-nv-choice mh-nv-serif" data-xmas-novel-option={o.i} onClick={() => answer(q, o.i)}>{xmasNovelFill(o.x, playerName)}</button>
                 ))}
               </div>
