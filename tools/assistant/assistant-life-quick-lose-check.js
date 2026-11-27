@@ -5,6 +5,7 @@
 //   ① 部品の中: 札は助手ライフの帯(renderLifeQuickRunStrip)の中だけ。出す長さは自動で始め直すまでの間(QUICK_RUN_AUTO_RETRY_MS)と同じ
 //   ② 実際の画面(縦 390×844): AUTO設定の難易度を Hell にして助手ライフで回し、負けると帯が「😢 負けちゃった…始め直すよ」(data-life-quick-run-lose="retry")になり、
 //      そのあと自動で始め直して札が消える(帯が live に戻る)。回っているあいだは札を出さない。始め直したあと「止める」を押しても前の札が出ない
+//      (「止める」にほかの窓がかぶっていないことも見る。初めての「見かた」の窓は既読にしておく)
 //   ③ ページのエラーが出ない
 const http = require('http');
 const path = require('path');
@@ -52,6 +53,8 @@ const seed = () => {
   put('mh_auto_settings_v1', { strategy: 'random', allies: [{ rosterEntry: null, slot: null }, { rosterEntry: null, slot: null }, { rosterEntry: null, slot: null }],
     breakthroughReserve: { gold: 0, psyche: 0 }, quickRun: { heroRosterEntry: 'Suezo', distance: 2, difficulty: 'Hell', autoStart: true } });
   put('mh_gold', 1000);
+  // 初めて開いた人への「❓ 助手ライフの見かた」(2026-11-22 段7)は帯の「止める」の上にかぶるので、見た印を入れておく
+  put('mh_assistant_life_guide_seen_v1', true);
 };
 
 (async () => {
@@ -101,10 +104,15 @@ const seed = () => {
     for (let i = 0; i < 4 && await closePopups(); i++) await page.waitForTimeout(300);
     const stopBtn = page.locator('[data-life-quick-run-stop]');
     let afterStop = 'no-stop';
+    let stopHit = 'no-stop';
     if (await stopBtn.count()) {
+      // 押す所に別の窓がかぶっていると、押しても止まらず(Hell なので)また負けて、その札が見えてしまう。かぶりが無いことも確かめる
+      stopHit = await page.evaluate(() => { const b = document.querySelector('[data-life-quick-run-stop]'); const r = b.getBoundingClientRect(); const e = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+        return e && (e === b || b.contains(e)) ? 'self' : (e ? e.outerHTML.slice(0, 120) : 'none'); });
       await stopBtn.click({ force: true }); await page.waitForTimeout(1200);
       afterStop = await page.evaluate(() => { const s = document.querySelector('[data-life-quick-run]'); const n = s && s.querySelector('[data-life-quick-run-lose]'); return `${s ? s.dataset.lifeQuickRun : 'none'}|${n ? n.textContent : ''}`; });
     }
+    check('② 始め直したあとの「止める」に、ほかの窓がかぶっていない', stopHit === 'self', stopHit);
     check('② 負け→始め直し→「止める」で、前の負けの札が出ない', /^stopped\|$/.test(afterStop), afterStop);
     check('③ ページのエラーが出ない', fatal.length === 0, fatal.slice(0, 3).join(' / '));
   } finally { await browser.close(); server.close(); }

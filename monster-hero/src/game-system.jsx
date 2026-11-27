@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1003f37ea287136c
+// generated-sha256: 6326c7b860bb161a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -53520,7 +53520,7 @@ const tacticsEnemyMotionMs = (enemyId, skill, fallbackMs) => {
 };
 // 体の動きのうち「当たる瞬間」が全体の何割のところにあるか(攻撃が味方に届く時刻・ムーの揺れの時刻)
 const TACTICS_ENEMY_BODY_HIT = Object.freeze({
-  jab: .5, lunge: .55, dash: .58, flurry: .7, spin: .8, windup: .68, swing: .58, leap: .7, press: .7, rise: .74, sway: .55,
+  jab: .5, toot: .58, lunge: .55, dash: .58, flurry: .7, spin: .8, windup: .68, swing: .58, leap: .7, press: .7, rise: .74, sway: .55,
 });
 const tacticsEnemyHitFrac = (enemyId, skill) => {
   const motion = enemyId ? TACTICS_ENEMY_MOTIONS[enemyId] : null;
@@ -53596,11 +53596,11 @@ const TACTICS_ENEMY_MOTION_SETS = Object.freeze({
     regen:['heal','sparkle'], charge:['power','aura'], pierceCharge:['stance','lock'] } },
   // 覚醒サンタ(クリスマスのレイドボス・r1126-075): 重く息をして構える。雪・黒いプレゼント・鐘・ソリ
   //   正拳・闇 … 突いて雪の拳を飛ばす / 瞬黒撃 … 一瞬で踏み込み、黒い十字の斬り跡と雪が散る
-  //   超宝屁 … 揺れて毒々しい光の粒を出し、プレゼントが味方へ飛ぶ(id が Jack なのでムーと同じく光の玉で飛ばす) / 超飛び蹴り … 跳んで蹴り落とす
+  //   超宝屁 … 後ろを向いてお尻を突き出し、ぷぅっと膨らむ(toot)。おならの💨が飛び、緑〜紫のガスの雲が味方の列を包む(星と雪が混じる・r1126-075 追記1) / 超飛び蹴り … 跳んで蹴り落とす
   //   超暗けい … 溜めて黒い掌の気を通す / 怪しこの夜 … 力を解き放ち、鐘が鳴りながら立ちのぼる
   //   X’マスプレデター … 横へ駆け、ソリが味方全員へ突っ込み、黒いプレゼントと雪が散る
   santa: { idle:'menace', skills:{
-    normal:['jab','burst','❄️','shoot'], sweep:['sway','sparkle','🎁','shoot'], rush:['leap','burst','🦵','shoot'], pierce:['windup','beam','🖤','rise'],
+    normal:['jab','burst','❄️','shoot'], sweep:['toot','sparkle','💨','shoot'], rush:['leap','burst','🦵','shoot'], pierce:['windup','beam','🖤','rise'],
     special:['dash','slash'], allout:['dash','widebeam','🛷','shoot'], roar:['rise','aura','🔔','rise'],
     regen:['heal','sparkle'], charge:['power','aura'], pierceCharge:['stance','lock'] } },
   // 覚醒ムー(竜): 待機は今までの浮遊のまま。技ごとの動きだけ付ける
@@ -53915,6 +53915,11 @@ const TacticsEnemyStageFx = ({ fx, motion, isMoo, enemyId, skillLabel, lite = fa
       ))}
       {isMoo && !lite && !afterMovie && skill === 'special' && [0, 1, 2, 3, 4, 5, 6, 7].map((k) => (
         <i key={k} data-moo-meteor style={{ left: `${8 + ((k * 29) % 90)}%`, animationDelay: at(0.18 + k * 0.07) }}>{santa ? '❄️' : '☄️'}</i>
+      ))}
+      {santa && !lite && skill === 'sweep' && geo.all.map((t, k) => (
+        <i key={`gas-${k}`} data-santa-gas style={{ left: t.x, top: t.y, '--w': `${Math.round(Math.max(t.w, t.h) * 1.6)}px`, animationDelay: at(0.48 + k * 0.04), animationDuration: at(0.52) }}>
+          <b>{k % 2 ? '❄️' : '✨'}</b><b>{k % 2 ? '✨' : '❄️'}</b>
+        </i>
       ))}
       {isMoo && !lite && skill === 'allout' && [0, 1, 2].map((k) => (
         <i key={k} data-moo-tornado style={{ top: `${44 + k * 14}%`, animationDelay: at(0.22 + k * 0.1) }}>{santa ? '🛷' : '🌪️'}</i>
@@ -162359,6 +162364,16 @@ const createAnimationStyle = () => {
       75% { transform: translateY(-10px) scale(1.03); }
       100% { transform: none; }
     }
+    /* 覚醒サンタの超宝屁: 後ろを向いてお尻を突き出し、ぷぅっと膨らんで、はじけて戻る(左右の反転は transform だけ) */
+    @keyframes emToot {
+      0% { transform: none; }
+      12% { transform: translate(-4px, 0) rotate(-5deg); }
+      22% { transform: scaleX(-1) translate(0, 2px) rotate(-6deg); }
+      44% { transform: scaleX(-1) translate(8px, 8px) rotate(-16deg) scale(1.12, .88); }
+      56% { transform: scaleX(-1) translate(-4px, -8px) rotate(5deg) scale(.92, 1.1); }
+      88% { transform: scaleX(-1) rotate(-2deg); }
+      100% { transform: none; }
+    }
     @keyframes emSway {
       0% { transform: none; }
       15% { transform: translate(-6px, -6px) rotate(-9deg) scale(.96, 1.06); }
@@ -162458,6 +162473,7 @@ const createAnimationStyle = () => {
     [data-tactics-look] [data-enemy-skill][data-em-body="stance"] > :is(span, [data-moo-body]) { animation-name: emStance; }
     [data-tactics-look] [data-enemy-skill][data-em-body="heal"] > :is(span, [data-moo-body]) { animation-name: emHeal; }
     [data-tactics-look] [data-enemy-skill][data-em-body="sway"] > :is(span, [data-moo-body]) { animation-name: emSway; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="toot"] > :is(span, [data-moo-body]) { animation-name: emToot; transform-origin: 50% 80%; }
     [data-tactics-look] [data-moo-stage] > [data-moo-body] { transform-origin: 50% 60%; }
     /* やられ(カワズモーと同じのけぞり) */
     [data-tactics-look] [data-enemy-ring][data-em-idle][data-enemy-hurt] > span, [data-tactics-look] [data-moo-stage][data-enemy-hurt] > [data-moo-body] { animation: kzHurt 520ms ease-out forwards; }
@@ -162667,6 +162683,14 @@ const createAnimationStyle = () => {
     [data-moo-claw] { left: -20%; width: 140%; height: 12px; margin-top: -6px; transform: rotate(-32deg) scaleX(0); transform-origin: 0 50%; border-radius: 6px; opacity: 0;
       background: linear-gradient(180deg, transparent, #dc2626 25%, #fff 45% 55%, #facc15 75%, transparent); box-shadow: 0 0 26px 8px rgba(220,38,38,.8); animation: mooClaw 520ms ease-out both; }
     @keyframes mooClaw { 0% { opacity: 1; transform: rotate(-32deg) scaleX(0); } 40% { opacity: 1; transform: rotate(-32deg) scaleX(1); } 100% { opacity: 0; transform: rotate(-32deg) scaleX(1) scaleY(.2); } }
+    /* 覚醒サンタの超宝屁のガスの雲(緑〜紫)。味方の枠ごとに1つ。中に小さな星と雪 */
+    [data-santa-gas] { position: absolute; width: var(--w); height: calc(var(--w) * .72); margin: calc(var(--w) * -.36) 0 0 calc(var(--w) * -.5); opacity: 0; pointer-events: none;
+      border-radius: 50%; background: radial-gradient(closest-side at 30% 58%, rgba(163,230,53,.95) 35%, rgba(163,230,53,0)), radial-gradient(closest-side at 68% 44%, rgba(192,132,252,.92) 35%, rgba(192,132,252,0)),
+        radial-gradient(closest-side at 50% 72%, rgba(74,222,128,.9) 35%, rgba(74,222,128,0)), radial-gradient(closest-side at 50% 40%, rgba(126,34,206,.7), rgba(126,34,206,0)); animation: santaGas 1s ease-out both; will-change: transform, opacity; }
+    [data-santa-gas] > b { position: absolute; font-size: 20px; line-height: 1; left: 30%; top: 30%; opacity: .9; }
+    [data-santa-gas] > b + b { left: 62%; top: 52%; font-size: 16px; }
+    @keyframes santaGas { 0% { opacity: 0; transform: scale(.3) translateY(10px); } 25% { opacity: 1; } 75% { opacity: .9; transform: scale(1.15) translateY(-4px); } 100% { opacity: 0; transform: scale(1.35) translateY(-14px); } }
+    @media (prefers-reduced-motion: reduce) { [data-santa-gas] { animation: none; display: none; } }
     [data-moo-meteor] { top: -12%; font-size: 64px; opacity: 0; filter: drop-shadow(0 0 16px rgba(251,146,60,1)); animation: mooMeteor 700ms cubic-bezier(.4,0,1,1) both; }
     @keyframes mooMeteor { 0% { opacity: 0; transform: translate(40vw, 0) rotate(-20deg) scale(.6); } 15% { opacity: 1; } 90% { opacity: 1; transform: translate(-30vw, 80vh) rotate(-20deg) scale(1.3); } 100% { opacity: 0; transform: translate(-34vw, 86vh) scale(1.8); } }
     [data-moo-tornado] { left: 0; font-size: 110px; margin-top: -55px; opacity: 0; filter: drop-shadow(0 0 20px rgba(250,204,21,.8)); animation: mooTornado 900ms ease-in-out both; }
