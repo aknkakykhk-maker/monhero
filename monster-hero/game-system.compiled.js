@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ddf4672914c0c915
+// source-sha256: 7d22db584accdedb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -113326,7 +113326,10 @@ const XmasEventScreen = ({
     cardCheckingRef.current = true;
     void xmasCardStarterReady().then(ok => {
       cardCheckingRef.current = false;
-      if (ok) raid.onChallenge(kind, tierIndex, way);else setNotice('バトルカードで挑むには、MFバトルカードのスターターが要ります。HOME の「MFバトルカード」でスターターを受け取ってから挑戦してください');
+      if (ok) raid.onChallenge(kind, tierIndex, way);else setNotice({
+        text: 'バトルカードで挑むには、MFバトルカードのスターターが要ります。「MFバトルカードへ」からスターターを受け取ると、そのままボスに挑めます',
+        go: () => raid.onChallenge(kind, tierIndex, way)
+      });
     });
   };
   const noticeSheet = notice ? React.createElement("div", {
@@ -113344,7 +113347,16 @@ const XmasEventScreen = ({
   }), React.createElement("p", {
     className: "mb-3 text-[13px] font-bold leading-relaxed text-amber-50",
     style: JA_LABEL_STYLE
-  }, jaWrap(notice)), React.createElement("button", {
+  }, jaWrap(typeof notice === 'string' ? notice : notice.text)), typeof notice === 'object' && typeof notice.go === 'function' && React.createElement("button", {
+    type: "button",
+    "data-xmas-event-notice-go": true,
+    onClick: () => {
+      const go = notice.go;
+      setNotice('');
+      go();
+    },
+    className: "mb-2 w-full min-h-[44px] rounded-xl border border-sky-300/70 bg-sky-800 text-[13px] font-black text-white active:scale-95"
+  }, "MFバトルカードへ"), React.createElement("button", {
     type: "button",
     "data-xmas-event-notice-close": true,
     onClick: () => setNotice(''),
@@ -223961,8 +223973,8 @@ const CardBattleScreen = ({
     setRaidDone(null);
     setRaid(raidChallenge);
     if (!save.starter) {
-      setNotice('MFバトルカードのスターターを受け取ると挑めます');
-      if (typeof raidChallenge.onClose === 'function') raidChallenge.onClose('noStarter');
+      setNotice('スターターを受け取ると、そのままボスに挑めます');
+      setView('starter');
       return;
     }
     setDeckPick({
@@ -225593,10 +225605,22 @@ const CardBattleScreen = ({
       db: db,
       result: {
         ...starterOpen,
-        doneLabel: needTutorial ? '練習試合へ' : 'トップへ戻る'
+        doneLabel: raid ? 'ボスに挑む' : needTutorial ? '練習試合へ' : 'トップへ戻る'
       },
       onDone: () => {
         setStarterOpen(null);
+        if (raid) {
+          setDeckPick({
+            next: 'raid',
+            pick: {
+              who: 'raid',
+              level: cardRaidTierOf(raid.tierIndex).level,
+              raid
+            }
+          });
+          setView('deckPick');
+          return;
+        }
         setView('top');
         if (needTutorial) startTutorial();
       }
@@ -225612,7 +225636,12 @@ const CardBattleScreen = ({
     }, React.createElement(ScreenHead, {
       title: "スターターを選ぶ",
       accent: "text-amber-200",
-      onBack: save.starter ? () => setView('top') : onExit,
+      onBack: save.starter ? () => setView('top') : raid ? () => {
+        const rc = raid;
+        setRaid(null);
+        setView('top');
+        if (typeof rc.onClose === 'function') rc.onClose('back');
+      } : onExit,
       note: "最初の1つは無料。選ばなかった2つは、あとでビートPで買えます"
     }), React.createElement("div", {
       className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
