@@ -32,8 +32,8 @@ const XMAS_NOVEL_CAST = Object.freeze([
   { id: 'ichika', name: 'イチーカ', kind: 'monster', art: 'images/monsters/snegurochka.png', face: 'images/monster-icons/face/snegurochka.png' },
   { id: 'mochimaru', name: 'もちまる', kind: 'monster', art: 'images/monsters/mocchi.png', face: 'images/monster-icons/face/mocchi.png' },
   // 謎の客2人(2026-11-26 届いた絵・余白だけ切りそろえた。表情は1枚)。顔は、社長が渡した顔の絵からほかの人と同じ寄り具合に切り出した物(r1126-033)
-  { id: 'kuroba', name: '黒羽', full: '黒羽 宗一郎', kind: 'guest', art: 'images/story-guests/kuroba_stand.png', face: 'images/story-guests/kuroba_face.png', tone: '#3b3f4a' },
-  { id: 'shirase', name: '白瀬', full: '白瀬 雪絵', kind: 'guest', art: 'images/story-guests/shirase_stand.png', face: 'images/story-guests/shirase_face.png', tone: '#5a6a86' },
+  { id: 'kuroba', name: '黒羽', full: '黒羽 宗一郎', kind: 'guest', art: 'images/story-guests/kuroba_full.png', face: 'images/story-guests/kuroba_face.png', tone: '#3b3f4a' },
+  { id: 'shirase', name: '白瀬', full: '白瀬 雪絵', kind: 'guest', art: 'images/story-guests/shirase_full.png', face: 'images/story-guests/shirase_face.png', tone: '#5a6a86' },
 ]);
 // 話し手だけの人(パネルには出ない)
 const XMAS_NOVEL_SPEAKERS_EXTRA = Object.freeze([

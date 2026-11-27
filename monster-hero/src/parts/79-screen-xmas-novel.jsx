@@ -350,7 +350,7 @@ const xmasNovelIsSilhouette = (row) => !!(row && /黒いサンタのシルエッ
 const xmasNovelIsLaugh = (row) => !!(row && /ふふ|あはは|ははは/.test(row.x || ''));
 // ---- 立ち絵の見せ方(r1126-067) ----
 //  寄り(close): 胸から上を大きく / ふだん(normal): 頭から腰 / 引き(far): 全身を小さめ。台本の〔立ち:寄り〕〔立ち:引き〕の印(行 f > 場面 frame > ふだん)。
-//  絵ごとに描かれている範囲が違う(助手は頭〜太もも、謎の客2人は胸から上、モンスターは全身)ので、絵の上から何割の所に胸・腰があるか(chest・waist)と、
+//  絵ごとに描かれている範囲が違う(助手は頭〜太もも、謎の客2人とモンスターは全身)ので、絵の上から何割の所に胸・腰があるか(chest・waist)と、
 //  左右の透明な余白を除いた絵の範囲(l・r)を持つ。文字の箱の上の縁(名札の上)で絵を切って下をぼかすので、箱の裏に体が透けず、名札も手や顔にかからない。
 //  横長の画面で箱が右に寄り重ならないときは、画面の下の縁で切る。絵の縦横の比率は変えない
 const XMAS_NOVEL_FRAMES = Object.freeze(['close', 'normal', 'far']);
@@ -362,8 +362,8 @@ const XMAS_NOVEL_MARKS = Object.freeze({
   momosuke: { chest: 0.62, waist: 0.76, l: 0.12, r: 0.93 },
   kyuko: { chest: 0.6, waist: 0.77, l: 0.28, r: 0.9 },
   erubin: { chest: 0.65, waist: 0.94, l: 0.09, r: 0.76 },
-  kuroba: { chest: 0.74, waist: 1, l: 0, r: 1 },
-  shirase: { chest: 0.72, waist: 1, l: 0, r: 1 },
+  kuroba: { chest: 0.22, waist: 0.42, l: 0.04, r: 0.96 }, // 謎の客2人は全身の絵(r1126-076。胸から上の *_stand.png は事件簿では使わない)
+  shirase: { chest: 0.24, waist: 0.38, l: 0.03, r: 0.97 },
   ichika: { chest: 0.42, waist: 0.66, l: 0.32, r: 0.68 },
   mochimaru: { chest: 0.5, waist: 0.75, l: 0.18, r: 0.82 },
   dra: { chest: 1, waist: 1, l: 0.1, r: 0.9 },
@@ -586,8 +586,9 @@ const XmasNovelBody = ({ who, scene = '', at = 0, bg = null }) => {
   }, []);
   const c = xmasNovelCastOf(who);
   const src = xmasNovelBodySrc(who);
-  const kind = c ? c.kind : '';
-  const bust = kind === 'guest'; // 胸から上の絵
+  // 謎の客2人も全身の絵になったので、倒れ方は助手と同じ(r1126-076)。胸から上の絵の扱い(bust)は、全身の絵が無い客のときだけ
+  const bust = !!(c && c.kind === 'guest' && !/_full\.png$/.test(c.art || ''));
+  const kind = c ? (c.kind === 'guest' && !bust ? 'assistant' : c.kind) : '';
   const pose = XMAS_NOVEL_BODY_POSE[scene] || 'lie';
   const slump = pose === 'slump';
   const sit = pose === 'sit';
