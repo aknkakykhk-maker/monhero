@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f728729f7ca97f0b
+// generated-sha256: 953049e06519845b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -67181,7 +67181,7 @@ const RaidJackPrepScreen = ({ ev = RAID_EVENT_JACK, kind, tierIndex, candidates,
 // 入口は App の openRaidXmas(HOME のイベントの札・デバッグ)。開始時刻まで(RELEASE_FLAGS.raidXmas が偽)は出さない。
 // gameState はレイドと同じ 'RAID_JACK'(バトル・ビート・カードから戻るときに setGameState('RAID_JACK') でここへ帰る)。
 
-// ポスター(いまは「開催予告」の絵の仮。帯の無い本番用の絵が来たら、この1行のファイルだけ差し替える)
+// ポスター(告知用の2枚で確定・台帳 r1126-057。本番用の別の絵は使わない)。横長 1000×500
 const XMAS_EVENT_POSTER_IMG = 'images/events/xmas-2026-event-wide.jpg';
 // 開催中に出す絵。予告の絵には「開催予告」の文字とボスの影が入っているので開催中は出さない(2026-11-26 窓口)。
 //   本番用の絵が届くまでは null にしておき、ペンションの雪景色(事件簿の背景)に題字を重ねた帯で出す
@@ -67600,7 +67600,8 @@ const HomeXmasEventEntry = ({ onOpen, preOpen = false }) => {
   const label = `クリスマスイベント 聖夜の名探偵 ${sub}`;
   return (
     <button type="button" data-home-xmas-entry="banner" className="mh-xmas-entry w-full" onClick={onOpen} aria-label={label} style={{ height: 80 }}>
-      <img className="mh-xmas-entry-art" src={XMAS_EVENT_POSTER_IMG} alt="" style={{ objectPosition: '70% 28%' }} />
+      {/* 告知用ポスター(台帳 r1126-057)の題字は上にあるので、題字の下(時計・人物・黒いサンタの影)を切り抜く。入口の文字と題字が重ならないように */}
+      <img className="mh-xmas-entry-art" src={XMAS_EVENT_POSTER_IMG} alt="" style={{ objectPosition: '70% 50%' }} />
       <span aria-hidden="true" style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, #0b1733f2 0%, #0b1733cc 42%, transparent 72%)' }} />
       <XmasHolly size={24} className="absolute -left-1 -top-1" />
       {sparks.map(([x, y, d], i) => <span key={i} aria-hidden="true" className="mh-xmas-entry-spark" style={{ left: `${x}%`, top: `${y}%`, animationDelay: `${d}s` }} />)}

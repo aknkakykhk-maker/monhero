@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d544e70007cea9eb
+// source-sha256: 8385dc9be5bd31c7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -113506,7 +113506,7 @@ const HomeXmasEventEntry = ({
     src: XMAS_EVENT_POSTER_IMG,
     alt: "",
     style: {
-      objectPosition: '70% 28%'
+      objectPosition: '70% 50%'
     }
   }), React.createElement("span", {
     "aria-hidden": "true",
