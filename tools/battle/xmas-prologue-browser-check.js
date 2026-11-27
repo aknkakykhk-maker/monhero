@@ -4,8 +4,8 @@
 //   node tools/battle/xmas-prologue-browser-check.js
 //   SHOT_DIR=<フォルダ> を付けると、序章を読んでいる所(縦・横)と、読んだあとの一覧の写真を残す
 //
-//   ① 11/28 9:59 … 序章はまだ読めない(公開の印が偽・回想の並びに無い・HOME にイベントの入口が無い)
-//   ② 11/28 10:05(開幕の前)… HOME の入口からイベントページを開き、物語タブの序章の「お話を読む」で読める
+//   ① 11/27 12:59 … 序章はまだ読めない(公開の印が偽・回想の並びに無い・HOME にイベントの入口が無い)
+//   ② 11/27 13:05(開幕の前)… HOME の入口からイベントページを開き、物語タブの序章の「お話を読む」で読める
 //   ③ 帯の行は帯(data-story-banner)で出る・題字は大きな帯・外側の場面はわく無し、ゲームの中は古いゲームの画面のわく・ワトソンくんは顔なし(名前と吹き出しだけ)・助手の顔はクリスマス衣装(santa/face)
 //   ④ 最後まで送ると、一覧の序章が「読んだ」になり、読んだ印(mh_xmas_story_v1 の cleared に xs00)が付く・実行時エラーが無い
 const http = require('http'), path = require('path'), fs = require('fs');
@@ -63,20 +63,20 @@ const CASES = [
   try {
     // ① 公開の前
     {
-      const { ctx, page, errors } = await open('2026-11-28T09:59:00+09:00', CASES[0]);
+      const { ctx, page, errors } = await open('2026-11-27T12:59:00+09:00', CASES[0]);
       await page.waitForTimeout(800);
       const st = await page.evaluate(() => ({ flag: EVENT_REPLAY_RELEASE_FLAGS.xmasStoryPrologue, listed: eventReplayList().some((e) => e.id === 'xmas_story_00'), all: eventReplayAllList().some((e) => e.id === 'xmas_story_00') }));
-      check('① 11/28 9:59: 公開の印が偽で、回想の並びに無い(デバッグの一覧には有る)', st.flag === false && !st.listed && st.all, JSON.stringify(st));
-      check('① 11/28 9:59: HOME にイベントの入口が無い', await page.locator('[data-home-xmas-entry]').count() === 0);
+      check('① 11/27 12:59: 公開の印が偽で、回想の並びに無い(デバッグの一覧には有る)', st.flag === false && !st.listed && st.all, JSON.stringify(st));
+      check('① 11/27 12:59: HOME にイベントの入口が無い', await page.locator('[data-home-xmas-entry]').count() === 0);
       check('① 実行時エラーが無い', errors.length === 0, errors.slice(0, 2).join(' / '));
       await ctx.close();
     }
     // ② 〜 ④ 公開のあと・開幕の前
     for (const vp of CASES) {
-      const { ctx, page, errors } = await open('2026-11-28T10:05:00+09:00', vp);
+      const { ctx, page, errors } = await open('2026-11-27T13:05:00+09:00', vp);
       const shot = async (name) => { if (!SHOT_DIR) return; fs.mkdirSync(SHOT_DIR, { recursive: true }); await page.waitForTimeout(450); await page.screenshot({ path: path.join(SHOT_DIR, `${vp.shot}-${name}.jpg`), type: 'jpeg', quality: 82 }); };
       const flag = await page.evaluate(() => EVENT_REPLAY_RELEASE_FLAGS.xmasStoryPrologue === true && RELEASE_FLAGS.raidXmas === false);
-      check(`② ${vp.label}: 11/28 10:05 は序章の公開の印が真(開幕の印はまだ偽)`, flag);
+      check(`② ${vp.label}: 11/27 13:05 は序章の公開の印が真(開幕の印はまだ偽)`, flag);
       const entry = page.locator('[data-home-xmas-entry]').first();
       await entry.waitFor({ timeout: 10000 }).catch(() => {});
       check(`② ${vp.label}: HOME にイベントの入口がある`, await entry.count() > 0);
@@ -130,7 +130,7 @@ const CASES = [
       check(`③ ${vp.label}: 題字は大きな帯`, bigOk);
       check(`③ ${vp.label}: ワトソンくんは顔なし(名前と吹き出しだけ)`, watsonOk === true);
       check(`③ ${vp.label}: 助手の顔はクリスマス衣装`, santaOk === true);
-      check(`④ ${vp.label}: 最後(${last + 1} 行目)まで送れた`, last + 1 === 40, `${last + 1}`);
+      check(`④ ${vp.label}: 最後(${last + 1} 行目)まで送れた`, last + 1 === 41, `${last + 1}`);
       const ending = page.locator('[data-story-ending]');
       await ending.waitFor({ timeout: 8000 }).catch(() => {});
       await page.waitForTimeout(2500);
