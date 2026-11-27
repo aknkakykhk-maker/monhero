@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ca1b967a017df49c
+// source-sha256: 651f8681a0631dbf
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -22811,6 +22811,14 @@ const storyChunkLines = (text, cap, maxLines) => {
       chunks.splice(i, 1);
     }
   }
+  if (chunks.length > 1 && /[ぁ-んァ-ヶ一-龠々a-zA-Z0-9０-９]/.test(chunks[0].t) && storyTextUnits(chunks[0].t) <= 2) {
+    chunks[1] = {
+      ...chunks[1],
+      t: chunks[0].t + (chunks[1].sp ? ' ' : '') + chunks[1].t,
+      sp: chunks[0].sp
+    };
+    chunks.splice(0, 1);
+  }
   if (chunks.length < 2) return null;
   const unitsOf = t => storyTextUnits(t) + (/[\x21-\x7e]/.test(t) ? 1 : 0) + 0.6 * (String(t).match(/\p{Extended_Pictographic}/gu) || []).length;
   let lines = 0,
@@ -22900,12 +22908,16 @@ const AssistantFace = ({
   }, who.emoji));
 };
 const HELP_NOWRAP_RE = /((?:[A-Za-z0-9∞]+ → )+[A-Za-z0-9∞]+|∞周回)/;
-const helpWrap = x => {
+const helpWrap = (x, max) => {
   if (typeof x !== 'string' || typeof jaWrap !== 'function') return x;
   const parts = x.split(HELP_NOWRAP_RE);
+  const wrapOne = t => typeof XmasNovelWrap === 'function' ? React.createElement(XmasNovelWrap, {
+    text: t,
+    max: max
+  }) : jaWrap(t);
   return React.createElement("span", {
     style: typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : undefined
-  }, parts.length === 1 ? jaWrap(x) : parts.map((t, i) => i % 2 === 1 ? React.createElement("span", {
+  }, parts.length === 1 ? wrapOne(x) : parts.map((t, i) => i % 2 === 1 ? React.createElement("span", {
     key: i,
     "data-help-nowrap": true,
     style: {
@@ -22913,7 +22925,7 @@ const helpWrap = x => {
     }
   }, t) : React.createElement(React.Fragment, {
     key: i
-  }, t ? jaWrap(t) : null)));
+  }, t ? wrapOne(t) : null)));
 };
 const renderHelpBlocks = (blocks, accent) => (blocks || []).map((b, i) => {
   if (b && b.playerFlag && !(typeof helpPlayerFlagOn === 'function' && helpPlayerFlagOn(b.playerFlag))) return null;
@@ -22995,7 +23007,7 @@ const renderHelpBlocks = (blocks, accent) => (blocks || []).map((b, i) => {
     kind: k,
     width: r[2].notes.length > 1 ? 44 : 54,
     height: r[2].notes.length > 1 ? 34 : 42
-  }))), r[0]), React.createElement("span", {
+  }))), helpWrap(r[0], 7)), React.createElement("span", {
     className: "flex-1 text-[11px] text-white leading-relaxed"
   }, helpWrap(r[1])))));
   if (b.t === 'data') {
@@ -23015,7 +23027,7 @@ const renderHelpBlocks = (blocks, accent) => (blocks || []).map((b, i) => {
       className: `flex gap-3 px-4 py-2.5 ${j > 0 ? 'border-t border-white/5' : ''}`
     }, React.createElement("span", {
       className: "shrink-0 w-24 text-[11px] font-black text-slate-400 leading-tight"
-    }, r[0]), React.createElement("span", {
+    }, helpWrap(r[0], 7)), React.createElement("span", {
       className: "flex-1 text-[11px] text-white leading-relaxed"
     }, helpWrap(r[1]))))));
   }
@@ -67766,7 +67778,9 @@ const jaKeepKanaRuns = (s, chunks, segs, {
   }
   return out.join('​');
 };
-const JA_WRAP_NO_BREAK = [/\d{1,4}\/\d{1,2}(?:\/\d{1,2})?(?:[(（][月火水木金土日](?:・祝)?[)）])?/g, /\d{1,2}:\d{2}/g, /聖夜の名探偵|名探偵|エンドヒストリー|手がかり帳|鐘が鳴る夜/g, /黒いサンタ|聖夜のロンド|十三番目の鐘|十二の鐘|招待状|ワトソンくん/g];
+const JA_WRAP_NO_BREAK = [/\d{1,4}\/\d{1,2}(?:\/\d{1,2})?(?:[(（][月火水木金土日](?:・祝)?[)）])?/g, /\d{1,2}:\d{2}/g, /聖夜の名探偵|名探偵|エンドヒストリー|手がかり帳|鐘が鳴る夜/g, /黒いサンタ|聖夜のロンド|十三番目の鐘|十二の鐘|招待状|ワトソンくん|ペンション・シュプール|クリスマス会|呪いのセーブデータ|モンヒロ事件簿/g, /—{2,}|―{2,}|…{2,}/g];
+const JA_WRAP_NAME_KEEP = /ペンション・シュプール|呪いのセーブデータ|聖夜の名探偵/;
+const JA_WRAP_NAME_SPLIT = /(ペンション・シュプール|呪いのセーブデータ|聖夜の名探偵)/;
 const jaWrapUnbreak = marked => {
   if (typeof marked !== 'string' || !marked.includes('​')) return marked;
   const plain = marked.replace(/​/g, '');
@@ -67949,9 +67963,10 @@ const jaWrap = text => {
       whiteSpace: 'nowrap'
     }
   }, t);
+  const names = (t, k) => JA_WRAP_NAME_KEEP.test(t) ? t.split(JA_WRAP_NAME_SPLIT).map((x, j) => j % 2 === 1 ? keep(x, `${k}n${j}`) : x) : t;
   return s.split('\u200B').map((seg, i) => React.createElement(React.Fragment, {
     key: i
-  }, i > 0 && !/^\s/.test(seg) && React.createElement("wbr", null), jaWrapPieces(seg).map(([t, kp], k) => kp ? keep(t, k) : t)));
+  }, i > 0 && !/^\s/.test(seg) && React.createElement("wbr", null), jaWrapPieces(seg).map(([t, kp], k) => kp ? keep(t, k) : names(t, k))));
 };
 const jaWrapParts = (...parts) => parts.map((p, i) => React.createElement(React.Fragment, {
   key: i
@@ -113532,7 +113547,7 @@ const XmasEventScreen = ({
     }, React.createElement(XmasHolly, {
       size: 24
     }), React.createElement("span", {
-      className: "mh-xmas-title"
+      className: "mh-xmas-title whitespace-nowrap"
     }, "聖夜の名探偵")),
     onBack: onBack,
     compact: true,
@@ -113566,7 +113581,7 @@ const XmasEventScreen = ({
       textShadow: '0 1px 3px #000'
     }
   }, "クリスマスイベント"), React.createElement("b", {
-    className: `mh-xmas-title leading-tight ${raidShown ? 'text-[20px]' : 'text-[38px]'}`,
+    className: `mh-xmas-title whitespace-nowrap leading-tight ${raidShown ? 'text-[20px]' : 'text-[38px]'}`,
     style: {
       fontFamily: "'Hiragino Mincho ProN', 'Yu Mincho', serif",
       filter: 'drop-shadow(0 2px 2px #000) drop-shadow(0 0 6px #000a)'
@@ -127740,13 +127755,31 @@ const xmasNovelWrapPlan = (text, max = XMAS_NOVEL_KEEP_MAX) => {
     for (let q = lo + 1; q < hi; q++) {
       if (q === b || spans.some(([x, e]) => q > x && q < e) || /^[、。！？!?」』）)…‥ー]/.test(s.slice(q)) || /[「『（(]$/.test(s.slice(0, q))) continue;
       if (xmasNovelBadBreak(s, q, segAt)) continue;
-      if (!xmasNovelGramBreak(s, q) && !(/[ぁ-ゖ、]$/.test(s.slice(0, q)) && /^[一-龯ァ-ヶ]/.test(s.slice(q)))) continue;
       if (len(lo, q) > max || len(q, hi) > max) continue;
       if (best < 0 || Math.abs(q - b) < Math.abs(best - b)) best = q;
     }
     if (best >= 0) {
       br.delete(b);
       br.add(best);
+    }
+  }
+  {
+    const sorted = [0, ...[...br].sort((x, y) => x - y), s.length];
+    for (let k = 1; k < sorted.length; k++) {
+      const lo = sorted[k - 1],
+        hi = sorted[k];
+      if (len(lo, hi) <= max || /^\s+$/.test(s.slice(lo, hi))) continue;
+      let start = lo,
+        lastOk = -1;
+      for (let q = lo + 1; q < hi; q++) {
+        if (len(start, q) > max) {
+          if (lastOk > start) {
+            br.add(lastOk);
+            start = lastOk;
+          } else break;
+        }
+        if (segAt.has(q) && !xmasNovelBadBreak(s, q, segAt) && !spans.some(([x, e]) => q > x && q < e) && !/^[、。！？!?」』）)…‥ー]/.test(s.slice(q)) && !/[「『（(]$/.test(s.slice(0, q))) lastOk = q;
+      }
     }
   }
   const cuts = [0, ...[...br].sort((a, b) => a - b), s.length];
@@ -275575,7 +275608,9 @@ function MonsterHeroGame() {
           color: '#fed7aa',
           margin: '3px 0'
         }
-      }, "・", x))));
+      }, "・", typeof x === 'string' && typeof XmasNovelWrap === 'function' ? React.createElement(XmasNovelWrap, {
+        text: x
+      }) : x))));
     }), ...rows.map(row => {
       const open = changelogOpenId === row.key;
       const unreadCount = row.entries.filter(entry => unreadHere.has(entry.id)).length;
@@ -275639,7 +275674,9 @@ function MonsterHeroGame() {
           borderColor: '#fdba74',
           marginLeft: 4
         }
-      }, "🎃 開催中"), React.createElement("b", null, c.title), c.image && React.createElement("img", {
+      }, "🎃 開催中"), React.createElement("b", null, typeof c.title === 'string' && typeof XmasNovelWrap === 'function' ? React.createElement(XmasNovelWrap, {
+        text: c.title
+      }) : c.title), c.image && React.createElement("img", {
         "data-changelog-image": true,
         src: c.image,
         alt: `${c.title}のお知らせ`,
@@ -275668,7 +275705,9 @@ function MonsterHeroGame() {
         poster: typeof c.videoPoster === 'string' ? c.videoPoster : undefined
       })), (c.items || []).map((x, j) => React.createElement("p", {
         key: j
-      }, "・", x)), (Array.isArray(c.gallery) ? c.gallery : []).filter(g => g && typeof g.image === 'string' && g.image).map((g, j) => React.createElement("figure", {
+      }, "・", typeof x === 'string' && typeof XmasNovelWrap === 'function' ? React.createElement(XmasNovelWrap, {
+        text: x
+      }) : x)), (Array.isArray(c.gallery) ? c.gallery : []).filter(g => g && typeof g.image === 'string' && g.image).map((g, j) => React.createElement("figure", {
         key: `g${j}`,
         "data-changelog-gallery": true,
         style: {
