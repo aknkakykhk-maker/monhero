@@ -1861,25 +1861,29 @@ function AssistantLifeHomeFaces({ metIds }) {
       const r = rects[f];
       const shown = list.slice(0, 3);
       const extra = list.length - shown.length;
-      const rowW = size + Math.max(0, shown.length - 1) * step + (extra > 0 ? 22 : 0) + 6;
-      const left = r.x + r.w - rowW + 6; // ボタンの右上隅に少しはみ出す
-      const top = r.y - 9;
+      // 2026-11-27 台帳 r1126-073(HOME の作り直し・すぐできる直し3): HOME では顔を並べず、入口の右上の内側に赤い点1つだけを出す
+      //   (顔は助手ライフの中で見せる)。押すと今までどおり助手ライフを開く。顔の印(data-assistant-life-home-face)は見えない形で残す
+      void step;
+      const rowW = 22;
+      const left = r.x + r.w - rowW - 1;
+      const top = r.y + 1;
       const names = list.map(id => { const who = assistantById(id); return who ? who.name : id; }).join('・');
       return (
-        <div key={f} data-assistant-life-home-faces={f} data-assistant-life-home-faces-ids={list.join(',')} className="pointer-events-none fixed" style={{ zIndex: 40, left, top, width: rowW, height: size + 2 }}>
+        <div key={f} data-assistant-life-home-faces={f} data-assistant-life-home-faces-ids={list.join(',')} className="pointer-events-none fixed" style={{ zIndex: 40, left, top, width: rowW, height: rowW }}>
           <button type="button" data-assistant-life-home-badge={f} aria-label={`${names}がいます。助手ライフを開く`} onClick={() => { ASSISTANT_LIFE_STORE.set({ open: true, focus: shown[0] }); }}
-            className="pointer-events-auto flex items-center rounded-full bg-slate-950/70 px-[3px] shadow active:scale-95" style={{ height: size + 2 }}>
-            {shown.map((id, i) => { const who = assistantById(id); if (!who) return null; const w = assistantLifeWhereOf(life, id); const lonely = w && w.reason === 'lonely';
+            className="pointer-events-auto relative flex items-center justify-center rounded-full active:scale-95" style={{ width: rowW, height: rowW }}>
+            <span data-assistant-life-home-dot aria-hidden="true" className="block rounded-full border-2 border-white bg-rose-500 shadow" style={{ width: 14, height: 14 }}/>
+            <span className="sr-only">{shown.map((id, i) => { const who = assistantById(id); if (!who) return null; const w = assistantLifeWhereOf(life, id); const lonely = w && w.reason === 'lonely';
               const spent = f === 'card' && !!assistantLifeCardSpent(id);
               return (
                 <span key={id} data-assistant-life-home-face={id} data-assistant-life-home-face-spent={spent ? '1' : undefined} className="relative shrink-0 rounded-full" style={{ marginLeft: i ? -8 : 0, boxShadow: lonely ? '0 0 0 1.5px #fbbf24,0 0 6px #fbbf24' : after.has(id) ? '0 0 0 1.5px #7dd3fc' : '0 0 0 1.5px #fff' }}>
                   <span className="block" style={spent ? { filter: 'grayscale(.6) brightness(.8)' } : undefined}><AssistantFace who={who} size={size} accent={who.accent}/></span>
                   {spent && <AssistantLifeSpentMark size={size}/>}
                 </span>); })}
-            {extra > 0 && <span data-assistant-life-home-faces-extra={extra} className="shrink-0 rounded-full bg-slate-100 px-1 font-black text-slate-900 shadow" style={{ marginLeft: 2, fontSize: 9, lineHeight: '14px' }}>+{extra}</span>}
+            {extra > 0 && <span data-assistant-life-home-faces-extra={extra} className="shrink-0 rounded-full bg-slate-100 px-1 font-black text-slate-900 shadow" style={{ marginLeft: 2, fontSize: 9, lineHeight: '14px' }}>+{extra}</span>}</span>
           </button>
         </div>); })}
-    {rects.card && cardUp && <span data-assistant-life-home-card-up className="pointer-events-none fixed rounded-full bg-amber-300 font-black text-slate-950 shadow" style={{ zIndex: 40, left: Math.max(2, rects.card.x - 4), top: rects.card.y - 8, fontSize: 9, lineHeight: '15px', padding: '0 5px' }}>UP</span>}
+    {rects.card && cardUp && <span data-assistant-life-home-card-up className="pointer-events-none fixed rounded-full bg-amber-300 font-black text-slate-950 shadow" style={{ zIndex: 40, left: rects.card.x + 4, top: rects.card.y + 4, fontSize: 11, lineHeight: 1.35, padding: '2px 7px', border: '1px solid #fff3c4' }}>UP</span>}
     {rects.life && typeof AssistantLifeFriendHomeBadge === 'function' && <AssistantLifeFriendHomeBadge rect={rects.life} dockTop={rects.__dockTop}/>}
   </>);
 }

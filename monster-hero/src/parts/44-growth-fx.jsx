@@ -771,11 +771,13 @@ const GrowthFxLayer = ({ screen, load }) => {
   const atHome = screen === 'HOME' && !domHold.monsuc;
   // Lvアップを貯めているあいだも、ほかの全面(アイテムのカードなど)は先に出す
   const sheet = sheets.find(s => growthFxSheetReady(s, vis, atHome)) || null;
+  // HOME では小さい札は1枚だけ(2026-11-27 台帳 r1126-073・すぐできる直し8)。左右の下に2〜3枚並ぶと端が散らかった。残りは前の札が消えたあとに出る
+  const smallMax = atHome ? 1 : GROWTH_FX_SMALL_MAX;
   return (
     <>
-      {!holdAll && !sheet && small.length > 0 && <GrowthFxChipsBox level={level} count={Math.min(small.length, GROWTH_FX_SMALL_MAX)}>
+      {!holdAll && !sheet && small.length > 0 && <GrowthFxChipsBox level={level} count={Math.min(small.length, smallMax)}>
         {/* 文の一行の札(裏クイックの結果)を先頭に。狭い画面で1枚だけ出す形(one)でも、結果が後ろに隠れない */}
-        {[...small].sort((a, b) => (b.text ? 1 : 0) - (a.text ? 1 : 0)).slice(0, GROWTH_FX_SMALL_MAX).map(c => <GrowthFxChip key={c.id} chip={c} level={level} held={false}/>)}
+        {[...small].sort((a, b) => (b.text ? 1 : 0) - (a.text ? 1 : 0)).slice(0, smallMax).map(c => <GrowthFxChip key={c.id} chip={c} level={level} held={false}/>)}
       </GrowthFxChipsBox>}
       {sheet && (sheet.tier === 'level'
         ? <GrowthFxLevelUp key={sheet.id} sheet={sheet} level={level} onClose={() => growthFxDropSheet(sheet.id)}/>
