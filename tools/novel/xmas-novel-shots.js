@@ -103,8 +103,8 @@ const SHOTS_077 = [];
   SHOTS_077.push({ name: `${name}-tate`, row, side: 2, label: `${label}(縦)` });
   SHOTS_077.push({ name: `${name}-yoko`, row, side: 2, land: true, label: `${label}(横)` });
 });
-SHOTS_077.push({ name: '35-card-tate', row: 'OUT-O2-8', side: 2, tap: 3, label: 'エンドの札(縦)' });
-SHOTS_077.push({ name: '35-card-yoko', row: 'OUT-O2-8', side: 2, tap: 3, land: true, label: 'エンドの札(横)' });
+SHOTS_077.push({ name: '35-card-tate', row: 'O2-5', side: 2, tap: 14, label: 'エンドの札(縦)' });
+SHOTS_077.push({ name: '35-card-yoko', row: 'O2-5', side: 2, tap: 14, land: true, label: 'エンドの札(横)' });
 SHOTS_077.push({ name: '36-history', history: true, endings: ALL_ENDS, label: 'エンドヒストリー(16本・全部見たあと)' });
 SHOTS_077.push({ name: '37-a7-atsu', row: '7-2-1', side: 1, label: 'あつ派 第7章は A7 なしで推理へ(比べ用)' });
 // 亡くなっているのが見つかる場面のシルエット(r1126-065)。縦と横で撮る(land: 横 844×390)
