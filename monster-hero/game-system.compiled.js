@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ecb0dcdb845bf700
+// source-sha256: ca1b967a017df49c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -16265,9 +16265,61 @@ const changelogEventLive = (entry, nowMs = Date.now()) => {
   if (Number.isFinite(pinUntil) && nowMs >= pinUntil) return false;
   return Number.isFinite(until) && nowMs < until && (!Number.isFinite(from) || nowMs >= from);
 };
+const changelogEventPeriod = entry => {
+  const ms = value => typeof value === 'string' ? Date.parse(value) : NaN;
+  let from = ms(entry && entry.eventStartAt),
+    until = ms(entry && entry.eventEndAt);
+  if (entry && entry.type === 'event' && entry.assistantNotice) {
+    if (!Number.isFinite(from)) from = ms(entry.assistantNotice.notifyFrom || entry.visibleFrom);
+    if (!Number.isFinite(until) && !entry.pinUntil) until = ms(entry.assistantNotice.notifyUntil);
+  } else if (entry && entry.pinTop && typeof entry.pinTop === 'object' && entry.pinTop.until) {
+    if (!Number.isFinite(from)) from = ms(entry.visibleFrom);
+    if (!Number.isFinite(until)) until = ms(entry.pinTop.until);
+  }
+  return {
+    from: Number.isFinite(from) ? from : NaN,
+    until: Number.isFinite(until) ? until : NaN
+  };
+};
+const changelogEventTimeLabel = (ms, isEnd = false) => {
+  if (!Number.isFinite(ms)) return '';
+  const shown = isEnd && ms % 3600000 === 0 ? ms - 60000 : ms;
+  const d = new Date(shown + 9 * 3600000);
+  return `${d.getUTCMonth() + 1}/${d.getUTCDate()}(${'日月火水木金土'[d.getUTCDay()]}) ${d.getUTCHours()}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
+};
+const changelogEventPeriodLabel = entry => {
+  const {
+    from,
+    until
+  } = changelogEventPeriod(entry);
+  return Number.isFinite(from) && Number.isFinite(until) ? `${changelogEventTimeLabel(from)} 〜 ${changelogEventTimeLabel(until, true)}` : '';
+};
+const changelogEventRemainLabel = (entry, nowMs = Date.now()) => {
+  const {
+    from,
+    until
+  } = changelogEventPeriod(entry);
+  const upcoming = changelogEventUpcoming(entry, nowMs);
+  const target = upcoming ? from : until;
+  if (!Number.isFinite(target) || target <= nowMs) return '';
+  const left = target - nowMs;
+  const text = left >= 86400000 ? `あと${Math.floor(left / 86400000)}日` : left >= 3600000 ? `あと${Math.floor(left / 3600000)}時間` : `あと${Math.max(1, Math.ceil(left / 60000))}分`;
+  return upcoming ? `開幕まで${text}` : text;
+};
+const changelogEventListTitle = entry => {
+  if (entry && typeof entry.listTitle === 'string' && entry.listTitle) return entry.listTitle;
+  if (entry && typeof entry.pinTitle === 'string' && entry.pinTitle) return entry.pinTitle;
+  return String(entry && entry.title || '').replace(/^【[^】]*】/, '').replace(/\s*(が|を)?(はじまりました|始まりました|開催します|開催)[!！]?$/, '').trim();
+};
 const changelogPinnedEntries = (nowMs = Date.now()) => {
   const live = CHANGELOG_ENTRIES.filter(entry => changelogEventLive(entry, nowMs));
-  return [...live.filter(entry => !changelogEventUpcoming(entry, nowMs)), ...live.filter(entry => changelogEventUpcoming(entry, nowMs))];
+  const by = key => (a, b) => {
+    const x = changelogEventPeriod(a)[key],
+      y = changelogEventPeriod(b)[key];
+    if (Number.isFinite(x) && Number.isFinite(y)) return x - y;
+    return Number.isFinite(x) ? -1 : Number.isFinite(y) ? 1 : 0;
+  };
+  return [...live.filter(entry => !changelogEventUpcoming(entry, nowMs)).sort(by('until')), ...live.filter(entry => changelogEventUpcoming(entry, nowMs)).sort(by('from'))];
 };
 const changelogSafeLink = link => {
   const url = link && typeof link.url === 'string' ? link.url.trim() : '';
@@ -127628,6 +127680,23 @@ const xmasNovelGramBreak = (s, i) => {
   return /て$/.test(b) && /^[^るたはぁぃぅぇぉっゃゅょー]/.test(a) || /[A-Za-z0-9０-９ァ-ヶー」』）)一-龯々][はがをにもへとでのや]$/.test(b) || /^[はがをにもへのとや]/.test(a) && /[ぁ-ゖー]{2}$/.test(b) && !/[はがをにもへ]$/.test(b) || /で$/.test(b) && /^[^すしきもはるぁぃぅぇぉっゃゅょー]/.test(a) || /(?:から|まで|けど|ので|のに|ても|でも|には|では|とは|って|たら|れば|ながら|けれど|より|だけ|ほど|など|ように|ような|という|か|を)$/.test(b) || /^(?:です|でし|でしょ|だっ|だった|だよ|だね|だろ|じゃ|ように|ような|こと|もの|ため|わけ|はず|べき|かも|かな|なの|なん|ちゃん|くん|さん|ん[だでじ]|の(?:た|に|で|だ|か))/.test(a) || /[くし]$/.test(b) && /^(?:な[るりっられ]|し[たてよま])/.test(a) || /^[おご]/.test(a) && /[ぁ-ゖ一-龯]/.test(s[i + 1] || '');
 };
 const xmasNovelIsKana = (s, i) => /[ぁ-ゖゝゞ]/.test(s[i] || '') || s[i] === 'ー' && i > 0 && /[ぁ-ゖ]/.test(s[i - 1]);
+let _xmasNovelSeg;
+const xmasNovelSegments = s => {
+  const m = new Map();
+  try {
+    if (_xmasNovelSeg === undefined) _xmasNovelSeg = typeof Intl !== 'undefined' && Intl.Segmenter ? new Intl.Segmenter('ja', {
+      granularity: 'word'
+    }) : null;
+    if (_xmasNovelSeg) for (const x of _xmasNovelSeg.segment(s)) m.set(x.index, x.segment);
+  } catch (e) {}
+  return m;
+};
+const xmasNovelBadBreak = (s, b, segAt) => {
+  if (segAt && segAt.size && !segAt.has(b)) return true;
+  if (xmasNovelIsKana(s, b - 1) && xmasNovelIsKana(s, b) && !xmasNovelGramBreak(s, b)) return true;
+  const w = segAt && segAt.get(b);
+  return /[一-龯々ァ-ヶー」』）)A-Za-z0-9０-９]$/.test(s.slice(0, b)) && !!w && /^(?:の|は|が|を|に|へ|と|で|も|や|から|まで|より)$/.test(w);
+};
 const XMAS_NOVEL_PLAN_CACHE = new Map();
 const xmasNovelWrapPlan = (text, max = XMAS_NOVEL_KEEP_MAX) => {
   const s = String(text ?? '');
@@ -127656,8 +127725,9 @@ const xmasNovelWrapPlan = (text, max = XMAS_NOVEL_KEEP_MAX) => {
   for (const re of XMAS_NOVEL_KEEP_RES) for (const m of s.matchAll(re)) if (!/^[「『【]/.test(m[0]) || [...m[0]].length <= max) spans.push([m.index, m.index + m[0].length]);
   for (const w of xmasNovelKeepWords()) if ([...w].length <= max) for (let i = s.indexOf(w); i >= 0; i = s.indexOf(w, i + 1)) spans.push([i, i + w.length]);
   for (const b of [...br]) if (b <= 0 || b >= s.length || spans.some(([a, e]) => b > a && b < e)) br.delete(b);
+  const segAt = xmasNovelSegments(s);
   for (const b of [...br].sort((x, y) => x - y)) {
-    if (!(xmasNovelIsKana(s, b - 1) && xmasNovelIsKana(s, b)) || xmasNovelGramBreak(s, b)) continue;
+    if (!xmasNovelBadBreak(s, b, segAt)) continue;
     const sorted = [0, ...[...br].sort((x, y) => x - y), s.length];
     const k = sorted.indexOf(b),
       lo = sorted[k - 1],
@@ -127669,7 +127739,7 @@ const xmasNovelWrapPlan = (text, max = XMAS_NOVEL_KEEP_MAX) => {
     let best = -1;
     for (let q = lo + 1; q < hi; q++) {
       if (q === b || spans.some(([x, e]) => q > x && q < e) || /^[、。！？!?」』）)…‥ー]/.test(s.slice(q)) || /[「『（(]$/.test(s.slice(0, q))) continue;
-      if (xmasNovelIsKana(s, q - 1) && xmasNovelIsKana(s, q) && !xmasNovelGramBreak(s, q)) continue;
+      if (xmasNovelBadBreak(s, q, segAt)) continue;
       if (!xmasNovelGramBreak(s, q) && !(/[ぁ-ゖ、]$/.test(s.slice(0, q)) && /^[一-龯ァ-ヶ]/.test(s.slice(q)))) continue;
       if (len(lo, q) > max || len(q, hi) > max) continue;
       if (best < 0 || Math.abs(q - b) < Math.abs(best - b)) best = q;
@@ -254898,10 +254968,12 @@ function MonsterHeroGame() {
   const {
     changelogUnreadIds,
     changelogUnread,
-    changelogPinnedIds
+    changelogPinnedIds,
+    changelogEventCards
   } = useMemo(() => {
     const changelogSeenAnyTab = new Set(CHANGELOG_TYPES.flatMap(type => changelogSeen[type] || []));
-    const pinnedIds = changelogPinnedEntries().map(entry => entry.id);
+    const eventCards = changelogPinnedEntries();
+    const pinnedIds = eventCards.map(entry => entry.id);
     const pinnedSet = new Set(pinnedIds);
     const unreadIds = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, CHANGELOG_IDS_BY_TYPE[type].filter(id => !changelogSeenAnyTab.has(id) && !pinnedSet.has(id))]));
     unreadIds.event = pinnedIds.filter(id => !changelogSeenAnyTab.has(id));
@@ -254909,28 +254981,32 @@ function MonsterHeroGame() {
     return {
       changelogUnreadIds: unreadIds,
       changelogUnread: unread,
-      changelogPinnedIds: pinnedSet
+      changelogPinnedIds: pinnedSet,
+      changelogEventCards: eventCards
     };
   }, [changelogSeen, showChangelog]);
   const hasUnreadChangelog = changelogUnread.update || changelogUnread.issue || changelogUnread.event;
+  const markChangelogEventSeen = id => {
+    if (!changelogUnreadIds.event.includes(id)) return;
+    const entry = CHANGELOG_ENTRIES.find(e => e.id === id);
+    if (!entry) return;
+    const tab = CHANGELOG_ISSUE_TAB_TYPES.includes(entry.type) ? 'issue' : 'update';
+    const next = Array.from(new Set([...(changelogSeen[tab] || []).filter(x => CHANGELOG_ALL_IDS.has(x)), id]));
+    storeSet(`mh_changelog_seen_ids_${tab}`, next, false);
+    setChangelogSeen(prev => ({
+      ...prev,
+      [tab]: next
+    }));
+  };
+  const [changelogClock, setChangelogClock] = useState(() => Date.now());
+  useEffect(() => {
+    if (!showChangelog || changelogTab !== 'event') return undefined;
+    setChangelogClock(Date.now());
+    const timer = setInterval(() => setChangelogClock(Date.now()), 30000);
+    return () => clearInterval(timer);
+  }, [showChangelog, changelogTab]);
   const markChangelogTabSeen = type => {
     if (type === 'event') {
-      if (!changelogUnreadIds.event.length) return;
-      const byTab = {};
-      CHANGELOG_ENTRIES.forEach(entry => {
-        if (!changelogUnreadIds.event.includes(entry.id)) return;
-        const tab = CHANGELOG_ISSUE_TAB_TYPES.includes(entry.type) ? 'issue' : 'update';
-        (byTab[tab] = byTab[tab] || []).push(entry.id);
-      });
-      const next = {};
-      Object.keys(byTab).forEach(tab => {
-        next[tab] = Array.from(new Set([...(changelogSeen[tab] || []).filter(id => CHANGELOG_ALL_IDS.has(id)), ...byTab[tab]]));
-        storeSet(`mh_changelog_seen_ids_${tab}`, next[tab], false);
-      });
-      setChangelogSeen(prev => ({
-        ...prev,
-        ...next
-      }));
       return;
     }
     const ids = CHANGELOG_IDS_BY_TYPE[type].filter(id => !changelogPinnedIds.has(id));
@@ -275296,10 +275372,14 @@ function MonsterHeroGame() {
     "aria-pressed": changelogTab === t.key,
     onClick: () => selectChangelogTab(t.key),
     className: changelogTab === t.key ? 'active' : ''
-  }, t.label, changelogUnread[t.key] && React.createElement("em", {
+  }, t.label, changelogUnread[t.key] && (t.key === 'event' ? React.createElement("em", {
+    className: "mh-unread-badge",
+    "data-changelog-event-unread": changelogUnreadIds.event.length,
+    "aria-label": `まだ開いていないイベント${changelogUnreadIds.event.length}件`
+  }, changelogUnreadIds.event.length) : React.createElement("em", {
     className: "mh-unread-badge",
     "aria-label": "未読あり"
-  }, "!")))), React.createElement("div", {
+  }, "!"))))), React.createElement("div", {
     className: "mh-changelog-list",
     "data-changelog-list": true
   }, CHANGELOG_ENTRIES.length === 0 ? React.createElement("p", {
@@ -275309,95 +275389,194 @@ function MonsterHeroGame() {
     const rows = changelogTab === 'event' ? [] : changelogRowsOfTab(changelogTab);
     const unreadHere = new Set(changelogUnreadIds[changelogTab] || []);
     let shownDay = null;
-    const pinnedEvents = changelogTab === 'event' ? changelogPinnedEntries() : [];
+    const pinnedEvents = changelogTab === 'event' ? changelogEventCards : [];
     if (changelogTab === 'event' && pinnedEvents.length === 0) return React.createElement("p", {
       className: "mh-changelog-empty",
       "data-changelog-event-empty": true
     }, "いま開催中・開催予定のイベントはありません。");
-    return [...pinnedEvents.map(c => React.createElement("details", {
-      key: `pinned-${c.id}`,
-      "data-changelog-pinned": true,
-      className: "mh-changelog-pinned",
-      style: {
-        margin: '0 0 10px',
-        border: '2px solid #fb923c',
-        borderRadius: 16,
-        background: 'linear-gradient(135deg,#431407,#3b0764)',
-        padding: '8px 10px'
-      }
-    }, React.createElement("summary", {
-      style: {
-        cursor: 'pointer',
-        listStyle: 'none',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-        fontWeight: 900,
-        fontSize: 13,
-        color: '#ffedd5'
-      }
-    }, React.createElement("span", {
-      "data-changelog-pinned-badge": true,
-      style: {
-        background: '#f97316',
-        color: '#1c1917',
-        borderRadius: 999,
-        padding: '1px 8px',
-        fontSize: 11,
-        flexShrink: 0
-      }
-    }, changelogEventUpcoming(c) ? '📅 開催予定' : `${typeof c.pinEmoji === 'string' && c.pinEmoji ? c.pinEmoji : '🎉'} 開催中`), React.createElement("span", {
-      "data-changelog-pinned-title": true,
-      style: {
-        flex: 1,
-        minWidth: 0,
-        lineHeight: 1.3,
-        wordBreak: 'keep-all',
-        overflowWrap: 'anywhere'
-      }
-    }, typeof c.pinTitle === 'string' && c.pinTitle ? c.pinTitle : String(c.title || '').replace(/^【[^】]*】/, '').replace(/を開催(します)?$/, '')), React.createElement("small", {
-      style: {
-        flexShrink: 0,
-        fontSize: 10,
-        color: '#fdba74'
-      }
-    }, "詳細 ▼")), c.image && React.createElement("img", {
-      "data-changelog-pinned-image": true,
-      src: c.image,
-      alt: `${c.title}のお知らせ`,
-      onError: e => {
-        e.currentTarget.style.display = 'none';
-      },
-      loading: "lazy",
-      decoding: "async",
-      style: {
-        width: '100%',
-        borderRadius: 12,
-        margin: '8px 0 4px'
-      }
-    }), typeof c.video === 'string' && c.video && React.createElement("figure", {
-      "data-changelog-pinned-video": true,
-      style: {
-        margin: '6px 0'
-      }
-    }, React.createElement("figcaption", {
-      style: {
-        fontWeight: 900,
-        fontSize: 12,
-        color: '#ffedd5',
-        margin: '0 0 4px'
-      }
-    }, "▶ 予告動画"), React.createElement(ChangelogVideo, {
-      src: c.video,
-      poster: typeof c.videoPoster === 'string' ? c.videoPoster : undefined
-    })), (c.items || []).map((x, j) => React.createElement("p", {
-      key: j,
-      style: {
-        fontSize: 12,
-        color: '#fed7aa',
-        margin: '3px 0'
-      }
-    }, "・", x)))), ...rows.map(row => {
+    const eventUnread = new Set(changelogUnreadIds.event || []);
+    return [...pinnedEvents.map(c => {
+      const upcoming = changelogEventUpcoming(c, changelogClock);
+      const period = changelogEventPeriodLabel(c);
+      const remain = changelogEventRemainLabel(c, changelogClock);
+      const isNew = eventUnread.has(c.id);
+      const banner = typeof c.image === 'string' && c.image ? c.image : '';
+      const listTitle = changelogEventListTitle(c);
+      return React.createElement("details", {
+        key: `pinned-${c.id}`,
+        "data-changelog-pinned": true,
+        "data-changelog-event-new": isNew ? '1' : '0',
+        className: "mh-changelog-pinned",
+        onToggle: e => {
+          if (e.currentTarget.open) markChangelogEventSeen(c.id);
+        },
+        style: {
+          margin: '0 0 10px',
+          border: `2px solid ${isNew ? '#f87171' : '#fb923c'}`,
+          borderRadius: 16,
+          background: 'linear-gradient(135deg,#431407,#3b0764)',
+          padding: banner ? 0 : '8px 10px',
+          overflow: 'hidden'
+        }
+      }, React.createElement("summary", {
+        "aria-label": `${listTitle}${upcoming ? '(開催予定)' : '(開催中)'}${isNew ? '・未読' : ''}`,
+        style: {
+          cursor: 'pointer',
+          listStyle: 'none',
+          display: 'block',
+          fontWeight: 900,
+          color: '#ffedd5'
+        }
+      }, banner && React.createElement("span", {
+        style: {
+          position: 'relative',
+          display: 'block'
+        }
+      }, React.createElement("img", {
+        "data-changelog-pinned-banner": true,
+        src: banner,
+        alt: "",
+        "aria-hidden": "true",
+        onError: e => {
+          e.currentTarget.style.display = 'none';
+        },
+        loading: "lazy",
+        decoding: "async",
+        style: {
+          display: 'block',
+          width: '100%',
+          aspectRatio: '3 / 1',
+          maxHeight: 'min(110px, 22vh)',
+          objectFit: 'cover',
+          objectPosition: typeof c.bannerPos === 'string' && c.bannerPos ? c.bannerPos : '50% 35%'
+        }
+      }), isNew && React.createElement("em", {
+        "data-changelog-event-new-mark": true,
+        style: {
+          position: 'absolute',
+          top: 6,
+          left: 6,
+          fontStyle: 'normal',
+          background: '#ef4444',
+          color: '#fff',
+          borderRadius: 999,
+          padding: '1px 8px',
+          fontSize: 11,
+          boxShadow: '0 2px 6px rgba(0,0,0,.5)'
+        }
+      }, "NEW")), React.createElement("span", {
+        style: {
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          padding: banner ? '6px 10px 0' : 0,
+          fontSize: 13
+        }
+      }, React.createElement("span", {
+        "data-changelog-pinned-badge": true,
+        style: {
+          background: upcoming ? '#38bdf8' : '#f97316',
+          color: '#1c1917',
+          borderRadius: 999,
+          padding: '1px 8px',
+          fontSize: 11,
+          flexShrink: 0
+        }
+      }, changelogEventUpcoming(c) ? '📅 開催予定' : `${typeof c.pinEmoji === 'string' && c.pinEmoji ? c.pinEmoji : '🎉'} 開催中`), React.createElement("span", {
+        "data-changelog-pinned-title": true,
+        style: {
+          flex: 1,
+          minWidth: 0,
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          lineHeight: 1.4
+        }
+      }, listTitle), !banner && isNew && React.createElement("em", {
+        "data-changelog-event-new-mark": true,
+        style: {
+          fontStyle: 'normal',
+          background: '#ef4444',
+          color: '#fff',
+          borderRadius: 999,
+          padding: '1px 7px',
+          fontSize: 10,
+          flexShrink: 0
+        }
+      }, "NEW")), React.createElement("span", {
+        style: {
+          display: 'flex',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '2px 8px',
+          padding: banner ? '3px 10px 8px' : '4px 0 0',
+          fontSize: 11,
+          fontWeight: 800,
+          color: '#fdba74'
+        }
+      }, period && React.createElement("span", {
+        "data-changelog-event-period": true,
+        style: {
+          whiteSpace: 'nowrap'
+        }
+      }, period), remain && React.createElement("span", {
+        "data-changelog-event-remain": true,
+        style: {
+          whiteSpace: 'nowrap',
+          background: 'rgba(0,0,0,.35)',
+          color: upcoming ? '#bae6fd' : '#fde68a',
+          borderRadius: 999,
+          padding: '0 7px'
+        }
+      }, remain), React.createElement("small", {
+        style: {
+          marginLeft: 'auto',
+          fontSize: 10,
+          color: '#fdba74',
+          whiteSpace: 'nowrap'
+        }
+      }, "詳細 ▼"))), React.createElement("div", {
+        style: {
+          padding: banner ? '0 10px 8px' : 0
+        }
+      }, c.image && React.createElement("img", {
+        "data-changelog-pinned-image": true,
+        src: c.image,
+        alt: `${c.title}のお知らせ`,
+        onError: e => {
+          e.currentTarget.style.display = 'none';
+        },
+        loading: "lazy",
+        decoding: "async",
+        style: {
+          width: '100%',
+          borderRadius: 12,
+          margin: '8px 0 4px'
+        }
+      }), typeof c.video === 'string' && c.video && React.createElement("figure", {
+        "data-changelog-pinned-video": true,
+        style: {
+          margin: '6px 0'
+        }
+      }, React.createElement("figcaption", {
+        style: {
+          fontWeight: 900,
+          fontSize: 12,
+          color: '#ffedd5',
+          margin: '0 0 4px'
+        }
+      }, "▶ 予告動画"), React.createElement(ChangelogVideo, {
+        src: c.video,
+        poster: typeof c.videoPoster === 'string' ? c.videoPoster : undefined
+      })), (c.items || []).map((x, j) => React.createElement("p", {
+        key: j,
+        style: {
+          fontSize: 12,
+          color: '#fed7aa',
+          margin: '3px 0'
+        }
+      }, "・", x))));
+    }), ...rows.map(row => {
       const open = changelogOpenId === row.key;
       const unreadCount = row.entries.filter(entry => unreadHere.has(entry.id)).length;
       const kinds = [];

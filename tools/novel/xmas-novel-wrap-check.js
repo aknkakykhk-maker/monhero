@@ -18,7 +18,8 @@
 const fs = require('fs');
 const path = require('path');
 const ROOT = path.resolve(__dirname, '..', '..');
-const P = (f) => fs.readFileSync(path.join(ROOT, 'monster-hero', f), 'utf8');
+// 本体の部品は名前だけで読む(run-checks --changed が「このファイルを名指しで読む検査」として選ぶ。台本を足したときにも回る)
+const P = (f) => fs.readFileSync(path.join(ROOT, 'monster-hero/src/parts', f), 'utf8');
 const argv = process.argv.slice(2);
 const BEFORE = argv.includes('--before');
 const VERBOSE = !!process.env.NV_WRAP_VERBOSE;
@@ -26,16 +27,16 @@ let failed = 0;
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
 
 // 部品(41-screen-ui.jsx の jaWrapPoints まわり)を取り出す。ja-wrap-lines-check.js と同じ切り出し方
-const ui = P('src/parts/41-screen-ui.jsx');
+const ui = P('41-screen-ui.jsx');
 const uiSrc = ui.slice(ui.indexOf('let _jaSegmenter'), ui.indexOf('const jaWrap ='));
-const nv = P('src/parts/79-screen-xmas-novel.jsx');
+const nv = P('79-screen-xmas-novel.jsx');
 const A = '// ==== 改行の位置(台帳 r1126-071)ここから', B = '// ==== 改行の位置ここまで ====';
 const nvSrc = nv.includes(A) && nv.includes(B) ? nv.slice(nv.indexOf(A), nv.indexOf(B)) : '';
 check('事件簿の改行の部品(XmasNovelWrap の前段)を取り出せた', /xmasNovelWrapPlan =/.test(nvSrc));
 const cssM = nv.match(/const XMAS_NOVEL_CSS = `([\s\S]*?)`;/);
 check('事件簿の見た目(XMAS_NOVEL_CSS)を取り出せた', !!cssM);
-const scriptSrc = P('src/parts/79-xmas-novel-script.jsx');
-const engine = P('src/parts/79-xmas-novel-engine.jsx');
+const scriptSrc = P('79-xmas-novel-script.jsx');
+const engine = P('79-xmas-novel-engine.jsx');
 const castM = engine.match(/const XMAS_NOVEL_CAST = Object\.freeze\(\[[\s\S]*?\]\);/);
 const S = new Function(`${scriptSrc}\nreturn XMAS_NOVEL_SCRIPT;`)();
 const PLAYER = 'ブリーダー';
@@ -76,7 +77,47 @@ for (const sc of S.scenes) {
   }
 }
 for (const c of S.chapters || []) if (c.title) add('chaptercard', '題', c.title, `${c.id} 章の札`);
+// 名前の札(話し手の名前。台本の w の人と、名前だけの話し手 n)
+const castNames = castM ? new Function(`${castM[0]}\nreturn XMAS_NOVEL_CAST;`)().map((x) => x.name) : [];
+for (const n of new Set([...castNames, ...S.scenes.flatMap((sc) => (sc.rows || []).map((r) => r.n).filter(Boolean))])) add('nametag', '名前の札', n, `名前の札 ${n}`);
 check('台本の文を集められた', jobs.length > 2000, `${jobs.length}本(縦・横でそれぞれ描く)`);
+
+// ① 幅によらない点検: 部品が「折ってよい」とした所を全部、ブラウザを使わずに同じ決まりで見る(どの画面の幅でも、折れうる所はここだけ)
+{
+  const XMAS_NOVEL_CAST_ = castM ? new Function(`${castM[0]}\nreturn XMAS_NOVEL_CAST;`)() : [];
+  const api = new Function('XMAS_NOVEL_SCRIPT', 'XMAS_NOVEL_CAST', `${uiSrc}\n${nvSrc}\nreturn { xmasNovelWrapPlan, xmasNovelKeepWords, XMAS_NOVEL_KEEP_RES, xmasNovelGramBreak, xmasNovelIsKana };`)(S, XMAS_NOVEL_CAST_);
+  const seg = new Intl.Segmenter('ja', { granularity: 'word' });
+  const P1 = /^(?:の|は|が|を|に|へ|と|で|も|や|から|まで|より)$/;
+  const bad = []; let points = 0;
+  for (const j of jobs) {
+    const max = ['endcard', 'titlecard', 'chaptercard'].includes(j.place) ? 10 : undefined;
+    const plan = api.xmasNovelWrapPlan(j.text, max);
+    const s = plan.map((p) => p.t).join('');
+    if (s !== j.text) { bad.push(`${j.where}: 字が変わった`); continue; }
+    const segs = [...seg.segment(s)], edges = new Set([0, s.length]); segs.forEach((x) => { edges.add(x.index); edges.add(x.index + x.segment.length); });
+    const spans = [];
+    for (const re of api.XMAS_NOVEL_KEEP_RES) for (const m of s.matchAll(re)) if (!/^[「『【]/.test(m[0]) || [...m[0]].length <= (max || 16)) spans.push([m.index, m.index + m[0].length]);
+    for (const w of api.xmasNovelKeepWords()) if ([...w].length <= (max || 16)) for (let i = s.indexOf(w); i >= 0; i = s.indexOf(w, i + 1)) spans.push([i, i + w.length]);
+    let pos = 0;
+    plan.forEach((p, k) => {
+      if (k > 0 && !p.space && !plan[k - 1].space) {
+        points++;
+        const i = pos, b = s.slice(0, i), a = s.slice(i), why = [];
+        if (!edges.has(i)) why.push('言葉の途中');
+        if (spans.some(([x, y]) => i > x && i < y)) why.push('名前・日時・かっこの中');
+        if (/^[、。，．,.」』）)】〕〉》…‥ー〜～・：；ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ！？!?]/.test(a)) why.push('行の頭に来てはいけない字');
+        if (/[「『（(【〔〈《]$/.test(b)) why.push('開きかっこで終わる行');
+        if (api.xmasNovelIsKana(s, i - 1) && api.xmasNovelIsKana(s, i) && !api.xmasNovelGramBreak(s, i)) why.push('ひらがなの言葉の途中');
+        const sg = segs.find((x) => x.index === i);
+        if (/[一-龯々ァ-ヶー」』）)A-Za-z0-9０-９]$/.test(b) && sg && P1.test(sg.segment)) why.push('助詞の手前');
+        if (why.length) bad.push(`[${j.kind}] ${j.where}: ${b.slice(-8)}／${a.slice(0, 6)}(${why.join('・')})`);
+      }
+      pos += p.t.length;
+    });
+  }
+  check(`幅によらず: 部品が折ってよいとした所が全部、文節の切れ目(${jobs.length}本・${points}か所)`, bad.length === 0, bad.length ? `${bad.length}か所 例: ${bad.slice(0, 3).join(' | ')}` : '');
+  if (VERBOSE) bad.forEach((m) => console.log(`   ${m}`));
+}
 
 (async () => {
   let chromium;
@@ -109,6 +150,7 @@ check('台本の文を集められた', jobs.length > 2000, `${jobs.length}本(�
               const inner = cls ? el('span', cls) : tx; if (cls) tx.appendChild(inner);
               return [box, inner];
             }
+            if (place === 'nametag') { const box = el('div', 'mh-nv-box'); const nm = el('div', 'mh-nv-name mh-nv-serif'); box.appendChild(nm); return [box, nm]; }
             if (place === 'got') { const g = el('div', 'mh-nv-get', 'animation:none'); const p = el('p', 'mh-nv-plain mt-1', 'white-space:pre-wrap;font-size:12px;line-height:1.625'); g.appendChild(p); return [g, p]; }
             if (place === 'endcard' || place === 'titlecard' || place === 'chaptercard') {
               const c = el('div', 'mh-nv-card', 'animation:none');
@@ -152,6 +194,8 @@ check('台本の文を集められた', jobs.length > 2000, `${jobs.length}本(�
             return spans;
           };
           const seg = new Intl.Segmenter('ja', { granularity: 'word' });
+          // 道具がその所から1字の助詞(または から・まで・より)を1つの言葉として読むか
+          const particleAt = (s, i) => { for (const x of seg.segment(s)) { if (x.index === i) return /^(?:の|は|が|を|に|へ|と|で|も|や|から|まで|より)$/.test(x.segment); if (x.index > i) break; } return false; };
           const wordEdges = (s) => { const e = new Set([0, s.length]); for (const x of seg.segment(s)) { e.add(x.index); e.add(x.index + x.segment.length); } return e; };
           const isKana = (s, i) => /[ぁ-ゖゝゞ]/.test(s[i] || '') || (s[i] === 'ー' && i > 0 && /[ぁ-ゖ]/.test(s[i - 1]));
           // 文の組み立てで切れ目になる所(助詞のあと・「て・で」のあと・「から・けど」などのあと)。ja-wrap-lines-check.js と同じ考え
@@ -181,6 +225,8 @@ check('台本の文を集められた', jobs.length > 2000, `${jobs.length}本(�
                 if (/^[、。，．,.」』）)】〕〉》…‥ー〜～・：；ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ！？!?]/.test(a)) why.push('行の頭に来てはいけない字');
                 if (/[「『（(【〔〈《]$/.test(b)) why.push('開きかっこで終わる行');
                 if (isKana(txt, i - 1) && isKana(txt, i) && !gramBreak(txt, i)) why.push('ひらがなの言葉の途中');
+                // 漢字・カタカナ・閉じかっこのすぐあと、助詞の手前で折れた(「暖炉の前／のひじかけ椅子」2026-11-27 r1126-077 の止め絵)。助詞は前の言葉といっしょの文節
+                if (/[一-龯々ァ-ヶー」』）)A-Za-z0-9０-９]$/.test(b) && /^(?:の|は|が|を|に|へ|と|で|も|や|から|まで|より)(?![ぁ-ゖ]*[一-龯])/.test(a) && particleAt(txt, i)) why.push('助詞の手前');
                 if (mode === 'after' && !allowed.has(i)) why.push('枠の中で折れた');
                 if (why.length) reasons.push(`${txt.slice(Math.max(lineStart, i - 8), i)}／${txt.slice(i, i + 6)}(${why.join('・')})`);
                 lineStart = i;
