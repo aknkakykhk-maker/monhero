@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 796a1c1720986203
+// generated-sha256: f0e7cfb3d03745f2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136134,6 +136134,23 @@ function MonsterHeroGame() {
   //   ここだけだと「画面を切り替えてから次の描画まで」のあいだ古い値が残り、
   //   モンビーから戻った直後に段階だけ進んで進行不能になる(2026-09-14)。
   runBackgroundAllowedRef.current = runBackgroundAllowed;
+  // 裏で回しているあいだに立った演出(effect)は、表の画面へ移ったあとも出さない(移った瞬間の1コマも。2026-11-11 社長「一瞬だけバトルの演出が起こる」)。
+  //   描くときに「裏で立ったものと同じか」で見るので、表へ移った最初の描画でも出ない。表で新しく立った演出はふつうに出る
+  if (effect && runBackgroundAllowed) offscreenEffectRef.current = effect;
+  // ランの段階を1つ進める唯一の入口。
+  // 画面を切り替えてよいときは gameState も一緒に動かす(いまは必ず切り替わる)。
+  // ラン進行の遷移は、ここを通さずに setGameState を直接呼ばないこと
+  // (直接呼ぶと runStage が置いていかれ、別画面でランが進まなくなる)。
+  const advanceRunStage = (stage) => {
+    runStageRef.current = stage;
+    setRunStage(stage);
+    if (!runBackgroundAllowedRef.current) setGameState(stage);
+  };
+  // ランから抜けた(HOMEへ戻った・やり直した)ときに段階を捨てる
+  // 印を落としたら、画面を切り替えてよいかの控えもその場で入れ直す(次の描画を待たない。2026-09-14 の型)
+  const clearRunStage = () => { runStageRef.current = null; quickAnywhereRunRef.current = false; runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current); setRunStage(null); };
+  // ランを進めてよいか。ランの画面を描いているとき、またはモンビーの非演奏画面で裏回し中。
+  const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun || cardBackgroundRun || assistantLifeBackgroundRun || quickAnywhereBackgroundRun);
   // 事件簿(79-screen-xmas-novel.jsx・App の外に重ねて開く)を開いているか。開閉の知らせ(XMAS_NOVEL_PRESENCE_EVENT)で描き直す(r1126-072)
   const [xmasNovelOpen, setXmasNovelOpen] = useState(() => typeof xmasNovelPresence !== 'undefined' && !!xmasNovelPresence.open);
   useEffect(() => {
@@ -136155,23 +136172,6 @@ function MonsterHeroGame() {
     window.__mhQuickAnywhereProbe = () => ({ run: !!quickAnywhereRunRef.current && !!runStageRef.current, loops: quickRunProgress ? quickRunProgress.loops : null, wave,
       finished: quickRunProgress ? !!quickRunProgress.finished : null, reason: quickRunProgress ? quickRunProgress.reason || '' : '', screen: gameStateNowRef.current, quiet: isXmasQuietScreen(gameStateNowRef.current) });
   }
-  // 裏で回しているあいだに立った演出(effect)は、表の画面へ移ったあとも出さない(移った瞬間の1コマも。2026-11-11 社長「一瞬だけバトルの演出が起こる」)。
-  //   描くときに「裏で立ったものと同じか」で見るので、表へ移った最初の描画でも出ない。表で新しく立った演出はふつうに出る
-  if (effect && runBackgroundAllowed) offscreenEffectRef.current = effect;
-  // ランの段階を1つ進める唯一の入口。
-  // 画面を切り替えてよいときは gameState も一緒に動かす(いまは必ず切り替わる)。
-  // ラン進行の遷移は、ここを通さずに setGameState を直接呼ばないこと
-  // (直接呼ぶと runStage が置いていかれ、別画面でランが進まなくなる)。
-  const advanceRunStage = (stage) => {
-    runStageRef.current = stage;
-    setRunStage(stage);
-    if (!runBackgroundAllowedRef.current) setGameState(stage);
-  };
-  // ランから抜けた(HOMEへ戻った・やり直した)ときに段階を捨てる
-  // 印を落としたら、画面を切り替えてよいかの控えもその場で入れ直す(次の描画を待たない。2026-09-14 の型)
-  const clearRunStage = () => { runStageRef.current = null; quickAnywhereRunRef.current = false; runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current); setRunStage(null); };
-  // ランを進めてよいか。ランの画面を描いているとき、またはモンビーの非演奏画面で裏回し中。
-  const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun || cardBackgroundRun || assistantLifeBackgroundRun || quickAnywhereBackgroundRun);
   // モンビーからクイックのバトルへ戻る。ランの段階そのものへ戻すので、続きから遊べる
   // 曲えらびの一覧をどこまで見ていたか。全国ランキングや遊びかたを見て戻ったとき、
   // その場所から続けられるようにするための控え(保存はしない・リロードで消えてよい)

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e35970078c1a5d6e
+// source-sha256: 14ab971dae0e6695
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -256003,6 +256003,19 @@ function MonsterHeroGame() {
   const quickAnywhereBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && quickAnywhereScreenOpen && isQuickAnywhereRunScreen(gameState);
   const runBackgroundAllowed = rhythmScreenOpen || cardScreenOpen || assistantLifeScreenOpen || quickAnywhereScreenOpen;
   runBackgroundAllowedRef.current = runBackgroundAllowed;
+  if (effect && runBackgroundAllowed) offscreenEffectRef.current = effect;
+  const advanceRunStage = stage => {
+    runStageRef.current = stage;
+    setRunStage(stage);
+    if (!runBackgroundAllowedRef.current) setGameState(stage);
+  };
+  const clearRunStage = () => {
+    runStageRef.current = null;
+    quickAnywhereRunRef.current = false;
+    runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current);
+    setRunStage(null);
+  };
+  const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun || cardBackgroundRun || assistantLifeBackgroundRun || quickAnywhereBackgroundRun);
   const [xmasNovelOpen, setXmasNovelOpen] = useState(() => typeof xmasNovelPresence !== 'undefined' && !!xmasNovelPresence.open);
   useEffect(() => {
     if (typeof window === 'undefined' || typeof XMAS_NOVEL_PRESENCE_EVENT === 'undefined') return undefined;
@@ -256027,19 +256040,6 @@ function MonsterHeroGame() {
       quiet: isXmasQuietScreen(gameStateNowRef.current)
     });
   }
-  if (effect && runBackgroundAllowed) offscreenEffectRef.current = effect;
-  const advanceRunStage = stage => {
-    runStageRef.current = stage;
-    setRunStage(stage);
-    if (!runBackgroundAllowedRef.current) setGameState(stage);
-  };
-  const clearRunStage = () => {
-    runStageRef.current = null;
-    quickAnywhereRunRef.current = false;
-    runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current);
-    setRunStage(null);
-  };
-  const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun || cardBackgroundRun || assistantLifeBackgroundRun || quickAnywhereBackgroundRun);
   const rhythmSongListScrollRef = useRef(0);
   const returnToBackgroundRun = () => {
     catchUpUntilRef.current = 0;
