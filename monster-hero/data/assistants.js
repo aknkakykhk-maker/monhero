@@ -13079,8 +13079,8 @@ const XMAS_STORY_00 = [
   { who:'kyuko',     e:'normal',   t:'宛名、『助手のみなさま』だよぉ。えるニキも、ちゃんと入ってる' },
   { who:'erubin',    e:'happy',    t:'……そっか。ありがとう、きゅうこちゃん' },
   // ---- C0-2 出発の朝(ゲームの中・曲: 温) ----
-  { band:true, bg:'monhero_town', bgm:'close_to_your_heart_alt', fxText:'次の日。プレゼント選び。みゅあは、毛糸をどっさり買い込んでいる' },
-  { who:'mua',       e:'wink',     t:'何に使うかは、ナイショ！' },
+  { band:true, bg:'monhero_town', bgm:'close_to_your_heart_alt', fxText:'次の日。プレゼント選び。みゅあは、毛糸をどっさり買いこんでいる' },
+  { who:'mua',       e:'wink',     t:'何に使うかは、ないしょ！' },
   { who:'dra',       e:'excited',  t:'なあ、みんな何にした？ 箱、ちょっと振らせてくれよ' },
   { who:'momosuke',  e:'angry',    t:'だめ！ ドラちゃん、当日まで振るの禁止w' },
   { band:true, fxText:'出発の朝。町に、今年初めての雪が降り始めた' },
