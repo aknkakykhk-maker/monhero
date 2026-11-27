@@ -52,7 +52,7 @@ const sandbox = {
 // 通信層を、指定した fetch(偽サーバー)で新しく読み込む。第2の読み込みは「列がまだ無い環境」の検査に使う
 const EXPORTS_SOURCE = `${source}\n;globalThis.__api = { friendsMakeCode, friendsNormalizeCode, friendsFormatCode, friendsSafeId, friendLinkView, friendsGroup, friendsLastSeenText, friendsIdOfRankingEntry,
   sbEnsureFriendCode, sbFindBreederIdByCode, sbFetchFriendLinks, sbFetchFriendProfiles, sbSendFriendRequest, sbRespondFriendRequest, sbCancelFriendRequest,
-  sbRemoveFriend, sbBlockFriendUser, sbUnblockFriendUser, sbSendRoomInvite, sbFetchRoomInvites, sbFetchFriendRoster, friendsPlaceOfScreen, friendsSetRoomPrivate, friendsSetLifeSpot, friendsSetLifeVisit, friendsLifeSpotText, friendsPresenceText, friendsPlaytimeText, friendsBuildSummary, friendsNormalizeRecent, friendsMergeRecent, friendsCleanNote, friendsNormalizeNotes, friendsInviteLink, friendsCodeFromSearch, friendsCompareScores, friendsCleanMessage, friendsNormalizeRecords, friendsRhythmSummary, friendsRhythmAchievements, friendsCollectionSummary, friendsArrangeList, friendsNormalizeFavorites, sbUpsertFriendProfile, sbFetchFriendSummaries, sbCountIncomingFriendRequests, FRIEND_INVITE_TTL_MS, FRIENDS_MAX, FRIENDS_PENDING_MAX, friendsUnavailable };`;
+  sbRemoveFriend, sbBlockFriendUser, sbUnblockFriendUser, sbSendRoomInvite, sbFetchRoomInvites, sbFetchFriendRoster, friendsPlaceOfScreen, friendsSetXmasSpot, friendsSetRoomPrivate, friendsSetLifeSpot, friendsSetLifeVisit, friendsLifeSpotText, friendsPresenceText, friendsPlaytimeText, friendsBuildSummary, friendsNormalizeRecent, friendsMergeRecent, friendsCleanNote, friendsNormalizeNotes, friendsInviteLink, friendsCodeFromSearch, friendsCompareScores, friendsCleanMessage, friendsNormalizeRecords, friendsRhythmSummary, friendsRhythmAchievements, friendsCollectionSummary, friendsArrangeList, friendsNormalizeFavorites, sbUpsertFriendProfile, sbFetchFriendSummaries, sbCountIncomingFriendRequests, FRIEND_INVITE_TTL_MS, FRIENDS_MAX, FRIENDS_PENDING_MAX, friendsUnavailable };`;
 const loadApi = (fetchImpl) => {
   const box = { ...sandbox, fetch: fetchImpl };
   vm.createContext(box);
@@ -221,6 +221,21 @@ const statusOf = (a, b) => {
       && api.friendsNormalizeRecords({ lv: 'q', la: '<b>' }).lv === '' && api.friendsNormalizeRecords({ lv: 'q', la: '<b>' }).la === '', JSON.stringify(lp({ lv: 'h', la: 'zzz' })));
     // 短い形は一覧の1行に収まる長さ(印のあと全角9字まで)
     check('いまの状態(助手ライフ): 短い形はどれも印のあと9字まで', ['h', 'w', 'f', 'i', 'p', 'v'].every((k) => [...lp({ lv: k }).text.split(' ')[1]].length <= 9), ['h', 'w', 'f', 'i', 'p', 'v'].map((k) => lp({ lv: k }).text).join('/'));
+    // クリスマスの事件簿・イベントページ(台帳 r1126-072 追記2)。表の place は 'other' のまま records.pl に載せる。古い版の人には「⚡ オート周回中」だけ
+    api.friendsSetXmasSpot('novel');
+    const xn = [api.friendsPlaceOfScreen('RAID_JACK'), api.friendsPlaceOfScreen('HOME')];
+    api.friendsSetXmasSpot('event');
+    const xe = api.friendsPlaceOfScreen('RAID_JACK');
+    api.friendsSetXmasSpot('');
+    const xj = api.friendsPlaceOfScreen('RAID_JACK');
+    check('いまの状態(クリスマス): 事件簿は xmasNovel・イベントページは xmasEvent・ジャックのレイド画面と HOME は今までどおり', xn[0] === 'xmasNovel' && xn[1] === 'home' && xe === 'xmasEvent' && xj === 'other', JSON.stringify([xn, xe, xj]));
+    const xa = P('xmasNovel', tN - 60000, tN, { au: 1, im: 0 }), xb = P('xmasEvent', tN - 60000, tN, { au: 1, im: 0 });
+    check('いまの状態(クリスマス): 裏クイックが回っていれば「⚡ オート周回中」+下の行に「事件簿を読んでいる」/「イベントページを見ている」', xa.auto && xa.text === '⚡ オート周回中' && xa.sub === '事件簿を読んでいる' && xb.auto && xb.sub === 'イベントページを見ている', JSON.stringify([xa, xb]));
+    const xc = P('xmasNovel', tN - 60000, tN, { au: 0, im: 0 }), xd = P('xmasNovel', tN - 60000, tN, { au: 0, im: 15 });
+    check('いまの状態(クリスマス): 周回が終わった・止まった(au なし)なら「オート周回中」を出さず「事件簿を読んでいる」・長く操作なしは「事件簿を開いたまま」', !xc.auto && xc.text === '事件簿を読んでいる' && xd.auto && xd.sub === '事件簿を開いたまま 15分 操作なし', JSON.stringify([xc, xd]));
+    const xOld = P('other', tN - 60000, tN, { au: 1, im: 0 });
+    check('いまの状態(クリスマス): 古い版(pl を知らない)には「⚡ オート周回中」だけ(下の行は空)', xOld.auto && xOld.text === '⚡ オート周回中' && xOld.sub === '', JSON.stringify(xOld));
+    check('いまの状態(クリスマス): pl の xmasNovel・xmasEvent を読める・知らない値は読まない', api.friendsNormalizeRecords({ pl: 'xmasNovel' }).pl === 'xmasNovel' && api.friendsNormalizeRecords({ pl: 'xmasEvent' }).pl === 'xmasEvent' && api.friendsNormalizeRecords({ pl: 'xmasZ' }).pl === null);
     check('いまの状態: 「いまの状態をフレンドに見せる」が切なら、場所は other・周回の印も送らない', sum.place === 'other' && sum.au === 0 && sum.im === 0, JSON.stringify(sum).slice(0, 120)); }
   const t0 = 1700000000000;
   check('5分以内なら「いまの場所」、それより前なら「◯分前」', api.friendsPresenceText('rhythm', t0 - 60 * 1000, t0).online === true
@@ -252,6 +267,11 @@ const statusOf = (a, b) => {
     && await api.sbUpsertFriendProfile('userA', cardSum) === true && db.friend_profiles[0].place === 'other' && db.friend_profiles[0].records && db.friend_profiles[0].records.pl === 'cardBattle');
   const cardRead = await api.sbFetchFriendSummaries(['userA']);
   check('読む側は records.pl から「MFバトルカードで対戦中」を出す', cardRead.userA && cardRead.userA.place === 'cardBattle', JSON.stringify(cardRead.userA && cardRead.userA.place));
+  const xmasSum = api.friendsBuildSummary({ place: 'xmasNovel', masuMons: [], favoriteMasuId: null, playtime: {}, records: { v: 1, battle: [] }, auto: true });
+  check('事件簿を読んでいるのを送ると、表の place は other・records.pl に xmasNovel・au=1(表の決まりに弾かれない)', await api.sbUpsertFriendProfile('userA', xmasSum) === true
+    && db.friend_profiles[0].place === 'other' && db.friend_profiles[0].records.pl === 'xmasNovel' && db.friend_profiles[0].records.au === 1, JSON.stringify(db.friend_profiles[0].records).slice(0, 160));
+  const xmasRead = await api.sbFetchFriendSummaries(['userA']);
+  check('読む側は records.pl から「事件簿を読んでいる」の場所を出す', xmasRead.userA && xmasRead.userA.place === 'xmasNovel', JSON.stringify(xmasRead.userA && xmasRead.userA.place));
   check('records の pl は知っている値だけ読む', api.friendsNormalizeRecords({ pl: 'zzz' }).pl === null && api.friendsNormalizeRecords({ pl: 'card' }).pl === 'card');
   await api.sbUpsertFriendProfile('userA', { ...summary, place: 'home' });
   // 届いている申請の件数

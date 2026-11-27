@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 47b7b96e5d411bf1
+// source-sha256: aa7e12558fdf8b5f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -10170,8 +10170,8 @@ const Audio_ = (() => {
   const preloadSE = src => {
     if (enabled && src) loadBuffer(src).catch(() => {});
   };
-  const playSeFile = async src => {
-    if (!enabled || !src || backgroundSeQuiet) return null;
+  const playSeFileOn = async (src, fg) => {
+    if (!enabled || !src || backgroundSeQuiet && !fg) return null;
     await ensure();
     if (!Tone || !seBus) return null;
     let buffer = null;
@@ -10212,6 +10212,8 @@ const Audio_ = (() => {
       return null;
     }
   };
+  const playSeFile = src => playSeFileOn(src, false);
+  const fgPlaySeFile = src => playSeFileOn(src, true);
   let returnHealTimer = null;
   const healAfterReturn = () => {
     if (returnHealTimer) clearTimeout(returnHealTimer);
@@ -11507,6 +11509,7 @@ const Audio_ = (() => {
     setStoryEndFade,
     setStoryOpenFade,
     playSeFile,
+    fgPlaySeFile,
     preloadSE,
     playBGM,
     fadeToBGM,
@@ -126345,8 +126348,9 @@ const XMAS_NOVEL_LAUGH_SE = 'audio/se-xmas-novel-laugh.mp3';
 const xmasNovelSe = kind => {
   try {
     if (typeof Audio_ === 'undefined' || !Audio_ || !Audio_.se) return;
-    if (kind === 'laugh' && typeof Audio_.playSeFile === 'function') {
-      void Audio_.playSeFile(XMAS_NOVEL_LAUGH_SE);
+    const playFile = typeof Audio_.fgPlaySeFile === 'function' ? Audio_.fgPlaySeFile : Audio_.playSeFile;
+    if (kind === 'laugh' && typeof playFile === 'function') {
+      void playFile(XMAS_NOVEL_LAUGH_SE);
       return;
     }
     const map = {
@@ -126360,7 +126364,7 @@ const xmasNovelSe = kind => {
       ok: 'victory',
       ng: 'guard'
     };
-    const fn = Audio_.se[map[kind] || 'tap'];
+    const fn = (Audio_.fgSe || Audio_.se)[map[kind] || 'tap'];
     if (typeof fn === 'function') fn();
   } catch (e) {}
 };
@@ -127507,6 +127511,16 @@ const XmasNovelScreen = ({
   }, "閉じる(続きは残ります)"))))));
 };
 let xmasNovelHost = null;
+const xmasNovelPresence = {
+  open: false,
+  touchedAt: 0
+};
+const XMAS_NOVEL_PRESENCE_EVENT = 'mh-xmas-novel-presence';
+const xmasNovelPresenceEmit = () => {
+  try {
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event(XMAS_NOVEL_PRESENCE_EVENT));
+  } catch (e) {}
+};
 const openXmasNovel = (opts = {}) => {
   if (typeof document === 'undefined' || typeof ReactDOM === 'undefined' || !ReactDOM.createRoot) return false;
   if (xmasNovelHost) return true;
@@ -127515,13 +127529,37 @@ const openXmasNovel = (opts = {}) => {
   el.setAttribute('data-xmas-novel-host', '');
   document.body.appendChild(el);
   const root = ReactDOM.createRoot(el);
+  const touch = e => {
+    if (e && e.isTrusted) xmasNovelPresence.touchedAt = Date.now();
+  };
+  const TOUCH_EVENTS = ['pointerdown', 'keydown', 'wheel'];
+  TOUCH_EVENTS.forEach(t => {
+    try {
+      document.addEventListener(t, touch, {
+        capture: true,
+        passive: true
+      });
+    } catch (e) {}
+  });
   xmasNovelHost = {
     el,
     root
   };
+  xmasNovelPresence.open = true;
+  xmasNovelPresence.touchedAt = Date.now();
+  xmasNovelPresenceEmit();
   const done = () => {
     const h = xmasNovelHost;
     xmasNovelHost = null;
+    TOUCH_EVENTS.forEach(t => {
+      try {
+        document.removeEventListener(t, touch, {
+          capture: true
+        });
+      } catch (e) {}
+    });
+    xmasNovelPresence.open = false;
+    xmasNovelPresenceEmit();
     setTimeout(() => {
       try {
         h.root.unmount();
@@ -249882,6 +249920,19 @@ function MonsterHeroGame() {
   const offscreenEffectRef = useRef(null);
   const quickAnywhereSeQuietRef = useRef(false);
   const QUICK_RUN_ANYWHERE_RUN_SCREENS = ['HOME', 'PROFILE', 'ITEM_INVENTORY', 'GIFT_BOX', 'MISSIONS', 'SETTINGS', 'FRIENDS', 'BREEDER_MARKET'];
+  const raidEvRef = useRef('jack');
+  const isXmasQuietScreen = state => state === 'RAID_JACK' && raidEvRef.current === 'xmas';
+  const isQuickAnywhereRunScreen = state => QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(state) || isXmasQuietScreen(state);
+  const XMAS_NOVEL_QUICK_BOOST = 3;
+  const XMAS_NOVEL_QUICK_IDLE_MS = 3 * 60 * 1000;
+  const xmasNovelQuickBoostNow = (now = Date.now()) => {
+    if (!QUICK_RUN_ANYWHERE_RELEASE || !quickAnywhereRunRef.current || !isXmasQuietScreen(gameStateNowRef.current)) return 1;
+    if (typeof xmasNovelPresence === 'undefined' || !xmasNovelPresence.open) return 1;
+    if (typeof xmasNovelPlayableAt !== 'function' || !xmasNovelPlayableAt(now)) return 1;
+    const touched = Number(xmasNovelPresence.touchedAt);
+    if (!Number.isFinite(touched) || now - touched >= XMAS_NOVEL_QUICK_IDLE_MS) return 1;
+    return XMAS_NOVEL_QUICK_BOOST;
+  };
   const QUICK_RUN_ANYWHERE_BATTLE_ENTRY_SCREENS = ['BATTLE_SYSTEM_SELECT', 'BATTLE_MODE_SELECT', 'BATTLE_DIFFICULTY_SELECT', 'BATTLE_MENU', 'EXTREME_DIFFICULTY_SELECT', 'SPECIES_CHALLENGE_SELECT', 'SKIP_PICK', 'RAID_JACK_PREP', 'RAID_JACK', 'BATTLE_TUTORIAL', 'DEBUG_BATTLE_SETUP', 'RPG_DEBUG_SETUP'];
   const isQuickAnywhereScreen = state => QUICK_RUN_ANYWHERE_RELEASE && quickAnywhereRunRef.current && !RUN_STAGE_SCREENS.includes(state) && !isRhythmScreen(state) && !isCardRunScreen(state);
   const quickAnywhereEndingRef = useRef(false);
@@ -250893,8 +250944,9 @@ function MonsterHeroGame() {
   const catchUpUntilRef = useRef(0);
   const battleMs = useCallback(baseMs => {
     const base = Math.max(0, Math.round(baseMs / normalizeBattleSpeed(battleSpeedRef.current)));
-    if (!(catchUpUntilRef.current > Date.now())) return base;
-    return Math.max(0, Math.round(base / CATCH_UP_SPEED));
+    if (catchUpUntilRef.current > Date.now()) return Math.max(0, Math.round(base / CATCH_UP_SPEED));
+    const boost = xmasNovelQuickBoostNow();
+    return boost > 1 ? Math.max(0, Math.round(base / boost)) : base;
   }, []);
   const specialMoveImpact = useCallback(() => {
     Audio_.se.crit();
@@ -253693,7 +253745,6 @@ function MonsterHeroGame() {
   const [raidJackDebugRealRules, setRaidJackDebugRealRules] = useState(false);
   const raidJackEventId = raidJackDebugForce ? RAID_JACK_DEBUG_EVENT_ID : RAID_JACK_EVENT.id;
   const [raidEv, setRaidEv] = useState('jack');
-  const raidEvRef = useRef('jack');
   const raidDef = raidEventDef(raidEv);
   const raidXmasOpen = raidEv === 'xmas';
   const [xmasEventTab, setXmasEventTab] = useState('story');
@@ -255342,9 +255393,29 @@ function MonsterHeroGame() {
   const assistantLifeScreenOpen = isAssistantLifeRunScreen(gameState);
   const assistantLifeBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && assistantLifeScreenOpen;
   const quickAnywhereScreenOpen = runStage !== null && isQuickAnywhereScreen(gameState);
-  const quickAnywhereBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && quickAnywhereScreenOpen && QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameState);
+  const quickAnywhereBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && quickAnywhereScreenOpen && isQuickAnywhereRunScreen(gameState);
   const runBackgroundAllowed = rhythmScreenOpen || cardScreenOpen || assistantLifeScreenOpen || quickAnywhereScreenOpen;
   runBackgroundAllowedRef.current = runBackgroundAllowed;
+  const [xmasNovelOpen, setXmasNovelOpen] = useState(() => typeof xmasNovelPresence !== 'undefined' && !!xmasNovelPresence.open);
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof XMAS_NOVEL_PRESENCE_EVENT === 'undefined') return undefined;
+    const sync = () => setXmasNovelOpen(typeof xmasNovelPresence !== 'undefined' && !!xmasNovelPresence.open);
+    window.addEventListener(XMAS_NOVEL_PRESENCE_EVENT, sync);
+    sync();
+    return () => window.removeEventListener(XMAS_NOVEL_PRESENCE_EVENT, sync);
+  }, []);
+  if (typeof window !== 'undefined') {
+    window.__mhQuickAnywhereBoost = xmasNovelQuickBoostNow;
+    window.__mhQuickAnywhereProbe = () => ({
+      run: !!quickAnywhereRunRef.current && !!runStageRef.current,
+      loops: quickRunProgress ? quickRunProgress.loops : null,
+      wave,
+      finished: quickRunProgress ? !!quickRunProgress.finished : null,
+      reason: quickRunProgress ? quickRunProgress.reason || '' : '',
+      screen: gameStateNowRef.current,
+      quiet: isXmasQuietScreen(gameStateNowRef.current)
+    });
+  }
   if (effect && runBackgroundAllowed) offscreenEffectRef.current = effect;
   const advanceRunStage = stage => {
     runStageRef.current = stage;
@@ -256872,6 +256943,7 @@ function MonsterHeroGame() {
   useEffect(() => {
     if (gameState === 'RHYTHM_PLAY') return;
     if (successScreenOpen) return;
+    if (xmasNovelOpen) return;
     if (rhythmWatchAudioOn) return;
     let key = bootPhase === 'GAME' ? bgmKeyForState(gameState, wave, enemy?.id, (waveHistory || []).length > 0, hp <= 0 || gaveUp) : bootPhase === 'TITLE' || bootPhase === 'ENTERING_GAME' ? bgmArrangement.title : null;
     if (key === '__keep_battle_bgm__' && bgmSuspendedByRhythmRef.current) {
@@ -256899,7 +256971,7 @@ function MonsterHeroGame() {
       key
     } : null;
     if (key && eventId && prev && prev.id === eventId && prev.key !== key) Audio_.fadeToBGM(key, EVENT_BGM_FADE_MS);else if (key) Audio_.playBGM(key);else Audio_.stopBGM();
-  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, successScreenOpen, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, cardScreenOpen, eventLineBgm, cardBgm, assistantLifeOpenNow, battleBgmOverlay, rhythmWatchAudioOn]);
+  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, successScreenOpen, xmasNovelOpen, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, cardScreenOpen, eventLineBgm, cardBgm, assistantLifeOpenNow, battleBgmOverlay, rhythmWatchAudioOn]);
   const assistantLifeRunMuted = assistantLifeScreenOpen && runStage !== null;
   useEffect(() => {
     Audio_.setSeVolume(ultraEcoSession && !cardScreenOpen || rhythmScreenOpen || assistantLifeRunMuted ? 0 : seVolume);
@@ -265476,8 +265548,9 @@ function MonsterHeroGame() {
   }, [quickAnywhereScreenOpen]);
   const renderQuickAnywhereStrip = () => {
     if (!QUICK_RUN_ANYWHERE_RELEASE || !quickAnywhereScreenOpen || assistantLifeOpenNow || !quickRunProgress) return null;
+    if (isXmasQuietScreen(gameState)) return null;
     const finished = !!quickRunProgress.finished;
-    const resting = !finished && !QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameState);
+    const resting = !finished && !isQuickAnywhereRunScreen(gameState);
     const paused = !finished && !resting && !quickAnywhereBackgroundRun;
     const pending = finished ? {
       xp: 0,
@@ -265610,14 +265683,20 @@ function MonsterHeroGame() {
       setQuickAnywhereSettling(false);
     }
   };
+  const xmasQuickSettleThen = async fn => {
+    if (quickAnywhereEndingRef.current) return;
+    if (QUICK_RUN_ANYWHERE_RELEASE && quickAnywhereRunRef.current && runStageRef.current) await settleQuickAnywhereRun();
+    fn();
+  };
   useEffect(() => {
     if (!QUICK_RUN_ANYWHERE_RELEASE || !quickAnywhereRunRef.current || !runStageRef.current) return;
     if (!QUICK_RUN_ANYWHERE_BATTLE_ENTRY_SCREENS.includes(gameState)) return;
+    if (isXmasQuietScreen(gameState)) return;
     void settleQuickAnywhereRun();
   }, [gameState]);
   const quickAnywhereTryStart = () => {
     if (!QUICK_RUN_ANYWHERE_RELEASE || !quickRhythmGuideReleased || !autoQuickRunAutoStartEnabled(autoSettings)) return false;
-    if (!QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameStateNowRef.current)) return false;
+    if (!isQuickAnywhereRunScreen(gameStateNowRef.current)) return false;
     if (quickRunProgressRef.current && !quickRunProgressRef.current.finished) return false;
     if (runStageRef.current && !runResultFinishedRef.current) return false;
     if (!repeatTemplateFromAutoSettings()) return false;
@@ -265631,7 +265710,7 @@ function MonsterHeroGame() {
     const prev = quickAnywherePrevScreenRef.current;
     quickAnywherePrevScreenRef.current = gameState;
     if (!QUICK_RUN_ANYWHERE_RELEASE || bootPhase !== 'GAME') return undefined;
-    if (!QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameState)) return undefined;
+    if (!isQuickAnywhereRunScreen(gameState)) return undefined;
     const boot = !quickAnywhereBootTriedRef.current;
     const fromBattle = RUN_STAGE_SCREENS.includes(prev) || QUICK_RUN_ANYWHERE_BATTLE_ENTRY_SCREENS.includes(prev) || prev === 'SKIP_RESULT';
     if (!boot && !fromBattle) return undefined;
@@ -265644,13 +265723,13 @@ function MonsterHeroGame() {
   useEffect(() => {
     if (!QUICK_RUN_ANYWHERE_RELEASE || assistantLifeOpenNow) return undefined;
     if (!quickRunProgress || !quickRunProgress.finished || quickRunProgress.reason !== 'defeat') return undefined;
-    if (!QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameState)) return undefined;
+    if (!isQuickAnywhereRunScreen(gameState)) return undefined;
     if (resultProcessing) return undefined;
     if (!quickRhythmGuideReleased || !autoQuickRunAutoStartEnabled(autoSettings)) return undefined;
     const retryAnywhere = () => {
       const current = quickRunProgressRef.current;
       if (!current || !current.finished || current.reason !== 'defeat') return;
-      if (!QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameStateNowRef.current)) return;
+      if (!isQuickAnywhereRunScreen(gameStateNowRef.current)) return;
       startQuickRunFromRhythm();
     };
     const timer = setTimeout(retryAnywhere, QUICK_RUN_AUTO_RETRY_MS);
@@ -267037,7 +267116,7 @@ function MonsterHeroGame() {
       boss: wave >= 10,
       key: Date.now()
     });
-    if (!autoBattleRef.current || bgmArrangement.autoVictoryJingle === 'on') Audio_.playJingle('victory');
+    if ((!autoBattleRef.current || bgmArrangement.autoVictoryJingle === 'on') && !(runBackgroundAllowedRef.current && isXmasQuietScreen(gameStateNowRef.current))) Audio_.playJingle('victory');
     const totalWaveDamage = waveDamageAtDefeat(currentWaveDamageRef.current, currentWaveDamage, damage);
     const waveMult = 1.0 + wave * 0.1;
     const remainingTurns = Math.max(0, 21 - turnCount);
@@ -281171,7 +281250,9 @@ function MonsterHeroGame() {
       storyVersion: xmasStoryVersion,
       fightWays: xmasStoryFightWays,
       onReadChapter: openXmasStoryChapter,
-      onFightChapter: fightXmasStoryChapter,
+      onFightChapter: (chapter, way) => {
+        void xmasQuickSettleThen(() => fightXmasStoryChapter(chapter, way));
+      },
       raid: {
         ev: RAID_EVENT_XMAS,
         ways: ['battle', ...(typeof startRaidXmasRhythm === 'function' ? ['rhythm'] : []), ...(typeof startRaidXmasCard === 'function' ? ['card'] : [])],
@@ -281181,20 +281262,22 @@ function MonsterHeroGame() {
           setGameState(raidJackDebugForce && !RELEASE_FLAGS.raidXmas ? 'RAID_JACK_DEBUG' : 'HOME');
         },
         onChallenge: (kind, tierIndex, way) => {
-          raidJackReturnTierRef.current = tierIndex;
-          if (kind === 'a' && way === 'rhythm') {
-            if (typeof startRaidXmasRhythm === 'function') void startRaidXmasRhythm(tierIndex);
-            return;
-          }
-          if (kind === 'a' && way === 'card') {
-            if (typeof startRaidXmasCard === 'function') void startRaidXmasCard(tierIndex);
-            return;
-          }
-          setRaidJackPrep({
-            kind,
-            tierIndex
+          void xmasQuickSettleThen(() => {
+            raidJackReturnTierRef.current = tierIndex;
+            if (kind === 'a' && way === 'rhythm') {
+              if (typeof startRaidXmasRhythm === 'function') void startRaidXmasRhythm(tierIndex);
+              return;
+            }
+            if (kind === 'a' && way === 'card') {
+              if (typeof startRaidXmasCard === 'function') void startRaidXmasCard(tierIndex);
+              return;
+            }
+            setRaidJackPrep({
+              kind,
+              tierIndex
+            });
+            setGameState('RAID_JACK_PREP');
           });
-          setGameState('RAID_JACK_PREP');
         },
         onPurchase: purchaseRaidJackExtra,
         onClaimRewards: claimRaidXmasRewards,
@@ -289452,7 +289535,15 @@ function MonsterHeroGame() {
       title: ''
     }), React.createElement(EnemyDefeatFx, {
       fx: gameState === 'BATTLE' ? defeatFx : null
-    }), renderQuickAnywhereStrip(), quickAnywhereSettling && React.createElement("div", {
+    }), renderQuickAnywhereStrip(), quickAnywhereSettling && isXmasQuietScreen(gameState) && React.createElement("div", {
+      "data-quick-anywhere-settling": "quiet",
+      "aria-hidden": "true",
+      className: "fixed inset-0 z-[96]",
+      onClickCapture: e => {
+        e.stopPropagation();
+        e.preventDefault();
+      }
+    }), quickAnywhereSettling && !isXmasQuietScreen(gameState) && React.createElement("div", {
       "data-quick-anywhere-settling": true,
       role: "status",
       className: "fixed inset-0 z-[96] flex items-end justify-center bg-black/20 pb-24",
