@@ -482,6 +482,49 @@ const assistantUpdateNoticeFromChangelog = entry => {
 // ★呼び方の決めごと: みゅあ・ドラは「モンビー」、ももすけは「モンビート」、ききは「モンヒロビート」(2026-10-18 社長「ドラちゃんはモンビー呼び、ももはモンビート呼びでいいよ」。公開済みのお話はそのとき決まっていた呼び方のまま)
 //   (2026-09-11・ユーザー指示)。
 const ASSISTANT_UPDATE_NOTICE_SCRIPTS = {
+  // クリスマスイベントの新曲3曲(2026-11-28 10:00〜・台帳 r1126-023/036/082)。告知は3曲で1件(更新履歴は曲ごと)。値段・版・イベント中の曲の当て方だけを言う
+  update_notice_xmas_2026_songs_v1: {
+    mua: [
+      { e:'excited', t:'{name}、聞いて！ モンビーにクリスマスの新曲が3曲も来たよ〜！ 「Kissからはじまるミステリー」「Dear Santa」「winter fall」✨' },
+      { e:'happy', t:'どれも原曲とshort ver.があって、ビートP500で買うと両方遊べるの！' },
+      { e:'wink', t:'イベント中はホームで「Dear Santa」、レイドのボス戦では「winter fall」が流れるよ〜♪' },
+    ],
+    kiki: [
+      { e:'happy', t:'{name}、モンヒロビートにクリスマスの新曲が3曲入りまちた。「Kissからはじまるミステリー」「Dear Santa」「winter fall」でつ。' },
+      { e:'normal', t:'どの曲も原曲とshort ver.があって、ビートP500で買うと両方で遊べまつ。' },
+      { e:'happy', t:'イベントのあいだは、ホームで「Dear Santa」、レイドのボス戦で「winter fall」が流れまつよ♪' },
+    ],
+    momosuke: [
+      { e:'excited', t:'{name}〜！ モンビートにクリスマスの新曲が3曲も来たよ♡ 「Kissからはじまるミステリー」「Dear Santa」「winter fall」！' },
+      { e:'happy', t:'どれも原曲とshort ver.があるの！ ビートP500で買うと両方遊べるよ♡' },
+      { e:'wink', t:'イベント中はホームで「Dear Santa」、レイドのボス戦で「winter fall」が流れるんだって♡' },
+    ],
+    dra: [
+      { e:'happy', t:'{name}、モンビーにクリスマスの新曲が3曲入ったぞ。「Kissからはじまるミステリー」「Dear Santa」「winter fall」だ。' },
+      { e:'normal', t:'どれも原曲とshort ver.があって、ビートP500で買うと両方遊べるんだ。' },
+      { e:'happy', t:'イベント中はホームで「Dear Santa」、レイドのボス戦で「winter fall」が流れるぞ。えへへ' },
+    ],
+    atsu: [
+      { e:'happy', t:'{name}、モンヒロビートにクリスマスの新曲が3曲来たよ。「Kissからはじまるミステリー」「Dear Santa」「winter fall」笑' },
+      { e:'normal', t:'どれも原曲とshort ver.があって、ビートP500で買うと両方遊べるよ。' },
+      { e:'happy', t:'イベント中はホームで「Dear Santa」、レイドのボス戦で「winter fall」が流れるからね笑' },
+    ],
+    kyuko: [
+      { e:'happy', t:'ほい！ モンヒロビートにクリスマスの新曲が3曲来たよぉ。「Kissからはじまるミステリー」「Dear Santa」「winter fall」だよ。' },
+      { e:'normal', t:'どれも原曲とshort ver.があって、ビートP500で買うと両方遊べるよぉ。' },
+      { e:'happy', t:'イベント中はホームで「Dear Santa」、レイドのボス戦で「winter fall」が流れるよ笑' },
+    ],
+    sorashido: [
+      { e:'excited', t:'{name}、モンヒロビートにクリスマスの新曲が3曲入りましたよ！ 「Kissからはじまるミステリー」「Dear Santa」「winter fall」です。' },
+      { e:'normal', t:'どれも原曲とshort ver.があって、ビートP500で買うと両方遊べます。' },
+      { e:'happy', t:'イベント中はホームで「Dear Santa」、レイドのボス戦で「winter fall」が流れますよ笑' },
+    ],
+    erubin: [
+      { e:'happy', t:'{name}、モンヒロビートにクリスマスの新曲が3曲入ったよ。「Kissからはじまるミステリー」「Dear Santa」「winter fall」。' },
+      { e:'normal', t:'どれも原曲とshort ver.があって、ビートP500で買うと両方遊べるよ。' },
+      { e:'happy', t:'イベント中はホームで「Dear Santa」、レイドのボス戦で「winter fall」が流れるよ。ゆっくり聞いてみてね' },
+    ],
+  },
   // 咲かせて！ハナウタ・ノート(2026-11-23 10:00〜・台帳 r1119-101/103)。花の3人が自分たちのイベントを知らせる。先の日の曲名・お話の中身は言わない。数字は倍率だけ
   update_notice_flower3_2026_start_v1: {
     mua: [
