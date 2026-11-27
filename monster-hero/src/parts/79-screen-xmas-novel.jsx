@@ -741,10 +741,42 @@ const xmasNovelSe = (kind) => {
   try {
     if (typeof Audio_ === 'undefined' || !Audio_ || !Audio_.se) return;
     if (kind === 'laugh' && typeof Audio_.playSeFile === 'function') { void Audio_.playSeFile(XMAS_NOVEL_LAUGH_SE); return; }
-    const map = { clap: 'join', laugh: 'enemySpecial', bell: 'levelUp', impact: 'enemyAttack', music: 'heal', tap: 'tap', clue: 'card', ok: 'victory', ng: 'guard' };
+    const map = { clap: 'join', laugh: 'enemySpecial', impact: 'enemyAttack', music: 'heal', tap: 'tap', clue: 'card', ok: 'victory', ng: 'guard' };
     const fn = Audio_.se[map[kind] || 'tap'];
     if (typeof fn === 'function') fn();
   } catch (e) { /* 音が出せなくても読み進める */ }
+};
+// 台本の〔音:鐘〕〔音:時計〕〔音:手紙〕の行の音(r1126-066)。手持ちの効果音だけを使う(新しい音は作らない)。
+//   鐘 = 金属の音(guard)に、低く下がる余韻(trainingFail)を重ねた「ボーン」/ 時計 = 短い針の音(xpTick)/ 手紙 = 不穏にふくらむ音(enemyCharge)。
+//   効果音の音量(seBus)を通るので設定どおりの大きさ。BGM は止めない。
+//   連打しても重ねない: 次の行へ進んだら残りの回数は鳴らさず、同じ音を前の音のすぐあと(hold の間)には鳴らし直さない
+const XMAS_NOVEL_SE_SEQ = Object.freeze({
+  bell: { gap: 1150, hold: 900, play: ['guard', 'trainingFail'] },
+  tick: { gap: 520, hold: 300, play: ['xpTick'] },
+  letter: { gap: 0, hold: 1500, play: ['enemyCharge'] },
+});
+let xmasNovelSeTimers = [];
+let xmasNovelSeLast = { kind: '', at: 0 };
+const xmasNovelSeStop = () => { xmasNovelSeTimers.forEach((t) => clearTimeout(t)); xmasNovelSeTimers = []; };
+const xmasNovelSeHit = (kind) => {
+  try {
+    if (typeof Audio_ === 'undefined' || !Audio_ || !Audio_.se) return;
+    const seq = XMAS_NOVEL_SE_SEQ[kind];
+    xmasNovelSeLast = { kind, at: Date.now() };
+    seq.play.forEach((name) => { const fn = Audio_.se[name]; if (typeof fn === 'function') fn(); });
+  } catch (e) { /* 音が出せなくても読み進める */ }
+};
+const xmasNovelRowSe = (kind, times) => {
+  xmasNovelSeStop();
+  const seq = XMAS_NOVEL_SE_SEQ[kind];
+  if (!seq) { xmasNovelSe(kind); return; }
+  const n = Math.max(1, Math.min(3, Number.isFinite(times) ? times : 1));
+  const wait = xmasNovelSeLast.kind === kind ? Math.max(0, seq.hold - (Date.now() - xmasNovelSeLast.at)) : 0;
+  for (let i = 0; i < n; i += 1) {
+    const at = wait + i * seq.gap;
+    if (at <= 0) xmasNovelSeHit(kind);
+    else xmasNovelSeTimers.push(setTimeout(() => xmasNovelSeHit(kind), at));
+  }
 };
 //  場面の途中で曲を変える所(台本の「切→温」のうち、新曲を当てた所・台帳 r1126-039)。場面ID → [その行から先, 曲の鍵]
 //  END-G: 屋根裏の会場のやり直しのクリスマス会と本物のサンタのそり(「温 ★」)から Dear Santa。それより前のせつない所は今の曲のまま
@@ -882,7 +914,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
     try { prevBgm.current = typeof Audio_ !== 'undefined' && Audio_.currentBgmKey ? Audio_.currentBgmKey() : null; } catch (e) { prevBgm.current = null; }
     xmasNovelLoad(S).then((s) => { if (alive) { saveRef.current = s; setSave(s); } });
     xmasNovelBgm('melo_kiss_mystery');
-    return () => { alive = false; if (storeTimer.current) clearTimeout(storeTimer.current); };
+    return () => { alive = false; xmasNovelSeStop(); if (storeTimer.current) clearTimeout(storeTimer.current); };
   }, []);
   const persist = (next, now = false) => {
     saveRef.current = next; setSave(next);
@@ -910,6 +942,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
     let s = base;
     unreadRef.current = !!(r.k && !s.read.includes(r.k));
     if (r.k && !s.read.includes(r.k)) s = { ...s, read: [...s.read, r.k] };
+    if (r.t === 'band' && r.se) xmasNovelRowSe(r.se, r.seN); else xmasNovelSeStop();
     if (r.t === 'band' && Array.isArray(r.fx)) {
       const vis = r.fx.find((f) => ['dark', 'white', 'red', 'light', 'bleed'].includes(f));
       if (r.fx.includes('bleed') && r.fx.includes('red')) setTimeout(() => setFx({ kind: 'bleed', n: Date.now() }), 380); // 赤く光ってから、にじむ
@@ -917,7 +950,6 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
       if (r.fx.includes('shake')) setShake((n) => n + 1);
       if (r.fx.includes('curtainDown')) setCurtain('down');
       if (r.fx.includes('curtainUp')) { setCurtain('up'); setTimeout(() => setCurtain((c) => (c === 'up' ? null : c)), 1700); }
-      if (r.se) xmasNovelSe(r.se);
       if (r.fx.includes('title') || r.fx.includes('chapter')) { setCard({ kind: r.fx.includes('title') ? 'title' : 'band', text: r.x }); setShown(99999); return s; }
     } else setFx((f) => (f && f.kind === 'dark' ? null : f));
     if (r.bgm && r.bgm !== lastBgm.current) { lastBgm.current = r.bgm; xmasNovelBgm(r.bgm); }
