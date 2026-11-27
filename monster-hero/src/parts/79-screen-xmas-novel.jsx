@@ -33,7 +33,16 @@ const XMAS_NOVEL_CSS = `
   background: linear-gradient(180deg, #1b2c5c, #0c1636); color: #f8e3a4; box-shadow: 0 0 0 1px rgba(232,196,106,.85); }
 .mh-nv-text { font-size: 17px; line-height: 1.75; font-weight: 600; white-space: pre-wrap; min-height: 3.5em; text-align: left; word-break: normal; line-break: normal; overflow-wrap: anywhere; text-wrap: wrap; }
 .mh-nv-plain { text-align: left; word-break: normal; line-break: normal; overflow-wrap: anywhere; text-wrap: wrap; }
-.mh-nv-text.band { text-align: left; color: #dfe6ff; font-style: normal; }
+/* 章の札・題の札の文も左寄せ(事件簿の中の文は左寄せ・幅いっぱいで1文字ずつ折る。飾りの見出しは起動画面の題字とエンドの札だけ・台帳 r1126-048) */
+.mh-nv-cardtext { width: min(100%, 560px); }
+.mh-nv-cardtext .mh-nv-rule { margin: 14px 0; }
+.mh-nv-text.say .mh-nv-say-body { display: block; padding-left: 1em; text-indent: -1em; }
+.mh-nv-text.say .mh-nv-say-lead { display: block; font-size: 13px; color: #b9c6e8; line-height: 1.5; margin-bottom: 2px; }
+.mh-nv-text.say .mh-nv-say-lead.only { font-size: inherit; color: #d6def5; margin: 0; }
+.mh-nv-text.se { text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+.mh-nv-se-sound { display: block; font-size: 21px; font-weight: 800; letter-spacing: .14em; color: #f3e6c0; text-shadow: 0 0 12px rgba(232,196,106,.35); }
+.mh-nv-se-note { display: block; font-size: 12px; font-weight: 600; letter-spacing: .02em; color: #a9b6da; line-height: 1.55; }
+.mh-nv-text.band { text-align: left; color: #c9d3ee; font-style: normal; }
 .mh-nv-note { margin-top: 2px; font-size: 11px; color: #9fb0d8; }
 .mh-nv-next { position: absolute; right: 14px; bottom: 8px; width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-top: 9px solid #e8c46a; animation: mh-nv-bob 1s ease-in-out infinite; }
 @keyframes mh-nv-bob { 50% { transform: translateY(4px); } }
@@ -79,12 +88,18 @@ const XMAS_NOVEL_CSS = `
 .mh-nv-person[data-st='santa'] .ph { filter: grayscale(1) brightness(.25); }
 .mh-nv-person .santa { position: absolute; top: 12%; left: 50%; width: 70%; transform: translateX(-50%) rotate(-10deg); }
 .mh-nv-person[data-fresh] { animation: mh-nv-fresh 1.1s ease; box-shadow: 0 0 0 2px #e8c46a; }
-.mh-nv-person[data-fresh] .stamp, .mh-nv-person[data-fresh] .santa, .mh-nv-person[data-fresh] .flower { animation: mh-nv-stamp .5s cubic-bezier(.2,1.6,.4,1) both; }
+.mh-nv-person[data-fresh] .stamp, .mh-nv-person[data-fresh] .santa { animation: mh-nv-stamp .5s cubic-bezier(.2,1.6,.4,1) both; }
 @keyframes mh-nv-fresh { 0% { transform: scale(1); } 30% { transform: scale(1.08); } 100% { transform: scale(1); } }
 @keyframes mh-nv-stamp { from { opacity: 0; scale: 2.2; } to { opacity: 1; scale: 1; } }
 .mh-nv-fig.laugh svg, .mh-nv-fig.laugh .mh-nv-boss { animation: mh-nv-laugh .25s ease-in-out 6; }
 @keyframes mh-nv-laugh { 50% { transform: translateY(-4px) scaleY(1.03); } }
-.mh-nv-person .flower { position: absolute; top: 30%; left: 50%; transform: translateX(-50%); font-size: 16px; color: #fff; text-shadow: 0 0 6px #fff; }
+.mh-nv-person .cross { position: absolute; left: 4%; top: 3%; width: 92%; aspect-ratio: 1; pointer-events: none; filter: drop-shadow(0 0 2px rgba(0,0,0,.6)); }
+.mh-nv-person[data-fresh] .cross .s1, .mh-nv-person[data-fresh] .cross .s2 { stroke-dasharray: 100; stroke-dashoffset: 100; animation: mh-nv-cross-draw .38s ease-out forwards; }
+.mh-nv-person[data-fresh] .cross .s2 { animation-delay: .42s; }
+.mh-nv-person[data-fresh] .cross .drip { opacity: 0; animation: mh-nv-cross-drip .9s ease-in .85s forwards; }
+@keyframes mh-nv-cross-draw { to { stroke-dashoffset: 0; } }
+@keyframes mh-nv-cross-drip { 0% { opacity: 0; transform: translateY(-4px); } 40% { opacity: 1; } 100% { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .mh-nv-person[data-fresh] .cross .s1, .mh-nv-person[data-fresh] .cross .s2, .mh-nv-person[data-fresh] .cross .drip { animation: none; stroke-dashoffset: 0; opacity: 1; } }
 .mh-nv-choice { width: 100%; min-height: 52px; padding: 10px 14px; border-radius: 12px; font-size: 15px; font-weight: 800; color: #fff3d0; text-align: left; word-break: normal; line-break: normal; overflow-wrap: anywhere; text-wrap: wrap;
   background: linear-gradient(180deg, rgba(27,44,92,.95), rgba(10,20,52,.95)); box-shadow: 0 0 0 1px #e8c46a, 0 6px 16px rgba(0,0,0,.45); }
 .mh-nv-choice:active { transform: scale(.98); }
@@ -397,6 +412,31 @@ const XmasNovelSantaStamp = () => (
     <circle cx="20" cy="20" r="5" fill="#0a0a0a" /><path d="M11 33 C12 25 16 24 20 24 C24 24 28 25 29 33 Z" fill="#0a0a0a" />
   </svg>
 );
+// 亡くなった人の印: 暗いパネルに、血でなぞったような赤いバツ(台帳 r1126-053・追記1)。色は赤いにじみ(.mh-nv-fx.bleed)にそろえる。
+//  かすれ・にじみは SVG のゆらぎで、線の端から滴が垂れる。付いた行では1本ずつ引かれる(.mh-nv-person[data-fresh])
+const XmasNovelBloodCross = () => (
+  <svg viewBox="0 0 100 100" width="100%" height="100%" aria-hidden="true">
+    <defs>
+      <filter id="mh-nv-blood-rough" x="-10%" y="-10%" width="120%" height="130%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="7" result="n" />
+        <feDisplacementMap in="SourceGraphic" in2="n" scale="5" xChannelSelector="R" yChannelSelector="G" result="d" />
+        <feGaussianBlur in="d" stdDeviation="0.5" />
+      </filter>
+    </defs>
+    <g filter="url(#mh-nv-blood-rough)" strokeLinecap="round" fill="none">
+      <path className="s1" pathLength="100" d="M15 15 C 30 28, 44 44, 52 52 S 74 72, 84 83" stroke="rgba(110,0,8,.92)" strokeWidth="11" />
+      <path className="s1" pathLength="100" d="M17 17 C 32 30, 45 45, 53 53 S 73 71, 82 81" stroke="rgba(160,6,16,.75)" strokeWidth="4.5" />
+      <path className="s2" pathLength="100" d="M85 14 C 72 28, 58 42, 50 50 S 28 72, 16 85" stroke="rgba(110,0,8,.92)" strokeWidth="10" />
+      <path className="s2" pathLength="100" d="M83 16 C 70 30, 57 43, 49 51 S 29 71, 18 83" stroke="rgba(160,6,16,.75)" strokeWidth="4" />
+    </g>
+    <g className="drip" fill="rgba(110,0,8,.95)" filter="url(#mh-nv-blood-rough)">
+      <path d="M82 84 C 82 88, 84 92, 83.5 96 C 83 99, 80.5 99, 80.6 96 C 80.8 92, 80 88, 80 84 Z" />
+      <circle cx="82" cy="97" r="2.6" />
+      <path d="M15 86 C 15 89, 16.5 92, 16 94 C 15.6 96, 13.6 96, 13.8 94 C 14 91, 13 89, 13 86 Z" />
+      <path d="M50 52 C 50.5 56, 51.5 59, 51 61 C 50.6 63, 48.8 63, 49 61 C 49.2 59, 48.6 56, 48.5 53 Z" />
+    </g>
+  </svg>
+);
 const XmasNovelCast = ({ states = {}, changed = [], onPick = null }) => (
   <div className="mh-nv-cast">
     {XMAS_NOVEL_CAST.map((c) => {
@@ -409,7 +449,7 @@ const XmasNovelCast = ({ states = {}, changed = [], onPick = null }) => (
           <span className="mh-nv-serif" style={{ lineHeight: 1.2 }}>{c.name}</span>
           {st === 'missing' && <span className="stamp">行方不明</span>}
           {st === 'hurt' && <span className="tag">けが</span>}
-          {st === 'dead' && <span className="flower" aria-label="白い花">✿</span>}
+          {st === 'dead' && <span className="cross" aria-label="赤いバツ"><XmasNovelBloodCross /></span>}
           {st === 'santa' && <span className="santa" aria-label="黒いサンタの判"><XmasNovelSantaStamp /></span>}
         </>
       );
@@ -486,6 +526,37 @@ const xmasNovelBgm = (key) => {
     if (key === 'silence') { Audio_.stopBGM(); return; }
     if (typeof Audio_.fadeToBGM === 'function') Audio_.fadeToBGM(key, 700); else Audio_.playBGM(key);
   } catch (e) { /* 曲が鳴らせなくても読み進める */ }
+};
+// ---- 文の置き方(台帳 r1126-052): 台詞・地の文・効果音で分ける ----
+//  効果音の帯(台本の「(効果音)」の印 = fx に se): 真ん中寄せ・大きめ・字間をあける。うしろの(説明書き)は小さい2行目に
+const xmasNovelIsSeRow = (row) => !!(row && row.t === 'band' && Array.isArray(row.fx) && row.fx.includes('se'));
+const xmasNovelSplitSe = (s) => {
+  const i = String(s || '').search(/[(（]/);
+  if (i < 0) return [String(s || ''), ''];
+  return [s.slice(0, i), s.slice(i + 1).replace(/[)）]\s*$/, '')];
+};
+const XmasNovelSeText = ({ text, shown }) => {
+  const [sound, note] = xmasNovelSplitSe(text);
+  const vis = Math.max(0, shown);
+  return (<>
+    {sound && <span className="mh-nv-se-sound">{sound.slice(0, vis)}</span>}
+    {note && vis > sound.length && <span className="mh-nv-se-note">{note.slice(0, vis - sound.length - 1)}</span>}
+  </>);
+};
+//  台詞: 「」の中身として出し、2行目からは「の分だけ下げてそろえる(ぶら下げ)。頭の(しぐさ)は小さい前置きの行に。全部が(しぐさ)なら「」を付けない
+const xmasNovelSplitLead = (s) => {
+  const m = String(s || '').match(/^[(（][^)）]*[)）]/);
+  return m ? [m[0], s.slice(m[0].length)] : ['', String(s || '')];
+};
+const XmasNovelSayText = ({ text, shown }) => {
+  const [lead, body] = xmasNovelSplitLead(text);
+  const vis = Math.max(0, shown);
+  if (!body.trim()) return <span className="mh-nv-say-lead only">{text.slice(0, vis)}</span>;
+  const bodyVis = body.slice(0, Math.max(0, vis - lead.length));
+  return (<>
+    {lead && <span className="mh-nv-say-lead">{lead.slice(0, vis)}</span>}
+    {(bodyVis || !lead || vis > lead.length) && <span className="mh-nv-say-body">「{bodyVis}{vis >= text.length ? '」' : ''}</span>}
+  </>);
 };
 const XmasNovelIcon = ({ d, size = 18 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" dangerouslySetInnerHTML={{ __html: d }} />
@@ -881,10 +952,12 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
         {(isLine || isBand || (row && (row.t === 'clue' || row.t === 'panel' || row.t === 'q'))) && !(card && card.kind !== 'band') && (
           <div className="mh-nv-box" style={{ zIndex: 5 }} data-xmas-novel-box>
             {name && <div className="mh-nv-name mh-nv-serif">{name}</div>}
-            <div className={`mh-nv-text${isBand ? ' band mh-nv-serif' : ''}`} data-xmas-novel-text>
+            <div className={`mh-nv-text${isBand ? (xmasNovelIsSeRow(row) ? ' se mh-nv-serif' : ' band mh-nv-serif') : ''}${isLine ? ' say' : ''}`} data-xmas-novel-text data-xmas-novel-kind={isBand ? (xmasNovelIsSeRow(row) ? 'se' : 'band') : isLine ? 'line' : row.t}>
               {row.t === 'clue' ? `手がかり帳に「${row.clue}」を書きとめた`
                 : row.t === 'panel' ? (row.x || (row.stamp ? '……' : '登場人物'))
                 : row.t === 'q' ? xmasNovelFill(row.x, playerName)
+                : isBand && xmasNovelIsSeRow(row) ? <XmasNovelSeText text={text} shown={shown} />
+                : isLine ? <XmasNovelSayText text={text} shown={shown} />
                 : text.slice(0, shown)}
             </div>
             {isLine && row.note && !typing && <div className="mh-nv-note">({row.note})</div>}
@@ -913,18 +986,18 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
 
       {card && (
         <div className="mh-nv-card" data-xmas-novel-card={card.kind} onClick={advance}>
-          {card.kind === 'chapter' && (<>
+          {card.kind === 'chapter' && (<div className="mh-nv-plain mh-nv-cardtext">
             <div className="mh-nv-serif text-[15px] tracking-[0.5em] text-slate-200">{card.label}</div>
             <div className="mh-nv-rule" />
             <div className="mh-nv-serif mh-nv-gold text-[30px] font-black leading-tight sm:text-[38px]">{card.title}</div>
             <div className="mh-nv-rule" />
             <div className="mt-6 text-[11px] text-slate-400">タップで進む</div>
-          </>)}
-          {(card.kind === 'title' || card.kind === 'band') && (<>
+          </div>)}
+          {(card.kind === 'title' || card.kind === 'band') && (<div className="mh-nv-plain mh-nv-cardtext">
             <div className="mh-nv-rule" />
-            <div className="mh-nv-serif mh-nv-gold text-[30px] font-black leading-tight sm:text-[40px]" style={JA_LABEL_STYLE}>{jaWrap(card.text)}</div>
+            <div className="mh-nv-serif mh-nv-gold text-[30px] font-black leading-tight sm:text-[40px]">{card.text}</div>
             <div className="mh-nv-rule" />
-          </>)}
+          </div>)}
           {card.kind === 'ending' && (() => {
             const kind = { ...(XMAS_NOVEL_ENDING_KINDS[card.ending.kind] || XMAS_NOVEL_ENDING_KINDS.normal), ...(card.ending.label ? { label: card.ending.label } : {}) };
             return (

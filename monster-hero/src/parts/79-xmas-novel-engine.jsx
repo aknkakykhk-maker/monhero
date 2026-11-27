@@ -176,7 +176,7 @@ const xmasNovelApplyRow = (cur, row) => {
   return cur;
 };
 // ---- 登場人物パネル(話の進みで積み上げる) ----
-//  状態: '' ふつう / 'missing' 行方不明のはんこ / 'hurt' けがの札 / 'dead' 暗いパネルと白い花 / 'santa' 暗いパネルと黒いサンタの判(バッドエンド)
+//  状態: '' ふつう / 'missing' 行方不明のはんこ / 'hurt' けがの札 / 'dead' 暗いパネルと赤いバツ / 'santa' 暗いパネルと黒いサンタの判(バッドエンド)
 //  行の ops(人ごとの変わり方)と stamp(1 = まだ暗くない人を1人・'all' = のこった人みんなに黒いサンタの判)
 const XMAS_NOVEL_PANEL_STATES = Object.freeze(['missing', 'hurt', 'dead', 'santa']);
 const xmasNovelPanelApply = (panel, row) => {
