@@ -3167,6 +3167,9 @@ function MonsterHeroGame() {
   const [changelogOpenId, setChangelogOpenId] = useState(null);
   const [changelogTab, setChangelogTab] = useState('update'); // 'update'=更新情報 / 'event'=イベント(r1119-113) / 'issue'=不具合情報
   const [changelogSeen, setChangelogSeen] = useState({ update: [], issue: [] }); // タブごとの既読ID一覧(端末に保存)
+  const changelogListRef = useRef(null); // 一覧(送る所)。「↑ 上へ」で使う(2026-11-27 r1126-074 小8)
+  const [changelogScrolled, setChangelogScrolled] = useState(false);
+  const [changelogZoomImage, setChangelogZoomImage] = useState(null); // 押して大きく出している絵(r1126-074 小3)
   const displayedChangelogTabRef = useRef(null); // 表示中のタブは、そこから離れるまで未読のまま保つ
   const [seVolume, setSeVolumeState] = useState(DEFAULT_VOLUME); // SE音量 0〜100(端末に保存、初期値は読み込み後に上書き)
   const [bgmVolume, setBgmVolumeState] = useState(DEFAULT_VOLUME); // BGM音量 0〜100(同上)
@@ -3472,6 +3475,8 @@ function MonsterHeroGame() {
     return { changelogUnreadIds: unreadIds, changelogUnread: unread, changelogPinnedIds: pinnedSet, changelogEventCards: eventCards };
   }, [changelogSeen, showChangelog]);
   const hasUnreadChangelog = changelogUnread.update || changelogUnread.issue || changelogUnread.event;
+  // 入口(タイトル・HOME)の印は「!」「NEW」ではなく未読の数(2026-11-27 r1126-074 小5。隣のミッション・ギフトと同じく数で出す)
+  const changelogUnreadCount = (changelogUnreadIds.update||[]).length + (changelogUnreadIds.issue||[]).length + (changelogUnreadIds.event||[]).length;
   // イベントタブの札を1枚開いたら、その項目だけ既読にする(2026-11-27 r1126-068)。
   //   その項目が属するタブの既読(mh_changelog_seen_ids_update / _issue)へ足す。保存のしかた・キーは前と同じ
   const markChangelogEventSeen = (id) => {
@@ -3509,6 +3514,8 @@ function MonsterHeroGame() {
     if (displayedChangelogTabRef.current === type) return;
     if (displayedChangelogTabRef.current) markChangelogTabSeen(displayedChangelogTabRef.current);
     displayedChangelogTabRef.current = type;
+    setChangelogScrolled(false);
+    try { changelogListRef.current && changelogListRef.current.scrollTo({ top:0 }); } catch {}
     setChangelogTab(type);
   };
   const openChangelog = () => {
@@ -3521,6 +3528,8 @@ function MonsterHeroGame() {
     if (displayedChangelogTabRef.current) markChangelogTabSeen(displayedChangelogTabRef.current);
     displayedChangelogTabRef.current = null;
     setChangelogOpenId(null);
+    setChangelogScrolled(false);
+    setChangelogZoomImage(null);
     setShowChangelog(false);
   };
   // ヘルプは「カテゴリ一覧 → 項目一覧 → 本文」の3階層。中身は data/help.js に置いている。
@@ -20018,7 +20027,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           :<em className="mh-unread-badge" aria-label="未読あり">!</em>)}</button>)}</div>
         {/* data/changelog.js の読み込みに失敗すると中身が0件になる。黙って空にすると
             「更新履歴が壊れた」としか分からないので、読み込み直せることをここで伝える */}
-        <div className="mh-changelog-list" data-changelog-list>{CHANGELOG_ENTRIES.length===0
+        <div className="mh-changelog-list" data-changelog-list ref={changelogListRef} onScroll={e=>{const far=e.currentTarget.scrollTop>600;if(far!==changelogScrolled)setChangelogScrolled(far);}}>{CHANGELOG_ENTRIES.length===0
           ? <p className="mh-changelog-empty" data-changelog-empty>更新履歴を読み込めませんでした。通信状況を確かめてから、設定の「ゲームを更新」で読み込み直してください。</p>
           : (()=>{
             // 同じ日の同じ話題を1行にまとめる(2026-09-13・ユーザー指摘
@@ -20028,7 +20037,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             // 日付は行の上に1度だけ出す(同じ日が続くあいだは繰り返さない)。
             // 「イベント」タブ(r1119-113)は札だけを並べる。更新情報・不具合情報は一番上から日付ごとの項目
             const rows = changelogTab==='event' ? [] : changelogRowsOfTab(changelogTab);
-            const unreadHere = new Set(changelogUnreadIds[changelogTab]||[]);
+            // イベントの札になっている項目も、元のタブの一覧で NEW と橙の縁を出す(2026-11-27 r1126-074 小2)。
+            //   既読にするのは今どおりイベントタブで札を開いたとき(この一覧を見ただけでは消さない)
+            const unreadHere = new Set([...(changelogUnreadIds[changelogTab]||[]), ...(changelogTab==='event'?[]:(changelogUnreadIds.event||[]).filter(id=>CHANGELOG_TAB_OF_ID.get(id)===changelogTab))]);
             let shownDay = null;
             // 開催中の期間限定イベントは、いつも一覧のいちばん上に固定して出す(2026-10-04・ユーザー指示
             // 「イベント期間中はこれを常に1番上に出しといて」)。日付やまとめの並びとは別。終わったら自然に消えて、あとは普通の行として残る。
@@ -20076,7 +20087,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   </span>
                 </summary>
                 <div style={{padding:banner?'0 10px 8px':0}}>
-                {c.image&&<img data-changelog-pinned-image src={c.image} alt={`${c.title}のお知らせ`} onError={e=>{e.currentTarget.style.display='none';}} loading="lazy" decoding="async" style={{width:'100%',borderRadius:12,margin:'8px 0 4px'}}/>}
+                {c.image&&<img data-changelog-pinned-image src={c.image} alt={`${c.title}のお知らせ`} onError={e=>{e.currentTarget.style.display='none';}} onClick={()=>setChangelogZoomImage(c.image)} loading="lazy" decoding="async" style={{display:'block',width:'100%',maxHeight:'min(34vh, 320px)',objectFit:'contain',background:'#0008',borderRadius:12,margin:'8px 0 4px',cursor:'zoom-in'}}/>}
                 {/* 予告動画も、固定の札の中で見られるようにする(下の一覧の行と同じ) */}
                 {typeof c.video==='string'&&c.video&&<figure data-changelog-pinned-video style={{margin:'6px 0'}}>
                   <figcaption style={{fontWeight:900,fontSize:12,color:'#ffedd5',margin:'0 0 4px'}}>▶ 予告動画</figcaption>
@@ -20095,7 +20106,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               const kinds=[];
               row.entries.forEach(entry=>{const info=changelogTypeOf(entry);
                 const found=kinds.find(kind=>kind.tone===info.tone);
-                if(found)found.count+=1;else kinds.push({tone:info.tone,label:info.label,count:1});});
+                if(found)found.count+=1;else kinds.push({tone:info.tone,label:changelogKindLabelInTab(info,changelogTab),count:1});});
               const dayHead=row.day!==shownDay?row.day:null;
               shownDay=row.day;
               return (<React.Fragment key={row.key}>
@@ -20105,7 +20116,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <span className="mh-changelog-group-emoji" aria-hidden="true">{row.emoji}</span>
                     <b>{row.label}</b>
                     <span className="mh-changelog-count">{row.entries.length}件{unreadCount>0&&<em>NEW</em>}</span>
-                    <small>{open?'閉じる ▲':'詳細 ▼'}</small>
+                    {/* 窓の「閉じる」と同じ言葉にしない(2026-11-27 r1126-074 小7) */}
+                    <small>{open?'たたむ ▲':'詳細 ▼'}</small>
                   </button>
                   <span className="mh-changelog-kinds">{kinds.map(kind=><span key={kind.tone} className="mh-changelog-kind" data-kind={kind.tone}>{kind.label}{kind.count>1&&<i>{kind.count}</i>}</span>)}</span>
                   {/* 閉じているあいだも、何があった日なのかが分かるように見出しだけ並べる */}
@@ -20114,13 +20126,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   {open&&<div className="mh-changelog-detail" data-changelog-detail>
                     {row.entries.map(c=>(<section key={c.id} className="mh-changelog-item" data-changelog-type={c.type||'update'}>
                       <time>{(c.date||'').slice(11)||c.date}{unreadHere.has(c.id)&&<em>NEW</em>}</time>
-                      <span className="mh-changelog-kind" data-kind={changelogTypeOf(c).tone}>{changelogTypeOf(c).label}</span>{changelogEventLive(c)&&<span data-changelog-event-live className="mh-changelog-kind" style={{background:'#f97316',color:'#1c1917',borderColor:'#fdba74',marginLeft:4}}>🎃 開催中</span>}
+                      <span className="mh-changelog-kind" data-kind={changelogTypeOf(c).tone}>{changelogKindLabelInTab(changelogTypeOf(c),changelogTab)}</span>{/* 札と同じ決め方にする(2026-11-27 r1126-074 小1)。開始前は「📅 開催予定」、絵文字はイベントごと(pinEmoji)。ハロウィンの 🎃 のままだった */}
+                      {changelogEventLive(c)&&<span data-changelog-event-live className="mh-changelog-kind" style={{background:changelogEventUpcoming(c)?'#38bdf8':'#f97316',color:'#1c1917',borderColor:'#fdba74',marginLeft:4}}>{changelogEventUpcoming(c)?'📅 開催予定':`${typeof c.pinEmoji==='string'&&c.pinEmoji?c.pinEmoji:'🎉'} 開催中`}</span>}
                       <b>{c.title}</b>
                       {/* 告知画像があれば本文の上に出す
                           (期間中いつでもここから見返せるように・2026-09-11・ユーザー指示) */}
+                      {/* 絵の高さに上限(縦は一覧の約1/3・横は高さの半分ほど)。押すと大きく出す(2026-11-27 r1126-074 小3) */}
                       {c.image&&<img data-changelog-image src={c.image} alt={`${c.title}のお知らせ`}
-                        onError={e=>{e.currentTarget.style.display='none';}} loading="lazy" decoding="async"
-                        style={{width:'100%',borderRadius:'12px',margin:'6px 0'}}/>}
+                        onError={e=>{e.currentTarget.style.display='none';}} loading="lazy" decoding="async" onClick={()=>setChangelogZoomImage(c.image)}
+                        style={{display:'block',width:'100%',maxHeight:'min(34vh, 320px)',objectFit:'contain',background:'#0008',borderRadius:'12px',margin:'6px 0',cursor:'zoom-in'}}/>}
                       {/* 予告動画(2026-11-02 社長「告知にストーリーの一部の予告動画もほしい」)。video:'movies/…mp4' と書いたときだけ出す。
                           押すまで読み込まない(preload none)。videoPoster は押す前に見せる絵。読めなかったら黙って消す */}
                       {typeof c.video==='string'&&c.video&&<figure data-changelog-video style={{margin:'6px 0'}}>
@@ -20133,8 +20147,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                           読めなかった絵は黙って消す(上の image と同じ)。助手の告知には出さない(告知は image の1枚だけ) */}
                       {(Array.isArray(c.gallery)?c.gallery:[]).filter(g=>g&&typeof g.image==='string'&&g.image).map((g,j)=><figure key={`g${j}`} data-changelog-gallery style={{margin:'10px 0 0'}}>
                         {g.caption&&<figcaption style={{fontWeight:900,margin:'0 0 4px'}}>■ {g.caption}</figcaption>}
-                        <img src={g.image} alt={g.caption||`${c.title}の見本`} onError={e=>{e.currentTarget.style.display='none';}}
-                          loading="lazy" decoding="async" style={{width:'100%',borderRadius:'12px'}}/>
+                        <img src={g.image} alt={g.caption||`${c.title}の見本`} onError={e=>{e.currentTarget.style.display='none';}} onClick={()=>setChangelogZoomImage(g.image)}
+                          loading="lazy" decoding="async" style={{display:'block',width:'100%',maxHeight:'min(34vh, 320px)',objectFit:'contain',background:'#0008',borderRadius:'12px',cursor:'zoom-in'}}/>
                       </figure>)}
                       {/* 外に出るリンク(2026-09-14・よそのゲームの曲を入れたときの案内用)。
                           https だけ通し、target="_blank" と rel="noopener noreferrer" を必ず付ける
@@ -20145,11 +20159,25 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         {(c.link&&c.link.label)||'詳しく見る'} ↗
                       </a>}
                     </section>))}
+                    {/* 長い中身を読んだあと、上まで戻らずにたためるように(2026-11-27 r1126-074 小7) */}
+                    <button type="button" data-changelog-fold-bottom onClick={e=>{const art=e.currentTarget.closest('article');setChangelogOpenId(null);requestAnimationFrame(()=>{try{art&&art.scrollIntoView({block:'nearest'});}catch{}});}}
+                      style={{display:'block',width:'100%',minHeight:40,marginTop:8,borderRadius:10,border:'1px solid #ffffff26',background:'#ffffff0d',color:'#c7d2fe',fontSize:12,fontWeight:900}}>▲ たたむ</button>
                   </div>}
                 </article>
               </React.Fragment>);
-            })];
+            }),
+            // 一覧の終わりと「↑ 上へ」(2026-11-27 r1126-074 小8)。100画面ぶん続くので、終わりと戻り方が分かるようにする
+            rows.length>0&&<p key="changelog-end" data-changelog-end style={{textAlign:'center',fontSize:11,color:'#94a3b8',margin:'14px 0 6px'}}>― ここまでです ―</p>,
+            changelogScrolled&&<div key="changelog-to-top" style={{position:'sticky',bottom:8,height:0,display:'flex',justifyContent:'flex-end',pointerEvents:'none'}}>
+              <button type="button" data-changelog-to-top onClick={()=>{try{changelogListRef.current&&changelogListRef.current.scrollTo({top:0,behavior:'smooth'});}catch{}}}
+                style={{pointerEvents:'auto',transform:'translateY(-100%)',minHeight:44,padding:'0 14px',borderRadius:999,border:'1px solid #c4b5fd88',background:'#312e81f0',color:'#fff',fontSize:12,fontWeight:900,boxShadow:'0 4px 12px #000a'}}>↑ 上へ</button>
+            </div>];
           })()}</div>
+        {/* 絵を押したら大きく出す(2026-11-27 r1126-074 小3)。もう一度押すと戻る */}
+        {changelogZoomImage&&<div data-changelog-zoom role="button" aria-label="絵を閉じる" onClick={e=>{e.stopPropagation();setChangelogZoomImage(null);}}
+          style={{position:'fixed',inset:0,zIndex:100001,background:'#000000e6',display:'flex',alignItems:'center',justifyContent:'center',padding:'calc(12px + env(safe-area-inset-top)) 12px calc(12px + env(safe-area-inset-bottom))'}}>
+          <img src={changelogZoomImage} alt="" style={{maxWidth:'100%',maxHeight:'100%',objectFit:'contain',borderRadius:12}}/>
+        </div>}
         <button type="button" className="mh-dialog-close" data-mh-back onClick={closeChangelog}>閉じる</button>
       </div>
     </div>
@@ -20468,7 +20496,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   if (bootPhase === 'TITLE') return (
     <><main className="mh-title-gate" aria-label="Monster Hero タイトル画面">
       <img className="mh-title-backdrop" src={titleArtSrc(titleArt, titleShape)} alt="" aria-hidden="true"/><img className="mh-title-visual" src={titleArtSrc(titleArt, titleShape)} alt="モンスターヒーロー タイトル画面"/>
-      <header className="mh-title-header"><div className="mh-title-build"><b>VERSION</b><span>{BUILD_DATE}</span><b>PLAYER ID</b><span>{titlePlayerId}</span></div><div className="mh-title-actions"><button onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();openChangelog()}}><Sparkles size={19}/><span>お知らせ</span>{hasUnreadChangelog&&<em>NEW</em>}</button><button onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();setShowTitleSettings(true)}}><Settings size={19}/><span>設定</span></button></div></header>
+      <header className="mh-title-header"><div className="mh-title-build"><b>VERSION</b><span>{BUILD_DATE}</span><b>PLAYER ID</b><span>{titlePlayerId}</span></div><div className="mh-title-actions"><button onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();openChangelog()}}><Sparkles size={19}/><span>更新履歴</span>{hasUnreadChangelog&&<em data-changelog-entry-count={changelogUnreadCount} aria-label={`未読${changelogUnreadCount}件`}>{changelogUnreadCount>99?'99+':changelogUnreadCount}</em>}</button><button onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();setShowTitleSettings(true)}}><Settings size={19}/><span>設定</span></button></div></header>
       <button type="button" className="mh-title-start" disabled={!!titleModal || titleStarting} onPointerDown={startGame} aria-label="トップ画面へ進む"></button>{titleModal}
     </main>{updateNotice}{storageTroubleNotice}</>
   );
@@ -20511,7 +20539,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             friendRequestCount={friendRequestInfo.count}
             assistantBondUp={assistantBondUp} breederIcon={breederIcon} breederLevel={breederLevel}
             breederName={breederName} breederPoints={breederPoints} gifts={gifts} gold={gold}
-            hasUnreadChangelog={hasUnreadChangelog} homeBackgroundReady={homeBackgroundReady}
+            hasUnreadChangelog={hasUnreadChangelog} changelogUnreadCount={changelogUnreadCount} homeBackgroundReady={homeBackgroundReady}
             homeArt={homeArt}
             homePastureMasumons={homePastureMasumons} masuMons={masuMons} missions={missions}
             onOpenBattle={openBattleSystemSelect}

@@ -348,7 +348,7 @@ const HomeRaidJack = ({ eventId, onOpen, ev = RAID_EVENT_JACK }) => {
 const homeWalletGrowPx=(goldText,bpText)=>{const w=t=>[...String(t)].reduce((n,c)=>n+(c.charCodeAt(0)>0x7f?2.5:1),0);return Math.min(24,Math.max(0,Math.ceil(w(goldText)*6.4-50),Math.ceil(w(bpText)*6.4-29)));};
 function HomeScreen({
   assistantBondUp, friendRequestCount = 0, breederIcon, breederLevel, breederName, breederPoints, gifts, gold,
-  hasUnreadChangelog, homeBackgroundReady, homeArt, homePastureMasumons, masuMons, missions,
+  hasUnreadChangelog, changelogUnreadCount, homeBackgroundReady, homeArt, homePastureMasumons, masuMons, missions,
   onOpenBattle, onOpenManagement, onOpenMarket, onOpenProfile, onOpenRhythm, onOpenSettings,
   onOpenTemple, openChangelog, openGiftBox, openMissions, profileFrameId, resolveIconUrl, spotClass,
   raidJackVisible = false, raidJackEventId, onOpenRaidJack,
@@ -491,7 +491,10 @@ function HomeScreen({
             時刻は当初スタック末尾だったが、同日あっくん指示「時計は右上の角に」で先頭(=右上の角)へ移動 */}
         <div className="mh-home-side-stack">
           {typeof TimeOfDayClock==='function'&&<TimeOfDayClock home/>}
-          <button onClick={openChangelog} className="mh-home-side-btn mh-home-update" aria-label="更新履歴"><span className="mh-home-side-ic"><RefreshCcw size={19}/></span><span className="mh-home-side-lb">更新履歴</span>{hasUnreadChangelog&&<em className="mh-unread-badge" aria-label="未読あり">!</em>}</button>
+          <button onClick={openChangelog} className="mh-home-side-btn mh-home-update" aria-label="更新履歴"><span className="mh-home-side-ic"><RefreshCcw size={19}/></span><span className="mh-home-side-lb">更新履歴</span>{hasUnreadChangelog&&(()=>{const n=Number(changelogUnreadCount)||0;return n>0
+            // 「!」ではなく未読の数(2026-11-27 r1126-074 小5)。2桁からは横に伸ばす
+            ?<em className="mh-unread-badge" data-changelog-entry-count={n} aria-label={`未読${n}件`} style={n>9?{width:'auto',minWidth:17,padding:'0 4px',borderRadius:9}:undefined}>{n>99?'99+':n}</em>
+            :<em className="mh-unread-badge" aria-label="未読あり">!</em>;})()}</button>
           <button onClick={openMissions} className={`mh-home-side-btn mh-home-mission${spotClass('reward')}`} aria-label="ミッション"><span className="mh-home-side-ic"><List size={20}/></span><span className="mh-home-side-lb">ミッション</span>
             {missionClaimableCount(normalizeMissions(missions))>0&&<em>{missionClaimableCount(normalizeMissions(missions))}</em>}
           </button>
