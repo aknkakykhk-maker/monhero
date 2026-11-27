@@ -34,6 +34,9 @@ const ROUTES = [
   { name: '主役を名指し', want: 'END-M4', from: 'Q7a', picks: { Q7a: 'P' }, panel: { erubin: 'dead', momosuke: 'dead', mochimaru: 'dead' } },
   { name: '相手(主役でない方)を名指し', want: 'END-M5', from: 'Q7a', picks: { Q7a: 'Q' }, panel: { Q: 'dead' } },
   { name: '真グッドのあと、A1 で「推理はお休み」', want: 'END-O', from: 'A1', picks: { A1: 'opt:2' }, seen: ['END-G'] },
+  // r1126-077 眠りのドラ: ソラシド派の第7章 A7 で②(ワトソンくんの奥の手)。あつ派には A7 が出ない(noQ で確かめる)
+  { name: '第7章 A7 で「ワトソンくんの奥の手」', want: 'END-O2', from: 'A7', picks: { A7: 'opt:1' }, only: 'sorashido' },
+  { name: '第7章 A7 は出ない(あつ派)', want: 'END-M4', from: 'Q7a', picks: { Q7a: 'P' }, only: 'atsu', noQ: 'A7', short: true },
 ];
 
 const run = (side, route) => {
@@ -42,16 +45,18 @@ const run = (side, route) => {
   const who = (v) => (v === 'P' ? P1 : v === 'Q' ? Q1 : v);
   const seen = route.seen || [];
   const lines = [];
+  const asked = [];
   let rec = false;
   let st = E.xmasNovelSettle(S, E.xmasNovelFreshCur(S));
   const push = (r, scene) => { if (rec) lines.push({ id: r.id, scene, t: r.t, w: r.w || null, n: r.n || null, e: r.e || null, x: r.x || '' }); };
   for (let steps = 0; steps < 8000; steps += 1) {
     if (!st.row) {
       if (st.ending) lines.push({ t: 'ending', id: st.ending.id, x: st.ending.name || st.ending.id });
-      return { lines, end: st.ending ? st.ending.id : null, panel: (st.cur && st.cur.panel) || {} };
+      return { lines, asked, end: st.ending ? st.ending.id : null, panel: (st.cur && st.cur.panel) || {} };
     }
     const row = st.row;
     if (row.t !== 'q') { push(row, st.cur.scene); st = E.xmasNovelStep(S, E.xmasNovelApplyRow(st.cur, row)); continue; }
+    asked.push(row.id);
     if (row.id === route.from) rec = true;
     const want = route.picks[row.id];
     let pick;
@@ -79,17 +84,19 @@ const run = (side, route) => {
 };
 
 const NAME = { atsu: 'あつ派', sorashido: 'ソラシド派' };
-const FACE = { normal: 'ふつう', happy: '笑顔', wink: 'ウインク', surprise: '驚き', troubled: '困り顔', angry: 'むくれ顔', crying: '泣き顔', excited: 'わくわく' };
+const FACE = { normal: 'ふつう', happy: '笑顔', wink: 'ウインク', surprise: '驚き', troubled: '困り顔', angry: 'むくれ顔', crying: '泣き顔', excited: 'わくわく', sleep: '寝顔' };
 const ng = [];
 const summary = [];
 ['atsu', 'sorashido'].forEach((side) => {
   const md = [`# 事件簿 足したエンドの通し読み(${NAME[side]}・r1126-062)`, '',
     '`node tools/novel/xmas-novel-ends-trace.js --out docs/progress/event-xmas-2026` で作った一覧(手で直さない)。画面と同じ手順で、生成物の台本をたどった順。分かれ目の選択からエンドまで。', ''];
   ROUTES.forEach((r) => {
+    if (r.only && r.only !== side) return;
     const res = run(side, r);
     const pq = { P: side === 'atsu' ? 'atsu' : 'sorashido', Q: side === 'atsu' ? 'sorashido' : 'atsu' };
     const bad = [];
     if (res.err) bad.push(res.err);
+    if (r.noQ && (res.asked || []).includes(r.noQ)) bad.push(`${r.noQ} が出た(出ないはず)`);
     if (res.end !== r.want) bad.push(`着いたのは ${res.end || '(なし)'}(${r.want} のはず)`);
     Object.entries(r.panel || {}).forEach(([k, v]) => { const id = pq[k] || k; if ((res.panel || {})[id] !== v) bad.push(`パネル ${id} が ${(res.panel || {})[id] || 'ふつう'}(${v} のはず)`); });
     // 派の行: 相手の派の行(末尾 a / s)が混ざっていないか

@@ -13,15 +13,13 @@
 const RHYTHM_SONG_OWNED_KEY = 'mh_rhythm_owned_songs_v1';
 const RHYTHM_SONG_DEFAULT_PRICE = 500;
 // 有料の曲: { 曲の id: ビートP }。2026-11-26 クリスマスの3曲も有料(台帳 r1126-036・ショート版は全編といっしょに開く)。2026-11-14 の新曲3つから(departure!・RPG・Midnight Studio。LAMIA・サウダージ・メガロバニアは無料のまま)
-// ★Battle #5 は公開を止めている間(2026-11-23 社長決定・台帳 r1119-120)、ここと下の組の表のどちらにも入れない。
-//   解禁するときに battle_5: 500 と battle_5_short: 'battle_5' を、公開曲の一覧(RHYTHM_DEMO_SONG_IDS)と必ず同じ変更で戻す
-//   (一覧だけ戻して値段が無いと、印の無い曲=無料の曲として出てしまう)
-const RHYTHM_SONG_PRICES = Object.freeze({ departure: 500, rpg: 500, midnight_studio: 500, hopes_and_dreams: 500, sparkling_pink_overture: 500, seasons_of_a_little_plaza: 500, eiyuu_no_akashi: 500, gourmet_race_64: 500, dr_wily_stage_1: 500, erfolg: 500, amakakeru_tsubasa: 500, beyond_the_same_sky: 500, desert_crown: 500, walkure: 500, kiss_mystery: 500, dear_santa: 500, winter_fall: 500 });
+// Battle #5 は 2026-11-23 から止めていたが、11/28 10:00 に解禁(台帳 r1126-064)。公開曲の一覧と同じ変更で、値段(500)と組(short ver. は原曲と一緒に開く)を戻した
+const RHYTHM_SONG_PRICES = Object.freeze({ departure: 500, rpg: 500, midnight_studio: 500, hopes_and_dreams: 500, sparkling_pink_overture: 500, seasons_of_a_little_plaza: 500, eiyuu_no_akashi: 500, gourmet_race_64: 500, dr_wily_stage_1: 500, erfolg: 500, amakakeru_tsubasa: 500, beyond_the_same_sky: 500, desert_crown: 500, walkure: 500, battle_5: 500, kiss_mystery: 500, dear_santa: 500, winter_fall: 500 });
 // 1曲の値段で、組の別の版(short ver.)もいっしょに遊べる(2026-11-14 社長「1曲500で両方ついてくる」)。{ 別の版の id: 買う曲の id }。
 // 保存するのは買った曲(全編)の id だけ。別の版は、全編を持っていれば開く(保存の形は変えない)
 // 2026-11-19 英雄の証も同じ形にそろえた(ミラクル☆ミルクティ版 → 戦闘版。交換所で2枚に分かれて出ていたのを1枚・500Pで両版に)
 // 2026-11-19 Dr.WILY STAGE 1 も同じ形(おっくせんまん版 → 原曲。曲組500P・両版開放で、交換所では1枚のカードだけ出す)
-const RHYTHM_SONG_BUNDLE_OWNER = Object.freeze({ departure_short: 'departure', rpg_short: 'rpg', midnight_studio_short: 'midnight_studio', hopes_and_dreams_short: 'hopes_and_dreams', gourmet_race_dx: 'gourmet_race_64', eiyuu_no_akashi_milktea: 'eiyuu_no_akashi', dr_wily_stage_1_okkussenman: 'dr_wily_stage_1', erfolg_piano: 'erfolg', beyond_the_same_sky_short: 'beyond_the_same_sky', walkure_short: 'walkure', kiss_mystery_short: 'kiss_mystery', dear_santa_short: 'dear_santa', winter_fall_short: 'winter_fall' });
+const RHYTHM_SONG_BUNDLE_OWNER = Object.freeze({ departure_short: 'departure', rpg_short: 'rpg', midnight_studio_short: 'midnight_studio', hopes_and_dreams_short: 'hopes_and_dreams', gourmet_race_dx: 'gourmet_race_64', eiyuu_no_akashi_milktea: 'eiyuu_no_akashi', dr_wily_stage_1_okkussenman: 'dr_wily_stage_1', erfolg_piano: 'erfolg', beyond_the_same_sky_short: 'beyond_the_same_sky', walkure_short: 'walkure', battle_5_short: 'battle_5', kiss_mystery_short: 'kiss_mystery', dear_santa_short: 'dear_santa', winter_fall_short: 'winter_fall' });
 const rhythmSongOwnerId = (songId) => { const id = String(songId || ''); return RHYTHM_SONG_BUNDLE_OWNER[id] || id; };
 const rhythmSongHasBundle = (songId) => Object.values(RHYTHM_SONG_BUNDLE_OWNER).includes(rhythmSongOwnerId(songId));
 // 購入で一緒に開く版の songId(持ち主自身は除く)。バンドルの表が正本
