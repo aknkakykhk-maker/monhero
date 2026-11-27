@@ -353,7 +353,8 @@ const raidJackUnlockedCount = (kind, defeatedIds) => {
 
 // 戦闘に出すジャック本体。ライフ・攻撃は段階の値をそのまま使う(35,000×倍率×10 の端数ずれを避けるため上書きする)。
 // 技の本数は actionCount で直接指定する(再生なし。3/4/5/5/5)。createBattleEnemy は 22-enemy-and-bond-entries.jsx
-// opts.ev === 'xmas' のときはクリスマスのボス(段階は 35-raid-xmas.jsx・絵は RAID_XMAS_BOSS_IMG)。技と動きはジャックの物を借りる(仮)
+// opts.ev === 'xmas' のときはクリスマスのボス(段階は 35-raid-xmas.jsx・絵は RAID_XMAS_BOSS_IMG)。技の数字・本数・当たり方はジャックと同じ。
+//   技の動きとエフェクトは raidXmas の印で 71-screen-battle.jsx の santa の組み合わせへ分かれる(tacticsEnemyMotionKey・r1126-075)
 const raidJackMakeEnemy = (kind, tierIndex, mode, opts = {}) => {
   if (opts.ev === 'xmas') {
     const xt = raidXmasTierAt(kind, tierIndex);
