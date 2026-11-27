@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f6fb3a6d476546a4
+// source-sha256: 050974eee6945ff3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -64526,7 +64526,7 @@ const RAID_EVENT_XMAS = Object.freeze({
   afterBoss: RAID_XMAS_AFTER_BOSS,
   afterBossBadge: 'あそびに来た',
   afterBossNote: '共有ライフは無限です。毎回いっぱいのライフから戦い、与えたダメージが累計に足されます',
-  lockedNote: `前の段階の${RAID_XMAS_EVENT.name}を止めると姿をあらわします`,
+  lockedNote: `前の段階の${RAID_XMAS_EVENT.name}を止めると姿を現します`,
   lastTierWord: '最後の段階',
   rankNote: '段階1〜4は倒れた時点、最後の段階は期間の終わりに順位が決まります',
   endLabel: '12/31 4:00',
@@ -87005,6 +87005,8 @@ const HOME_RAID_JACK_CSS = `
   82%{transform:translateY(0) scale(1.05,.94) rotate(1deg)}}
 @keyframes mhRaidJackShadow{0%,100%{transform:scaleX(1.05);opacity:.5}50%{transform:scaleX(.7);opacity:.3}}
 @media(prefers-reduced-motion:reduce){.mh-home-raid-jack-img,.mh-home-raid-jack-shadow{animation:none}}
+/* 背の低い横画面: クリスマスのボスは枠より上へはみ出して描くので、耳が上の欄の裏に隠れた(#7857 点検の8)。絵を少し縮めて上を空ける。足もとの位置は変えない */
+@media(orientation:landscape) and (max-height:430px){.mh-home-raid-boss-tall{height:112% !important}}
 `;
 const HOME_RAID_JACK_WRAP_STYLE = Object.freeze({
   position: 'absolute',
@@ -87529,7 +87531,7 @@ const HomeRaidJack = ({
       pointerEvents: 'none'
     }
   }) : !isJack ? React.createElement("img", {
-    className: "mh-home-raid-jack-img",
+    className: "mh-home-raid-jack-img mh-home-raid-boss-tall",
     "data-home-raid-boss": ev.key,
     src: allDone ? ev.afterBossImg() : ev.bossImg(),
     alt: "",
@@ -112432,7 +112434,7 @@ const RaidJackScreen = ({
     cardClass: cardClass
   }))), React.createElement("div", {
     "data-raid-jack-footer": true,
-    className: `${SCREEN_FOOTER_CLASS} [@media(orientation:landscape)_and_(max-height:520px)]:sticky [@media(orientation:landscape)_and_(max-height:520px)]:bottom-0 [@media(orientation:landscape)_and_(max-height:520px)]:z-20 [@media(orientation:landscape)_and_(max-height:520px)]:-mx-4 [@media(orientation:landscape)_and_(max-height:520px)]:-mb-4 [@media(orientation:landscape)_and_(max-height:520px)]:px-4 [@media(orientation:landscape)_and_(max-height:520px)]:pb-3 [@media(orientation:landscape)_and_(max-height:520px)]:bg-slate-950 [@media(orientation:landscape)_and_(max-height:520px)]:shadow-[0_60px_0_0_#020617]`
+    className: `${SCREEN_FOOTER_CLASS} [@media(orientation:landscape)_and_(max-height:520px)]:sticky [@media(orientation:landscape)_and_(max-height:520px)]:bottom-0 [@media(orientation:landscape)_and_(max-height:520px)]:z-20 [@media(orientation:landscape)_and_(max-height:520px)]:-mx-4 [@media(orientation:landscape)_and_(max-height:520px)]:-mb-4 [@media(orientation:landscape)_and_(max-height:520px)]:px-4 [@media(orientation:landscape)_and_(max-height:520px)]:pb-3 [@media(orientation:landscape)_and_(max-height:520px)]:bg-slate-950 [@media(orientation:landscape)_and_(max-height:520px)]:shadow-[0_32px_0_0_#020617]`
   }, tab === 'a' && open && isOpenTier && !closedTier && remaining > 0 && Array.isArray(ways) && ways.length > 1 ? React.createElement("div", {
     "data-raid-ways": ways.join(' '),
     className: `grid gap-2 ${ways.length >= 3 ? 'grid-cols-3' : 'grid-cols-2'}`
@@ -112443,21 +112445,27 @@ const RaidJackScreen = ({
       key: way,
       [w.data]: true,
       onClick: () => onChallenge(tab, current, way),
-      className: `min-h-[48px] rounded-2xl border-2 px-1 text-[12px] font-black leading-tight text-white active:scale-95 ${w.tone}`
-    }, w.label, React.createElement("br", null), "挑戦する") : null;
+      className: `min-h-[48px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[36px] rounded-2xl border-2 px-1 text-[12px] font-black leading-tight text-white active:scale-95 ${w.tone}`
+    }, w.label, React.createElement("br", {
+      className: "[@media(orientation:landscape)_and_(max-height:520px)]:hidden"
+    }), "挑戦する") : null;
   })) : tab === 'a' && open && isOpenTier && !closedTier && remaining > 0 && !Array.isArray(ways) && (RELEASE_FLAGS.raidJackRhythm === true || forced) ? React.createElement("div", {
     className: "grid grid-cols-2 gap-2"
   }, React.createElement("button", {
     type: "button",
     "data-raid-jack-challenge": true,
     onClick: () => onChallenge(tab, current, 'battle'),
-    className: "min-h-[48px] rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-2 text-[12px] font-black leading-tight text-white active:scale-95"
-  }, "バトルで", React.createElement("br", null), "挑戦する"), React.createElement("button", {
+    className: "min-h-[48px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[36px] rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-2 text-[12px] font-black leading-tight text-white active:scale-95"
+  }, "バトルで", React.createElement("br", {
+    className: "[@media(orientation:landscape)_and_(max-height:520px)]:hidden"
+  }), "挑戦する"), React.createElement("button", {
     type: "button",
     "data-raid-jack-challenge-rhythm": true,
     onClick: () => onChallenge(tab, current, 'rhythm'),
-    className: "min-h-[48px] rounded-2xl border-2 border-fuchsia-300/70 bg-fuchsia-800 px-2 text-[12px] font-black leading-tight text-white active:scale-95"
-  }, "モンヒロビートで", React.createElement("br", null), "挑戦する")) : React.createElement("button", {
+    className: "min-h-[48px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[36px] rounded-2xl border-2 border-fuchsia-300/70 bg-fuchsia-800 px-2 text-[12px] font-black leading-tight text-white active:scale-95"
+  }, "モンヒロビートで", React.createElement("br", {
+    className: "[@media(orientation:landscape)_and_(max-height:520px)]:hidden"
+  }), "挑戦する")) : React.createElement("button", {
     type: "button",
     "data-raid-jack-challenge": true,
     disabled: !open || !isOpenTier || closedTier || remaining <= 0,
@@ -113120,7 +113128,7 @@ const XmasStoryTab = ({
   const chapter = sel ? XMAS_STORY_CHAPTERS.find(c => c.id === sel) : null;
   const preMain = !allOpen && !(nowMs >= Date.parse(RAID_XMAS_EVENT.startAt));
   const shownChapters = XMAS_STORY_CHAPTERS.filter(c => c.prologue);
-  const storyNote = preMain ? `${xmasEventDateLabel(XMAS_STORY_PROLOGUE_OPEN_AT)} から序章が読めます。本編は ${xmasEventDateLabel(RAID_XMAS_EVENT.startAt)} から始まります` : '序章は、いつでも読み返せます';
+  const storyNote = preMain ? `${xmasEventDateLabel(XMAS_STORY_PROLOGUE_OPEN_AT)} から序章が読めます。本編は ${xmasEventDateLabel(RAID_XMAS_EVENT.startAt)} から始まります` : '序章は、期間中いつでも読み返せます';
   const novelOpen = typeof openXmasNovel === 'function' && (allOpen || typeof xmasNovelPlayableAt === 'function' && xmasNovelPlayableAt(nowMs));
   const novelEnded = !allOpen && typeof XMAS_NOVEL_CLOSE_AT !== 'undefined' && nowMs >= Date.parse(XMAS_NOVEL_CLOSE_AT);
   const select = c => {
@@ -113581,7 +113589,11 @@ const HomeXmasEventEntry = ({
     className: "mh-xmas-entry-title block whitespace-nowrap text-[22px] leading-none"
   }, "聖夜の名探偵"), React.createElement("span", {
     className: "mh-xmas-entry-sub px-2 py-px text-[10px]"
-  }, sub)));
+  }, preOpen ? sub : React.createElement(React.Fragment, null, "開催中 〜12/31", React.createElement("span", {
+    style: {
+      marginLeft: '.3em'
+    }
+  }, '\u00a0'), "3:59"))));
 };
 const XMAS_NOVEL_STORAGE_KEY = 'mh_xmas_novel_v1';
 const XMAS_NOVEL_GAME = Object.freeze({
@@ -125502,6 +125514,16 @@ const XMAS_NOVEL_CSS = `
   .mh-nv-box { left: auto; right: 10px; transform: none; width: min(calc(60vw - 10px), 760px); min-height: 110px; padding-top: 20px; }
   .mh-nv-text { font-size: 15px; line-height: 1.65; }
   .mh-nv-cast { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+  /* 起動画面: 背の低い横では題の上と「一発で当てた数」が画面の端で切れた(#7857 点検の8)。字とボタンを縮め、上下中央は余るときだけにする */
+  .mh-nv-boot > .absolute { justify-content: flex-start; padding-top: 10px; padding-bottom: 10px; }
+  .mh-nv-boot > .absolute > * { margin-top: auto; margin-bottom: auto; }
+  .mh-nv-boot-series { font-size: 28px; }
+  .mh-nv-boot-title { margin-top: 2px; font-size: 13px; }
+  .mh-nv-boot .mh-nv-rule { margin: 6px auto; }
+  .mh-nv-boot-sub { font-size: 20px; }
+  .mh-nv-boot [data-xmas-novel-title] .mh-nv-boot-press { margin-top: 8px; }
+  .mh-nv-boot [data-xmas-novel-title] .mh-nv-btn.wide { min-height: 40px; }
+  .mh-nv-boot [data-xmas-novel-perfect] { margin-top: 8px; }
 }
 @media (min-width: 900px) and (min-height: 700px) { .mh-nv-text { font-size: 19px; } .mh-nv-box { min-height: 150px; } }
 @media (prefers-reduced-motion: reduce) { .mh-nv-snow, .mh-nv-next, .mh-nv-shake, .mh-nv-get, .mh-nv-fig img { animation: none !important; } }
@@ -126794,6 +126816,7 @@ const XmasNovelScreen = ({
       "data-xmas-novel-endings": true,
       onClick: () => setMode('endings')
     }, "エンドヒストリー ", seenCount, " / ", endingsAll.length)), React.createElement("div", {
+      "data-xmas-novel-perfect": true,
       className: "mt-4 text-[10px] text-slate-400"
     }, "推理の問い 一発で当てた数 ", xmasNovelPerfectCount(S, save), " / ", perfectTotal), confirmNew && React.createElement("div", {
       className: "mh-nv-sheet",

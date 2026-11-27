@@ -491,9 +491,10 @@ const RaidJackScreen = ({ ev = RAID_EVENT_JACK, ways = null, initialTier = 0, on
         </div>
       </div>
 
+      {/* 横の背の低い画面では挑戦のボタンを1行の低い形にして、帯が「ランキング」「報酬一覧」を隠さないようにする(#7857 点検の8) */}
       {/* 横向きの背の低い画面は画面ごと下へ送る形なので、挑戦のボタンが画面3つぶん下にあった(2026-10-27 ジン部長)。
-          その画面だけ、送っても画面の下に貼り付けて、すぐ押せるようにする。後ろの一覧が透けないよう地を敷く。画面の下の余白(30px)に止まるので、その下も影で同じ地にする。縦画面は変えない */}
-      <div data-raid-jack-footer className={`${SCREEN_FOOTER_CLASS} [@media(orientation:landscape)_and_(max-height:520px)]:sticky [@media(orientation:landscape)_and_(max-height:520px)]:bottom-0 [@media(orientation:landscape)_and_(max-height:520px)]:z-20 [@media(orientation:landscape)_and_(max-height:520px)]:-mx-4 [@media(orientation:landscape)_and_(max-height:520px)]:-mb-4 [@media(orientation:landscape)_and_(max-height:520px)]:px-4 [@media(orientation:landscape)_and_(max-height:520px)]:pb-3 [@media(orientation:landscape)_and_(max-height:520px)]:bg-slate-950 [@media(orientation:landscape)_and_(max-height:520px)]:shadow-[0_60px_0_0_#020617]`}>
+          その画面だけ、送っても画面の下に貼り付けて、すぐ押せるようにする。後ろの一覧が透けないよう地を敷く。画面の下の余白(16px)に止まるので、その下も影で同じ地にする(影のずらしは帯の高さより小さく。大きいと帯と影のあいだに隙間ができて後ろが透ける)。縦画面は変えない */}
+      <div data-raid-jack-footer className={`${SCREEN_FOOTER_CLASS} [@media(orientation:landscape)_and_(max-height:520px)]:sticky [@media(orientation:landscape)_and_(max-height:520px)]:bottom-0 [@media(orientation:landscape)_and_(max-height:520px)]:z-20 [@media(orientation:landscape)_and_(max-height:520px)]:-mx-4 [@media(orientation:landscape)_and_(max-height:520px)]:-mb-4 [@media(orientation:landscape)_and_(max-height:520px)]:px-4 [@media(orientation:landscape)_and_(max-height:520px)]:pb-3 [@media(orientation:landscape)_and_(max-height:520px)]:bg-slate-950 [@media(orientation:landscape)_and_(max-height:520px)]:shadow-[0_32px_0_0_#020617]`}>
         {/* レイドバトルは「バトル」と「モンヒロビート」の2つの挑み方(2026-10-06・ユーザー指示)。回数は同じものを使う。
             挑めないとき(開始前・未解放・倒された・回数切れ)は、これまでどおり理由を出す1つのボタンにする */}
         {tab === 'a' && open && isOpenTier && !closedTier && remaining > 0 && Array.isArray(ways) && ways.length > 1 ? (
@@ -502,16 +503,16 @@ const RaidJackScreen = ({ ev = RAID_EVENT_JACK, ways = null, initialTier = 0, on
               const w = RAID_WAY_BUTTONS[way];
               return w ? (
                 <button type="button" key={way} {...{ [w.data]: true }} onClick={() => onChallenge(tab, current, way)}
-                  className={`min-h-[48px] rounded-2xl border-2 px-1 text-[12px] font-black leading-tight text-white active:scale-95 ${w.tone}`}>{w.label}<br />挑戦する</button>
+                  className={`min-h-[48px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[36px] rounded-2xl border-2 px-1 text-[12px] font-black leading-tight text-white active:scale-95 ${w.tone}`}>{w.label}<br className="[@media(orientation:landscape)_and_(max-height:520px)]:hidden" />挑戦する</button>
               ) : null;
             })}
           </div>
         ) : tab === 'a' && open && isOpenTier && !closedTier && remaining > 0 && !Array.isArray(ways) && (RELEASE_FLAGS.raidJackRhythm === true || forced) ? (
           <div className="grid grid-cols-2 gap-2">
             <button type="button" data-raid-jack-challenge onClick={() => onChallenge(tab, current, 'battle')}
-              className="min-h-[48px] rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-2 text-[12px] font-black leading-tight text-white active:scale-95">バトルで<br />挑戦する</button>
+              className="min-h-[48px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[36px] rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-2 text-[12px] font-black leading-tight text-white active:scale-95">バトルで<br className="[@media(orientation:landscape)_and_(max-height:520px)]:hidden" />挑戦する</button>
             <button type="button" data-raid-jack-challenge-rhythm onClick={() => onChallenge(tab, current, 'rhythm')}
-              className="min-h-[48px] rounded-2xl border-2 border-fuchsia-300/70 bg-fuchsia-800 px-2 text-[12px] font-black leading-tight text-white active:scale-95">モンヒロビートで<br />挑戦する</button>
+              className="min-h-[48px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[36px] rounded-2xl border-2 border-fuchsia-300/70 bg-fuchsia-800 px-2 text-[12px] font-black leading-tight text-white active:scale-95">モンヒロビートで<br className="[@media(orientation:landscape)_and_(max-height:520px)]:hidden" />挑戦する</button>
           </div>
         ) : (
           <button type="button" data-raid-jack-challenge disabled={!open || !isOpenTier || closedTier || remaining <= 0}
