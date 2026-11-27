@@ -114,7 +114,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   //   data/rhythm-mode.js の公開曲の一覧(RHYTHM_DEMO_SONG_IDS)が持つ(この印は告知だけの印)。
   //   2026-11-27 社長の決定(台帳 r1126-064)で、クリスマスイベントの開幕 11/28 10:00 から真(見るたびに数え直す)。
   //   曲の公開は data/rhythm-mode.js の RHYTHM_SONG_RELEASE_AT が同じ時刻で持つ
-  get battle5() { return Date.now() >= Date.parse(BATTLE5_RELEASE_AT); },
+  get battle5() { return Date.now() >= Date.parse(typeof BATTLE5_RELEASE_AT === 'string' ? BATTLE5_RELEASE_AT : '2026-11-28T10:00:00+09:00'); },
   // レイド・タクティクスプロ(ベースモンだけの回)の1回ごとの記録(raid_battle_logs・tactics_pro_logs)を送る(2026-10-21 社長「仕組みは作って」)。
   //   2026-10-22 窓口が表を2つとも作って確かめた(docs/sql/battle-log/BATTLE_LOGS_APPLY.sql)ので真にした。設計は docs/spec/BATTLE_LOG.md
   //   偽にすると何も送らず、タクティクスプロは入れ物も作らない(26-supabase.jsx)

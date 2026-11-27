@@ -67,9 +67,9 @@ const CHANGELOG = [
   },
   // 新曲「Battle #5」(2026-11-22 社長決定。原曲+short ver. の2つの版の曲組・ビートP500で両方の版が付く・作者クレジットなし・ジャケットは版ごとに違う絵。お知らせは曲組で1件)
   // 2026-11-23 から公開を止めていた(台帳 r1119-120)。2026-11-27 社長の決定(台帳 r1126-064)で、クリスマスイベントの開幕 11/28 10:00 と一緒に解禁する。
-  //   date・visibleFrom・notifyFrom を解禁の時刻にそろえた。releaseFlag:'battle5' もこの時刻から真(17-release の BATTLE5_RELEASE_AT)
+  //   date・visibleFrom・notifyFrom を解禁の時刻にそろえた。項目は visibleFrom、告知は notifyFrom で止める(releaseFlag は外した。RELEASE_FLAGS.battle5 も同じ時刻から真)
   {
-    date: "2026-11-28 10:00", type:'content', group:'rhythm', status:'new', releaseFlag:'battle5', visibleFrom:'2026-11-28T10:00:00+09:00',
+    date: "2026-11-28 10:00", type:'content', group:'rhythm', status:'new', visibleFrom:'2026-11-28T10:00:00+09:00',
     title:'新曲「Battle #5」を追加しました',
     image:'images/song-art/battle-5.jpg?v=c98d8edcec3a',
     items:[

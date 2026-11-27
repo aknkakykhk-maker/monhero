@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3742c77002040cae
+// source-sha256: e79cc30621e49e08
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -15959,7 +15959,7 @@ const RELEASE_FLAGS = {
   tactics: TACTICS_MODE_PUBLIC_RELEASE,
   rhythmHell: true,
   get battle5() {
-    return Date.now() >= Date.parse(BATTLE5_RELEASE_AT);
+    return Date.now() >= Date.parse(typeof BATTLE5_RELEASE_AT === 'string' ? BATTLE5_RELEASE_AT : '2026-11-28T10:00:00+09:00');
   },
   battleLog: true,
   battleCardArt: true,
