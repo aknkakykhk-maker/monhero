@@ -193,7 +193,7 @@ const CASES = CASES_ALL.filter((c) => !ONLY || c.shot === ONLY);
       await entry.waitFor({ timeout: 15000 }).catch(() => {});
       await entry.dispatchEvent('click').catch(() => {});
       await page.locator('[data-xmas-story]').waitFor({ timeout: 10000 }).catch(() => {});
-      const st = await page.evaluate(() => ({ btn: document.querySelectorAll('[data-xmas-novel-open]').length, soon: /本編は 11\/30/.test((document.querySelector('[data-xmas-story]') || {}).textContent || '') ? 1 : 0,
+      const st = await page.evaluate(() => ({ btn: document.querySelectorAll('[data-xmas-novel-open]').length, soon: /本編は 11\/28/.test((document.querySelector('[data-xmas-story]') || {}).textContent || '') ? 1 : 0,
         prologue: document.querySelectorAll('[data-xmas-story-chapter="xs00"]').length, ch1: document.querySelectorAll('[data-xmas-story-chapter="xs01"]').length }));
       const label = open ? '⑤ 11/28 10:05' : '⑤ 11/27 13:05';
       if (open) {
