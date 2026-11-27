@@ -22,7 +22,7 @@ const SHOTS = [
   { name: '05-x2-atsu', row: '5-X-4a', side: 1, label: 'あつ派 END-X2 の場面' },
   { name: '06-x3-sora', row: '6-X-10s', side: 2, label: 'ソラシド派 END-X3 の場面' },
   { name: '07-c7-atsu', row: '7-1-13a', side: 1, label: 'あつ派 第7章 ソラシドがドラを名指し' },
-  { name: '08-c8-atsu', row: '8-1-14a', side: 1, label: 'あつ派 第8章「謎はすべて解けた!」' },
+  { name: '08-c8-atsu', row: '8-1-14a', side: 1, label: 'あつ派 第8章「謎は全て解けた!」' },
   { name: '09-c8-sora', row: '8-1-15s', side: 2, label: 'ソラシド派 第8章「真実はいつもひとつ!」' },
   { name: '10-c8-past', row: '8-3-12', side: 1, label: '第8章 12年前(ももすけ)' },
 ];
