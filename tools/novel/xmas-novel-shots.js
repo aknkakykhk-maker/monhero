@@ -51,7 +51,14 @@ const SHOTS_054 = [
   { name: '07-n-leave', row: 'N-13c', side: 2, label: '普通のグッド 山道を下りる' },
   { name: '08-n-last', row: 'N-13f', side: 2, label: '普通のグッド 最後の地の文' },
 ];
-const LIST = process.argv.includes('--r1126-046') ? SHOTS_046 : process.argv.includes('--r1126-054') ? SHOTS_054 : SHOTS;
+// 予告の手紙(r1126-058)
+const SHOTS_058 = [
+  { name: '01-letter-atsu', row: '2-L-4', side: 1, label: 'あつ派 赤い字の手紙' },
+  { name: '02-letter-sora', row: '2-L-4', side: 2, label: 'ソラシド派 赤い字の手紙' },
+  { name: '03-letter-after', row: '2-L-6s', side: 2, label: 'ソラシド派 ワトソンくん(血ではない)' },
+  { name: '04-letter-truth', row: '8-3-7b', side: 1, label: '真ルート きゅうこが手紙を明かす' },
+];
+const LIST = process.argv.includes('--r1126-046') ? SHOTS_046 : process.argv.includes('--r1126-054') ? SHOTS_054 : process.argv.includes('--r1126-058') ? SHOTS_058 : SHOTS;
 
 const ctx = vm.createContext({});
 vm.runInContext(`${fs.readFileSync(path.join(ROOT, 'monster-hero/src/parts/79-xmas-novel-script.jsx'), 'utf8')}\nthis.S = XMAS_NOVEL_SCRIPT;`, ctx);
