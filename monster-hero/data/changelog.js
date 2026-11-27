@@ -39,11 +39,12 @@ const CHANGELOG = [
     //   予告(下)は pinUntil で開幕から上の札を外れる。数字は 35-raid-xmas.jsx(RAID_XMAS_FREE_PER_DAY・RAID_XMAS_EXTRA_COST_BEAT_P・RAID_XMAS_REWARDS)から。
     //   敵のライフ・攻撃力・段階の名前、事件簿の犯人・いなくなる人・エンドの中身は書かない(ネタバレ)。
     //   告知のボタン(destination)は付けない(行き先が gameState だけで、クリスマスのページを開けないため)
+    //   絵は告知ポスターの赤いリボン「開催予告」だけを消した版(r1126-061 追記1・社長「リボンだけ切り取る」)。予告の項目はリボン入りのまま
     //   2026-11-27 ミハリの開幕前点検(r1126-061): 終わったあとも一覧に残るので、題・本文に「開催中」と書かない(開催中の札は notifyUntil まで仕組みが付ける)
     date: "2026-11-30 10:00", type:'event', group:'other', title:'【期間限定】クリスマスイベント『聖夜の名探偵』がはじまりました', status:'new',
     visibleFrom:'2026-11-30T10:00:00+09:00',
     pinEmoji:'🎄',
-    image: 'images/events/xmas-2026-event-wide.jpg?v=88d049a453e6',
+    image: 'images/events/xmas-2026-open-wide.jpg?v=2e6c0a5d9816',
     assistantNotice: {
       id:'update_notice_xmas_2026_start_v1', type:'content',
       notifyFrom:'2026-11-30T10:00:00+09:00',
