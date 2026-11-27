@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e78fe330322815ec
+// generated-sha256: abfc0470d4443fa2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -68981,7 +68981,13 @@ const XMAS_NOVEL_CSS = `
 /* 章の札・題の札の文も左寄せ(事件簿の中の文は左寄せ・幅いっぱいで1文字ずつ折る。飾りの見出しは起動画面の題字とエンドの札だけ・台帳 r1126-048) */
 .mh-nv-cardtext { width: min(100%, 560px); }
 .mh-nv-cardtext .mh-nv-rule { margin: 14px 0; }
-.mh-nv-text.band { text-align: left; color: #dfe6ff; font-style: normal; }
+.mh-nv-text.say .mh-nv-say-body { display: block; padding-left: 1em; text-indent: -1em; }
+.mh-nv-text.say .mh-nv-say-lead { display: block; font-size: 13px; color: #b9c6e8; line-height: 1.5; margin-bottom: 2px; }
+.mh-nv-text.say .mh-nv-say-lead.only { font-size: inherit; color: #d6def5; margin: 0; }
+.mh-nv-text.se { text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+.mh-nv-se-sound { display: block; font-size: 21px; font-weight: 800; letter-spacing: .14em; color: #f3e6c0; text-shadow: 0 0 12px rgba(232,196,106,.35); }
+.mh-nv-se-note { display: block; font-size: 12px; font-weight: 600; letter-spacing: .02em; color: #a9b6da; line-height: 1.55; }
+.mh-nv-text.band { text-align: left; color: #c9d3ee; font-style: normal; }
 .mh-nv-note { margin-top: 2px; font-size: 11px; color: #9fb0d8; }
 .mh-nv-next { position: absolute; right: 14px; bottom: 8px; width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-top: 9px solid #e8c46a; animation: mh-nv-bob 1s ease-in-out infinite; }
 @keyframes mh-nv-bob { 50% { transform: translateY(4px); } }
@@ -69435,6 +69441,37 @@ const xmasNovelBgm = (key) => {
     if (typeof Audio_.fadeToBGM === 'function') Audio_.fadeToBGM(key, 700); else Audio_.playBGM(key);
   } catch (e) { /* 曲が鳴らせなくても読み進める */ }
 };
+// ---- 文の置き方(台帳 r1126-052): 台詞・地の文・効果音で分ける ----
+//  効果音の帯(台本の「(効果音)」の印 = fx に se): 真ん中寄せ・大きめ・字間をあける。うしろの(説明書き)は小さい2行目に
+const xmasNovelIsSeRow = (row) => !!(row && row.t === 'band' && Array.isArray(row.fx) && row.fx.includes('se'));
+const xmasNovelSplitSe = (s) => {
+  const i = String(s || '').search(/[(（]/);
+  if (i < 0) return [String(s || ''), ''];
+  return [s.slice(0, i), s.slice(i + 1).replace(/[)）]\s*$/, '')];
+};
+const XmasNovelSeText = ({ text, shown }) => {
+  const [sound, note] = xmasNovelSplitSe(text);
+  const vis = Math.max(0, shown);
+  return (<>
+    {sound && <span className="mh-nv-se-sound">{sound.slice(0, vis)}</span>}
+    {note && vis > sound.length && <span className="mh-nv-se-note">{note.slice(0, vis - sound.length - 1)}</span>}
+  </>);
+};
+//  台詞: 「」の中身として出し、2行目からは「の分だけ下げてそろえる(ぶら下げ)。頭の(しぐさ)は小さい前置きの行に。全部が(しぐさ)なら「」を付けない
+const xmasNovelSplitLead = (s) => {
+  const m = String(s || '').match(/^[(（][^)）]*[)）]/);
+  return m ? [m[0], s.slice(m[0].length)] : ['', String(s || '')];
+};
+const XmasNovelSayText = ({ text, shown }) => {
+  const [lead, body] = xmasNovelSplitLead(text);
+  const vis = Math.max(0, shown);
+  if (!body.trim()) return <span className="mh-nv-say-lead only">{text.slice(0, vis)}</span>;
+  const bodyVis = body.slice(0, Math.max(0, vis - lead.length));
+  return (<>
+    {lead && <span className="mh-nv-say-lead">{lead.slice(0, vis)}</span>}
+    {(bodyVis || !lead || vis > lead.length) && <span className="mh-nv-say-body">「{bodyVis}{vis >= text.length ? '」' : ''}</span>}
+  </>);
+};
 const XmasNovelIcon = ({ d, size = 18 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" dangerouslySetInnerHTML={{ __html: d }} />
 );
@@ -69829,10 +69866,12 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
         {(isLine || isBand || (row && (row.t === 'clue' || row.t === 'panel' || row.t === 'q'))) && !(card && card.kind !== 'band') && (
           <div className="mh-nv-box" style={{ zIndex: 5 }} data-xmas-novel-box>
             {name && <div className="mh-nv-name mh-nv-serif">{name}</div>}
-            <div className={`mh-nv-text${isBand ? ' band mh-nv-serif' : ''}`} data-xmas-novel-text>
+            <div className={`mh-nv-text${isBand ? (xmasNovelIsSeRow(row) ? ' se mh-nv-serif' : ' band mh-nv-serif') : ''}${isLine ? ' say' : ''}`} data-xmas-novel-text data-xmas-novel-kind={isBand ? (xmasNovelIsSeRow(row) ? 'se' : 'band') : isLine ? 'line' : row.t}>
               {row.t === 'clue' ? `手がかり帳に「${row.clue}」を書きとめた`
                 : row.t === 'panel' ? (row.x || (row.stamp ? '……' : '登場人物'))
                 : row.t === 'q' ? xmasNovelFill(row.x, playerName)
+                : isBand && xmasNovelIsSeRow(row) ? <XmasNovelSeText text={text} shown={shown} />
+                : isLine ? <XmasNovelSayText text={text} shown={shown} />
                 : text.slice(0, shown)}
             </div>
             {isLine && row.note && !typing && <div className="mh-nv-note">({row.note})</div>}
