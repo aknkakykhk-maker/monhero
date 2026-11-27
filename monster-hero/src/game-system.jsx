@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f728729f7ca97f0b
+// generated-sha256: e4daf2d638715619
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -68150,7 +68150,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"1-M-14","t":"band","x":"廊下の窓の外で、雪が、少しずつ強くなっていく","k":"C1-M:1-M-14"},
 {"id":"1-M-15","t":"line","secret":true,"x":"(黒いカードを1枚、指に挟む)……これは、明日の夜。鐘と一緒に","n":"？？？","e":"troubled","k":"C1-M:1-M-15"},
 {"id":"1-M-16","t":"line","secret":true,"x":"……もう、止まらないよ","n":"？？？","e":"troubled","k":"C1-M:1-M-16"}]},
-{"id":"C2-1","chapter":"C2","title":"消えた楽譜","cond":null,"bgm":"melo_dullahan_clockwork","bg":"2階の廊下","next":"C2-M","rows":[{"id":"2-1-1","t":"band","x":"聖夜の名探偵 第2章 〜十二の鐘〜","k":"C2-1:2-1-1"},
+{"id":"C2-1","chapter":"C2","title":"消えた楽譜","cond":null,"bgm":"melo_dullahan_clockwork","bg":"2階の廊下","next":"C2-L","rows":[{"id":"2-1-1","t":"band","x":"聖夜の名探偵 第2章 〜十二の鐘〜","k":"C2-1:2-1-1"},
 {"id":"2-1-2","t":"band","x":"次の夜。2階の廊下に、黒羽の怒鳴り声が響く","k":"C2-1:2-1-2"},
 {"id":"2-1-3","t":"line","w":"kuroba","x":"ない！ わたしの楽譜のケースがない！ 誰だ、わたしの部屋に入ったのは！","k":"C2-1:2-1-3"},
 {"id":"2-1-4","t":"line","w":"atsu","x":"落ち着いて、黒羽のおっちゃん。何がなくなったの？","e":"normal","k":"C2-1:2-1-4"},
@@ -68162,6 +68162,20 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"2-1-10","t":"band","x":"バタン、カチャリ(扉が閉まり、内側から鍵の音)","fx":["se"],"se":"impact","k":"C2-1:2-1-10"},
 {"id":"2-1-11","t":"line","w":"myua","x":"……あつくん。あのおじさん、強がってるけど、手、震えてた","e":"troubled","k":"C2-1:2-1-11"},
 {"id":"2-1-12","t":"line","w":"atsu","x":"うん。……今夜は、気をつけよう","e":"normal","k":"C2-1:2-1-12"}]},
+{"id":"C2-L","chapter":"C2","title":"赤い字の手紙","cond":null,"bgm":"melo_dullahan_steel_ghost","bg":"客室(夜","next":"C2-M","rows":[{"id":"2-L-1","t":"band","x":"21時。部屋へ戻ると、枕の上に、白い封筒が1通、置いてあった","k":"C2-L:2-L-1"},
+{"id":"2-L-2a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"atsu","x":"……俺の部屋に？ 誰が……","e":"surprise","k":"C2-L:2-L-2a"},
+{"id":"2-L-2s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"sorashido","x":"……自分の部屋に？ いつの間に……","e":"surprise","k":"C2-L:2-L-2s"},
+{"id":"2-L-3","t":"band","x":"カサ……(封を切る音)","fx":["se"],"se":"tap","k":"C2-L:2-L-3"},
+{"id":"2-L-4","t":"band","x":"今夜、0時の鐘が鳴ったら／一人、帰ってこない／あの夜と、同じように／——黒いサンタ","fx":["letter","bleed"],"k":"C2-L:2-L-4"},
+{"id":"2-L-5","t":"band","x":"赤い字は、所々にじんで、紙の下へ垂れていた。インクなのか、それとも——","k":"C2-L:2-L-5"},
+{"id":"2-L-6a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"myua","x":"やだ……何これ、血みたい……","e":"crying","k":"C2-L:2-L-6a"},
+{"id":"2-L-6s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"watson","x":"……赤いインクです。血ではありません。ですが、わざと血のように見せています","k":"C2-L:2-L-6s"},
+{"id":"2-L-7a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"atsu","x":"……インクだ。わざと、血みたいに見せてる。……『一人、帰ってこない』って、どういう意味だ","e":"normal","k":"C2-L:2-L-7a"},
+{"id":"2-L-7s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"sorashido","x":"『帰ってこない』……。誰かが、どこかから戻れなくなる、ということでしょうか","e":"normal","k":"C2-L:2-L-7s"},
+{"id":"2-L-8","t":"band","x":"黒羽の部屋の扉を叩いても、「放っておけ！」と怒鳴る声が返ってくるだけだった","k":"C2-L:2-L-8"},
+{"id":"2-L-9a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"atsu","x":"ばこっちゃん。今夜は0時まで、ホールで柱時計を見張ろう。何かあったら、すぐ動けるように","e":"normal","k":"C2-L:2-L-9a"},
+{"id":"2-L-9s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"sorashido","x":"あつさん。今夜は0時まで、ホールで柱時計を見ていましょう。ワトソンくんも一緒に","e":"normal","k":"C2-L:2-L-9s"},
+{"id":"2-L-10","t":"clue","clue":"予告の手紙","x":"探偵の部屋の枕の上に置かれていた、赤い字の手紙。「今夜、0時の鐘が鳴ったら、一人、帰ってこない。あの夜と、同じように」。差出人は「黒いサンタ」","k":"C2-L:2-L-10"}]},
 {"id":"C2-M","chapter":"C2","title":"幕間 鍵をかけた部屋","cond":null,"bgm":"melo_dullahan_clockwork","bg":"黒羽の部屋(夜","next":"C2-2","rows":[{"id":"2-M-1","t":"band","x":"幕間 〜鍵をかけた部屋〜","k":"C2-M:2-M-1"},
 {"id":"2-M-2","t":"band","x":"22時。黒羽の部屋。鍵を二度確かめ、重い椅子を扉の前まで引きずってくる","k":"C2-M:2-M-2"},
 {"id":"2-M-3","t":"line","w":"kuroba","x":"……くだらん。いたずらだ。誰かが、わたしをからかっているだけだ","k":"C2-M:2-M-3"},
@@ -68607,6 +68621,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"8-3-5s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"sorashido","x":"……黒羽さんは、もう、何も答えられません","e":"troubled","k":"C8-3:8-3-5s"},
 {"id":"8-3-6","t":"line","w":"kiki","x":"白瀬さんは……手紙に、ごめんなさいって、書いてまちた……","e":"crying","k":"C8-3:8-3-6"},
 {"id":"8-3-7","t":"line","w":"kyuko","x":"だから、同じ夜を、もう一度作った。同じ鐘。同じ扉。同じ寒さ。……そうしたら、お母さんの寒さが、少しは分かってもらえると思った","e":"normal","k":"C8-3:8-3-7"},
+{"id":"8-3-7b","t":"line","w":"kyuko","x":"探偵さんの部屋の手紙も、俺。……0時の鐘で、一人帰ってこない。あの夜のお母さんと、同じに。……本当は、誰かに止めてほしかったのかもしれない","e":"troubled","k":"C8-3:8-3-7b"},
 {"id":"8-3-8","t":"line","w":"erubin","x":"……『同じ夜』って。あの夜、ほかにも、誰かが……？","e":"troubled","k":"C8-3:8-3-8"},
 {"id":"8-3-9","t":"line","w":"kyuko","x":"お母さんは、ふもとの薬屋の戸を、ずっと叩いてたんだ。吹雪で、店は早く閉まってて。……やっと薬をもらえた時には、もう、鐘に間に合わなかった","e":"troubled","k":"C8-3:8-3-9"},
 {"id":"8-3-10","t":"line","w":"kyuko","x":"最初の夜、えるニキが白瀬さんに話してるの、聞こえちゃった。……えるニキの家、ふもとの薬屋だったんだ","e":"troubled","k":"C8-3:8-3-10"},
@@ -69012,6 +69027,13 @@ const XMAS_NOVEL_CSS = `
 .mh-nv-se-sound { display: block; font-size: 21px; font-weight: 800; letter-spacing: .14em; color: #f3e6c0; text-shadow: 0 0 12px rgba(232,196,106,.35); }
 .mh-nv-se-note { display: block; font-size: 12px; font-weight: 600; letter-spacing: .02em; color: #a9b6da; line-height: 1.55; }
 .mh-nv-text.band { text-align: left; color: #c9d3ee; font-style: normal; }
+.mh-nv-text.band.letter { color: #ff8a8a; }
+/* 予告の手紙(帯の頭の「(手紙)」・r1126-058): 紙に赤い字。にじみながら、ゆっくり浮かぶ */
+.mh-nv-letter { position: absolute; left: 50%; top: 18%; width: min(80vw, 420px); padding: 24px 22px; z-index: 4; border-radius: 3px;
+  background: radial-gradient(120% 90% at 50% 40%, #f4ecd8 0%, #e7d8b4 70%, #cdb88c 100%); box-shadow: 0 14px 34px rgba(0,0,0,.65);
+  color: #a3080e; font-weight: 900; font-size: clamp(17px, 4.6vw, 22px); line-height: 1.9; letter-spacing: .08em; white-space: pre-line;
+  text-shadow: 0 0 1px rgba(140,0,0,.7), 0 1px 7px rgba(170,0,0,.45); transform: translateX(-50%) rotate(-1.5deg); animation: mhNvLetterIn 2.4s ease both; }
+@keyframes mhNvLetterIn { 0% { opacity: 0; filter: blur(7px); transform: translate(-50%, 14px) rotate(-3deg); } 55% { opacity: 1; filter: blur(1.5px); } 100% { opacity: 1; filter: none; transform: translateX(-50%) rotate(-1.5deg); } }
 .mh-nv-note { margin-top: 2px; font-size: 11px; color: #9fb0d8; }
 .mh-nv-next { position: absolute; right: 14px; bottom: 8px; width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-top: 9px solid #e8c46a; animation: mh-nv-bob 1s ease-in-out infinite; }
 @keyframes mh-nv-bob { 50% { transform: translateY(4px); } }
@@ -69904,6 +69926,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
         {!darkNow && (isLine || (isBand && xmasNovelIsSilhouette(row))) && <XmasNovelFigure row={row} />}
         {fx && <div key={fx.n} className={`mh-nv-fx ${fx.kind}`} />}
         {isBand && Array.isArray(row.fx) && row.fx.includes('fallen') && <XmasNovelFallen />}
+        {isBand && Array.isArray(row.fx) && row.fx.includes('letter') && <div key={`letter-${row.id}`} className="mh-nv-letter mh-nv-serif" data-xmas-novel-letter>{String(text).replace(/／/g, '\n')}</div>}
         {inside && <div className="mh-nv-crt" data-xmas-novel-inside />}
         {transit && <div key={transit.n} className="mh-nv-transit" data-dir={transit.dir} data-xmas-novel-transit={transit.dir} onAnimationEnd={(e) => { if (e.target === e.currentTarget) setTransit(null); }}><div className="scr" /><div className="mh-nv-noise" /><div className="mh-nv-scan" /></div>}
         {curtain && <div key={`curtain-${curtain}`} className="mh-nv-curtain" data-st={curtain} data-xmas-novel-curtain={curtain} />}
@@ -69921,12 +69944,13 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
         {(isLine || isBand || (row && (row.t === 'clue' || row.t === 'panel' || row.t === 'q'))) && !(card && card.kind !== 'band') && (
           <div className="mh-nv-box" style={{ zIndex: 5 }} data-xmas-novel-box>
             {name && <div className="mh-nv-name mh-nv-serif">{name}</div>}
-            <div className={`mh-nv-text${isBand ? (xmasNovelIsSeRow(row) ? ' se mh-nv-serif' : ' band mh-nv-serif') : ''}${isLine ? ' say' : ''}`} data-xmas-novel-text data-xmas-novel-kind={isBand ? (xmasNovelIsSeRow(row) ? 'se' : 'band') : isLine ? 'line' : row.t}>
+            <div className={`mh-nv-text${isBand ? (xmasNovelIsSeRow(row) ? ' se mh-nv-serif' : ` band mh-nv-serif${Array.isArray(row.fx) && row.fx.includes('letter') ? ' letter' : ''}`) : ''}${isLine ? ' say' : ''}`} data-xmas-novel-text data-xmas-novel-kind={isBand ? (xmasNovelIsSeRow(row) ? 'se' : 'band') : isLine ? 'line' : row.t}>
               {row.t === 'clue' ? `手がかり帳に「${row.clue}」を書きとめた`
                 : row.t === 'panel' ? (row.x || (row.stamp ? '……' : '登場人物'))
                 : row.t === 'q' ? xmasNovelFill(row.x, playerName)
                 : isBand && xmasNovelIsSeRow(row) ? <XmasNovelSeText text={text} shown={shown} />
                 : isLine ? <XmasNovelSayText text={text} shown={shown} />
+                : isBand && Array.isArray(row.fx) && row.fx.includes('letter') ? text.slice(0, shown).replace(/／/g, '　')
                 : text.slice(0, shown)}
             </div>
             {isLine && row.note && !typing && <div className="mh-nv-note">({row.note})</div>}

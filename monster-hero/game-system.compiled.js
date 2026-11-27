@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d544e70007cea9eb
+// source-sha256: 00b37cee420344d4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -115280,7 +115280,7 @@ const XMAS_NOVEL_SCRIPT = {
     "cond": null,
     "bgm": "melo_dullahan_clockwork",
     "bg": "2階の廊下",
-    "next": "C2-M",
+    "next": "C2-L",
     "rows": [{
       "id": "2-1-1",
       "t": "band",
@@ -115355,6 +115355,176 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "うん。……今夜は、気をつけよう",
       "e": "normal",
       "k": "C2-1:2-1-12"
+    }]
+  }, {
+    "id": "C2-L",
+    "chapter": "C2",
+    "title": "赤い字の手紙",
+    "cond": null,
+    "bgm": "melo_dullahan_steel_ghost",
+    "bg": "客室(夜",
+    "next": "C2-M",
+    "rows": [{
+      "id": "2-L-1",
+      "t": "band",
+      "x": "21時。部屋へ戻ると、枕の上に、白い封筒が1通、置いてあった",
+      "k": "C2-L:2-L-1"
+    }, {
+      "id": "2-L-2a",
+      "c": {
+        "any": [{
+          "all": [{
+            "k": "f_A1",
+            "op": "=",
+            "v": 1
+          }]
+        }]
+      },
+      "t": "line",
+      "w": "atsu",
+      "x": "……俺の部屋に？ 誰が……",
+      "e": "surprise",
+      "k": "C2-L:2-L-2a"
+    }, {
+      "id": "2-L-2s",
+      "c": {
+        "any": [{
+          "all": [{
+            "k": "f_A1",
+            "op": "=",
+            "v": 2
+          }]
+        }]
+      },
+      "t": "line",
+      "w": "sorashido",
+      "x": "……自分の部屋に？ いつの間に……",
+      "e": "surprise",
+      "k": "C2-L:2-L-2s"
+    }, {
+      "id": "2-L-3",
+      "t": "band",
+      "x": "カサ……(封を切る音)",
+      "fx": ["se"],
+      "se": "tap",
+      "k": "C2-L:2-L-3"
+    }, {
+      "id": "2-L-4",
+      "t": "band",
+      "x": "今夜、0時の鐘が鳴ったら／一人、帰ってこない／あの夜と、同じように／——黒いサンタ",
+      "fx": ["letter", "bleed"],
+      "k": "C2-L:2-L-4"
+    }, {
+      "id": "2-L-5",
+      "t": "band",
+      "x": "赤い字は、所々にじんで、紙の下へ垂れていた。インクなのか、それとも——",
+      "k": "C2-L:2-L-5"
+    }, {
+      "id": "2-L-6a",
+      "c": {
+        "any": [{
+          "all": [{
+            "k": "f_A1",
+            "op": "=",
+            "v": 1
+          }]
+        }]
+      },
+      "t": "line",
+      "w": "myua",
+      "x": "やだ……何これ、血みたい……",
+      "e": "crying",
+      "k": "C2-L:2-L-6a"
+    }, {
+      "id": "2-L-6s",
+      "c": {
+        "any": [{
+          "all": [{
+            "k": "f_A1",
+            "op": "=",
+            "v": 2
+          }]
+        }]
+      },
+      "t": "line",
+      "w": "watson",
+      "x": "……赤いインクです。血ではありません。ですが、わざと血のように見せています",
+      "k": "C2-L:2-L-6s"
+    }, {
+      "id": "2-L-7a",
+      "c": {
+        "any": [{
+          "all": [{
+            "k": "f_A1",
+            "op": "=",
+            "v": 1
+          }]
+        }]
+      },
+      "t": "line",
+      "w": "atsu",
+      "x": "……インクだ。わざと、血みたいに見せてる。……『一人、帰ってこない』って、どういう意味だ",
+      "e": "normal",
+      "k": "C2-L:2-L-7a"
+    }, {
+      "id": "2-L-7s",
+      "c": {
+        "any": [{
+          "all": [{
+            "k": "f_A1",
+            "op": "=",
+            "v": 2
+          }]
+        }]
+      },
+      "t": "line",
+      "w": "sorashido",
+      "x": "『帰ってこない』……。誰かが、どこかから戻れなくなる、ということでしょうか",
+      "e": "normal",
+      "k": "C2-L:2-L-7s"
+    }, {
+      "id": "2-L-8",
+      "t": "band",
+      "x": "黒羽の部屋の扉を叩いても、「放っておけ！」と怒鳴る声が返ってくるだけだった",
+      "k": "C2-L:2-L-8"
+    }, {
+      "id": "2-L-9a",
+      "c": {
+        "any": [{
+          "all": [{
+            "k": "f_A1",
+            "op": "=",
+            "v": 1
+          }]
+        }]
+      },
+      "t": "line",
+      "w": "atsu",
+      "x": "ばこっちゃん。今夜は0時まで、ホールで柱時計を見張ろう。何かあったら、すぐ動けるように",
+      "e": "normal",
+      "k": "C2-L:2-L-9a"
+    }, {
+      "id": "2-L-9s",
+      "c": {
+        "any": [{
+          "all": [{
+            "k": "f_A1",
+            "op": "=",
+            "v": 2
+          }]
+        }]
+      },
+      "t": "line",
+      "w": "sorashido",
+      "x": "あつさん。今夜は0時まで、ホールで柱時計を見ていましょう。ワトソンくんも一緒に",
+      "e": "normal",
+      "k": "C2-L:2-L-9s"
+    }, {
+      "id": "2-L-10",
+      "t": "clue",
+      "clue": "予告の手紙",
+      "x": "探偵の部屋の枕の上に置かれていた、赤い字の手紙。「今夜、0時の鐘が鳴ったら、一人、帰ってこない。あの夜と、同じように」。差出人は「黒いサンタ」",
+      "k": "C2-L:2-L-10"
     }]
   }, {
     "id": "C2-M",
@@ -119649,6 +119819,13 @@ const XMAS_NOVEL_SCRIPT = {
       "e": "normal",
       "k": "C8-3:8-3-7"
     }, {
+      "id": "8-3-7b",
+      "t": "line",
+      "w": "kyuko",
+      "x": "探偵さんの部屋の手紙も、俺。……0時の鐘で、一人帰ってこない。あの夜のお母さんと、同じに。……本当は、誰かに止めてほしかったのかもしれない",
+      "e": "troubled",
+      "k": "C8-3:8-3-7b"
+    }, {
       "id": "8-3-8",
       "t": "line",
       "w": "erubin",
@@ -122987,6 +123164,13 @@ const XMAS_NOVEL_CSS = `
 .mh-nv-se-sound { display: block; font-size: 21px; font-weight: 800; letter-spacing: .14em; color: #f3e6c0; text-shadow: 0 0 12px rgba(232,196,106,.35); }
 .mh-nv-se-note { display: block; font-size: 12px; font-weight: 600; letter-spacing: .02em; color: #a9b6da; line-height: 1.55; }
 .mh-nv-text.band { text-align: left; color: #c9d3ee; font-style: normal; }
+.mh-nv-text.band.letter { color: #ff8a8a; }
+/* 予告の手紙(帯の頭の「(手紙)」・r1126-058): 紙に赤い字。にじみながら、ゆっくり浮かぶ */
+.mh-nv-letter { position: absolute; left: 50%; top: 18%; width: min(80vw, 420px); padding: 24px 22px; z-index: 4; border-radius: 3px;
+  background: radial-gradient(120% 90% at 50% 40%, #f4ecd8 0%, #e7d8b4 70%, #cdb88c 100%); box-shadow: 0 14px 34px rgba(0,0,0,.65);
+  color: #a3080e; font-weight: 900; font-size: clamp(17px, 4.6vw, 22px); line-height: 1.9; letter-spacing: .08em; white-space: pre-line;
+  text-shadow: 0 0 1px rgba(140,0,0,.7), 0 1px 7px rgba(170,0,0,.45); transform: translateX(-50%) rotate(-1.5deg); animation: mhNvLetterIn 2.4s ease both; }
+@keyframes mhNvLetterIn { 0% { opacity: 0; filter: blur(7px); transform: translate(-50%, 14px) rotate(-3deg); } 55% { opacity: 1; filter: blur(1.5px); } 100% { opacity: 1; filter: none; transform: translateX(-50%) rotate(-1.5deg); } }
 .mh-nv-note { margin-top: 2px; font-size: 11px; color: #9fb0d8; }
 .mh-nv-next { position: absolute; right: 14px; bottom: 8px; width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-top: 9px solid #e8c46a; animation: mh-nv-bob 1s ease-in-out infinite; }
 @keyframes mh-nv-bob { 50% { transform: translateY(4px); } }
@@ -124559,7 +124743,11 @@ const XmasNovelScreen = ({
   }), fx && React.createElement("div", {
     key: fx.n,
     className: `mh-nv-fx ${fx.kind}`
-  }), isBand && Array.isArray(row.fx) && row.fx.includes('fallen') && React.createElement(XmasNovelFallen, null), inside && React.createElement("div", {
+  }), isBand && Array.isArray(row.fx) && row.fx.includes('fallen') && React.createElement(XmasNovelFallen, null), isBand && Array.isArray(row.fx) && row.fx.includes('letter') && React.createElement("div", {
+    key: `letter-${row.id}`,
+    className: "mh-nv-letter mh-nv-serif",
+    "data-xmas-novel-letter": true
+  }, String(text).replace(/／/g, '\n')), inside && React.createElement("div", {
     className: "mh-nv-crt",
     "data-xmas-novel-inside": true
   }), transit && React.createElement("div", {
@@ -124607,7 +124795,7 @@ const XmasNovelScreen = ({
   }, name && React.createElement("div", {
     className: "mh-nv-name mh-nv-serif"
   }, name), React.createElement("div", {
-    className: `mh-nv-text${isBand ? xmasNovelIsSeRow(row) ? ' se mh-nv-serif' : ' band mh-nv-serif' : ''}${isLine ? ' say' : ''}`,
+    className: `mh-nv-text${isBand ? xmasNovelIsSeRow(row) ? ' se mh-nv-serif' : ` band mh-nv-serif${Array.isArray(row.fx) && row.fx.includes('letter') ? ' letter' : ''}` : ''}${isLine ? ' say' : ''}`,
     "data-xmas-novel-text": true,
     "data-xmas-novel-kind": isBand ? xmasNovelIsSeRow(row) ? 'se' : 'band' : isLine ? 'line' : row.t
   }, row.t === 'clue' ? `手がかり帳に「${row.clue}」を書きとめた` : row.t === 'panel' ? row.x || (row.stamp ? '……' : '登場人物') : row.t === 'q' ? xmasNovelFill(row.x, playerName) : isBand && xmasNovelIsSeRow(row) ? React.createElement(XmasNovelSeText, {
@@ -124616,7 +124804,7 @@ const XmasNovelScreen = ({
   }) : isLine ? React.createElement(XmasNovelSayText, {
     text: text,
     shown: shown
-  }) : text.slice(0, shown)), isLine && row.note && !typing && React.createElement("div", {
+  }) : isBand && Array.isArray(row.fx) && row.fx.includes('letter') ? text.slice(0, shown).replace(/／/g, '　') : text.slice(0, shown)), isLine && row.note && !typing && React.createElement("div", {
     className: "mh-nv-note"
   }, "(", row.note, ")"), !typing && row.t !== 'q' && React.createElement("span", {
     className: "mh-nv-next"
