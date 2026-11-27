@@ -172,6 +172,31 @@ if (sv.first.Qx.f !== false) fail('一発目の記録が、読み直しで書き
 
 // 4. 画面の入口
 const screen = fs.readFileSync(P('79-screen-xmas-novel.jsx'), 'utf8');
+// 立ち絵の見せ方(r1126-067): 台本の印は寄り・ふだん・引きだけ。置き方は、頭がボタン列より下・切れ目が箱の上・縦横の比率どおり・見せ方の順に大きい
+if (!SAMPLE_MODE) {
+  const FR = ['close', 'normal', 'far'];
+  S.scenes.forEach((sc) => { if (sc.frame && !FR.includes(sc.frame)) fail(`${sc.id}: 立ち絵の見せ方の印がおかしい(${sc.frame})`); (sc.rows || []).forEach((r) => { if (r.f && !FR.includes(r.f)) fail(`${r.id}: 立ち絵の見せ方の印がおかしい(${r.f})`); }); });
+  if (!S.scenes.some((sc) => sc.frame === 'close') || !S.scenes.some((sc) => sc.frame === 'far')) fail('立ち絵の見せ方: 寄り・引きの場面が1つも無い(台本の〔立ち:寄り〕〔立ち:引き〕が読めていない)');
+  const cut = (a, b) => { const i = screen.indexOf(a); return i < 0 ? '' : screen.slice(i, screen.indexOf(b, i)); };
+  const src = `${cut('const XMAS_NOVEL_FRAMES', 'const useXmasNovelPlace')}\nthis.F = { XMAS_NOVEL_MARKS, xmasNovelPlaceFig, xmasNovelFrameOf };`;
+  const fx = vm.createContext({});
+  try { vm.runInContext(src, fx); } catch (e) { fail(`立ち絵の置き方の部品が読めない ${e.message}`); }
+  const F = fx.F;
+  if (F) {
+    [[390, 844, 56, 674], [844, 390, 56, 390], [1180, 820, 60, 610]].forEach(([w, , top, cutY]) => {
+      Object.entries(F.XMAS_NOVEL_MARKS).forEach(([who, mark]) => {
+        const hs = FR.map((frame) => {
+          const p = F.xmasNovelPlaceFig({ stageW: w, top, cutY, ar: 0.9, mark, frame });
+          if (p.top < top - 1) fail(`${who} ${frame} ${w}px: 頭が上のボタン列にかかる(top ${p.top})`);
+          if (Math.abs(p.w / p.h - 0.9) > 0.02) fail(`${who} ${frame}: 縦横の比率が変わる`);
+          return p.h;
+        });
+        if (!(hs[0] >= hs[1] && hs[1] >= hs[2])) fail(`${who} ${w}px: 寄り ≥ ふだん ≥ 引き の大きさになっていない ${hs.join('/')}`);
+      });
+    });
+    if (F.xmasNovelFrameOf({ f: 'close' }, { frame: 'far' }) !== 'close' || F.xmasNovelFrameOf({}, { frame: 'far' }) !== 'far' || F.xmasNovelFrameOf({}, {}) !== 'normal') fail('立ち絵の見せ方: 行の印 > 場面の印 > ふだん の順になっていない');
+  }
+}
 ['const openXmasNovel', 'const XmasNovelScreen', 'XMAS_NOVEL_STORAGE_KEY', 'xmasNovelPlayableAt(Date.now())'].forEach((w) => { if (!screen.includes(w)) fail(`画面の部品に ${w} が無い`); });
 const parts = JSON.parse(fs.readFileSync(P('parts.json'), 'utf8')).parts.map((p) => p.file);
 ['79-xmas-novel-engine.jsx', '79-xmas-novel-script.jsx', '79-screen-xmas-novel.jsx'].forEach((f) => { if (!parts.includes(f)) fail(`parts.json に ${f} が無い`); });
