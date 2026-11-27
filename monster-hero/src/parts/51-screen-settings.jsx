@@ -272,7 +272,7 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
           <b className="block text-[13px] font-black text-slate-200">ホームの助手コメント</b>
           <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('ホーム画面の上に出る助手の吹き出しです。はじめは「切」で、助手の顔だけが出ます(顔を押すと吹き出しが開きます)。「入」にすると、いつも吹き出しが出ます。新しい機能のお知らせは、これまでどおり出ます。')}</p>
           <div className="mt-2 grid grid-cols-2 gap-2">
-            {[{ on: false, label: '切', note: '顔だけ(はじめの形)' }, { on: true, label: '入', note: '吹き出しを出す' }].map(option => (
+            {[{ on: false, label: '切', note: '顔だけ(初めの形)' }, { on: true, label: '入', note: '吹き出しを出す' }].map(option => (
               <button key={option.label} type="button" data-home-assistant-comment={option.on ? 'on' : 'off'}
                 aria-pressed={homeComment.on === option.on}
                 onClick={() => HOME_ASSISTANT_COMMENT_STORE.setOn(option.on)}

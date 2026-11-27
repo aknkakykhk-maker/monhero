@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: db399146d44bf14f
+// source-sha256: 03adf63b60be5dae
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -72868,7 +72868,7 @@ function SettingsScreen({
   }, [{
     on: false,
     label: '切',
-    note: '顔だけ(はじめの形)'
+    note: '顔だけ(初めの形)'
   }, {
     on: true,
     label: '入',
@@ -87015,7 +87015,9 @@ const HOME_V2_CSS = `
 .mh-home-v2 .mh-home-menu-btn em,.mh-home-v2 .mh-home-menu .mh-home-side-btn em{display:flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:999px;border:2px solid #fff;background:#e11d48;color:#fff;font-size:11px;font-style:normal;font-weight:900;line-height:1;box-shadow:0 2px 6px #0008}
 .mh-home-v2 .mh-home-menu-btn em{position:absolute;top:-7px;right:-6px}
 .mh-home-v2 .mh-home-menu-shade{position:absolute;inset:0;z-index:28;border:0;background:#0006;cursor:default}
-.mh-home-v2 .mh-home-menu{position:absolute;z-index:29;right:8px;top:calc(58px + env(safe-area-inset-top));display:flex;flex-direction:column;gap:6px;width:min(240px,calc(100% - 16px));padding:8px;border:1px solid var(--v2-line);border-radius:16px;background:#0d1f1cf7;box-shadow:0 10px 30px #000c;display:none}
+.mh-home-v2 .mh-home-menu{position:absolute;z-index:29;right:8px;top:calc(58px + env(safe-area-inset-top));display:flex;flex-direction:column;gap:6px;width:min(240px,calc(100% - 16px));padding:8px;border:1px solid var(--v2-line);border-radius:16px;background:#0d1f1cf7;box-shadow:0 10px 30px #000c}
+/* 閉じているときは目に見えない形(読み上げには残す)。メニューの中の「設定」「ミッション」などを、読み上げの利用者と検査がいつでも見つけられるように */
+.mh-home-v2 .mh-home-menu:not(.is-open){width:1px;height:1px;padding:0;margin:0;border:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap;pointer-events:none;box-shadow:none}
 .mh-home-v2 .mh-home-menu.is-open{display:flex;animation:mhHomeMenuIn .15s ease-out}
 @keyframes mhHomeMenuIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
 @media(prefers-reduced-motion:reduce){.mh-home-v2 .mh-home-menu.is-open{animation:none}}
@@ -87927,8 +87929,7 @@ function HomeScreen({
     onClick: () => setHomeMenuOpen(false)
   }), React.createElement("div", {
     className: `mh-home-menu${homeMenuOpen ? ' is-open' : ''}`,
-    "data-home-menu": homeMenuOpen ? 'open' : 'closed',
-    "aria-hidden": !homeMenuOpen
+    "data-home-menu": homeMenuOpen ? 'open' : 'closed'
   }, React.createElement("div", {
     className: "mh-home-menu-info"
   }, typeof TimeOfDayClock === 'function' && React.createElement(TimeOfDayClock, {
@@ -88032,7 +88033,7 @@ function HomeScreen({
     "data-home-event-banner": true,
     className: "mh-home-event-banner",
     tabIndex: i === homeBandShow ? 0 : -1,
-    onClick: homeEventCampaign.id === 'xmas_2026' && typeof onOpenXmasEvent === 'function' ? onOpenXmasEvent : openChangelog,
+    onClick: homeEventCampaign.id === 'xmas_2026' && typeof onOpenXmasEvent === 'function' ? onOpenXmasEvent : onOpenRhythm,
     "aria-label": `${homeEventCampaign.banner.title}${homeEventCampaign.banner.title2 || ''} ${homeEventCampaign.banner.sub}`
   }, React.createElement("b", {
     className: "r1"
@@ -140454,17 +140455,11 @@ function AssistantLifeHomeFaces({
         width: rowW,
         height: rowW
       }
-    }, React.createElement("button", {
-      type: "button",
+    }, React.createElement("span", {
+      role: "img",
       "data-assistant-life-home-badge": f,
-      "aria-label": `${names}がいます。助手ライフを開く`,
-      onClick: () => {
-        ASSISTANT_LIFE_STORE.set({
-          open: true,
-          focus: shown[0]
-        });
-      },
-      className: "pointer-events-auto relative flex items-center justify-center rounded-full active:scale-95",
+      "aria-label": `${names}がいます`,
+      className: "pointer-events-none relative flex items-center justify-center rounded-full",
       style: {
         width: rowW,
         height: rowW
@@ -142210,7 +142205,8 @@ function AssistantLifeMapRow({
   close = () => {},
   onRoom = null,
   onBeat = null,
-  onCard = null
+  onCard = null,
+  noSuccess = false
 }) {
   const a = assistantById(id);
   if (!a) return null;
@@ -142252,7 +142248,7 @@ function AssistantLifeMapRow({
     style: JA_LABEL_STYLE
   }, jaWrap(String(bi.label || '⚔ マスモンで対戦(β)').replace('で対戦', 'で\u200B対戦')));
   let si = null;
-  if (place === 'battle') {
+  if (place === 'battle' && !noSuccess) {
     try {
       si = typeof assistantLifeSuccessRowInfo === 'function' ? assistantLifeSuccessRowInfo(id) : null;
     } catch (_) {
@@ -142478,6 +142474,7 @@ function AssistantLifeBattleHall({
     life: life,
     cheerMsg: cheerMsg,
     setCheerMsg: setCheerMsg,
+    noSuccess: true,
     onRoom: rid => {
       try {
         ASSISTANT_LIFE_STORE.set({

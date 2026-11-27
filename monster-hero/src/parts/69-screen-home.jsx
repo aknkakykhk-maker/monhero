@@ -89,7 +89,9 @@ const HOME_V2_CSS = `
 .mh-home-v2 .mh-home-menu-btn em,.mh-home-v2 .mh-home-menu .mh-home-side-btn em{display:flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:999px;border:2px solid #fff;background:#e11d48;color:#fff;font-size:11px;font-style:normal;font-weight:900;line-height:1;box-shadow:0 2px 6px #0008}
 .mh-home-v2 .mh-home-menu-btn em{position:absolute;top:-7px;right:-6px}
 .mh-home-v2 .mh-home-menu-shade{position:absolute;inset:0;z-index:28;border:0;background:#0006;cursor:default}
-.mh-home-v2 .mh-home-menu{position:absolute;z-index:29;right:8px;top:calc(58px + env(safe-area-inset-top));display:flex;flex-direction:column;gap:6px;width:min(240px,calc(100% - 16px));padding:8px;border:1px solid var(--v2-line);border-radius:16px;background:#0d1f1cf7;box-shadow:0 10px 30px #000c;display:none}
+.mh-home-v2 .mh-home-menu{position:absolute;z-index:29;right:8px;top:calc(58px + env(safe-area-inset-top));display:flex;flex-direction:column;gap:6px;width:min(240px,calc(100% - 16px));padding:8px;border:1px solid var(--v2-line);border-radius:16px;background:#0d1f1cf7;box-shadow:0 10px 30px #000c}
+/* 閉じているときは目に見えない形(読み上げには残す)。メニューの中の「設定」「ミッション」などを、読み上げの利用者と検査がいつでも見つけられるように */
+.mh-home-v2 .mh-home-menu:not(.is-open){width:1px;height:1px;padding:0;margin:0;border:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap;pointer-events:none;box-shadow:none}
 .mh-home-v2 .mh-home-menu.is-open{display:flex;animation:mhHomeMenuIn .15s ease-out}
 @keyframes mhHomeMenuIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
 @media(prefers-reduced-motion:reduce){.mh-home-v2 .mh-home-menu.is-open{animation:none}}
@@ -601,7 +603,7 @@ function HomeScreen({
         </header>
         {/* メニューの中身。閉じているときも描いておく(見えないだけ)。外を押すと閉じる */}
         {homeMenuOpen&&<button type="button" className="mh-home-menu-shade" data-home-menu-shade aria-label="メニューを閉じる" onClick={()=>setHomeMenuOpen(false)}/>}
-        <div className={`mh-home-menu${homeMenuOpen?' is-open':''}`} data-home-menu={homeMenuOpen?'open':'closed'} aria-hidden={!homeMenuOpen}>
+        <div className={`mh-home-menu${homeMenuOpen?' is-open':''}`} data-home-menu={homeMenuOpen?'open':'closed'}>
           <div className="mh-home-menu-info">
             {typeof TimeOfDayClock==='function'&&<TimeOfDayClock home/>}
             <span className="mh-home-menu-bp"><Coins size={14}/><small>ブリーダーP</small><CompactCount value={breederPoints}/></span>

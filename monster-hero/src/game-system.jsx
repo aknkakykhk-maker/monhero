@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8becd957313f9392
+// generated-sha256: 1396b0fac21d7de1
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -44848,7 +44848,7 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
           <b className="block text-[13px] font-black text-slate-200">ホームの助手コメント</b>
           <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('ホーム画面の上に出る助手の吹き出しです。はじめは「切」で、助手の顔だけが出ます(顔を押すと吹き出しが開きます)。「入」にすると、いつも吹き出しが出ます。新しい機能のお知らせは、これまでどおり出ます。')}</p>
           <div className="mt-2 grid grid-cols-2 gap-2">
-            {[{ on: false, label: '切', note: '顔だけ(はじめの形)' }, { on: true, label: '入', note: '吹き出しを出す' }].map(option => (
+            {[{ on: false, label: '切', note: '顔だけ(初めの形)' }, { on: true, label: '入', note: '吹き出しを出す' }].map(option => (
               <button key={option.label} type="button" data-home-assistant-comment={option.on ? 'on' : 'off'}
                 aria-pressed={homeComment.on === option.on}
                 onClick={() => HOME_ASSISTANT_COMMENT_STORE.setOn(option.on)}
@@ -52127,7 +52127,9 @@ const HOME_V2_CSS = `
 .mh-home-v2 .mh-home-menu-btn em,.mh-home-v2 .mh-home-menu .mh-home-side-btn em{display:flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:999px;border:2px solid #fff;background:#e11d48;color:#fff;font-size:11px;font-style:normal;font-weight:900;line-height:1;box-shadow:0 2px 6px #0008}
 .mh-home-v2 .mh-home-menu-btn em{position:absolute;top:-7px;right:-6px}
 .mh-home-v2 .mh-home-menu-shade{position:absolute;inset:0;z-index:28;border:0;background:#0006;cursor:default}
-.mh-home-v2 .mh-home-menu{position:absolute;z-index:29;right:8px;top:calc(58px + env(safe-area-inset-top));display:flex;flex-direction:column;gap:6px;width:min(240px,calc(100% - 16px));padding:8px;border:1px solid var(--v2-line);border-radius:16px;background:#0d1f1cf7;box-shadow:0 10px 30px #000c;display:none}
+.mh-home-v2 .mh-home-menu{position:absolute;z-index:29;right:8px;top:calc(58px + env(safe-area-inset-top));display:flex;flex-direction:column;gap:6px;width:min(240px,calc(100% - 16px));padding:8px;border:1px solid var(--v2-line);border-radius:16px;background:#0d1f1cf7;box-shadow:0 10px 30px #000c}
+/* 閉じているときは目に見えない形(読み上げには残す)。メニューの中の「設定」「ミッション」などを、読み上げの利用者と検査がいつでも見つけられるように */
+.mh-home-v2 .mh-home-menu:not(.is-open){width:1px;height:1px;padding:0;margin:0;border:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap;pointer-events:none;box-shadow:none}
 .mh-home-v2 .mh-home-menu.is-open{display:flex;animation:mhHomeMenuIn .15s ease-out}
 @keyframes mhHomeMenuIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
 @media(prefers-reduced-motion:reduce){.mh-home-v2 .mh-home-menu.is-open{animation:none}}
@@ -52639,7 +52641,7 @@ function HomeScreen({
         </header>
         {/* メニューの中身。閉じているときも描いておく(見えないだけ)。外を押すと閉じる */}
         {homeMenuOpen&&<button type="button" className="mh-home-menu-shade" data-home-menu-shade aria-label="メニューを閉じる" onClick={()=>setHomeMenuOpen(false)}/>}
-        <div className={`mh-home-menu${homeMenuOpen?' is-open':''}`} data-home-menu={homeMenuOpen?'open':'closed'} aria-hidden={!homeMenuOpen}>
+        <div className={`mh-home-menu${homeMenuOpen?' is-open':''}`} data-home-menu={homeMenuOpen?'open':'closed'}>
           <div className="mh-home-menu-info">
             {typeof TimeOfDayClock==='function'&&<TimeOfDayClock home/>}
             <span className="mh-home-menu-bp"><Coins size={14}/><small>ブリーダーP</small><CompactCount value={breederPoints}/></span>
@@ -52663,7 +52665,8 @@ function HomeScreen({
               {homeBandSlides.map((k,i)=>(
                 <div key={k} className="mh-home-band-slide" aria-hidden={i!==homeBandShow} {...(k==='xmas'?{'data-home-xmas-entry-strip':''}:{'data-home-event-strip':''})}>
                   {k==='xmas'&&<HomeXmasEventEntry onOpen={xmasEntry.onOpen} preOpen={!!xmasEntry.preOpen}/>}
-                  {k==='event'&&<button type="button" data-home-event-banner className="mh-home-event-banner" tabIndex={i===homeBandShow?0:-1} onClick={homeEventCampaign.id==='xmas_2026'&&typeof onOpenXmasEvent==='function'?onOpenXmasEvent:openChangelog} aria-label={`${homeEventCampaign.banner.title}${homeEventCampaign.banner.title2||''} ${homeEventCampaign.banner.sub}`}>
+                  {/* 押すとモンヒロビートへ直に入る(2026-11-27 台帳 r1126-073 追記2・入口の整理①。前は更新履歴が開いた) */}
+                  {k==='event'&&<button type="button" data-home-event-banner className="mh-home-event-banner" tabIndex={i===homeBandShow?0:-1} onClick={homeEventCampaign.id==='xmas_2026'&&typeof onOpenXmasEvent==='function'?onOpenXmasEvent:onOpenRhythm} aria-label={`${homeEventCampaign.banner.title}${homeEventCampaign.banner.title2||''} ${homeEventCampaign.banner.sub}`}>
                     {/* 1行目に題と期間(sub)、2行目に副題(title2)(r1119-131) */}
                     <b className="r1"><span>{homeEventCampaign.banner.emoji} {homeEventCampaign.banner.title}</span><small>{homeEventCampaign.banner.sub}</small></b>{homeEventCampaign.banner.title2?<span className="t2">{homeEventCampaign.banner.title2}</span>:null}
                   </button>}
@@ -76503,8 +76506,10 @@ function AssistantLifeHomeFaces({ metIds }) {
       const names = list.map(id => { const who = assistantById(id); return who ? who.name : id; }).join('・');
       return (
         <div key={f} data-assistant-life-home-faces={f} data-assistant-life-home-faces-ids={list.join(',')} className="pointer-events-none fixed" style={{ zIndex: 40, left, top, width: rowW, height: rowW }}>
-          <button type="button" data-assistant-life-home-badge={f} aria-label={`${names}がいます。助手ライフを開く`} onClick={() => { ASSISTANT_LIFE_STORE.set({ open: true, focus: shown[0] }); }}
-            className="pointer-events-auto relative flex items-center justify-center rounded-full active:scale-95" style={{ width: rowW, height: rowW }}>
+          {/* 2026-11-27 台帳 r1126-073 追記2(入口の整理③): 点は押せない印にした。点のあたりを押しても、下の入口(ビート・バトルなど)が開く。
+              助手ライフへは HOME の小さな丸「助手ライフ」1つから入る。開発部が窓口の判断で出し方だけ変えた */}
+          <span role="img" data-assistant-life-home-badge={f} aria-label={`${names}がいます`}
+            className="pointer-events-none relative flex items-center justify-center rounded-full" style={{ width: rowW, height: rowW }}>
             <span data-assistant-life-home-dot aria-hidden="true" className="block rounded-full border-2 border-white bg-rose-500 shadow" style={{ width: 14, height: 14 }}/>
             <span className="sr-only">{shown.map((id, i) => { const who = assistantById(id); if (!who) return null; const w = assistantLifeWhereOf(life, id); const lonely = w && w.reason === 'lonely';
               const spent = f === 'card' && !!assistantLifeCardSpent(id);
@@ -76514,7 +76519,7 @@ function AssistantLifeHomeFaces({ metIds }) {
                   {spent && <AssistantLifeSpentMark size={size}/>}
                 </span>); })}
             {extra > 0 && <span data-assistant-life-home-faces-extra={extra} className="shrink-0 rounded-full bg-slate-100 px-1 font-black text-slate-900 shadow" style={{ marginLeft: 2, fontSize: 9, lineHeight: '14px' }}>+{extra}</span>}</span>
-          </button>
+          </span>
         </div>); })}
     {rects.card && cardUp && <span data-assistant-life-home-card-up className="pointer-events-none fixed rounded-full bg-amber-300 font-black text-slate-950 shadow" style={{ zIndex: 40, left: rects.card.x + 4, top: rects.card.y + 4, fontSize: 11, lineHeight: 1.35, padding: '2px 7px', border: '1px solid #fff3c4' }}>UP</span>}
     {rects.life && typeof AssistantLifeFriendHomeBadge === 'function' && <AssistantLifeFriendHomeBadge rect={rects.life} dockTop={rects.__dockTop}/>}
@@ -77152,7 +77157,7 @@ function AssistantLifeMapViewRow({ id, place, town = false, w = null }) {
       </div>
     </div>);
 }
-function AssistantLifeMapRow({ id, place, town = false, life, selected = false, cheerMsg = null, setCheerMsg = () => {}, close = () => {}, onRoom = null, onBeat = null, onCard = null }) {
+function AssistantLifeMapRow({ id, place, town = false, life, selected = false, cheerMsg = null, setCheerMsg = () => {}, close = () => {}, onRoom = null, onBeat = null, onCard = null, noSuccess = false }) {
     const a = assistantById(id); if (!a) return null;
     const w = assistantLifeWhereOf(life, id); const d = w && ASSISTANT_LIFE_DOINGS[w.doing];
     const withNames = w && w.with && w.with.length ? `${w.with.map(assistantLifeName).join('・')}と` : 'ひとりで';
@@ -77162,7 +77167,9 @@ function AssistantLifeMapRow({ id, place, town = false, life, selected = false, 
     let bi = null; if (place === 'battle') { try { bi = typeof assistantMasmonBattleRowInfo === 'function' && typeof assistantMasmonBattleOpen === 'function' ? assistantMasmonBattleRowInfo(id) : null; } catch (_) { bi = null; } }
     const battleBtn = bi && <button type="button" disabled={!!bi.disabled} title={bi.disabled ? (bi.why || '') : (bi.sub || '')} data-assistant-life-map-act="masmon-battle" onClick={() => { close(); try { assistantMasmonBattleOpen({ assistantId: id, from: 'place' }); } catch (_) {} }} className="rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 min-h-[44px] px-2 py-1 text-[12px] font-black text-white active:scale-95 disabled:opacity-50" style={JA_LABEL_STYLE}>{jaWrap(String(bi.label || '⚔ マスモンで対戦(β)').replace('で対戦', 'で\u200B対戦'))}</button>;
     // モンヒロサクセス(β)の入口(2026-11-14 社長・印 monheroSuccess が偽なら null)。モンヒロバトルにいる助手の札にだけ
-    let si = null; if (place === 'battle') { try { si = typeof assistantLifeSuccessRowInfo === 'function' ? assistantLifeSuccessRowInfo(id) : null; } catch (_) { si = null; } }
+    // noSuccess … バトルを選ぶ画面の「いまモンヒロバトルにいる助手」では出さない(2026-11-27 台帳 r1126-073 追記2・入口の整理②。
+    //   サクセスの入口は HOME の大きな札と助手ライフの部屋・地図に残す。開発部が窓口の判断で出し方だけ変えた)
+    let si = null; if (place === 'battle' && !noSuccess) { try { si = typeof assistantLifeSuccessRowInfo === 'function' ? assistantLifeSuccessRowInfo(id) : null; } catch (_) { si = null; } }
     const successBtn = si && <button type="button" title={si.sub} data-assistant-life-map-act="monhero-success" onClick={() => { close(); try { assistantLifeSuccessOpen({ assistantId: id, from: 'place' }); } catch (_) {} }} className="w-full rounded-xl bg-gradient-to-r from-emerald-600 to-lime-600 min-h-[44px] px-2 py-1 text-[12px] font-black text-white active:scale-95"><span style={JA_LABEL_STYLE}>{jaWrap(si.label)}</span><span className="block text-[10px] font-bold text-emerald-50" style={JA_LABEL_STYLE}>{jaWrap(si.sub)}</span></button>;
     const tiLine = ti && (ti.today ? `🥋 今日の修行: ${ti.today.nick} ― ${ti.today.kindText || ti.today.kind}${ti.today.learned ? ` NEW 新しい技「${ti.today.learned}」を覚えた` : ''}${ti.today.main ? ` 技の熟練度 ${ti.today.main} +${ti.today.gain}` : ''}` : '🥋 今日はまだ修行していません');
     return (
@@ -77227,7 +77234,7 @@ function AssistantLifeBattleHall({ metIds }) {
       {typeof AssistantMasmonTrainWatchHost === 'function' && <AssistantMasmonTrainWatchHost/>}
       <p className="text-[12px] font-black text-amber-200" style={JA_WRAP_STYLE}>{jaWrap('🏡 いまモンヒロバトルにいる助手')}</p>
       {ids.map(id => (
-        <AssistantLifeMapRow key={id} id={id} place="battle" life={life} cheerMsg={cheerMsg} setCheerMsg={setCheerMsg}
+        <AssistantLifeMapRow key={id} id={id} place="battle" life={life} cheerMsg={cheerMsg} setCheerMsg={setCheerMsg} noSuccess
           onRoom={(rid) => { try { ASSISTANT_LIFE_STORE.set({ open: true, focus: rid }); } catch (_) {} }}/>))}
     </section>);
 }

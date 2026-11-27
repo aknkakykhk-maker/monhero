@@ -59,7 +59,8 @@ check('0件ならバッジを出さない', has('count > 0 ?') && has(') : null)
 check('3種のミッションタブにバッジを出す',
   has("tabCountBadge(missionClaimableList(state,'daily').length)") && has("tabCountBadge(missionClaimableList(state,'weekly').length)") && has("tabCountBadge(missionClaimableList(state,'monthly').length)"));
 check('ギフトの未受取タブにバッジを出す', has('tabCountBadge(claimable.length)'));
-check('HOMEのギフト通知も同じ判定を使う', has('{giftClaimableCount(gifts)>0&&<em>{giftClaimableCount(gifts)}</em>}'));
+// 2026-11-27 r1126-073: ギフトはメニュー☰の中へ。数は同じ giftClaimableCount で数え、メニューの赤い数字(合計)にも足す
+check('HOMEのギフト通知も同じ判定を使う', has('const homeGiftCount=giftClaimableCount(gifts);') && has('{homeGiftCount>0&&<em>{homeGiftCount}</em>}') && has('const homeMenuBadge=homeMissionCount+homeGiftCount'));
 check('ギフト画面の受取可能判定も共通化されている', has('const claimable=unclaimed.filter(g=>giftIsClaimable(g,now));'));
 
 // 一括受取

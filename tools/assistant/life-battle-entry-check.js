@@ -33,7 +33,8 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
   check('② 見る画面の入れ物は、地図が出ていないときだけ家の画面にも(2つ重ねない)', /\{roomId && tab !== 'where' && typeof AssistantMasmonTrainWatchHost === 'function' && <AssistantMasmonTrainWatchHost\/>\}/.test(house) && (map.match(/<AssistantMasmonTrainWatchHost\/>/g) || []).length === 2); // 地図の根元に1つ+モンヒロバトルの選択画面の枠(AssistantLifeBattleHall)に1つ。選択画面では家も地図も出ない
   const cheer = read('monster-hero/src/parts/56-assistant-life-masmon-cheer.jsx');
   check('⑤ 練習試合の入れ物が消えるときは「開いている」も消す(残ると次に地図を開いたとき勝手に始まる)', /AMGC_HOST\.subs\.delete\(f\); if \(!AMGC_HOST\.subs\.size\) AMGC_HOST\.open = null;/.test(cheer));
-  check('③ HOME の顔: バッジは施設のボタンの右上に固定 24px・居場所の記録は全員ぶん', /ASSISTANT_LIFE_BADGE_FACE = 24/.test(house) && /const top = r\.y - 9;/.test(house) && /data-assistant-life-home-faces-ids/.test(house));
+  // 2026-11-27 r1126-073 追記2(入口の整理③): HOME では顔を並べず、ボタンの右上の内側に押せない赤い点1つ。居場所の記録(ids)は全員ぶんのまま
+  check('③ HOME の印: 施設のボタンの右上の内側に赤い点(押せない)・居場所の記録は全員ぶん', /const top = r\.y \+ 1;/.test(house) && /data-assistant-life-home-dot/.test(house) && /className="pointer-events-none relative flex/.test(house) && /data-assistant-life-home-faces-ids/.test(house));
 }
 
 (async () => {
@@ -66,12 +67,13 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     const WHO = 'atsu';
     await page.evaluate((who) => { const st = ASSISTANT_LIFE_STORE.state, l = st.life; const groups = (l.groups || []).map(g => ({ ...g, ids: g.ids.filter(x => x !== who) })).filter(g => g.ids.length > 1); const solo = { ...(l.solo || {}) }; solo[who] = { doing: 'battle', place: 'battle' }; ASSISTANT_LIFE_STORE.set({ life: { ...l, groups, solo } }); }, WHO);
     await page.waitForTimeout(1600);
-    const face = page.locator(`[data-assistant-life-home-faces="battle"] [data-assistant-life-home-face="${WHO}"]`);
-    const f = await face.evaluate(el => { const r = el.getBoundingClientRect(); const t = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return { w: Math.round(r.width), top: Math.round(r.top), bottom: Math.round(r.bottom), H: innerHeight, hit: t === el || el.contains(t) }; }).catch(() => null);
-    check('④ HOME: モンヒロバトルの助手の顔が画面の中に 18px 以上で出て、押せる(バッジはボタンの右上・固定 24px)', !!f && f.w >= 18 && f.bottom <= f.H - 4 && f.top >= 0 && f.hit, JSON.stringify(f));
-    await face.tap({ timeout: 3000 }).catch(() => {});
+    // 2026-11-27 r1126-073 追記2: 点は押せない印。点のあたりを押すとモンヒロバトルの入口が開く。部屋へは助手ライフ(小さな丸)から入る
+    const dot = page.locator(`[data-assistant-life-home-faces="battle"][data-assistant-life-home-faces-ids*="${WHO}"] [data-assistant-life-home-dot]`);
+    const f = await dot.evaluate(el => { const r = el.getBoundingClientRect(); const t = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return { w: Math.round(r.width), top: Math.round(r.top), bottom: Math.round(r.bottom), H: innerHeight, toFac: !!(t && t.closest('[data-home-fac="battle"]')) }; }).catch(() => null);
+    check('④ HOME: モンヒロバトルの入口の右上に赤い点が画面の中に出て、押すと下の入口に届く(点は押せない印)', !!f && f.w >= 10 && f.bottom <= f.H - 4 && f.top >= 0 && f.toFac, JSON.stringify(f));
+    await page.evaluate((who) => ASSISTANT_LIFE_STORE.set({ open: true, focus: who }), WHO);
     await page.locator(`[data-assistant-life-room-sheet="${WHO}"]`).waitFor({ timeout: 6000 }).catch(() => {});
-    check('④ 顔を押すと、その助手の部屋が開く', (await page.locator(`[data-assistant-life-room-sheet="${WHO}"]`).count()) === 1);
+    check('④ 助手ライフでその助手を選ぶと、部屋が開く', (await page.locator(`[data-assistant-life-room-sheet="${WHO}"]`).count()) === 1);
     check('④ 部屋に 👀 修行を見る・📣 応援する', (await page.locator('[data-assistant-life-room-do="train-watch"]').count()) === 1 && (await page.locator('[data-assistant-life-room-do="cheer"]').count()) === 1);
     await page.locator('[data-assistant-life-room-do="train-watch"]').tap({ timeout: 3000 }).catch(() => {});
     await page.locator('.ambw-root').waitFor({ timeout: 4000 }).catch(() => {});
