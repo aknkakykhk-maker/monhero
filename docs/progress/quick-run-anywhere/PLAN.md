@@ -42,3 +42,15 @@
 区切り1: 判定のまとめ(1)と見た目の条件の置き換え。今と同じ画面だけで回る状態で、検査がすべて通ることを確かめる(振る舞いは変えない)。
 区切り2: 休む画面・HOME で終わらせない・ほかのバトルの前に締める・自動で始める1か所化。
 区切り3: 共通の帯・ヘルプ・助手の案内・更新履歴の案と止め絵 → 社長の「この文で」 → ミハリ → 公開。
+
+## 追記: クリスマスのイベントページ・事件簿でも回す(2026-11-27 台帳 r1126-072)
+
+- 進める画面に、クリスマスのイベントページ(画面は `RAID_JACK`・`raidEv === 'xmas'`)と、その上に重ねて開く事件簿を足した(`isXmasQuietScreen` / `isQuickAnywhereRunScreen`)。
+  ジャックのレイド画面は今までどおり入口として締める。イベントページからレイド(バトル・モンヒロビート・カード)へ挑むときは `xmasQuickSettleThen` で先に締める。
+- 事件簿を読んでいるあいだは3倍(`xmasNovelQuickBoostNow`)。報酬は変えず、`battleMs` の待ち時間を縮めるだけ(演奏の追いつきと同じ作り。追いつきのほうを優先)。
+  最後に人が触れて(isTrusted の pointerdown・keydown・wheel)から3分で1倍。期間(`xmasNovelPlayableAt`)の外では1倍。
+- 音・表示: 帯・詳細・幕の文字を出さない。お祝いの演出は事件簿のあいだためておく(`[data-xmas-novel-host]`)。App は事件簿のあいだ曲を替えない・勝ちのジングルを鳴らさない。
+  事件簿の効果音は表の口(`fgSe`・`fgPlaySeFile`)から鳴らす。
+- フレンド: イベントページ=`xmasEvent`・事件簿=`xmasNovel`(表の place は `other`、`records.pl` に載せる)。休む画面では「オート周回中」を送らない。
+- 検査: `tools/battle/quick-anywhere-xmas-novel-browser-check.js`(時計をずらしたブラウザ)・`tools/friends/friends-api-check.js`。
+- 止め絵: `xmas-novel-tate.jpg`(事件簿・縦・帯なし) / `xmas-novel-yoko.jpg`(横・帯なし) / `xmas-novel-closed-home.jpg`(閉じたあとの HOME・帯とためたお祝いが出る)
