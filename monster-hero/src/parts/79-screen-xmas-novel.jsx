@@ -21,9 +21,13 @@ const XMAS_NOVEL_CSS = `
   background-size: 260px 260px; animation: mh-nv-snow 14s linear infinite; }
 .mh-nv-snow.b { background-size: 170px 170px; opacity: .35; animation-duration: 9s; }
 @keyframes mh-nv-snow { from { background-position: 0 0; } to { background-position: 40px 260px; } }
-.mh-nv-fig { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); height: 78%; width: min(92vw, 560px); display: flex; align-items: flex-end; justify-content: center; pointer-events: none; }
-.mh-nv-fig img { max-height: 100%; max-width: 100%; object-fit: contain; object-position: bottom; filter: drop-shadow(0 6px 18px rgba(0,0,0,.6)); animation: mh-nv-in .35s ease; }
-.mh-nv-fig.face img { max-height: 46%; margin-bottom: 30%; border-radius: 50%; }
+/* 立ち絵の置き場(r1126-067)。上の端から文字の箱の上(名札の上)までの帯で、絵はその中に場面の見せ方(寄り・ふだん・引き)で置き、下の縁で切ってぼかす。
+   大きさと位置は useXmasNovelPlace が決める(置くまでは見せない) */
+.mh-nv-fig { position: absolute; left: 0; right: 0; top: 0; height: 78%; overflow: hidden; pointer-events: none;
+  -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 26px), transparent); mask-image: linear-gradient(180deg, #000 calc(100% - 26px), transparent); }
+.mh-nv-fig:not([data-placed]) > * { visibility: hidden; }
+.mh-nv-fig img { position: absolute; object-fit: contain; filter: drop-shadow(0 6px 18px rgba(0,0,0,.6)); animation: mh-nv-in .35s ease; }
+.mh-nv-fig.face img { border-radius: 50%; }
 .mh-nv-fig.dim img, .mh-nv-fig.dim svg { filter: brightness(.55) drop-shadow(0 6px 18px rgba(0,0,0,.6)); }
 @keyframes mh-nv-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 .mh-nv-box { position: absolute; left: 50%; transform: translateX(-50%); bottom: max(10px, env(safe-area-inset-bottom)); width: min(calc(100% - 20px), 880px); min-height: 132px;
@@ -127,18 +131,18 @@ const XMAS_NOVEL_CSS = `
 .mh-nv-fallen { position: absolute; left: 50%; bottom: 24%; width: min(80vw, 520px); transform: translateX(-50%); z-index: 4; filter: drop-shadow(0 0 2px rgba(190,200,230,.35)); pointer-events: none; animation: mh-nv-fade 1.2s ease both; }
 .mh-nv-body { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
 .mh-nv-body-dim { position: absolute; inset: 0; -webkit-backdrop-filter: grayscale(.9) brightness(.55); backdrop-filter: grayscale(.9) brightness(.55);
-  background: radial-gradient(70% 34% at 50% 74%, rgba(120,0,14,.42), rgba(120,0,14,0) 72%), radial-gradient(120% 90% at 50% 40%, rgba(6,10,34,.35), rgba(0,0,4,.88)); animation: mh-nv-fade 1.4s ease both; }
-.mh-nv-body-lie { --L: min(88vw, 580px, calc(26vh / var(--ar))); --H: calc(var(--L) * var(--ar)); position: absolute; left: 50%; bottom: 27%; width: var(--L); height: calc(var(--L) * var(--ar)); transform: translateX(-50%); }
-.mh-nv-body-lie img { position: absolute; left: 50%; top: 50%; width: calc(var(--L) * var(--ar)); height: var(--L); max-width: none; object-fit: fill;
-  transform: translate(-50%, -50%) rotate(-90deg); animation: mh-nv-body-in 1.6s ease-out both !important;
+  background: radial-gradient(70% 34% at var(--fx, 50%) var(--fy, 74%), rgba(120,0,14,.42), rgba(120,0,14,0) 72%), radial-gradient(120% 90% at 50% 40%, rgba(6,10,34,.35), rgba(0,0,4,.88)); animation: mh-nv-fade 1.4s ease both; }
+.mh-nv-body-lie { position: absolute; }
+.mh-nv-body-lie > img { position: absolute; left: 50%; top: 50%; max-width: none; object-fit: fill; transform: translate(-50%, -50%) rotate(-90deg); animation: mh-nv-body-in 1.6s ease-out both !important;
   filter: brightness(0) drop-shadow(0 0 1px rgba(210,30,40,.75)) drop-shadow(0 0 16px rgba(110,0,12,.6)) !important; }
-.mh-nv-body-lie.bust { --L: min(40vw, 300px, 17vh); transform: translateX(-100%); }
-.mh-nv-body-lie.bust .pool { left: -30%; top: calc(var(--H) * .6); width: calc(var(--L) * 1.9); height: calc(var(--L) * .3); }
-@media (orientation: landscape) { .mh-nv-body-lie { left: 31%; bottom: 22%; } }
-.mh-nv-body-lie img.bust { -webkit-mask-image: linear-gradient(180deg, #000 42%, transparent 80%); mask-image: linear-gradient(180deg, #000 42%, transparent 80%); }
-.mh-nv-body-lie.bust::after { content: ''; position: absolute; left: 52%; top: 22%; width: 120%; height: 62%; border-radius: 40% 50% 50% 40%; background: radial-gradient(60% 60% at 30% 50%, #000 40%, rgba(0,0,0,.85) 62%, rgba(0,0,0,0) 100%); filter: drop-shadow(0 0 10px rgba(110,0,12,.5)); animation: mh-nv-body-in 1.6s ease-out both; }
-.mh-nv-body-lie .pool { position: absolute; left: -14%; top: calc(var(--H) * .62); width: calc(var(--L) * 1.05); height: calc(var(--L) * .16); transform-origin: 18% 40%; filter: drop-shadow(0 0 6px rgba(140,0,16,.55));
+.mh-nv-body-lie > img.cut { -webkit-mask-image: linear-gradient(180deg, #000 50%, transparent 88%); mask-image: linear-gradient(180deg, #000 50%, transparent 88%); }
+.mh-nv-body-lie.sit > img { left: 0; top: 0; transform: none; transform-origin: 50% 100%; -webkit-mask-image: linear-gradient(180deg, #000 62%, transparent 100%); mask-image: linear-gradient(180deg, #000 62%, transparent 100%); }
+.mh-nv-body-lie .ground { position: absolute; left: -12%; right: -12%; bottom: -10%; height: 34%; border-radius: 50%; background: radial-gradient(50% 50% at 50% 50%, rgba(0,0,0,.72), rgba(0,0,0,0) 100%); }
+.mh-nv-body-lie .drift { position: absolute; left: -45%; bottom: -12%; width: 190%; height: 52%; pointer-events: none; filter: blur(1.5px); animation: mh-nv-body-in 1.6s ease-out both; }
+.mh-nv-body-lie.sit.prone .pool { left: -55%; bottom: -6%; width: 120%; height: 30%; }
+.mh-nv-body-lie .pool { position: absolute; left: -20%; bottom: -14%; width: 82%; height: 46%; transform-origin: 30% 50%; filter: drop-shadow(0 0 6px rgba(140,0,16,.55));
   animation: mh-nv-pool 3.2s cubic-bezier(.2,.6,.3,1) .5s both; }
+.mh-nv-body-lie.sit .pool { left: -30%; bottom: -8%; width: 160%; height: 22%; transform-origin: 50% 50%; }
 @keyframes mh-nv-body-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes mh-nv-pool { from { transform: scale(.08, .05); opacity: .6; } to { transform: scale(1); opacity: 1; } }
 .mh-nv-body.again .mh-nv-body-dim, .mh-nv-body.again img, .mh-nv-body.again .pool { animation-duration: .25s !important; animation-delay: 0s !important; }
@@ -186,7 +190,7 @@ const XMAS_NOVEL_CSS = `
 @keyframes mh-nv-zoom-out { 0% { transform: translate(-50%, -50%) scale(4); opacity: .2; } 100% { transform: translate(-50%, -50%) scale(.6); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .mh-nv-noise, .mh-nv-boot-logo, .mh-nv-boot-press { animation: none; } .mh-nv-transit { animation-duration: .01s !important; } }
 @media (orientation: landscape) and (max-height: 560px) {
-  .mh-nv-fig { left: 4%; transform: none; height: 96%; width: min(40vw, 420px); }
+  .mh-nv-fig { left: 0; right: auto; width: min(42vw, 460px); }
   .mh-nv-box { left: auto; right: 10px; transform: none; width: min(calc(60vw - 10px), 760px); min-height: 110px; padding-top: 20px; }
   .mh-nv-text { font-size: 15px; line-height: 1.65; }
   .mh-nv-cast { grid-template-columns: repeat(12, minmax(0, 1fr)); }
@@ -241,6 +245,7 @@ const XMAS_NOVEL_TINT = Object.freeze({
 const XMAS_NOVEL_BG = Object.freeze([
   { re: /停電|まっくら|真っ暗|暗転/, img: 'hall_night', tint: 'blackout' },
   { re: /山道|外観/, img: 'mountain_road', snow: true },
+  { re: /薪小屋/, img: 'secret_passage' }, // 薪小屋の絵は無いので、板壁の暗い小部屋(通り道の絵)で出す(r1126-065 追記2)
   { re: /雪原|雪の庭|庭|森|足あと|崖/, img: 'snowfield_cliff', snow: true },
   { re: /屋根裏の会場|会場/, img: 'attic_party' },
   { re: /屋根裏|暗がり/, img: 'attic' },
@@ -278,11 +283,18 @@ const xmasNovelBgOf = (name) => {
   const b = XMAS_NOVEL_BG.find((x) => x.re.test(n));
   if (!b) return XMAS_NOVEL_BG_DEFAULT;
   const tint = xmasNovelTintOf(n, b);
-  return { img: XMAS_NOVEL_BG_IMG[b.img], pos: b.pos, tint: tint ? XMAS_NOVEL_TINT[tint] : '', tintKind: tint, snow: !!(b.snow || /吹雪/.test(n)) };
+  return { img: XMAS_NOVEL_BG_IMG[b.img], key: b.img, pos: b.pos, tint: tint ? XMAS_NOVEL_TINT[tint] : '', tintKind: tint, snow: !!(b.snow || /吹雪/.test(n)) };
 };
 //  1つの場面の途中で背景が変わる所(台本の「A→B」)。場面ID → [その行から先, 背景の名前]
 const XMAS_NOVEL_BG_SHIFT = Object.freeze({
-  'C10-3': [['10-3-4', 'ペンションのホール(朝)'], ['10-3-7', '朝の裏口'], ['10-3-12', 'ペンションのホール(朝)']],
+  'C10-3': [['10-3-4', 'ペンションのホール(朝)'], ['10-3-7', '朝の雪原(裏口の外)'], ['10-3-12', 'ペンションのホール(朝)']],
+  // 亡くなっているのが見つかる行は、文の場所の絵にする(r1126-065 追記2・社長「倒れてる位置が絵とあってない」)
+  'C5-4': [['5-4-5', '鏡の裏の通り道']],
+  'C10-2': [['10-2-7', '朝の通り道(はしごの下)']],
+  'C2-X': [['2-X-6a', '夜の裏口(ろうそく)']],
+  'C6-X': [['6-X-10a', '明け方の雪原(裏口の外・吹雪)']],
+  'C2-Y': [['2-Y-10', '裏の階段(夜)'], ['2-Y-11', '夜のホール'], ['2-Y-13a', '裏の階段の下']],
+  'END-M2': [['M2-2', '朝の暖炉の前'], ['M2-3', '朝の雪原'], ['M2-4', '朝の薪小屋の中']],
   'END-G': [['G-10', '屋根裏の会場']],
 });
 const xmasNovelSceneBgName = (scene, idx) => {
@@ -336,34 +348,86 @@ const XmasNovelLaptop = () => (
 // シルエットの笑い(名前を伏せた声で「ふふ」「あはは」)。笑い声の音源はまだ無いので、いまはボスの技の音で代える
 const xmasNovelIsSilhouette = (row) => !!(row && /黒いサンタのシルエット|黒いサンタの影/.test(row.x || ''));
 const xmasNovelIsLaugh = (row) => !!(row && /ふふ|あはは|ははは/.test(row.x || ''));
-//  顔が台詞の欄に隠れないよう、立ち絵ごとの「あご」の高さ(絵の上から何割の所か)。出したあと、文の箱と絵の実際の位置を測り、
-//  あごが箱の上の縁より上に来るまで絵を持ち上げる(縦・横・タブレットで箱の大きさが違っても合う。横並びで重ならないときは動かさない)
-const XMAS_NOVEL_CHIN = Object.freeze({
-  atsu: 0.46, myua: 0.47, sorashido: 0.46, kiki: 0.47, momosuke: 0.47, dra: 0.76, kyuko: 0.47, erubin: 0.47,
-  ichika: 0.30, mochimaru: 0.35, kuroba: 0.50, shirase: 0.50, shadow: 0.42, boss: 0.40,
+// ---- 立ち絵の見せ方(r1126-067) ----
+//  寄り(close): 胸から上を大きく / ふだん(normal): 頭から腰 / 引き(far): 全身を小さめ。台本の〔立ち:寄り〕〔立ち:引き〕の印(行 f > 場面 frame > ふだん)。
+//  絵ごとに描かれている範囲が違う(助手は頭〜太もも、謎の客2人とモンスターは全身)ので、絵の上から何割の所に胸・腰があるか(chest・waist)と、
+//  左右の透明な余白を除いた絵の範囲(l・r)を持つ。文字の箱の上の縁(名札の上)で絵を切って下をぼかすので、箱の裏に体が透けず、名札も手や顔にかからない。
+//  横長の画面で箱が右に寄り重ならないときは、画面の下の縁で切る。絵の縦横の比率は変えない
+const XMAS_NOVEL_FRAMES = Object.freeze(['close', 'normal', 'far']);
+const XMAS_NOVEL_MARKS = Object.freeze({
+  atsu: { chest: 0.62, waist: 0.9, l: 0.15, r: 0.76 },
+  myua: { chest: 0.6, waist: 0.82, l: 0.03, r: 0.97 },
+  sorashido: { chest: 0.6, waist: 0.86, l: 0.01, r: 0.84 },
+  kiki: { chest: 0.6, waist: 0.81, l: 0.01, r: 0.93 },
+  momosuke: { chest: 0.62, waist: 0.76, l: 0.12, r: 0.93 },
+  kyuko: { chest: 0.6, waist: 0.77, l: 0.28, r: 0.9 },
+  erubin: { chest: 0.65, waist: 0.94, l: 0.09, r: 0.76 },
+  kuroba: { chest: 0.22, waist: 0.42, l: 0.04, r: 0.96 }, // 謎の客2人は全身の絵(r1126-076。胸から上の *_stand.png は事件簿では使わない)
+  shirase: { chest: 0.24, waist: 0.38, l: 0.03, r: 0.97 },
+  ichika: { chest: 0.42, waist: 0.66, l: 0.32, r: 0.68 },
+  mochimaru: { chest: 0.5, waist: 0.75, l: 0.18, r: 0.82 },
+  dra: { chest: 1, waist: 1, l: 0.1, r: 0.9 },
+  shadow: { chest: 0.58, waist: 0.82, l: 0.1, r: 0.9 },
+  boss: { chest: 0.5, waist: 0.72, l: 0.05, r: 0.95 },
+  watson: { chest: 1, waist: 1, l: 0.05, r: 0.95 },
 });
-const XmasNovelLift = ({ chin, children }) => {
+// 見せ方ごとの「切れ目(絵の上から何割)」・見える高さ(箱の上の空きに対する割合)・絵の幅の上限(置き場の幅に対する割合)
+const XMAS_NOVEL_FRAME_FIT = Object.freeze({
+  close: { cut: 'chest', vis: 0.84, maxW: 1.12 },
+  normal: { cut: 'waist', vis: 0.74, maxW: 0.94 },
+  far: { cut: 'all', vis: 0.6, maxW: 0.66 },
+});
+const xmasNovelFrameOf = (row, scene) => {
+  const f = (row && row.f) || (scene && scene.frame) || 'normal';
+  return XMAS_NOVEL_FRAMES.includes(f) ? f : 'normal';
+};
+// 置き場(.mh-nv-fig)の大きさと文字の箱から、絵の大きさと位置を決める(純粋な計算。検査からも呼ぶ)
+//   stageW/H: 置き場の幅・画面の高さ / top: 上のボタン列の下 / cutY: 絵を切る高さ / ar: 絵の 幅÷高さ
+const xmasNovelPlaceFig = ({ stageW, top, cutY, ar, mark, frame }) => {
+  const fit = XMAS_NOVEL_FRAME_FIT[frame] || XMAS_NOVEL_FRAME_FIT.normal;
+  const m = mark || XMAS_NOVEL_MARKS.shadow;
+  const cutF = fit.cut === 'all' ? 1 : Math.min(1, Math.max(0.2, m[fit.cut]));
+  const avail = Math.max(60, cutY - top);
+  const span = Math.max(0.2, (m.r - m.l)); // 透明な余白を除いた絵の幅(絵の幅に対する割合)
+  let h = (avail * fit.vis) / cutF;
+  const maxH = (stageW * fit.maxW) / (ar * span);
+  if (h > maxH) h = maxH;
+  if (h * cutF > avail) h = avail / cutF; // 頭が上のボタン列にかからない
+  const w = h * ar;
+  const left = stageW / 2 - w * ((m.l + m.r) / 2); // 描かれている所の真ん中を置き場の真ん中に
+  return { w: Math.round(w), h: Math.round(h), left: Math.round(left), top: Math.round(cutY - h * cutF) };
+};
+const useXmasNovelPlace = (who, frame, artKey) => {
   const ref = useRef(null);
   useEffect(() => {
-    const wrap = ref.current;
-    const fig = wrap && wrap.firstElementChild;
-    if (!fig || !Number.isFinite(chin)) return undefined;
-    let lift = 0;
+    const fig = ref.current;
+    if (!fig) return undefined;
     let raf = 0;
     const fit = () => {
       raf = 0;
       const art = fig.firstElementChild;
+      const stage = fig.parentElement;
+      if (!art || !stage) return;
+      let ar = 0;
+      if (art.tagName === 'IMG') { if (!art.naturalWidth || !art.naturalHeight) return; ar = art.naturalWidth / art.naturalHeight; }
+      else {
+        const vb = art.tagName === 'svg' && art.viewBox && art.viewBox.baseVal;
+        ar = vb && vb.width && vb.height ? vb.width / vb.height : (art.classList.contains('mh-nv-boss') ? 985 / 1347 : 0.7);
+      }
+      const s = stage.getBoundingClientRect();
+      const f = fig.getBoundingClientRect();
       const box = document.querySelector('[data-xmas-novel-box]');
-      if (!art || !box) return;
-      const a = art.getBoundingClientRect();
-      const b = box.getBoundingClientRect();
-      if (!a.height || !b.height) return;
-      const overlapX = Math.min(a.right, b.right) - Math.max(a.left, b.left) > a.width * 0.2;
-      const need = overlapX ? (a.top + a.height * chin) - (b.top - 6) : -lift;
-      const next = Math.max(0, Math.round(lift + need));
-      if (Math.abs(next - lift) < 1) return;
-      lift = next;
-      fig.style.translate = lift ? `0 ${-lift}px` : '';
+      const bar = document.querySelector('.mh-nv-top');
+      const b = box ? box.getBoundingClientRect() : null;
+      const overlapX = b && b.height ? Math.min(f.right, b.right) - Math.max(f.left, b.left) > f.width * 0.3 : false;
+      // 名札は箱の上の縁から 15px はみ出るので、その上で切る
+      const cutY = overlapX ? b.top - s.top - 20 : s.height;
+      const top = bar ? bar.getBoundingClientRect().bottom - s.top + 8 : 56;
+      const p = xmasNovelPlaceFig({ stageW: f.width, top, cutY, ar, mark: XMAS_NOVEL_MARKS[who], frame });
+      fig.style.height = `${Math.max(0, Math.round(cutY))}px`;
+      Object.assign(art.style, { position: 'absolute', left: `${p.left}px`, top: `${p.top}px`, width: `${p.w}px`, height: `${p.h}px`, maxWidth: 'none', maxHeight: 'none', margin: '0' });
+      fig.setAttribute('data-placed', '');
+      fig.setAttribute('data-xmas-novel-frame', frame);
     };
     const later = () => { if (!raf) raf = requestAnimationFrame(fit); };
     later();
@@ -371,7 +435,7 @@ const XmasNovelLift = ({ chin, children }) => {
     if (art && art.tagName === 'IMG') art.addEventListener('load', later);
     const box = document.querySelector('[data-xmas-novel-box]');
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(later) : null;
-    if (ro) { if (box) ro.observe(box); ro.observe(fig); }
+    if (ro) { if (box) ro.observe(box); if (fig.parentElement) ro.observe(fig.parentElement); }
     window.addEventListener('resize', later);
     return () => {
       if (raf) cancelAnimationFrame(raf);
@@ -379,30 +443,29 @@ const XmasNovelLift = ({ chin, children }) => {
       if (ro) ro.disconnect();
       window.removeEventListener('resize', later);
     };
-  }, [chin]);
-  return <div ref={ref} style={{ display: 'contents' }}>{children}</div>;
+  }, [who, frame, artKey]);
+  return ref;
 };
 const XmasNovelFigure = (props) => {
   const { row } = props;
   const who = !row ? '' : (row.t === 'band' ? 'boss' : (row.n === '？？？' ? (xmasNovelIsLaugh(row) ? 'boss' : 'shadow') : (row.w || '')));
-  const inner = <XmasNovelFigureArt {...props} />;
-  const chin = XMAS_NOVEL_CHIN[who] || (who && who !== 'watson' ? XMAS_NOVEL_CHIN.shadow : NaN);
-  return <XmasNovelLift chin={chin} key={`${who}-${(row && row.e) || ''}`}>{inner}</XmasNovelLift>;
+  return <XmasNovelFigureArt {...props} who={who} frame={xmasNovelFrameOf(row, props.scene)} key={`${who}-${(row && row.e) || ''}`} />;
 };
-const XmasNovelFigureArt = ({ row, dim = false }) => {
+const XmasNovelFigureArt = ({ row, dim = false, who = '', frame = 'normal' }) => {
   const [broken, setBroken] = useState(0);
-  if (row && row.t === 'band' && xmasNovelIsSilhouette(row)) return <div className={`mh-nv-fig${dim ? ' dim' : ''}`} key={`band-${row.id}`}><XmasNovelBossShadow /></div>;
+  const ref = useXmasNovelPlace(who, frame, `${row ? row.id : ''}-${broken}`);
+  if (row && row.t === 'band' && xmasNovelIsSilhouette(row)) return <div ref={ref} className={`mh-nv-fig${dim ? ' dim' : ''}`} key={`band-${row.id}`}><XmasNovelBossShadow /></div>;
   if (!row || row.t !== 'line') return null;
   const key = `${row.w || row.n}-${row.e || ''}`;
   const laugh = row.n === '？？？' && xmasNovelIsLaugh(row);
-  if (row.n === '？？？' || !row.w) return row.n === '？？？' ? <div className={`mh-nv-fig${dim ? ' dim' : ''}${laugh ? ' laugh' : ''}`} key={key}>{laugh ? <XmasNovelBossShadow /> : <XmasNovelShadow tone="#1c2240" label="？？？" />}</div> : null;
-  if (row.w === 'watson') return <div className="mh-nv-fig" key={key}><XmasNovelLaptop /></div>;
+  if (row.n === '？？？' || !row.w) return row.n === '？？？' ? <div ref={ref} className={`mh-nv-fig${dim ? ' dim' : ''}${laugh ? ' laugh' : ''}`} key={key}>{laugh ? <XmasNovelBossShadow /> : <XmasNovelShadow tone="#1c2240" label="？？？" />}</div> : null;
+  if (row.w === 'watson') return <div ref={ref} className="mh-nv-fig" key={key}><XmasNovelLaptop /></div>;
   const c = xmasNovelCastOf(row.w);
   const fig = xmasNovelFigureSrc(row.w, row.e);
-  if (!fig || broken >= 2) return <div className={`mh-nv-fig${dim ? ' dim' : ''}`} key={key}><XmasNovelShadow tone={(c && c.tone) || '#2a3350'} label={c ? c.name : ''} /></div>;
+  if (!fig || broken >= 2) return <div ref={ref} className={`mh-nv-fig${dim ? ' dim' : ''}`} key={key}><XmasNovelShadow tone={(c && c.tone) || '#2a3350'} label={c ? c.name : ''} /></div>;
   const src = broken === 1 && fig.fallback ? fig.fallback : fig.src;
   return (
-    <div className={`mh-nv-fig${fig.face ? ' face' : ''}${dim ? ' dim' : ''}`} key={key}>
+    <div ref={ref} className={`mh-nv-fig${fig.face ? ' face' : ''}${dim ? ' dim' : ''}`} key={key}>
       <img src={src} alt={c ? c.name : ''} draggable={false} onError={() => setBroken((b) => (b === 0 && fig.fallback ? 1 : 2))} />
     </div>
   );
@@ -447,20 +510,100 @@ const xmasNovelBodySrc = (who) => {
   }
   return c.art || '';
 };
-const XmasNovelBody = ({ who, scene = '', at = 0 }) => {
+// 背景の絵ごとの床(r1126-065 追記2・社長「倒れてる位置が絵とあってない」)。絵(1536×1024)の中の割合で、
+//   x = 倒れている所の左右の中ほど / y = 床・地面の線(体の下がここに来る) / s = 大きさ(奥なら小さく)。
+//   画面は絵を cover で敷くので、縦と横で切り取られ方が違う。置く所は XmasNovelBody が画面の大きさから計算し、
+//   見えない所・文字の枠の下に入るときは、同じ床の上で左右・上へずらす
+const XMAS_NOVEL_BODY_FLOOR = Object.freeze({
+  backdoor: { x: 0.5, y: 0.83 }, kitchen: { x: 0.5, y: 0.84 },
+  snowfield_cliff: { x: 0.5, y: 0.82, snow: true }, mountain_road: { x: 0.5, y: 0.86, snow: true },
+  secret_passage: { x: 0.52, y: 0.84 }, mirror_hall: { x: 0.5, y: 0.88, s: 0.9 },
+  guest_room: { x: 0.57, y: 0.64, s: 0.8, lift: true }, // えるびんはベッドの上(横は文字の枠に隠れるので、枕のほうへ上げる)
+  study: { x: 0.5, y: 0.82, desk: { x: 0.47, y: 0.585 } }, // 机に突っ伏す人は天板の上 stairs_candle: { x: 0.36, y: 0.82 }, corridor_2f: { x: 0.5, y: 0.86 },
+  hall_day: { x: 0.5, y: 0.86 }, hall_night: { x: 0.5, y: 0.86 }, attic: { x: 0.5, y: 0.86 }, attic_party: { x: 0.5, y: 0.86 },
+  dining: { x: 0.5, y: 0.86 }, locked_room: { x: 0.5, y: 0.86 },
+});
+const XMAS_NOVEL_BODY_FLOOR_DEFAULT = { x: 0.5, y: 0.84 };
+//  倒れ方。sit = 壁にもたれて座りこんでいる(白瀬・名指しエンド M5)/ slump = 机に突っ伏している(書斎)。ほかは横たわる
+const XMAS_NOVEL_BODY_POSE = Object.freeze({ 'C5-4': 'sit', 'END-M5': 'sit', 'C5-X': 'slump' });
+const xmasNovelBodyPlace = ({ W, H, bg, pose, kind, ar }) => {
+  const f = (bg && XMAS_NOVEL_BODY_FLOOR[bg.key]) || XMAS_NOVEL_BODY_FLOOR_DEFAULT;
+  const land = W > H;
+  const sc = Math.max(W / 1536, H / 1024);
+  const dw = 1536 * sc; const dh = 1024 * sc;
+  const pxm = String((bg && bg.pos) || '').match(/^(\d+)%/);
+  const px = pxm ? Number(pxm[1]) / 100 : 0.5;
+  const ox = (W - dw) * px; const oy = (H - dh) / 2;
+  const k = f.s || 1;
+  let w; let h;
+  if (pose === 'slump') {
+    // 机に突っ伏している: 頭と肩(絵の上の3割)だけを、机の天板の上に伏せて見せる。下は机の手前の板に隠れる
+    const d = f.desk || { x: f.x, y: f.y };
+    h = Math.min(0.55 * dh * k, H * (land ? 1.1 : 0.62));
+    w = h * ar;
+    return { ...xmasNovelBodyClamp({ X: ox + d.x * dw, Y: oy + d.y * dh, w, hv: h * 0.22, W, H, land, lift: true }), w, h, vis: 0.22, snow: false };
+  }
+  if (pose === 'sit') {
+    const vis = kind === 'guest' ? 0.95 : 0.45; // 半身の絵はほぼ全部、全身の絵は腰から上だけ見せる(下は床の暗がりに沈める)
+    h = (kind === 'guest' ? 0.27 : 0.5) * dh * k; // 絵の全体の高さ
+    h = Math.min(h, H * (land ? 0.62 : 0.34) / vis);
+    w = h * ar;
+    return { ...xmasNovelBodyClamp({ X: ox + f.x * dw, Y: oy + f.y * dh, w, hv: h * vis, W, H, land }), w, h, vis, snow: !!f.snow };
+  }
+  if (kind === 'guest') {
+    // 胸から上の絵で横たわる人(黒羽): 横に倒さず、頭と肩だけを手前に向けて低くつぶして見せる(うつ伏せの頭と肩)。
+    //   胸の切れ目は、雪の吹きだまり(外)か床の暗がり(中)に沈める(r1126-065 追記3)
+    h = Math.min(0.26 * dh * k, H * (land ? 0.5 : 0.3));
+    w = h * ar;
+    return { ...xmasNovelBodyClamp({ X: ox + f.x * dw, Y: oy + f.y * dh, w, hv: h * 0.5, W, H, land }), w, h, vis: 0.5, snow: !!f.snow };
+  }
+  const len = (kind === 'monster' ? 0.17 : 0.27) * dw * k;
+  w = Math.min(len, W * (land ? 0.36 : 0.82));
+  h = w * ar; // 横に倒すので、絵の幅が体の厚み
+  return { ...xmasNovelBodyClamp({ X: ox + f.x * dw, Y: oy + f.y * dh, w, hv: h, W, H, land, lift: f.lift }), w, h, vis: 1, snow: !!f.snow };
+};
+const xmasNovelBodyClamp = ({ X, Y, w, hv, W, H, land, lift }) => {
+  const boxTop = H - (land ? 140 : 170); // 文字の枠の上の端(だいたい)
+  let y = Math.min(Y, land && !lift ? H - 10 : boxTop);
+  let x = X;
+  if (land && y > boxTop) x = Math.min(x, W * 0.4 - w / 2 - 6); // 横は文字の枠が右側。床の高さはそのままで左へ
+  x = Math.max(w / 2 + 8, Math.min(W - w / 2 - 8, x));
+  y = Math.max(hv + 50, y);
+  return { left: x - w / 2, bottom: H - y };
+};
+const XmasNovelBody = ({ who, scene = '', at = 0, bg = null }) => {
   const k = `${scene}:${who}`;
   // 同じ場面で同じ人の影がすぐまた出るとき(間に台詞が1〜2行)は、血が広がり直さないようにする
   const [again] = useState(() => xmasNovelBodyLast.k === k && Math.abs(at - xmasNovelBodyLast.at) <= 4);
   const [ar, setAr] = useState(0);
   const [broken, setBroken] = useState(false);
+  const [vp, setVp] = useState(() => ({ W: typeof window !== 'undefined' ? window.innerWidth : 390, H: typeof window !== 'undefined' ? window.innerHeight : 844 }));
   useEffect(() => { xmasNovelBodyLast = { k, at }; }, [k, at]);
+  useEffect(() => {
+    const on = () => setVp({ W: window.innerWidth, H: window.innerHeight });
+    window.addEventListener('resize', on);
+    return () => window.removeEventListener('resize', on);
+  }, []);
   const c = xmasNovelCastOf(who);
   const src = xmasNovelBodySrc(who);
-  const bust = !!(c && c.kind === 'guest'); // 胸から上の絵は、胸の切れ目を暗がりにぼかす
+  // 謎の客2人も全身の絵になったので、倒れ方は助手と同じ(r1126-076)。胸から上の絵の扱い(bust)は、全身の絵が無い客のときだけ
+  const bust = !!(c && c.kind === 'guest' && !/_full\.png$/.test(c.art || ''));
+  const kind = c ? (c.kind === 'guest' && !bust ? 'assistant' : c.kind) : '';
+  const pose = XMAS_NOVEL_BODY_POSE[scene] || 'lie';
+  const slump = pose === 'slump';
+  const sit = pose === 'sit';
+  const prone = slump || (!sit && bust);
+  const r = ar || (bust ? 1 : kind === 'monster' ? 1 : 0.4);
+  const p = xmasNovelBodyPlace({ W: vp.W, H: vp.H, bg, pose, kind, ar: r });
+  const boxH = sit || prone ? p.h * p.vis : p.h;
+  const fx = `${Math.round(((p.left + p.w / 2) / vp.W) * 100)}%`;
+  const fy = `${Math.round(((vp.H - p.bottom) / vp.H) * 100)}%`;
+  const fade = sit ? `linear-gradient(180deg, #000 ${Math.round(p.vis * 70)}%, transparent ${Math.round(p.vis * 100)}%)` : '';
   return (
-    <div className={`mh-nv-body${again ? ' again' : ''}`} data-xmas-novel-fallen data-xmas-novel-body={who} aria-label={c ? `${c.name}の倒れた影` : '倒れた影'}>
+    <div className={`mh-nv-body${again ? ' again' : ''}`} data-xmas-novel-fallen data-xmas-novel-body={who} data-xmas-novel-body-pose={pose} aria-label={c ? `${c.name}の倒れた影` : '倒れた影'} style={{ '--fx': fx, '--fy': fy }}>
       <div className="mh-nv-body-dim" />
-      <div className={`mh-nv-body-lie${bust ? ' bust' : ''}`} style={{ '--ar': ar || (bust ? 1 : 0.3) }}>
+      <div className={`mh-nv-body-lie${sit ? ' sit' : prone ? ' sit prone' : ''}`} style={{ left: p.left, bottom: p.bottom, width: p.w, height: boxH }}>
+        <div className="ground" />
         <svg className="pool" viewBox="0 0 300 60" preserveAspectRatio="none" aria-hidden="true">
           <defs>
             <radialGradient id="mh-nv-pool-g" cx="30%" cy="42%" r="70%"><stop offset="0%" stopColor="#9a0716" /><stop offset="45%" stopColor="#6a020e" /><stop offset="100%" stopColor="#300006" /></radialGradient>
@@ -468,11 +611,30 @@ const XmasNovelBody = ({ who, scene = '', at = 0 }) => {
           <path d="M14 30 C8 20 30 14 52 16 C64 8 96 6 118 13 C136 9 160 12 170 19 C188 17 204 22 198 28 C214 27 246 30 262 33 C274 35 272 39 258 39 C236 40 214 38 200 40 C206 48 184 54 160 51 C146 57 112 58 92 53 C70 58 38 55 30 48 C16 46 6 38 14 30 Z" fill="url(#mh-nv-pool-g)" />
         </svg>
         {src && !broken && (
-          <img src={src} alt="" draggable={false} className={bust ? 'bust' : ''}
+          <img src={src} alt="" draggable={false}
+            style={sit
+              ? { width: p.w, height: p.h, transform: `rotate(${pose === 'slump' ? 16 : 5}deg)`, WebkitMaskImage: fade, maskImage: fade }
+              : slump ? { width: p.w, height: p.h, transformOrigin: '50% 0', transform: 'scaleY(.7) rotate(-3deg)', WebkitMaskImage: 'linear-gradient(180deg, #000 20%, transparent 31%)', maskImage: 'linear-gradient(180deg, #000 20%, transparent 31%)' }
+              : prone ? { width: p.w, height: p.h, transformOrigin: '50% 0', transform: 'scaleY(.62) rotate(-4deg)', WebkitMaskImage: 'linear-gradient(180deg, #000 48%, transparent 74%)', maskImage: 'linear-gradient(180deg, #000 48%, transparent 74%)' }
+              // モンスターの絵(もっち)は左右に余白が多く、倒すと体が床から浮くので、余白のぶん床へ下ろす
+              : { width: p.h, height: p.w, ...(kind === 'monster' ? { transform: `translateY(${Math.round(p.h * 0.17)}px) translate(-50%, -50%) rotate(-90deg)` } : {}) }}
             onLoad={(e) => { const im = e.currentTarget; if (im.naturalWidth && im.naturalHeight) setAr(im.naturalWidth / im.naturalHeight); }}
             onError={() => setBroken(true)} />
         )}
         {(!src || broken) && <XmasNovelFallen />}
+        {prone && !slump && (
+          // 胸から上の絵の切れ目(体の右の端)は、雪の吹きだまり(外)か床の暗がり(中)に沈めて隠す(r1126-065 追記3)
+          <svg className="drift" viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true">
+            <defs>
+              <linearGradient id="mh-nv-drift-g" x1="0" y1="0" x2="0" y2="1">
+                {p.snow
+                  ? <><stop offset="0%" stopColor="#5f6574" stopOpacity="0" /><stop offset="22%" stopColor="#5f6574" /><stop offset="100%" stopColor="#3c404b" /></>
+                  : <><stop offset="0%" stopColor="#000" stopOpacity=".2" /><stop offset="40%" stopColor="#000" stopOpacity=".9" /><stop offset="100%" stopColor="#000" stopOpacity="0" /></>}
+              </linearGradient>
+            </defs>
+            <path d="M0 40 C10 30 22 22 36 20 C46 16 56 16 66 19 C80 22 92 30 100 40 Z" fill="url(#mh-nv-drift-g)" />
+          </svg>
+        )}
       </div>
     </div>
   );
@@ -1049,9 +1211,9 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
       <div key={`stage-${shake}`} className={`mh-nv-stage${shake ? ' mh-nv-shake' : ''}`} onClick={advance}>
         <div className="mh-nv-bg" key={bgName || (scene ? scene.id : 'bg')} data-xmas-novel-bg={bg.tintKind || ''} style={bg.img ? { backgroundImage: `${bg.tint ? `${bg.tint}, ` : ''}url(${bg.img})`, backgroundPosition: bg.pos || 'center' } : { background: bg.grad }} />
         {(bg.snow || !bg.img) && <><div className="mh-nv-snow" />{bg.snow && <div className="mh-nv-snow b" />}</>}
-        {!darkNow && (isLine || (isBand && xmasNovelIsSilhouette(row))) && <XmasNovelFigure row={row} />}
+        {!darkNow && (isLine || (isBand && xmasNovelIsSilhouette(row))) && <XmasNovelFigure row={row} scene={scene} />}
         {fx && <div key={fx.n} className={`mh-nv-fx ${fx.kind}`} />}
-        {isBand && row.body && <XmasNovelBody key={`body-${row.body}`} who={xmasNovelBodyWho(row.body, st && st.cur && st.cur.flags)} scene={scene ? scene.id : ''} at={st && st.cur && Number.isFinite(st.cur.idx) ? st.cur.idx : 0} />}
+        {isBand && row.body && <XmasNovelBody key={`body-${row.body}`} bg={bg} who={xmasNovelBodyWho(row.body, st && st.cur && st.cur.flags)} scene={scene ? scene.id : ''} at={st && st.cur && Number.isFinite(st.cur.idx) ? st.cur.idx : 0} />}
         {isBand && !row.body && Array.isArray(row.fx) && row.fx.includes('fallen') && <XmasNovelFallen />}
         {isBand && Array.isArray(row.fx) && row.fx.includes('letter') && <div key={`letter-${row.id}`} className="mh-nv-letter mh-nv-serif" data-xmas-novel-letter>{String(text).replace(/／/g, '\n')}</div>}
         {inside && <div className="mh-nv-crt" data-xmas-novel-inside />}
