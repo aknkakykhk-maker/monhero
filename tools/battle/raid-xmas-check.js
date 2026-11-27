@@ -245,6 +245,9 @@ const totalsBody = (a1) => JSON.stringify([{ kind: 'a', tier: 1, total_damage: a
       scr.includes("santa: { impact:'stamp', mark:'❄️' },") && /\n  santa: +\{ special:\[/.test(scr)
       && css.includes('[data-enemy-motion="santa"] { --em-c:') && css.includes('[data-moo-stage="true"][data-enemy-motion="santa"]')
       && css.includes('.fin-shape--snow {') && css.includes('.fin-shape--gift {'));
+    check('技の見せ方: 超宝屁はおならの見せ方(後ろを向いて膨らむ toot・💨・ガスの雲。プレゼントは出さない・r1126-075 追記1)',
+      santa.includes("sweep:['toot','sparkle','💨','shoot']") && css.includes('@keyframes emToot') && css.includes('[data-em-body="toot"]')
+      && scr.includes("santa && !lite && skill === 'sweep' && geo.all.map(") && css.includes('@keyframes santaGas'));
     check('技の見せ方: 技の長さは全員共通の表のまま(サンタ専用の長さを作らない=待ち時間・進行はジャックと同じ)',
       scr.includes("const ms = !motion ? null : motion === 'awakenedMoo' ? TACTICS_MOO_SKILL_MS[skill] : TACTICS_ENEMY_SKILL_MS_DEFAULT[skill];"));
   }
