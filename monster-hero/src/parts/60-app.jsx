@@ -20160,7 +20160,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       </a>}
                     </section>))}
                     {/* 長い中身を読んだあと、上まで戻らずにたためるように(2026-11-27 r1126-074 小7) */}
-                    <button type="button" data-changelog-fold-bottom onClick={e=>{const art=e.currentTarget.closest('article');setChangelogOpenId(null);requestAnimationFrame(()=>{try{art&&art.scrollIntoView({block:'nearest'});}catch{}});}}
+                    <button type="button" data-changelog-fold-bottom onClick={e=>{const art=e.currentTarget.closest('article');setChangelogOpenId(null);
+                        // たたんだ行が見える所へ、一覧(送る所)だけを送る。scrollIntoView は外側の画面まで動かすので使わない(ミハリの指摘)
+                        requestAnimationFrame(()=>{try{const list=changelogListRef.current;if(art&&list){const top=art.getBoundingClientRect().top-list.getBoundingClientRect().top;if(top<0)list.scrollTop+=top-8;}}catch{}});}}
                       style={{display:'block',width:'100%',minHeight:40,marginTop:8,borderRadius:10,border:'1px solid #ffffff26',background:'#ffffff0d',color:'#c7d2fe',fontSize:12,fontWeight:900}}>▲ たたむ</button>
                   </div>}
                 </article>
