@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2e86e7dede39ad19
+// generated-sha256: 37a19d085f01a27a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -528,7 +528,7 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   get cardCup() { return typeof cardCupOpen === 'function' && cardCupOpen() === true; },
   // クリスマスのひとりで進める物語の序章(xmas_story_00・台帳 r1126-013)。11/27 13:00 から読める(r1126-060 で前倒し)(17-release の RELEASE_FLAGS.xmasStoryPrologue)
   get xmasStoryPrologue() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.xmasStoryPrologue === true; },
-  // クリスマスのレイド「もうひとつの聖夜」のお話(raid_xmas_story_*・r1126-026)。レイドの開始 11/30 10:00 から(17-release の RELEASE_FLAGS.raidXmas・見るたびに時刻で決める)
+  // クリスマスのレイド「もうひとつの聖夜」のお話(raid_xmas_story_*・r1126-026)。レイドの開始 11/28 10:00 から(17-release の RELEASE_FLAGS.raidXmas・見るたびに時刻で決める)
   get raidXmas() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.raidXmas === true; },
 });
 const eventReplayReleased = (event) => !event?.releaseFlag || EVENT_REPLAY_RELEASE_FLAGS[event.releaseFlag] === true;
@@ -5030,12 +5030,12 @@ const BGM_TRACK_BY_ID = Object.fromEntries(BGM_TRACKS.map(track => [track.id, tr
 // 公開を止めている曲(Battle #5)は、はじめから BGM_TRACKS に入れていない(上の BGM_UNRELEASED_TRACKS)。鳴らす口(BGM_TRACK_BY_ID)は絞らない。HOME やレイドの曲として決まった時刻から鳴らす物は、一覧に出る前でも鳴らせる。
 //  ・BGM_TRACK_LISTED_FROM … 一覧に出しはじめる時刻。モンヒロビートの RHYTHM_SONG_RELEASE_AT と同じ時刻にそろえる。見るたびに数え直す(CLAUDE.md ⑥-4)
 const BGM_TRACK_LISTED_FROM = Object.freeze({
-  // クリスマスイベントの曲(台帳 r1126-023)。開幕の 11/30 10:00 から(Kiss の全編はイベントページの曲として先に入っているので外さない)
-  melo_kiss_mystery_short: '2026-11-30T10:00:00+09:00',
-  melo_dear_santa: '2026-11-30T10:00:00+09:00',
-  melo_dear_santa_short: '2026-11-30T10:00:00+09:00',
-  melo_winter_fall: '2026-11-30T10:00:00+09:00',
-  melo_winter_fall_short: '2026-11-30T10:00:00+09:00',
+  // クリスマスイベントの曲(台帳 r1126-023)。開幕の 11/28 10:00 から(Kiss の全編はイベントページの曲として先に入っているので外さない)
+  melo_kiss_mystery_short: '2026-11-28T10:00:00+09:00',
+  melo_dear_santa: '2026-11-28T10:00:00+09:00',
+  melo_dear_santa_short: '2026-11-28T10:00:00+09:00',
+  melo_winter_fall: '2026-11-28T10:00:00+09:00',
+  melo_winter_fall_short: '2026-11-28T10:00:00+09:00',
 });
 const bgmTrackListed = (track, nowMs = Date.now()) => {
   const id = track && track.id;
@@ -6277,7 +6277,7 @@ const TITLE_ART_STORAGE_KEY = 'mh_title_art';
 // クリスマス(r1125-061・社長 2026-11-25): from〜until はクリスマスのイベント(RAID_XMAS_START_AT・RAID_XMAS_EVENT.endAt)と同じ。
 //   from より前は選択肢にも出さない(titleArtOptionsAt)。おまかせは from〜until のあいだだけクリスマス、そのあとはクラシック。
 //   自分で選んだ人は until のあとも選んだまま。期間は見るたびに時刻で決める(保存しない)。★index.html の先読みも同じ時刻を持っている
-const TITLE_ART_XMAS_FROM = () => Date.parse(typeof RAID_XMAS_START_AT === 'string' ? RAID_XMAS_START_AT : '2026-11-30T10:00:00+09:00');
+const TITLE_ART_XMAS_FROM = () => Date.parse(typeof RAID_XMAS_START_AT === 'string' ? RAID_XMAS_START_AT : '2026-11-28T10:00:00+09:00');
 const TITLE_ART_XMAS_UNTIL = () => Date.parse(typeof RAID_XMAS_EVENT === 'object' && RAID_XMAS_EVENT && typeof RAID_XMAS_EVENT.endAt === 'string' ? RAID_XMAS_EVENT.endAt : '2026-12-31T04:00:00+09:00');
 const TITLE_ART_OPTIONS = [
   { id: 'xmas', label: 'クリスマス', desc: '雪の夜の広場。モッチーたちがクリスマスの装いでお出迎え', src: 'data/images/title-screen-xmas.jpg', squareSrc: 'data/images/title-screen-xmas-square.jpg', wideSrc: 'data/images/title-screen-xmas-wide.jpg', from: TITLE_ART_XMAS_FROM },
@@ -6320,7 +6320,7 @@ const HOME_ART_STORAGE_KEY = 'mh_home_art';
 // クリスマス(r1125-059・社長 2026-11-25): from〜until は、クリスマスのイベント(RAID_XMAS_START_AT・RAID_XMAS_EVENT.endAt)と同じ。
 //   from より前は選択肢にも出さない(homeArtOptionsAt)。おまかせは from〜until のあいだだけクリスマス、そのあとはクラシック。
 //   自分で選んだ人は until のあとも選んだまま。期間は見るたびに時刻で決める(保存しない)
-const HOME_ART_XMAS_FROM = () => Date.parse(typeof RAID_XMAS_START_AT === 'string' ? RAID_XMAS_START_AT : '2026-11-30T10:00:00+09:00');
+const HOME_ART_XMAS_FROM = () => Date.parse(typeof RAID_XMAS_START_AT === 'string' ? RAID_XMAS_START_AT : '2026-11-28T10:00:00+09:00');
 const HOME_ART_XMAS_UNTIL = () => Date.parse(typeof RAID_XMAS_EVENT === 'object' && RAID_XMAS_EVENT && typeof RAID_XMAS_EVENT.endAt === 'string' ? RAID_XMAS_EVENT.endAt : '2026-12-31T04:00:00+09:00');
 const HOME_ART_OPTIONS = [
   { id: 'xmas', label: 'クリスマス', desc: '雪の夜、イルミネーションがきらめく村の広場', src: 'data/images/home-background-xmas.jpg', squareSrc: 'data/images/home-background-xmas-square.jpg', wideSrc: 'data/images/home-background-xmas-wide.jpg', from: HOME_ART_XMAS_FROM },
@@ -10744,10 +10744,10 @@ const FRIENDS_PUBLIC_RELEASE = true;
 const RAID_JACK_START_AT = '2026-10-05T04:00:00+09:00';
 // クリスマスイベントの衣装(みゅあのサンタ・2026-11-25 r1119-172)の売り出しの時刻。RELEASE_FLAGS.xmasCostume が見るたびに数え直す。
 //   data/breeder.js の ASSISTANT_COSTUME_XMAS_START_AT と同じ値(更新履歴・ヘルプの出し入れに使う。食い違いは tools/market/assistant-costume-check.js が見る)
-const XMAS_COSTUME_START_AT = '2026-11-30T10:00:00+09:00';
+const XMAS_COSTUME_START_AT = '2026-11-28T10:00:00+09:00';
 // クリスマスのレイド(r1119-172)の開始時刻。35-raid-xmas.jsx の RAID_XMAS_EVENT.startAt と同じ値(食い違いは tools/battle/raid-xmas-check.js が見る)。
 //   RELEASE_FLAGS.raidXmas はこの時刻まで偽を返す(見るたびに数え直す)。入口・HOMEのボス・ヘルプ・更新履歴はこれを見る
-const RAID_XMAS_START_AT = '2026-11-30T10:00:00+09:00';
+const RAID_XMAS_START_AT = '2026-11-28T10:00:00+09:00';
 // クリスマスのひとりで進める物語の序章(台帳 r1126-012/013)。RELEASE_FLAGS.xmasStoryPrologue は 35-raid-xmas.jsx の XMAS_STORY_PROLOGUE_OPEN_AT(11/27 13:00・r1126-060 で前倒し)まで偽を返す。
 //   序章のお話(EVENT_REPLAYS の xmas_story_00)の releaseFlag が見る。開幕(raidXmas)より前でも、この時刻からは序章だけ読める
 const RAID_JACK_PUBLIC_RELEASE = true;
@@ -10918,7 +10918,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   // タクティクスのEXスキル。遊べる入口(β版を含む)があって、EXの公開フラグも立っているときだけ
   tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, get rhythmGrandOpen() { try { return RHYTHM_GRAND_OPEN_RELEASE === true && Date.now() >= Date.parse(RHYTHM_GRAND_OPEN_START_AT); } catch (e) { return false; } },
   // クリスマスイベントのモンヒロビート5倍(data/rhythm-event.js の xmas_2026・台帳 r1119-172 追記・追跡 r1125-044)の期間だけ真。
-  // ヘルプの説明を開始の 11/30 10:00 まで出さず、12/31 4:00 に下げる。見るたびに数え直す(読み込み時に決めない)
+  // ヘルプの説明を開始の 11/30 0:00 まで出さず(イベントの開幕 11/28 10:00 より遅い・r1126-063)、12/31 4:00 に下げる。見るたびに数え直す(読み込み時に決めない)
   get rhythmXmasBoost() { try { const c = typeof rhythmEventPointCampaignAt === 'function' ? rhythmEventPointCampaignAt(Date.now()) : null; return !!c && c.id === 'xmas_2026'; } catch (e) { return false; } }, rhythmGrandOpenTeaser:RHYTHM_GRAND_OPEN_TEASER_RELEASE, rhythmMulti:RHYTHM_MULTI_PUBLIC_RELEASE, friends:FRIENDS_PUBLIC_RELEASE, raidJackRhythm: RAID_JACK_RHYTHM_PUBLIC_RELEASE, get raidJack() { try { return RAID_JACK_PUBLIC_RELEASE === true && Date.now() >= Date.parse(RAID_JACK_START_AT); } catch (e) { return false; } }, get xmasBattleBonus() { try { return typeof xmasBattleBonusRateAt === 'function' && xmasBattleBonusRateAt(Date.now()) > 1; } catch (e) { return false; } }, get raidXmas() { try { return Date.now() >= Date.parse(RAID_XMAS_START_AT); } catch (e) { return false; } }, get xmasStoryPrologue() { try { return Date.now() >= Date.parse(XMAS_STORY_PROLOGUE_OPEN_AT); } catch (e) { return false; } }, get xmasCostume() { try { return Date.now() >= Date.parse(XMAS_COSTUME_START_AT); } catch (e) { return false; } }, get cardXmasBonus() { try { return typeof cardEventBonusOn === 'function' && cardEventBonusOn() === true; } catch (e) { return false; } }, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
 // releaseFlag = そのフラグが立つまで出さない。unreleasedFlag = そのフラグが立ったら出さない。
 // 逆向きの名札が要るのは「準備中です」の案内で、公開したあとも残っていると
@@ -39018,7 +39018,7 @@ const RAID_XMAS_EVENT = Object.freeze({
   debugId: 'raid_xmas_debug',
   title: '聖夜の名探偵',                 // イベントの名前(社長決定 2026-11-25)。副題は「〜十三番目の鐘が鳴る夜〜」(台帳 r1126-051)
   name: '黒いサンタ',                   // ボスの名前(社長決定 r1126-024)。ボスは「サンタ」が覚醒した「覚醒サンタ」
-  startAt: '2026-11-30T10:00:00+09:00',
+  startAt: '2026-11-28T10:00:00+09:00',
   endAt: '2026-12-31T04:00:00+09:00',
   storageKey: 'mh_raid_xmas_v1',
 });
@@ -39122,7 +39122,7 @@ const raidXmasStoryCandidates = (totals, nowMs) => {
 };
 
 // ---- 期間中のモンヒロバトルのごほうび1.5倍(r1119-172 追記「期間中のボーナス」③・社長の選択) ----
-//  ・期間はクリスマスのイベントと同じ(11/30 10:00〜12/31 4:00)。見るたびに時刻で決める(保存しない)。
+//  ・期間はクリスマスのイベントと同じ(11/28 10:00〜12/31 4:00)。見るたびに時刻で決める(保存しない)。
 //  ・掛けるのは、モンヒロバトルのランで配るブリーダー経験値・絆経験値・ダイヤ(60-app.jsx の awardRunRewards)と、
 //    プロのランぶんのクイック周回の周回数。今ある倍率(難易度・クイック・プロなど)とは掛け算で重ねる(カードと同じ「A 掛け算」)。
 //  ・スコア・ランキングの送信・自己ベスト・スキップチケット・レイド・モンヒロビートの周回(ビートの5倍の側)には掛けない。
@@ -39131,7 +39131,7 @@ const xmasBattleBonusRateAt = (nowMs) => (raidXmasWindowAt(nowMs) === 'open' ? X
 
 // ---- ひとりで進める物語(イベントページの「物語」タブ・台帳 r1126-006) ----
 //  ・話はイベントページから選んで読む。自動では流さない(社長 2026-11-25)。開いた話はいつでも読み返せる
-//  ・開く日時: 序章は 11/28(開催予告)から、第1話は開始と同時(11/30 10:00)、第2話からは毎日 4:00(1日の区切りと同じ)に1話ずつ(仮)
+//  ・開く日時: 序章は 11/28(開催予告)から、第1話は開始と同時(11/28 10:00)、第2話からは毎日 4:00(1日の区切りと同じ)に1話ずつ(仮)
 //  ・前の話を読んだ(戦う話は勝った)ら次が選べる。戦う話はバトル・モンヒロビート・バトルカードのどれかで勝つと進む
 //  ・題と「読む/戦う」は台本の全話一覧(第3案・docs/progress/event-xmas-2026/SCRIPT.md §0)の仮。台本が決まったらこの表だけ直す
 //  ・お話の中身は data/assistants.js の EVENT_REPLAYS に scriptId の id で入れる(入るまでは「準備中」と出す)
@@ -39232,7 +39232,7 @@ const xmasStoryCastAt = (no) => {
 
 // イベントページ(レイドの準備画面も)を開いているあいだの曲(台帳 r1126-015)。閉じると画面の曲へ戻る。BGM を切っている人には鳴らない(ふだんの BGM と同じ口)
 const XMAS_EVENT_BGM_TRACK = 'melo_kiss_mystery';
-// クリスマスイベントの期間(11/30 10:00〜12/31 3:59)だけの曲(台帳 r1126-023)。期間の外は今までの曲。開催中かは見るたびに数え直す
+// クリスマスイベントの期間(11/28 10:00〜12/31 3:59)だけの曲(台帳 r1126-023)。期間の外は今までの曲。開催中かは見るたびに数え直す
 //  ・ホームのBGM「Dear Santa」(台帳 r1126-023 追記1): HOME の曲(プロフィール・持ち物など HOME の曲を続ける画面も)。BGMアレンジでデフォルトのままの人だけ(自分で選んだ曲は替えない)
 //  ・レイドバトル曲「winter fall」: レイドのボスとの戦いの最中(モンヒロバトルの戦闘・MFバトルカードの対戦)
 const XMAS_HOME_BGM_TRACK = 'melo_dear_santa';
@@ -67243,7 +67243,7 @@ const XmasEventIcon = ({ name, size = 22 }) => (
 
 const XMAS_EVENT_BONUSES = Object.freeze([
   { id: 'rhythm', icon: () => <XmasEventIcon name="music" />, tone: 'border-fuchsia-300/50 bg-fuchsia-950/40 text-fuchsia-100',
-    title: 'モンヒロビート', big: '5倍', body: 'もらえるビートPと、クイックの∞周回を回しながら遊ぶと入る周回数が5倍になります' },
+    title: 'モンヒロビート', big: '5倍', body: '11/30(月) 0:00 から、もらえるビートPと、クイックの∞周回を回しながら遊ぶと入る周回数が5倍になります' },
   { id: 'card', icon: () => <Layers size={22} />, tone: 'border-sky-300/50 bg-sky-950/40 text-sky-100',
     title: 'MFバトルカード', big: '1.5倍', body: '対戦のごほうび(ビートP・カードランクの経験値・クイック周回)が1.5倍になります' },
   { id: 'battle', icon: () => <Sword size={22} />, tone: 'border-orange-300/50 bg-orange-950/40 text-orange-100',
@@ -67367,7 +67367,7 @@ const XmasStoryTab = ({ version = 0, allOpen = false, fightWays = [], onRead, on
   if (!progress) return <div className="py-6 text-center text-[11px] text-slate-300">読み込み中…</div>;
   const reached = xmasStoryReachedNo(progress);
   const chapter = sel ? XMAS_STORY_CHAPTERS.find((c) => c.id === sel) : null;
-  // 本編の開幕(11/30 10:00)より前は序章だけを見せる(台帳 r1126-022・本編はひとつのコンテンツで 11/30 に出る。毎日1話ずつ開く形はやめた)
+  // 本編の開幕(11/28 10:00)より前は序章だけを見せる(台帳 r1126-022・本編はひとつのコンテンツで 11/28 に出る・r1126-063 で 11/30 から前倒し。毎日1話ずつ開く形はやめた)
   const preMain = !allOpen && !(nowMs >= Date.parse(RAID_XMAS_EVENT.startAt));
   // 本編はミステリーノベル『モンヒロ事件簿』(79-screen-xmas-novel.jsx の openXmasNovel)。ここに並べるのは序章だけ(台帳 r1126-022)
   const shownChapters = XMAS_STORY_CHAPTERS.filter((c) => c.prologue);
@@ -67476,7 +67476,7 @@ const XmasStoryTab = ({ version = 0, allOpen = false, fightWays = [], onRead, on
 const XmasBonusTab = () => (
   <div data-xmas-bonus className="space-y-2">
     <XmasSectionTitle>期間中のボーナス</XmasSectionTitle>
-    <p className="px-0.5 text-[10px] font-bold leading-relaxed text-slate-300" style={JA_LABEL_STYLE}>{jaWrap('イベントの期間中は、どれも自動でかかります')}</p>
+    <p className="px-0.5 text-[10px] font-bold leading-relaxed text-slate-300" style={JA_LABEL_STYLE}>{jaWrap('イベントの期間中は、どれも自動でかかります。モンヒロビートの5倍だけは 11/30(月) 0:00 からです')}</p>
     {XMAS_EVENT_BONUSES.map((b) => (
       <div key={b.id} data-xmas-bonus-item={b.id} className={`flex items-center gap-3 rounded-2xl border-2 p-3 shadow-lg shadow-black/30 ${b.tone}`}>
         <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-amber-200/40 bg-black/35">{b.icon()}</span>
@@ -67496,7 +67496,7 @@ const XmasBonusTab = () => (
 //  tab / onTab … いまのタブ(App が持つ。バトルなどから戻ったときも同じタブに帰る)
 //  raid        … RaidJackScreen へそのまま渡す物(ev・ways・onChallenge など)
 //  storyVersion… 読んだ印が変わったら App が増やす(物語タブが読み直す)
-//  preOpen     … 開幕(11/30 10:00)より前。序章だけ読める。レイド・ボーナスのタブは「11/30 10:00 から」と出す(台帳 r1126-014)
+//  preOpen     … 開幕(11/28 10:00)より前。序章だけ読める。レイド・ボーナスのタブは「11/28 10:00 から」と出す(台帳 r1126-014)
 // バトルカードで挑めるか(スターターを受け取ったか)。カードの保存を読むだけ(書かない)。読めないときは挑ませる(カードの画面が確かめ直す)
 const xmasCardStarterReady = async () => {
   if (typeof CARD_SAVE_KEYS === 'undefined' || typeof cardNormalizeStarter !== 'function') return true;
@@ -67504,7 +67504,7 @@ const xmasCardStarterReady = async () => {
 };
 const XmasEventScreen = ({ tab = 'story', onTab, onBack, forced = false, preOpen = false, raid = null, storyVersion = 0, fightWays = [], onReadChapter, onFightChapter }) => {
   useXmasEventCss();
-  // レイドの中身を出しているか(開幕の前は「11/30 10:00 から」の札だけ)
+  // レイドの中身を出しているか(開幕の前は「11/28 10:00 から」の札だけ)
   const raidShown = tab === 'raid' && !!raid && !preOpen;
   // 開催中(またはデバッグの強制表示)は、予告の絵の代わりに題字の帯を出す
   const posterOpen = !preOpen;
@@ -67571,7 +67571,7 @@ const XmasEventScreen = ({ tab = 'story', onTab, onBack, forced = false, preOpen
             <div data-xmas-event-preopen={tab} className="mh-xmas-frame mt-2 rounded-2xl bg-[#0a1430]/95 px-4 py-6 text-center">
               <XmasHolly size={40} className="mx-auto mb-2" />
               <div className="mh-xmas-title text-[18px] font-black">{xmasEventDateLabel(RAID_XMAS_EVENT.startAt)} から</div>
-              <p className="mt-2 text-[12px] font-bold leading-relaxed text-slate-200" style={JA_LABEL_STYLE}>{jaWrap(tab === 'raid' ? 'レイドはイベントの開幕と同時に始まります。いまは「物語」の序章が読めます' : '期間中のボーナスは、イベントの開幕と同時にかかります')}</p>
+              <p className="mt-2 text-[12px] font-bold leading-relaxed text-slate-200" style={JA_LABEL_STYLE}>{jaWrap(tab === 'raid' ? 'レイドはイベントの開幕と同時に始まります。いまは「物語」の序章が読めます' : '期間中のボーナスは、イベントの開幕と同時にかかります(モンヒロビートの5倍は 11/30(月) 0:00 から)')}</p>
             </div>
           ) : tab === 'bonus' ? <XmasBonusTab />
             : <XmasStoryTab version={storyVersion} allOpen={forced} fightWays={fightWays} onRead={onReadChapter} onFight={onFightChapter} />}
@@ -67585,7 +67585,7 @@ const XmasEventScreen = ({ tab = 'story', onTab, onBack, forced = false, preOpen
 //  ひと目でクリスマスのイベントと分かる札。ポスターの絵を切り抜き、金の縁・柊・ゆっくり光るきらめきを付ける。
 //  形は「上の大きな帯」(社長の選択 2026-11-26・案A)。細バナーの場所に置き、右の丸ボタンの列にはかからない幅にする。
 //  背の低い横画面では、ボスの頭にかからないよう、右の丸ボタンの列の左の空きへ小さく置く
-//  出すのは 11/28 10:00(序章が開く)から 12/31 4:00 まで。11/30 10:00 までは「序章公開中」と出す
+//  出すのは 11/28 10:00(序章が開く)から 12/31 4:00 まで。11/28 10:00 までは「序章公開中」と出す
 // イベントページを開けるか: 序章が開く時刻から、イベントの終わりまで
 const xmasEventPageOpenAt = (nowMs) => {
   const at = Date.parse(XMAS_STORY_PROLOGUE_OPEN_AT);
@@ -67622,7 +67622,7 @@ const HomeXmasEventEntry = ({ onOpen, preOpen = false }) => {
     if (typeof document === 'undefined' || document.getElementById('mh-xmas-home-entry-css')) return;
     const tag = document.createElement('style'); tag.id = 'mh-xmas-home-entry-css'; tag.textContent = XMAS_HOME_ENTRY_CSS; document.head.appendChild(tag);
   }, []);
-  const sub = preOpen ? '序章公開中・11/30 10:00 開幕' : '開催中 〜12/31 3:59';
+  const sub = preOpen ? `序章公開中・${xmasEventDateLabel(RAID_XMAS_EVENT.startAt).replace(/\(.\)/, '')} 開幕` : '開催中 〜12/31 3:59';
   const sparks = [[8, 18, 0], [62, 12, .8], [88, 64, 1.6], [30, 78, 1.2]];
   const label = `クリスマスイベント 聖夜の名探偵 ${sub}`;
   return (
@@ -67655,8 +67655,8 @@ const XMAS_NOVEL_STORAGE_KEY = 'mh_xmas_novel_v1';
 
 // 届いたゲームの名前(社長 2026-11-26)。シリーズ名・副題は、次のお話でここだけ差し替えて使い回す
 const XMAS_NOVEL_GAME = Object.freeze({ series: 'モンヒロ事件簿', title: '呪いのセーブデータ', sub: '十三番目の鐘' });
-// 遊べるのはイベントの期間中だけ(11/30 10:00〜12/31 3:59)。期間が終わっても保存の記録は消さない
-const XMAS_NOVEL_OPEN_AT = '2026-11-30T10:00:00+09:00';
+// 遊べるのはイベントの期間中だけ(11/28 10:00〜12/31 3:59)。期間が終わっても保存の記録は消さない
+const XMAS_NOVEL_OPEN_AT = '2026-11-28T10:00:00+09:00';
 const XMAS_NOVEL_CLOSE_AT = '2026-12-31T04:00:00+09:00';
 const xmasNovelPlayableAt = (nowMs) => {
   const a = Date.parse(XMAS_NOVEL_OPEN_AT); const b = Date.parse(XMAS_NOVEL_CLOSE_AT);
@@ -112529,7 +112529,7 @@ const cardSharePolicy = (tactics, levelId, opts = {}) => {
 const CARD_EVENT_BONUS = Object.freeze({
   id: 'xmas_2026',
   name: 'クリスマスイベント',
-  startAt: '2026-11-30T10:00:00+09:00',
+  startAt: '2026-11-28T10:00:00+09:00',
   endAt: '2026-12-31T04:00:00+09:00',
   mult: 1.5,
   label: '1.5倍',
@@ -136996,7 +136996,7 @@ function MonsterHeroGame() {
         } catch (e) { raidProgressStoryId = null; }
       }
       // クリスマスのレイド「もうひとつの聖夜」のお話(r1126-026・台本 docs/progress/event-xmas-2026/SCRIPT.md)。みんなに1回ずつ。
-      //   導入=レイドの開始(RELEASE_FLAGS.raidXmas・11/30 10:00)のあと / 第1〜5話=段階を倒したあと / 終章=期間が終わったあと(煉獄まで倒せたかで2本の片方)。
+      //   導入=レイドの開始(RELEASE_FLAGS.raidXmas・11/28 10:00)のあと / 第1〜5話=段階を倒したあと / 終章=期間が終わったあと(煉獄まで倒せたかで2本の片方)。
       //   開始より前は RELEASE_FLAGS.raidXmas が偽なので並べない(見るたびに時刻で数え直す)。共有の合計は見回りのたびに取り直す(取れなければ今回は出さない)
       let raidXmasStoryId = null;
       if (RELEASE_FLAGS.raidXmas === true) {
@@ -149317,7 +149317,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // クリスマスのイベントページを開く(入口: HOME のイベントの札・HOME のボス(⑤で作る)・レイドの確認画面)。開始前はデバッグの強制表示のときだけ
   //   tab: 開くタブ。イベントの札は「物語」、ボスとレイドの確認画面は「レイド」
   const openRaidXmas = async (force = false, tab = 'raid') => {
-    // 11/28 10:00(序章が開く)からはページを開ける。レイド・ボーナスのタブは 11/30 10:00 まで「から」と出す(台帳 r1126-014)
+    // 11/28 10:00(序章が開く)からはページを開ける。レイド・ボーナスのタブは 11/28 10:00 まで「から」と出す(台帳 r1126-014)
     if (!RELEASE_FLAGS.raidXmas && !raidJackDebugForce && force !== true && !xmasEventPageOpenAt(Date.now())) return;
     raidEvRef.current = 'xmas'; setRaidEv('xmas');
     raidJackReturnTierRef.current = 0;
@@ -151199,7 +151199,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             raidJackEventId={raidJackEventId} onOpenRaidJack={openRaidJack}
             /* クリスマスのイベントの札(台帳 r1126-006)。開始時刻(RELEASE_FLAGS.raidXmas)からだけ、札を押すとイベントページの「物語」を開く */
             onOpenXmasEvent={RELEASE_FLAGS.raidXmas===true?()=>{void openRaidXmas(false,'story');}:null}
-            /* クリスマスのイベントページの目立つ入口(台帳 r1126-014)。序章が開く 11/28 10:00 から、11/30 10:00 までは「序章公開中」 */
+            /* クリスマスのイベントページの目立つ入口(台帳 r1126-014)。序章が開く 11/28 10:00 から、11/28 10:00 までは「序章公開中」 */
             xmasEntry={xmasEventPageOpenAt(Date.now())||(raidJackDebugForce&&raidEv==='xmas')?{onOpen:()=>{void openRaidXmas(true,'story');},preOpen:RELEASE_FLAGS.raidXmas!==true}:null}
             /* クリスマスのレイドのボス(台帳 r1126-006)。期間中か、デバッグの強制表示でクリスマスを開いたあと。押すとイベントページの「レイド」タブ */
             raidXmasVisible={(RELEASE_FLAGS.raidXmas===true&&raidXmasWindowAt(Date.now())==='open')||(raidJackDebugForce&&raidEv==='xmas')}

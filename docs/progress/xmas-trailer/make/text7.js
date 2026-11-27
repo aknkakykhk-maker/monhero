@@ -35,7 +35,7 @@ const items = {
   s5:`<div class="wrap" style="height:220px"><div class="sub">吹雪の窓の外に、<br>黒い影――。</div></div>`,
   s6a:`<div class="wrap" style="height:170px"><div class="sub" style="font-size:84px;letter-spacing:.08em">名探偵は、</div></div>`,
   s6b:`<div class="wrap" style="height:170px"><div class="sub" style="font-size:96px;letter-spacing:.1em;color:#ffe08a">誰だ。</div></div>`,
-  s7:`<div class="wrap" style="height:200px;flex-direction:column"><div class="sub" style="font-size:30px;letter-spacing:.2em">クリスマスイベント</div><div class="sub" style="font-size:62px;color:#ffe08a;letter-spacing:.02em">11/30(月) 10:00 開幕</div></div>`,
+  s7:`<div class="wrap" style="height:200px;flex-direction:column"><div class="sub" style="font-size:30px;letter-spacing:.2em">クリスマスイベント</div><div class="sub" style="font-size:62px;color:#ffe08a;letter-spacing:.02em">11/28(土) 10:00 開幕</div></div>`,
 };
 (async()=>{
   const b = await chromium.launch(); const p = await b.newPage({viewport:{width:720,height:400},deviceScaleFactor:1});

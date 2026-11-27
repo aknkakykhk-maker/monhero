@@ -6292,7 +6292,7 @@ function MonsterHeroGame() {
         } catch (e) { raidProgressStoryId = null; }
       }
       // クリスマスのレイド「もうひとつの聖夜」のお話(r1126-026・台本 docs/progress/event-xmas-2026/SCRIPT.md)。みんなに1回ずつ。
-      //   導入=レイドの開始(RELEASE_FLAGS.raidXmas・11/30 10:00)のあと / 第1〜5話=段階を倒したあと / 終章=期間が終わったあと(煉獄まで倒せたかで2本の片方)。
+      //   導入=レイドの開始(RELEASE_FLAGS.raidXmas・11/28 10:00)のあと / 第1〜5話=段階を倒したあと / 終章=期間が終わったあと(煉獄まで倒せたかで2本の片方)。
       //   開始より前は RELEASE_FLAGS.raidXmas が偽なので並べない(見るたびに時刻で数え直す)。共有の合計は見回りのたびに取り直す(取れなければ今回は出さない)
       let raidXmasStoryId = null;
       if (RELEASE_FLAGS.raidXmas === true) {
@@ -18613,7 +18613,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // クリスマスのイベントページを開く(入口: HOME のイベントの札・HOME のボス(⑤で作る)・レイドの確認画面)。開始前はデバッグの強制表示のときだけ
   //   tab: 開くタブ。イベントの札は「物語」、ボスとレイドの確認画面は「レイド」
   const openRaidXmas = async (force = false, tab = 'raid') => {
-    // 11/28 10:00(序章が開く)からはページを開ける。レイド・ボーナスのタブは 11/30 10:00 まで「から」と出す(台帳 r1126-014)
+    // 11/28 10:00(序章が開く)からはページを開ける。レイド・ボーナスのタブは 11/28 10:00 まで「から」と出す(台帳 r1126-014)
     if (!RELEASE_FLAGS.raidXmas && !raidJackDebugForce && force !== true && !xmasEventPageOpenAt(Date.now())) return;
     raidEvRef.current = 'xmas'; setRaidEv('xmas');
     raidJackReturnTierRef.current = 0;
@@ -20495,7 +20495,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             raidJackEventId={raidJackEventId} onOpenRaidJack={openRaidJack}
             /* クリスマスのイベントの札(台帳 r1126-006)。開始時刻(RELEASE_FLAGS.raidXmas)からだけ、札を押すとイベントページの「物語」を開く */
             onOpenXmasEvent={RELEASE_FLAGS.raidXmas===true?()=>{void openRaidXmas(false,'story');}:null}
-            /* クリスマスのイベントページの目立つ入口(台帳 r1126-014)。序章が開く 11/28 10:00 から、11/30 10:00 までは「序章公開中」 */
+            /* クリスマスのイベントページの目立つ入口(台帳 r1126-014)。序章が開く 11/28 10:00 から、11/28 10:00 までは「序章公開中」 */
             xmasEntry={xmasEventPageOpenAt(Date.now())||(raidJackDebugForce&&raidEv==='xmas')?{onOpen:()=>{void openRaidXmas(true,'story');},preOpen:RELEASE_FLAGS.raidXmas!==true}:null}
             /* クリスマスのレイドのボス(台帳 r1126-006)。期間中か、デバッグの強制表示でクリスマスを開いたあと。押すとイベントページの「レイド」タブ */
             raidXmasVisible={(RELEASE_FLAGS.raidXmas===true&&raidXmasWindowAt(Date.now())==='open')||(raidJackDebugForce&&raidEv==='xmas')}

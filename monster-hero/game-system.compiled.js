@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 050974eee6945ff3
+// source-sha256: 3218802084cd67b0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -6894,11 +6894,11 @@ const BGM_UNRELEASED_TRACKS = Object.freeze([{
 }]);
 const BGM_TRACK_BY_ID = Object.fromEntries(BGM_TRACKS.map(track => [track.id, track]));
 const BGM_TRACK_LISTED_FROM = Object.freeze({
-  melo_kiss_mystery_short: '2026-11-30T10:00:00+09:00',
-  melo_dear_santa: '2026-11-30T10:00:00+09:00',
-  melo_dear_santa_short: '2026-11-30T10:00:00+09:00',
-  melo_winter_fall: '2026-11-30T10:00:00+09:00',
-  melo_winter_fall_short: '2026-11-30T10:00:00+09:00'
+  melo_kiss_mystery_short: '2026-11-28T10:00:00+09:00',
+  melo_dear_santa: '2026-11-28T10:00:00+09:00',
+  melo_dear_santa_short: '2026-11-28T10:00:00+09:00',
+  melo_winter_fall: '2026-11-28T10:00:00+09:00',
+  melo_winter_fall_short: '2026-11-28T10:00:00+09:00'
 });
 const bgmTrackListed = (track, nowMs = Date.now()) => {
   const id = track && track.id;
@@ -8395,7 +8395,7 @@ const screenThemeCategory = (gameState, rhythmOpen = false) => {
   return 'menu';
 };
 const TITLE_ART_STORAGE_KEY = 'mh_title_art';
-const TITLE_ART_XMAS_FROM = () => Date.parse(typeof RAID_XMAS_START_AT === 'string' ? RAID_XMAS_START_AT : '2026-11-30T10:00:00+09:00');
+const TITLE_ART_XMAS_FROM = () => Date.parse(typeof RAID_XMAS_START_AT === 'string' ? RAID_XMAS_START_AT : '2026-11-28T10:00:00+09:00');
 const TITLE_ART_XMAS_UNTIL = () => Date.parse(typeof RAID_XMAS_EVENT === 'object' && RAID_XMAS_EVENT && typeof RAID_XMAS_EVENT.endAt === 'string' ? RAID_XMAS_EVENT.endAt : '2026-12-31T04:00:00+09:00');
 const TITLE_ART_OPTIONS = [{
   id: 'xmas',
@@ -8440,7 +8440,7 @@ const titleArtSrc = (value, shape = 'portrait') => {
   return option.src;
 };
 const HOME_ART_STORAGE_KEY = 'mh_home_art';
-const HOME_ART_XMAS_FROM = () => Date.parse(typeof RAID_XMAS_START_AT === 'string' ? RAID_XMAS_START_AT : '2026-11-30T10:00:00+09:00');
+const HOME_ART_XMAS_FROM = () => Date.parse(typeof RAID_XMAS_START_AT === 'string' ? RAID_XMAS_START_AT : '2026-11-28T10:00:00+09:00');
 const HOME_ART_XMAS_UNTIL = () => Date.parse(typeof RAID_XMAS_EVENT === 'object' && RAID_XMAS_EVENT && typeof RAID_XMAS_EVENT.endAt === 'string' ? RAID_XMAS_EVENT.endAt : '2026-12-31T04:00:00+09:00');
 const HOME_ART_OPTIONS = [{
   id: 'xmas',
@@ -15940,8 +15940,8 @@ const RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE = true;
 const RHYTHM_MULTI_PUBLIC_RELEASE = true;
 const FRIENDS_PUBLIC_RELEASE = true;
 const RAID_JACK_START_AT = '2026-10-05T04:00:00+09:00';
-const XMAS_COSTUME_START_AT = '2026-11-30T10:00:00+09:00';
-const RAID_XMAS_START_AT = '2026-11-30T10:00:00+09:00';
+const XMAS_COSTUME_START_AT = '2026-11-28T10:00:00+09:00';
+const RAID_XMAS_START_AT = '2026-11-28T10:00:00+09:00';
 const RAID_JACK_PUBLIC_RELEASE = true;
 const RAID_JACK_RHYTHM_PUBLIC_RELEASE = true;
 const RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE = true;
@@ -64057,7 +64057,7 @@ const RAID_XMAS_EVENT = Object.freeze({
   debugId: 'raid_xmas_debug',
   title: '聖夜の名探偵',
   name: '黒いサンタ',
-  startAt: '2026-11-30T10:00:00+09:00',
+  startAt: '2026-11-28T10:00:00+09:00',
   endAt: '2026-12-31T04:00:00+09:00',
   storageKey: 'mh_raid_xmas_v1'
 });
@@ -112904,7 +112904,7 @@ const XMAS_EVENT_BONUSES = Object.freeze([{
   tone: 'border-fuchsia-300/50 bg-fuchsia-950/40 text-fuchsia-100',
   title: 'モンヒロビート',
   big: '5倍',
-  body: 'もらえるビートPと、クイックの∞周回を回しながら遊ぶと入る周回数が5倍になります'
+  body: '11/30(月) 0:00 から、もらえるビートPと、クイックの∞周回を回しながら遊ぶと入る周回数が5倍になります'
 }, {
   id: 'card',
   icon: () => React.createElement(Layers, {
@@ -113301,7 +113301,7 @@ const XmasBonusTab = () => React.createElement("div", {
 }, React.createElement(XmasSectionTitle, null, "期間中のボーナス"), React.createElement("p", {
   className: "px-0.5 text-[10px] font-bold leading-relaxed text-slate-300",
   style: JA_LABEL_STYLE
-}, jaWrap('イベントの期間中は、どれも自動でかかります')), XMAS_EVENT_BONUSES.map(b => React.createElement("div", {
+}, jaWrap('イベントの期間中は、どれも自動でかかります。モンヒロビートの5倍だけは 11/30(月) 0:00 からです')), XMAS_EVENT_BONUSES.map(b => React.createElement("div", {
   key: b.id,
   "data-xmas-bonus-item": b.id,
   className: `flex items-center gap-3 rounded-2xl border-2 p-3 shadow-lg shadow-black/30 ${b.tone}`
@@ -113481,7 +113481,7 @@ const XmasEventScreen = ({
   }, xmasEventDateLabel(RAID_XMAS_EVENT.startAt), " から"), React.createElement("p", {
     className: "mt-2 text-[12px] font-bold leading-relaxed text-slate-200",
     style: JA_LABEL_STYLE
-  }, jaWrap(tab === 'raid' ? 'レイドはイベントの開幕と同時に始まります。いまは「物語」の序章が読めます' : '期間中のボーナスは、イベントの開幕と同時にかかります'))) : tab === 'bonus' ? React.createElement(XmasBonusTab, null) : React.createElement(XmasStoryTab, {
+  }, jaWrap(tab === 'raid' ? 'レイドはイベントの開幕と同時に始まります。いまは「物語」の序章が読めます' : '期間中のボーナスは、イベントの開幕と同時にかかります(モンヒロビートの5倍は 11/30(月) 0:00 から)'))) : tab === 'bonus' ? React.createElement(XmasBonusTab, null) : React.createElement(XmasStoryTab, {
     version: storyVersion,
     allOpen: forced,
     fightWays: fightWays,
@@ -113530,7 +113530,7 @@ const HomeXmasEventEntry = ({
     tag.textContent = XMAS_HOME_ENTRY_CSS;
     document.head.appendChild(tag);
   }, []);
-  const sub = preOpen ? '序章公開中・11/30 10:00 開幕' : '開催中 〜12/31 3:59';
+  const sub = preOpen ? `序章公開中・${xmasEventDateLabel(RAID_XMAS_EVENT.startAt).replace(/\(.\)/, '')} 開幕` : '開催中 〜12/31 3:59';
   const sparks = [[8, 18, 0], [62, 12, .8], [88, 64, 1.6], [30, 78, 1.2]];
   const label = `クリスマスイベント 聖夜の名探偵 ${sub}`;
   return React.createElement("button", {
@@ -113601,7 +113601,7 @@ const XMAS_NOVEL_GAME = Object.freeze({
   title: '呪いのセーブデータ',
   sub: '十三番目の鐘'
 });
-const XMAS_NOVEL_OPEN_AT = '2026-11-30T10:00:00+09:00';
+const XMAS_NOVEL_OPEN_AT = '2026-11-28T10:00:00+09:00';
 const XMAS_NOVEL_CLOSE_AT = '2026-12-31T04:00:00+09:00';
 const xmasNovelPlayableAt = nowMs => {
   const a = Date.parse(XMAS_NOVEL_OPEN_AT);
@@ -216204,7 +216204,7 @@ const cardSharePolicy = (tactics, levelId, opts = {}) => {
 const CARD_EVENT_BONUS = Object.freeze({
   id: 'xmas_2026',
   name: 'クリスマスイベント',
-  startAt: '2026-11-30T10:00:00+09:00',
+  startAt: '2026-11-28T10:00:00+09:00',
   endAt: '2026-12-31T04:00:00+09:00',
   mult: 1.5,
   label: '1.5倍'

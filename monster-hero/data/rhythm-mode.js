@@ -85234,7 +85234,7 @@ const RHYTHM_DEMO_SONG_IDS=Object.freeze([
   'kimimachi_loop',
   // 2026-11-22 追加。全部必殺技でつ( `･ω･)(ききの曲・花の女3人のイベント曲)。HELL あり
   'zenbu_hissatsuwaza',
-  // 2026-11-26 追加。クリスマスイベントの3曲(原曲とショート版)。HELL あり。出すのは 11/30 10:00 から(RHYTHM_SONG_RELEASE_AT)
+  // 2026-11-26 追加。クリスマスイベントの3曲(原曲とショート版)。HELL あり。出すのは 11/28 10:00 から(RHYTHM_SONG_RELEASE_AT)
   'kiss_mystery',
   'kiss_mystery_short',
   'dear_santa',
@@ -85346,12 +85346,12 @@ const RHYTHM_SONG_RELEASE_AT=Object.freeze({
   crazy_party_night:'2026-10-04T08:00:00+09:00',
   crazy_party_night_full:'2026-10-04T08:00:00+09:00',
   // クリスマスイベント(RAID_XMAS_START_AT・data/rhythm-event.js の xmas_2026)の開始と同時(台帳 r1126-023)
-  kiss_mystery:'2026-11-30T10:00:00+09:00',
-  kiss_mystery_short:'2026-11-30T10:00:00+09:00',
-  dear_santa:'2026-11-30T10:00:00+09:00',
-  dear_santa_short:'2026-11-30T10:00:00+09:00',
-  winter_fall:'2026-11-30T10:00:00+09:00',
-  winter_fall_short:'2026-11-30T10:00:00+09:00',
+  kiss_mystery:'2026-11-28T10:00:00+09:00',
+  kiss_mystery_short:'2026-11-28T10:00:00+09:00',
+  dear_santa:'2026-11-28T10:00:00+09:00',
+  dear_santa_short:'2026-11-28T10:00:00+09:00',
+  winter_fall:'2026-11-28T10:00:00+09:00',
+  winter_fall_short:'2026-11-28T10:00:00+09:00',
 });
 const rhythmSongReleased=(songId,nowMs=Date.now())=>{
   // イベントで日ごとに開く曲(data/rhythm-event.js の FLOWER3_SONG_SLOTS・2026-11-23)。あとから読み込まれるので呼ばれた時に引く

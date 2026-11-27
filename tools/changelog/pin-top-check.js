@@ -85,7 +85,7 @@ check('pinTop の days は日時が読めないときは固定しない', change
   check('ハナウタ・ノートの予告は 11/23 10:00 より前だけ「開催予定」', !!teaser && up(teaser, at('2026-11-22T22:30:00+09:00')) === true && up(teaser, at('2026-11-23T10:00:00+09:00')) === false);
   // クリスマスの予告も同じ(台帳 r1126-038・ミハリが見つけた「11/28 から開催中と出る」)
   const xmasTeaser = CHANGELOG.find((e) => e && e.assistantNotice && e.assistantNotice.id === 'update_notice_xmas_2026_notice_v1');
-  check('クリスマスの予告は 11/30 10:00 より前だけ「開催予定」', !!xmasTeaser && up(xmasTeaser, at('2026-11-27T13:00:00+09:00')) === true && up(xmasTeaser, at('2026-11-30T09:59:00+09:00')) === true && up(xmasTeaser, at('2026-11-30T10:00:00+09:00')) === false);
+  check('クリスマスの予告は 11/28 10:00 より前だけ「開催予定」', !!xmasTeaser && up(xmasTeaser, at('2026-11-27T13:00:00+09:00')) === true && up(xmasTeaser, at('2026-11-28T09:59:00+09:00')) === true && up(xmasTeaser, at('2026-11-28T10:00:00+09:00')) === false);
   const app = fs.readFileSync(path.join(web, 'src/parts/60-app.jsx'), 'utf8');
   check('固定の札は開始前なら「📅 開催予定」・それ以外は「開催中」', /changelogEventUpcoming\(c\)\?'📅 開催予定':`[^`]*開催中`/.test(app));
   check('eventStartAt の無い項目は「開催予定」にならない', up({}, at('2026-01-01T00:00:00+09:00')) === false); }
