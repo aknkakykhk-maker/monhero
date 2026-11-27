@@ -35,7 +35,8 @@ const BGM_MARKS = {
   ボ: 'original_boss', なし: 'silence', 止: 'silence',
 };
 // 帯の頭の印 → 演出
-const FX_TAGS = { 赤いにじみ: 'bleed', 倒れた影: 'fallen', 赤く光る: 'red', 幕が下りる: 'curtainDown', 幕がおりる: 'curtainDown', 幕が上がる: 'curtainUp', 幕があがる: 'curtainUp', 暗転: 'dark', 白転: 'white', 明転: 'light', ゆれ: 'shake', 揺れ: 'shake', 赤: 'red', 赤い一瞬: 'red', 題字: 'title', 章: 'chapter', 効果音: 'se', 悲鳴: 'se', 帯: 'band', 雪: 'snow' };
+const FX_TAGS = { 赤いにじみ: 'bleed', 倒れた影: 'fallen', 赤く光る: 'red', 幕が下りる: 'curtainDown', 幕がおりる: 'curtainDown', 幕が上がる: 'curtainUp', 幕があがる: 'curtainUp', 暗転: 'dark', 白転: 'white', 明転: 'light', ゆれ: 'shake', 揺れ: 'shake', 赤: 'red', 赤い一瞬: 'red', 題字: 'title', 章: 'chapter', 効果音: 'se', 悲鳴: 'se', 帯: 'band', 雪: 'snow', 手紙: 'letter' };
+// (手紙) … 紙の手紙を赤い字で浮かべる(文の「／」で改行・r1126-058)
 const ENDING_KIND = { G: 'good', N: 'normal', B: 'bad', A: 'another', X: 'forced' };
 const CHAPTER_NO = { 序章: 0, 終章: 9 };
 
