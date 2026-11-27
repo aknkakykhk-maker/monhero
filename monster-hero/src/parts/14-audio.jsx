@@ -1033,9 +1033,10 @@ const Audio_ = (() => {
   //   Tone の再生器で鳴らす(BGM の出口とは別の音の世界なので、そのままつなげない)。
   //   止められるように { stop(秒) } を返す。鳴らせなかったら null
   const preloadSE = (src) => { if (enabled && src) loadBuffer(src).catch(() => {}); };
-  const playSeFile = async (src) => {
+  // fg … 表の画面の音(事件簿の笑い声など)。裏の周回の効果音を止める印(backgroundSeQuiet)を見ない(fgSe と同じ考え・2026-11-27 r1126-072)
+  const playSeFileOn = async (src, fg) => {
     // ボスの登場の音(バトルだけが使う)。MFバトルカードにいるあいだは裏の周回のものなので鳴らさない(下の setBackgroundSeQuiet)
-    if (!enabled || !src || backgroundSeQuiet) return null;
+    if (!enabled || !src || (backgroundSeQuiet && !fg)) return null;
     await ensure(); if (!Tone || !seBus) return null;
     let buffer = null;
     try { buffer = await loadBuffer(src); } catch (e) { return null; }
@@ -1054,6 +1055,8 @@ const Audio_ = (() => {
       return { stop };
     } catch (e) { return null; }
   };
+  const playSeFile = (src) => playSeFileOn(src, false);
+  const fgPlaySeFile = (src) => playSeFileOn(src, true);
   // 表へ戻ったら、出口の時計が実時間どおり進んでいるかを確かめる(2026-11-15 r1115-205)。0.4秒後に印を付け、さらに0.9秒後に比べる。
   //   止まっていたら作り直して鳴らし直す(演奏中の曲があるときは作り直さず、次のタップまで待つ)。起こせていなければ、次のタップで作り直す
   let returnHealTimer = null;
@@ -1291,5 +1294,5 @@ const Audio_ = (() => {
   // お知らせ・ヘルプの動画にかける音量(2026-11-14 社長「予告動画の音が設定の音量と関係なく鳴る」)。
   // 動画は曲と同じ扱いにして、BGM の音量と同じ曲線(_gainFromPct)で返す。音を切っている・BGM が 0 なら 0
   const videoGain = () => (enabled && bgmVolumePct > 0 ? _gainFromPct(bgmVolumePct) : 0);
-  return { currentBgmKey: () => currentKey, isBackgroundSeQuiet, setVideoHold, videoGain, setStoryEndFade, setStoryOpenFade, playSeFile, preloadSE, playBGM, fadeToBGM, stopBGM, setBgmOnce, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setUiSeVolume, uiSeVolume, uiTap, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
+  return { currentBgmKey: () => currentKey, isBackgroundSeQuiet, setVideoHold, videoGain, setStoryEndFade, setStoryOpenFade, playSeFile, fgPlaySeFile, preloadSE, playBGM, fadeToBGM, stopBGM, setBgmOnce, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setUiSeVolume, uiSeVolume, uiTap, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
 })();

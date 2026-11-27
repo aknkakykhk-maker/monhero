@@ -28,6 +28,24 @@ function MonsterHeroGame() {
   // 進め続ける画面。ここに無い画面(M/B管理・神殿・トレーニング・デバッグ・これから足す画面)では「休む」=進めないだけで、出たら続きから。
   //   モンヒロビート・MFバトルカードは今までどおりそれぞれの決まりで回す(演奏中の配り方を崩さない)
   const QUICK_RUN_ANYWHERE_RUN_SCREENS = ['HOME', 'PROFILE', 'ITEM_INVENTORY', 'GIFT_BOX', 'MISSIONS', 'SETTINGS', 'FRIENDS', 'BREEDER_MARKET'];
+  // クリスマスのイベントページ(画面は RAID_JACK のまま、raidEv が 'xmas')と、その上に重ねて開く事件簿(r1126-072 社長「事件簿とイベントページで進める」)。
+  //   ここも進める画面。ただし帯・詳細・知らせ・音は一切出さない(isXmasQuietScreen)。ジャックのレイド画面(raidEv が 'jack')は今までどおり入口として締める
+  const raidEvRef = useRef('jack');
+  const isXmasQuietScreen = state => state === 'RAID_JACK' && raidEvRef.current === 'xmas';
+  const isQuickAnywhereRunScreen = state => QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(state) || isXmasQuietScreen(state);
+  // 事件簿を読んでいるあいだは裏クイックを3倍の速さで回す。最後に触れてから3分たったら1倍へ戻し、触れたらまた3倍(社長「3倍・3分で戻す」)。
+  //   ★報酬の量は変えない。本物のバトルの待ち時間を縮めるだけ(演奏の追いつき CATCH_UP_SPEED と同じ作り)。報酬・上限・周回の数え方は今までの1つの経路のまま
+  //   ★事件簿で遊べる期間(xmasNovelPlayableAt)の外では3倍にしない(デバッグで期間の外に開いても1倍)
+  const XMAS_NOVEL_QUICK_BOOST = 3;
+  const XMAS_NOVEL_QUICK_IDLE_MS = 3 * 60 * 1000;
+  const xmasNovelQuickBoostNow = (now = Date.now()) => {
+    if (!QUICK_RUN_ANYWHERE_RELEASE || !quickAnywhereRunRef.current || !isXmasQuietScreen(gameStateNowRef.current)) return 1;
+    if (typeof xmasNovelPresence === 'undefined' || !xmasNovelPresence.open) return 1;
+    if (typeof xmasNovelPlayableAt !== 'function' || !xmasNovelPlayableAt(now)) return 1;
+    const touched = Number(xmasNovelPresence.touchedAt);
+    if (!Number.isFinite(touched) || now - touched >= XMAS_NOVEL_QUICK_IDLE_MS) return 1;
+    return XMAS_NOVEL_QUICK_BOOST;
+  };
   // ほかのバトルの入口。開いたら裏クイックを締めて(そこまでの報酬を確定して)から入る(社長 B「ほかのバトルを始めたら締めて報酬を確定」)
   const QUICK_RUN_ANYWHERE_BATTLE_ENTRY_SCREENS = ['BATTLE_SYSTEM_SELECT', 'BATTLE_MODE_SELECT', 'BATTLE_DIFFICULTY_SELECT', 'BATTLE_MENU', 'EXTREME_DIFFICULTY_SELECT',
     'SPECIES_CHALLENGE_SELECT', 'SKIP_PICK', 'RAID_JACK_PREP', 'RAID_JACK', 'BATTLE_TUTORIAL', 'DEBUG_BATTLE_SETUP', 'RPG_DEBUG_SETUP'];
@@ -1128,8 +1146,10 @@ function MonsterHeroGame() {
   const catchUpUntilRef = useRef(0);
   const battleMs = useCallback((baseMs) => {
     const base = Math.max(0, Math.round(baseMs / normalizeBattleSpeed(battleSpeedRef.current)));
-    if (!(catchUpUntilRef.current > Date.now())) return base;
-    return Math.max(0, Math.round(base / CATCH_UP_SPEED));
+    if (catchUpUntilRef.current > Date.now()) return Math.max(0, Math.round(base / CATCH_UP_SPEED));
+    // 事件簿を読んでいるあいだの3倍(上の xmasNovelQuickBoostNow)。追いつきと重ねない(追いつきのほうが速いので、そちらを優先)
+    const boost = xmasNovelQuickBoostNow();
+    return boost > 1 ? Math.max(0, Math.round(base / boost)) : base;
   }, []);
   // 固有技(必殺技)を放った瞬間の衝撃(2026-10-02 ユーザー指示「全てのモンスターの固有技のモーションを強化してほしい」)。
   // 効果音と、少し遅れて(動きが敵に届くころ)画面を大きく揺らす。見た目だけで待ち時間は足さない。
@@ -2972,7 +2992,8 @@ function MonsterHeroGame() {
     } catch (error) { console.error('[friends] records build failed:', error && error.message ? error.message : error); }
     // オート周回中(クイックの∞周回が回っている・裏に回って止まっているときは finished)と「いまの状態をフレンドに見せる」(2026-11-08・34-friends-api)
     let auto = false; let show = true;
-    try { const q = quickRunProgressRef.current; auto = !!(q && !q.finished); } catch (error) { auto = false; }
+    // 休む画面(M/B管理・神殿など)では進んでいないので、オート周回中にしない(r1126-072 追記2「止まっている画面で残らない」)
+    try { const q = quickRunProgressRef.current; const gs = gameStateNowRef.current; auto = !!(q && !q.finished) && !(isQuickAnywhereScreen(gs) && !isQuickAnywhereRunScreen(gs)); } catch (error) { auto = false; }
     try { show = (await storeGet(FRIEND_PRESENCE_SHOW_KEY, true)) !== false; } catch (error) { show = true; }
     await sbUpsertFriendProfile(id, friendsBuildSummary({
       place: friendsPlaceOfScreen(latest.gameState), masuMons: latest.masuMons,
@@ -3455,35 +3476,45 @@ function MonsterHeroGame() {
   // 不具合情報タブで未読(NEW)へ戻るのを防ぐ
   // 約900件を見比べるので、既読が変わったときだけ数え直す(描画のたびに作り直さない)
   // 「イベント」タブ(2026-11-23 r1119-113)。開催中・開催予定の札はこのタブにだけ出す。
-  //   印(!)は、まだ見ていない札があるあいだだけ付ける。既読は今ある mh_changelog_seen_ids_<その項目のタブ> へ足す(キーは増やさない)。
-  //   札になっている項目は、更新情報タブを見ただけでは既読にしない(イベントタブを開くまで印を残す)。
+  //   印は、まだ開いていない札があるあいだだけ付ける。既読は今ある mh_changelog_seen_ids_<その項目のタブ> へ足す(キーは増やさない)。
+  //   札になっている項目は、更新情報タブを見ただけでは既読にしない。
+  //   2026-11-27 r1126-068 社長「イベントにびっくりついてるけどどれかわからない」→ 札ごとに「NEW」を付け、その札を開いたら既読にする
+  //   (タブを見ただけでは消さない)。タブの印の数と札の「NEW」の数は、どちらもここの changelogUnreadIds.event から作るので必ず合う。
+  //   並べる札(changelogEventCards)もここで1回だけ作り、描画はそれを使う(時刻の境目で札の顔ぶれと印がずれないように)。
   //   開催中かは時刻で変わるので、窓を開くたびに数え直す(showChangelog を依存に入れている)
-  const { changelogUnreadIds, changelogUnread, changelogPinnedIds } = useMemo(() => {
+  const { changelogUnreadIds, changelogUnread, changelogPinnedIds, changelogEventCards } = useMemo(() => {
     const changelogSeenAnyTab = new Set(CHANGELOG_TYPES.flatMap(type => changelogSeen[type] || []));
-    const pinnedIds = changelogPinnedEntries().map(entry => entry.id);
+    const eventCards = changelogPinnedEntries();
+    const pinnedIds = eventCards.map(entry => entry.id);
     const pinnedSet = new Set(pinnedIds);
     const unreadIds = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, CHANGELOG_IDS_BY_TYPE[type].filter(id=>!changelogSeenAnyTab.has(id) && !pinnedSet.has(id))]));
     unreadIds.event = pinnedIds.filter(id => !changelogSeenAnyTab.has(id));
     const unread = Object.fromEntries(Object.keys(unreadIds).map(type => [type, unreadIds[type].length>0]));
-    return { changelogUnreadIds: unreadIds, changelogUnread: unread, changelogPinnedIds: pinnedSet };
+    return { changelogUnreadIds: unreadIds, changelogUnread: unread, changelogPinnedIds: pinnedSet, changelogEventCards: eventCards };
   }, [changelogSeen, showChangelog]);
   const hasUnreadChangelog = changelogUnread.update || changelogUnread.issue || changelogUnread.event;
+  // イベントタブの札を1枚開いたら、その項目だけ既読にする(2026-11-27 r1126-068)。
+  //   その項目が属するタブの既読(mh_changelog_seen_ids_update / _issue)へ足す。保存のしかた・キーは前と同じ
+  const markChangelogEventSeen = (id) => {
+    if (!changelogUnreadIds.event.includes(id)) return;
+    const entry = CHANGELOG_ENTRIES.find(e => e.id === id);
+    if (!entry) return;
+    const tab = CHANGELOG_ISSUE_TAB_TYPES.includes(entry.type) ? 'issue' : 'update';
+    const next = Array.from(new Set([...(changelogSeen[tab]||[]).filter(x=>CHANGELOG_ALL_IDS.has(x)), id]));
+    storeSet(`mh_changelog_seen_ids_${tab}`, next, false);
+    setChangelogSeen(prev => ({ ...prev, [tab]: next }));
+  };
+  // 残り時間(「あと◯日」)を、イベントタブを見ているあいだは30秒ごとに描き直す
+  const [changelogClock, setChangelogClock] = useState(() => Date.now());
+  useEffect(() => {
+    if (!showChangelog || changelogTab !== 'event') return undefined;
+    setChangelogClock(Date.now());
+    const timer = setInterval(() => setChangelogClock(Date.now()), 30000);
+    return () => clearInterval(timer);
+  }, [showChangelog, changelogTab]);
   const markChangelogTabSeen = (type) => {
     if (type === 'event') {
-      // 札の項目を、その項目が属するタブの既読へ足す(更新情報の項目なら mh_changelog_seen_ids_update)
-      if (!changelogUnreadIds.event.length) return;
-      const byTab = {};
-      CHANGELOG_ENTRIES.forEach(entry => {
-        if (!changelogUnreadIds.event.includes(entry.id)) return;
-        const tab = CHANGELOG_ISSUE_TAB_TYPES.includes(entry.type) ? 'issue' : 'update';
-        (byTab[tab] = byTab[tab] || []).push(entry.id);
-      });
-      const next = {};
-      Object.keys(byTab).forEach(tab => {
-        next[tab] = Array.from(new Set([...(changelogSeen[tab]||[]).filter(id=>CHANGELOG_ALL_IDS.has(id)), ...byTab[tab]]));
-        storeSet(`mh_changelog_seen_ids_${tab}`, next[tab], false);
-      });
-      setChangelogSeen(prev => ({ ...prev, ...next }));
+      // イベントタブは、タブを見ただけでは既読にしない(札を開いたときに markChangelogEventSeen。2026-11-27 r1126-068)
       return;
     }
     const ids = CHANGELOG_IDS_BY_TYPE[type].filter(id => !changelogPinnedIds.has(id));
@@ -3632,7 +3663,6 @@ function MonsterHeroGame() {
   // どのレイドを開いているか('jack' | 'xmas')。レイド画面・編成・1戦・結果は、これで定義(36-raid-xmas-api.jsx の raidEventDef)を選ぶ。
   //   ジャックの流れは raidEv が 'jack' のときこれまでどおり。クリスマスの回数・送信は 36-raid-xmas-api.jsx の口(raidXmasUseTry / raidXmasAddDamage)だけを使う
   const [raidEv, setRaidEv] = useState('jack');
-  const raidEvRef = useRef('jack');
   const raidDef = raidEventDef(raidEv);
   const raidXmasOpen = raidEv === 'xmas';
   // クリスマスのイベントページ(79-screen-xmas-event.jsx・台帳 r1126-006)のいまのタブ('story' | 'raid' | 'bonus')。
@@ -5125,7 +5155,7 @@ function MonsterHeroGame() {
   const quickAnywhereScreenOpen = runStage !== null && isQuickAnywhereScreen(gameState);
   // そのうち、進めてよい画面にいるか(QUICK_RUN_ANYWHERE_RUN_SCREENS)。休む画面では進めないだけで、出たら続きから
   const quickAnywhereBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && quickAnywhereScreenOpen
-    && QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameState);
+    && isQuickAnywhereRunScreen(gameState);
   // ランの画面を描かずに段階だけ進めてよいか。モンビー・MFバトルカード・助手ライフ・裏クイックの回っている画面ではそのまま進める。
   //   ★「いまバトルの画面を見ていない」の1つの値。揺れ・暗幕・負けの全面・効果音などの「見せない」はこれで決める(画面ごとに条件を並べない)
   const runBackgroundAllowed = rhythmScreenOpen || cardScreenOpen || assistantLifeScreenOpen || quickAnywhereScreenOpen;
@@ -5155,6 +5185,27 @@ function MonsterHeroGame() {
   const clearRunStage = () => { runStageRef.current = null; quickAnywhereRunRef.current = false; runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current); setRunStage(null); };
   // ランを進めてよいか。ランの画面を描いているとき、またはモンビーの非演奏画面で裏回し中。
   const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun || cardBackgroundRun || assistantLifeBackgroundRun || quickAnywhereBackgroundRun);
+  // 事件簿(79-screen-xmas-novel.jsx・App の外に重ねて開く)を開いているか。開閉の知らせ(XMAS_NOVEL_PRESENCE_EVENT)で描き直す(r1126-072)
+  const [xmasNovelOpen, setXmasNovelOpen] = useState(() => typeof xmasNovelPresence !== 'undefined' && !!xmasNovelPresence.open);
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof XMAS_NOVEL_PRESENCE_EVENT === 'undefined') return undefined;
+    const sync = () => setXmasNovelOpen(typeof xmasNovelPresence !== 'undefined' && !!xmasNovelPresence.open);
+    window.addEventListener(XMAS_NOVEL_PRESENCE_EVENT, sync);
+    sync();
+    return () => window.removeEventListener(XMAS_NOVEL_PRESENCE_EVENT, sync);
+  }, []);
+  // フレンドに見せる場所: クリスマスのイベントページ・事件簿(34-friends-api の friendsSetXmasSpot。変わったら送り直す・r1126-072 追記2)
+  useEffect(() => {
+    if (typeof friendsSetXmasSpot !== 'function') return;
+    friendsSetXmasSpot(gameState === 'RAID_JACK' && raidEv === 'xmas' ? (xmasNovelOpen ? 'novel' : 'event') : '');
+  }, [gameState, raidEv, xmasNovelOpen]);
+  // 検査の口(tools/battle/quick-anywhere-xmas-novel-browser-check.js)。いまの裏クイックの速さの倍率を読むだけ(ゲームの動きは変えない)
+  if (typeof window !== 'undefined') {
+    window.__mhQuickAnywhereBoost = xmasNovelQuickBoostNow;
+    // 帯を出さない画面(イベントページ・事件簿)でも、周回が進んでいるかを検査が見る口(読むだけ)
+    window.__mhQuickAnywhereProbe = () => ({ run: !!quickAnywhereRunRef.current && !!runStageRef.current, loops: quickRunProgress ? quickRunProgress.loops : null, wave,
+      finished: quickRunProgress ? !!quickRunProgress.finished : null, reason: quickRunProgress ? quickRunProgress.reason || '' : '', screen: gameStateNowRef.current, quiet: isXmasQuietScreen(gameStateNowRef.current) });
+  }
   // モンビーからクイックのバトルへ戻る。ランの段階そのものへ戻すので、続きから遊べる
   // 曲えらびの一覧をどこまで見ていたか。全国ランキングや遊びかたを見て戻ったとき、
   // その場所から続けられるようにするための控え(保存はしない・リロードで消えてよい)
@@ -5185,6 +5236,9 @@ function MonsterHeroGame() {
     return '端末に進行を保存できていません';
   };
   const [quickRunProgress, setQuickRunProgress] = useState(null);
+  // 周回が始まった・終わった(負け・止める)ら、フレンドの「⚡ オート周回中」を早めに送り直す(2分ごとの知らせを待たない・r1126-072 追記2)
+  const quickRunLiveForFriends = !!(quickRunProgress && !quickRunProgress.finished);
+  useEffect(() => { try { if (typeof window !== 'undefined') window.dispatchEvent(new Event('mh-friend-spot')); } catch (error) { /* 2分ごとの知らせで届く */ } }, [quickRunLiveForFriends]);
   // 直前の演奏で何周ぶん入ったか。帯へ1回だけ出す(保存しない)。
   // 演奏から抜けた直後の effect からも見るので、同期の控え(ref)も持つ
   const [rhythmPlayRunAwardState, setRhythmPlayRunAwardState] = useState(null);
@@ -6826,6 +6880,9 @@ function MonsterHeroGame() {
     // 専用sourceの開始・停止はRhythmTapTestが管理する。通常BGM effectから触ると二重再生や途中停止になる。
     if (gameState === 'RHYTHM_PLAY') return;
     if (successScreenOpen) return;
+    // 事件簿を開いているあいだは事件簿が曲を決める(裏クイックの WAVE・敵が替わってこの effect が走っても、イベントページの曲へ戻さない・r1126-072)。
+    //   閉じたときは事件簿が開く前の曲へ戻し、ここも xmasNovelOpen の変化で走り直す
+    if (xmasNovelOpen) return;
     // 観戦の曲が鳴っているあいだは触らない(観戦の画面が鳴らし始めるときに待機の曲を止めている。終わったら下で流し直す・r1115-190)
     if (rhythmWatchAudioOn) return;
     let key = bootPhase === 'GAME' ? bgmKeyForState(gameState, wave, enemy?.id, (waveHistory||[]).length > 0, hp <= 0 || gaveUp) : (bootPhase === 'TITLE' || bootPhase === 'ENTERING_GAME' ? bgmArrangement.title : null);
@@ -6858,7 +6915,7 @@ function MonsterHeroGame() {
     if (key && eventId && prev && prev.id === eventId && prev.key !== key) Audio_.fadeToBGM(key, EVENT_BGM_FADE_MS);
     else if (key) Audio_.playBGM(key);
     else Audio_.stopBGM();
-  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, successScreenOpen, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, cardScreenOpen, eventLineBgm, cardBgm, assistantLifeOpenNow, battleBgmOverlay, rhythmWatchAudioOn]);
+  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, successScreenOpen, xmasNovelOpen, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, cardScreenOpen, eventLineBgm, cardBgm, assistantLifeOpenNow, battleBgmOverlay, rhythmWatchAudioOn]);
 
   // SE/BGMそれぞれの音量をAudioエンジンへ反映
   // 超省エネではBGMを選んで鳴らしてもSEだけは常に0。保存済みSE音量そのものは変更しない。
@@ -13455,8 +13512,10 @@ function MonsterHeroGame() {
   // どの画面からも見える小さな帯(左下)。画面の高さを取らない(fixed)。助手ライフ・モンヒロビート・カードの上では、それぞれの帯があるので出さない
   const renderQuickAnywhereStrip = () => {
     if (!QUICK_RUN_ANYWHERE_RELEASE || !quickAnywhereScreenOpen || assistantLifeOpenNow || !quickRunProgress) return null;
+    // クリスマスのイベントページ・事件簿では出さない(社長「音とか表示は絶対出さないようにしてね」。HOME などへ戻ればいつもどおり出る)
+    if (isXmasQuietScreen(gameState) || xmasNovelOpen) return null;
     const finished = !!quickRunProgress.finished;
-    const resting = !finished && !QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameState);
+    const resting = !finished && !isQuickAnywhereRunScreen(gameState);
     const paused = !finished && !resting && !quickAnywhereBackgroundRun;
     const pending = finished ? { xp: 0, gold: 0 } : quickRunPendingRewards();
     const gold = Math.floor(quickRunProgress.gold + pending.gold), xp = Math.floor(quickRunProgress.xp + pending.xp);
@@ -13525,10 +13584,19 @@ function MonsterHeroGame() {
       setQuickAnywhereSettling(false);
     }
   };
+  // クリスマスのイベントページからレイドへ挑むとき(バトル・モンヒロビート・カード)は、先に裏クイックを締めてから進む(r1126-072)。
+  //   イベントページは裏クイックを回す画面にしたので、今までの「レイド画面を開いたら締める」の代わりにここで締める(報酬はそこまでのぶんを確定)
+  const xmasQuickSettleThen = async (fn) => {
+    if (quickAnywhereEndingRef.current) return;
+    if (QUICK_RUN_ANYWHERE_RELEASE && quickAnywhereRunRef.current && runStageRef.current) await settleQuickAnywhereRun();
+    fn();
+  };
   // ほかのバトルの入口を開いたら締める(その周までの報酬を確定)。「動いているバトルは常に1つ」(QUICK_RHYTHM_LINK.md §13)の作りのまま
   useEffect(() => {
     if (!QUICK_RUN_ANYWHERE_RELEASE || !quickAnywhereRunRef.current || !runStageRef.current) return;
     if (!QUICK_RUN_ANYWHERE_BATTLE_ENTRY_SCREENS.includes(gameState)) return;
+    // クリスマスのイベントページ(画面は RAID_JACK)は進める画面。締めるのは、そこからレイドへ挑むとき(xmasQuickSettleThen)
+    if (isXmasQuietScreen(gameState)) return;
     void settleQuickAnywhereRun();
   }, [gameState]);
   // 自動で始める(条件はモンヒロビート・助手ライフの自動開始と同じ: AUTO設定のクイックがそろっていて、自動開始が入、その難易度をクリア済み)。
@@ -13536,7 +13604,7 @@ function MonsterHeroGame() {
   //   帯の「止める」で止めたあとは、回す画面を行き来しても始め直さない(次にゲームを開くか、ほかのバトルから戻ったら、また始まる)
   const quickAnywhereTryStart = () => {
     if (!QUICK_RUN_ANYWHERE_RELEASE || !quickRhythmGuideReleased || !autoQuickRunAutoStartEnabled(autoSettings)) return false;
-    if (!QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameStateNowRef.current)) return false;
+    if (!isQuickAnywhereRunScreen(gameStateNowRef.current)) return false;
     if (quickRunProgressRef.current && !quickRunProgressRef.current.finished) return false;
     if (runStageRef.current && !runResultFinishedRef.current) return false;
     if (!repeatTemplateFromAutoSettings()) return false;
@@ -13550,7 +13618,7 @@ function MonsterHeroGame() {
     const prev = quickAnywherePrevScreenRef.current;
     quickAnywherePrevScreenRef.current = gameState;
     if (!QUICK_RUN_ANYWHERE_RELEASE || bootPhase !== 'GAME') return undefined;
-    if (!QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameState)) return undefined;
+    if (!isQuickAnywhereRunScreen(gameState)) return undefined;
     const boot = !quickAnywhereBootTriedRef.current;
     const fromBattle = RUN_STAGE_SCREENS.includes(prev) || QUICK_RUN_ANYWHERE_BATTLE_ENTRY_SCREENS.includes(prev) || prev === 'SKIP_RESULT';
     if (!boot && !fromBattle) return undefined;
@@ -13563,13 +13631,13 @@ function MonsterHeroGame() {
   useEffect(() => {
     if (!QUICK_RUN_ANYWHERE_RELEASE || assistantLifeOpenNow) return undefined;
     if (!quickRunProgress || !quickRunProgress.finished || quickRunProgress.reason !== 'defeat') return undefined;
-    if (!QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameState)) return undefined;
+    if (!isQuickAnywhereRunScreen(gameState)) return undefined;
     if (resultProcessing) return undefined;
     if (!quickRhythmGuideReleased || !autoQuickRunAutoStartEnabled(autoSettings)) return undefined;
     const retryAnywhere = () => {
       const current = quickRunProgressRef.current;
       if (!current || !current.finished || current.reason !== 'defeat') return;
-      if (!QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameStateNowRef.current)) return;
+      if (!isQuickAnywhereRunScreen(gameStateNowRef.current)) return;
       startQuickRunFromRhythm();
     };
     const timer = setTimeout(retryAnywhere, QUICK_RUN_AUTO_RETRY_MS);   // 目印を「どこでも回す」の始め直しとして分ける(SCREEN_EFFECTS_MAP)
@@ -14805,7 +14873,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 倒した瞬間に閃光と敵が消える動き(data-enemy-down)。「VICTORY!」は敵が消えたあとに出す(70-bootstrap の .mh-defeat の delay)。
     // 待ち時間は、消える0.6秒＋VICTORY!の1秒に合わせる
     if(defeatFxOn) setDefeatFx({name:enemy?.name||'敵',boss:wave>=10,key:Date.now()});
-    if (!autoBattleRef.current || bgmArrangement.autoVictoryJingle === 'on') Audio_.playJingle('victory');
+    // 裏クイックがクリスマスのイベントページ・事件簿で回っているあいだは鳴らさない(ジングルは曲を止めるので、事件簿の曲が途切れる・r1126-072)
+    if ((!autoBattleRef.current || bgmArrangement.autoVictoryJingle === 'on') && !(runBackgroundAllowedRef.current && isXmasQuietScreen(gameStateNowRef.current))) Audio_.playJingle('victory');
     // 呼ぶ側は、今回のぶん(damage・distDamage)を足してからここへ来る。合計は「いまの値」から読む(上の currentWaveDamageRef の説明)
     const totalWaveDamage=waveDamageAtDefeat(currentWaveDamageRef.current,currentWaveDamage,damage);
     const waveMult=1.0+(wave*0.1); const remainingTurns=Math.max(0,21-turnCount);
@@ -15115,7 +15184,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const fxSkill = intent.variant || (intent.type==='SPECIAL' ? 'special' : 'normal');
         // ★技ごとの動きを持つ敵は、連続はり手・上手投げなどを見せきる長さだけ待つ(tacticsEnemyMotionMs)。
         //   ムーも動きを持つときは技ごとの長さ(全画面の演出を見せきる長さ)になる
-        const motionEnemyId = isTacticsMode(runMode)&&!ecoBattleView ? (enemy?.raidJackPumpkin?'Pumpkin':enemy?.id) : null;
+        const motionEnemyId = isTacticsMode(runMode)&&!ecoBattleView ? tacticsEnemyMotionKey(enemy) : null;
         // ★必殺技ムービーを持つ敵(覚醒ムー)の必殺技は、画面を切り替えてムービーを流してから当てる
         //   (2026-09-25 ユーザー指示)。流すのは設定が「流す」のときだけ。演奏で止まったぶんの追いつき中は流さない。
         //   ムービーは戦闘の速さに合わせて縮めない(「下手に短くしないでおけ」)。
@@ -20002,7 +20071,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           見た目は .mh-title-dialog--changelog(70-bootstrap.jsx)。見出しの帯・タブ・一覧(ここだけ送る)・閉じるの4段で、閉じるはいつも同じ所。
           横・小さい横は、左の列に見出し・タブ・閉じる、右の列に一覧。お知らせの中身と既読の印は変えていない */}
       <div className="mh-title-dialog mh-title-dialog--changelog" role="dialog" aria-modal="true" aria-label="更新履歴"><div className="mh-dialog-head"><h3>✦ 更新履歴</h3></div>
-        <div className="mh-changelog-tabs">{[{key:'update',label:'更新情報'},{key:'event',label:'イベント'},{key:'issue',label:'不具合情報'}].map(t=><button key={t.key} type="button" aria-pressed={changelogTab===t.key} onClick={()=>selectChangelogTab(t.key)} className={changelogTab===t.key?'active':''}>{t.label}{changelogUnread[t.key]&&<em className="mh-unread-badge" aria-label="未読あり">!</em>}</button>)}</div>
+        <div className="mh-changelog-tabs">{[{key:'update',label:'更新情報'},{key:'event',label:'イベント'},{key:'issue',label:'不具合情報'}].map(t=><button key={t.key} type="button" aria-pressed={changelogTab===t.key} onClick={()=>selectChangelogTab(t.key)} className={changelogTab===t.key?'active':''}>{t.label}{changelogUnread[t.key]&&(t.key==='event'
+          // イベントタブの印は、まだ開いていない札の数(札の「NEW」と同じ数。2026-11-27 r1126-068)
+          ?<em className="mh-unread-badge" data-changelog-event-unread={changelogUnreadIds.event.length} aria-label={`まだ開いていないイベント${changelogUnreadIds.event.length}件`}>{changelogUnreadIds.event.length}</em>
+          :<em className="mh-unread-badge" aria-label="未読あり">!</em>)}</button>)}</div>
         {/* data/changelog.js の読み込みに失敗すると中身が0件になる。黙って空にすると
             「更新履歴が壊れた」としか分からないので、読み込み直せることをここで伝える */}
         <div className="mh-changelog-list" data-changelog-list>{CHANGELOG_ENTRIES.length===0
@@ -20021,30 +20093,57 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             // 「イベント期間中はこれを常に1番上に出しといて」)。日付やまとめの並びとは別。終わったら自然に消えて、あとは普通の行として残る。
             // 開催中かは描くたびに数え直す(changelogEventLive)。ふだんは他の行と同じく閉じておき、押すと中身(告知画像・本文)が開く
             // 2026-11-23 r1119-113 社長「更新内容が見づらい」→ 札は「イベント」タブへ移した(開催中が上・開催予定が下。changelogPinnedEntries)
-            const pinnedEvents = changelogTab==='event' ? changelogPinnedEntries() : [];
+            const pinnedEvents = changelogTab==='event' ? changelogEventCards : [];
             if (changelogTab==='event' && pinnedEvents.length===0) return <p className="mh-changelog-empty" data-changelog-event-empty>いま開催中・開催予定のイベントはありません。</p>;
-            return [...pinnedEvents.map(c=>(
-              <details key={`pinned-${c.id}`} data-changelog-pinned className="mh-changelog-pinned"
-                style={{margin:'0 0 10px',border:'2px solid #fb923c',borderRadius:16,background:'linear-gradient(135deg,#431407,#3b0764)',padding:'8px 10px'}}>
-                <summary style={{cursor:'pointer',listStyle:'none',display:'flex',alignItems:'center',gap:8,fontWeight:900,fontSize:13,color:'#ffedd5'}}>
-                  {/* 札の絵文字はイベントごと(pinEmoji)。書いていない項目は 🎉(ハロウィンの 🎃 のままだった。2026-11-03) */}
-                  {/* 予告(開始前)の項目は eventStartAt を書く。その時刻より前は「📅 開催予定」(2026-11-22 社長が本番で「開催前なのに開催中」を見つけた)。
-                      書いていない項目(これまでのイベント)は今までどおり「開催中」。時刻は描くたびに数え直す */}
-                  <span data-changelog-pinned-badge style={{background:'#f97316',color:'#1c1917',borderRadius:999,padding:'1px 8px',fontSize:11,flexShrink:0}}>{changelogEventUpcoming(c)?'📅 開催予定':`${typeof c.pinEmoji==='string'&&c.pinEmoji?c.pinEmoji:'🎉'} 開催中`}</span>
-                  {/* 固定表示の見出しは短くする。先頭の【期間限定】と末尾の「〜を開催します」は、「開催中」の札と重なるので落とす(本文の見出しはそのまま)。
-                      幅の狭い画面(320)で「レイドボス戦「…」と名前が切れていたので、切らずに折り返す(2026-10-27 ダメダシくんの見回り) */}
-                  {/* pinTitle を書いた項目は、固定の札だけその短い題(2026-11-10 社長「モンヒロビート本オープン記念 これだけにしといて」)。一覧の行と本文の題はそのまま */}
-                  <span data-changelog-pinned-title style={{flex:1,minWidth:0,lineHeight:1.3,wordBreak:'keep-all',overflowWrap:'anywhere'}}>{typeof c.pinTitle==='string'&&c.pinTitle?c.pinTitle:String(c.title||'').replace(/^【[^】]*】/,'').replace(/を開催(します)?$/,'')}</span>
-                  <small style={{flexShrink:0,fontSize:10,color:'#fdba74'}}>詳細 ▼</small>
+            const eventUnread = new Set(changelogUnreadIds.event||[]);
+            // 2026-11-27 r1126-068 社長「イベントにびっくりついてるけどどれかわからない。てか表示方法もっとなんとかならない？」→ 札を作り直した。
+            //   ・上にイベントの絵の横長の帯(絵の無い項目は今までの色の札のまま)。その下に短い題を1行(changelogEventListTitle)
+            //   ・期間「11/28(土) 10:00 〜 12/31(木) 3:59」と残り「あと◯日」「開幕まであと◯時間」(changelogEventPeriodLabel / changelogEventRemainLabel)
+            //   ・まだ開いていない札に「NEW」。札を開いたら既読(markChangelogEventSeen)。タブの数字と同じ数になる
+            //   ・並びは開催中(終わりが近い順)→開催予定(開幕が近い順)。changelogPinnedEntries
+            return [...pinnedEvents.map(c=>{
+              const upcoming=changelogEventUpcoming(c,changelogClock);
+              const period=changelogEventPeriodLabel(c);
+              const remain=changelogEventRemainLabel(c,changelogClock);
+              const isNew=eventUnread.has(c.id);
+              const banner=typeof c.image==='string'&&c.image?c.image:'';
+              const listTitle=changelogEventListTitle(c);
+              return (
+              <details key={`pinned-${c.id}`} data-changelog-pinned data-changelog-event-new={isNew?'1':'0'} className="mh-changelog-pinned"
+                onToggle={e=>{ if (e.currentTarget.open) markChangelogEventSeen(c.id); }}
+                style={{margin:'0 0 10px',border:`2px solid ${isNew?'#f87171':'#fb923c'}`,borderRadius:16,background:'linear-gradient(135deg,#431407,#3b0764)',padding:banner?0:'8px 10px',overflow:'hidden'}}>
+                <summary aria-label={`${listTitle}${upcoming?'(開催予定)':'(開催中)'}${isNew?'・未読':''}`} style={{cursor:'pointer',listStyle:'none',display:'block',fontWeight:900,color:'#ffedd5'}}>
+                  {banner&&<span style={{position:'relative',display:'block'}}>
+                    {/* 帯は絵の真ん中より少し上を見せる(題字が上にある絵が多い)。項目ごとに bannerPos で変えられる */}
+                    <img data-changelog-pinned-banner src={banner} alt="" aria-hidden="true" onError={e=>{e.currentTarget.style.display='none';}} loading="lazy" decoding="async"
+                      style={{display:'block',width:'100%',aspectRatio:'3 / 1',maxHeight:'min(110px, 22vh)',objectFit:'cover',objectPosition:typeof c.bannerPos==='string'&&c.bannerPos?c.bannerPos:'50% 35%'}}/>
+                    {isNew&&<em data-changelog-event-new-mark style={{position:'absolute',top:6,left:6,fontStyle:'normal',background:'#ef4444',color:'#fff',borderRadius:999,padding:'1px 8px',fontSize:11,boxShadow:'0 2px 6px rgba(0,0,0,.5)'}}>NEW</em>}
+                  </span>}
+                  <span style={{display:'flex',alignItems:'center',gap:6,padding:banner?'6px 10px 0':0,fontSize:13}}>
+                    {/* 札の絵文字はイベントごと(pinEmoji)。書いていない項目は 🎉(ハロウィンの 🎃 のままだった。2026-11-03) */}
+                    {/* 予告(開始前)の項目は eventStartAt を書く。その時刻より前は「📅 開催予定」(2026-11-22 社長が本番で「開催前なのに開催中」を見つけた)。
+                        書いていない項目(これまでのイベント)は今までどおり「開催中」。時刻は描くたびに数え直す */}
+                    <span data-changelog-pinned-badge style={{background:upcoming?'#38bdf8':'#f97316',color:'#1c1917',borderRadius:999,padding:'1px 8px',fontSize:11,flexShrink:0}}>{changelogEventUpcoming(c)?'📅 開催予定':`${typeof c.pinEmoji==='string'&&c.pinEmoji?c.pinEmoji:'🎉'} 開催中`}</span>
+                    {/* 題は1行(長い物は「…」)。listTitle を書いた項目はそれ(更新情報タブの題・本文の題は変えない) */}
+                    <span data-changelog-pinned-title style={{flex:1,minWidth:0,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',lineHeight:1.4}}>{listTitle}</span>
+                    {!banner&&isNew&&<em data-changelog-event-new-mark style={{fontStyle:'normal',background:'#ef4444',color:'#fff',borderRadius:999,padding:'1px 7px',fontSize:10,flexShrink:0}}>NEW</em>}
+                  </span>
+                  <span style={{display:'flex',alignItems:'center',flexWrap:'wrap',gap:'2px 8px',padding:banner?'3px 10px 8px':'4px 0 0',fontSize:11,fontWeight:800,color:'#fdba74'}}>
+                    {period&&<span data-changelog-event-period style={{whiteSpace:'nowrap'}}>{period}</span>}
+                    {remain&&<span data-changelog-event-remain style={{whiteSpace:'nowrap',background:'rgba(0,0,0,.35)',color:upcoming?'#bae6fd':'#fde68a',borderRadius:999,padding:'0 7px'}}>{remain}</span>}
+                    <small style={{marginLeft:'auto',fontSize:10,color:'#fdba74',whiteSpace:'nowrap'}}>詳細 ▼</small>
+                  </span>
                 </summary>
+                <div style={{padding:banner?'0 10px 8px':0}}>
                 {c.image&&<img data-changelog-pinned-image src={c.image} alt={`${c.title}のお知らせ`} onError={e=>{e.currentTarget.style.display='none';}} loading="lazy" decoding="async" style={{width:'100%',borderRadius:12,margin:'8px 0 4px'}}/>}
                 {/* 予告動画も、固定の札の中で見られるようにする(下の一覧の行と同じ) */}
                 {typeof c.video==='string'&&c.video&&<figure data-changelog-pinned-video style={{margin:'6px 0'}}>
                   <figcaption style={{fontWeight:900,fontSize:12,color:'#ffedd5',margin:'0 0 4px'}}>▶ 予告動画</figcaption>
                   <ChangelogVideo src={c.video} poster={typeof c.videoPoster==='string'?c.videoPoster:undefined}/>
                 </figure>}
-                {(c.items||[]).map((x,j)=><p key={j} style={{fontSize:12,color:'#fed7aa',margin:'3px 0'}}>・{x}</p>)}
-              </details>)),
+                {(c.items||[]).map((x,j)=><p key={j} style={{fontSize:12,color:'#fed7aa',margin:'3px 0'}}>・{typeof x==='string'&&typeof XmasNovelWrap==='function'?<XmasNovelWrap text={x}/>:x}</p>)}
+                </div>
+              </details>);}),
             ...rows.map(row=>{
               const open=changelogOpenId===row.key;
               const unreadCount=row.entries.filter(entry=>unreadHere.has(entry.id)).length;
@@ -20075,7 +20174,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     {row.entries.map(c=>(<section key={c.id} className="mh-changelog-item" data-changelog-type={c.type||'update'}>
                       <time>{(c.date||'').slice(11)||c.date}{unreadHere.has(c.id)&&<em>NEW</em>}</time>
                       <span className="mh-changelog-kind" data-kind={changelogTypeOf(c).tone}>{changelogTypeOf(c).label}</span>{changelogEventLive(c)&&<span data-changelog-event-live className="mh-changelog-kind" style={{background:'#f97316',color:'#1c1917',borderColor:'#fdba74',marginLeft:4}}>🎃 開催中</span>}
-                      <b>{c.title}</b>
+                      <b>{typeof c.title==='string'&&typeof XmasNovelWrap==='function'?<XmasNovelWrap text={c.title}/>:c.title}</b>
                       {/* 告知画像があれば本文の上に出す
                           (期間中いつでもここから見返せるように・2026-09-11・ユーザー指示) */}
                       {c.image&&<img data-changelog-image src={c.image} alt={`${c.title}のお知らせ`}
@@ -20087,7 +20186,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         <figcaption style={{fontWeight:900,margin:'0 0 4px'}}>▶ 予告動画</figcaption>
                         <ChangelogVideo src={c.video} poster={typeof c.videoPoster==='string'?c.videoPoster:undefined}/>
                       </figure>}
-                      {(c.items||[]).map((x,j)=><p key={j}>・{x}</p>)}
+                      {/* 本文は文節の切れ目だけで折る(2026-11-27 r1126-078・社長「文字の崩れ」) */}{(c.items||[]).map((x,j)=><p key={j}>・{typeof x==='string'&&typeof XmasNovelWrap==='function'?<XmasNovelWrap text={x}/>:x}</p>)}
                       {/* 本文の下に並べる見本の絵(2026-09-28・ユーザー提案「こんな感じに染色イメージを出したりしたらどう？」)。
                           gallery:[{ caption, image }] と書いたときだけ、見出しと絵を順に出す。
                           読めなかった絵は黙って消す(上の image と同じ)。助手の告知には出さない(告知は image の1枚だけ) */}
@@ -22909,14 +23008,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
         {gameState==='RAID_JACK'&&raidXmasOpen&&(<XmasEventScreen tab={xmasEventTab} onTab={setXmasEventTab} forced={raidJackDebugForce&&!RELEASE_FLAGS.raidXmas} preOpen={!RELEASE_FLAGS.raidXmas&&!raidJackDebugForce}
           onBack={()=>{raidJackReturnTierRef.current=0;setGameState(raidJackDebugForce&&!RELEASE_FLAGS.raidXmas?'RAID_JACK_DEBUG':'HOME');}}
-          storyVersion={xmasStoryVersion} fightWays={xmasStoryFightWays} onReadChapter={openXmasStoryChapter} onFightChapter={fightXmasStoryChapter}
+          storyVersion={xmasStoryVersion} fightWays={xmasStoryFightWays} onReadChapter={openXmasStoryChapter} onFightChapter={(chapter,way)=>{void xmasQuickSettleThen(()=>fightXmasStoryChapter(chapter,way));}}
           /* レイドのタブの中身(今までのクリスマスのレイド画面そのまま) */
           raid={{ev:RAID_EVENT_XMAS,
             /* 挑み方: バトルはバトル部。モンヒロビート・バトルカードはビート部・カード部が startRaidXmasRhythm / startRaidXmasCard を App に置いたら出る(BUILD.md §4) */
             ways:['battle',...(typeof startRaidXmasRhythm === 'function'?['rhythm']:[]),...(typeof startRaidXmasCard === 'function'?['card']:[])],
             initialTier:raidJackReturnTierRef.current,
             onBack:()=>{raidJackReturnTierRef.current=0;setGameState(raidJackDebugForce&&!RELEASE_FLAGS.raidXmas?'RAID_JACK_DEBUG':'HOME');},
-            onChallenge:(kind,tierIndex,way)=>{raidJackReturnTierRef.current=tierIndex;if(kind==='a'&&way==='rhythm'){if(typeof startRaidXmasRhythm === 'function')void startRaidXmasRhythm(tierIndex);return;}if(kind==='a'&&way==='card'){if(typeof startRaidXmasCard === 'function')void startRaidXmasCard(tierIndex);return;}setRaidJackPrep({kind,tierIndex});setGameState('RAID_JACK_PREP');},
+            onChallenge:(kind,tierIndex,way)=>{void xmasQuickSettleThen(()=>{raidJackReturnTierRef.current=tierIndex;if(kind==='a'&&way==='rhythm'){if(typeof startRaidXmasRhythm === 'function')void startRaidXmasRhythm(tierIndex);return;}if(kind==='a'&&way==='card'){if(typeof startRaidXmasCard === 'function')void startRaidXmasCard(tierIndex);return;}setRaidJackPrep({kind,tierIndex});setGameState('RAID_JACK_PREP');});},
             onPurchase:purchaseRaidJackExtra,onClaimRewards:claimRaidXmasRewards,beatPoints:rhythmEventPoints,eventId:raidCurEventId,forced:raidJackDebugForce,unlimited:raidJackDebugForce&&!raidJackDebugRealRules,
             renderPlace:rankingPlace,renderIcon:rankingBreederIcon,cardClass:rankingCardClass}}/>)}
         {gameState==='RAID_JACK'&&raidJackOpen&&(<RaidJackScreen
@@ -26972,7 +27071,8 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
         :<WaveIntro enabled={battleFxEffective.waveIntro!=='OFF'&&gameState==='BATTLE'&&!!enemy} wave={wave} enemyName={enemy?.name} title={''}/>}
       <EnemyDefeatFx fx={gameState==='BATTLE'?defeatFx:null}/>
       {renderQuickAnywhereStrip()}
-      {quickAnywhereSettling && <div data-quick-anywhere-settling role="status" className="fixed inset-0 z-[96] flex items-end justify-center bg-black/20 pb-24" onClickCapture={(e) => { e.stopPropagation(); e.preventDefault(); }}>
+      {quickAnywhereSettling && isXmasQuietScreen(gameState) && <div data-quick-anywhere-settling="quiet" aria-hidden="true" className="fixed inset-0 z-[96]" onClickCapture={(e) => { e.stopPropagation(); e.preventDefault(); }}/>}
+      {quickAnywhereSettling && !isXmasQuietScreen(gameState) && <div data-quick-anywhere-settling role="status" className="fixed inset-0 z-[96] flex items-end justify-center bg-black/20 pb-24" onClickCapture={(e) => { e.stopPropagation(); e.preventDefault(); }}>
         <span className="rounded-full border border-fuchsia-300/50 bg-slate-950/90 px-3 py-1.5 text-[12px] font-black text-fuchsia-100">🔁 裏クイックの報酬を受け取っています…</span>
       </div>}
       {effect&&!runBackgroundAllowed&&effect!==offscreenEffectRef.current&&(<div data-battle-effect-overlay className="fixed inset-0 flex flex-col items-center justify-center pointer-events-none text-center p-8 overflow-hidden" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.96)',zIndex:70000}}>

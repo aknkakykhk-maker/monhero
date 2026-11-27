@@ -511,7 +511,13 @@ const JA_WRAP_NO_BREAK = [
   /\d{1,4}\/\d{1,2}(?:\/\d{1,2})?(?:[(（][月火水木金土日](?:・祝)?[)）])?/g,
   /\d{1,2}:\d{2}/g,
   /聖夜の名探偵|名探偵|エンドヒストリー|手がかり帳|鐘が鳴る夜/g,
+  // 事件簿とクリスマスのお話の名前(2026-11-27 r1126-071「黒いサン／タ」)。お話の画面(レイド・イベントのお話)も jaWrap の折り目を使うので、ここで外す
+  /黒いサンタ|聖夜のロンド|十三番目の鐘|十二の鐘|招待状|ワトソンくん|ペンション・シュプール|クリスマス会|呪いのセーブデータ|モンヒロ事件簿/g,
+  // 「——」「……」の並びの中(「—／—シュプール」2026-11-27 r1126-078 の点検)
+  /—{2,}|―{2,}|…{2,}/g,
 ];
+const JA_WRAP_NAME_KEEP = /ペンション・シュプール|呪いのセーブデータ|聖夜の名探偵/;
+const JA_WRAP_NAME_SPLIT = /(ペンション・シュプール|呪いのセーブデータ|聖夜の名探偵)/;
 const jaWrapUnbreak = (marked) => {
   if (typeof marked !== 'string' || !marked.includes('​')) return marked;
   const plain = marked.replace(/​/g, '');
@@ -717,7 +723,9 @@ const jaWrap = (text) => {
   const keep = (t, k) => <span key={k} data-ja-keep style={{ whiteSpace: 'nowrap' }}>{t}</span>;
   // 空白で始まるかたまりの手前には印(<wbr>)を置かない。空白はもともと折れるうえ、「折らない枠」+<wbr>+「空白で始まる字」の並びで
   // Chromium が落ちた(行の長さをそろえる text-wrap: balance・pretty のとき。2026-10-24 台詞「本当に極限…！ (>人<;)」で見つけた)
-  return s.split('\u200B').map((seg, i) => <React.Fragment key={i}>{i > 0 && !/^\s/.test(seg) && <wbr/>}{jaWrapPieces(seg).map(([t, kp], k) => (kp ? keep(t, k) : t))}</React.Fragment>);
+  // 事件簿とクリスマスのお話の名前(JA_WRAP_NAME_KEEP)は、長くても折らない枠で包む(「ペンション・／シュプール」ブラウザは「・」のあとで折る。2026-11-27 r1126-078)
+  const names = (t, k) => (JA_WRAP_NAME_KEEP.test(t) ? t.split(JA_WRAP_NAME_SPLIT).map((x, j) => (j % 2 === 1 ? keep(x, `${k}n${j}`) : x)) : t);
+  return s.split('\u200B').map((seg, i) => <React.Fragment key={i}>{i > 0 && !/^\s/.test(seg) && <wbr/>}{jaWrapPieces(seg).map(([t, kp], k) => (kp ? keep(t, k) : names(t, k)))}</React.Fragment>);
 };
 // 太字(<b>)などが混ざった文用。文字の部分だけを jaWrap に通す(2026-10-26 マスモン設定「金色のノー／ツに」)。JA_WRAP_STYLE と一緒に使う
 const jaWrapParts = (...parts) => parts.map((p, i) => <React.Fragment key={i}>{typeof p === 'string' ? jaWrap(p) : p}</React.Fragment>);

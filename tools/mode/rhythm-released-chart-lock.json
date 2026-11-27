@@ -396,6 +396,16 @@
   "walkure_short/hard": "37eccc33cd466b30",
   "walkure_short/expert": "bf6fdebaad16a2c0",
   "walkure_short/master": "3483c98e1670d287",
+  "battle_5/easy": "35ef20f3995bb457",
+  "battle_5/normal": "48577f1b043faf2c",
+  "battle_5/hard": "53d0310279d664a7",
+  "battle_5/expert": "f6f06fe5d128fe99",
+  "battle_5/master": "9e4ec85a57fa93b0",
+  "battle_5_short/easy": "16106d1c1c10447a",
+  "battle_5_short/normal": "342bedb1b1f02ddb",
+  "battle_5_short/hard": "ce01a874ccf8d6ea",
+  "battle_5_short/expert": "b388b0b85d0ca911",
+  "battle_5_short/master": "d13cf15e7a2b4706",
   "amakakeru_tsubasa/easy": "153f0f77521cc4c4",
   "amakakeru_tsubasa/normal": "bb1c1aa5cc335adf",
   "amakakeru_tsubasa/hard": "f4923a42b1c9b0d8",
@@ -550,6 +560,8 @@
   "erfolg_piano/hell": "af6f6690583fc26c",
   "walkure/hell": "94860f0aa2cf55ca",
   "walkure_short/hell": "ca1fdfc6c9e030fb",
+  "battle_5/hell": "8c45df48801c80ff",
+  "battle_5_short/hell": "3f240788023b9c36",
   "amakakeru_tsubasa/hell": "34a2b5e26dee1f49",
   "beyond_the_same_sky/hell": "6cc4ed78ed09571f",
   "beyond_the_same_sky_short/hell": "8a448637b891bf04",
@@ -1333,6 +1345,24 @@
    "at": "2026-11-26 23:04",
    "reason": "新曲 Kissからはじまるミステリー・Dear Santa・winter fall(原曲と short ver.)を公開",
    "changedCount": 36
+  },
+  {
+   "at": "2026-11-27 16:23",
+   "reason": "Battle #5 を 11/28 10:00 に解禁(台帳 r1126-064)",
+   "changed": [
+    "battle_5/easy",
+    "battle_5/normal",
+    "battle_5/hard",
+    "battle_5/expert",
+    "battle_5/master",
+    "battle_5_short/easy",
+    "battle_5_short/normal",
+    "battle_5_short/hard",
+    "battle_5_short/expert",
+    "battle_5_short/master",
+    "battle_5/hell",
+    "battle_5_short/hell"
+   ]
   }
  ]
 }

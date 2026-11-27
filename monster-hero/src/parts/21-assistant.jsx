@@ -159,6 +159,11 @@ const storyChunkLines = (text, cap, maxLines) => {
       chunks.splice(i, 1);
     }
   }
+  // 先頭の2字以下のかたまり(「袋、」)は、次のかたまりにくっつける(くっつける前が無いので、それだけが1行目に残った・2026-11-27 r1126-078)
+  if (chunks.length > 1 && /[ぁ-んァ-ヶ一-龠々a-zA-Z0-9０-９]/.test(chunks[0].t) && storyTextUnits(chunks[0].t) <= 2) {
+    chunks[1] = { ...chunks[1], t: chunks[0].t + (chunks[1].sp ? ' ' : '') + chunks[1].t, sp: chunks[0].sp };
+    chunks.splice(0, 1);
+  }
   if (chunks.length < 2) return null;
   // 半角の字は幅の見込みがずれやすいので、1字ぶん余らせて見る。入りきらない長いかたまりは折らずに流す(flow)
   // 絵文字(🔥✨)は字1つより幅が広いので、1つにつき 0.6字ぶん足して見る
@@ -241,11 +246,14 @@ const AssistantFace = ({ who, size = 88, accent, expression = null }) => {
 // 矢印でつないだ切り替わりの順(「OFF → AUTO → ∞ → OFF」)と「∞周回」は1つの塊で出し、途中で折らない
 // (2026-11-22 点検 #7059 HOME の助手の説明「OFF → / AUTO」「その∞ / 周回」と折れて順が読めなかった・r1119-080)
 const HELP_NOWRAP_RE = /((?:[A-Za-z0-9∞]+ → )+[A-Za-z0-9∞]+|∞周回)/;
-const helpWrap = (x) => {
+// max: 1つにまとめる字数の上限(狭い欄では小さく。省くと XmasNovelWrap の既定)
+const helpWrap = (x, max) => {
   if (typeof x !== 'string' || typeof jaWrap !== 'function') return x;
   const parts = x.split(HELP_NOWRAP_RE);
-  return <span style={typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : undefined}>{parts.length === 1 ? jaWrap(x)
-    : parts.map((t, i) => (i % 2 === 1 ? <span key={i} data-help-nowrap style={{ whiteSpace:'nowrap' }}>{t}</span> : <React.Fragment key={i}>{t ? jaWrap(t) : null}</React.Fragment>))}</span>;
+  // 文節の切れ目だけで折る部品(事件簿と同じ XmasNovelWrap。名前・日時・かっこの中の名前・ひらがなの言葉の途中では折らない)があれば使う(2026-11-27 r1126-078)
+  const wrapOne = (t) => (typeof XmasNovelWrap === 'function' ? <XmasNovelWrap text={t} max={max} /> : jaWrap(t));
+  return <span style={typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : undefined}>{parts.length === 1 ? wrapOne(x)
+    : parts.map((t, i) => (i % 2 === 1 ? <span key={i} data-help-nowrap style={{ whiteSpace:'nowrap' }}>{t}</span> : <React.Fragment key={i}>{t ? wrapOne(t) : null}</React.Fragment>))}</span>;
 };
 const renderHelpBlocks = (blocks, accent) => (blocks || []).map((b, i) => {
   // その端末で条件を満たした人だけの本文(playerFlag)は、満たしていなければ見出しごと出さない
@@ -258,9 +266,9 @@ const renderHelpBlocks = (blocks, accent) => (blocks || []).map((b, i) => {
   if(b.t==='list') return <ul key={i} className="text-[12px] text-slate-300 leading-relaxed space-y-2 list-disc pl-5">{b.items.map((x,j)=><li key={j}>{helpWrap(x)}</li>)}</ul>;
   if(b.t==='steps') return <div key={i} className="space-y-2.5">{b.items.map((x,j)=>(<div key={j} className="flex items-start gap-3"><span className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-black text-black" style={{backgroundColor:accent}}>{j+1}</span><span className="text-[12px] text-slate-300 leading-relaxed pt-0.5">{helpWrap(x)}</span></div>))}</div>;
   // 表の行の3つ目 {notes:[…]} は、その行のノーツの見本の絵(2026-10-21)。演奏画面と同じ描き方の RhythmNoteSwatch で、見出しの上に並べる
-  if(b.t==='kv') return <div key={i} className="rounded-2xl bg-black/50 border border-white/5 overflow-hidden">{b.rows.map((r,j)=>(<div key={j} className={`flex gap-3 px-4 py-2.5 ${j>0?'border-t border-white/5':''}`}><span className="shrink-0 w-24 text-[11px] font-black text-slate-400 leading-tight">{Array.isArray(r[2]?.notes)&&r[2].notes.length>0&&<span data-help-note-swatches className="mb-1 flex gap-1">{r[2].notes.map(k=><RhythmNoteSwatch key={k} kind={k} width={r[2].notes.length>1?44:54} height={r[2].notes.length>1?34:42}/>)}</span>}{r[0]}</span><span className="flex-1 text-[11px] text-white leading-relaxed">{helpWrap(r[1])}</span></div>))}</div>;
+  if(b.t==='kv') return <div key={i} className="rounded-2xl bg-black/50 border border-white/5 overflow-hidden">{b.rows.map((r,j)=>(<div key={j} className={`flex gap-3 px-4 py-2.5 ${j>0?'border-t border-white/5':''}`}><span className="shrink-0 w-24 text-[11px] font-black text-slate-400 leading-tight">{Array.isArray(r[2]?.notes)&&r[2].notes.length>0&&<span data-help-note-swatches className="mb-1 flex gap-1">{r[2].notes.map(k=><RhythmNoteSwatch key={k} kind={k} width={r[2].notes.length>1?44:54} height={r[2].notes.length>1?34:42}/>)}</span>}{helpWrap(r[0],7)}</span><span className="flex-1 text-[11px] text-white leading-relaxed">{helpWrap(r[1])}</span></div>))}</div>;
   // 実データから作る表。難易度・アイテム・ログボ・ミッションはここで全件出るので取りこぼさない
-  if(b.t==='data'){const rows=helpDataRows(b.id);if(rows.length===0)return null;return(<div key={i}><div className="text-[10px] font-black mb-1 tracking-wider" style={{color:accent}}>{HELP_DATA_TITLES[b.id]||''}</div><div className="rounded-2xl bg-black/50 border border-white/5 overflow-hidden">{rows.map((r,j)=>(<div key={j} className={`flex gap-3 px-4 py-2.5 ${j>0?'border-t border-white/5':''}`}><span className="shrink-0 w-24 text-[11px] font-black text-slate-400 leading-tight">{r[0]}</span><span className="flex-1 text-[11px] text-white leading-relaxed">{helpWrap(r[1])}</span></div>))}</div></div>);}
+  if(b.t==='data'){const rows=helpDataRows(b.id);if(rows.length===0)return null;return(<div key={i}><div className="text-[10px] font-black mb-1 tracking-wider" style={{color:accent}}>{HELP_DATA_TITLES[b.id]||''}</div><div className="rounded-2xl bg-black/50 border border-white/5 overflow-hidden">{rows.map((r,j)=>(<div key={j} className={`flex gap-3 px-4 py-2.5 ${j>0?'border-t border-white/5':''}`}><span className="shrink-0 w-24 text-[11px] font-black text-slate-400 leading-tight">{helpWrap(r[0],7)}</span><span className="flex-1 text-[11px] text-white leading-relaxed">{helpWrap(r[1])}</span></div>))}</div></div>);}
   return <p key={i} className="text-[12px] text-slate-200 leading-relaxed">{helpWrap(b.text)}</p>;
 });
 // ---- 助手のひとことを出す回数(2026-10-10・改善 G6「助手の吹き出しが、ほぼ全画面に出たまま」→ 社長が選択肢1) ----
