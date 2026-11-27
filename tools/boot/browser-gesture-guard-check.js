@@ -87,7 +87,7 @@ const seed=()=>{ if (sessionStorage.getItem('s')) return; sessionStorage.setItem
       ok('② ブラウザでは、今までどおり別の画面で履歴を1つ足す(戻るでゲームの外へ出ない)',head&&len1===len0+1,`履歴 ${len0} → ${len1}`);
       await page.goBack().catch(()=>{});
       await page.waitForTimeout(900);
-      const r=await page.evaluate(()=>({home:!!document.querySelector('.mh-home-assistant'),url:location.pathname}));
+      const r=await page.evaluate(()=>({home:!!document.querySelector('.mh-home-assistant,.mh-home-assistant-fold'),url:location.pathname}));
       ok('② ブラウザの戻るで、ゲームの HOME へ戻る(外へ出ない)',r.home&&/monster-hero\/index\.html$/.test(r.url),JSON.stringify(r));
       // ②-2 HOME の上に重ねて開く画面・窓も、戻るで閉じる(2026-11-19 r1119-013 ⑥ C-1・U-15。前はゲームの外へ出ていた)
       for(const [name,sel] of [['モンヒロサクセス β','.msx'],['更新履歴','[aria-modal="true"],.mh-title-modal']]){
