@@ -21,9 +21,13 @@ const XMAS_NOVEL_CSS = `
   background-size: 260px 260px; animation: mh-nv-snow 14s linear infinite; }
 .mh-nv-snow.b { background-size: 170px 170px; opacity: .35; animation-duration: 9s; }
 @keyframes mh-nv-snow { from { background-position: 0 0; } to { background-position: 40px 260px; } }
-.mh-nv-fig { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); height: 78%; width: min(92vw, 560px); display: flex; align-items: flex-end; justify-content: center; pointer-events: none; }
-.mh-nv-fig img { max-height: 100%; max-width: 100%; object-fit: contain; object-position: bottom; filter: drop-shadow(0 6px 18px rgba(0,0,0,.6)); animation: mh-nv-in .35s ease; }
-.mh-nv-fig.face img { max-height: 46%; margin-bottom: 30%; border-radius: 50%; }
+/* 立ち絵の置き場(r1126-067)。上の端から文字の箱の上(名札の上)までの帯で、絵はその中に場面の見せ方(寄り・ふだん・引き)で置き、下の縁で切ってぼかす。
+   大きさと位置は useXmasNovelPlace が決める(置くまでは見せない) */
+.mh-nv-fig { position: absolute; left: 0; right: 0; top: 0; height: 78%; overflow: hidden; pointer-events: none;
+  -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 26px), transparent); mask-image: linear-gradient(180deg, #000 calc(100% - 26px), transparent); }
+.mh-nv-fig:not([data-placed]) > * { visibility: hidden; }
+.mh-nv-fig img { position: absolute; object-fit: contain; filter: drop-shadow(0 6px 18px rgba(0,0,0,.6)); animation: mh-nv-in .35s ease; }
+.mh-nv-fig.face img { border-radius: 50%; }
 .mh-nv-fig.dim img, .mh-nv-fig.dim svg { filter: brightness(.55) drop-shadow(0 6px 18px rgba(0,0,0,.6)); }
 @keyframes mh-nv-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 .mh-nv-box { position: absolute; left: 50%; transform: translateX(-50%); bottom: max(10px, env(safe-area-inset-bottom)); width: min(calc(100% - 20px), 880px); min-height: 132px;
@@ -186,7 +190,7 @@ const XMAS_NOVEL_CSS = `
 @keyframes mh-nv-zoom-out { 0% { transform: translate(-50%, -50%) scale(4); opacity: .2; } 100% { transform: translate(-50%, -50%) scale(.6); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .mh-nv-noise, .mh-nv-boot-logo, .mh-nv-boot-press { animation: none; } .mh-nv-transit { animation-duration: .01s !important; } }
 @media (orientation: landscape) and (max-height: 560px) {
-  .mh-nv-fig { left: 4%; transform: none; height: 96%; width: min(40vw, 420px); }
+  .mh-nv-fig { left: 0; right: auto; width: min(42vw, 460px); }
   .mh-nv-box { left: auto; right: 10px; transform: none; width: min(calc(60vw - 10px), 760px); min-height: 110px; padding-top: 20px; }
   .mh-nv-text { font-size: 15px; line-height: 1.65; }
   .mh-nv-cast { grid-template-columns: repeat(12, minmax(0, 1fr)); }
@@ -336,34 +340,86 @@ const XmasNovelLaptop = () => (
 // シルエットの笑い(名前を伏せた声で「ふふ」「あはは」)。笑い声の音源はまだ無いので、いまはボスの技の音で代える
 const xmasNovelIsSilhouette = (row) => !!(row && /黒いサンタのシルエット|黒いサンタの影/.test(row.x || ''));
 const xmasNovelIsLaugh = (row) => !!(row && /ふふ|あはは|ははは/.test(row.x || ''));
-//  顔が台詞の欄に隠れないよう、立ち絵ごとの「あご」の高さ(絵の上から何割の所か)。出したあと、文の箱と絵の実際の位置を測り、
-//  あごが箱の上の縁より上に来るまで絵を持ち上げる(縦・横・タブレットで箱の大きさが違っても合う。横並びで重ならないときは動かさない)
-const XMAS_NOVEL_CHIN = Object.freeze({
-  atsu: 0.46, myua: 0.47, sorashido: 0.46, kiki: 0.47, momosuke: 0.47, dra: 0.76, kyuko: 0.47, erubin: 0.47,
-  ichika: 0.30, mochimaru: 0.35, kuroba: 0.50, shirase: 0.50, shadow: 0.42, boss: 0.40,
+// ---- 立ち絵の見せ方(r1126-067) ----
+//  寄り(close): 胸から上を大きく / ふだん(normal): 頭から腰 / 引き(far): 全身を小さめ。台本の〔立ち:寄り〕〔立ち:引き〕の印(行 f > 場面 frame > ふだん)。
+//  絵ごとに描かれている範囲が違う(助手は頭〜太もも、謎の客2人は胸から上、モンスターは全身)ので、絵の上から何割の所に胸・腰があるか(chest・waist)と、
+//  左右の透明な余白を除いた絵の範囲(l・r)を持つ。文字の箱の上の縁(名札の上)で絵を切って下をぼかすので、箱の裏に体が透けず、名札も手や顔にかからない。
+//  横長の画面で箱が右に寄り重ならないときは、画面の下の縁で切る。絵の縦横の比率は変えない
+const XMAS_NOVEL_FRAMES = Object.freeze(['close', 'normal', 'far']);
+const XMAS_NOVEL_MARKS = Object.freeze({
+  atsu: { chest: 0.62, waist: 0.9, l: 0.15, r: 0.76 },
+  myua: { chest: 0.6, waist: 0.82, l: 0.03, r: 0.97 },
+  sorashido: { chest: 0.6, waist: 0.86, l: 0.01, r: 0.84 },
+  kiki: { chest: 0.6, waist: 0.81, l: 0.01, r: 0.93 },
+  momosuke: { chest: 0.62, waist: 0.76, l: 0.12, r: 0.93 },
+  kyuko: { chest: 0.6, waist: 0.77, l: 0.28, r: 0.9 },
+  erubin: { chest: 0.65, waist: 0.94, l: 0.09, r: 0.76 },
+  kuroba: { chest: 0.74, waist: 1, l: 0, r: 1 },
+  shirase: { chest: 0.72, waist: 1, l: 0, r: 1 },
+  ichika: { chest: 0.42, waist: 0.66, l: 0.32, r: 0.68 },
+  mochimaru: { chest: 0.5, waist: 0.75, l: 0.18, r: 0.82 },
+  dra: { chest: 1, waist: 1, l: 0.1, r: 0.9 },
+  shadow: { chest: 0.58, waist: 0.82, l: 0.1, r: 0.9 },
+  boss: { chest: 0.5, waist: 0.72, l: 0.05, r: 0.95 },
+  watson: { chest: 1, waist: 1, l: 0.05, r: 0.95 },
 });
-const XmasNovelLift = ({ chin, children }) => {
+// 見せ方ごとの「切れ目(絵の上から何割)」・見える高さ(箱の上の空きに対する割合)・絵の幅の上限(置き場の幅に対する割合)
+const XMAS_NOVEL_FRAME_FIT = Object.freeze({
+  close: { cut: 'chest', vis: 0.84, maxW: 1.12 },
+  normal: { cut: 'waist', vis: 0.74, maxW: 0.94 },
+  far: { cut: 'all', vis: 0.6, maxW: 0.66 },
+});
+const xmasNovelFrameOf = (row, scene) => {
+  const f = (row && row.f) || (scene && scene.frame) || 'normal';
+  return XMAS_NOVEL_FRAMES.includes(f) ? f : 'normal';
+};
+// 置き場(.mh-nv-fig)の大きさと文字の箱から、絵の大きさと位置を決める(純粋な計算。検査からも呼ぶ)
+//   stageW/H: 置き場の幅・画面の高さ / top: 上のボタン列の下 / cutY: 絵を切る高さ / ar: 絵の 幅÷高さ
+const xmasNovelPlaceFig = ({ stageW, top, cutY, ar, mark, frame }) => {
+  const fit = XMAS_NOVEL_FRAME_FIT[frame] || XMAS_NOVEL_FRAME_FIT.normal;
+  const m = mark || XMAS_NOVEL_MARKS.shadow;
+  const cutF = fit.cut === 'all' ? 1 : Math.min(1, Math.max(0.2, m[fit.cut]));
+  const avail = Math.max(60, cutY - top);
+  const span = Math.max(0.2, (m.r - m.l)); // 透明な余白を除いた絵の幅(絵の幅に対する割合)
+  let h = (avail * fit.vis) / cutF;
+  const maxH = (stageW * fit.maxW) / (ar * span);
+  if (h > maxH) h = maxH;
+  if (h * cutF > avail) h = avail / cutF; // 頭が上のボタン列にかからない
+  const w = h * ar;
+  const left = stageW / 2 - w * ((m.l + m.r) / 2); // 描かれている所の真ん中を置き場の真ん中に
+  return { w: Math.round(w), h: Math.round(h), left: Math.round(left), top: Math.round(cutY - h * cutF) };
+};
+const useXmasNovelPlace = (who, frame, artKey) => {
   const ref = useRef(null);
   useEffect(() => {
-    const wrap = ref.current;
-    const fig = wrap && wrap.firstElementChild;
-    if (!fig || !Number.isFinite(chin)) return undefined;
-    let lift = 0;
+    const fig = ref.current;
+    if (!fig) return undefined;
     let raf = 0;
     const fit = () => {
       raf = 0;
       const art = fig.firstElementChild;
+      const stage = fig.parentElement;
+      if (!art || !stage) return;
+      let ar = 0;
+      if (art.tagName === 'IMG') { if (!art.naturalWidth || !art.naturalHeight) return; ar = art.naturalWidth / art.naturalHeight; }
+      else {
+        const vb = art.tagName === 'svg' && art.viewBox && art.viewBox.baseVal;
+        ar = vb && vb.width && vb.height ? vb.width / vb.height : (art.classList.contains('mh-nv-boss') ? 985 / 1347 : 0.7);
+      }
+      const s = stage.getBoundingClientRect();
+      const f = fig.getBoundingClientRect();
       const box = document.querySelector('[data-xmas-novel-box]');
-      if (!art || !box) return;
-      const a = art.getBoundingClientRect();
-      const b = box.getBoundingClientRect();
-      if (!a.height || !b.height) return;
-      const overlapX = Math.min(a.right, b.right) - Math.max(a.left, b.left) > a.width * 0.2;
-      const need = overlapX ? (a.top + a.height * chin) - (b.top - 6) : -lift;
-      const next = Math.max(0, Math.round(lift + need));
-      if (Math.abs(next - lift) < 1) return;
-      lift = next;
-      fig.style.translate = lift ? `0 ${-lift}px` : '';
+      const bar = document.querySelector('.mh-nv-top');
+      const b = box ? box.getBoundingClientRect() : null;
+      const overlapX = b && b.height ? Math.min(f.right, b.right) - Math.max(f.left, b.left) > f.width * 0.3 : false;
+      // 名札は箱の上の縁から 15px はみ出るので、その上で切る
+      const cutY = overlapX ? b.top - s.top - 20 : s.height;
+      const top = bar ? bar.getBoundingClientRect().bottom - s.top + 8 : 56;
+      const p = xmasNovelPlaceFig({ stageW: f.width, top, cutY, ar, mark: XMAS_NOVEL_MARKS[who], frame });
+      fig.style.height = `${Math.max(0, Math.round(cutY))}px`;
+      Object.assign(art.style, { position: 'absolute', left: `${p.left}px`, top: `${p.top}px`, width: `${p.w}px`, height: `${p.h}px`, maxWidth: 'none', maxHeight: 'none', margin: '0' });
+      fig.setAttribute('data-placed', '');
+      fig.setAttribute('data-xmas-novel-frame', frame);
     };
     const later = () => { if (!raf) raf = requestAnimationFrame(fit); };
     later();
@@ -371,7 +427,7 @@ const XmasNovelLift = ({ chin, children }) => {
     if (art && art.tagName === 'IMG') art.addEventListener('load', later);
     const box = document.querySelector('[data-xmas-novel-box]');
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(later) : null;
-    if (ro) { if (box) ro.observe(box); ro.observe(fig); }
+    if (ro) { if (box) ro.observe(box); if (fig.parentElement) ro.observe(fig.parentElement); }
     window.addEventListener('resize', later);
     return () => {
       if (raf) cancelAnimationFrame(raf);
@@ -379,30 +435,29 @@ const XmasNovelLift = ({ chin, children }) => {
       if (ro) ro.disconnect();
       window.removeEventListener('resize', later);
     };
-  }, [chin]);
-  return <div ref={ref} style={{ display: 'contents' }}>{children}</div>;
+  }, [who, frame, artKey]);
+  return ref;
 };
 const XmasNovelFigure = (props) => {
   const { row } = props;
   const who = !row ? '' : (row.t === 'band' ? 'boss' : (row.n === '？？？' ? (xmasNovelIsLaugh(row) ? 'boss' : 'shadow') : (row.w || '')));
-  const inner = <XmasNovelFigureArt {...props} />;
-  const chin = XMAS_NOVEL_CHIN[who] || (who && who !== 'watson' ? XMAS_NOVEL_CHIN.shadow : NaN);
-  return <XmasNovelLift chin={chin} key={`${who}-${(row && row.e) || ''}`}>{inner}</XmasNovelLift>;
+  return <XmasNovelFigureArt {...props} who={who} frame={xmasNovelFrameOf(row, props.scene)} key={`${who}-${(row && row.e) || ''}`} />;
 };
-const XmasNovelFigureArt = ({ row, dim = false }) => {
+const XmasNovelFigureArt = ({ row, dim = false, who = '', frame = 'normal' }) => {
   const [broken, setBroken] = useState(0);
-  if (row && row.t === 'band' && xmasNovelIsSilhouette(row)) return <div className={`mh-nv-fig${dim ? ' dim' : ''}`} key={`band-${row.id}`}><XmasNovelBossShadow /></div>;
+  const ref = useXmasNovelPlace(who, frame, `${row ? row.id : ''}-${broken}`);
+  if (row && row.t === 'band' && xmasNovelIsSilhouette(row)) return <div ref={ref} className={`mh-nv-fig${dim ? ' dim' : ''}`} key={`band-${row.id}`}><XmasNovelBossShadow /></div>;
   if (!row || row.t !== 'line') return null;
   const key = `${row.w || row.n}-${row.e || ''}`;
   const laugh = row.n === '？？？' && xmasNovelIsLaugh(row);
-  if (row.n === '？？？' || !row.w) return row.n === '？？？' ? <div className={`mh-nv-fig${dim ? ' dim' : ''}${laugh ? ' laugh' : ''}`} key={key}>{laugh ? <XmasNovelBossShadow /> : <XmasNovelShadow tone="#1c2240" label="？？？" />}</div> : null;
-  if (row.w === 'watson') return <div className="mh-nv-fig" key={key}><XmasNovelLaptop /></div>;
+  if (row.n === '？？？' || !row.w) return row.n === '？？？' ? <div ref={ref} className={`mh-nv-fig${dim ? ' dim' : ''}${laugh ? ' laugh' : ''}`} key={key}>{laugh ? <XmasNovelBossShadow /> : <XmasNovelShadow tone="#1c2240" label="？？？" />}</div> : null;
+  if (row.w === 'watson') return <div ref={ref} className="mh-nv-fig" key={key}><XmasNovelLaptop /></div>;
   const c = xmasNovelCastOf(row.w);
   const fig = xmasNovelFigureSrc(row.w, row.e);
-  if (!fig || broken >= 2) return <div className={`mh-nv-fig${dim ? ' dim' : ''}`} key={key}><XmasNovelShadow tone={(c && c.tone) || '#2a3350'} label={c ? c.name : ''} /></div>;
+  if (!fig || broken >= 2) return <div ref={ref} className={`mh-nv-fig${dim ? ' dim' : ''}`} key={key}><XmasNovelShadow tone={(c && c.tone) || '#2a3350'} label={c ? c.name : ''} /></div>;
   const src = broken === 1 && fig.fallback ? fig.fallback : fig.src;
   return (
-    <div className={`mh-nv-fig${fig.face ? ' face' : ''}${dim ? ' dim' : ''}`} key={key}>
+    <div ref={ref} className={`mh-nv-fig${fig.face ? ' face' : ''}${dim ? ' dim' : ''}`} key={key}>
       <img src={src} alt={c ? c.name : ''} draggable={false} onError={() => setBroken((b) => (b === 0 && fig.fallback ? 1 : 2))} />
     </div>
   );
@@ -1017,7 +1072,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
       <div key={`stage-${shake}`} className={`mh-nv-stage${shake ? ' mh-nv-shake' : ''}`} onClick={advance}>
         <div className="mh-nv-bg" key={bgName || (scene ? scene.id : 'bg')} data-xmas-novel-bg={bg.tintKind || ''} style={bg.img ? { backgroundImage: `${bg.tint ? `${bg.tint}, ` : ''}url(${bg.img})`, backgroundPosition: bg.pos || 'center' } : { background: bg.grad }} />
         {(bg.snow || !bg.img) && <><div className="mh-nv-snow" />{bg.snow && <div className="mh-nv-snow b" />}</>}
-        {!darkNow && (isLine || (isBand && xmasNovelIsSilhouette(row))) && <XmasNovelFigure row={row} />}
+        {!darkNow && (isLine || (isBand && xmasNovelIsSilhouette(row))) && <XmasNovelFigure row={row} scene={scene} />}
         {fx && <div key={fx.n} className={`mh-nv-fx ${fx.kind}`} />}
         {isBand && row.body && <XmasNovelBody key={`body-${row.body}`} who={xmasNovelBodyWho(row.body, st && st.cur && st.cur.flags)} scene={scene ? scene.id : ''} at={st && st.cur && Number.isFinite(st.cur.idx) ? st.cur.idx : 0} />}
         {isBand && !row.body && Array.isArray(row.fx) && row.fx.includes('fallen') && <XmasNovelFallen />}
