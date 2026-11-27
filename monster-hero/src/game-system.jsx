@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 895d8aee1006932d
+// generated-sha256: 9eebea32b1b999ae
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -67495,14 +67495,17 @@ const XmasEventScreen = ({ tab = 'story', onTab, onBack, forced = false, preOpen
     void xmasCardStarterReady().then((ok) => {
       cardCheckingRef.current = false;
       if (ok) raid.onChallenge(kind, tierIndex, way);
-      else setNotice('バトルカードで挑むには、MFバトルカードのスターターが要ります。HOME の「MFバトルカード」でスターターを受け取ってから挑戦してください');
+      // スターターが無い人: 案内から MFバトルカードのスターター選びへ行ける(受け取ったらそのままボスに挑み、終わるとレイドへ戻る。2026-11-27 開幕前の点検 r1126-061)
+      else setNotice({ text: 'バトルカードで挑むには、MFバトルカードのスターターが要ります。「MFバトルカードへ」からスターターを受け取ると、そのままボスに挑めます', go: () => raid.onChallenge(kind, tierIndex, way) });
     });
   };
   const noticeSheet = notice ? (
     <div data-xmas-event-notice className="fixed inset-0 z-[80] flex items-center justify-center bg-black/65 p-4" onClick={() => setNotice('')}>
       <div role="dialog" aria-label="お知らせ" className="mh-xmas-frame w-full max-w-sm rounded-2xl bg-gradient-to-b from-[#16264a] to-[#0b1530] p-4 text-center" onClick={(e) => e.stopPropagation()}>
         <XmasHolly size={32} className="mx-auto mb-1" />
-        <p className="mb-3 text-[13px] font-bold leading-relaxed text-amber-50" style={JA_LABEL_STYLE}>{jaWrap(notice)}</p>
+        <p className="mb-3 text-[13px] font-bold leading-relaxed text-amber-50" style={JA_LABEL_STYLE}>{jaWrap(typeof notice === 'string' ? notice : notice.text)}</p>
+        {typeof notice === 'object' && typeof notice.go === 'function' && <button type="button" data-xmas-event-notice-go onClick={() => { const go = notice.go; setNotice(''); go(); }}
+          className="mb-2 w-full min-h-[44px] rounded-xl border border-sky-300/70 bg-sky-800 text-[13px] font-black text-white active:scale-95">MFバトルカードへ</button>}
         <button type="button" data-xmas-event-notice-close onClick={() => setNotice('')}
           className="w-full min-h-[44px] rounded-xl border border-white/15 bg-slate-800 text-[13px] font-black text-slate-100 active:scale-95">閉じる</button>
       </div>
@@ -118396,7 +118399,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     setRaidDone(null);
     setRaid(raidChallenge);
     // スターターをまだ受け取っていない人は、デッキが無いので挑めない(レイド画面へ戻す)
-    if (!save.starter) { setNotice('MFバトルカードのスターターを受け取ると挑めます'); if (typeof raidChallenge.onClose === 'function') raidChallenge.onClose('noStarter'); return; }
+    // スターターをまだ受け取っていない人は、スターター選びへ。受け取ったら、そのままボス戦のデッキえらびへ進む(戻るとレイド画面へ。2026-11-27 開幕前の点検 r1126-061)
+    if (!save.starter) { setNotice('スターターを受け取ると、そのままボスに挑めます'); setView('starter'); return; }
     setDeckPick({ next: 'raid', pick: { who: 'raid', level: cardRaidTierOf(raidChallenge.tierIndex).level, raid: raidChallenge } });
     setView('deckPick');
   }, [raidChallenge, !!save]);
@@ -119231,7 +119235,12 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   // ---- はじめのスターターを開ける(パックと同じ画面。閉じたら、練習試合がまだなら練習試合へ) ----
   if (view === 'starter-open' && starterOpen) {
     const needTutorial = !save.tutorial.done && !save.tutorial.skipped;
-    return <CardPackOpen db={db} result={{ ...starterOpen, doneLabel: needTutorial ? '練習試合へ' : 'トップへ戻る' }} onDone={() => { setStarterOpen(null); setView('top'); if (needTutorial) startTutorial(); }}/>;
+    return <CardPackOpen db={db} result={{ ...starterOpen, doneLabel: raid ? 'ボスに挑む' : needTutorial ? '練習試合へ' : 'トップへ戻る' }} onDone={() => {
+      setStarterOpen(null);
+      // レイドから来た人: 練習試合は後に回して(次に MFバトルカードを開いたときの案内のまま)、ボス戦のデッキえらびへ
+      if (raid) { setDeckPick({ next: 'raid', pick: { who: 'raid', level: cardRaidTierOf(raid.tierIndex).level, raid } }); setView('deckPick'); return; }
+      setView('top'); if (needTutorial) startTutorial();
+    }}/>;
   }
 
   // ---- スターター選び(一度きり) ----
@@ -119240,7 +119249,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     const pick = kitPick ? db.starters[kitPick] : null;
     return (
       <div data-mh-screen data-card-top="starter" className={SCREEN_SHELL_CLASS}>
-        <ScreenHead title="スターターを選ぶ" accent="text-amber-200" onBack={save.starter ? () => setView('top') : onExit} note="最初の1つは無料。選ばなかった2つは、あとでビートPで買えます"/>
+        <ScreenHead title="スターターを選ぶ" accent="text-amber-200" onBack={save.starter ? () => setView('top') : raid ? () => { const rc = raid; setRaid(null); setView('top'); if (typeof rc.onClose === 'function') rc.onClose('back'); } : onExit} note="最初の1つは無料。選ばなかった2つは、あとでビートPで買えます"/>
         <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
           {kits.map((k) => (
             // 「中身を見る」で、選ぶ前に入っているカードを確かめられる(2026-10-27 社長「最初にやるときにスターターパックの中身が分からない」案A)

@@ -3322,7 +3322,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     setRaidDone(null);
     setRaid(raidChallenge);
     // スターターをまだ受け取っていない人は、デッキが無いので挑めない(レイド画面へ戻す)
-    if (!save.starter) { setNotice('MFバトルカードのスターターを受け取ると挑めます'); if (typeof raidChallenge.onClose === 'function') raidChallenge.onClose('noStarter'); return; }
+    // スターターをまだ受け取っていない人は、スターター選びへ。受け取ったら、そのままボス戦のデッキえらびへ進む(戻るとレイド画面へ。2026-11-27 開幕前の点検 r1126-061)
+    if (!save.starter) { setNotice('スターターを受け取ると、そのままボスに挑めます'); setView('starter'); return; }
     setDeckPick({ next: 'raid', pick: { who: 'raid', level: cardRaidTierOf(raidChallenge.tierIndex).level, raid: raidChallenge } });
     setView('deckPick');
   }, [raidChallenge, !!save]);
@@ -4157,7 +4158,12 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   // ---- はじめのスターターを開ける(パックと同じ画面。閉じたら、練習試合がまだなら練習試合へ) ----
   if (view === 'starter-open' && starterOpen) {
     const needTutorial = !save.tutorial.done && !save.tutorial.skipped;
-    return <CardPackOpen db={db} result={{ ...starterOpen, doneLabel: needTutorial ? '練習試合へ' : 'トップへ戻る' }} onDone={() => { setStarterOpen(null); setView('top'); if (needTutorial) startTutorial(); }}/>;
+    return <CardPackOpen db={db} result={{ ...starterOpen, doneLabel: raid ? 'ボスに挑む' : needTutorial ? '練習試合へ' : 'トップへ戻る' }} onDone={() => {
+      setStarterOpen(null);
+      // レイドから来た人: 練習試合は後に回して(次に MFバトルカードを開いたときの案内のまま)、ボス戦のデッキえらびへ
+      if (raid) { setDeckPick({ next: 'raid', pick: { who: 'raid', level: cardRaidTierOf(raid.tierIndex).level, raid } }); setView('deckPick'); return; }
+      setView('top'); if (needTutorial) startTutorial();
+    }}/>;
   }
 
   // ---- スターター選び(一度きり) ----
@@ -4166,7 +4172,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     const pick = kitPick ? db.starters[kitPick] : null;
     return (
       <div data-mh-screen data-card-top="starter" className={SCREEN_SHELL_CLASS}>
-        <ScreenHead title="スターターを選ぶ" accent="text-amber-200" onBack={save.starter ? () => setView('top') : onExit} note="最初の1つは無料。選ばなかった2つは、あとでビートPで買えます"/>
+        <ScreenHead title="スターターを選ぶ" accent="text-amber-200" onBack={save.starter ? () => setView('top') : raid ? () => { const rc = raid; setRaid(null); setView('top'); if (typeof rc.onClose === 'function') rc.onClose('back'); } : onExit} note="最初の1つは無料。選ばなかった2つは、あとでビートPで買えます"/>
         <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
           {kits.map((k) => (
             // 「中身を見る」で、選ぶ前に入っているカードを確かめられる(2026-10-27 社長「最初にやるときにスターターパックの中身が分からない」案A)

@@ -320,14 +320,17 @@ const XmasEventScreen = ({ tab = 'story', onTab, onBack, forced = false, preOpen
     void xmasCardStarterReady().then((ok) => {
       cardCheckingRef.current = false;
       if (ok) raid.onChallenge(kind, tierIndex, way);
-      else setNotice('バトルカードで挑むには、MFバトルカードのスターターが要ります。HOME の「MFバトルカード」でスターターを受け取ってから挑戦してください');
+      // スターターが無い人: 案内から MFバトルカードのスターター選びへ行ける(受け取ったらそのままボスに挑み、終わるとレイドへ戻る。2026-11-27 開幕前の点検 r1126-061)
+      else setNotice({ text: 'バトルカードで挑むには、MFバトルカードのスターターが要ります。「MFバトルカードへ」からスターターを受け取ると、そのままボスに挑めます', go: () => raid.onChallenge(kind, tierIndex, way) });
     });
   };
   const noticeSheet = notice ? (
     <div data-xmas-event-notice className="fixed inset-0 z-[80] flex items-center justify-center bg-black/65 p-4" onClick={() => setNotice('')}>
       <div role="dialog" aria-label="お知らせ" className="mh-xmas-frame w-full max-w-sm rounded-2xl bg-gradient-to-b from-[#16264a] to-[#0b1530] p-4 text-center" onClick={(e) => e.stopPropagation()}>
         <XmasHolly size={32} className="mx-auto mb-1" />
-        <p className="mb-3 text-[13px] font-bold leading-relaxed text-amber-50" style={JA_LABEL_STYLE}>{jaWrap(notice)}</p>
+        <p className="mb-3 text-[13px] font-bold leading-relaxed text-amber-50" style={JA_LABEL_STYLE}>{jaWrap(typeof notice === 'string' ? notice : notice.text)}</p>
+        {typeof notice === 'object' && typeof notice.go === 'function' && <button type="button" data-xmas-event-notice-go onClick={() => { const go = notice.go; setNotice(''); go(); }}
+          className="mb-2 w-full min-h-[44px] rounded-xl border border-sky-300/70 bg-sky-800 text-[13px] font-black text-white active:scale-95">MFバトルカードへ</button>}
         <button type="button" data-xmas-event-notice-close onClick={() => setNotice('')}
           className="w-full min-h-[44px] rounded-xl border border-white/15 bg-slate-800 text-[13px] font-black text-slate-100 active:scale-95">閉じる</button>
       </div>
