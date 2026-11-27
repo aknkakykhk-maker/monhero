@@ -64,7 +64,7 @@ const STORY_KEY = seeds.eventStoryKey();
       } else {
         check(`${label}: HOME で導入(raid_xmas_story_1b)が流れる`, storyId === 'raid_xmas_story_1b', String(storyId));
         // 最後までめくる。黒羽・白瀬が話す行で、顔の絵が出ているかを見る
-        const speakers = new Set(); let faceOk = { kuroba: false, shirase: false, ham: false }; const shotDone = new Set();
+        const speakers = new Set(); let faceOk = { kuroba: false, shirase: false, ham: false, santa: false }; const shotDone = new Set();
         for (let i = 0; i < 200; i++) {
           const st = await page.evaluate(() => {
             const root = document.querySelector('[data-event-story]');
@@ -73,7 +73,7 @@ const STORY_KEY = seeds.eventStoryKey();
             return { text: root.textContent || '', imgs };
           });
           if (!st) break;
-          for (const [id, name, part] of [['kuroba', '黒羽', 'story-guests/kuroba_face.png'], ['shirase', '白瀬', 'story-guests/shirase_face.png'], ['ham', 'ハム', 'monster-icons/face/ham.png']]) {
+          for (const [id, name, part] of [['kuroba', '黒羽', 'story-guests/kuroba_face.png'], ['shirase', '白瀬', 'story-guests/shirase_face.png'], ['ham', 'ハム', 'monster-icons/face/ham.png'], ['santa', 'サンタ', 'enemies/santa-red.png']]) {
             const im = st.imgs.find((x) => x.src.includes(part));
             if (im) { speakers.add(name); if (im.ok) faceOk[id] = true; if (SHOT_DIR && !shotDone.has(id) && st.text.includes(name)) { fs.mkdirSync(SHOT_DIR, { recursive: true }); await page.screenshot({ path: path.join(SHOT_DIR, `raid-xmas-story-${id}.jpg`), type: 'jpeg', quality: 80 }); shotDone.add(id); } }
           }
@@ -81,7 +81,7 @@ const STORY_KEY = seeds.eventStoryKey();
           if (!next) { await page.mouse.click(195, 600); }
           await page.waitForTimeout(140);
         }
-        check(`${label}: 黒羽・白瀬・ハムが顔の絵つきで話す`, faceOk.kuroba && faceOk.shirase && faceOk.ham, JSON.stringify(faceOk));
+        check(`${label}: 黒羽・白瀬・ハム・赤いサンタ(レイドの絵 santa-red.png・絵文字にしない)が顔の絵つきで話す`, faceOk.kuroba && faceOk.shirase && faceOk.ham && faceOk.santa, JSON.stringify(faceOk));
         await page.waitForTimeout(800);
         const seen = await page.evaluate((k) => { try { return JSON.parse(localStorage.getItem(k) || '[]'); } catch (e) { return []; } }, STORY_KEY);
         check(`${label}: 最後まで見ると「見た」の印が残る`, Array.isArray(seen) && seen.includes('raid_xmas_story_1b'));

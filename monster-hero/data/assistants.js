@@ -11350,8 +11350,9 @@ const STORY_GUEST_SPEAKERS = [
   { id: 'mochimaru', name: 'もちまる', role: 'ゲスト', speakBottom: true, emoji: '🍡', accent: '#fca5a5', image: 'images/monster-icons/face/mocchi.png', expressions: [], defaultExpression: 'normal' },
   { id: 'kuroba', name: '黒羽', role: 'ゲスト', speakBottom: true, emoji: '🕰️', accent: '#94a3b8', image: 'images/story-guests/kuroba_face.png', expressions: [], defaultExpression: 'normal' },
   { id: 'shirase', name: '白瀬', role: 'ゲスト', speakBottom: true, emoji: '🧤', accent: '#f87171', image: 'images/story-guests/shirase_face.png', expressions: [], defaultExpression: 'normal' },
-  // 赤いサンタは、まだゲームの中に絵が無いので絵文字で出す。黒いサンタはレイドのボスの絵(行の name で段階の名前に上書きする)
-  { id: 'xmas_santa', name: 'サンタ', role: 'ゲスト', speakBottom: true, emoji: '🎅', accent: '#ef4444', image: null, expressions: [], defaultExpression: 'normal' },
+  // 赤いサンタはレイドの絵(正気に戻ったサンタ・santa-red.png)。黒いサンタはレイドのボスの絵(行の name で段階の名前に上書きする)。
+  //   どちらも全身の絵なので imageFit: 'contain'。絵が読めないときだけ絵文字(r1126-083 の点検 1番)
+  { id: 'xmas_santa', name: 'サンタ', role: 'ゲスト', speakBottom: true, emoji: '🎅', accent: '#ef4444', image: (typeof RAID_XMAS_SANTA_IMG !== 'undefined' ? RAID_XMAS_SANTA_IMG : null), imageFit: 'contain', expressions: [], defaultExpression: 'normal' },
   // ペンションの雪かき係のハム(r1126-055)。サンタに憧れて手作りのサンタ帽をかぶっている。一人称「オイラ」
   { id: 'ham', name: 'ハム', role: 'ゲスト', emoji: '🐰', accent: '#d6a36b', image: (typeof HAM_FACE_ICON !== 'undefined' ? HAM_FACE_ICON : (typeof HAM_IMG !== 'undefined' ? HAM_IMG : null)), expressions: [], defaultExpression: 'normal' },
   { id: 'xmas_kurosanta', name: '黒いサンタ', role: 'ゲスト', emoji: '🎅', accent: '#7f1d1d', image: (typeof RAID_XMAS_BOSS_IMG !== 'undefined' ? RAID_XMAS_BOSS_IMG : null), imageFit: 'contain', expressions: [], defaultExpression: 'normal' },
