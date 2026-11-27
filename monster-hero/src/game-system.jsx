@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d55a175b80294068
+// generated-sha256: 196702dce34803a1
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -41759,6 +41759,27 @@ const jaKeepKanaRuns = (s, chunks, segs, { visible, letters, inKeepWord }) => {
   }
   return out.join('​');
 };
+// jaWrapPoints の最後に通す。日付・時刻と、割ると読めなくなる名前の中の折り目(U+200B)を外す(2026-11-27 ミハリの開幕前点検 r1126-061)。
+//   道具(Intl.Segmenter)は「12/31」を「12|/|31」、「3:59」を「3:|59」と読み、お知らせで「12/31(木) 3:」「59」と割れていた。
+//   名前は「エンド|ヒストリー」「名探|偵」(長い名前は入れない。後ろの字とひとかたまりになり、句読点の手前で折れる)。外すだけ(折り目を足さない)なので、ほかの文の折れ方は変わらない
+const JA_WRAP_NO_BREAK = [
+  /\d{1,4}\/\d{1,2}(?:\/\d{1,2})?(?:[(（][月火水木金土日](?:・祝)?[)）])?/g,
+  /\d{1,2}:\d{2}/g,
+  /聖夜の名探偵|名探偵|エンドヒストリー|手がかり帳|鐘が鳴る夜/g,
+];
+const jaWrapUnbreak = (marked) => {
+  if (typeof marked !== 'string' || !marked.includes('​')) return marked;
+  const plain = marked.replace(/​/g, '');
+  const spans = [];
+  for (const re of JA_WRAP_NO_BREAK) for (const m of plain.matchAll(re)) spans.push([m.index, m.index + m[0].length]);
+  if (!spans.length) return marked;
+  let pos = 0, out = '';
+  for (const ch of marked) {
+    if (ch === '​') { if (!spans.some(([a, b]) => pos > a && pos < b)) out += ch; continue; }
+    out += ch; pos += ch.length;
+  }
+  return out;
+};
 const jaWrapPoints = (text) => {
   const s = String(text ?? '');
   if (!s) return s;
@@ -41906,7 +41927,7 @@ const jaWrapPoints = (text) => {
       // 境目を含む部分(空白で区切った中)が7字を超えるときだけ分ける
       if (m && visible(m[1].split(/\s/).pop() + m[2].split(/\s/)[0]) > 7 && letters(m[1]) >= 2 && letters(m[2]) >= 2) chunks.splice(k, 1, m[1], m[2]);
     }
-    return jaKeepKanaRuns(s, chunks, segs, { visible, letters, inKeepWord });
+    return jaWrapUnbreak(jaKeepKanaRuns(s, chunks, segs, { visible, letters, inKeepWord }));
   } catch { return s; }
 };
 // 丸ごと包むのは、吹き出しのいちばん狭い1行(本文104〜112pxで約10字)に入るものだけ(長いと字が吹き出しの外へ出る)。字の無い顔文字だけは14字まで
@@ -52751,9 +52772,9 @@ const headline=n=>{const pages=(typeof assistantNoticePagesFor==='function')?ass
 return(
   <div data-update-guide-bundle className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:76000,backgroundColor:'rgba(2,6,23,.94)'}} role="dialog" aria-modal="true" aria-label="新しいお知らせの一覧">
     <div className="w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] flex flex-col overflow-hidden rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4" style={{paddingBottom:'calc(env(safe-area-inset-bottom) + 16px)'}}>
-      <div className="flex items-center gap-2"><AssistantFace who={who} size={56} accent={who.accent} expression="happy"/><div className="flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 p-2.5 text-sm font-bold text-white">新しいお知らせが{updateGuideQueue.length}件あるよ♪ 読みたいものだけ「くわしく」で開いてね。</div></div>
+      <div className="flex items-center gap-2"><AssistantFace who={who} size={56} accent={who.accent} expression="happy"/><div className="flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 p-2.5 text-sm font-bold text-white">新しいお知らせが{updateGuideQueue.length}件あるよ♪ 読みたいものだけ「詳しく」で開いてね。</div></div>
       <div className="mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto">{updateGuideQueue.map(n=><div key={n.id} data-update-guide-bundle-item={n.id} className="flex items-center gap-2 rounded-2xl border border-pink-400/40 bg-slate-900/80 p-2.5">
-        <div className="min-w-0 flex-1"><div className="text-[13px] font-black leading-snug text-pink-200">{n.title}</div><div className="mt-0.5 truncate text-[10px] font-bold text-slate-400">{headline(n)}</div></div>
+        <div className="min-w-0 flex-1"><div className="text-[13px] font-black leading-snug text-pink-200" style={typeof JA_LABEL_STYLE!=='undefined'?JA_LABEL_STYLE:undefined}>{typeof jaWrap==='function'?jaWrap(n.title):n.title}</div><div className="mt-0.5 truncate text-[10px] font-bold text-slate-400">{headline(n)}</div></div>
         <button type="button" onClick={()=>openUpdateGuideDetail(n.id)} className="min-h-[44px] shrink-0 rounded-xl bg-pink-500 px-3 text-xs font-black text-slate-950">詳しく</button>
       </div>)}</div>
       <button type="button" data-update-guide-bundle-later onClick={dismissUpdateGuideAll} className="mt-4 min-h-[50px] w-full shrink-0 rounded-2xl bg-slate-700 text-sm font-black text-white">あとで読む</button>
@@ -52790,7 +52811,7 @@ return(
         {notice.image&&<img data-update-notice-image src={notice.image} alt={`${notice.title}のお知らせ`}
           onError={e=>{e.currentTarget.style.display='none';}} decoding="async"
           className="mb-3 w-full max-h-[42vh] rounded-2xl border border-pink-400/50 object-contain"/>}
-        <h2 className="mb-1 text-center text-base font-black text-pink-200">{notice.title}</h2><p className="mb-3 text-center text-[10px] font-bold text-slate-400">{page+1} / {pages.length}</p>
+        <h2 className="mb-1 text-center text-base font-black text-pink-200" style={typeof JA_LABEL_STYLE!=='undefined'?JA_LABEL_STYLE:undefined}>{typeof jaWrap==='function'?jaWrap(notice.title):notice.title}</h2><p className="mb-3 text-center text-[10px] font-bold text-slate-400">{page+1} / {pages.length}</p>
         <div className="flex items-end gap-2"><AssistantFace who={who} size={76} accent={who.accent} expression={pageExpression}/><div className="flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-3 text-[13px] font-bold leading-relaxed text-white" style={bubbleWrapStyle()}>{bubbleWrap(assistantSpeakText(pageText,breederName,assistantBondLevelNow,assistantCallStyle,selectedAssistantId))}</div></div>
         {!last?<button onClick={()=>setUpdateGuidePage(page+1)} className="mt-4 min-h-[50px] w-full rounded-2xl bg-pink-500 text-sm font-black text-slate-950">次へ</button>:<div className={`mt-4 grid ${notice.destination?'grid-cols-2':'grid-cols-1'} gap-2`}>{notice.destination&&<button onClick={()=>finishUpdateGuide(notice.destination)} className="min-h-[50px] rounded-2xl bg-pink-500 text-sm font-black text-slate-950">{notice.buttonLabel||'見に行く'}</button>}<button onClick={()=>finishUpdateGuide()} className="min-h-[50px] rounded-2xl bg-slate-700 text-sm font-black text-white">{notice.destination?'あとで':'閉じる'}</button></div>}
       </div>
@@ -67225,7 +67246,7 @@ const XMAS_EVENT_BONUSES = Object.freeze([
   { id: 'battle', icon: () => <Sword size={22} />, tone: 'border-orange-300/50 bg-orange-950/40 text-orange-100',
     title: 'モンヒロバトル', big: '1.5倍', body: 'バトルでもらえる経験値とダイヤが1.5倍になります' },
   { id: 'costume', icon: () => <XmasEventIcon name="shirt" />, tone: 'border-rose-300/50 bg-rose-950/40 text-rose-100',
-    title: '助手のクリスマスきせかえ', big: '', body: '助手のサンタ姿のきせかえが登場します' },
+    title: '助手のクリスマスきせかえ', big: '', body: '助手8人のクリスマスのきせかえが、ビートP交換所の「着替え」に並びます(ソラシドとあつは探偵の衣装です)' },
   { id: 'art', icon: () => <XmasEventIcon name="picture" />, tone: 'border-emerald-300/50 bg-emerald-950/40 text-emerald-100',
     title: 'ホーム・タイトルのクリスマスの絵', big: '', body: 'ホームとタイトルがクリスマスの絵になります(設定の「ホーム画面アレンジ」で選べます)' },
 ]);
@@ -67495,14 +67516,17 @@ const XmasEventScreen = ({ tab = 'story', onTab, onBack, forced = false, preOpen
     void xmasCardStarterReady().then((ok) => {
       cardCheckingRef.current = false;
       if (ok) raid.onChallenge(kind, tierIndex, way);
-      else setNotice('バトルカードで挑むには、MFバトルカードのスターターが要ります。HOME の「MFバトルカード」でスターターを受け取ってから挑戦してください');
+      // スターターが無い人: 案内から MFバトルカードのスターター選びへ行ける(受け取ったらそのままボスに挑み、終わるとレイドへ戻る。2026-11-27 開幕前の点検 r1126-061)
+      else setNotice({ text: 'バトルカードで挑むには、MFバトルカードのスターターが要ります。「MFバトルカードへ」からスターターを受け取ると、そのままボスに挑めます', go: () => raid.onChallenge(kind, tierIndex, way) });
     });
   };
   const noticeSheet = notice ? (
     <div data-xmas-event-notice className="fixed inset-0 z-[80] flex items-center justify-center bg-black/65 p-4" onClick={() => setNotice('')}>
       <div role="dialog" aria-label="お知らせ" className="mh-xmas-frame w-full max-w-sm rounded-2xl bg-gradient-to-b from-[#16264a] to-[#0b1530] p-4 text-center" onClick={(e) => e.stopPropagation()}>
         <XmasHolly size={32} className="mx-auto mb-1" />
-        <p className="mb-3 text-[13px] font-bold leading-relaxed text-amber-50" style={JA_LABEL_STYLE}>{jaWrap(notice)}</p>
+        <p className="mb-3 text-[13px] font-bold leading-relaxed text-amber-50" style={JA_LABEL_STYLE}>{jaWrap(typeof notice === 'string' ? notice : notice.text)}</p>
+        {typeof notice === 'object' && typeof notice.go === 'function' && <button type="button" data-xmas-event-notice-go onClick={() => { const go = notice.go; setNotice(''); go(); }}
+          className="mb-2 w-full min-h-[44px] rounded-xl border border-sky-300/70 bg-sky-800 text-[13px] font-black text-white active:scale-95">MFバトルカードへ</button>}
         <button type="button" data-xmas-event-notice-close onClick={() => setNotice('')}
           className="w-full min-h-[44px] rounded-xl border border-white/15 bg-slate-800 text-[13px] font-black text-slate-100 active:scale-95">閉じる</button>
       </div>
@@ -118621,7 +118645,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     setRaidDone(null);
     setRaid(raidChallenge);
     // スターターをまだ受け取っていない人は、デッキが無いので挑めない(レイド画面へ戻す)
-    if (!save.starter) { setNotice('MFバトルカードのスターターを受け取ると挑めます'); if (typeof raidChallenge.onClose === 'function') raidChallenge.onClose('noStarter'); return; }
+    // スターターをまだ受け取っていない人は、スターター選びへ。受け取ったら、そのままボス戦のデッキえらびへ進む(戻るとレイド画面へ。2026-11-27 開幕前の点検 r1126-061)
+    if (!save.starter) { setNotice('スターターを受け取ると、そのままボスに挑めます'); setView('starter'); return; }
     setDeckPick({ next: 'raid', pick: { who: 'raid', level: cardRaidTierOf(raidChallenge.tierIndex).level, raid: raidChallenge } });
     setView('deckPick');
   }, [raidChallenge, !!save]);
@@ -119456,7 +119481,12 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   // ---- はじめのスターターを開ける(パックと同じ画面。閉じたら、練習試合がまだなら練習試合へ) ----
   if (view === 'starter-open' && starterOpen) {
     const needTutorial = !save.tutorial.done && !save.tutorial.skipped;
-    return <CardPackOpen db={db} result={{ ...starterOpen, doneLabel: needTutorial ? '練習試合へ' : 'トップへ戻る' }} onDone={() => { setStarterOpen(null); setView('top'); if (needTutorial) startTutorial(); }}/>;
+    return <CardPackOpen db={db} result={{ ...starterOpen, doneLabel: raid ? 'ボスに挑む' : needTutorial ? '練習試合へ' : 'トップへ戻る' }} onDone={() => {
+      setStarterOpen(null);
+      // レイドから来た人: 練習試合は後に回して(次に MFバトルカードを開いたときの案内のまま)、ボス戦のデッキえらびへ
+      if (raid) { setDeckPick({ next: 'raid', pick: { who: 'raid', level: cardRaidTierOf(raid.tierIndex).level, raid } }); setView('deckPick'); return; }
+      setView('top'); if (needTutorial) startTutorial();
+    }}/>;
   }
 
   // ---- スターター選び(一度きり) ----
@@ -119465,7 +119495,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     const pick = kitPick ? db.starters[kitPick] : null;
     return (
       <div data-mh-screen data-card-top="starter" className={SCREEN_SHELL_CLASS}>
-        <ScreenHead title="スターターを選ぶ" accent="text-amber-200" onBack={save.starter ? () => setView('top') : onExit} note="最初の1つは無料。選ばなかった2つは、あとでビートPで買えます"/>
+        <ScreenHead title="スターターを選ぶ" accent="text-amber-200" onBack={save.starter ? () => setView('top') : raid ? () => { const rc = raid; setRaid(null); setView('top'); if (typeof rc.onClose === 'function') rc.onClose('back'); } : onExit} note="最初の1つは無料。選ばなかった2つは、あとでビートPで買えます"/>
         <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
           {kits.map((k) => (
             // 「中身を見る」で、選ぶ前に入っているカードを確かめられる(2026-10-27 社長「最初にやるときにスターターパックの中身が分からない」案A)
@@ -139984,7 +140014,7 @@ function MonsterHeroGame() {
     return(
     <div data-assistant-unlock-notice={scene} className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:76000,backgroundColor:'rgba(2,6,23,.94)'}} role="dialog" aria-modal="true" aria-label={notice.title}>
       <div className="w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
-        <h2 className="mb-1 text-center text-base font-black text-pink-200">{notice.title}</h2><p className="mb-3 text-center text-[10px] font-bold text-slate-400">{page+1} / {pages.length}</p>
+        <h2 className="mb-1 text-center text-base font-black text-pink-200" style={bubbleWrapStyle()}>{bubbleWrap(notice.title)}</h2><p className="mb-3 text-center text-[10px] font-bold text-slate-400">{page+1} / {pages.length}</p>
         <div className="flex items-end gap-2"><AssistantFace who={who} size={76} accent={who.accent} expression={notice.expression||'happy'}/><div className="flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-3 text-[13px] font-bold leading-relaxed text-white" style={bubbleWrapStyle()}>{bubbleWrap(assistantSpeakText(pages[page],breederName,assistantBondLevelNow,assistantCallStyle,selectedAssistantId))}</div></div>
         {!last
           ?<button onClick={()=>setAssistantUnlockPage(page+1)} className="mt-4 min-h-[50px] w-full rounded-2xl bg-pink-500 text-sm font-black text-slate-950">次へ</button>
