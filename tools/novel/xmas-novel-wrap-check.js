@@ -96,8 +96,8 @@ check('台本の文を集められた', jobs.length > 2000, `${jobs.length}本(�
     if (s !== j.text) { bad.push(`${j.where}: 字が変わった`); continue; }
     const segs = [...seg.segment(s)], edges = new Set([0, s.length]); segs.forEach((x) => { edges.add(x.index); edges.add(x.index + x.segment.length); });
     const spans = [];
-    for (const re of api.XMAS_NOVEL_KEEP_RES) for (const m of s.matchAll(re)) if (!/^[「『【]/.test(m[0]) || [...m[0]].length <= (max || 16)) spans.push([m.index, m.index + m[0].length]);
-    for (const w of api.xmasNovelKeepWords()) if ([...w].length <= (max || 16)) for (let i = s.indexOf(w); i >= 0; i = s.indexOf(w, i + 1)) spans.push([i, i + w.length]);
+    for (const re of api.XMAS_NOVEL_KEEP_RES) for (const m of s.matchAll(re)) if (!/^[「『【]/.test(m[0]) || [...m[0]].length <= (max || 18)) spans.push([m.index, m.index + m[0].length]);
+    for (const w of api.xmasNovelKeepWords()) if ([...w].length <= (max || 18)) for (let i = s.indexOf(w); i >= 0; i = s.indexOf(w, i + 1)) spans.push([i, i + w.length]);
     let pos = 0;
     plan.forEach((p, k) => {
       if (k > 0 && !p.space && !plan[k - 1].space) {
@@ -210,7 +210,7 @@ check('台本の文を集められた', jobs.length > 2000, `${jobs.length}本(�
             const tops = []; let txt = '';
             const walk = document.createTreeWalker(t, NodeFilter.SHOW_TEXT);
             for (let n = walk.nextNode(); n; n = walk.nextNode()) for (let i = 0; i < n.textContent.length; i++) { range.setStart(n, i); range.setEnd(n, i + 1); const r = range.getBoundingClientRect(); tops.push(r.width || r.height ? r.top : null); txt += n.textContent[i]; }
-            const spans = keepSpans(txt, ['endcard', 'titlecard', 'chaptercard'].includes(j.place) ? 10 : 16), edges = wordEdges(txt);
+            const spans = keepSpans(txt, ['endcard', 'titlecard', 'chaptercard'].includes(j.place) ? 10 : 18), edges = wordEdges(txt);
             const reasons = [];
             let prevTop = null, lineStart = 0;
             for (let i = 0; i < tops.length; i++) {

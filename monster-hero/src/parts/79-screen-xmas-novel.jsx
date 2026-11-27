@@ -821,9 +821,11 @@ const XMAS_NOVEL_KEEP_BASE = [
   '黒いサンタ', '聖夜のロンド', '十三番目の鐘', '十二の鐘', 'ペンション・シュプール', '聖夜の名探偵', '名探偵', '手がかり帳', '12年前の聖夜', '12年前', '12年後',
   'ワトソンくん', 'エンドヒストリー', 'セーブデータ', 'ノートパソコン', 'メリークリスマス', 'クリスマス会', 'クリスマス', 'モンヒロ', 'オルゴール', 'ミステリーノベル',
   '呪いのセーブデータ', 'モンヒロ事件簿', 'ポロロン', 'ローズ色', '銀の音符', '懐中時計', '子守歌', '招待状', 'サンタの帽子',
+  // お知らせの吹き出しでも使う(2026-11-28 r1126 ミハリの総点検「MF／バトルカード」)
+  'MFバトルカード', 'モンヒロビート', 'モンヒロバトル', 'ビートP', 'カードポイント',
 ];
-// 長い枠は1行に入らず、字が枠の外へ出る。包むのはこの字数まで(縦のいちばん狭い選択肢で1行約18字)
-const XMAS_NOVEL_KEEP_MAX = 16;
+// 長い枠は1行に入らず、字が枠の外へ出る。包むのはこの字数まで(縦の台詞で1行約18.6字・お知らせの吹き出しで約19字。2026-11-28 16→18)
+const XMAS_NOVEL_KEEP_MAX = 18;
 let _xmasNovelKeepWords = null;
 const xmasNovelKeepWords = () => {
   if (_xmasNovelKeepWords) return _xmasNovelKeepWords;
@@ -849,9 +851,14 @@ const XMAS_NOVEL_KEEP_RES = [
   /\d{1,2}\/\d{1,2}(?:[(（][月火水木金土日](?:・祝)?[)）])?(?:[ 　]?\d{1,2}:\d{2})?/g,
   /\d{1,2}:\d{2}/g,
   // かぎかっこの中の短い名前は、かっこごと(「黒いサンタ」『聖夜のロンド』【二通目の招待状】)
-  /[「『【][^「」『』【】\n]{1,12}[」』】]/g,
+  /[「『【][^「」『』【】\n]{1,14}[」』】]/g,
   // 数と単位(30センチ・3人・0じ)。前の「約」「第」「残り 」も
-  /(?:約|第|残り[ 　]?)?[0-9０-９]+(?:[.．][0-9０-９]+)?[ 　]?(?:センチ|メートル|キロ|ミリ|時間|人目|番目|通目|号室|人|年|時|分|秒|個|つ|回|日|月|歳|才|枚|本|通|度|階|号|じ|cm|m|%|％)/g,
+  //   続いた単位(4分12秒・1時間30分)もひとかたまり
+  /(?:約|第|残り[ 　]?)?(?:[0-9０-９]+(?:[.．][0-9０-９]+)?[ 　]?(?:センチ|メートル|キロ|ミリ|時間|人目|番目|通目|号室|人|年|時|分|秒|個|つ|回|日|月|歳|才|枚|本|通|度|階|号|じ|倍|cm|m|%|％))+/g,
+  // 数とそのあとのカタカナの言葉(2バージョン・3ステージ)
+  /[0-9０-９]+[ァ-ヶー]{2,}/g,
+  // 英字の並び(BPM 170・short ver.・Dear Santa)。空白をはさんでもひとかたまり(枠に入る長さのときだけ)
+  /[A-Za-z][A-Za-z0-9#.'&!?-]*(?:[ ][A-Za-z0-9#.'&!?-]+)+/g,
   /[一二三四五六七八九十百千]+(?:番目|人目|通目|時間|人|年|つ|回|度|階|日|分|時|本|枚|個|通)/g,
   // 三点リーダー・ダッシュの並び(「……」「——」)と、そのすぐあとの句読点
   /(?:…|‥|—|―){2,}[、。！？!?]*/g,
@@ -864,11 +871,13 @@ const xmasNovelGramBreak = (s, i) => {
   return (/て$/.test(b) && /^[^るたはぁぃぅぇぉっゃゅょー]/.test(a))
     || /[A-Za-z0-9０-９ァ-ヶー」』）)一-龯々][はがをにもへとでのや]$/.test(b)
     || (/^[はがをにもへのとや]/.test(a) && /[ぁ-ゖー]{2}$/.test(b) && !/[はがをにもへ]$/.test(b)) || (/で$/.test(b) && /^[^すしきもはるぁぃぅぇぉっゃゅょー]/.test(a))
-    || /(?:から|まで|けど|ので|のに|ても|でも|には|では|とは|って|たら|れば|ながら|けれど|より|だけ|ほど|など|ように|ような|という|か|を)$/.test(b)
+    // 「って」は引用の「って」だけ(漢字のすぐあとの「入って|る」は動詞の途中・r1126 総点検)
+    || /(?:から|まで|けど|ので|のに|ても|でも|には|では|とは|(?<![一-龯々])って|たら|れば|ながら|けれど|より|だけ|ほど|など|ように|ような|という|か|を)$/.test(b)
     || /^(?:です|でし|でしょ|だっ|だった|だよ|だね|だろ|じゃ|ように|ような|こと|もの|ため|わけ|はず|べき|かも|かな|なの|なん|ちゃん|くん|さん|ん[だでじ]|の(?:た|に|で|だ|か))/.test(a)
     || (/[くし]$/.test(b) && /^(?:な[るりっられ]|し[たてよま])/.test(a))
     || (/^[おご]/.test(a) && /[ぁ-ゖ一-龯]/.test(s[i + 1] || ''));
 };
+const xmasNovelWidth = (t) => [...String(t)].reduce((n, c) => n + (/[\x20-\x7e]/.test(c) ? 0.55 : 1), 0);
 const xmasNovelIsKana = (s, i) => /[ぁ-ゖゝゞ]/.test(s[i] || '') || (s[i] === 'ー' && i > 0 && /[ぁ-ゖ]/.test(s[i - 1]));
 // 道具(Intl.Segmenter)の言葉の区切り。Map(始まりの位置 → 言葉)。道具が無い端末では空(決まりの分だけで見る)
 let _xmasNovelSeg;
@@ -903,10 +912,11 @@ const xmasNovelWrapPlan = (text, max = XMAS_NOVEL_KEEP_MAX) => {
   let pos = 0;
   for (const ch of marked) { if (ch === '\u200B') br.add(pos); else pos += ch.length; }
   for (const m of s.matchAll(/\s+/g)) { br.add(m.index); br.add(m.index + m[0].length); }
-  const len = (a, b) => [...s.slice(a, b)].length;
+  // 長さは見た目の幅で数える(半角の英数字・記号は全角の約半分。「「Battle #5」を追加しました。」2026-11-28 総点検)
+  const len = (a, b) => xmasNovelWidth(s.slice(a, b));
   const spans = [];
   // かぎかっこの中の名前は、枠(max)に入るときだけかっこごと包む。入らないときは、名前の一覧と言葉の切れ目に任せる
-  for (const re of XMAS_NOVEL_KEEP_RES) for (const m of s.matchAll(re)) if (!/^[「『【]/.test(m[0]) || [...m[0]].length <= max) spans.push([m.index, m.index + m[0].length]);
+  for (const re of XMAS_NOVEL_KEEP_RES) for (const m of s.matchAll(re)) if (!/^[「『【]/.test(m[0]) || xmasNovelWidth(m[0]) <= max) spans.push([m.index, m.index + m[0].length]);
   for (const w of xmasNovelKeepWords()) if ([...w].length <= max) for (let i = s.indexOf(w); i >= 0; i = s.indexOf(w, i + 1)) spans.push([i, i + w.length]);
   for (const b of [...br]) if (b <= 0 || b >= s.length || spans.some(([a, e]) => b > a && b < e)) br.delete(b);
   const segAt = xmasNovelSegments(s);
@@ -919,7 +929,7 @@ const xmasNovelWrapPlan = (text, max = XMAS_NOVEL_KEEP_MAX) => {
     // つなぐと長すぎるときは、同じかたまりの中の文の組み立ての切れ目(「ねじを|巻いていない」)へ移す。どちらの側も枠に入る所のうち、元の所にいちばん近い所
     let best = -1;
     for (let q = lo + 1; q < hi; q++) {
-      if (q === b || spans.some(([x, e]) => q > x && q < e) || /^[、。！？!?」』）)…‥ー]/.test(s.slice(q)) || /[「『（(]$/.test(s.slice(0, q))) continue;
+      if (q === b || spans.some(([x, e]) => q > x && q < e) || /^[、。，．,.」』）)】〕〉》…‥ー〜～・：；ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ！？!?]/.test(s.slice(q)) || /[「『（(]$/.test(s.slice(0, q))) continue;
       if (xmasNovelBadBreak(s, q, segAt)) continue;
       if (len(lo, q) > max || len(q, hi) > max) continue;
       if (best < 0 || Math.abs(q - b) < Math.abs(best - b)) best = q;
@@ -927,7 +937,11 @@ const xmasNovelWrapPlan = (text, max = XMAS_NOVEL_KEEP_MAX) => {
     if (best >= 0) { br.delete(b); br.add(best); }
   }
   // 枠(max)より長いかたまりは、中の言葉の切れ目で枠に入る長さずつに分ける(ブラウザの好きな所で折らせない・r1126-078 の点検「「お気に入りの魔／法」」)
-  {
+  //   分ける所が無いとき(守るかっこの名前とあとの字で枠を超える「『〜みなさまへ』でつ」)だけ、かっこの中の言葉の切れ目でも分ける
+  const NO_START = /^[、。，．,.」』）)】〕〉》…‥ー〜～・：；ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ！？!?]/;
+  const okAt = (q, inSpanOk) => segAt.has(q) && !xmasNovelBadBreak(s, q, segAt) && !NO_START.test(s.slice(q)) && !/[「『（(【]$/.test(s.slice(0, q))
+    && !spans.some(([x, e]) => q > x && q < e && (!inSpanOk || !/^[「『【]/.test(s.slice(x, e))));
+  for (const inSpanOk of [false, true]) {
     const sorted = [0, ...[...br].sort((x, y) => x - y), s.length];
     for (let k = 1; k < sorted.length; k++) {
       const lo = sorted[k - 1], hi = sorted[k];
@@ -935,7 +949,7 @@ const xmasNovelWrapPlan = (text, max = XMAS_NOVEL_KEEP_MAX) => {
       let start = lo, lastOk = -1;
       for (let q = lo + 1; q < hi; q++) {
         if (len(start, q) > max) { if (lastOk > start) { br.add(lastOk); start = lastOk; } else break; }
-        if (segAt.has(q) && !xmasNovelBadBreak(s, q, segAt) && !spans.some(([x, e]) => q > x && q < e) && !/^[、。！？!?」』）)…‥ー]/.test(s.slice(q)) && !/[「『（(]$/.test(s.slice(0, q))) lastOk = q;
+        if (okAt(q, inSpanOk)) lastOk = q;
       }
     }
   }
@@ -945,7 +959,7 @@ const xmasNovelWrapPlan = (text, max = XMAS_NOVEL_KEEP_MAX) => {
     const t = s.slice(cuts[i - 1], cuts[i]);
     if (!t) continue;
     if (/^\s+$/.test(t)) plan.push({ t, keep: false, space: true });
-    else plan.push({ t, keep: [...t].length <= max, space: false });
+    else plan.push({ t, keep: xmasNovelWidth(t) <= max, space: false });
   }
   if (XMAS_NOVEL_PLAN_CACHE.size > 600) XMAS_NOVEL_PLAN_CACHE.clear();
   XMAS_NOVEL_PLAN_CACHE.set(ck, plan);

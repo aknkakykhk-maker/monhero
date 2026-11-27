@@ -6,7 +6,8 @@
 //
 // 見る画面(時計を開幕 11/28 10:05 にずらす。Supabase には触らず空の返事にする):
 //   HOME のイベントの帯 / イベントページの3タブ(物語・レイド・ボーナス) / レイドのお話(導入。HOME に着くと流れる) / 序章のお話 /
-//   事件簿の起動画面・章から・エンドヒストリー / 更新履歴(11/27 以降の項目を開いて) / ヘルプ(クリスマスに触れる項目)
+//   事件簿の起動画面・章から・エンドヒストリー / 更新履歴(11/27 以降の項目を開いて) / ヘルプ(クリスマスに触れる項目) /
+//   助手のお知らせ(11/26 以降の告知のうち、開幕の時刻に出るもの。1件ずつ開いてページをめくる)
 //   事件簿の本文の全行(選択肢・手がかりの窓・名前の札・おまけ)は、同じ見た目で全部描く tools/novel/xmas-novel-wrap-check.js が見る
 // 行ごとの区切りは、字ごとの Range の矩形で取る。見つけるもの:
 //   ・文節の途中での改行(道具 Intl.Segmenter の言葉の切れ目でない・ひらがなの言葉の途中・漢字/カタカナのあと助詞の手前・名前/日時/かっこの中・行頭に来てはいけない字)
@@ -41,6 +42,13 @@ const VPS = [
   { label: 'タブレット', key: 'tablet', viewport: { width: 820, height: 1180 } },
 ].filter((v) => !ONLY || v.key === ONLY);
 const OPEN = '2026-11-28T10:05:00+09:00';
+// 助手のお知らせ: クリスマスのころ(11/26 以降)の告知の id。見た印のキーは quiet-boot-seed と同じ所から読む
+const NOTICE_KEY = (fs.readFileSync(path.join(ROOT, 'monster-hero/src/parts/20-market-notices-help.jsx'), 'utf8').match(/const UPDATE_NOTICE_SEEN_KEY = '([^']+)'/) || [])[1];
+const CHANGELOG = new Function(`${fs.readFileSync(path.join(ROOT, 'monster-hero/data/changelog.js'), 'utf8')}\n;return CHANGELOG;`)();
+const ALL_NOTICE_IDS = [...new Set((fs.readFileSync(path.join(ROOT, 'monster-hero/data/changelog.js'), 'utf8').match(/update_notice_[A-Za-z0-9_]+/g) || []))];
+const NOTICE_IDS = [...new Set(CHANGELOG.filter((x) => x && x.assistantNotice && x.assistantNotice.id && String(x.date || '') >= '2026-11-26'
+  && !(x.assistantNotice.notifyFrom && Date.parse(x.assistantNotice.notifyFrom) > Date.parse(OPEN))
+  && !(x.assistantNotice.notifyUntil && Date.parse(x.assistantNotice.notifyUntil) <= Date.parse(OPEN))).map((x) => x.assistantNotice.id))];
 const RAID_IDS = ['raid_xmas_story_1b'];
 
 // ページの中で動く測り方。root の中の字を全部、ふだんの塊(ブロック)ごとに集め、行の切れ目を調べる
@@ -151,6 +159,8 @@ const SCAN = () => {
   const shotTaken = new Set();
   try {
     for (const vp of VPS) {
+      // NV_NOTICE_ONLY=1 で、助手のお知らせだけを見る(手早く確かめる用)
+      if (!process.env.NV_NOTICE_ONLY) {
       const ctx = await browser.newContext({ viewport: vp.viewport, hasTouch: true, isMobile: true, deviceScaleFactor: 1 });
       const page = await ctx.newPage();
       const errors = [];
@@ -287,6 +297,45 @@ const SCAN = () => {
       if (topics.length && !helpSeen) console.log(`… ${vp.label}: ヘルプの項目を開けなかった`);
       check(`${vp.label}: 実行時エラーが無い`, errors.length === 0, errors.slice(0, 2).join(' | '));
       await ctx.close();
+      }
+      // ⑧ 助手のお知らせ(クリスマスのころの告知)。1件ずつ「まだ見ていない」にして HOME を開き、ページをめくりながら見る
+      for (const nid of NOTICE_IDS) {
+        const c2 = await browser.newContext({ viewport: vp.viewport, hasTouch: true, isMobile: true, deviceScaleFactor: 1 });
+        const p2 = await c2.newPage();
+        await p2.route(/supabase\.co/, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+        await p2.addInitScript(shiftClock(OPEN));
+        await p2.addInitScript(() => {
+          const put = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+          put('mh_breeder_name', '検査ブリーダー'); put('mh_breeder_icon', '🐣'); put('mh_onboarded', true); put('mh_tutorial_seen_v1', true);
+          put('mh_battle_tutorial_seen_v1', true); put('mh_battle_tutorial_guide_shown_v1', true); put('mh_masu_migrated', true);
+          put('mh_inherited_unique_level_compensation_v1', true); put('mh_inherited_unique_level_compensation_pending_v1', false); put('mh_first_battle_done_v1', true);
+          put('mh_rhythm_tutorial_seen_v1', true);
+        });
+        await p2.addInitScript(seeds.eventStorySeed()); await p2.addInitScript(seeds.loginBonusDoneSeed()); await p2.addInitScript(seeds.oneTimeNoticeSeed());
+        await p2.addInitScript({ content: `(() => { try { localStorage.setItem(${JSON.stringify(NOTICE_KEY)}, ${JSON.stringify(JSON.stringify(ALL_NOTICE_IDS.filter((x) => x !== nid)))}); } catch (e) {} })();` });
+        await p2.addInitScript(SCAN);
+        await p2.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
+        await p2.getByRole('button', { name: 'TAP TO START' }).click({ timeout: 60000 });
+        await p2.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
+        await p2.locator('[data-home-update-guide]').first().waitFor({ timeout: 20000 }).catch(() => {});
+        let seen = 0;
+        for (let k = 0; k < 12; k++) {
+          if (!(await p2.locator('[data-home-update-guide]').count())) break;
+          await p2.waitForTimeout(300);
+          const r = await p2.evaluate(([s, l]) => window.__nvScan(s, l), ['[data-home-update-guide]', `${vp.label} お知らせ(${nid})`]);
+          if (process.env.NV_DEBUG && k === 0) console.log(await p2.evaluate(() => { const d = [...document.querySelectorAll('[data-home-update-guide] div')].find((x) => /border-pink-400/.test(x.className) && /bg-slate-900/.test(x.className)); return d ? d.innerHTML.slice(0, 600) : 'なし'; }));
+          total.texts += r.texts; total.issues.push(...r.issues); seen++;
+          byScreen['お知らせ'] = byScreen['お知らせ'] || { texts: 0, issues: 0 };
+          byScreen['お知らせ'].texts += r.texts; byScreen['お知らせ'].issues += r.issues.length;
+          const shotName = `${vp.key}-お知らせ-${nid}`;
+          if (SHOT_DIR && !shotTaken.has(shotName)) { shotTaken.add(shotName); fs.mkdirSync(SHOT_DIR, { recursive: true }); await p2.screenshot({ path: path.join(SHOT_DIR, `${shotName}.jpg`), type: 'jpeg', quality: 72 }); }
+          const nx = await p2.evaluate(() => { const b = [...document.querySelectorAll('[data-home-update-guide] button')].find((x) => x.textContent.trim() === '次へ'); if (b) { b.click(); return true; } return false; });
+          if (!nx) break;
+          await p2.waitForTimeout(300);
+        }
+        if (!seen) console.log(`… ${vp.label}: お知らせ ${nid} が出なかった`);
+        await c2.close();
+      }
     }
   } finally { await browser.close(); server.close(); }
   const scr = Object.entries(byScreen).map(([k, v]) => `${k} ${v.texts}文/${v.issues}件`).join('・');
