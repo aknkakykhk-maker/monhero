@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 54ee56c7861e6dda
+// generated-sha256: e78fe330322815ec
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -67792,7 +67792,7 @@ const xmasNovelApplyRow = (cur, row) => {
   return cur;
 };
 // ---- 登場人物パネル(話の進みで積み上げる) ----
-//  状態: '' ふつう / 'missing' 行方不明のはんこ / 'hurt' けがの札 / 'dead' 暗いパネルと白い花 / 'santa' 暗いパネルと黒いサンタの判(バッドエンド)
+//  状態: '' ふつう / 'missing' 行方不明のはんこ / 'hurt' けがの札 / 'dead' 暗いパネルと赤いバツ / 'santa' 暗いパネルと黒いサンタの判(バッドエンド)
 //  行の ops(人ごとの変わり方)と stamp(1 = まだ暗くない人を1人・'all' = のこった人みんなに黒いサンタの判)
 const XMAS_NOVEL_PANEL_STATES = Object.freeze(['missing', 'hurt', 'dead', 'santa']);
 const xmasNovelPanelApply = (panel, row) => {

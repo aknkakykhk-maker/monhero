@@ -251,7 +251,7 @@ const panelOpsOf = (text) => {
   const hits = [];
   PANEL_NAMES.forEach(([ja, id]) => { let i = text.indexOf(ja); while (i >= 0) { hits.push({ at: i, end: i + ja.length, id }); i = text.indexOf(ja, i + ja.length); } });
   hits.sort((a, b) => a.at - b.at);
-  const kindOf = (seg) => (/色が戻|白い花が消え/.test(seg) ? 'normal' : /白い花|暗く|暗い/.test(seg) ? 'dead' : /行方不明/.test(seg) ? 'missing' : /けが/.test(seg) ? 'hurt' : '');
+  const kindOf = (seg) => (/色が戻|白い花が消え|バツが消え/.test(seg) ? 'normal' : /白い花|赤いバツ|バツ|暗く|暗い/.test(seg) ? 'dead' : /行方不明/.test(seg) ? 'missing' : /けが/.test(seg) ? 'hurt' : '');
   const ops = []; let group = [];
   hits.forEach((h, i) => {
     const seg = text.slice(h.end, i + 1 < hits.length ? hits[i + 1].at : text.length);
@@ -317,8 +317,8 @@ const parseRow = (cells, where) => {
   }
   if (who === '並び') {
     const s = stripMd(raw);
-    // 文で書いたパネルの変わり方(「黒羽のパネルが暗くなり、白い花」「えるびんに「けが」の札」「きゅうこの白い花が消え、色が戻る」)。
-    //   名前ごとに、次の名前までの文で決める(「黒羽・白瀬も暗いパネルと白い花」のように並んだ名前は同じ扱い)。強さ: 色が戻る > 亡くなった > 行方不明 > けが
+    // 文で書いたパネルの変わり方(「黒羽のパネルが暗くなり、赤いバツ」「えるびんに「けが」の札」「きゅうこの赤いバツが消え、色が戻る」。前の書き方の「白い花」も読む・r1126-053)。
+    //   名前ごとに、次の名前までの文で決める(「黒羽・白瀬も暗いパネルと赤いバツ」のように並んだ名前は同じ扱い)。強さ: 色が戻る > 亡くなった > 行方不明 > けが
     const ops = panelOpsOf(s);
     const stamp = /のこらず|すべてに|みんな暗い/.test(s) && /判/.test(s) ? 'all' : /1枚|また1枚/.test(s) && /判/.test(s) ? 1 : 0;
     if (ops.length || stamp) return { ...row, t: 'panel', x: '', ops, ...(stamp ? { stamp } : {}) };
