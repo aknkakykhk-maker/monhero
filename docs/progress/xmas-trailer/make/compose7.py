@@ -4,7 +4,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageEnhance
 
 REPO, S, OUT = sys.argv[1], sys.argv[2], sys.argv[3]
-W, H, FPS, DUR = 720, 1280, 30, 74.5
+W, H, FPS, DUR = 720, 1280, 30, 75.9
 R = REPO + '/tools/art-sources/promo/xmas-2026/received/'
 IMG = REPO + '/monster-hero/images/'
 def rgba(p): return Image.open(p).convert('RGBA')
@@ -185,7 +185,7 @@ def sc2(t):  # 5-9.4 ペンションの外観
     p = pension.resize((w, h), Image.BICUBIC).convert('RGBA')
     m = Image.new('L', p.size, 0); ImageDraw.Draw(m).rectangle((0, 18, w, h - 18), fill=255); p.putalpha(m.filter(ImageFilter.GaussianBlur(16)))
     img.alpha_composite(p, ((W - w) // 2, 640 - h // 2 - 40))
-    snow(img, t + 5, 1.0); text_at(img, 'band', t, 0.6, 4.2, 240); return img
+    snow(img, t + 5, 1.0); text_at(img, 'band', t, 0.5, 3.7, 240); return img
 def sc3(t):  # 9-14.4 招待状とイチーカ
     img = warm_bg.copy().convert('RGBA'); snow(img, t + 9, 0.5)
     pc = ease((t - 0.2) / 1.2)
@@ -383,10 +383,46 @@ def sc7b(t):  # 38.4-44.0
     return img
 POSTER2 = rgba(S + '/v7/square_v2.png')  # 社長が確定した新しい告知ポスター(f2a217f5・副題「〜十三番目の鐘が鳴る夜〜」)
 POSTER2_BG = blur_bg(POSTER2.convert('RGB'), 0.38, 26)
+# ── 予告の手紙(事件簿 第2章 2-L-4・赤い字が1行ずつ浮かぶ) ──
+LET = rgb(S + '/v7/shots/letter.png')
+def _blank_card(im):
+    a = np.asarray(im).astype(np.float32)
+    red = (a[:, :, 0] - a[:, :, 1] > 25) & (a[:, :, 0] > 70)
+    red[:220] = False; red[620:] = False  # 手紙のカードの所だけ
+    m = np.array(Image.fromarray((red * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(13))) > 0
+    paper = (a.mean(axis=2) > 170) & ~m
+    out = a.copy()
+    for y in range(220, 620):
+        row = paper[y]
+        if row.sum() < 20: continue
+        xs = np.nonzero(row)[0]
+        col = np.median(a[y, xs], axis=0)
+        for x in np.nonzero(m[y])[0]:
+            # 横に近い紙の色を使う(カードの明るさのむらに合わせる)
+            near = xs[(xs > x - 60) & (xs < x + 60)]
+            out[y, x] = np.median(a[y, near], axis=0) if len(near) > 5 else col
+    return Image.fromarray(out.astype(np.uint8)).filter(ImageFilter.SMOOTH)
+LET_BLANK = _blank_card(LET)
+LET_LINES = [(270, 340), (345, 405), (410, 470), (475, 545)]  # 4行の高さ(1280の画面で)
+LET_TIMES = [1.0, 2.3, 3.4, 4.8]
+def sc_letter(t):  # 7.4秒
+    base = np.asarray(LET_BLANK).astype(np.float32); full = np.asarray(LET).astype(np.float32)
+    out = base.copy()
+    for (y0, y1), t0 in zip(LET_LINES, LET_TIMES):
+        a = ease((t - t0) / 0.9)
+        if a > 0: out[y0:y1] = base[y0:y1] * (1 - a) + full[y0:y1] * a
+    img = Image.fromarray(out.astype(np.uint8))
+    sc = lerp(1.3, 1.5, ease(t / 7.4))
+    img = cover(img, sc, 345, lerp(480, 440, ease(t / 7.4)))
+    a = np.asarray(img).astype(np.float32)
+    yy, xx = np.mgrid[0:H, 0:W]; v = 1 - 0.75 * np.clip(((xx - W / 2) / (W * 0.62)) ** 2 + ((yy - H / 2) / (H * 0.5)) ** 2, 0, 1)
+    a = a * v[:, :, None] * min(1, t / 0.6)
+    if 4.8 <= t < 5.0: a = a * (1 + 0.5 * (1 - (t - 4.8) / 0.2))  # 署名で一瞬光る(鐘の一打)
+    return Image.fromarray(np.clip(a, 0, 255).astype(np.uint8)).convert('RGBA')
 def sc8(t):  # 新しいポスターと開幕
     img = POSTER2_BG.copy().convert('RGBA')
     snow(img, t + 38, 0.8)
-    p = ease(t / 0.9); s_ = lerp(1.06, 1.0, ease(t / 6.5)); w = int(680 * s_)
+    p = ease(t / 0.9); s_ = lerp(1.06, 1.0, ease(t / 5.5)); w = int(680 * s_)
     pc = POSTER2.resize((w, w), Image.LANCZOS)
     sh = Image.new('L', (W, H), 0); ImageDraw.Draw(sh).rectangle(((W - w) / 2 + 6, 236, (W + w) / 2 + 6, 236 + w + 14), fill=200)
     shl = Image.new('RGBA', (W, H), (0, 0, 0, 255)); shl.putalpha(sh.filter(ImageFilter.GaussianBlur(18)).point(lambda v: int(v * p))); img.alpha_composite(shl)
@@ -421,10 +457,11 @@ def gkime(t):  # 決め台詞を2つ続けて(あいだは白く光る)
     if tt < 0.12:
         w = Image.new('RGBA', (W, H), (255, 255, 255, int(200 * (1 - tt / 0.12)))); f.alpha_composite(w)
     return f
-SCENES = [(0.0, 5.4, sc1), (5.0, 9.4, sc2), (9.0, 13.4, gshot('c1-band', 4.4)), (13.0, 20.0, sc3), (19.6, 26.0, sc4), (25.6, 33.0, sc5),
-          (32.6, 37.2, gshot('clue', 4.6)), (36.8, 43.2, sc5b), (42.8, 47.6, sc6), (47.4, 52.6, sc7),
-          (52.2, 58.2, gshot('a1', 6.0)), (57.8, 62.2, gkime), (61.8, 68.4, sc7b), (68.0, 74.5, sc8)]
-T_BELL, T_HIT = 25.6 + 0.6, 47.4  # 柱時計の鐘で曲を切り替え / 名探偵はでサビ
+SCENES = [(0.0, 5.4, sc1), (5.0, 8.8, sc2), (8.4, 15.4, sc3), (15.0, 21.4, sc4), (21.0, 28.4, sc_letter), (28.0, 35.4, sc5),
+          (35.0, 39.6, gshot('clue', 4.6)), (39.2, 45.6, sc5b), (45.2, 50.0, sc6), (49.8, 55.0, sc7),
+          (54.6, 60.6, gshot('a1', 6.0)), (60.2, 64.6, gkime), (64.2, 70.8, sc7b), (70.4, 75.9, sc8)]
+T_LET, T_SIG = 21.0, 21.0 + 4.8
+T_BELL, T_HIT = 28.0 + 0.6, 49.8  # 柱時計の鐘で曲を切り替え / 名探偵はでサビ
 T_DARK = T_BELL
 
 def frame(t):
@@ -442,7 +479,7 @@ def frame(t):
     return np.clip(out, 0, 255).astype(np.uint8)
 
 if __name__ == '__main__':
-    if sys.argv[3] == 'times': print(T_BELL, T_HIT, DUR); sys.exit()
+    if sys.argv[3] == 'times': print(T_BELL, T_HIT, DUR, T_LET, T_SIG); sys.exit()
     only = [float(x) for x in sys.argv[4].split(',')] if len(sys.argv) > 4 else None
     if only:
         for t in only: Image.fromarray(frame(t)).save(f'{OUT}_{t:05.1f}.jpg', quality=90)

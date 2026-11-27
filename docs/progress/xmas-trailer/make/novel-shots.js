@@ -14,12 +14,8 @@ const ROOT = '/home/user/monhero';
 const OUT = path.resolve(process.argv[2] || 'shots');
 const PORT = 8000 + Math.floor(Math.random() * 900);
 const SHOTS = [
-  { name: 'c1-band', row: '1-1-1', side: 0, tap: 1 },
-  { name: 'clue', row: '1-3-12c', side: 1 },
-  { name: 'a1', row: 'A1', side: 0 },
-  { name: 'kime-atsu', row: '8-1-14a', side: 1 },
-  { name: 'kime-sora', row: '8-1-15s', side: 2 },
-  { name: 'hall', row: '1-2-4', side: 0 },
+  { name: 'letter', row: '2-L-4', side: 1, wait: 7000 },
+  { name: 'letter-early', row: '2-L-4', side: 1, wait: 1200 },
 ];
 
 const ctx = vm.createContext({});
@@ -63,6 +59,7 @@ const serve = () => new Promise((r) => { const s = http.createServer((req, res) 
       await page.evaluate(() => openXmasNovel({ force: true, playerName: 'モンヒロ太郎' }));
       if (sh.act === 'title') { await page.waitForTimeout(2500); }
       else { await page.locator('[data-xmas-novel-continue]').click({ timeout: 8000 }); await page.waitForTimeout(2600); }
+      if (sh.wait) await page.waitForTimeout(sh.wait);
       for (let t = 0; t < (sh.tap || 0); t++) { await page.mouse.click(180, 330); await page.waitForTimeout(3500); }
       if (sh.act === 'book') { await page.waitForTimeout(1500); await page.locator('[data-xmas-novel-open-book]').first().click({ timeout: 8000 }); await page.waitForTimeout(1200); }
       // 文字送りを最後まで(1回だけ叩く。問いの行はそのまま)
