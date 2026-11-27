@@ -62,11 +62,11 @@ const CHANGELOG = [
     ],
   },
   {
-    // 2026-11-25 社長「11/28ごろから出す」(r1119-172・追跡 r1125-043)。告知用ポスター(ボスは影)。パンドラの予告と同じ形:
+    // 2026-11-25 社長「11/28ごろから出す」(r1119-172・追跡 r1125-043)。2026-11-27 社長の指示で 11/27 13:00 に前倒し(r1126-060)。告知用ポスター(ボスは影)。パンドラの予告と同じ形:
     //   出しはじめる時刻を date・visibleFrom・notifyFrom にそろえ、開幕(11/30 10:00)からは上の札に出さない(pinUntil)。
     //   本番用のポスターと開幕のお知らせは、ボスの名前が決まってから別に足す。ボスの名前・正体・敵の数字は書かない
-    date: "2026-11-28 10:00", type:'event', group:'other', title:'【開催予告】クリスマスイベント『聖夜の名探偵』を開催します', status:'new',
-    visibleFrom:'2026-11-28T10:00:00+09:00',
+    date: "2026-11-27 13:00", type:'event', group:'other', title:'【開催予告】クリスマスイベント『聖夜の名探偵』を開催します', status:'new',
+    visibleFrom:'2026-11-27T13:00:00+09:00',
     // 開始前の予告なので、固定の札は「📅 開催予定」(17-release の changelogEventUpcoming・台帳 r1126-038)。11/30 10:00 からは pinUntil で固定を外れる
     eventStartAt:'2026-11-30T10:00:00+09:00',
     pinUntil:'2026-11-30T10:00:00+09:00',
@@ -78,7 +78,7 @@ const CHANGELOG = [
     videoPoster: 'images/events/xmas-2026-trailer-poster.jpg?v=24bb14baa66b',
     assistantNotice: {
       id:'update_notice_xmas_2026_notice_v1', type:'content',
-      notifyFrom:'2026-11-28T10:00:00+09:00',
+      notifyFrom:'2026-11-27T13:00:00+09:00',
       notifyUntil:'2026-11-30T10:00:00+09:00',
     },
     items:[
