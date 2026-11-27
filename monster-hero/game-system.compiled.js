@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: dc5904da6a5ba9e9
+// source-sha256: 3bd4354b73ce69bc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -89207,8 +89207,10 @@ const TACTICS_ENEMY_MOTIONS = Object.freeze({
   Nyarlathotep: 'nyarlathotep',
   Splatter: 'splatter',
   AwakenedMoo: 'awakenedMoo',
-  Jack: 'jack'
+  Jack: 'jack',
+  Santa: 'santa'
 });
+const tacticsEnemyMotionKey = enemy => !enemy ? null : enemy.raidJackPumpkin ? 'Pumpkin' : enemy.raidXmas ? 'Santa' : enemy.id;
 const TACTICS_ENEMY_SKILL_MS_DEFAULT = Object.freeze({
   rush: 750,
   pierce: 900,
@@ -89405,6 +89407,21 @@ const TACTICS_ENEMY_MOTION_SETS = Object.freeze({
       pierceCharge: ['stance', 'lock']
     }
   },
+  santa: {
+    idle: 'menace',
+    skills: {
+      normal: ['jab', 'burst', '❄️', 'shoot'],
+      sweep: ['sway', 'sparkle', '🎁', 'shoot'],
+      rush: ['leap', 'burst', '🦵', 'shoot'],
+      pierce: ['windup', 'beam', '🖤', 'rise'],
+      special: ['dash', 'slash'],
+      allout: ['dash', 'widebeam', '🛷', 'shoot'],
+      roar: ['rise', 'aura', '🔔', 'rise'],
+      regen: ['heal', 'sparkle'],
+      charge: ['power', 'aura'],
+      pierceCharge: ['stance', 'lock']
+    }
+  },
   awakenedMoo: {
     idle: null,
     skills: {
@@ -89465,6 +89482,10 @@ const TACTICS_ENEMY_STRIKE_LOOK = Object.freeze({
   pumpkin: {
     impact: 'stamp',
     mark: '🎃'
+  },
+  santa: {
+    impact: 'stamp',
+    mark: '❄️'
   }
 });
 const TACTICS_ENEMY_NO_STRIKE_SKILLS = Object.freeze(['roar', 'charge', 'pierceCharge', 'regen']);
@@ -90098,6 +90119,57 @@ const TACTICS_ENEMY_FINISH = Object.freeze({
       flat: .45
     }]
   },
+  santa: {
+    special: [{
+      t: 'blade',
+      a: -35,
+      len: 380,
+      w: 12,
+      d: 220
+    }, {
+      t: 'blade',
+      a: 35,
+      len: 380,
+      w: 12,
+      d: 280
+    }, {
+      t: 'bits',
+      n: 12,
+      shape: 'snow',
+      dist: 140,
+      d: 300
+    }, {
+      t: 'ring',
+      d: 320,
+      r: 3.6,
+      void: true
+    }],
+    allout: [{
+      t: 'blade',
+      a: 0,
+      len: 440,
+      w: 16,
+      d: 240
+    }, {
+      t: 'bits',
+      n: 10,
+      shape: 'gift',
+      dist: 140,
+      d: 270
+    }, {
+      t: 'bits',
+      n: 12,
+      shape: 'snow',
+      dist: 120,
+      d: 320,
+      fall: true
+    }, {
+      t: 'ring',
+      d: 340,
+      r: 3.8,
+      flat: .45
+    }]
+  },
   splatter: {
     special: [{
       t: 'blade',
@@ -90201,6 +90273,7 @@ const TacticsEnemyStageFx = ({
   const trail = skill === 'pierce' ? 'beam' : skill === 'sweep' && !isMoo ? 'wave' : look.trail || 'orb';
   const shot = spec && spec[3] === 'shoot' ? spec[2] : isMoo && skill === 'sweep' ? '👊' : look.shot || null;
   const big = skill === 'special' || skill === 'allout' || isMoo;
+  const santa = motion === 'santa';
   const at = frac => `${Math.round(ms * Math.max(0, frac))}ms`;
   const {
     sx,
@@ -90272,8 +90345,8 @@ const TacticsEnemyStageFx = ({
     style: {
       animationDelay: at(hit)
     }
-  }), !isMoo && !lite && strikes && (() => {
-    const parts = skill === 'pierce' ? TACTICS_ENEMY_PIERCE_FINISH : (TACTICS_ENEMY_FINISH[motion] || {})[skill] || null;
+  }), (!isMoo || santa) && !lite && strikes && (() => {
+    const parts = skill === 'pierce' && !isMoo ? TACTICS_ENEMY_PIERCE_FINISH : (TACTICS_ENEMY_FINISH[motion] || {})[skill] || null;
     if (!parts) return null;
     const hitMs = Math.round(ms * hit);
     return geo.slots.map(t => React.createElement("div", {
@@ -90319,14 +90392,14 @@ const TacticsEnemyStageFx = ({
       left: `${8 + k * 29 % 90}%`,
       animationDelay: at(0.18 + k * 0.07)
     }
-  }, "☄️")), isMoo && !lite && skill === 'allout' && [0, 1, 2].map(k => React.createElement("i", {
+  }, santa ? '❄️' : '☄️')), isMoo && !lite && skill === 'allout' && [0, 1, 2].map(k => React.createElement("i", {
     key: k,
     "data-moo-tornado": true,
     style: {
       top: `${44 + k * 14}%`,
       animationDelay: at(0.22 + k * 0.1)
     }
-  }, "🌪️")), isMoo && !lite && skill === 'roar' && [0, 1, 2, 3, 4, 5].map(k => React.createElement("i", {
+  }, santa ? '🛷' : '🌪️')), isMoo && !lite && skill === 'roar' && [0, 1, 2, 3, 4, 5].map(k => React.createElement("i", {
     key: k,
     "data-moo-bolt": true,
     style: {
@@ -90334,7 +90407,7 @@ const TacticsEnemyStageFx = ({
       top: `${8 + k * 53 % 70}%`,
       animationDelay: at(0.18 + k * 0.08)
     }
-  }, "⚡")), isMoo && !lite && skill === 'regen' && React.createElement(React.Fragment, null, React.createElement("i", {
+  }, santa ? '🔔' : '⚡')), isMoo && !lite && skill === 'regen' && React.createElement(React.Fragment, null, React.createElement("i", {
     "data-moo-heaven": true
   }), [0, 1, 2, 3, 4, 5].map(k => React.createElement("i", {
     key: k,
@@ -92432,7 +92505,7 @@ function BattleScreen({
     });
   }, [infernoShellView?.breakSeq, wave, enemy?.id]);
   const enemyImageOnlyAttack = tacticsNewLayout && !!enemyAttackAnim && !ecoBattleView && enemyAttackFx?.kind !== 'move' && !isMooBoss(enemy?.id);
-  const enemyMotion = tacticsNewLayout && !ecoBattleView ? TACTICS_ENEMY_MOTIONS[enemy?.raidJackPumpkin ? 'Pumpkin' : enemy?.id] || null : null;
+  const enemyMotion = tacticsNewLayout && !ecoBattleView ? TACTICS_ENEMY_MOTIONS[tacticsEnemyMotionKey(enemy)] || null : null;
   const bossMovieSrc = battleFx.specialMovie === 'ON' && !ecoBattleView && typeof enemy?.specialMovie === 'string' ? enemy.specialMovie : null;
   useEffect(() => {
     if (bossMovieSrc) preloadBossMovie(bossMovieSrc);
@@ -93350,7 +93423,7 @@ function BattleScreen({
     fx: enemyAttackFx,
     motion: enemyMotion,
     isMoo: enemyIsMoo,
-    enemyId: enemy?.raidJackPumpkin ? 'Pumpkin' : enemy?.id,
+    enemyId: tacticsEnemyMotionKey(enemy),
     skillLabel: enemySkillName?.label || null,
     lite: fxLoad === 'LIGHT'
   }), enemySkillName && !(enemyIsMoo && emSet && enemyAttackFx?.skill && TACTICS_MOO_CUTIN_SKILLS.includes(enemyAttackFx.skill)) && ReactDOM.createPortal(React.createElement("div", {
@@ -127632,6 +127705,23 @@ const xmasNovelGramBreak = (s, i) => {
   return /て$/.test(b) && /^[^るたはぁぃぅぇぉっゃゅょー]/.test(a) || /[A-Za-z0-9０-９ァ-ヶー」』）)一-龯々][はがをにもへとでのや]$/.test(b) || /^[はがをにもへのとや]/.test(a) && /[ぁ-ゖー]{2}$/.test(b) && !/[はがをにもへ]$/.test(b) || /で$/.test(b) && /^[^すしきもはるぁぃぅぇぉっゃゅょー]/.test(a) || /(?:から|まで|けど|ので|のに|ても|でも|には|では|とは|って|たら|れば|ながら|けれど|より|だけ|ほど|など|ように|ような|という|か|を)$/.test(b) || /^(?:です|でし|でしょ|だっ|だった|だよ|だね|だろ|じゃ|ように|ような|こと|もの|ため|わけ|はず|べき|かも|かな|なの|なん|ちゃん|くん|さん|ん[だでじ]|の(?:た|に|で|だ|か))/.test(a) || /[くし]$/.test(b) && /^(?:な[るりっられ]|し[たてよま])/.test(a) || /^[おご]/.test(a) && /[ぁ-ゖ一-龯]/.test(s[i + 1] || '');
 };
 const xmasNovelIsKana = (s, i) => /[ぁ-ゖゝゞ]/.test(s[i] || '') || s[i] === 'ー' && i > 0 && /[ぁ-ゖ]/.test(s[i - 1]);
+let _xmasNovelSeg;
+const xmasNovelSegments = s => {
+  const m = new Map();
+  try {
+    if (_xmasNovelSeg === undefined) _xmasNovelSeg = typeof Intl !== 'undefined' && Intl.Segmenter ? new Intl.Segmenter('ja', {
+      granularity: 'word'
+    }) : null;
+    if (_xmasNovelSeg) for (const x of _xmasNovelSeg.segment(s)) m.set(x.index, x.segment);
+  } catch (e) {}
+  return m;
+};
+const xmasNovelBadBreak = (s, b, segAt) => {
+  if (segAt && segAt.size && !segAt.has(b)) return true;
+  if (xmasNovelIsKana(s, b - 1) && xmasNovelIsKana(s, b) && !xmasNovelGramBreak(s, b)) return true;
+  const w = segAt && segAt.get(b);
+  return /[一-龯々ァ-ヶー」』）)A-Za-z0-9０-９]$/.test(s.slice(0, b)) && !!w && /^(?:の|は|が|を|に|へ|と|で|も|や|から|まで|より)$/.test(w);
+};
 const XMAS_NOVEL_PLAN_CACHE = new Map();
 const xmasNovelWrapPlan = (text, max = XMAS_NOVEL_KEEP_MAX) => {
   const s = String(text ?? '');
@@ -127660,8 +127750,9 @@ const xmasNovelWrapPlan = (text, max = XMAS_NOVEL_KEEP_MAX) => {
   for (const re of XMAS_NOVEL_KEEP_RES) for (const m of s.matchAll(re)) if (!/^[「『【]/.test(m[0]) || [...m[0]].length <= max) spans.push([m.index, m.index + m[0].length]);
   for (const w of xmasNovelKeepWords()) if ([...w].length <= max) for (let i = s.indexOf(w); i >= 0; i = s.indexOf(w, i + 1)) spans.push([i, i + w.length]);
   for (const b of [...br]) if (b <= 0 || b >= s.length || spans.some(([a, e]) => b > a && b < e)) br.delete(b);
+  const segAt = xmasNovelSegments(s);
   for (const b of [...br].sort((x, y) => x - y)) {
-    if (!(xmasNovelIsKana(s, b - 1) && xmasNovelIsKana(s, b)) || xmasNovelGramBreak(s, b)) continue;
+    if (!xmasNovelBadBreak(s, b, segAt)) continue;
     const sorted = [0, ...[...br].sort((x, y) => x - y), s.length];
     const k = sorted.indexOf(b),
       lo = sorted[k - 1],
@@ -127673,7 +127764,7 @@ const xmasNovelWrapPlan = (text, max = XMAS_NOVEL_KEEP_MAX) => {
     let best = -1;
     for (let q = lo + 1; q < hi; q++) {
       if (q === b || spans.some(([x, e]) => q > x && q < e) || /^[、。！？!?」』）)…‥ー]/.test(s.slice(q)) || /[「『（(]$/.test(s.slice(0, q))) continue;
-      if (xmasNovelIsKana(s, q - 1) && xmasNovelIsKana(s, q) && !xmasNovelGramBreak(s, q)) continue;
+      if (xmasNovelBadBreak(s, q, segAt)) continue;
       if (!xmasNovelGramBreak(s, q) && !(/[ぁ-ゖ、]$/.test(s.slice(0, q)) && /^[一-龯ァ-ヶ]/.test(s.slice(q)))) continue;
       if (len(lo, q) > max || len(q, hi) > max) continue;
       if (best < 0 || Math.abs(q - b) < Math.abs(best - b)) best = q;
@@ -268720,7 +268811,7 @@ function MonsterHeroGame() {
         let tookEnemyAttack = false;
         const fxKind = isMooBoss(enemy?.id) ? 'moo' : intent.type === 'SPECIAL' ? 'special' : 'normal';
         const fxSkill = intent.variant || (intent.type === 'SPECIAL' ? 'special' : 'normal');
-        const motionEnemyId = isTacticsMode(runMode) && !ecoBattleView ? enemy?.raidJackPumpkin ? 'Pumpkin' : enemy?.id : null;
+        const motionEnemyId = isTacticsMode(runMode) && !ecoBattleView ? tacticsEnemyMotionKey(enemy) : null;
         const specialMovieSrc = fxSkill === 'special' && motionEnemyId && typeof enemy?.specialMovie === 'string' && normalizeBattleFxSettings(battleFxSettings).specialMovie === 'ON' && !(catchUpUntilRef.current > Date.now()) ? enemy.specialMovie : null;
         const movieShown = specialMovieSrc ? await playBossMovie(specialMovieSrc, {
           label: intent.label || enemy?.special || '',
@@ -293554,6 +293645,11 @@ const createAnimationStyle = () => {
     .fin-shape--note::before { content:'♪'; }
     .fin-shape--heart { width:auto; height:auto; background:none; box-shadow:none; border-radius:0; font:900 22px/1 system-ui, sans-serif; color:var(--spm-c1); text-shadow:0 0 8px var(--spm-c2); }
     .fin-shape--heart::before { content:'♥'; }
+    /* 覚醒サンタの雪と黒いプレゼント(TACTICS_ENEMY_FINISH.santa)。雪は文字の形(後ろに文字の形の印を付けて絵文字にしない)、プレゼントは黒い箱に赤いリボン */
+    .fin-shape--snow { width:auto; height:auto; background:none; box-shadow:none; border-radius:0; font:900 20px/1 system-ui, sans-serif; color:#fff; text-shadow:0 0 8px var(--spm-c2); }
+    .fin-shape--snow::before { content:'❄︎'; }
+    .fin-shape--gift { width:16px; height:16px; border-radius:2px; box-shadow:0 0 6px var(--spm-c2);
+      background:linear-gradient(90deg, transparent 42%, var(--spm-c2) 42% 58%, transparent 58%), linear-gradient(0deg, transparent 42%, var(--spm-c2) 42% 58%, transparent 58%), #1c1917; }
     .fin-bit.fin-shape--note:nth-child(3n+1)::before { content:'♫'; }
     .fin-bit.fin-shape--note:nth-child(3n+2)::before { content:'♬'; }
     .fin-fall { left:-14px; top:-420px; width:28px; height:28px; opacity:0; position:absolute; margin-left:var(--x); scale:var(--s);
@@ -294503,6 +294599,7 @@ const createAnimationStyle = () => {
     [data-enemy-motion="awakenedMoo"] { --em-c: 250,204,21; }
     [data-enemy-motion="jack"] { --em-c: 251,146,60; }
     [data-enemy-motion="pumpkin"] { --em-c: 253,186,116; }
+    [data-enemy-motion="santa"] { --em-c: 239,68,68; }
     /* ジャックのオーラ(段階1〜5でどんどん派手に)。色: 橙 → 金橙 → 紫 → 赤 → 虹金。動くのは transform / opacity だけ */
     [data-jack-aura-el] { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
     [data-jack-aura-el] > i { position: absolute; inset: 10% 8% 6%; border-radius: 50%; opacity: 0; will-change: transform, opacity; }
@@ -294783,7 +294880,7 @@ const createAnimationStyle = () => {
     /* ジャックの絵は 1024x880 でほぼ正方形(ムーは横長の 1024x598)。ムーと同じ枠(108vw・最大560px)だと画面を覆い、両腕ポーズの腕も画面から切れるので、
        枠は画面の幅に収める。通常絵は枠の半分の大きさで描く(JACK_NORMAL_BATTLE_STYLE)。
        大きさの指定はJSXの style に書いてあり、検査(moo-notice-visibility-check)がそれを読むので、ここで上書きする */
-    [data-moo-stage="true"][data-enemy-motion="jack"], [data-moo-stage="true"][data-enemy-motion="pumpkin"] { width: min(100vw, 400px) !important; height: min(100vw, 400px) !important; }
+    [data-moo-stage="true"][data-enemy-motion="jack"], [data-moo-stage="true"][data-enemy-motion="pumpkin"], [data-moo-stage="true"][data-enemy-motion="santa"] { width: min(100vw, 400px) !important; height: min(100vw, 400px) !important; }
     [data-tactics-look] [data-enemy-skill] { --em-dur: 450ms; }
     [data-tactics-look] [data-enemy-skill="rush"] { --em-dur: 750ms; }
     [data-tactics-look] [data-enemy-skill="pierce"] { --em-dur: 900ms; }
