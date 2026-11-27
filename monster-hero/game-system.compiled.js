@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 03adf63b60be5dae
+// source-sha256: 5607d88e4695b710
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -87093,6 +87093,24 @@ const HOME_V2_CSS = `
   .mh-home-v2 .mh-home-dock-top .mh-home-dock-sub,.mh-home-v2 .mh-home-dock-top .mh-home-success .sb{font-size:12px}
   .mh-home-v2 .mh-home-dock-bottom .mh-home-dock-pic{width:62px;height:62px}
   .mh-home-v2 .mh-home-dock-bottom .mh-home-dock-name{font-size:12px}
+}
+/* クリスマスの入口(79-screen-xmas-event.jsx)は、横向きで帯を右の列の横へ動かす決まりを持っている(前の HOME の形のため)。
+   新しい帯の中では、ほかの1枚と同じ位置・大きさのままにする(部品の中身は変えない。HOME の側で上書きするだけ) */
+.mh-home-v2 .mh-home-band-slide[data-home-xmas-entry-strip]{position:relative!important;left:auto!important;right:auto!important;top:auto!important;width:auto!important;margin:0!important}
+@media (orientation:landscape) and (max-height:520px){.mh-home-v2 .mh-home-band .mh-xmas-entry[data-home-xmas-entry="banner"] .mh-xmas-entry-sub{font-size:11px}}
+/* 横持ちの iPhone の切り欠き(カメラの欠け)に、押す物を入れない。左右の余白に端末の安全な余白(safe-area)を足す */
+.mh-home-v2 .mh-home-top{padding-left:calc(8px + env(safe-area-inset-left));padding-right:calc(8px + env(safe-area-inset-right))}
+.mh-home-v2 .mh-home-menu{right:calc(8px + env(safe-area-inset-right))}
+.mh-home-v2 .mh-home-band{margin-left:calc(8px + env(safe-area-inset-left));margin-right:calc(8px + env(safe-area-inset-right))}
+.mh-home-v2 .mh-home-assistant,.mh-home-v2 .mh-home-assistant-fold{margin-left:calc(8px + env(safe-area-inset-left))}
+.mh-home-v2 .mh-home-dock{padding-left:calc(8px + env(safe-area-inset-left));padding-right:calc(8px + env(safe-area-inset-right))}
+@media(orientation:landscape) and (max-height:600px){
+  .mh-home-v2 .mh-home-band{left:calc(8px + env(safe-area-inset-left));margin:0}
+  .mh-home-v2 .mh-home-assistant,.mh-home-v2 .mh-home-assistant-fold{left:calc(8px + env(safe-area-inset-left));margin:0}
+}
+@container (min-width:700px) and (min-height:560px){
+  .mh-home-v2 .mh-home-band{margin-left:auto;margin-right:auto}
+  .mh-home-v2 .mh-home-dock{padding-left:calc(14px + env(safe-area-inset-left));padding-right:calc(14px + env(safe-area-inset-right))}
 }
 `;
 const HOME_RAID_JACK_CSS = `

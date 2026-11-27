@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1396b0fac21d7de1
+// generated-sha256: 1f9215525037e783
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -52205,6 +52205,24 @@ const HOME_V2_CSS = `
   .mh-home-v2 .mh-home-dock-top .mh-home-dock-sub,.mh-home-v2 .mh-home-dock-top .mh-home-success .sb{font-size:12px}
   .mh-home-v2 .mh-home-dock-bottom .mh-home-dock-pic{width:62px;height:62px}
   .mh-home-v2 .mh-home-dock-bottom .mh-home-dock-name{font-size:12px}
+}
+/* クリスマスの入口(79-screen-xmas-event.jsx)は、横向きで帯を右の列の横へ動かす決まりを持っている(前の HOME の形のため)。
+   新しい帯の中では、ほかの1枚と同じ位置・大きさのままにする(部品の中身は変えない。HOME の側で上書きするだけ) */
+.mh-home-v2 .mh-home-band-slide[data-home-xmas-entry-strip]{position:relative!important;left:auto!important;right:auto!important;top:auto!important;width:auto!important;margin:0!important}
+@media (orientation:landscape) and (max-height:520px){.mh-home-v2 .mh-home-band .mh-xmas-entry[data-home-xmas-entry="banner"] .mh-xmas-entry-sub{font-size:11px}}
+/* 横持ちの iPhone の切り欠き(カメラの欠け)に、押す物を入れない。左右の余白に端末の安全な余白(safe-area)を足す */
+.mh-home-v2 .mh-home-top{padding-left:calc(8px + env(safe-area-inset-left));padding-right:calc(8px + env(safe-area-inset-right))}
+.mh-home-v2 .mh-home-menu{right:calc(8px + env(safe-area-inset-right))}
+.mh-home-v2 .mh-home-band{margin-left:calc(8px + env(safe-area-inset-left));margin-right:calc(8px + env(safe-area-inset-right))}
+.mh-home-v2 .mh-home-assistant,.mh-home-v2 .mh-home-assistant-fold{margin-left:calc(8px + env(safe-area-inset-left))}
+.mh-home-v2 .mh-home-dock{padding-left:calc(8px + env(safe-area-inset-left));padding-right:calc(8px + env(safe-area-inset-right))}
+@media(orientation:landscape) and (max-height:600px){
+  .mh-home-v2 .mh-home-band{left:calc(8px + env(safe-area-inset-left));margin:0}
+  .mh-home-v2 .mh-home-assistant,.mh-home-v2 .mh-home-assistant-fold{left:calc(8px + env(safe-area-inset-left));margin:0}
+}
+@container (min-width:700px) and (min-height:560px){
+  .mh-home-v2 .mh-home-band{margin-left:auto;margin-right:auto}
+  .mh-home-v2 .mh-home-dock{padding-left:calc(14px + env(safe-area-inset-left));padding-right:calc(14px + env(safe-area-inset-right))}
 }
 `;
 // ★イベント・レイドボス「ジャック」(docs/spec/RAID_BOSS_JACK.md)。開催中だけ、HOMEの真ん中でぴょこぴょこ跳ねる。
