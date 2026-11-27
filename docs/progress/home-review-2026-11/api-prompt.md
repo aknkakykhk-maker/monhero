@@ -28,3 +28,5 @@
 ## 6. どれを勧めるか(3行)
 
 添付の並び(この順・20枚): t1-1127-1907-phone-tate-say t1-1127-1907-phone-tate-nosay t1-1127-1907-phone-yoko-say t1-1127-1907-phone-yoko-nosay t1-1127-1907-tablet-tate-say t1-1127-1907-tablet-tate-nosay t1-1127-1907-tablet-yoko-say t1-1127-1907-tablet-yoko-nosay t2-1128-1005-phone-tate-say t2-1128-1005-phone-tate-nosay t2-1128-1005-phone-yoko-say t2-1128-1005-phone-yoko-nosay t2-1128-1005-tablet-tate-say t2-1128-1005-tablet-tate-nosay t2-1128-1005-tablet-yoko-say t2-1128-1005-tablet-yoko-nosay t3-1130-0005-phone-tate-say t3-1130-0005-phone-tate-nosay t3-1130-0005-phone-yoko-say t3-1130-0005-tablet-tate-say
+
+全体で日本語9000字以内。考えるのは要点だけにして、答えの本文を必ず最後まで書いてください。
