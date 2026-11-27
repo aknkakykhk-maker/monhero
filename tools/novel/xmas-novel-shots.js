@@ -55,7 +55,7 @@ const SHOTS_054 = [
 const SHOTS_058 = [
   { name: '01-letter-atsu', row: '2-L-4', side: 1, label: 'あつ派 赤い字の手紙' },
   { name: '02-letter-sora', row: '2-L-4', side: 2, label: 'ソラシド派 赤い字の手紙' },
-  { name: '03-letter-after', row: '2-L-6s', side: 2, label: 'ソラシド派 ワトソンくん(血ではない)' },
+  { name: '03-letter-after', row: '2-L-8', side: 2, label: 'ソラシド派 みんなが黙る間' },
   { name: '04-letter-truth', row: '8-3-7b', side: 1, label: '真ルート きゅうこが手紙を明かす' },
 ];
 const LIST = process.argv.includes('--r1126-046') ? SHOTS_046 : process.argv.includes('--r1126-054') ? SHOTS_054 : process.argv.includes('--r1126-058') ? SHOTS_058 : SHOTS;
