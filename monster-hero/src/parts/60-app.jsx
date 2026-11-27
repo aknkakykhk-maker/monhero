@@ -20082,7 +20082,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <figcaption style={{fontWeight:900,fontSize:12,color:'#ffedd5',margin:'0 0 4px'}}>▶ 予告動画</figcaption>
                   <ChangelogVideo src={c.video} poster={typeof c.videoPoster==='string'?c.videoPoster:undefined}/>
                 </figure>}
-                {(c.items||[]).map((x,j)=><p key={j} style={{fontSize:12,color:'#fed7aa',margin:'3px 0'}}>・{x}</p>)}
+                {(c.items||[]).map((x,j)=><p key={j} style={{fontSize:12,color:'#fed7aa',margin:'3px 0'}}>・{typeof x==='string'&&typeof XmasNovelWrap==='function'?<XmasNovelWrap text={x}/>:x}</p>)}
                 </div>
               </details>);}),
             ...rows.map(row=>{
@@ -20115,7 +20115,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     {row.entries.map(c=>(<section key={c.id} className="mh-changelog-item" data-changelog-type={c.type||'update'}>
                       <time>{(c.date||'').slice(11)||c.date}{unreadHere.has(c.id)&&<em>NEW</em>}</time>
                       <span className="mh-changelog-kind" data-kind={changelogTypeOf(c).tone}>{changelogTypeOf(c).label}</span>{changelogEventLive(c)&&<span data-changelog-event-live className="mh-changelog-kind" style={{background:'#f97316',color:'#1c1917',borderColor:'#fdba74',marginLeft:4}}>🎃 開催中</span>}
-                      <b>{c.title}</b>
+                      <b>{typeof c.title==='string'&&typeof XmasNovelWrap==='function'?<XmasNovelWrap text={c.title}/>:c.title}</b>
                       {/* 告知画像があれば本文の上に出す
                           (期間中いつでもここから見返せるように・2026-09-11・ユーザー指示) */}
                       {c.image&&<img data-changelog-image src={c.image} alt={`${c.title}のお知らせ`}
@@ -20127,7 +20127,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         <figcaption style={{fontWeight:900,margin:'0 0 4px'}}>▶ 予告動画</figcaption>
                         <ChangelogVideo src={c.video} poster={typeof c.videoPoster==='string'?c.videoPoster:undefined}/>
                       </figure>}
-                      {(c.items||[]).map((x,j)=><p key={j}>・{x}</p>)}
+                      {/* 本文は文節の切れ目だけで折る(2026-11-27 r1126-078・社長「文字の崩れ」) */}{(c.items||[]).map((x,j)=><p key={j}>・{typeof x==='string'&&typeof XmasNovelWrap==='function'?<XmasNovelWrap text={x}/>:x}</p>)}
                       {/* 本文の下に並べる見本の絵(2026-09-28・ユーザー提案「こんな感じに染色イメージを出したりしたらどう？」)。
                           gallery:[{ caption, image }] と書いたときだけ、見出しと絵を順に出す。
                           読めなかった絵は黙って消す(上の image と同じ)。助手の告知には出さない(告知は image の1枚だけ) */}
