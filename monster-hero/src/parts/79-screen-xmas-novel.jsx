@@ -43,6 +43,13 @@ const XMAS_NOVEL_CSS = `
 .mh-nv-se-sound { display: block; font-size: 21px; font-weight: 800; letter-spacing: .14em; color: #f3e6c0; text-shadow: 0 0 12px rgba(232,196,106,.35); }
 .mh-nv-se-note { display: block; font-size: 12px; font-weight: 600; letter-spacing: .02em; color: #a9b6da; line-height: 1.55; }
 .mh-nv-text.band { text-align: left; color: #c9d3ee; font-style: normal; }
+.mh-nv-text.band.letter { color: #ff8a8a; }
+/* 予告の手紙(帯の頭の「(手紙)」・r1126-058): 紙に赤い字。にじみながら、ゆっくり浮かぶ */
+.mh-nv-letter { position: absolute; left: 50%; top: 18%; width: min(80vw, 420px); padding: 24px 22px; z-index: 4; border-radius: 3px;
+  background: radial-gradient(120% 90% at 50% 40%, #f4ecd8 0%, #e7d8b4 70%, #cdb88c 100%); box-shadow: 0 14px 34px rgba(0,0,0,.65);
+  color: #a3080e; font-weight: 900; font-size: clamp(17px, 4.6vw, 22px); line-height: 1.9; letter-spacing: .08em; white-space: pre-line;
+  text-shadow: 0 0 1px rgba(140,0,0,.7), 0 1px 7px rgba(170,0,0,.45); transform: translateX(-50%) rotate(-1.5deg); animation: mhNvLetterIn 2.4s ease both; }
+@keyframes mhNvLetterIn { 0% { opacity: 0; filter: blur(7px); transform: translate(-50%, 14px) rotate(-3deg); } 55% { opacity: 1; filter: blur(1.5px); } 100% { opacity: 1; filter: none; transform: translateX(-50%) rotate(-1.5deg); } }
 .mh-nv-note { margin-top: 2px; font-size: 11px; color: #9fb0d8; }
 .mh-nv-next { position: absolute; right: 14px; bottom: 8px; width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-top: 9px solid #e8c46a; animation: mh-nv-bob 1s ease-in-out infinite; }
 @keyframes mh-nv-bob { 50% { transform: translateY(4px); } }
@@ -935,6 +942,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
         {!darkNow && (isLine || (isBand && xmasNovelIsSilhouette(row))) && <XmasNovelFigure row={row} />}
         {fx && <div key={fx.n} className={`mh-nv-fx ${fx.kind}`} />}
         {isBand && Array.isArray(row.fx) && row.fx.includes('fallen') && <XmasNovelFallen />}
+        {isBand && Array.isArray(row.fx) && row.fx.includes('letter') && <div key={`letter-${row.id}`} className="mh-nv-letter mh-nv-serif" data-xmas-novel-letter>{String(text).replace(/／/g, '\n')}</div>}
         {inside && <div className="mh-nv-crt" data-xmas-novel-inside />}
         {transit && <div key={transit.n} className="mh-nv-transit" data-dir={transit.dir} data-xmas-novel-transit={transit.dir} onAnimationEnd={(e) => { if (e.target === e.currentTarget) setTransit(null); }}><div className="scr" /><div className="mh-nv-noise" /><div className="mh-nv-scan" /></div>}
         {curtain && <div key={`curtain-${curtain}`} className="mh-nv-curtain" data-st={curtain} data-xmas-novel-curtain={curtain} />}
@@ -952,12 +960,13 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
         {(isLine || isBand || (row && (row.t === 'clue' || row.t === 'panel' || row.t === 'q'))) && !(card && card.kind !== 'band') && (
           <div className="mh-nv-box" style={{ zIndex: 5 }} data-xmas-novel-box>
             {name && <div className="mh-nv-name mh-nv-serif">{name}</div>}
-            <div className={`mh-nv-text${isBand ? (xmasNovelIsSeRow(row) ? ' se mh-nv-serif' : ' band mh-nv-serif') : ''}${isLine ? ' say' : ''}`} data-xmas-novel-text data-xmas-novel-kind={isBand ? (xmasNovelIsSeRow(row) ? 'se' : 'band') : isLine ? 'line' : row.t}>
+            <div className={`mh-nv-text${isBand ? (xmasNovelIsSeRow(row) ? ' se mh-nv-serif' : ` band mh-nv-serif${Array.isArray(row.fx) && row.fx.includes('letter') ? ' letter' : ''}`) : ''}${isLine ? ' say' : ''}`} data-xmas-novel-text data-xmas-novel-kind={isBand ? (xmasNovelIsSeRow(row) ? 'se' : 'band') : isLine ? 'line' : row.t}>
               {row.t === 'clue' ? `手がかり帳に「${row.clue}」を書きとめた`
                 : row.t === 'panel' ? (row.x || (row.stamp ? '……' : '登場人物'))
                 : row.t === 'q' ? xmasNovelFill(row.x, playerName)
                 : isBand && xmasNovelIsSeRow(row) ? <XmasNovelSeText text={text} shown={shown} />
                 : isLine ? <XmasNovelSayText text={text} shown={shown} />
+                : isBand && Array.isArray(row.fx) && row.fx.includes('letter') ? text.slice(0, shown).replace(/／/g, '　')
                 : text.slice(0, shown)}
             </div>
             {isLine && row.note && !typing && <div className="mh-nv-note">({row.note})</div>}
