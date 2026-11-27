@@ -14344,6 +14344,34 @@ const filterAssistantLines = (list, assistantId) => {
   return list.filter(line => (line.who || DEFAULT_ASSISTANT_ID) === id);
 };
 
+// ---------- 期間で出し入れする台詞(2026-11-27 r1126-066・クリスマスイベントの HOME から) ----------
+// ふだんの台詞(ASSISTANT_SCENES)とは別に置き、条件の無いときだけ、その時刻・その服に合う物を候補へ混ぜる。
+//   ・from / until(ISO) … その間だけ出る。時刻は選ぶたびに見る(読み込み時に1回だけ決めない・開きっぱなしの端末でも期間で切り替わる)
+//   ・outfit … その服(服の絵のフォルダ名・'santa' など)を着ているときだけ / notOutfit … その服を着ていないときだけ
+//   ・ほかの画面・ほかの道具が ASSISTANT_SCENES を読んでも、期間の台詞は混ざらない
+const ASSISTANT_SEASON_LINES = [];
+// 期間の台詞と、ふだんの台詞の両方が候補にあるとき、期間の台詞を選ぶ割合
+const ASSISTANT_SEASON_LINE_SHARE = 0.4;
+const addAssistantSeasonLines = ({ id, assistantId, scene, from, until, lines } = {}) => {
+  if (!id || !assistantId || !scene || !Array.isArray(lines)) return;
+  lines.forEach(line => { if (line && line.t) ASSISTANT_SEASON_LINES.push({ ...line, who: assistantId, scene, from: from || null, until: until || null, season: id }); });
+};
+const assistantSeasonLinesNow = (scene, assistantId, nowMs = Date.now()) => {
+  const id = assistantId || DEFAULT_ASSISTANT_ID;
+  const list = ASSISTANT_SEASON_LINES.filter(line => line.scene === scene && line.who === id);
+  if (!list.length) return [];
+  let worn = '';
+  try { worn = typeof assistantWornOutfitName === 'function' ? (assistantWornOutfitName({ id }) || '') : ''; } catch (_) { worn = ''; }
+  return list.filter(line => {
+    const from = line.from ? Date.parse(line.from) : NaN;
+    const until = line.until ? Date.parse(line.until) : NaN;
+    if (Number.isFinite(from) && nowMs < from) return false;
+    if (Number.isFinite(until) && nowMs >= until) return false;
+    if (line.outfit && worn !== line.outfit) return false;
+    if (line.notOutfit && worn === line.notOutfit) return false;
+    return true;
+  });
+};
 const assistantSceneLines = (scene, condition, bondLevel, assistantId) => {
   // line pack だけで追加されたデバッグ用の場面も取得できるようにする。
   // これが無いと pack のセリフは読み込み時に捨てられ、案内待ちのまま画面が止まる。
@@ -14359,7 +14387,9 @@ const assistantSceneLines = (scene, condition, bondLevel, assistantId) => {
   const conditional = conditionalAll ? filterAssistantLines(conditionalAll, assistantId) : null;
   const useConditional = conditional && conditional.length
     && conditional.some(line => (line.who || DEFAULT_ASSISTANT_ID) === (assistantId || DEFAULT_ASSISTANT_ID));
-  const list = useConditional ? conditional : filterAssistantLines(def.lines, assistantId);
+  const plain = useConditional ? conditional : filterAssistantLines(def.lines, assistantId);
+  // 条件の無いときだけ、いまの期間・いまの服に合う期間の台詞を混ぜる(r1126-066)
+  const list = (!useConditional && !condition && scene) ? [...(plain || []), ...assistantSeasonLinesNow(scene, assistantId)] : plain;
   if (!Array.isArray(list) || !list.length) return [];
   const lv = Number.isFinite(bondLevel) ? bondLevel : ASSISTANT_BOND_MIN_LEVEL;
   const matched = list.filter(line => assistantLineMatchesBond(line, lv));
@@ -14397,11 +14427,89 @@ const pickAssistantLine = (scene, condition, bondLevel, assistantId) => {
   const recent = ASSISTANT_RECENT[key] || [];
   const fresh = list.filter((_, i) => !recent.includes(i));
   const pool = fresh.length > 0 ? fresh : list;
-  const picked = pickWeighted(pool);
+  // 期間の台詞はふだんの台詞の数に関係なく、決まった割合で選ぶ(助手ごとに台詞の数が違うため・r1126-066)
+  const seasonal = pool.filter(line => line && line.season);
+  const usual = pool.filter(line => !(line && line.season));
+  const sub = (seasonal.length && usual.length) ? (Math.random() < ASSISTANT_SEASON_LINE_SHARE ? seasonal : usual) : pool;
+  const picked = pickWeighted(sub);
   const index = list.indexOf(picked);
   ASSISTANT_RECENT[key] = [index, ...recent].slice(0, assistantRecentLimit(list.length));
   return picked;
 };
+
+// ---------- クリスマスイベントの HOME のひとこと(2026-11-27 r1126-066・開催中だけ) ----------
+// 話題は 事件簿・レイドの黒いサンタ・クリスマス会・きせかえ・新曲。ネタバレ(犯人・消える人・エンドの中身・敵の数字・まだ出ていない敵)は書かない。
+//   きゅうこは作中の正体に触れない(黒いサンタの話をさせない)。あつの「謎は全て解けた！」は着ているときの1本だけ。
+//   各助手: いつも出る4本+着ていないときだけ1本(notOutfit)+着ているときだけ1本(outfit)。一覧は docs/progress/event-xmas-2026/home-lines/
+const ASSISTANT_XMAS_HOME_FROM = (typeof ASSISTANT_COSTUME_XMAS_START_AT !== 'undefined') ? ASSISTANT_COSTUME_XMAS_START_AT : '2026-11-28T10:00:00+09:00';
+const ASSISTANT_XMAS_HOME_UNTIL = (typeof ASSISTANT_COSTUME_XMAS_END_AT !== 'undefined') ? ASSISTANT_COSTUME_XMAS_END_AT : '2026-12-31T04:00:00+09:00';
+const ASSISTANT_XMAS_HOME_LINES = Object.freeze({
+  mua: [
+    { e:'excited', t:"{name}、クリスマスイベント始まったよ〜！ HOMEの「聖夜の名探偵」から入れるよ🎄" },
+    { e:'happy', t:"事件簿、あつくんの隣で見てるんだけど、まぢドキドキするｗ 手がかり帳もちゃんと見返してね！" },
+    { e:'normal', t:"黒いサンタ、みんなでやっつけに行こ！ レイドは1日3回まで無料だよ〜。" },
+    { e:'wink', t:"新曲の「winter fall」と「Dear Santa」、もう聞いた？ 冬っぽくてまぢ好き〜٩(*´ ꒳ `*)۶" },
+    { e:'wink', t:"あたしのサンタ服も並んでるよ〜。ビートP交換所の「着替え」、のぞいてみて！", notOutfit:'santa' },
+    { e:'happy', t:"じゃーん、サンタのあたし！ ぽんぽんの帽子、かわいくない？ｗ", outfit:'santa' },
+  ],
+  kiki: [
+    { e:'happy', t:"クリスマスイベント、始まりまつたね♪♪ 雪山のペンションでクリスマス会でつ。" },
+    { e:'normal', t:"事件簿の続きは、日を追って開いていきまつ。あわてず1話ずつ読みましょう (・∀・)" },
+    { e:'troubled', t:"黒いサンタ……ちょっと怖いでつけど、みんなで挑めば大丈夫でつ。" },
+    { e:'happy', t:"新曲の「Dear Santa」は速いでつよ。指をあたためてから挑みまつ♪" },
+    { e:'wink', t:"私のサンタケープも並んでまつ。柊の飾りがお気に入りでつ♪♪", notOutfit:'santa' },
+    { e:'happy', t:"サンタの格好、似合ってまつか？ ちょっと照れまつね (*´ω`*)", outfit:'santa' },
+  ],
+  momosuke: [
+    { e:'excited', t:"クリスマス会だよ、クリスマス会！ ももはプレゼント選びがいちばん楽しみ♡" },
+    { e:'wink', t:"事件簿の推理の問い、まちがえたら笑っちゃうかもw 手がかり帳、ちゃんと読んでね？" },
+    { e:'normal', t:"HOMEの黒いサンタ、押したらレイドに行けるよ。みんなでやっつけよ♡" },
+    { e:'happy', t:"「winter fall」、雪がしんしん降ってる感じでいいよね〜。ももはこっち派♡" },
+    { e:'wink', t:"ももの濃いピンクのサンタ服、もう見た？ ビートP交換所の「着替え」にあるよ♡", notOutfit:'santa' },
+    { e:'happy', t:"サンタのもも、かわいすぎない？w {name}、見とれてないで遊ぼ♡", outfit:'santa' },
+  ],
+  dra: [
+    { e:'excited', t:"クリスマスだぞ！ ペンションのごちそう、楽しみだなぁ。えへへ" },
+    { e:'surprise', t:"事件簿な、おでも出てくるんだよ。帽子まで同じでびっくりしたわ" },
+    { e:'normal', t:"黒いサンタは、モンヒロバトルでもモンヒロビートでもカードでも挑めるってよ。好きなので行こうぜ" },
+    { e:'troubled', t:"新曲の「Dear Santa」、BPM 200だって。おでの膝が先に音を上げそうだわ" },
+    { e:'wink', t:"おでのサンタ帽もあるんだぞ。星のめがねもついてくる。えへへ", notOutfit:'santa' },
+    { e:'happy', t:"どうだ、この星のめがね。赤い鼻もつけてるんだぞ。えへへ", outfit:'santa' },
+  ],
+  atsu: [
+    { e:'happy', t:"{name}、クリスマスイベント始まったね。事件簿、俺とソラシドで解くから見てて笑" },
+    { e:'wink', t:"ソラシドには負けたくないんだよね笑 手がかり、ちゃんと拾っていこ" },
+    { e:'excited', t:"黒いサンタ、レイドで上いこうぜ！ 無料の3回は毎日使い切ってこ笑" },
+    { e:'normal', t:"「Dear Santa」のHELL、もう触った？ 俺はとりあえず突っ込む笑" },
+    { e:'wink', t:"探偵の衣装、ビートP交換所にあるよ。俺のは黒いコートね笑", notOutfit:'santa' },
+    { e:'excited', t:"コートにマフラー、王冠つき。……謎は全て解けた！ なんてね笑", outfit:'santa' },
+  ],
+  kyuko: [
+    { e:'happy', t:"クリスマスだねぇ。ペンションでクリスマス会、楽しみだよぉ笑" },
+    { e:'normal', t:"事件簿、ちょっとずつ読んでこ。1日1話くらいがちょうどいいよぉ" },
+    { e:'wink', t:"新曲の「Dear Santa」、音がぎっしりで楽しいよぉ。HELLは覚悟してねw" },
+    { e:'normal', t:"寒い日はあったかくして遊ぼうねぇ。こたつでモンヒロビートとか最高だよ笑" },
+    { e:'wink', t:"俺のクリスマスの服も並んでるよぉ。黄色いサンタケープ、けっこう気に入ってる笑", notOutfit:'santa' },
+    { e:'happy', t:"サンタの格好、どうかなぁ。ちょっと照れるねぇ笑", outfit:'santa' },
+  ],
+  sorashido: [
+    { e:'happy', t:"{name}、クリスマスイベントですね！ 事件簿は、ワトソンくんと記録を取りながら解いています笑" },
+    { e:'normal', t:"推理の問いは、手がかり帳を見返してから答えるのがおすすめです" },
+    { e:'excited', t:"レイドの黒いサンタ、挑戦は1日3回まで無料です。毎朝4時に戻りますよー！" },
+    { e:'wink', t:"新曲の攻略まとめ、また書き足しておきました笑 「winter fall」は short ver. から慣れるのがいいと思います" },
+    { e:'normal', t:"探偵の衣装、ビートP交換所の「着替え」に並んでいます。紺のブレザーです笑", notOutfit:'santa' },
+    { e:'happy', t:"丸い眼鏡、似合ってますか？ 猫のキーホルダーもサンタ帽をかぶってます笑", outfit:'santa' },
+  ],
+  erubin: [
+    { e:'happy', t:"{name}、クリスマスイベントが始まったね。雪山のペンション、ちょっとわくわくするな" },
+    { e:'normal', t:"事件簿、俺も読んでるよ。推理って難しいね🤔 手がかり帳を何度も見返してる" },
+    { e:'excited', t:"黒いサンタ、カードでも挑めるんだって。俺はMFバトルカードで行こうかな" },
+    { e:'wink', t:"「Dear Santa」、速いけど楽しいね。指が追いつかなくて笑っちゃったw" },
+    { e:'wink', t:"俺のサンタのマント、ビートP交換所に並んでるよ。金の刺しゅうがきれいなんだ", notOutfit:'santa' },
+    { e:'happy', t:"サンタの頭巾、あったかいね。似合ってるかな？", outfit:'santa' },
+  ],
+});
+Object.keys(ASSISTANT_XMAS_HOME_LINES).forEach(assistantId => addAssistantSeasonLines({ id: 'xmas2026Home', assistantId, scene: 'home', from: ASSISTANT_XMAS_HOME_FROM, until: ASSISTANT_XMAS_HOME_UNTIL, lines: ASSISTANT_XMAS_HOME_LINES[assistantId] }));
 
 const findAssistant = (id) => ASSISTANTS.find(a => a.id === id)
   || ASSISTANTS.find(a => a.id === DEFAULT_ASSISTANT_ID)

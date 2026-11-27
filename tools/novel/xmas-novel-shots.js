@@ -5,6 +5,9 @@
 // 使い方: node tools/novel/xmas-novel-shots.js <出力ディレクトリ>   (縦 390×844・2倍)
 //         node tools/novel/xmas-novel-shots.js <出力ディレクトリ> --r1126-046   幕間と過去編(r1126-046)の組を撮る
 //         node tools/novel/xmas-novel-shots.js <出力ディレクトリ> --r1126-065   亡くなった人のシルエット(r1126-065)の組を縦と横で撮る
+//         node tools/novel/xmas-novel-shots.js <出力ディレクトリ> --r1126-071   改行の位置(r1126-071)の組を縦と横で撮る
+//         node tools/novel/xmas-novel-shots.js <出力ディレクトリ> --r1126-076   謎の客2人の全身の絵(寄り・ふだん・引き・死の場面)の組を縦と横で撮る
+//         node tools/novel/xmas-novel-shots.js <出力ディレクトリ> --r1126-067   立ち絵の見せ方(寄り・ふだん・引き)の組を縦と横で撮る
 //         node tools/novel/xmas-novel-shots.js <出力ディレクトリ> --r1126-062   足した選択肢とエンド(r1126-062)の組を撮る
 'use strict';
 const fs = require('fs');
@@ -87,12 +90,43 @@ const SHOTS_062 = [
 ];
 // 亡くなっているのが見つかる場面のシルエット(r1126-065)。縦と横で撮る(land: 横 844×390)
 const SHOTS_065 = [];
-[['01-kuroba', '3-1-4', 1, '第3章 黒羽が見つかる'], ['02-kuroba-hands', '3-1-7', 1, '第3章 黒羽の手'], ['03-momosuke', '10-2-8', 1, '後半 第8章 はしごの下のももすけ'],
-  ['04-x1-sora', '2-X-7', 2, 'ソラシド派 END-X1 裏口の前(主役)'], ['05-m2', 'M2-4', 1, 'END-M2 薪小屋のもちまる']].forEach(([name, row, side, label]) => {
+[['01-kuroba', '3-1-4', 1, '第3章 黒羽(雪原)'], ['02-kuroba-hands', '3-1-7', 1, '第3章 黒羽の手'], ['03-shirase', '5-4-5', 1, '第5章 白瀬(鏡の裏の通り道)'],
+  ['04-erubin', '10-1-4', 1, '後半 えるびん(客室のベッド)'], ['05-momosuke', '10-2-7', 1, '後半 ももすけ(はしごの下)'], ['06-mochimaru', '10-3-7', 1, '後半 もちまる(裏口の外の雪)'],
+  ['07-x1', '2-X-6a', 1, 'END-X1 裏口の前(あつ)'], ['08-x1-sora', '2-X-7', 2, 'END-X1 裏口の前(ソラシド)'], ['09-x2', '5-X-4a', 1, 'END-X2 書斎'],
+  ['10-x3', '6-X-10a', 1, 'END-X3 扉の外の雪'], ['11-x4', '2-Y-13a', 1, 'END-X4 裏の階段の下'], ['12-x5', '10-X-10a', 1, 'END-X5 はしごの下'],
+  ['13-m2', 'M2-4', 1, 'END-M2 薪小屋のもちまる'], ['14-m5', 'M5-5a', 1, 'END-M5 通り道(ソラシド)'], ['15-m5-atsu', 'M5-5s', 2, 'END-M5 通り道(あつ)']].forEach(([name, row, side, label]) => {
   SHOTS_065.push({ name: `${name}-tate`, row, side, label: `${label}(縦)` });
   SHOTS_065.push({ name: `${name}-yoko`, row, side, land: true, label: `${label}(横)` });
 });
-const LIST = process.argv.includes('--r1126-065') ? SHOTS_065 : process.argv.includes('--r1126-062') ? SHOTS_062 : process.argv.includes('--r1126-046') ? SHOTS_046 : process.argv.includes('--r1126-054') ? SHOTS_054 : process.argv.includes('--r1126-058') ? SHOTS_058 : SHOTS;
+// 改行の位置(r1126-071)。直す前と後を並べる。縦と横で撮る
+const SHOTS_071 = [];
+[['01-coat', '3-1-4', 1, '地の文「灰色のコートの影」'], ['02-cake', '1-O-25', 1, 'ト書き「ケーキをほおばって」'], ['03-got', '1-3-12c', 1, '手がかりを手に入れた【二通目の招待状】'],
+  ['04-clue', '4-1-6c', 1, '手がかり帳に書きとめた'], ['05-santa', '11-N-3', 1, '地の文「黒いサンタが座りこんで」'], ['06-say', '7-1-12a', 1, '台詞(ぶら下げ)'],
+  ['07-out', 'OUT-1-3', 0, '外側の台詞「上書きできません」'], ['08-band', '2-M-8', 1, '幕間の地の文'], ['09-say2', '1-5-13', 1, '台詞'], ['10-choice', 'A10', 1, '選択肢']].forEach(([name, row, side, label]) => {
+  SHOTS_071.push({ name: `${name}-tate`, row, side, label: `${label}(縦)` });
+  SHOTS_071.push({ name: `${name}-yoko`, row, side, land: true, label: `${label}(横)` });
+});
+// 立ち絵の見せ方(r1126-067)。寄り・ふだん・引きを縦と横で撮る(前と後を並べる用)
+const SHOTS_067 = [];
+[['1-yori-atsu', '8-1-14a', 1, '寄り 第8章「謎は全て解けた!」(あつ)'], ['2-yori-erubin', '5-4-8', 1, '寄り 第5章 白瀬を見つけたえるびん(泣く)'],
+  ['3-fudan-kyuko', '1-4-6', 1, 'ふだん 第1章 ねじ巻きを申し出るきゅうこ'], ['4-fudan-shirase', '3-5-3', 1, 'ふだん 第3章 窓辺の白瀬'],
+  ['5-hiki-kyuko', '1-O-25', 1, '引き おまけ ケーキをほおばるきゅうこ'], ['6-hiki-kuroba', '1-3-2', 1, '引き 第1章 黒羽の登場']].forEach(([name, row, side, label]) => {
+  SHOTS_067.push({ name: `${name}-tate`, row, side, label: `${label}(縦)` });
+  SHOTS_067.push({ name: `${name}-yoko`, row, side, land: true, label: `${label}(横)` });
+});
+// 謎の客2人を全身の絵に(r1126-076)。寄り・ふだん・引きと死の場面を縦と横で撮る
+const SHOTS_076 = [];
+[['1-kuroba-yori', '2-M-14', 1, '寄り 幕間 鍵をかけた部屋の黒羽'], ['2-kuroba-fudan', '2-1-3', 1, 'ふだん 第2章 楽譜が消えた黒羽'], ['3-kuroba-hiki', '1-3-2', 1, '引き 第1章 黒羽の登場'],
+  ['4-shirase-yori', '3-5-4', 1, '寄り 第3章 窓辺の白瀬「12年前」'], ['5-shirase-fudan', '3-5-3', 1, 'ふだん 第3章 窓辺の白瀬'], ['6-shirase-hiki', '1-3-6', 1, '引き 第1章 白瀬の登場'],
+  ['7-kuroba-shi', '3-1-4', 1, '死の場面 第3章 黒羽(雪原)'], ['8-kuroba-shi-te', '3-1-7', 1, '死の場面 第3章 黒羽の手'], ['9-shirase-shi', '5-4-5', 1, '死の場面 第5章 白瀬(鏡の裏の通り道)']].forEach(([name, row, side, label]) => {
+  SHOTS_076.push({ name: `${name}-tate`, row, side, label: `${label}(縦)` });
+  SHOTS_076.push({ name: `${name}-yoko`, row, side, land: true, label: `${label}(横)` });
+});
+const LIST_ALL = process.argv.includes('--r1126-071') ? SHOTS_071 : process.argv.includes('--r1126-076') ? SHOTS_076 : process.argv.includes('--r1126-067') ? SHOTS_067 : process.argv.includes('--r1126-065') ? SHOTS_065 : process.argv.includes('--r1126-062') ? SHOTS_062 : process.argv.includes('--r1126-046') ? SHOTS_046 : process.argv.includes('--r1126-054') ? SHOTS_054 : process.argv.includes('--r1126-058') ? SHOTS_058 : SHOTS;
+
+//  --only <語>: 名前にその語を含む物だけ撮る(例: --only kuroba)
+const ONLY = process.argv.includes('--only') ? process.argv[process.argv.indexOf('--only') + 1] || '' : '';
+const LIST = ONLY ? LIST_ALL.filter((x) => x.name.includes(ONLY)) : LIST_ALL;
 
 const ctx = vm.createContext({});
 vm.runInContext(`${fs.readFileSync(path.join(ROOT, 'monster-hero/src/parts/79-xmas-novel-script.jsx'), 'utf8')}\nthis.S = XMAS_NOVEL_SCRIPT;`, ctx);
@@ -127,7 +161,7 @@ const serve = () => new Promise((r) => { const s = http.createServer((req, res) 
         put('mh_xmas_novel_v1', seed);
       }, { cur: sh.list || sh.history ? null : { scene: at.scene, idx: at.idx, flags: sh.side ? { f_A1: sh.side } : {}, clues: [], ans: {}, panel: {} },
         ...(sh.endings ? { endings: sh.endings, endAt: Object.fromEntries(sh.endings.map((e) => [e, '2026-12-03T12:15:00.000Z'])) } : {}),
-        ...(sh.list || LIST === SHOTS_046 ? { endings: ['END-G'], snaps: { C1: { scene: 'C1-1', idx: 0, flags: {}, clues: [], ans: {}, panel: {} } } } : {}) });
+        ...(sh.list || LIST_ALL === SHOTS_046 ? { endings: ['END-G'], snaps: { C1: { scene: 'C1-1', idx: 0, flags: {}, clues: [], ans: {}, panel: {} } } } : {}) });
       await page.addInitScript(seeds.eventStorySeed()); await page.addInitScript(seeds.updateNoticeSeed()); await page.addInitScript(seeds.loginBonusDoneSeed()); await page.addInitScript(seeds.oneTimeNoticeSeed());
       await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
       await page.getByRole('button', { name: 'TAP TO START' }).click({ timeout: 60000 });

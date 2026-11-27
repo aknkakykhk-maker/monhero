@@ -45,6 +45,9 @@ const XMAS_COSTUME_START_AT = '2026-11-28T10:00:00+09:00';
 // クリスマスのレイド(r1119-172)の開始時刻。35-raid-xmas.jsx の RAID_XMAS_EVENT.startAt と同じ値(食い違いは tools/battle/raid-xmas-check.js が見る)。
 //   RELEASE_FLAGS.raidXmas はこの時刻まで偽を返す(見るたびに数え直す)。入口・HOMEのボス・ヘルプ・更新履歴はこれを見る
 const RAID_XMAS_START_AT = '2026-11-28T10:00:00+09:00';
+// 新曲「Battle #5」の解禁の時刻(2026-11-27 社長の決定・台帳 r1126-064。クリスマスイベントの開幕と同じ)。RELEASE_FLAGS.battle5 が見る。
+// 曲の公開(data/rhythm-mode.js の RHYTHM_SONG_RELEASE_AT)・BGM の一覧(13-bgm の BGM_TRACK_LISTED_FROM)も同じ時刻
+const BATTLE5_RELEASE_AT = '2026-11-28T10:00:00+09:00';
 // クリスマスのひとりで進める物語の序章(台帳 r1126-012/013)。RELEASE_FLAGS.xmasStoryPrologue は 35-raid-xmas.jsx の XMAS_STORY_PROLOGUE_OPEN_AT(11/27 13:00・r1126-060 で前倒し)まで偽を返す。
 //   序章のお話(EVENT_REPLAYS の xmas_story_00)の releaseFlag が見る。開幕(raidXmas)より前でも、この時刻からは序章だけ読める
 const RAID_JACK_PUBLIC_RELEASE = true;
@@ -109,8 +112,9 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   // 新曲「Battle #5」の告知(2026-11-23 社長決定・台帳 r1119-120)。曲のデータは入っているが公開は社長の
   //   タイミングで別途行うため、偽のあいだは更新履歴と助手の告知に出さない。曲そのものの公開は
   //   data/rhythm-mode.js の公開曲の一覧(RHYTHM_DEMO_SONG_IDS)が持つ(この印は告知だけの印)。
-  //   ★解禁するときは、ここを true にし、告知の date を解禁の日時に直す
-  battle5: false,
+  //   2026-11-27 社長の決定(台帳 r1126-064)で、クリスマスイベントの開幕 11/28 10:00 から真(見るたびに数え直す)。
+  //   曲の公開は data/rhythm-mode.js の RHYTHM_SONG_RELEASE_AT が同じ時刻で持つ
+  get battle5() { return Date.now() >= Date.parse(typeof BATTLE5_RELEASE_AT === 'string' ? BATTLE5_RELEASE_AT : '2026-11-28T10:00:00+09:00'); },
   // レイド・タクティクスプロ(ベースモンだけの回)の1回ごとの記録(raid_battle_logs・tactics_pro_logs)を送る(2026-10-21 社長「仕組みは作って」)。
   //   2026-10-22 窓口が表を2つとも作って確かめた(docs/sql/battle-log/BATTLE_LOGS_APPLY.sql)ので真にした。設計は docs/spec/BATTLE_LOG.md
   //   偽にすると何も送らず、タクティクスプロは入れ物も作らない(26-supabase.jsx)
