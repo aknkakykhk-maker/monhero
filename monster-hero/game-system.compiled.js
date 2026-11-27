@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d75fad2d8cd2cc30
+// source-sha256: b8520c1ab1f8e356
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -127726,11 +127726,16 @@ const xmasNovelKeepWords = () => {
   _xmasNovelKeepWords = [...set].filter(w => typeof w === 'string' && [...w].length >= 2 && [...w].length <= XMAS_NOVEL_KEEP_MAX).sort((a, b) => b.length - a.length);
   return _xmasNovelKeepWords;
 };
-const XMAS_NOVEL_KEEP_RES = [/\d{1,2}\/\d{1,2}(?:[(（][月火水木金土日](?:・祝)?[)）])?(?:[ 　]?\d{1,2}:\d{2})?/g, /\d{1,2}:\d{2}/g, /[「『【][^「」『』【】\n]{1,14}[」』】]/g, /(?:約|第|残り[ 　]?)?(?:[0-9０-９]+(?:[.．][0-9０-９]+)?[ 　]?(?:センチ|メートル|キロ|ミリ|時間|人目|番目|通目|号室|人|年|時|分|秒|個|つ|回|日|月|歳|才|枚|本|通|度|階|号|じ|倍|cm|m|%|％))+/g, /[0-9０-９]+[ァ-ヶー]{2,}/g, /[A-Za-z][A-Za-z0-9#.'&!?-]*(?:[ ][A-Za-z0-9#.'&!?-]+)+/g, /[一二三四五六七八九十百千]+(?:番目|人目|通目|時間|人|年|つ|回|度|階|日|分|時|本|枚|個|通)/g, /(?:…|‥|—|―){2,}[、。！？!?]*/g, /[〜～][^〜～\s]{1,12}[〜～]/g];
+const XMAS_NOVEL_KEEP_RES = [/\d{1,2}\/\d{1,2}(?:[(（][月火水木金土日](?:・祝)?[)）])?(?:[ 　]?\d{1,2}:\d{2})?/g, /\d{1,2}:\d{2}/g, /[「『【][^「」『』【】\n]{1,24}[」』】]/g, /(?:約|第|残り[ 　]?)?(?:[0-9０-９]+(?:[.．][0-9０-９]+)?[ 　]?(?:センチ|メートル|キロ|ミリ|時間|人目|番目|通目|号室|人|年|時|分|秒|個|つ|回|日|月|歳|才|枚|本|通|度|階|号|じ|倍|cm|m|%|％))+/g, /[0-9０-９]+[ァ-ヶー]{2,}/g, /[A-Za-z][A-Za-z0-9#.'&!?-]*(?:[ ][A-Za-z0-9#.'&!?-]+)+/g, /[一二三四五六七八九十百千]+(?:番目|人目|通目|時間|人|年|つ|回|度|階|日|分|時|本|枚|個|通)/g, /(?:…|‥|—|―){2,}[、。！？!?]*/g, /[〜～][^〜～\s]{1,12}[〜～]/g];
 const xmasNovelGramBreak = (s, i) => {
   const b = s.slice(0, i),
     a = s.slice(i);
   return /て$/.test(b) && /^[^るたはぁぃぅぇぉっゃゅょー]/.test(a) || /[A-Za-z0-9０-９ァ-ヶー」』）)一-龯々][はがをにもへとでのや]$/.test(b) || /^[はがをにもへのとや]/.test(a) && /[ぁ-ゖー]{2}$/.test(b) && !/[はがをにもへ]$/.test(b) || /で$/.test(b) && /^[^すしきもはるぁぃぅぇぉっゃゅょー]/.test(a) || /(?:から|まで|けど|ので|のに|ても|でも|には|では|とは|(?<![一-龯々])って|たら|れば|ながら|けれど|より|だけ|ほど|など|ように|ような|という|か|を)$/.test(b) || /^(?:です|でし|でしょ|だっ|だった|だよ|だね|だろ|じゃ|ように|ような|こと|もの|ため|わけ|はず|べき|かも|かな|なの|なん|ちゃん|くん|さん|ん[だでじ]|の(?:た|に|で|だ|か))/.test(a) || /[くし]$/.test(b) && /^(?:な[るりっられ]|し[たてよま])/.test(a) || /^[おご]/.test(a) && /[ぁ-ゖ一-龯]/.test(s[i + 1] || '');
+};
+const xmasNovelBracketFits = (s, m, max) => {
+  let e = m.index + m[0].length;
+  while (e < s.length && /[、。！？!?]/.test(s[e])) e++;
+  return xmasNovelWidth(s.slice(m.index, e)) <= max;
 };
 const xmasNovelWidth = t => [...String(t)].reduce((n, c) => n + (/[\x20-\x7e]/.test(c) ? 0.55 : 1), 0);
 const xmasNovelIsKana = (s, i) => /[ぁ-ゖゝゞ]/.test(s[i] || '') || s[i] === 'ー' && i > 0 && /[ぁ-ゖ]/.test(s[i - 1]);
@@ -127776,7 +127781,7 @@ const xmasNovelWrapPlan = (text, max = XMAS_NOVEL_KEEP_MAX) => {
   }
   const len = (a, b) => xmasNovelWidth(s.slice(a, b));
   const spans = [];
-  for (const re of XMAS_NOVEL_KEEP_RES) for (const m of s.matchAll(re)) if (!/^[「『【]/.test(m[0]) || xmasNovelWidth(m[0]) <= max) spans.push([m.index, m.index + m[0].length]);
+  for (const re of XMAS_NOVEL_KEEP_RES) for (const m of s.matchAll(re)) if (!/^[「『【]/.test(m[0]) || xmasNovelBracketFits(s, m, max)) spans.push([m.index, m.index + m[0].length]);
   for (const w of xmasNovelKeepWords()) if ([...w].length <= max) for (let i = s.indexOf(w); i >= 0; i = s.indexOf(w, i + 1)) spans.push([i, i + w.length]);
   for (const b of [...br]) if (b <= 0 || b >= s.length || spans.some(([a, e]) => b > a && b < e)) br.delete(b);
   const segAt = xmasNovelSegments(s);
@@ -127811,15 +127816,25 @@ const xmasNovelWrapPlan = (text, max = XMAS_NOVEL_KEEP_MAX) => {
         hi = sorted[k];
       if (len(lo, hi) <= max || /^\s+$/.test(s.slice(lo, hi))) continue;
       let start = lo,
-        lastOk = -1;
+        lastOk = -1,
+        lastGood = -1;
+      const pick = () => lastGood > start ? lastGood : lastOk;
       for (let q = lo + 1; q < hi; q++) {
         if (len(start, q) > max) {
-          if (lastOk > start) {
-            br.add(lastOk);
-            start = lastOk;
+          const c = pick();
+          if (c > start) {
+            br.add(c);
+            start = c;
           } else break;
         }
-        if (okAt(q, inSpanOk)) lastOk = q;
+        if (okAt(q, inSpanOk)) {
+          lastOk = q;
+          if (/[、。！？!?」』）)]$/.test(s.slice(0, q)) || xmasNovelGramBreak(s, q)) lastGood = q;
+        }
+      }
+      if (len(start, hi) > max) {
+        const c = pick();
+        if (c > start) br.add(c);
       }
     }
   }

@@ -851,7 +851,8 @@ const XMAS_NOVEL_KEEP_RES = [
   /\d{1,2}\/\d{1,2}(?:[(（][月火水木金土日](?:・祝)?[)）])?(?:[ 　]?\d{1,2}:\d{2})?/g,
   /\d{1,2}:\d{2}/g,
   // かぎかっこの中の短い名前は、かっこごと(「黒いサンタ」『聖夜のロンド』【二通目の招待状】)
-  /[「『【][^「」『』【】\n]{1,14}[」』】]/g,
+  //   長さは使う所の枠(max)で決める(見た目の幅で数える。「Kissからはじまるミステリー」2026-11-28)
+  /[「『【][^「」『』【】\n]{1,24}[」』】]/g,
   // 数と単位(30センチ・3人・0じ)。前の「約」「第」「残り 」も
   //   続いた単位(4分12秒・1時間30分)もひとかたまり
   /(?:約|第|残り[ 　]?)?(?:[0-9０-９]+(?:[.．][0-9０-９]+)?[ 　]?(?:センチ|メートル|キロ|ミリ|時間|人目|番目|通目|号室|人|年|時|分|秒|個|つ|回|日|月|歳|才|枚|本|通|度|階|号|じ|倍|cm|m|%|％))+/g,
@@ -877,6 +878,8 @@ const xmasNovelGramBreak = (s, i) => {
     || (/[くし]$/.test(b) && /^(?:な[るりっられ]|し[たてよま])/.test(a))
     || (/^[おご]/.test(a) && /[ぁ-ゖ一-龯]/.test(s[i + 1] || ''));
 };
+// かっこの名前を守るか: すぐあとの句読点(離せない)も合わせて枠(max)に入るとき
+const xmasNovelBracketFits = (s, m, max) => { let e = m.index + m[0].length; while (e < s.length && /[、。！？!?]/.test(s[e])) e++; return xmasNovelWidth(s.slice(m.index, e)) <= max; };
 const xmasNovelWidth = (t) => [...String(t)].reduce((n, c) => n + (/[\x20-\x7e]/.test(c) ? 0.55 : 1), 0);
 const xmasNovelIsKana = (s, i) => /[ぁ-ゖゝゞ]/.test(s[i] || '') || (s[i] === 'ー' && i > 0 && /[ぁ-ゖ]/.test(s[i - 1]));
 // 道具(Intl.Segmenter)の言葉の区切り。Map(始まりの位置 → 言葉)。道具が無い端末では空(決まりの分だけで見る)
@@ -916,7 +919,7 @@ const xmasNovelWrapPlan = (text, max = XMAS_NOVEL_KEEP_MAX) => {
   const len = (a, b) => xmasNovelWidth(s.slice(a, b));
   const spans = [];
   // かぎかっこの中の名前は、枠(max)に入るときだけかっこごと包む。入らないときは、名前の一覧と言葉の切れ目に任せる
-  for (const re of XMAS_NOVEL_KEEP_RES) for (const m of s.matchAll(re)) if (!/^[「『【]/.test(m[0]) || xmasNovelWidth(m[0]) <= max) spans.push([m.index, m.index + m[0].length]);
+  for (const re of XMAS_NOVEL_KEEP_RES) for (const m of s.matchAll(re)) if (!/^[「『【]/.test(m[0]) || xmasNovelBracketFits(s, m, max)) spans.push([m.index, m.index + m[0].length]);
   for (const w of xmasNovelKeepWords()) if ([...w].length <= max) for (let i = s.indexOf(w); i >= 0; i = s.indexOf(w, i + 1)) spans.push([i, i + w.length]);
   for (const b of [...br]) if (b <= 0 || b >= s.length || spans.some(([a, e]) => b > a && b < e)) br.delete(b);
   const segAt = xmasNovelSegments(s);
@@ -946,11 +949,15 @@ const xmasNovelWrapPlan = (text, max = XMAS_NOVEL_KEEP_MAX) => {
     for (let k = 1; k < sorted.length; k++) {
       const lo = sorted[k - 1], hi = sorted[k];
       if (len(lo, hi) <= max || /^\s+$/.test(s.slice(lo, hi))) continue;
-      let start = lo, lastOk = -1;
+      // 分ける所は、句読点のあと・文の組み立ての切れ目(lastGood)を先に選ぶ。無ければ言葉の切れ目(lastOk)
+      let start = lo, lastOk = -1, lastGood = -1;
+      const pick = () => (lastGood > start ? lastGood : lastOk);
       for (let q = lo + 1; q < hi; q++) {
-        if (len(start, q) > max) { if (lastOk > start) { br.add(lastOk); start = lastOk; } else break; }
-        if (okAt(q, inSpanOk)) lastOk = q;
+        if (len(start, q) > max) { const c = pick(); if (c > start) { br.add(c); start = c; } else break; }
+        if (okAt(q, inSpanOk)) { lastOk = q; if (/[、。！？!?」』）)]$/.test(s.slice(0, q)) || xmasNovelGramBreak(s, q)) lastGood = q; }
       }
+      // 最後の字で初めて枠を超えるとき(「「0時の鐘、なんだか早かったっちー」。」)も分ける
+      if (len(start, hi) > max) { const c = pick(); if (c > start) br.add(c); }
     }
   }
   const cuts = [0, ...[...br].sort((a, b) => a - b), s.length];

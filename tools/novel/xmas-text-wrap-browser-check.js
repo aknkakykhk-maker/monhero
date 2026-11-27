@@ -107,7 +107,7 @@ const SCAN = () => {
       const edges = new Set([0, txt.length]); const segAt = new Map();
       for (const x of seg.segment(txt)) { edges.add(x.index); edges.add(x.index + x.segment.length); segAt.set(x.index, x.segment); }
       const spans = [];
-      for (const re of keepRes) for (const m of txt.matchAll(new RegExp(re.source, re.flags))) if (!/^[「『【]/.test(m[0]) || [...m[0]].length <= 12) spans.push([m.index, m.index + m[0].length]);
+      for (const re of keepRes) for (const m of txt.matchAll(new RegExp(re.source, re.flags))) if (!/^[「『【]/.test(m[0]) || (typeof xmasNovelBracketFits === 'function' ? xmasNovelBracketFits(txt, m, 18) : [...m[0]].length <= 12)) spans.push([m.index, m.index + m[0].length]);
       for (const w of keepWords) for (let i = txt.indexOf(w); i >= 0; i = txt.indexOf(w, i + 1)) spans.push([i, i + w.length]);
       // 1行に入る字数の見込み。名前・言葉がそれより長いときは、どこで折っても入らないので数えない(ヘルプの表の狭い欄など)
       const cap = Math.max(1, Math.floor(blk.clientWidth / (parseFloat(bcs.fontSize) || 14)));
