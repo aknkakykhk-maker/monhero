@@ -174,7 +174,7 @@ const XmasStoryTab = ({ version = 0, allOpen = false, fightWays = [], onRead, on
   const shownChapters = XMAS_STORY_CHAPTERS.filter((c) => c.prologue);
   const storyNote = preMain
     ? `${xmasEventDateLabel(XMAS_STORY_PROLOGUE_OPEN_AT)} から序章が読めます。本編は ${xmasEventDateLabel(RAID_XMAS_EVENT.startAt)} から始まります`
-    : '序章は、いつでも読み返せます';
+    : '序章は、期間中いつでも読み返せます';
   // 本編の入口: 開幕から期間の終わりまで(デバッグの強制表示では、期間の外でも開く)
   const novelOpen = typeof openXmasNovel === 'function' && (allOpen || (typeof xmasNovelPlayableAt === 'function' && xmasNovelPlayableAt(nowMs)));
   const novelEnded = !allOpen && typeof XMAS_NOVEL_CLOSE_AT !== 'undefined' && nowMs >= Date.parse(XMAS_NOVEL_CLOSE_AT);
@@ -436,7 +436,8 @@ const HomeXmasEventEntry = ({ onOpen, preOpen = false }) => {
       <span style={{ position: 'absolute', left: 14, top: 6, right: 8, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
         <span data-xmas-entry-kicker className="block text-[10px] font-black text-amber-100" style={{ textShadow: '0 1px 2px #000' }}>クリスマスイベント</span>
         <b className="mh-xmas-entry-title block whitespace-nowrap text-[22px] leading-none">聖夜の名探偵</b>
-        <span className="mh-xmas-entry-sub px-2 py-px text-[10px]">{sub}</span>
+        {/* 日付と時刻のあいだの空白は小さい字だと潰れて「12/313:59」と読めた(#7857 点検の3)。改行されない空白に字の幅の間を足す */}
+        <span className="mh-xmas-entry-sub px-2 py-px text-[10px]">{preOpen ? sub : <>開催中 〜12/31<span style={{ marginLeft: '.3em' }}>{'\u00a0'}</span>3:59</>}</span>
       </span>
     </button>
   );

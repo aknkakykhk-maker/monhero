@@ -172,6 +172,16 @@ const XMAS_NOVEL_CSS = `
   .mh-nv-box { left: auto; right: 10px; transform: none; width: min(calc(60vw - 10px), 760px); min-height: 110px; padding-top: 20px; }
   .mh-nv-text { font-size: 15px; line-height: 1.65; }
   .mh-nv-cast { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+  /* 起動画面: 背の低い横では題の上と「一発で当てた数」が画面の端で切れた(#7857 点検の8)。字とボタンを縮め、上下中央は余るときだけにする */
+  .mh-nv-boot > .absolute { justify-content: flex-start; padding-top: 10px; padding-bottom: 10px; }
+  .mh-nv-boot > .absolute > * { margin-top: auto; margin-bottom: auto; }
+  .mh-nv-boot-series { font-size: 28px; }
+  .mh-nv-boot-title { margin-top: 2px; font-size: 13px; }
+  .mh-nv-boot .mh-nv-rule { margin: 6px auto; }
+  .mh-nv-boot-sub { font-size: 20px; }
+  .mh-nv-boot [data-xmas-novel-title] .mh-nv-boot-press { margin-top: 8px; }
+  .mh-nv-boot [data-xmas-novel-title] .mh-nv-btn.wide { min-height: 40px; }
+  .mh-nv-boot [data-xmas-novel-perfect] { margin-top: 8px; }
 }
 @media (min-width: 900px) and (min-height: 700px) { .mh-nv-text { font-size: 19px; } .mh-nv-box { min-height: 150px; } }
 @media (prefers-reduced-motion: reduce) { .mh-nv-snow, .mh-nv-next, .mh-nv-shake, .mh-nv-get, .mh-nv-fig img { animation: none !important; } }
@@ -858,7 +868,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
                 <button type="button" className="mh-nv-btn wide mh-nv-serif mh-nv-boot-btn" data-xmas-novel-chapters disabled={!Object.keys(save.snaps).length} onClick={() => setMode('chapters')}>章から</button>
                 <button type="button" className="mh-nv-btn wide mh-nv-serif mh-nv-boot-btn" data-xmas-novel-endings onClick={() => setMode('endings')}>エンドヒストリー {seenCount} / {endingsAll.length}</button>
               </div>
-              <div className="mt-4 text-[10px] text-slate-400">推理の問い 一発で当てた数 {xmasNovelPerfectCount(S, save)} / {perfectTotal}</div>
+              <div data-xmas-novel-perfect className="mt-4 text-[10px] text-slate-400">推理の問い 一発で当てた数 {xmasNovelPerfectCount(S, save)} / {perfectTotal}</div>
               {confirmNew && (
                 <div className="mh-nv-sheet" onClick={() => setConfirmNew(false)}>
                   <div className="mh-nv-panel mb-auto mt-auto max-w-sm text-center" onClick={(e) => e.stopPropagation()}>
