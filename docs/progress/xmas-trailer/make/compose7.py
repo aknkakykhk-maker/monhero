@@ -4,7 +4,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageEnhance
 
 REPO, S, OUT = sys.argv[1], sys.argv[2], sys.argv[3]
-W, H, FPS, DUR = 720, 1280, 30, 73.0
+W, H, FPS, DUR = 720, 1280, 30, 74.5
 R = REPO + '/tools/art-sources/promo/xmas-2026/received/'
 IMG = REPO + '/monster-hero/images/'
 def rgba(p): return Image.open(p).convert('RGBA')
@@ -381,15 +381,17 @@ def sc7b(t):  # 38.4-44.0
     img.alpha_composite(scr, (40, 360)); img.alpha_composite(TX['tv'], (0, 320))
     img = cover(img.convert('RGB'), lerp(1.0, 1.03, ease(tt / 2.6)), W / 2, 600).convert('RGBA')
     return img
-def sc8(t):  # 33.4-38 題字と開幕
-    img = cover(title_bg, lerp(1.12, 1.02, ease(t / 4.6)), title_bg.width / 2, title_bg.height * 0.45)
-    img = ImageEnhance.Brightness(img.filter(ImageFilter.GaussianBlur(6))).enhance(0.42).convert('RGBA')
-    snow(img, t + 38, 1.0)
-    p = ease(t / 0.9); s = lerp(1.15, 1.0, p)
-    lg = title_logo.resize((int(title_logo.width * s), int(title_logo.height * s)), Image.BICUBIC)
-    paste_a(img, lg, ((W - lg.width) / 2, 380 - (lg.height - title_logo.height) / 2), p)
-    sp = ease((t - 0.7) / 0.7); paste_a(img, TX['sub7'], (0, 380 + lg.height + 6 + (1 - sp) * 10), sp)
-    text_at(img, 's7', t, 1.5, 9.0, 760, fade=0.6)
+POSTER2 = rgba(S + '/v7/square_v2.png')  # 社長が確定した新しい告知ポスター(f2a217f5・副題「〜十三番目の鐘が鳴る夜〜」)
+POSTER2_BG = blur_bg(POSTER2.convert('RGB'), 0.38, 26)
+def sc8(t):  # 新しいポスターと開幕
+    img = POSTER2_BG.copy().convert('RGBA')
+    snow(img, t + 38, 0.8)
+    p = ease(t / 0.9); s_ = lerp(1.06, 1.0, ease(t / 6.5)); w = int(680 * s_)
+    pc = POSTER2.resize((w, w), Image.LANCZOS)
+    sh = Image.new('L', (W, H), 0); ImageDraw.Draw(sh).rectangle(((W - w) / 2 + 6, 236, (W + w) / 2 + 6, 236 + w + 14), fill=200)
+    shl = Image.new('RGBA', (W, H), (0, 0, 0, 255)); shl.putalpha(sh.filter(ImageFilter.GaussianBlur(18)).point(lambda v: int(v * p))); img.alpha_composite(shl)
+    paste_a(img, pc, ((W - w) / 2, 230 - (w - 680) / 2), p)
+    text_at(img, 's7', t, 1.3, 9.0, 960, fade=0.6)
     return img
 
 # ── 事件簿のゲーム画面を挟む(第5版・r1126-045。360×640 を2倍で撮った実際の画面) ──
@@ -421,7 +423,7 @@ def gkime(t):  # 決め台詞を2つ続けて(あいだは白く光る)
     return f
 SCENES = [(0.0, 5.4, sc1), (5.0, 9.4, sc2), (9.0, 13.4, gshot('c1-band', 4.4)), (13.0, 20.0, sc3), (19.6, 26.0, sc4), (25.6, 33.0, sc5),
           (32.6, 37.2, gshot('clue', 4.6)), (36.8, 43.2, sc5b), (42.8, 47.6, sc6), (47.4, 52.6, sc7),
-          (52.2, 58.2, gshot('a1', 6.0)), (57.8, 62.2, gkime), (61.8, 68.4, sc7b), (68.0, 73.0, sc8)]
+          (52.2, 58.2, gshot('a1', 6.0)), (57.8, 62.2, gkime), (61.8, 68.4, sc7b), (68.0, 74.5, sc8)]
 T_BELL, T_HIT = 25.6 + 0.6, 47.4  # 柱時計の鐘で曲を切り替え / 名探偵はでサビ
 T_DARK = T_BELL
 
