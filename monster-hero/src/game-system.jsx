@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4bdb3474f33f480e
+// generated-sha256: 3d0f9557ade25a73
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -68978,6 +68978,9 @@ const XMAS_NOVEL_CSS = `
   background: linear-gradient(180deg, #1b2c5c, #0c1636); color: #f8e3a4; box-shadow: 0 0 0 1px rgba(232,196,106,.85); }
 .mh-nv-text { font-size: 17px; line-height: 1.75; font-weight: 600; white-space: pre-wrap; min-height: 3.5em; text-align: left; word-break: normal; line-break: normal; overflow-wrap: anywhere; text-wrap: wrap; }
 .mh-nv-plain { text-align: left; word-break: normal; line-break: normal; overflow-wrap: anywhere; text-wrap: wrap; }
+/* 章の札・題の札の文も左寄せ(事件簿の中の文は左寄せ・幅いっぱいで1文字ずつ折る。飾りの見出しは起動画面の題字とエンドの札だけ・台帳 r1126-048) */
+.mh-nv-cardtext { width: min(100%, 560px); }
+.mh-nv-cardtext .mh-nv-rule { margin: 14px 0; }
 .mh-nv-text.band { text-align: left; color: #dfe6ff; font-style: normal; }
 .mh-nv-note { margin-top: 2px; font-size: 11px; color: #9fb0d8; }
 .mh-nv-next { position: absolute; right: 14px; bottom: 8px; width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-top: 9px solid #e8c46a; animation: mh-nv-bob 1s ease-in-out infinite; }
@@ -69858,18 +69861,18 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
 
       {card && (
         <div className="mh-nv-card" data-xmas-novel-card={card.kind} onClick={advance}>
-          {card.kind === 'chapter' && (<>
+          {card.kind === 'chapter' && (<div className="mh-nv-plain mh-nv-cardtext">
             <div className="mh-nv-serif text-[15px] tracking-[0.5em] text-slate-200">{card.label}</div>
             <div className="mh-nv-rule" />
             <div className="mh-nv-serif mh-nv-gold text-[30px] font-black leading-tight sm:text-[38px]">{card.title}</div>
             <div className="mh-nv-rule" />
             <div className="mt-6 text-[11px] text-slate-400">タップで進む</div>
-          </>)}
-          {(card.kind === 'title' || card.kind === 'band') && (<>
+          </div>)}
+          {(card.kind === 'title' || card.kind === 'band') && (<div className="mh-nv-plain mh-nv-cardtext">
             <div className="mh-nv-rule" />
-            <div className="mh-nv-serif mh-nv-gold text-[30px] font-black leading-tight sm:text-[40px]" style={JA_LABEL_STYLE}>{jaWrap(card.text)}</div>
+            <div className="mh-nv-serif mh-nv-gold text-[30px] font-black leading-tight sm:text-[40px]">{card.text}</div>
             <div className="mh-nv-rule" />
-          </>)}
+          </div>)}
           {card.kind === 'ending' && (() => {
             const kind = { ...(XMAS_NOVEL_ENDING_KINDS[card.ending.kind] || XMAS_NOVEL_ENDING_KINDS.normal), ...(card.ending.label ? { label: card.ending.label } : {}) };
             return (
