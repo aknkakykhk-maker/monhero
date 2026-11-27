@@ -202,10 +202,10 @@ const CHANGELOG = [
     pinEmoji:'🎄',
     image: 'images/events/xmas-2026-notice.jpg?v=12920aca9e80',
     // 2026-11-26 社長「土曜日の告知のときに場面場面で予告動画というかそういう感じのもいれたいね」(r1126-010)。お話の絵・助手のクリスマスの立ち絵・イベントの曲「Kissからはじまるミステリー」でつないだ予告編。第7版(75.9秒)は第5版の作りに戻し、読める速さ・事件簿の新しい画面・予告の手紙・最後は新しい告知ポスターにした(r1126-051〜053・058)。
-    //   2026-11-27 開幕の前倒し(r1126-063)で、最後の字幕だけ「11/28(土) 10:00 開幕」に描き直した(71.0秒から後ろ・音と長さはそのまま・make/tail8.py)。
+    //   2026-11-27 開幕の前倒し(r1126-063)で、最後のポスターの場面(70.4秒から後ろ)を、日付を直した v3 のポスターと字幕「11/28(土) 10:00 開幕」で描き直した(音と長さはそのまま・make/tail8.py)。表紙も同じ場面から撮り直した。
     //   第1話の範囲(招待状・ペンション)と、ポスターに出ている影だけ。ボスの名前・犯人・誰が消えるかは出さない。作り方は docs/promo/VIDEOS.md
-    video: 'movies/xmas-2026-trailer.mp4?v=dc9b4ed11f67',
-    videoPoster: 'images/events/xmas-2026-trailer-poster.jpg?v=24bb14baa66b',
+    video: 'movies/xmas-2026-trailer.mp4?v=dd98544a8099',
+    videoPoster: 'images/events/xmas-2026-trailer-poster.jpg?v=e2e35f009b2d',
     assistantNotice: {
       id:'update_notice_xmas_2026_notice_v1', type:'content',
       notifyFrom:'2026-11-27T13:00:00+09:00',
