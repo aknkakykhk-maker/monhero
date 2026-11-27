@@ -33,7 +33,9 @@ const MAX_PLAY_MS=5*60*1000;
 // 5分を超えてよい曲(社長がその曲だけ例外にしたもの)。ほかの曲の上限は変えない
 //   altar_world_tree … 2026-11-01 社長「この曲だけ例外」(原曲は6分25秒のまま最後まで遊べる。イベント「鍵の向こう側へ」の対象曲)
 //   walkure … 2026-11-22 社長「例外に足して最後まで遊べるようにする。短く遊びたい人はショート版」(原曲は11分32秒・台帳 r1119-095)
-const LONG_PLAY_ALLOWED=new Set(['altar_world_tree','walkure']);
+//   kiss_mystery … 2026-11-27 窓口(PR #7771 のあと CI が止まった件)。原曲は5分04秒で、最初のノーツを2秒より後にする決まり(rhythm-song-add)の
+//     2秒の無音を頭に足して5分06秒になった。無音は削らない(台帳 r1126-023・r1126-036)。短く遊びたい人はショート版
+const LONG_PLAY_ALLOWED=new Set(['altar_world_tree','walkure','kiss_mystery']);
 
 for(const songId of RHYTHM_DEMO_SONG_IDS){
   const song=RHYTHM_SONGS.find(entry=>entry.songId===songId);

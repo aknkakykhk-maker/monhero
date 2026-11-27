@@ -143,15 +143,15 @@ check('A: EXスキルは、持つ味方ごとに RAID_JACK_A_EX_MAX_USES(=2)回�
 check('AもBも、味方のライフ・ガッツは全快からはじまる(追いつき補正のあとで満タンにする)',
   /fullGuts: isRaidJackMode\(mode\)[\s\S]{0,500}isRaidJackMode\(mode\) && joined \? normalizeTacticsUnit\(\{ \.\.\.joined, hp: joined\.maxHp, guts: joined\.maxGuts \}\)/.test(app));
 
-// ⑨ ターン数とBGM(2026-10-04)
+// ⑨ ターン数とBGM(2026-10-04)。2026-11-27: クリスマスのレイド戦(winter fall)・期間中のHOME(Dear Santa)の分岐も受け付ける(台帳 r1126-023)
 check('1回の戦闘は20ターン(レイドバトルもグランドスラムも)・ターンごとのバフは半分(5% / 1.5%)',
   /const RAID_JACK_TURNS = 20;/.test(defs35) && /RAID_JACK_TURN_GROWTH = 1\.05;/.test(defs35) && /RAID_JACK_TURN_REGEN_STEP = 0\.015;/.test(defs35));
 check('ジャックとの戦いは Monster(全編)、レイド画面・段階えらび・編成はぱんぷきんの曲に固定(どちらも isGameOver より前で決める)',
-  /if \(state === 'BATTLE' && raidJackRunRef\.current\) return RAID_JACK_BATTLE_BGM_TRACK;\s*(?:\/\/[^\n]*\n\s*)*if \(RAID_JACK_BGM_STATES\.includes\(state\)(?: && raidEvRef\.current !== 'xmas')?\) return (?:raidEvRef\.current === 'xmas' \? XMAS_EVENT_BGM_TRACK : )?RAID_JACK_BGM_TRACK;[\s\S]{0,900}if \(isGameOver\) return bgmArrangement\.gameOver;/.test(app)
+  /if \(state === 'BATTLE' && raidJackRunRef\.current\) return (?:raidJackRunRef\.current\.ev === 'xmas' \? XMAS_RAID_BATTLE_BGM_TRACK : )?RAID_JACK_BATTLE_BGM_TRACK;\s*(?:\/\/[^\n]*\n\s*)*if \(RAID_JACK_BGM_STATES\.includes\(state\)(?: && raidEvRef\.current !== 'xmas')?\) return (?:raidEvRef\.current === 'xmas' \? XMAS_EVENT_BGM_TRACK : )?RAID_JACK_BGM_TRACK;[\s\S]{0,900}if \(isGameOver\) return bgmArrangement\.gameOver;/.test(app)
   && /RAID_JACK_BGM_TRACK = 'melo_crazy_party_night_full'/.test(defs35) && /id:'melo_crazy_party_night_full'/.test(read('monster-hero/src/parts/13-bgm-and-rhythm-settings.jsx'))
   && /RAID_JACK_BATTLE_BGM_TRACK = 'melo_monster';/.test(defs35) && /id:'melo_monster'/.test(read('monster-hero/src/parts/13-bgm-and-rhythm-settings.jsx')));
 check('HOMEの曲は、イベント中かつ曲を選んでいないときだけぱんぷきん(開催中は見るたびに数え直す)',
-  /raidJackWindowAt\(Date\.now\(\)\) === 'open'\) \|\| raidJackDebugForce \|\| halloweenNightOpen\)\s*&& bgmArrangement\.home === DEFAULT_BGM_ARRANGEMENT\.home\) \? RAID_JACK_BGM_TRACK : bgmArrangement\.home;/.test(app)
+  /raidJackWindowAt\(Date\.now\(\)\) === 'open'\) \|\| raidJackDebugForce \|\| halloweenNightOpen\)\s*&& bgmArrangement\.home === DEFAULT_BGM_ARRANGEMENT\.home\) \? RAID_JACK_BGM_TRACK(?:\s*(?:\/\/[^\n]*\n\s*)*: \(xmasEventBgmOpenAt\(Date\.now\(\)\) && bgmArrangement\.home === DEFAULT_BGM_ARRANGEMENT\.home\) \? XMAS_HOME_BGM_TRACK)? : bgmArrangement\.home;/.test(app)
   && /state === 'HOME' \|\| state === 'PROFILE' \|\| state === 'ITEM_INVENTORY'\) return homeBgm;/.test(app));
 check('ハロウィン・ナイトの期間中も(曲を選んでいなければ)HOMEの曲がぱんぷきんになる。期間は見るたびに数え直す',
   /const halloweenNightOpen = Date\.now\(\) >= Date\.parse\(HALLOWEEN_NIGHT_START_AT\) && Date\.now\(\) < Date\.parse\(HALLOWEEN_NIGHT_END_AT\);/.test(app));

@@ -71,9 +71,18 @@ function rhythmPts(note){
   return Array.isArray(note.slidePoints)&&note.slidePoints.length>=2?note.slidePoints
     :[{timeMs:Number(note.timeMs)||0,lane:Number(note.lane)||0},{timeMs:Number(note.endTimeMs)||Number(note.timeMs)||0,lane:Number(note.endLane??note.lane)||0}];
 }
-let slides=0,moved=0,withEase=0,withThrough=0;
+// 通り抜け(ease:'through')は MHB CHART ENGINE Rev.42(2026-11-23)から新曲に使う。曲の一覧(rhythm-song-registry.json)で
+// chartRevision が 42 以上の曲は、はじめから新しい作り方で作った曲なので「前と同じ位置か」の突き合わせから外す
+// (2026-11-27 クリスマスの3曲が、通り抜けを使って配信する最初の曲になって CI が止まった)。前からある配信中の曲は今までどおり1点も動かさない
+const THROUGH_FROM_REVISION=42;
+const registrySongs=JSON.parse(fs.readFileSync(path.join(__dirname,'authoring/rhythm-song-registry.json'),'utf8')).songs||{};
+const {RELEASED_TRACKS:SLIDE_RELEASED_TRACKS}=require('./rhythm-runtime-notes.js');
+const throughAllowed=songId=>{const track=(SLIDE_RELEASED_TRACKS&&SLIDE_RELEASED_TRACKS[songId])||String(songId||'').replace(/_hell_debug$/,'');const e=registrySongs[track];return !!e&&Number(e.chartRevision)>=THROUGH_FROM_REVISION;};
+let slides=0,moved=0,withEase=0,withThrough=0,newSongs=0,newThrough=0;
 for(const song of songs){
   const diffs=song&&song.difficulties?song.difficulties:{};
+  if(throughAllowed(song&&song.songId)){newSongs++;for(const id of Object.keys(diffs)){const chart=diffs[id],notes=Array.isArray(chart)?chart:(chart&&chart.notes)||[];
+    for(const note of notes)if(note&&note.type==='SLIDE'&&(note.slideEase==='through'||(note.slidePoints||[]).some(p=>p&&p.ease==='through')))newThrough++;}continue;}
   for(const id of Object.keys(diffs)){
     const chart=diffs[id],notes=Array.isArray(chart)?chart:(chart&&chart.notes)||[];
     for(const note of notes){
@@ -87,7 +96,7 @@ for(const song of songs){
   }
 }
 check('配信中のSLIDEは通り抜けを足す前と同じ位置(1点も動かない)',slides>0&&moved===0,`SLIDE ${slides}本 / 曲線を書いたもの ${withEase}本 / 動いたもの ${moved}本`);
-check('配信中の譜面に通り抜けを書いたものは無い(使うのは新曲から)',withThrough===0,`${withThrough}本`);
+check('配信中の譜面に通り抜けを書いたものは無い(使うのは新曲から)',withThrough===0,`${withThrough}本(Rev.${THROUGH_FROM_REVISION} 以上で作った新曲 ${newSongs}曲は外した・そちらの通り抜け ${newThrough}本)`);
 
 // 4b. 通り抜け(through)の形
 const thr=(pts,w=2)=>({type:'SLIDE',timeMs:pts[0][0],endTimeMs:pts[pts.length-1][0],lane:pts[0][1],endLane:pts[pts.length-1][1],subLaneWidth:w,
