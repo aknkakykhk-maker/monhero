@@ -474,7 +474,7 @@ const HomeRaidJack = ({ eventId, onOpen, ev = RAID_EVENT_JACK }) => {
 const homeWalletGrowPx=(goldText,bpText)=>{const w=t=>[...String(t)].reduce((n,c)=>n+(c.charCodeAt(0)>0x7f?2.5:1),0);return Math.min(24,Math.max(0,Math.ceil(w(goldText)*6.4-50),Math.ceil(w(bpText)*6.4-29)));};
 function HomeScreen({
   assistantBondUp, friendRequestCount = 0, breederIcon, breederLevel, breederName, breederPoints, gifts, gold,
-  hasUnreadChangelog, homeBackgroundReady, homeArt, homePastureMasumons, masuMons, missions,
+  hasUnreadChangelog, changelogUnreadCount, homeBackgroundReady, homeArt, homePastureMasumons, masuMons, missions,
   onOpenBattle, onOpenManagement, onOpenMarket, onOpenProfile, onOpenRhythm, onOpenSettings,
   onOpenTemple, openChangelog, openGiftBox, openMissions, profileFrameId, resolveIconUrl, spotClass,
   raidJackVisible = false, raidJackEventId, onOpenRaidJack,
@@ -592,7 +592,9 @@ function HomeScreen({
   const [homeMenuOpen,setHomeMenuOpen]=React.useState(false);
   const homeMissionCount=missionClaimableCount(normalizeMissions(missions));
   const homeGiftCount=giftClaimableCount(gifts);
-  const homeMenuBadge=homeMissionCount+homeGiftCount+(hasUnreadChangelog?1:0);
+  // 更新履歴は未読の数(r1126-074 小5)。数が分からないときだけ1と数える
+  const homeChangelogCount=Number(changelogUnreadCount)||0;
+  const homeMenuBadge=homeMissionCount+homeGiftCount+(hasUnreadChangelog?Math.max(1,homeChangelogCount):0);
   const homeMenuSpot=`${spotClass('reward')||''}${spotClass('settings')||''}`.trim();
   React.useEffect(()=>{if(homeMenuSpot)setHomeMenuOpen(true);},[homeMenuSpot]);
   const homeMenuGo=(fn)=>()=>{setHomeMenuOpen(false);if(typeof fn==='function')fn();};
@@ -637,7 +639,10 @@ function HomeScreen({
           <button onClick={homeMenuGo(openGiftBox)} className={`mh-home-side-btn mh-home-gift${spotClass('reward')}`} aria-label="ギフト"><span className="mh-home-side-ic"><Package size={18}/></span><span className="mh-home-side-lb">ギフト</span>
             {homeGiftCount>0&&<em>{homeGiftCount}</em>}
           </button>
-          <button onClick={homeMenuGo(openChangelog)} className="mh-home-side-btn mh-home-update" aria-label="更新履歴"><span className="mh-home-side-ic"><RefreshCcw size={17}/></span><span className="mh-home-side-lb">更新履歴</span>{hasUnreadChangelog&&<em className="mh-unread-badge" aria-label="未読あり">!</em>}</button>
+          <button onClick={homeMenuGo(openChangelog)} className="mh-home-side-btn mh-home-update" aria-label="更新履歴"><span className="mh-home-side-ic"><RefreshCcw size={17}/></span><span className="mh-home-side-lb">更新履歴</span>{hasUnreadChangelog&&(homeChangelogCount>0
+            // 「!」ではなく未読の数(2026-11-27 r1126-074 小5)。メニューの行は横に長いので、2桁でもそのまま出せる
+            ?<em className="mh-unread-badge" data-changelog-entry-count={homeChangelogCount} aria-label={`未読${homeChangelogCount}件`}>{homeChangelogCount>99?'99+':homeChangelogCount}</em>
+            :<em className="mh-unread-badge" aria-label="未読あり">!</em>)}</button>
           <button onClick={homeMenuGo(onOpenSettings)} className={`mh-home-side-btn mh-home-settings${spotClass('settings')}`} aria-label="設定"><span className="mh-home-side-ic"><Settings size={18}/></span><span className="mh-home-side-lb">設定</span></button>
         </div>
         {/* イベントの帯1枚(案A)。2つ目からは横に送る。並びと送り方は上の homeBandSlides */}
