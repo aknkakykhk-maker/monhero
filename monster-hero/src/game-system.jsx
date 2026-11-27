@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4bdb3474f33f480e
+// generated-sha256: 4b3efed7d03296ee
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -39016,7 +39016,7 @@ const raidJackRevokeUnearned = async (state, gifts, breederId, eventId) => {
 const RAID_XMAS_EVENT = Object.freeze({
   id: 'raid_xmas_2026',
   debugId: 'raid_xmas_debug',
-  title: '聖夜の名探偵',                 // イベントの名前(社長決定 2026-11-25)。副題の案は「〜雪山ペンションと消えたプレゼント〜」
+  title: '聖夜の名探偵',                 // イベントの名前(社長決定 2026-11-25)。副題は「〜十三番目の鐘が鳴る夜〜」(台帳 r1126-051)
   name: '黒いサンタ',                   // ボスの名前(社長決定 r1126-024)。ボスは「サンタ」が覚醒した「覚醒サンタ」
   startAt: '2026-11-30T10:00:00+09:00',
   endAt: '2026-12-31T04:00:00+09:00',
@@ -67522,7 +67522,7 @@ const XmasEventScreen = ({ tab = 'story', onTab, onBack, forced = false, preOpen
               <span className="absolute inset-0 flex flex-col items-center justify-center text-center" style={{ background: 'radial-gradient(80% 70% at 50% 55%, #0b1733cc 0%, #0b173388 55%, transparent 100%)' }}>
                 <span className={`font-black text-amber-100 ${raidShown ? 'text-[8px]' : 'text-[11px]'}`} style={{ letterSpacing: '.2em', textShadow: '0 1px 3px #000' }}>クリスマスイベント</span>
                 <b className={`mh-xmas-title leading-tight ${raidShown ? 'text-[20px]' : 'text-[38px]'}`} style={{ fontFamily: "'Hiragino Mincho ProN', 'Yu Mincho', serif", filter: 'drop-shadow(0 2px 2px #000) drop-shadow(0 0 6px #000a)' }}>聖夜の名探偵</b>
-                <span className={`font-bold text-amber-50 ${raidShown ? 'text-[7px]' : 'text-[11px]'}`} style={{ textShadow: '0 1px 3px #000' }}>～雪山ペンションと消えたプレゼント～</span>
+                <span className={`font-bold text-amber-50 ${raidShown ? 'text-[7px]' : 'text-[11px]'}`} style={{ textShadow: '0 1px 3px #000' }}>～十三番目の鐘が鳴る夜～</span>
               </span>
             )}
           </div>
