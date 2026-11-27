@@ -4,6 +4,7 @@
 //   撮る物は下の SHOTS。行は台本の番号(7-1-3a など)で書く
 // 使い方: node tools/novel/xmas-novel-shots.js <出力ディレクトリ>   (縦 390×844・2倍)
 //         node tools/novel/xmas-novel-shots.js <出力ディレクトリ> --r1126-046   幕間と過去編(r1126-046)の組を撮る
+//         node tools/novel/xmas-novel-shots.js <出力ディレクトリ> --r1126-065   亡くなった人のシルエット(r1126-065)の組を縦と横で撮る
 //         node tools/novel/xmas-novel-shots.js <出力ディレクトリ> --r1126-062   足した選択肢とエンド(r1126-062)の組を撮る
 'use strict';
 const fs = require('fs');
@@ -84,7 +85,14 @@ const SHOTS_062 = [
   { name: '20-history-few', history: true, endings: ['END-X1', 'END-M1', 'END-M4', 'END-G'], label: 'エンドヒストリー(まだの物は？？？)' },
   { name: '21-history-all', history: true, endings: ALL_ENDS, label: 'エンドヒストリー(全部見たあと)' },
 ];
-const LIST = process.argv.includes('--r1126-062') ? SHOTS_062 : process.argv.includes('--r1126-046') ? SHOTS_046 : process.argv.includes('--r1126-054') ? SHOTS_054 : process.argv.includes('--r1126-058') ? SHOTS_058 : SHOTS;
+// 亡くなっているのが見つかる場面のシルエット(r1126-065)。縦と横で撮る(land: 横 844×390)
+const SHOTS_065 = [];
+[['01-kuroba', '3-1-4', 1, '第3章 黒羽が見つかる'], ['02-kuroba-hands', '3-1-7', 1, '第3章 黒羽の手'], ['03-momosuke', '10-2-8', 1, '後半 第8章 はしごの下のももすけ'],
+  ['04-x1-sora', '2-X-7', 2, 'ソラシド派 END-X1 裏口の前(主役)'], ['05-m2', 'M2-4', 1, 'END-M2 薪小屋のもちまる']].forEach(([name, row, side, label]) => {
+  SHOTS_065.push({ name: `${name}-tate`, row, side, label: `${label}(縦)` });
+  SHOTS_065.push({ name: `${name}-yoko`, row, side, land: true, label: `${label}(横)` });
+});
+const LIST = process.argv.includes('--r1126-065') ? SHOTS_065 : process.argv.includes('--r1126-062') ? SHOTS_062 : process.argv.includes('--r1126-046') ? SHOTS_046 : process.argv.includes('--r1126-054') ? SHOTS_054 : process.argv.includes('--r1126-058') ? SHOTS_058 : SHOTS;
 
 const ctx = vm.createContext({});
 vm.runInContext(`${fs.readFileSync(path.join(ROOT, 'monster-hero/src/parts/79-xmas-novel-script.jsx'), 'utf8')}\nthis.S = XMAS_NOVEL_SCRIPT;`, ctx);
@@ -108,7 +116,7 @@ const serve = () => new Promise((r) => { const s = http.createServer((req, res) 
     for (const sh of LIST) {
       const at = sh.list || sh.history ? { scene: 'C1-1', idx: 0 } : where(sh.row);
       if (!at) { console.log(`NG: ${sh.row} が台本に無い`); bad += 1; continue; }
-      const page = await (await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 })).newPage();
+      const page = await (await browser.newContext({ viewport: sh.land ? { width: 844, height: 390 } : { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 })).newPage();
       const errors = []; page.on('pageerror', (e) => errors.push(String(e)));
       await page.route(/supabase\.co/, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
       await page.addInitScript((seed) => {

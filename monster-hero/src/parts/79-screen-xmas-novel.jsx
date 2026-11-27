@@ -125,6 +125,24 @@ const XMAS_NOVEL_CSS = `
   animation: mh-nv-bleed 2.4s ease-out both; }
 @keyframes mh-nv-bleed { 0% { opacity: 0; transform: scale(1.35); filter: blur(6px); } 25% { opacity: 1; transform: scale(1); filter: blur(0); } 70% { opacity: .9; } 100% { opacity: 0; } }
 .mh-nv-fallen { position: absolute; left: 50%; bottom: 24%; width: min(80vw, 520px); transform: translateX(-50%); z-index: 4; filter: drop-shadow(0 0 2px rgba(190,200,230,.35)); pointer-events: none; animation: mh-nv-fade 1.2s ease both; }
+.mh-nv-body { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
+.mh-nv-body-dim { position: absolute; inset: 0; -webkit-backdrop-filter: grayscale(.9) brightness(.55); backdrop-filter: grayscale(.9) brightness(.55);
+  background: radial-gradient(70% 34% at 50% 74%, rgba(120,0,14,.42), rgba(120,0,14,0) 72%), radial-gradient(120% 90% at 50% 40%, rgba(6,10,34,.35), rgba(0,0,4,.88)); animation: mh-nv-fade 1.4s ease both; }
+.mh-nv-body-lie { --L: min(88vw, 580px, calc(26vh / var(--ar))); --H: calc(var(--L) * var(--ar)); position: absolute; left: 50%; bottom: 27%; width: var(--L); height: calc(var(--L) * var(--ar)); transform: translateX(-50%); }
+.mh-nv-body-lie img { position: absolute; left: 50%; top: 50%; width: calc(var(--L) * var(--ar)); height: var(--L); max-width: none; object-fit: fill;
+  transform: translate(-50%, -50%) rotate(-90deg); animation: mh-nv-body-in 1.6s ease-out both !important;
+  filter: brightness(0) drop-shadow(0 0 1px rgba(210,30,40,.75)) drop-shadow(0 0 16px rgba(110,0,12,.6)) !important; }
+.mh-nv-body-lie.bust { --L: min(40vw, 300px, 17vh); transform: translateX(-100%); }
+.mh-nv-body-lie.bust .pool { left: -30%; top: calc(var(--H) * .6); width: calc(var(--L) * 1.9); height: calc(var(--L) * .3); }
+@media (orientation: landscape) { .mh-nv-body-lie { left: 31%; bottom: 22%; } }
+.mh-nv-body-lie img.bust { -webkit-mask-image: linear-gradient(180deg, #000 42%, transparent 80%); mask-image: linear-gradient(180deg, #000 42%, transparent 80%); }
+.mh-nv-body-lie.bust::after { content: ''; position: absolute; left: 52%; top: 22%; width: 120%; height: 62%; border-radius: 40% 50% 50% 40%; background: radial-gradient(60% 60% at 30% 50%, #000 40%, rgba(0,0,0,.85) 62%, rgba(0,0,0,0) 100%); filter: drop-shadow(0 0 10px rgba(110,0,12,.5)); animation: mh-nv-body-in 1.6s ease-out both; }
+.mh-nv-body-lie .pool { position: absolute; left: -14%; top: calc(var(--H) * .62); width: calc(var(--L) * 1.05); height: calc(var(--L) * .16); transform-origin: 18% 40%; filter: drop-shadow(0 0 6px rgba(140,0,16,.55));
+  animation: mh-nv-pool 3.2s cubic-bezier(.2,.6,.3,1) .5s both; }
+@keyframes mh-nv-body-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes mh-nv-pool { from { transform: scale(.08, .05); opacity: .6; } to { transform: scale(1); opacity: 1; } }
+.mh-nv-body.again .mh-nv-body-dim, .mh-nv-body.again img, .mh-nv-body.again .pool { animation-duration: .25s !important; animation-delay: 0s !important; }
+@media (prefers-reduced-motion: reduce) { .mh-nv-body-dim, .mh-nv-body-lie img, .mh-nv-body-lie .pool { animation: none !important; } }
 .mh-nv-boss { position: relative; height: 86%; aspect-ratio: 985 / 1347; max-width: 100%; }
 .mh-nv-boss img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; filter: brightness(0) drop-shadow(0 0 10px rgba(180,0,20,.55)) !important; animation: none !important; }
 .mh-nv-boss .eye { position: absolute; top: 34.5%; width: 7%; height: 3.2%; border-radius: 50%; transform: translate(-50%, -50%);
@@ -410,6 +428,55 @@ const XmasNovelFallen = () => (
     <path d="M110 58 C120 70 150 72 165 66" stroke="rgba(0,0,0,.8)" strokeWidth="9" fill="none" strokeLinecap="round" />
   </svg>
 );
+// 亡くなっているのが見つかる行(台本の〔遺体:黒羽〕・r1126-065)。その人の絵を真っ黒の影にして横に倒し、床に血だまりが広がる。
+//   色を持つのは血だけ(手本の作品の見せ方・r1126-065 追記1)。背景は暗く冷たくし、床の近くだけ赤くさす。新しい絵は作らない。
+//   助手はサンタのきせかえの全身の絵、謎の客2人・もちまるはいまの画面の絵。lead / partner は A1 で選んだ方 / 選ばなかった方
+let xmasNovelBodyLast = { k: '', at: -9 };
+const xmasNovelBodyWho = (body, flags) => {
+  const lead = flags && flags.f_A1 === 2 ? 'sorashido' : 'atsu';
+  if (body === 'lead') return lead;
+  if (body === 'partner') return lead === 'atsu' ? 'sorashido' : 'atsu';
+  return body || '';
+};
+const xmasNovelBodySrc = (who) => {
+  const c = xmasNovelCastOf(who);
+  if (!c) return '';
+  if (c.kind === 'assistant') {
+    const dir = typeof STORY_OUTFIT_DIRS !== 'undefined' && STORY_OUTFIT_DIRS && STORY_OUTFIT_DIRS.santa ? STORY_OUTFIT_DIRS.santa : '';
+    return dir ? `${dir}/${who}_normal.PNG` : '';
+  }
+  return c.art || '';
+};
+const XmasNovelBody = ({ who, scene = '', at = 0 }) => {
+  const k = `${scene}:${who}`;
+  // 同じ場面で同じ人の影がすぐまた出るとき(間に台詞が1〜2行)は、血が広がり直さないようにする
+  const [again] = useState(() => xmasNovelBodyLast.k === k && Math.abs(at - xmasNovelBodyLast.at) <= 4);
+  const [ar, setAr] = useState(0);
+  const [broken, setBroken] = useState(false);
+  useEffect(() => { xmasNovelBodyLast = { k, at }; }, [k, at]);
+  const c = xmasNovelCastOf(who);
+  const src = xmasNovelBodySrc(who);
+  const bust = !!(c && c.kind === 'guest'); // 胸から上の絵は、胸の切れ目を暗がりにぼかす
+  return (
+    <div className={`mh-nv-body${again ? ' again' : ''}`} data-xmas-novel-fallen data-xmas-novel-body={who} aria-label={c ? `${c.name}の倒れた影` : '倒れた影'}>
+      <div className="mh-nv-body-dim" />
+      <div className={`mh-nv-body-lie${bust ? ' bust' : ''}`} style={{ '--ar': ar || (bust ? 1 : 0.3) }}>
+        <svg className="pool" viewBox="0 0 300 60" preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <radialGradient id="mh-nv-pool-g" cx="30%" cy="42%" r="70%"><stop offset="0%" stopColor="#9a0716" /><stop offset="45%" stopColor="#6a020e" /><stop offset="100%" stopColor="#300006" /></radialGradient>
+          </defs>
+          <path d="M14 30 C8 20 30 14 52 16 C64 8 96 6 118 13 C136 9 160 12 170 19 C188 17 204 22 198 28 C214 27 246 30 262 33 C274 35 272 39 258 39 C236 40 214 38 200 40 C206 48 184 54 160 51 C146 57 112 58 92 53 C70 58 38 55 30 48 C16 46 6 38 14 30 Z" fill="url(#mh-nv-pool-g)" />
+        </svg>
+        {src && !broken && (
+          <img src={src} alt="" draggable={false} className={bust ? 'bust' : ''}
+            onLoad={(e) => { const im = e.currentTarget; if (im.naturalWidth && im.naturalHeight) setAr(im.naturalWidth / im.naturalHeight); }}
+            onError={() => setBroken(true)} />
+        )}
+        {(!src || broken) && <XmasNovelFallen />}
+      </div>
+    </div>
+  );
+};
 // 黒いサンタの影(バッドエンドのシルエット)。レイドのボスの絵を黒く塗りつぶし、目だけ赤く光らせる。絵が無ければ簡単な影
 const XmasNovelBossShadow = () => {
   const src = typeof RAID_XMAS_BOSS_IMG !== 'undefined' ? RAID_XMAS_BOSS_IMG : '';
@@ -952,7 +1019,8 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
         {(bg.snow || !bg.img) && <><div className="mh-nv-snow" />{bg.snow && <div className="mh-nv-snow b" />}</>}
         {!darkNow && (isLine || (isBand && xmasNovelIsSilhouette(row))) && <XmasNovelFigure row={row} />}
         {fx && <div key={fx.n} className={`mh-nv-fx ${fx.kind}`} />}
-        {isBand && Array.isArray(row.fx) && row.fx.includes('fallen') && <XmasNovelFallen />}
+        {isBand && row.body && <XmasNovelBody key={`body-${row.body}`} who={xmasNovelBodyWho(row.body, st && st.cur && st.cur.flags)} scene={scene ? scene.id : ''} at={st && st.cur && Number.isFinite(st.cur.idx) ? st.cur.idx : 0} />}
+        {isBand && !row.body && Array.isArray(row.fx) && row.fx.includes('fallen') && <XmasNovelFallen />}
         {isBand && Array.isArray(row.fx) && row.fx.includes('letter') && <div key={`letter-${row.id}`} className="mh-nv-letter mh-nv-serif" data-xmas-novel-letter>{String(text).replace(/／/g, '\n')}</div>}
         {inside && <div className="mh-nv-crt" data-xmas-novel-inside />}
         {transit && <div key={transit.n} className="mh-nv-transit" data-dir={transit.dir} data-xmas-novel-transit={transit.dir} onAnimationEnd={(e) => { if (e.target === e.currentTarget) setTransit(null); }}><div className="scr" /><div className="mh-nv-noise" /><div className="mh-nv-scan" /></div>}

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d33cb7f948def7de
+// source-sha256: 47b7b96e5d411bf1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -116221,6 +116221,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "band",
       "x": "裏口から少し離れた雪の上に、灰色のコートの影が、うつ伏せに横たわっていた",
       "fx": ["fallen"],
+      "body": "kuroba",
       "k": "C3-1:3-1-4"
     }, {
       "id": "3-1-5",
@@ -116233,12 +116234,14 @@ const XMAS_NOVEL_SCRIPT = {
       "id": "3-1-6",
       "t": "band",
       "x": "二人が、雪を踏みしめていく。黒羽の体は、一晩で白く凍りついていた。髪にも、まつげにも、霜がびっしりと貼りついている",
+      "body": "kuroba",
       "k": "C3-1:3-1-6"
     }, {
       "id": "3-1-7",
       "t": "band",
       "x": "見開いたままの目が、裏口のほうを向いていた。両手の指先は皮が剥け、爪が剥がれて、凍った血で黒くこわばっている",
       "fx": ["red"],
+      "body": "kuroba",
       "k": "C3-1:3-1-7"
     }, {
       "id": "3-1-8",
@@ -117573,17 +117576,20 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "band",
       "x": "細く冷たい通り道。白いケープの白瀬が、鏡の裏に背中をつけて、座りこんでいた",
       "fx": ["fallen"],
+      "body": "shirase",
       "k": "C5-4:5-4-5"
     }, {
       "id": "5-4-6",
       "t": "band",
       "x": "顔は青白く、唇は紫に変わっている。手袋のない右手が、鏡の裏の板に、まだ爪を立てたまま凍りついていた",
+      "body": "shirase",
       "k": "C5-4:5-4-6"
     }, {
       "id": "5-4-7",
       "t": "band",
       "x": "鏡の裏には、何十本もの、赤い引っかき傷。爪の間から流れた血が、板の上で細い筋になって固まっている",
       "fx": ["bleed"],
+      "body": "shirase",
       "k": "C5-4:5-4-7"
     }, {
       "id": "5-4-8",
@@ -121041,12 +121047,14 @@ const XMAS_NOVEL_SCRIPT = {
       "id": "10-1-4",
       "t": "band",
       "x": "吹きこんだ雪が、床に白く積もっている。ベッドの上で、えるびんは、毛布をかけたまま、横を向いて動かない",
+      "body": "erubin",
       "k": "C10-1:10-1-4"
     }, {
       "id": "10-1-5",
       "t": "band",
       "x": "みゅあが毛布に手をかけた。白い枕が、頭の後ろから、赤黒く、ぐっしょりと染まっていた。そばの床に、血のついた燭台が一つ転がっている",
       "fx": ["bleed"],
+      "body": "erubin",
       "k": "C10-1:10-1-5"
     }, {
       "id": "10-1-6",
@@ -121224,12 +121232,14 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "band",
       "x": "朝。屋根裏へ上る通り道のはしごの下。ももすけが、仰向けに倒れていた",
       "fx": ["fallen"],
+      "body": "momosuke",
       "k": "C10-2:10-2-7"
     }, {
       "id": "10-2-8",
       "t": "band",
       "x": "頭の下に、黒い血だまりが広がって、もう乾きかけている。見開いた目は、はしごの上の暗がりを見上げたまま。お気に入りの髪飾りが、血の中に沈んでいた",
       "fx": ["red"],
+      "body": "momosuke",
       "k": "C10-2:10-2-8"
     }, {
       "id": "10-2-9",
@@ -121242,6 +121252,7 @@ const XMAS_NOVEL_SCRIPT = {
       "id": "10-2-10",
       "t": "band",
       "x": "ドラが、ももすけの肩を揺さぶる。その手が、血で赤く濡れていく。誰も、止められない",
+      "body": "momosuke",
       "k": "C10-2:10-2-10"
     }, {
       "id": "10-2-11",
@@ -121335,6 +121346,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "band",
       "x": "裏口の外の雪の上。もちまるが、ランタンを探すように片手を伸ばしたまま、うつ伏せに倒れていた。後ろ頭の周りの雪だけが、赤く溶けて、くぼんでいる",
       "fx": ["fallen"],
+      "body": "mochimaru",
       "k": "C10-3:10-3-7"
     }, {
       "id": "10-3-8",
@@ -121346,6 +121358,7 @@ const XMAS_NOVEL_SCRIPT = {
       "id": "10-3-9",
       "t": "band",
       "x": "イチーカが雪の上に崩れ落ちる。伸ばしたままの指先のそばに、雪を引っかいた跡。最後の力で、ふもとへ、助けを呼びに行こうとしていたのかもしれない",
+      "body": "mochimaru",
       "k": "C10-3:10-3-9"
     }, {
       "id": "10-3-10",
@@ -122039,6 +122052,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "band",
       "x": "裏口の前に、あつが、うつ伏せに倒れていた。探偵の帽子が、少し先に転がっている",
       "fx": ["fallen"],
+      "body": "atsu",
       "k": "C2-X:2-X-6a"
     }, {
       "id": "2-X-6s",
@@ -122054,17 +122068,20 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "band",
       "x": "裏口の前に、ソラシドが、うつ伏せに倒れていた。そばに、ひびの入ったノートパソコン",
       "fx": ["fallen"],
+      "body": "sorashido",
       "k": "C2-X:2-X-6s"
     }, {
       "id": "2-X-7",
       "t": "band",
       "x": "後ろ頭から流れた血が、床板の隙間に、細く、黒く、染みこんでいく。そばに、血のついた薪が一本",
       "fx": ["red"],
+      "body": "lead",
       "k": "C2-X:2-X-7"
     }, {
       "id": "2-X-8",
       "t": "band",
       "x": "裏口のかんぬきは、閉まっていた。伸ばした指先は、かんぬきに届く、ほんの少し手前で止まっている",
+      "body": "lead",
       "k": "C2-X:2-X-8"
     }, {
       "id": "2-X-9a",
@@ -122249,6 +122266,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "band",
       "x": "物音に駆けつけたソラシドが見つけたのは、書斎の机に突っ伏したあつだった",
       "fx": ["fallen"],
+      "body": "atsu",
       "k": "C5-X:5-X-4a"
     }, {
       "id": "5-X-4s",
@@ -122264,12 +122282,14 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "band",
       "x": "物音に駆けつけたあつが見つけたのは、書斎の机に突っ伏したソラシドだった",
       "fx": ["fallen"],
+      "body": "sorashido",
       "k": "C5-X:5-X-4s"
     }, {
       "id": "5-X-5",
       "t": "band",
       "x": "首には、細いひもの跡が、赤黒く食いこんでいる。ひびの入った画面の上に、血のついた指の跡",
       "fx": ["bleed"],
+      "body": "lead",
       "k": "C5-X:5-X-5"
     }, {
       "id": "5-X-6",
@@ -122503,6 +122523,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "band",
       "x": "扉の外。雪に埋もれた探偵の帽子の先で、あつが、扉に手を伸ばしたまま凍りついていた。後ろ頭の髪が、血で固まっている",
       "fx": ["bleed"],
+      "body": "atsu",
       "k": "C6-X:6-X-10a"
     }, {
       "id": "6-X-10s",
@@ -122518,6 +122539,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "band",
       "x": "扉の外。雪に埋もれた探偵の帽子の先で、ソラシドが、扉に手を伸ばしたまま凍りついていた。後ろ頭の髪が、血で固まっている",
       "fx": ["bleed"],
+      "body": "sorashido",
       "k": "C6-X:6-X-10s"
     }, {
       "id": "6-X-11",
@@ -122809,6 +122831,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "band",
       "x": "裏の階段の下に、あつが、ねじれたような姿で倒れていた",
       "fx": ["fallen"],
+      "body": "atsu",
       "k": "C2-Y:2-Y-13a"
     }, {
       "id": "2-Y-13s",
@@ -122824,12 +122847,14 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "band",
       "x": "裏の階段の下に、ソラシドが、ねじれたような姿で倒れていた。そばに、画面の割れたノートパソコン",
       "fx": ["fallen"],
+      "body": "sorashido",
       "k": "C2-Y:2-Y-13s"
     }, {
       "id": "2-Y-14",
       "t": "band",
       "x": "階段の角から角へ、赤い跡が、一段ごとに続いている。後ろ頭の髪が、ぐっしょりと濡れていた",
       "fx": ["bleed"],
+      "body": "lead",
       "k": "C2-Y:2-Y-14"
     }, {
       "id": "2-Y-15a",
@@ -123105,6 +123130,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "band",
       "x": "はしごの下。あつが、仰向けに倒れていた。頭の下に、黒い血だまりが、ゆっくりと広がっていく",
       "fx": ["red"],
+      "body": "atsu",
       "k": "C10-X:10-X-10a"
     }, {
       "id": "10-X-10s",
@@ -123120,11 +123146,13 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "band",
       "x": "はしごの下。ソラシドが、仰向けに倒れていた。頭の下に、黒い血だまりが、ゆっくりと広がっていく",
       "fx": ["red"],
+      "body": "sorashido",
       "k": "C10-X:10-X-10s"
     }, {
       "id": "10-X-11",
       "t": "band",
       "x": "見開いた目は、はしごの上の暗がりを、見上げたままだった。板は、もう、ぴたりと閉じている",
+      "body": "lead",
       "k": "C10-X:10-X-11"
     }, {
       "id": "10-X-12",
@@ -123288,6 +123316,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "band",
       "x": "薪小屋の中。もちまるが、最後の一抱えの薪を抱いたまま、うつ伏せに倒れていた。後ろ頭の毛が、赤黒く固まっている",
       "fx": ["fallen"],
+      "body": "mochimaru",
       "k": "END-M2:M2-4"
     }, {
       "id": "M2-5",
@@ -123566,6 +123595,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "band",
       "x": "白瀬が見つかったのと同じ場所で、ソラシドが、壁にもたれて座ったまま、動かなくなっていた。膝の上で、ひびの入った画面が、まだ、かすかに光っている",
       "fx": ["fallen"],
+      "body": "sorashido",
       "k": "END-M5:M5-5a"
     }, {
       "id": "M5-5s",
@@ -123581,12 +123611,14 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "band",
       "x": "白瀬が見つかったのと同じ場所で、あつが、壁にもたれて座ったまま、動かなくなっていた。消えたランタンを、握りしめたまま",
       "fx": ["fallen"],
+      "body": "atsu",
       "k": "END-M5:M5-5s"
     }, {
       "id": "M5-6",
       "t": "band",
       "x": "まつげにも、髪にも、白い霜。外から閉められた鏡の扉の内側に、引っかいた跡が、何本も残っていた",
       "fx": ["bleed"],
+      "body": "partner",
       "k": "END-M5:M5-6"
     }, {
       "id": "M5-7a",
@@ -125504,6 +125536,24 @@ const XMAS_NOVEL_CSS = `
   animation: mh-nv-bleed 2.4s ease-out both; }
 @keyframes mh-nv-bleed { 0% { opacity: 0; transform: scale(1.35); filter: blur(6px); } 25% { opacity: 1; transform: scale(1); filter: blur(0); } 70% { opacity: .9; } 100% { opacity: 0; } }
 .mh-nv-fallen { position: absolute; left: 50%; bottom: 24%; width: min(80vw, 520px); transform: translateX(-50%); z-index: 4; filter: drop-shadow(0 0 2px rgba(190,200,230,.35)); pointer-events: none; animation: mh-nv-fade 1.2s ease both; }
+.mh-nv-body { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
+.mh-nv-body-dim { position: absolute; inset: 0; -webkit-backdrop-filter: grayscale(.9) brightness(.55); backdrop-filter: grayscale(.9) brightness(.55);
+  background: radial-gradient(70% 34% at 50% 74%, rgba(120,0,14,.42), rgba(120,0,14,0) 72%), radial-gradient(120% 90% at 50% 40%, rgba(6,10,34,.35), rgba(0,0,4,.88)); animation: mh-nv-fade 1.4s ease both; }
+.mh-nv-body-lie { --L: min(88vw, 580px, calc(26vh / var(--ar))); --H: calc(var(--L) * var(--ar)); position: absolute; left: 50%; bottom: 27%; width: var(--L); height: calc(var(--L) * var(--ar)); transform: translateX(-50%); }
+.mh-nv-body-lie img { position: absolute; left: 50%; top: 50%; width: calc(var(--L) * var(--ar)); height: var(--L); max-width: none; object-fit: fill;
+  transform: translate(-50%, -50%) rotate(-90deg); animation: mh-nv-body-in 1.6s ease-out both !important;
+  filter: brightness(0) drop-shadow(0 0 1px rgba(210,30,40,.75)) drop-shadow(0 0 16px rgba(110,0,12,.6)) !important; }
+.mh-nv-body-lie.bust { --L: min(40vw, 300px, 17vh); transform: translateX(-100%); }
+.mh-nv-body-lie.bust .pool { left: -30%; top: calc(var(--H) * .6); width: calc(var(--L) * 1.9); height: calc(var(--L) * .3); }
+@media (orientation: landscape) { .mh-nv-body-lie { left: 31%; bottom: 22%; } }
+.mh-nv-body-lie img.bust { -webkit-mask-image: linear-gradient(180deg, #000 42%, transparent 80%); mask-image: linear-gradient(180deg, #000 42%, transparent 80%); }
+.mh-nv-body-lie.bust::after { content: ''; position: absolute; left: 52%; top: 22%; width: 120%; height: 62%; border-radius: 40% 50% 50% 40%; background: radial-gradient(60% 60% at 30% 50%, #000 40%, rgba(0,0,0,.85) 62%, rgba(0,0,0,0) 100%); filter: drop-shadow(0 0 10px rgba(110,0,12,.5)); animation: mh-nv-body-in 1.6s ease-out both; }
+.mh-nv-body-lie .pool { position: absolute; left: -14%; top: calc(var(--H) * .62); width: calc(var(--L) * 1.05); height: calc(var(--L) * .16); transform-origin: 18% 40%; filter: drop-shadow(0 0 6px rgba(140,0,16,.55));
+  animation: mh-nv-pool 3.2s cubic-bezier(.2,.6,.3,1) .5s both; }
+@keyframes mh-nv-body-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes mh-nv-pool { from { transform: scale(.08, .05); opacity: .6; } to { transform: scale(1); opacity: 1; } }
+.mh-nv-body.again .mh-nv-body-dim, .mh-nv-body.again img, .mh-nv-body.again .pool { animation-duration: .25s !important; animation-delay: 0s !important; }
+@media (prefers-reduced-motion: reduce) { .mh-nv-body-dim, .mh-nv-body-lie img, .mh-nv-body-lie .pool { animation: none !important; } }
 .mh-nv-boss { position: relative; height: 86%; aspect-ratio: 985 / 1347; max-width: 100%; }
 .mh-nv-boss img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; filter: brightness(0) drop-shadow(0 0 10px rgba(180,0,20,.55)) !important; animation: none !important; }
 .mh-nv-boss .eye { position: absolute; top: 34.5%; width: 7%; height: 3.2%; border-radius: 50%; transform: translate(-50%, -50%);
@@ -125997,6 +126047,89 @@ const XmasNovelFallen = () => React.createElement("svg", {
   fill: "none",
   strokeLinecap: "round"
 }));
+let xmasNovelBodyLast = {
+  k: '',
+  at: -9
+};
+const xmasNovelBodyWho = (body, flags) => {
+  const lead = flags && flags.f_A1 === 2 ? 'sorashido' : 'atsu';
+  if (body === 'lead') return lead;
+  if (body === 'partner') return lead === 'atsu' ? 'sorashido' : 'atsu';
+  return body || '';
+};
+const xmasNovelBodySrc = who => {
+  const c = xmasNovelCastOf(who);
+  if (!c) return '';
+  if (c.kind === 'assistant') {
+    const dir = typeof STORY_OUTFIT_DIRS !== 'undefined' && STORY_OUTFIT_DIRS && STORY_OUTFIT_DIRS.santa ? STORY_OUTFIT_DIRS.santa : '';
+    return dir ? `${dir}/${who}_normal.PNG` : '';
+  }
+  return c.art || '';
+};
+const XmasNovelBody = ({
+  who,
+  scene = '',
+  at = 0
+}) => {
+  const k = `${scene}:${who}`;
+  const [again] = useState(() => xmasNovelBodyLast.k === k && Math.abs(at - xmasNovelBodyLast.at) <= 4);
+  const [ar, setAr] = useState(0);
+  const [broken, setBroken] = useState(false);
+  useEffect(() => {
+    xmasNovelBodyLast = {
+      k,
+      at
+    };
+  }, [k, at]);
+  const c = xmasNovelCastOf(who);
+  const src = xmasNovelBodySrc(who);
+  const bust = !!(c && c.kind === 'guest');
+  return React.createElement("div", {
+    className: `mh-nv-body${again ? ' again' : ''}`,
+    "data-xmas-novel-fallen": true,
+    "data-xmas-novel-body": who,
+    "aria-label": c ? `${c.name}の倒れた影` : '倒れた影'
+  }, React.createElement("div", {
+    className: "mh-nv-body-dim"
+  }), React.createElement("div", {
+    className: `mh-nv-body-lie${bust ? ' bust' : ''}`,
+    style: {
+      '--ar': ar || (bust ? 1 : 0.3)
+    }
+  }, React.createElement("svg", {
+    className: "pool",
+    viewBox: "0 0 300 60",
+    preserveAspectRatio: "none",
+    "aria-hidden": "true"
+  }, React.createElement("defs", null, React.createElement("radialGradient", {
+    id: "mh-nv-pool-g",
+    cx: "30%",
+    cy: "42%",
+    r: "70%"
+  }, React.createElement("stop", {
+    offset: "0%",
+    stopColor: "#9a0716"
+  }), React.createElement("stop", {
+    offset: "45%",
+    stopColor: "#6a020e"
+  }), React.createElement("stop", {
+    offset: "100%",
+    stopColor: "#300006"
+  }))), React.createElement("path", {
+    d: "M14 30 C8 20 30 14 52 16 C64 8 96 6 118 13 C136 9 160 12 170 19 C188 17 204 22 198 28 C214 27 246 30 262 33 C274 35 272 39 258 39 C236 40 214 38 200 40 C206 48 184 54 160 51 C146 57 112 58 92 53 C70 58 38 55 30 48 C16 46 6 38 14 30 Z",
+    fill: "url(#mh-nv-pool-g)"
+  })), src && !broken && React.createElement("img", {
+    src: src,
+    alt: "",
+    draggable: false,
+    className: bust ? 'bust' : '',
+    onLoad: e => {
+      const im = e.currentTarget;
+      if (im.naturalWidth && im.naturalHeight) setAr(im.naturalWidth / im.naturalHeight);
+    },
+    onError: () => setBroken(true)
+  }), (!src || broken) && React.createElement(XmasNovelFallen, null)));
+};
 const XmasNovelBossShadow = () => {
   const src = typeof RAID_XMAS_BOSS_IMG !== 'undefined' ? RAID_XMAS_BOSS_IMG : '';
   if (!src) return React.createElement(XmasNovelShadow, {
@@ -127012,7 +127145,12 @@ const XmasNovelScreen = ({
   }), fx && React.createElement("div", {
     key: fx.n,
     className: `mh-nv-fx ${fx.kind}`
-  }), isBand && Array.isArray(row.fx) && row.fx.includes('fallen') && React.createElement(XmasNovelFallen, null), isBand && Array.isArray(row.fx) && row.fx.includes('letter') && React.createElement("div", {
+  }), isBand && row.body && React.createElement(XmasNovelBody, {
+    key: `body-${row.body}`,
+    who: xmasNovelBodyWho(row.body, st && st.cur && st.cur.flags),
+    scene: scene ? scene.id : '',
+    at: st && st.cur && Number.isFinite(st.cur.idx) ? st.cur.idx : 0
+  }), isBand && !row.body && Array.isArray(row.fx) && row.fx.includes('fallen') && React.createElement(XmasNovelFallen, null), isBand && Array.isArray(row.fx) && row.fx.includes('letter') && React.createElement("div", {
     key: `letter-${row.id}`,
     className: "mh-nv-letter mh-nv-serif",
     "data-xmas-novel-letter": true
