@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8d486e002899aa03
+// source-sha256: 4db1f8c89af6a1fa
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -122793,6 +122793,9 @@ const XMAS_NOVEL_CSS = `
   background: linear-gradient(180deg, #1b2c5c, #0c1636); color: #f8e3a4; box-shadow: 0 0 0 1px rgba(232,196,106,.85); }
 .mh-nv-text { font-size: 17px; line-height: 1.75; font-weight: 600; white-space: pre-wrap; min-height: 3.5em; text-align: left; word-break: normal; line-break: normal; overflow-wrap: anywhere; text-wrap: wrap; }
 .mh-nv-plain { text-align: left; word-break: normal; line-break: normal; overflow-wrap: anywhere; text-wrap: wrap; }
+/* 章の札・題の札の文も左寄せ(事件簿の中の文は左寄せ・幅いっぱいで1文字ずつ折る。飾りの見出しは起動画面の題字とエンドの札だけ・台帳 r1126-048) */
+.mh-nv-cardtext { width: min(100%, 560px); }
+.mh-nv-cardtext .mh-nv-rule { margin: 14px 0; }
 .mh-nv-text.band { text-align: left; color: #dfe6ff; font-style: normal; }
 .mh-nv-note { margin-top: 2px; font-size: 11px; color: #9fb0d8; }
 .mh-nv-next { position: absolute; right: 14px; bottom: 8px; width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-top: 9px solid #e8c46a; animation: mh-nv-bob 1s ease-in-out infinite; }
@@ -124377,7 +124380,9 @@ const XmasNovelScreen = ({
     className: "mh-nv-card",
     "data-xmas-novel-card": card.kind,
     onClick: advance
-  }, card.kind === 'chapter' && React.createElement(React.Fragment, null, React.createElement("div", {
+  }, card.kind === 'chapter' && React.createElement("div", {
+    className: "mh-nv-plain mh-nv-cardtext"
+  }, React.createElement("div", {
     className: "mh-nv-serif text-[15px] tracking-[0.5em] text-slate-200"
   }, card.label), React.createElement("div", {
     className: "mh-nv-rule"
@@ -124387,12 +124392,13 @@ const XmasNovelScreen = ({
     className: "mh-nv-rule"
   }), React.createElement("div", {
     className: "mt-6 text-[11px] text-slate-400"
-  }, "タップで進む")), (card.kind === 'title' || card.kind === 'band') && React.createElement(React.Fragment, null, React.createElement("div", {
+  }, "タップで進む")), (card.kind === 'title' || card.kind === 'band') && React.createElement("div", {
+    className: "mh-nv-plain mh-nv-cardtext"
+  }, React.createElement("div", {
     className: "mh-nv-rule"
   }), React.createElement("div", {
-    className: "mh-nv-serif mh-nv-gold text-[30px] font-black leading-tight sm:text-[40px]",
-    style: JA_LABEL_STYLE
-  }, jaWrap(card.text)), React.createElement("div", {
+    className: "mh-nv-serif mh-nv-gold text-[30px] font-black leading-tight sm:text-[40px]"
+  }, card.text), React.createElement("div", {
     className: "mh-nv-rule"
   })), card.kind === 'ending' && (() => {
     const kind = {
