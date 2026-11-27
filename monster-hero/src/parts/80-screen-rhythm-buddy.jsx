@@ -389,7 +389,7 @@ function RhythmBuddyScoreChart({ recent, songName }) {
         ))}
       </svg>
       <p data-rhythm-buddy-chart-pick className="mt-1 text-[11px] font-black leading-snug text-slate-200">
-        <span className="text-slate-400">{list.length - pickedIndex === 1 ? '一番新しい回' : `${list.length - pickedIndex}回前`}: </span>
+        <span className="text-slate-400">{list.length - pickedIndex === 1 ? '1番新しい回' : `${list.length - pickedIndex}回前`}: </span>
         {songName(picked.songId)} {picked.diffId ? rhythmBuddyDiffShort[picked.diffId] : ''} <b className="text-lime-200">{picked.score.toLocaleString()}点</b>
         <span className="text-slate-400">(満点の{pct(picked)}%)</span>
       </p>
@@ -510,7 +510,7 @@ function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack, ownerName = ''
             <button data-rhythm-buddy-seed-open type="button" disabled={seeds <= 0} onClick={() => { setSeedOpen((v) => !v); setSeedPick(''); }}
               className={`min-h-[34px] rounded-lg px-3 text-[11px] font-black ${seeds > 0 ? 'bg-lime-500 text-slate-950' : 'bg-slate-800 text-slate-500'}`}>{seedOpen ? 'キャンセル' : '性格を選び直す'}</button>
           </div>
-          <small className="mt-0.5 block break-keep text-[9px] font-bold leading-snug text-slate-400">1個使うと、性格を全部の中から選び直せます。選んだ性格は遊び方では変わりません(もう一度たねを使えば変えられます)</small>
+          <small className="mt-0.5 block break-keep text-[9px] font-bold leading-snug text-slate-400">1個使うと、性格を全部の中から選び直せます。選んだ性格は遊び方では変わりません(もう1度たねを使えば変えられます)</small>
           {seedOpen && (
             <div className="mt-1 space-y-1">
               <ul data-rhythm-buddy-seed-list className="grid grid-cols-2 gap-1">
@@ -951,7 +951,7 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
             <div className="flex min-h-0 flex-1 flex-col">
               {refused && refused.id && (
                 <p data-rhythm-assist-refused={refused.id} className="mb-2 shrink-0 rounded-xl border border-indigo-300/50 bg-indigo-950/70 px-2 py-1 text-[11px] font-black leading-snug text-indigo-100" style={JA_WRAP_STYLE}>
-                  {jaWrap(`💤 ${rhythmAssistSessionName(refused.id)}${refused.line ? `「${refused.line}」……来てくれませんでした` : 'は起きませんでした'}(回数は使っていません)。もう一度呼ぶと、起きやすくなります`)}
+                  {jaWrap(`💤 ${rhythmAssistSessionName(refused.id)}${refused.line ? `「${refused.line}」……来てくれませんでした` : 'は起きませんでした'}(回数は使っていません)。もう1度呼ぶと、起きやすくなります`)}
                 </p>
               )}
               <RhythmAssistSessionPicker assistants={assistants} calledIds={calledIds} guideAssistantId={guideAssistantId} picked={pickedAssistantIds} onToggle={(id) => togglePick('assistant', id)} roomy={roomy} />
@@ -1164,7 +1164,7 @@ function RhythmBuddyRankingBoard({ renderBreederIcon = null, selfName = '', onCl
         {state.status === 'error' && (
           <div className="py-8 text-center">
             <p className="text-sm font-bold text-amber-200">ランキングを読み込めませんでした</p>
-            <button type="button" onClick={() => { rhythmBuddyRankCache.delete(cacheKey); setRetry((n) => n + 1); }} className="mt-2 min-h-[44px] rounded-xl bg-slate-800 px-4 text-sm font-black">もう一度読み込む</button>
+            <button type="button" onClick={() => { rhythmBuddyRankCache.delete(cacheKey); setRetry((n) => n + 1); }} className="mt-2 min-h-[44px] rounded-xl bg-slate-800 px-4 text-sm font-black">もう1度読み込む</button>
           </div>
         )}
         {state.status === 'ready' && shown.length === 0 && <p className="py-8 text-center text-sm font-bold text-slate-400">{helpWrap(friendOnly ? 'フレンドのマスモンは、まだ載っていません' : 'まだ記録がありません。マルチの部屋でマスモンを呼んで、育ててみましょう')}</p>}

@@ -54,7 +54,7 @@ const RHYTHM_BUDDY_TRAITS = Object.freeze([
   Object.freeze({ id: 'fickle', label: '気まぐれ', note: '日によって得意な難易度と苦手な難易度が入れかわる', how: '毎回ちがう難易度を遊ぶ', v2: true }),
   Object.freeze({ id: 'mellow', label: 'おっとり', note: '無理なく叩ける譜面では安定して強いが、難しすぎる譜面は少し苦手', how: '自分より易しい譜面をよく遊ぶ', v2: true }),
   Object.freeze({ id: 'hasty', label: 'せっかち', note: '短い曲に強いが、長い曲は少し苦手', how: '短い曲(2分未満)をよく遊ぶ', v2: true }),
-  Object.freeze({ id: 'competitive', label: '負けず嫌い', note: '前の回(同じ曲・同じ難易度)がいまいちだと、次は燃えて上手くなる', how: '同じ曲を続けてもう一度遊ぶ', v2: true }),
+  Object.freeze({ id: 'competitive', label: '負けず嫌い', note: '前の回(同じ曲・同じ難易度)がいまいちだと、次は燃えて上手くなる', how: '同じ曲を続けてもう1度遊ぶ', v2: true }),
   Object.freeze({ id: 'showoff', label: 'お調子者', note: '調子の良い日はさらに上手、悪い日はさらに下手(調子の波が大きい)', how: '調子の良い日によく遊ぶ', v2: true }),
   Object.freeze({ id: 'shy', label: '人見知り', note: '人の少ない部屋で強く、人が多いと少し落ちる', how: 'ひとり(ほかに人のいない部屋)でよく遊ぶ', v2: true }),
   Object.freeze({ id: 'hardworker', label: '努力家', note: '同じ曲を遊ぶほど、曲の得意がより深くたまる', how: '同じ曲をくり返し遊ぶ', v2: true }),

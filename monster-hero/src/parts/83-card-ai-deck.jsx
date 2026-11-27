@@ -39,7 +39,7 @@ const cardAiFaceOf = (s) => (typeof s === 'string' && CARD_AI_FACE_IDS.includes(
 //   ★名前にマスモンの愛称を使わない(社長「既定の名前は愛称を使わない名前に」。愛称は人ごとに違い、引き直しもある)。主役は種の名前で書く
 //   よそいき(yoso)の名前は今の8つの名前(82 の CARD_AI_STYLE_NAMES)。好きの種は、カードに無い種を部長の判断で近い種にした(みゅあ: イブリス→ジョーカー・きき: ザン→ライガー)
 const CARD_AI_FACES = Object.freeze({
-  mua: { oshi: { lead: 'mocchi', style: 'normal', name: '剣士モッチーの一番乗り' }, suki: { lead: 'joker', words: ['イブリス'], style: 'normal', name: 'イブリスとちょい悪ナイト' }, yoso: { lead: null, style: 'normal' }, honne: { lead: null, style: 'attack', name: 'ノリだけで全力突破' } },
+  mua: { oshi: { lead: 'mocchi', style: 'normal', name: '剣士モッチーの1番乗り' }, suki: { lead: 'joker', words: ['イブリス'], style: 'normal', name: 'イブリスとちょい悪ナイト' }, yoso: { lead: null, style: 'normal' }, honne: { lead: null, style: 'attack', name: 'ノリだけで全力突破' } },
   kiki: { oshi: { lead: 'golem', style: 'normal', name: 'ゴーレムの一撃' }, suki: { lead: 'tiger', style: 'normal', name: 'ライガーの桜吹雪' }, yoso: { lead: null, style: 'normal' }, honne: { lead: null, style: 'attack', name: 'ぜんぶ必殺技でつ' } },
   momosuke: { oshi: { lead: 'metalner', style: 'normal', name: 'メタルナーの銀ピカライブ' }, suki: { lead: 'mew', style: 'normal', name: 'ニャーとおやすみソング' }, yoso: { lead: null, style: 'normal' }, honne: { lead: null, style: 'attack', name: 'ぜんぶ見せ場♡' } },
   dra: { oshi: { lead: 'zilla', style: 'normal', name: 'グジラとどっしり行進' }, suki: { lead: 'suezo', style: 'normal', name: 'スエゾーのギャグ劇場' }, yoso: { lead: null, style: 'normal' }, honne: { lead: 'golem', style: 'attack', name: 'おでの大ぶり勝負' } },
@@ -629,7 +629,7 @@ const cardAiWishMarkUsed = async (who, wish) => {
   const st = await cardAiWishRead();
   const next = cardNormalizeAiWish({ ...st, used: { ...st.used, [who]: [...(st.used[who] || []), wish.mark] } });
   cardAiWishState = next;
-  try { await storeSet(CARD_AI_WISH_KEY, next); } catch (_) { /* 残せなくても遊べる(次の組み直しでもう一度使うだけ) */ }
+  try { await storeSet(CARD_AI_WISH_KEY, next); } catch (_) { /* 残せなくても遊べる(次の組み直しでもう1度使うだけ) */ }
   return next;
 };
 // 提案の名前のデッキと初めて戦った(84 が対戦を始めたときに呼ぶ)。印が偽・名前が無ければ何もしない
@@ -639,7 +639,7 @@ const cardAiDeckWishFought = async (who, name) => {
   if (((st.fought || {})[who] || []).includes(name)) return st;
   const next = cardNormalizeAiWish({ ...st, fought: { ...(st.fought || {}), [who]: [...((st.fought || {})[who] || []), name] } });
   cardAiWishState = next;
-  try { await storeSet(CARD_AI_WISH_KEY, next); } catch (_) { /* 残せなくても遊べる(もう一度だけ台詞が出る) */ }
+  try { await storeSet(CARD_AI_WISH_KEY, next); } catch (_) { /* 残せなくても遊べる(もう1度だけ台詞が出る) */ }
   return next;
 };
 const cardAiDeckWishFirst = (who, name) => !!name && !(((cardAiWishState && cardAiWishState.fought) || {})[who] || []).includes(name);
