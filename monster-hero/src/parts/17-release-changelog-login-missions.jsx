@@ -45,7 +45,7 @@ const XMAS_COSTUME_START_AT = '2026-11-30T10:00:00+09:00';
 // クリスマスのレイド(r1119-172)の開始時刻。35-raid-xmas.jsx の RAID_XMAS_EVENT.startAt と同じ値(食い違いは tools/battle/raid-xmas-check.js が見る)。
 //   RELEASE_FLAGS.raidXmas はこの時刻まで偽を返す(見るたびに数え直す)。入口・HOMEのボス・ヘルプ・更新履歴はこれを見る
 const RAID_XMAS_START_AT = '2026-11-30T10:00:00+09:00';
-// クリスマスのひとりで進める物語の序章(台帳 r1126-012/013)。RELEASE_FLAGS.xmasStoryPrologue は 35-raid-xmas.jsx の XMAS_STORY_PROLOGUE_OPEN_AT(11/28 10:00)まで偽を返す。
+// クリスマスのひとりで進める物語の序章(台帳 r1126-012/013)。RELEASE_FLAGS.xmasStoryPrologue は 35-raid-xmas.jsx の XMAS_STORY_PROLOGUE_OPEN_AT(11/27 13:00・r1126-060 で前倒し)まで偽を返す。
 //   序章のお話(EVENT_REPLAYS の xmas_story_00)の releaseFlag が見る。開幕(raidXmas)より前でも、この時刻からは序章だけ読める
 const RAID_JACK_PUBLIC_RELEASE = true;
 // レイドバトルの「モンヒロビートで挑戦する」(2026-10-06)。ダメージの仕様が固まるまで一時止めていた(ユーザー指示)が、仕様の確定・実装・サブストーリー(ドラのビート)の用意ができたので、

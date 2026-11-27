@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ab31c34cc29ad95c
+// generated-sha256: 895d8aee1006932d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -526,7 +526,7 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   get monsucStoryEp2() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.monheroSuccess === true; },
   // 個人杯のお話(2026-10-31)。公開の印は 99-card-cup.jsx の cardCupOpen(あとの部品なので見るたびに引く)
   get cardCup() { return typeof cardCupOpen === 'function' && cardCupOpen() === true; },
-  // クリスマスのひとりで進める物語の序章(xmas_story_00・台帳 r1126-013)。11/28 10:00 から読める(17-release の RELEASE_FLAGS.xmasStoryPrologue)
+  // クリスマスのひとりで進める物語の序章(xmas_story_00・台帳 r1126-013)。11/27 13:00 から読める(r1126-060 で前倒し)(17-release の RELEASE_FLAGS.xmasStoryPrologue)
   get xmasStoryPrologue() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.xmasStoryPrologue === true; },
   // クリスマスのレイド「もうひとつの聖夜」のお話(raid_xmas_story_*・r1126-026)。レイドの開始 11/30 10:00 から(17-release の RELEASE_FLAGS.raidXmas・見るたびに時刻で決める)
   get raidXmas() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.raidXmas === true; },
@@ -10748,7 +10748,7 @@ const XMAS_COSTUME_START_AT = '2026-11-30T10:00:00+09:00';
 // クリスマスのレイド(r1119-172)の開始時刻。35-raid-xmas.jsx の RAID_XMAS_EVENT.startAt と同じ値(食い違いは tools/battle/raid-xmas-check.js が見る)。
 //   RELEASE_FLAGS.raidXmas はこの時刻まで偽を返す(見るたびに数え直す)。入口・HOMEのボス・ヘルプ・更新履歴はこれを見る
 const RAID_XMAS_START_AT = '2026-11-30T10:00:00+09:00';
-// クリスマスのひとりで進める物語の序章(台帳 r1126-012/013)。RELEASE_FLAGS.xmasStoryPrologue は 35-raid-xmas.jsx の XMAS_STORY_PROLOGUE_OPEN_AT(11/28 10:00)まで偽を返す。
+// クリスマスのひとりで進める物語の序章(台帳 r1126-012/013)。RELEASE_FLAGS.xmasStoryPrologue は 35-raid-xmas.jsx の XMAS_STORY_PROLOGUE_OPEN_AT(11/27 13:00・r1126-060 で前倒し)まで偽を返す。
 //   序章のお話(EVENT_REPLAYS の xmas_story_00)の releaseFlag が見る。開幕(raidXmas)より前でも、この時刻からは序章だけ読める
 const RAID_JACK_PUBLIC_RELEASE = true;
 // レイドバトルの「モンヒロビートで挑戦する」(2026-10-06)。ダメージの仕様が固まるまで一時止めていた(ユーザー指示)が、仕様の確定・実装・サブストーリー(ドラのビート)の用意ができたので、
@@ -39145,7 +39145,7 @@ const XMAS_STORY_LIST = Object.freeze([
 // 第2話から: 12/(話-1) 4:00 JST(第25話 = 12/24)
 const xmasStoryOpenAtOf = (no) => (no <= 1 ? RAID_XMAS_EVENT.startAt : `2026-12-${String(no - 1).padStart(2, '0')}T04:00:00+09:00`);
 // 序章(台帳 r1126-012・社長): 第1話の前。イチーカから招待状が届いて行くまで。11/28 の開催予告のときから開く(時刻 10:00 は仮)。お話は data/assistants.js の XMAS_STORY_00(EVENT_REPLAYS の xmas_story_00)
-const XMAS_STORY_PROLOGUE_OPEN_AT = '2026-11-28T10:00:00+09:00';
+const XMAS_STORY_PROLOGUE_OPEN_AT = '2026-11-27T13:00:00+09:00'; // 社長の指示で 11/28 10:00 から前倒し(r1126-060)
 const XMAS_STORY_CHAPTERS = Object.freeze([
   Object.freeze({ id: 'xs00', no: 0, prologue: true, openAt: XMAS_STORY_PROLOGUE_OPEN_AT, type: 'read', title: '届いたゲーム', scriptId: 'xmas_story_00' }),
   ...XMAS_STORY_LIST.map(([title, type], i) => Object.freeze({
@@ -68033,7 +68033,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"0-12","t":"line","w":"erubin","x":"……古いね。誰のだろう","e":"normal","k":"OUT-0-1:0-12"}],"outside":true},
 {"id":"OUT-0-2","chapter":"C0","title":"1件だけのセーブデータ","cond":null,"bgm":"melo_dullahan_clockwork","bg":"monhero_plaza_evening(ゲーム機をかこむ助手たち","next":"C0-1","rows":[{"id":"0-13","t":"band","x":"起動すると、セーブデータが1件だけ。名前の欄は、文字がにじんで読めない","k":"OUT-0-2:0-13"},
 {"id":"0-14","t":"line","w":"sorashido","x":"誰かが、途中まで遊んだデータ……でしょうか","e":"normal","k":"OUT-0-2:0-14"},
-{"id":"0-15","t":"line","w":"watson","x":"保存された日付は、読みとれません","k":"OUT-0-2:0-15"},
+{"id":"0-15","t":"line","w":"watson","x":"保存された日付は、読み取れません","k":"OUT-0-2:0-15"},
 {"id":"0-16","t":"line","w":"atsu","x":"じゃあ、新しく始めるか。……『はじめから』","e":"normal","k":"OUT-0-2:0-16"},
 {"id":"0-17","t":"band","x":"画面に、雪山のペンションと、登場人物の紹介が流れる","k":"OUT-0-2:0-17"},
 {"id":"0-18","t":"line","w":"myua","x":"……え、待って。この子、あたしにそっくり！","e":"surprise","k":"OUT-0-2:0-18"},
@@ -68041,8 +68041,9 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"0-20","t":"line","w":"kyuko","x":"ほい、俺までいるじゃん笑 ……髪の色まで、そっくりだよぉ","e":"happy","k":"OUT-0-2:0-20"},
 {"id":"0-21","t":"line","w":"sorashido","x":"……全員です。自分たちが、一人残らず","e":"normal","k":"OUT-0-2:0-21"},
 {"id":"0-22","t":"line","w":"erubin","x":"俺のことまで、知ってるのかな……","e":"troubled","k":"OUT-0-2:0-22"},
-{"id":"0-23","t":"line","w":"atsu","x":"おもしろそうじゃん！ みんなで解こうよ、この事件！","e":"excited","k":"OUT-0-2:0-23"},
+{"id":"0-23","t":"line","w":"atsu","x":"面白そうじゃん！ みんなで解こうよ、この事件！","e":"excited","k":"OUT-0-2:0-23"},
 {"id":"0-24","t":"line","w":"myua","x":"あつくんが遊ぶなら、あたしも！ 助手として、隣で見てる！","e":"happy","k":"OUT-0-2:0-24"},
+{"id":"0-24b","t":"line","w":"sorashido","x":"では、自分はワトソンくんと、記録を取りながら解きます。……どちらが先に解くか、勝負ですね笑","e":"normal","k":"OUT-0-2:0-24b"},
 {"id":"0-25","t":"band","x":"画面いっぱいに、題字 ——『モンヒロ事件簿 ―呪いのセーブデータ― 十三番目の鐘』","k":"OUT-0-2:0-25"}],"outside":true},
 {"id":"C0-1","chapter":"C0","title":"雪の招待状","cond":null,"bgm":"kaze_ga_soyogu","bg":"monhero_plaza(画面のわくの中","next":"C0-2","rows":[{"id":"0-26","t":"band","x":"——ゲームの中。11月の終わり。モンヒロの広場","k":"C0-1:0-26"},
 {"id":"0-27","t":"band","x":"晴れた空から、雪がひとひら。それは、雪の結晶の形をした封筒だった","k":"C0-1:0-27"},
