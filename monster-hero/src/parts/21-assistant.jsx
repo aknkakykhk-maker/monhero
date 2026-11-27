@@ -346,11 +346,13 @@ const useAssistantBubbleState = () => {
 // ── HOMEの助手コメント(吹き出し)を出すか(2026-11-17 あっくん「ファーム(ホーム)が狭く感じる。助手のコメントのオンオフがほしい」) ──
 //   上の「助手のひとこと」の3択は HOME を対象外にしている(HOMEの助手はお知らせや話しかけの入口のため)。
 //   こちらは HOME 専用の入/切で、切ると HOME の吹き出しと「💬 おしゃべり」のボタンが消えて、そのぶん広場が広くなる。
-//   保存は新しいキーだけ(既存の mh_* は触らない・CLAUDE.md ⑦)。保存が無い・壊れているときは「入」(今の見た目が既定)
+//   保存は新しいキーだけ(既存の mh_* は触らない・CLAUDE.md ⑦)。値の意味(true=入・false=切)は変えない。
+//   保存が無い・壊れているときは「切」(顔の丸だけの畳んだ形)にした(2026-11-27 台帳 r1126-073・HOME の作り直しの直し2。前の既定は「入」)。
+//   自分で「入」を選んだ人(true を保存している人)は今までどおり吹き出しが出る
 //   助手の告知(アップデートのお知らせ)はこの部品を使っていないので、この設定の影響を受けない
 const HOME_ASSISTANT_COMMENT_KEY = 'mh_home_assistant_comment_v1';
 const HOME_ASSISTANT_COMMENT_STORE = (() => {
-  let state = { on: true, loaded: false };
+  let state = { on: false, loaded: false };
   let loading = null;
   const listeners = new Set();
   const emit = () => listeners.forEach((fn) => { try { fn(state); } catch (_) { /* 画面側の失敗で止めない */ } });
@@ -359,8 +361,8 @@ const HOME_ASSISTANT_COMMENT_STORE = (() => {
     load() {
       if (loading) return loading;
       loading = (async () => {
-        let on = true;
-        try { on = (await storeGet(HOME_ASSISTANT_COMMENT_KEY, true, false)) !== false; } catch (_) { /* 読めなければ「入」 */ }
+        let on = false;
+        try { on = (await storeGet(HOME_ASSISTANT_COMMENT_KEY, null, false)) === true; } catch (_) { /* 読めなければ「切」(畳んだ形) */ }
         state = { on, loaded: true };
         emit();
       })();

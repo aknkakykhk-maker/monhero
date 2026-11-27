@@ -59,7 +59,7 @@ const seed=()=>{ if (sessionStorage.getItem('s')) return; sessionStorage.setItem
       await page.waitForFunction(()=>document.body?.innerText.includes('TAP TO START'),{timeout:40000});
       await page.getByRole('button',{name:'TAP TO START'}).click({force:true});
       await page.getByRole('button',{name:'トップ画面へ進む'}).click({timeout:30000});
-      await page.waitForFunction(()=>document.querySelector('.mh-home-assistant'),{timeout:40000});
+      await page.waitForFunction(()=>document.querySelector('.mh-home-assistant,.mh-home-assistant-fold'),{timeout:40000});
       for(let i=0;i<14;i++){
         const did=await page.evaluate(()=>{const inO=el=>{for(let e=el;e&&e!==document.body;e=e.parentElement){const st=getComputedStyle(e);if(st.position==='fixed'||(st.position==='absolute'&&Number(st.zIndex)>=40))return true;}return false;};
           const l=[...document.querySelectorAll('button')].filter(b=>inO(b)&&/^(確認|閉じる|OK|受け取る|次へ|(?:分|わ)かった|はい|スキップ|あとで読む)$/.test((b.innerText||'').replace(/\s+/g,' ').trim()));
@@ -87,7 +87,7 @@ const seed=()=>{ if (sessionStorage.getItem('s')) return; sessionStorage.setItem
       ok('② ブラウザでは、今までどおり別の画面で履歴を1つ足す(戻るでゲームの外へ出ない)',head&&len1===len0+1,`履歴 ${len0} → ${len1}`);
       await page.goBack().catch(()=>{});
       await page.waitForTimeout(900);
-      const r=await page.evaluate(()=>({home:!!document.querySelector('.mh-home-assistant'),url:location.pathname}));
+      const r=await page.evaluate(()=>({home:!!document.querySelector('.mh-home-assistant,.mh-home-assistant-fold'),url:location.pathname}));
       ok('② ブラウザの戻るで、ゲームの HOME へ戻る(外へ出ない)',r.home&&/monster-hero\/index\.html$/.test(r.url),JSON.stringify(r));
       // ②-2 HOME の上に重ねて開く画面・窓も、戻るで閉じる(2026-11-19 r1119-013 ⑥ C-1・U-15。前はゲームの外へ出ていた)
       for(const [name,sel] of [['モンヒロサクセス β','.msx'],['更新履歴','[aria-modal="true"],.mh-title-modal']]){

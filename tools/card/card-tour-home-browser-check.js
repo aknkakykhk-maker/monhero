@@ -177,7 +177,8 @@ const serve = () => new Promise((resolve) => {
       const r = (s) => { const el = document.querySelector(s); if (!el) return null; const b = el.getBoundingClientRect(); return b.height ? { top: b.top, bottom: b.bottom } : null; };
       return { ev: r('[data-home-event-banner]'), tour: r('[data-home-card-tour]'), card: r('[data-home-card-battle]') };
     });
-    if (pos.ev && pos.tour) ok(pos.ev.bottom <= pos.tour.top, '② 公式杯の札がイベントの札の下にない');
+    // 2026-11-27 r1126-073: イベントと公式杯は HOME の上の帯1枚にまとめ、横に送る形になった。上下に並ぶのでなく、帯の同じ高さに並ぶ(見えるのは1枚ずつ)
+    if (pos.ev && pos.tour) ok(Math.abs(pos.ev.top - pos.tour.top) <= 2, '② 公式杯の札がイベントの帯と同じ帯の中にない');
     if (pos.tour && pos.card) ok(pos.tour.bottom <= pos.card.top, '② 公式杯の札が MFバトルカードの札の上にない');
     // ③ 押すと大会のトップ
     await banner.click();
