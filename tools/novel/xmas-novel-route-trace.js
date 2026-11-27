@@ -54,8 +54,8 @@ const trace = (side) => {
       if (row.id === 'A1') pick = opts[side === 'atsu' ? 0 : 1].i;
       else if (Array.isArray(row.answer) && row.answer.length) pick = row.answer[0];
       else {
-        const danger = opts.find((o) => o.to && /-X$/.test(o.to));
-        const safe = opts.find((o) => !(o.to && /-X$/.test(o.to)));
+        const danger = opts.find((o) => o.to && /-[XY]$/.test(o.to)); // 強制バッドの場面(C2-X・C2-Y・C10-X など)
+        const safe = opts.find((o) => !(o.to && /-[XY]$/.test(o.to)));
         if (danger && !seenBad.has(row.id)) {
           seenBad.add(row.id);
           lines.push({ t: 'choice', id: row.id, x: `${row.x} → 「${danger.x}」(危ない方)` });
@@ -115,6 +115,6 @@ const ends = (L) => L.filter((l) => l.t === 'ending').map((l) => l.id).join(' �
 console.log(`あつ派: ${result.atsu.length}行 / エンド ${ends(result.atsu)}`);
 console.log(`ソラシド派: ${result.sorashido.length}行 / エンド ${ends(result.sorashido)}`);
 console.log(`あつ派だけの行 ${[...A].filter((x) => !Sd.has(x)).length} / ソラシド派だけの行 ${[...Sd].filter((x) => !A.has(x)).length}`);
-const ok = ['atsu', 'sorashido'].every((k) => /END-X1.*END-X2.*END-X3.*END-G/.test(ends(result[k])));
+const ok = ['atsu', 'sorashido'].every((k) => /END-X4.*END-X1.*END-X2.*END-X3.*END-G/.test(ends(result[k])));
 if (!ok) { console.log('NG: 強制バッド3つ → 真グッドの順に着かない'); process.exit(1); }
 console.log('OK: 両方の派で A1 → 強制バッド3つ → 真グッドが通しで読める');
