@@ -43,6 +43,8 @@ const TIMES = [
     page.on('pageerror', (e) => errors.push(String(e)));
     await page.route(/supabase\.co/, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
     await page.addInitScript(shiftClock(t.iso));
+    // peer の形を撮るときは、助手どうしの会話が必ず始まるように乱数を小さく固定する(ふだんは4割。会話が出ない回を撮らないため)
+    if (MODES.includes('peer')) await page.addInitScript(() => { Math.random = () => 0.05; });
     await page.addInitScript(() => {
       const put = (k, v) => localStorage.setItem(k, JSON.stringify(v));
       put('mh_breeder_name', '検査ブリーダー'); put('mh_breeder_icon', '🐣'); put('mh_onboarded', true); put('mh_tutorial_seen_v1', true);
