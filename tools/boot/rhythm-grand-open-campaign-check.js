@@ -38,17 +38,17 @@ check('11/9 4:00 〜 9:59:59 は5倍なし', id('2026-11-09T04:00:00+09:00') ===
 check('11/9 10:00 から本オープン記念', id('2026-11-09T10:00:00+09:00') === 'grand_open_2026');
 check('11/23 9:59:59 までは本オープン記念', id('2026-11-16T12:00:00+09:00') === 'grand_open_2026' && id('2026-11-23T09:59:59+09:00') === 'grand_open_2026');
 const endDef = A.RHYTHM_EVENT_POINT_CAMPAIGNS.find((c) => c.id === 'grand_open_2026');
-check('11/30 0:00 で終わる', id('2026-11-30T00:00:00+09:00') === null && !!endDef && endDef.endAt === '2026-11-30T00:00:00+09:00');
+check('11/30 0:00 で終わる(そこからはクリスマスの5倍・r1126-063)', id('2026-11-30T00:00:00+09:00') !== 'grand_open_2026' && !!endDef && endDef.endAt === '2026-11-30T00:00:00+09:00');
 
 // ③
 const IN = at('2026-11-12T20:00:00+09:00');
 const camp = A.rhythmEventPointCampaignAt(IN);
 check('期間中は周回のキャンペーンとして出る(画面の案内も同じものを見る)', !!A.rhythmLoopCampaignAt(IN) && A.rhythmLoopCampaignAt(IN).id === 'grand_open_2026');
 check('期間中は、どの曲でも周回 ×10(いつもの ×2 の5倍)', A.rhythmPlayRunLoopScale('monster_hero', A.rhythmLimitedEventAt(IN), camp) === 10 && A.rhythmPlayRunLoopScale('humanoid', null, camp) === 10);
-check('期間の外は、周回 ×2 に戻る', A.rhythmPlayRunLoopScale('monster_hero', null, A.rhythmEventPointCampaignAt(at('2026-11-30T00:00:00+09:00'))) === 2);
+check('期間の外は、周回 ×2 に戻る', A.rhythmPlayRunLoopScale('monster_hero', null, A.rhythmEventPointCampaignAt(at('2026-12-31T04:00:00+09:00'))) === 2);
 check('期間中にランキングの期間限定イベントは開いていない(ビートPはキャンペーンの計算になる)', A.rhythmLimitedEventAt(IN) === null);
 const award = A.rhythmEventPointAwardAt(IN, 'monster_hero', 1000000, 120000);
-const awardOff = A.rhythmEventPointAwardAt(at('2026-11-30T00:00:00+09:00'), 'monster_hero', 1000000, 120000);
+const awardOff = A.rhythmEventPointAwardAt(at('2026-12-31T04:00:00+09:00'), 'monster_hero', 1000000, 120000);
 check('期間中のビートPは、いつもの5倍', !!award && !!awardOff && award.campaignId === 'grand_open_2026' && award.amount === awardOff.amount * 5, JSON.stringify({ in: award && award.amount, off: awardOff && awardOff.amount }));
 
 // ④⑤

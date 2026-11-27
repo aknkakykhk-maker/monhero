@@ -44,7 +44,7 @@ const XmasEventIcon = ({ name, size = 22 }) => (
 
 const XMAS_EVENT_BONUSES = Object.freeze([
   { id: 'rhythm', icon: () => <XmasEventIcon name="music" />, tone: 'border-fuchsia-300/50 bg-fuchsia-950/40 text-fuchsia-100',
-    title: 'モンヒロビート', big: '5倍', body: 'もらえるビートPと、クイックの∞周回を回しながら遊ぶと入る周回数が5倍になります' },
+    title: 'モンヒロビート', big: '5倍', body: '11/30(月) 0:00 から、もらえるビートPと、クイックの∞周回を回しながら遊ぶと入る周回数が5倍になります' },
   { id: 'card', icon: () => <Layers size={22} />, tone: 'border-sky-300/50 bg-sky-950/40 text-sky-100',
     title: 'MFバトルカード', big: '1.5倍', body: '対戦のごほうび(ビートP・カードランクの経験値・クイック周回)が1.5倍になります' },
   { id: 'battle', icon: () => <Sword size={22} />, tone: 'border-orange-300/50 bg-orange-950/40 text-orange-100',
@@ -168,7 +168,7 @@ const XmasStoryTab = ({ version = 0, allOpen = false, fightWays = [], onRead, on
   if (!progress) return <div className="py-6 text-center text-[11px] text-slate-300">読み込み中…</div>;
   const reached = xmasStoryReachedNo(progress);
   const chapter = sel ? XMAS_STORY_CHAPTERS.find((c) => c.id === sel) : null;
-  // 本編の開幕(11/30 10:00)より前は序章だけを見せる(台帳 r1126-022・本編はひとつのコンテンツで 11/30 に出る。毎日1話ずつ開く形はやめた)
+  // 本編の開幕(11/28 10:00)より前は序章だけを見せる(台帳 r1126-022・本編はひとつのコンテンツで 11/28 に出る・r1126-063 で 11/30 から前倒し。毎日1話ずつ開く形はやめた)
   const preMain = !allOpen && !(nowMs >= Date.parse(RAID_XMAS_EVENT.startAt));
   // 本編はミステリーノベル『モンヒロ事件簿』(79-screen-xmas-novel.jsx の openXmasNovel)。ここに並べるのは序章だけ(台帳 r1126-022)
   const shownChapters = XMAS_STORY_CHAPTERS.filter((c) => c.prologue);
@@ -277,7 +277,7 @@ const XmasStoryTab = ({ version = 0, allOpen = false, fightWays = [], onRead, on
 const XmasBonusTab = () => (
   <div data-xmas-bonus className="space-y-2">
     <XmasSectionTitle>期間中のボーナス</XmasSectionTitle>
-    <p className="px-0.5 text-[10px] font-bold leading-relaxed text-slate-300" style={JA_LABEL_STYLE}>{jaWrap('イベントの期間中は、どれも自動でかかります')}</p>
+    <p className="px-0.5 text-[10px] font-bold leading-relaxed text-slate-300" style={JA_LABEL_STYLE}>{jaWrap('イベントの期間中は、どれも自動でかかります。モンヒロビートの5倍だけは 11/30(月) 0:00 からです')}</p>
     {XMAS_EVENT_BONUSES.map((b) => (
       <div key={b.id} data-xmas-bonus-item={b.id} className={`flex items-center gap-3 rounded-2xl border-2 p-3 shadow-lg shadow-black/30 ${b.tone}`}>
         <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-amber-200/40 bg-black/35">{b.icon()}</span>
@@ -297,7 +297,7 @@ const XmasBonusTab = () => (
 //  tab / onTab … いまのタブ(App が持つ。バトルなどから戻ったときも同じタブに帰る)
 //  raid        … RaidJackScreen へそのまま渡す物(ev・ways・onChallenge など)
 //  storyVersion… 読んだ印が変わったら App が増やす(物語タブが読み直す)
-//  preOpen     … 開幕(11/30 10:00)より前。序章だけ読める。レイド・ボーナスのタブは「11/30 10:00 から」と出す(台帳 r1126-014)
+//  preOpen     … 開幕(11/28 10:00)より前。序章だけ読める。レイド・ボーナスのタブは「11/28 10:00 から」と出す(台帳 r1126-014)
 // バトルカードで挑めるか(スターターを受け取ったか)。カードの保存を読むだけ(書かない)。読めないときは挑ませる(カードの画面が確かめ直す)
 const xmasCardStarterReady = async () => {
   if (typeof CARD_SAVE_KEYS === 'undefined' || typeof cardNormalizeStarter !== 'function') return true;
@@ -305,7 +305,7 @@ const xmasCardStarterReady = async () => {
 };
 const XmasEventScreen = ({ tab = 'story', onTab, onBack, forced = false, preOpen = false, raid = null, storyVersion = 0, fightWays = [], onReadChapter, onFightChapter }) => {
   useXmasEventCss();
-  // レイドの中身を出しているか(開幕の前は「11/30 10:00 から」の札だけ)
+  // レイドの中身を出しているか(開幕の前は「11/28 10:00 から」の札だけ)
   const raidShown = tab === 'raid' && !!raid && !preOpen;
   // 開催中(またはデバッグの強制表示)は、予告の絵の代わりに題字の帯を出す
   const posterOpen = !preOpen;
@@ -372,7 +372,7 @@ const XmasEventScreen = ({ tab = 'story', onTab, onBack, forced = false, preOpen
             <div data-xmas-event-preopen={tab} className="mh-xmas-frame mt-2 rounded-2xl bg-[#0a1430]/95 px-4 py-6 text-center">
               <XmasHolly size={40} className="mx-auto mb-2" />
               <div className="mh-xmas-title text-[18px] font-black">{xmasEventDateLabel(RAID_XMAS_EVENT.startAt)} から</div>
-              <p className="mt-2 text-[12px] font-bold leading-relaxed text-slate-200" style={JA_LABEL_STYLE}>{jaWrap(tab === 'raid' ? 'レイドはイベントの開幕と同時に始まります。いまは「物語」の序章が読めます' : '期間中のボーナスは、イベントの開幕と同時にかかります')}</p>
+              <p className="mt-2 text-[12px] font-bold leading-relaxed text-slate-200" style={JA_LABEL_STYLE}>{jaWrap(tab === 'raid' ? 'レイドはイベントの開幕と同時に始まります。いまは「物語」の序章が読めます' : '期間中のボーナスは、イベントの開幕と同時にかかります(モンヒロビートの5倍は 11/30(月) 0:00 から)')}</p>
             </div>
           ) : tab === 'bonus' ? <XmasBonusTab />
             : <XmasStoryTab version={storyVersion} allOpen={forced} fightWays={fightWays} onRead={onReadChapter} onFight={onFightChapter} />}
@@ -386,7 +386,7 @@ const XmasEventScreen = ({ tab = 'story', onTab, onBack, forced = false, preOpen
 //  ひと目でクリスマスのイベントと分かる札。ポスターの絵を切り抜き、金の縁・柊・ゆっくり光るきらめきを付ける。
 //  形は「上の大きな帯」(社長の選択 2026-11-26・案A)。細バナーの場所に置き、右の丸ボタンの列にはかからない幅にする。
 //  背の低い横画面では、ボスの頭にかからないよう、右の丸ボタンの列の左の空きへ小さく置く
-//  出すのは 11/28 10:00(序章が開く)から 12/31 4:00 まで。11/30 10:00 までは「序章公開中」と出す
+//  出すのは 11/28 10:00(序章が開く)から 12/31 4:00 まで。11/28 10:00 までは「序章公開中」と出す
 // イベントページを開けるか: 序章が開く時刻から、イベントの終わりまで
 const xmasEventPageOpenAt = (nowMs) => {
   const at = Date.parse(XMAS_STORY_PROLOGUE_OPEN_AT);
@@ -423,7 +423,7 @@ const HomeXmasEventEntry = ({ onOpen, preOpen = false }) => {
     if (typeof document === 'undefined' || document.getElementById('mh-xmas-home-entry-css')) return;
     const tag = document.createElement('style'); tag.id = 'mh-xmas-home-entry-css'; tag.textContent = XMAS_HOME_ENTRY_CSS; document.head.appendChild(tag);
   }, []);
-  const sub = preOpen ? '序章公開中・11/30 10:00 開幕' : '開催中 〜12/31 3:59';
+  const sub = preOpen ? `序章公開中・${xmasEventDateLabel(RAID_XMAS_EVENT.startAt).replace(/\(.\)/, '')} 開幕` : '開催中 〜12/31 3:59';
   const sparks = [[8, 18, 0], [62, 12, .8], [88, 64, 1.6], [30, 78, 1.2]];
   const label = `クリスマスイベント 聖夜の名探偵 ${sub}`;
   return (

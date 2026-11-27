@@ -155,9 +155,9 @@ let eh = E.xmasNovelNormalize({ endAt: { 'END-G': 'x', 'END-B': '2026-12-01T00:0
 if (eh.endAt['END-G'] || !eh.endAt['END-B'] || eh.endAt.bad) fail('正規化: エンドヒストリーの日時が直らない');
 eh = E.xmasNovelRecordEnding(eh, 'END-B', '2026-12-09T00:00:00Z');
 if (eh.endAt['END-B'] !== '2026-12-01T00:00:00Z' || eh.endings.length !== 1) fail('エンドヒストリー: 2回目に見た日時で上書きした');
-// 遊べる期間(11/30 10:00〜12/31 3:59)
+// 遊べる期間(11/28 10:00〜12/31 3:59・r1126-063)
 const at = (iso) => E.xmasNovelPlayableAt(Date.parse(iso));
-if (at('2026-11-30T09:59:00+09:00') || !at('2026-11-30T10:00:00+09:00') || !at('2026-12-31T03:59:00+09:00') || at('2026-12-31T04:00:00+09:00')) fail('遊べる期間の境目がちがう');
+if (at('2026-11-28T09:59:00+09:00') || !at('2026-11-28T10:00:00+09:00') || !at('2026-12-31T03:59:00+09:00') || at('2026-12-31T04:00:00+09:00')) fail('遊べる期間の境目がちがう');
 if (!E.XMAS_NOVEL_GAME || !E.XMAS_NOVEL_GAME.series || !E.XMAS_NOVEL_GAME.sub) fail('ゲームの名前(XMAS_NOVEL_GAME)が無い');
 // 一発目の記録は、2回目から書き変えない
 let sv = E.xmasNovelNormalize(null, S);

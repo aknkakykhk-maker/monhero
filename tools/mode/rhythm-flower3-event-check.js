@@ -50,7 +50,7 @@ check('B. 参加報酬の曲数は入っている曲の数', ev.participationRew
 check('B. 帯(周回5倍・ビートP5倍)が期間中だけ出る', all.rhythmEventPointCampaignAt(T('2026-11-25T10:00:00+09:00'))?.id === 'flower3_2026'
   && all.rhythmEventPointCampaignAt(T('2026-11-30T00:00:00+09:00'))?.id !== 'flower3_2026');
 check('B. 本オープン記念の5倍は 11/23 4:00〜10:00 も続き、11/30 0:00 で終わる', all.rhythmEventPointCampaignAt(T('2026-11-23T05:00:00+09:00'))?.id === 'grand_open_2026'
-  && !all.rhythmEventPointCampaignAt(T('2026-11-30T00:00:00+09:00')));
+  && all.rhythmEventPointCampaignAt(T('2026-11-30T00:00:00+09:00'))?.id !== 'grand_open_2026');
 const one = make([ids[0]]);
 const ev1 = one.RHYTHM_EVENTS.find(e => e.id === one.FLOWER3_EVENT_ID);
 check('B. 1曲だけ入っていても、その1曲でイベントが開く', !!ev1 && ev1.songIds.length === 1 && ev1.participationReward.songs === 1);
@@ -82,7 +82,7 @@ const na = all.rhythmEventPointAwardAt(mid, 'monster_hero', 1000000, 100000);
 check('F. イベント曲はいつもの7倍(280P)', ta && ta.target && ta.amount === 280, ta && String(ta.amount));
 check('F. ほかの公開曲はいつもの5倍(200P)', na && !na.target && na.amount === 200, na && String(na.amount));
 check('F. イベント前(11/23 5:00)は本オープン記念の5倍', all.rhythmEventPointAwardAt(T('2026-11-23T05:00:00+09:00'), 'monster_hero', 1000000, 100000)?.amount === 200);
-check('F. 終わったあとは、いつもの貯まり方(40P)', all.rhythmEventPointAwardAt(T('2026-11-30T00:00:00+09:00'), 'monster_hero', 1000000, 100000)?.amount === 40);
+check('F. 終わったあと(どのキャンペーンも無い時刻)は、いつもの貯まり方(40P)', all.rhythmEventPointAwardAt(T('2026-12-31T04:00:00+09:00'), 'monster_hero', 1000000, 100000)?.amount === 40);
 
 // G. お話の BGM(社長「新曲3曲を演出でうまく使って」)。行の bgm で切り替え、曲がまだ入っていなければお話の曲のまま(止まらない)
 {

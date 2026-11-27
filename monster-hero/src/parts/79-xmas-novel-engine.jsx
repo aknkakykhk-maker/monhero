@@ -10,8 +10,8 @@ const XMAS_NOVEL_STORAGE_KEY = 'mh_xmas_novel_v1';
 
 // 届いたゲームの名前(社長 2026-11-26)。シリーズ名・副題は、次のお話でここだけ差し替えて使い回す
 const XMAS_NOVEL_GAME = Object.freeze({ series: 'モンヒロ事件簿', title: '呪いのセーブデータ', sub: '十三番目の鐘' });
-// 遊べるのはイベントの期間中だけ(11/30 10:00〜12/31 3:59)。期間が終わっても保存の記録は消さない
-const XMAS_NOVEL_OPEN_AT = '2026-11-30T10:00:00+09:00';
+// 遊べるのはイベントの期間中だけ(11/28 10:00〜12/31 3:59)。期間が終わっても保存の記録は消さない
+const XMAS_NOVEL_OPEN_AT = '2026-11-28T10:00:00+09:00';
 const XMAS_NOVEL_CLOSE_AT = '2026-12-31T04:00:00+09:00';
 const xmasNovelPlayableAt = (nowMs) => {
   const a = Date.parse(XMAS_NOVEL_OPEN_AT); const b = Date.parse(XMAS_NOVEL_CLOSE_AT);
