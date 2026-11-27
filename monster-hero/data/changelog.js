@@ -125,7 +125,6 @@ const CHANGELOG = [
       '譜面は原曲と short ver. で違います。曲選びの難易度の上のボタンで切り替えて遊べます。',
       'この曲はビートP500で買って遊びます。買うと原曲と short ver. の両方で遊べます。曲選びの「🔒 500P」か、ビートP交換所の「曲」から買えます。',
     ],
-    assistantNotice:{ id:'update_notice_winter_fall_v1', type:'content', notifyFrom:'2026-11-28T10:00:00+09:00' },
   },
   // クリスマスイベントの新曲「Dear Santa」(2026-11-26 社長・台帳 r1126-023/036。期間中のHOME BGM。開幕の 11/28 10:00 から出す)
   {
@@ -141,7 +140,6 @@ const CHANGELOG = [
       '譜面は原曲と short ver. で違います。曲選びの難易度の上のボタンで切り替えて遊べます。',
       'この曲はビートP500で買って遊びます。買うと原曲と short ver. の両方で遊べます。曲選びの「🔒 500P」か、ビートP交換所の「曲」から買えます。',
     ],
-    assistantNotice:{ id:'update_notice_dear_santa_v1', type:'content', notifyFrom:'2026-11-28T10:00:00+09:00' },
   },
   // クリスマスイベントの新曲「Kissからはじまるミステリー」(2026-11-26 社長・台帳 r1126-015/023/036。イベントページの曲。開幕の 11/28 10:00 から出す)
   {
@@ -157,7 +155,9 @@ const CHANGELOG = [
       '譜面は原曲と short ver. で違います。曲選びの難易度の上のボタンで切り替えて遊べます。',
       'この曲はビートP500で買って遊びます。買うと原曲と short ver. の両方で遊べます。曲選びの「🔒 500P」か、ビートP交換所の「曲」から買えます。',
     ],
-    assistantNotice:{ id:'update_notice_kiss_mystery_v1', type:'content', notifyFrom:'2026-11-28T10:00:00+09:00' },
+    // 助手の告知はクリスマスの新曲3曲で1件にまとめる(台帳 r1126-082。ログインで出る告知は3件までなので、開幕・3曲・Battle #5 の3件に収める)。
+    //   本文は data/assistants.js の ASSISTANT_UPDATE_NOTICE_SCRIPTS(助手8人ぶん)。Dear Santa・winter fall の項目には告知を付けない
+    assistantNotice:{ id:'update_notice_xmas_2026_songs_v1', type:'content', notifyFrom:'2026-11-28T10:00:00+09:00' },
   },
   // クリスマスイベントの間の曲(台帳 r1126-023 追記1)。開幕の 11/28 10:00 から出す
   {
