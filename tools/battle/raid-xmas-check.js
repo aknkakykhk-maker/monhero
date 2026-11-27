@@ -53,11 +53,11 @@ const totalsBody = (a1) => JSON.stringify([{ kind: 'a', tier: 1, total_damage: a
     const t = make(OPEN);
     const E = t.o.RAID_XMAS_EVENT;
     check('イベントidは raid_xmas_2026・デバッグは raid_xmas_debug', E.id === 'raid_xmas_2026' && E.debugId === 'raid_xmas_debug');
-    check('期間は 2026-11-30 10:00〜2026-12-31 4:00(JST)', E.startAt === '2026-11-30T10:00:00+09:00' && E.endAt === '2026-12-31T04:00:00+09:00');
+    check('期間は 2026-11-28 10:00〜2026-12-31 4:00(JST)', E.startAt === '2026-11-28T10:00:00+09:00' && E.endAt === '2026-12-31T04:00:00+09:00');
     check('保存キーは新しい mh_raid_xmas_v1', E.storageKey === 'mh_raid_xmas_v1');
     check('入口は battle / rhythm / card', JSON.stringify(t.o.RAID_XMAS_SOURCES) === '["battle","rhythm","card"]');
     check('段階は A・B とも5つ', t.o.RAID_XMAS_A_TIERS.length === 5 && t.o.RAID_XMAS_B_TIERS.length === 5);
-    check('期間の判定', t.o.raidXmasWindowAt(Date.parse('2026-11-30T09:59:59+09:00')) === 'before' && t.o.raidXmasWindowAt(Date.parse('2026-11-30T10:00:00+09:00')) === 'open' && t.o.raidXmasWindowAt(Date.parse('2026-12-31T04:00:00+09:00')) === 'after');
+    check('期間の判定', t.o.raidXmasWindowAt(Date.parse('2026-11-28T09:59:59+09:00')) === 'before' && t.o.raidXmasWindowAt(Date.parse('2026-11-28T10:00:00+09:00')) === 'open' && t.o.raidXmasWindowAt(Date.parse('2026-12-31T04:00:00+09:00')) === 'after');
     const rel = read(P + '17-release-changelog-login-missions.jsx');
     const m = rel.match(/const RAID_XMAS_START_AT = '([^']+)'/);
     check('17-release の RAID_XMAS_START_AT と開始時刻が同じ', !!m && m[1] === E.startAt, m ? m[1] : 'なし');
@@ -68,7 +68,7 @@ const totalsBody = (a1) => JSON.stringify([{ kind: 'a', tier: 1, total_damage: a
   }
   // ② 回数
   {
-    const before = make('2026-11-30T09:00:00+09:00');
+    const before = make('2026-11-28T09:00:00+09:00');
     check('開始前は回数を使えない', (await before.o.raidXmasUseTry()).ok === false);
     const t = make(OPEN);
     const r = [];
@@ -135,7 +135,7 @@ const totalsBody = (a1) => JSON.stringify([{ kind: 'a', tier: 1, total_damage: a
     const t = make('2026-12-01T12:00:00+09:00');
     const r = t.o.xmasBattleBonusRateAt;
     check('ごほうび1.5倍: 開始前は1倍・期間中は1.5倍・終わったら1倍',
-      r(Date.parse('2026-11-30T09:59:59+09:00')) === 1 && r(Date.parse('2026-11-30T10:00:00+09:00')) === 1.5
+      r(Date.parse('2026-11-28T09:59:59+09:00')) === 1 && r(Date.parse('2026-11-28T10:00:00+09:00')) === 1.5
       && r(Date.parse('2026-12-31T03:59:59+09:00')) === 1.5 && r(Date.parse('2026-12-31T04:00:00+09:00')) === 1);
     const app = read(P + '60-app.jsx');
     const body = (name, len = 6000) => { const i = app.indexOf(`const ${name} = `); return i < 0 ? '' : app.slice(i, i + len); };
@@ -152,7 +152,7 @@ const totalsBody = (a1) => JSON.stringify([{ kind: 'a', tier: 1, total_damage: a
     const S = t.o.story;
     const C = S.XMAS_STORY_CHAPTERS;
     check('物語: 序章+25話・序章は 11/27 13:00・第1話は開始と同時・第2話は 12/1 4:00・第25話は 12/24 4:00',
-      C.length === 26 && C[0].id === 'xs00' && C[0].openAt === '2026-11-27T13:00:00+09:00' && C[1].openAt === '2026-11-30T10:00:00+09:00' && C[2].openAt === '2026-12-01T04:00:00+09:00' && C[25].openAt === '2026-12-24T04:00:00+09:00');
+      C.length === 26 && C[0].id === 'xs00' && C[0].openAt === '2026-11-27T13:00:00+09:00' && C[1].openAt === '2026-11-28T10:00:00+09:00' && C[2].openAt === '2026-12-01T04:00:00+09:00' && C[25].openAt === '2026-12-24T04:00:00+09:00');
     const now = Date.parse('2026-12-01T12:00:00+09:00');
     const st = (i, p, all) => S.xmasStoryStatusOf(C[i], p, now, all);
     check('物語: 日時の前は locked・前の話がまだなら waiting・開いたら new(序章を読むと第1話)',
@@ -194,7 +194,7 @@ const totalsBody = (a1) => JSON.stringify([{ kind: 'a', tier: 1, total_damage: a
     const x2 = await run(x1.t.o.RAID_XMAS_A_TIERS[0].hp, true);
     const ids2 = x2.r.due.map((d) => d.id);
     check('報酬: クリスマスの段階1のライフに届くと討伐・貢献の報酬', ids2.includes('clear_a1') && ids2.includes('rank_a1') && x2.r.due.find((d) => d.id === 'clear_a1').title.startsWith(x2.t.o.RAID_XMAS_A_TIERS[0].name), ids2.join());
-    const x3 = await (async () => { const t = make('2026-11-30T09:00:00+09:00'); return t.o.raidJackCollectDueRewards({}, me, 'raid_xmas_2026', Date.parse('2026-11-30T09:00:00+09:00'), t.o.raidXmasRewardRules()); })();
+    const x3 = await (async () => { const t = make('2026-11-28T09:00:00+09:00'); return t.o.raidJackCollectDueRewards({}, me, 'raid_xmas_2026', Date.parse('2026-11-28T09:00:00+09:00'), t.o.raidXmasRewardRules()); })();
     check('報酬: 開始前は何も出さない(クリスマスの期間で見る)', x3.ok && x3.due.length === 0);
     const x4 = await (async () => { const t = make(OPEN); t.setResponder((url) => (/raid_jack_tier_totals/.test(url) ? { ok: true, status: 200, body: totalsBody(x1.t.o.RAID_XMAS_A_TIERS[0].hp) } : /breeder_id=eq\./.test(url) ? { ok: true, status: 200, body: JSON.stringify([{ kind: 'a', tier: 1, total_damage: 5000 }]) } : { ok: true, status: 200, body: '[]' })); return t.o.raidJackCollectDueRewards({ claimed: ['part_a', 'clear_a1', 'rank_a1'] }, me, 'raid_xmas_2026', Date.parse(OPEN), t.o.raidXmasRewardRules()); })();
     check('報酬: 受け取り済みの印があれば二度は出さない', x4.ok && x4.due.length === 0, JSON.stringify(x4.due));

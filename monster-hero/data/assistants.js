@@ -13096,8 +13096,8 @@ const XMAS_STORY_COSTUMES = Object.freeze({ mua:'mua_santa_2026', kiki:'kiki_san
 // 台本は docs/progress/event-xmas-2026/SCRIPT.md の「## みんなで進む話(レイド) 台本」(台詞は台本のまま。この配列は台本の表から作った)。
 //   だれも消えなかった「もしも」の話。謎の客2人(黒羽・白瀬)も生きていて、事件・12年前には触れない。
 //   黒いサンタは段階ごとに name を上書きする(咎・戒・罰・断罪・煉獄)。赤に戻ったあとと覚醒する前は santa。
-//   id と流す時は 35-raid-xmas.jsx の RAID_XMAS_STORY_START_ID・RAID_XMAS_STORY_AFTER_TIER・RAID_XMAS_ENDING_*_ID。公開の印 raidXmas(11/30 10:00)まで回想にも出さない
-// レイド導入 ～もうひとつの聖夜～ (レイド開始 11/30 10:00)
+//   id と流す時は 35-raid-xmas.jsx の RAID_XMAS_STORY_START_ID・RAID_XMAS_STORY_AFTER_TIER・RAID_XMAS_ENDING_*_ID。公開の印 raidXmas(11/28 10:00)まで回想にも出さない
+// レイド導入 ～もうひとつの聖夜～ (レイド開始 11/28 10:00)
 const RAID_XMAS_STORY_1B = [
   { band:true, fxText:'これは、もうひとつの聖夜のお話。——もしも、誰も消えなかったら' },
   { band:true, fxText:'ペンション・シュプール。クリスマス会の前の晩' },
@@ -13461,7 +13461,7 @@ const EVENT_REPLAYS = [
   // クリスマスのイベント「聖夜の名探偵」序章(2026-11-27 13:00 から・台帳 r1126-013・r1126-060 で前倒し)。イベントページの「物語」タブから読む。回想には、読んだあとに並ぶ(xmasStory00Seen)
   { id: 'xmas_story_00', date: '2026-11-27 13:00', title: '聖夜の名探偵 序章 ～届いたゲーム～', script: XMAS_STORY_00, calls: XMAS_STORY_CALLS, unlockedKey: 'xmasStory00Seen', costumes: XMAS_STORY_COSTUMES, releaseFlag: 'xmasStoryPrologue', group: 'xmas' },
   // クリスマスのレイド「もうひとつの聖夜」(r1126-026)。導入=レイド開始 / 第1〜5話=段階(咎・戒・罰・断罪・煉獄)を倒したあと / 終章=期間終了後(煉獄まで倒せたかで2本)。
-  //   id は 35-raid-xmas.jsx の RAID_XMAS_STORY_IDS と同じ。公開の印 raidXmas(11/30 10:00)まで回想にも出さない。date は回想の並び順にだけ使う(1分ずつ振る)
+  //   id は 35-raid-xmas.jsx の RAID_XMAS_STORY_IDS と同じ。公開の印 raidXmas(11/28 10:00)まで回想にも出さない。date は回想の並び順にだけ使う(1分ずつ振る)
   { id: 'raid_xmas_story_1b', date: '2026-11-30 10:00', title: '聖夜の名探偵 もうひとつの聖夜 ～はじまり～', script: RAID_XMAS_STORY_1B, calls: RAID_XMAS_STORY_CALLS, unlockedKey: 'raidXmasStory1bSeen', costumes: XMAS_STORY_COSTUMES, releaseFlag: 'raidXmas', group: 'xmas' },
   { id: 'raid_xmas_story_2', date: '2026-11-30 10:01', title: '聖夜の名探偵 もうひとつの聖夜 第1話 ～落ちたひとつ～', script: RAID_XMAS_STORY_2, calls: RAID_XMAS_STORY_CALLS, unlockedKey: 'raidXmasStory2Seen', costumes: XMAS_STORY_COSTUMES, releaseFlag: 'raidXmas', group: 'xmas' },
   { id: 'raid_xmas_story_3', date: '2026-11-30 10:02', title: '聖夜の名探偵 もうひとつの聖夜 第2話 ～ゆれる声～', script: RAID_XMAS_STORY_3, calls: RAID_XMAS_STORY_CALLS, unlockedKey: 'raidXmasStory3Seen', costumes: XMAS_STORY_COSTUMES, releaseFlag: 'raidXmas', group: 'xmas' },

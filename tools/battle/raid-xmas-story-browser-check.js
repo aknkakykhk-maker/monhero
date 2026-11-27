@@ -3,8 +3,8 @@
 //   node tools/battle/raid-xmas-story-browser-check.js
 //   SHOT_DIR=<フォルダ> を付けると、黒羽・白瀬が話す止め絵を残す
 //
-//   ① 11/29 10:00(レイドの開始より前): HOME に着いても、レイドのお話は流れない
-//   ② 11/30 10:05(開始のあと): HOME に着くと導入(raid_xmas_story_1b)が流れ、黒羽・白瀬が顔つきで話す。
+//   ① 11/28 9:55(レイドの開始より前): HOME に着いても、レイドのお話は流れない
+//   ② 11/28 10:05(開始のあと): HOME に着くと導入(raid_xmas_story_1b)が流れ、黒羽・白瀬が顔つきで話す。
 //      最後までめくると「見た」の印が会話の既読キーに残り、ほかの話(段階のあと)は合計が取れないあいだ流れない
 //   共有の合計(Supabase)は空の返事にしてある(本番の表には触らない)
 const http = require('http'), path = require('path'), fs = require('fs');
@@ -28,8 +28,8 @@ const STORY_KEY = seeds.eventStoryKey();
   const server = await serve();
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   try {
-    for (const [iso, open] of [['2026-11-29T10:00:00+09:00', false], ['2026-11-30T10:05:00+09:00', true]]) {
-      const label = open ? '② 11/30 10:05' : '① 11/29 10:00';
+    for (const [iso, open] of [['2026-11-28T09:55:00+09:00', false], ['2026-11-28T10:05:00+09:00', true]]) {
+      const label = open ? '② 11/28 10:05' : '① 11/28 9:55';
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: SHOT_DIR ? 2 : 1 });
       const page = await ctx.newPage();
       const errors = [];

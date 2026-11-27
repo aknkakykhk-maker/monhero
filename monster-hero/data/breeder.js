@@ -1301,11 +1301,11 @@ const kikiTwintailCostume = Object.freeze({
   price: Object.freeze({ diamond: 100000 }),
 });
 // みゅあのサンタ(2026-11-25 社長・クリスマスイベント r1119-172「ハロウィンと同じ売り方」「イベントとストーリーはみんなこれを着ている」)。
-//   イベント中(11/30 10:00〜12/31 3:59)はビートP交換所で1000P、終わったあとはダイヤショップで100000ダイヤ。開始の前は released が偽で、着替えにもマーケットにも出ない。
+//   イベント中(11/28 10:00〜12/31 3:59)はビートP交換所で1000P、終わったあとはダイヤショップで100000ダイヤ。開始の前は released が偽で、着替えにもマーケットにも出ない。
 //   絵は images/assistant/santa/(全身の絵をバスト絵の置き場に置く・face/ の顔アイコン・寝顔 myua_sleep.PNG)。立ち絵は stand-santa、全身画は fullbody/mua_santa。
 //   原本は tools/art-sources/assistants/mua/santa/received/(加工せずに保管)。作り方は life-fullbody-art.py → life-stand-from-fullbody.py
 // ★期間はクリスマスイベントの期間(docs/progress/event-xmas-2026/PLAN.md)。イベントの定義を足したら、そちらと食い違わないように検査で見張る
-const ASSISTANT_COSTUME_XMAS_START_AT = '2026-11-30T10:00:00+09:00';
+const ASSISTANT_COSTUME_XMAS_START_AT = '2026-11-28T10:00:00+09:00';
 const ASSISTANT_COSTUME_XMAS_END_AT = '2026-12-31T04:00:00+09:00';
 const MUA_SANTA_COSTUME_ART = "images/assistant/santa/face/myua_happy.PNG?v=0c64729b1058";
 const muaSantaCostume = Object.freeze({
@@ -1579,7 +1579,7 @@ const setAssistantCostumeWornNow = (worn) => { ASSISTANT_COSTUME_WORN_NOW = (wor
 // 会話を閉じたら空へ戻る。アプリが描くたびに入れ直す(2026-10-04・ユーザー指摘「コスプレ版になってない」)
 let ASSISTANT_COSTUME_STORY_NOW = {};
 const setAssistantCostumeStoryNow = (map) => { ASSISTANT_COSTUME_STORY_NOW = (map && typeof map === 'object') ? map : {}; };
-// 会話のあいだだけ着る服は、売り出しの前でも着る(2026-11-26 クリスマスの序章は 11/28 から読めて、サンタの服の売り出しは 11/30・台帳 r1126-013)。
+// 会話のあいだだけ着る服は、売り出しの前でも着る(2026-11-26 クリスマスの序章は 11/28 から読めて、サンタの服の売り出しは 11/28 10:00・台帳 r1126-013/063)。
 //   その助手の服であることは確かめる。着替え・ショップの判定(assistantCostumeById)は今までどおり売り出しのあとだけ
 const assistantCostumeStoryFor = (assistantId) => {
   const id = ASSISTANT_COSTUME_STORY_NOW[assistantId];

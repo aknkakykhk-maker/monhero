@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ece808f14f03ff29
+// source-sha256: 1a196f1cdd638da5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -6894,11 +6894,11 @@ const BGM_UNRELEASED_TRACKS = Object.freeze([{
 }]);
 const BGM_TRACK_BY_ID = Object.fromEntries(BGM_TRACKS.map(track => [track.id, track]));
 const BGM_TRACK_LISTED_FROM = Object.freeze({
-  melo_kiss_mystery_short: '2026-11-30T10:00:00+09:00',
-  melo_dear_santa: '2026-11-30T10:00:00+09:00',
-  melo_dear_santa_short: '2026-11-30T10:00:00+09:00',
-  melo_winter_fall: '2026-11-30T10:00:00+09:00',
-  melo_winter_fall_short: '2026-11-30T10:00:00+09:00'
+  melo_kiss_mystery_short: '2026-11-28T10:00:00+09:00',
+  melo_dear_santa: '2026-11-28T10:00:00+09:00',
+  melo_dear_santa_short: '2026-11-28T10:00:00+09:00',
+  melo_winter_fall: '2026-11-28T10:00:00+09:00',
+  melo_winter_fall_short: '2026-11-28T10:00:00+09:00'
 });
 const bgmTrackListed = (track, nowMs = Date.now()) => {
   const id = track && track.id;
@@ -8395,7 +8395,7 @@ const screenThemeCategory = (gameState, rhythmOpen = false) => {
   return 'menu';
 };
 const TITLE_ART_STORAGE_KEY = 'mh_title_art';
-const TITLE_ART_XMAS_FROM = () => Date.parse(typeof RAID_XMAS_START_AT === 'string' ? RAID_XMAS_START_AT : '2026-11-30T10:00:00+09:00');
+const TITLE_ART_XMAS_FROM = () => Date.parse(typeof RAID_XMAS_START_AT === 'string' ? RAID_XMAS_START_AT : '2026-11-28T10:00:00+09:00');
 const TITLE_ART_XMAS_UNTIL = () => Date.parse(typeof RAID_XMAS_EVENT === 'object' && RAID_XMAS_EVENT && typeof RAID_XMAS_EVENT.endAt === 'string' ? RAID_XMAS_EVENT.endAt : '2026-12-31T04:00:00+09:00');
 const TITLE_ART_OPTIONS = [{
   id: 'xmas',
@@ -8440,7 +8440,7 @@ const titleArtSrc = (value, shape = 'portrait') => {
   return option.src;
 };
 const HOME_ART_STORAGE_KEY = 'mh_home_art';
-const HOME_ART_XMAS_FROM = () => Date.parse(typeof RAID_XMAS_START_AT === 'string' ? RAID_XMAS_START_AT : '2026-11-30T10:00:00+09:00');
+const HOME_ART_XMAS_FROM = () => Date.parse(typeof RAID_XMAS_START_AT === 'string' ? RAID_XMAS_START_AT : '2026-11-28T10:00:00+09:00');
 const HOME_ART_XMAS_UNTIL = () => Date.parse(typeof RAID_XMAS_EVENT === 'object' && RAID_XMAS_EVENT && typeof RAID_XMAS_EVENT.endAt === 'string' ? RAID_XMAS_EVENT.endAt : '2026-12-31T04:00:00+09:00');
 const HOME_ART_OPTIONS = [{
   id: 'xmas',
@@ -15940,8 +15940,8 @@ const RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE = true;
 const RHYTHM_MULTI_PUBLIC_RELEASE = true;
 const FRIENDS_PUBLIC_RELEASE = true;
 const RAID_JACK_START_AT = '2026-10-05T04:00:00+09:00';
-const XMAS_COSTUME_START_AT = '2026-11-30T10:00:00+09:00';
-const RAID_XMAS_START_AT = '2026-11-30T10:00:00+09:00';
+const XMAS_COSTUME_START_AT = '2026-11-28T10:00:00+09:00';
+const RAID_XMAS_START_AT = '2026-11-28T10:00:00+09:00';
 const RAID_JACK_PUBLIC_RELEASE = true;
 const RAID_JACK_RHYTHM_PUBLIC_RELEASE = true;
 const RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE = true;
@@ -64057,7 +64057,7 @@ const RAID_XMAS_EVENT = Object.freeze({
   debugId: 'raid_xmas_debug',
   title: '聖夜の名探偵',
   name: '黒いサンタ',
-  startAt: '2026-11-30T10:00:00+09:00',
+  startAt: '2026-11-28T10:00:00+09:00',
   endAt: '2026-12-31T04:00:00+09:00',
   storageKey: 'mh_raid_xmas_v1'
 });
@@ -112904,7 +112904,7 @@ const XMAS_EVENT_BONUSES = Object.freeze([{
   tone: 'border-fuchsia-300/50 bg-fuchsia-950/40 text-fuchsia-100',
   title: 'モンヒロビート',
   big: '5倍',
-  body: 'もらえるビートPと、クイックの∞周回を回しながら遊ぶと入る周回数が5倍になります'
+  body: '11/30(月) 0:00 から、もらえるビートPと、クイックの∞周回を回しながら遊ぶと入る周回数が5倍になります'
 }, {
   id: 'card',
   icon: () => React.createElement(Layers, {
@@ -113301,7 +113301,7 @@ const XmasBonusTab = () => React.createElement("div", {
 }, React.createElement(XmasSectionTitle, null, "期間中のボーナス"), React.createElement("p", {
   className: "px-0.5 text-[10px] font-bold leading-relaxed text-slate-300",
   style: JA_LABEL_STYLE
-}, jaWrap('イベントの期間中は、どれも自動でかかります')), XMAS_EVENT_BONUSES.map(b => React.createElement("div", {
+}, jaWrap('イベントの期間中は、どれも自動でかかります。モンヒロビートの5倍だけは 11/30(月) 0:00 からです')), XMAS_EVENT_BONUSES.map(b => React.createElement("div", {
   key: b.id,
   "data-xmas-bonus-item": b.id,
   className: `flex items-center gap-3 rounded-2xl border-2 p-3 shadow-lg shadow-black/30 ${b.tone}`
@@ -113481,7 +113481,7 @@ const XmasEventScreen = ({
   }, xmasEventDateLabel(RAID_XMAS_EVENT.startAt), " から"), React.createElement("p", {
     className: "mt-2 text-[12px] font-bold leading-relaxed text-slate-200",
     style: JA_LABEL_STYLE
-  }, jaWrap(tab === 'raid' ? 'レイドはイベントの開幕と同時に始まります。いまは「物語」の序章が読めます' : '期間中のボーナスは、イベントの開幕と同時にかかります'))) : tab === 'bonus' ? React.createElement(XmasBonusTab, null) : React.createElement(XmasStoryTab, {
+  }, jaWrap(tab === 'raid' ? 'レイドはイベントの開幕と同時に始まります。いまは「物語」の序章が読めます' : '期間中のボーナスは、イベントの開幕と同時にかかります(モンヒロビートの5倍は 11/30(月) 0:00 から)'))) : tab === 'bonus' ? React.createElement(XmasBonusTab, null) : React.createElement(XmasStoryTab, {
     version: storyVersion,
     allOpen: forced,
     fightWays: fightWays,
@@ -113530,7 +113530,7 @@ const HomeXmasEventEntry = ({
     tag.textContent = XMAS_HOME_ENTRY_CSS;
     document.head.appendChild(tag);
   }, []);
-  const sub = preOpen ? '序章公開中・11/30 10:00 開幕' : '開催中 〜12/31 3:59';
+  const sub = preOpen ? `序章公開中・${xmasEventDateLabel(RAID_XMAS_EVENT.startAt).replace(/\(.\)/, '')} 開幕` : '開催中 〜12/31 3:59';
   const sparks = [[8, 18, 0], [62, 12, .8], [88, 64, 1.6], [30, 78, 1.2]];
   const label = `クリスマスイベント 聖夜の名探偵 ${sub}`;
   return React.createElement("button", {
@@ -113601,7 +113601,7 @@ const XMAS_NOVEL_GAME = Object.freeze({
   title: '呪いのセーブデータ',
   sub: '十三番目の鐘'
 });
-const XMAS_NOVEL_OPEN_AT = '2026-11-30T10:00:00+09:00';
+const XMAS_NOVEL_OPEN_AT = '2026-11-28T10:00:00+09:00';
 const XMAS_NOVEL_CLOSE_AT = '2026-12-31T04:00:00+09:00';
 const xmasNovelPlayableAt = nowMs => {
   const a = Date.parse(XMAS_NOVEL_OPEN_AT);
@@ -115617,7 +115617,7 @@ const XMAS_NOVEL_SCRIPT = {
         "to": "C2-Y",
         "x": "ソラシドが、灯りを消した自分の部屋で、一人で手紙の主を待ちぶせる"
       }, {
-        "x": "部屋は空けておく。0時まで、みんなでホールの柱時計を見張る(手紙の主は、つかまえられない)"
+        "x": "部屋は空けておく。探偵たちは、0時までホールの柱時計を見張る(手紙の主は、つかまえられない)"
       }],
       "k": "C2-L:A2b"
     }, {
@@ -119411,7 +119411,7 @@ const XMAS_NOVEL_SCRIPT = {
       "id": "7-P1-6",
       "t": "line",
       "w": "momosuke",
-      "x": "……みんな、目がこわい。ももを見る目が、黒いサンタを見る目になってる",
+      "x": "……みんな、目が怖い。ももを見る目が、黒いサンタを見る目になってる",
       "e": "angry",
       "k": "C7-P1:7-P1-6"
     }, {
@@ -119424,7 +119424,7 @@ const XMAS_NOVEL_SCRIPT = {
     }, {
       "id": "7-P1-8",
       "t": "band",
-      "x": "ももすけは、コートもつかまずに、台所の裏口から、吹雪の中へ飛び出していった",
+      "x": "ももすけは、コートも持たずに、台所の裏口から、吹雪の中へ飛び出していった",
       "k": "C7-P1:7-P1-8"
     }, {
       "id": "7-P1-9a",
@@ -119461,7 +119461,7 @@ const XMAS_NOVEL_SCRIPT = {
     }, {
       "id": "7-P1-10",
       "t": "band",
-      "x": "追いかけた灯りは、三歩先で、白い闇にのまれた。吹雪の音が、呼ぶ声を、全部さらっていく",
+      "x": "灯りを手に追いかけたが、ももすけの背中は、三歩先で、白い闇にのまれた。吹雪の音が、呼ぶ声を、全部さらっていく",
       "k": "C7-P1:7-P1-10"
     }, {
       "id": "7-P1-11",
@@ -119472,7 +119472,7 @@ const XMAS_NOVEL_SCRIPT = {
     }, {
       "id": "7-P1-12",
       "t": "band",
-      "x": "その夜。誰も眠らずに、裏口の扉を見ていた",
+      "x": "その夜。誰も眠らずに、台所で裏口の扉を見ていた。ホールの暖炉の火だけが、誰もいない木の下を照らしていた",
       "k": "C7-P1:7-P1-12"
     }, {
       "id": "7-P1-13",
@@ -119505,7 +119505,7 @@ const XMAS_NOVEL_SCRIPT = {
       "id": "7-P2-2",
       "t": "line",
       "w": "mochimaru",
-      "x": "……ぼく、だっちー……？",
+      "x": "……ぼくだっちー……？",
       "k": "C7-P2:7-P2-2"
     }, {
       "id": "7-P2-3",
@@ -119516,7 +119516,7 @@ const XMAS_NOVEL_SCRIPT = {
       "id": "7-P2-4",
       "t": "line",
       "w": "ichika",
-      "x": "待ってください。もちまるは、12年前から、この宿の火を守ってきた子ですよ",
+      "x": "待ってください。もちまるは、12年前から、この宿の火をずっと守ってきてくれた人ですよ",
       "k": "C7-P2:7-P2-4"
     }, {
       "id": "7-P2-5a",
@@ -119531,7 +119531,7 @@ const XMAS_NOVEL_SCRIPT = {
       },
       "t": "line",
       "w": "sorashido",
-      "x": "……ですが、この宿の鍵を全部持っているのは、もちまるさんだけです",
+      "x": "……ですが、この宿の鍵の束を預かっているのは、もちまるさんです",
       "e": "troubled",
       "k": "C7-P2:7-P2-5a"
     }, {
@@ -119547,7 +119547,7 @@ const XMAS_NOVEL_SCRIPT = {
       },
       "t": "line",
       "w": "atsu",
-      "x": "……でも、この宿の鍵を全部持ってるのは、もちまるだけだ",
+      "x": "……でも、この宿の鍵の束を預かってるのは、もちまるだ",
       "e": "troubled",
       "k": "C7-P2:7-P2-5s"
     }, {
@@ -119560,7 +119560,7 @@ const XMAS_NOVEL_SCRIPT = {
       "id": "7-P2-7",
       "t": "line",
       "w": "mochimaru",
-      "x": "でも、疑われてるぼくの火じゃ、みなさん、安心してあたれないっちー。……今夜は、薪小屋で寝るっちー",
+      "x": "でも、疑われてるぼくの火じゃ、みなさん、安心して当たれないっちー。……今夜は、薪小屋で寝るっちー",
       "k": "C7-P2:7-P2-7"
     }, {
       "id": "7-P2-8",
@@ -119682,10 +119682,25 @@ const XMAS_NOVEL_SCRIPT = {
         }]
       },
       "t": "line",
-      "w": "sorashido",
-      "x": "……今夜は、見張りをやめて、それぞれの部屋で休みましょう。みなさん、もう限界です",
-      "e": "normal",
+      "w": "ichika",
+      "x": "……今夜は、見張りをやめて、それぞれのお部屋で休みましょう。みなさん、もう限界ですよ",
       "k": "C7-P3:7-P3-8a"
+    }, {
+      "id": "7-P3-82a",
+      "c": {
+        "any": [{
+          "all": [{
+            "k": "f_A1",
+            "op": "=",
+            "v": 1
+          }]
+        }]
+      },
+      "t": "line",
+      "w": "sorashido",
+      "x": "(ノートを閉じかけて、手を止める)",
+      "e": "troubled",
+      "k": "C7-P3:7-P3-82a"
     }, {
       "id": "7-P3-8s",
       "c": {
@@ -119875,14 +119890,14 @@ const XMAS_NOVEL_SCRIPT = {
       "id": "7-4b-4",
       "t": "line",
       "w": "atsu",
-      "x": "……いいよ、ばこっちゃん。俺、さっき、ドラちゃんを名指しして外しかけた。疑われても、しかたない",
+      "x": "……いいよ、ばこっちゃん。俺、さっき、ドラちゃんを名指しした。間違ってたのかもしれない。疑われても、しかたない",
       "e": "troubled",
       "k": "C7-4b:7-4b-4"
     }, {
       "id": "7-4b-5",
       "t": "line",
       "w": "atsu",
-      "x": "だから、自分で確かめる。黒いサンタの通り道、俺一人で、端から端まで見てくる",
+      "x": "だから、自分で確かめる。誰かと一緒だと、かばってるって思われるでしょ。黒いサンタの通り道、俺一人で、端から端まで見てくる",
       "e": "normal",
       "k": "C7-4b:7-4b-5"
     }, {
@@ -119896,7 +119911,7 @@ const XMAS_NOVEL_SCRIPT = {
       "id": "7-4b-7",
       "t": "line",
       "w": "atsu",
-      "x": "一人じゃなきゃ、証明になんないでしょ。……みゅあ、ここで待ってて",
+      "x": "一人じゃなきゃ、証明になんないんだよ。……みゅあ、ここで待ってて",
       "e": "normal",
       "k": "C7-4b:7-4b-7"
     }, {
@@ -120024,14 +120039,14 @@ const XMAS_NOVEL_SCRIPT = {
       "id": "7-5b-4",
       "t": "line",
       "w": "sorashido",
-      "x": "……いいんです、あつさん。自分は、さっき、ドラさんを名指しして外しかけました。疑われても、しかたがありません",
+      "x": "……いいんです、あつさん。自分は、さっき、確かめきれないまま、ドラさんを名指ししました。疑われても、しかたがありません",
       "e": "troubled",
       "k": "C7-5b:7-5b-4"
     }, {
       "id": "7-5b-5",
       "t": "line",
       "w": "sorashido",
-      "x": "だから、記録で証明します。黒いサンタの通り道を、自分一人で、端から端まで調べてきます",
+      "x": "だから、記録で証明します。誰かと一緒では、その人がかばったと思われます。黒いサンタの通り道を、自分一人で、端から端まで調べてきます",
       "e": "normal",
       "k": "C7-5b:7-5b-5"
     }, {
@@ -120045,7 +120060,7 @@ const XMAS_NOVEL_SCRIPT = {
       "id": "7-5b-7",
       "t": "line",
       "w": "sorashido",
-      "x": "一人でなければ、証明になりません。……ワトソンくん、記録を",
+      "x": "一人は危ないと言ったのは、自分です。……それでも、一人でなければ、証明になりません。……ワトソンくん、記録を",
       "e": "normal",
       "k": "C7-5b:7-5b-7"
     }, {
@@ -122745,7 +122760,7 @@ const XMAS_NOVEL_SCRIPT = {
     }, {
       "id": "2-Y-7",
       "t": "band",
-      "x": "影は、音もなく、裏の階段を下りていく。探偵は、靴もはかずに、その後を追った",
+      "x": "影は、音もなく、裏の階段を下りていく。探偵は、靴も履かずに、その後を追った",
       "k": "C2-Y:2-Y-7"
     }, {
       "id": "2-Y-8",
@@ -122783,7 +122798,7 @@ const XMAS_NOVEL_SCRIPT = {
       },
       "t": "line",
       "w": "myua",
-      "x": "今の音……あつくんの部屋のほう……！",
+      "x": "今の音……裏の階段のほう……！ あつくん、部屋にいたはずなのに……！",
       "e": "surprise",
       "k": "C2-Y:2-Y-12a"
     }, {
@@ -123023,7 +123038,7 @@ const XMAS_NOVEL_SCRIPT = {
     }, {
       "id": "10-X-5",
       "t": "band",
-      "x": "板が、内側から、そっと持ち上がった。小さな灯りの中に、黒いフードの影",
+      "x": "板が、上から、そっと持ち上がった。小さな灯りの中に、黒いフードの影",
       "k": "C10-X:10-X-5"
     }, {
       "id": "10-X-6a",
@@ -123038,7 +123053,7 @@ const XMAS_NOVEL_SCRIPT = {
       },
       "t": "line",
       "w": "atsu",
-      "x": "……うそだろ。……お前……",
+      "x": "……うそだろ。……なんで……",
       "e": "surprise",
       "k": "C10-X:10-X-6a"
     }, {
@@ -123232,7 +123247,7 @@ const XMAS_NOVEL_SCRIPT = {
     }, {
       "id": "M1-2",
       "t": "band",
-      "x": "朝。吹雪のやんだ雪原に、小さな足跡が一つ、ふもとへの山道のほうへ続いていた",
+      "x": "朝。吹雪のやんだ雪原に、小さな足跡が一筋、ふもとへの山道のほうへ続いていた",
       "k": "END-M1:M1-2"
     }, {
       "id": "M1-3",
@@ -123294,7 +123309,7 @@ const XMAS_NOVEL_SCRIPT = {
     }, {
       "id": "M2-3",
       "t": "band",
-      "x": "裏口から薪小屋まで、雪の上に、薪を運んだ足跡が、何度も、何度も往復していた",
+      "x": "裏口から薪小屋まで、雪の上に、薪を運んで往復した足跡が、何本も重なっていた",
       "k": "END-M2:M2-3"
     }, {
       "id": "M2-4",
@@ -123312,7 +123327,7 @@ const XMAS_NOVEL_SCRIPT = {
       "id": "M2-6",
       "t": "line",
       "w": "ichika",
-      "x": "……もちまる。……疑われた夜まで、あなたは、みんなの火の番を……",
+      "x": "……もちまる。……疑われた夜でさえ、あなたは、みんなの火の番を……",
       "k": "END-M2:M2-6"
     }, {
       "id": "M2-7",
@@ -123326,7 +123341,7 @@ const XMAS_NOVEL_SCRIPT = {
     }, {
       "id": "M2-8",
       "t": "band",
-      "x": "——火を守っていた人の名前を指さしたのは、{name}だった",
+      "x": "——その名前を指さしたのは、{name}だった",
       "k": "END-M2:M2-8"
     }],
     "ending": {
@@ -123356,7 +123371,7 @@ const XMAS_NOVEL_SCRIPT = {
     }, {
       "id": "M3-3",
       "t": "band",
-      "x": "吹きこんだ雪の積もったベッドに、えるびんの姿は無かった。白いシーツの上の赤い跡が、窓のほうへ、引きずられたように続いている",
+      "x": "吹きこんだ雪の積もったベッドに、えるびんの姿はなかった。白いシーツの上の赤い跡が、窓のほうへ、引きずられたように続いている",
       "fx": ["bleed"],
       "k": "END-M3:M3-3"
     }, {
@@ -123395,7 +123410,7 @@ const XMAS_NOVEL_SCRIPT = {
     }, {
       "id": "M3-9",
       "t": "band",
-      "x": "——死んだ人の名前を指さした夜から、鐘が鳴るたびに、誰かがいなくなった",
+      "x": "——その名前を指さしたのは、{name}だった",
       "k": "END-M3:M3-9"
     }],
     "ending": {
@@ -123420,7 +123435,7 @@ const XMAS_NOVEL_SCRIPT = {
     }, {
       "id": "M4-2",
       "t": "band",
-      "x": "鍵のかかった部屋で、名探偵は、扉に背中をあずけて、鐘の数を数えた",
+      "x": "鍵のかかった部屋で、名探偵は、扉に背中を預けて、鐘の数を数えた",
       "k": "END-M4:M4-2"
     }, {
       "id": "M4-3",
@@ -123445,7 +123460,7 @@ const XMAS_NOVEL_SCRIPT = {
     }, {
       "id": "M4-7",
       "t": "band",
-      "x": "12月27日の朝。山道があいて、ふもとから大人たちが上がってきた。扉の鍵を開けたのは、知らない人の手だった",
+      "x": "12月27日の朝。山道があいて、ふもとの人たちが上がってきた。扉の鍵を開けたのは、知らない人の手だった",
       "k": "END-M4:M4-7"
     }, {
       "id": "M4-8a",
@@ -123476,7 +123491,7 @@ const XMAS_NOVEL_SCRIPT = {
       },
       "t": "line",
       "w": "atsu",
-      "x": "ばこっちゃん……。俺、探偵の代わり、できなかった……",
+      "x": "ばこっちゃん……。ばこっちゃんの分まで、守れなかった……",
       "e": "crying",
       "k": "END-M4:M4-8s"
     }, {
@@ -123497,7 +123512,7 @@ const XMAS_NOVEL_SCRIPT = {
     }, {
       "id": "M4-10",
       "t": "band",
-      "x": "——名探偵の名前を指さしたのは、{name}だった",
+      "x": "——その名前を指さしたのは、{name}だった",
       "k": "END-M4:M4-10"
     }],
     "ending": {
@@ -123561,6 +123576,11 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "band",
       "x": "朝。鏡の扉の奥の、冷えきった通り道",
       "k": "END-M5:M5-4"
+    }, {
+      "id": "M5-4b",
+      "t": "band",
+      "x": "後ろ頭の髪に、乾いた血。来た道へ戻る前に殴られ、鏡の扉の奥の行き止まりへ、運びこまれていたのだった",
+      "k": "END-M5:M5-4b"
     }, {
       "id": "M5-5a",
       "c": {
@@ -123644,7 +123664,7 @@ const XMAS_NOVEL_SCRIPT = {
       },
       "t": "line",
       "w": "sorashido",
-      "x": "……あつさん。……あなたを疑う人なんて、本当は、どこにもいなかったのに",
+      "x": "……あつさん。……自分が、腕をつかんででも止めていれば……",
       "e": "troubled",
       "k": "END-M5:M5-7s"
     }, {
@@ -123702,7 +123722,7 @@ const XMAS_NOVEL_SCRIPT = {
     }, {
       "id": "M5-10",
       "t": "band",
-      "x": "——一人で証明しようとした名探偵の名前を指さしたのは、{name}だった",
+      "x": "——その名前を指さしたのは、{name}だった",
       "k": "END-M5:M5-10"
     }],
     "ending": {
@@ -124773,7 +124793,7 @@ const XMAS_NOVEL_SCRIPT = {
     }, {
       "id": "1-O-13",
       "t": "band",
-      "x": "10分後。ホールに、黒いサンタが7人いた",
+      "x": "10分後。本物は2着。あとの5着は、みゅあの黒い毛糸と古いシーツで作った手作り。ホールに、黒いサンタが7人いた",
       "k": "C1-O:1-O-13"
     }, {
       "id": "1-O-14",
@@ -124786,7 +124806,7 @@ const XMAS_NOVEL_SCRIPT = {
       "id": "1-O-15",
       "t": "line",
       "w": "sorashido",
-      "x": "記録します。黒いサンタ、7人。……言い伝えより、だいぶ多いです笑",
+      "x": "記録します。黒いサンタ、7人。……記録の上限を超えました笑",
       "e": "happy",
       "k": "C1-O:1-O-15"
     }, {
@@ -124799,7 +124819,7 @@ const XMAS_NOVEL_SCRIPT = {
       "id": "1-O-17",
       "t": "line",
       "w": "shirase",
-      "x": "……ごめんなさい。でも、ふふ……とても、お似合いです",
+      "x": "……ふふ。とても、お似合いです",
       "k": "C1-O:1-O-17"
     }, {
       "id": "1-O-18",
@@ -124807,6 +124827,11 @@ const XMAS_NOVEL_SCRIPT = {
       "w": "ichika",
       "x": "ふふっ。今年のシュプールは、にぎやかですね",
       "k": "C1-O:1-O-18"
+    }, {
+      "id": "1-O-18b",
+      "t": "band",
+      "x": "——そして、12月24日の夜。約束どおり、もみの木の下の箱を開ける、クリスマス会",
+      "k": "C1-O:1-O-18b"
     }, {
       "id": "1-O-19",
       "t": "band",
@@ -124882,7 +124907,7 @@ const XMAS_NOVEL_SCRIPT = {
     }, {
       "id": "O-2",
       "t": "band",
-      "x": "次の朝。ホールのソファで、7人の黒いサンタが、毛布にくるまって、仲よく眠っていた",
+      "x": "次の朝。ホールのソファで、7人の黒いサンタが、毛布にくるまって、仲良く眠っていた",
       "k": "END-O:O-2"
     }, {
       "id": "O-3",
@@ -124905,10 +124930,15 @@ const XMAS_NOVEL_SCRIPT = {
     "bg": "ゲーム機をかこむ助手たち",
     "next": null,
     "rows": [{
+      "id": "OUT-O-0",
+      "t": "band",
+      "x": "画面の前。エンディングの曲が、にぎやかに流れている",
+      "k": "OUT-O:OUT-O-0"
+    }, {
       "id": "OUT-O-1",
       "t": "line",
       "w": "myua",
-      "x": "なにこれ笑 ゲームの中のみんな、ゆるすぎぢゃん！",
+      "x": "なにこれ！ ゲームの中のみんな、ゆるすぎぢゃん！",
       "e": "happy",
       "k": "OUT-O:OUT-O-1"
     }, {
@@ -124929,7 +124959,7 @@ const XMAS_NOVEL_SCRIPT = {
       "id": "OUT-O-4",
       "t": "line",
       "w": "momosuke",
-      "x": "ももも、黒いサンタ着たかった〜w",
+      "x": "ももだって、黒いサンタ着たかった〜w",
       "e": "happy",
       "k": "OUT-O:OUT-O-4"
     }, {
@@ -124949,7 +124979,7 @@ const XMAS_NOVEL_SCRIPT = {
     }, {
       "id": "OUT-O-7",
       "t": "band",
-      "x": "画面の中で、7人の黒いサンタが、そろって、ぺこりとおじぎをした",
+      "x": "画面の中で、7人の黒いサンタが、そろって、ぺこりとお辞儀をした",
       "k": "OUT-O:OUT-O-7"
     }],
     "outside": true
@@ -216342,7 +216372,7 @@ const cardSharePolicy = (tactics, levelId, opts = {}) => {
 const CARD_EVENT_BONUS = Object.freeze({
   id: 'xmas_2026',
   name: 'クリスマスイベント',
-  startAt: '2026-11-30T10:00:00+09:00',
+  startAt: '2026-11-28T10:00:00+09:00',
   endAt: '2026-12-31T04:00:00+09:00',
   mult: 1.5,
   label: '1.5倍'
