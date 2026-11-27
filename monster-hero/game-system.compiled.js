@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1a196f1cdd638da5
+// source-sha256: d9bd4a902a2e722f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -67707,7 +67707,7 @@ const jaKeepKanaRuns = (s, chunks, segs, {
   }
   return out.join('​');
 };
-const JA_WRAP_NO_BREAK = [/\d{1,4}\/\d{1,2}(?:\/\d{1,2})?(?:[(（][月火水木金土日](?:・祝)?[)）])?/g, /\d{1,2}:\d{2}/g, /聖夜の名探偵|名探偵|エンドヒストリー|手がかり帳|鐘が鳴る夜/g];
+const JA_WRAP_NO_BREAK = [/\d{1,4}\/\d{1,2}(?:\/\d{1,2})?(?:[(（][月火水木金土日](?:・祝)?[)）])?/g, /\d{1,2}:\d{2}/g, /聖夜の名探偵|名探偵|エンドヒストリー|手がかり帳|鐘が鳴る夜/g, /黒いサンタ|聖夜のロンド|十三番目の鐘|十二の鐘|招待状|ワトソンくん/g];
 const jaWrapUnbreak = marked => {
   if (typeof marked !== 'string' || !marked.includes('​')) return marked;
   const plain = marked.replace(/​/g, '');
@@ -125437,7 +125437,7 @@ const XMAS_NOVEL_CSS = `
   background: linear-gradient(180deg, #1b2c5c, #0c1636); color: #f8e3a4; box-shadow: 0 0 0 1px rgba(232,196,106,.85); }
 .mh-nv-text { font-size: 17px; line-height: 1.75; font-weight: 600; white-space: pre-wrap; min-height: 3.5em; text-align: left; word-break: normal; line-break: normal; overflow-wrap: anywhere; text-wrap: wrap; }
 .mh-nv-plain { text-align: left; word-break: normal; line-break: normal; overflow-wrap: anywhere; text-wrap: wrap; }
-/* 章の札・題の札の文も左寄せ(事件簿の中の文は左寄せ・幅いっぱいで1文字ずつ折る。飾りの見出しは起動画面の題字とエンドの札だけ・台帳 r1126-048) */
+/* 章の札・題の札の文も左寄せ(事件簿の中の文は左寄せ・r1126-048。折るのは文節の切れ目だけ・XmasNovelWrap・r1126-071。飾りの見出しは起動画面の題字とエンドの札だけ) */
 .mh-nv-cardtext { width: min(100%, 560px); }
 .mh-nv-cardtext .mh-nv-rule { margin: 14px 0; }
 .mh-nv-text.say .mh-nv-say-body { display: block; padding-left: 1em; text-indent: -1em; }
@@ -126386,6 +126386,144 @@ const xmasNovelBgm = key => {
     if (typeof Audio_.fadeToBGM === 'function') Audio_.fadeToBGM(key, 700);else Audio_.playBGM(key);
   } catch (e) {}
 };
+const XMAS_NOVEL_KEEP_BASE = ['黒いサンタ', '聖夜のロンド', '十三番目の鐘', '十二の鐘', 'ペンション・シュプール', '聖夜の名探偵', '名探偵', '手がかり帳', '12年前の聖夜', '12年前', '12年後', 'ワトソンくん', 'エンドヒストリー', 'セーブデータ', 'ノートパソコン', 'メリークリスマス', 'クリスマス会', 'クリスマス', 'モンヒロ', 'オルゴール', 'ミステリーノベル', '呪いのセーブデータ', 'モンヒロ事件簿', 'ポロロン', 'ローズ色', '銀の音符', '懐中時計', '子守歌', '招待状', 'サンタの帽子'];
+const XMAS_NOVEL_KEEP_MAX = 16;
+let _xmasNovelKeepWords = null;
+const xmasNovelKeepWords = () => {
+  if (_xmasNovelKeepWords) return _xmasNovelKeepWords;
+  const set = new Set(XMAS_NOVEL_KEEP_BASE);
+  try {
+    const S = typeof XMAS_NOVEL_SCRIPT !== 'undefined' ? XMAS_NOVEL_SCRIPT : null;
+    if (S) {
+      (S.chapters || []).forEach(c => {
+        if (c && c.title) set.add(c.title);
+      });
+      (S.scenes || []).forEach(sc => {
+        if (sc && sc.ending && sc.ending.name) set.add(sc.ending.name);
+        (sc && sc.rows || []).forEach(r => {
+          if (r && r.t === 'clue' && r.clue) set.add(r.clue);
+        });
+      });
+    }
+    if (typeof XMAS_NOVEL_CAST !== 'undefined') XMAS_NOVEL_CAST.forEach(c => {
+      if (c.name) set.add(c.name);
+      if (c.full) set.add(c.full);
+    });
+  } catch (e) {}
+  _xmasNovelKeepWords = [...set].filter(w => typeof w === 'string' && [...w].length >= 2 && [...w].length <= XMAS_NOVEL_KEEP_MAX).sort((a, b) => b.length - a.length);
+  return _xmasNovelKeepWords;
+};
+const XMAS_NOVEL_KEEP_RES = [/\d{1,2}\/\d{1,2}(?:[(（][月火水木金土日](?:・祝)?[)）])?(?:[ 　]?\d{1,2}:\d{2})?/g, /\d{1,2}:\d{2}/g, /[「『【][^「」『』【】\n]{1,12}[」』】]/g, /(?:約|第|残り[ 　]?)?[0-9０-９]+(?:[.．][0-9０-９]+)?[ 　]?(?:センチ|メートル|キロ|ミリ|時間|人目|番目|通目|号室|人|年|時|分|秒|個|つ|回|日|月|歳|才|枚|本|通|度|階|号|じ|cm|m|%|％)/g, /[一二三四五六七八九十百千]+(?:番目|人目|通目|時間|人|年|つ|回|度|階|日|分|時|本|枚|個|通)/g, /(?:…|‥|—|―){2,}[、。！？!?]*/g, /[〜～][^〜～\s]{1,12}[〜～]/g];
+const xmasNovelGramBreak = (s, i) => {
+  const b = s.slice(0, i),
+    a = s.slice(i);
+  return /て$/.test(b) && /^[^るたはぁぃぅぇぉっゃゅょー]/.test(a) || /[A-Za-z0-9０-９ァ-ヶー」』）)一-龯々][はがをにもへとでのや]$/.test(b) || /^[はがをにもへのとや]/.test(a) && /[ぁ-ゖー]{2}$/.test(b) && !/[はがをにもへ]$/.test(b) || /で$/.test(b) && /^[^すしきもはるぁぃぅぇぉっゃゅょー]/.test(a) || /(?:から|まで|けど|ので|のに|ても|でも|には|では|とは|って|たら|れば|ながら|けれど|より|だけ|ほど|など|ように|ような|という|か|を)$/.test(b) || /^(?:です|でし|でしょ|だっ|だった|だよ|だね|だろ|じゃ|ように|ような|こと|もの|ため|わけ|はず|べき|かも|かな|なの|なん|ちゃん|くん|さん|ん[だでじ]|の(?:た|に|で|だ|か))/.test(a) || /[くし]$/.test(b) && /^(?:な[るりっられ]|し[たてよま])/.test(a) || /^[おご]/.test(a) && /[ぁ-ゖ一-龯]/.test(s[i + 1] || '');
+};
+const xmasNovelIsKana = (s, i) => /[ぁ-ゖゝゞ]/.test(s[i] || '') || s[i] === 'ー' && i > 0 && /[ぁ-ゖ]/.test(s[i - 1]);
+const XMAS_NOVEL_PLAN_CACHE = new Map();
+const xmasNovelWrapPlan = (text, max = XMAS_NOVEL_KEEP_MAX) => {
+  const s = String(text ?? '');
+  if (!s) return [];
+  const ck = `${max}|${s}`;
+  const hit = XMAS_NOVEL_PLAN_CACHE.get(ck);
+  if (hit) return hit;
+  const br = new Set();
+  let marked = s;
+  try {
+    marked = typeof jaWrapPoints === 'function' ? jaWrapPoints(s) : s;
+  } catch (e) {
+    marked = s;
+  }
+  if (typeof marked !== 'string' || marked.replace(/\u200B/g, '') !== s) marked = s;
+  let pos = 0;
+  for (const ch of marked) {
+    if (ch === '\u200B') br.add(pos);else pos += ch.length;
+  }
+  for (const m of s.matchAll(/\s+/g)) {
+    br.add(m.index);
+    br.add(m.index + m[0].length);
+  }
+  const len = (a, b) => [...s.slice(a, b)].length;
+  const spans = [];
+  for (const re of XMAS_NOVEL_KEEP_RES) for (const m of s.matchAll(re)) if (!/^[「『【]/.test(m[0]) || [...m[0]].length <= max) spans.push([m.index, m.index + m[0].length]);
+  for (const w of xmasNovelKeepWords()) if ([...w].length <= max) for (let i = s.indexOf(w); i >= 0; i = s.indexOf(w, i + 1)) spans.push([i, i + w.length]);
+  for (const b of [...br]) if (b <= 0 || b >= s.length || spans.some(([a, e]) => b > a && b < e)) br.delete(b);
+  for (const b of [...br].sort((x, y) => x - y)) {
+    if (!(xmasNovelIsKana(s, b - 1) && xmasNovelIsKana(s, b)) || xmasNovelGramBreak(s, b)) continue;
+    const sorted = [0, ...[...br].sort((x, y) => x - y), s.length];
+    const k = sorted.indexOf(b),
+      lo = sorted[k - 1],
+      hi = sorted[k + 1];
+    if (len(lo, hi) <= max) {
+      br.delete(b);
+      continue;
+    }
+    let best = -1;
+    for (let q = lo + 1; q < hi; q++) {
+      if (q === b || spans.some(([x, e]) => q > x && q < e) || /^[、。！？!?」』）)…‥ー]/.test(s.slice(q)) || /[「『（(]$/.test(s.slice(0, q))) continue;
+      if (xmasNovelIsKana(s, q - 1) && xmasNovelIsKana(s, q) && !xmasNovelGramBreak(s, q)) continue;
+      if (!xmasNovelGramBreak(s, q) && !(/[ぁ-ゖ、]$/.test(s.slice(0, q)) && /^[一-龯ァ-ヶ]/.test(s.slice(q)))) continue;
+      if (len(lo, q) > max || len(q, hi) > max) continue;
+      if (best < 0 || Math.abs(q - b) < Math.abs(best - b)) best = q;
+    }
+    if (best >= 0) {
+      br.delete(b);
+      br.add(best);
+    }
+  }
+  const cuts = [0, ...[...br].sort((a, b) => a - b), s.length];
+  const plan = [];
+  for (let i = 1; i < cuts.length; i++) {
+    const t = s.slice(cuts[i - 1], cuts[i]);
+    if (!t) continue;
+    if (/^\s+$/.test(t)) plan.push({
+      t,
+      keep: false,
+      space: true
+    });else plan.push({
+      t,
+      keep: [...t].length <= max,
+      space: false
+    });
+  }
+  if (XMAS_NOVEL_PLAN_CACHE.size > 600) XMAS_NOVEL_PLAN_CACHE.clear();
+  XMAS_NOVEL_PLAN_CACHE.set(ck, plan);
+  return plan;
+};
+const XMAS_NOVEL_NOWRAP = Object.freeze({
+  whiteSpace: 'nowrap'
+});
+const XMAS_NOVEL_HIDE = Object.freeze({
+  visibility: 'hidden'
+});
+const XmasNovelWrap = ({
+  text,
+  shown,
+  max
+}) => {
+  const plan = xmasNovelWrapPlan(text, max);
+  const lim = typeof shown === 'number' && Number.isFinite(shown) ? shown : Infinity;
+  let pos = 0;
+  return plan.map((p, i) => {
+    const a = pos;
+    pos += p.t.length;
+    const vis = Math.max(0, Math.min(p.t.length, lim - a));
+    const body = vis >= p.t.length ? p.t : React.createElement(React.Fragment, null, p.t.slice(0, vis), React.createElement("span", {
+      style: XMAS_NOVEL_HIDE
+    }, p.t.slice(vis)));
+    const prev = plan[i - 1];
+    return React.createElement(React.Fragment, {
+      key: i
+    }, i > 0 && !p.space && !(prev && prev.space) && React.createElement("wbr", null), p.keep ? React.createElement("span", {
+      "data-nv-keep": "",
+      style: XMAS_NOVEL_NOWRAP
+    }, body) : body);
+  });
+};
+const xmasNovelWrap = (text, max) => React.createElement(XmasNovelWrap, {
+  text: text,
+  max: max
+});
 const xmasNovelIsSeRow = row => !!(row && row.t === 'band' && Array.isArray(row.fx) && row.fx.includes('se'));
 const xmasNovelSplitSe = s => {
   const i = String(s || '').search(/[(（]/);
@@ -126400,9 +126538,15 @@ const XmasNovelSeText = ({
   const vis = Math.max(0, shown);
   return React.createElement(React.Fragment, null, sound && React.createElement("span", {
     className: "mh-nv-se-sound"
-  }, sound.slice(0, vis)), note && vis > sound.length && React.createElement("span", {
+  }, React.createElement(XmasNovelWrap, {
+    text: sound,
+    shown: vis
+  })), note && vis > sound.length && React.createElement("span", {
     className: "mh-nv-se-note"
-  }, note.slice(0, vis - sound.length - 1)));
+  }, React.createElement(XmasNovelWrap, {
+    text: note,
+    shown: vis - sound.length - 1
+  })));
 };
 const xmasNovelSplitLead = s => {
   const m = String(s || '').match(/^[(（][^)）]*[)）]/);
@@ -126416,13 +126560,22 @@ const XmasNovelSayText = ({
   const vis = Math.max(0, shown);
   if (!body.trim()) return React.createElement("span", {
     className: "mh-nv-say-lead only"
-  }, text.slice(0, vis));
+  }, React.createElement(XmasNovelWrap, {
+    text: text,
+    shown: vis
+  }));
   const bodyVis = body.slice(0, Math.max(0, vis - lead.length));
   return React.createElement(React.Fragment, null, lead && React.createElement("span", {
     className: "mh-nv-say-lead"
-  }, lead.slice(0, vis)), (bodyVis || !lead || vis > lead.length) && React.createElement("span", {
+  }, React.createElement(XmasNovelWrap, {
+    text: lead,
+    shown: vis
+  })), (bodyVis || !lead || vis > lead.length) && React.createElement("span", {
     className: "mh-nv-say-body"
-  }, "「", bodyVis, vis >= text.length ? '」' : ''));
+  }, React.createElement(XmasNovelWrap, {
+    text: `「${body}」`,
+    shown: vis >= text.length ? Infinity : 1 + bodyVis.length
+  })));
 };
 const XmasNovelIcon = ({
   d,
@@ -126991,7 +127144,7 @@ const XmasNovelScreen = ({
       className: "mh-nv-serif mh-nv-gold mb-2 text-[17px] font-black"
     }, "はじめから遊びますか？"), React.createElement("p", {
       className: "mh-nv-plain mb-3 text-[12px] leading-relaxed text-slate-200"
-    }, "いまの続きの場所は消えます。エンドヒストリー・一発で当てた記録・読んだ印はそのまま残ります"), React.createElement("div", {
+    }, xmasNovelWrap('いまの続きの場所は消えます。エンドヒストリー・一発で当てた記録・読んだ印はそのまま残ります')), React.createElement("div", {
       className: "space-y-2"
     }, React.createElement("button", {
       type: "button",
@@ -127047,7 +127200,7 @@ const XmasNovelScreen = ({
         style: {
           color: seen ? kind.tone : '#5b6585'
         }
-      }, seen ? `「${e.name}」` : '？？？'), seen && React.createElement("button", {
+      }, seen ? xmasNovelWrap(`「${e.name}」`) : '？？？'), seen && React.createElement("button", {
         type: "button",
         className: "mh-nv-btn mt-2",
         "data-xmas-novel-replay": e.id,
@@ -127068,7 +127221,7 @@ const XmasNovelScreen = ({
       className: "mh-nv-serif mh-nv-gold text-center text-[22px] font-black"
     }, "章から"), React.createElement("p", {
       className: "mh-nv-plain mt-1 text-[11px] text-slate-300"
-    }, "その章に入ったときの手がかりと選んだことから、読み直せます"), React.createElement("div", {
+    }, xmasNovelWrap('その章に入ったときの手がかりと選んだことから、読み直せます')), React.createElement("div", {
       className: "mh-nv-rule"
     }), React.createElement("ul", {
       className: "space-y-2"
@@ -127198,13 +127351,19 @@ const XmasNovelScreen = ({
     className: `mh-nv-text${isBand ? xmasNovelIsSeRow(row) ? ' se mh-nv-serif' : ` band mh-nv-serif${Array.isArray(row.fx) && row.fx.includes('letter') ? ' letter' : ''}` : ''}${isLine ? ' say' : ''}`,
     "data-xmas-novel-text": true,
     "data-xmas-novel-kind": isBand ? xmasNovelIsSeRow(row) ? 'se' : 'band' : isLine ? 'line' : row.t
-  }, row.t === 'clue' ? `手がかり帳に「${row.clue}」を書きとめた` : row.t === 'panel' ? row.x || (row.stamp ? '……' : '登場人物') : row.t === 'q' ? xmasNovelFill(row.x, playerName) : isBand && xmasNovelIsSeRow(row) ? React.createElement(XmasNovelSeText, {
+  }, row.t === 'clue' ? xmasNovelWrap(`手がかり帳に「${row.clue}」を書きとめた`) : row.t === 'panel' ? xmasNovelWrap(row.x || (row.stamp ? '……' : '登場人物')) : row.t === 'q' ? xmasNovelWrap(xmasNovelFill(row.x, playerName)) : isBand && xmasNovelIsSeRow(row) ? React.createElement(XmasNovelSeText, {
     text: text,
     shown: shown
   }) : isLine ? React.createElement(XmasNovelSayText, {
     text: text,
     shown: shown
-  }) : isBand && Array.isArray(row.fx) && row.fx.includes('letter') ? text.slice(0, shown).replace(/／/g, '　') : text.slice(0, shown)), isLine && row.note && !typing && React.createElement("div", {
+  }) : isBand && Array.isArray(row.fx) && row.fx.includes('letter') ? React.createElement(XmasNovelWrap, {
+    text: text.replace(/／/g, '　'),
+    shown: shown
+  }) : React.createElement(XmasNovelWrap, {
+    text: text,
+    shown: shown
+  })), isLine && row.note && !typing && React.createElement("div", {
     className: "mh-nv-note"
   }, "(", row.note, ")"), !typing && row.t !== 'q' && React.createElement("span", {
     className: "mh-nv-next"
@@ -127275,7 +127434,7 @@ const XmasNovelScreen = ({
     className: "mh-nv-serif mh-nv-gold mt-1 text-[20px] font-black"
   }, "【", got.n, "】"), React.createElement("p", {
     className: "mh-nv-plain mt-1 whitespace-pre-wrap text-[12px] leading-relaxed text-slate-100"
-  }, got.d)), card && React.createElement("div", {
+  }, xmasNovelWrap(got.d))), card && React.createElement("div", {
     className: "mh-nv-card",
     "data-xmas-novel-card": card.kind,
     onClick: advance
@@ -127287,7 +127446,7 @@ const XmasNovelScreen = ({
     className: "mh-nv-rule"
   }), React.createElement("div", {
     className: "mh-nv-serif mh-nv-gold text-[30px] font-black leading-tight sm:text-[38px]"
-  }, card.title), React.createElement("div", {
+  }, xmasNovelWrap(card.title, 10)), React.createElement("div", {
     className: "mh-nv-rule"
   }), React.createElement("div", {
     className: "mt-6 text-[11px] text-slate-400"
@@ -127297,7 +127456,7 @@ const XmasNovelScreen = ({
     className: "mh-nv-rule"
   }), React.createElement("div", {
     className: "mh-nv-serif mh-nv-gold text-[30px] font-black leading-tight sm:text-[40px]"
-  }, card.text), React.createElement("div", {
+  }, xmasNovelWrap(card.text, 10)), React.createElement("div", {
     className: "mh-nv-rule"
   })), card.kind === 'ending' && (() => {
     const kind = {
@@ -127321,7 +127480,7 @@ const XmasNovelScreen = ({
       className: "mh-nv-rule"
     }), React.createElement("div", {
       className: `mh-nv-serif text-[28px] font-black leading-tight ${card.ending.kind === 'forced' ? 'mh-nv-red' : 'mh-nv-gold'}`
-    }, "「", card.ending.name, "」"), React.createElement("div", {
+    }, xmasNovelWrap(`「${card.ending.name}」`, 10)), React.createElement("div", {
       className: "mh-nv-rule"
     }), !card.replay && React.createElement("div", {
       className: "text-[12px] text-slate-200"
@@ -127388,7 +127547,7 @@ const XmasNovelScreen = ({
     className: "mh-nv-serif text-[11px] font-black text-amber-200"
   }, l.who), React.createElement("div", {
     className: `mh-nv-plain ${l.who ? 'text-slate-100' : 'text-slate-300'}`
-  }, l.text))) : React.createElement("div", {
+  }, xmasNovelWrap(l.text)))) : React.createElement("div", {
     className: "text-[12px] text-slate-400"
   }, "まだありません")), React.createElement("button", {
     type: "button",
@@ -127407,7 +127566,7 @@ const XmasNovelScreen = ({
     }
   }, q.label && React.createElement("div", {
     className: "mh-nv-serif text-[11px] font-black text-rose-200"
-  }, q.label), xmasNovelFill(q.x, playerName), React.createElement("div", {
+  }, q.label), xmasNovelWrap(xmasNovelFill(q.x, playerName)), React.createElement("div", {
     className: "mt-1 text-[11px] text-rose-100"
   }, "突きつける手がかりを1つ選ぼう")), React.createElement("div", {
     className: "mh-nv-scroll mt-2 flex-1 space-y-2 pr-1"
@@ -127425,8 +127584,8 @@ const XmasNovelScreen = ({
     "data-xmas-novel-present": c.n,
     onClick: () => answer(q, c.n)
   }, "突きつける")), React.createElement("p", {
-    className: "mt-1 whitespace-pre-wrap text-[12px] leading-relaxed text-slate-200"
-  }, c.d))) : React.createElement("div", {
+    className: "mh-nv-plain mt-1 whitespace-pre-wrap text-[12px] leading-relaxed text-slate-200"
+  }, xmasNovelWrap(c.d)))) : React.createElement("div", {
     className: "text-[12px] text-slate-400"
   }, "まだ手がかりはありません")), !q && React.createElement("button", {
     type: "button",
@@ -127445,7 +127604,7 @@ const XmasNovelScreen = ({
     }
   }, q.label && React.createElement("div", {
     className: "mh-nv-serif text-[11px] font-black text-rose-200"
-  }, q.label), xmasNovelFill(q.x, playerName)), React.createElement("div", {
+  }, q.label), xmasNovelWrap(xmasNovelFill(q.x, playerName))), React.createElement("div", {
     className: "mh-nv-scroll"
   }, React.createElement(XmasNovelCast, {
     onPick: id => answer(q, id)
@@ -127455,7 +127614,7 @@ const XmasNovelScreen = ({
     className: "mh-nv-choice mh-nv-serif mt-2",
     "data-xmas-novel-extra": x.key,
     onClick: () => answer(q, x.key)
-  }, x.x)), q.once && React.createElement("div", {
+  }, xmasNovelWrap(x.x))), q.once && React.createElement("div", {
     className: "mh-nv-plain mt-2 text-[11px] font-bold text-rose-200"
   }, "選んだら、やり直しはできません"), React.createElement("button", {
     type: "button",
@@ -127464,7 +127623,7 @@ const XmasNovelScreen = ({
   }, "話をもう一度見る")), q && q.kind === 'action' && React.createElement(React.Fragment, null, React.createElement("div", {
     "data-xmas-novel-question": q.id,
     className: "mh-nv-plain mh-nv-serif mh-nv-gold mb-3 text-[17px] font-black"
-  }, xmasNovelFill(q.x, playerName)), React.createElement("div", {
+  }, xmasNovelWrap(xmasNovelFill(q.x, playerName))), React.createElement("div", {
     className: "space-y-2.5"
   }, xmasNovelOptionsOf(q, xmasNovelCtx(S, st.cur, save.endings)).map(o => React.createElement("button", {
     type: "button",
@@ -127472,7 +127631,7 @@ const XmasNovelScreen = ({
     className: "mh-nv-choice mh-nv-serif",
     "data-xmas-novel-option": o.i,
     onClick: () => answer(q, o.i)
-  }, xmasNovelFill(o.x, playerName)))), q.once && React.createElement("div", {
+  }, xmasNovelWrap(xmasNovelFill(o.x, playerName))))), q.once && React.createElement("div", {
     className: "mh-nv-plain mt-2 text-[11px] font-bold text-rose-200"
   }, "選んだら、やり直しはできません")), sheet === 'menu' && React.createElement(React.Fragment, null, React.createElement("div", {
     className: "mh-nv-serif mh-nv-gold mb-3 text-center text-[18px] font-black"

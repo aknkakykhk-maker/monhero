@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 15e878554d4183be
+// generated-sha256: df2e90f824e64358
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -41766,6 +41766,8 @@ const JA_WRAP_NO_BREAK = [
   /\d{1,4}\/\d{1,2}(?:\/\d{1,2})?(?:[(（][月火水木金土日](?:・祝)?[)）])?/g,
   /\d{1,2}:\d{2}/g,
   /聖夜の名探偵|名探偵|エンドヒストリー|手がかり帳|鐘が鳴る夜/g,
+  // 事件簿とクリスマスのお話の名前(2026-11-27 r1126-071「黒いサン／タ」)。お話の画面(レイド・イベントのお話)も jaWrap の折り目を使うので、ここで外す
+  /黒いサンタ|聖夜のロンド|十三番目の鐘|十二の鐘|招待状|ワトソンくん/g,
 ];
 const jaWrapUnbreak = (marked) => {
   if (typeof marked !== 'string' || !marked.includes('​')) return marked;
@@ -69281,7 +69283,7 @@ const XMAS_NOVEL_CSS = `
   background: linear-gradient(180deg, #1b2c5c, #0c1636); color: #f8e3a4; box-shadow: 0 0 0 1px rgba(232,196,106,.85); }
 .mh-nv-text { font-size: 17px; line-height: 1.75; font-weight: 600; white-space: pre-wrap; min-height: 3.5em; text-align: left; word-break: normal; line-break: normal; overflow-wrap: anywhere; text-wrap: wrap; }
 .mh-nv-plain { text-align: left; word-break: normal; line-break: normal; overflow-wrap: anywhere; text-wrap: wrap; }
-/* 章の札・題の札の文も左寄せ(事件簿の中の文は左寄せ・幅いっぱいで1文字ずつ折る。飾りの見出しは起動画面の題字とエンドの札だけ・台帳 r1126-048) */
+/* 章の札・題の札の文も左寄せ(事件簿の中の文は左寄せ・r1126-048。折るのは文節の切れ目だけ・XmasNovelWrap・r1126-071。飾りの見出しは起動画面の題字とエンドの札だけ) */
 .mh-nv-cardtext { width: min(100%, 560px); }
 .mh-nv-cardtext .mh-nv-rule { margin: 14px 0; }
 .mh-nv-text.say .mh-nv-say-body { display: block; padding-left: 1em; text-indent: -1em; }
@@ -69859,6 +69861,134 @@ const xmasNovelBgm = (key) => {
     if (typeof Audio_.fadeToBGM === 'function') Audio_.fadeToBGM(key, 700); else Audio_.playBGM(key);
   } catch (e) { /* 曲が鳴らせなくても読み進める */ }
 };
+// ==== 改行の位置(台帳 r1126-071)ここから。検査 tools/novel/xmas-novel-wrap-check.js がこの間をそのまま取り出して使う ====
+//  社長「改行位置がめちゃくちゃ、きになる。特にセリフじゃない部分」(「灰色のコー／トの影が」「染みこんでい／く」「黒いサン／タ」)。
+//  前の決め(r1126-048)の「1文字単位で折る」をやめ、文節(言葉のまとまり)の切れ目だけで折る。左寄せ・ぶら下げ・音の行の中央(r1126-052)はそのまま。
+//  ・折ってよい所は、ほかの画面と同じ部品 jaWrapPoints(41-screen-ui.jsx)が決める所と空白
+//  ・そのうえで、名前・固有名詞・手がかりの名前・かぎかっこの中の短い名前・日時・数と単位・「……」の中では折らない
+//  ・折ってよい所と所のあいだは、折らない枠(white-space: nowrap)で包む。ブラウザがほかの所で折れないようにするため
+//  ・文字送りの途中も、文の全部を置いて、まだの字を見えなくするだけ(字が出るたびに改行の位置が動かない)
+const XMAS_NOVEL_KEEP_BASE = [
+  '黒いサンタ', '聖夜のロンド', '十三番目の鐘', '十二の鐘', 'ペンション・シュプール', '聖夜の名探偵', '名探偵', '手がかり帳', '12年前の聖夜', '12年前', '12年後',
+  'ワトソンくん', 'エンドヒストリー', 'セーブデータ', 'ノートパソコン', 'メリークリスマス', 'クリスマス会', 'クリスマス', 'モンヒロ', 'オルゴール', 'ミステリーノベル',
+  '呪いのセーブデータ', 'モンヒロ事件簿', 'ポロロン', 'ローズ色', '銀の音符', '懐中時計', '子守歌', '招待状', 'サンタの帽子',
+];
+// 長い枠は1行に入らず、字が枠の外へ出る。包むのはこの字数まで(縦のいちばん狭い選択肢で1行約18字)
+const XMAS_NOVEL_KEEP_MAX = 16;
+let _xmasNovelKeepWords = null;
+const xmasNovelKeepWords = () => {
+  if (_xmasNovelKeepWords) return _xmasNovelKeepWords;
+  const set = new Set(XMAS_NOVEL_KEEP_BASE);
+  try {
+    // 台本から: 手がかりの名前・章の題・エンドの名前・人の名前(フルネームも)
+    const S = typeof XMAS_NOVEL_SCRIPT !== 'undefined' ? XMAS_NOVEL_SCRIPT : null;
+    if (S) {
+      (S.chapters || []).forEach((c) => { if (c && c.title) set.add(c.title); });
+      (S.scenes || []).forEach((sc) => {
+        if (sc && sc.ending && sc.ending.name) set.add(sc.ending.name);
+        (sc && sc.rows || []).forEach((r) => { if (r && r.t === 'clue' && r.clue) set.add(r.clue); });
+      });
+    }
+    if (typeof XMAS_NOVEL_CAST !== 'undefined') XMAS_NOVEL_CAST.forEach((c) => { if (c.name) set.add(c.name); if (c.full) set.add(c.full); });
+  } catch (e) { /* 一覧が作れなくても、決まりの分だけで折る */ }
+  _xmasNovelKeepWords = [...set].filter((w) => typeof w === 'string' && [...w].length >= 2 && [...w].length <= XMAS_NOVEL_KEEP_MAX).sort((a, b) => b.length - a.length);
+  return _xmasNovelKeepWords;
+};
+// 形で決まる「割らない所」
+const XMAS_NOVEL_KEEP_RES = [
+  // 日時(11/28(土) 10:00・12/25・0:00)
+  /\d{1,2}\/\d{1,2}(?:[(（][月火水木金土日](?:・祝)?[)）])?(?:[ 　]?\d{1,2}:\d{2})?/g,
+  /\d{1,2}:\d{2}/g,
+  // かぎかっこの中の短い名前は、かっこごと(「黒いサンタ」『聖夜のロンド』【二通目の招待状】)
+  /[「『【][^「」『』【】\n]{1,12}[」』】]/g,
+  // 数と単位(30センチ・3人・0じ)。前の「約」「第」「残り 」も
+  /(?:約|第|残り[ 　]?)?[0-9０-９]+(?:[.．][0-9０-９]+)?[ 　]?(?:センチ|メートル|キロ|ミリ|時間|人目|番目|通目|号室|人|年|時|分|秒|個|つ|回|日|月|歳|才|枚|本|通|度|階|号|じ|cm|m|%|％)/g,
+  /[一二三四五六七八九十百千]+(?:番目|人目|通目|時間|人|年|つ|回|度|階|日|分|時|本|枚|個|通)/g,
+  // 三点リーダー・ダッシュの並び(「……」「——」)と、そのすぐあとの句読点
+  /(?:…|‥|—|―){2,}[、。！？!?]*/g,
+  // 「〜届いたゲーム〜」のような題の飾り
+  /[〜～][^〜～\s]{1,12}[〜～]/g,
+];
+// 文の組み立てで切れ目になる所(助詞のあと・「て」のあと・「です」「ように」「こと」の手前など)。ひらがなの続きの中でも、ここなら折ってよい
+const xmasNovelGramBreak = (s, i) => {
+  const b = s.slice(0, i), a = s.slice(i);
+  return (/て$/.test(b) && /^[^るたはぁぃぅぇぉっゃゅょー]/.test(a))
+    || /[A-Za-z0-9０-９ァ-ヶー」』）)一-龯々][はがをにもへとでのや]$/.test(b)
+    || (/^[はがをにもへのとや]/.test(a) && /[ぁ-ゖー]{2}$/.test(b) && !/[はがをにもへ]$/.test(b)) || (/で$/.test(b) && /^[^すしきもはるぁぃぅぇぉっゃゅょー]/.test(a))
+    || /(?:から|まで|けど|ので|のに|ても|でも|には|では|とは|って|たら|れば|ながら|けれど|より|だけ|ほど|など|ように|ような|という|か|を)$/.test(b)
+    || /^(?:です|でし|でしょ|だっ|だった|だよ|だね|だろ|じゃ|ように|ような|こと|もの|ため|わけ|はず|べき|かも|かな|なの|なん|ちゃん|くん|さん|ん[だでじ]|の(?:た|に|で|だ|か))/.test(a)
+    || (/[くし]$/.test(b) && /^(?:な[るりっられ]|し[たてよま])/.test(a))
+    || (/^[おご]/.test(a) && /[ぁ-ゖ一-龯]/.test(s[i + 1] || ''));
+};
+const xmasNovelIsKana = (s, i) => /[ぁ-ゖゝゞ]/.test(s[i] || '') || (s[i] === 'ー' && i > 0 && /[ぁ-ゖ]/.test(s[i - 1]));
+const XMAS_NOVEL_PLAN_CACHE = new Map();
+// 文を「折らない枠」に分ける。[{ t: 字, keep: 包むか, space: 空白か }]。max は1つの枠の字数の上限(1行に入る字数より少なく。大きい字の札は小さく)
+const xmasNovelWrapPlan = (text, max = XMAS_NOVEL_KEEP_MAX) => {
+  const s = String(text ?? '');
+  if (!s) return [];
+  const ck = `${max}|${s}`;
+  const hit = XMAS_NOVEL_PLAN_CACHE.get(ck);
+  if (hit) return hit;
+  const br = new Set();
+  let marked = s;
+  try { marked = typeof jaWrapPoints === 'function' ? jaWrapPoints(s) : s; } catch (e) { marked = s; }
+  if (typeof marked !== 'string' || marked.replace(/\u200B/g, '') !== s) marked = s;
+  let pos = 0;
+  for (const ch of marked) { if (ch === '\u200B') br.add(pos); else pos += ch.length; }
+  for (const m of s.matchAll(/\s+/g)) { br.add(m.index); br.add(m.index + m[0].length); }
+  const len = (a, b) => [...s.slice(a, b)].length;
+  const spans = [];
+  // かぎかっこの中の名前は、枠(max)に入るときだけかっこごと包む。入らないときは、名前の一覧と言葉の切れ目に任せる
+  for (const re of XMAS_NOVEL_KEEP_RES) for (const m of s.matchAll(re)) if (!/^[「『【]/.test(m[0]) || [...m[0]].length <= max) spans.push([m.index, m.index + m[0].length]);
+  for (const w of xmasNovelKeepWords()) if ([...w].length <= max) for (let i = s.indexOf(w); i >= 0; i = s.indexOf(w, i + 1)) spans.push([i, i + w.length]);
+  for (const b of [...br]) if (b <= 0 || b >= s.length || spans.some(([a, e]) => b > a && b < e)) br.delete(b);
+  // ひらがなの続きの途中(「しまいこ|まれてた」「いてく|れた」)は、文の組み立ての切れ目でなければ外す。つないでも枠に入るときだけ(迷ったら折らない)
+  for (const b of [...br].sort((x, y) => x - y)) {
+    if (!(xmasNovelIsKana(s, b - 1) && xmasNovelIsKana(s, b)) || xmasNovelGramBreak(s, b)) continue;
+    const sorted = [0, ...[...br].sort((x, y) => x - y), s.length];
+    const k = sorted.indexOf(b), lo = sorted[k - 1], hi = sorted[k + 1];
+    if (len(lo, hi) <= max) { br.delete(b); continue; }
+    // つなぐと長すぎるときは、同じかたまりの中の文の組み立ての切れ目(「ねじを|巻いていない」)へ移す。どちらの側も枠に入る所のうち、元の所にいちばん近い所
+    let best = -1;
+    for (let q = lo + 1; q < hi; q++) {
+      if (q === b || spans.some(([x, e]) => q > x && q < e) || /^[、。！？!?」』）)…‥ー]/.test(s.slice(q)) || /[「『（(]$/.test(s.slice(0, q))) continue;
+      if (xmasNovelIsKana(s, q - 1) && xmasNovelIsKana(s, q) && !xmasNovelGramBreak(s, q)) continue;
+      if (!xmasNovelGramBreak(s, q) && !(/[ぁ-ゖ、]$/.test(s.slice(0, q)) && /^[一-龯ァ-ヶ]/.test(s.slice(q)))) continue;
+      if (len(lo, q) > max || len(q, hi) > max) continue;
+      if (best < 0 || Math.abs(q - b) < Math.abs(best - b)) best = q;
+    }
+    if (best >= 0) { br.delete(b); br.add(best); }
+  }
+  const cuts = [0, ...[...br].sort((a, b) => a - b), s.length];
+  const plan = [];
+  for (let i = 1; i < cuts.length; i++) {
+    const t = s.slice(cuts[i - 1], cuts[i]);
+    if (!t) continue;
+    if (/^\s+$/.test(t)) plan.push({ t, keep: false, space: true });
+    else plan.push({ t, keep: [...t].length <= max, space: false });
+  }
+  if (XMAS_NOVEL_PLAN_CACHE.size > 600) XMAS_NOVEL_PLAN_CACHE.clear();
+  XMAS_NOVEL_PLAN_CACHE.set(ck, plan);
+  return plan;
+};
+// ==== 改行の位置ここまで ====
+const XMAS_NOVEL_NOWRAP = Object.freeze({ whiteSpace: 'nowrap' });
+const XMAS_NOVEL_HIDE = Object.freeze({ visibility: 'hidden' });
+//  shown: 見せる字の数(文字送り)。省くと全部
+const XmasNovelWrap = ({ text, shown, max }) => {
+  const plan = xmasNovelWrapPlan(text, max);
+  const lim = typeof shown === 'number' && Number.isFinite(shown) ? shown : Infinity;
+  let pos = 0;
+  return plan.map((p, i) => {
+    const a = pos; pos += p.t.length;
+    const vis = Math.max(0, Math.min(p.t.length, lim - a));
+    const body = vis >= p.t.length ? p.t : (<>{p.t.slice(0, vis)}<span style={XMAS_NOVEL_HIDE}>{p.t.slice(vis)}</span></>);
+    const prev = plan[i - 1];
+    return (<React.Fragment key={i}>{i > 0 && !p.space && !(prev && prev.space) && <wbr />}{p.keep ? <span data-nv-keep="" style={XMAS_NOVEL_NOWRAP}>{body}</span> : body}</React.Fragment>);
+  });
+};
+// 大きい字の札(章の札・題の札・エンドの札)は1行に入る字が少ないので、枠を小さく(縦 390 で 30px の字は約11字)
+const xmasNovelWrap = (text, max) => <XmasNovelWrap text={text} max={max} />;
 // ---- 文の置き方(台帳 r1126-052): 台詞・地の文・効果音で分ける ----
 //  効果音の帯(台本の「(効果音)」の印 = fx に se): 真ん中寄せ・大きめ・字間をあける。うしろの(説明書き)は小さい2行目に
 const xmasNovelIsSeRow = (row) => !!(row && row.t === 'band' && Array.isArray(row.fx) && row.fx.includes('se'));
@@ -69871,8 +70001,8 @@ const XmasNovelSeText = ({ text, shown }) => {
   const [sound, note] = xmasNovelSplitSe(text);
   const vis = Math.max(0, shown);
   return (<>
-    {sound && <span className="mh-nv-se-sound">{sound.slice(0, vis)}</span>}
-    {note && vis > sound.length && <span className="mh-nv-se-note">{note.slice(0, vis - sound.length - 1)}</span>}
+    {sound && <span className="mh-nv-se-sound"><XmasNovelWrap text={sound} shown={vis} /></span>}
+    {note && vis > sound.length && <span className="mh-nv-se-note"><XmasNovelWrap text={note} shown={vis - sound.length - 1} /></span>}
   </>);
 };
 //  台詞: 「」の中身として出し、2行目からは「の分だけ下げてそろえる(ぶら下げ)。頭の(しぐさ)は小さい前置きの行に。全部が(しぐさ)なら「」を付けない
@@ -69883,11 +70013,12 @@ const xmasNovelSplitLead = (s) => {
 const XmasNovelSayText = ({ text, shown }) => {
   const [lead, body] = xmasNovelSplitLead(text);
   const vis = Math.max(0, shown);
-  if (!body.trim()) return <span className="mh-nv-say-lead only">{text.slice(0, vis)}</span>;
+  if (!body.trim()) return <span className="mh-nv-say-lead only"><XmasNovelWrap text={text} shown={vis} /></span>;
   const bodyVis = body.slice(0, Math.max(0, vis - lead.length));
+  // 「」も文といっしょに置き、まだの字と閉じかっこは見えなくしておく(改行の位置が字送りの途中で動かない・r1126-071)
   return (<>
-    {lead && <span className="mh-nv-say-lead">{lead.slice(0, vis)}</span>}
-    {(bodyVis || !lead || vis > lead.length) && <span className="mh-nv-say-body">「{bodyVis}{vis >= text.length ? '」' : ''}</span>}
+    {lead && <span className="mh-nv-say-lead"><XmasNovelWrap text={lead} shown={vis} /></span>}
+    {(bodyVis || !lead || vis > lead.length) && <span className="mh-nv-say-body"><XmasNovelWrap text={`「${body}」`} shown={vis >= text.length ? Infinity : 1 + bodyVis.length} /></span>}
   </>);
 };
 const XmasNovelIcon = ({ d, size = 18 }) => (
@@ -70189,7 +70320,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
                 <div className="mh-nv-sheet" onClick={() => setConfirmNew(false)}>
                   <div className="mh-nv-panel mb-auto mt-auto max-w-sm text-center" onClick={(e) => e.stopPropagation()}>
                     <div className="mh-nv-serif mh-nv-gold mb-2 text-[17px] font-black">はじめから遊びますか？</div>
-                    <p className="mh-nv-plain mb-3 text-[12px] leading-relaxed text-slate-200">いまの続きの場所は消えます。エンドヒストリー・一発で当てた記録・読んだ印はそのまま残ります</p>
+                    <p className="mh-nv-plain mb-3 text-[12px] leading-relaxed text-slate-200">{xmasNovelWrap('いまの続きの場所は消えます。エンドヒストリー・一発で当てた記録・読んだ印はそのまま残ります')}</p>
                     <div className="space-y-2">
                       <button type="button" className="mh-nv-btn wide" data-xmas-novel-new-ok onClick={() => { setConfirmNew(false); start(xmasNovelFreshCur(S)); }}>はじめから</button>
                       <button type="button" className="mh-nv-btn wide" onClick={() => setConfirmNew(false)}>やめる</button>
@@ -70214,7 +70345,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
                         <span className="mh-nv-serif shrink-0 rounded px-2 py-0.5 text-[10px] font-black" style={{ color: '#0a0f20', background: seen ? kind.tone : '#3a4466' }}>{seen ? kind.label : '？？？'}</span>
                         {seen && at && <span className="ml-auto text-[10px] font-bold text-slate-300" data-xmas-novel-ending-at>{xmasNovelDateText(at)}</span>}
                       </div>
-                      <div className="mh-nv-serif mt-1 text-[17px] font-black leading-snug" style={{ color: seen ? kind.tone : '#5b6585' }}>{seen ? `「${e.name}」` : '？？？'}</div>
+                      <div className="mh-nv-serif mt-1 text-[17px] font-black leading-snug" style={{ color: seen ? kind.tone : '#5b6585' }}>{seen ? xmasNovelWrap(`「${e.name}」`) : '？？？'}</div>
                       {seen && <button type="button" className="mh-nv-btn mt-2" data-xmas-novel-replay={e.id}
                         onClick={() => start({ ...xmasNovelFreshCur(S), scene: e.id, idx: 0 }, true)}>見返す</button>}
                     </li>
@@ -70227,7 +70358,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
           {mode === 'chapters' && (
             <div className="my-auto w-full max-w-md" data-xmas-novel-chapter-list>
               <div className="mh-nv-serif mh-nv-gold text-center text-[22px] font-black">章から</div>
-              <p className="mh-nv-plain mt-1 text-[11px] text-slate-300">その章に入ったときの手がかりと選んだことから、読み直せます</p>
+              <p className="mh-nv-plain mt-1 text-[11px] text-slate-300">{xmasNovelWrap('その章に入ったときの手がかりと選んだことから、読み直せます')}</p>
               <div className="mh-nv-rule" />
               <ul className="space-y-2">
                 {xmasNovelChapters(S).filter((c) => c.id !== 'END' && !c.outside).map((c) => {
@@ -70288,13 +70419,13 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
           <div className="mh-nv-box" style={{ zIndex: 5 }} data-xmas-novel-box>
             {name && <div className="mh-nv-name mh-nv-serif">{name}</div>}
             <div className={`mh-nv-text${isBand ? (xmasNovelIsSeRow(row) ? ' se mh-nv-serif' : ` band mh-nv-serif${Array.isArray(row.fx) && row.fx.includes('letter') ? ' letter' : ''}`) : ''}${isLine ? ' say' : ''}`} data-xmas-novel-text data-xmas-novel-kind={isBand ? (xmasNovelIsSeRow(row) ? 'se' : 'band') : isLine ? 'line' : row.t}>
-              {row.t === 'clue' ? `手がかり帳に「${row.clue}」を書きとめた`
-                : row.t === 'panel' ? (row.x || (row.stamp ? '……' : '登場人物'))
-                : row.t === 'q' ? xmasNovelFill(row.x, playerName)
+              {row.t === 'clue' ? xmasNovelWrap(`手がかり帳に「${row.clue}」を書きとめた`)
+                : row.t === 'panel' ? xmasNovelWrap(row.x || (row.stamp ? '……' : '登場人物'))
+                : row.t === 'q' ? xmasNovelWrap(xmasNovelFill(row.x, playerName))
                 : isBand && xmasNovelIsSeRow(row) ? <XmasNovelSeText text={text} shown={shown} />
                 : isLine ? <XmasNovelSayText text={text} shown={shown} />
-                : isBand && Array.isArray(row.fx) && row.fx.includes('letter') ? text.slice(0, shown).replace(/／/g, '　')
-                : text.slice(0, shown)}
+                : isBand && Array.isArray(row.fx) && row.fx.includes('letter') ? <XmasNovelWrap text={text.replace(/／/g, '　')} shown={shown} />
+                : <XmasNovelWrap text={text} shown={shown} />}
             </div>
             {isLine && row.note && !typing && <div className="mh-nv-note">({row.note})</div>}
             {!typing && row.t !== 'q' && <span className="mh-nv-next" />}
@@ -70316,7 +70447,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
         <div className="mh-nv-get" data-xmas-novel-got={got.n} onClick={() => setGot(null)}>
           <div className="text-[11px] font-black tracking-widest text-amber-200">{got.add ? '手がかり帳に書き足した' : '手がかりを手に入れた'}</div>
           <div className="mh-nv-serif mh-nv-gold mt-1 text-[20px] font-black">【{got.n}】</div>
-          <p className="mh-nv-plain mt-1 whitespace-pre-wrap text-[12px] leading-relaxed text-slate-100">{got.d}</p>
+          <p className="mh-nv-plain mt-1 whitespace-pre-wrap text-[12px] leading-relaxed text-slate-100">{xmasNovelWrap(got.d)}</p>
         </div>
       )}
 
@@ -70325,13 +70456,13 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
           {card.kind === 'chapter' && (<div className="mh-nv-plain mh-nv-cardtext">
             <div className="mh-nv-serif text-[15px] tracking-[0.5em] text-slate-200">{card.label}</div>
             <div className="mh-nv-rule" />
-            <div className="mh-nv-serif mh-nv-gold text-[30px] font-black leading-tight sm:text-[38px]">{card.title}</div>
+            <div className="mh-nv-serif mh-nv-gold text-[30px] font-black leading-tight sm:text-[38px]">{xmasNovelWrap(card.title, 10)}</div>
             <div className="mh-nv-rule" />
             <div className="mt-6 text-[11px] text-slate-400">タップで進む</div>
           </div>)}
           {(card.kind === 'title' || card.kind === 'band') && (<div className="mh-nv-plain mh-nv-cardtext">
             <div className="mh-nv-rule" />
-            <div className="mh-nv-serif mh-nv-gold text-[30px] font-black leading-tight sm:text-[40px]">{card.text}</div>
+            <div className="mh-nv-serif mh-nv-gold text-[30px] font-black leading-tight sm:text-[40px]">{xmasNovelWrap(card.text, 10)}</div>
             <div className="mh-nv-rule" />
           </div>)}
           {card.kind === 'ending' && (() => {
@@ -70341,7 +70472,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
                 {card.ending.kind === 'forced' && <div className="mh-nv-gameover-title" data-xmas-novel-gameover>GAME OVER</div>}
                 <div className="mh-nv-serif text-[13px] tracking-[0.4em]" style={{ color: kind.tone }}>{/エンド$/.test(kind.label) ? kind.label : `${kind.label} END`}</div>
                 <div className="mh-nv-rule" />
-                <div className={`mh-nv-serif text-[28px] font-black leading-tight ${card.ending.kind === 'forced' ? 'mh-nv-red' : 'mh-nv-gold'}`}>「{card.ending.name}」</div>
+                <div className={`mh-nv-serif text-[28px] font-black leading-tight ${card.ending.kind === 'forced' ? 'mh-nv-red' : 'mh-nv-gold'}`}>{xmasNovelWrap(`「${card.ending.name}」`, 10)}</div>
                 <div className="mh-nv-rule" />
                 {!card.replay && <div className="text-[12px] text-slate-200">{card.fresh ? 'エンドヒストリーに記録しました' : 'エンドヒストリーに記録ずみ'}</div>}
                 {!card.replay && <div className="mt-1 text-[11px] text-slate-300">推理の問い 一発で当てた数 {card.count} / {card.total}</div>}
@@ -70368,7 +70499,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
                 {log.length ? log.map((l, i) => (
                   <div key={i} className="text-[13px] leading-relaxed">
                     {l.who && <div className="mh-nv-serif text-[11px] font-black text-amber-200">{l.who}</div>}
-                    <div className={`mh-nv-plain ${l.who ? 'text-slate-100' : 'text-slate-300'}`}>{l.text}</div>
+                    <div className={`mh-nv-plain ${l.who ? 'text-slate-100' : 'text-slate-300'}`}>{xmasNovelWrap(l.text)}</div>
                   </div>
                 )) : <div className="text-[12px] text-slate-400">まだありません</div>}
               </div>
@@ -70378,7 +70509,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
               <div className="mh-nv-serif mh-nv-gold text-[18px] font-black">手がかり帳 <span className="text-[12px] text-slate-300">{clues.length}個</span></div>
               {q && <div data-xmas-novel-question={q.id} className="mt-2 rounded-lg p-2 text-[13px] font-bold leading-relaxed" style={{ background: 'rgba(120,20,30,.35)', boxShadow: '0 0 0 1px rgba(232,120,120,.6)' }}>
                 {q.label && <div className="mh-nv-serif text-[11px] font-black text-rose-200">{q.label}</div>}
-                {xmasNovelFill(q.x, playerName)}
+                {xmasNovelWrap(xmasNovelFill(q.x, playerName))}
                 <div className="mt-1 text-[11px] text-rose-100">突きつける手がかりを1つ選ぼう</div>
               </div>}
               <div className="mh-nv-scroll mt-2 flex-1 space-y-2 pr-1">
@@ -70388,7 +70519,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
                       <div className="mh-nv-serif mh-nv-gold min-w-0 flex-1 text-[15px] font-black">【{c.n}】</div>
                       {q && <button type="button" className="mh-nv-btn shrink-0" data-xmas-novel-present={c.n} onClick={() => answer(q, c.n)}>突きつける</button>}
                     </div>
-                    <p className="mt-1 whitespace-pre-wrap text-[12px] leading-relaxed text-slate-200">{c.d}</p>
+                    <p className="mh-nv-plain mt-1 whitespace-pre-wrap text-[12px] leading-relaxed text-slate-200">{xmasNovelWrap(c.d)}</p>
                   </div>
                 )) : <div className="text-[12px] text-slate-400">まだ手がかりはありません</div>}
               </div>
@@ -70398,20 +70529,20 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
             {q && q.kind === 'person' && (<>
               <div data-xmas-novel-question={q.id} className="mb-3 rounded-lg p-2 text-[13px] font-bold leading-relaxed" style={{ background: 'rgba(120,20,30,.35)', boxShadow: '0 0 0 1px rgba(232,120,120,.6)' }}>
                 {q.label && <div className="mh-nv-serif text-[11px] font-black text-rose-200">{q.label}</div>}
-                {xmasNovelFill(q.x, playerName)}
+                {xmasNovelWrap(xmasNovelFill(q.x, playerName))}
               </div>
               <div className="mh-nv-scroll"><XmasNovelCast onPick={(id) => answer(q, id)} /></div>
               {(q.extra || []).map((x) => (
-                <button type="button" key={x.key} className="mh-nv-choice mh-nv-serif mt-2" data-xmas-novel-extra={x.key} onClick={() => answer(q, x.key)}>{x.x}</button>
+                <button type="button" key={x.key} className="mh-nv-choice mh-nv-serif mt-2" data-xmas-novel-extra={x.key} onClick={() => answer(q, x.key)}>{xmasNovelWrap(x.x)}</button>
               ))}
               {q.once && <div className="mh-nv-plain mt-2 text-[11px] font-bold text-rose-200">選んだら、やり直しはできません</div>}
               <button type="button" className="mh-nv-btn wide mt-3" onClick={() => setSheet(null)}>話をもう一度見る</button>
             </>)}
             {q && q.kind === 'action' && (<>
-              <div data-xmas-novel-question={q.id} className="mh-nv-plain mh-nv-serif mh-nv-gold mb-3 text-[17px] font-black">{xmasNovelFill(q.x, playerName)}</div>
+              <div data-xmas-novel-question={q.id} className="mh-nv-plain mh-nv-serif mh-nv-gold mb-3 text-[17px] font-black">{xmasNovelWrap(xmasNovelFill(q.x, playerName))}</div>
               <div className="space-y-2.5">
                 {xmasNovelOptionsOf(q, xmasNovelCtx(S, st.cur, save.endings)).map((o) => (
-                  <button type="button" key={o.i} className="mh-nv-choice mh-nv-serif" data-xmas-novel-option={o.i} onClick={() => answer(q, o.i)}>{xmasNovelFill(o.x, playerName)}</button>
+                  <button type="button" key={o.i} className="mh-nv-choice mh-nv-serif" data-xmas-novel-option={o.i} onClick={() => answer(q, o.i)}>{xmasNovelWrap(xmasNovelFill(o.x, playerName))}</button>
                 ))}
               </div>
               {q.once && <div className="mh-nv-plain mt-2 text-[11px] font-bold text-rose-200">選んだら、やり直しはできません</div>}
