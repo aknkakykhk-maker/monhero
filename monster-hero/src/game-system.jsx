@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1564123f579b81d6
+// generated-sha256: 2502e20b3c7536c9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -70183,6 +70183,24 @@ const xmasNovelGramBreak = (s, i) => {
     || (/^[おご]/.test(a) && /[ぁ-ゖ一-龯]/.test(s[i + 1] || ''));
 };
 const xmasNovelIsKana = (s, i) => /[ぁ-ゖゝゞ]/.test(s[i] || '') || (s[i] === 'ー' && i > 0 && /[ぁ-ゖ]/.test(s[i - 1]));
+// 道具(Intl.Segmenter)の言葉の区切り。Map(始まりの位置 → 言葉)。道具が無い端末では空(決まりの分だけで見る)
+let _xmasNovelSeg;
+const xmasNovelSegments = (s) => {
+  const m = new Map();
+  try {
+    if (_xmasNovelSeg === undefined) _xmasNovelSeg = (typeof Intl !== 'undefined' && Intl.Segmenter) ? new Intl.Segmenter('ja', { granularity: 'word' }) : null;
+    if (_xmasNovelSeg) for (const x of _xmasNovelSeg.segment(s)) m.set(x.index, x.segment);
+  } catch (e) { /* 区切りが取れなくても折れる */ }
+  return m;
+};
+// ここで折ると言葉の途中になるか: 道具の言葉の切れ目でない所(「巻いて|いない」の「てい」)・ひらがなの言葉の途中(「しまいこ|まれて」)・
+//   漢字・カタカナ・閉じかっこのすぐあとの助詞の手前(「暖炉の前|の」「スピーカー|から、」「(カノン)|と、」。助詞は前の言葉と同じ文節・r1126-077 の点検)
+const xmasNovelBadBreak = (s, b, segAt) => {
+  if (segAt && segAt.size && !segAt.has(b)) return true;
+  if (xmasNovelIsKana(s, b - 1) && xmasNovelIsKana(s, b) && !xmasNovelGramBreak(s, b)) return true;
+  const w = segAt && segAt.get(b);
+  return /[一-龯々ァ-ヶー」』）)A-Za-z0-9０-９]$/.test(s.slice(0, b)) && !!w && /^(?:の|は|が|を|に|へ|と|で|も|や|から|まで|より)$/.test(w);
+};
 const XMAS_NOVEL_PLAN_CACHE = new Map();
 // 文を「折らない枠」に分ける。[{ t: 字, keep: 包むか, space: 空白か }]。max は1つの枠の字数の上限(1行に入る字数より少なく。大きい字の札は小さく)
 const xmasNovelWrapPlan = (text, max = XMAS_NOVEL_KEEP_MAX) => {
@@ -70204,9 +70222,10 @@ const xmasNovelWrapPlan = (text, max = XMAS_NOVEL_KEEP_MAX) => {
   for (const re of XMAS_NOVEL_KEEP_RES) for (const m of s.matchAll(re)) if (!/^[「『【]/.test(m[0]) || [...m[0]].length <= max) spans.push([m.index, m.index + m[0].length]);
   for (const w of xmasNovelKeepWords()) if ([...w].length <= max) for (let i = s.indexOf(w); i >= 0; i = s.indexOf(w, i + 1)) spans.push([i, i + w.length]);
   for (const b of [...br]) if (b <= 0 || b >= s.length || spans.some(([a, e]) => b > a && b < e)) br.delete(b);
+  const segAt = xmasNovelSegments(s);
   // ひらがなの続きの途中(「しまいこ|まれてた」「いてく|れた」)は、文の組み立ての切れ目でなければ外す。つないでも枠に入るときだけ(迷ったら折らない)
   for (const b of [...br].sort((x, y) => x - y)) {
-    if (!(xmasNovelIsKana(s, b - 1) && xmasNovelIsKana(s, b)) || xmasNovelGramBreak(s, b)) continue;
+    if (!xmasNovelBadBreak(s, b, segAt)) continue;
     const sorted = [0, ...[...br].sort((x, y) => x - y), s.length];
     const k = sorted.indexOf(b), lo = sorted[k - 1], hi = sorted[k + 1];
     if (len(lo, hi) <= max) { br.delete(b); continue; }
@@ -70214,7 +70233,7 @@ const xmasNovelWrapPlan = (text, max = XMAS_NOVEL_KEEP_MAX) => {
     let best = -1;
     for (let q = lo + 1; q < hi; q++) {
       if (q === b || spans.some(([x, e]) => q > x && q < e) || /^[、。！？!?」』）)…‥ー]/.test(s.slice(q)) || /[「『（(]$/.test(s.slice(0, q))) continue;
-      if (xmasNovelIsKana(s, q - 1) && xmasNovelIsKana(s, q) && !xmasNovelGramBreak(s, q)) continue;
+      if (xmasNovelBadBreak(s, q, segAt)) continue;
       if (!xmasNovelGramBreak(s, q) && !(/[ぁ-ゖ、]$/.test(s.slice(0, q)) && /^[一-龯ァ-ヶ]/.test(s.slice(q)))) continue;
       if (len(lo, q) > max || len(q, hi) > max) continue;
       if (best < 0 || Math.abs(q - b) < Math.abs(best - b)) best = q;
