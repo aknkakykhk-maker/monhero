@@ -6,15 +6,15 @@
 - 回した main: **`eb46a544a`**(#7921 のマージ・2026-11-27 23:00 ごろ)
 - 回し方: `node tools/build.js` のあと `node tools/run-checks.js --script <下の61本> --parallel 4 --timeout 600`
 - 結果: **61本 / OK 55 / NG 4 / SKIP 2**(NG の4本は、run-checks が1本ずつ回し直しても NG)
-- 2026-11-28 ビート部(台帳 r1126-083): `assistant/assistant-chat-check.js` ㉓ を直して外した(ヘルプの「SKY SLIDE（桃・青の帯）」を受けるように)。いま残る NG は下の3本
+- 2026-11-28 ビート部(台帳 r1126-083): `assistant/assistant-chat-check.js` ㉓ を直して外した(ヘルプの「SKY SLIDE（桃・青の帯）」を受けるように)。下の表で直っていないのは `boot/changelog-order-check.js` の1本(開発部)
 
 ## 元から落ちる物(NG 3本)
 
 | 検査 | 落ちた行の要点 | 原因の見立て |
 | --- | --- | --- |
 | `boot/changelog-order-check.js` | 「書いてある順も日付の新しい順 — 17か所で逆転」 | `changelog.js` に書いてある順が日付の順と17か所で逆。画面は `17-release` で日付順に並べ替えているので、表示は崩れない。前から(#7876 の時点で18か所)。クリスマスの項目を足すと数が1つ前後することがある |
-| `assistant/assistant-life-quick-lose-check.js` | ②「負け→始め直し→『止める』で、前の負けの札が出ない — live」が NG | 助手ライフの裏クイックの負けの札。クリスマスの変更は触れていない所(未切り分け・持ち主はビート部/助手部) |
-| `assistant/assistant-life-quick-run-browser-check.js` | ⑧「『詳細』でカードと同じ詳細の窓が助手ライフの上に出る — null」が NG | 助手ライフの裏クイックの「詳細」の窓が出ない。上と同じく、クリスマスの変更とは別の所(未切り分け) |
+| `assistant/assistant-life-quick-lose-check.js` | ②「負け→始め直し→『止める』で、前の負けの札が出ない — live」が NG | **直した(検査が古かった)**。11/22 に入った「初めての1回は自動で開く ❓ 助手ライフの見かた」の窓が帯にかぶり、「止める」が押せていなかった(Hell でまた負けた正しい札が見えていた)。検査で見かたを既読にし、押す所のかぶりも見るようにした(助手部ナカヨシ) |
+| `assistant/assistant-life-quick-run-browser-check.js` | ⑧「『詳細』でカードと同じ詳細の窓が助手ライフの上に出る — null」が NG | **直した(検査が古かった)**。上と同じく見かたの窓が「詳細」にかぶっていた。同じ直し(助手部ナカヨシ) |
 
 ## この環境で回らない物(SKIP 2本)
 
