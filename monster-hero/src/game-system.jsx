@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fd2c85676d36ac73
+// generated-sha256: 90fd8e7f613941a9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -7389,9 +7389,10 @@ const Audio_ = (() => {
   //   Tone の再生器で鳴らす(BGM の出口とは別の音の世界なので、そのままつなげない)。
   //   止められるように { stop(秒) } を返す。鳴らせなかったら null
   const preloadSE = (src) => { if (enabled && src) loadBuffer(src).catch(() => {}); };
-  const playSeFile = async (src) => {
+  // fg … 表の画面の音(事件簿の笑い声など)。裏の周回の効果音を止める印(backgroundSeQuiet)を見ない(fgSe と同じ考え・2026-11-27 r1126-072)
+  const playSeFileOn = async (src, fg) => {
     // ボスの登場の音(バトルだけが使う)。MFバトルカードにいるあいだは裏の周回のものなので鳴らさない(下の setBackgroundSeQuiet)
-    if (!enabled || !src || backgroundSeQuiet) return null;
+    if (!enabled || !src || (backgroundSeQuiet && !fg)) return null;
     await ensure(); if (!Tone || !seBus) return null;
     let buffer = null;
     try { buffer = await loadBuffer(src); } catch (e) { return null; }
@@ -7410,6 +7411,8 @@ const Audio_ = (() => {
       return { stop };
     } catch (e) { return null; }
   };
+  const playSeFile = (src) => playSeFileOn(src, false);
+  const fgPlaySeFile = (src) => playSeFileOn(src, true);
   // 表へ戻ったら、出口の時計が実時間どおり進んでいるかを確かめる(2026-11-15 r1115-205)。0.4秒後に印を付け、さらに0.9秒後に比べる。
   //   止まっていたら作り直して鳴らし直す(演奏中の曲があるときは作り直さず、次のタップまで待つ)。起こせていなければ、次のタップで作り直す
   let returnHealTimer = null;
@@ -7647,7 +7650,7 @@ const Audio_ = (() => {
   // お知らせ・ヘルプの動画にかける音量(2026-11-14 社長「予告動画の音が設定の音量と関係なく鳴る」)。
   // 動画は曲と同じ扱いにして、BGM の音量と同じ曲線(_gainFromPct)で返す。音を切っている・BGM が 0 なら 0
   const videoGain = () => (enabled && bgmVolumePct > 0 ? _gainFromPct(bgmVolumePct) : 0);
-  return { currentBgmKey: () => currentKey, isBackgroundSeQuiet, setVideoHold, videoGain, setStoryEndFade, setStoryOpenFade, playSeFile, preloadSE, playBGM, fadeToBGM, stopBGM, setBgmOnce, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setUiSeVolume, uiSeVolume, uiTap, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
+  return { currentBgmKey: () => currentKey, isBackgroundSeQuiet, setVideoHold, videoGain, setStoryEndFade, setStoryOpenFade, playSeFile, fgPlaySeFile, preloadSE, playBGM, fadeToBGM, stopBGM, setBgmOnce, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setUiSeVolume, uiSeVolume, uiTap, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
 })();
 
 // ---- part: 14-success-sound.jsx ----
@@ -37703,12 +37706,14 @@ const FRIEND_PLACE_TEXT = Object.freeze({
   rhythmPlay: '🎵 モンヒロビートで演奏中', life: '🏡 助手ライフ',
   // モンヒロビートの合言葉(プライベート)の部屋にいる(2026-11-08 社長・ビート部テンポが friendsSetRoomPrivate を呼ぶ)
   roomPrivate: '🔑 プライベート中',
+  // クリスマスの事件簿・イベントページ(台帳 r1126-072 追記2)。裏クイックが回っていれば「⚡ オート周回中」の下の行に出る
+  xmasNovel: '事件簿を読んでいる', xmasEvent: 'イベントページを見ている',
 });
 // オート周回中・長く操作なし(10分)のときの文。place は今いる画面のまま、records.au(周回中)・records.im(操作なしの分)で足す(バトル部ジンとすり合わせ)
 const FRIEND_AUTO_TEXT = '⚡ オート周回中';
 const FRIEND_IDLE_AUTO_MIN = 10;
 // 長く操作がないときに「◯◯を開いたまま」と書く場所。演奏中・対戦中は変えない
-const FRIEND_IDLE_OPEN_TEXT = Object.freeze({ home: 'ホーム', rhythm: 'モンヒロビート', multi: 'モンヒロビート', room: '部屋', roomPrivate: '合言葉の部屋', card: 'MFバトルカード', masu: 'マスモンの画面', market: 'マーケット', life: '助手ライフ', battle: 'バトル', other: 'ゲーム' });
+const FRIEND_IDLE_OPEN_TEXT = Object.freeze({ xmasNovel: '事件簿', xmasEvent: 'イベントページ', home: 'ホーム', rhythm: 'モンヒロビート', multi: 'モンヒロビート', room: '部屋', roomPrivate: '合言葉の部屋', card: 'MFバトルカード', masu: 'マスモンの画面', market: 'マーケット', life: '助手ライフ', battle: 'バトル', other: 'ゲーム' });
 // 最後に画面へ触れた時刻(端末の中だけ。送るのは「何分たったか」の数だけ)
 let _friendsLastInputAt = Date.now();
 if (typeof window !== 'undefined' && window.addEventListener) {
@@ -37718,7 +37723,15 @@ const friendsIdleMinutes = (now = Date.now()) => Math.max(0, Math.floor((now - _
 // 「いまの状態をフレンドに見せる」(2026-11-08 社長・既定は入)。切なら place は 'other'(ログイン中)だけを送る
 const FRIEND_PRESENCE_SHOW_KEY = 'mh_friend_presence_show_v1';
 // 表(friend_profiles.place)の決まり(check)に無い場所。表へは 'other' で送り、records.pl に本当の場所を載せる
-const FRIEND_SUB_PLACES = Object.freeze(['card', 'cardBattle', 'room', 'rhythmPlay', 'life', 'roomPrivate']);
+const FRIEND_SUB_PLACES = Object.freeze(['card', 'cardBattle', 'room', 'rhythmPlay', 'life', 'roomPrivate', 'xmasNovel', 'xmasEvent']);
+// クリスマスのイベントページ(画面は RAID_JACK)・その上に重ねて開く事件簿にいるか('event' | 'novel' | '')。App が画面の出入りで知らせる(r1126-072 追記2)
+let _friendsXmasSpot = '';
+const friendsSetXmasSpot = (spot) => {
+  const next = spot === 'novel' || spot === 'event' ? spot : '';
+  if (next === _friendsXmasSpot) return;
+  _friendsXmasSpot = next;
+  try { if (typeof window !== 'undefined') window.dispatchEvent(new Event('mh-friend-spot')); } catch (error) { /* 2分ごとの知らせで届く */ }
+};
 // マルチの部屋で相手を待っているあいだ真(モンヒロビート・MFバトルカードの部屋が立てる)。次にフレンドへ知らせるとき、場所を「部屋で待ち中」にする
 let _friendsRoomWaiting = false;
 const friendsSetRoomWaiting = (on) => { _friendsRoomWaiting = !!on; };
@@ -37779,6 +37792,8 @@ const friendsPlaceOfScreen = (gameState) => {
   // 助手ライフは HOME の上に開く器(56-assistant-life の data-assistant-life-screen)
   if (name === 'HOME' && typeof document !== 'undefined' && document.querySelector && document.querySelector('[data-assistant-life-screen]')) return 'life';
   if (name === 'HOME') return 'home';
+  if (name === 'RAID_JACK' && _friendsXmasSpot === 'novel') return 'xmasNovel';
+  if (name === 'RAID_JACK' && _friendsXmasSpot === 'event') return 'xmasEvent';
   if (name === 'CARD_BATTLE') return 'cardBattle';
   if (name.startsWith('CARD_')) return 'card';
   if (name === 'RHYTHM_MULTI') return 'multi';
@@ -43648,7 +43663,8 @@ const GROWTH_FX_CALM_SCREENS = Object.freeze(new Set([
   'MASU_REGENERATION_DETAIL', 'MASU_REINCARNATE', 'MASU_SOUL_RANK', 'MASU_SOUL_TRAITS', 'MASU_TRANSCENDENCE', 'MASU_TRANSCEND_ENHANCE',
 ]));
 // 画面の上にこれが出ているあいだは出さない(お話・ほかの大きな演出・案内)。中・大の段だけ止める目印もある(おしゃべりの画面)
-const GROWTH_FX_HOLD_ALL_SELECTOR = '[data-event-story],[data-story-stage],[data-story-sheet],[data-player-rank-up-fx]';
+// 事件簿(79-screen-xmas-novel.jsx・body に重ねて開く data-xmas-novel-host)を開いているあいだも出さない。閉じたら出す(r1126-072 社長「音とか表示は絶対出さない」)
+const GROWTH_FX_HOLD_ALL_SELECTOR = '[data-event-story],[data-story-stage],[data-story-sheet],[data-player-rank-up-fx],[data-xmas-novel-host]';
 // 助手ライフで裏クイックが回っているあいだ(帯 data-life-quick-run="live")も、全面のお祝いは貯めておく。止めたり閉じたりしたら出す
 //   (モンヒロビート・カードの画面では裏の周回のお祝いは出ない作りなのに、助手ライフは HOME の上なので毎回全面で出ていた。2026-11-08 社長「中途半端」)
 const GROWTH_FX_HOLD_SHEET_SELECTOR = '[data-assistant-chat],[data-life-quick-run="live"]';
@@ -53314,7 +53330,7 @@ const tacticsEnemyMotionMs = (enemyId, skill, fallbackMs) => {
 };
 // 体の動きのうち「当たる瞬間」が全体の何割のところにあるか(攻撃が味方に届く時刻・ムーの揺れの時刻)
 const TACTICS_ENEMY_BODY_HIT = Object.freeze({
-  jab: .5, lunge: .55, dash: .58, flurry: .7, spin: .8, windup: .68, swing: .58, leap: .7, press: .7, rise: .74, sway: .55,
+  jab: .5, toot: .58, lunge: .55, dash: .58, flurry: .7, spin: .8, windup: .68, swing: .58, leap: .7, press: .7, rise: .74, sway: .55,
 });
 const tacticsEnemyHitFrac = (enemyId, skill) => {
   const motion = enemyId ? TACTICS_ENEMY_MOTIONS[enemyId] : null;
@@ -53390,11 +53406,11 @@ const TACTICS_ENEMY_MOTION_SETS = Object.freeze({
     regen:['heal','sparkle'], charge:['power','aura'], pierceCharge:['stance','lock'] } },
   // 覚醒サンタ(クリスマスのレイドボス・r1126-075): 重く息をして構える。雪・黒いプレゼント・鐘・ソリ
   //   正拳・闇 … 突いて雪の拳を飛ばす / 瞬黒撃 … 一瞬で踏み込み、黒い十字の斬り跡と雪が散る
-  //   超宝屁 … 揺れて毒々しい光の粒を出し、プレゼントが味方へ飛ぶ(id が Jack なのでムーと同じく光の玉で飛ばす) / 超飛び蹴り … 跳んで蹴り落とす
+  //   超宝屁 … 後ろを向いてお尻を突き出し、ぷぅっと膨らむ(toot)。おならの💨が飛び、緑〜紫のガスの雲が味方の列を包む(星と雪が混じる・r1126-075 追記1) / 超飛び蹴り … 跳んで蹴り落とす
   //   超暗けい … 溜めて黒い掌の気を通す / 怪しこの夜 … 力を解き放ち、鐘が鳴りながら立ちのぼる
   //   X’マスプレデター … 横へ駆け、ソリが味方全員へ突っ込み、黒いプレゼントと雪が散る
   santa: { idle:'menace', skills:{
-    normal:['jab','burst','❄️','shoot'], sweep:['sway','sparkle','🎁','shoot'], rush:['leap','burst','🦵','shoot'], pierce:['windup','beam','🖤','rise'],
+    normal:['jab','burst','❄️','shoot'], sweep:['toot','sparkle','💨','shoot'], rush:['leap','burst','🦵','shoot'], pierce:['windup','beam','🖤','rise'],
     special:['dash','slash'], allout:['dash','widebeam','🛷','shoot'], roar:['rise','aura','🔔','rise'],
     regen:['heal','sparkle'], charge:['power','aura'], pierceCharge:['stance','lock'] } },
   // 覚醒ムー(竜): 待機は今までの浮遊のまま。技ごとの動きだけ付ける
@@ -53709,6 +53725,11 @@ const TacticsEnemyStageFx = ({ fx, motion, isMoo, enemyId, skillLabel, lite = fa
       ))}
       {isMoo && !lite && !afterMovie && skill === 'special' && [0, 1, 2, 3, 4, 5, 6, 7].map((k) => (
         <i key={k} data-moo-meteor style={{ left: `${8 + ((k * 29) % 90)}%`, animationDelay: at(0.18 + k * 0.07) }}>{santa ? '❄️' : '☄️'}</i>
+      ))}
+      {santa && !lite && skill === 'sweep' && geo.all.map((t, k) => (
+        <i key={`gas-${k}`} data-santa-gas style={{ left: t.x, top: t.y, '--w': `${Math.round(Math.max(t.w, t.h) * 1.6)}px`, animationDelay: at(0.48 + k * 0.04), animationDuration: at(0.52) }}>
+          <b>{k % 2 ? '❄️' : '✨'}</b><b>{k % 2 ? '✨' : '❄️'}</b>
+        </i>
       ))}
       {isMoo && !lite && skill === 'allout' && [0, 1, 2].map((k) => (
         <i key={k} data-moo-tornado style={{ top: `${44 + k * 14}%`, animationDelay: at(0.22 + k * 0.1) }}>{santa ? '🛷' : '🌪️'}</i>
@@ -70144,9 +70165,12 @@ const XMAS_NOVEL_LAUGH_SE = 'audio/se-xmas-novel-laugh.mp3';
 const xmasNovelSe = (kind) => {
   try {
     if (typeof Audio_ === 'undefined' || !Audio_ || !Audio_.se) return;
-    if (kind === 'laugh' && typeof Audio_.playSeFile === 'function') { void Audio_.playSeFile(XMAS_NOVEL_LAUGH_SE); return; }
+    // 表の画面の音の口(fgSe・fgPlaySeFile)から鳴らす。裏クイックが回っているあいだは裏のバトルの音を止める印が立つので、
+    //   se・playSeFile だと事件簿の音まで消える(r1126-072)。口が無い古い作りなら今までの口へ
+    const playFile = typeof Audio_.fgPlaySeFile === 'function' ? Audio_.fgPlaySeFile : Audio_.playSeFile;
+    if (kind === 'laugh' && typeof playFile === 'function') { void playFile(XMAS_NOVEL_LAUGH_SE); return; }
     const map = { clap: 'join', laugh: 'enemySpecial', impact: 'enemyAttack', music: 'heal', tap: 'tap', clue: 'card', ok: 'victory', ng: 'guard' };
-    const fn = Audio_.se[map[kind] || 'tap'];
+    const fn = (Audio_.fgSe || Audio_.se)[map[kind] || 'tap'];
     if (typeof fn === 'function') fn();
   } catch (e) { /* 音が出せなくても読み進める */ }
 };
@@ -70167,7 +70191,8 @@ const xmasNovelSeHit = (kind) => {
     if (typeof Audio_ === 'undefined' || !Audio_ || !Audio_.se) return;
     const seq = XMAS_NOVEL_SE_SEQ[kind];
     xmasNovelSeLast = { kind, at: Date.now() };
-    seq.play.forEach((name) => { const fn = Audio_.se[name]; if (typeof fn === 'function') fn(); });
+    // 表の画面の口(fgSe)から鳴らす(裏クイックの音を止める印を受けない・r1126-072。上の xmasNovelSe と同じ)
+    seq.play.forEach((name) => { const fn = (Audio_.fgSe || Audio_.se)[name]; if (typeof fn === 'function') fn(); });
   } catch (e) { /* 音が出せなくても読み進める */ }
 };
 const xmasNovelRowSe = (kind, times) => {
@@ -70944,6 +70969,13 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
 // ---- 入口(イベントページの物語タブなどから呼ぶ関数1つ) ----
 //  App の画面の上に重ねて開く。2回呼んでも1つだけ。閉じたら片づけて opts.onClose を呼ぶ
 let xmasNovelHost = null;
+// 開いているか・最後に人が触れた時刻(r1126-072)。App はこれを見て、裏クイックを3倍にする・事件簿の曲を触らない。
+//   触れた = 人の操作(タップ・キー・ホイール。isTrusted)だけ。オート送り・スキップで勝手に進むあいだは数えない。保存はしない
+const xmasNovelPresence = { open: false, touchedAt: 0 };
+const XMAS_NOVEL_PRESENCE_EVENT = 'mh-xmas-novel-presence';
+const xmasNovelPresenceEmit = () => {
+  try { if (typeof window !== 'undefined') window.dispatchEvent(new Event(XMAS_NOVEL_PRESENCE_EVENT)); } catch (e) { /* 知らせられなくても読み進める */ }
+};
 const openXmasNovel = (opts = {}) => {
   if (typeof document === 'undefined' || typeof ReactDOM === 'undefined' || !ReactDOM.createRoot) return false;
   if (xmasNovelHost) return true;
@@ -70952,9 +70984,17 @@ const openXmasNovel = (opts = {}) => {
   el.setAttribute('data-xmas-novel-host', '');
   document.body.appendChild(el);
   const root = ReactDOM.createRoot(el);
+  const touch = (e) => { if (e && e.isTrusted) xmasNovelPresence.touchedAt = Date.now(); };
+  const TOUCH_EVENTS = ['pointerdown', 'keydown', 'wheel'];
+  TOUCH_EVENTS.forEach((t) => { try { document.addEventListener(t, touch, { capture: true, passive: true }); } catch (e) { /* 数えられなくても読める */ } });
   xmasNovelHost = { el, root };
+  xmasNovelPresence.open = true; xmasNovelPresence.touchedAt = Date.now();
+  xmasNovelPresenceEmit();
   const done = () => {
     const h = xmasNovelHost; xmasNovelHost = null;
+    TOUCH_EVENTS.forEach((t) => { try { document.removeEventListener(t, touch, { capture: true }); } catch (e) { /* 同上 */ } });
+    xmasNovelPresence.open = false;
+    xmasNovelPresenceEmit();
     setTimeout(() => { try { h.root.unmount(); } catch (e) { /* 片づけに失敗しても画面は消す */ } try { h.el.remove(); } catch (e) { /* 同上 */ } }, 0);
     try { opts.onClose && opts.onClose(); } catch (e) { /* 呼び出し元の失敗は持ちこまない */ }
   };
@@ -131314,6 +131354,24 @@ function MonsterHeroGame() {
   // 進め続ける画面。ここに無い画面(M/B管理・神殿・トレーニング・デバッグ・これから足す画面)では「休む」=進めないだけで、出たら続きから。
   //   モンヒロビート・MFバトルカードは今までどおりそれぞれの決まりで回す(演奏中の配り方を崩さない)
   const QUICK_RUN_ANYWHERE_RUN_SCREENS = ['HOME', 'PROFILE', 'ITEM_INVENTORY', 'GIFT_BOX', 'MISSIONS', 'SETTINGS', 'FRIENDS', 'BREEDER_MARKET'];
+  // クリスマスのイベントページ(画面は RAID_JACK のまま、raidEv が 'xmas')と、その上に重ねて開く事件簿(r1126-072 社長「事件簿とイベントページで進める」)。
+  //   ここも進める画面。ただし帯・詳細・知らせ・音は一切出さない(isXmasQuietScreen)。ジャックのレイド画面(raidEv が 'jack')は今までどおり入口として締める
+  const raidEvRef = useRef('jack');
+  const isXmasQuietScreen = state => state === 'RAID_JACK' && raidEvRef.current === 'xmas';
+  const isQuickAnywhereRunScreen = state => QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(state) || isXmasQuietScreen(state);
+  // 事件簿を読んでいるあいだは裏クイックを3倍の速さで回す。最後に触れてから3分たったら1倍へ戻し、触れたらまた3倍(社長「3倍・3分で戻す」)。
+  //   ★報酬の量は変えない。本物のバトルの待ち時間を縮めるだけ(演奏の追いつき CATCH_UP_SPEED と同じ作り)。報酬・上限・周回の数え方は今までの1つの経路のまま
+  //   ★事件簿で遊べる期間(xmasNovelPlayableAt)の外では3倍にしない(デバッグで期間の外に開いても1倍)
+  const XMAS_NOVEL_QUICK_BOOST = 3;
+  const XMAS_NOVEL_QUICK_IDLE_MS = 3 * 60 * 1000;
+  const xmasNovelQuickBoostNow = (now = Date.now()) => {
+    if (!QUICK_RUN_ANYWHERE_RELEASE || !quickAnywhereRunRef.current || !isXmasQuietScreen(gameStateNowRef.current)) return 1;
+    if (typeof xmasNovelPresence === 'undefined' || !xmasNovelPresence.open) return 1;
+    if (typeof xmasNovelPlayableAt !== 'function' || !xmasNovelPlayableAt(now)) return 1;
+    const touched = Number(xmasNovelPresence.touchedAt);
+    if (!Number.isFinite(touched) || now - touched >= XMAS_NOVEL_QUICK_IDLE_MS) return 1;
+    return XMAS_NOVEL_QUICK_BOOST;
+  };
   // ほかのバトルの入口。開いたら裏クイックを締めて(そこまでの報酬を確定して)から入る(社長 B「ほかのバトルを始めたら締めて報酬を確定」)
   const QUICK_RUN_ANYWHERE_BATTLE_ENTRY_SCREENS = ['BATTLE_SYSTEM_SELECT', 'BATTLE_MODE_SELECT', 'BATTLE_DIFFICULTY_SELECT', 'BATTLE_MENU', 'EXTREME_DIFFICULTY_SELECT',
     'SPECIES_CHALLENGE_SELECT', 'SKIP_PICK', 'RAID_JACK_PREP', 'RAID_JACK', 'BATTLE_TUTORIAL', 'DEBUG_BATTLE_SETUP', 'RPG_DEBUG_SETUP'];
@@ -132414,8 +132472,10 @@ function MonsterHeroGame() {
   const catchUpUntilRef = useRef(0);
   const battleMs = useCallback((baseMs) => {
     const base = Math.max(0, Math.round(baseMs / normalizeBattleSpeed(battleSpeedRef.current)));
-    if (!(catchUpUntilRef.current > Date.now())) return base;
-    return Math.max(0, Math.round(base / CATCH_UP_SPEED));
+    if (catchUpUntilRef.current > Date.now()) return Math.max(0, Math.round(base / CATCH_UP_SPEED));
+    // 事件簿を読んでいるあいだの3倍(上の xmasNovelQuickBoostNow)。追いつきと重ねない(追いつきのほうが速いので、そちらを優先)
+    const boost = xmasNovelQuickBoostNow();
+    return boost > 1 ? Math.max(0, Math.round(base / boost)) : base;
   }, []);
   // 固有技(必殺技)を放った瞬間の衝撃(2026-10-02 ユーザー指示「全てのモンスターの固有技のモーションを強化してほしい」)。
   // 効果音と、少し遅れて(動きが敵に届くころ)画面を大きく揺らす。見た目だけで待ち時間は足さない。
@@ -134258,7 +134318,8 @@ function MonsterHeroGame() {
     } catch (error) { console.error('[friends] records build failed:', error && error.message ? error.message : error); }
     // オート周回中(クイックの∞周回が回っている・裏に回って止まっているときは finished)と「いまの状態をフレンドに見せる」(2026-11-08・34-friends-api)
     let auto = false; let show = true;
-    try { const q = quickRunProgressRef.current; auto = !!(q && !q.finished); } catch (error) { auto = false; }
+    // 休む画面(M/B管理・神殿など)では進んでいないので、オート周回中にしない(r1126-072 追記2「止まっている画面で残らない」)
+    try { const q = quickRunProgressRef.current; const gs = gameStateNowRef.current; auto = !!(q && !q.finished) && !(isQuickAnywhereScreen(gs) && !isQuickAnywhereRunScreen(gs)); } catch (error) { auto = false; }
     try { show = (await storeGet(FRIEND_PRESENCE_SHOW_KEY, true)) !== false; } catch (error) { show = true; }
     await sbUpsertFriendProfile(id, friendsBuildSummary({
       place: friendsPlaceOfScreen(latest.gameState), masuMons: latest.masuMons,
@@ -134928,7 +134989,6 @@ function MonsterHeroGame() {
   // どのレイドを開いているか('jack' | 'xmas')。レイド画面・編成・1戦・結果は、これで定義(36-raid-xmas-api.jsx の raidEventDef)を選ぶ。
   //   ジャックの流れは raidEv が 'jack' のときこれまでどおり。クリスマスの回数・送信は 36-raid-xmas-api.jsx の口(raidXmasUseTry / raidXmasAddDamage)だけを使う
   const [raidEv, setRaidEv] = useState('jack');
-  const raidEvRef = useRef('jack');
   const raidDef = raidEventDef(raidEv);
   const raidXmasOpen = raidEv === 'xmas';
   // クリスマスのイベントページ(79-screen-xmas-event.jsx・台帳 r1126-006)のいまのタブ('story' | 'raid' | 'bonus')。
@@ -136421,7 +136481,7 @@ function MonsterHeroGame() {
   const quickAnywhereScreenOpen = runStage !== null && isQuickAnywhereScreen(gameState);
   // そのうち、進めてよい画面にいるか(QUICK_RUN_ANYWHERE_RUN_SCREENS)。休む画面では進めないだけで、出たら続きから
   const quickAnywhereBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && quickAnywhereScreenOpen
-    && QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameState);
+    && isQuickAnywhereRunScreen(gameState);
   // ランの画面を描かずに段階だけ進めてよいか。モンビー・MFバトルカード・助手ライフ・裏クイックの回っている画面ではそのまま進める。
   //   ★「いまバトルの画面を見ていない」の1つの値。揺れ・暗幕・負けの全面・効果音などの「見せない」はこれで決める(画面ごとに条件を並べない)
   const runBackgroundAllowed = rhythmScreenOpen || cardScreenOpen || assistantLifeScreenOpen || quickAnywhereScreenOpen;
@@ -136451,6 +136511,27 @@ function MonsterHeroGame() {
   const clearRunStage = () => { runStageRef.current = null; quickAnywhereRunRef.current = false; runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current); setRunStage(null); };
   // ランを進めてよいか。ランの画面を描いているとき、またはモンビーの非演奏画面で裏回し中。
   const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun || cardBackgroundRun || assistantLifeBackgroundRun || quickAnywhereBackgroundRun);
+  // 事件簿(79-screen-xmas-novel.jsx・App の外に重ねて開く)を開いているか。開閉の知らせ(XMAS_NOVEL_PRESENCE_EVENT)で描き直す(r1126-072)
+  const [xmasNovelOpen, setXmasNovelOpen] = useState(() => typeof xmasNovelPresence !== 'undefined' && !!xmasNovelPresence.open);
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof XMAS_NOVEL_PRESENCE_EVENT === 'undefined') return undefined;
+    const sync = () => setXmasNovelOpen(typeof xmasNovelPresence !== 'undefined' && !!xmasNovelPresence.open);
+    window.addEventListener(XMAS_NOVEL_PRESENCE_EVENT, sync);
+    sync();
+    return () => window.removeEventListener(XMAS_NOVEL_PRESENCE_EVENT, sync);
+  }, []);
+  // フレンドに見せる場所: クリスマスのイベントページ・事件簿(34-friends-api の friendsSetXmasSpot。変わったら送り直す・r1126-072 追記2)
+  useEffect(() => {
+    if (typeof friendsSetXmasSpot !== 'function') return;
+    friendsSetXmasSpot(gameState === 'RAID_JACK' && raidEv === 'xmas' ? (xmasNovelOpen ? 'novel' : 'event') : '');
+  }, [gameState, raidEv, xmasNovelOpen]);
+  // 検査の口(tools/battle/quick-anywhere-xmas-novel-browser-check.js)。いまの裏クイックの速さの倍率を読むだけ(ゲームの動きは変えない)
+  if (typeof window !== 'undefined') {
+    window.__mhQuickAnywhereBoost = xmasNovelQuickBoostNow;
+    // 帯を出さない画面(イベントページ・事件簿)でも、周回が進んでいるかを検査が見る口(読むだけ)
+    window.__mhQuickAnywhereProbe = () => ({ run: !!quickAnywhereRunRef.current && !!runStageRef.current, loops: quickRunProgress ? quickRunProgress.loops : null, wave,
+      finished: quickRunProgress ? !!quickRunProgress.finished : null, reason: quickRunProgress ? quickRunProgress.reason || '' : '', screen: gameStateNowRef.current, quiet: isXmasQuietScreen(gameStateNowRef.current) });
+  }
   // モンビーからクイックのバトルへ戻る。ランの段階そのものへ戻すので、続きから遊べる
   // 曲えらびの一覧をどこまで見ていたか。全国ランキングや遊びかたを見て戻ったとき、
   // その場所から続けられるようにするための控え(保存はしない・リロードで消えてよい)
@@ -136481,6 +136562,9 @@ function MonsterHeroGame() {
     return '端末に進行を保存できていません';
   };
   const [quickRunProgress, setQuickRunProgress] = useState(null);
+  // 周回が始まった・終わった(負け・止める)ら、フレンドの「⚡ オート周回中」を早めに送り直す(2分ごとの知らせを待たない・r1126-072 追記2)
+  const quickRunLiveForFriends = !!(quickRunProgress && !quickRunProgress.finished);
+  useEffect(() => { try { if (typeof window !== 'undefined') window.dispatchEvent(new Event('mh-friend-spot')); } catch (error) { /* 2分ごとの知らせで届く */ } }, [quickRunLiveForFriends]);
   // 直前の演奏で何周ぶん入ったか。帯へ1回だけ出す(保存しない)。
   // 演奏から抜けた直後の effect からも見るので、同期の控え(ref)も持つ
   const [rhythmPlayRunAwardState, setRhythmPlayRunAwardState] = useState(null);
@@ -138122,6 +138206,9 @@ function MonsterHeroGame() {
     // 専用sourceの開始・停止はRhythmTapTestが管理する。通常BGM effectから触ると二重再生や途中停止になる。
     if (gameState === 'RHYTHM_PLAY') return;
     if (successScreenOpen) return;
+    // 事件簿を開いているあいだは事件簿が曲を決める(裏クイックの WAVE・敵が替わってこの effect が走っても、イベントページの曲へ戻さない・r1126-072)。
+    //   閉じたときは事件簿が開く前の曲へ戻し、ここも xmasNovelOpen の変化で走り直す
+    if (xmasNovelOpen) return;
     // 観戦の曲が鳴っているあいだは触らない(観戦の画面が鳴らし始めるときに待機の曲を止めている。終わったら下で流し直す・r1115-190)
     if (rhythmWatchAudioOn) return;
     let key = bootPhase === 'GAME' ? bgmKeyForState(gameState, wave, enemy?.id, (waveHistory||[]).length > 0, hp <= 0 || gaveUp) : (bootPhase === 'TITLE' || bootPhase === 'ENTERING_GAME' ? bgmArrangement.title : null);
@@ -138154,7 +138241,7 @@ function MonsterHeroGame() {
     if (key && eventId && prev && prev.id === eventId && prev.key !== key) Audio_.fadeToBGM(key, EVENT_BGM_FADE_MS);
     else if (key) Audio_.playBGM(key);
     else Audio_.stopBGM();
-  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, successScreenOpen, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, cardScreenOpen, eventLineBgm, cardBgm, assistantLifeOpenNow, battleBgmOverlay, rhythmWatchAudioOn]);
+  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, successScreenOpen, xmasNovelOpen, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, cardScreenOpen, eventLineBgm, cardBgm, assistantLifeOpenNow, battleBgmOverlay, rhythmWatchAudioOn]);
 
   // SE/BGMそれぞれの音量をAudioエンジンへ反映
   // 超省エネではBGMを選んで鳴らしてもSEだけは常に0。保存済みSE音量そのものは変更しない。
@@ -144751,8 +144838,10 @@ function MonsterHeroGame() {
   // どの画面からも見える小さな帯(左下)。画面の高さを取らない(fixed)。助手ライフ・モンヒロビート・カードの上では、それぞれの帯があるので出さない
   const renderQuickAnywhereStrip = () => {
     if (!QUICK_RUN_ANYWHERE_RELEASE || !quickAnywhereScreenOpen || assistantLifeOpenNow || !quickRunProgress) return null;
+    // クリスマスのイベントページ・事件簿では出さない(社長「音とか表示は絶対出さないようにしてね」。HOME などへ戻ればいつもどおり出る)
+    if (isXmasQuietScreen(gameState) || xmasNovelOpen) return null;
     const finished = !!quickRunProgress.finished;
-    const resting = !finished && !QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameState);
+    const resting = !finished && !isQuickAnywhereRunScreen(gameState);
     const paused = !finished && !resting && !quickAnywhereBackgroundRun;
     const pending = finished ? { xp: 0, gold: 0 } : quickRunPendingRewards();
     const gold = Math.floor(quickRunProgress.gold + pending.gold), xp = Math.floor(quickRunProgress.xp + pending.xp);
@@ -144821,10 +144910,19 @@ function MonsterHeroGame() {
       setQuickAnywhereSettling(false);
     }
   };
+  // クリスマスのイベントページからレイドへ挑むとき(バトル・モンヒロビート・カード)は、先に裏クイックを締めてから進む(r1126-072)。
+  //   イベントページは裏クイックを回す画面にしたので、今までの「レイド画面を開いたら締める」の代わりにここで締める(報酬はそこまでのぶんを確定)
+  const xmasQuickSettleThen = async (fn) => {
+    if (quickAnywhereEndingRef.current) return;
+    if (QUICK_RUN_ANYWHERE_RELEASE && quickAnywhereRunRef.current && runStageRef.current) await settleQuickAnywhereRun();
+    fn();
+  };
   // ほかのバトルの入口を開いたら締める(その周までの報酬を確定)。「動いているバトルは常に1つ」(QUICK_RHYTHM_LINK.md §13)の作りのまま
   useEffect(() => {
     if (!QUICK_RUN_ANYWHERE_RELEASE || !quickAnywhereRunRef.current || !runStageRef.current) return;
     if (!QUICK_RUN_ANYWHERE_BATTLE_ENTRY_SCREENS.includes(gameState)) return;
+    // クリスマスのイベントページ(画面は RAID_JACK)は進める画面。締めるのは、そこからレイドへ挑むとき(xmasQuickSettleThen)
+    if (isXmasQuietScreen(gameState)) return;
     void settleQuickAnywhereRun();
   }, [gameState]);
   // 自動で始める(条件はモンヒロビート・助手ライフの自動開始と同じ: AUTO設定のクイックがそろっていて、自動開始が入、その難易度をクリア済み)。
@@ -144832,7 +144930,7 @@ function MonsterHeroGame() {
   //   帯の「止める」で止めたあとは、回す画面を行き来しても始め直さない(次にゲームを開くか、ほかのバトルから戻ったら、また始まる)
   const quickAnywhereTryStart = () => {
     if (!QUICK_RUN_ANYWHERE_RELEASE || !quickRhythmGuideReleased || !autoQuickRunAutoStartEnabled(autoSettings)) return false;
-    if (!QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameStateNowRef.current)) return false;
+    if (!isQuickAnywhereRunScreen(gameStateNowRef.current)) return false;
     if (quickRunProgressRef.current && !quickRunProgressRef.current.finished) return false;
     if (runStageRef.current && !runResultFinishedRef.current) return false;
     if (!repeatTemplateFromAutoSettings()) return false;
@@ -144846,7 +144944,7 @@ function MonsterHeroGame() {
     const prev = quickAnywherePrevScreenRef.current;
     quickAnywherePrevScreenRef.current = gameState;
     if (!QUICK_RUN_ANYWHERE_RELEASE || bootPhase !== 'GAME') return undefined;
-    if (!QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameState)) return undefined;
+    if (!isQuickAnywhereRunScreen(gameState)) return undefined;
     const boot = !quickAnywhereBootTriedRef.current;
     const fromBattle = RUN_STAGE_SCREENS.includes(prev) || QUICK_RUN_ANYWHERE_BATTLE_ENTRY_SCREENS.includes(prev) || prev === 'SKIP_RESULT';
     if (!boot && !fromBattle) return undefined;
@@ -144859,13 +144957,13 @@ function MonsterHeroGame() {
   useEffect(() => {
     if (!QUICK_RUN_ANYWHERE_RELEASE || assistantLifeOpenNow) return undefined;
     if (!quickRunProgress || !quickRunProgress.finished || quickRunProgress.reason !== 'defeat') return undefined;
-    if (!QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameState)) return undefined;
+    if (!isQuickAnywhereRunScreen(gameState)) return undefined;
     if (resultProcessing) return undefined;
     if (!quickRhythmGuideReleased || !autoQuickRunAutoStartEnabled(autoSettings)) return undefined;
     const retryAnywhere = () => {
       const current = quickRunProgressRef.current;
       if (!current || !current.finished || current.reason !== 'defeat') return;
-      if (!QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameStateNowRef.current)) return;
+      if (!isQuickAnywhereRunScreen(gameStateNowRef.current)) return;
       startQuickRunFromRhythm();
     };
     const timer = setTimeout(retryAnywhere, QUICK_RUN_AUTO_RETRY_MS);   // 目印を「どこでも回す」の始め直しとして分ける(SCREEN_EFFECTS_MAP)
@@ -146101,7 +146199,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 倒した瞬間に閃光と敵が消える動き(data-enemy-down)。「VICTORY!」は敵が消えたあとに出す(70-bootstrap の .mh-defeat の delay)。
     // 待ち時間は、消える0.6秒＋VICTORY!の1秒に合わせる
     if(defeatFxOn) setDefeatFx({name:enemy?.name||'敵',boss:wave>=10,key:Date.now()});
-    if (!autoBattleRef.current || bgmArrangement.autoVictoryJingle === 'on') Audio_.playJingle('victory');
+    // 裏クイックがクリスマスのイベントページ・事件簿で回っているあいだは鳴らさない(ジングルは曲を止めるので、事件簿の曲が途切れる・r1126-072)
+    if ((!autoBattleRef.current || bgmArrangement.autoVictoryJingle === 'on') && !(runBackgroundAllowedRef.current && isXmasQuietScreen(gameStateNowRef.current))) Audio_.playJingle('victory');
     // 呼ぶ側は、今回のぶん(damage・distDamage)を足してからここへ来る。合計は「いまの値」から読む(上の currentWaveDamageRef の説明)
     const totalWaveDamage=waveDamageAtDefeat(currentWaveDamageRef.current,currentWaveDamage,damage);
     const waveMult=1.0+(wave*0.1); const remainingTurns=Math.max(0,21-turnCount);
@@ -154235,14 +154334,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
         {gameState==='RAID_JACK'&&raidXmasOpen&&(<XmasEventScreen tab={xmasEventTab} onTab={setXmasEventTab} forced={raidJackDebugForce&&!RELEASE_FLAGS.raidXmas} preOpen={!RELEASE_FLAGS.raidXmas&&!raidJackDebugForce}
           onBack={()=>{raidJackReturnTierRef.current=0;setGameState(raidJackDebugForce&&!RELEASE_FLAGS.raidXmas?'RAID_JACK_DEBUG':'HOME');}}
-          storyVersion={xmasStoryVersion} fightWays={xmasStoryFightWays} onReadChapter={openXmasStoryChapter} onFightChapter={fightXmasStoryChapter}
+          storyVersion={xmasStoryVersion} fightWays={xmasStoryFightWays} onReadChapter={openXmasStoryChapter} onFightChapter={(chapter,way)=>{void xmasQuickSettleThen(()=>fightXmasStoryChapter(chapter,way));}}
           /* レイドのタブの中身(今までのクリスマスのレイド画面そのまま) */
           raid={{ev:RAID_EVENT_XMAS,
             /* 挑み方: バトルはバトル部。モンヒロビート・バトルカードはビート部・カード部が startRaidXmasRhythm / startRaidXmasCard を App に置いたら出る(BUILD.md §4) */
             ways:['battle',...(typeof startRaidXmasRhythm === 'function'?['rhythm']:[]),...(typeof startRaidXmasCard === 'function'?['card']:[])],
             initialTier:raidJackReturnTierRef.current,
             onBack:()=>{raidJackReturnTierRef.current=0;setGameState(raidJackDebugForce&&!RELEASE_FLAGS.raidXmas?'RAID_JACK_DEBUG':'HOME');},
-            onChallenge:(kind,tierIndex,way)=>{raidJackReturnTierRef.current=tierIndex;if(kind==='a'&&way==='rhythm'){if(typeof startRaidXmasRhythm === 'function')void startRaidXmasRhythm(tierIndex);return;}if(kind==='a'&&way==='card'){if(typeof startRaidXmasCard === 'function')void startRaidXmasCard(tierIndex);return;}setRaidJackPrep({kind,tierIndex});setGameState('RAID_JACK_PREP');},
+            onChallenge:(kind,tierIndex,way)=>{void xmasQuickSettleThen(()=>{raidJackReturnTierRef.current=tierIndex;if(kind==='a'&&way==='rhythm'){if(typeof startRaidXmasRhythm === 'function')void startRaidXmasRhythm(tierIndex);return;}if(kind==='a'&&way==='card'){if(typeof startRaidXmasCard === 'function')void startRaidXmasCard(tierIndex);return;}setRaidJackPrep({kind,tierIndex});setGameState('RAID_JACK_PREP');});},
             onPurchase:purchaseRaidJackExtra,onClaimRewards:claimRaidXmasRewards,beatPoints:rhythmEventPoints,eventId:raidCurEventId,forced:raidJackDebugForce,unlimited:raidJackDebugForce&&!raidJackDebugRealRules,
             renderPlace:rankingPlace,renderIcon:rankingBreederIcon,cardClass:rankingCardClass}}/>)}
         {gameState==='RAID_JACK'&&raidJackOpen&&(<RaidJackScreen
@@ -158298,7 +158397,8 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
         :<WaveIntro enabled={battleFxEffective.waveIntro!=='OFF'&&gameState==='BATTLE'&&!!enemy} wave={wave} enemyName={enemy?.name} title={''}/>}
       <EnemyDefeatFx fx={gameState==='BATTLE'?defeatFx:null}/>
       {renderQuickAnywhereStrip()}
-      {quickAnywhereSettling && <div data-quick-anywhere-settling role="status" className="fixed inset-0 z-[96] flex items-end justify-center bg-black/20 pb-24" onClickCapture={(e) => { e.stopPropagation(); e.preventDefault(); }}>
+      {quickAnywhereSettling && isXmasQuietScreen(gameState) && <div data-quick-anywhere-settling="quiet" aria-hidden="true" className="fixed inset-0 z-[96]" onClickCapture={(e) => { e.stopPropagation(); e.preventDefault(); }}/>}
+      {quickAnywhereSettling && !isXmasQuietScreen(gameState) && <div data-quick-anywhere-settling role="status" className="fixed inset-0 z-[96] flex items-end justify-center bg-black/20 pb-24" onClickCapture={(e) => { e.stopPropagation(); e.preventDefault(); }}>
         <span className="rounded-full border border-fuchsia-300/50 bg-slate-950/90 px-3 py-1.5 text-[12px] font-black text-fuchsia-100">🔁 裏クイックの報酬を受け取っています…</span>
       </div>}
       {effect&&!runBackgroundAllowed&&effect!==offscreenEffectRef.current&&(<div data-battle-effect-overlay className="fixed inset-0 flex flex-col items-center justify-center pointer-events-none text-center p-8 overflow-hidden" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.96)',zIndex:70000}}>
@@ -162050,6 +162150,16 @@ const createAnimationStyle = () => {
       75% { transform: translateY(-10px) scale(1.03); }
       100% { transform: none; }
     }
+    /* 覚醒サンタの超宝屁: 後ろを向いてお尻を突き出し、ぷぅっと膨らんで、はじけて戻る(左右の反転は transform だけ) */
+    @keyframes emToot {
+      0% { transform: none; }
+      12% { transform: translate(-4px, 0) rotate(-5deg); }
+      22% { transform: scaleX(-1) translate(0, 2px) rotate(-6deg); }
+      44% { transform: scaleX(-1) translate(8px, 8px) rotate(-16deg) scale(1.12, .88); }
+      56% { transform: scaleX(-1) translate(-4px, -8px) rotate(5deg) scale(.92, 1.1); }
+      88% { transform: scaleX(-1) rotate(-2deg); }
+      100% { transform: none; }
+    }
     @keyframes emSway {
       0% { transform: none; }
       15% { transform: translate(-6px, -6px) rotate(-9deg) scale(.96, 1.06); }
@@ -162149,6 +162259,7 @@ const createAnimationStyle = () => {
     [data-tactics-look] [data-enemy-skill][data-em-body="stance"] > :is(span, [data-moo-body]) { animation-name: emStance; }
     [data-tactics-look] [data-enemy-skill][data-em-body="heal"] > :is(span, [data-moo-body]) { animation-name: emHeal; }
     [data-tactics-look] [data-enemy-skill][data-em-body="sway"] > :is(span, [data-moo-body]) { animation-name: emSway; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="toot"] > :is(span, [data-moo-body]) { animation-name: emToot; transform-origin: 50% 80%; }
     [data-tactics-look] [data-moo-stage] > [data-moo-body] { transform-origin: 50% 60%; }
     /* やられ(カワズモーと同じのけぞり) */
     [data-tactics-look] [data-enemy-ring][data-em-idle][data-enemy-hurt] > span, [data-tactics-look] [data-moo-stage][data-enemy-hurt] > [data-moo-body] { animation: kzHurt 520ms ease-out forwards; }
@@ -162358,6 +162469,14 @@ const createAnimationStyle = () => {
     [data-moo-claw] { left: -20%; width: 140%; height: 12px; margin-top: -6px; transform: rotate(-32deg) scaleX(0); transform-origin: 0 50%; border-radius: 6px; opacity: 0;
       background: linear-gradient(180deg, transparent, #dc2626 25%, #fff 45% 55%, #facc15 75%, transparent); box-shadow: 0 0 26px 8px rgba(220,38,38,.8); animation: mooClaw 520ms ease-out both; }
     @keyframes mooClaw { 0% { opacity: 1; transform: rotate(-32deg) scaleX(0); } 40% { opacity: 1; transform: rotate(-32deg) scaleX(1); } 100% { opacity: 0; transform: rotate(-32deg) scaleX(1) scaleY(.2); } }
+    /* 覚醒サンタの超宝屁のガスの雲(緑〜紫)。味方の枠ごとに1つ。中に小さな星と雪 */
+    [data-santa-gas] { position: absolute; width: var(--w); height: calc(var(--w) * .72); margin: calc(var(--w) * -.36) 0 0 calc(var(--w) * -.5); opacity: 0; pointer-events: none;
+      border-radius: 50%; background: radial-gradient(closest-side at 30% 58%, rgba(163,230,53,.95) 35%, rgba(163,230,53,0)), radial-gradient(closest-side at 68% 44%, rgba(192,132,252,.92) 35%, rgba(192,132,252,0)),
+        radial-gradient(closest-side at 50% 72%, rgba(74,222,128,.9) 35%, rgba(74,222,128,0)), radial-gradient(closest-side at 50% 40%, rgba(126,34,206,.7), rgba(126,34,206,0)); animation: santaGas 1s ease-out both; will-change: transform, opacity; }
+    [data-santa-gas] > b { position: absolute; font-size: 20px; line-height: 1; left: 30%; top: 30%; opacity: .9; }
+    [data-santa-gas] > b + b { left: 62%; top: 52%; font-size: 16px; }
+    @keyframes santaGas { 0% { opacity: 0; transform: scale(.3) translateY(10px); } 25% { opacity: 1; } 75% { opacity: .9; transform: scale(1.15) translateY(-4px); } 100% { opacity: 0; transform: scale(1.35) translateY(-14px); } }
+    @media (prefers-reduced-motion: reduce) { [data-santa-gas] { animation: none; display: none; } }
     [data-moo-meteor] { top: -12%; font-size: 64px; opacity: 0; filter: drop-shadow(0 0 16px rgba(251,146,60,1)); animation: mooMeteor 700ms cubic-bezier(.4,0,1,1) both; }
     @keyframes mooMeteor { 0% { opacity: 0; transform: translate(40vw, 0) rotate(-20deg) scale(.6); } 15% { opacity: 1; } 90% { opacity: 1; transform: translate(-30vw, 80vh) rotate(-20deg) scale(1.3); } 100% { opacity: 0; transform: translate(-34vw, 86vh) scale(1.8); } }
     [data-moo-tornado] { left: 0; font-size: 110px; margin-top: -55px; opacity: 0; filter: drop-shadow(0 0 20px rgba(250,204,21,.8)); animation: mooTornado 900ms ease-in-out both; }

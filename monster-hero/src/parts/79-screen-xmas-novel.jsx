@@ -741,9 +741,12 @@ const XMAS_NOVEL_LAUGH_SE = 'audio/se-xmas-novel-laugh.mp3';
 const xmasNovelSe = (kind) => {
   try {
     if (typeof Audio_ === 'undefined' || !Audio_ || !Audio_.se) return;
-    if (kind === 'laugh' && typeof Audio_.playSeFile === 'function') { void Audio_.playSeFile(XMAS_NOVEL_LAUGH_SE); return; }
+    // 表の画面の音の口(fgSe・fgPlaySeFile)から鳴らす。裏クイックが回っているあいだは裏のバトルの音を止める印が立つので、
+    //   se・playSeFile だと事件簿の音まで消える(r1126-072)。口が無い古い作りなら今までの口へ
+    const playFile = typeof Audio_.fgPlaySeFile === 'function' ? Audio_.fgPlaySeFile : Audio_.playSeFile;
+    if (kind === 'laugh' && typeof playFile === 'function') { void playFile(XMAS_NOVEL_LAUGH_SE); return; }
     const map = { clap: 'join', laugh: 'enemySpecial', impact: 'enemyAttack', music: 'heal', tap: 'tap', clue: 'card', ok: 'victory', ng: 'guard' };
-    const fn = Audio_.se[map[kind] || 'tap'];
+    const fn = (Audio_.fgSe || Audio_.se)[map[kind] || 'tap'];
     if (typeof fn === 'function') fn();
   } catch (e) { /* 音が出せなくても読み進める */ }
 };
@@ -764,7 +767,8 @@ const xmasNovelSeHit = (kind) => {
     if (typeof Audio_ === 'undefined' || !Audio_ || !Audio_.se) return;
     const seq = XMAS_NOVEL_SE_SEQ[kind];
     xmasNovelSeLast = { kind, at: Date.now() };
-    seq.play.forEach((name) => { const fn = Audio_.se[name]; if (typeof fn === 'function') fn(); });
+    // 表の画面の口(fgSe)から鳴らす(裏クイックの音を止める印を受けない・r1126-072。上の xmasNovelSe と同じ)
+    seq.play.forEach((name) => { const fn = (Audio_.fgSe || Audio_.se)[name]; if (typeof fn === 'function') fn(); });
   } catch (e) { /* 音が出せなくても読み進める */ }
 };
 const xmasNovelRowSe = (kind, times) => {
@@ -1541,6 +1545,13 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
 // ---- 入口(イベントページの物語タブなどから呼ぶ関数1つ) ----
 //  App の画面の上に重ねて開く。2回呼んでも1つだけ。閉じたら片づけて opts.onClose を呼ぶ
 let xmasNovelHost = null;
+// 開いているか・最後に人が触れた時刻(r1126-072)。App はこれを見て、裏クイックを3倍にする・事件簿の曲を触らない。
+//   触れた = 人の操作(タップ・キー・ホイール。isTrusted)だけ。オート送り・スキップで勝手に進むあいだは数えない。保存はしない
+const xmasNovelPresence = { open: false, touchedAt: 0 };
+const XMAS_NOVEL_PRESENCE_EVENT = 'mh-xmas-novel-presence';
+const xmasNovelPresenceEmit = () => {
+  try { if (typeof window !== 'undefined') window.dispatchEvent(new Event(XMAS_NOVEL_PRESENCE_EVENT)); } catch (e) { /* 知らせられなくても読み進める */ }
+};
 const openXmasNovel = (opts = {}) => {
   if (typeof document === 'undefined' || typeof ReactDOM === 'undefined' || !ReactDOM.createRoot) return false;
   if (xmasNovelHost) return true;
@@ -1549,9 +1560,17 @@ const openXmasNovel = (opts = {}) => {
   el.setAttribute('data-xmas-novel-host', '');
   document.body.appendChild(el);
   const root = ReactDOM.createRoot(el);
+  const touch = (e) => { if (e && e.isTrusted) xmasNovelPresence.touchedAt = Date.now(); };
+  const TOUCH_EVENTS = ['pointerdown', 'keydown', 'wheel'];
+  TOUCH_EVENTS.forEach((t) => { try { document.addEventListener(t, touch, { capture: true, passive: true }); } catch (e) { /* 数えられなくても読める */ } });
   xmasNovelHost = { el, root };
+  xmasNovelPresence.open = true; xmasNovelPresence.touchedAt = Date.now();
+  xmasNovelPresenceEmit();
   const done = () => {
     const h = xmasNovelHost; xmasNovelHost = null;
+    TOUCH_EVENTS.forEach((t) => { try { document.removeEventListener(t, touch, { capture: true }); } catch (e) { /* 同上 */ } });
+    xmasNovelPresence.open = false;
+    xmasNovelPresenceEmit();
     setTimeout(() => { try { h.root.unmount(); } catch (e) { /* 片づけに失敗しても画面は消す */ } try { h.el.remove(); } catch (e) { /* 同上 */ } }, 0);
     try { opts.onClose && opts.onClose(); } catch (e) { /* 呼び出し元の失敗は持ちこまない */ }
   };

@@ -554,6 +554,9 @@ const DATA_FILES = [
   'data/breeder.js',
   'data/enemy-monsters.js',
   'data/skills.js',
+  // モンヒロビートの土台(譜面・判定の数字・RHYTHM_TOUCH_DIAG_STATS_MAX など)。本体の parts がここの定義を当てにしている。
+  // 読み込まないと 30-rhythm-play の頭で ReferenceError になり、この関数を使う検査がまとめて落ちる(2026-11-28)
+  'data/rhythm-mode.js',
   'data/changelog.js',
   'data/help.js',
   'data/assistants.js',

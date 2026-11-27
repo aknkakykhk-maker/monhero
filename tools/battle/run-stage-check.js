@@ -303,7 +303,9 @@ check('モンビーを開いている間はバトルのSEを鳴らさない',
 check('MFバトルカードにいる間は、裏の周回の効果音だけを止める',
   source.includes('Audio_.setBackgroundSeQuiet(cardScreenOpen || quickAnywhereScreenOpen || rhythmRunBackgroundQuiet || successScreenOpen);')
   && source.includes('(...args) => (backgroundSeQuiet ? Promise.resolve() : play(...args))')
-  && source.includes('if (!enabled || !src || backgroundSeQuiet) return null;'));
+  // playSeFile(ボスの登場の音など)は印が立っていると鳴らさない。印を見ないのは表の画面の口 fgPlaySeFile(事件簿の音・r1126-072)だけ
+  && source.includes('if (!enabled || !src || (backgroundSeQuiet && !fg)) return null;')
+  && source.includes('const playSeFile = (src) => playSeFileOn(src, false);'));
 // 2026-11-12 社長「モンビー中の演奏後に裏クイックの音が表に出てきてる」: 結果のランク演出のあいだ効果音の音量を戻すため、裏のバトルの音まで鳴っていた
 check('モンビーで周回が残っているあいだは、効果音の音量を戻す演出中も裏の周回の効果音だけ止める',
   source.includes('const rhythmRunBackgroundQuiet = rhythmScreenOpen && runStage !== null;')

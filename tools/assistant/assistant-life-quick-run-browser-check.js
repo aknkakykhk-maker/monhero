@@ -51,6 +51,8 @@ const seed = () => {
   put('mh_auto_settings_v1', { strategy: 'random', allies: [{ rosterEntry: null, slot: null }, { rosterEntry: null, slot: null }, { rosterEntry: null, slot: null }],
     breakthroughReserve: { gold: 0, psyche: 0 }, quickRun: { heroRosterEntry: 'Suezo', distance: 2, difficulty: 'Beginner', autoStart: false } });
   put('mh_gold', 1000);
+  // 初めて開いた人への「❓ 助手ライフの見かた」(2026-11-22 段7)は帯の「詳細」「止める」の上にかぶるので、見た印を入れておく
+  put('mh_assistant_life_guide_seen_v1', true);
 };
 
 (async () => {
@@ -224,6 +226,10 @@ const seed = () => {
       }
       await page.setViewportSize({ width: 390, height: 844 }); await page.waitForTimeout(500);
       // 詳細の窓(カードと同じ CardQuickRunDetail)が助手ライフの上に出て、閉じられる
+      // 押す所に別の窓がかぶっていると、押しても詳細は開かない。かぶりが無いことも確かめる
+      const detailHit = await page.evaluate(() => { const b = document.querySelector('[data-life-quick-run-detail]'); if (!b) return 'none'; const r = b.getBoundingClientRect(); const e = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+        return e && (e === b || b.contains(e)) ? 'self' : (e ? e.outerHTML.slice(0, 120) : 'nothing'); });
+      check('⑧ 帯の「詳細」に、ほかの窓がかぶっていない', detailHit === 'self', detailHit);
       await page.locator('[data-life-quick-run-detail]').click({ force: true }); await page.waitForTimeout(500);
       const det = await page.evaluate(() => { const d = document.querySelector('[data-card-quick-detail]'); if (!d) return null; const r = d.getBoundingClientRect(); const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return { onTop: !!top && d.contains(top), text: d.textContent.slice(0, 40) }; });
       check('⑧ 「詳細」でカードと同じ詳細の窓が助手ライフの上に出る', !!det && det.onTop, JSON.stringify(det));
