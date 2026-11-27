@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 75fa0f3e56663d99
+// source-sha256: 55a8913b45c24e46
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -6868,16 +6868,7 @@ const BGM_TRACKS = [{
   src: 'audio/bgm-pandora-boss-remix.mp3',
   gain: 1,
   loop: true
-}];
-const BGM_PROTO_TRACKS = Object.freeze([{
-  id: 'melo_sheriruth_proto',
-  name: 'Sheriruth 試作',
-  creator: 'Team Grimoire',
-  src: 'audio/bgm-sheriruth-proto.mp3',
-  gain: 1,
-  loop: true
-}]);
-const BGM_UNRELEASED_TRACKS = Object.freeze([{
+}, {
   id: 'melo_battle_5',
   name: 'Battle #5',
   creator: 'オリジナル',
@@ -6891,9 +6882,20 @@ const BGM_UNRELEASED_TRACKS = Object.freeze([{
   src: 'audio/bgm-battle-5-short.mp3',
   gain: 1,
   loop: true
+}];
+const BGM_PROTO_TRACKS = Object.freeze([{
+  id: 'melo_sheriruth_proto',
+  name: 'Sheriruth 試作',
+  creator: 'Team Grimoire',
+  src: 'audio/bgm-sheriruth-proto.mp3',
+  gain: 1,
+  loop: true
 }]);
+const BGM_UNRELEASED_TRACKS = Object.freeze([]);
 const BGM_TRACK_BY_ID = Object.fromEntries(BGM_TRACKS.map(track => [track.id, track]));
 const BGM_TRACK_LISTED_FROM = Object.freeze({
+  melo_battle_5: '2026-11-28T10:00:00+09:00',
+  melo_battle_5_short: '2026-11-28T10:00:00+09:00',
   melo_kiss_mystery_short: '2026-11-28T10:00:00+09:00',
   melo_dear_santa: '2026-11-28T10:00:00+09:00',
   melo_dear_santa_short: '2026-11-28T10:00:00+09:00',
@@ -15942,6 +15944,7 @@ const FRIENDS_PUBLIC_RELEASE = true;
 const RAID_JACK_START_AT = '2026-10-05T04:00:00+09:00';
 const XMAS_COSTUME_START_AT = '2026-11-28T10:00:00+09:00';
 const RAID_XMAS_START_AT = '2026-11-28T10:00:00+09:00';
+const BATTLE5_RELEASE_AT = '2026-11-28T10:00:00+09:00';
 const RAID_JACK_PUBLIC_RELEASE = true;
 const RAID_JACK_RHYTHM_PUBLIC_RELEASE = true;
 const RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE = true;
@@ -15955,7 +15958,9 @@ const RELEASE_FLAGS = {
   speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE,
   tactics: TACTICS_MODE_PUBLIC_RELEASE,
   rhythmHell: true,
-  battle5: false,
+  get battle5() {
+    return Date.now() >= Date.parse(typeof BATTLE5_RELEASE_AT === 'string' ? BATTLE5_RELEASE_AT : '2026-11-28T10:00:00+09:00');
+  },
   battleLog: true,
   battleCardArt: true,
   assistantChat: true,
@@ -65246,6 +65251,7 @@ const RHYTHM_SONG_PRICES = Object.freeze({
   beyond_the_same_sky: 500,
   desert_crown: 500,
   walkure: 500,
+  battle_5: 500,
   kiss_mystery: 500,
   dear_santa: 500,
   winter_fall: 500
@@ -65261,6 +65267,7 @@ const RHYTHM_SONG_BUNDLE_OWNER = Object.freeze({
   erfolg_piano: 'erfolg',
   beyond_the_same_sky_short: 'beyond_the_same_sky',
   walkure_short: 'walkure',
+  battle_5_short: 'battle_5',
   kiss_mystery_short: 'kiss_mystery',
   dear_santa_short: 'dear_santa',
   winter_fall_short: 'winter_fall'
