@@ -12,12 +12,19 @@
 //   ・文節の途中での改行(道具 Intl.Segmenter の言葉の切れ目でない・ひらがなの言葉の途中・漢字/カタカナのあと助詞の手前・名前/日時/かっこの中・行頭に来てはいけない字)
 //   ・1文字だけの行 ・はみ出し/切れ(字が画面や枠の外) ・「{」「}」「〔」「〕」がそのまま出ている
 // 出力は小さく: 画面ごとの崩れの件数と、上から数件だけ
+// 文の元(ここに名前を書いておくと、run-checks --changed がこの検査を選ぶ。文を足したときに落ちる):
+//   monster-hero/data/assistants.js(お話)・monster-hero/data/changelog.js・monster-hero/data/help.js・
+//   79-screen-xmas-event.jsx・79-screen-xmas-novel.jsx・79-xmas-novel-script.jsx・35-raid-xmas.jsx・21-assistant.jsx・41-screen-ui.jsx
+const DATA_FILES = [path.join('monster-hero', 'data', 'assistants.js'), path.join('monster-hero', 'data', 'changelog.js'), path.join('monster-hero', 'data', 'help.js')];
+void DATA_FILES;
 const http = require('http'), path = require('path'), fs = require('fs');
 const seeds = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
 const ROOT = path.resolve(__dirname, '..', '..');
 const PORT = 8979;
 const VERBOSE = !!process.env.NV_WRAP_VERBOSE;
 const ONLY = process.env.NV_ONLY || '';
+// SHOT_DIR=<フォルダ> で、画面ごとに最初の1枚を撮る(直す前と後を並べる用)
+const SHOT_DIR = process.env.SHOT_DIR ? path.resolve(process.env.SHOT_DIR) : '';
 let failed = 0;
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.PNG': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.json': 'application/json', '.mp3': 'audio/mpeg', '.svg': 'image/svg+xml', '.woff2': 'font/woff2' };
@@ -141,6 +148,7 @@ const SCAN = () => {
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   const total = { texts: 0, issues: [] };
   const byScreen = {};
+  const shotTaken = new Set();
   try {
     for (const vp of VPS) {
       const ctx = await browser.newContext({ viewport: vp.viewport, hasTouch: true, isMobile: true, deviceScaleFactor: 1 });
@@ -170,6 +178,8 @@ const SCAN = () => {
         total.texts += r.texts; total.issues.push(...r.issues);
         byScreen[screen] = byScreen[screen] || { texts: 0, issues: 0 };
         byScreen[screen].texts += r.texts; byScreen[screen].issues += r.issues.length;
+        const shotName = `${vp.key}-${screen.replace(/[()（）]/g, '_')}`;
+        if (SHOT_DIR && !shotTaken.has(shotName)) { shotTaken.add(shotName); fs.mkdirSync(SHOT_DIR, { recursive: true }); await page.screenshot({ path: path.join(SHOT_DIR, `${shotName}.jpg`), type: 'jpeg', quality: 72 }); }
         return r;
       };
       // お話(HOME で流れる・序章)を最後までめくる。文が変わったときだけ測る
