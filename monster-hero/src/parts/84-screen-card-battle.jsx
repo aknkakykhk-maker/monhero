@@ -1791,7 +1791,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   const choice = mode === 'choose' ? (() => {
     const ch = st.pendingChoice;
     const list = ch.src === 'oppHand' ? st.players[CARD_CPU].hand : ch.src === 'hand' ? me.hand : me.discard;
-    const title = { toHand: '手札に加えるカードを選ぶ', toDeckBottom: '山札の一番下へ戻すカードを選ぶ', toDeckShuffleDraw: '山札に戻すカードを選ぶ', discardDraw2: '捨てるカードを選ぶ', oppDiscard: '相手に捨てさせるカードを選ぶ' }[ch.then] || 'カードを選ぶ';
+    const title = { toHand: '手札に加えるカードを選ぶ', toDeckBottom: '山札の1番下へ戻すカードを選ぶ', toDeckShuffleDraw: '山札に戻すカードを選ぶ', discardDraw2: '捨てるカードを選ぶ', oppDiscard: '相手に捨てさせるカードを選ぶ' }[ch.then] || 'カードを選ぶ';
     return { title, from: (cardOf(db, ch.card) || {}).name || '', items: ch.cands.map((i) => ({ i, no: list[i], c: cardOf(db, list[i]) })) };
   })() : null;
   const guardOpts = mode === 'guard' ? cardGuardOptions(db, st).filter(tutAllow) : [];
@@ -2655,7 +2655,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
           {st.winner === CARD_ME && <CardConfetti/>}
           <b data-card-end-title className={`mh-card-end-title relative block font-black italic leading-none ${st.winner === CARD_ME ? 'text-amber-200 [-webkit-text-stroke:2px_#7c2d12] [text-shadow:0_6px_0_#7c2d12,0_0_40px_rgba(251,191,36,.9)]' : 'text-slate-300 [text-shadow:0_4px_0_#0f172a]'}`}
             style={{ fontSize: st.winner === CARD_ME ? 'clamp(64px, 22vw, 96px)' : 'clamp(44px, 15vw, 64px)' }}>{st.winner === CARD_ME ? 'WIN!' : 'LOSE'}</b>
-          <span className={`relative mt-2 rounded-xl bg-slate-950/70 px-4 py-1 text-center text-[15px] font-black [text-shadow:0_2px_4px_rgba(0,0,0,.8)] ${st.winner === CARD_ME ? 'text-white' : 'text-slate-300'}`} style={JA_LABEL_STYLE}>{st.winner === CARD_ME ? `${who.name}に勝った！` : 'おしかった！ もう一回いってみよう'}</span>
+          <span className={`relative mt-2 rounded-xl bg-slate-950/70 px-4 py-1 text-center text-[15px] font-black [text-shadow:0_2px_4px_rgba(0,0,0,.8)] ${st.winner === CARD_ME ? 'text-white' : 'text-slate-300'}`} style={JA_LABEL_STYLE}>{st.winner === CARD_ME ? `${who.name}に勝った！` : 'おしかった！ もう1回いってみよう'}</span>
           <span className="absolute bottom-5 text-[12px] font-bold text-white/70">タップで次へ</span>
         </div>
       )}
@@ -3683,7 +3683,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       const ok = await persist({ point: save.point + w.point }, {}, [
         { key: CARD_SAVE_KEYS.weeklyReward, before: raw, next: [...claims, w.id].slice(-30) },
       ]);
-      if (!ok) { setNotice('保存できませんでした。もう一度お試しください'); return; }
+      if (!ok) { setNotice('保存できませんでした。もう1度お試しください'); return; }
       setWeekly((l) => l.filter((x) => x.id !== w.id));
       setNotice(`週間報酬を受け取りました(ビートP +${w.point.toLocaleString()})`);
     } finally { setWeeklyBusy(false); }
@@ -3704,7 +3704,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         const credited = cardShareNormalizeClaims(await storeGet(CARD_SHARE_REWARD_KEY, null));
         if (!id || !credited) return;
         setDeckRewards(await cardSharePendingRewards(id, credited));
-      } catch (_) { /* 通信できないときは出さない(次に開いたときにもう一度) */ }
+      } catch (_) { /* 通信できないときは出さない(次に開いたときにもう1度) */ }
     })();
   }, [save ? 1 : 0, screen]);
   const claimDeckRewards = async () => {
@@ -3720,7 +3720,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       const ok = await persist({ point: save.point + total }, {}, [
         { key: CARD_SHARE_REWARD_KEY, before: raw, next: [...credited, ...todo.map((r) => r.day)].slice(-60) },
       ]);
-      if (!ok) { setNotice('保存できませんでした。もう一度お試しください'); return; }
+      if (!ok) { setNotice('保存できませんでした。もう1度お試しください'); return; }
       setDeckRewards([]);
       setNotice(`デッキ登録の報酬を受け取りました(ビートP +${total.toLocaleString()})`);
     } finally { setDeckRewardBusy(false); }
@@ -4192,7 +4192,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             if (!g) { setNotice('スターターはもう受け取っています'); setView('top'); return; }
             const before = save.collection;
             const ok = await persist(g);
-            setNotice(ok ? `「${pick.name}」を受け取りました。ビートP${CARD_STARTER_POINT}もいっしょに！` : '保存できませんでした。もう一度お試しください');
+            setNotice(ok ? `「${pick.name}」を受け取りました。ビートP${CARD_STARTER_POINT}もいっしょに！` : '保存できませんでした。もう1度お試しください');
             // 受け取ったら、ブースターパックと同じ画面で開けて中身を見せてから練習試合へ(2026-10-27 社長「最初に手に入れたときも」)。
             //   ここを通るのは、まだスターターを持っていない人だけ(cardGrantStarter が2回目を断る)なので、もう持っている人には出ない
             if (ok) { setStarterOpen(cardStarterOpenResult(db, kitPick, before, false)); setView('starter-open'); }
@@ -4680,7 +4680,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             {result.auto && <div data-card-result-auto={result.auto.paid ? 'paid' : 'free'} className="mt-1 text-[12px] font-black text-sky-200" style={JA_LABEL_STYLE}>
               {jaWrap(result.auto.paid ? '🤖 オートで挑みました(ごほうびは自分で戦うときの半分)' : '🤖 オートで挑みました(今日のごほうびは終わっていたので、ごほうびなし)')}</div>}
             {/* オートのごほうびの残りの札と、その場でセッション券でふやすボタン(2026-11-07 社長「ここに残りのごほうび回数とこの場でセッション券で増やすボタンもほしい」)。
-                ふやしたら、下の「もう一度」でごほうびありの対戦ができる(ごほうびは対戦の終わりに残りを読み直して決める) */}
+                ふやしたら、下の「もう1度」でごほうびありの対戦ができる(ごほうびは対戦の終わりに残りを読み直して決める) */}
             {result.auto && !result.demo && typeof CardAutoRewardBar === 'function' && <CardAutoRewardBar info={autoInfo} tickets={Number.isInteger(sessionTickets) ? sessionTickets : 0}
               onAdd={typeof onUseSessionTicket === 'function' && typeof cardAutoRewardAddExtra === 'function' ? () => { setAutoTicketNote(''); setAutoTicketAsk(true); } : null} note={autoTicketNote}/>}
             <div className="mt-1 text-[12px] font-bold text-slate-300">いまのビートP: {save.point}</div>
@@ -4692,7 +4692,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         <div className={`${SCREEN_FOOTER_CLASS} grid grid-cols-2 gap-2`}>
           {!result.replay && result.replayRec && <button type="button" data-card-result-replay="auto" className={`${btn} mh-button-secondary col-span-2 border border-sky-300/40 bg-slate-800`} onClick={() => { Audio_.fgSe.tap(); openReplayRec(result.replayRec, 'result'); }}>この対戦を見る</button>}
           {result.replay && <button type="button" data-card-result-replay className={`${btn} mh-button-secondary col-span-2 border border-sky-300/40 bg-slate-800`} onClick={() => { Audio_.fgSe.tap(); void openReplay(result.replay, 'result'); }}>この対戦を見る</button>}
-          <button type="button" className={`${btn} mh-button-primary`} onClick={() => { if (result.share) { startBattle({ who: result.share.tactics.habit, level: result.level, share: result.share }, activeDeck, result.auto ? { auto: { tactics: result.auto.tactics, quick: !!result.auto.quick } } : {}); return; } const again = { who: result.who, level: result.level }; setFoe(again); setDeckPick({ next: 'cpu', pick: again }); setView('deckPick'); }}>もう一度</button>
+          <button type="button" className={`${btn} mh-button-primary`} onClick={() => { if (result.share) { startBattle({ who: result.share.tactics.habit, level: result.level, share: result.share }, activeDeck, result.auto ? { auto: { tactics: result.auto.tactics, quick: !!result.auto.quick } } : {}); return; } const again = { who: result.who, level: result.level }; setFoe(again); setDeckPick({ next: 'cpu', pick: again }); setView('deckPick'); }}>もう1度</button>
           <button type="button" className={`${btn} mh-button-secondary border border-white/20 bg-slate-800`} onClick={() => setView(result.share ? 'share' : 'foe')}>相手を選ぶ</button>
         </div>
         {autoTicketSheet}
@@ -4822,7 +4822,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     const startLevelPanel = (
           <div data-card-setting="startLevel" className="mt-2.5 border-t border-white/10 pt-2.5">
             <b className="block text-[12px] font-black text-slate-200">フリー対戦の最初の強さ</b>
-            <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{cardJaWrap('相手選びを開いたときに、はじめに選ばれている強さです。まだ開いていない強さのときは、開いている中で一番近い強さになります。')}</p>
+            <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{cardJaWrap('相手選びを開いたときに、はじめに選ばれている強さです。まだ開いていない強さのときは、開いている中で1番近い強さになります。')}</p>
             <div className="mt-2 grid grid-cols-3 gap-1.5">
               {CARD_START_LEVEL_OPTIONS.map((o) => (
                 <button key={o.id} type="button" data-card-start-level={o.id} aria-pressed={startLevel === o.id}

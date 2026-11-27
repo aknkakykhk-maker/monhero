@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fd2c85676d36ac73
+// generated-sha256: bd98df96c587651b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -340,7 +340,7 @@ const BATTLE_FX_SETTING_ITEMS = Object.freeze([
       { id:'RICH', label:'豪華', note:'全ての飾りと演出' },
       { id:'STANDARD', label:'標準', note:'飾りの動きを止める' },
       { id:'LIGHT', label:'軽め', note:'待機の動きも止める' },
-      { id:'MINIMAL', label:'最軽量', note:'一番軽い表示' },
+      { id:'MINIMAL', label:'最軽量', note:'1番軽い表示' },
     ] },
   { key:'autoLoad', title:'重いときは自動で軽く',
     desc:'タクティクス新画面で動きのかくつきが続いたとき、画面の軽さを一段ずつ自動で下げます（「軽め」まで）。下げたぶんは、アプリを開き直すか画面の軽さを選び直すと元に戻ります。ダメージや進行は変わりません。',
@@ -673,7 +673,7 @@ const isSpeciesChallengeUnlocked = (clearCounts) => SPECIES_CHALLENGE_UNLOCK_DIF
 // ここへ書かない(カード側のDEBUGバッジで分ける)。
 const SPECIES_CHALLENGE_MODE = Object.freeze({
   id:BATTLE_MODE_SPECIES_CHALLENGE, label:'種族チャレンジ', short:'種族', emoji:'🧬', color:'#67e8f9',
-  tagline:'一つの種族だけで挑む、しばりプレイのモード',
+  tagline:'1つの種族だけで挑む、しばりプレイのモード',
   highlights:[
     ['🧬','ひとつの種族だけでWAVE1〜10'],
     ['🔓','種族別に難易度を解放していく'],
@@ -734,7 +734,7 @@ const TACTICS_SPECIES_MODE = Object.freeze({
   id:BATTLE_MODE_TACTICS_SPECIES, label:'タクティクス種族チャレンジ', cardLabel:'種族チャレンジ', short:'種族', emoji:'🧬', color:'#67e8f9',
   // ★「敵の予告を読んで誰を守るか」はタクティクスの3モードすべてにあるので売りに書かない。
   //   クラシックの種族チャレンジと同じ3行にそろえる(見比べる列をそろえるため)
-  tagline:'一つの種族だけで挑む、しばりプレイのモード',
+  tagline:'1つの種族だけで挑む、しばりプレイのモード',
   highlights:[
     ['🧬','ひとつの種族だけでWAVE1〜10'],
     ['🔓','種族別に難易度を解放していく'],
@@ -767,7 +767,7 @@ const TACTICS_PRO_MODE = Object.freeze({
     ['⚔️','編成','育てたマスモンは1体も連れていけません。全員が素のベースモンです。積み上げたステータス・強化ポイント・固有技レベル・限界突破は、このモードでは一切使えません。'],
     ['❤️','ステータスの持ち方','ライフ・ちから・丈夫さ・ガッツを1体ずつ持ちます(クラシックバトルはパーティ全員ぶんの合計)。倒れたモンスターはその場では戦えなくなり、ライフが満タンまで戻ると立ち上がります。全員が倒れたときだけ負けです。'],
     ['📈','WAVEのあいだの強化','WAVEをクリアするたびに強化フェーズがあります。素の状態から始まるぶん、誰をどこまで伸ばすかの判断がそのまま結果に出ます。'],
-    ['👹','難しさ','難易度は通常9段階と極限5段階です。敵は間合い攻撃・連撃・貫通撃・攻撃力アップなどを使い分け、どの技が来るかは1ターン前に予告されます。育てた個体に頼れないぶん、読み合いの比重が一番大きいモードです。'],
+    ['👹','難しさ','難易度は通常9段階と極限5段階です。敵は間合い攻撃・連撃・貫通撃・攻撃力アップなどを使い分け、どの技が来るかは1ターン前に予告されます。育てた個体に頼れないぶん、読み合いの比重が1番大きいモードです。'],
     ['💎','もらえる経験値とダイヤ','絆経験値が3倍、ブリーダー経験値が1.5倍になります（難易度の倍率にさらにかかります）。ダイヤとスコアの倍率は難易度の設定どおりです。'],
     ['🏆','スコアと記録','スコアはこのモード専用の全国ランキングに反映されます。自己ベスト・最高到達WAVE・クリア回数も専用の場所に残り、ほかのモードの記録は書き換わりません。'],
     ['🤝','供モンの加入','始める前に供モンの候補を5体選びます。実際に加入候補として出るのは、その5体からランダムに選ばれた3体です。加わるとそのぶん敵も強くなります。'],
@@ -1056,7 +1056,7 @@ const BATTLE_MODES = [
     points: [
       ['⚔️', '編成', 'ベースモンもマスモンも自由に連れていけます。勇者モン1体と供モンで挑みます。'],
       ['📈', 'WAVEのあいだの強化', 'WAVEをクリアするたびに強化フェーズがあります。ちから・丈夫さ・ライフ・ガッツのどれを伸ばすかを自分で選べるので、編成のかみ合わせを考えながら組み立てられます。ブリーダーの教えもここで選びます。'],
-      ['👹', '難しさ', '9段階の難易度から選べます。強化を自分で選べるぶん、うまく組み立てれば高い難易度でも十分に戦えます。育てたマスモンをそのまま活かせる、一番素直な難しさです。'],
+      ['👹', '難しさ', '9段階の難易度から選べます。強化を自分で選べるぶん、うまく組み立てれば高い難易度でも十分に戦えます。育てたマスモンをそのまま活かせる、1番素直な難しさです。'],
       ['💎', 'もらえる経験値とダイヤ', 'ブリーダー経験値・絆経験値・ダイヤは、どれも難易度の設定どおりの倍率です。モードによる上乗せはありません。'],
       ['🏆', 'スコアと記録', 'スコアは難易度ごとの全国ランキングに反映されます。自己ベストスコア・最高到達WAVE・クリア回数も難易度ごとに残ります。'],
       ['🤝', '供モンの加入', '決まったWAVEで供モンが加わります。加わるモンスターは所持しているモンスターから選べます。'],
@@ -1074,10 +1074,10 @@ const BATTLE_MODES = [
       ['🚫', 'スコアランキングは無し'],
     ],
     points: [
-      ['⚔️', '編成', 'ベースモンもマスモンも自由に連れていけます。育てたいモンスターを勇者モンにすると、そのモンスターの絆経験値が一番多く貯まります。'],
+      ['⚔️', '編成', 'ベースモンもマスモンも自由に連れていけます。育てたいモンスターを勇者モンにすると、そのモンスターの絆経験値が1番多く貯まります。'],
       ['📈', 'WAVEのあいだの強化', '強化を選ぶ画面は出ません。かわりにWAVEをクリアするたび、味方全員の全ステータス（ライフ・ちから・丈夫さ・ガッツ）がそのときの値から10%上がり、ライフとガッツが満タンまで回復します。'],
       ['👹', '難しさ', '9段階の難易度から選べます。強化を選べないぶん苦手をふさぎにくく、チャレンジモードとは違う難しさがあります。育成が目的なので、無理のない難易度で回すのが向いています。'],
-      ['💎', 'もらえる経験値とダイヤ', 'ブリーダー経験値・絆経験値・ダイヤが、難易度の倍率にさらに1.5倍かかります。同じ時間で一番多く育つのがこのモードです。'],
+      ['💎', 'もらえる経験値とダイヤ', 'ブリーダー経験値・絆経験値・ダイヤが、難易度の倍率にさらに1.5倍かかります。同じ時間で1番多く育つのがこのモードです。'],
       ['🏆', 'スコアと記録', 'スコアは競いません。ランキングには載らず、チャレンジモードの自己ベストも書き換わりません。記録はクイック専用の場所に、最高到達WAVEとクリア回数として残ります。'],
       ['🤝', '供モンの加入', '決まったWAVEで供モンが加わります。加わったあと、味方の誰か1体の固有技がランダムで1レベル上がります（上限Lv.8）。技を選ぶ画面は出ません。'],
       ['⭐', 'マスモン登録', '勇者モンにしたモンスターは、プレイが終わったあとマスモンとして登録できます。'],
@@ -1155,7 +1155,7 @@ const BATTLE_SYSTEMS = Object.freeze([
       Object.freeze(['✨', '勇者特性', '勇者モンにしたモンスターの特性だけが、パーティ全体へ効きます。供モンが同じ特性を持っていても効かないので、誰を勇者モンにするかが編成の要になります。']),
       Object.freeze(['📈', 'WAVEのあいだの強化', 'WAVEをクリアするたびに強化フェーズがあります。ちから・丈夫さ・ライフ・ガッツのどれを伸ばすかを自分で選び、ブリーダーの教えもここで選びます。編成のかみ合わせを考えながら組み立てられます。']),
       Object.freeze(['👹', '難しさ', '通常の9段階に加えて、その上に極限の段があります。難易度選びの「極限」タブから挑め、段ごとに特殊ルールが付きます。']),
-      Object.freeze(['🎮', '中にあるモード', 'チャレンジモード（基本）、種族チャレンジ（一つの種族だけで挑む）、プロモード（ベースモンだけで挑む）の3つです。']),
+      Object.freeze(['🎮', '中にあるモード', 'チャレンジモード（基本）、種族チャレンジ（1つの種族だけで挑む）、プロモード（ベースモンだけで挑む）の3つです。']),
       Object.freeze(['🏆', 'スコアと記録', 'スコアは難易度ごとの全国ランキングに反映されます。自己ベスト・最高到達WAVE・クリア回数はモードごとに別々に残ります。']),
       Object.freeze(['🎯', 'こんな人におすすめ', 'じっくり考えて攻略したい人、ランキング上位や自己ベスト更新を狙いたい人向けです。']),
     ]),
@@ -1194,7 +1194,7 @@ const BATTLE_SYSTEMS = Object.freeze([
     ]),
     note: '中のモードは1つだけなので、選ぶとそのまま難易度選びへ進みます',
     points: Object.freeze([
-      Object.freeze(['💎', 'もらえるもの', 'ブリーダー経験値・絆経験値・ダイヤが、難易度の倍率にさらに1.5倍かかります。同じ時間で一番多く育つのがこのモードです。']),
+      Object.freeze(['💎', 'もらえるもの', 'ブリーダー経験値・絆経験値・ダイヤが、難易度の倍率にさらに1.5倍かかります。同じ時間で1番多く育つのがこのモードです。']),
       Object.freeze(['📈', '強化のかわり', '強化を選ぶ画面は出ません。かわりにWAVEをクリアするたび、味方全員のライフ・ちから・丈夫さ・ガッツがそのときの値から10%上がり、ライフとガッツが満タンまで回復します。']),
       Object.freeze(['🔁', '放置で周回する', 'AUTO∞を使うと、10WAVEをクリアしたあとそのまま次の周へ入ります。置いておくだけで育つので、育成の周回と相性がいい遊び方です。']),
       Object.freeze(['⏩', 'スキップチケット', 'このモードでだけ使えます。チケットのある難易度は、戦わずに一気にクリアぶんの報酬を受け取れます。']),
@@ -4816,7 +4816,7 @@ const TRAINING_TOOLS = Object.freeze({
  feather:{name:'加速の羽',emoji:'🪽',timing:'サイコロを振る前',mode:'消費型',desc:'次の出目に＋2'}, gale:{name:'疾風のお守り',emoji:'🌪️',timing:'サイコロを振る前',mode:'消費型',desc:'2回振り、高い出目を採用'}, reroll:{name:'振り直しの石',emoji:'🪨',timing:'出目の確定後・移動前',mode:'消費型',desc:'確定した出目を1回だけ振り直す'}, noReturn:{name:'戻らずのお守り',emoji:'🧿',timing:'持っているだけで効く',mode:'自動発動型',desc:'次に戻されるのを1回だけ防いで、なくなる'}, sand:{name:'時の砂',emoji:'⏳',timing:'移動していない時',mode:'消費型',desc:'残りターン＋1'}, fixed:{name:'確定サイコロ',emoji:'🎲',timing:'サイコロを振る前',mode:'消費型',desc:'次の出目を1・2・3から選択'}, returnCharm:{name:'帰還のお守り',emoji:'🏮',timing:'持っているだけで効く',mode:'自動発動型',desc:'ゴール失敗時、仮獲得した通常アイテムから1個選んで保護'},
 });
 const TRAINING_SPACE_TYPES = Object.freeze({
- start:{kind:'start',label:'スタート',emoji:'🚩',color:'#475569',desc:'修行の開始地点'}, xp30:{kind:'xp',value:30,label:'絆EXP',emoji:'💗',color:'#16a34a',desc:'仮獲得絆経験値＋30'}, xp60:{kind:'xp',value:60,label:'大EXP',emoji:'💖',color:'#15803d',desc:'仮獲得絆経験値＋60'}, gem50:{kind:'diamond',value:50,label:'ダイヤ',emoji:'💎',color:'#0891b2',desc:'仮獲得ダイヤ＋50'}, gem100:{kind:'diamond',value:100,label:'大ダイヤ',emoji:'💠',color:'#2563eb',desc:'仮獲得ダイヤ＋100'}, item:{kind:'item',value:'training_ticket',label:'アイテム',emoji:'🎁',color:'#ec4899',desc:'仮獲得通常アイテムを1個追加'}, tool:{kind:'tool',label:'修行道具',emoji:'🎒',color:'#d946ef',desc:'修行で使う道具を1つもらう'}, forward:{kind:'move',value:1,label:'前進',emoji:'⏩',color:'#16a34a',desc:'1～3マス追加移動（停止マスだけ発動）'}, back:{kind:'move',value:-1,label:'後退',emoji:'⏪',color:'#dc2626',desc:'1～3マス戻る（停止マスだけ発動）'}, turnPlus:{kind:'turn',value:1,label:'ターン＋',emoji:'⏱️',color:'#059669',desc:'残りターン＋1'}, turnMinus:{kind:'turn',value:-1,label:'ターン－',emoji:'⚡',color:'#b91c1c',desc:'残りターン－1'}, boost:{kind:'effect',value:'boost',label:'強化',emoji:'✨',color:'#ca8a04',desc:'次回のサイコロ出目＋1'}, again:{kind:'effect',value:'again',label:'もう一度',emoji:'🔁',color:'#0d9488',desc:'ターンを消費せず再度サイコロ'}, happening:{kind:'happening',label:'ハプニング',emoji:'⁉️',color:'#9333ea',desc:'良い効果または悪い効果が発動'}, goal:{kind:'goal',label:'ゴール',emoji:'🏁',color:'#eab308',desc:'到達または通過で修行成功'},
+ start:{kind:'start',label:'スタート',emoji:'🚩',color:'#475569',desc:'修行の開始地点'}, xp30:{kind:'xp',value:30,label:'絆EXP',emoji:'💗',color:'#16a34a',desc:'仮獲得絆経験値＋30'}, xp60:{kind:'xp',value:60,label:'大EXP',emoji:'💖',color:'#15803d',desc:'仮獲得絆経験値＋60'}, gem50:{kind:'diamond',value:50,label:'ダイヤ',emoji:'💎',color:'#0891b2',desc:'仮獲得ダイヤ＋50'}, gem100:{kind:'diamond',value:100,label:'大ダイヤ',emoji:'💠',color:'#2563eb',desc:'仮獲得ダイヤ＋100'}, item:{kind:'item',value:'training_ticket',label:'アイテム',emoji:'🎁',color:'#ec4899',desc:'仮獲得通常アイテムを1個追加'}, tool:{kind:'tool',label:'修行道具',emoji:'🎒',color:'#d946ef',desc:'修行で使う道具を1つもらう'}, forward:{kind:'move',value:1,label:'前進',emoji:'⏩',color:'#16a34a',desc:'1～3マス追加移動（停止マスだけ発動）'}, back:{kind:'move',value:-1,label:'後退',emoji:'⏪',color:'#dc2626',desc:'1～3マス戻る（停止マスだけ発動）'}, turnPlus:{kind:'turn',value:1,label:'ターン＋',emoji:'⏱️',color:'#059669',desc:'残りターン＋1'}, turnMinus:{kind:'turn',value:-1,label:'ターン－',emoji:'⚡',color:'#b91c1c',desc:'残りターン－1'}, boost:{kind:'effect',value:'boost',label:'強化',emoji:'✨',color:'#ca8a04',desc:'次回のサイコロ出目＋1'}, again:{kind:'effect',value:'again',label:'もう1度',emoji:'🔁',color:'#0d9488',desc:'ターンを消費せず再度サイコロ'}, happening:{kind:'happening',label:'ハプニング',emoji:'⁉️',color:'#9333ea',desc:'良い効果または悪い効果が発動'}, goal:{kind:'goal',label:'ゴール',emoji:'🏁',color:'#eab308',desc:'到達または通過で修行成功'},
 });
 // 接続先を持つ24ノード。3回分岐し、安全な短路と報酬の遠回りが再合流する。
 const TRAINING_BEGINNER_NODES = Object.freeze([
@@ -4905,7 +4905,7 @@ const BGM_TRACKS = [
   // モンビーの新曲(2026-09-14)。m4aで受け取った音源から映像とタグを落として入れたもの
   { id:'melo_the_city_beneath_the_comets', name:'The City Beneath the Comets', creator:'オリジナル', src:'audio/bgm-the-city-beneath-the-comets.mp3', gain:1, loop:true },
   // 「ドラ」さんのゲーム「CREATE MONSTERS」の曲(2026-09-14)。本人の許可を得て入れている
-  { id:'melo_mou_hitotsu_no_sekai_e', name:'もう一つの世界へ', creator:'ドラ', src:'audio/bgm-mou-hitotsu-no-sekai-e.mp3', gain:1, loop:true },
+  { id:'melo_mou_hitotsu_no_sekai_e', name:'もう1つの世界へ', creator:'ドラ', src:'audio/bgm-mou-hitotsu-no-sekai-e.mp3', gain:1, loop:true },
   // モンビーの新曲(2026-09-28)。mp4で受け取った音源から映像とタグを落として入れたもの
   { id:'melo_only_my_railgun', name:'only my railgun', creator:'オリジナル', src:'audio/bgm-only-my-railgun.mp3', gain:1, loop:true },
   { id:'melo_big_bridge_no_shitou', name:'ビッグブリッヂの死闘', creator:'オリジナル', src:'audio/bgm-big-bridge-no-shitou.mp3', gain:1, loop:true },
@@ -5720,7 +5720,7 @@ const RHYTHM_FX_HELP = Object.freeze({
   stageBright:'ライブ背景の明るさです。既定は「おまかせ」（これまでどおり100%）。ノーツが背景に紛れて見づらいときは下げてください。',
   searchlight:'左右から揺れるサーチライトを出すかです。既定は「おまかせ」（ライブ背景が「派手」「ライブ」で、演出量が「最小」でないときに出ます）。\n「出す」を選ぶと、ライブ背景・演出量・軽量モードに関係なく出ます。',
   sparks:'背景に舞う光の粒の量です。既定は「おまかせ」（サーチライトと同じときに出ます）。「少ない」は手前の粒だけにします。',
-  laser:'「ライブ」の背景で、小節ごとに向きと色を変えて走るレーザーです。既定は「おまかせ」。\n絵を描くのが得意な専用の部分（GPU）が無い端末では出せません。一番重い演出の1つです。',
+  laser:'「ライブ」の背景で、小節ごとに向きと色を変えて走るレーザーです。既定は「おまかせ」。\n絵を描くのが得意な専用の部分（GPU）が無い端末では出せません。1番重い演出の1つです。',
   penlight:'「ライブ」の背景で、道の両側に並ぶ観客のペンライトの量です。既定は「おまかせ」。「少ない」は本数を半分ほどにします。\nGPU が無い端末では出せません。重い演出の1つです。',
   timingLight:'ノーツが判定ラインへ来るタイミングで、背景が光る演出です。既定は「おまかせ」（ライブ背景が「シンプル」以外のときに出ます）。',
   beatLine:'曲の拍ごとに、細い線が道の奥から流れてくる演出です。小節の頭では明るい線になります。既定は「おまかせ」（「道の演出」どおり）。',
@@ -16476,7 +16476,7 @@ const enemyActionProbabilities = (ent,currentDist,state={}) => {
 // 段: 0 いまのまま / 1 間合いを読む / 2 状況を読む / 3 技をつなぐ(上の段は下の段を全部含む)
 const TACTICS_ENEMY_AI_LEVELS = Object.freeze([
   Object.freeze({id:0,label:'いまのまま',note:'決まった重みのくじ(本番と同じ)'}),
-  Object.freeze({id:1,label:'間合いを読む',note:'移動先を「味方の攻めが一番弱まる間合い」に。いまが一番ましなら動かない'}),
+  Object.freeze({id:1,label:'間合いを読む',note:'移動先を「味方の攻めが1番弱まる間合い」に。いまが1番ましなら動かない'}),
   Object.freeze({id:2,label:'状況を読む',note:'様子見をしない・減ってから再生・削られてからの咆哮はしない・空振りの間合い攻撃はしない'}),
   Object.freeze({id:3,label:'技をつなぐ',note:'咆哮→ためる→必殺技・弱った味方がいれば必殺技・ガードの厚い相手に貫通の構え'}),
 ]);
@@ -23717,9 +23717,9 @@ const rhythmQuietModeSupportText=()=>{
   const can=rhythmQuietModeCan();
   const tail='通知そのものを止めることはブラウザからはできないので、確実に止めたいときは端末の「集中モード」もお使いください。';
   if(can.fullscreen&&can.wakeLock)
-    return `この端末では、演奏のあいだだけ全画面にして、画面が消えないようにできます。全画面のあいだは画面一番上の通知バーが隠れるので、通知が降りてくる表示も出にくくなります。${tail}`;
+    return `この端末では、演奏のあいだだけ全画面にして、画面が消えないようにできます。全画面のあいだは画面1番上の通知バーが隠れるので、通知が降りてくる表示も出にくくなります。${tail}`;
   if(can.fullscreen)
-    return `この端末では、演奏のあいだだけ全画面にできます。全画面のあいだは画面一番上の通知バーが隠れます。画面が消えないようにする機能はこのブラウザにはありません。${tail}`;
+    return `この端末では、演奏のあいだだけ全画面にできます。全画面のあいだは画面1番上の通知バーが隠れます。画面が消えないようにする機能はこのブラウザにはありません。${tail}`;
   if(can.wakeLock)
     return `この端末では、演奏のあいだ画面が消えないようにできます。全画面にする機能がこのブラウザには無いため、通知バーは隠せません。${tail}`;
   return `この端末のブラウザでは、全画面にすることも画面が消えないようにすることもできません。ONにしても何も起きないので、通知を止めたいときは端末の「集中モード」をお使いください。`;
@@ -24229,7 +24229,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
                   (2026-09-13・ユーザー指摘「設定にもなってない」。決めるのは測り終わった画面) */}
               {calibrationResult&&<div data-rhythm-calibrator-result className="mt-2 rounded-xl border border-amber-300/50 bg-amber-950/30 p-2 text-[11px] leading-relaxed text-amber-100">
                 <p><b className="tabular-nums">{calibrationResult.offsetMs>0?'+':''}{calibrationResult.offsetMs}ms</b> にしました。叩いた{calibrationResult.usedCount}回の平均は {calibrationResult.rawMeanMs>0?'+':''}{calibrationResult.rawMeanMs}ms（ばらつき±{calibrationResult.spreadMs}ms{calibrationResult.droppedCount>0?`／${calibrationResult.droppedCount}回は外れ値として除外`:''}）でした。</p>
-                {!calibrationResult.stable&&<p style={JA_WRAP_STYLE} className="mt-1 font-black text-rose-300">{jaWrap('ばらつきが大きめです。もう一度合わせると、より合った値になります。')}</p>}
+                {!calibrationResult.stable&&<p style={JA_WRAP_STYLE} className="mt-1 font-black text-rose-300">{jaWrap('ばらつきが大きめです。もう1度合わせると、より合った値になります。')}</p>}
                 <button type="button" data-rhythm-calibrator-dismiss onClick={()=>onClearCalibration&&onClearCalibration()} className="mt-2 min-h-[44px] w-full rounded-xl border border-white/20 bg-slate-800 text-[12px] font-black">閉じる</button>
               </div>}
             </>,'判定窓の幅は変えず、表示と入力の基準を同じ量だけ補正します。1ms刻みで動かせます。数字で決めにくいときは「実際の画面で合わせる」を押してください。いつもの演奏画面が開き、判定とFAST／SLOWを見ながら2拍ごとのノーツを叩きます。初めの4回は数えず、そのあとの16回のずれから合う値を出して、その場で「この値にする」を選べます。ライフは減らず、記録にも残りません。',{full:true})}
@@ -24462,7 +24462,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
                 <span className={`block px-0.5 ${wide?'py-2.5':'py-1.5'}`}>{preset.label}</span></button>;})}</div>
               {!rhythmLookPresetOf(draft)&&<p style={JA_WRAP_STYLE} data-rhythm-look-custom className="mt-1.5 text-center text-[10px] font-bold text-cyan-100/80">{jaWrap('いまは自分で選んだ組み合わせです')}</p>}
             </div>,
-              '演奏中の見た目の設定（演出量・ライブ背景・道の演出・判定の演出・ノーツの動き・コンボの節目・にじむ光）を、1回押すだけでまとめて切り替えます。絵は、それぞれの見た目で同じ曲の同じ場面を演奏しているところです。音・判定・操作・画質の設定は変わりません。切り替えたあとも、この下で1つずつ変えられます。\n「軽さ優先」＝一番軽い見た目です。端末が熱くなるとき・カクつくときに。\n「標準」＝最初の設定と同じ見た目です。\n「華やか」＝曲のジャケットの背景・サーチライト・道の演出・判定の演出・ノーツの動き・コンボの節目が加わります。\n「全部のせ」＝一番華やかな見た目です（ライブ背景「ライブ」・にじむ光も入ります。にじむ光は描画方式が WebGL のときだけ効きます）。重くなるので、カクつくときは「華やか」以下にしてください。\n押しただけではまだ保存されません。下の「保存」を押してください。',{full:true})}
+              '演奏中の見た目の設定（演出量・ライブ背景・道の演出・判定の演出・ノーツの動き・コンボの節目・にじむ光）を、1回押すだけでまとめて切り替えます。絵は、それぞれの見た目で同じ曲の同じ場面を演奏しているところです。音・判定・操作・画質の設定は変わりません。切り替えたあとも、この下で1つずつ変えられます。\n「軽さ優先」＝1番軽い見た目です。端末が熱くなるとき・カクつくときに。\n「標準」＝最初の設定と同じ見た目です。\n「華やか」＝曲のジャケットの背景・サーチライト・道の演出・判定の演出・ノーツの動き・コンボの節目が加わります。\n「全部のせ」＝1番華やかな見た目です（ライブ背景「ライブ」・にじむ光も入ります。にじむ光は描画方式が WebGL のときだけ効きます）。重くなるので、カクつくときは「華やか」以下にしてください。\n押しただけではまだ保存されません。下の「保存」を押してください。',{full:true})}
 {/* 何が起きるのか画面に書いていなかったので、2026-09-13に説明を足した
                 (ユーザーからの質問「軽量モードはどういう効果があるの？」) */}
 {field('軽量モード',toggle('lightweightMode'),
@@ -24489,7 +24489,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
                 120Hz以上の画面でだけ効く。60Hz・90Hzの画面ではどちらを選んでも同じ */}
 {/* 背景の演出(2026-09-24・ユーザー指示「設定ありきで派手な感じにしたい」)。既定はシンプル(操作感を変えないため) */}
 {field('ライブ背景',segments('stageEffect',RHYTHM_STAGE_EFFECT_LABELS),
-              '演奏中のレーンの後ろの演出です。既定は「シンプル」（これまでの見た目）です。判定・スコアはどれでも変わりません。\n「ライブ」＝「派手」に加えて、ライブ会場のようにします。サーチライトが曲の拍に合わせて明るくなり、レーザーが小節ごとに向きと色を変えて走り、道の両側には観客のペンライトが奥までずらりと並び、拍に合わせて揺れます。ペンライトの色もコンボが伸びるほど変わります。一番重い段なので、端末が熱くなるときは下げてください。絵を描くのが得意な専用の部分（GPU）が無い端末では「派手」と同じになります。\n「派手」＝曲のジャケットをぼかして背景に敷き、ノーツが判定ラインへ来るタイミングで背景が光ります。コンボが伸びるほど光の色が熱くなり（水色→桃→金→白金）、モンスターノーツでは金色に大きく光ります。左右からサーチライトが揺れ、光の粒が舞います。\n「控えめ」＝ジャケットの背景とタイミングの光だけにします（動き続けるサーチライトと光の粒は出しません）。\n「シンプル」＝これまでの見た目のままです。\n軽量モードのときは「シンプル」になります。演出量「最小」では、サーチライト・光の粒・レーザー・ペンライトは出しません。',{full:true})}
+              '演奏中のレーンの後ろの演出です。既定は「シンプル」（これまでの見た目）です。判定・スコアはどれでも変わりません。\n「ライブ」＝「派手」に加えて、ライブ会場のようにします。サーチライトが曲の拍に合わせて明るくなり、レーザーが小節ごとに向きと色を変えて走り、道の両側には観客のペンライトが奥までずらりと並び、拍に合わせて揺れます。ペンライトの色もコンボが伸びるほど変わります。1番重い段なので、端末が熱くなるときは下げてください。絵を描くのが得意な専用の部分（GPU）が無い端末では「派手」と同じになります。\n「派手」＝曲のジャケットをぼかして背景に敷き、ノーツが判定ラインへ来るタイミングで背景が光ります。コンボが伸びるほど光の色が熱くなり（水色→桃→金→白金）、モンスターノーツでは金色に大きく光ります。左右からサーチライトが揺れ、光の粒が舞います。\n「控えめ」＝ジャケットの背景とタイミングの光だけにします（動き続けるサーチライトと光の粒は出しません）。\n「シンプル」＝これまでの見た目のままです。\n軽量モードのときは「シンプル」になります。演出量「最小」では、サーチライト・光の粒・レーザー・ペンライトは出しません。',{full:true})}
 {RHYTHM_FX_ITEMS.filter(item=>item.group==='stage').map(fxField)}
 {/* 本オープン記念ステージ(B5)。本オープンの印が立つまで出さない */}
 {typeof RELEASE_FLAGS!=='undefined'&&RELEASE_FLAGS.rhythmGrandOpen===true&&field('記念ステージ',segments('stageTheme',RHYTHM_STAGE_THEME_CHOICES),
@@ -24504,7 +24504,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
               '演奏中の道(レーン)を、曲に合わせて動かします。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n曲の拍ごとに細い線が奥から流れてきて、小節の頭では明るい線になります。道の左右のふちが拍に合わせて光り、道の奥はもやに溶けて、その先の光が小節ごとに脈打ちます。\n少し重くなるので、端末が熱くなるときは OFF のままにしてください。演出量が「最小」のときと軽量モードでは出ません。\n変えた設定は、次に遊ぶ曲から使われます。')}
 {/* 盛り上がりの光(2026-09-29・ユーザー指示「最初は OFF・オプションで出せる」)。既定は OFF */}
 {field('盛り上がりの光',toggle('climaxFx'),
-              'サビなど曲が一番盛り上がるところに入ると、道の両側に光の筋が奥から流れてきます。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n盛り上がるところは曲ごとに決まっていて、そこを抜けると光はゆっくり消えます。曲の中でもとくに盛り上がるところほど光が濃くなります。\n演出量が「最小」のときと軽量モードでは出ません。')}
+              'サビなど曲が1番盛り上がるところに入ると、道の両側に光の筋が奥から流れてきます。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n盛り上がるところは曲ごとに決まっていて、そこを抜けると光はゆっくり消えます。曲の中でもとくに盛り上がるところほど光が濃くなります。\n演出量が「最小」のときと軽量モードでは出ません。')}
 {RHYTHM_FX_ITEMS.filter(item=>item.group==='road').map(fxField)}
 </div>}
 </section>}
@@ -24531,7 +24531,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
 {/* モンスターノーツだけを軽くしたい人向け(2026-09-13・ユーザー依頼
                 「設定でモンスターノーツを踏んだときの軽量化バージョンもほしい」) */}
 {field('モンスターノーツの演出',segments('monsterNoteEffect',RHYTHM_MONSTER_EFFECT_LABELS),
-              'モンスターノーツを取ったときの演出の強さです。重い順に「多め」「標準」「少なめ」「最小」の4段で、既定は「標準」です。\n「多め」＝画面全体が金色に光り、粒も大きく、そのマスモンが大きく跳ねます。\n「標準」＝全画面の光をやめます（一番重いのがこの描き直しです）。粒と跳ねは残ります。\n「少なめ」＝光る粒もふつうのノーツと同じになり、跳ねもやめます。\n「最小」＝ノーツに乗るマスモンの絵を出さなくなります。この絵だけはふつうのノーツと違って、流れているあいだずっと位置と大きさを書き換えているので、ここを止めると一番効きます。さらに、取ったその瞬間に走っていた両サイドのマスモンへの反応（見た目の切り替えと700msのタイマー）も丸ごとやめます。どれがモンスターノーツかは金色の粒で分かります。能力名の大きな表示も出ません。\nどの段でも、音・振動・能力の効果はそのまま残ります（効いていることは左上のバッジでも分かります）。',{full:true})}
+              'モンスターノーツを取ったときの演出の強さです。重い順に「多め」「標準」「少なめ」「最小」の4段で、既定は「標準」です。\n「多め」＝画面全体が金色に光り、粒も大きく、そのマスモンが大きく跳ねます。\n「標準」＝全画面の光をやめます（1番重いのがこの描き直しです）。粒と跳ねは残ります。\n「少なめ」＝光る粒もふつうのノーツと同じになり、跳ねもやめます。\n「最小」＝ノーツに乗るマスモンの絵を出さなくなります。この絵だけはふつうのノーツと違って、流れているあいだずっと位置と大きさを書き換えているので、ここを止めると1番効きます。さらに、取ったその瞬間に走っていた両サイドのマスモンへの反応（見た目の切り替えと700msのタイマー）も丸ごとやめます。どれがモンスターノーツかは金色の粒で分かります。能力名の大きな表示も出ません。\nどの段でも、音・振動・能力の効果はそのまま残ります（効いていることは左上のバッジでも分かります）。',{full:true})}
 {RHYTHM_FX_ITEMS.filter(item=>item.group==='note').map(fxField)}
 </div>}
 </section>}
@@ -24566,7 +24566,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
               '演奏中に1秒あたり何回画面を描くかです。既定は「端末に合わせる」（これまでの動き）です。端末が熱くなるときは「省電力」を試してください。\n「省電力」＝120Hz以上のなめらかな画面の端末で、描く回数を毎秒60回ほどに抑えます。端末が熱くなりにくく、電池も長持ちします。ノーツの流れは60Hzの端末と同じなめらかさになります。\n「端末に合わせる」＝画面の速さのまま描きます（毎秒120回など）。いちばんなめらかですが、そのぶん熱くなりやすくなります。\n判定の正確さはどちらでも変わりません。60Hz・90Hzの画面の端末では、どちらを選んでも同じです。',{full:true})}
 {/* 画質(2026-09-26・ユーザー指示「画質の設定を入れて」)。既定は「高」(これまでの細かさ) */}
 {field('画質',segments('renderQuality',RHYTHM_RENDER_QUALITY_LABELS),
-              '演奏中に描くノーツ・光・背景を、どこまで細かく描くかです。既定は「高」（これまでの見た目）です。端末が熱くなるときは下げてみてください。判定・スコア・叩く位置はどれでも変わりません。\n「自動」＝「高」で始め、演奏中に動きが詰まるようなら「標準」→「省電力」と自動で下げます。下げた画質は、アプリを開き直すまで次の曲にも引き継ぎます。\n「高」＝一番細かく描きます。\n「標準」＝少しだけ粗く描きます。スマホの画面ではほとんど見分けがつかず、端末の負担が減ります。\n「省電力」＝さらに粗く描きます。ノーツのふちが少しやわらかく見えますが、端末が一番熱くなりにくくなります。')}
+              '演奏中に描くノーツ・光・背景を、どこまで細かく描くかです。既定は「高」（これまでの見た目）です。端末が熱くなるときは下げてみてください。判定・スコア・叩く位置はどれでも変わりません。\n「自動」＝「高」で始め、演奏中に動きが詰まるようなら「標準」→「省電力」と自動で下げます。下げた画質は、アプリを開き直すまで次の曲にも引き継ぎます。\n「高」＝1番細かく描きます。\n「標準」＝少しだけ粗く描きます。スマホの画面ではほとんど見分けがつかず、端末の負担が減ります。\n「省電力」＝さらに粗く描きます。ノーツのふちが少しやわらかく見えますが、端末が1番熱くなりにくくなります。')}
 {/* 描画方式(2026-09-26・ユーザー指示「設定で選べるようにしてほしい」「専門用語使っていいから説明で補完しよう」)。
                 既定は「自動」(2026-09-26・ユーザー指示「WebGLをデフォルトにしたい」)。ボタンは専門用語のまま、何で描くのかを説明に書く */}
 {field('描画方式',<>{segments('noteDrawMode',RHYTHM_NOTE_DRAW_LABELS)}
@@ -25599,7 +25599,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
             見た目は index.html の [data-rhythm-detail-slim] が決める。横・🔄横(viewWide)は今のまま */}
         <div data-rhythm-detail-slim={viewWide?undefined:'1'} data-rhythm-song-detail-grid className="grid items-start gap-x-3 gap-y-1.5 landscape:gap-y-1 [grid-template-areas:'art_title'_'art_stats'_'diff_diff'_'act_act'_'foot_foot'] [grid-template-columns:7rem_minmax(0,1fr)] landscape:min-h-full landscape:[grid-template-areas:'art_stats'_'art_foot'_'title_title'_'diff_diff'_'._.'_'note_note'_'act_act'] landscape:[grid-template-columns:auto_minmax(0,1fr)] landscape:[grid-template-rows:auto_auto_auto_auto_minmax(0,1fr)_auto_auto] landscape:[@container(min-height:540px)]:[grid-template-areas:'art_art'_'stats_stats'_'foot_foot'_'title_title'_'diff_diff'_'._.'_'note_note'_'act_act'] landscape:[@container(min-height:540px)]:[grid-template-columns:minmax(0,1fr)_minmax(0,1fr)] landscape:[@container(min-height:540px)]:[grid-template-rows:auto_auto_auto_auto_auto_minmax(0,1fr)_auto_auto]">
           {/* 選んでいる難易度でフルコンボ以上を取っているときは、ジャケットへ光の枠と帯を重ねる(2026-10-07・ユーザー指示「フルコンボとかオールエクセレントとか表示して / 派手めに」)。
-              選び直すたびに key が変わって、帯がもう一度ポンと出る */}
+              選び直すたびに key が変わって、帯がもう1度ポンと出る */}
           {(()=>{const tier=rhythmDetailAchieveTier(best);
             return <div data-rhythm-song-detail-art className="relative w-28 shrink-0 self-start landscape:w-[7.5rem] landscape:[width:clamp(5.5rem,calc(100cqh_-_222px),min(46cqw,calc(100cqw_-_170px)))] landscape:[@container(min-height:540px)]:justify-self-center landscape:[@container(min-height:540px)]:[width:min(100%,max(7.5rem,calc(100cqh_-_360px)))]" style={{gridArea:'art'}} {...(tier?{'data-rhythm-detail-achieve':tier.id}:{})}>
               <RhythmSongArt song={song} large listenMark={typeof onListen==='function'&&!lockedSong(song)} onZoom={()=>{setListenDiffId('');setArtZoom(true);}}/>
@@ -27485,7 +27485,7 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   const monsterFaceHidden=rhythmMonsterEffectAtMost(monsterNoteEffect,'NONE');
   /* アシストモード・ミラー譜面(バンドリ！アワーノーツから取り入れた遊び方。2026-09-24)。
      練習・タイミング合わせでは使わない(アシストはデバッグから始めたプレイでも使わない)。
-     譜面は演奏の前に一度だけ作り変える。元の譜面(song.difficulties)は書き換えない */
+     譜面は演奏の前に1度だけ作り変える。元の譜面(song.difficulties)は書き換えない */
   const assistOn=!!settings.assistMode&&!tutorial&&!calibrating&&!debugPlay&&!multi,mirrorOn=!!settings.mirrorChart&&!tutorial&&!calibrating;
   const rawChart=song.difficulties[difficulty.id];
   const transformedChart=useMemo(()=>assistOn||mirrorOn?rhythmTransformChart(song.difficulties[difficulty.id],{mirror:mirrorOn,assist:assistOn}):null,[song.songId,difficulty.id,assistOn,mirrorOn]);
@@ -27656,7 +27656,7 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
                 実体のある要素へ切り出し、形はCSS(clip-path)の三角で描く。文字と違って端末のフォントに左右されず、大きさもそろう */}
                 {note.type==='FLICK'&&<i data-rhythm-flick-arrow aria-hidden="true"/>}</span>{/* 設定したマスモンの染色済みの絵をノーツ中央へ出す(§3.5)。
                 奥行きはレーンと同じ --rhythm-note-depth-scale へ乗せるので、毎フレームJSで書き換えない。
-                絵はプレイ開始時に一度だけ組み立て、そのまま使い回す */}
+                絵はプレイ開始時に1度だけ組み立て、そのまま使い回す */}
                 {monster&&!monsterFaceHidden&&<span data-rhythm-monster-face aria-hidden="true" className="absolute left-1/2 top-1/2 flex h-[42px] w-[42px] items-center justify-center" style={{transform:'translate(-50%,-50%) scale(var(--rhythm-note-depth-scale, 1))'}}>{monster.imageUrl&&<DyedMonsterImage baseId={monster.baseId} src={monster.imageUrl} alt="" masuColors={monster.colors} draggable={false} className="h-full w-full object-contain"/>}</span>}</div>;}),[chart.notes,monsterSignature,settings.lightweightMode,settings.effectAmount,monsterFaceHidden]);
   // canvas で描くときも、マスモンの絵(染色済み・透明部分あり)だけは要素のまま canvas の上へ重ねる。
   // 位置と大きさは tick が transform で書く。絵が無いノーツには要素を作らない
@@ -29306,7 +29306,7 @@ scheduleTick();};
     if(!run||run.finished||run.paused)return;RHYTHM_NOTE_SE_RUNTIME.holdStopAll(.03);run.activePointers.clear();run.standbyPointers?.clear();run.activeTouchInputs?.clear();run.outsideStartInputs?.clear();run.inputFeedbackState?.clear();run.activePointerFeedback?.clear();run.activePointerSkyFeedback?.clear();liveTouchSkySubLanesRef.current=[];setPressedLanes([]);run.notes.forEach(note=>{if(note.type==='HOLD'&&note.activePointerId!==null)note.activePointerId=-1;});setPausedSongMs(Math.max(0,Number(run.audio.songTimeMs())||0));run.paused=true;stopFrame();run.audio.pause();setView(v=>({...v,status:'paused'}));};
   /* 再開は 3→2→1 と数えてから(開始のカウントダウンと同じ部品を使い、READYだけ省く)。
      数えているあいだに画面を離れた・リスタートした(generationが変わった)ら鳴らさない。
-     二度押しで数えが2本走らないよう resumingRef で止める */
+     2度押しで数えが2本走らないよう resumingRef で止める */
   const resume=async()=>{const run=runRef.current;if(!run||run.finished||!run.paused||resumingRef.current)return;const generation=generationRef.current;resumingRef.current=true;setResumeCountdown(true);const counted=await runCountdown(generation,RHYTHM_RESUME_COUNTDOWN_STEPS);resumingRef.current=false;if(!mountedRef.current)return;setResumeCountdown(false);if(!counted||generation!==generationRef.current||runRef.current!==run||run.finished||!run.paused)return;const resumed=await run.audio.resume();if(!resumed)return;run.paused=false;setView(v=>({...v,status:'playing'}));scheduleTick();};
   const restart=()=>{const startBest=runRef.current?.startBest;if(startBest)beginRun(startBest);};
   const abort=()=>{++generationRef.current;startLockRef.current=false;disposeRun();onExit();};
@@ -29572,17 +29572,17 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
             {measured.rawMeanMs<0?'ノーツより少し早く叩くくせがあります。':measured.rawMeanMs>0?'ノーツより少し遅れて叩くくせがあります。':'ほとんどずれていません。'}
             この値を入れると、いつもどおり叩いたときにちょうど真ん中で取れるようになります。
           </p>
-          {!measured.stable&&<p data-rhythm-calibration-unstable className="mt-2 text-[11px] font-black text-rose-300">ばらつきが大きめです。もう一度合わせると、より合った値になります。</p>}
+          {!measured.stable&&<p data-rhythm-calibration-unstable className="mt-2 text-[11px] font-black text-rose-300">ばらつきが大きめです。もう1度合わせると、より合った値になります。</p>}
         </div>
         <div className="mx-auto mt-5 grid max-w-sm grid-cols-1 gap-2">
           <button data-rhythm-calibration-apply className="min-h-[52px] rounded-xl bg-amber-400 text-base font-black text-slate-950" onClick={()=>onApplyCalibration&&onApplyCalibration(measured)}>この値（{label}）にして戻る</button>
-          <button data-rhythm-calibration-retry className="min-h-[48px] rounded-xl bg-fuchsia-700 font-black" disabled={startLockRef.current} onClick={()=>beginRun(runRef.current?.startBest)}>もう一度合わせる</button>
+          <button data-rhythm-calibration-retry className="min-h-[48px] rounded-xl bg-fuchsia-700 font-black" disabled={startLockRef.current} onClick={()=>beginRun(runRef.current?.startBest)}>もう1度合わせる</button>
           <button data-rhythm-calibration-cancel className="min-h-[48px] rounded-xl border border-white/20 bg-slate-800 font-black" onClick={abort}>使わずにオプションへ戻る</button>
         </div>
       </>:<>
         <p className="mx-auto mt-5 max-w-sm rounded-2xl border border-rose-300/40 bg-rose-950/30 p-4 text-center text-[12px] font-bold leading-relaxed text-rose-100">うまく測れませんでした。ノーツが判定ラインへ来た瞬間に叩いてください（MISSは数えません）。</p>
         <div className="mx-auto mt-5 grid max-w-sm grid-cols-1 gap-2">
-          <button data-rhythm-calibration-retry className="min-h-[52px] rounded-xl bg-fuchsia-700 text-base font-black" disabled={startLockRef.current} onClick={()=>beginRun(runRef.current?.startBest)}>もう一度合わせる</button>
+          <button data-rhythm-calibration-retry className="min-h-[52px] rounded-xl bg-fuchsia-700 text-base font-black" disabled={startLockRef.current} onClick={()=>beginRun(runRef.current?.startBest)}>もう1度合わせる</button>
           <button data-rhythm-calibration-cancel className="min-h-[48px] rounded-xl border border-white/20 bg-slate-800 font-black" onClick={abort}>オプションへ戻る</button>
         </div>
       </>}
@@ -29759,7 +29759,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
     ALL MARVELOUS > ALL EXCELLENT > FULL COMBO の順に上位。残りは下に小さく並べる。 */}
 {(result.fullCombo||result.allExcellent||result.allMarvelous)&&<div data-rhythm-result-celebrate className="my-3 text-center">
   <b className="block text-3xl font-black leading-tight">{result.allMarvelous?'ALL MARVELOUS!!':result.allExcellent?'ALL EXCELLENT!!':'FULL COMBO!'}</b>
-  <small className="mt-1 block text-[10px] font-black text-amber-200">{result.allMarvelous?'全てMARVELOUS。文句なしの完璧です':result.allExcellent?'全てEXCELLENT以上。ほぼ完璧です':'一度もコンボを切らずに完走しました'}</small>
+  <small className="mt-1 block text-[10px] font-black text-amber-200">{result.allMarvelous?'全てMARVELOUS。文句なしの完璧です':result.allExcellent?'全てEXCELLENT以上。ほぼ完璧です':'1度もコンボを切らずに完走しました'}</small>
 </div>}
 <div className="my-3 flex flex-wrap justify-center gap-2 text-xs font-black text-slate-300">{result.fullCombo&&<span>FULL COMBO</span>}{result.allExcellent&&<span>ALL EXCELLENT</span>}{result.allMarvelous&&<span>ALL MARVELOUS</span>}</div>{/* クイック∞周回を裏で回していたときだけ。曲の長さぶんが周回クリア扱いで入る */}
 {/* ビートランクの経験値の棒は、上のまとめ(スコア・判定)のすぐ下にある(2026-11-22) */}
@@ -29805,7 +29805,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
     {heroArt&&<img src={heroArt} alt="" aria-hidden="true" className="h-12 w-12 shrink-0 object-contain"/>}
     <div className="min-w-0 flex-1"><small className="block truncate text-[10px] font-black text-sky-200">{monsters[index].name}</small><p style={JA_WRAP_STYLE} className="text-[12px] font-bold leading-snug text-white">{jaWrap(line)}</p></div>
   </div>;})()}
-{(()=>{if(tutorial||calibrating||debugPlay||multi||result.assist||result.cleared===false)return null;const before=runRef.current?.startBest;if(before&&before.clear===true)return null;/* 新曲は HARD のクリアで EXPERT と MASTER が一度に開く(2026-10-09・rhythmDifficultyUnlockRequirement)ので、開いたものを全部並べる */const openedIds=RHYTHM_SELECTABLE_DIFFICULTY_IDS.filter(id=>rhythmDifficultyUnlockRequirement(id,song.songId)===difficulty.id&&rhythmChartPlayable(song,id));if(!openedIds.length)return null;const opened=openedIds.join('・');return <div data-rhythm-result-unlock={openedIds.join(',')} className="mx-auto my-3 max-w-xs rounded-2xl border-2 border-amber-300/70 bg-amber-500/15 px-3 py-2 text-center"><b className="block text-base font-black text-amber-100">🔓 {opened} が解放されました！</b><small className="mt-0.5 block text-[10px] font-bold text-amber-200/90">この曲の {openedIds.map(id=>`${id}（Lv.${song.difficulties[id].level}）`).join('・')} を曲選びで選べます</small></div>;})()}
+{(()=>{if(tutorial||calibrating||debugPlay||multi||result.assist||result.cleared===false)return null;const before=runRef.current?.startBest;if(before&&before.clear===true)return null;/* 新曲は HARD のクリアで EXPERT と MASTER が1度に開く(2026-10-09・rhythmDifficultyUnlockRequirement)ので、開いたものを全部並べる */const openedIds=RHYTHM_SELECTABLE_DIFFICULTY_IDS.filter(id=>rhythmDifficultyUnlockRequirement(id,song.songId)===difficulty.id&&rhythmChartPlayable(song,id));if(!openedIds.length)return null;const opened=openedIds.join('・');return <div data-rhythm-result-unlock={openedIds.join(',')} className="mx-auto my-3 max-w-xs rounded-2xl border-2 border-amber-300/70 bg-amber-500/15 px-3 py-2 text-center"><b className="block text-base font-black text-amber-100">🔓 {opened} が解放されました！</b><small className="mt-0.5 block text-[10px] font-bold text-amber-200/90">この曲の {openedIds.map(id=>`${id}（Lv.${song.difficulties[id].level}）`).join('・')} を曲選びで選べます</small></div>;})()}
 {result.luck&&(result.luck.draws>0||result.luck.points>0)&&<div data-rhythm-result-luck className="mx-auto my-2 max-w-xs rounded-2xl border border-lime-300/50 bg-lime-950/30 px-3 py-2 text-center [@container(min-width:680px)]:hidden"><small className="block text-[10px] font-black tracking-wider text-lime-200">🍀 ラッキーラッシュ</small><b className="mt-0.5 block text-lg font-black tabular-nums text-white">{Number(result.luck.points).toLocaleString()}pt</b><span className="mt-0.5 block text-[10px] font-bold text-lime-100">抽選 {result.luck.draws}回・RUSH {result.luck.rush}回{result.luck.bonus>0?`・おまけビートP +${result.luck.bonus}P`:''}</span></div>}
 {result.eventPointAward&&result.eventPointAward.amount>0&&<div data-rhythm-result-beat-points className="mx-auto my-3 max-w-xs rounded-2xl border border-violet-400/50 bg-violet-950/35 px-3 py-2 text-center [@container(min-width:680px)]:hidden"><small className="block text-[10px] font-black tracking-wider text-violet-200">🎟️ ビートP獲得</small><b className="mt-0.5 block text-2xl font-black text-white">+{result.eventPointAward.amount.toLocaleString()}P</b>{result.eventPointAward.multiScale>1&&<span data-rhythm-result-beat-points-multi className="mt-1 block text-[9px] font-black text-cyan-200">👥 みんなで対戦のボーナス(人数・連続) ×{result.eventPointAward.multiScale}</span>}{result.eventPointAward.target&&<span className="mt-1 block text-[9px] font-black text-amber-200">イベント対象曲 {result.eventPointAward.targetBoost>0?`いつもの${result.eventPointAward.targetBoost}倍`:'1.5倍'}</span>}{result.eventPointAward.lengthBonusPercent>0&&<span data-rhythm-result-beat-points-length className="mt-1 block text-[10px] font-black text-sky-200">曲の長さ +{result.eventPointAward.lengthBonusPercent}%</span>}{result.eventPointAward.campaign&&<span data-rhythm-result-beat-points-campaign className="mt-1 block text-[9px] font-black text-amber-200">ビートPアップキャンペーン いつもの{result.eventPointAward.boost}倍</span>}{result.eventPointAward.offEvent&&<span data-rhythm-result-beat-points-off-event className="mt-1 block text-[9px] font-black text-violet-200">イベント開催中はこの5倍もらえます</span>}</div>}{/* ライブログ(バンドリ！アワーノーツの演奏後の振り返り)。曲を8つの区間に分け、区間ごとに
     MARVELOUS・EXCELLENTの割合を棒の高さで、BAD・MISSの数を下の数字で出す。いちばん崩れた区間を一言で言う */}
@@ -29814,7 +29814,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
   <div className="mt-2 grid grid-cols-8 items-end gap-1" style={{height:'44px'}}>{sections.map((section,i)=>{const rate=section.rate==null?0:section.rate;const color=section.total===0?'#334155':rate>=.9?'#fbbf24':rate>=.7?'#e879f9':rate>=.5?'#f87171':'#60a5fa';return <i key={i} data-rhythm-live-log-bar={String(i)} className="block rounded-t" style={{height:`${Math.max(6,Math.round(rate*100))}%`,background:color,opacity:section.total===0?.4:(section===worst?1:.85),outline:section===worst?'2px solid rgba(251,113,133,.9)':'none'}}/>;})}</div>
   <div className="mt-1 grid grid-cols-8 gap-1 text-center text-[9px] font-black tabular-nums">{sections.map((section,i)=><span key={i} className={section.bad+section.miss>0?'text-rose-300':'text-slate-500'}>{section.total===0?'−':section.bad+section.miss}</span>)}</div>
   <div className="mt-0.5 flex justify-between text-[8px] font-bold tabular-nums text-slate-500"><span>0:00</span><span>{rhythmClockLabel(result.liveLogEndMs)}</span></div>
-  <p data-rhythm-live-log-worst className="mt-1 text-[10px] font-bold leading-relaxed text-slate-300">{worst?`一番崩れたのは ${rhythmClockLabel(worst.fromMs)}〜${rhythmClockLabel(worst.toMs)} の区間でした（BAD・MISS ${worst.bad+worst.miss}回）。`:'どの区間も BAD・MISS なしで通せました。'}</p>
+  <p data-rhythm-live-log-worst className="mt-1 text-[10px] font-bold leading-relaxed text-slate-300">{worst?`1番崩れたのは ${rhythmClockLabel(worst.fromMs)}〜${rhythmClockLabel(worst.toMs)} の区間でした（BAD・MISS ${worst.bad+worst.miss}回）。`:'どの区間も BAD・MISS なしで通せました。'}</p>
 </div>;})()}
 {/* 押したのに反応しないことがあった(2026-10-01・ユーザー指示)。押すと、この曲の指の記録に印を付けて送る。
     印の付いた曲と付いていない曲の数字を比べて、指がどこで消えているかを絞る(docs/spec/RHYTHM_TOUCH_DIAG.md)。
@@ -29827,7 +29827,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
 {debugPlay&&!tutorial&&!calibrating&&<RhythmChartNotePanel song={song} difficulty={difficulty} chart={chart}/>}
 </div>
 <div data-rhythm-result-actions className="relative shrink-0 border-t border-white/10 bg-slate-950/90 px-4 pt-2" style={{paddingBottom:'calc(.5rem + var(--mh-sa-bottom))'}}><RhythmResultMoreHint label={[result.eventPointAward&&result.eventPointAward.amount>0?'ビートP':null,Array.isArray(result.liveLog)&&result.liveLog.some(section=>section.total>0)?'ライブログ':null].filter(Boolean).join('・')||'続き'}/>{/* マルチだけ、縦⇄横の切り替えを左に置く(部屋の見出しと同じ部品。2026-10-10・社長「マルチの演奏後の結果画面でも縦横切り替えボタンほしい」)。
-  ソロ・レイドの結果は今のまま。上は曲の札とランクの丸で埋まっているので、指の届く下の列へ置く */}<div className="flex items-center gap-2">{multi&&<div data-rhythm-result-orientation className="shrink-0"><RhythmOrientationButton/></div>}<RhythmResultMoreHint inline label={[result.eventPointAward&&result.eventPointAward.amount>0?'ビートP':null,Array.isArray(result.liveLog)&&result.liveLog.some(section=>section.total>0)?'ライブログ':null].filter(Boolean).join('・')||'続き'}/><div className={multi?"grid min-w-0 flex-1 grid-cols-1 gap-2":(raidPlay?"grid min-w-0 flex-1 grid-cols-1 gap-2":"grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-2")}>{!multi&&!raidPlay&&<button data-rhythm-result-retry className="min-h-[48px] rounded-xl border border-white/15 bg-slate-700 text-sm font-black" disabled={startLockRef.current} onClick={()=>beginRun(mergeRhythmBestRecord(runRef.current?.startBest,result))}>もう一度プレイ</button>}<button data-rhythm-multi-result-back={multi?"":undefined} data-rhythm-raid-result-back={raidPlay?"":undefined} className={`min-h-[48px] rounded-xl bg-indigo-700 font-black ${!multi&&!raidPlay?'text-lg shadow-[0_0_16px_rgba(99,102,241,.6)]':''}`} onClick={abort}>{multi&&'みんなの結果を見る'}{!multi&&raidPlay&&'レイドの結果を見る'}{!multi&&!raidPlay&&<>{debugPlay?'音ゲーデバッグへ戻る':'曲選びへ戻る'}</>}</button></div></div></div></div></div></main>}
+  ソロ・レイドの結果は今のまま。上は曲の札とランクの丸で埋まっているので、指の届く下の列へ置く */}<div className="flex items-center gap-2">{multi&&<div data-rhythm-result-orientation className="shrink-0"><RhythmOrientationButton/></div>}<RhythmResultMoreHint inline label={[result.eventPointAward&&result.eventPointAward.amount>0?'ビートP':null,Array.isArray(result.liveLog)&&result.liveLog.some(section=>section.total>0)?'ライブログ':null].filter(Boolean).join('・')||'続き'}/><div className={multi?"grid min-w-0 flex-1 grid-cols-1 gap-2":(raidPlay?"grid min-w-0 flex-1 grid-cols-1 gap-2":"grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-2")}>{!multi&&!raidPlay&&<button data-rhythm-result-retry className="min-h-[48px] rounded-xl border border-white/15 bg-slate-700 text-sm font-black" disabled={startLockRef.current} onClick={()=>beginRun(mergeRhythmBestRecord(runRef.current?.startBest,result))}>もう1度プレイ</button>}<button data-rhythm-multi-result-back={multi?"":undefined} data-rhythm-raid-result-back={raidPlay?"":undefined} className={`min-h-[48px] rounded-xl bg-indigo-700 font-black ${!multi&&!raidPlay?'text-lg shadow-[0_0_16px_rgba(99,102,241,.6)]':''}`} onClick={abort}>{multi&&'みんなの結果を見る'}{!multi&&raidPlay&&'レイドの結果を見る'}{!multi&&!raidPlay&&<>{debugPlay?'音ゲーデバッグへ戻る':'曲選びへ戻る'}</>}</button></div></div></div></div></div></main>}
   /* ★演奏画面そのものを器(container-type:inline-size)にして、HUDの幅や字の大きさは vw ではなく cqw で決める
      (2026-09-26・ユーザー報告「演奏中の曲名が切れてる / 時間バーが難易度に被ってる」)。
      「🔄 横」で絵を回したとき、vw は端末の縦の幅(390px)のままなので、左上の欄が109pxまで縮んで曲名が「SIX…」になり、
@@ -29908,7 +29908,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
     '--mh-judgment-line-bottom':`${rhythmFiniteStep(settings.judgmentLineHeight,RHYTHM_JUDGMENT_LINE_HEIGHT_MIN,RHYTHM_JUDGMENT_LINE_HEIGHT_MAX,RHYTHM_JUDGMENT_LINE_HEIGHT_STEP,DEFAULT_RHYTHM_SETTINGS.judgmentLineHeight)}%`,filter:settings.effectAmount==='MINIMAL'?'saturate(.78)':settings.effectAmount==='LOW'?'saturate(.92)':'none'}}>{laneElements}{/* ライブ背景。いちばん奥(z-index:-1)。見た目は index.html の [data-rhythm-stage] が持つ */}
 {stageLevel!=='SIMPLE'&&<div ref={stageHostRef} data-rhythm-stage={stageLevel} data-stage-tier={String(stageTierNow)} data-stage-gl={stageGl?'1':undefined} aria-hidden="true" style={rhythmFxStageStyle(settings)}>
   {/* WebGL 版は、ジャケット・暗幕・サーチライト・光の粒をこの canvas 1枚に描く(暗幕の ::after は CSS 側で消す)。
-      描き込み先を作り直すときは canvas も作り直す(一度片付けた canvas からは描き込み先を取り出せない) */}
+      描き込み先を作り直すときは canvas も作り直す(1度片付けた canvas からは描き込み先を取り出せない) */}
   {stageGl&&<canvas key={`stage-gl-${renderQualityStill}`} ref={stageGlRef} data-rhythm-stage-gl/>}
   {!stageGl&&stageArtSrc&&<canvas key={`stage-art-${stageArtSize}`} ref={stageArtRef} data-rhythm-stage-art width={stageArtSize} height={stageArtSize}/>}
   {/* サーチライトと光の粒は、1度だけ焼いた画像を CSS のアニメーション(合成だけで動く)で動かす(2026-09-26)。
@@ -31590,7 +31590,7 @@ const clearTacticsSlotFlag = (bySlot, key) => {
 const TACTICS_EX_DURATION_TEXT = Object.freeze({
   turn: '発動したターンだけ',
   wave: '発動したWAVEが終わるまで',
-  style: 'もう一度使って選び直すまで',
+  style: 'もう1度使って選び直すまで',
 });
 // 緋桜瞬歩(distMatch)が効いているあいだの距離補正。ふだんは敵との距離の差 0/1/2/3 で ×1.5/1.3/1.1/0.9
 const TACTICS_EX_DIST_MATCH_MULT = 1.7;
@@ -31789,7 +31789,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'tiger_thunder_shadow',
     name: '雷狼影',
     useNote: '3ターン雷をため、そのあと3ターン雷纏で強化',
-    desc: '3ターンのあいだ雷をため、そのあと3ターン、雷をまとって戦う（効果は合計6ターン）。\n・前半3ターン：ライガーへ置いたカードを使う（行動する）たびに「雷」が1つたまる（ガード・アシストカードも数える。ききの効果でカードが増えたぶんも数える）\n・3ターン目の終わりに「雷纏」が始まる\n・後半3ターン：雷1つにつき、与えるダメージ+30%・会心率+10%・回避率+5%・ライフ自動回復+5%・ガッツ自動回復+5%・与えたダメージの10%の連撃が1回付く\n・効果中は、もう一度使えない',
+    desc: '3ターンのあいだ雷をため、そのあと3ターン、雷をまとって戦う（効果は合計6ターン）。\n・前半3ターン：ライガーへ置いたカードを使う（行動する）たびに「雷」が1つたまる（ガード・アシストカードも数える。ききの効果でカードが増えたぶんも数える）\n・3ターン目の終わりに「雷纏」が始まる\n・後半3ターン：雷1つにつき、与えるダメージ+30%・会心率+10%・回避率+5%・ライフ自動回復+5%・ガッツ自動回復+5%・与えたダメージの10%の連撃が1回付く\n・効果中は、もう1度使えない',
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 6,
     thunder: Object.freeze({ chargeTurns: 3, dmg: 0.3, crit: 0.1, comboRate: 0.1, dodge: 0.05, regenHp: 0.05, regenGuts: 0.05 }),
     effect: 'thunder',
@@ -32001,7 +32001,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'dreamy_millefeuille_shield',
     name: 'ミルフィーシールド',
     useNote: '全員に最大ライフぶんのシールド・3ターン シールドのあるモンスターは全ステータス+5%(楔1つごとに+5%)',
-    desc: '夢の雲を何層にも重ねて、味方を包む。\n・使った瞬間に、立っている味方全員（ドリーミィも）へ、それぞれ自分の最大ライフと同じ量のシールドを張る。敵の攻撃はシールドが先に受け、0になってからライフが減る\n・シールドが残っているモンスターは、ちから・丈夫さ・ライフ上限・ガッツ上限が+5%。さらに、使った瞬間の敵の楔の数（一番多いもの）1つごとに+5%（楔0で+5%・3つで+20%・6つで+35%）\n・シールドが0になったモンスターは、アップもなくなる（ライフ・ガッツが元の上限より多ければ上限まで戻る。ほかのモンスターはそのまま）\n・3ターンたつと、残ったシールドもアップも消える\n・効いているあいだにもう一度使うと、シールドは残りに足され、残りターンは3に戻る。アップは、そのときの楔の数で決め直した値になる（重ならない）',
+    desc: '夢の雲を何層にも重ねて、味方を包む。\n・使った瞬間に、立っている味方全員（ドリーミィも）へ、それぞれ自分の最大ライフと同じ量のシールドを張る。敵の攻撃はシールドが先に受け、0になってからライフが減る\n・シールドが残っているモンスターは、ちから・丈夫さ・ライフ上限・ガッツ上限が+5%。さらに、使った瞬間の敵の楔の数（1番多いもの）1つごとに+5%（楔0で+5%・3つで+20%・6つで+35%）\n・シールドが0になったモンスターは、アップもなくなる（ライフ・ガッツが元の上限より多ければ上限まで戻る。ほかのモンスターはそのまま）\n・3ターンたつと、残ったシールドもアップも消える\n・効いているあいだにもう1度使うと、シールドは残りに足され、残りターンは3に戻る。アップは、そのときの楔の数で決め直した値になる（重ならない）',
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
     millefeuille: Object.freeze({ statBase: 0.05, statPer: 0.05 }),
     effect: 'millefeuille',
@@ -33701,7 +33701,7 @@ const RHYTHM_BUDDY_TRAITS = Object.freeze([
   Object.freeze({ id: 'fickle', label: '気まぐれ', note: '日によって得意な難易度と苦手な難易度が入れかわる', how: '毎回ちがう難易度を遊ぶ', v2: true }),
   Object.freeze({ id: 'mellow', label: 'おっとり', note: '無理なく叩ける譜面では安定して強いが、難しすぎる譜面は少し苦手', how: '自分より易しい譜面をよく遊ぶ', v2: true }),
   Object.freeze({ id: 'hasty', label: 'せっかち', note: '短い曲に強いが、長い曲は少し苦手', how: '短い曲(2分未満)をよく遊ぶ', v2: true }),
-  Object.freeze({ id: 'competitive', label: '負けず嫌い', note: '前の回(同じ曲・同じ難易度)がいまいちだと、次は燃えて上手くなる', how: '同じ曲を続けてもう一度遊ぶ', v2: true }),
+  Object.freeze({ id: 'competitive', label: '負けず嫌い', note: '前の回(同じ曲・同じ難易度)がいまいちだと、次は燃えて上手くなる', how: '同じ曲を続けてもう1度遊ぶ', v2: true }),
   Object.freeze({ id: 'showoff', label: 'お調子者', note: '調子の良い日はさらに上手、悪い日はさらに下手(調子の波が大きい)', how: '調子の良い日によく遊ぶ', v2: true }),
   Object.freeze({ id: 'shy', label: '人見知り', note: '人の少ない部屋で強く、人が多いと少し落ちる', how: 'ひとり(ほかに人のいない部屋)でよく遊ぶ', v2: true }),
   Object.freeze({ id: 'hardworker', label: '努力家', note: '同じ曲を遊ぶほど、曲の得意がより深くたまる', how: '同じ曲をくり返し遊ぶ', v2: true }),
@@ -34593,11 +34593,11 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     dislike: [['troubled', 'えっ、この曲！？速すぎて目が回るんだけどｗ']],
     combo: [['excited', 'いい流れぢゃん♪ 全部いこ！'], ['excited', 'まぢつながってる！すごくない？ｗ'], ['excited', 'このままフルコンいけるかも♪']],
     miss: [['normal', 'どんまい！ここから取り返そ♪'], ['normal', '大丈夫、あたしもいるよ♪']],
-    climax: [['excited', 'サビきた〜！テンションまぢ上がる♪'], ['excited', 'ここ一番楽しいとこ！'], ['excited', 'いっくよ〜♪']],
+    climax: [['excited', 'サビきた〜！テンションまぢ上がる♪'], ['excited', 'ここ1番楽しいとこ！'], ['excited', 'いっくよ〜♪']],
     last: [['normal', 'あとちょっと！ラストまで一緒に♪'], ['normal', '最後まで笑顔でいこ！']],
     mvp: [['wink', 'MVPとっちゃった！？あたしすごくない？ｗ'], ['wink', '今日のあたし、まぢノッてたかもｗ']],
     high: [['happy', 'まぢいい感じぢゃん！楽しかったぁ♪'], ['happy', '今の、めっちゃそろってたよね♪']],
-    mid: [['happy', 'いい感じだったよ！次はもっといけるかも♪'], ['happy', '楽しかったぁ♪ もう一曲いこ！']],
+    mid: [['happy', 'いい感じだったよ！次はもっといけるかも♪'], ['happy', '楽しかったぁ♪ もう1曲いこ！']],
     low: [['troubled', '次はもっと合わせよ！あたしもがんばる♪'], ['troubled', '大丈夫！何回でも付き合うよ♪']],
     fc: [['surprise', 'フルコンぢゃん！{name}天才かもｗ'], ['surprise', '全部つながった〜！まぢ感動♪']],
     levelup: [['happy', 'セッションLvが上がった♪ あたしも上手になってるかも！'], ['happy', 'もっと一緒に叩きたくなってきた♪']],
@@ -34608,7 +34608,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'song:crazy_party_night': [['happy', 'パーティーの曲って、それだけで楽しいぢゃん♪']],
     'song:grievous_lady': [['happy', 'Grievous Lady、最後までついていけた！あたしえらいｗ']],
     'sp50': [['happy', 'あたしたち、もうセッションLv.50ぢゃん！まぢ最強コンビかも♪'], ['wink', '{name}とならどんな曲でも楽しいの、ほんとだよ♪']],
-    'sp80': [['excited', 'Lv.80！ここまで来たら、もう息ぴったりぢゃん♪'], ['happy', 'あたしの一番のセッション相手は、{name}だよｗ']],
+    'sp80': [['excited', 'Lv.80！ここまで来たら、もう息ぴったりぢゃん♪'], ['happy', 'あたしの1番のセッション相手は、{name}だよｗ']],
     'sp100': [['excited', 'セッションLv.100！あたしたち、セッションマスターぢゃん！'], ['happy', 'ここまで一緒に叩いてくれて、まぢありがと♪']],
     woke: [['troubled', 'ふぁ…{name}？ 起こされたけど、行く〜'], ['happy', 'ん〜…目、半分閉じてるけど叩くｗ'], ['wink', '寝ぐせのままだけど、来ちゃった♪']],
     refuse: [['normal', 'むにゃ…あと5曲…ぢゃなくて5分…'], ['normal', '…ん…あしたなら、まぢで行く…'], ['happy', 'すぅ…{name}…またあとでね…']],
@@ -34629,7 +34629,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:gourmet_race_dx': [['excited', '1:14からのサビ、いちばん強い音が押し寄せるぢゃん！ テンション上がるよ♪']],
     'listen:hopes_and_dreams': [['excited', '1:15と1:55と2:11がいちばん強いの！ ずっとアガるのー♪']],
     'listen:kimimachi_loop': [['excited', '1:00でいきなりいちばん強くなるの！ ここ、まぢテンション上がるー♪']],
-    'listen:kiss_mystery': [['excited', '2:32でいちばん強いとこ来るの！ 4:07でもう一回アガるぢゃん♪']],
+    'listen:kiss_mystery': [['excited', '2:32でいちばん強いとこ来るの！ 4:07でもう1回アガるぢゃん♪']],
     'listen:mf_ichika_mix': [['excited', 'サビは1:48から！ そこからテンションまぢ上がるやつ♪']],
     'listen:monster_hero': [['excited', '1:50からずーっといちばん強いの！ 最後までアゲてこ♪']],
     'listen:monster_hero_another': [['excited', 'こっちもサビは1:49から！ 最後までずっと盛り上がるの♪']],
@@ -34666,7 +34666,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:rising_hope': [['excited', '0:31でいきなり上がるの！ 一気にテンションMAXぢゃんｗ']],
     'listen:haruka': [['excited', 'ハルカ大好き！ 0:53からのサビ、ずっとアガりっぱなしなの♪']],
     'listen:crazy_party_night': [['excited', 'これ大好き♪ 0:38から1:19まで、ずーっとパーティーぢゃん！']],
-    'listen:emerald_rush': [['surprise', '0:31でいきなり一番強くなるの、ドキッとするぢゃんｗ']],
+    'listen:emerald_rush': [['surprise', '0:31でいきなり1番強くなるの、ドキッとするぢゃんｗ']],
     'listen:wrath_of_the_thorn_king': [['excited', '1:05からのサビ、最後までずっと強いの！ アガる〜♪']],
     'listen:monster': [['excited', 'サビが2回あるの！ 1:10と3:34、どっちもアガるぢゃん♪']],
     'listen:anima': [['excited', '0:28からもうサビ！？ 早めに上がるの、テンションまぢ上がる！']],
@@ -34676,7 +34676,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:grievous_lady': [['troubled', '速すぎて目が回るけど…1:41からのサビは、まぢでアガる！']],
     'listen:rose': [['happy', '1:27からのサビ、ふわっと上がる感じがかわいいぢゃん♪']],
     'listen:sad_song': [['excited', '2:04からも3:01からも強いの！ 何回もアガれるぢゃん♪']],
-    'listen:toward_the_stars_short': [['excited', '1:37でいちばん強くなって、1:59でもう一回！ 二度おいしいぢゃんｗ']],
+    'listen:toward_the_stars_short': [['excited', '1:37でいちばん強くなって、1:59でもう1回！ 2度おいしいぢゃんｗ']],
     'listen:black_shout': [['excited', '1:18からのサビ、強い音ばっかりでテンション爆上がりｗ']],
     'listen:light_player': [['excited', '3:30から4:18まで、長いサビでずっとアガれるの♪']],
     'listen:tsuki_ga_michiru_mae_ni': [['excited', 'サビが4回もあるの！ 4回アガれるとか最高ぢゃん♪']],
@@ -34695,13 +34695,13 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     dislike: [['troubled', 'この曲は大きい音でどなられるので、少しびっくりしちゃいます']],
     combo: [['excited', 'いい流れでつね♪ このまま全部いけそうです'], ['excited', 'とってもきれいにつながっていますよ♪'], ['excited', '{name}、さすがでつ']],
     miss: [['normal', '大丈夫でつ、落ち着いていきましょう♪'], ['normal', 'ひと呼吸おけば、また合わせられまつよ']],
-    climax: [['excited', 'ここが一番きれいなところでつ♪'], ['excited', 'ここは押し切りまつ ( ˘ω˘)9グッ!'], ['excited', '雪が舞うみたいな気持ちになりまつ♪']],
+    climax: [['excited', 'ここが1番きれいなところでつ♪'], ['excited', 'ここは押し切りまつ ( ˘ω˘)9グッ!'], ['excited', '雪が舞うみたいな気持ちになりまつ♪']],
     last: [['normal', 'あと少しでつ。最後までていねいに♪'], ['normal', '最後のひと押しでつ']],
     mvp: [['wink', '私がMVPですか？ちょっと照れちゃいまつ♪'], ['wink', '今日は指がよく動きました♪']],
     high: [['happy', 'とってもいい演奏でした♪'], ['happy', '息がぴったりでしたね♪']],
-    mid: [['happy', 'いい演奏でした。次はもっと合わせられそうです'], ['happy', '楽しかったです♪ もう一曲いかがですか？']],
+    mid: [['happy', 'いい演奏でした。次はもっと合わせられそうです'], ['happy', '楽しかったです♪ もう1曲いかがですか？']],
     low: [['troubled', '次はきっと、もっと合わせられますよ♪'], ['troubled', '何度でもお付き合いしまつ♪']],
-    fc: [['surprise', 'フルコンボでつ！{name}、すごいです♪'], ['surprise', '最後まで一つも落とさないなんて、見とれちゃいました']],
+    fc: [['surprise', 'フルコンボでつ！{name}、すごいです♪'], ['surprise', '最後まで1つも落とさないなんて、見とれちゃいました']],
     levelup: [['happy', 'セッションLvが上がりました♪ うれしいでつ'], ['happy', '少しずつ、上手になれている気がします♪']],
     likeup: [['wink', 'この曲、だんだん好きになってきました♪']],
     overcome: [['happy', '苦手な曲でしたけど、最後までいけました♪'], ['happy', 'びっくりしましたけど、楽しかったです']],
@@ -34721,7 +34721,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:dear_santa': [['normal', '最初の静かな所から始まって、1:29でまたすっと引くのがきれいです♪']],
     'listen:departure': [['normal', '最初の静かなところ、そっと始まってきれいでつ']],
     'listen:desert_crown': [['normal', '頭の静かなところ、砂の上をゆっくり歩くみたいできれいでつ']],
-    'listen:dr_wily_stage_1': [['normal', '1:13で一度ふつうに戻る所も、静かできれいでつ']],
+    'listen:dr_wily_stage_1': [['normal', '1:13で1度ふつうに戻る所も、静かできれいでつ']],
     'listen:dr_wily_stage_1_okkussenman': [['normal', '0:03の静かな始まりから、少しずつ大きくなるのがきれいでつ']],
     'listen:eiyuu_no_akashi': [['normal', '強い音が68%もあるのに、0:13で静かになる落差がきれいです♪']],
     'listen:eiyuu_no_akashi_milktea': [['normal', '1:31から2:09まで、いちばん強いのが長く続くのが見事です♪']],
@@ -34735,7 +34735,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:mf_ichika_mix': [['normal', '2分25秒の曲でつ。終わりの手前の盛り上がりまで、ていねいにいきましょう']],
     'listen:monster_hero': [['normal', '最初の45秒くらいは静かなんでつ。そこから少しずつ強くなっていきます']],
     'listen:monster_hero_another': [['normal', '0:48までは、静かな時間が長いんでつ。そこが好きです']],
-    'listen:six_eternel_remix': [['happy', '1:44で一度静かになるんでつ。その静けさが、とてもきれいです']],
+    'listen:six_eternel_remix': [['happy', '1:44で1度静かになるんでつ。その静けさが、とてもきれいです']],
     'listen:six_eternel_beat': [['troubled', 'とても速い曲でつ。でも、最初の静かなところで心を落ち着けられます']],
     'listen:stay_with_me': [['normal', '1:29に静かなところがありまつ。その静けさが、少しせつなくて好きです']],
     'listen:kiki_issen': [['happy', '私の曲でつ♪ 静かなところと強いところが、何度も入れ替わるんです']],
@@ -34749,7 +34749,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:4u_hitasura': [['normal', '最後の1:54で静かになりまつ。その終わり方が、きれいなんです']],
     'listen:kindan_no_resistance': [['normal', '0:16に静かなところがありまつ。速い曲の中の、短いひと休みです']],
     'listen:crossing_field': [['normal', '最初の0:17まで静かでつ。そこから一気に強くなります']],
-    'listen:nothing_without_you': [['happy', '1:43で一度静かになりまつ。その一瞬の静けさが、きれいです']],
+    'listen:nothing_without_you': [['happy', '1:43で1度静かになりまつ。その一瞬の静けさが、きれいです']],
     'listen:freedom_dive': [['troubled', 'とても強い曲でつ。でも、1:21に一瞬だけ静かなところがあるんです']],
     'listen:the_city_beneath_the_comets': [['normal', '0:29と1:24に静かなところがありまつ。そこがきれいなんです']],
     'listen:mou_hitotsu_no_sekai_e': [['normal', '1:17に静かなところがありまつ。長い曲の中の、ひと休みです']],
@@ -34763,7 +34763,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:saudade': [['normal', '0:46の静かなところ、すーっと入ってきてすてきでつ']],
     'listen:seasons_of_a_little_plaza': [['normal', '0:24の静かなところ、音がすっと引いて、とてもきれいです♪']],
     'listen:sparkling_pink_overture': [['normal', '1:12の静かなところ、ひと息ついてまた走り出す感じでつ']],
-    'listen:only_my_railgun': [['normal', '0:25のところで一度静かになるのが、きれいでつね']],
+    'listen:only_my_railgun': [['normal', '0:25のところで1度静かになるのが、きれいでつね']],
     'listen:big_bridge_no_shitou': [['normal', '最後の2:15で静かに終わるところ、余韻がありますね']],
     'listen:rising_hope': [['normal', '0:13の静かな一瞬が、次の盛り上がりを引き立ててますね']],
     'listen:haruka': [['happy', '最初の静かな所から、少しずつ強くなっていくのが美しいでつ']],
@@ -34773,9 +34773,9 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:monster': [['normal', '2:42の静かな所で、長い曲のなかにひと息ありますね']],
     'listen:anima': [['normal', '1:51で最後にすっと静かになるのが、きれいですね']],
     'listen:journey': [['normal', '1:04で静かになるところ、旅の途中で休むみたいでつ']],
-    'listen:sheriruth': [['normal', '0:36で一度静かになるところ、すっと息をのむ感じです']],
+    'listen:sheriruth': [['normal', '0:36で1度静かになるところ、すっと息をのむ感じです']],
     'listen:against_my_own_shadow': [['happy', '最初の30秒くらい静かなのが、落ち着いていて好きでつ']],
-    'listen:grievous_lady': [['normal', '1:07で一度静かになるところ、嵐の前の静けさみたいでつ']],
+    'listen:grievous_lady': [['normal', '1:07で1度静かになるところ、嵐の前の静けさみたいでつ']],
     'listen:rose': [['happy', '1:04で静かになるところ、花が閉じるみたいで美しいでつ']],
     'listen:sad_song': [['normal', '最初の46秒くらい、ずっと静かなのがきれいですね']],
     'listen:toward_the_stars_short': [['happy', '0:35で静かになるところ、星空を見上げてるみたいでつ']],
@@ -34785,19 +34785,19 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:rebellion': [['normal', '2:42の静かな所が、次の盛り上がりの前の深呼吸みたいです']],
     'listen:altar_world_tree': [['happy', '最初の48秒、静かに広がっていくところが美しいでつ']],
     'listen:evans': [['normal', '0:27で静かになるところ、きれいな間ですね']],
-    'listen:humanoid': [['normal', '0:25で一度静かになるところ、すっとした感じが好きでつ']],
+    'listen:humanoid': [['normal', '0:25で1度静かになるところ、すっとした感じが好きでつ']],
     'listen:walkure': [['normal', '5:02からの静かな所、音がすっと引いてとてもきれいです♪']],
     'listen:winter_fall': [['normal', '0:02から0:24までの静かな始まり、とてもきれいです♪']],
-    'listen:zenbu_hissatsuwaza': [['normal', '1:03の静かなところで一回ひと息つけるでつ。そこからまた全力でつ']],
+    'listen:zenbu_hissatsuwaza': [['normal', '1:03の静かなところで1回ひと息つけるでつ。そこからまた全力でつ']],
   },
   momosuke: {
     join: [['happy', 'ももが来たからには盛り上げるよ！！'], ['happy', '{name}、ももとセッションできるなんてラッキーだよw']],
-    first: [['excited', 'はじめての曲！！ももが一番に覚えちゃうもんね'], ['excited', '新曲でもももは完璧にこなすよ♡']],
+    first: [['excited', 'はじめての曲！！ももが1番に覚えちゃうもんね'], ['excited', '新曲でもももは完璧にこなすよ♡']],
     like: [['happy', 'この曲ももの推し曲！！']],
     dislike: [['troubled', 'チクタクがずっと鳴っててもも眠くなる〜♡']],
     combo: [['excited', 'いい感じ！！ももも乗ってきた♡'], ['excited', 'まだつながってるの！？やるじゃんw'], ['excited', 'このままいけばもも並みだよ♡']],
     miss: [['normal', 'ドンマイドンマイ！ももがついてるよw'], ['normal', 'ちょっとくらいミスってもかわいいから平気♡']],
-    climax: [['excited', 'サビ！！ここで一番かわいく決めるよ♡'], ['excited', 'ここがももの見せ場！！'], ['excited', 'ペンライト振って〜！！']],
+    climax: [['excited', 'サビ！！ここで1番かわいく決めるよ♡'], ['excited', 'ここがももの見せ場！！'], ['excited', 'ペンライト振って〜！！']],
     last: [['normal', 'ラストスパート！！最後までアイドルでいくよ♡'], ['normal', 'あとちょっと！！ももより先にバテないでよw']],
     mvp: [['wink', 'MVPはもも！！当然でしょw'], ['wink', 'センターはやっぱりもも♡']],
     high: [['happy', 'ももと合わせたらこんなもんでしょw さすが♡'], ['happy', '今のステージ、拍手もらえるやつだよ！！']],
@@ -34807,28 +34807,28 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     levelup: [['happy', 'セッションLvアップ！！もも、また一段とかわいくなっちゃったw'], ['happy', '上達してるのはももだけじゃないよ、{name}もね♡']],
     likeup: [['wink', 'この曲、ちょっとだけ好きになったかも…ちょっとだけね！！']],
     overcome: [['happy', '眠くならずに最後までいけた！！もも、えらい♡'], ['happy', '苦手でもちゃんと決めるのがアイドルだよw']],
-    'song:crossing_field': [['happy', 'crossing field は、ももが一番かわいく踊れる曲！！']],
+    'song:crossing_field': [['happy', 'crossing field は、ももが1番かわいく踊れる曲！！']],
     'song:only_my_railgun': [['happy', 'only my railgun、テンション上がりっぱなしw']],
     'song:rose': [['happy', 'ROSE はかっこいいももも見せられる曲なんだよ♡']],
     'song:dullahan_clockwork': [['happy', 'チクタクに負けなかった！！{name}もえらい♡']],
     'sp50': [['excited', 'Lv.50！！ももと{name}、もう名コンビだね♡'], ['wink', 'ここまで来たら、ももの専属だよw']],
-    'sp80': [['excited', 'Lv.80！！ステージの上で一番息が合うの、{name}かも♡'], ['happy', 'ももについてこれるの、{name}くらいだよ！！']],
+    'sp80': [['excited', 'Lv.80！！ステージの上で1番息が合うの、{name}かも♡'], ['happy', 'ももについてこれるの、{name}くらいだよ！！']],
     'sp100': [['excited', 'Lv.100！！セッションマスターはもものおかげだよね♡'], ['happy', 'ずっと一緒にステージ立ってくれて、ありがと！！']],
     woke: [['angry', 'ふぁ…ももを起こすなんて！ でも行く！！'], ['excited', '寝起きでもセンターは、もも！！'], ['wink', '目こすりながら叩くねw']],
     refuse: [['normal', '…むにゃ…アンコールは…あした…'], ['happy', '…もも、いま夢でライブ中…♡'], ['normal', '…すぅ…起こさないで…w']],
     'listen:amakakeru_tsubasa': [['excited', 'サビは1:01から！ ももはこの一気に駆け上がる感じが大好き♡']],
     'listen:battle_5': [['excited', '1:04も2:53も強め！ 何度も盛り上がるの、ももは大好き♡']],
     'listen:beyond_the_same_sky': [['excited', '0:49から一気に強くなるの！ ももはここでもうわくわくしちゃう♡']],
-    'listen:brand_new_sky': [['excited', '2:20でもう一回いちばん強くなるの、最後まで最高潮だよ♡']],
+    'listen:brand_new_sky': [['excited', '2:20でもう1回いちばん強くなるの、最後まで最高潮だよ♡']],
     'listen:dear_santa': [['excited', '2:30も2:58も3:16もいちばん強い！ ももはこの勢いが大好き♡']],
-    'listen:departure': [['excited', '4:36でもう一回いちばん強くなるの！！ 最高だよ♡']],
+    'listen:departure': [['excited', '4:36でもう1回いちばん強くなるの！！ 最高だよ♡']],
     'listen:desert_crown': [['excited', '1:07と2:02がいちばん強いよ♡ 後半はずっと最高潮だよ♡']],
     'listen:dr_wily_stage_1': [['excited', '1:58から2回目のサビ！！ 最後までいちばん強いまま駆け抜けるの、最高♡']],
     'listen:dr_wily_stage_1_okkussenman': [['excited', '2:31からまた強くなって、そのまま終わりまで行くの！！ 締めまで熱い♡']],
     'listen:eiyuu_no_akashi': [['excited', '1:11でいちばん強くなって、1:40までずっと強い！！ ももはここが大好き♡']],
     'listen:eiyuu_no_akashi_milktea': [['excited', 'サビが2回来る！！ 0:31と1:31、どっちも強いよ♡']],
     'listen:erfolg': [['excited', '0:24も0:34もいちばん強い！ ももはこの勢いが大好き♡']],
-    'listen:erfolg_piano': [['excited', '1:01からもう一度いちばん強い！！ ももはここが大好き♡']],
+    'listen:erfolg_piano': [['excited', '1:01からもう1度いちばん強い！！ ももはここが大好き♡']],
     'listen:gourmet_race_64': [['excited', '0:38も1:00もいちばん強い！ ももはこの勢いが大好き♡']],
     'listen:gourmet_race_dx': [['excited', '1:14でいちばん強くなるの、ももはここが大好き♡']],
     'listen:hopes_and_dreams': [['excited', 'いちばん強いところが3回もあるよ♡ 最高潮だよ♡']],
@@ -34844,20 +34844,20 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:kaze_ga_soyogu': [['excited', '0:37からすぐサビ！！ 盛り上がるの早いよ！！']],
     'listen:close_to_your_heart': [['excited', 'サビが1:02から1:59まで！！ 長く盛り上がれるよ♡']],
     'listen:eiki_boss_remix': [['excited', '2:40から3:33までサビ！！ 最後に一気に盛り上がるよ♡']],
-    'listen:pandora_boss_remix': [['excited', 'サビは2:27から！！ ここで一番盛り上げよ♡']],
+    'listen:pandora_boss_remix': [['excited', 'サビは2:27から！！ ここで1番盛り上げよ♡']],
     'listen:dullahan': [['excited', '0:33と1:03で盛り上がるの！！ 2回くるよ！！']],
     'listen:dullahan_clockwork': [['troubled', 'チクタク鳴る感じがちょっと苦手……でも1:17からのとこは盛り上がる！！']],
-    'listen:toriko': [['excited', '1:09でいちばん強くなるの！！ そこが一番の見せ場♡']],
+    'listen:toriko': [['excited', '1:09でいちばん強くなるの！！ そこが1番の見せ場♡']],
     'listen:4u_hitasura': [['excited', '1:06から1:47までサビ！！ いっぱい盛り上がれるよ♡']],
     'listen:kindan_no_resistance': [['excited', '0:48からもう盛り上がる！！ 早めにテンション上げてこ♡']],
-    'listen:crossing_field': [['excited', 'ももが一番かわいく踊れる曲！！ 0:46からのサビ、見てて♡']],
+    'listen:crossing_field': [['excited', 'ももが1番かわいく踊れる曲！！ 0:46からのサビ、見てて♡']],
     'listen:nothing_without_you': [['excited', 'サビが1:14と2:41の2回！！ どっちも盛り上がるよ♡']],
     'listen:freedom_dive': [['excited', '1:17でいちばん強くなるの！！ 盛り上がりがすごいよ！！']],
     'listen:the_city_beneath_the_comets': [['excited', '2:11からのサビ、最後にいちばん盛り上がるよ！！']],
     'listen:mou_hitotsu_no_sekai_e': [['excited', '2:58から3:32までサビ！！ 最後にどーんと盛り上がるよ♡']],
     'listen:senjou_no_shippuu': [['excited', '最後の2:52から一気に盛り上がるよ！！ ラストが見せ場♡']],
     'listen:makutsu_no_senritsu': [['excited', '2:18からのとこ、短いけどいちばん盛り上がるよ！！']],
-    'listen:lamia': [['excited', '0:56でもう一回いちばん強くなるの！！ 最高潮だよ♡']],
+    'listen:lamia': [['excited', '0:56でもう1回いちばん強くなるの！！ 最高潮だよ♡']],
     'listen:megalovania_sans': [['excited', '0:52から1:18までいちばん強いのが続くよ♡ すごいね♡']],
     'listen:megalovania_smash': [['excited', '1:08と1:49でいちばん強くなるよ♡ ぐっとくるね♡']],
     'listen:midnight_studio': [['excited', '2:58からいちばん強いのが続くよ♡ 最高潮だよ♡']],
@@ -34865,18 +34865,18 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:saudade': [['excited', '1:00で強めに入って、2:44でいちばん強くなるよ♡']],
     'listen:seasons_of_a_little_plaza': [['excited', '1:31でいちばん強くなって、1:47からまたサビ！！ ももはここが大好き♡']],
     'listen:sparkling_pink_overture': [['excited', '0:11と0:33がいちばん強いよ♡ ずっと最高潮だよ♡']],
-    'listen:only_my_railgun': [['excited', 'サビは0:52から最後まで！！ ももが一番かわいく踊れるとこw']],
+    'listen:only_my_railgun': [['excited', 'サビは0:52から最後まで！！ ももが1番かわいく踊れるとこw']],
     'listen:big_bridge_no_shitou': [['excited', '0:08からもう盛り上がりMAX！！ 最初から全力だよw']],
     'listen:rising_hope': [['wink', 'サビは0:31から！！ 短いけど、そこがいちばんアガるの♡']],
     'listen:haruka': [['excited', '0:53からラストまでサビ！！ 盛り上がりが長いの最高w']],
     'listen:crazy_party_night': [['excited', '0:38からサビ！！ 40秒くらいずっと盛り上がるの♡']],
     'listen:emerald_rush': [['excited', 'サビは1:55から！！ 最後に全部持っていく感じがいいの！！']],
-    'listen:wrath_of_the_thorn_king': [['surprise', '0:29で一回ドーンってくるの！！ そこでもうテンション上がる！！']],
-    'listen:monster': [['excited', '3:34からのラストのサビ！！ ここでもう一回盛り上がるの♡']],
-    'listen:anima': [['excited', '1:46でもう一回いちばん強くなるの！！ ラストまで全力！！']],
-    'listen:journey': [['excited', '0:34で一回ドーンってきて、最後にもう一回なの！！']],
-    'listen:sheriruth': [['excited', '最後の2:03！！ 一瞬だけど、そこが一番の見せ場なの！！']],
-    'listen:against_my_own_shadow': [['excited', '1:41からラストまで！！ 最後にもう一回盛り上がるの♡']],
+    'listen:wrath_of_the_thorn_king': [['surprise', '0:29で1回ドーンってくるの！！ そこでもうテンション上がる！！']],
+    'listen:monster': [['excited', '3:34からのラストのサビ！！ ここでもう1回盛り上がるの♡']],
+    'listen:anima': [['excited', '1:46でもう1回いちばん強くなるの！！ ラストまで全力！！']],
+    'listen:journey': [['excited', '0:34で1回ドーンってきて、最後にもう1回なの！！']],
+    'listen:sheriruth': [['excited', '最後の2:03！！ 一瞬だけど、そこが1番の見せ場なの！！']],
+    'listen:against_my_own_shadow': [['excited', '1:41からラストまで！！ 最後にもう1回盛り上がるの♡']],
     'listen:grievous_lady': [['surprise', '1:41から2:16まで、ずーっといちばん強いの！！ すごすぎ！！']],
     'listen:rose': [['excited', 'ROSE大好き！！ 1:27からのサビで、くるっと回りたくなるの♡']],
     'listen:sad_song': [['excited', 'ラストのサビは3:01から！！ 最後にいちばん盛り上がるの！！']],
@@ -34903,13 +34903,13 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     last: [['normal', 'あと少しだな、最後まで行くからな'], ['normal', 'ゴールが見えてきたな。膝もまだもってるぞ']],
     mvp: [['wink', 'おでがMVPか、えへへ、照れくさいな'], ['wink', '今日はおで、調子よかったな']],
     high: [['happy', 'いい演奏だったな。おで楽しかったよ'], ['happy', 'ぴったりだったな、えへへ']],
-    mid: [['happy', 'なかなかよかったな。次も行くからな'], ['happy', '楽しかったな。もう一回いいか？']],
+    mid: [['happy', 'なかなかよかったな。次も行くからな'], ['happy', '楽しかったな。もう1回いいか？']],
     low: [['troubled', 'どんまいだな、次でとりかえすからな'], ['troubled', 'おでも練習するからな。一緒にがんばろう']],
     fc: [['surprise', '全部つながったな！？すごいな、{name}'], ['surprise', 'フルコンだな、おで鼻が高いからな']],
     levelup: [['happy', 'セッションLvが上がったな、えへへ'], ['happy', 'おでも少しは上手になってきたかな']],
     likeup: [['wink', 'この曲、だんだん好きになってきたわ']],
     overcome: [['happy', '苦手な曲だったけど、最後まで行けたな'], ['happy', '照れくさかったけど、いい曲だったな']],
-    'song:mou_hitotsu_no_sekai_e': [['happy', 'もう一つの世界へは、おでの曲だからな。冒険って感じでいいだろ']],
+    'song:mou_hitotsu_no_sekai_e': [['happy', 'もう1つの世界へは、おでの曲だからな。冒険って感じでいいだろ']],
     'song:big_bridge_no_shitou': [['happy', 'ビッグブリッヂの死闘、橋を渡りきった気分だな']],
     'song:senjou_no_shippuu': [['happy', '戦場の疾風、風みたいに駆け抜けたな']],
     'song:stay_with_me': [['happy', 'Stay With Me、しんみりしたけど、悪くなかったよ']],
@@ -34995,7 +34995,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:zenbu_hissatsuwaza': [['happy', 'BPM193の全力疾走だな。2分足らずで一気に突っ切るぞ']],
   },
   atsu: {
-    join: [['happy', 'とりあえず一曲いくか笑'], ['happy', '来たよ！ 今日もやろ笑']],
+    join: [['happy', 'とりあえず1曲いくか笑'], ['happy', '来たよ！ 今日もやろ笑']],
     first: [['excited', 'てか初見の曲？ 燃えるじゃん笑'], ['excited', '知らない曲こそ、とりあえずやってみるか笑']],
     like: [['happy', 'これ俺の好きなやつだな笑']],
     dislike: [['troubled', 'てか自分の大会の曲って、なんか照れるだろ笑']],
@@ -35005,7 +35005,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     last: [['normal', '最後の10秒、締めるぞ！'], ['normal', 'ラスト、きれいに決めるか笑']],
     mvp: [['wink', 'MVPもらっといた笑'], ['wink', '今日は俺の日だったな笑']],
     high: [['happy', 'てか今の、普通にうまかったな笑'], ['happy', 'いい締めだったな！']],
-    mid: [['happy', '悪くないな。次はもっと上いけるだろ笑'], ['happy', 'とりあえずもう一曲いくか笑']],
+    mid: [['happy', '悪くないな。次はもっと上いけるだろ笑'], ['happy', 'とりあえずもう1曲いくか笑']],
     low: [['troubled', 'まあ次だな、切り替えていこう！'], ['troubled', '練習あるのみだな笑']],
     fc: [['surprise', 'フルコンかよ！やるな笑'], ['surprise', '全部つないだの！？ まじですごいじゃん！']],
     levelup: [['happy', 'セッションLv上がったな笑'], ['happy', '俺もまだまだ伸びるな！']],
@@ -35026,7 +35026,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:brand_new_sky': [['happy', '0:46で強めに上がってから、1:19で一気にひらける流れがいいね']],
     'listen:dear_santa': [['happy', '3:16でいちばん強いところを決めて、最後に静かに締めるのいいよね笑']],
     'listen:departure': [['happy', '4:48でスッと静かに終わるの、きれいだよね笑']],
-    'listen:desert_crown': [['happy', '2:02からもう一回いちばん強くなって、そのまま締めるのいいね']],
+    'listen:desert_crown': [['happy', '2:02からもう1回いちばん強くなって、そのまま締めるのいいね']],
     'listen:dr_wily_stage_1': [['happy', '2:29から静かに締めるの、余韻があっていいよね笑']],
     'listen:dr_wily_stage_1_okkussenman': [['happy', '2:52で静かに終わるの、歌いきった感じでいいよね笑']],
     'listen:eiyuu_no_akashi': [['happy', '0:01から強めで始まるの、待たせない感じでいいね笑']],
@@ -35036,7 +35036,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:gourmet_race_64': [['happy', '2:13で静かに終わるの、締めがきれいだね笑']],
     'listen:gourmet_race_dx': [['happy', '1:51で静かに終わるの、締めがきれいだね笑']],
     'listen:hopes_and_dreams': [['happy', '2:59で静かに終わるの、余韻があっていいよね笑']],
-    'listen:kimimachi_loop': [['happy', '2:22で一回静かになってから、2:32でもう一回いちばん強くなるのずるいね笑']],
+    'listen:kimimachi_loop': [['happy', '2:22で1回静かになってから、2:32でもう1回いちばん強くなるのずるいね笑']],
     'listen:kiss_mystery': [['happy', '4:07からいちばん強いまま、最後まで押し切るの熱いよね笑']],
     'listen:mf_ichika_mix': [['wink', '自分の大会の曲はちょっと照れる笑 でも1:48からのサビは全力でいくよ！']],
     'listen:monster_hero': [['happy', '最後の2:30でいきなり静かになるから、きれいに締めよ笑']],
@@ -35069,8 +35069,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:saudade': [['happy', '4:10で静かに終わるの、余韻があっていいよね笑']],
     'listen:seasons_of_a_little_plaza': [['happy', '2:26で静かに終わるの、締めがきれいだね笑']],
     'listen:sparkling_pink_overture': [['happy', '2分ちょっとなのに強い音が多いね笑 あっという間だよ']],
-    'listen:only_my_railgun': [['happy', '1:22からもう一回いちばん強くなって、そのまま締めるのが最高笑']],
-    'listen:big_bridge_no_shitou': [['happy', '1:24でもう一回いちばん強くなるとこ、ここが勝負所だよね笑']],
+    'listen:only_my_railgun': [['happy', '1:22からもう1回いちばん強くなって、そのまま締めるのが最高笑']],
+    'listen:big_bridge_no_shitou': [['happy', '1:24でもう1回いちばん強くなるとこ、ここが勝負所だよね笑']],
     'listen:rising_hope': [['excited', '0:56からの2回目の山、ここで決めにいきたい笑']],
     'listen:haruka': [['happy', '1:30で静かに着地する締め方、きれいだよね笑']],
     'listen:crazy_party_night': [['wink', '1:29で静かに終わるとこ、パーティーのあとって感じ笑']],
@@ -35082,19 +35082,19 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:sheriruth': [['happy', '2:03でいちばん強くなって、すぐ2:08で終わる！ 締めがキレてる笑']],
     'listen:against_my_own_shadow': [['excited', '俺の曲だしな笑 1:41から最後まで、いちばん強いまま締める！']],
     'listen:grievous_lady': [['happy', '1:41から最後まで強いまま、2:16でぴたっと締まる笑']],
-    'listen:rose': [['happy', '2:13でもう一回強めになって締めるの、いいよね笑']],
+    'listen:rose': [['happy', '2:13でもう1回強めになって締めるの、いいよね笑']],
     'listen:sad_song': [['happy', 'これ好きなんだよね笑 3:01からのサビで締めるとこ、何回でも聞ける！']],
     'listen:toward_the_stars_short': [['happy', '2:12ですっと静かに終わる締め、余韻がいい笑']],
     'listen:black_shout': [['wink', '1:41でふつうに戻って締める、ちょっと余裕ある終わり方笑']],
     'listen:light_player': [['excited', '4:13から最後まで、強いまま締めるとこが熱い笑']],
     'listen:tsuki_ga_michiru_mae_ni': [['happy', '3:51からの最後のサビで締めて、4:33で静かに終わる笑']],
-    'listen:rebellion': [['excited', '好きな曲笑 3:49でもう一回いちばん強くなって締めるの、ずるい！']],
-    'listen:altar_world_tree': [['happy', '5:01でもう一回いちばん強くなって、そこから締めに向かう笑']],
+    'listen:rebellion': [['excited', '好きな曲笑 3:49でもう1回いちばん強くなって締めるの、ずるい！']],
+    'listen:altar_world_tree': [['happy', '5:01でもう1回いちばん強くなって、そこから締めに向かう笑']],
     'listen:evans': [['happy', '1:45ですっと静かに締めるとこ、かっこいい笑']],
     'listen:humanoid': [['happy', '1:33で静かに締めるとこ、きれいだよね笑']],
     'listen:walkure': [['happy', '8:12からいちばん強いまま、最後まで押し切るの熱いよね笑']],
     'listen:winter_fall': [['happy', '3:58でいちばん強いところを越えて、最後に静かに締めるのいいよね笑']],
-    'listen:zenbu_hissatsuwaza': [['happy', '1:45でもう一回いちばん強くなって、そのまま締めるのいいね笑']],
+    'listen:zenbu_hissatsuwaza': [['happy', '1:45でもう1回いちばん強くなって、そのまま締めるのいいね笑']],
   },
   kyuko: {
     join: [['happy', 'ほい！俺も入るね〜'], ['happy', 'よろしく〜、今日は何いく？']],
@@ -35102,8 +35102,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     like: [['happy', 'この曲は構成がきれいなんだよね〜']],
     dislike: [['troubled', 'トリコはノリが良すぎて、俺だけ置いていかれるんだよねぇ']],
     combo: [['excited', 'ほい！ いい流れだねぇ'], ['excited', 'リズムが安定してるからつながるんだよね〜'], ['excited', 'このままいけるよぉ。ありがとん笑']],
-    miss: [['normal', 'ぐぬぬぬ、でもリズムは合ってるよ〜'], ['normal', '一回深呼吸ね〜、次の小節から戻そ']],
-    climax: [['excited', '一回ためて…ここだねぇ'], ['excited', 'ここが一番盛り上がるとこだよぉ'], ['excited', 'ここから音が増えるよ〜、おけ〜？']],
+    miss: [['normal', 'ぐぬぬぬ、でもリズムは合ってるよ〜'], ['normal', '1回深呼吸ね〜、次の小節から戻そ']],
+    climax: [['excited', '1回ためて…ここだねぇ'], ['excited', 'ここが1番盛り上がるとこだよぉ'], ['excited', 'ここから音が増えるよ〜、おけ〜？']],
     last: [['normal', '最後まで、ていねいにね〜'], ['normal', 'あと少しだぁ。おけ？']],
     mvp: [['wink', 'MVPいただきました〜笑'], ['wink', '曲を読んだのが効いたかも〜']],
     high: [['happy', 'いい流れだったね〜、ありがとん笑'], ['happy', '今のは理想の形だったなぁ笑']],
@@ -35129,74 +35129,74 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:dear_santa': [['happy', '静かに始めて0:54から強めを重ねる。1:24の山からの落とし方が効いてるんだよね〜']],
     'listen:departure': [['happy', '1:51でいったん落として、2:04からまた上げるのがいいんだよね〜']],
     'listen:desert_crown': [['happy', '静か→ふつう→強めって少しずつ上がって、1:07で爆発する構成なんだよね〜']],
-    'listen:dr_wily_stage_1': [['happy', '0:44と1:58、二度サビが来る構成がいいんだよね〜。1:13で一度落とすのも効いてる']],
-    'listen:dr_wily_stage_1_okkussenman': [['happy', 'ほい、盛り上がりの山は1:16に一度だけ。そこへ向けて上げる構成だね〜']],
+    'listen:dr_wily_stage_1': [['happy', '0:44と1:58、2度サビが来る構成がいいんだよね〜。1:13で1度落とすのも効いてる']],
+    'listen:dr_wily_stage_1_okkussenman': [['happy', 'ほい、盛り上がりの山は1:16に1度だけ。そこへ向けて上げる構成だね〜']],
     'listen:eiyuu_no_akashi': [['happy', 'BPM162、強い音68%。0:13の静けさが短いから、休む暇なく進むんだよね〜']],
     'listen:eiyuu_no_akashi_milktea': [['happy', 'BPM192で2分26秒。サビが2か所あるから、山場の配分が分かりやすいんだよね〜']],
-    'listen:erfolg': [['happy', '0:02から1:13まで強い所が続いて、1:18で一度静かになる。構成が効いてるんだよね〜']],
-    'listen:erfolg_piano': [['happy', '0:19と1:01、二度サビが来る構成がいいんだよね〜。1:19で一度静かになるのも効いてる']],
+    'listen:erfolg': [['happy', '0:02から1:13まで強い所が続いて、1:18で1度静かになる。構成が効いてるんだよね〜']],
+    'listen:erfolg_piano': [['happy', '0:19と1:01、2度サビが来る構成がいいんだよね〜。1:19で1度静かになるのも効いてる']],
     'listen:gourmet_race_64': [['happy', 'いちばん強い所が何度も来て、間にふつうが挟まる。ためが効いてるんだよね〜']],
-    'listen:gourmet_race_dx': [['happy', '1:14のサビのあと1:30で一度静かになる。構成が効いてるんだよね〜']],
+    'listen:gourmet_race_dx': [['happy', '1:14のサビのあと1:30で1度静かになる。構成が効いてるんだよね〜']],
     'listen:hopes_and_dreams': [['happy', '0:47でいったん落として、1:10からまた上げるのがいいんだよね〜']],
     'listen:kimimachi_loop': [['happy', '静か→ふつう→いちばん強いを何度もくり返す構成なんだよね〜 名前どおりループしてる笑']],
     'listen:kiss_mystery': [['happy', '0:15で静かにためて0:58で強める。2:41で落としてまた上げる構成が効いてるんだよね〜']],
     'listen:mf_ichika_mix': [['normal', 'サビは1:48から2:14。終わりの近くに山があるから、前半はためていこ']],
     'listen:monster_hero': [['normal', '0:46でふつう、0:57で強め、1:50でいちばん強い。段の上がり方がきれいなんだよねぇ']],
-    'listen:monster_hero_another': [['normal', '0:48で強くなって、1:14で一回ふつうに戻るんだよねぇ。そこが休みどころ']],
+    'listen:monster_hero_another': [['normal', '0:48で強くなって、1:14で1回ふつうに戻るんだよねぇ。そこが休みどころ']],
     'listen:six_eternel_remix': [['happy', '1:44で落として、1:54でいちばん強い。この落とし方、展開がきれいだよねぇ']],
-    'listen:six_eternel_beat': [['excited', 'サビが2:02と2:13の2回に分かれてるんだよねぇ。一回目は短いから、次に本気']],
+    'listen:six_eternel_beat': [['excited', 'サビが2:02と2:13の2回に分かれてるんだよねぇ。1回目は短いから、次に本気']],
     'listen:stay_with_me': [['normal', '1:15でいちばん強くなって、1:29で静か。前半にも山があるんだよねぇ']],
-    'listen:kiki_issen': [['normal', '静か→強めを何回もくり返して、2:52で一番上。ためが長い構成だねぇ']],
+    'listen:kiki_issen': [['normal', '静か→強めを何回もくり返して、2:52で1番上。ためが長い構成だねぇ']],
     'listen:kaze_ga_soyogu': [['normal', '0:37でいちばん強くなって、そこから少しずつ下りていく。山が前にある構成だよぉ']],
     'listen:close_to_your_heart': [['normal', '0:25で強め、1:02でいちばん強い。前半で一気に上がる構成だねぇ']],
-    'listen:eiki_boss_remix': [['normal', '2:27で一回静かにして、2:40で上がる。ためてから上がる構成だよぉ']],
+    'listen:eiki_boss_remix': [['normal', '2:27で1回静かにして、2:40で上がる。ためてから上がる構成だよぉ']],
     'listen:pandora_boss_remix': [['normal', '強めとふつうを何回も行き来して、2:27で上がる。じらし方がうまいんだよねぇ']],
     'listen:dullahan': [['normal', 'サビが0:33と1:03の2回。短い山と長い山があるんだよねぇ']],
     'listen:dullahan_clockwork': [['normal', '強い→静か→強いを2回くり返すんだよねぇ。形が分かると楽だよ']],
     'listen:toriko': [['troubled', 'ノリが良すぎて置いていかれがちなんだよねぇ。0:47のサビまでに体を慣らそ']],
-    'listen:4u_hitasura': [['normal', '0:35で一回ふつうに戻して、0:59から上がる。ためが分かりやすい構成だよぉ']],
+    'listen:4u_hitasura': [['normal', '0:35で1回ふつうに戻して、0:59から上がる。ためが分かりやすい構成だよぉ']],
     'listen:kindan_no_resistance': [['normal', 'サビが2回で、1回目が長いんだよねぇ。前半から本気で']],
     'listen:crossing_field': [['normal', '0:41で強めにして、0:46でいちばん強い。助走が短い構成だねぇ']],
-    'listen:nothing_without_you': [['normal', '強めが続いて、1:38で一番上、1:43で一気に静か。落とし方がうまいんだよねぇ']],
+    'listen:nothing_without_you': [['normal', '強めが続いて、1:38で1番上、1:43で一気に静か。落とし方がうまいんだよねぇ']],
     'listen:freedom_dive': [['normal', '1:17でいちばん強くして、1:21で静か。そのあとまた上がっていくんだよねぇ']],
-    'listen:the_city_beneath_the_comets': [['normal', '1:59で一回ふつうに戻してから、2:11でサビ。ためてから上がる形だよぉ']],
-    'listen:mou_hitotsu_no_sekai_e': [['normal', 'ふつうが長く続いて、2:58で一番上。ためが長い構成だねぇ']],
-    'listen:senjou_no_shippuu': [['normal', '0:17でもう強め。静かを2回はさんで、2:52で一番上だよぉ']],
-    'listen:makutsu_no_senritsu': [['normal', '1:13からずっと強めで、2:18で一番上。最後まで上がり続ける構成だねぇ']],
-    'listen:lamia': [['happy', '1:37でいったん落として、1:46でもう一回上げるのがいいんだよね〜']],
+    'listen:the_city_beneath_the_comets': [['normal', '1:59で1回ふつうに戻してから、2:11でサビ。ためてから上がる形だよぉ']],
+    'listen:mou_hitotsu_no_sekai_e': [['normal', 'ふつうが長く続いて、2:58で1番上。ためが長い構成だねぇ']],
+    'listen:senjou_no_shippuu': [['normal', '0:17でもう強め。静かを2回はさんで、2:52で1番上だよぉ']],
+    'listen:makutsu_no_senritsu': [['normal', '1:13からずっと強めで、2:18で1番上。最後まで上がり続ける構成だねぇ']],
+    'listen:lamia': [['happy', '1:37でいったん落として、1:46でもう1回上げるのがいいんだよね〜']],
     'listen:megalovania_sans': [['happy', '1:22でひと息ついて、1:38からまた上げていくのがいいんだよね〜']],
-    'listen:megalovania_smash': [['happy', '1:08で上げて、1:14で一回落とす緩急がいいんだよね〜']],
+    'listen:megalovania_smash': [['happy', '1:08で上げて、1:14で1回落とす緩急がいいんだよね〜']],
     'listen:midnight_studio': [['happy', '1:14でいったん落として、1:27からまた上げるのがいいんだよね〜']],
     'listen:rpg': [['happy', '1:23でひと息ついて、2:00でまたいちばん強くするのがいいんだよね〜']],
-    'listen:saudade': [['happy', '1:40で一回落として、2:04からまた上げるのがいいんだよね〜']],
-    'listen:seasons_of_a_little_plaza': [['happy', '1:37で一度静かにしてから1:47のサビ、ためが効いてるんだよね〜']],
+    'listen:saudade': [['happy', '1:40で1回落として、2:04からまた上げるのがいいんだよね〜']],
+    'listen:seasons_of_a_little_plaza': [['happy', '1:37で1度静かにしてから1:47のサビ、ためが効いてるんだよね〜']],
     'listen:sparkling_pink_overture': [['happy', '0:07〜1:02の長いサビが続くのがいいんだよね〜']],
     'listen:only_my_railgun': [['normal', '強め→静か→サビ、の3段なんだよねぇ。短いのに組み立てがきれい']],
-    'listen:big_bridge_no_shitou': [['normal', 'サビが最初に来て、1:24でもう一回山がある構成なんだよねぇ']],
+    'listen:big_bridge_no_shitou': [['normal', 'サビが最初に来て、1:24でもう1回山がある構成なんだよねぇ']],
     'listen:rising_hope': [['normal', '強め→静か→ふつう→最強、って細かく波があるんだよねぇ']],
     'listen:haruka': [['happy', '静か→ふつう→強め→最強、って階段みたいに上がる構成だねぇ']],
     'listen:crazy_party_night': [['normal', '軽い音が15%もあるんだよねぇ。ほかの曲より跳ねてる']],
-    'listen:emerald_rush': [['normal', '0:31に一回山があって、最後の1:55で本番なんだよねぇ']],
+    'listen:emerald_rush': [['normal', '0:31に1回山があって、最後の1:55で本番なんだよねぇ']],
     'listen:wrath_of_the_thorn_king': [['normal', '静か→ふつう→強め→最強を、30秒で上がりきる構成なんだよねぇ']],
-    'listen:monster': [['normal', 'サビ→静か→もう一回サビ、って大きく2回まわる構成だねぇ']],
-    'listen:anima': [['normal', 'サビが0:28からと長めで、1:46にもう一回山があるんだよねぇ']],
+    'listen:monster': [['normal', 'サビ→静か→もう1回サビ、って大きく2回まわる構成だねぇ']],
+    'listen:anima': [['normal', 'サビが0:28からと長めで、1:46にもう1回山があるんだよねぇ']],
     'listen:journey': [['normal', '山が0:34と1:58の2つで、間にちゃんと谷があるんだよねぇ']],
     'listen:sheriruth': [['happy', 'ずっとためて、最後の5秒で出しきる構成なんだよねぇ']],
     'listen:against_my_own_shadow': [['normal', '山が0:54と1:41の2つで、きれいに分かれてるんだよねぇ']],
     'listen:grievous_lady': [['normal', '1:03に短い山、1:41から長い山。2段がまえの構成だねぇ']],
     'listen:rose': [['happy', '軽い音が11%あって、強い音とまざってるのがおしゃれなんだよねぇ']],
     'listen:sad_song': [['normal', '静か→強い、を3回くり返して、最後がいちばん大きいんだよねぇ']],
-    'listen:toward_the_stars_short': [['happy', 'これ構成がきれいなんだよね〜。1:44で一回引いて、1:59でサビなの笑']],
+    'listen:toward_the_stars_short': [['happy', 'これ構成がきれいなんだよね〜。1:44で1回引いて、1:59でサビなの笑']],
     'listen:black_shout': [['normal', '0:36から0:49まで、ふつうでためてるのがいいんだよねぇ']],
     'listen:light_player': [['normal', '1:19に短いサビ、3:30に長いサビ。前ふりがちゃんとある構成だねぇ']],
     'listen:tsuki_ga_michiru_mae_ni': [['normal', '静か→サビ、をきっちり4回くり返す構成なんだよねぇ']],
-    'listen:rebellion': [['normal', 'サビが3:14からで、そのあと3:49にもう一回山があるんだよねぇ']],
+    'listen:rebellion': [['normal', 'サビが3:14からで、そのあと3:49にもう1回山があるんだよねぇ']],
     'listen:altar_world_tree': [['normal', '6分を、静かな所と強い所で細かく区切ってる構成なんだよねぇ']],
-    'listen:evans': [['happy', '好きなんだよね〜。0:59で一回山を見せて、1:33で本番なの笑']],
+    'listen:evans': [['happy', '好きなんだよね〜。0:59で1回山を見せて、1:33で本番なの笑']],
     'listen:humanoid': [['normal', '強め→静か→強め、を2回やってからサビに入るんだよねぇ']],
-    'listen:walkure': [['happy', '4:33で一回静かに落として、8:12でまた一番上まで上げる。構成が効いてるんだよね〜']],
-    'listen:winter_fall': [['happy', '1:37でいったん落として、2:22でまた一番上まで上げる。構成が効いてるんだよね〜']],
-    'listen:zenbu_hissatsuwaza': [['happy', '0:34で強めに入って、1:03で一回静かにして、1:31で爆発する構成なんだよね〜']],
+    'listen:walkure': [['happy', '4:33で1回静かに落として、8:12でまた1番上まで上げる。構成が効いてるんだよね〜']],
+    'listen:winter_fall': [['happy', '1:37でいったん落として、2:22でまた1番上まで上げる。構成が効いてるんだよね〜']],
+    'listen:zenbu_hissatsuwaza': [['happy', '0:34で強めに入って、1:03で1回静かにして、1:31で爆発する構成なんだよね〜']],
   },
   sorashido: {
     join: [['happy', '自分も参戦します！ よろしくお願いします笑'], ['happy', '今日はオリヒメの曲、ありますかね・・・！ 楽しみです笑']],
@@ -35209,7 +35209,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     last: [['normal', '残り10秒、計算どおりに締めます笑'], ['normal', 'ラストまで全部拾いましょう！']],
     mvp: [['wink', 'MVPは計算済みでした・・・！笑'], ['wink', 'え、自分がMVPですか！？ 表に太字で書いておきます笑']],
     high: [['happy', '計算どおりの名演でしたねー！'], ['happy', '今の数字、表に残しておきたいです笑']],
-    mid: [['happy', '悪くない数字ですね。次はもっと上がる計算です'], ['happy', 'もう一曲いきましょう！ 次は勝ちます笑']],
+    mid: [['happy', '悪くない数字ですね。次はもっと上がる計算です'], ['happy', 'もう1曲いきましょう！ 次は勝ちます笑']],
     low: [['troubled', '次は全ノーツ計算して挑みます笑'], ['crying', 'くやしい・・・！ 次は上げます！']],
     fc: [['surprise', 'フルコンですねー！ すごいです笑'], ['surprise', '計算を超えてきましたね笑']],
     levelup: [['happy', 'セッションLvアップです・・・！'], ['happy', '伸び方、グラフにしたら右肩上がりですね笑']],
@@ -35311,7 +35311,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     last: [['normal', 'あと少しだね、最後まで一緒に'], ['normal', '最後まで楽しもうね']],
     mvp: [['wink', '俺がMVP？ おけ、ありがとね笑'], ['wink', '今日はたまたま調子がよかったかな']],
     high: [['happy', 'いい演奏だったね、おつかれさま'], ['happy', '息が合ってたね、うれしいな']],
-    mid: [['happy', 'いい演奏だったよ。少し休んでもいいからね'], ['happy', '楽しかったね、もう一曲どうかな']],
+    mid: [['happy', 'いい演奏だったよ。少し休んでもいいからね'], ['happy', '楽しかったね、もう1曲どうかな']],
     low: [['troubled', '大丈夫、次はきっと合うよ'], ['troubled', '疲れてないかな？無理しないでね']],
     fc: [['surprise', 'フルコンかな？ すごいね☺️'], ['surprise', '全部つながったね、見ててうれしかったよ']],
     levelup: [['happy', 'セッションLvが上がったね。ありがとね'], ['happy', '少しずつ合ってきたかな']],
@@ -35369,7 +35369,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:makutsu_no_senritsu': [['happy', 'はじめの静かなところで、ゆっくり気持ちを整えようか☺️']],
     'listen:lamia': [['normal', '1:00で少し落ち着く所、ひと息つけるね']],
     'listen:megalovania_sans': [['normal', '1:22と1:26は少し落ち着くから、ひと息つけるね']],
-    'listen:megalovania_smash': [['normal', '1:43で一度静かになるから、そこでひと息つけるね']],
+    'listen:megalovania_smash': [['normal', '1:43で1度静かになるから、そこでひと息つけるね']],
     'listen:midnight_studio': [['normal', '1:14の静かなところ、ひと息つけるね']],
     'listen:rpg': [['normal', '1:23の静かなところ、ひと息つけるね']],
     'listen:saudade': [['normal', '1:40で少し静かになるから、ひと息つけるね']],
@@ -35382,7 +35382,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:crazy_party_night': [['troubled', 'にぎやかなのは少し疲れちゃうけど…1:19からは落ち着けるかな']],
     'listen:emerald_rush': [['happy', '1:42でふつうに戻る所が、サビ前のひと休みだね']],
     'listen:wrath_of_the_thorn_king': [['happy', 'ここに来たときの曲なんだ。静かな入り、何度聞いても落ち着くね']],
-    'listen:monster': [['normal', '1:45でふつうに戻る所で、一度落ち着けるね']],
+    'listen:monster': [['normal', '1:45でふつうに戻る所で、1度落ち着けるね']],
     'listen:anima': [['normal', '1:08でふつうに戻る所で、少し落ち着けるかな']],
     'listen:journey': [['happy', '1:04からの静かな所、ゆっくり景色を見てる気分になるね']],
     'listen:sheriruth': [['normal', '1:16でふつうに戻る所で、少しひと息つけるね']],
@@ -35515,12 +35515,12 @@ const RHYTHM_ASSIST_SESSION_PAIR_LINES = Object.freeze({
     gattai: [[['sorashido', 'excited', '{c}、ここです！ いきましょう！'], ['kiki', 'excited', 'はい、いきまつ♪']]],
   },
   'kyuko-momosuke': {
-    play: [[['kyuko', 'happy', '{c}、ここサビ前だよ〜'], ['momosuke', 'happy', '知ってる！！ももが一番かわいくなるとこ♡']], [['momosuke', 'happy', '{c}、もものダンスどう？'], ['kyuko', 'happy', 'ほい、リズムぴったりだよ〜']]],
+    play: [[['kyuko', 'happy', '{c}、ここサビ前だよ〜'], ['momosuke', 'happy', '知ってる！！ももが1番かわいくなるとこ♡']], [['momosuke', 'happy', '{c}、もものダンスどう？'], ['kyuko', 'happy', 'ほい、リズムぴったりだよ〜']]],
     result: [[['kyuko', 'happy', '2人でいい流れだったね〜'], ['momosuke', 'wink', '{c}、ももについてこれてえらい♡']]],
     gattai: [[['momosuke', 'excited', '{c}、いくよ！！'], ['kyuko', 'excited', 'おけ〜、せーの！']]],
   },
   'kyuko-mua': {
-    play: [[['kyuko', 'happy', '{c}、ここで一回ためるよぉ'], ['mua', 'happy', 'おっけ！あたし合わせる♪']], [['mua', 'happy', '{c}、余裕そうぢゃん！'], ['kyuko', 'happy', 'ほい、構成は読めてるよ〜']]],
+    play: [[['kyuko', 'happy', '{c}、ここで1回ためるよぉ'], ['mua', 'happy', 'おっけ！あたし合わせる♪']], [['mua', 'happy', '{c}、余裕そうぢゃん！'], ['kyuko', 'happy', 'ほい、構成は読めてるよ〜']]],
     result: [[['kyuko', 'happy', 'いい流れだったね〜、ありがとん笑'], ['mua', 'wink', 'こっちこそ！楽しかった♪']]],
     gattai: [[['kyuko', 'excited', '{c}、ここだよ〜'], ['mua', 'excited', 'まかせて！せーの♪']]],
   },
@@ -35633,10 +35633,10 @@ const RHYTHM_BUDDY_TALK_BASE = ({
       clingy: ['ねぇ見て見て!MVP!ほめてほめて!', 'MVP取ったよ〜!なでて!', 'えへへ、ほめられたい〜', 'いっぱいほめてね!'],
       smart: ['MVPは予測どおりです', '計算どおりの結果ですね', '最高スコアを記録しました', '要因は集中力と分析です'],
       serious: ['MVPをいただき光栄です!', '日ごろの練習の成果です', '皆さんのおかげです', 'まだまだ精進します!'],
-      proud: ['当たり前ね。私だもの', 'もっと称えていいのよ?', 'やっぱり私が一番ね', 'ふふん、見たでしょ?'],
+      proud: ['当たり前ね。私だもの', 'もっと称えていいのよ?', 'やっぱり私が1番ね', 'ふふん、見たでしょ?'],
       worrier: ['え、ほんとに?まぐれかも…', 'MVP…!?信じられない…', 'うれしいけど、次が不安…', '夢じゃないよね…?'],
       stubborn: ['当然の結果だ', '努力は裏切らん!', '次もMVPを取る!', 'これが俺のやり方だ!'],
-      easygoing: ['あ〜MVPだ〜、やった〜', 'ラッキー〜', 'なんか取れちゃった〜', 'うれし〜ねむい〜'], fiery: ['やったぞ!全力のおかげだ!', '燃えた分だけ取れた!', 'まだまだ上がいける!', 'もう一曲いくぞ!'], cool: ['想定内だね', '計算どおり', '…悪くない結果だ', '落ち着いてたからね'], fickle: ['MVP?気分がよかったのかも', 'なんとなく取れちゃった', '明日はわかんないけどね', 'やっぱ今日はいける日かも'], mellow: ['あらあら、MVPですって', 'ふふ、うれしいですね', 'みなさんのおかげです', 'ありがたいことですね'], hasty: ['MVP!よし次!', 'やった!はやく次の曲!', '取った!すぐもう一曲!', '喜ぶのはあと!次!'], competitive: ['よし!やっと勝てた!', 'これがリベンジだ!', '次も負けないからな!', '悔しかった分、うれしい!'], showoff: ['見た?見た?MVP〜!', 'やっぱ天才かも?', 'でしょでしょ!ノッてたもん!', 'このままずっとノッてたい〜!'], shy: ['え、あ…MVP…?てれる…', '…うれしい。ありがと', 'みんなに見られてる…てれる', 'こ、こういうの、なれてない…'], hardworker: ['やった!練習してよかった!', '積み重ねが実った!', 'コツコツやってきたかいがあった!', 'でも、もっと上手くなる!'], romantic: ['夢みたい…MVPだなんて', '星に手が届いた気分', 'なんて素敵な結末…', 'この瞬間、ずっと忘れない'],
+      easygoing: ['あ〜MVPだ〜、やった〜', 'ラッキー〜', 'なんか取れちゃった〜', 'うれし〜ねむい〜'], fiery: ['やったぞ!全力のおかげだ!', '燃えた分だけ取れた!', 'まだまだ上がいける!', 'もう1曲いくぞ!'], cool: ['想定内だね', '計算どおり', '…悪くない結果だ', '落ち着いてたからね'], fickle: ['MVP?気分がよかったのかも', 'なんとなく取れちゃった', '明日はわかんないけどね', 'やっぱ今日はいける日かも'], mellow: ['あらあら、MVPですって', 'ふふ、うれしいですね', 'みなさんのおかげです', 'ありがたいことですね'], hasty: ['MVP!よし次!', 'やった!はやく次の曲!', '取った!すぐもう1曲!', '喜ぶのはあと!次!'], competitive: ['よし!やっと勝てた!', 'これがリベンジだ!', '次も負けないからな!', '悔しかった分、うれしい!'], showoff: ['見た?見た?MVP〜!', 'やっぱ天才かも?', 'でしょでしょ!ノッてたもん!', 'このままずっとノッてたい〜!'], shy: ['え、あ…MVP…?てれる…', '…うれしい。ありがと', 'みんなに見られてる…てれる', 'こ、こういうの、なれてない…'], hardworker: ['やった!練習してよかった!', '積み重ねが実った!', 'コツコツやってきたかいがあった!', 'でも、もっと上手くなる!'], romantic: ['夢みたい…MVPだなんて', '星に手が届いた気分', 'なんて素敵な結末…', 'この瞬間、ずっと忘れない'],
     },
     mood: {
       great: ['最高の日!!MVP!!', '今日は無敵だ!!', 'うれしすぎる!!'],
@@ -35658,7 +35658,7 @@ const RHYTHM_BUDDY_TALK_BASE = ({
       proud: ['まあ、このくらいは当然ね', '完璧に近かったでしょ?', '見事だったでしょ?', 'さすが私ね'],
       worrier: ['ふぅ…うまくいってよかった…', 'ほっとした〜…', 'ミスしなくて助かった…', 'ドキドキした〜…'],
       stubborn: ['狙いどおりだ', '手は抜かなかった!', 'まだ満足せんぞ', 'これが実力だ!'],
-      easygoing: ['いい感じだったね〜', 'ふぅ、気持ちよかった〜', 'ゆったりできたよ〜', 'うまくいったね〜'], fiery: ['全力が届いた!', '体がまだ熱い!', 'この調子でもう一曲だ!', '胸が熱くなった!'], cool: ['問題なかったね', 'いい流れだった', '想定どおりに叩けた', '…うん、悪くない'], fickle: ['今のはよかったかも', '気分がのってた', 'なんか、うまくいっちゃった', 'この気分、続くといいな'], mellow: ['とてもよかったですね', 'ふふ、気持ちのいい演奏でした', 'みなさん、おじょうずでした', 'ていねいに叩けましたね'], hasty: ['よし!次いこ!', 'いい感じ!はやく次!', 'すぐもう一回やりたい!', '終わるのはやかった!いいね!'], competitive: ['よし、前より上だ!', 'この調子なら負けない!', 'まだまだ、もっと上へ!', '今日は勝ちにいけた!'], showoff: ['見た?決まったでしょ!', 'ノリノリだったでしょ〜!', '天才かもしれない〜', '今の、録画しといて〜!'], shy: ['…うまく、できた', 'ふふ…よかった', 'ちょっとだけ、うれしい', '…みんなの前でも、できた'], hardworker: ['いい感じ!練習どおり!', '積み重ねてきたかいがある!', 'この感覚、もっと練習しよう!', 'よし、一歩前進!'], romantic: ['心が音にとけていく…', 'なんて素敵な時間だったの', '旋律がきらきらしてた', 'まるで星の海を泳いだみたい'],
+      easygoing: ['いい感じだったね〜', 'ふぅ、気持ちよかった〜', 'ゆったりできたよ〜', 'うまくいったね〜'], fiery: ['全力が届いた!', '体がまだ熱い!', 'この調子でもう1曲だ!', '胸が熱くなった!'], cool: ['問題なかったね', 'いい流れだった', '想定どおりに叩けた', '…うん、悪くない'], fickle: ['今のはよかったかも', '気分がのってた', 'なんか、うまくいっちゃった', 'この気分、続くといいな'], mellow: ['とてもよかったですね', 'ふふ、気持ちのいい演奏でした', 'みなさん、おじょうずでした', 'ていねいに叩けましたね'], hasty: ['よし!次いこ!', 'いい感じ!はやく次!', 'すぐもう1回やりたい!', '終わるのはやかった!いいね!'], competitive: ['よし、前より上だ!', 'この調子なら負けない!', 'まだまだ、もっと上へ!', '今日は勝ちにいけた!'], showoff: ['見た?決まったでしょ!', 'ノリノリだったでしょ〜!', '天才かもしれない〜', '今の、録画しといて〜!'], shy: ['…うまく、できた', 'ふふ…よかった', 'ちょっとだけ、うれしい', '…みんなの前でも、できた'], hardworker: ['いい感じ!練習どおり!', '積み重ねてきたかいがある!', 'この感覚、もっと練習しよう!', 'よし、一歩前進!'], romantic: ['心が音にとけていく…', 'なんて素敵な時間だったの', '旋律がきらきらしてた', 'まるで星の海を泳いだみたい'],
     },
     mood: {
       great: ['最高の演奏!!', 'ノリノリだった!!', '気持ちよかった〜!!'],
@@ -35670,7 +35670,7 @@ const RHYTHM_BUDDY_TALK_BASE = ({
   },
   // ---- 結果: ふつう ----
   mid: {
-    common: ['おつかれさま!', 'まあまあだったかな', 'ふぅ、おわった!', '次はもっとうまくやる!', '楽しかったね!', 'ちょっとミスしちゃった', 'もう一回やりたい!', 'いい経験になった!'],
+    common: ['おつかれさま!', 'まあまあだったかな', 'ふぅ、おわった!', '次はもっとうまくやる!', '楽しかったね!', 'ちょっとミスしちゃった', 'もう1回やりたい!', 'いい経験になった!'],
     trait: {
       jester: ['ここからが本番だったのに!', 'ミスも味ってことで!', '次は笑わせるぞ!', '見せ場がたりなかった!'],
       brave: ['まだ本気じゃない!', '次は勝つ!', '悔しいが、次だ!', 'もっと強くなる!'],
@@ -35679,11 +35679,11 @@ const RHYTHM_BUDDY_TALK_BASE = ({
       serious: ['もっと練習します!', 'まだ未熟でした', 'ありがとうございました', '次はがんばります!'],
       proud: ['本調子じゃなかっただけよ', 'こんなものじゃないわ', '次は本気を見せるわ', 'まあ、悪くないでしょ?'],
       worrier: ['ミスしちゃった…ごめんね…', 'みんなの足を引っぱったかな…', 'もっとうまくなりたい…', '次はちゃんとやる…!'],
-      stubborn: ['納得いかん!もう一回!', 'こんなはずでは…', '次こそ決める!', '妥協はせんぞ'],
-      easygoing: ['まあ、こんなもんだよね〜', 'ふわ〜、おつかれ〜', 'のんびり上達しよ〜', 'つぎ、がんばるね〜'], fiery: ['まだまだ燃え足りない!', '次はもっと全力だ!', 'ここからもっと熱くなる!', 'もう一曲で上げるぞ!'], cool: ['まあ、こんなものか', '想定の範囲だね', '次は修正できる', '…落ち着いていこう'], fickle: ['うーん、気分がのらなかったかも', 'ふつうだった、たぶん', '次はいい気分かも', 'やっぱ別の曲がよかったかな'], mellow: ['まあまあ、悪くなかったですよ', 'おつかれさまでした', 'ゆっくり上手になりましょう', '次もいっしょにがんばりましょう'], hasty: ['まあいい!次!', '考えるのはあと!次の曲!', '待てない!もう一曲!', 'すぐもう一回!'], competitive: ['くっ…あと少しだった!', '次は負けない!', 'もう一回、もう一回!', 'こんなんじゃ満足できない!'], showoff: ['今のは準備運動〜!', 'まだノリきれてないだけ〜', '次は天才モードいくよ〜!', 'ふふん、本番はこれから〜'], shy: ['…ちょっと、かたくなった', '人が多いと、手がかたく…', '…次は、もう少し', 'えへ…まあまあ、かな'], hardworker: ['まだ練習が足りないな!', 'もう一回やらせて!', 'コツコツ直していこう!', '伸びしろがあるってこと!'], romantic: ['もう少しで、星に届いたのに', '旋律をつかみきれなかった…', '夢の続きは、次の曲で', '欠けた月みたいな出来だね'],
+      stubborn: ['納得いかん!もう1回!', 'こんなはずでは…', '次こそ決める!', '妥協はせんぞ'],
+      easygoing: ['まあ、こんなもんだよね〜', 'ふわ〜、おつかれ〜', 'のんびり上達しよ〜', 'つぎ、がんばるね〜'], fiery: ['まだまだ燃え足りない!', '次はもっと全力だ!', 'ここからもっと熱くなる!', 'もう1曲で上げるぞ!'], cool: ['まあ、こんなものか', '想定の範囲だね', '次は修正できる', '…落ち着いていこう'], fickle: ['うーん、気分がのらなかったかも', 'ふつうだった、たぶん', '次はいい気分かも', 'やっぱ別の曲がよかったかな'], mellow: ['まあまあ、悪くなかったですよ', 'おつかれさまでした', 'ゆっくり上手になりましょう', '次もいっしょにがんばりましょう'], hasty: ['まあいい!次!', '考えるのはあと!次の曲!', '待てない!もう1曲!', 'すぐもう1回!'], competitive: ['くっ…あと少しだった!', '次は負けない!', 'もう1回、もう1回!', 'こんなんじゃ満足できない!'], showoff: ['今のは準備運動〜!', 'まだノリきれてないだけ〜', '次は天才モードいくよ〜!', 'ふふん、本番はこれから〜'], shy: ['…ちょっと、かたくなった', '人が多いと、手がかたく…', '…次は、もう少し', 'えへ…まあまあ、かな'], hardworker: ['まだ練習が足りないな!', 'もう1回やらせて!', 'コツコツ直していこう!', '伸びしろがあるってこと!'], romantic: ['もう少しで、星に届いたのに', '旋律をつかみきれなかった…', '夢の続きは、次の曲で', '欠けた月みたいな出来だね'],
     },
     mood: {
-      great: ['それでも楽しかった!!', 'もう一回やりたい!!'],
+      great: ['それでも楽しかった!!', 'もう1回やりたい!!'],
       good: ['楽しかったからOK!', '次はもっといける!'],
       normal: ['ふつうにがんばった!'],
       bad: ['調子わるかったから…', 'ちょっと疲れた…'],
@@ -35695,14 +35695,14 @@ const RHYTHM_BUDDY_TALK_BASE = ({
     common: ['うまくいかなかった…', 'ごめんね…', 'くやしい…', '次はがんばる!', 'むずかしかった…', 'ミスばっかりだった…', 'もっと練習する!', '今日はダメだった…'],
     trait: {
       jester: ['ズッコケちゃった〜!', '笑ってごまかそう!', 'これも芸のうち…?', '次は名誉挽回だ!'],
-      brave: ['くっ…負けた…', '悔しい!次は勝つ!', 'もう一回だ!!', '強くなって戻ってくる!'],
+      brave: ['くっ…負けた…', '悔しい!次は勝つ!', 'もう1回だ!!', '強くなって戻ってくる!'],
       clingy: ['うぅ…なぐさめて〜', 'ごめんね…きらいにならないで…', 'ぎゅってして…', 'さみしいよ〜'],
       smart: ['想定を下回りました', '原因を分析します', '失敗から学びます', '次は修正します'],
       serious: ['申し訳ありません…', '精進が足りませんでした', '次は必ず取り戻します', 'もっと練習します…'],
       proud: ['…今のは見なかったことにして', '次は絶対に見返すわ', 'こんなの私じゃないわ…', '調子が悪かっただけよ!'],
       worrier: ['やっぱりダメだった…ごめんなさい…', 'みんなに迷惑かけた…', 'どうしよう…', '自信なくなっちゃう…'],
-      stubborn: ['認めん!もう一回だ!', 'こんなはずはない!', '次こそ…!', 'あきらめんぞ!'],
-      easygoing: ['あちゃ〜、失敗した〜', 'まあ、そんな日もあるよね〜', 'ねむくてミスった〜', '次はがんばる〜…たぶん'], fiery: ['くうっ、まだまだだ!', 'この悔しさで燃えてきた!', 'もう一曲だ!全力で!', '熱がたりなかった!次だ!'], cool: ['…想定外だったね', '次は落ち着いていく', '今のは計算ミスだ', '問題ない。立て直す'], fickle: ['あちゃ、気分じゃなかったかも', '今日はこういう日かも', 'やっぱ別の難易度がよかった', 'ま、明日は変わるかも'], mellow: ['あらあら、残念でしたね', 'そういう日もありますよ', 'ゆっくり立て直しましょう', 'ふふ、次はきっと大丈夫です'], hasty: ['うわっ、急ぎすぎた!', '次!次いこ!', 'はやく取り返したい!', '落ちこむひまない!次!'], competitive: ['くっ…今のなし!', '悔しい!絶対リベンジする!', '負けたままじゃ終われない!', 'このままじゃ引き下がれない!'], showoff: ['あれ〜?今日はノれなかった〜', 'ま、天才にも休みはあるよね〜', '次こそノッてくからね〜!', '調子の波ってやつ〜!'], shy: ['…うう、みんな見てた…', '人が多くて、目が回った…', '…はずかしい', 'こ、今度は二人のときに…'], hardworker: ['よし、ここから特訓だ!', 'できるまで、何回でもやる!', 'ここからまた積み上げよう!', '苦手なとこ、見つかった!'], romantic: ['夢が、こわれちゃった…', '今日の旋律は、遠かったね', '星がかくれた夜みたい', '涙も音楽の一部かな'],
+      stubborn: ['認めん!もう1回だ!', 'こんなはずはない!', '次こそ…!', 'あきらめんぞ!'],
+      easygoing: ['あちゃ〜、失敗した〜', 'まあ、そんな日もあるよね〜', 'ねむくてミスった〜', '次はがんばる〜…たぶん'], fiery: ['くうっ、まだまだだ!', 'この悔しさで燃えてきた!', 'もう1曲だ!全力で!', '熱がたりなかった!次だ!'], cool: ['…想定外だったね', '次は落ち着いていく', '今のは計算ミスだ', '問題ない。立て直す'], fickle: ['あちゃ、気分じゃなかったかも', '今日はこういう日かも', 'やっぱ別の難易度がよかった', 'ま、明日は変わるかも'], mellow: ['あらあら、残念でしたね', 'そういう日もありますよ', 'ゆっくり立て直しましょう', 'ふふ、次はきっと大丈夫です'], hasty: ['うわっ、急ぎすぎた!', '次!次いこ!', 'はやく取り返したい!', '落ちこむひまない!次!'], competitive: ['くっ…今のなし!', '悔しい!絶対リベンジする!', '負けたままじゃ終われない!', 'このままじゃ引き下がれない!'], showoff: ['あれ〜?今日はノれなかった〜', 'ま、天才にも休みはあるよね〜', '次こそノッてくからね〜!', '調子の波ってやつ〜!'], shy: ['…うう、みんな見てた…', '人が多くて、目が回った…', '…はずかしい', 'こ、今度は2人のときに…'], hardworker: ['よし、ここから特訓だ!', 'できるまで、何回でもやる!', 'ここからまた積み上げよう!', '苦手なとこ、見つかった!'], romantic: ['夢が、こわれちゃった…', '今日の旋律は、遠かったね', '星がかくれた夜みたい', '涙も音楽の一部かな'],
     },
     mood: {
       great: ['でもすごく楽しかった!!', 'めげないよ!!'],
@@ -35724,7 +35724,7 @@ const RHYTHM_BUDDY_TALK_BASE = ({
       proud: ['しかたないわね、譲ってあげる', '私の席は特別に空けるわ', 'また呼ぶことを許すわ', 'ふふ、ありがたく思いなさい'],
       worrier: ['ここにいていいのかな…帰るね…', 'ごめんね、席ゆずる…', '迷惑かけなくてよかった…', 'またね…ほんとにまたね…'],
       stubborn: ['しかたない、席はゆずる', '次は最後までやるぞ!', '帰るが、また来る', '席のことは了解した'],
-      easygoing: ['はいは〜い、ゆずるね〜', 'じゃあね〜', 'ねむくなってきたからちょうどいい〜', 'またね〜、のんびり〜'], fiery: ['席はゆずる!みんな燃えろ!', 'またすぐ全力で来る!', '熱いの、たのんだぞ!', '次は一日中遊ぶぞ!'], cool: ['席はゆずるよ', 'じゃあ、また', '落ち着いたらまた来る', 'あとはよろしく'], fickle: ['ゆずるね。気分で', 'やっぱ帰ろっかな', '今日はここまでかも', 'またなんとなく来るね'], mellow: ['どうぞ、お席をゆずりますね', 'みなさん、楽しんでくださいね', 'またお会いしましょうね', 'それでは、失礼しますね'], hasty: ['ゆずる!はやく座って!', 'じゃ!またすぐ!', '次の人、急いで!', 'すぐ戻る!'], competitive: ['次は負けないからな!またな!', '席はゆずる。勝負はまた今度!', 'くっ…またリベンジしに来る!', '次こそ一番になる!じゃあな!'], showoff: ['じゃ、またね〜!呼んでね〜!', '名残おしいけど、お先〜!', '次も天才っぷり見せにくるね〜', 'ばいば〜い!また来るよ〜!'], shy: ['あ…じゃあ、ゆずるね', '…またね', '人が多いから、そっと帰るね', '…またね、二人のときに'], hardworker: ['席ゆずる!練習してくるね!', 'ありがとう!またがんばる!', '次までに上手くなっておく!', 'またね!コツコツ続ける!'], romantic: ['素敵な時間を、ありがとう', '夢の続きは、またいつか', '星の数ほど、また会えるよ', 'この旋律を胸に、またね'],
+      easygoing: ['はいは〜い、ゆずるね〜', 'じゃあね〜', 'ねむくなってきたからちょうどいい〜', 'またね〜、のんびり〜'], fiery: ['席はゆずる!みんな燃えろ!', 'またすぐ全力で来る!', '熱いの、たのんだぞ!', '次は1日中遊ぶぞ!'], cool: ['席はゆずるよ', 'じゃあ、また', '落ち着いたらまた来る', 'あとはよろしく'], fickle: ['ゆずるね。気分で', 'やっぱ帰ろっかな', '今日はここまでかも', 'またなんとなく来るね'], mellow: ['どうぞ、お席をゆずりますね', 'みなさん、楽しんでくださいね', 'またお会いしましょうね', 'それでは、失礼しますね'], hasty: ['ゆずる!はやく座って!', 'じゃ!またすぐ!', '次の人、急いで!', 'すぐ戻る!'], competitive: ['次は負けないからな!またな!', '席はゆずる。勝負はまた今度!', 'くっ…またリベンジしに来る!', '次こそ1番になる!じゃあな!'], showoff: ['じゃ、またね〜!呼んでね〜!', '名残おしいけど、お先〜!', '次も天才っぷり見せにくるね〜', 'ばいば〜い!また来るよ〜!'], shy: ['あ…じゃあ、ゆずるね', '…またね', '人が多いから、そっと帰るね', '…またね、2人のときに'], hardworker: ['席ゆずる!練習してくるね!', 'ありがとう!またがんばる!', '次までに上手くなっておく!', 'またね!コツコツ続ける!'], romantic: ['素敵な時間を、ありがとう', '夢の続きは、またいつか', '星の数ほど、また会えるよ', 'この旋律を胸に、またね'],
     },
     mood: {
       great: ['楽しかった!!ありがとう!!', 'またあそぼうね!!'],
@@ -35753,7 +35753,7 @@ const RHYTHM_BUDDY_TALK_BASE = ({
       clingy: ['えへへ、うれしい〜!', 'もっと言って!'], smart: ['お役に立てて光栄です', '礼には及びません'],
       serious: ['恐縮です!', 'とんでもないです'], proud: ['当然のことよ', 'わかればいいのよ'],
       worrier: ['そ、そんな…ありがとう…', 'お役に立ててよかった…'], stubborn: ['礼などいらん', 'いや、当然だ'],
-      easygoing: ['いいよいいよ〜', 'どういたしまして〜'], fiery: ['礼はいい!もう一曲だ!', 'へへ、燃えるな!'], cool: ['別にいいよ', '問題ないよ'], fickle: ['気分でやっただけかも', 'いいのいいの、なんとなく'], mellow: ['いえいえ、どういたしまして', 'ふふ、喜んでもらえてうれしいです'], hasty: ['いいって!次いこ!', 'どういたしまして!はやく次!'], competitive: ['いいって、気にするな', 'へへ、次は負けないけどな'], showoff: ['でしょでしょ〜!いいってこと〜', 'えっへん、もっと頼って〜'], shy: ['あ…う、うん…', '…どういたしまして'], hardworker: ['どういたしまして!練習の成果!', 'いいよ!また手伝う!'], romantic: ['ふふ、素敵な言葉をありがとう', 'その一言で、心が晴れたよ'],
+      easygoing: ['いいよいいよ〜', 'どういたしまして〜'], fiery: ['礼はいい!もう1曲だ!', 'へへ、燃えるな!'], cool: ['別にいいよ', '問題ないよ'], fickle: ['気分でやっただけかも', 'いいのいいの、なんとなく'], mellow: ['いえいえ、どういたしまして', 'ふふ、喜んでもらえてうれしいです'], hasty: ['いいって!次いこ!', 'どういたしまして!はやく次!'], competitive: ['いいって、気にするな', 'へへ、次は負けないけどな'], showoff: ['でしょでしょ〜!いいってこと〜', 'えっへん、もっと頼って〜'], shy: ['あ…う、うん…', '…どういたしまして'], hardworker: ['どういたしまして!練習の成果!', 'いいよ!また手伝う!'], romantic: ['ふふ、素敵な言葉をありがとう', 'その一言で、心が晴れたよ'],
     },
     mood: { great: ['こっちこそありがとう!!'], good: ['うれしい!'], normal: ['どういたしまして'], bad: ['…うん'], awful: ['…べつに'] },
   },
@@ -35769,15 +35769,15 @@ const RHYTHM_BUDDY_TALK_BASE = ({
     mood: { great: ['やったー!!ありがとう!!'], good: ['ありがとう!うれしい!'], normal: ['ありがとう'], bad: ['…どうも'], awful: ['…ふん'] },
   },
   replyAgain: {
-    common: ['いいよ!もう一回!', 'やろうやろう!', 'もちろん!', 'まだまだいける!'],
+    common: ['いいよ!もう1回!', 'やろうやろう!', 'もちろん!', 'まだまだいける!'],
     trait: {
-      jester: ['アンコールありがとう!', 'もう一回ウケを狙う!'], brave: ['望むところだ!', '何度でも受けて立つ!'],
+      jester: ['アンコールありがとう!', 'もう1回ウケを狙う!'], brave: ['望むところだ!', '何度でも受けて立つ!'],
       clingy: ['やったー!まだ遊べる!', 'ずっと遊んでいたい〜'], smart: ['再挑戦ですね。承知しました', '改善点を活かします'],
-      serious: ['よろしくお願いします!', '次はもっとうまくやります'], proud: ['いいわよ、もう一度見せてあげる', '何度でもどうぞ'],
-      worrier: ['う、うん…がんばる…', 'もう一回…ドキドキ…'], stubborn: ['おう!次こそ決める!', '望むところだ'],
-      easygoing: ['いいよ〜、もう一回〜', 'のんびりやろ〜'], fiery: ['もう一曲か!燃えるな!', '何度でも全力だ!'], cool: ['いいよ。もう一回', '問題ない。いこう'], fickle: ['もう一回?いい気分だしいいかも', 'やっぱもう一回やりたいかも'], mellow: ['ええ、もう一度いきましょうか', 'ふふ、何度でもお付き合いしますね'], hasty: ['もう一回!すぐやろ!', '待ってました!はやく!'], competitive: ['よし、リベンジだ!', 'もう一回!今度こそ!'], showoff: ['いいね〜!もっとノッてく〜!', '何回でも見せちゃう〜!'], shy: ['…うん、もう一回', 'い、いいよ…やる'], hardworker: ['よし!もう一回練習だ!', '何回でもやろう!'], romantic: ['もう一度、あの旋律を', '夢の続きを見よう'],
+      serious: ['よろしくお願いします!', '次はもっとうまくやります'], proud: ['いいわよ、もう1度見せてあげる', '何度でもどうぞ'],
+      worrier: ['う、うん…がんばる…', 'もう1回…ドキドキ…'], stubborn: ['おう!次こそ決める!', '望むところだ'],
+      easygoing: ['いいよ〜、もう1回〜', 'のんびりやろ〜'], fiery: ['もう1曲か!燃えるな!', '何度でも全力だ!'], cool: ['いいよ。もう1回', '問題ない。いこう'], fickle: ['もう1回?いい気分だしいいかも', 'やっぱもう1回やりたいかも'], mellow: ['ええ、もう1度いきましょうか', 'ふふ、何度でもお付き合いしますね'], hasty: ['もう1回!すぐやろ!', '待ってました!はやく!'], competitive: ['よし、リベンジだ!', 'もう1回!今度こそ!'], showoff: ['いいね〜!もっとノッてく〜!', '何回でも見せちゃう〜!'], shy: ['…うん、もう1回', 'い、いいよ…やる'], hardworker: ['よし!もう1回練習だ!', '何回でもやろう!'], romantic: ['もう1度、あの旋律を', '夢の続きを見よう'],
     },
-    mood: { great: ['やろうやろう!!うれしい!!'], good: ['いいね!やろう!'], normal: ['うん、やろう'], bad: ['…もう一回かぁ'], awful: ['…まだやるの?'] },
+    mood: { great: ['やろうやろう!!うれしい!!'], good: ['いいね!やろう!'], normal: ['うん、やろう'], bad: ['…もう1回かぁ'], awful: ['…まだやるの?'] },
   },
   replyCall: {
     common: ['いるよ!', 'ここにいるよー!', 'よんだ?', 'はーい!'],
@@ -35819,11 +35819,11 @@ const RHYTHM_BUDDY_TALK_EXTRA = ({
   join: {
     common: ['おじゃまします!みんなよろしくね!', '今日はどんな曲かな?', 'わくわくするね!', '席、あいてた?よかった!', 'ぼくも仲間に入れてね!', '楽しい時間にしようね!'],
     trait: {
-      jester: ['楽しませる準備は万全だよ!', 'おもしろいこと起こるかな?'], brave: ['どんな相手でもこい!', '一番乗りで来たぞ!'],
+      jester: ['楽しませる準備は万全だよ!', 'おもしろいこと起こるかな?'], brave: ['どんな相手でもこい!', '1番乗りで来たぞ!'],
       clingy: ['来てよかった〜!うれしい!', 'さみしかったんだよ〜'], smart: ['環境を確認しました。問題ありません', 'メンバーを把握しました'],
       serious: ['お力になれるよう努めます!', '一生懸命やります!'], proud: ['主役のおでましよ', '期待していていいわよ'],
       worrier: ['みんなの邪魔にならないようにする…', 'はじめてじゃないのに緊張する…'], stubborn: ['やるからには最後までやる', '手を抜かんから覚悟しろ'],
-      easygoing: ['あ〜、あったかい部屋だね〜', 'ふぁ…ぼちぼちいこ〜'], fiery: ['来たぞ!今日も熱くなろう!', '一日中でも遊べるぞ!'], cool: ['来たよ。静かでいい部屋だ', 'いい部屋だね。始めよう'], fickle: ['なんとなく来ちゃった', '今日はこの部屋の気分かも'], mellow: ['おじゃましますね', 'あら、すてきなお部屋ですね'], hasty: ['来た!もう始めよ!', '着いた!曲まだ?'], competitive: ['今日も勝ちにいくぞ!', 'みんなライバルだな!'], showoff: ['今日はノリノリでいくよ〜!', '主役、到着〜!'], shy: ['…人、いっぱい…ちょっと緊張', '…すみっこに、いるね'], hardworker: ['今日もコツコツ上手くなる!', '練習の成果を見せる日だ!'], romantic: ['なんて素敵な顔ぶれ…', '今日はどんな音に出会えるかな'],
+      easygoing: ['あ〜、あったかい部屋だね〜', 'ふぁ…ぼちぼちいこ〜'], fiery: ['来たぞ!今日も熱くなろう!', '1日中でも遊べるぞ!'], cool: ['来たよ。静かでいい部屋だ', 'いい部屋だね。始めよう'], fickle: ['なんとなく来ちゃった', '今日はこの部屋の気分かも'], mellow: ['おじゃましますね', 'あら、すてきなお部屋ですね'], hasty: ['来た!もう始めよ!', '着いた!曲まだ?'], competitive: ['今日も勝ちにいくぞ!', 'みんなライバルだな!'], showoff: ['今日はノリノリでいくよ〜!', '主役、到着〜!'], shy: ['…人、いっぱい…ちょっと緊張', '…すみっこに、いるね'], hardworker: ['今日もコツコツ上手くなる!', '練習の成果を見せる日だ!'], romantic: ['なんて素敵な顔ぶれ…', '今日はどんな音に出会えるかな'],
     },
     mood: { great: ['気分は最高潮!!'], good: ['今日はなんだか楽しい!'], normal: ['今日もよろしくね!'], bad: ['…少しだけ元気ないけど'], awful: ['…よばれたから来ただけ'] },
   },
@@ -35854,8 +35854,8 @@ const RHYTHM_BUDDY_TALK_EXTRA = ({
     trait: {
       jester: ['これが主役の実力!', 'アンコールしてもいいよ!'], brave: ['勝利の味だ!', '次も頂点を目指す!'],
       clingy: ['なでなでしてほしいな〜', 'ほめてくれる?うれしいな〜'], smart: ['練習の効果が出ましたね', '最良の結果です'],
-      serious: ['恐縮です。ありがとうございます', 'この結果に満足せず進みます'], proud: ['ふふ、当然の結果ね', '私が一番に決まってるでしょ'],
-      worrier: ['みんなに迷惑かけなくてよかった…', 'うれしくて手がふるえる…'], stubborn: ['努力の成果だ', '一番でなければ意味がない'],
+      serious: ['恐縮です。ありがとうございます', 'この結果に満足せず進みます'], proud: ['ふふ、当然の結果ね', '私が1番に決まってるでしょ'],
+      worrier: ['みんなに迷惑かけなくてよかった…', 'うれしくて手がふるえる…'], stubborn: ['努力の成果だ', '1番でなければ意味がない'],
       easygoing: ['ほんとに取れた〜?やった〜', 'なんかうれし〜'], fiery: ['全力の勝ちだ!', 'もっと燃えて、また取る!'], cool: ['当然…とまでは言わないけど', '…うん、取れると思ってた'], fickle: ['え、取れた?気分いいかも', 'こういう日もあるんだね'], mellow: ['あらあら、ありがたいですね', 'ふふ、みなさんと取れました'], hasty: ['やった!休まず次!', '取れた!さっさと次の曲!'], competitive: ['よっしゃ!勝った!', 'これで前の借りは返した!'], showoff: ['やっぱ天才かも!?', '今日の主役、いただき〜!'], shy: ['…う、うれしい', 'みんなの前で…はずかしい…'], hardworker: ['やった!毎日の練習のおかげ!', 'まだまだ上を目指す!'], romantic: ['夢がかなった夜みたい', '星がほほえんでくれた'],
     },
     mood: { great: ['世界一うれしい!!'], good: ['今日はいい日だ!'], normal: ['やった!'], bad: ['不調だったのに…うれしい'], awful: ['…まあ、悪くないね'] },
@@ -35878,7 +35878,7 @@ const RHYTHM_BUDDY_TALK_EXTRA = ({
       clingy: ['つぎはもっとがんばるね', 'ちょっとだけほめて〜'], smart: ['改善の余地があります', '次は精度を上げます'],
       serious: ['課題がはっきりしました', '次にいかします!'], proud: ['私ならもっとできたはず', '次は本気を出すわ'],
       worrier: ['ミスが気になる…', 'みんなに迷惑かけてないかな…'], stubborn: ['まだ納得していない', '次は譲らんぞ'],
-      easygoing: ['まあ、これくらいでいいや〜', 'ほどほどが一番〜'], fiery: ['まだ燃えきってない!', '次はもっと熱くいく!'], cool: ['次は精度を上げる', 'ふつうだね。次で上げる'], fickle: ['ふつうかも。気分次第だね', '次はちがう気分かも'], mellow: ['ほどよい出来でしたね', '次はもう少しだけ、がんばりましょうか'], hasty: ['まあまあ!次!', 'よし、すぐやり直し!'], competitive: ['くっ…まだ足りない!', '次はもっと上をいく!'], showoff: ['今のは本気の半分〜!', '次でいっきにノるから〜!'], shy: ['…人が多くて、そわそわした', '…次は、もうちょっと'], hardworker: ['次はここを練習しよう!', 'コツコツ伸ばしていこう!'], romantic: ['もう少しで、夢に手が届いた', '旋律が、ちょっとだけ遠かった'],
+      easygoing: ['まあ、これくらいでいいや〜', 'ほどほどが1番〜'], fiery: ['まだ燃えきってない!', '次はもっと熱くいく!'], cool: ['次は精度を上げる', 'ふつうだね。次で上げる'], fickle: ['ふつうかも。気分次第だね', '次はちがう気分かも'], mellow: ['ほどよい出来でしたね', '次はもう少しだけ、がんばりましょうか'], hasty: ['まあまあ!次!', 'よし、すぐやり直し!'], competitive: ['くっ…まだ足りない!', '次はもっと上をいく!'], showoff: ['今のは本気の半分〜!', '次でいっきにノるから〜!'], shy: ['…人が多くて、そわそわした', '…次は、もうちょっと'], hardworker: ['次はここを練習しよう!', 'コツコツ伸ばしていこう!'], romantic: ['もう少しで、夢に手が届いた', '旋律が、ちょっとだけ遠かった'],
     },
     mood: { great: ['楽しければOK!!'], good: ['次はもっと上手くいく!'], normal: ['まあまあ!'], bad: ['調子が悪かった…'], awful: ['…つかれた'] },
   },
@@ -35889,7 +35889,7 @@ const RHYTHM_BUDDY_TALK_EXTRA = ({
       clingy: ['なぐさめてほしいな…', 'ひとりにしないで…'], smart: ['敗因は把握しています', '次は必ず修正します'],
       serious: ['不甲斐ない結果でした', 'もっと努力します'], proud: ['屈辱だわ…', '次は絶対に取り返す'],
       worrier: ['やっぱりだめだった…', 'みんなごめんなさい…'], stubborn: ['こんな結果は認めん', '何度でもやり直す'],
-      easygoing: ['まあ、仕方ないよね〜', 'そんな日もあるよ〜'], fiery: ['悔しい!でも燃えてきた!', '次こそ全力を出しきる!'], cool: ['…まあ、立て直せる', '想定外。次で直す'], fickle: ['気分じゃなかったのかも', '次はきっといい気分'], mellow: ['あらあら、そういうこともありますね', '大丈夫、また次がありますよ'], hasty: ['しまった!次!', '急ぎすぎたかも!もう一回!'], competitive: ['うう、悔しい!', '今のはなし!やり直し!'], showoff: ['あちゃ〜、ノリそこねた〜', '天才にも波はあるの〜'], shy: ['…人前だと、手が止まる', '…うう、はずかしい'], hardworker: ['よし、特訓メニュー追加だ!', 'できるまでがんばる!'], romantic: ['星のない夜みたい…', '悲しい旋律も、きれいだね'],
+      easygoing: ['まあ、仕方ないよね〜', 'そんな日もあるよ〜'], fiery: ['悔しい!でも燃えてきた!', '次こそ全力を出しきる!'], cool: ['…まあ、立て直せる', '想定外。次で直す'], fickle: ['気分じゃなかったのかも', '次はきっといい気分'], mellow: ['あらあら、そういうこともありますね', '大丈夫、また次がありますよ'], hasty: ['しまった!次!', '急ぎすぎたかも!もう1回!'], competitive: ['うう、悔しい!', '今のはなし!やり直し!'], showoff: ['あちゃ〜、ノリそこねた〜', '天才にも波はあるの〜'], shy: ['…人前だと、手が止まる', '…うう、はずかしい'], hardworker: ['よし、特訓メニュー追加だ!', 'できるまでがんばる!'], romantic: ['星のない夜みたい…', '悲しい旋律も、きれいだね'],
     },
     mood: { great: ['失敗しても楽しい!!'], good: ['次はいけるはず!'], normal: ['次がんばる'], bad: ['調子が悪かっただけ…'], awful: ['…もうだめかも'] },
   },
@@ -35913,9 +35913,9 @@ const RHYTHM_BUDDY_TALK_EXTRA = ({
   replyNice: { common: ['いえーい!', 'ありがとう!がんばった!'], trait: {
     jester: ['ほめられて伸びるタイプ!'], brave: ['次ももっとやるぞ!'], clingy: ['ほめられた〜!しあわせ〜'], smart: ['ありがとうございます。励みになります'], serious: ['もったいないお言葉です'],
     proud: ['ふふ、もっとほめなさい'], worrier: ['えへへ…自信がついた…'], stubborn: ['褒めても何も出んぞ'], easygoing: ['うれし〜、ありがと〜'], fiery: ['よし!もっと燃えるぞ!'], cool: ['…悪くない'], fickle: ['今日は気分がいいからかも'], mellow: ['ふふ、うれしいです'], hasty: ['ありがと!次!'], competitive: ['へへ、でも次はもっとうまくやる!'], showoff: ['ほめられるともっとノれる〜!'], shy: ['…あ、ありがと…てれる'], hardworker: ['うれしい!やる気が出た!'], romantic: ['なんて素敵なほめ言葉…'] } },
-  replyAgain: { common: ['何回でもいけるよ!', 'もう一回、いこう!'], trait: {
-    jester: ['何度でも笑わせるよ!'], brave: ['もう一戦だ!'], clingy: ['やったー!もっと遊ぶ!'], smart: ['次はより精度を上げます'], serious: ['もう一度、全力で!'],
-    proud: ['次こそ見せてあげる'], worrier: ['が、がんばるよ…'], stubborn: ['次は絶対だ!'], easygoing: ['じゃあ、もう一回〜'], fiery: ['よし!もう一曲燃えるぞ!'], cool: ['了解。もう一回'], fickle: ['いいよ、気分がのってるし'], mellow: ['ええ、もう一度いきましょう'], hasty: ['やる!今すぐ!'], competitive: ['今度こそ勝つ!'], showoff: ['次はもっとノッてく〜!'], shy: ['…また、やる'], hardworker: ['何回でもやらせて!'], romantic: ['もう一度、夢を見よう'] } },
+  replyAgain: { common: ['何回でもいけるよ!', 'もう1回、いこう!'], trait: {
+    jester: ['何度でも笑わせるよ!'], brave: ['もう1戦だ!'], clingy: ['やったー!もっと遊ぶ!'], smart: ['次はより精度を上げます'], serious: ['もう1度、全力で!'],
+    proud: ['次こそ見せてあげる'], worrier: ['が、がんばるよ…'], stubborn: ['次は絶対だ!'], easygoing: ['じゃあ、もう1回〜'], fiery: ['よし!もう1曲燃えるぞ!'], cool: ['了解。もう1回'], fickle: ['いいよ、気分がのってるし'], mellow: ['ええ、もう1度いきましょう'], hasty: ['やる!今すぐ!'], competitive: ['今度こそ勝つ!'], showoff: ['次はもっとノッてく〜!'], shy: ['…また、やる'], hardworker: ['何回でもやらせて!'], romantic: ['もう1度、夢を見よう'] } },
   replyCall: { common: ['ここだよー!', 'ちゃんといるよ!'], trait: {
     jester: ['お呼びでしょうか?'], brave: ['いつでも呼べ!'], clingy: ['呼んでくれたぁ!うれしい!'], smart: ['常に待機しています'], serious: ['はい、ここにいます!'],
     proud: ['私を呼ぶとは分かっているわね'], worrier: ['い、いますよ…どうしたの…?'], stubborn: ['見ればわかるだろう'], easygoing: ['ふぁい、いるよ〜'], fiery: ['ここだ!燃えてるぞ!'], cool: ['いるよ。どうした'], fickle: ['呼んだ?気分で来たよ'], mellow: ['はいはい、どうしましたか?'], hasty: ['いる!用件はやく!'], competitive: ['呼んだか?いつでもいけるぞ!'], showoff: ['は〜い!お呼びかな〜?'], shy: ['…あ、は、はい…'], hardworker: ['はい!いるよ!'], romantic: ['呼ばれた気がして、来たよ'] } },
@@ -35937,7 +35937,7 @@ const RHYTHM_BUDDY_TALK_EXTRA = ({
       proud: ['待たせるなんて失礼ね', '私を待たせるとはいい度胸ね', 'まだなの?早くしなさい', '準備なんてとっくに終わってるわ'],
       worrier: ['うまくできるかな…心配…', '緊張で手がふるえる…', 'もしミスしたらどうしよう…', '早く始まってほしいような…'],
       stubborn: ['待つのは性に合わん', '早くしてくれ!', '腹はくくった、いつでもいい', '決まりが遅いな'],
-      easygoing: ['ふぁ〜…ねむくなってきた〜', 'のんびり待つのも悪くないね〜', 'ごろごろ〜', 'おやつ食べたいな〜'], fiery: ['体があったまってきた!', '早く燃えたいぞ!', 'まだまだ遊べるぞ!', '待ってる間も全力だ!'], cool: ['…静かでいいね', '譜面を思い返してる', '落ち着いて待つよ', '急ぐ必要はない'], fickle: ['ひまだなあ、なんとなく', '待ってたら気分変わってきた', 'やっぱ別の曲がいいかも', '今日の気分は…まだ決めてない'], mellow: ['お茶でもいかがですか?', 'ゆっくり待ちましょうね', 'ふふ、のどかですね', 'みなさん、準備はいいですか?'], hasty: ['まだ?まだ?', 'はやくはやく!', '待てない〜!', 'もう始めよ!ね!'], competitive: ['うずうずしてきた!', '前の記録、思い出してた', '次は絶対一番になる', 'じっとしてると落ち着かない!'], showoff: ['ヒマ〜、ノリたい〜', '天才は待つのも上手〜', 'ダンスの練習しとこ〜', 'まだかな〜、見せたいのに〜'], shy: ['…しずか。落ち着く', '…こういう時間、好き', '…すみっこ、落ち着く', '…だれか話しかけてくれるかな'], hardworker: ['手首の体操してる!', '前の曲のふりかえり中!', '空き時間もコツコツ!', '今日は何曲できるかな!'], romantic: ['窓の外、星が見えるかな', '頭の中で旋律が流れてる', '月を見ながら待ってるね', '待つ時間も物語のうち'],
+      easygoing: ['ふぁ〜…ねむくなってきた〜', 'のんびり待つのも悪くないね〜', 'ごろごろ〜', 'おやつ食べたいな〜'], fiery: ['体があったまってきた!', '早く燃えたいぞ!', 'まだまだ遊べるぞ!', '待ってる間も全力だ!'], cool: ['…静かでいいね', '譜面を思い返してる', '落ち着いて待つよ', '急ぐ必要はない'], fickle: ['ひまだなあ、なんとなく', '待ってたら気分変わってきた', 'やっぱ別の曲がいいかも', '今日の気分は…まだ決めてない'], mellow: ['お茶でもいかがですか?', 'ゆっくり待ちましょうね', 'ふふ、のどかですね', 'みなさん、準備はいいですか?'], hasty: ['まだ?まだ?', 'はやくはやく!', '待てない〜!', 'もう始めよ!ね!'], competitive: ['うずうずしてきた!', '前の記録、思い出してた', '次は絶対1番になる', 'じっとしてると落ち着かない!'], showoff: ['ヒマ〜、ノリたい〜', '天才は待つのも上手〜', 'ダンスの練習しとこ〜', 'まだかな〜、見せたいのに〜'], shy: ['…しずか。落ち着く', '…こういう時間、好き', '…すみっこ、落ち着く', '…だれか話しかけてくれるかな'], hardworker: ['手首の体操してる!', '前の曲のふりかえり中!', '空き時間もコツコツ!', '今日は何曲できるかな!'], romantic: ['窓の外、星が見えるかな', '頭の中で旋律が流れてる', '月を見ながら待ってるね', '待つ時間も物語のうち'],
     },
     mood: {
       great: ['待ってるあいだも楽しい!!', '早く叩きたくてたまらない!!', '今日は何でもできそう!!'],
@@ -36022,7 +36022,7 @@ const rhythmBuddyTalkReplyKind = (text) => {
   if (/よろしく|はじめまして|こんにちは/.test(t)) return 'replyHello';
   if (/ありがとう/.test(t)) return 'replyThanks';
   if (/ナイス|すごい|うまい|GG/.test(t)) return 'replyNice';
-  if (/もう一回|もういっかい|次いこう/.test(t)) return 'replyAgain';
+  if (/もう1回|もういっかい|次いこう/.test(t)) return 'replyAgain';
   if (/ドンマイ|おしい|惜しい/.test(t)) return 'replyDrop';
   if (/待って|まって/.test(t)) return 'replyWait';
   return '';
@@ -36056,7 +36056,7 @@ const RHYTHM_BUDDY_CONVO_RULES = Object.freeze([
   { kind: 'hardTalk', re: /(難しい|むずかしい|むずい|ムズ|きつい|キツ|無理|むり)/ },
   { kind: 'easyTalk', re: /(簡単|かんたん|楽勝|らくしょう|余裕|よゆう|ちょろい)/ },
   { kind: 'replyDrop', re: /(ドンマイ|どんまい|惜しい|おしい|残念|ざんねん)/ },
-  { kind: 'replyAgain', re: /(もう一回|もういっかい|もう1回|もう一度|次いこう|つぎいこう|もっかい)/ },
+  { kind: 'replyAgain', re: /(もう1回|もういっかい|もう1回|もう1度|次いこう|つぎいこう|もっかい)/ },
   { kind: 'replyWait', re: /(待って|まって|ちょっと待|ちょっとまっ|少々|準備中)/ },
   { kind: 'cheer', re: /(がんばれ|頑張れ|がんばろ|頑張ろ|ファイト|いくぞ|行くぞ|やるぞ|気合|きあい|任せた|まかせた)/ },
   { kind: 'challenge', re: /(勝負|対決|負けない|勝つ|勝てる|ライバル)/ },
@@ -36203,7 +36203,7 @@ const RHYTHM_BUDDY_CONVO_BASE = ({
       clingy: ['{who}さんがいるから元気〜!', 'ねぇ、気にかけてくれてうれしい…'], smart: ['体調は{mood}と分析しています', '良好です。{who}さんは?'],
       serious: ['はい、{mood}です!', '万全に整えてきました'], proud: ['{mood}に決まってるでしょ', '私に不調なんてないわ'],
       worrier: ['{mood}…だと思う、たぶん…', '心配してくれてありがとう…'], stubborn: ['{mood}だが、問題ない', '調子など関係ない'],
-      easygoing: ['{mood}〜、のんびり〜', 'ぼちぼちだよ〜'], fiery: ['{mood}!でも燃えてるぞ!', 'いつでも熱いぞ!'], cool: ['{mood}。問題ない', '…いつもどおりだよ'], fickle: ['{mood}…いや、どうかな', '今日の気分は{mood}かも'], mellow: ['{mood}ですよ、ふふ', 'おかげさまで、元気です'], hasty: ['{mood}!はやく遊ぼ!', '元気!だから次!'], competitive: ['{mood}!勝てる気がする!', '今日は負ける気がしない!'], showoff: ['天才的に{mood}〜!', '調子の波、いま上のほう〜!'], shy: ['…{mood}、だよ', '…うん、まあまあ'], hardworker: ['{mood}!今日も練習する!', '毎日続けてるから元気!'], romantic: ['{mood}…素敵な一日だから', '月がきれいで、心も軽いよ'],
+      easygoing: ['{mood}〜、のんびり〜', 'ぼちぼちだよ〜'], fiery: ['{mood}!でも燃えてるぞ!', 'いつでも熱いぞ!'], cool: ['{mood}。問題ない', '…いつもどおりだよ'], fickle: ['{mood}…いや、どうかな', '今日の気分は{mood}かも'], mellow: ['{mood}ですよ、ふふ', 'おかげさまで、元気です'], hasty: ['{mood}!はやく遊ぼ!', '元気!だから次!'], competitive: ['{mood}!勝てる気がする!', '今日は負ける気がしない!'], showoff: ['天才的に{mood}〜!', '調子の波、いま上のほう〜!'], shy: ['…{mood}、だよ', '…うん、まあまあ'], hardworker: ['{mood}!今日も練習する!', '毎日続けてるから元気!'], romantic: ['{mood}…素敵な1日だから', '月がきれいで、心も軽いよ'],
     },
     mood: { great: ['最高にいい!!{who}さんは?'], good: ['いい感じ!'], normal: ['ふつうだよ'], bad: ['ちょっと不機嫌…'], awful: ['…聞かないで'] },
   },
@@ -36249,7 +36249,7 @@ const RHYTHM_BUDDY_CONVO_BASE = ({
     common: ['{fav}が得意!', '得意なのは{fav}かな', '{fav}はいっぱい遊んだよ!', 'まだ得意な曲はないかも', 'いろんな曲を遊びたいな!'],
     trait: {
       jester: ['{fav}で笑いを取れるよ!'], brave: ['{fav}なら負けない!'], clingy: ['{fav}がすき〜、いっしょにやろ?'], smart: ['統計では{fav}が最良です'],
-      serious: ['{fav}を練習しています'], proud: ['{fav}は完璧よ'], worrier: ['{fav}ならなんとか…'], stubborn: ['{fav}以外は認めん'], easygoing: ['{fav}がおちつく〜'], fiery: ['{fav}なら一番燃える!'], cool: ['{fav}なら問題ない'], fickle: ['{fav}が好き…今日はね'], mellow: ['{fav}が、落ち着きますね'], hasty: ['{fav}がいい!サクッといける!'], competitive: ['{fav}なら誰にも負けたくない!'], showoff: ['{fav}なら天才だよ〜!'], shy: ['…{fav}、好き'], hardworker: ['{fav}、たくさん練習した!'], romantic: ['{fav}は夢みたいに素敵なの'],
+      serious: ['{fav}を練習しています'], proud: ['{fav}は完璧よ'], worrier: ['{fav}ならなんとか…'], stubborn: ['{fav}以外は認めん'], easygoing: ['{fav}がおちつく〜'], fiery: ['{fav}なら1番燃える!'], cool: ['{fav}なら問題ない'], fickle: ['{fav}が好き…今日はね'], mellow: ['{fav}が、落ち着きますね'], hasty: ['{fav}がいい!サクッといける!'], competitive: ['{fav}なら誰にも負けたくない!'], showoff: ['{fav}なら天才だよ〜!'], shy: ['…{fav}、好き'], hardworker: ['{fav}、たくさん練習した!'], romantic: ['{fav}は夢みたいに素敵なの'],
     },
     mood: { great: ['{fav}!!なんど叩いても楽しい!!'], good: ['{fav}がいい感じ!'], normal: [], bad: ['{fav}ならできる…'], awful: [] },
   },
@@ -36258,7 +36258,7 @@ const RHYTHM_BUDDY_CONVO_BASE = ({
     common: ['{who}さんの好きな曲は?', '{who}さんの得意な曲、教えて!', '{who}さんはどの曲が好き?', '{who}さんのおすすめは?'],
     trait: {
       jester: ['{who}さんの十八番は?'], brave: ['{who}さんの勝負曲は?'], clingy: ['{who}さんの好きな曲、知りたいな〜'], smart: ['{who}さんの得意曲を伺っても?'],
-      serious: ['{who}さんの得意な曲は?'], proud: ['{who}さんの自慢の曲は?'], worrier: ['{who}さんの得意な曲…あるかな?'], stubborn: ['{who}さんの曲選びの基準は?'], easygoing: ['{who}さんは何がすき〜?'], fiery: ['{who}さんの一番燃える曲は?'], cool: ['{who}さんは、何が得意?'], fickle: ['{who}さんの好きな曲、今日はどれ?'], mellow: ['{who}さんのお好きな曲は?'], hasty: ['{who}さんの好きな曲!はやく!'], competitive: ['{who}さんの得意曲は?勝負しよう!'], showoff: ['{who}さんのノれる曲は〜?'], shy: ['…{who}さんは、どの曲が好き…?'], hardworker: ['{who}さんの得意曲、教えて!'], romantic: ['{who}さんの好きな旋律は?'],
+      serious: ['{who}さんの得意な曲は?'], proud: ['{who}さんの自慢の曲は?'], worrier: ['{who}さんの得意な曲…あるかな?'], stubborn: ['{who}さんの曲選びの基準は?'], easygoing: ['{who}さんは何がすき〜?'], fiery: ['{who}さんの1番燃える曲は?'], cool: ['{who}さんは、何が得意?'], fickle: ['{who}さんの好きな曲、今日はどれ?'], mellow: ['{who}さんのお好きな曲は?'], hasty: ['{who}さんの好きな曲!はやく!'], competitive: ['{who}さんの得意曲は?勝負しよう!'], showoff: ['{who}さんのノれる曲は〜?'], shy: ['…{who}さんは、どの曲が好き…?'], hardworker: ['{who}さんの得意曲、教えて!'], romantic: ['{who}さんの好きな旋律は?'],
     },
     mood: { great: [], good: [], normal: [], bad: [], awful: [] },
   },
@@ -36303,7 +36303,7 @@ const RHYTHM_BUDDY_CONVO_BASE = ({
     common: ['{me}だよ!', '{me}っていうんだ!', '{me}です、よろしくね!', 'ぼくは{me}!', '{me}!おぼえてね!'],
     trait: {
       jester: ['{me}!覚えてね、テストに出るよ!'], brave: ['{me}だ!おぼえとけ!'], clingy: ['{me}だよ〜、呼んで呼んで!'], smart: ['{me}と申します'],
-      serious: ['{me}と申します。よろしくお願いします'], proud: ['{me}よ。覚えておきなさい'], worrier: ['{me}…だよ。おぼえにくい…?'], stubborn: ['{me}だ。二度は言わん'], easygoing: ['{me}〜、よろしく〜'], fiery: ['{me}だ!熱いのが取りえ!'], cool: ['{me}。よろしく'], fickle: ['{me}だよ。今日の気分は上々'], mellow: ['{me}です。よろしくお願いしますね'], hasty: ['{me}!はい、覚えた?次!'], competitive: ['{me}だ!覚えとけよ!'], showoff: ['{me}だよ〜!覚えてね〜!'], shy: ['…{me}、です'], hardworker: ['{me}!練習大好き、よろしく!'], romantic: ['{me}。星の名前みたいでしょ'],
+      serious: ['{me}と申します。よろしくお願いします'], proud: ['{me}よ。覚えておきなさい'], worrier: ['{me}…だよ。おぼえにくい…?'], stubborn: ['{me}だ。2度は言わん'], easygoing: ['{me}〜、よろしく〜'], fiery: ['{me}だ!熱いのが取りえ!'], cool: ['{me}。よろしく'], fickle: ['{me}だよ。今日の気分は上々'], mellow: ['{me}です。よろしくお願いしますね'], hasty: ['{me}!はい、覚えた?次!'], competitive: ['{me}だ!覚えとけよ!'], showoff: ['{me}だよ〜!覚えてね〜!'], shy: ['…{me}、です'], hardworker: ['{me}!練習大好き、よろしく!'], romantic: ['{me}。星の名前みたいでしょ'],
     },
     mood: { great: [], good: [], normal: [], bad: [], awful: [] },
   },
@@ -36357,7 +36357,7 @@ const RHYTHM_BUDDY_CONVO_BASE = ({
     common: ['だいじょうぶ?そばにいるよ', 'つらいときは休んでいいよ', 'ぼくがついてるよ', 'はなしてくれてありがとう', 'きっとよくなるよ'],
     trait: {
       jester: ['元気出して。変な顔するから!'], brave: ['ついてこい!いっしょに立ちあがろう!'], clingy: ['ぎゅってするね…ぎゅっ'], smart: ['お話を伺います。無理せずどうぞ'],
-      serious: ['お力になれれば幸いです'], proud: ['私がついてるのよ。大丈夫'], worrier: ['わ、わたしまで悲しくなる…'], stubborn: ['乗りこえられる。俺が保証する'], easygoing: ['ゆっくりいこ〜、ここにいるよ〜'], fiery: ['元気を分けるぞ!全力で!'], cool: ['…話、聞くよ'], fickle: ['気分は変わるものだよ'], mellow: ['大丈夫ですよ、ここにいますからね'], hasty: ['いっしょに一曲やろ!すぐ!'], competitive: ['悔しいなら、いっしょに巻き返そう!'], showoff: ['元気出して〜!ノリでなんとかなる〜!'], shy: ['…そばに、いるね'], hardworker: ['話してくれたら、力になる!'], romantic: ['夜が明けるまで、そばにいるよ'],
+      serious: ['お力になれれば幸いです'], proud: ['私がついてるのよ。大丈夫'], worrier: ['わ、わたしまで悲しくなる…'], stubborn: ['乗りこえられる。俺が保証する'], easygoing: ['ゆっくりいこ〜、ここにいるよ〜'], fiery: ['元気を分けるぞ!全力で!'], cool: ['…話、聞くよ'], fickle: ['気分は変わるものだよ'], mellow: ['大丈夫ですよ、ここにいますからね'], hasty: ['いっしょに1曲やろ!すぐ!'], competitive: ['悔しいなら、いっしょに巻き返そう!'], showoff: ['元気出して〜!ノリでなんとかなる〜!'], shy: ['…そばに、いるね'], hardworker: ['話してくれたら、力になる!'], romantic: ['夜が明けるまで、そばにいるよ'],
     },
     mood: { great: [], good: [], normal: [], bad: [], awful: [] },
   },
@@ -36411,7 +36411,7 @@ const RHYTHM_BUDDY_CONVO_BASE = ({
     common: ['よゆうだね!', 'すごい自信!', 'いいね、そのいきおい!', 'ぼくも負けない!', '次は難しい曲もやろう!'],
     trait: {
       jester: ['よゆうなら笑いも取れるね!'], brave: ['ならもっと上の難易度に挑め!'], clingy: ['すごーい!ほめて〜'], smart: ['余裕があるなら上を目指しましょう'],
-      serious: ['油断は禁物です'], proud: ['ふふ、私もよ'], worrier: ['すごい…うらやましい…'], stubborn: ['ならばもう一段上へだ'], easygoing: ['よゆうだね〜'], fiery: ['なら次は全力で上へ!'], cool: ['なら上の難易度だね'], fickle: ['よゆうの日もあるよね'], mellow: ['あら、たのもしいですね'], hasty: ['じゃあ次!もっと上!'], competitive: ['なら、もっと上で勝負だ!'], showoff: ['さっすが〜!こっちもノッてく〜!'], shy: ['…すごいね'], hardworker: ['なら一つ上の難易度で練習だ!'], romantic: ['軽やかで、素敵だね'],
+      serious: ['油断は禁物です'], proud: ['ふふ、私もよ'], worrier: ['すごい…うらやましい…'], stubborn: ['ならばもう一段上へだ'], easygoing: ['よゆうだね〜'], fiery: ['なら次は全力で上へ!'], cool: ['なら上の難易度だね'], fickle: ['よゆうの日もあるよね'], mellow: ['あら、たのもしいですね'], hasty: ['じゃあ次!もっと上!'], competitive: ['なら、もっと上で勝負だ!'], showoff: ['さっすが〜!こっちもノッてく〜!'], shy: ['…すごいね'], hardworker: ['なら1つ上の難易度で練習だ!'], romantic: ['軽やかで、素敵だね'],
     },
     mood: { great: ['ぼくも余裕!!'], good: ['いいね!'], normal: [], bad: ['…そうなんだ'], awful: ['…ふーん'] },
   },
@@ -36494,7 +36494,7 @@ const RHYTHM_BUDDY_CONVO_BASE = ({
     common: ['{who}さんはおまかせなんだ!', '{who}さん、おまかせか〜', '{who}さんのおまかせ、たのしみ!', '何がくるかな、{who}さん!', 'おまかせもいいね、{who}さん!'],
     trait: {
       jester: ['{who}さん、おまかせとはお目が高い!'], brave: ['{who}さん、運まかせか!嫌いじゃない!'], clingy: ['{who}さんといっしょならなんでもいい〜'], smart: ['{who}さん、確率に任せるのも一手です'],
-      serious: ['{who}さん、おまかせですね。了解です'], proud: ['{who}さん、私が選んであげてもいいわよ'], worrier: ['{who}さん、むずかしい曲がきたらどうしよう…'], stubborn: ['{who}さん、決めきれんのか'], easygoing: ['{who}さん、おまかせでいいよね〜'], fiery: ['{who}さん、おまかせか!なんでも全力だ!'], cool: ['{who}さん、おまかせか。いいよ'], fickle: ['{who}さん、おまかせ大好きかも'], mellow: ['{who}さん、おまかせ、楽しみですね'], hasty: ['{who}さん、おまかせ!はやい!いいね!'], competitive: ['{who}さん、おまかせ?何が来ても勝つ!'], showoff: ['{who}さん、おまかせ〜!何でもノれる〜!'], shy: ['…{who}さん、おまかせ…どきどき'], hardworker: ['{who}さん、おまかせ!どの曲も練習だ!'], romantic: ['{who}さん、運命の一曲だね'],
+      serious: ['{who}さん、おまかせですね。了解です'], proud: ['{who}さん、私が選んであげてもいいわよ'], worrier: ['{who}さん、むずかしい曲がきたらどうしよう…'], stubborn: ['{who}さん、決めきれんのか'], easygoing: ['{who}さん、おまかせでいいよね〜'], fiery: ['{who}さん、おまかせか!なんでも全力だ!'], cool: ['{who}さん、おまかせか。いいよ'], fickle: ['{who}さん、おまかせ大好きかも'], mellow: ['{who}さん、おまかせ、楽しみですね'], hasty: ['{who}さん、おまかせ!はやい!いいね!'], competitive: ['{who}さん、おまかせ?何が来ても勝つ!'], showoff: ['{who}さん、おまかせ〜!何でもノれる〜!'], shy: ['…{who}さん、おまかせ…どきどき'], hardworker: ['{who}さん、おまかせ!どの曲も練習だ!'], romantic: ['{who}さん、運命の1曲だね'],
     },
     mood: { great: [], good: [], normal: [], bad: [], awful: [] },
   },
@@ -36581,13 +36581,13 @@ const RHYTHM_BUDDY_CONVO_BASE = ({
   // 何度も来てくれた人へのあいさつ({plays}=遊んだ回数)
   bondHello: {
     common: ['もう{plays}回も遊んだね!', '{plays}回目のライブ、いっしょに楽しもう!', 'いつも呼んでくれてありがとう!', '何度もいっしょでうれしいな!'],
-    trait: { jester: ['{plays}回も呼ばれるなんて、人気者だね!'], brave: ['{plays}回、戦ってきた戦友だな!'], clingy: ['{plays}回もいっしょ!うれしい〜!'], smart: ['累計{plays}回の演奏ですね'], serious: ['{plays}回もお声がけいただき光栄です'], proud: ['{plays}回も私を選ぶなんて、見る目があるわ'], worrier: ['{plays}回もいっしょ…ありがとう…'], stubborn: ['{plays}回目か。悪くない'], easygoing: ['{plays}回目〜、もう慣れっこだね〜'], fiery: ['{plays}回も!まだまだ燃えるぞ!'], cool: ['{plays}回。長い付き合いだね'], fickle: ['{plays}回?気づいたらそんなに'], mellow: ['{plays}回も、ありがとうございます'], hasty: ['{plays}回!あっという間!'], competitive: ['{plays}回か!まだまだ上をめざす!'], showoff: ['{plays}回も!ご指名ありがと〜!'], shy: ['…{plays}回も…うれしい'], hardworker: ['{plays}回!一回一回が積み重ね!'], romantic: ['{plays}回…夢みたいな日々だね'] },
+    trait: { jester: ['{plays}回も呼ばれるなんて、人気者だね!'], brave: ['{plays}回、戦ってきた戦友だな!'], clingy: ['{plays}回もいっしょ!うれしい〜!'], smart: ['累計{plays}回の演奏ですね'], serious: ['{plays}回もお声がけいただき光栄です'], proud: ['{plays}回も私を選ぶなんて、見る目があるわ'], worrier: ['{plays}回もいっしょ…ありがとう…'], stubborn: ['{plays}回目か。悪くない'], easygoing: ['{plays}回目〜、もう慣れっこだね〜'], fiery: ['{plays}回も!まだまだ燃えるぞ!'], cool: ['{plays}回。長い付き合いだね'], fickle: ['{plays}回?気づいたらそんなに'], mellow: ['{plays}回も、ありがとうございます'], hasty: ['{plays}回!あっという間!'], competitive: ['{plays}回か!まだまだ上をめざす!'], showoff: ['{plays}回も!ご指名ありがと〜!'], shy: ['…{plays}回も…うれしい'], hardworker: ['{plays}回!1回1回が積み重ね!'], romantic: ['{plays}回…夢みたいな日々だね'] },
     mood: { great: ['{plays}回目!!最高の仲間だね!!'], good: [], normal: [], bad: [], awful: [] },
   },
   // 部屋に入ったとき、遊んだ回数に触れる
   bondJoin: {
     common: ['また呼んでくれてありがとう!', '{plays}回目の登場だよ!', 'おなじみのメンバーだね!', '今日もよろしくね!{plays}回目!'],
-    trait: { jester: ['{plays}回目のご来場!盛り上げるよ!'], brave: ['{plays}回目、今日も前線は任せろ!'], clingy: ['また呼んでくれた〜!{plays}回目!うれしい〜!'], smart: ['{plays}回目の演奏準備、完了です'], serious: ['{plays}回目、本日もよろしくお願いします'], proud: ['{plays}回目の私に、期待しなさい'], worrier: ['{plays}回目なのに、まだ緊張する…'], stubborn: ['{plays}回目か。今日もやるぞ'], easygoing: ['{plays}回目〜、今日ものんびり〜'], fiery: ['{plays}回目も全力だ!'], cool: ['{plays}回目。いつもどおりいく'], fickle: ['{plays}回目、今日の気分は上々'], mellow: ['{plays}回目ですね、うれしいです'], hasty: ['{plays}回目!はやく始めよ!'], competitive: ['{plays}回目!今日こそ一番だ!'], showoff: ['{plays}回目!今日もノッてくよ〜!'], shy: ['…{plays}回目。少し慣れた'], hardworker: ['{plays}回目!今日も練習あるのみ!'], romantic: ['{plays}回目の、素敵な時間'] },
+    trait: { jester: ['{plays}回目のご来場!盛り上げるよ!'], brave: ['{plays}回目、今日も前線は任せろ!'], clingy: ['また呼んでくれた〜!{plays}回目!うれしい〜!'], smart: ['{plays}回目の演奏準備、完了です'], serious: ['{plays}回目、本日もよろしくお願いします'], proud: ['{plays}回目の私に、期待しなさい'], worrier: ['{plays}回目なのに、まだ緊張する…'], stubborn: ['{plays}回目か。今日もやるぞ'], easygoing: ['{plays}回目〜、今日ものんびり〜'], fiery: ['{plays}回目も全力だ!'], cool: ['{plays}回目。いつもどおりいく'], fickle: ['{plays}回目、今日の気分は上々'], mellow: ['{plays}回目ですね、うれしいです'], hasty: ['{plays}回目!はやく始めよ!'], competitive: ['{plays}回目!今日こそ1番だ!'], showoff: ['{plays}回目!今日もノッてくよ〜!'], shy: ['…{plays}回目。少し慣れた'], hardworker: ['{plays}回目!今日も練習あるのみ!'], romantic: ['{plays}回目の、素敵な時間'] },
     mood: { great: ['{plays}回目!!張り切っていくよ!!'], good: [], normal: [], bad: [], awful: [] },
   },
   // 朝(5〜10時)のあいさつ
@@ -36598,7 +36598,7 @@ const RHYTHM_BUDDY_CONVO_BASE = ({
   },
   // 昼(11〜16時)のあいさつ
   timeNoon: {
-    common: ['こんにちは!お昼のライブだね!', '昼間のライブ、いいね!', 'こんにちは!ひと休みに一曲どう?', '昼でも夜でも、リズムはいっしょ!'],
+    common: ['こんにちは!お昼のライブだね!', '昼間のライブ、いいね!', 'こんにちは!ひと休みに1曲どう?', '昼でも夜でも、リズムはいっしょ!'],
     trait: { jester: ['こんにちは!昼から笑いをとるぞ!'], brave: ['こんにちは!昼間も全開だ!'], clingy: ['こんにちは〜!お昼もいっしょでうれしい〜!'], smart: ['こんにちは。昼の集中力は高めです'], serious: ['こんにちは、本日もよろしくお願いします'], proud: ['こんにちは。昼の私も輝いてるわよ'], worrier: ['こ、こんにちは…昼でも緊張する…'], stubborn: ['こんにちは。昼でもやるときはやる'], easygoing: ['こんにちは〜、お昼ごはんのあとは眠いね〜'], fiery: ['こんにちは!昼も熱いぞ!'], cool: ['こんにちは。調子は問題ない'], fickle: ['こんにちは。お昼はなんとなく好き'], mellow: ['こんにちは、ごはんは食べましたか?'], hasty: ['こんにちは!昼休み短いし、はやく!'], competitive: ['こんにちは!昼も負けないぞ!'], showoff: ['こんにちは〜!昼もノッてるよ〜!'], shy: ['…こ、こんにちは'], hardworker: ['こんにちは!昼も練習がんばろう!'], romantic: ['こんにちは。空がすみきってるね'] },
     mood: { great: ['こんにちは!!元気いっぱいだよ!!'], good: [], normal: [], bad: [], awful: [] },
   },
@@ -36611,7 +36611,7 @@ const RHYTHM_BUDDY_CONVO_BASE = ({
   // 深夜(22〜4時)のあいさつ
   timeNight: {
     common: ['こんな夜ふかしに、ありがとう!', '夜ふかしライブ、ひみつっぽいね!', '夜ふかしだね。ほどほどにね!', '静かな夜のライブも、いいね!'],
-    trait: { jester: ['夜ふかしライブ、深夜テンションでいくよ!'], brave: ['夜ふかしか!つき合うぞ!'], clingy: ['こんな時間に呼んでくれてうれしい〜!でも寝てね〜'], smart: ['深夜帯です。睡眠も大切ですよ'], serious: ['夜遅くまでおつかれさまです。無理なさらず'], proud: ['こんな時間まで起きてるなんて、やるじゃない'], worrier: ['こんな時間…明日だいじょうぶ…?'], stubborn: ['夜ふかしか。ほどほどにな'], easygoing: ['ふぁ…もう夜おそいね〜'], fiery: ['こんな時間でも燃えてるぞ!'], cool: ['遅いね。ほどほどに'], fickle: ['夜ふかしの気分かも'], mellow: ['あらあら、夜ふかしさんですね'], hasty: ['夜おそい!はやく一曲やって寝よ!'], competitive: ['こんな時間でも負けないぞ!'], showoff: ['夜ふかし〜!テンション上がる〜!'], shy: ['…夜おそいと、人が少なくて落ち着く'], hardworker: ['夜おそいね!練習はほどほどに!'], romantic: ['月が高いね。夢の時間だ'] },
+    trait: { jester: ['夜ふかしライブ、深夜テンションでいくよ!'], brave: ['夜ふかしか!つき合うぞ!'], clingy: ['こんな時間に呼んでくれてうれしい〜!でも寝てね〜'], smart: ['深夜帯です。睡眠も大切ですよ'], serious: ['夜遅くまでおつかれさまです。無理なさらず'], proud: ['こんな時間まで起きてるなんて、やるじゃない'], worrier: ['こんな時間…明日だいじょうぶ…?'], stubborn: ['夜ふかしか。ほどほどにな'], easygoing: ['ふぁ…もう夜おそいね〜'], fiery: ['こんな時間でも燃えてるぞ!'], cool: ['遅いね。ほどほどに'], fickle: ['夜ふかしの気分かも'], mellow: ['あらあら、夜ふかしさんですね'], hasty: ['夜おそい!はやく1曲やって寝よ!'], competitive: ['こんな時間でも負けないぞ!'], showoff: ['夜ふかし〜!テンション上がる〜!'], shy: ['…夜おそいと、人が少なくて落ち着く'], hardworker: ['夜おそいね!練習はほどほどに!'], romantic: ['月が高いね。夢の時間だ'] },
     mood: { great: ['夜ふかしライブ!!テンション上がる!!'], good: [], normal: [], bad: [], awful: [] },
   },
   // 結果で、自分のビートLvが上がった({lv}=新しいLv)
@@ -36647,7 +36647,7 @@ const RHYTHM_BUDDY_CONVO_BASE = ({
   // マスモンどうしの和やかなやりとり({mate}=いっしょのマスモン)
   banterFriend: {
     common: ['{mate}といると落ち着くな〜', '{mate}、いっしょでうれしい!', '{mate}、仲良くしようね!', '{mate}とならうまくいきそう!'],
-    trait: { jester: ['{mate}、二人で笑いをとろう!'], brave: ['{mate}、いい仲間だな!'], clingy: ['{mate}〜、ずっとなかよしでいてね〜'], smart: ['{mate}との連携は良好です'], serious: ['{mate}さんとご一緒できて光栄です'], proud: ['{mate}、あなたとなら悪くないわ'], worrier: ['{mate}がいてくれて、ほっとする…'], stubborn: ['{mate}か。頼りにしてるぞ'], easygoing: ['{mate}〜、いっしょにのんびりしよ〜'], fiery: ['{mate}といると力がわく!'], cool: ['{mate}となら問題ない'], fickle: ['{mate}といると気分がいい'], mellow: ['{mate}さんと一緒で、うれしいです'], hasty: ['{mate}、いっしょにサクッといこ!'], competitive: ['{mate}、組んでも負けないぞ!'], showoff: ['{mate}、二人でノリノリいこ〜!'], shy: ['…{mate}といると、落ち着く'], hardworker: ['{mate}、二人でコツコツいこう!'], romantic: ['{mate}と奏でる、二人の旋律'] },
+    trait: { jester: ['{mate}、2人で笑いをとろう!'], brave: ['{mate}、いい仲間だな!'], clingy: ['{mate}〜、ずっとなかよしでいてね〜'], smart: ['{mate}との連携は良好です'], serious: ['{mate}さんとご一緒できて光栄です'], proud: ['{mate}、あなたとなら悪くないわ'], worrier: ['{mate}がいてくれて、ほっとする…'], stubborn: ['{mate}か。頼りにしてるぞ'], easygoing: ['{mate}〜、いっしょにのんびりしよ〜'], fiery: ['{mate}といると力がわく!'], cool: ['{mate}となら問題ない'], fickle: ['{mate}といると気分がいい'], mellow: ['{mate}さんと一緒で、うれしいです'], hasty: ['{mate}、いっしょにサクッといこ!'], competitive: ['{mate}、組んでも負けないぞ!'], showoff: ['{mate}、2人でノリノリいこ〜!'], shy: ['…{mate}といると、落ち着く'], hardworker: ['{mate}、2人でコツコツいこう!'], romantic: ['{mate}と奏でる、2人の旋律'] },
     mood: { great: ['{mate}!!大好き!!いっしょに叩こう!!'], good: [], normal: [], bad: [], awful: [] },
   },
   // ほかの人の結果で、ミスが多め({who}=その人)
@@ -36931,7 +36931,7 @@ const RHYTHM_BUDDY_PERSONA_TALK_RAW = ({
       clingy: ['{like}、{self}の大好きな曲〜!', '{self}ね、{like}がいちばん好き!'], smart: ['{like}は{self}のいちばん好きな曲です', '{self}の記録では{like}が最多です'],
       serious: ['{self}、{like}がいちばん好きなんです', '{like}は何度も一緒に遊んだ曲です'], proud: ['{like}は{self}のための曲よ', '{self}といえば{like}でしょ?'],
       worrier: ['{like}なら、{self}も安心…', '{self}、{like}は好きなんだ…'], stubborn: ['{like}は{self}の曲だ', '{self}は{like}と決めている'],
-      easygoing: ['{like}、{self}の好きな曲〜', '{self}、{like}がいいな〜'], fiery: ['{like}は{self}が一番燃える曲だ!', '{self}の{like}、全力でいくぞ!'], cool: ['{like}は{self}の好きな曲', '{self}、{like}なら問題ない'], fickle: ['{like}…{self}、今日は好きかも', '{self}、なんとなく{like}が好き'], mellow: ['{like}は{self}の好きな曲なんです', '{self}、{like}がお気に入りですよ'], hasty: ['{like}!{self}の好きなやつ!はやく!', '{self}、{like}ならすぐやる!'], competitive: ['{like}なら、{self}は負けない!', '{self}、{like}でリベンジしたい!'], showoff: ['{like}は{self}の得意曲〜!', '{self}といえば{like}でしょでしょ!'], shy: ['…{like}、{self}の好きな曲', '…{like}だと、{self}もほっとする'], hardworker: ['{like}は{self}が一番練習した曲!', '{self}、{like}をもっとやりこみたい!'], romantic: ['{like}は{self}の宝物の曲', '{self}、{like}の旋律が大好き'],
+      easygoing: ['{like}、{self}の好きな曲〜', '{self}、{like}がいいな〜'], fiery: ['{like}は{self}が1番燃える曲だ!', '{self}の{like}、全力でいくぞ!'], cool: ['{like}は{self}の好きな曲', '{self}、{like}なら問題ない'], fickle: ['{like}…{self}、今日は好きかも', '{self}、なんとなく{like}が好き'], mellow: ['{like}は{self}の好きな曲なんです', '{self}、{like}がお気に入りですよ'], hasty: ['{like}!{self}の好きなやつ!はやく!', '{self}、{like}ならすぐやる!'], competitive: ['{like}なら、{self}は負けない!', '{self}、{like}でリベンジしたい!'], showoff: ['{like}は{self}の得意曲〜!', '{self}といえば{like}でしょでしょ!'], shy: ['…{like}、{self}の好きな曲', '…{like}だと、{self}もほっとする'], hardworker: ['{like}は{self}が1番練習した曲!', '{self}、{like}をもっとやりこみたい!'], romantic: ['{like}は{self}の宝物の曲', '{self}、{like}の旋律が大好き'],
     },
     mood: {},
   },
@@ -37005,7 +37005,7 @@ const RHYTHM_BUDDY_PERSONA_TALK_RAW = ({
     trait: {
       jester: ['今日は{self}の誕生日!お祝いして〜!'], brave: ['今日は誕生日だ!最高の日にするぞ!'], clingy: ['今日ね、{self}の誕生日なの〜!'],
       smart: ['本日は{self}の誕生日です'], serious: ['今日は{self}の誕生日なんです!'], proud: ['今日は{self}の誕生日よ。祝いなさい'],
-      worrier: ['今日、誕生日なんだ…覚えててくれた?'], stubborn: ['今日は誕生日だ。祝ってもいいぞ'], easygoing: ['今日は誕生日なんだ〜うれしいな〜'], fiery: ['今日は誕生日だ!全力で祝うぞ!'], cool: ['今日は誕生日なんだ。…悪くない日だ'], fickle: ['今日誕生日なんだ。気分いいかも'], mellow: ['今日はお誕生日なんです、ふふ'], hasty: ['今日誕生日!はやく祝って!'], competitive: ['誕生日だから、今日は絶対勝つ!'], showoff: ['今日は{self}の誕生日〜!主役だよ〜!'], shy: ['…きょう、誕生日、なんだ'], hardworker: ['今日は{self}の誕生日!また一年がんばる!'], romantic: ['今日は{self}の誕生日。夢みたいな日'],
+      worrier: ['今日、誕生日なんだ…覚えててくれた?'], stubborn: ['今日は誕生日だ。祝ってもいいぞ'], easygoing: ['今日は誕生日なんだ〜うれしいな〜'], fiery: ['今日は誕生日だ!全力で祝うぞ!'], cool: ['今日は誕生日なんだ。…悪くない日だ'], fickle: ['今日誕生日なんだ。気分いいかも'], mellow: ['今日はお誕生日なんです、ふふ'], hasty: ['今日誕生日!はやく祝って!'], competitive: ['誕生日だから、今日は絶対勝つ!'], showoff: ['今日は{self}の誕生日〜!主役だよ〜!'], shy: ['…きょう、誕生日、なんだ'], hardworker: ['今日は{self}の誕生日!また1年がんばる!'], romantic: ['今日は{self}の誕生日。夢みたいな日'],
     },
     mood: { bad: ['今日は誕生日なんだけど…'], awful: ['…誕生日なのに'] },
   },
@@ -37018,7 +37018,7 @@ const RHYTHM_BUDDY_PERSONA_KINDS = Object.freeze(Object.keys(RHYTHM_BUDDY_PERSON
 // (勇敢=元気で強気・頑固=きりっとして譲らない・お調子者=明るく)。女の子の子のときだけ rhythmBuddyTalkPick が差し替える。ほかの子は使わない
 const RHYTHM_BUDDY_FEMALE_LINES = Object.freeze({
   "突撃だー!": "突撃よー!",
-  "一番乗りで来たぞ!": "一番乗りで来たよ!",
+  "1番乗りで来たぞ!": "1番乗りで来たよ!",
   "呼ばれたからには手は抜かん!": "呼ばれたからには手は抜かないわ!",
   "自分のやり方でいくぞ": "自分のやり方でいくわ",
   "文句は言わせんぞ": "文句は言わせないわよ",
@@ -37054,8 +37054,8 @@ const RHYTHM_BUDDY_FEMALE_LINES = Object.freeze({
   "妥協はせんぞ": "妥協はしないわよ",
   "次は譲らんぞ": "次は譲らないわよ",
   "次は笑わせるぞ!": "次は笑わせるよ!",
-  "もう一回だ!!": "もう一回よ!!",
-  "認めん!もう一回だ!": "認めないわ!もう一回よ!",
+  "もう1回だ!!": "もう1回よ!!",
+  "認めん!もう1回だ!": "認めないわ!もう1回よ!",
   "あきらめんぞ!": "あきらめないわよ!",
   "こんな結果は認めん": "こんな結果は認めないわ",
   "次は名誉挽回だ!": "次は名誉挽回よ!",
@@ -37072,7 +37072,7 @@ const RHYTHM_BUDDY_FEMALE_LINES = Object.freeze({
   "次ももっとやるぞ!": "次ももっとやるよ!",
   "褒めても何も出んぞ": "褒めても何も出ないわよ",
   "望むところだ!": "望むところよ!",
-  "もう一戦だ!": "もう一戦よ!",
+  "もう1戦だ!": "もう1戦よ!",
   "おう!次こそ決める!": "ええ!次こそ決めるわ!",
   "望むところだ": "望むところよ",
   "次は絶対だ!": "次は絶対よ!",
@@ -37097,7 +37097,7 @@ const RHYTHM_BUDDY_FEMALE_LINES = Object.freeze({
   "{score}!次はもっと上だ!": "{score}!次はもっと上よ!",
   "{score}。納得はしとらん": "{score}。納得はしてないわ",
   "{plays}回。まだ足りん": "{plays}回。まだ足りないわ",
-  "{me}だ。二度は言わん": "{me}よ。二度は言わないわ",
+  "{me}だ。2度は言わん": "{me}よ。2度は言わないわ",
   "ふっ、当然だ!": "ふふっ、当然よ!",
   "おだてても何も出んぞ…": "おだてても何も出ないわよ…",
   "休むのも勝負だ": "休むのも勝負よ",
@@ -44893,7 +44893,7 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
           <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('モンヒロビートの演奏中は、どの設定でも出ません（レーンの上に重なってしまうため）。曲が終わってから出ます。')}</p>
         </div>
         {/* 助手のひとことを出す回数(2026-10-10・改善 G6)。選べるのは3つ(ASSISTANT_BUBBLE_MODE_LABELS が正本)。
-            止めるのは画面ごとのひとことだけ。はじめての案内・一度きりの案内・HOMEの助手・助手の告知は出る(21-assistant.jsx) */}
+            止めるのは画面ごとのひとことだけ。はじめての案内・1度きりの案内・HOMEの助手・助手の告知は出る(21-assistant.jsx) */}
         <div data-assistant-bubble-setting className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
           <b className="block text-[13px] font-black text-slate-200">助手のひとこと</b>
           <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('画面の上に出る助手の吹き出しです。「1日1回」にすると、同じ画面のひとことは1日1回だけ出ます(朝4:00で戻ります)。「出さない」にしても、初めての案内やHOMEの助手、新しい機能のお知らせは出ます。')}</p>
@@ -46349,7 +46349,7 @@ function ProfileHighlights({ highScores, rhythmAchRows, assistantBonds, assistan
     <div className="mb-3 grid grid-cols-3 gap-2" data-profile-highlights>
       {cell('challenge', 'チャレンジ最高', best > 0 ? <span className="font-mono">{best.toLocaleString()}</span> : '記録なし', 'border-amber-400/40 bg-amber-950/40 text-amber-300')}
       {cell('beat', 'フルコンボ', fc > 0 ? `${fc}譜面` : '記録なし', 'border-violet-400/40 bg-violet-950/40 text-violet-300')}
-      {cell('bond', '一番の仲良し', top ? <><span className="inline-block">{top.who.name}</span> <span className="inline-block whitespace-nowrap">Lv.{top.lv}</span></> : '―', 'border-pink-400/40 bg-pink-950/40 text-pink-300')}
+      {cell('bond', '1番の仲良し', top ? <><span className="inline-block">{top.who.name}</span> <span className="inline-block whitespace-nowrap">Lv.{top.lv}</span></> : '―', 'border-pink-400/40 bg-pink-950/40 text-pink-300')}
     </div>
   );
 }
@@ -46601,7 +46601,7 @@ function ProfileScreen({
               <span>遊んだ日 <span className="text-white font-mono">{playtimeView.days}</span>日</span>
             </div>
             {playtimeView.longest.day&&(
-              <div className="text-[10px] text-slate-400 font-bold">一番長かった日 {formatPlaytime(playtimeView.longest.ms)}（{playtimeView.longest.day}）</div>
+              <div className="text-[10px] text-slate-400 font-bold">1番長かった日 {formatPlaytime(playtimeView.longest.ms)}（{playtimeView.longest.day}）</div>
             )}
             <div className="text-[10px] text-slate-400 font-bold">{playtimeView.since?`${playtimeView.since} から数えています`:'いま数え始めたところです'}</div>
             {(Number(playtimeAllDevicesMs) || 0) > playtimeView.totalMs&&(
@@ -46635,7 +46635,7 @@ function ProfileScreen({
                 )}
               </div>
               <div className="mt-2 h-2 rounded-full border border-white/5 bg-black/40 overflow-hidden"><i className="block h-full rounded-full" style={{width:`${width}%`,background:`linear-gradient(90deg,${accent},#fbbf24)`}}/></div>
-              <div className="text-[10px] text-slate-400 font-bold mt-1 text-right">{next?`次のLv.${next.level}まで あと${next.remain}`:'一番仲良し！'}</div>
+              <div className="text-[10px] text-slate-400 font-bold mt-1 text-right">{next?`次のLv.${next.level}まで あと${next.remain}`:'1番仲良し！'}</div>
               {/* ごほうび一覧(2026-10-21)。Lvごとにもらえるもの(ギフト・飾り枠・呼び方)を見る */}
               <button type="button" data-assistant-bond-reward-open onClick={()=>setBondRewardListOpen(true)}
                 className="mt-2 flex w-full min-h-[44px] items-center justify-center gap-1.5 rounded-xl border border-pink-400/50 bg-pink-950/40 px-3 text-[12px] font-black text-pink-100 active:scale-[.98]">
@@ -47487,7 +47487,7 @@ function RhythmSongSelectScreen({
       return (
       <main data-rhythm-demo-home={debugAll?undefined:true} data-rhythm-debug-select={debugAll?true:undefined} className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white">
         {/* 周回を締めているあいだ。いまは報酬の付与と記録だけで端末の中で完結するので
-            ほぼ一瞬だが、まれに引っかかったときに二度押しされないよう薄い幕だけ残す
+            ほぼ一瞬だが、まれに引っかかったときに2度押しされないよう薄い幕だけ残す
             (2026-09-14・ユーザー指摘「待ち時間が長くてストレス」。
              それまでは進んでいるターンの演出の終わりを待っていて、実測で3〜6秒かかっていた。
              いまは returnToHome がランの世代を1つ進めて演出を止めるので、待つ必要がない) */}
@@ -47600,7 +47600,7 @@ function RhythmSongSelectScreen({
                 //   まだその難易度をクリアしていない人には入らないので、そこも言い分ける
                 :rhythmPlayRunLoopsAllowed(difficulty,quickClearCounts)
                   ?jaWrap('ここにいるあいだも周回は進みます。演奏中は止まりますが、曲を最後まで演奏すると、その曲の長さぶんの周回がクリア扱いで入ります（2分台までは4周・3分台は6周…）。イベント開催中は、その対象曲だけ3倍（2分台6周・3分台9周）になります。')
-                  :jaWrap('ここにいるあいだも周回は進みます。演奏中は止まり、そのぶんは曲のあとに速く進んで取り戻します。この難易度をクイックで一度クリアすると、演奏したぶんがそのまま周回クリアとして入るようになります。')}</p>
+                  :jaWrap('ここにいるあいだも周回は進みます。演奏中は止まり、そのぶんは曲のあとに速く進んで取り戻します。この難易度をクイックで1度クリアすると、演奏したぶんがそのまま周回クリアとして入るようになります。')}</p>
             {/* ===== ここから操作。状態は3つだけ(2026-09-07に整理) =====
                   ① 回っている                … バトルへ戻る ／ ここで周回をやめる
                   ② 止まった・挑戦は生きている … 周回を再開する ／ バトルへ戻る
@@ -47639,7 +47639,7 @@ function RhythmSongSelectScreen({
           </div>}
         </div>}
         {/* 週間ランキングの「今週の対象曲」案内(docs/spec/RHYTHM_RANKING.md §10.2)。
-            その週の初回に1度だけ出す。閉じるか、その週にもう一度見たら出ない。
+            その週の初回に1度だけ出す。閉じるか、その週にもう1度見たら出ない。
             ★ヘルプと更新履歴は探しに行った人しか読まないので、画面のなかでも伝える(CLAUDE.md ⑤) */}
         {selectNoticesOpen&&rhythmEventNotice&&!eventNoticeOpen&&<div data-rhythm-event-notice data-rhythm-event-notice-folded className="shrink-0 border-b border-fuchsia-400/20 bg-slate-950/90 px-2">
           <div className="flex items-center gap-1">
@@ -47875,7 +47875,7 @@ function RhythmHelpScreen({
               <p className="mt-2 text-[10px] leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('ノーツを1種類ずつ選んで、実際のプレイ画面で流して試せます。HELL の空のノーツも見られます。記録には残りません。')}</p>
             </>}
             <button style={JA_WRAP_STYLE} data-rhythm-demo-help-tutorial onClick={startRhythmTutorial}
-              className="mt-3 min-h-[52px] w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-sm font-black text-white">{jaWrap('🎓 もう一度チュートリアルを見る')}</button>
+              className="mt-3 min-h-[52px] w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-sm font-black text-white">{jaWrap('🎓 もう1度チュートリアルを見る')}</button>
             <p className="mt-2 text-[10px] leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('曲選びへ戻って、助手が最初から説明します。何度でも見られます。')}</p>
             <div data-rhythm-demo-help-list className="mt-4 space-y-2">
               {topics.length===0
@@ -48443,7 +48443,7 @@ function RhythmRankingScreen({
                     {/* ぴったりのMARVELOUSの回数。MARVELOUSの**内数**だが、並びはリザルトとそろえて
                         MARVELOUSの**上**へ置く(2026-09-13・ユーザー指示)。
                         ★これより前に送られた記録には precise が無い。
-                          0と出すと「一度も取れていない」に見えるので「—」で分ける。 */}
+                          0と出すと「1度も取れていない」に見えるので「—」で分ける。 */}
                     {id==='MARVELOUS'&&<React.Fragment key="precise">
                       <dt data-rhythm-ranking-precise-label data-rhythm-judgment-row="JUST">JUST MARVELOUS</dt>
                       <dd data-rhythm-ranking-precise data-rhythm-judgment-row="JUST" className="text-right font-mono">{Number.isFinite(Number(rhythmRankingDetail.detail?.precise))?Math.max(0,Math.floor(Number(rhythmRankingDetail.detail.precise))):'—'}</dd>
@@ -49246,7 +49246,7 @@ function MasuOfferingScreen({
         setFx({ plan:res.plan, baseId:selected.baseId, name:selected.name, colors:getMasuColors(selected), src:base?.iconUrl });
         setDiamondText('');
       }
-      else setError(res?.error || 'お布施を保存できませんでした。もう一度お試しください。');
+      else setError(res?.error || 'お布施を保存できませんでした。もう1度お試しください。');
     } finally { setBusy(false); }
   };
   const needsConfirm = !!plan && (plan.breakthroughs>0 || plan.reincarnations>0);
@@ -50136,7 +50136,7 @@ function MasuEnhanceScreen({
             )}
 
             {/* まとめて強化: 1ポイントずつタップするのが手間なので、
-                振り分けを下書きしてから一度に確定できるようにしている */}
+                振り分けを下書きしてから1度に確定できるようにしている */}
             {points>0&&(
               <div className="bg-slate-900 border border-amber-500/40 rounded-2xl p-3 shadow-xl">
                 <div className="flex items-center justify-between gap-2 mb-2">
@@ -51949,7 +51949,7 @@ function RewardPickScreen({
         </div>
       </div>}
       {/* 4項目。1画面に収めるため2列2行。空きがあればカードが伸びて画面を埋める。
-          同じ項目をもう一度タップすると2回目として積める */}
+          同じ項目をもう1度タップすると2回目として積める */}
       <div className={`mh-phase-cards w-full max-w-sm mt-2 grid grid-cols-2 grid-rows-2 gap-2 flex-1 min-h-0 overflow-y-auto mh-scroll${battleTutorialSpotClass('rewards')}`}>
         {trainingOptions.map((option,optionIndex)=>{
           const count=activePicks.filter(id=>id===option.id).length;
@@ -52040,7 +52040,7 @@ function RankingFailedNote() {
     <div className="w-full max-w-xs mx-auto mt-3 rounded-2xl border border-amber-300/60 bg-amber-950/40 px-3 py-2 text-left">
       <div className="text-[11px] font-black text-amber-200">全国ランキングへ送れませんでした</div>
       <div className="mt-0.5 text-[10px] leading-relaxed text-amber-100/80">
-        記録は端末に残してあります。次にトップ画面へ戻ったとき、自動でもう一度送ります。
+        記録は端末に残してあります。次にトップ画面へ戻ったとき、自動でもう1度送ります。
         自己ベストや報酬はいつもどおり反映されています。
       </div>
     </div>
@@ -55404,7 +55404,7 @@ function BattleScreen({
             {/* ★body の直下へ出す(ReactDOM.createPortal)。画面の揺れ(screenShake)は transform で作ってあり、
                 transform の掛かった要素の中の position:fixed は、揺れているあいだだけ基準がその要素へ切り替わる。
                 そのため敵の攻撃が当たった瞬間に技名の札が飛ぶように「ずれ」ていた(2026-09-24 ユーザー指摘
-                「大回転落としとか技名表示がずれる」)。バトル中の設定メニューで一度直したのと同じ原因 */}
+                「大回転落としとか技名表示がずれる」)。バトル中の設定メニューで1度直したのと同じ原因 */}
             {/* 敵の技の全画面の演出(攻撃が味方の枠まで届く・必殺技で暗くなる・覚醒ムーのカットインなど) */}
             {/* ボスの必殺技ムービー(画面を切り替えて流す)。流すかどうかは 60-app が playBossMovie で決める */}
             <BossMovieLayer shake={battleFx.shake!=='OFF'}/>
@@ -55972,7 +55972,7 @@ function BattleScreen({
           {/* ライフ・ガッツのポップアップ(吸収・ガードの余り・回復カードなど)。
               ★1体ずつの帯は**カードの中へ入れた**(2026-09-22 ユーザー指摘「距離いれると縦が
                 狭くなりすぎる」)。同じ4列が2段あるだけで枠1つぶんと余白を丸ごと使っていたため。
-              ★帯を消すときに、出す場所ごと消してはいけない(2026-09-20 に一度やって、回復も
+              ★帯を消すときに、出す場所ごと消してはいけない(2026-09-20 に1度やって、回復も
                 ガードの余りもどこにも出なくなった)。入れ物だけここに残す */}
           {Array.isArray(tacticsUnits)?(
             <div data-tactics-party-popups className="absolute inset-x-0 top-0 flex flex-col items-center gap-0.5 pointer-events-none" style={{zIndex:210}}>
@@ -57553,7 +57553,7 @@ function RhythmHistoryScreen({
               </div>
             )}
             {view.status==='notReady'&&<p className="rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-center text-[11px] font-black text-slate-400">この端末ではまだ順位を出せません。</p>}
-            {view.status==='error'&&<p className="rounded-2xl border border-rose-400/30 bg-rose-950/30 p-4 text-center text-[11px] font-black text-rose-200">順位を読み込めませんでした。「更新」を押すともう一度試します。</p>}
+            {view.status==='error'&&<p className="rounded-2xl border border-rose-400/30 bg-rose-950/30 p-4 text-center text-[11px] font-black text-rose-200">順位を読み込めませんでした。「更新」を押すともう1度試します。</p>}
             {divisionBoard.status==='loading'&&rows.length===0&&<p className="p-6 text-center text-[11px] font-black text-slate-500">読み込み中…</p>}
             {divisionBoard.status==='ready'&&rows.length===0&&<p className="rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-center text-[11px] font-black text-slate-400">この回の記録はありません。</p>}
             {rows.length>0&&(
@@ -58360,7 +58360,7 @@ const FRIENDS_RESULT_TEXT = Object.freeze({
   cancelled: ['申請を取り消しました', 'info'],
   removed: ['フレンドを解除しました', 'info'],
   notready: ['フレンド機能はただいま準備中です', 'warn'],
-  error: ['通信がうまくいきませんでした。少し待ってからもう一度試してください', 'warn'],
+  error: ['通信がうまくいきませんでした。少し待ってからもう1度試してください', 'warn'],
 });
 const FRIENDS_TONE_CLASS = Object.freeze({
   ok: 'border-emerald-400/60 bg-emerald-950/50 text-emerald-100',
@@ -58616,14 +58616,14 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
   // ---- 状態が整っていないとき ----
   if (phase !== 'ready') {
     const lines = phase === 'loading' ? ['フレンドを読み込んでいます…']
-      : phase === 'notready' ? ['フレンド機能はただいま準備中です', 'しばらくしてからもう一度開いてください']
+      : phase === 'notready' ? ['フレンド機能はただいま準備中です', 'しばらくしてからもう1度開いてください']
       : phase === 'noid' ? ['この端末ではフレンドを使えません', 'セーブデータを保存できる状態で開いてください']
-      : ['フレンドを読み込めませんでした', '通信を確かめて、もう一度開いてください'];
+      : ['フレンドを読み込めませんでした', '通信を確かめて、もう1度開いてください'];
     return (
       <div data-mh-screen data-friends-phase={phase} className={SCREEN_SHELL_CLASS}>
         <ScreenHead title="フレンド" accent="text-pink-300" onBack={onBack} backLabel="プロフィールへ戻る"/>
         <ScreenEmpty emoji={phase === 'loading' ? '⏳' : '🤝'} lines={lines}
-          action={phase === 'error' ? <button type="button" onClick={() => { setPhase('loading'); reload(); }} className={`${btn} w-full border-white/20 bg-slate-800 text-slate-200`}>もう一度読み込む</button> : null}/>
+          action={phase === 'error' ? <button type="button" onClick={() => { setPhase('loading'); reload(); }} className={`${btn} w-full border-white/20 bg-slate-800 text-slate-200`}>もう1度読み込む</button> : null}/>
       </div>
     );
   }
@@ -58745,7 +58745,7 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
                         <b className="min-w-0 flex-1 truncate text-[12px] font-black text-white">{labels[e.id].label}</b>
                         <strong className="shrink-0 text-[13px] font-black text-amber-200">{e.k === 'w' ? `WAVE ${e.v.toLocaleString()}` : `${e.v.toLocaleString()} pt`}</strong>
                       </div>))}
-                    <p className="px-1 text-[10px] font-bold text-slate-500">モード別の、一番良い記録です。</p>
+                    <p className="px-1 text-[10px] font-bold text-slate-500">モード別の、1番良い記録です。</p>
                   </div>);
               })()}
               {fold('songs', '曲のベスト')}
@@ -58811,7 +58811,7 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
         {confirm && (
           <ConfirmSheet
             title={confirm.kind === 'remove' ? `${look.userName}さんとのフレンドを解除しますか?` : `${look.userName}さんをブロックしますか?`}
-            message={confirm.kind === 'remove' ? '解除しても、あとからもう一度申請できます。' : 'ブロックすると、フレンドが解除され、相手からの申請も届かなくなります。申請の画面からいつでも解除できます。'}
+            message={confirm.kind === 'remove' ? '解除しても、あとからもう1度申請できます。' : 'ブロックすると、フレンドが解除され、相手からの申請も届かなくなります。申請の画面からいつでも解除できます。'}
             confirmLabel={confirm.kind === 'remove' ? '解除する' : 'ブロックする'} danger
             onConfirm={doConfirmed} onCancel={() => setConfirm(null)}/>
         )}
@@ -59060,7 +59060,7 @@ function DebugDataScreen({
         ))}
 
         {/* ④ もう一度出す。ここだけは進行が消えるので、文面で言い切ってから確認を取る */}
-        {section('④ もう一度出す（進行が消えます）', '待たずに出すための操作です。いまの進み具合は失われます。押すと確認が出ます。', (
+        {section('④ もう1度出す（進行が消えます）', '待たずに出すための操作です。いまの進み具合は失われます。押すと確認が出ます。', (
           <div className="grid grid-cols-1 gap-2">
             {btn('ログインボーナスを未受け取りへ戻す', onResetLoginBonus, 'danger', { 'data-debug-reset-login': '1' })}
             {btn('ミッションを未達成へ戻す', onResetMissions, 'danger', { 'data-debug-reset-missions': '1' })}
@@ -59161,7 +59161,7 @@ const RHYTHM_MULTI_PUBLIC_MATCH_WAIT_MS = 15000;
 const RHYTHM_MULTI_CHAT_MAX_LENGTH = 40;
 const RHYTHM_MULTI_CHAT_KEEP = 50;
 const RHYTHM_MULTI_CHAT_INTERVAL_MS = 800;
-const RHYTHM_MULTI_CHAT_STAMPS = Object.freeze(['よろしく!', 'ナイス!', '準備OK!', 'もう一回!', 'ありがとう!']);
+const RHYTHM_MULTI_CHAT_STAMPS = Object.freeze(['よろしく!', 'ナイス!', '準備OK!', 'もう1回!', 'ありがとう!']);
 // 画面ごとに、先頭へ出す定型文(2026-10-03・ユーザー指示「チャット機能もっと使いやすく」
 // 「結果画面でもチャットできるように。もういっかいとかありがとうとか意思疎通したい」)。
 // 残りは共通の定型文を後ろへ並べる(同じ文は2度並べない)
@@ -59172,7 +59172,7 @@ const RHYTHM_MULTI_CHAT_STAMPS_BY_PHASE = Object.freeze({
   playing: ['おつかれ!', 'ナイス!', '待ってるね!'],
   // 観戦の人の定型文(2026-11-15 r1115-189)
   watch: ['がんばれ!', 'ナイス!', 'すごい!', 'おしい!', '見てるよ!', 'おつかれ!'],
-  result: ['もう一回!', 'ありがとう!', 'おつかれ!', 'ナイス!', 'GG!', '次いこう!', 'ドンマイ!', 'またね!'],
+  result: ['もう1回!', 'ありがとう!', 'おつかれ!', 'ナイス!', 'GG!', '次いこう!', 'ドンマイ!', 'またね!'],
 });
 // 呼んだマスモンに話しかける札(2026-10-08・ユーザー指示「マスモンに聞くボタン」)。押すと「{名前}、{text}」を送る。
 // 何を聞くかはマスモンの会話(33-rhythm-buddy-convo.jsx)が読み取れるものだけ。名前は12文字までなので、40文字に収まる
@@ -59182,7 +59182,7 @@ const RHYTHM_BUDDY_ASK_CHIPS = Object.freeze([
 ]);
 // マスモンを呼ぶ遊びの定型文(2026-10-07・ユーザー指示「マスモンいれてーとかマスモン出せないとか」)。共通の最後に並べる
 const RHYTHM_MULTI_CHAT_BUDDY_STAMPS = Object.freeze(['マスモン入れて!', 'マスモン入れたよ!', 'マスモンうまい!', 'マスモン出せない…', '無料おわった…', '券がない…', '席ゆずるね!']);
-const RHYTHM_MULTI_CHAT_COMMON_STAMPS = Object.freeze(['よろしく!', 'ありがとう!', 'ナイス!', 'もう一回!', 'おつかれ!', 'すごい!', 'ドンマイ!', 'またね!', ...RHYTHM_MULTI_CHAT_BUDDY_STAMPS]);
+const RHYTHM_MULTI_CHAT_COMMON_STAMPS = Object.freeze(['よろしく!', 'ありがとう!', 'ナイス!', 'もう1回!', 'おつかれ!', 'すごい!', 'ドンマイ!', 'またね!', ...RHYTHM_MULTI_CHAT_BUDDY_STAMPS]);
 const rhythmMultiStampsFor = (phase) => {
   const list = [...(RHYTHM_MULTI_CHAT_STAMPS_BY_PHASE[phase] || []), ...RHYTHM_MULTI_CHAT_COMMON_STAMPS, ...RHYTHM_MULTI_CHAT_STAMPS];
   return list.filter((text, i) => text.length <= RHYTHM_MULTI_CHAT_MAX_LENGTH && list.indexOf(text) === i);
@@ -61563,7 +61563,7 @@ function RhythmMultiMemberSheet({ m, res, resolveIconUrl, friendsOn, friendSelfI
     setBusy(false);
   };
   const text = state && typeof FRIENDS_RESULT_TEXT !== 'undefined' && FRIENDS_RESULT_TEXT[state] ? FRIENDS_RESULT_TEXT[state][0]
-    : state === 'error' ? '申請を送れませんでした。もう一度試してください' : '';
+    : state === 'error' ? '申請を送れませんでした。もう1度試してください' : '';
   return (
     <div className="absolute inset-0 z-[86000] flex items-center justify-center p-4">
       <button type="button" aria-label="閉じる" className="absolute inset-0 bg-slate-950/70" onClick={onClose} />
@@ -63123,7 +63123,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
     if (!view || !friendSelfId) return;
     const result = await sbSendRoomInvite(friendSelfId, friendId, view.code);
     if (result === 'invited') { setInvitedIds((prev) => ({ ...prev, [friendId]: true })); setInviteMessage(''); }
-    else setInviteMessage(result === 'notready' ? 'フレンド機能はただいま準備中です' : '招待を送れませんでした。もう一度試してください');
+    else setInviteMessage(result === 'notready' ? 'フレンド機能はただいま準備中です' : '招待を送れませんでした。もう1度試してください');
   };
 
   // ライブ開始の合図が来たら 3・2・1 を数えて演奏へ入る。数えるのは受け取った時刻から(端末の時計のずれに左右されない)
@@ -63196,7 +63196,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
       setLinkWatch('');
       const v = RHYTHM_MULTI.view();
       if (!v || v.code !== linkWatch || v.full) return;
-      if (v.status !== 'open') { setMessage('部屋へつなげませんでした。電波のよい所で、もう一度リンクを開いてください'); return; }
+      if (v.status !== 'open') { setMessage('部屋へつなげませんでした。電波のよい所で、もう1度リンクを開いてください'); return; }
       if (v.members.filter((m) => !m.cpu).length <= 1) setMessage('この部屋にはだれもいませんでした。もう閉じたか、期限が切れたようです。送ってくれた人に、新しいリンクをもらってください');
     }, 8000);
     return () => clearTimeout(timer);
@@ -63675,7 +63675,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
           <RhythmOrientationButton/>
         </header>
         {beatRankOpen && Number.isFinite(ms.beatRankXp) && <PlayerRankDetail kind="beat" xp={ms.beatRankXp} rewardsOf={beatRankRewardItems}
-          how="曲を遊ぶと経験値がたまります。難しい難易度ほど多く、HELL が一番多くたまります。その日初めてクリアした1曲は +30 です。" onClose={() => setBeatRankOpen(false)}/>}
+          how="曲を遊ぶと経験値がたまります。難しい難易度ほど多く、HELL が1番多くたまります。その日初めてクリアした1曲は +30 です。" onClose={() => setBeatRankOpen(false)}/>}
         {ms.exiting && <div data-quick-run-exit-overlay className="absolute inset-0 z-[90000] flex items-center justify-center bg-slate-950/60 px-6 text-center"><b className="text-sm font-black text-amber-200">周回を終えています…</b></div>}
         {/* 縦画面: 上に助手の立ち絵(余った高さを使って大きく)、下にボタン。
             横画面: 左に立ち絵、右にボタン(2026-10-03・ユーザー指摘「サイズ感悪い」で組み直し) */}
@@ -64767,7 +64767,7 @@ function RhythmBuddyScoreChart({ recent, songName }) {
         ))}
       </svg>
       <p data-rhythm-buddy-chart-pick className="mt-1 text-[11px] font-black leading-snug text-slate-200">
-        <span className="text-slate-400">{list.length - pickedIndex === 1 ? '一番新しい回' : `${list.length - pickedIndex}回前`}: </span>
+        <span className="text-slate-400">{list.length - pickedIndex === 1 ? '1番新しい回' : `${list.length - pickedIndex}回前`}: </span>
         {songName(picked.songId)} {picked.diffId ? rhythmBuddyDiffShort[picked.diffId] : ''} <b className="text-lime-200">{picked.score.toLocaleString()}点</b>
         <span className="text-slate-400">(満点の{pct(picked)}%)</span>
       </p>
@@ -64888,7 +64888,7 @@ function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack, ownerName = ''
             <button data-rhythm-buddy-seed-open type="button" disabled={seeds <= 0} onClick={() => { setSeedOpen((v) => !v); setSeedPick(''); }}
               className={`min-h-[34px] rounded-lg px-3 text-[11px] font-black ${seeds > 0 ? 'bg-lime-500 text-slate-950' : 'bg-slate-800 text-slate-500'}`}>{seedOpen ? 'キャンセル' : '性格を選び直す'}</button>
           </div>
-          <small className="mt-0.5 block break-keep text-[9px] font-bold leading-snug text-slate-400">1個使うと、性格を全部の中から選び直せます。選んだ性格は遊び方では変わりません(もう一度たねを使えば変えられます)</small>
+          <small className="mt-0.5 block break-keep text-[9px] font-bold leading-snug text-slate-400">1個使うと、性格を全部の中から選び直せます。選んだ性格は遊び方では変わりません(もう1度たねを使えば変えられます)</small>
           {seedOpen && (
             <div className="mt-1 space-y-1">
               <ul data-rhythm-buddy-seed-list className="grid grid-cols-2 gap-1">
@@ -65329,7 +65329,7 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
             <div className="flex min-h-0 flex-1 flex-col">
               {refused && refused.id && (
                 <p data-rhythm-assist-refused={refused.id} className="mb-2 shrink-0 rounded-xl border border-indigo-300/50 bg-indigo-950/70 px-2 py-1 text-[11px] font-black leading-snug text-indigo-100" style={JA_WRAP_STYLE}>
-                  {jaWrap(`💤 ${rhythmAssistSessionName(refused.id)}${refused.line ? `「${refused.line}」……来てくれませんでした` : 'は起きませんでした'}(回数は使っていません)。もう一度呼ぶと、起きやすくなります`)}
+                  {jaWrap(`💤 ${rhythmAssistSessionName(refused.id)}${refused.line ? `「${refused.line}」……来てくれませんでした` : 'は起きませんでした'}(回数は使っていません)。もう1度呼ぶと、起きやすくなります`)}
                 </p>
               )}
               <RhythmAssistSessionPicker assistants={assistants} calledIds={calledIds} guideAssistantId={guideAssistantId} picked={pickedAssistantIds} onToggle={(id) => togglePick('assistant', id)} roomy={roomy} />
@@ -65542,7 +65542,7 @@ function RhythmBuddyRankingBoard({ renderBreederIcon = null, selfName = '', onCl
         {state.status === 'error' && (
           <div className="py-8 text-center">
             <p className="text-sm font-bold text-amber-200">ランキングを読み込めませんでした</p>
-            <button type="button" onClick={() => { rhythmBuddyRankCache.delete(cacheKey); setRetry((n) => n + 1); }} className="mt-2 min-h-[44px] rounded-xl bg-slate-800 px-4 text-sm font-black">もう一度読み込む</button>
+            <button type="button" onClick={() => { rhythmBuddyRankCache.delete(cacheKey); setRetry((n) => n + 1); }} className="mt-2 min-h-[44px] rounded-xl bg-slate-800 px-4 text-sm font-black">もう1度読み込む</button>
           </div>
         )}
         {state.status === 'ready' && shown.length === 0 && <p className="py-8 text-center text-sm font-bold text-slate-400">{helpWrap(friendOnly ? 'フレンドのマスモンは、まだ載っていません' : 'まだ記録がありません。マルチの部屋でマスモンを呼んで、育ててみましょう')}</p>}
@@ -66289,7 +66289,7 @@ const RHYTHM_ASSIST_SESSION_GUIDE_LINES = Object.freeze({
   kiki: '{name}、私たち助手も、ここから呼べるようになりました♪ 一緒に演奏しまつ',
   momosuke: 'ももたち助手も呼べるようになったよ！！{name}、ステージ一緒に立と♡',
   dra: 'おでたち助手も、ここから呼べるようになったんだ。{name}、一緒に叩こうな',
-  atsu: 'てか、俺たち助手もここから呼べるようになったぞ！{name}、一曲いくか笑',
+  atsu: 'てか、俺たち助手もここから呼べるようになったぞ！{name}、1曲いくか笑',
   kyuko: 'ほい！俺たち助手も、ここから呼べるようになったよぉ。{name}、一緒にやろぉ',
   sorashido: 'うぉぉぉ！ 自分たち助手も呼べるようになりました！ {name}、一緒に演奏しましょう笑',
   erubin: '俺たち助手も、ここから呼べるようになったんだ。{name}、よかったら一緒にね',
@@ -71021,7 +71021,7 @@ const assistantChatMonsterIds = (text, prevUserText) => {
 //   ・「エクストリーム」「極限」は、そのモードの極限の難易度を全部。「全部」「全難易度」は、そのモードの難易度を全部
 //   ・その発言にランキングの言葉やモードが無ければ、すぐ前のプレイヤーの発言(2つまで)から話題・モード・難易度を引き継ぐ
 //     (中継役も、すぐ前の発言にランキングの言葉があれば読む。ranking.js の rankingTopicOf)
-const ASSISTANT_CHAT_RANKING_TOPIC = /ランキング|ランク(?:イン|上位)|順位|何位|なんい|[0-9０-９一二三四五]+位|トップ|上位|首位|一番(?:上|強い|高い)|いちばん(?:上|強い|高い)/;
+const ASSISTANT_CHAT_RANKING_TOPIC = /ランキング|ランク(?:イン|上位)|順位|何位|なんい|[0-9０-９一二三四五]+位|トップ|上位|首位|1番(?:上|強い|高い)|いちばん(?:上|強い|高い)/;
 // 1回に読むランキングの数。チャレンジの全部(通常9+極限12・2026-11-04 EREBUS を足した)が入る数。中継役の RANKING_PLAN_MAX と同じ
 const ASSISTANT_CHAT_RANKING_MAX = 21;
 // 引き継ぐ前の発言の数
@@ -72831,7 +72831,7 @@ function AssistantPeerMap({ metIds, onReplay, peerItems = null, onUseItem = null
               </span>
               <span className="mt-1 flex items-start gap-2">
                 <span className="mt-1.5 h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-slate-700" aria-hidden="true"><span className="block h-full bg-pink-400" style={{ width: `${nextStage ? Math.min(100, Math.round(100 * (x.pts - stage.min) / (nextStage.min - stage.min))) : 100}%` }}/></span>
-<span data-assistant-peer-next className="min-w-0 flex-1 text-[11.5px] font-bold leading-snug text-emerald-300" style={{ wordBreak: 'auto-phrase' }}>{nextStage ? <>あと<b className="text-amber-200">{nextStage.min - x.pts}ポイント</b>で Lv{nextStage.level}「{assistantPeerStageName(nextStage)}」{(() => { const gain = (typeof ASSISTANT_LIFE_PEER_LV_GAIN !== 'undefined' && ASSISTANT_LIFE_PEER_LV_GAIN[nextStage.level]) || opens; return gain ? <span data-assistant-peer-gain className="block text-emerald-200">Lv{nextStage.level}になると → {gain}</span> : null; })()}</> : '一番上まで来ました'}</span>
+<span data-assistant-peer-next className="min-w-0 flex-1 text-[11.5px] font-bold leading-snug text-emerald-300" style={{ wordBreak: 'auto-phrase' }}>{nextStage ? <>あと<b className="text-amber-200">{nextStage.min - x.pts}ポイント</b>で Lv{nextStage.level}「{assistantPeerStageName(nextStage)}」{(() => { const gain = (typeof ASSISTANT_LIFE_PEER_LV_GAIN !== 'undefined' && ASSISTANT_LIFE_PEER_LV_GAIN[nextStage.level]) || opens; return gain ? <span data-assistant-peer-gain className="block text-emerald-200">Lv{nextStage.level}になると → {gain}</span> : null; })()}</> : '1番上まで来ました'}</span>
               </span>
             </button>); }
           return (
@@ -74341,7 +74341,7 @@ const assistantLifePickGroupTalk = (group, peerSt, life = ASSISTANT_LIFE_STORE.s
   const pairsOk = (m) => { for (let i = 0; i < m.length; i++) for (let j = i + 1; j < m.length; j++) if (assistantLifeLevelOf(peerSt, m[i], m[j]) < trioLv) return false; return true; };
   const oldTrios = typeof assistantPeerExtraTalks === 'function' ? assistantPeerExtraTalks().trios : [];
   // 4人の組では「3人」と言う台本は使わない(2026-11-07 社長「3人でも4人でも同時に遊んでるならそう書く」)
-  const fitsSize = (t) => ids.length <= 3 || !(t.lines || []).some(l => /3人|三人/.test(l.t || ''));
+  const fitsSize = (t) => ids.length <= 3 || !(t.lines || []).some(l => /3人|3人/.test(l.t || ''));
   const fixed = [...assistantLifeTalkSet().trio, ...oldTrios.filter(t => !t.similar)].filter(t => Array.isArray(t.trio) && t.trio.every(id => ids.includes(id)) && pairsOk(t.trio) && fitsSize(t))
     .map(t => ({ talk: t, keys: { doing: (t.keys && t.keys.doing) || t.lifeDoing || null } }));
   const freshFixed = fixed.filter(c => !seen[c.talk.id]);
@@ -74541,8 +74541,8 @@ const assistantLifeCloseScreen = () => ASSISTANT_LIFE_STORE.set({ open: false })
 const assistantLifeOpenMapAt = (place, id = null) => { if (assistantLifeEnabled()) ASSISTANT_LIFE_STORE.set({ open: true, mapFocus: { place, id: id || null, n: Date.now() } }); };
 // 段ごとのひとこと(上の帯)
 const ASSISTANT_LIFE_TIER_NOTES = Object.freeze({
-  quiet: 'のんびりした一日。遊ぶほど、友情Lv が上がりやすくなります', // 前は「みんなの動きが増えます」(見守れる回数)。1日の上限をなくしたので言いかえた(2026-11-08)
-  normal: 'いつもどおりの一日。みんな、それぞれ過ごしています',
+  quiet: 'のんびりした1日。遊ぶほど、友情Lv が上がりやすくなります', // 前は「みんなの動きが増えます」(見守れる回数)。1日の上限をなくしたので言いかえた(2026-11-08)
+  normal: 'いつもどおりの1日。みんな、それぞれ過ごしています',
   lively: 'よく遊んでくれたから、みんな元気！',
   festival: 'お祭りみたいににぎやか！ 友情Lv がぐんぐん上がります',
 });
@@ -74707,7 +74707,7 @@ function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem
           <div data-assistant-life-tier={tier.id} className="rounded-2xl border border-pink-300/40 bg-pink-400/10 p-2.5">
             <div className="flex items-baseline gap-2">
               <p className="text-[12px] font-black text-pink-100">今日のにぎわい「{tier.label}」</p>
-              <p className="ml-auto whitespace-nowrap text-[10px] font-bold text-pink-200">{next ? `あと${next.min - play.points}で「${next.label}」` : '一番上の段'}</p>
+              <p className="ml-auto whitespace-nowrap text-[10px] font-bold text-pink-200">{next ? `あと${next.min - play.points}で「${next.label}」` : '1番上の段'}</p>
             </div>
             <div className="mt-1 h-2 overflow-hidden rounded-full bg-slate-800" aria-hidden="true">
               <div className="h-full bg-pink-400" style={{ width: `${next ? Math.min(100, Math.round(100 * (play.points - tier.min) / (next.min - tier.min))) : 100}%` }}/>
@@ -75708,7 +75708,7 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
     const details = (
       <div data-assistant-life-room-details style={{ marginTop: 8 }}>
         <div className="alu-n">詳しく</div>
-        <AluRow pic="🤝" text={`友情Lv ${friends.map(f => `${assistantLifeName(f.id)} Lv${f.lv}`).join('・')}`} note="一番仲のいい3人" />
+        <AluRow pic="🤝" text={`友情Lv ${friends.map(f => `${assistantLifeName(f.id)} Lv${f.lv}`).join('・')}`} note="1番仲のいい3人" />
         {sess ? <AluRow pic="🎵" text={`セッションLv${sess.level}`} note={`一緒に ${sess.lives}回`} /> : null}
         {rhythm ? <AluRow pic="🕰" text={rhythm.replace(/^🕰 /, '')} note="" /> : null}
         {typeof AssistantLifeRoomTypedLikes === 'function' && <AssistantLifeRoomTypedLikes id={id}/>}
@@ -76455,7 +76455,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
       {(!uiV2 || tab === 'house') && <div className="mt-1 flex items-center gap-1.5" data-assistant-life-tier={tier.id} title={ASSISTANT_LIFE_TIER_NOTES[tier.id]}>
         {uiV2 ? <button type="button" className="mhl-chip" data-assistant-life-tier-help aria-label="にぎわいの説明" onClick={() => setNote(`🎉 にぎわい「${tier.label}」: 今日 🤝 友情Lv の上がり方が ×${tier.mult}。モンヒロビート・モンヒロバトル・MFバトルカード・見守るで遊ぶほど上がります${next ? `(あと ${next.min - play.points} で「${next.label}」×${next.mult})` : ''}。朝4時に戻ります`)} style={{ minHeight: 32, padding: '0 10px' }}>🎉 {tier.label} ×{tier.mult} <span aria-hidden="true">ⓘ</span></button> : <span className="mhl-chip">🎉 {tier.label} ×{tier.mult}</span>}
         <span className="mhl-bar" aria-hidden="true"><i style={{ width: `${next ? Math.min(100, Math.round(100 * (play.points - tier.min) / (next.min - tier.min))) : 100}%` }}/></span>
-        <span className="whitespace-nowrap text-[9.5px] font-bold text-slate-200">{next ? `${next.label}まで ${next.min - play.points}` : '一番上'}</span>
+        <span className="whitespace-nowrap text-[9.5px] font-bold text-slate-200">{next ? `${next.label}まで ${next.min - play.points}` : '1番上'}</span>
       </div>}
     </div>);
   const findBtn = <button type="button" className="mhl-find" data-assistant-life-find onClick={() => { if (uiV2) { setMapFocusPlace(null); setMapFocusAssistantId(null); } setTab('where'); }}>📋 みんなの居場所 ›</button>;
@@ -76916,7 +76916,7 @@ function AssistantLifeRoomTyped({ id, who, land = false, tabs, tab = 'house', on
     <div className="alu-card" data-assistant-life-room-head data-assistant-life-bond-road={lv != null ? lv : undefined}>
       <div className="alu-t" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '2px 8px' }}>
         {lv != null ? <span className="alu-nw">💗 仲良し度 <b>Lv{lv}</b></span> : null}
-        {lv != null ? <span className="alu-n alu-nw" data-assistant-life-bond-road-remain={next ? next.remain : undefined}>{next ? `あと ${next.remain} で Lv${next.level}` : '一番上まで来ました'}</span> : null}
+        {lv != null ? <span className="alu-n alu-nw" data-assistant-life-bond-road-remain={next ? next.remain : undefined}>{next ? `あと ${next.remain} で Lv${next.level}` : '1番上まで来ました'}</span> : null}
         <AluCond id={id} sleeping={sleeping} hour={hour} />
       </div>
       {/* 「· 」で区切った塊の途中では折らない(「気分: ご機 / 嫌」と折れていた・2026-11-22 r1119-098) */}
@@ -76987,7 +76987,7 @@ function AssistantLifeRoomTypedCheki({ id }) {
   const st = typeof useAssistantLifeGiftState === 'function' ? useAssistantLifeGiftState() : null;
   const days = (st && st.cheki && st.cheki[String(id)]) || [];
   if (!days.length) return null;
-  return <div data-assistant-life-cheki={id}><AluRow pic="📸" text={`チェキ ${days.length}枚`} note={`一番新しい日 ${String(days[days.length - 1]).slice(5).replace('-', '/')}`} /></div>;
+  return <div data-assistant-life-cheki={id}><AluRow pic="📸" text={`チェキ ${days.length}枚`} note={`1番新しい日 ${String(days[days.length - 1]).slice(5).replace('-', '/')}`} /></div>;
 }
 
 // ===== 助手ライフの作り直し 段10: 友情を型に載せる(docs/progress/assistant-life/step10-friendship/・2026-11-22 社長 r1119-099 は案A 型どおり) =====
@@ -78457,7 +78457,7 @@ function AssistantLifeBondRoad({ id, points = null, level = null, land = false }
     <div className={`rounded-2xl border border-pink-300/70 bg-pink-950/60 px-3 py-2 ${land ? 'mt-1.5' : 'mt-2'}`} data-assistant-life-bond-road={lv}>
       <p className="flex items-baseline gap-2 text-[13px] font-black text-pink-50">💗 仲良し度 <b className="text-[16px]">Lv{lv}</b>
         {next && <span className="ml-auto text-[11.5px] font-bold text-pink-200" data-assistant-life-bond-road-remain={next.remain}>あと {next.remain} で Lv{next.level}</span>}
-        {!next && <span className="ml-auto text-[11.5px] font-bold text-pink-200">一番上まで来ました</span>}
+        {!next && <span className="ml-auto text-[11.5px] font-bold text-pink-200">1番上まで来ました</span>}
       </p>
       <div className="mt-1 h-2 overflow-hidden rounded-full bg-white/15"><i className="block h-full rounded-full bg-pink-400" style={{ width: `${pct}%` }}/></div>
       {next && opens.length > 0 && <p className="mt-1 text-[11.5px] font-bold leading-snug text-pink-100" style={JA_WRAP_STYLE} data-assistant-life-bond-road-opens>{jaWrap(`Lv${next.level} で: ${opens.join('・')}`)}</p>}
@@ -78769,11 +78769,11 @@ const ASSISTANT_LIFE_DAILY_NEED = 7;
 const ASSISTANT_LIFE_DAILY_ITEM = 'peer_gift';
 const ASSISTANT_LIFE_DAILY_SCENES = Object.freeze({
   late: { icon: '🌙', text: '{n}が夜ふかしをしています', say: 'しーっ…みんなには ないしょですよ' },
-  morning: { icon: '🌅', text: '{n}が朝の空気を吸っています', say: 'おはようございます。今日もいい一日になりそうですね' },
+  morning: { icon: '🌅', text: '{n}が朝の空気を吸っています', say: 'おはようございます。今日もいい1日になりそうですね' },
   noon: { icon: '🍙', text: '{n}がお昼ごはんを食べています', say: 'お昼はやっぱり元気が出ますね。ひとくち、どうですか' },
   afternoon: { icon: '☀️', text: '{n}がひなたでひと休みしています', say: 'ぽかぽかして、つい うとうとしてしまいますね' },
   evening: { icon: '🌇', text: '{n}が夕日を見ています', say: '夕日がきれいですね。一緒に見られて うれしいです' },
-  night: { icon: '⭐', text: '{n}が星を見ています', say: '今日も一日おつかれさまでした。また明日' },
+  night: { icon: '⭐', text: '{n}が星を見ています', say: '今日も1日おつかれさまでした。また明日' },
 });
 const assistantLifeDailySceneOf = (h) => (h < 5 ? 'late' : h < 10 ? 'morning' : h < 14 ? 'noon' : h < 18 ? 'afternoon' : h < 21 ? 'evening' : 'night');
 const assistantLifeDailyNormalize = (v) => {
@@ -79955,10 +79955,10 @@ const ASSISTANT_LIFE_PROFILE_FACE_ORDER = Object.freeze([['normal', 'ふつう']
 // 助手ごとに happy・excited・wink・surprise・troubled・angry・crying の順
 const ASSISTANT_LIFE_PROFILE_FACE_LINES = Object.freeze({
   mua:       ['いいの！ 楽しいのがいちばんぢゃんｗ', 'ちょ、待って！ あたしも行きたいんだけど！', 'あたしたち、天才ぢゃん♪', 'えっ、どしたの急に', '起きたら髪ぼさぼさだったら、どうしよｗ', 'あたしが楽しみにとっといたやつぢゃん！ もー！', 'なにそれ、うれしすぎるんだけど…！'],
-  kiki:      ['私はチョコがいいでつ♪ 半分こしましょうか', '「火力の上げ方」という本を見つけました', 'これからも、たくさん話しかけてくださいね♪', 'あれま…。そんなふうに思ってくれてたんでつね', '私、守りは苦手でつ…がんばります', '…もう一回お願いします。今のは、火力が足りませんでした', 'うれしくて、ちょっと泣いてしまいまつ…'],
+  kiki:      ['私はチョコがいいでつ♪ 半分こしましょうか', '「火力の上げ方」という本を見つけました', 'これからも、たくさん話しかけてくださいね♪', 'あれま…。そんなふうに思ってくれてたんでつね', '私、守りは苦手でつ…がんばります', '…もう1回お願いします。今のは、火力が足りませんでした', 'うれしくて、ちょっと泣いてしまいまつ…'],
   momosuke:  ['もちろんだよ♡ ももにまかせて', 'でも、ぜんぶ覚えた！！ もも、天才かも♡', 'えへ、知ってる〜w', 'え、ききちゃん普通にうまくない？', 'ももだって、ほんとはもっとおしゃべりしたいのにさ〜', 'ももだって食べたかったもん！！', 'くやしい〜！！ 次は負けないから！！'],
   dra:       ['半分かよ！ でも、うれしいわ', '100点！？ やったぁ、えへへ', 'えへへ、ばれたか', 'お、おう？ 急にどうしたんだよ', '長靴じゃ勝てないか…次は本物を釣るぞ', 'おでの昼寝は大事なんだぞ', '…やめろよ、おで泣くだろ'],
-  atsu:      ['次も期待してるわ！', 'あと1曲、いや3曲いこ笑', 'できるって。俺ら組んだら強いから！', 'まじ？ じゃあもう1回！', '今日はちょっとうまくいかないなー笑', '今のはたまたま！ もう一回！', '…やば、ちょっと泣きそう。ありがと！'],
+  atsu:      ['次も期待してるわ！', 'あと1曲、いや3曲いこ笑', 'できるって。俺ら組んだら強いから！', 'まじ？ じゃあもう1回！', '今日はちょっとうまくいかないなー笑', '今のはたまたま！ もう1回！', '…やば、ちょっと泣きそう。ありがと！'],
   kyuko:     ['ありがとん笑 心強いよぉ', '新しい組み方、3つ思いついた！', 'ほい！ じゃあこれからも一緒に上目指そ笑', 'えっ、ばれてた？ 笑', 'え〜、ちょっとこわいよぉ', 'ぐぬぬぬ…そこはゆずれないよぉ', 'うぅ…うれしすぎて泣けるよぉ🥺'],
   sorashido: ['でーじうれしいです笑', 'やる気出ました・・・！ ちばりよー、自分！', 'グラフもつけておきました・・・！', '100回！？ ・・・やってみせます・・・！', 'は、はい。かっこ悪いですよね笑', '今の判定、自分の勝ちですよね！', 'うぉぉぉ！ 負けました！ くやしい！'],
   erubin:    ['ふふ、いつも元気をもらってるよ', 'ちょうどいいところに来たね。今の組み方、試してみたい', 'ふふ、そう言ってくれると思ったよ', 'わ、すごく明るい部屋になったね', 'ばれちゃったかな…笑 好きなんだよね', 'みんな、ずっと待ってたんだよ', '…ありがとう。ちょっと、うるっときちゃった'],
@@ -80673,7 +80673,7 @@ const ASSISTANT_LIFE_GIFT_CHEKI_MAX = 60;
 const ASSISTANT_LIFE_SOLO_GIFT_KEY = 'mh_assistant_life_solo_gift_v1';
 // 狭い枠で名前を折り返すときの区切り(言葉の途中で折らない)。名前が変わって合わなくなったら、名前をそのまま1つで出す
 const ASSISTANT_LIFE_GIFT_WRAP = Object.freeze({ basket: ['おやつ', 'バスケット'], misanga: ['おそろいの', 'ミサンガ'], cake: ['半分こ', 'ケーキ'], onigiri: ['ほかほか', 'おにぎり'],
-  tea: ['午後の', 'ティーセット'], earphone: ['片耳', 'イヤホン'], puzzle: ['二人で解く', 'パズル'], sleeve: ['おそろい', 'スリーブ'], cheki: ['思い出', 'チェキ'], flower: ['小さな', '花束'],
+  tea: ['午後の', 'ティーセット'], earphone: ['片耳', 'イヤホン'], puzzle: ['2人で解く', 'パズル'], sleeve: ['おそろい', 'スリーブ'], cheki: ['思い出', 'チェキ'], flower: ['小さな', '花束'],
   letter: ['手書きの', '手紙'], candy: ['ひとつぶ', 'キャンディ'], omamori: ['小さな', 'おまもり'], monplush: ['モンスターの', 'ぬいぐるみ'] });
 // 表に無い名前(改名のあと表が古いまま等)も、言葉の切れ目で折る: 末尾のカタカナの言葉の前・「の」の後(2026-11-15 窓口「切らず・言葉の切れ目で折る」)
 const assistantLifeGiftWrapName = (g) => {
@@ -81078,7 +81078,7 @@ const assistantLifeWeightOf = (pts, lo, hi, levels, key) => {
 function AssistantLifeGiftWeight({ w, tone, gainText, kind }) {
   if (!w) return null;
   const col = tone === 'peer' ? ['bg-orange-400', 'bg-orange-200'] : ['bg-pink-500', 'bg-pink-200'];
-  if (w.max) return <p data-assistant-life-give-weight={`${kind}:max`} className="mt-0.5 text-[10px] font-bold leading-snug text-slate-300">Lv{w.lv}(一番上の段)</p>;
+  if (w.max) return <p data-assistant-life-give-weight={`${kind}:max`} className="mt-0.5 text-[10px] font-bold leading-snug text-slate-300">Lv{w.lv}(1番上の段)</p>;
   return (
     <div data-assistant-life-give-weight={`${kind}:${w.lv}`} className="mt-0.5">
       <div className="flex h-[6px] overflow-hidden rounded-full bg-slate-950/80" aria-hidden="true">
@@ -81174,7 +81174,7 @@ function AssistantLifeBuyConfirm({ item, to, gains = [], check, give, onClose })
     if (r0) { setErr(r0); return; }
     setBusy(true); setErr('');
     const r = await assistantLifeBuyOne(item.itemId);
-    if (!r.ok) { setBusy(false); setErr(r.reason === 'points' ? 'ビートPが足りません' : r.reason === 'busy' ? 'ほかの交換を待っています。少ししてからもう一度押してください' : '買えませんでした。ビートPと持ち物はそのままです'); return; }
+    if (!r.ok) { setBusy(false); setErr(r.reason === 'points' ? 'ビートPが足りません' : r.reason === 'busy' ? 'ほかの交換を待っています。少ししてからもう1度押してください' : '買えませんでした。ビートPと持ち物はそのままです'); return; }
     try { if (typeof give === 'function') await give(); } finally { setBusy(false); if (typeof onClose === 'function') onClose(); }
   };
   return (
@@ -84757,7 +84757,7 @@ function AmgbPanel({ who, t }) {
       {f < 1 && left <= AMGB_NUM.warnDays && <p className="mt-1 rounded-lg bg-amber-900/50 p-1.5 text-[10.5px] font-bold text-amber-100" data-amgb-warn>{who.name || '助手'}「そろそろ伸びが止まりそう。{typeof amgsFuseOn === 'function' && amgsFuseOn() ? '合体も考えてみる?' : 'いまのうちに、たくさん鍛えておこうね'}」</p>}
       {f >= 1 && <p className="mt-1 text-[10px] font-bold text-slate-400">寿命が来ても、いなくなったりはしません。対戦にも出られます</p>}
       <div className="mt-2 rounded-xl border border-white/10 p-2" data-amgb-result>
-        <p className="text-[10.5px] font-bold text-slate-200">{last ? `一番新しい訓練: ${AMGB_RESULT_ICON[last.r]} ${MASMON_CALC.RESULTS[last.r].name}${last.a ? `(${last.a === 'praise' ? '褒めた' : '叱った'})` : ''}` : 'まだ訓練の結果はありません'}</p>
+        <p className="text-[10.5px] font-bold text-slate-200">{last ? `1番新しい訓練: ${AMGB_RESULT_ICON[last.r]} ${MASMON_CALC.RESULTS[last.r].name}${last.a ? `(${last.a === 'praise' ? '褒めた' : '叱った'})` : ''}` : 'まだ訓練の結果はありません'}</p>
         {pend && <div className="mt-1.5 flex gap-2">
           <button type="button" className="min-h-[40px] flex-1 rounded-xl bg-sky-700 px-2 text-[12px] font-black" onClick={() => react('scold')} data-amgb-act="scold">📣 叱る</button>
           <button type="button" className="min-h-[40px] flex-1 rounded-xl bg-pink-600 px-2 text-[12px] font-black" onClick={() => react('praise')} data-amgb-act="praise">👏 褒める</button>
@@ -85427,7 +85427,7 @@ const amgtBackupBeforeTech2 = async (trainRaw) => {
     const copies = [[AMGT_PRE_TECH2_KEY, trainRaw], [AMGT_SLEEP_PRE_TECH2_KEY, sleepRaw]].filter(([, r]) => amgtHasOldTechId(r));
     for (const [key, r] of copies) { const had = await storeGet(key, null, false); if (had == null) await storeSet(key, r, false); } // すでにあれば上書きしない
     await storeSet(AMGT_TECH2_FLAG, true, false);
-  } catch (_) { /* 写せなかったときは印を付けない(次に開いたときもう一度やる) */ }
+  } catch (_) { /* 写せなかったときは印を付けない(次に開いたときもう1度やる) */ }
 };
 const AMGT_STORE = { state: normalizeAssistantMasmonTrain(null), loaded: false, subs: new Set(), dirty: false,
   set(next) { this.state = next; this.subs.forEach(f => { try { f(next); } catch (_) {} }); },
@@ -86092,7 +86092,7 @@ function AssistantLifePlanPlace({ place, ids, cur }) {
       <div className="mt-1 flex flex-col gap-1">{ids.map(id => { const on = assistantLifePlanOf(next, id) === place; return (
         <button key={id} type="button" data-assistant-life-plan-ask={id} onClick={() => assistantLifePlanSet(next, id, on ? null : place)}
           className={`flex min-h-[44px] items-center justify-between rounded-xl px-2 text-[12.5px] font-black ${on ? 'bg-sky-600 text-white' : 'bg-white/10 text-white'} active:scale-95`}>
-          <span>{assistantLifePlanName(id)}</span><span className="text-[11px]">{on ? '📍 お願いした(もう一度押すと取り消し)' : '📍 来てもらう'}</span>
+          <span>{assistantLifePlanName(id)}</span><span className="text-[11px]">{on ? '📍 お願いした(もう1度押すと取り消し)' : '📍 来てもらう'}</span>
         </button>); })}</div>
     </div>);
 }
@@ -87578,7 +87578,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, presetFriend, 
   if (!ticked || (!ready && !loadFailed)) {
     body = <div className="ambw-card"><p className="ambw-small">対戦のじゅんびをしています…</p></div>;
   } else if (!ready || !catalog) {
-    body = <div className="ambw-card"><p className="ambw-small">対戦の計算を読み込めませんでした。通信のよいところで、もう一度開いてください。</p></div>;
+    body = <div className="ambw-card"><p className="ambw-small">対戦の計算を読み込めませんでした。通信のよいところで、もう1度開いてください。</p></div>;
   } else if (!me || !myUnits.length) {
     body = <div className="ambw-card" data-ambb-empty><p className="ambw-small">対戦に出せるマスモンがいません。助手ライフで、助手がマスモンを迎えると対戦できます。</p></div>;
   } else if (phase === 'prep') {
@@ -87791,7 +87791,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, presetFriend, 
               )}
             </div>
             <div className="ambw-ctl">
-              <button className="ambw-btn" data-ambb-again onClick={() => setPhase('prep')}>⚔ もう一度</button>
+              <button className="ambw-btn" data-ambb-again onClick={() => setPhase('prep')}>⚔ もう1度</button>
               <button className="ambw-btn2" onClick={() => { setPos(0); setPaused(false); setPhase('watch'); }}>▶ 見返す</button>
               <button className="ambw-btn2" data-ambb-rank-open onClick={() => setPhase('rank')}>🏆 ランキング</button>
             </div>
@@ -88538,7 +88538,7 @@ const MSC_CSS = `
 .msc-hero .rival em{font-style:normal;background:#fde047;color:#3b2a05;border-radius:999px;padding:1px 8px;font-size:11px}
 .msc-rw{display:flex;align-items:center;gap:8px;border-radius:12px;background:rgba(15,12,34,.88);border:1.5px solid #3f3a6b;padding:9px 10px;font-size:13px;font-weight:800;animation:msc-fade .35s ease-out both}
 .msc-rw .i{font-size:20px;width:26px;text-align:center}
-.msc-rw .k{flex:0 0 6.6em;white-space:nowrap} /* 見出しの列の幅をそろえて、値の書き出しをそろえる(r1115-051。一番長い「修行チケット」「能力ポイント」が入る幅) */
+.msc-rw .k{flex:0 0 6.6em;white-space:nowrap} /* 見出しの列の幅をそろえて、値の書き出しをそろえる(r1115-051。1番長い「修行チケット」「能力ポイント」が入る幅) */
 .msc-rw .v{flex:1;min-width:0;color:#e2e8f0;font-size:12.5px}
 .msc-rw.big{background:linear-gradient(90deg,rgba(161,98,7,.55),rgba(15,12,34,.88));border-color:#fde047}
 .msc-rw.band{padding:12px 12px;font-size:15px;box-shadow:0 0 16px rgba(253,224,71,.35)}.msc-rw.band .v{font-size:15px;color:#fef9c3;font-weight:900}.msc-rw.band .k em{font-style:normal;margin-left:4px;color:#fde047}
@@ -88716,14 +88716,14 @@ function MonsucBracket({ suc, s, info, catalog, result: resultProp, onFight, onR
           </svg>
           <div className={`msc-cupbadge ${result === 'win' ? 'lit' : ''}`} style={{ right: 4 }} aria-label="優勝"><span className="tr">🏆</span>WINNER</div>
         </div>
-        <div className="msc-note in">{st >= 3 ? <><b>決勝は <span className="nw">{info.meName} VS {nm(foe)}</span></b>。</> : null}<span className="nw">左の数字は人気の順</span><span className="nw">(1が 一番人気)。</span></div>
+        <div className="msc-note in">{st >= 3 ? <><b>決勝は <span className="nw">{info.meName} VS {nm(foe)}</span></b>。</> : null}<span className="nw">左の数字は人気の順</span><span className="nw">(1が 1番人気)。</span></div>
       </div>
       {/* 2026-11-20 再点検 バ-07・20: 1回戦の途中で決勝の顔合わせを先に言っていた・「見せるだけの演出です」の裏話で冷めた → 決勝の顔合わせは表が決勝まで進んでから出し、裏話の文はやめる */}
       {peek != null && E[peek] ? <MscEntrantPeek suc={suc} s={s} info={info} catalog={catalog} e={E[peek]} isFoe={peek === fi && st >= 3} known={st >= 3} name={nm(E[peek])} no={no[peek]} colors={shownColors[peek]} onClose={() => setPeek(null)}/> : null}
       <div className="msc-talk st">{(() => { const full = coach && typeof assistantFullBodyImage === 'function' ? assistantFullBodyImage(coach, 'happy') : null; return <span className="msc-stand" aria-hidden="true">{full ? <img src={full} alt=""/> : <img className="face" src={mscFace(s.aid)} alt=""/>}</span>; })()}<p className="msx-kp">{coach ? <b style={{ display: 'block', fontSize: 11, color: '#b45309' }}>解説 {coach.name}</b> : null}{st >= 3 ? finalLine : lines[st]}</p>{st < 3 ? <button type="button" className="msc-sk" data-msc-skip onClick={() => setStage(3)}>スキップ ⏭</button> : null}</div>
       <div className="msc-foot">
         {/* 「(優勝ずみ)」を後ろに付けると、半分の幅では単語の途中で折れて読めなかった(2026-11-17 社長)。押せないときの副題と同じ形で、優勝ずみも副題にする */}
-        <button className="msc-btn y s" data-msc-quick disabled={!canSkip} onClick={() => canSkip && onResultOnly()}>⏩ 結果だけ見る{canSkip ? <small className="msc-qsub">一度優勝したので使えます</small> : <small className="msc-qsub" data-msc-quick-why>一度優勝すると使えます</small>}</button>
+        <button className="msc-btn y s" data-msc-quick disabled={!canSkip} onClick={() => canSkip && onResultOnly()}>⏩ 結果だけ見る{canSkip ? <small className="msc-qsub">1度優勝したので使えます</small> : <small className="msc-qsub" data-msc-quick-why>1度優勝すると使えます</small>}</button>
         {/* 2026-11-20 再点検 バ-55: 進むボタンは「試合へ」にそろえる(表は「決勝へ」・試合の前は「準備完了」とばらばらだった) */}
         <button className="msc-btn" data-msc-go onClick={onFight}>⚔ 試合へ ▶</button>
       </div>
@@ -88827,7 +88827,7 @@ function MonsucBattleCard({ suc, s, info, catalog, odds, noSulk, onReady, onResu
       </div>
       <div className="msc-hint"><img src={mscFace(s.aid)} alt=""/><span style={typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined}>{hint}</span></div>
       <div className="msc-foot">
-        <button className="msc-btn y s" data-msc-quick disabled={!canSkip} onClick={() => canSkip && onResultOnly()}>⏩ 結果だけ見る{canSkip ? null : <small className="msc-qsub" data-msc-quick-why>一度優勝すると使えます</small>}</button>
+        <button className="msc-btn y s" data-msc-quick disabled={!canSkip} onClick={() => canSkip && onResultOnly()}>⏩ 結果だけ見る{canSkip ? null : <small className="msc-qsub" data-msc-quick-why>1度優勝すると使えます</small>}</button>
         <button className="msc-btn" data-msc-ready onClick={onReady}>⚔ 試合へ ▶</button>
       </div>
     </div>
@@ -88950,8 +88950,8 @@ function MonsucCupLose({ suc, s, info, match, onRematch, onGiveUp, onSkipAnim })
       <div className="msc-again">
         <h3>時をもどして、やり直す?</h3>
         <p>やり直せるのは 1回の育成で{mscNum(suc.REMATCH && suc.REMATCH.max, 3)}回まで・<em>残り {left}/{mscNum(suc.REMATCH && suc.REMATCH.max, 3)}</em></p>
-        <button className="msc-pick sand" data-msc-rematch="sand" disabled={!can('sand')} onClick={() => onRematch('sand')}><img src="images/success/items/hourglass.png" alt=""/><span>時渡りの砂時計で やり直す<small>{can('sand') ? '同じ相手と もう一度' : mscRematchNg(left, has('sand'))}</small></span><b className="n" aria-label={`持っている数 ${has('sand')}`}><small>×</small>{has('sand')}</b></button>
-        <button className="msc-pick rain" data-msc-rematch="rainbow" disabled={!can('rainbow')} onClick={() => onRematch('rainbow')}><img src="images/success/items/hourglass-rainbow.png" alt=""/><span>虹の時渡りの砂時計で 相手を変えて やり直す<small>{!can('rainbow') ? mscRematchNg(left, has('rainbow')) : info.rival ? '同じライバルと もう一度' : 'ちがう相手と 戦える'}</small></span><b className="n" aria-label={`持っている数 ${has('rainbow')}`}><small>×</small>{has('rainbow')}</b></button>
+        <button className="msc-pick sand" data-msc-rematch="sand" disabled={!can('sand')} onClick={() => onRematch('sand')}><img src="images/success/items/hourglass.png" alt=""/><span>時渡りの砂時計で やり直す<small>{can('sand') ? '同じ相手と もう1度' : mscRematchNg(left, has('sand'))}</small></span><b className="n" aria-label={`持っている数 ${has('sand')}`}><small>×</small>{has('sand')}</b></button>
+        <button className="msc-pick rain" data-msc-rematch="rainbow" disabled={!can('rainbow')} onClick={() => onRematch('rainbow')}><img src="images/success/items/hourglass-rainbow.png" alt=""/><span>虹の時渡りの砂時計で 相手を変えて やり直す<small>{!can('rainbow') ? mscRematchNg(left, has('rainbow')) : info.rival ? '同じライバルと もう1度' : 'ちがう相手と 戦える'}</small></span><b className="n" aria-label={`持っている数 ${has('rainbow')}`}><small>×</small>{has('rainbow')}</b></button>
         <button className="msc-pick quit" data-msc-giveup onClick={onGiveUp}>{summit ? 'あきらめる(ヒーローズファイナルは ここまで)' : info.star >= 2 ? 'あきらめる(準優勝の ごほうびを もらう)' : 'あきらめる'}</button>
       </div>
       <div className="msc-talk"><img src={mscFace(s.aid, 'sad')} alt=""/><p>{coach ? <b style={{ display: 'block', fontSize: 11, color: '#b45309' }}>{coach.name}</b> : null}「おしかった! {why} もう1回 いく?」</p></div>
@@ -89035,7 +89035,7 @@ function MonsucCupShowInner({ suc, s, me, settle, onRematch, onNext, onClose, st
     body = canPlay ? <MonsucArena s={s} info={info} engine={engine} input={match.input} onEnd={finish}/>
       : match && match.r ? <MonsucArena s={s} info={info} watch={match} onEnd={finish}/>
       : match ? <MonsucMatchSkip won={match.won} onEnd={finish}/>
-      : <p className="msc-note">{failed ? '試合を読み込めませんでした。もう一度開いてください' : '試合の準備をしています…'}</p>;
+      : <p className="msc-note">{failed ? '試合を読み込めませんでした。もう1度開いてください' : '試合の準備をしています…'}</p>;
   }
   else if (phase === 'win') body = <MonsucCupWin suc={suc} s={s} info={info} match={shown} out={out} onNext={() => onNext && onNext(out)}/>;
   else if (phase === 'lose') body = <MonsucCupLose suc={suc} s={s} info={info} match={shown} onRematch={(k) => onRematch && onRematch(k)} onGiveUp={() => { const o = typeof settle === 'function' ? settle(false) : null; if (onNext) onNext(o); }}/>;
@@ -89280,7 +89280,7 @@ function AssistantMasmonTrainWatch({ assistantId, onClose }) {
     : growNames.length ? `「${growNames.join('」「')}」の技の熟練度を伸ばす練習試合` : '技の熟練を伸ばす練習試合';
   const faceOf = (aId) => { const a = typeof ASSISTANT_LIST !== 'undefined' ? ASSISTANT_LIST.find(x => x.id === aId) : null; return a ? { a, src: assistantFaceSrc(a, 'normal') } : null; };
   const stageBlock = () => {
-    if (failed) return <p className="ambw-small" style={{ padding: 24, textAlign: 'center' }}>練習試合を読み込めませんでした。もう一度開いてください</p>;
+    if (failed) return <p className="ambw-small" style={{ padding: 24, textAlign: 'center' }}>練習試合を読み込めませんでした。もう1度開いてください</p>;
     if (!battle) return <p className="ambw-small" style={{ padding: 24, textAlign: 'center' }} data-amgc-loading>練習の相手を探しています…</p>;
     if (battle.solo) {
       const tch = battle.techs[Math.min(pos, battle.techs.length - 1)] || {};
@@ -90062,7 +90062,7 @@ function AmgpFsGauge({ kind, start, ends }) {
       <div className="flex items-baseline gap-1.5 text-[11px] font-black">
         <span className="w-[56px] shrink-0 text-left">{label}</span>
         <span className="flex-1 text-left text-[10px] font-bold" style={{ color: over ? over[1] : '#94a3b8' }}>{over ? `⚠ ${over[2]}の線をこえる` : 'だいじょうぶ'}</span>
-        <b className="shrink-0 text-right text-amber-200" data-amgp-gauge-num>{start} → {last}{peak > last ? `(一番高い ${peak})` : ''}</b>
+        <b className="shrink-0 text-right text-amber-200" data-amgp-gauge-num>{start} → {last}{peak > last ? `(1番高い ${peak})` : ''}</b>
       </div>
       <div className="relative mt-1 h-3 overflow-hidden rounded-full bg-slate-700">
         <i className="absolute inset-y-0 left-0 bg-slate-300" style={{ width: pct(Math.min(start, peak)) }}/>
@@ -91371,7 +91371,7 @@ function MonsucFuseShow({ a, b, child, childName, onDone }) {
   return (
     <div className={`mf-show st${st}${calm ? ' calm' : ''}`} data-monsuc-fuse-show={st} onClick={() => { if (st < 3) setSt((n) => Math.min(3, n + 1)); }}>{/* 画面を押すと次の段へ(早送りのボタンはやめた・窓-38) */}
       <img className="bgimg" src="images/story-bg/monhero_plaza.jpg" alt=""/>
-      <div className="mf-head"><small>合体</small><span style={{ display: 'block', whiteSpace: 'nowrap' }}>{st >= 3 ? `${childName}が生まれた!` : st >= 1 ? '2体の力が円盤石に集まっていく…' : '2体が一つになっていく…'}</span></div>
+      <div className="mf-head"><small>合体</small><span style={{ display: 'block', whiteSpace: 'nowrap' }}>{st >= 3 ? `${childName}が生まれた!` : st >= 1 ? '2体の力が円盤石に集まっていく…' : '2体が1つになっていく…'}</span></div>
       
       <div className="mf-stage">
         <img className="mf-mon a" src={monsucFuseImg(a)} alt=""/><img className="mf-mon b" src={monsucFuseImg(b)} alt=""/>
@@ -92253,7 +92253,7 @@ const msxFxText = (f) => {
   if (k === 'mas') return `技の熟練 ${msxSigned(Number(a) || 0)}`;
   if (k === 'flag') return MSX_FX_FLAG[a] || 'いいことがある';
   if (k === 'goal') return MSX_FX_GOAL[a] || '期の目標を決める';
-  if (k === 'apt') return a === 'low' ? '一番低い間合い適性 +1段' : '一番高い間合い適性 +1段';
+  if (k === 'apt') return a === 'low' ? '1番低い間合い適性 +1段' : '1番高い間合い適性 +1段';
   return '';
 };
 const msxFxLine = (list) => { const t = (Array.isArray(list) ? list : []).map(msxFxText).filter(Boolean); return t.length ? t.join('・') : 'なにも変わらない'; };
@@ -92278,7 +92278,7 @@ function MsxChoiceInfo({ evId, c, open }) {
   if (!open) return null;
   const known = Boolean(seen.ch[`${evId}.${c}`]);
   const lines = known ? (String(evId).startsWith('story.') ? ['お話の続きが変わる'] : msxChoiceLines(msxEvChoice(evId, c))) : ['？？？'];
-  return <div className="msx-chinfo" data-msx-chinfo={known ? 'known' : 'unknown'}>{lines.map((l, i) => <div key={i}>{l}</div>)}{known ? null : <small>一度選ぶと、効果が分かるようになる</small>}{known && lines.some((l) => /\+\d+〜?\d*/.test(l) && /(ライフ|ちから|かしこさ|命中|回避|丈夫さ|能力)/.test(l)) ? <small>{MSX_FX_NOTE}</small> : null}</div>;
+  return <div className="msx-chinfo" data-msx-chinfo={known ? 'known' : 'unknown'}>{lines.map((l, i) => <div key={i}>{l}</div>)}{known ? null : <small>1度選ぶと、効果が分かるようになる</small>}{known && lines.some((l) => /\+\d+〜?\d*/.test(l) && /(ライフ|ちから|かしこさ|命中|回避|丈夫さ|能力)/.test(l)) ? <small>{MSX_FX_NOTE}</small> : null}</div>;
 }
 
 // ---- 図鑑の中身(タブと出来事の並び) ----
@@ -92365,7 +92365,7 @@ function MsxDex({ aid = 'mua', nick = '', onClose }) {
       {open ? (
           <div className="mdx-read msx-dex-read" data-msx-dex-read={open.id}>
             <div className="h"><b>{open.title}</b></div>
-            {open.awake ? <div className="ln">{open.awake === 2 ? '覚醒したあと、さらに虹色の光に包まれて、全能力 +40・間合い適性が2つ上がった。' : 'まぶしい光に包まれて、全能力 +30・一番高い間合い適性が上がった。'}</div> : null}
+            {open.awake ? <div className="ln">{open.awake === 2 ? '覚醒したあと、さらに虹色の光に包まれて、全能力 +40・間合い適性が2つ上がった。' : 'まぶしい光に包まれて、全能力 +30・1番高い間合い適性が上がった。'}</div> : null}
             {aw && aw.t ? <div className="ln"><span className="who">{typeof msxAidName === 'function' ? msxAidName(readAid) : ''}</span>「{aw.t}」</div> : null}
             {open.id === 'issa' ? <div className="ln">夜の町に、のびのび装置を持ったイッサ博士があらわれた。成功すれば大きく強くなれるが、失敗すると…。</div> : null}
             {chosen && cont ? <><div className="ln msx-dex-picked" data-msx-dex-picked={chosen}>▶ {(ev0 && ev0.choices ? (ev0.choices.find((x) => x.c === chosen) || {}).t : '') || '選んだ'}</div>
@@ -93999,7 +93999,7 @@ function MsxTrainFinish({ run, o }) {
       <span className="speed" style={{ '--d': '1.2s' }}/>
       <span className="aura mix" style={{ '--d': '1.25s' }}/>
       {orbs(1.2, true)}
-      <b className="word mn" style={{ '--d': '1.2s', '--wd': '.35s' }}>みんなの力が 一つに…!</b>
+      <b className="word mn" style={{ '--d': '1.2s', '--wd': '.35s' }}>みんなの力が 1つに…!</b>
       <span className="flash mix" style={{ '--d': '1.55s' }}/>
       <span className="ring rainbow" style={{ '--d': '1.55s' }}/>{lite ? null : <span className="ring shock" style={{ '--d': '1.6s' }}/>}
       {msxTfxBits(lite ? 5 : 10, 1.55, ['💗', '✨', '💥', '💞'])}
@@ -94885,10 +94885,10 @@ const alfRefusalText = (e) => {
   if (/切にしています/.test(b)) return 'あなたか相手が行き来を「切」にしているため、置き手紙を残せませんでした';
   if (/今日はもう/.test(b)) return '今日はもう訪ねられません(朝4時に戻ります)';
   if (/止めています/.test(b)) return 'フレンドの家との行き来は、いまお休み中です';
-  if (/日付/.test(b)) return '端末の日付と時刻がずれているようです。合わせてからもう一度';
+  if (/日付/.test(b)) return '端末の日付と時刻がずれているようです。合わせてからもう1度';
   if (/連絡先/.test(b) || /alf_visits_note/.test(b)) return '連絡先のような文は置けません。ひとことを書き直してください';
   if ((e && e.status === 409) || /23505|duplicate/.test(b)) return '今日はこの家にもう置き手紙を残しました';
-  return '通信がうまくいきませんでした(時間をおいてもう一度)';
+  return '通信がうまくいきませんでした(時間をおいてもう1度)';
 };
 // 行き来の行を足す(表の側でも上限・フレンドか・切かを見る)。{ ok, reason }
 const alfPostVisitR = async ({ kind, visitor, host, ids = [], word = 0, note = '', noteTo = null }) => {
@@ -95133,7 +95133,7 @@ const assistantLifeFriendLeaveNote = async (hostId, { word = 0, talked = [], nam
   if (can !== 'ok') return { ok: false, reason: can === 'done' ? '今日はこの家にもう置き手紙を残しました' : can === 'max' ? '今日はもう訪ねられません(朝4時に戻ります)' : 'フレンドの家との行き来が「切」になっています' };
   const self = await alfSelf();
   if (!self) return { ok: false, reason: 'この端末では、まだフレンドの機能が使えません' };
-  if (!(await alfEnsureHouse())) return { ok: false, reason: 'あなたの家の様子をまだ届けられていません。電波のよい所でもう一度' };
+  if (!(await alfEnsureHouse())) return { ok: false, reason: 'あなたの家の様子をまだ届けられていません。電波のよい所でもう1度' };
   const ids = [...new Set((talked || []).filter(alfValidId))].slice(0, 2);
   const nc = alfNoteCheck(note);
   if (!nc.ok) return { ok: false, reason: nc.reason };
@@ -95280,7 +95280,7 @@ const ALF_TALK_LINES = Object.freeze({
 });
 // 訪ねた家の台本(2026-11-08 コトバ・ツムギ。docs/progress/assistant-peer/lines/friend-*.txt・注文書 ORDER-FRIEND.md)
 //   greet … {name}(訪ねてきたプレイヤー)を迎える/doing … 部屋でしていることごとの迎え/reply … 返事への答え/sleep … 寝ている部屋の寝言
-const ALF_VISIT_LINES = Object.freeze({"mua": {"greet": ["はじめましてー！ {h}さんのお友だち？", "わ、お客さんだ！ ゆっくりしてってよー✨", "{name}って言うの？ よろしくね♪"], "doing": {"snack": "いま、おやつ食べてたとこー！ いっしょにどう？", "practice": "ちょうど練習してたの！ 見てってよー♪", "training": "モッチーのお世話中だったの！ かわいいでしょ？", "cards": "カード並べてたとこ！ どれがかわいいと思う？", "read": "雑誌見てたの！ コーデ決めてたとこ♪", "idle": "ちょうどヒマしてたの！ ナイスタイミングぢゃん👍"}, "reply": ["ありがとー！ 来てくれて、まぢうれしい♪", "うんうん(●ﾟｪﾟ))ｺｸｺｸ 楽しんでってね！", "そう言ってもらえると、照れるぢゃんｗ"], "sleep": ["…むにゃ…このリボン…かわいー…", "…すぅ…いらっしゃーい…むにゃ…"]}, "kiki": {"greet": ["まあ、お客さまでつね。ようこそいらっしゃいました", "はじめまして。{h}さんのところの、ききでつ", "{name}、どうぞお入りくださいな♪"], "doing": {"snack": "ちょうど、お茶菓子をいただいていたところでつ。おひとついかが？", "practice": "モンヒロビートの練習中でした。ちから全開でいきまつよ♪", "training": "ゴーレムさんのお世話をしていました。立派でしょう？", "cards": "カードを並べていたところでつ。攻撃のカードばかりですね♪", "read": "本を読んでいました。静かな時間は、いいものでつね", "idle": "ぼんやりお茶を飲んでいたところでした。ゆっくりしていってくださいね"}, "reply": ["ありがとうございます。くつろいでくださいね♪", "そう言っていただけると、うれしいでつ", "どうぞ、お茶でもいれましょうか"], "sleep": ["…すぅ…お茶が…さめてしまいまつ…", "…むにゃ…火力は…こちらに…"]}, "momosuke": {"greet": ["わ、お客さん！！ ももの部屋へようこそ♡", "はじめまして！！ {h}さんちの、ももだよ！！", "{name}、来てくれたの！？ うれしい！！"], "doing": {"snack": "おやつタイム中！！ ひと口あげるw", "practice": "いま練習中！！ ももの音、聞いてって♡", "training": "メタルナーみがいてたとこ！！ ぴかぴかでしょ？", "cards": "カード並べてた！！ かわいいのばっかでしょw", "read": "楽譜見てたの！！ 次の曲、どれにしよっかな", "idle": "ちょうどヒマだったの！！ 遊ぼ遊ぼ！！"}, "reply": ["でしょ！？ ももの自慢の部屋だもん♡", "ありがと！！ ゆっくりしてってねw", "えっへん！！ もっとほめていいよw"], "sleep": ["…すぅ…ライブ…まだ終わらない…", "…むにゃ…ぴかぴか…w"]}, "dra": {"greet": ["お、お客さんか。よく来たな", "はじめましてだな。{h}さんのところのドラだ", "{name}か。ゆっくりしていけよ"], "doing": {"snack": "ちょうどおやつ中だ。ひとつ食うか？", "practice": "モンビーの練習してたとこだ。リズムきざむぞ", "training": "グジラの世話してたんだ。でっかいだろ", "cards": "山札を確かめてたとこだ。見ていくか？", "read": "説明書きを読んでたんだ。わかりやすく書いてあるな", "idle": "ぼーっとしてたとこだ。ちょうどよかったな、えへへ"}, "reply": ["そうか、ありがとな。くつろいでいけ", "おでの部屋、気に入ったか？", "まあ、座ってくれ。おやつもあるぞ"], "sleep": ["…ぐぅ…グジラ…まだ食べるのか…", "…すぅ…いらっしゃい…むにゃ…"]}, "atsu": {"greet": ["お、いらっしゃい！ {h}さんの友だちだよね笑", "{name}、来てくれたんだ！ ゆっくりしてって笑", "おっ、お客さん笑 遠慮しないで入って！"], "doing": {"snack": "ちょうどおやつ食べてた笑 一個どう？", "practice": "いま一曲叩いてたとこ笑 {name}も聞いてく？", "training": "ドラゴンの世話してた笑 ちょっと待ってて！", "cards": "デッキ組み直してたとこ笑 見ていく？", "read": "本読んでたら、ちょっと寝そうだった笑 来てくれて助かる！", "idle": "ぼーっとしてた笑 ちょうど話し相手ほしかった！"}, "reply": ["ありがと笑 くつろいでって！", "そう言ってもらえると、うれしい笑", "いいって笑 {h}さんにも伝えとく！"], "sleep": ["……次の一曲、いける……", "……ドラゴン、えらいぞ……( *'ω'*)ノ"]}, "kyuko": {"greet": ["ほい、いらっしゃ〜い。{name}、ようこそだよぉ", "あ、お客さんだぁ。{h}さんの友だちかな？", "ちょうどひと休みしたかったんだぁ。どうぞどうぞ"], "doing": {"snack": "おやつ食べてたとこ〜。一緒にどう？", "practice": "いま練習してたんだぁ。ちょっと聞いてってよぉ", "training": "ニャーの世話してたとこ〜。かわいいでしょ笑", "cards": "新しい組み方、考えてたんだぁ。見る？", "read": "本読んでたとこ〜。いいところで来たねぇ笑", "idle": "ぼーっと音楽聞いてたんだぁ。座っていいよぉ"}, "reply": ["ありがとん笑 ゆっくりしてってねぇ", "そう言ってもらえると、うれしいなぁ", "ほい、どういたしまして〜。{h}さんも喜ぶよぉ"], "sleep": ["……むにゃ……あと一ページ……", "……ニャー、そこはだめだよぉ……"]}, "sorashido": {"greet": ["お客さんですねー！ よく来てくれました笑", "{name}、いらっしゃい！ くつろいでいってください笑", "{h}さんのお友だちですか。ゆっくりしていってくださいね"], "doing": {"snack": "ちょうどちんすこうを食べてたんです。一緒にどうですか？", "practice": "いま練習してたんですよ！ 聞いていきますか？", "training": "育成の記録をつけてたところです。ちょっと待っててくださいね", "cards": "新しい表を作ってたんです・・・！ 見ていきますか？", "read": "本を読んでたんです。いいところで来ましたね笑", "idle": "考えごとをしてたんです。話し相手ができてうれしいです"}, "reply": ["ありがとうございます！ でーじうれしいです笑", "そう言ってもらえると、表を作ったかいがありますねー", "気をつかわなくて大丈夫ですよ。ゆっくりしてください"], "sleep": ["・・・うぉぉ・・・むにゃ・・・表が・・・", "・・・なんくるないさ〜・・・すぅ・・・"]}, "erubin": {"greet": ["いらっしゃい。{name}、来てくれてありがとう", "はじめまして、かな。{h}さんのお友だちだね", "ようこそ。ゆっくりしていってね☺️"], "doing": {"snack": "ちょうどお茶とおやつの時間だったんだ。一緒にどうかな？", "practice": "いま練習してたところだよ。少し聞いていく？", "training": "デュラハンのお世話をしてたんだ。おとなしいでしょ", "cards": "カードの組み方を考えてたんだ。見ていく？", "read": "本を読んでたんだ。静かでいい時間だね", "idle": "窓の外をながめてたんだ。ちょうどよかったよ"}, "reply": ["ありがとう。そう言ってもらえるとうれしいな", "どういたしまして。気をつかわなくていいからね", "うん、{h}さんにも伝えておくね"], "sleep": ["……みんな、元気かな……", "……デュラハン、そこで守って……"]}});
+const ALF_VISIT_LINES = Object.freeze({"mua": {"greet": ["はじめましてー！ {h}さんのお友だち？", "わ、お客さんだ！ ゆっくりしてってよー✨", "{name}って言うの？ よろしくね♪"], "doing": {"snack": "いま、おやつ食べてたとこー！ いっしょにどう？", "practice": "ちょうど練習してたの！ 見てってよー♪", "training": "モッチーのお世話中だったの！ かわいいでしょ？", "cards": "カード並べてたとこ！ どれがかわいいと思う？", "read": "雑誌見てたの！ コーデ決めてたとこ♪", "idle": "ちょうどヒマしてたの！ ナイスタイミングぢゃん👍"}, "reply": ["ありがとー！ 来てくれて、まぢうれしい♪", "うんうん(●ﾟｪﾟ))ｺｸｺｸ 楽しんでってね！", "そう言ってもらえると、照れるぢゃんｗ"], "sleep": ["…むにゃ…このリボン…かわいー…", "…すぅ…いらっしゃーい…むにゃ…"]}, "kiki": {"greet": ["まあ、お客さまでつね。ようこそいらっしゃいました", "はじめまして。{h}さんのところの、ききでつ", "{name}、どうぞお入りくださいな♪"], "doing": {"snack": "ちょうど、お茶菓子をいただいていたところでつ。おひとついかが？", "practice": "モンヒロビートの練習中でした。ちから全開でいきまつよ♪", "training": "ゴーレムさんのお世話をしていました。立派でしょう？", "cards": "カードを並べていたところでつ。攻撃のカードばかりですね♪", "read": "本を読んでいました。静かな時間は、いいものでつね", "idle": "ぼんやりお茶を飲んでいたところでした。ゆっくりしていってくださいね"}, "reply": ["ありがとうございます。くつろいでくださいね♪", "そう言っていただけると、うれしいでつ", "どうぞ、お茶でもいれましょうか"], "sleep": ["…すぅ…お茶が…さめてしまいまつ…", "…むにゃ…火力は…こちらに…"]}, "momosuke": {"greet": ["わ、お客さん！！ ももの部屋へようこそ♡", "はじめまして！！ {h}さんちの、ももだよ！！", "{name}、来てくれたの！？ うれしい！！"], "doing": {"snack": "おやつタイム中！！ ひと口あげるw", "practice": "いま練習中！！ ももの音、聞いてって♡", "training": "メタルナーみがいてたとこ！！ ぴかぴかでしょ？", "cards": "カード並べてた！！ かわいいのばっかでしょw", "read": "楽譜見てたの！！ 次の曲、どれにしよっかな", "idle": "ちょうどヒマだったの！！ 遊ぼ遊ぼ！！"}, "reply": ["でしょ！？ ももの自慢の部屋だもん♡", "ありがと！！ ゆっくりしてってねw", "えっへん！！ もっとほめていいよw"], "sleep": ["…すぅ…ライブ…まだ終わらない…", "…むにゃ…ぴかぴか…w"]}, "dra": {"greet": ["お、お客さんか。よく来たな", "はじめましてだな。{h}さんのところのドラだ", "{name}か。ゆっくりしていけよ"], "doing": {"snack": "ちょうどおやつ中だ。ひとつ食うか？", "practice": "モンビーの練習してたとこだ。リズムきざむぞ", "training": "グジラの世話してたんだ。でっかいだろ", "cards": "山札を確かめてたとこだ。見ていくか？", "read": "説明書きを読んでたんだ。わかりやすく書いてあるな", "idle": "ぼーっとしてたとこだ。ちょうどよかったな、えへへ"}, "reply": ["そうか、ありがとな。くつろいでいけ", "おでの部屋、気に入ったか？", "まあ、座ってくれ。おやつもあるぞ"], "sleep": ["…ぐぅ…グジラ…まだ食べるのか…", "…すぅ…いらっしゃい…むにゃ…"]}, "atsu": {"greet": ["お、いらっしゃい！ {h}さんの友だちだよね笑", "{name}、来てくれたんだ！ ゆっくりしてって笑", "おっ、お客さん笑 遠慮しないで入って！"], "doing": {"snack": "ちょうどおやつ食べてた笑 1個どう？", "practice": "いま1曲叩いてたとこ笑 {name}も聞いてく？", "training": "ドラゴンの世話してた笑 ちょっと待ってて！", "cards": "デッキ組み直してたとこ笑 見ていく？", "read": "本読んでたら、ちょっと寝そうだった笑 来てくれて助かる！", "idle": "ぼーっとしてた笑 ちょうど話し相手ほしかった！"}, "reply": ["ありがと笑 くつろいでって！", "そう言ってもらえると、うれしい笑", "いいって笑 {h}さんにも伝えとく！"], "sleep": ["……次の1曲、いける……", "……ドラゴン、えらいぞ……( *'ω'*)ノ"]}, "kyuko": {"greet": ["ほい、いらっしゃ〜い。{name}、ようこそだよぉ", "あ、お客さんだぁ。{h}さんの友だちかな？", "ちょうどひと休みしたかったんだぁ。どうぞどうぞ"], "doing": {"snack": "おやつ食べてたとこ〜。一緒にどう？", "practice": "いま練習してたんだぁ。ちょっと聞いてってよぉ", "training": "ニャーの世話してたとこ〜。かわいいでしょ笑", "cards": "新しい組み方、考えてたんだぁ。見る？", "read": "本読んでたとこ〜。いいところで来たねぇ笑", "idle": "ぼーっと音楽聞いてたんだぁ。座っていいよぉ"}, "reply": ["ありがとん笑 ゆっくりしてってねぇ", "そう言ってもらえると、うれしいなぁ", "ほい、どういたしまして〜。{h}さんも喜ぶよぉ"], "sleep": ["……むにゃ……あと一ページ……", "……ニャー、そこはだめだよぉ……"]}, "sorashido": {"greet": ["お客さんですねー！ よく来てくれました笑", "{name}、いらっしゃい！ くつろいでいってください笑", "{h}さんのお友だちですか。ゆっくりしていってくださいね"], "doing": {"snack": "ちょうどちんすこうを食べてたんです。一緒にどうですか？", "practice": "いま練習してたんですよ！ 聞いていきますか？", "training": "育成の記録をつけてたところです。ちょっと待っててくださいね", "cards": "新しい表を作ってたんです・・・！ 見ていきますか？", "read": "本を読んでたんです。いいところで来ましたね笑", "idle": "考えごとをしてたんです。話し相手ができてうれしいです"}, "reply": ["ありがとうございます！ でーじうれしいです笑", "そう言ってもらえると、表を作ったかいがありますねー", "気をつかわなくて大丈夫ですよ。ゆっくりしてください"], "sleep": ["・・・うぉぉ・・・むにゃ・・・表が・・・", "・・・なんくるないさ〜・・・すぅ・・・"]}, "erubin": {"greet": ["いらっしゃい。{name}、来てくれてありがとう", "はじめまして、かな。{h}さんのお友だちだね", "ようこそ。ゆっくりしていってね☺️"], "doing": {"snack": "ちょうどお茶とおやつの時間だったんだ。一緒にどうかな？", "practice": "いま練習してたところだよ。少し聞いていく？", "training": "デュラハンのお世話をしてたんだ。おとなしいでしょ", "cards": "カードの組み方を考えてたんだ。見ていく？", "read": "本を読んでたんだ。静かでいい時間だね", "idle": "窓の外をながめてたんだ。ちょうどよかったよ"}, "reply": ["ありがとう。そう言ってもらえるとうれしいな", "どういたしまして。気をつかわなくていいからね", "うん、{h}さんにも伝えておくね"], "sleep": ["……みんな、元気かな……", "……デュラハン、そこで守って……"]}});
 // フレンドの家へ行ったとき・迎えるときに足す台本(前からの ALF_GO_LINES・ALF_WELCOME_LINES と合わせて選ぶ)
 const ALF_GO_MORE = Object.freeze({"mua": ["{h}さんの家、おしゃれすぎぢゃない！？", "{f}の部屋、見せてもらってもいい？"], "kiki": ["{h}さんのお家、落ち着いたすてきなお部屋でつね", "{f}、おじゃましまつ。お茶をお持ちしました♪"], "momosuke": ["{h}さんちの部屋、かわいいじゃん！！", "{f}、遊びに来たよ！！ 練習見せて♡"], "dra": ["{h}さんの家か。いい部屋だな", "{f}、おじゃまするぞ。おやつ持ってきた"], "atsu": ["{f}、遊びに来た笑 なんかして遊ぼ！", "{h}さんの部屋、いい感じじゃん！ また来たいな笑"], "kyuko": ["{f}、遊びに来たよぉ。何してたの？", "{h}さんの部屋、本がありそうで落ち着くねぇ"], "sorashido": ["{f}、遊びに来ました！ 今日はなにをしますか？", "{h}さんの部屋、でーじ落ち着きますね笑"], "erubin": ["{f}、遊びに来たよ。元気だったかな？", "{h}さんの部屋、やさしい感じがするね"]});
 const ALF_WELCOME_MORE = Object.freeze({"mua": ["{f}だ！ 来てくれたの、まぢうれしい♪", "あたしの部屋、こっちだよー！ ゆっくりしてってね✨"], "kiki": ["{f}、ようこそ。お茶をおいれしまつね", "遠いところ、ありがとうございまつ。ゆっくりしていってくださいな"], "momosuke": ["{f}だ！！ ももの部屋、案内するね♡", "いらっしゃい！！ おやつ用意してあるよw"], "dra": ["{f}か、よく来たな。ゆっくりしていけ", "おでの部屋はこっちだ。散らかってるけどな"], "atsu": ["いらっしゃい！ 来てくれたの、まじでうれしい笑", "{f}、よく来たじゃん笑 ゆっくりしてって！"], "kyuko": ["いらっしゃ〜い。{f}、待ってたよぉ", "ほい、上がって上がって〜。お茶いれるねぇ"], "sorashido": ["よく来てくれましたね！ {f}、待ってましたよ", "いらっしゃい！ ゆっくりしていってください笑"], "erubin": ["いらっしゃい、{f}。ゆっくりしていってね", "来てくれてうれしいよ。お茶をいれるね"]});
@@ -95530,7 +95530,7 @@ function AlfFriendHouseView({ friend, onClose }) {
     setConfirm(null);
     setLeaving(null); setRoomId(null); setTalk(null); setNoteText('');
     if (r && r.ok) bondMark('note');
-    setDone(r && r.ok ? `✉️ 置き手紙${alfWordQuote(word)}を残しました${r.photo ? '・📷 写真1枚' : ''}${r.beatP ? `・🎁 ビートP ${r.beatP}(ギフトに届きます)` : ''}` : `⚠️ ${(r && r.reason) || '置き手紙を残せませんでした(時間をおいてもう一度)'}`);
+    setDone(r && r.ok ? `✉️ 置き手紙${alfWordQuote(word)}を残しました${r.photo ? '・📷 写真1枚' : ''}${r.beatP ? `・🎁 ビートP ${r.beatP}(ギフトに届きます)` : ''}` : `⚠️ ${(r && r.reason) || '置き手紙を残せませんでした(時間をおいてもう1度)'}`);
   };
   // 自由文があるときは確認を出してから送る
   const ask = (word) => { const c = alfNoteCheck(noteText); if (c.ok && c.text) { setNoteWarn(''); setConfirm({ word, warn: '', busy: false }); } else void leave(word); };
@@ -96258,7 +96258,7 @@ const albSendLike = async (hostId, spot) => {
   if (x.liked.includes(spot)) return { ok: true, reason: '' };
   if (x.liked.length >= ALB_MAX.likes) return { ok: false, reason: `この家への「すてき」は1日${ALB_MAX.likes}つまでです(朝4時に戻ります)` };
   const self = await alfSelf();
-  if (!self) return { ok: false, reason: '通信がうまくいきませんでした(時間をおいてもう一度)' };
+  if (!self) return { ok: false, reason: '通信がうまくいきませんでした(時間をおいてもう1度)' };
   try {
     await alfRequest(ALB_TABLE_LIKES, { method: 'POST', prefer: 'return=minimal', soft: true, body: { visitor_id: self, host_id: hostId, day: alfDay(), spot } });
   } catch (e) {
@@ -96866,8 +96866,8 @@ const MASMON_PVP_TIMEOUT_MS = 12000;
 const MASMON_PVP_CHALLENGE_DAILY = 20;      // サーバの CHALLENGE_DAILY_LIMIT と同じ(残りの目安に使う。決めるのはサーバ)
 const MASMON_PVP_REASON_TEXT = Object.freeze({
   off: 'フレンド対戦は準備中です',
-  network: 'つながりませんでした。少し待ってからもう一度ためしてね',
-  server: 'サーバーが混んでいるみたい。少し待ってからもう一度ためしてね',
+  network: 'つながりませんでした。少し待ってからもう1度ためしてね',
+  server: 'サーバーが混んでいるみたい。少し待ってからもう1度ためしてね',
   no_id: 'この端末ではまだ登録できません',
   locked: 'この登録は別の端末で作られています',
   over_cap: '育った量が、日数から考えられる上限を超えています',
@@ -99868,7 +99868,7 @@ const MSX_PERIOD_WHEN = Object.freeze({ 'デビュー期': 'はじめ', 'ジュ�
 const msxPeakWords = (peak) => {
   const ps = String(peak || '').split('〜');
   const w = ps.map((p) => MSX_PERIOD_WHEN[p]).filter(Boolean);
-  return [peak, `(育成の${w.length > 1 && w[0] !== w[1] ? `${w[0]}〜${w[1]}` : w[0] || '中ごろ'})`, 'に', '一番', '伸びる']; // 言葉の途中で折れないよう、かたまりごとに折らない札にする
+  return [peak, `(育成の${w.length > 1 && w[0] !== w[1] ? `${w[0]}〜${w[1]}` : w[0] || '中ごろ'})`, 'に', '1番', '伸びる']; // 言葉の途中で折れないよう、かたまりごとに折らない札にする
 };
 function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf, onOpenShop }) {
   const { box, meta, unlocked } = data;
@@ -100026,7 +100026,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf, onOpenSh
           <div className="v-p1grow" data-msx-start-type><span className="k">成長の型</span><b className="yel">{growName}</b>{peakText ? <span className="v">{msxPeakWords(peakText).map((w, i) => <span key={i} className="w">{w}</span>)}</span> : null}</div>
           <div className="v-p1st" data-msx-start-stats>{MSX_STATS.map((k, i) => { const v = Number(startSt[k]) || 0; const top = Math.max(300, ...MSX_STATS.map((q) => Number(startSt[q]) || 0)); return (
             <div key={k} className="r"><span className="n">{MSX_STAT_NAME[k]}</span><b>{v}</b><i className={`g g${msxAptCls(apt[i])}`} title="伸びやすさ">{apt[i]}</i><span className="bar"><span style={{ width: `${Math.max(4, Math.min(100, (v / top) * 100))}%`, background: MSX_STAT_COLOR && MSX_STAT_COLOR[k] ? MSX_STAT_COLOR[k] : '#94a3b8' }}/></span></div>); })}</div>
-          <div className="v-p1note">右の字は<b>伸びやすさ</b>(A が一番伸びる → E)</div>
+          <div className="v-p1note">右の字は<b>伸びやすさ</b>(A が1番伸びる → E)</div>
         </div>
       </div>
       {detail && <MsxMonDetail pick={{ sel: tpSel, locked: () => false, onPick: onTechPick }} species={species} name={fromMon && fromMon.nick ? fromMon.nick : msxMonName(species)} sub={fromMon ? '合体で生まれたモンスター' : 'ベースモン'} st={startSt} apt={apt} type={growType} grades={preview.grades} peak={peakText} power={preview.power} rank={preview.rank} onClose={() => setDetail(false)} SUC={SUC}/>}
@@ -100136,7 +100136,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf, onOpenSh
             <b>{t.name}<span className="yel"> ×{n}</span></b>
             <small style={JA_WRAP_STYLE}>{jaWrap(msxItemDesc(look))}</small>
             <small style={{ ...JA_WRAP_STYLE, color: '#7dd3fc' }}>{jaWrap(t.when === 'before' ? 'いつ: 育成を始める前に効き、その育成のあいだ続く' : look === 'pack' ? 'いつ: 持ちこんだ時点で中身が持ち物に入っている。中身は育成中の自分のターンに使う(1ターン1個まで・ターンは進まない)' : 'いつ: 育成中の自分のターンに使う(1ターン1個まで・ターンは進まない)')}</small>
-            <small style={{ ...JA_WRAP_STYLE, color: '#fcd34d' }}>{jaWrap(n > 0 ? (items.includes(look) ? '持っていく物に入っている(もう一度押すと外す)' : items.length >= 2 ? '持っていけるのは2つまで(ほかを外すと選べる)' : '押すと持っていく物に入る') : '手に入れ方: マーケットのビートP交換所・助手ライフの拾い物や贈り物')}</small>
+            <small style={{ ...JA_WRAP_STYLE, color: '#fcd34d' }}>{jaWrap(n > 0 ? (items.includes(look) ? '持っていく物に入っている(もう1度押すと外す)' : items.length >= 2 ? '持っていけるのは2つまで(ほかを外すと選べる)' : '押すと持っていく物に入る') : '手に入れ方: マーケットのビートP交換所・助手ライフの拾い物や贈り物')}</small>
           </div></div>); })() : <div className="msx-note" style={{ marginBottom: 6 }}>升目を押すと、効き目と手に入れ方が出ます</div>}
         {items.map((id) => <div key={id} className="v-item sel"><span style={{ fontSize: 22 }}>{MSX_ITEM_BY_ID[id].e}</span><div>{MSX_ITEM_BY_ID[id].name}<small>{msxItemDesc(id)}</small></div><span className="pr">✅ 持っていく・あと{has(id) - 1}</span></div>)}
         {/* 持っている物の効き目も下に並べる(下を空けない。docs/spec/MONSUC_UI.md の 1) */}
@@ -100195,7 +100195,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf, onOpenSh
       <button type="button" className="v-sum" onClick={() => setStep(2)}><span className="k">助手</span><span>{msxAidName(aid)}</span>{/* 題はストーリーの行の1つだけ(再点検 msx-S6: 題が2つ並んでいた) */}<span className="ed">変える</span></button>
       <button type="button" className="v-sum" onClick={() => setStep(3)}><span className="k">持ちこみ</span><span style={JA_LABEL_STYLE}>{jaWrap(items.length ? items.map((id) => `${MSX_ITEM_BY_ID[id].e}${MSX_ITEM_BY_ID[id].name}`).join('・') : 'なし')}</span><span className="ed">変える</span></button>
       {/* 何に何を足すのかを言葉で(「初めの上乗せ」だけでは伝わらなかった) */}
-      <div className="v-sum v-s6add" data-msx-s6-add><span className="k">初めの能力に足す分</span><span>{Object.keys(startAdd).length ? <>{Object.entries(startAdd).map(([k, v]) => `${MSX_STAT_NAME[k]} +${v}`).join('・')}<small className="v-sumsub">{`編成の6体それぞれの、一番高い能力の 1/25 を、その能力に足します${startMul > 1 ? `(受け継ぎ草で ×${startMul})` : ""}`}</small>
+      <div className="v-sum v-s6add" data-msx-s6-add><span className="k">初めの能力に足す分</span><span>{Object.keys(startAdd).length ? <>{Object.entries(startAdd).map(([k, v]) => `${MSX_STAT_NAME[k]} +${v}`).join('・')}<small className="v-sumsub">{`編成の6体それぞれの、1番高い能力の 1/25 を、その能力に足します${startMul > 1 ? `(受け継ぎ草で ×${startMul})` : ""}`}</small>
         {/* どの子から何が来たかの内訳(API 点検: 式だけでは分からない)。押すと開く */}
         <details className="v-s6det"><summary>内訳を見る</summary>{members.map((m, i) => (m.startAdd && m.startAdd.v > 0 ? <span key={i} className="v-s6row"><b>{m.name || msxMonName(m.species)}</b>{`${MSX_STAT_NAME[m.startAdd.stat]} +${m.startAdd.v * startMul}`}</span> : null))}</details></> : '編成のモンスターからの足し分はありません'}</span></div>
       {capUp.length ? <div className="v-sum" data-msx-start-cap><span className="k">能力の上限</span><span>{capUp.map(([k, v]) => `${MSX_STAT_NAME[k]} ${v.toLocaleString()}`).join('・')}</span></div> : null}
@@ -100575,7 +100575,7 @@ function MsxTeamEffects({ members, onClose }) {
         <div className="msx-ef-tabs" role="tablist">{[['eff', '効果ごと'], ['mon', 'モンスターごと']].map(([k, n]) => <button type="button" key={k} role="tab" aria-selected={view === k} className={view === k ? 'on' : ''} onClick={() => setView(k)} data-msx-ef-view={k}>{n}</button>)}</div>
         <div className="msx-dt-body">
           {view === 'eff' ? (list.length ? <>
-            <div className="msx-ef-how"><span>数字は編成の合計(上限まで効く)</span><span><b className="one">1体だけ</b> 一番大きい1体の分だけ効く</span><span>行を押すと1体ずつの値</span></div>
+            <div className="msx-ef-how"><span>数字は編成の合計(上限まで効く)</span><span><b className="one">1体だけ</b> 1番大きい1体の分だけ効く</span><span>行を押すと1体ずつの値</span></div>
             {(() => { const seenGrp = {}; return list.map((e) => { const c = capOf(e.id); const grpFirst = !!(c && c.group && !seenGrp[c.group] && (seenGrp[c.group] = true)); const tot = c && c.group ? groupTotal(c.group) : e.total; const pct = c ? Math.min(100, tot / c.v * 100) : null; const u = AT.BY_ID[e.id] && AT.BY_ID[e.id].u === '%' ? '%' : ''; const on = open === e.id; return (
               <div key={e.id} className={`msx-ef-row${on ? ' on' : ''}${c && c.group ? ' grp' : ''}`}>
                 <button type="button" className="msx-ef-hd" onClick={() => setOpen(on ? null : e.id)} aria-expanded={on} data-msx-effect={e.id} data-msx-assist-type={e.d.type || ''}>
@@ -100888,7 +100888,7 @@ function MsxStRow({ stats, ups, main, preview = false, who = null }) {
   return (
     <div {...tgProps} className={`v-st${tgId ? ' tg' : ''}${aptOn ? ' apton' : ''}${grow ? ' grow' : ''}${grow && on ? ' on' : ''}${grow && !calm ? ' gs-a' : ''}${zoomA ? ' zin' : ''}${zoomS ? ' zs' : ''}${zoomA && MSX_STATS.filter((k) => ups[k]).length > 3 ? ' many' : ''}`} data-msx-st-grow={grow ? (on ? 'on' : 'pre') : undefined}>
       {/* 見出しの行: 左に四角の意味(F〜S はランク)、右に素質の切り替え。前は丈夫さの札の角に小さな札がのっていて、何か・押せるのかが分からなかった(育-210・214・220・204・163・166) */}
-      {tgId ? <p className="v-sthd" aria-hidden="true">{aptOn ? <span className="lg">素質は能力の伸びやすさ(A が一番)</span> : <span className="lg">能力 <i className="msx-srk rF">F</i>〜<i className="msx-srk rS">S</i> はランク</span>}<span className="v-sttg">⇄ {aptOn ? '数に戻す' : '素質を見る'}</span></p> : null}
+      {tgId ? <p className="v-sthd" aria-hidden="true">{aptOn ? <span className="lg">素質は能力の伸びやすさ(A が1番)</span> : <span className="lg">能力 <i className="msx-srk rF">F</i>〜<i className="msx-srk rS">S</i> はランク</span>}<span className="v-sttg">⇄ {aptOn ? '数に戻す' : '素質を見る'}</span></p> : null}
       {MSX_STATS.map((k) => {
         const u = ups ? (ups[k] || 0) : 0;
         const after = stats[k]; const before = Math.max(0, after - (grow ? u : 0));
@@ -101085,7 +101085,7 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false, st
     const r1 = typeof msxBeatMark === 'function' ? { ...msxBeatMark(r), rev: 1 } : { ...r, rev: 1 };
     let saved = false;
     try { saved = await (typeof msxStartRunSave === 'function' ? msxStartRunSave(r1, meta) : Promise.all([msxSaveMeta(meta), msxSaveRun(r1, !!debug)]).then((a) => a.every((x) => x === true))); } catch (e) { saved = false; }
-    if (saved !== true) { setAsk({ text: '保存できませんでした。アイテムと前の育成はそのままです。もう一度「育成を始める」を押してください', yes: 'OK', onYes: () => {} }); return false; }
+    if (saved !== true) { setAsk({ text: '保存できませんでした。アイテムと前の育成はそのままです。もう1度「育成を始める」を押してください', yes: 'OK', onYes: () => {} }); return false; }
     lendRef.current = {};
     setData((d) => ({ ...d, meta })); revRef.current = 1; setRunState(r1); setView('play');
     return true;
@@ -101093,7 +101093,7 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false, st
   // やめる(r1115-200 3a・3c): 画面の育成の id が保存と同じときだけ消す。別の育成なら消さずに読み直す・書けなければもう一度
   const quit = () => setAsk({ text: 'この育成をやめますか? 育てた中身はなくなります(マスモンボックスには入りません)', yes: '育成をやめる', onYes: async () => {
     let res = false; try { res = await (typeof msxClearRun === 'function' ? msxClearRun(run && run.id) : storeSet(MSX_KEYS.run, null)); } catch (e) { res = false; }
-    if (res === false) { setAsk({ text: '保存できませんでした。育成は消えていません。もう一度「育成をやめる」を押してください', yes: 'OK', onYes: () => {} }); return; }
+    if (res === false) { setAsk({ text: '保存できませんでした。育成は消えていません。もう1度「育成をやめる」を押してください', yes: 'OK', onYes: () => {} }); return; }
     if (res === 'other') { toHome(); return; } // ほかの画面で新しい育成が始まっていた → 消さずに読み直す
     setRunLoaded(null); setView('home');
   } });
@@ -101109,8 +101109,8 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false, st
         <div className="v-hm-logo"><img src={MSX_LOGO_ART} alt="モンヒロサクセス"/>{typeof MsxBetaMark === 'function' ? <MsxBetaMark/> : null}</div>
       </div>
       {view === 'loading' ? <div className="msx-note" style={{ textAlign: 'center' }}>読み込んでいます…</div>
-        : <div className="v-card" style={{ textAlign: 'center' }}>読み込めませんでした。通信のよいところで、もう一度読み込んでください
-          <button type="button" className="msx-btn go" style={{ marginTop: 10 }} onClick={() => { setView('loading'); setLoadTry((t) => t + 1); }}>もう一度読み込む</button></div>}
+        : <div className="v-card" style={{ textAlign: 'center' }}>読み込めませんでした。通信のよいところで、もう1度読み込んでください
+          <button type="button" className="msx-btn go" style={{ marginTop: 10 }} onClick={() => { setView('loading'); setLoadTry((t) => t + 1); }}>もう1度読み込む</button></div>}
     </div>
   </>);
   else if (view === 'home') content = <MsxHome data={data} run={run} debug={debug} onClose={onClose} onBase={typeof MsxBaseMons === 'function' ? () => setView('basemon') : null} onBox={typeof MsxR3Box === 'function' ? () => setView('box') : null} onContinue={() => setView('play')} onNew={() => (run && !run.s.over ? setAsk({ text: '途中の育成があります。新しく始めると、いまの育成はなくなります', yes: '新しく始める', onYes: () => setView('start') }) : setView('start'))} setMeta={setMeta} onWipe={quit} onRank={() => setView('rank')}/>;
@@ -101447,7 +101447,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
     const tLast = tAt < 0 || tAt >= tSteps.length - 1;
     body = <>{typeof MsxTevMini === 'function' ? <MsxTevMini s={s} v={v}/> : <MsxBand s={s} v={v} ev={ev}/>}<MsxTrainEvent key={`${s.turn}-tev`} run={run} o={run.out} ctx={ctx} at={tAt} go={tGo} onNext={() => toReact(run)}/></>;
     foot = tAt < 0
-      ? <div className="v-ft"><button type="button" onClick={() => tGo(0)} data-msx-tev-replay>もう一度見る</button><button type="button" className="go" onClick={() => afterAct({ ...run, phase: 'main' })} data-msx-tev-next>次へ ▶</button></div>
+      ? <div className="v-ft"><button type="button" onClick={() => tGo(0)} data-msx-tev-replay>もう1度見る</button><button type="button" className="go" onClick={() => afterAct({ ...run, phase: 'main' })} data-msx-tev-next>次へ ▶</button></div>
       : <div className="v-ft"><button type="button" onClick={() => tGo(-1)} data-msx-tev-skip>スキップ ⏭</button><button type="button" className="go" onClick={() => (tLast ? toReact(run) : tGo(tAt + 1))} data-msx-tev-next>次へ ▶</button></div>;
   }
   // ---- 覚醒・超覚醒(56-monsuc-awake.jsx の演出)。終わったら、ターンのはじめならメインへ・ターンの終わりなら閉じる ----
@@ -101604,7 +101604,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
           {/* 計算の途中(基本▶編成▶タッグ)は見せず、「上がる量が何倍か」と内訳を1行で(2026-11-20 r1119-033 育-22・育-105) */}
           <div className="t">{tags.length ? <span className="big">🤝 友情タッグ ×{tags.length}</span> : <span>タッグなし</span>}<span data-msx-train-mult>上がる量 <b className="mx">×{card.mult}</b></span></div>
           {/* Lv は下の丸に出ているので、ここは次の Lv までだけ(観点8) */}
-          {trainLv ? <div className="v-lvx"><b>{trainLv >= 5 ? 'トレーニングLv が 一番上' : card.next ? `あと${card.next}回で Lv.${trainLv + 1}` : ''}</b><i><u style={{ width: `${card.next ? Math.max(0, 100 - card.next * 20) : 100}%` }}/></i></div> : null}
+          {trainLv ? <div className="v-lvx"><b>{trainLv >= 5 ? 'トレーニングLv が 1番上' : card.next ? `あと${card.next}回で Lv.${trainLv + 1}` : ''}</b><i><u style={{ width: `${card.next ? Math.max(0, 100 - card.next * 20) : 100}%` }}/></i></div> : null}
         </div>}
       </div>
       <MsxStRow who={s} stats={s.stats} ups={pv ? pv.gain : null} main={stat} preview/>
@@ -101683,7 +101683,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
           {/* ヒーローズファイナルの間・期末の大会の当日は、上の帯と大会のボタン・吹き出しに出るので、場面の札は出さない(r1119-033 育-49・再点検 バ-01) */}
           {v.period.key === 'final' || preOn ? null : v.period.left <= 1 ? <span className="v-chip hot" data-msx-cup-soon>🏆 このあと期末の大会</span> : null}
           {/* ピークが何に効くかを札の中に書く(2026-11-20 r1119-033 育-108) */}
-          {pkI.state === 'in' ? <span className="v-chip hot" data-msx-peak-chip>🔥 ピーク中 あと{pkI.left}ターン<small className="v-chip-sub">トレーニングの伸びが一番大きい</small></span> : pkI.state === 'soon' ? <span className="v-chip ylw" data-msx-peak-chip>🔥 もうすぐ伸びどき<small className="v-chip-sub">あと{pkI.in}ターンで ピーク</small></span> : null}
+          {pkI.state === 'in' ? <span className="v-chip hot" data-msx-peak-chip>🔥 ピーク中 あと{pkI.left}ターン<small className="v-chip-sub">トレーニングの伸びが1番大きい</small></span> : pkI.state === 'soon' ? <span className="v-chip ylw" data-msx-peak-chip>🔥 もうすぐ伸びどき<small className="v-chip-sub">あと{pkI.in}ターンで ピーク</small></span> : null}
           <MsxYosuChips s={s}/>
           {s.cond ? <span className="v-chip bad">🤕 {MSX_COND[s.cond.kind]}(あと{s.cond.left})</span> : null}
           {typeof MsxBuffChips === 'function' ? <MsxBuffChips s={s}/> : null}</div>
@@ -103488,7 +103488,7 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
   if (!b) return <MsxR3Frame run={run} back="中断" onBack={onPause} body={<div className="msx-note">大会の中身を読めませんでした</div>} foot={<div className="v-ft"><button type="button" className="go" onClick={() => finish(s)}>次へ ▶</button></div>}/>;
 
   // ---- 読み込み ----
-  if (failed) return <MsxR3Frame run={run} back="中断" onBack={onPause} body={<div className="msx-note">試合を読み込めませんでした。電波のよい所で、もう一度開いてください</div>} foot={<div className="v-ft"><button type="button" onClick={onPause}>← 中断</button></div>}/>;
+  if (failed) return <MsxR3Frame run={run} back="中断" onBack={onPause} body={<div className="msx-note">試合を読み込めませんでした。電波のよい所で、もう1度開いてください</div>} foot={<div className="v-ft"><button type="button" onClick={onPause}>← 中断</button></div>}/>;
   if (!fight) return <MsxR3Frame run={run} back="中断" onBack={onPause} body={<div className="msx-note" data-msx-r3-loading>大会の準備をしています…</div>} foot={null}/>;
   const opp = fight.opp;
   // ヒーローズファイナル: 試合の前に、助手が相手を選ぶ(1戦ごとに1回。やり直しでは出さない)
@@ -103528,7 +103528,7 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
           <div className="t">時をもどして、やり直す?<small>やり直せるのは 1回の育成で3回まで・<b style={{ color: '#fde047' }}>残り {left} / 3</b></small></div>
           <div className="v-rm3">
             <button type="button" className="re" disabled={!SUC.canRematch(s, 'sand')} style={{ opacity: SUC.canRematch(s, 'sand') ? 1 : 0.45 }} onClick={() => re('sand')} data-msx-r3-sand>
-              <img src="images/success/items/hourglass.png" alt="" style={{ width: 30, height: 30 }}/><div>時渡りの砂時計で やり直す<small>同じ相手ともう一度(持っている ×{has('sand')})</small></div></button>
+              <img src="images/success/items/hourglass.png" alt="" style={{ width: 30, height: 30 }}/><div>時渡りの砂時計で やり直す<small>同じ相手ともう1度(持っている ×{has('sand')})</small></div></button>
             <button type="button" className="nj" disabled={!SUC.canRematch(s, 'rainbow')} style={{ opacity: SUC.canRematch(s, 'rainbow') ? 1 : 0.45 }} onClick={() => re('rainbow')} data-msx-r3-rainbow>
               <img src="images/success/items/hourglass-rainbow.png" alt="" style={{ width: 30, height: 30 }}/><div>虹の砂時計で 相手を変えて やり直す<small>ちがう相手と戦える(持っている ×{has('rainbow')})</small></div></button>
             <button type="button" className="gv" onClick={() => settle(false)} data-msx-r3-giveup>あきらめる<small>{b.kind === 'debut' ? `デビュー戦の負け ${(s.debutLoss || 0) + 1} / 3${debutLeft === 0 ? '(育成はここまで)' : ''}` : b.kind === 'summit' ? 'ヒーローズファイナルはここまで(引退へ)' : '準優勝のごほうびをもらう'}</small></button>
@@ -104203,9 +104203,9 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
         <div className="lv" style={{ display: 'grid', gridTemplateColumns: `repeat(${a.cost.length},1fr)`, gap: 3 }}>{a.cost.map((p, j) => <span key={j} className={got === j + 1 ? 'on' : ''} onClick={() => tap(id, j + 1)}>段{j + 1}<b>{p}</b></span>)}</div></div>);
     })}</div>
     <div className="v-pick">取るもの({kinds} / {maxKinds}種類): {kinds ? Object.entries(pick).map(([id, lv], i) => <React.Fragment key={id}>{i ? '・' : ''}<b>{A[id] ? `${A[id].icon} ${A[id].name}` : id}{V3 ? '' : ` 段${lv}`}</b></React.Fragment>) : 'まだ選んでいない'}<br/>⚠ 決めたあとは変えられない</div>
-    {res && res.full ? <div className="v-card" style={{ borderColor: '#f87171' }}><div className="sub"><b style={{ color: '#fca5a5' }}>マスモンボックスがいっぱい</b>({res.box ? `${res.box.mons.length} / ${res.box.cap}体` : ''})。お別れで1体あけてから、もう一度「これで決める」を押してください。育成はこのまま残しておきます</div>
+    {res && res.full ? <div className="v-card" style={{ borderColor: '#f87171' }}><div className="sub"><b style={{ color: '#fca5a5' }}>マスモンボックスがいっぱい</b>({res.box ? `${res.box.mons.length} / ${res.box.cap}体` : ''})。お別れで1体あけてから、もう1度「これで決める」を押してください。育成はこのまま残しておきます</div>
       <button type="button" className="msx-btn sub" onClick={() => setShowBox(true)}>🐾 マスモンボックスを見る</button></div> : null}
-    {res && !res.ok && !res.full ? <div className="msx-note">保存できませんでした。もう一度押してください{res.why === 'beat' || res.why === 'clear' ? '(マスモンボックスへの保存は済んでいます。二重には入りません)' : ''}</div> : null}
+    {res && !res.ok && !res.full ? <div className="msx-note">保存できませんでした。もう1度押してください{res.why === 'beat' || res.why === 'clear' ? '(マスモンボックスへの保存は済んでいます。二重には入りません)' : ''}</div> : null}
   </>);
   const foot = <div className="v-ft"><button type="button" onClick={auto} data-msx-r3-auto>🎲 おまかせ</button><button type="button" onClick={() => { setPick({}); setSure(false); }}>やり直す</button>
     <button type="button" className="go" disabled={busy} onClick={decide} data-msx-r3-decide>{sure ? '本当に決める(変えられない)▶' : 'これで決める ▶'}</button></div>;
@@ -104982,11 +104982,11 @@ function MsxAssistDetail({ rec = null, mem, name, sub, kind = 'box', dropped = 0
             <div className="kv" data-msx-asd-support>
               {[['bond', '初めの親密度', mem.bond0, '育成を始めたときの親密度。'],
                 ['tag', '友情タッグ', `+${Math.round(Number(mem.tag) || 0)}%`, '親密度80から、いっしょのトレーニングの伸びが上がる。'],
-                ['fav', '得意率', `+${Math.round((Number(mem.fav) || 0) * 100)}%${top[0] ? `(${MSX_STAT_ICON[top[0]] || ''}${MSX_STAT_NAME[top[0]] || ''})` : ''}`, '来たとき、一番得意な能力のトレーニングに行く確率。'], // r1119-054: 1位の得意だけ・強さの段で15〜35%
+                ['fav', '得意率', `+${Math.round((Number(mem.fav) || 0) * 100)}%${top[0] ? `(${MSX_STAT_ICON[top[0]] || ''}${MSX_STAT_NAME[top[0]] || ''})` : ''}`, '来たとき、1番得意な能力のトレーニングに行く確率。'], // r1119-054: 1位の得意だけ・強さの段で15〜35%
                 kind === 'base' ? null : ['pow', '総合力', msxFmt(pow || 0), '6つの能力から出す強さ。']].filter(Boolean).map(([k, t, v]) => (
                 <button type="button" key={k} className={kvTip === k ? 'on' : ''} aria-expanded={kvTip === k} onClick={() => setKvTip(kvTip === k ? null : k)} data-msx-asd-kv={k}><i>{t}</i><b>{v}</b></button>))}
             </div>
-            {kvTip ? <small className="asd-kvn" data-msx-asd-kv-tip>{({ bond: '初めの親密度 … 育成を始めたときの親密度。', tag: '友情タッグ … 親密度80から、いっしょのトレーニングの伸びが上がる。', fav: '得意率 … 来たとき、一番得意な能力のトレーニングに行く確率。友情タッグと同じ強さの段で15〜35%(得意率アップで45%まで)。来ないこともあります。', pow: '総合力 … 6つの能力から出す強さ。' })[kvTip]}</small>
+            {kvTip ? <small className="asd-kvn" data-msx-asd-kv-tip>{({ bond: '初めの親密度 … 育成を始めたときの親密度。', tag: '友情タッグ … 親密度80から、いっしょのトレーニングの伸びが上がる。', fav: '得意率 … 来たとき、1番得意な能力のトレーニングに行く確率。友情タッグと同じ強さの段で15〜35%(得意率アップで45%まで)。来ないこともあります。', pow: '総合力 … 6つの能力から出す強さ。' })[kvTip]}</small>
               : <small className="asd-kvn">数字を押すと説明</small>}
             {top.length ? <div className="asd-up" data-msx-asd-up><i>伸びが上がる</i>{top.map((k) => <span key={k}>{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]} <b>+{Math.round((mem.bonus && mem.bonus[k]) || 0)}%</b></span>)}</div> : null}
           </div>
@@ -105099,7 +105099,7 @@ const MSX_ARC_END = Object.freeze({
   super: { name: '超グッドエンディング', sub: '最高のチーム', bg: 'images/success/scenes/venue-summit.png' },
 });
 const MSX_ARC_PARTY = Object.freeze({ bad: ['おつかれさま会'], good: ['祝勝会', '町のパレード', '助手からの手紙'], super: ['町じゅうのお祝い', 'ヒーローの取材', '3人の打ち上げ'] });
-const MSX_ARC_PICK_WHY = Object.freeze({ pop: '人気が一番の相手', rival: 'この育成のライバル', strong: '一番強い常連', champ: '王者', reg: '常連' });
+const MSX_ARC_PICK_WHY = Object.freeze({ pop: '人気が1番の相手', rival: 'この育成のライバル', strong: '1番強い常連', champ: '王者', reg: '常連' });
 
 // 台本の行(地の文と助手)。無ければ []
 const msxArcLines = (scene, ctx, bondLv, extra) => {
@@ -105245,8 +105245,8 @@ function MsxArcEnding({ run, setRun, v, ev, onPause, ctx, bondLv }) {
 // 返り値の reason は monsucLendReasonText で日本語にできる
 const MONSUC_LEND_REASON_TEXT = Object.freeze({
   off: 'フレンドからのレンタルは準備中です',
-  network: 'つながりませんでした。少し待ってからもう一度ためしてね',
-  server: 'サーバーが混んでいるみたい。少し待ってからもう一度ためしてね',
+  network: 'つながりませんでした。少し待ってからもう1度ためしてね',
+  server: 'サーバーが混んでいるみたい。少し待ってからもう1度ためしてね',
   no_id: 'この端末ではまだ使えません',
   locked: 'この貸し出しは別の端末で作られています',
   mon: 'このマスモンは貸し出せません',
@@ -105729,7 +105729,7 @@ function MsaTechSheet({ title, list, d = null, dist = null, rep = null, hitAt = 
   const rows = d == null ? (Array.isArray(list) ? list.slice() : []).sort((a, b) => (dist != null ? (b.dist.includes(dist) ? 1 : 0) - (a.dist.includes(dist) ? 1 : 0) : 0)) : msaSheetOrder(list, d, repId);
   const distOf = (t) => (Array.isArray(t.dist) ? t.dist.map((x) => MSA_DC_DIST[x]).join('・') : '');
   const note = d == null ? (dist != null ? `いまの間合い: ${MSA_DC_DIST[dist]}・届く技を先に並べています` : 'このモンスターの技')
-    : onUse ? '一番上が代表の技。押した技を使います' : `一番上が代表の技${dist != null && d !== dist ? `(いまの間合いは ${MSA_DC_DIST[dist]})` : ''}`;
+    : onUse ? '1番上が代表の技。押した技を使います' : `1番上が代表の技${dist != null && d !== dist ? `(いまの間合いは ${MSA_DC_DIST[dist]})` : ''}`;
   // 窓は body の直下へ出す(2026-11-19 段3・社長の実機: 助手マスモン対戦で、スクロールする操作欄の中に置いた窓の上に下の進み具合の帯が重なり、1行目と説明が隠れた。
   //   iPhone では、スクロールする入れ物の中の固定表示が、ほかの重なりの下に回ることがある。モンサクの試合も同じ作りなので一緒に直す)
   const sheetNode = (
@@ -108225,7 +108225,7 @@ const MONSUC_RANK_STAT_LABEL = { life: '❤️ライフ', pow: '🏋️ちから
 const MONSUC_RANK_GRADE_COLOR = { M: '#f472b6', SSS: '#f472b6', SS: '#fb923c', S: '#fbbf24', A: '#f472b6', B: '#a78bfa', C: '#38bdf8', D: '#94a3b8', E: '#94a3b8', F: '#94a3b8', G: '#94a3b8' };
 const MONSUC_RANK_REASON_TEXT = Object.freeze({
   off: 'ランキングは準備中です',
-  network: 'つながりませんでした。次に開いたときにもう一度送ります',
+  network: 'つながりませんでした。次に開いたときにもう1度送ります',
   busy: '少し待ってから送り直します',
   bad: 'この記録はランキングに載せられませんでした',
   locked: 'この端末ではランキングに送れません',
@@ -108814,10 +108814,10 @@ function MonsucRankScreen({ onBack }) {
     <div ref={listRef} className="flex-1 overflow-y-auto px-3 py-2 space-y-1.5">
       {!on && <div className="text-center text-slate-300 text-[13px] py-8">{monsucRankReasonText('off')}</div>}
       {on && loading && <div className="text-center text-slate-300 text-[13px] py-8">読みこみ中…</div>}
-      {on && !loading && failed && !data && <div className="text-center text-slate-300 text-[13px] py-8"><span className="block">つながりませんでした。</span><span className="block">少し待ってからもう一度開いてね</span><button type="button" onClick={() => setRetryN(n => n + 1)} className="mt-3 rounded-full bg-yellow-300 text-slate-900 px-4 py-2 text-[13px] font-black">もう一度読む</button></div>}
+      {on && !loading && failed && !data && <div className="text-center text-slate-300 text-[13px] py-8"><span className="block">つながりませんでした。</span><span className="block">少し待ってからもう1度開いてね</span><button type="button" onClick={() => setRetryN(n => n + 1)} className="mt-3 rounded-full bg-yellow-300 text-slate-900 px-4 py-2 text-[13px] font-black">もう1度読む</button></div>}
       {on && !loading && data && rows.length === 0 && <div className="text-center text-slate-300 text-[13px] py-8"><span className="block">まだだれも載っていません。</span><span className="block">育て終えたモンスターが最初に載ります</span></div>}
       {/* 取得済みの一覧は再取得中も出し続け、失敗したらその場で読み直せる(2026-11-16 UI改修) */}
-      {on && !loading && failed && data && <div className="flex items-center justify-center gap-2 rounded-xl border border-amber-400/50 bg-amber-900/30 px-3 py-2 text-[12px] font-bold text-amber-200">新しい順位を読めませんでした<button type="button" onClick={() => setRetryN(n => n + 1)} className="rounded-full bg-yellow-300 text-slate-900 px-3 py-1 text-[12px] font-black">もう一度読む</button></div>}
+      {on && !loading && failed && data && <div className="flex items-center justify-center gap-2 rounded-xl border border-amber-400/50 bg-amber-900/30 px-3 py-2 text-[12px] font-bold text-amber-200">新しい順位を読めませんでした<button type="button" onClick={() => setRetryN(n => n + 1)} className="rounded-full bg-yellow-300 text-slate-900 px-3 py-1 text-[12px] font-black">もう1度読む</button></div>}
       {rows.map(r => <MonsucRankRow key={r.run_id} row={r} mine={sent.includes(r.run_id)} onOpen={() => openDetail(r, false)} />)}
     </div>
     {mine && <div className="px-3 pb-1">
@@ -110069,7 +110069,7 @@ const cardApplySpecial = (db, st, p, mi, card, target, act = {}) => {
     }
     if (e.t === 'gutsZeroBoth') { me.discard.push(...me.guts.splice(0)); const k = cardLoseGuts(st, cardOther(p), 'all'); cardLog(st, `お互いのガッツが0になった${k === 0 && opp.guts.length ? '(相手は精神集中で減らない)' : ''}`); }
     if (e.t === 'deckToGuts') { const k = me.deck.length; me.guts.push(...me.deck.splice(0)); cardLog(st, `山札の${k}枚を全部ガッツにした`); }
-    if (e.t === 'oppHandToDeckBottom') { const k = opp.hand.length; opp.deck.unshift(...opp.hand.splice(0)); cardLog(st, `${opp.name}の手札${k}枚を山札の一番下へ`); }
+    if (e.t === 'oppHandToDeckBottom') { const k = opp.hand.length; opp.deck.unshift(...opp.hand.splice(0)); cardLog(st, `${opp.name}の手札${k}枚を山札の1番下へ`); }
     if (e.t === 'oppDraw') { const k = cardDrawN(st, cardOther(p), e.n); cardLog(st, `${opp.name}は${k}枚引いた`); }
     if (e.t === 'gutsToDeckShuffle') { const k = me.guts.length; me.deck.push(...me.guts.splice(0)); cardReshuffle(st, p); cardLog(st, `${me.name}はガッツ${k}枚を山札に戻して切った`); }
     if (e.t === 'selfHurt' && tm && tm.safeUntil >= st.turn) cardLog(st, `${tm.name}はダメージを受けない(ぬいぐるみ)`);
@@ -110169,7 +110169,7 @@ const cardApplyAction = (db, st0, act) => {
     const take = (list) => list.splice(act.pick, 1)[0];
     st.pendingChoice = null;
     if (ch.then === 'toHand') { const no = take(me.discard); me.hand.push(no); cardLog(st, `${me.name}は捨て札から「${(cardOf(db, no) || {}).name || ''}」を手札に加えた`); }
-    if (ch.then === 'toDeckBottom') { const no = take(me.discard); me.deck.unshift(no); cardLog(st, `${me.name}は捨て札から「${(cardOf(db, no) || {}).name || ''}」を山札の一番下へ戻した`); }
+    if (ch.then === 'toDeckBottom') { const no = take(me.discard); me.deck.unshift(no); cardLog(st, `${me.name}は捨て札から「${(cardOf(db, no) || {}).name || ''}」を山札の1番下へ戻した`); }
     if (ch.then === 'toDeckShuffleDraw') { me.deck.push(take(me.hand)); cardReshuffle(st, ch.p); cardDrawN(st, ch.p, 1); cardLog(st, `${me.name}は手札を1枚山札に戻して切り、1枚引いた`); }
     if (ch.then === 'discardDraw2') { me.discard.push(take(me.hand)); const k = cardDrawN(st, ch.p, 2); cardLog(st, `${me.name}は手札を1枚捨てて、${k}枚引いた`); }
     if (ch.then === 'oppDiscard') { const no = take(opp.hand); opp.discard.push(no); cardLog(st, `${opp.name}は「${(cardOf(db, no) || {}).name || ''}」を捨てた`); }
@@ -112151,9 +112151,9 @@ const CARD_TACTIC_GROUPS = Object.freeze([
   // ---------- 条件 ----------
   { id: 'any', cat: 'cond', sec: '標的', name: 'いつでも', tiers: [['', 'N']], start: [''], desc: 'いつも当たる' },
   { id: 'ko', cat: 'cond', sec: '標的', name: '倒せる相手', tiers: [['', 'N']], start: [''], desc: '出せる技で倒せる相手を標的にする' },
-  { id: 'lowest', cat: 'cond', sec: '標的', name: '一番ライフの低い相手', tiers: [['', 'N']], desc: '残りライフが一番少ないモンスター' },
-  { id: 'highest', cat: 'cond', sec: '標的', name: '一番ライフの高い相手', tiers: [['', 'N']], desc: '残りライフが一番多いモンスター' },
-  { id: 'strongest', cat: 'cond', sec: '標的', name: '一番攻撃の強い相手', tiers: [['', 'R']], desc: 'そのモンスターが使える技の最大ダメージで見積もる(手札は見ない)' },
+  { id: 'lowest', cat: 'cond', sec: '標的', name: '1番ライフの低い相手', tiers: [['', 'N']], desc: '残りライフが1番少ないモンスター' },
+  { id: 'highest', cat: 'cond', sec: '標的', name: '1番ライフの高い相手', tiers: [['', 'N']], desc: '残りライフが1番多いモンスター' },
+  { id: 'strongest', cat: 'cond', sec: '標的', name: '1番攻撃の強い相手', tiers: [['', 'R']], desc: 'そのモンスターが使える技の最大ダメージで見積もる(手札は見ない)' },
   { id: 'attacker', cat: 'cond', sec: '標的', name: '前の番に攻撃してきた相手', tiers: [['', 'R']], desc: '直前の相手の番に攻撃してきたモンスター' },
   { id: 'leader', cat: 'cond', sec: '標的', name: '相手のリーダー', tiers: [['', 'R']], desc: '相手が1体目に置いたモンスター' },
   { id: 'type', cat: 'cond', sec: '標的', name: '◯の相手', tiers: [['地上', 'N'], ['空中', 'N'], ['水中', 'N']], desc: 'その特徴のモンスター' },
@@ -112222,7 +112222,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([
   { id: 'tSpread', cat: 'base', sec: '基本', name: '分散型', tiers: [['', 'SR']], mul: { area: 1.4 }, knob: { spread: true }, desc: '全員を少しずつ削り、最後にまとめて倒す' },
   { id: 'tComeback', cat: 'base', sec: '基本', name: '逆転型', tiers: [['', 'SR']], knob: { comeback: true }, desc: '勝っているあいだは堅く、負けたら捨て身で攻める' },
   // ---------- 行動(ブリーダーカード・モンスターカード) ----------
-  { id: 'atk', cat: 'monster', sec: '攻撃', phase: 'attack', name: '攻める', tiers: [['', 'N']], start: [''], desc: '点数が一番高い攻撃' },
+  { id: 'atk', cat: 'monster', sec: '攻撃', phase: 'attack', name: '攻める', tiers: [['', 'N']], start: [''], desc: '点数が1番高い攻撃' },
   { id: 'kind', cat: 'monster', sec: '攻撃', phase: 'attack', name: '◯の技を出す', tiers: [['ちから', 'N'], ['かしこさ', 'N'], ['特殊', 'N']], desc: 'その種類の技を出す' },
   { id: 'cost', cat: 'monster', sec: '攻撃', phase: 'attack', name: '◯を出す', tiers: [['軽い技(ガッツ0〜1)', 'N'], ['中くらいの技(2〜3)', 'N'], ['大技(4以上)', 'N']], start: ['大技(4以上)'], desc: '払うガッツで選ぶ' },
   { id: 'reach', cat: 'monster', sec: '攻撃', phase: 'attack', name: '◯を出す', tiers: [['全体攻撃', 'R'], ['単体攻撃', 'N']], desc: '全員に当たる技か、1体に当てる技か' },
@@ -112261,9 +112261,9 @@ const CARD_TACTIC_TEXT = Object.freeze({
 // ---- 条件(〜なら) ----
 any:()=>['いつでも','いつでも当てはまる。組み合わせたカードを、使えるときはいつも使う'],
 ko:()=>['倒せる相手がいる','手札の攻撃の技(特殊技は除く)を、いまのガッツで出せば倒せる相手のモンスターがいるとき。その相手を狙う'],
-lowest:()=>['ライフが一番少ない相手','相手の場で、残りライフ(数)が一番少ない相手を狙う'],
-highest:()=>['ライフが一番多い相手','相手の場で、残りライフ(数)が一番多い相手を狙う'],
-strongest:()=>['攻撃が一番強い相手','相手のモンスターのうち、使える技の最大ダメージが一番大きい相手を狙う(手札は見ない)'],
+lowest:()=>['ライフが1番少ない相手','相手の場で、残りライフ(数)が1番少ない相手を狙う'],
+highest:()=>['ライフが1番多い相手','相手の場で、残りライフ(数)が1番多い相手を狙う'],
+strongest:()=>['攻撃が1番強い相手','相手のモンスターのうち、使える技の最大ダメージが1番大きい相手を狙う(手札は見ない)'],
 attacker:()=>['前のターンに攻撃してきた相手','直前の相手のターンに攻撃してきた相手のモンスターを狙う'],
 leader:()=>['相手のリーダー','相手が1体目(左)に置いたモンスターが残っていれば、それを狙う'],
 type:(v)=>[`${v}の相手`,`いま${v}にいる相手のモンスターを狙う`],
@@ -112311,7 +112311,7 @@ incoming:(v)=>[`受けるダメージ${v}以上`,`攻撃を受けたとき、受
 incomingKo:()=>['受けると倒れる','攻撃を受けたとき、守らないと倒れるなら(守るかどうかを決めるときだけ見る)'],
 incomingArea:()=>['全体攻撃を受けた','受けた攻撃が、全員に当たる攻撃なら(守るかどうかを決めるときだけ見る)'],
 // ---- 基本カード(どの手にも当てはまらないときの打ち方) ----
-tBalance:()=>['バランス型','攻め・守り・ガッツ・大技・崩し・全体を同じくらいに見て、一番得になるカードを出す。とどめだけ少し優先する'],
+tBalance:()=>['バランス型','攻め・守り・ガッツ・大技・崩し・全体を同じくらいに見て、1番得になるカードを出す。とどめだけ少し優先する'],
 tAttack:()=>['攻め型','攻撃をふだんの1.5倍選びやすくする。ガッツはためず、守りのカードも手札に残さない。守るのは、受けると倒れるときだけ'],
 tGuard:()=>['守り型','守りのカードを手札に残しやすく(ふだんの1.5倍)、攻撃は控えめ(0.7倍)にする。攻撃を受けたら、守れるときはいつも守る(守っても倒れるのが変わらないときは除く)'],
 tSave:()=>['溜め型','ガッツを多めにため(ふだんの1.6倍)、大技を選びやすくする(1.8倍)'],
@@ -112328,21 +112328,21 @@ tMill:()=>['持久型','相手の山札を削る・相手に引かせる・ガ�
 tReckless:()=>['捨て身型','守りのカードを手札に残さず(ふだんの0.5倍)、とどめを選びやすくする(1.3倍)。受けると倒れるとき以外は守らない'],
 tHand:()=>['手札を残す型','出したあとに手札が2枚以上残るときだけカードを出す。ターンの終わりに手札をガッツにするときも、2枚は手札に残す'],
 tDeck:()=>['山札節約型','カードを引く・山札からガッツへ・手札を引き直す・相手に引かせるカードは出さない'],
-tFocus:()=>['一点集中型','ライフの割合が一番低い相手への攻撃を優先して、倒れるまで同じ相手を狙う'],
-tSpread:()=>['分散型','全体攻撃を選びやすくし(ふだんの1.4倍)、ライフが一番多い相手への攻撃を優先する'],
+tFocus:()=>['一点集中型','ライフの割合が1番低い相手への攻撃を優先して、倒れるまで同じ相手を狙う'],
+tSpread:()=>['分散型','全体攻撃を選びやすくし(ふだんの1.4倍)、ライフが1番多い相手への攻撃を優先する'],
 tComeback:()=>['逆転型','倒された数で負けている、または味方のライフの合計が半分以下なら、捨て身で戦う(守り0.5倍・とどめ・大技・全体1.3倍)。それ以外は堅く戦う(守り・ガッツ1.2倍)'],
 // ---- モンスターカード(この子の手) ----
-atk:()=>['一番得な攻撃','このモンスターが出せる攻撃のうち、ダメージ・とどめ・払うガッツを見て、一番得な攻撃をする'],
-kind:(v)=>[`${v}の技で攻撃`,`このモンスターの${v}の技のうち、一番得な技で攻撃する`],
-cost:(v)=>{const n=v.startsWith('軽い')?'0〜1':v.startsWith('中')?'2〜3':'4以上';const nm=v.startsWith('軽い')?'軽い技':v.startsWith('中')?'中くらいの技':'大技';return [`${nm}で攻撃`,`このモンスターの技のうち、払うガッツが${n}の技のうち、一番得なもので攻撃する`];},
-reach:(v)=>[v==='全体攻撃'?'全体攻撃で攻撃':'1体だけに攻撃',v==='全体攻撃'?'このモンスターの、相手の全員に当たる技のうち、一番得な技で攻撃する':'このモンスターの、1体だけに当てる技のうち、一番得な技で攻撃する'],
-eff:(v)=>{const d={回避されない:'相手が回避できない技',攻撃できなくする:'当たると相手を攻撃できなくする技',ガッツを減らす:'当たると相手のガッツを減らす技',吸い取る:'相手のライフを吸い取って回復する技','2回攻撃':'もう1回攻撃できるようになる技',防御で減らない:'防御されてもダメージが減らない技',回避されても半分:'回避されても半分のダメージが入る技',種族に強い:'特定の特徴の相手に倍のダメージの技',ダメージを割り振る:'ダメージを相手の何体かに割り振る技','2枚同時':'2枚組でいっしょに出す技',手札に戻る:'当たると手札に戻ってくる技',カード投げ:'カードを投げてダメージを足す技'}[v];return [`「${v}」の技で攻撃`,`このモンスターの、${d}のうち、一番得な技で攻撃する`];},
-attach:()=>['付けるカードといっしょに攻撃','技に付けるカードをいっしょに出す攻撃のうち、一番得なものを出す'],
-attachKind:(v)=>[`付けるカード(${v})といっしょに攻撃`,`「${v}」の付けるカードをいっしょに出す攻撃のうち、一番得なものを出す`],
+atk:()=>['1番得な攻撃','このモンスターが出せる攻撃のうち、ダメージ・とどめ・払うガッツを見て、1番得な攻撃をする'],
+kind:(v)=>[`${v}の技で攻撃`,`このモンスターの${v}の技のうち、1番得な技で攻撃する`],
+cost:(v)=>{const n=v.startsWith('軽い')?'0〜1':v.startsWith('中')?'2〜3':'4以上';const nm=v.startsWith('軽い')?'軽い技':v.startsWith('中')?'中くらいの技':'大技';return [`${nm}で攻撃`,`このモンスターの技のうち、払うガッツが${n}の技のうち、1番得なもので攻撃する`];},
+reach:(v)=>[v==='全体攻撃'?'全体攻撃で攻撃':'1体だけに攻撃',v==='全体攻撃'?'このモンスターの、相手の全員に当たる技のうち、1番得な技で攻撃する':'このモンスターの、1体だけに当てる技のうち、1番得な技で攻撃する'],
+eff:(v)=>{const d={回避されない:'相手が回避できない技',攻撃できなくする:'当たると相手を攻撃できなくする技',ガッツを減らす:'当たると相手のガッツを減らす技',吸い取る:'相手のライフを吸い取って回復する技','2回攻撃':'もう1回攻撃できるようになる技',防御で減らない:'防御されてもダメージが減らない技',回避されても半分:'回避されても半分のダメージが入る技',種族に強い:'特定の特徴の相手に倍のダメージの技',ダメージを割り振る:'ダメージを相手の何体かに割り振る技','2枚同時':'2枚組でいっしょに出す技',手札に戻る:'当たると手札に戻ってくる技',カード投げ:'カードを投げてダメージを足す技'}[v];return [`「${v}」の技で攻撃`,`このモンスターの、${d}のうち、1番得な技で攻撃する`];},
+attach:()=>['付けるカードといっしょに攻撃','技に付けるカードをいっしょに出す攻撃のうち、1番得なものを出す'],
+attachKind:(v)=>[`付けるカード(${v})といっしょに攻撃`,`「${v}」の付けるカードをいっしょに出す攻撃のうち、1番得なものを出す`],
 spe:(v)=>{const d={味方を回復:'味方のライフを回復する',引く:'カードを引く',空中になる:'空中に上がる',安全になる:'次の攻撃を受けなくなる',まゆと羽化:'まゆになる・羽化する',のりうつる:'相手にのりうつる'}[v];return [`特殊技で${d}`,`このモンスターの特殊技のうち、${d}技を出す`];},
-stance:(v)=>({この子から攻める:['このモンスターから攻める','当てはまったら、このモンスターで、一番得な攻撃をする'],この子は攻撃しない:['このモンスターは攻撃しない','当てはまったら、このターンはこのモンスターに攻撃させない(このあとの戦術カード・基本カードでも攻撃させない)'],ライフの多い子が先に:['一番元気なら攻める','このモンスターが味方の中で一番ライフが多いときだけ、このモンスターで、一番得な攻撃をする'],ライフの少ない子は温存:['一番弱っていたら休む','味方が2体以上いて、このモンスターのライフが一番少ないときは、このターンは攻撃させない(休ませる)'],攻撃は1回だけ:['攻撃は1回だけ','このターンにまだ攻撃していなければ攻撃する。1回攻撃したら、このターンはもう攻撃させない'],何回でも攻める:['何回でも攻める','少し損な攻撃でも出して、このモンスターで攻撃を続ける']})[v],
+stance:(v)=>({この子から攻める:['このモンスターから攻める','当てはまったら、このモンスターで、1番得な攻撃をする'],この子は攻撃しない:['このモンスターは攻撃しない','当てはまったら、このターンはこのモンスターに攻撃させない(このあとの戦術カード・基本カードでも攻撃させない)'],ライフの多い子が先に:['1番元気なら攻める','このモンスターが味方の中で1番ライフが多いときだけ、このモンスターで、1番得な攻撃をする'],ライフの少ない子は温存:['1番弱っていたら休む','味方が2体以上いて、このモンスターのライフが1番少ないときは、このターンは攻撃させない(休ませる)'],攻撃は1回だけ:['攻撃は1回だけ','このターンにまだ攻撃していなければ攻撃する。1回攻撃したら、このターンはもう攻撃させない'],何回でも攻める:['何回でも攻める','少し損な攻撃でも出して、このモンスターで攻撃を続ける']})[v],
 disrupt:(v)=>({手札を捨てさせる:['相手の手札を捨てさせる','相手の手札を捨てさせる・山札の下へ戻すカードを使う'],山札を削る:['相手の山札を削る','相手の山札を削るカードを使う'],ガッツを減らす:['相手のガッツを減らす','相手のガッツを減らす・0にするカードを使う'],番を飛ばす:['相手のターンを飛ばす','相手の次のターンを飛ばすカードを使う']})[v],
-guard:()=>['守る','このモンスターが攻撃を受けたら、手札の守りのカードで一番良い守り方をする。守っても倒れるのが変わらないときは、守らずに受ける'],
+guard:()=>['守る','このモンスターが攻撃を受けたら、手札の守りのカードで1番良い守り方をする。守っても倒れるのが変わらないときは、守らずに受ける'],
 guardFirst:(v)=>[`${v}で守る`,`このモンスターが攻撃を受けたら、${v==='回避'||v==='防御'?v+'のカード':'「'+v+'」のカード'}だけで守る(そのカードが無ければ、次の戦術カードへ進む)。守っても倒れるのが変わらないときは、守らずに受ける`],
 guardOver:(v)=>[`ダメージ${v}以上だけ守る`,`このモンスターが攻撃を受けたとき、受けるダメージの見込みが${v}より小さければ守らずに受ける。${v}以上なら守る`],
 guardDie:()=>['倒れるときだけ守る','このモンスターが攻撃を受けたとき、受けても倒れなければ守らずに受ける。倒れるときだけ守る。守っても倒れるのが変わらないときは、守らずに受ける'],
@@ -112370,9 +112370,9 @@ const CARD_TACTIC_LINE = Object.freeze({
   // ---- 条件 ----
   any: () => 'いつでも(ほかの条件なしで、いつも)',
   ko: () => 'いまの手札とガッツで倒せる相手がいるとき(その相手を狙う)',
-  lowest: () => 'ライフが一番少ない相手を狙うとき',
-  highest: () => 'ライフが一番多い相手を狙うとき',
-  strongest: () => '一番強い技をもつ相手を狙うとき',
+  lowest: () => 'ライフが1番少ない相手を狙うとき',
+  highest: () => 'ライフが1番多い相手を狙うとき',
+  strongest: () => '1番強い技をもつ相手を狙うとき',
   attacker: () => '前のターンに攻撃してきた相手を狙うとき',
   leader: () => '相手のリーダー(1体目)が残っているとき(その相手を狙う)',
   type: (v) => `${v}にいる相手がいるとき(その相手を狙う)`,
@@ -112420,7 +112420,7 @@ const CARD_TACTIC_LINE = Object.freeze({
   incomingKo: () => '受けると倒れる攻撃が来たとき',
   incomingArea: () => '全体攻撃を受けたとき',
   // ---- 基本 ----
-  tBalance: () => '攻めも守りも、一番得になるようにカードを出す',
+  tBalance: () => '攻めも守りも、1番得になるようにカードを出す',
   tAttack: () => 'どんどん攻撃する。守るのは倒れそうなときだけ',
   tGuard: () => '守りのカードを手札に残し、攻撃を受けたらできるだけ守る',
   tSave: () => 'ガッツを多めにためて、大技を狙う',
@@ -112441,7 +112441,7 @@ const CARD_TACTIC_LINE = Object.freeze({
   tSpread: () => 'ライフの多い相手や全員に、ばらしてダメージを与える',
   tComeback: () => '負けているときは捨て身で、勝っているときは堅く戦う',
   // ---- モンスター ----
-  atk: () => '一番良い技で攻撃する',
+  atk: () => '1番良い技で攻撃する',
   kind: (v) => `${v}の技で攻撃する`,
   cost: (v) => (/^軽い/.test(v) ? '軽い技(ガッツ0〜1)で攻撃する' : /^中/.test(v) ? '中くらいの技(ガッツ2〜3)で攻撃する' : '大技(ガッツ4以上)で攻撃する'),
   reach: (v) => (v === '全体攻撃' ? '全体攻撃で攻撃する' : '1体だけを狙う技で攻撃する'),
@@ -112449,9 +112449,9 @@ const CARD_TACTIC_LINE = Object.freeze({
   attach: () => '付けるカードといっしょに攻撃する',
   attachKind: (v) => `「${v}」の付けるカードといっしょに攻撃する`,
   spe: (v) => ({ 味方を回復: '特殊技で味方を回復する', 引く: '特殊技でカードを引く', 空中になる: '特殊技で空中に上がる', 安全になる: '特殊技で次の攻撃を受けなくする', まゆと羽化: '特殊技でまゆになる・羽化する', のりうつる: '特殊技でのりうつる' }[v] || `特殊技(${v})を使う`),
-  stance: (v) => ({ この子から攻める: 'このモンスターから先に攻撃する', この子は攻撃しない: 'このモンスターは攻撃しない', ライフの多い子が先に: 'このモンスターのライフが味方で一番多いとき、攻撃する', ライフの少ない子は温存: 'このモンスターのライフが味方で一番少ないとき、攻撃させずに休ませる', 攻撃は1回だけ: 'このターンの攻撃は1回だけにする', 何回でも攻める: '出せるだけ何回でも攻撃する' }[v] || v),
+  stance: (v) => ({ この子から攻める: 'このモンスターから先に攻撃する', この子は攻撃しない: 'このモンスターは攻撃しない', ライフの多い子が先に: 'このモンスターのライフが味方で1番多いとき、攻撃する', ライフの少ない子は温存: 'このモンスターのライフが味方で1番少ないとき、攻撃させずに休ませる', 攻撃は1回だけ: 'このターンの攻撃は1回だけにする', 何回でも攻める: '出せるだけ何回でも攻撃する' }[v] || v),
   disrupt: (v) => ({ 手札を捨てさせる: '相手の手札を捨てさせる', 山札を削る: '相手の山札を減らす', ガッツを減らす: '相手のガッツを減らす', 番を飛ばす: '相手のターンを飛ばす' }[v] || v),
-  guard: () => '攻撃を受けたら、一番良い守り方で守る',
+  guard: () => '攻撃を受けたら、1番良い守り方で守る',
   guardFirst: (v) => `攻撃を受けたら、${v}のカードで守る`,
   guardOver: (v) => `${v}ダメージ以上の攻撃だけ守る(小さい攻撃は受ける)`,
   guardDie: () => '受けると倒れるときだけ守る',
@@ -113546,7 +113546,7 @@ const CARD_BATTLE_LINES = Object.freeze({
     deckMine: ['山札が少なくなってきました…急がないと', 'あれま、カードがもう残りわずかでつ'],
     deckTheirs: ['あれま、そちらの山札、もうそんなに減ったんでつね', 'このまま押し切りまつね( ˘ω˘)'],
     win: ['私の勝ちでつ。ありがとうございました♪♪', '火力で押し切れました( ˘ω˘)9グッ!', 'いい勝負でした。またお相手してくださいね'],
-    lose: [['負けちゃいました…お強いですね', 'troubled'], ['あれま…悔しいでつ。もう一度お願いしまつ', 'crying'], ['完敗です。次はもっとためてから挑みますね(´ー`*)', 'normal']],
+    lose: [['負けちゃいました…お強いですね', 'troubled'], ['あれま…悔しいでつ。もう1度お願いしまつ', 'crying'], ['完敗です。次はもっとためてから挑みますね(´ー`*)', 'normal']],
     winQuick: [['あれま、もう終わりでつか？ 次はゆっくりお相手しまつ♪', 'surprise'], ['今日は手札がかみ合わなかったでつか？ またいつでもどうぞ( ˘ω˘)', 'normal']],
   },
   momosuke: {
@@ -113708,7 +113708,7 @@ const CARD_TALK_MOMENT_PER_GAME = 5;
 // ゲームが待つ長さ。間に合わなければ決まった台詞のまま(山場は待たせない)
 const CARD_TALK_WAIT_MS = Object.freeze({ moment: 2500, after: 6000, deck: 12000 });
 // デッキ相談が届かなかったときの一言(助手を選ばない言い方)
-const CARD_TALK_DECK_SORRY = 'いまはうまく相談にのれないみたい…。少しあとで、もう一度聞いてね';
+const CARD_TALK_DECK_SORRY = 'いまはうまく相談にのれないみたい…。少しあとで、もう1度聞いてね';
 const CARD_TALK_FACES = ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited'];
 
 // 呼んでよい端末か(公開の印か、デバッグの合言葉が合った端末)
@@ -113863,7 +113863,7 @@ const cardAiFaceOf = (s) => (typeof s === 'string' && CARD_AI_FACE_IDS.includes(
 //   ★名前にマスモンの愛称を使わない(社長「既定の名前は愛称を使わない名前に」。愛称は人ごとに違い、引き直しもある)。主役は種の名前で書く
 //   よそいき(yoso)の名前は今の8つの名前(82 の CARD_AI_STYLE_NAMES)。好きの種は、カードに無い種を部長の判断で近い種にした(みゅあ: イブリス→ジョーカー・きき: ザン→ライガー)
 const CARD_AI_FACES = Object.freeze({
-  mua: { oshi: { lead: 'mocchi', style: 'normal', name: '剣士モッチーの一番乗り' }, suki: { lead: 'joker', words: ['イブリス'], style: 'normal', name: 'イブリスとちょい悪ナイト' }, yoso: { lead: null, style: 'normal' }, honne: { lead: null, style: 'attack', name: 'ノリだけで全力突破' } },
+  mua: { oshi: { lead: 'mocchi', style: 'normal', name: '剣士モッチーの1番乗り' }, suki: { lead: 'joker', words: ['イブリス'], style: 'normal', name: 'イブリスとちょい悪ナイト' }, yoso: { lead: null, style: 'normal' }, honne: { lead: null, style: 'attack', name: 'ノリだけで全力突破' } },
   kiki: { oshi: { lead: 'golem', style: 'normal', name: 'ゴーレムの一撃' }, suki: { lead: 'tiger', style: 'normal', name: 'ライガーの桜吹雪' }, yoso: { lead: null, style: 'normal' }, honne: { lead: null, style: 'attack', name: 'ぜんぶ必殺技でつ' } },
   momosuke: { oshi: { lead: 'metalner', style: 'normal', name: 'メタルナーの銀ピカライブ' }, suki: { lead: 'mew', style: 'normal', name: 'ニャーとおやすみソング' }, yoso: { lead: null, style: 'normal' }, honne: { lead: null, style: 'attack', name: 'ぜんぶ見せ場♡' } },
   dra: { oshi: { lead: 'zilla', style: 'normal', name: 'グジラとどっしり行進' }, suki: { lead: 'suezo', style: 'normal', name: 'スエゾーのギャグ劇場' }, yoso: { lead: null, style: 'normal' }, honne: { lead: 'golem', style: 'attack', name: 'おでの大ぶり勝負' } },
@@ -114453,7 +114453,7 @@ const cardAiWishMarkUsed = async (who, wish) => {
   const st = await cardAiWishRead();
   const next = cardNormalizeAiWish({ ...st, used: { ...st.used, [who]: [...(st.used[who] || []), wish.mark] } });
   cardAiWishState = next;
-  try { await storeSet(CARD_AI_WISH_KEY, next); } catch (_) { /* 残せなくても遊べる(次の組み直しでもう一度使うだけ) */ }
+  try { await storeSet(CARD_AI_WISH_KEY, next); } catch (_) { /* 残せなくても遊べる(次の組み直しでもう1度使うだけ) */ }
   return next;
 };
 // 提案の名前のデッキと初めて戦った(84 が対戦を始めたときに呼ぶ)。印が偽・名前が無ければ何もしない
@@ -114463,7 +114463,7 @@ const cardAiDeckWishFought = async (who, name) => {
   if (((st.fought || {})[who] || []).includes(name)) return st;
   const next = cardNormalizeAiWish({ ...st, fought: { ...(st.fought || {}), [who]: [...((st.fought || {})[who] || []), name] } });
   cardAiWishState = next;
-  try { await storeSet(CARD_AI_WISH_KEY, next); } catch (_) { /* 残せなくても遊べる(もう一度だけ台詞が出る) */ }
+  try { await storeSet(CARD_AI_WISH_KEY, next); } catch (_) { /* 残せなくても遊べる(もう1度だけ台詞が出る) */ }
   return next;
 };
 const cardAiDeckWishFirst = (who, name) => !!name && !(((cardAiWishState && cardAiWishState.fought) || {})[who] || []).includes(name);
@@ -114807,7 +114807,7 @@ const CARD_VS_LINES = Object.freeze({
     easy: { e: 'happy', t: '気楽にいこうな。おでは守ってるだけだよ' },
     normal: { e: 'happy', t: 'まずは守りを固めるとこからだな' },
     hard: { e: 'excited', t: '打ってこい。全部《はね返して》やるよ' },
-    expert: { e: 'excited', t: '全部の弾から一番かたい守りを持ってきた' },
+    expert: { e: 'excited', t: '全部の弾から1番かたい守りを持ってきた' },
     master: { e: 'wink', t: '本気の要塞だ。崩せるもんなら崩してみな' },
   },
   atsu: {
@@ -114825,7 +114825,7 @@ const CARD_VS_LINES = Object.freeze({
     master: { e: 'angry', t: 'うぉぉぉ！ 自分の全力、受けてみてください・・・！' },
   },
   erubin: {   // 2026-11-05 社長「この文で」(ルールくんの案)。公開の印が立つまで画面には出ない
-    easy: { e: 'happy', t: 'のんびりいこうか。楽しむのが一番だよね☺️' },
+    easy: { e: 'happy', t: 'のんびりいこうか。楽しむのが1番だよね☺️' },
     normal: { e: 'wink', t: 'おけ！ 今日の組み方、ちょっと自信あるんだよね笑' },
     hard: { e: 'normal', t: 'ここからはしっかりいくね。それでもよいかな？' },
     expert: { e: 'excited', t: '全部の弾から選んできたよ。いい勝負にしようね' },
@@ -115295,7 +115295,7 @@ const CARD_RULE_PAGES = Object.freeze([
   ] },
   { id: 'turn', emoji: '🔁', title: 'ターンの流れ', lines: [
     '① 引く: 手札が5枚になるまで山札から引く(先攻の1ターン目は引かない)',
-    '手札がもう5枚あるときは、山札の一番上が1枚ガッツになる',
+    '手札がもう5枚あるときは、山札の1番上が1枚ガッツになる',
     '② 攻撃: 技を使う(使わないモンスターがいてもよい)',
     '③ ガッツ: 手札から好きな枚数をガッツにする',
     '④ 「ターン終了」で相手のターンへ',
@@ -115332,7 +115332,7 @@ const CARD_RULE_PAGES = Object.freeze([
     '相手が投了したら勝ち',
     '両方の最後の1体が同時にKOされたときは、攻撃した側の勝ち',
   ] },
-  { id: 'text', emoji: '📜', title: 'カードの文が一番', lines: [
+  { id: 'text', emoji: '📜', title: 'カードの文が1番', lines: [
     'カードに書いてある文は、ここの決まりより先に効く',
     '「同時に使用できる」「同一ターンに連続して使用できる」などは、その文のとおり',
     'カードを長押しすると、大きな絵と文が見られる',
@@ -117710,7 +117710,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   const choice = mode === 'choose' ? (() => {
     const ch = st.pendingChoice;
     const list = ch.src === 'oppHand' ? st.players[CARD_CPU].hand : ch.src === 'hand' ? me.hand : me.discard;
-    const title = { toHand: '手札に加えるカードを選ぶ', toDeckBottom: '山札の一番下へ戻すカードを選ぶ', toDeckShuffleDraw: '山札に戻すカードを選ぶ', discardDraw2: '捨てるカードを選ぶ', oppDiscard: '相手に捨てさせるカードを選ぶ' }[ch.then] || 'カードを選ぶ';
+    const title = { toHand: '手札に加えるカードを選ぶ', toDeckBottom: '山札の1番下へ戻すカードを選ぶ', toDeckShuffleDraw: '山札に戻すカードを選ぶ', discardDraw2: '捨てるカードを選ぶ', oppDiscard: '相手に捨てさせるカードを選ぶ' }[ch.then] || 'カードを選ぶ';
     return { title, from: (cardOf(db, ch.card) || {}).name || '', items: ch.cands.map((i) => ({ i, no: list[i], c: cardOf(db, list[i]) })) };
   })() : null;
   const guardOpts = mode === 'guard' ? cardGuardOptions(db, st).filter(tutAllow) : [];
@@ -118574,7 +118574,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
           {st.winner === CARD_ME && <CardConfetti/>}
           <b data-card-end-title className={`mh-card-end-title relative block font-black italic leading-none ${st.winner === CARD_ME ? 'text-amber-200 [-webkit-text-stroke:2px_#7c2d12] [text-shadow:0_6px_0_#7c2d12,0_0_40px_rgba(251,191,36,.9)]' : 'text-slate-300 [text-shadow:0_4px_0_#0f172a]'}`}
             style={{ fontSize: st.winner === CARD_ME ? 'clamp(64px, 22vw, 96px)' : 'clamp(44px, 15vw, 64px)' }}>{st.winner === CARD_ME ? 'WIN!' : 'LOSE'}</b>
-          <span className={`relative mt-2 rounded-xl bg-slate-950/70 px-4 py-1 text-center text-[15px] font-black [text-shadow:0_2px_4px_rgba(0,0,0,.8)] ${st.winner === CARD_ME ? 'text-white' : 'text-slate-300'}`} style={JA_LABEL_STYLE}>{st.winner === CARD_ME ? `${who.name}に勝った！` : 'おしかった！ もう一回いってみよう'}</span>
+          <span className={`relative mt-2 rounded-xl bg-slate-950/70 px-4 py-1 text-center text-[15px] font-black [text-shadow:0_2px_4px_rgba(0,0,0,.8)] ${st.winner === CARD_ME ? 'text-white' : 'text-slate-300'}`} style={JA_LABEL_STYLE}>{st.winner === CARD_ME ? `${who.name}に勝った！` : 'おしかった！ もう1回いってみよう'}</span>
           <span className="absolute bottom-5 text-[12px] font-bold text-white/70">タップで次へ</span>
         </div>
       )}
@@ -119602,7 +119602,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       const ok = await persist({ point: save.point + w.point }, {}, [
         { key: CARD_SAVE_KEYS.weeklyReward, before: raw, next: [...claims, w.id].slice(-30) },
       ]);
-      if (!ok) { setNotice('保存できませんでした。もう一度お試しください'); return; }
+      if (!ok) { setNotice('保存できませんでした。もう1度お試しください'); return; }
       setWeekly((l) => l.filter((x) => x.id !== w.id));
       setNotice(`週間報酬を受け取りました(ビートP +${w.point.toLocaleString()})`);
     } finally { setWeeklyBusy(false); }
@@ -119623,7 +119623,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         const credited = cardShareNormalizeClaims(await storeGet(CARD_SHARE_REWARD_KEY, null));
         if (!id || !credited) return;
         setDeckRewards(await cardSharePendingRewards(id, credited));
-      } catch (_) { /* 通信できないときは出さない(次に開いたときにもう一度) */ }
+      } catch (_) { /* 通信できないときは出さない(次に開いたときにもう1度) */ }
     })();
   }, [save ? 1 : 0, screen]);
   const claimDeckRewards = async () => {
@@ -119639,7 +119639,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       const ok = await persist({ point: save.point + total }, {}, [
         { key: CARD_SHARE_REWARD_KEY, before: raw, next: [...credited, ...todo.map((r) => r.day)].slice(-60) },
       ]);
-      if (!ok) { setNotice('保存できませんでした。もう一度お試しください'); return; }
+      if (!ok) { setNotice('保存できませんでした。もう1度お試しください'); return; }
       setDeckRewards([]);
       setNotice(`デッキ登録の報酬を受け取りました(ビートP +${total.toLocaleString()})`);
     } finally { setDeckRewardBusy(false); }
@@ -120111,7 +120111,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             if (!g) { setNotice('スターターはもう受け取っています'); setView('top'); return; }
             const before = save.collection;
             const ok = await persist(g);
-            setNotice(ok ? `「${pick.name}」を受け取りました。ビートP${CARD_STARTER_POINT}もいっしょに！` : '保存できませんでした。もう一度お試しください');
+            setNotice(ok ? `「${pick.name}」を受け取りました。ビートP${CARD_STARTER_POINT}もいっしょに！` : '保存できませんでした。もう1度お試しください');
             // 受け取ったら、ブースターパックと同じ画面で開けて中身を見せてから練習試合へ(2026-10-27 社長「最初に手に入れたときも」)。
             //   ここを通るのは、まだスターターを持っていない人だけ(cardGrantStarter が2回目を断る)なので、もう持っている人には出ない
             if (ok) { setStarterOpen(cardStarterOpenResult(db, kitPick, before, false)); setView('starter-open'); }
@@ -120599,7 +120599,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             {result.auto && <div data-card-result-auto={result.auto.paid ? 'paid' : 'free'} className="mt-1 text-[12px] font-black text-sky-200" style={JA_LABEL_STYLE}>
               {jaWrap(result.auto.paid ? '🤖 オートで挑みました(ごほうびは自分で戦うときの半分)' : '🤖 オートで挑みました(今日のごほうびは終わっていたので、ごほうびなし)')}</div>}
             {/* オートのごほうびの残りの札と、その場でセッション券でふやすボタン(2026-11-07 社長「ここに残りのごほうび回数とこの場でセッション券で増やすボタンもほしい」)。
-                ふやしたら、下の「もう一度」でごほうびありの対戦ができる(ごほうびは対戦の終わりに残りを読み直して決める) */}
+                ふやしたら、下の「もう1度」でごほうびありの対戦ができる(ごほうびは対戦の終わりに残りを読み直して決める) */}
             {result.auto && !result.demo && typeof CardAutoRewardBar === 'function' && <CardAutoRewardBar info={autoInfo} tickets={Number.isInteger(sessionTickets) ? sessionTickets : 0}
               onAdd={typeof onUseSessionTicket === 'function' && typeof cardAutoRewardAddExtra === 'function' ? () => { setAutoTicketNote(''); setAutoTicketAsk(true); } : null} note={autoTicketNote}/>}
             <div className="mt-1 text-[12px] font-bold text-slate-300">いまのビートP: {save.point}</div>
@@ -120611,7 +120611,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         <div className={`${SCREEN_FOOTER_CLASS} grid grid-cols-2 gap-2`}>
           {!result.replay && result.replayRec && <button type="button" data-card-result-replay="auto" className={`${btn} mh-button-secondary col-span-2 border border-sky-300/40 bg-slate-800`} onClick={() => { Audio_.fgSe.tap(); openReplayRec(result.replayRec, 'result'); }}>この対戦を見る</button>}
           {result.replay && <button type="button" data-card-result-replay className={`${btn} mh-button-secondary col-span-2 border border-sky-300/40 bg-slate-800`} onClick={() => { Audio_.fgSe.tap(); void openReplay(result.replay, 'result'); }}>この対戦を見る</button>}
-          <button type="button" className={`${btn} mh-button-primary`} onClick={() => { if (result.share) { startBattle({ who: result.share.tactics.habit, level: result.level, share: result.share }, activeDeck, result.auto ? { auto: { tactics: result.auto.tactics, quick: !!result.auto.quick } } : {}); return; } const again = { who: result.who, level: result.level }; setFoe(again); setDeckPick({ next: 'cpu', pick: again }); setView('deckPick'); }}>もう一度</button>
+          <button type="button" className={`${btn} mh-button-primary`} onClick={() => { if (result.share) { startBattle({ who: result.share.tactics.habit, level: result.level, share: result.share }, activeDeck, result.auto ? { auto: { tactics: result.auto.tactics, quick: !!result.auto.quick } } : {}); return; } const again = { who: result.who, level: result.level }; setFoe(again); setDeckPick({ next: 'cpu', pick: again }); setView('deckPick'); }}>もう1度</button>
           <button type="button" className={`${btn} mh-button-secondary border border-white/20 bg-slate-800`} onClick={() => setView(result.share ? 'share' : 'foe')}>相手を選ぶ</button>
         </div>
         {autoTicketSheet}
@@ -120741,7 +120741,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     const startLevelPanel = (
           <div data-card-setting="startLevel" className="mt-2.5 border-t border-white/10 pt-2.5">
             <b className="block text-[12px] font-black text-slate-200">フリー対戦の最初の強さ</b>
-            <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{cardJaWrap('相手選びを開いたときに、はじめに選ばれている強さです。まだ開いていない強さのときは、開いている中で一番近い強さになります。')}</p>
+            <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{cardJaWrap('相手選びを開いたときに、はじめに選ばれている強さです。まだ開いていない強さのときは、開いている中で1番近い強さになります。')}</p>
             <div className="mt-2 grid grid-cols-3 gap-1.5">
               {CARD_START_LEVEL_OPTIONS.map((o) => (
                 <button key={o.id} type="button" data-card-start-level={o.id} aria-pressed={startLevel === o.id}
@@ -121288,7 +121288,7 @@ const CardDeckList = ({ db, collection, decks, onBack, onEdit, onPut, onRemove, 
     <div data-mh-screen data-card-deck-list className={SCREEN_SHELL_CLASS}>
       <ScreenHead title="デッキ編成" accent="text-amber-200" onBack={onBack}/>
       <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-2`}>
-        <p data-card-deck-count={decks.decks.length} className="text-[11px] font-bold text-slate-400">{`デッキ ${decks.decks.length} / ${CARD_DECK_MAX}。★のデッキで対戦します(★のデッキは一番上に出ます)`}</p>
+        <p data-card-deck-count={decks.decks.length} className="text-[11px] font-bold text-slate-400">{`デッキ ${decks.decks.length} / ${CARD_DECK_MAX}。★のデッキで対戦します(★のデッキは1番上に出ます)`}</p>
         {/* ★(使っている)デッキはいちばん上に出す(20まで並ぶと、どれを使っているか探しにくい。2026-10-30)。保存の並びは変えない */}
         {[...decks.decks].sort((a, b) => (b.id === decks.active) - (a.id === decks.active)).map((d) => {
           const ready = cardDeckReady(db, d, col);
@@ -121518,7 +121518,7 @@ const CardRules = ({ onBack, onTutorial }) => (
       ))}
     </div>
     <div className={SCREEN_FOOTER_CLASS}>
-      <button type="button" data-card-tutorial-again className="mh-button min-h-[52px] w-full rounded-2xl border border-emerald-300/50 bg-emerald-900/60 font-black text-emerald-50 active:scale-[.98]" onClick={() => { Audio_.fgSe.tap(); onTutorial(); }}>練習試合をもう一度<span className="block text-[10px] font-bold text-emerald-200" style={JA_LABEL_STYLE}>{jaWrap('ドラと、みゅあ相手に5つの決まりをおさらい')}</span></button>
+      <button type="button" data-card-tutorial-again className="mh-button min-h-[52px] w-full rounded-2xl border border-emerald-300/50 bg-emerald-900/60 font-black text-emerald-50 active:scale-[.98]" onClick={() => { Audio_.fgSe.tap(); onTutorial(); }}>練習試合をもう1度<span className="block text-[10px] font-bold text-emerald-200" style={JA_LABEL_STYLE}>{jaWrap('ドラと、みゅあ相手に5つの決まりをおさらい')}</span></button>
     </div>
   </div>
 );
@@ -122950,7 +122950,7 @@ const CardBattleStatsPanel = ({ stats, who = 'self' }) => {
       </div>
       <div className="mt-1 grid grid-cols-3 gap-1 text-center">
         <div data-card-stats-streak className={cell}>
-          <span className="block whitespace-nowrap text-[9px] font-black text-orange-200">一番長い連勝</span>
+          <span className="block whitespace-nowrap text-[9px] font-black text-orange-200">1番長い連勝</span>
           <b className={`block ${val(stats.bestStreak)}`}>{stats.bestStreak}</b>
         </div>
         <div data-card-stats-pvp className={cell}>
@@ -123134,7 +123134,7 @@ const CardRankingBoard = ({ onBack, renderBreederIcon = null, selfName = '', rec
         {!cardRankOwnTab(kind) && state.status === 'error' && (
           <div className="py-8 text-center">
             <p className="text-sm font-bold text-amber-200">ランキングを読み込めませんでした</p>
-            <button type="button" onClick={() => { cardRankCache.delete(cacheKey); setRetry((n) => n + 1); }} className="mt-2 min-h-[44px] rounded-xl bg-slate-800 px-4 text-sm font-black">もう一度読み込む</button>
+            <button type="button" onClick={() => { cardRankCache.delete(cacheKey); setRetry((n) => n + 1); }} className="mt-2 min-h-[44px] rounded-xl bg-slate-800 px-4 text-sm font-black">もう1度読み込む</button>
           </div>
         )}
         {!cardRankOwnTab(kind) && state.status === 'ready' && shown.length === 0 && <p data-card-ranking-empty className="py-8 text-center text-sm font-bold text-slate-400">まだ記録がありません</p>}
@@ -123391,7 +123391,7 @@ const CardRecordScreen = ({ db = CARD_BATTLE_DATA, save, foes = [], levelLabel =
             <div className="text-[12px] font-bold text-slate-400">勝ち方(フリー対戦)</div>
             <div className="mt-1 grid grid-cols-3 gap-1.5 text-center">
               {cell('勝つまでの平均', winAvg === null ? '—' : winAvg, 'ターン')}
-              {cell('一番早い勝ち', d.wins.fastest || '—', d.wins.fastest ? 'ターン目' : '')}
+              {cell('1番早い勝ち', d.wins.fastest || '—', d.wins.fastest ? 'ターン目' : '')}
               {cell('今日の勝ち', d.day.key === today ? d.day.win : 0, '勝')}
             </div>
             <p className={small} style={JA_WRAP_STYLE}>{jaWrap('「ターン」は自分のターンの数です。この記録ができてからのぶんです')}</p>
@@ -123439,7 +123439,7 @@ const CardRecordScreen = ({ db = CARD_BATTLE_DATA, save, foes = [], levelLabel =
                       {row('投了', `${f.surrender}`, 'sur')}
                       {row('いまの連勝', `${f.now}連勝`, 'now')}
                       {row('最高の連勝', `${f.best}連勝`, 'best')}
-                      {row('一番早い勝ち', f.fastest ? `${f.fastest}ターン目` : '—', 'fast')}
+                      {row('1番早い勝ち', f.fastest ? `${f.fastest}ターン目` : '—', 'fast')}
                       <div className="mt-1 text-[10px] font-bold text-slate-400">難易度ごとの勝ち</div>
                       <div className="mt-0.5 grid grid-cols-5 gap-1 text-center text-[10px] font-bold">
                         {CARD_LEVEL_ORDER.map((lv) => <div key={lv} className="min-w-0 rounded-md bg-black/30 py-0.5"><span className="block truncate text-slate-400">{levelLabel[lv] || lv}</span><b className="text-[12px] text-amber-200">{f.levels[lv]}</b></div>)}
@@ -123457,7 +123457,7 @@ const CardRecordScreen = ({ db = CARD_BATTLE_DATA, save, foes = [], levelLabel =
             <div className="text-[12px] font-bold text-slate-400">マルチ対戦</div>
             <div className="text-[16px] font-black text-white">{rec.pvp.win}勝 {rec.pvp.lose}敗</div>
             {row('いまの強さ', !multi ? '読み込み中…' : Number.isFinite(multi.rating) ? `${multi.rating}${multi.place ? `(${multi.place.capped ? `${multi.place.n}位より下` : `${multi.place.n}位`})` : ''}` : pvpGames ? '—' : 'まだ対戦していません', 'rating')}
-            {row('一番高かった強さ', d.pvpBest ? `${d.pvpBest}` : '—', 'best')}
+            {row('1番高かった強さ', d.pvpBest ? `${d.pvpBest}` : '—', 'best')}
           </div>
           <div data-card-record-trend className={SCREEN_PANEL_CLASS}>
             <div className="text-[12px] font-bold text-slate-400">強さの移り(最近20戦)</div>
@@ -124413,7 +124413,7 @@ const CARD_PVP = (() => {
       onClose: () => {
         if (socket !== me || !s) return;
         alive = false;
-        if (s.phase === 'connecting') { set({ phase: 'error', error: 'つながりませんでした。電波のよい所で、もう一度お試しください' }); return; }
+        if (s.phase === 'connecting') { set({ phase: 'error', error: 'つながりませんでした。電波のよい所で、もう1度お試しください' }); return; }
         if (s.phase === 'idle' || s.phase === 'error') return;
         set({ offline: true });
         retry = setTimeout(connect, CARD_PVP_RECONNECT_MS);
@@ -125122,7 +125122,7 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
                             {label && <span data-card-pvp-invite-state={state} className={`shrink-0 text-[11px] font-bold tabular-nums ${state === 'live' ? 'text-emerald-200' : 'text-amber-200'}`}>{label}</span>}
                             {state !== 'live' && (
                               <button type="button" data-card-pvp-invite-to={f.otherId} className="mh-button mh-button-primary min-h-[36px] rounded-lg px-3 text-[12px] font-black disabled:opacity-50"
-                                onClick={() => { Audio_.fgSe.tap(); void sendInvite(f.otherId, room.code); }}>{state ? 'もう一度' : '招待する'}</button>
+                                onClick={() => { Audio_.fgSe.tap(); void sendInvite(f.otherId, room.code); }}>{state ? 'もう1度' : '招待する'}</button>
                             )}
                           </>);
                         })()}
@@ -127289,7 +127289,7 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
     setBusy(true); setMsg('');
     const r = await cardShareRegister({ ownerId: selfId, name: profile.name, icon: profile.icon, frame, deck: picked, tactics: { ...cardShareNormalizeTactics(tactics, picked), name: picked.name, habit: cardShareMainHabit(framesNow, tactics.habit), ...(framesNow ? { f: cardTacticPackFrames(framesNow) } : {}) } });
     if (r === 'ok') { setMine(await cardShareFetchMine(selfId)); setMsg('登録しました。ほかのブリーダーが、このデッキと戦えます'); }
-    else setMsg(r === 'locked' ? 'この端末では登録を書きかえられません(登録した端末で操作してください)' : r === 'bad' ? `このデッキは登録できませんでした(${cardShareBadReason(db, picked, tactics)})` : r === 'nokey' ? 'この端末に保存できなかったため、登録できませんでした' : '通信できませんでした。電波のよい所で、もう一度お試しください');
+    else setMsg(r === 'locked' ? 'この端末では登録を書きかえられません(登録した端末で操作してください)' : r === 'bad' ? `このデッキは登録できませんでした(${cardShareBadReason(db, picked, tactics)})` : r === 'nokey' ? 'この端末に保存できなかったため、登録できませんでした' : '通信できませんでした。電波のよい所で、もう1度お試しください');
     setBusy(false);
   };
   const unregister = async () => {
@@ -127297,7 +127297,7 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
     setBusy(true); setMsg('');
     const r = await cardShareUnregister(selfId);
     if (r === 'ok' || r === 'none') { setMine(null); setMsg('登録をやめました'); }
-    else setMsg(r === 'locked' || r === 'nokey' ? 'この端末では登録をやめられません(登録した端末で操作してください)' : '通信できませんでした。もう一度お試しください');
+    else setMsg(r === 'locked' || r === 'nokey' ? 'この端末では登録をやめられません(登録した端末で操作してください)' : '通信できませんでした。もう1度お試しください');
     setBusy(false);
   };
   const chip = (on) => `rounded-lg px-2 py-1 text-[12px] font-black ${on ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 text-slate-200'}`;
@@ -127360,7 +127360,7 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
   const body = (
       <div className={embedded ? 'space-y-3 pb-2' : `${SCREEN_LIST_CLASS} space-y-3 pb-4`}>
         {mine === undefined && <p className="text-[13px] font-bold text-slate-300">読み込み中…</p>}
-        {mine !== undefined && off && <p data-card-share-off className="rounded-xl border border-amber-300/40 bg-amber-500/10 p-3 text-[13px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{jaWrap('いまは準備中です。しばらくしてから、もう一度開いてください')}</p>}
+        {mine !== undefined && off && <p data-card-share-off className="rounded-xl border border-amber-300/40 bg-amber-500/10 p-3 text-[13px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{jaWrap('いまは準備中です。しばらくしてから、もう1度開いてください')}</p>}
         {mine !== undefined && !off && onFight && part === 'all' && (
           <div className="flex gap-1.5" role="tablist">
             {[['fight', '戦う'], ['mine', '自分のデッキを登録']].map(([id, label]) => <button key={id} type="button" role="tab" aria-selected={tab === id} data-card-share-tab={id} className={`flex-1 ${chip(tab === id)} py-2`} onClick={() => { Audio_.fgSe.tap(); setTab(id); }}>{label}</button>)}
@@ -128909,7 +128909,7 @@ const cardRankRewardItems = (r, got = false) => {
 // 札を押した先: 大きい札・棒・ランクごとのごほうびの一覧・経験値のたまり方(2026-10-30 社長「報酬が全部見れるように」。43 の共通の画面。ビートランクと同じ)
 const CardRankDetail = ({ xp = 0, onClose }) => (
   <PlayerRankDetail kind="card" xp={xp} rewardsOf={cardRankRewardItems} onClose={onClose}
-    how={'フリー対戦・マルチ対戦で戦うと経験値がたまります。強い相手ほど多く、マルチが一番多くたまります。その日初めての勝ちは +30。投了・練習試合ではたまりません。'}/>
+    how={'フリー対戦・マルチ対戦で戦うと経験値がたまります。強い相手ほど多く、マルチが1番多くたまります。その日初めての勝ちは +30。投了・練習試合ではたまりません。'}/>
 );
 // 対戦の結果: 経験値の札(棒が前の量から伸びる)と、ランクが上がったときの演出(43 の PlayerRankUpFx。ビートランクと同じ。帯が変わると自動で豪華になる)。
 //   一度に何ランク上がっても、上がった先のランクで1回だけ出し、もらった物をまとめて渡す。5ランクごとのおまけは bonus(桃色の光)
@@ -129001,7 +129001,7 @@ const cardRegSmartNextText = (frames, lv) => {
   const base = f.base.filter(Boolean).length;
   const rows = cardTacticCountedRows(f);
   const now = cardTacticSmartLevel(f);
-  if (now === 'legend') return '一番上の LEGEND です。';
+  if (now === 'legend') return '1番上の LEGEND です。';
   const next = CARD_TACTIC_SMART[CARD_TACTIC_SMART.indexOf(now) + 1];
   const label = CARD_SHARE_SMART_LABEL[next];
   if (next === 'master') return `次の ${label} まで: 基本カードをあと${2 - base}枚、または、ちゃんと効く戦術カードをあと${Math.max(1, 4 - rows)}枚。`;
@@ -129242,7 +129242,7 @@ const CardRegTrialSheet = ({ db, deck, battle, aces, monName, onClose }) => {
               <b className="shrink-0 text-[15px] font-black text-amber-200">{`${used[x.k]}回`}</b>
             </div>
           ))}
-          {zero.length > 0 && <p className="pt-1 text-[13px] font-black text-rose-200">一度も当てはまらなかったカード</p>}
+          {zero.length > 0 && <p className="pt-1 text-[13px] font-black text-rose-200">1度も当てはまらなかったカード</p>}
           {zero.map((x) => (
             <div key={x.k} data-card-reg-trial-zero className="rounded-xl border border-white/10 bg-slate-900/60 px-2 py-1.5 opacity-80">
               <div className="text-[12px] font-black leading-snug text-white" style={JA_WRAP_STYLE}>{cardRegRowText(x.r)}</div>
@@ -129274,7 +129274,7 @@ const CardRegTemplateSheet = ({ db, deck, tactics, open, lv, aces, monName, onPi
   const [auto, setAuto] = useState(''); // '' / 'run'
   const runAuto = () => {
     setAuto('run');
-    setTimeout(() => { const best = cardRegAutoPick(db, deck, tactics, open, lv, aces); onPick(best.frames, `おまかせ: 「${best.s.name}」が一番勝ちました(${CARD_REG_AUTO_GAMES}戦 ${best.wins}勝)`); }, 60);
+    setTimeout(() => { const best = cardRegAutoPick(db, deck, tactics, open, lv, aces); onPick(best.frames, `おまかせ: 「${best.s.name}」が1番勝ちました(${CARD_REG_AUTO_GAMES}戦 ${best.wins}勝)`); }, 60);
   };
   return (
     <div data-card-reg-templates className="fixed inset-0 z-[82] flex flex-col bg-slate-950 p-3" style={cardSafePad('.75rem')}>
@@ -129282,7 +129282,7 @@ const CardRegTemplateSheet = ({ db, deck, tactics, open, lv, aces, monName, onPi
       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pb-3">
         <button type="button" data-card-reg-auto disabled={auto === 'run'} onClick={() => { Audio_.fgSe.tap(); runAuto(); }}
           className="mh-button w-full rounded-2xl border-2 border-dashed border-sky-300 bg-sky-950/60 py-3 text-[14px] font-black text-sky-50 disabled:opacity-60" style={JA_WRAP_STYLE}>
-          {auto === 'run' ? '4つの型を、試しに戦わせています…' : `🎲 おまかせ(4つの型を試しに${CARD_REG_AUTO_GAMES}戦ずつ戦わせて、一番勝った型で組む)`}
+          {auto === 'run' ? '4つの型を、試しに戦わせています…' : `🎲 おまかせ(4つの型を試しに${CARD_REG_AUTO_GAMES}戦ずつ戦わせて、1番勝った型で組む)`}
         </button>
         {CARD_REG_STYLES.map((s) => {
           const f = cardRegApplyStyle(s, tactics, open);
@@ -129400,7 +129400,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
       const r = await cardShareRegister({ ownerId: selfId, name: profile.name, icon: profile.icon, frame, deck,
         tactics: { name: deck.name, habit: cardShareMainHabit(cardTacticUnpackFrames(f), 'kyuko'), aces: acesNow, f } });
       if (r === 'ok') { setMine(await cardShareFetchMine(selfId)); setMsg('登録しました。ほかのブリーダーが、フリー対戦でこのデッキと戦えます'); setStep('done'); }
-      else setMsg(r === 'locked' ? 'この端末では登録を書きかえられません(登録した端末で操作してください)' : r === 'bad' ? `このデッキは登録できませんでした(${cardShareBadReason(db, deck, { aces: acesNow, f })})` : r === 'nokey' ? 'この端末に保存できなかったため、登録できませんでした' : '通信できませんでした。もう一度お試しください');
+      else setMsg(r === 'locked' ? 'この端末では登録を書きかえられません(登録した端末で操作してください)' : r === 'bad' ? `このデッキは登録できませんでした(${cardShareBadReason(db, deck, { aces: acesNow, f })})` : r === 'nokey' ? 'この端末に保存できなかったため、登録できませんでした' : '通信できませんでした。もう1度お試しください');
     } finally { setBusy(false); }
   };
   const unregister = async () => {
@@ -129768,7 +129768,7 @@ const CardTourEntry = ({ t, view, now, mine, selfId, onChanged, onOpenRegister }
         closed: '受付は終わりました', nodeck: 'デッキ登録で、デッキを登録するとエントリーできます', locked: 'デッキを登録した端末でだけ、エントリーできます',
         none: 'エントリーしていません', bad: 'エントリーできませんでした',
       }[r];
-      setMsg(text || '通信できませんでした。もう一度お試しください');
+      setMsg(text || '通信できませんでした。もう1度お試しください');
       if (r === 'ok') await onChanged();
     } finally { setBusy(false); }
   };
@@ -130050,10 +130050,10 @@ const CardTournament = ({ onBack, onOpenRegister = null, onOpenReplay = null, on
         if (await onCredit(view.tour, reward)) {
           setClaimed(cardTourNormalizeClaimed(await storeGet(CARD_TOUR_CLAIMED_KEY, null).catch(() => null)) || []);
           setMsg(`ごほうびを受け取りました${reward.point ? `(ビートP +${reward.point.toLocaleString()})` : ''}`);
-        } else setMsg('保存できませんでした。通信のよいところで、もう一度お試しください');
+        } else setMsg('保存できませんでした。通信のよいところで、もう1度お試しください');
         return;
       }
-      setMsg({ claimed: 'もう受け取っています', none: 'この大会のごほうびはありません', locked: 'デッキを登録した端末でだけ、受け取れます', wait: '大会が終わってから受け取れます' }[st] || '通信できませんでした。もう一度お試しください');
+      setMsg({ claimed: 'もう受け取っています', none: 'この大会のごほうびはありません', locked: 'デッキを登録した端末でだけ、受け取れます', wait: '大会が終わってから受け取れます' }[st] || '通信できませんでした。もう1度お試しください');
     } finally { setBusy(false); }
   };
 
@@ -130409,7 +130409,7 @@ const CardCupCreate = ({ now, mine, onOpenRegister, onCreated, selfId, profile }
       const st = r && typeof r === 'object' ? r.status : null;
       if (st === 'ok') { onCreated(r.id); return; }
       setMsg({ bad: '内容を確かめてください(時刻がずれたときは選び直してください)', busy: '開いている個人杯がもうあります(1人1つまで)', slot: 'その発表の時刻はいっぱいです。別の時刻を選んでください', crowded: 'いまは開けません。少しあとでお試しください',
-        many: '出ている個人杯が3つあります', nodeck: 'デッキ登録をしてから開いてください', locked: 'デッキを登録した端末でだけ開けます' }[st] || '通信できませんでした。もう一度お試しください');
+        many: '出ている個人杯が3つあります', nodeck: 'デッキ登録をしてから開いてください', locked: 'デッキを登録した端末でだけ開けます' }[st] || '通信できませんでした。もう1度お試しください');
     } finally { setBusy(false); }
   };
   return (
@@ -130510,7 +130510,7 @@ const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegiste
       const text = { ok: { card_cup_join: '参加しました', card_cup_leave: '参加を取り消しました', card_cup_cancel: 'この個人杯を取り消しました' }[fn],
         closed: '受付は終わりました', full: '人数がいっぱいです', many: '出ている個人杯が3つあります', nodeck: 'デッキ登録をしてから参加してください',
         locked: 'デッキを登録した端末でだけ参加できます', none: '参加していません', fee: 'この個人杯には、いまは参加できません', host: '主催は抜けられません(取り消しはできます)', bad: '参加できませんでした' }[r];
-      setMsg(text || '通信できませんでした。もう一度お試しください');
+      setMsg(text || '通信できませんでした。もう1度お試しください');
       if (r === 'ok') await onChanged();
     } finally { setBusy(false); }
   };
@@ -130681,7 +130681,7 @@ const CardCupLivePanel = ({ v, now, selfId, onChanged, onPlay = null }) => {
     setBusy(true); setMsg('');
     try {
       const r = await call(fn);
-      setMsg(cardCupLiveMsg[kind][r] || '通信できませんでした。もう一度お試しください');
+      setMsg(cardCupLiveMsg[kind][r] || '通信できませんでした。もう1度お試しください');
       await onChanged();
     } finally { setBusy(false); }
   };
@@ -130844,7 +130844,7 @@ const cardCupItemText = (item, amount) => { const it = cardCupItemOf(item); retu
 const CARD_CUP_ITEMS_NG = Object.freeze([
   ['ブリーダーP', '2度と手に入らない物'],
   ['マスモン・円盤石・アシストカード', 'ひとつずつの物で、育てた中身がある'],
-  ['アイコン・フレーム・着替え', '一度手に入れたら外さない物'],
+  ['アイコン・フレーム・着替え', '1度手に入れたら外さない物'],
   ['バトルカード(1枚ずつ)', 'これから(番号ごとの預かりが要る)'],
   ['経験値・ランク・記録', '持ち物ではない'],
 ]);
@@ -131054,9 +131054,9 @@ const cardCupClaim = async (adapters, cup, cupName) => {
 // 誘われた人: 受ける・断る / 終わった・取り消された杯: 受け取る(1回だけ・ギフトボックスへ)
 // getAdapters … 84 の cupAdapters(持ち物を足し引きする口と、持ち主の鍵)。prize・reload … 84 側で読んだごほうび(cardCupPrizeView)と読み直し
 const CARD_CUP_PRIZE_MSG = Object.freeze({
-  ok: 'できました', short: '持っている数が足りません', save: 'この端末に保存できませんでした', pending: '通信が途切れました。次に開いたとき、もう一度送ります(持ち物は預けたままです)',
+  ok: 'できました', short: '持っている数が足りません', save: 'この端末に保存できませんでした', pending: '通信が途切れました。次に開いたとき、もう1度送ります(持ち物は預けたままです)',
   closed: '受付は終わりました', locked: 'デッキを登録した端末でだけできます', bad: '内容を確かめてください', paid: '参加費を払った人がいるので、もう変えられません',
-  notfriend: 'フレンドだけ誘えます', host: '主催は外せません', none: 'もう返事をしています', full: '人数がいっぱいです', many: '出ている個人杯が3つあります', nodeck: 'デッキ登録をしてから参加してください', off: '通信できませんでした。もう一度お試しください',
+  notfriend: 'フレンドだけ誘えます', host: '主催は外せません', none: 'もう返事をしています', full: '人数がいっぱいです', many: '出ている個人杯が3つあります', nodeck: 'デッキ登録をしてから参加してください', off: '通信できませんでした。もう1度お試しください',
   nothing: 'この個人杯で受け取る物はありません', elsewhere: 'ほかの端末で受け取り済みです', got: '受け取りました。本編の持ち物はギフトボックスから受け取ってください', wait: 'まだ受け取れません(結果が出てから)',
 });
 const CardCupPrizePanel = ({ c, v, now, selfId, prize, reload, getAdapters }) => {
@@ -137226,7 +137226,7 @@ function MonsterHeroGame() {
     if (link.kind === 'beat') { mhBeatRoomLinkRequest(link.code); void openRhythmDemo({ to: 'RHYTHM_MULTI' }); }
     else if (link.kind === 'card') {
       if (cardBattleEntryVisible && cardPvpOpen()) { CARD_PVP_JOIN.request(link.code); setCardOrigin('home'); setGameState('CARD_TOP'); }
-      else setRoomLinkNotice('MFバトルカードのマルチは、まだ開いていません。遊べるようになったら、もう一度リンクを開いてください');
+      else setRoomLinkNotice('MFバトルカードのマルチは、まだ開いていません。遊べるようになったら、もう1度リンクを開いてください');
     }
   }, [pendingRoomLink, pendingFriendCode, bootPhase, gameState, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, rhythmEventStoryPending, updateGuideQueue]);
   // この起動で一度でも流し始めた会話。二度目を並べないための歯止め(下の useEffect の説明を参照)。
@@ -140053,7 +140053,7 @@ function MonsterHeroGame() {
       { key:'mh_masu_mons', before:currentMons, next },
     ], storeGet, storeSet);
     if (!saved) {
-      window.alert('一括設定を保存できませんでした。もう一度お試しください。');
+      window.alert('一括設定を保存できませんでした。もう1度お試しください。');
       return false;
     }
     masuMonsRef.current = next;
@@ -140071,7 +140071,7 @@ function MonsterHeroGame() {
       { key:AUTO_SETTINGS_KEY, before:autoSettings, next:normalized },
     ], storeGet, storeSet);
     if (!saved) {
-      window.alert('AUTO設定を保存できませんでした。もう一度お試しください。');
+      window.alert('AUTO設定を保存できませんでした。もう1度お試しください。');
       return false;
     }
     setAutoSettings(normalized);
@@ -141765,7 +141765,7 @@ function MonsterHeroGame() {
       { key:'mh_masu_mons', before, next },
     ], storeGet, storeSet);
     if (!saved) {
-      window.alert('自動限界突破の設定を保存できませんでした。もう一度お試しください。');
+      window.alert('自動限界突破の設定を保存できませんでした。もう1度お試しください。');
       return null;
     }
     masuMonsRef.current = next;
@@ -141836,7 +141836,7 @@ function MonsterHeroGame() {
       Audio_.se.tap();
       return reset;
     } catch {
-      setTranscendResetError('リセットを保存できませんでした。もう一度お試しください。');
+      setTranscendResetError('リセットを保存できませんでした。もう1度お試しください。');
       return null;
     } finally {
       transcendResetProcessingRef.current = false;
@@ -142143,7 +142143,7 @@ function MonsterHeroGame() {
       setTimeout(()=>{ setRebirthAnimation(null); setRebirthSelectedId(null); setRebirthSkillKey(null); rebirthProcessingRef.current=false; }, 4100);
     } catch {
       rebirthProcessingRef.current=false;
-      setRebirthError('限界突破のデータを保存できませんでした。もう一度お試しください。');
+      setRebirthError('限界突破のデータを保存できませんでした。もう1度お試しください。');
     }
   };
   // 超越: レベルはそのままで、Lv上限だけ400→500へ伸ばす。
@@ -142174,7 +142174,7 @@ function MonsterHeroGame() {
       setTimeout(()=>{ setTranscendAnimation(null); setTranscendSelectedId(null); transcendProcessingRef.current=false; }, prefersReducedMotion()?900:4400);
     } catch {
       transcendProcessingRef.current=false;
-      setTranscendError('超越のデータを保存できませんでした。もう一度お試しください。');
+      setTranscendError('超越のデータを保存できませんでした。もう1度お試しください。');
     }
   };
   // 魂格進化: 現Lvはそのまま、次の魂格段階とLv上限だけを1段階進める。
@@ -142269,7 +142269,7 @@ function MonsterHeroGame() {
       setTranscendExchangeError('');
       return applied;
     } catch {
-      setTranscendExchangeError('交換を保存できませんでした。もう一度お試しください。');
+      setTranscendExchangeError('交換を保存できませんでした。もう1度お試しください。');
       return null;
     } finally {
       transcendProcessingRef.current = false;
@@ -142291,7 +142291,7 @@ function MonsterHeroGame() {
         beforeMasuMons, beforeOwnedItems, nextMasuMons, result.nextOwnedItems, storeGet, storeSet
       );
       if (!saved) {
-        setTranscendFruitError('超越の実を保存できませんでした。所持数を確認して、もう一度お試しください。');
+        setTranscendFruitError('超越の実を保存できませんでした。所持数を確認して、もう1度お試しください。');
         return null;
       }
       masuMonsRef.current = nextMasuMons; ownedItemsRef.current = result.nextOwnedItems;
@@ -142301,7 +142301,7 @@ function MonsterHeroGame() {
       await saveMissionProgress('itemUse',Math.max(1,Math.floor(Number(amount)||1)));
       return result;
     } catch {
-      setTranscendFruitError('超越の実を保存できませんでした。所持数を確認して、もう一度お試しください。');
+      setTranscendFruitError('超越の実を保存できませんでした。所持数を確認して、もう1度お試しください。');
       return null;
     } finally {
       transcendFruitProcessingRef.current = false;
@@ -142459,7 +142459,7 @@ function MonsterHeroGame() {
   // 見積もりと同じ buildMasuOffering を、実行の瞬間の最新の所持数で計算し直して確定する
   // (画面の見積もりが古くても、足りない状態で成立させない)。保存に失敗したら何も減らさない。
   const executeMasuOffering = async ({ masuId, mode, amount, autoBreakthrough }) => {
-    if (offeringProcessingRef.current) return { ok:false, error:'いま手続き中です。少し待ってからもう一度押してください。' };
+    if (offeringProcessingRef.current) return { ok:false, error:'いま手続き中です。少し待ってからもう1度押してください。' };
     const masu = masuMonsRef.current.find(m=>String(m.id)===String(masuId));
     const plan = buildMasuOffering({ masu, gold, ownedItems:ownedItemsRef.current, lockedIds:rebirthLockedMasuIds, mode, amount, autoBreakthrough });
     if (!plan.ok) return { ok:false, error:plan.reason || 'お布施の条件を満たしていません。' };
@@ -142479,7 +142479,7 @@ function MonsterHeroGame() {
       Audio_.se.levelUp();
       return { ok:true, plan };
     } catch {
-      return { ok:false, error:'お布施のデータを保存できませんでした。もう一度お試しください。' };
+      return { ok:false, error:'お布施のデータを保存できませんでした。もう1度お試しください。' };
     } finally {
       offeringProcessingRef.current = false;
     }
@@ -142507,7 +142507,7 @@ function MonsterHeroGame() {
       setTimeout(()=>{ setReincarnateAnimation(null); setReincarnateSelectedId(null); setReincarnateSkillKey(null); reincarnateProcessingRef.current=false; }, 4100);
     } catch {
       reincarnateProcessingRef.current=false;
-      setReincarnateError('転生データを保存できませんでした。もう一度お試しください。');
+      setReincarnateError('転生データを保存できませんでした。もう1度お試しください。');
     }
   };
   // まとめて転生(2026-10-17)。選んだ子を1回ずつ、1体ずつと同じ計算(buildMasuReincarnationMulti)で順に転生し、
@@ -142537,7 +142537,7 @@ function MonsterHeroGame() {
       return { ok:true, count:result.count, stopReason:result.stopReason };
     } catch {
       reincarnateProcessingRef.current=false;
-      setReincarnateError('転生データを保存できませんでした。どのモンスターも転生していません。もう一度お試しください。');
+      setReincarnateError('転生データを保存できませんでした。どのモンスターも転生していません。もう1度お試しください。');
       return { ok:false };
     }
   };
@@ -142607,7 +142607,7 @@ function MonsterHeroGame() {
       setDonationAnimation(null);
       setDonationResult({ count:result.donated.length, name:result.donated[0]?.name, diamonds: result.diamonds, psyche:result.psyche, gold: result.nextGold });
     } catch (error) {
-      setDonationError('寄付データを保存できませんでした。もう一度お試しください。');
+      setDonationError('寄付データを保存できませんでした。もう1度お試しください。');
     } finally {
       donationProcessingRef.current = false;
       setDonationProcessing(false);
@@ -144254,7 +144254,7 @@ function MonsterHeroGame() {
     await storeSet(RHYTHM_EVENT_STORY_KEY, [], false);
     const seen = normalizeSeenUpdateNoticeIds(await storeGet(UPDATE_NOTICE_SEEN_KEY, [], false));
     await storeSet(UPDATE_NOTICE_SEEN_KEY, seen.filter(id => id !== 'update_notice_rhythm_weekend_cup_v1'), false);
-    window.alert('イベントの会話と告知を未読へ戻しました。開催中に起動すると、もう一度出ます。');
+    window.alert('イベントの会話と告知を未読へ戻しました。開催中に起動すると、もう1度出ます。');
   };
   const debugResetUpdateGuide = async () => {
     const debugIds = new Set(availableUpdateNotices({debug:true}).map(n=>n.id));
@@ -151614,8 +151614,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 画面が増えても表示の作りが枝分かれしないよう、一覧はここにしか書かない
   const rankingRetryButton = (onRetry) => (
     // 「取得に失敗しました」だけでは次にどうすればよいか分からなかったので、ほかの画面の0件表示(ScreenEmpty)と同じ形にする
-    <ScreenEmpty emoji="📡" lines={['ランキングを読み込めませんでした','通信を確かめて、もう一度読み込んでください']}
-      action={<button type="button" onClick={onRetry} className="mh-button mh-button-secondary w-full min-h-[44px] rounded-xl font-black text-[12px] active:scale-[.98]">もう一度読み込む</button>}/>
+    <ScreenEmpty emoji="📡" lines={['ランキングを読み込めませんでした','通信を確かめて、もう1度読み込んでください']}
+      action={<button type="button" onClick={onRetry} className="mh-button mh-button-secondary w-full min-h-[44px] rounded-xl font-black text-[12px] active:scale-[.98]">もう1度読み込む</button>}/>
   );
   const rankingEmptyText = <ScreenEmpty emoji="🏆" lines={['記録はまだありません','このモードを遊ぶと、ここに記録が並びます']}/>;
   // スコアランキング。モードごとに別枠なので、どのモードのぶんを見るかを受け取る。
@@ -151928,7 +151928,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
         {gameState==='TRAINING_BOARD'&&trainingSession&&(()=>{const m=masuMons.find(x=>String(x.id)===String(trainingSession.masuId));const current=TRAINING_NODE_BY_ID[trainingSession.position];const highlighted=new Set([current.id,...trainingSession.routePreview,...trainingSession.branchOptions]);return <main className="mh-training-board">{trainingEffect&&<div className={`mh-training-effect ${trainingEffect.kind}`} aria-live="polite"><span>{trainingEffect.emoji}</span><b>{trainingEffect.text}</b><i/><i/><i/><i/><i/><i/></div>}{trainingDiceStage!=='idle'&&<div className={`mh-dice-overlay ${trainingDiceStage}`} aria-live="assertive"><div className="mh-dice-cube">{trainingDiceFace}</div><b>{trainingDiceStage==='rolling'?'サイコロを振っています…':`${trainingDiceFace} が出た！`}</b></div>}<header><div><b>{m?.name||'マスモン'} <small>BEGINNER・DEBUG保存なし</small></b><span>残り {trainingSession.remainingTurns}ターン　・　ゴールまであと {trainingDistanceToGoal(current.id)}マス</span></div><button className="mh-debug-toggle" onClick={()=>setTrainingDebugOpen(v=>!v)}>DEBUG</button></header><section className="mh-training-hud"><span>💗 仮XP <b>{trainingSession.rewards.bondXp}</b></span><span>💎 仮ダイヤ <b>{trainingSession.rewards.diamonds}</b></span><span>🎁 仮アイテム <b>{trainingSession.rewards.items.length}</b></span></section><div ref={trainingMapRef} className={`mh-tile-viewport ${trainingMapOverview?'overview':''}`} onPointerDown={trainingPointerDown} onPointerMove={trainingPointerMove} onPointerUp={trainingPointerUp} onPointerCancel={trainingPointerUp} onWheel={trainingWheel}><div className="mh-map-legend"><b>🚩 START</b><b>📍 現在地</b><b>⚡ 安全ルート</b><b>🎁 報酬ルート</b><b>🏁 GOAL</b></div><div className="mh-goal-guide">GOAL <span>➜</span></div><div className="mh-tile-board" style={{width:`${720*trainingMapScale}px`,height:`${520*trainingMapScale}px`,'--map-scale':trainingMapScale}}>{TRAINING_BEGINNER_NODES.map(n=><React.Fragment key={n.id}>{n.next.filter(id=>TRAINING_BEGINNER_NODES.findIndex(x=>x.id===id)>TRAINING_BEGINNER_NODES.findIndex(x=>x.id===n.id)).map(id=>{const to=TRAINING_NODE_BY_ID[id],dx=to.x-n.x,dy=to.y-n.y,isRoute=highlighted.has(n.id)&&highlighted.has(id);return <i className={isRoute?'route':''} key={id} style={{left:`${n.x}%`,top:`${n.y}%`,width:`${Math.hypot(dx,dy)}%`,transform:`rotate(${Math.atan2(dy,dx)*180/Math.PI}deg)`}}/>})}<button ref={n.id===current.id?trainingPieceRef:null} style={{left:`${n.x}%`,top:`${n.y}%`,'--tile-color':TRAINING_SPACE_TYPES[n.type].color}} className={`mh-training-tile ${n.id===current.id?'current':''} ${trainingSession.routePreview.includes(n.id)?'route-preview':''} ${trainingSession.stopPreview===n.id?'stop-preview':''} ${trainingSession.branchOptions.includes(n.id)?'branch-choice':''} ${trainingForwardOptions(n.id).length>1?'branch':''} ${n.type==='goal'?'goal':''} ${n.type==='start'?'start':''}`} onClick={()=>{if(Date.now()<trainingSuppressTapRef.current)return;trainingSession.branchOptions.includes(n.id)?chooseTrainingBranch(n.id):setTrainingModal({type:'space',space:TRAINING_SPACE_TYPES[n.type]});}}>{trainingSession.branchOptions.includes(n.id)&&<em className="mh-branch-arrow">➜ 選ぶ</em>}<small>{n.type==='start'?'START':n.type==='goal'?'GOAL':TRAINING_SPACE_TYPES[n.type].label}</small><span>{TRAINING_SPACE_TYPES[n.type].emoji}</span>{n.id===current.id&&m&&<div className="mh-training-piece"><DyedMonsterImage baseId={m.baseId} src={ALL_PLAYER_MONSTERS[m.baseId]?.iconUrl} alt={m.name} masuColors={getMasuColors(m)}/><b>{m.name}</b></div>}</button></React.Fragment>)}</div></div><div className="mh-board-buttons"><button onClick={()=>{setTrainingMapOverview(true);setTrainingMapScale(.48);trainingMapRef.current?.scrollTo({left:0,top:0,behavior:'smooth'});}}>🗺️ 全体</button><button onClick={focusTrainingCurrent}>📍 現在地</button><span>{Math.round(trainingMapScale*100)}%</span><button onClick={()=>setTrainingModal({type:'rules'})}>マス詳細・ルール</button></div><p className="mh-training-message">{trainingSession.lastRoll&&<strong>出目 {trainingSession.lastRoll}</strong>}{trainingSession.movementRemaining>0&&<strong>あと {trainingSession.movementRemaining} マス</strong>}{trainingSession.message}{trainingSession.previousRoll&&<small>前回の出目 {trainingSession.previousRoll}</small>}</p><section className="mh-training-tools"><strong>修行道具</strong>{trainingSession.tools.length?trainingSession.tools.map((id,i)=><button key={`${id}-${i}`} className={trainingSession.effects[id]?'waiting':''} onClick={()=>setTrainingModal({type:'tool',id})}><span>{TRAINING_TOOLS[id].emoji}</span><small>{TRAINING_TOOLS[id].name}<br/>{trainingSession.effects[id]?'待機中':TRAINING_TOOLS[id].timing}</small></button>):<p>所持なし（最大3個）</p>}</section><footer>{trainingSession.rollPending?<div className="mh-roll-decision"><b>🎲 出目 {trainingSession.lastRoll}</b><button onClick={acceptTrainingRoll}>この出目で進む</button></div>:trainingSession.effects.fixed?<div className="mh-fixed-dice"><span>確定サイコロ</span>{[1,2,3].map(n=><button key={n} onClick={()=>rollTrainingDice(n)}>{n}</button>)}</div>:<button disabled={trainingSession.movementRemaining>0||trainingSession.branchOptions.length>0||trainingMovingRef.current} onClick={()=>rollTrainingDice()} className="mh-roll-button">🎲 サイコロを振る<small>{trainingSession.branchOptions.length?'分岐方向を選んでください':'出目ぶん自動で進みます'}</small></button>}</footer>{trainingDebugOpen&&<aside className="mh-training-debug"><b>DEBUG PANEL</b><button className="mh-debug-close" onClick={()=>setTrainingDebugOpen(false)}>閉じる</button><div>次の出目 {[1,2,3].map(n=><button key={n} onClick={()=>setTrainingDebugRoll(n)} className={trainingDebugRoll===n?'active':''}>{n}</button>)}<button onClick={()=>setTrainingDebugRoll(null)}>解除</button></div><div><button onClick={()=>patchTraining({remainingTurns:trainingSession.remainingTurns+1})}>ターン＋1</button><button onClick={()=>patchTraining({remainingTurns:Math.max(0,trainingSession.remainingTurns-1)})}>－1</button></div><select onChange={e=>{if(e.target.value)addTrainingTool(e.target.value)}} defaultValue=""><option value="">道具を追加</option>{Object.entries(TRAINING_TOOLS).map(([id,t])=><option key={id} value={id}>{t.name}</option>)}</select><button onClick={()=>setTrainingModal({type:'rewards'})}>仮報酬確認</button><button onClick={()=>finishTraining(true)}>強制成功</button><button onClick={()=>finishTraining(false)}>強制失敗</button><button onClick={restartTraining}>最初から</button><pre>map: {trainingSession.mapId}{'\n'}seed: {trainingSession.seed}{'\n'}{trainingSession.eventLog.join('\n')}</pre></aside>}</main>})()}
 
-        {gameState==='TRAINING_RESULT'&&trainingSession&&(()=>{const r=trainingSession.finalRewards;return <main className={`mh-training-result ${trainingSession.success?'success':'failure'}`}><div><div className="mh-debug-banner">DEBUG・報酬や進行状況は保存されません</div><span className="mh-result-mark">{trainingSession.success?'🏁':'🌧️'}</span><h2>{trainingSession.success?'修行成功！':'修行失敗…'}</h2><section><div><span>仮獲得XP（{trainingSession.success?'100':'50'}%）</span><b>{r.bondXp} XP</b></div><div><span>仮獲得ダイヤ（{trainingSession.success?'100':'50'}%）</span><b>{r.diamonds}</b></div><div><span>通常アイテム</span><b>{r.items.length?`${r.items.length}個`:'没収'}</b></div><div><span>ゴール報酬</span><b>{r.goalReward}</b></div></section><p className="mh-result-note">計算表示のみです。所持データには反映されません。</p><button onClick={restartTraining}>もう一度</button><button onClick={leaveTrainingResult}>設定へ戻る</button><button onClick={()=>{setTrainingSession(null);returnToHome();}}>HOMEへ戻る</button></div></main>})()}
+        {gameState==='TRAINING_RESULT'&&trainingSession&&(()=>{const r=trainingSession.finalRewards;return <main className={`mh-training-result ${trainingSession.success?'success':'failure'}`}><div><div className="mh-debug-banner">DEBUG・報酬や進行状況は保存されません</div><span className="mh-result-mark">{trainingSession.success?'🏁':'🌧️'}</span><h2>{trainingSession.success?'修行成功！':'修行失敗…'}</h2><section><div><span>仮獲得XP（{trainingSession.success?'100':'50'}%）</span><b>{r.bondXp} XP</b></div><div><span>仮獲得ダイヤ（{trainingSession.success?'100':'50'}%）</span><b>{r.diamonds}</b></div><div><span>通常アイテム</span><b>{r.items.length?`${r.items.length}個`:'没収'}</b></div><div><span>ゴール報酬</span><b>{r.goalReward}</b></div></section><p className="mh-result-note">計算表示のみです。所持データには反映されません。</p><button onClick={restartTraining}>もう1度</button><button onClick={leaveTrainingResult}>設定へ戻る</button><button onClick={()=>{setTrainingSession(null);returnToHome();}}>HOMEへ戻る</button></div></main>})()}
 
         {trainingModal&&<div className="mh-training-modal" onClick={()=>setTrainingModal(null)}><div onClick={e=>e.stopPropagation()}>{trainingModal.type==='rules'?<><h3>マス一覧／ルール</h3><div className="mh-rules-list">{Object.values(TRAINING_SPACE_TYPES).map(s=><p><b>{s.emoji} {s.label}</b><span>{s.desc}</span></p>)}</div><h3>修行道具</h3><div className="mh-rules-list">{Object.entries(TRAINING_TOOLS).map(([id,t])=><p><b>{t.emoji} {t.name}</b><span>使用：{t.timing}<br/>効果：{t.desc}</span></p>)}</div></>:trainingModal.type==='tool'?<><h3>{TRAINING_TOOLS[trainingModal.id].emoji} {TRAINING_TOOLS[trainingModal.id].name}</h3><p>種類：{TRAINING_TOOLS[trainingModal.id].mode}<br/>使用可能なタイミング：{TRAINING_TOOLS[trainingModal.id].timing}</p><p>正確な効果：{TRAINING_TOOLS[trainingModal.id].desc}</p>{trainingToolAvailability(trainingModal.id).ok?<button className="mh-route-choice" onClick={()=>{useTrainingTool(trainingModal.id);setTrainingModal(null)}}>使用する</button>:<p className="mh-tool-unavailable">今は使えません：{trainingToolAvailability(trainingModal.id).reason}</p>}</>:trainingModal.type==='discard'?<><h3>道具の所持上限（3個）</h3><p>捨てる道具を選ぶか、新しい道具を諦めてください。</p>{trainingSession.tools.map((id,i)=><button className="mh-route-choice" onClick={()=>{const tools=[...trainingSession.tools];tools.splice(i,1,trainingModal.newTool);patchTraining({tools});setTrainingModal(null)}}>{TRAINING_TOOLS[id].name}を捨てる</button>)}<button className="mh-route-choice" onClick={()=>setTrainingModal(null)}>新しい道具を諦める</button></>:trainingModal.type==='rewards'?<><h3>仮報酬</h3><p>絆経験値：{trainingSession?.rewards.bondXp||0}<br/>ダイヤ：{trainingSession?.rewards.diamonds||0}<br/>通常アイテム：{trainingSession?.rewards.items.length||0}個</p></>:<><h3>{trainingModal.space?.emoji} {trainingModal.space?.label}</h3><dl className="mh-space-detail"><div><dt>効果内容</dt><dd>{trainingModal.space?.desc}</dd></div><div><dt>数値</dt><dd>{trainingSpaceValue(trainingModal.space)}</dd></div><div><dt>発動タイミング</dt><dd>{trainingSpaceTiming(trainingModal.space)}</dd></div><div><dt>補足</dt><dd>仮報酬・効果はデバッグ修行中だけ有効で、通常データには保存されません。</dd></div></dl></>}<button className="mh-modal-close" onClick={()=>setTrainingModal(null)}>閉じる</button></div></div>}
 
@@ -152375,7 +152375,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           />
         )}
         {/* 超越の演出。限界突破・転生より明確に格上に見えるよう、虹と金の光が集まって
-            一度強く白く弾け、衝撃波が広がってから「超　越」と超越マークが出る。
+            1度強く白く弾け、衝撃波が広がってから「超　越」と超越マークが出る。
             新しい画像・音声・ライブラリは足さず、CSSのグラデーションとアニメーションだけで作る。
             モーション軽減設定では @media(prefers-reduced-motion:reduce) 側で止め、JSの表示時間も短くする */}
         {transcendAnimation&&(
@@ -152454,7 +152454,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='BATTLE_MENU'&&(
           <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 px-4" style={{paddingTop:'.35rem',paddingBottom:'.35rem'}}>
             {/* 戻るボタン。ランキングを見ているときは、いきなりホームへ帰らず
-                まず難易度の画面(バトル)へ戻す。ホームへはもう一度押せば戻れる */}
+                まず難易度の画面(バトル)へ戻す。ホームへはもう1度押せば戻れる */}
             <ScreenHead compact title="バトル" accent="text-indigo-400" disabled={!!battleTutorial} onBack={()=>{if(battleMenuTab!=='difficulty'){setBattleMenuTab('difficulty');return;}returnToHome();}}/>
             <div className="w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1">
             {/* モードのタブ。各モード名の横の「？」で説明を開く。
@@ -153552,7 +153552,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <section className="mh-rpg-section"><h3>敵</h3>{renderRows(battle.enemies)}</section>
             </div>
             <footer className="mh-rpg-footer">
-              <button onClick={rpgStartBattle}>同じ条件でもう一度</button>
+              <button onClick={rpgStartBattle}>同じ条件でもう1度</button>
               <button className="sub" onClick={()=>setGameState('RPG_DEBUG_SETUP')}>編成・Lv・ステータスを変更</button>
               <button className="sub" onClick={()=>{setRpgBattle(null);setGameState('DEBUG_SETTINGS');}}>デバッグ設定へ戻る</button>
             </footer>
@@ -153944,12 +153944,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div data-rhythm-debug-calibration className="mb-3"/>
             {/* 性能計測(デバッグ限定)。既定OFF・OFFのあいだは計測処理が一切動かない。
                 プレイヤーの通常プレイには出ないので、更新履歴・ヘルプには載せない */}
-            <section data-rhythm-perf-panel className="mb-3 rounded-2xl border border-amber-400/40 bg-amber-950/20 p-3"><div className="flex items-center justify-between gap-2"><h3 className="text-xs font-black text-amber-200">性能計測（デバッグ）</h3><button type="button" data-rhythm-perf-toggle aria-pressed={rhythmPerfOn} onClick={()=>{setRhythmPerfOn(RHYTHM_PERF.setEnabled(!rhythmPerfOn));setRhythmPerfStats(null);}} className={`min-h-[44px] rounded-xl px-3 text-[11px] font-black ${rhythmPerfOn?'bg-amber-500 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{rhythmPerfOn?'計測ON':'計測OFF'}</button></div><p className="mt-1 text-[9px] font-bold leading-relaxed text-amber-100/80">ONにしてからプレイすると、フレーム時間と1フレームあたりの負荷（レイアウト測定・DOM検索・SLIDE帯の更新数）を記録します。OFFのあいだは記録処理そのものが動きません（指の記録の行だけは、OFFでもいつも数えています）。「モンスターノーツ」の行が「ノーツを取る処理」よりはっきり大きければ、踏んだときに固まる原因はそこです。ノーツの動きが滑らかかどうかは「曲の時刻」の3つを見ます。ノーツの位置は曲の再生位置だけで決まるので、これが進まないフレームが多いと、フレームレートが60のままでもノーツは止まって飛ぶ動きになります。</p><div className="mt-2 flex gap-2"><button type="button" className="min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>setRhythmPerfStats(RHYTHM_PERF.snapshot())}>いまの記録を見る</button><button type="button" className="min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>{RHYTHM_PERF.reset();setRhythmPerfStats(null);}}>記録をクリア</button></div>{rhythmPerfStats&&<dl data-rhythm-perf-stats className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]">{[['フレーム数',rhythmPerfStats.frames],['平均fps',rhythmPerfStats.fps.toFixed(1)],['平均フレーム',`${rhythmPerfStats.avgMs.toFixed(1)}ms`],['最悪フレーム',`${rhythmPerfStats.maxMs.toFixed(1)}ms`],...[['GPU(ノーツ)',rhythmPerfStats.gpuNotes],['GPU(背景)',rhythmPerfStats.gpuStage]].map(([label,g])=>[label,!g||g.supported===null?'—':g.supported===false?'この端末は測れない':g.count?`平均${g.avgMs.toFixed(2)}ms 最大${g.maxMs.toFixed(1)}ms`:'まだ届いていない']),['16.7ms超',rhythmPerfStats.over16],['25ms超',rhythmPerfStats.over25],['33ms超',rhythmPerfStats.over33],['50ms以上（自動調整が重いと数える）',rhythmPerfStats.over50??0],['レイアウト測定/frame',rhythmPerfStats.layoutReadsPerFrame.toFixed(2)],['DOM検索/frame',rhythmPerfStats.domQueriesPerFrame.toFixed(2)],['SLIDE帯更新/frame',rhythmPerfStats.slidePolygonsPerFrame.toFixed(2)],['ジェスチャーrAF',rhythmPerfStats.gestureFrames],['ノーツ再検索',rhythmPerfStats.noteRescans],['走査ノーツ/frame',rhythmPerfStats.notesScannedPerFrame.toFixed(1)],['実描画ノーツ/frame',rhythmPerfStats.notesDrawnPerFrame.toFixed(1)],['最悪frameの走査/実描画',`${rhythmPerfStats.worstFrameScanned} / ${rhythmPerfStats.worstFrameDrawn}`],['先頭スキップ/frame',rhythmPerfStats.headSkippedPerFrame.toFixed(1)],['走査の絞り込み',rhythmPerfStats.narrowed===null?'未計測':(rhythmPerfStats.narrowed?'有効':'無効(昇順でない譜面)')],['tick処理/frame',`${rhythmPerfStats.tickMsPerFrame.toFixed(2)}ms`],['最悪frameのtick処理',`${rhythmPerfStats.worstFrameTickMs.toFixed(1)}ms`],['tick処理の最大',`${rhythmPerfStats.maxTickMs.toFixed(1)}ms`],['frame開始→tick開始の遅れ',`${rhythmPerfStats.tickDelayMsPerFrame.toFixed(2)}ms`],['最悪frameの遅れ',`${rhythmPerfStats.worstFrameDelayMs.toFixed(1)}ms`],['遅れの最大',`${rhythmPerfStats.maxDelayMs.toFixed(1)}ms`],['曲の時刻の進み/frame',`${(rhythmPerfStats.songStepMsPerFrame??0).toFixed(2)}ms`],['曲の時刻が進まないframe',`${((rhythmPerfStats.songStallRate??0)*100).toFixed(1)}%`],['曲の時刻の最大の飛び',`${(rhythmPerfStats.songStepMaxMs??0).toFixed(1)}ms`],['ノーツを取る処理/回',`${(rhythmPerfStats.judgeMsAvg??0).toFixed(2)}ms（${rhythmPerfStats.judgeCount??0}回）`],['取る処理の最大',`${(rhythmPerfStats.judgeMsMax??0).toFixed(1)}ms`],['モンスターノーツ/回',`${(rhythmPerfStats.monsterJudgeMsAvg??0).toFixed(2)}ms（${rhythmPerfStats.monsterJudgeCount??0}回）`],['モンスターノーツの最大',`${(rhythmPerfStats.monsterJudgeMsMax??0).toFixed(1)}ms`],['指が触れた数（同時の最大）',`${rhythmPerfStats.touch?.starts??0}回（${rhythmPerfStats.touch?.maxTouches??0}本）`],['端末に指を取り消された',`${rhythmPerfStats.touch?.cancels??0}回（${rhythmPerfStats.touch?.cancelledTouches??0}本）`],['演奏エリアの外に触れた',`${rhythmPerfStats.touch?.outside??0}回`],['道の外で無視した指（押しても音も光も出ない）',`${rhythmPerfStats.touch?.ignored??0}回`],...(()=>{const b=typeof RHYTHM_TOUCH_BRIDGE!=='undefined'?RHYTHM_TOUCH_BRIDGE.snapshot():null;return b?[['ポインタだけ届いた指（取り戻した）',`${b.pointerOnly}回（${b.recovered}回）`],['ポインタとタッチが組になった',`${b.matched}回`],['50ms以上遅れて届いたタッチ',`${b.lateDelivery}回（最大${Math.round(b.maxDelayMs)}ms）`],['別の指のイベントで初めて見えた指',`${b.lateStart}回`]]:[];})(),['二本指ジェスチャー',`${rhythmPerfStats.touch?.gestures??0}回`],['空打ち',`${rhythmPerfStats.touch?.emptyTaps??0}回`],['指の飛び（3サブレーン以上）',`${rhythmPerfStats.touch?.jumps??0}回`]].map(([label,value])=><React.Fragment key={label}><dt className="text-slate-400">{label}</dt><dd className="text-right font-black text-amber-100">{value}</dd></React.Fragment>)}</dl>}{rhythmPerfStats&&Array.isArray(rhythmPerfStats.spikes)&&rhythmPerfStats.spikes.length>0&&<div data-rhythm-perf-spikes className="mt-2 rounded-xl border border-amber-400/30 bg-slate-950/60 p-2"><h4 className="text-[10px] font-black text-amber-200">飛んだフレーム（33ms超）を起きた順に{rhythmPerfStats.spikes.length}件</h4><p className="mt-1 text-[9px] font-bold leading-relaxed text-amber-100/70">「モンスター後」が小さい行が並ぶなら、踏んだあとの演出が原因です。「tick」が0msなら、その飛びはJSではなく描画側です。</p><ol className="mt-1 space-y-0.5 text-[9px] font-mono text-slate-300">{rhythmPerfStats.spikes.map((sp,i)=><li key={i}>{`${(sp.at/1000).toFixed(1)}s  ${sp.dt}ms  tick ${sp.tick}ms  遅れ ${sp.delay}ms  走査${sp.scan}/描画${sp.draw}  モンスター後 ${sp.mon<0?'—':`${sp.mon}ms`}`}</li>)}</ol></div>}{rhythmPerfStats&&Array.isArray(rhythmPerfStats.autoSteps)&&<div data-rhythm-perf-auto-steps className="mt-2 rounded-xl border border-cyan-400/30 bg-slate-950/60 p-2"><h4 className="text-[10px] font-black text-cyan-200">自動で下げた記録（{rhythmPerfStats.autoSteps.length}件）</h4><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/70">画質「自動」と「重いときは演出を自動で控えめに」が働いた時刻です。3秒のうち重いフレームが8%を超えると一段下げます。「重い」は、一番短い間隔の1.8倍か50ms以上のフレームです。下がりすぎる・下がらないと感じたら、この数字を教えてください。</p>{rhythmPerfStats.autoSteps.length?<ol className="mt-1 space-y-0.5 text-[9px] font-mono text-slate-300">{rhythmPerfStats.autoSteps.map((st,i)=><li key={i}>{`${(st.at/1000).toFixed(1)}s  ${st.kind}→${st.label}  重い ${st.slow}/${st.frames}フレーム（約${st.fps}fps）`}</li>)}</ol>:<p className="mt-1 text-[9px] font-bold text-slate-400">まだ一度も下げていません。</p>}</div>}</section><section data-rhythm-strip-panel className="mb-3 rounded-2xl border border-rose-400/40 bg-rose-950/20 p-3"><h3 className="text-xs font-black text-rose-200">装飾を切って切り分ける（デバッグ）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-rose-100/80">演奏画面の重そうな装飾を個別に消します。<b>次の演奏から効きます。</b>ONにして1曲プレイし、性能計測の「33ms超」が減るかを見てください。減ったものが原因です。判定・スコア・譜面には一切関わりません。</p><div className="mt-2 grid grid-cols-2 gap-2">{RHYTHM_STRIP_ITEMS.map(item=><button key={item.id} type="button" data-rhythm-strip-toggle={item.id} aria-pressed={rhythmStrip.split(/\s+/).includes(item.id)} onClick={()=>setRhythmStrip(RHYTHM_STRIP.toggle(item.id))} className={`min-h-[44px] rounded-xl px-2 text-[10px] font-black ${rhythmStrip.split(/\s+/).includes(item.id)?'bg-rose-500 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{item.label}</button>)}</div><button type="button" className="mt-2 min-h-[40px] w-full rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>setRhythmStrip(RHYTHM_STRIP.set(''))}>全部元に戻す</button></section>{/* ノーツの描き方(検証用・デバッグ限定)。canvas 1枚に描く方式(発熱対策)と要素で描く方式を、次の演奏から切り替える。
+            <section data-rhythm-perf-panel className="mb-3 rounded-2xl border border-amber-400/40 bg-amber-950/20 p-3"><div className="flex items-center justify-between gap-2"><h3 className="text-xs font-black text-amber-200">性能計測（デバッグ）</h3><button type="button" data-rhythm-perf-toggle aria-pressed={rhythmPerfOn} onClick={()=>{setRhythmPerfOn(RHYTHM_PERF.setEnabled(!rhythmPerfOn));setRhythmPerfStats(null);}} className={`min-h-[44px] rounded-xl px-3 text-[11px] font-black ${rhythmPerfOn?'bg-amber-500 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{rhythmPerfOn?'計測ON':'計測OFF'}</button></div><p className="mt-1 text-[9px] font-bold leading-relaxed text-amber-100/80">ONにしてからプレイすると、フレーム時間と1フレームあたりの負荷（レイアウト測定・DOM検索・SLIDE帯の更新数）を記録します。OFFのあいだは記録処理そのものが動きません（指の記録の行だけは、OFFでもいつも数えています）。「モンスターノーツ」の行が「ノーツを取る処理」よりはっきり大きければ、踏んだときに固まる原因はそこです。ノーツの動きが滑らかかどうかは「曲の時刻」の3つを見ます。ノーツの位置は曲の再生位置だけで決まるので、これが進まないフレームが多いと、フレームレートが60のままでもノーツは止まって飛ぶ動きになります。</p><div className="mt-2 flex gap-2"><button type="button" className="min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>setRhythmPerfStats(RHYTHM_PERF.snapshot())}>いまの記録を見る</button><button type="button" className="min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>{RHYTHM_PERF.reset();setRhythmPerfStats(null);}}>記録をクリア</button></div>{rhythmPerfStats&&<dl data-rhythm-perf-stats className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]">{[['フレーム数',rhythmPerfStats.frames],['平均fps',rhythmPerfStats.fps.toFixed(1)],['平均フレーム',`${rhythmPerfStats.avgMs.toFixed(1)}ms`],['最悪フレーム',`${rhythmPerfStats.maxMs.toFixed(1)}ms`],...[['GPU(ノーツ)',rhythmPerfStats.gpuNotes],['GPU(背景)',rhythmPerfStats.gpuStage]].map(([label,g])=>[label,!g||g.supported===null?'—':g.supported===false?'この端末は測れない':g.count?`平均${g.avgMs.toFixed(2)}ms 最大${g.maxMs.toFixed(1)}ms`:'まだ届いていない']),['16.7ms超',rhythmPerfStats.over16],['25ms超',rhythmPerfStats.over25],['33ms超',rhythmPerfStats.over33],['50ms以上（自動調整が重いと数える）',rhythmPerfStats.over50??0],['レイアウト測定/frame',rhythmPerfStats.layoutReadsPerFrame.toFixed(2)],['DOM検索/frame',rhythmPerfStats.domQueriesPerFrame.toFixed(2)],['SLIDE帯更新/frame',rhythmPerfStats.slidePolygonsPerFrame.toFixed(2)],['ジェスチャーrAF',rhythmPerfStats.gestureFrames],['ノーツ再検索',rhythmPerfStats.noteRescans],['走査ノーツ/frame',rhythmPerfStats.notesScannedPerFrame.toFixed(1)],['実描画ノーツ/frame',rhythmPerfStats.notesDrawnPerFrame.toFixed(1)],['最悪frameの走査/実描画',`${rhythmPerfStats.worstFrameScanned} / ${rhythmPerfStats.worstFrameDrawn}`],['先頭スキップ/frame',rhythmPerfStats.headSkippedPerFrame.toFixed(1)],['走査の絞り込み',rhythmPerfStats.narrowed===null?'未計測':(rhythmPerfStats.narrowed?'有効':'無効(昇順でない譜面)')],['tick処理/frame',`${rhythmPerfStats.tickMsPerFrame.toFixed(2)}ms`],['最悪frameのtick処理',`${rhythmPerfStats.worstFrameTickMs.toFixed(1)}ms`],['tick処理の最大',`${rhythmPerfStats.maxTickMs.toFixed(1)}ms`],['frame開始→tick開始の遅れ',`${rhythmPerfStats.tickDelayMsPerFrame.toFixed(2)}ms`],['最悪frameの遅れ',`${rhythmPerfStats.worstFrameDelayMs.toFixed(1)}ms`],['遅れの最大',`${rhythmPerfStats.maxDelayMs.toFixed(1)}ms`],['曲の時刻の進み/frame',`${(rhythmPerfStats.songStepMsPerFrame??0).toFixed(2)}ms`],['曲の時刻が進まないframe',`${((rhythmPerfStats.songStallRate??0)*100).toFixed(1)}%`],['曲の時刻の最大の飛び',`${(rhythmPerfStats.songStepMaxMs??0).toFixed(1)}ms`],['ノーツを取る処理/回',`${(rhythmPerfStats.judgeMsAvg??0).toFixed(2)}ms（${rhythmPerfStats.judgeCount??0}回）`],['取る処理の最大',`${(rhythmPerfStats.judgeMsMax??0).toFixed(1)}ms`],['モンスターノーツ/回',`${(rhythmPerfStats.monsterJudgeMsAvg??0).toFixed(2)}ms（${rhythmPerfStats.monsterJudgeCount??0}回）`],['モンスターノーツの最大',`${(rhythmPerfStats.monsterJudgeMsMax??0).toFixed(1)}ms`],['指が触れた数（同時の最大）',`${rhythmPerfStats.touch?.starts??0}回（${rhythmPerfStats.touch?.maxTouches??0}本）`],['端末に指を取り消された',`${rhythmPerfStats.touch?.cancels??0}回（${rhythmPerfStats.touch?.cancelledTouches??0}本）`],['演奏エリアの外に触れた',`${rhythmPerfStats.touch?.outside??0}回`],['道の外で無視した指（押しても音も光も出ない）',`${rhythmPerfStats.touch?.ignored??0}回`],...(()=>{const b=typeof RHYTHM_TOUCH_BRIDGE!=='undefined'?RHYTHM_TOUCH_BRIDGE.snapshot():null;return b?[['ポインタだけ届いた指（取り戻した）',`${b.pointerOnly}回（${b.recovered}回）`],['ポインタとタッチが組になった',`${b.matched}回`],['50ms以上遅れて届いたタッチ',`${b.lateDelivery}回（最大${Math.round(b.maxDelayMs)}ms）`],['別の指のイベントで初めて見えた指',`${b.lateStart}回`]]:[];})(),['二本指ジェスチャー',`${rhythmPerfStats.touch?.gestures??0}回`],['空打ち',`${rhythmPerfStats.touch?.emptyTaps??0}回`],['指の飛び（3サブレーン以上）',`${rhythmPerfStats.touch?.jumps??0}回`]].map(([label,value])=><React.Fragment key={label}><dt className="text-slate-400">{label}</dt><dd className="text-right font-black text-amber-100">{value}</dd></React.Fragment>)}</dl>}{rhythmPerfStats&&Array.isArray(rhythmPerfStats.spikes)&&rhythmPerfStats.spikes.length>0&&<div data-rhythm-perf-spikes className="mt-2 rounded-xl border border-amber-400/30 bg-slate-950/60 p-2"><h4 className="text-[10px] font-black text-amber-200">飛んだフレーム（33ms超）を起きた順に{rhythmPerfStats.spikes.length}件</h4><p className="mt-1 text-[9px] font-bold leading-relaxed text-amber-100/70">「モンスター後」が小さい行が並ぶなら、踏んだあとの演出が原因です。「tick」が0msなら、その飛びはJSではなく描画側です。</p><ol className="mt-1 space-y-0.5 text-[9px] font-mono text-slate-300">{rhythmPerfStats.spikes.map((sp,i)=><li key={i}>{`${(sp.at/1000).toFixed(1)}s  ${sp.dt}ms  tick ${sp.tick}ms  遅れ ${sp.delay}ms  走査${sp.scan}/描画${sp.draw}  モンスター後 ${sp.mon<0?'—':`${sp.mon}ms`}`}</li>)}</ol></div>}{rhythmPerfStats&&Array.isArray(rhythmPerfStats.autoSteps)&&<div data-rhythm-perf-auto-steps className="mt-2 rounded-xl border border-cyan-400/30 bg-slate-950/60 p-2"><h4 className="text-[10px] font-black text-cyan-200">自動で下げた記録（{rhythmPerfStats.autoSteps.length}件）</h4><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/70">画質「自動」と「重いときは演出を自動で控えめに」が働いた時刻です。3秒のうち重いフレームが8%を超えると一段下げます。「重い」は、1番短い間隔の1.8倍か50ms以上のフレームです。下がりすぎる・下がらないと感じたら、この数字を教えてください。</p>{rhythmPerfStats.autoSteps.length?<ol className="mt-1 space-y-0.5 text-[9px] font-mono text-slate-300">{rhythmPerfStats.autoSteps.map((st,i)=><li key={i}>{`${(st.at/1000).toFixed(1)}s  ${st.kind}→${st.label}  重い ${st.slow}/${st.frames}フレーム（約${st.fps}fps）`}</li>)}</ol>:<p className="mt-1 text-[9px] font-bold text-slate-400">まだ1度も下げていません。</p>}</div>}</section><section data-rhythm-strip-panel className="mb-3 rounded-2xl border border-rose-400/40 bg-rose-950/20 p-3"><h3 className="text-xs font-black text-rose-200">装飾を切って切り分ける（デバッグ）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-rose-100/80">演奏画面の重そうな装飾を個別に消します。<b>次の演奏から効きます。</b>ONにして1曲プレイし、性能計測の「33ms超」が減るかを見てください。減ったものが原因です。判定・スコア・譜面には一切関わりません。</p><div className="mt-2 grid grid-cols-2 gap-2">{RHYTHM_STRIP_ITEMS.map(item=><button key={item.id} type="button" data-rhythm-strip-toggle={item.id} aria-pressed={rhythmStrip.split(/\s+/).includes(item.id)} onClick={()=>setRhythmStrip(RHYTHM_STRIP.toggle(item.id))} className={`min-h-[44px] rounded-xl px-2 text-[10px] font-black ${rhythmStrip.split(/\s+/).includes(item.id)?'bg-rose-500 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{item.label}</button>)}</div><button type="button" className="mt-2 min-h-[40px] w-full rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>setRhythmStrip(RHYTHM_STRIP.set(''))}>全部元に戻す</button></section>{/* ノーツの描き方(検証用・デバッグ限定)。canvas 1枚に描く方式(発熱対策)と要素で描く方式を、次の演奏から切り替える。
                 プレイヤーの通常プレイには出ないので更新履歴・ヘルプには載せない */}
             <section data-rhythm-canvas-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">ノーツの描き方（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">canvas 1枚に描く方式（発熱対策）と、これまでの要素ごとに描く方式を切り替えます。次の演奏から効きます。「自動」は公開設定（いまは{RELEASE_FLAGS.rhythmCanvasNotes?'canvas':'要素'}）に従います。「WebGL」は canvas と同じ描き方を GPU で描く試作です（重さ・発熱を「性能計測」で canvas と比べるためのもの）。</p><div className="mt-2 flex gap-2">{[['','自動'],['dom','要素'],['canvas','canvas'],['webgl','WebGL']].map(([value,label])=><button key={value||'auto'} type="button" data-rhythm-canvas-pref={value||'auto'} aria-pressed={rhythmCanvasPref===value} onClick={()=>setRhythmCanvasPref(rhythmCanvasNotesSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmCanvasPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
             {/* スライドの帯を GPU に一度だけ置いて描くかの切り替え(2026-10-11・作り替え B の S1)。社長の iPhone で今の描き方と比べてから既定にする(S3)。
                 プレイヤーの通常プレイには出ないので更新履歴・ヘルプには載せない */}
-            <section data-rhythm-gpu-band-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">スライドの帯の描き方（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">「GPU」はスライドの帯（地上・空中・影）の形を譜面を読んだときに一度だけ GPU に置き、毎コマは曲の位置だけ渡して描きます（帯が長い・多い曲で軽くするための試作）。既定（GPU）は、ノーツを WebGL で描いているとき（描画方式が自動で GPU がある端末など）に使います。「GPU（WebGL も）」は描画方式に関係なくノーツを WebGL で描きます（「ノーツの描き方」で canvas・要素を選んでいるときはそちらが勝ちます）。「今の描き方」は使いません。WebGL が使えないときは今の描き方に戻ります。次の演奏から効きます。</p><div className="mt-2 flex gap-2">{[['','既定（GPU）'],['gpu','GPU（WebGL も）'],['off','今の描き方']].map(([value,label])=><button key={value||'default'} type="button" data-rhythm-gpu-band-pref={value||'default'} aria-pressed={rhythmGpuBandPref===value} onClick={()=>setRhythmGpuBandPref(rhythmGpuBandSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmGpuBandPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
+            <section data-rhythm-gpu-band-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">スライドの帯の描き方（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">「GPU」はスライドの帯（地上・空中・影）の形を譜面を読んだときに1度だけ GPU に置き、毎コマは曲の位置だけ渡して描きます（帯が長い・多い曲で軽くするための試作）。既定（GPU）は、ノーツを WebGL で描いているとき（描画方式が自動で GPU がある端末など）に使います。「GPU（WebGL も）」は描画方式に関係なくノーツを WebGL で描きます（「ノーツの描き方」で canvas・要素を選んでいるときはそちらが勝ちます）。「今の描き方」は使いません。WebGL が使えないときは今の描き方に戻ります。次の演奏から効きます。</p><div className="mt-2 flex gap-2">{[['','既定（GPU）'],['gpu','GPU（WebGL も）'],['off','今の描き方']].map(([value,label])=><button key={value||'default'} type="button" data-rhythm-gpu-band-pref={value||'default'} aria-pressed={rhythmGpuBandPref===value} onClick={()=>setRhythmGpuBandPref(rhythmGpuBandSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmGpuBandPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
             {/* 床と空中の見た目の試作(2026-10-16 社長「地上は床にべったり、空中は立体感ある表示」)。見た目だけ・判定と入力は変えない。
                 プレイヤーの通常プレイには出ないので更新履歴・ヘルプには載せない */}
             <section data-rhythm-floor3d-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">床と空中の見た目（試作）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">「試作」は、地上のノーツを道の床に平たく貼り付けた形（奥ほど細く薄い台形）にし、空中のノーツを側面と厚みのある箱にして、床に影を落とします。判定の位置・時刻・指の扱いは変わりません。空中スライドの厚みは「スライドの帯の描き方」が「今の描き方」のときだけ出ます。「試作2」は、色を抜いても高さで見分けられるように、空中のノーツの真下の床に濃い影と白い導線を出し、箱を宙に立てます。空中スライドは床の影と帯の下の薄い幕で浮いたリボンにします(帯の描き方の設定に関係なく効きます)。「試作3」は、空中の層を道と同じ遠近のガラスの床として描き、道の両端に床と空中をつなぐ柱を立て、空中のノーツを厚い立方体、空中スライドを厚みのある管にします。「3D(段階A)」は、空中のタップを光の当たる本物の立体の箱、空中スライドを丸い管として WebGL で描きます(ノーツを WebGL で描いているときだけ・地上と道は今のまま)。「案3」は、空中のタップを明るく薄い板と光る縁、空中スライドを白い芯から手の色がにじむ半透明の光の帯にします(参考動画の見やすさに寄せた見た目)。「案3+カメラ」は、それに加えてカメラを寝かせ、道を奥へ深くします(押す場所も同じ計算でそろって変わります)。次の演奏から効きます。</p><div className="mt-2 flex gap-2">{[['','今の見た目'],['on','試作'],['on2','試作2'],['on3','試作3'],['a3d','3D(段階A)'],['c3','案3'],['c3b','案3+カメラ']].map(([value,label])=><button key={value||'off'} type="button" data-rhythm-floor3d-pref={value||'off'} aria-pressed={rhythmFloor3dPref===value} onClick={()=>setRhythmFloor3dPref(rhythmFloor3dSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmFloor3dPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
@@ -153958,9 +153958,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             {/* 叩いたときの光の描き方の切り替え(2026-10-11・修理部・発熱の調べ)。DOM の光の部品は CSS のアニメーションが毎コマ スタイルの再計算をさせていた。
                 canvas 版は WebGL のときに使っている同じ絵。2026-10-11 社長の判断で既定を canvas にした。「画面の要素」で今までの描き方に戻せる */}
             {/* 叩いたときの光の粒の描き方(2026-10-12・修理部・発熱の手当て ④)。焼いた丸を貼ると光の重さが約2割減る。差は 1画素未満のふちだけ。社長が静止画を見て既定を決める */}
-            <section data-rhythm-hit-spark-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">叩いたときの光の粒（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">ノーツを叩いたときにはじける小さな粒を、canvas で描くときの描き方です。「焼いた丸」は一度作った丸の絵を貼るので軽くなります（見た目の差は粒のふちのわずかな違いだけ）。次の演奏から効きます。</p><div className="mt-2 flex gap-2">{[['','既定（焼いた丸）'],['on','焼いた丸'],['off','今までの形']].map(([value,label])=><button key={value||'default'} type="button" data-rhythm-hit-spark-pref={value||'default'} aria-pressed={rhythmHitSparkPref===value} onClick={()=>setRhythmHitSparkPref(rhythmHitSparkSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmHitSparkPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
+            <section data-rhythm-hit-spark-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">叩いたときの光の粒（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">ノーツを叩いたときにはじける小さな粒を、canvas で描くときの描き方です。「焼いた丸」は1度作った丸の絵を貼るので軽くなります（見た目の差は粒のふちのわずかな違いだけ）。次の演奏から効きます。</p><div className="mt-2 flex gap-2">{[['','既定（焼いた丸）'],['on','焼いた丸'],['off','今までの形']].map(([value,label])=><button key={value||'default'} type="button" data-rhythm-hit-spark-pref={value||'default'} aria-pressed={rhythmHitSparkPref===value} onClick={()=>setRhythmHitSparkPref(rhythmHitSparkSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmHitSparkPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
             <section data-rhythm-input-rec-panel className="mb-3 rounded-2xl border border-amber-400/40 bg-amber-950/20 p-3"><h3 className="text-xs font-black text-amber-200">入力の記録（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-amber-100/80">「入」にすると、モンヒロビートの演奏中の指の動き（時刻・位置・接触の幅）と判定の出来事を端末の中だけに記録します。名前などは入りません。ランキングには影響しません。演奏が終わったら下のボタンで最後の1曲分をコピーして送ってください。</p><div className="mt-2 flex gap-2">{[[true,'入'],[false,'切']].map(([value,label])=><button key={label} type="button" data-rhythm-input-rec-pref={value?'on':'off'} aria-pressed={rhythmInputRecOn===value} onClick={()=>{try{RHYTHM_INPUT_REC.setEnabled(value);setRhythmInputRecOn(RHYTHM_INPUT_REC.enabled());}catch{}}} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmInputRecOn===value?'bg-amber-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div><button type="button" data-rhythm-input-rec-copy onClick={async()=>{let text='';let sum=null;try{RHYTHM_INPUT_REC.close();text=RHYTHM_INPUT_REC.text();sum=RHYTHM_INPUT_REC.summary();}catch{}if(!text){setRhythmInputRecMsg('まだ記録がありません（「入」にしてから1曲演奏してください）');return;}const info=sum?`（指の動き ${sum.touches||0}件・判定 ${sum.judges||0}件）`:'';try{await navigator.clipboard.writeText(text);setRhythmInputRecMsg(`コピーしました${info}`);}catch{setRhythmInputRecMsg('コピーできませんでした');}}} className="mt-2 min-h-[40px] w-full rounded-xl border border-amber-300/50 bg-slate-900 text-[11px] font-black text-amber-100">最後の演奏の記録をコピー</button>{rhythmInputRecMsg&&<p data-rhythm-input-rec-msg className="mt-1 text-[10px] font-bold text-amber-100">{rhythmInputRecMsg}</p>}</section>
-            <section data-rhythm-judgment-snap-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">判定の文字の大きさの変わり方（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">判定の文字（PERFECT など）は判定ごとに大きさが違い、今は 0.12秒かけてなめらかに大きさを変えています（そのあいだ毎コマ画面の組み直しが起きます）。「一度で」は大きさをすぐに変えます。弾む動き・色・光は変わりません。次の演奏から効きます。</p><div className="mt-2 flex gap-2">{[['','既定（一度で）'],['on','一度で'],['off','なめらかに']].map(([value,label])=><button key={value||'default'} type="button" data-rhythm-judgment-snap-pref={value||'default'} aria-pressed={rhythmJudgmentSnapPref===value} onClick={()=>setRhythmJudgmentSnapPref(rhythmJudgmentSnapSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmJudgmentSnapPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
+            <section data-rhythm-judgment-snap-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">判定の文字の大きさの変わり方（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">判定の文字（PERFECT など）は判定ごとに大きさが違い、今は 0.12秒かけてなめらかに大きさを変えています（そのあいだ毎コマ画面の組み直しが起きます）。「1度で」は大きさをすぐに変えます。弾む動き・色・光は変わりません。次の演奏から効きます。</p><div className="mt-2 flex gap-2">{[['','既定（1度で）'],['on','1度で'],['off','なめらかに']].map(([value,label])=><button key={value||'default'} type="button" data-rhythm-judgment-snap-pref={value||'default'} aria-pressed={rhythmJudgmentSnapPref===value} onClick={()=>setRhythmJudgmentSnapPref(rhythmJudgmentSnapSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmJudgmentSnapPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
             <section data-rhythm-canvas-hits-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">叩いたときの光の描き方（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">「canvas」は、ノーツを叩いたときに判定ラインで弾ける光を、ノーツと同じ canvas へ描きます（WebGL の描き方で使っている絵と同じ）。既定は canvas です。「画面の要素」は今までの描き方（光の部品を画面の要素として動かす。発熱の元になっていた）です。次の演奏から効きます。</p><div className="mt-2 flex gap-2">{[['','既定（canvas）'],['canvas','canvas'],['dom','画面の要素']].map(([value,label])=><button key={value||'default'} type="button" data-rhythm-canvas-hits-pref={value||'default'} aria-pressed={rhythmCanvasHitsPref===value} onClick={()=>setRhythmCanvasHitsPref(rhythmCanvasHitsSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmCanvasHitsPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
             <section data-rhythm-prepare-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">演奏前の準備（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">「する」は、曲の最初のコマで初めて起きていた重い仕事（道の大きさを測る・ノーツの絵を描く準備）を、曲の前の幕のあいだに済ませます。準備が済むまで幕は閉じません（最長6秒）。次の演奏から効きます。</p><div className="mt-2 flex gap-2">{[['','既定（する）'],['on','する'],['off','しない']].map(([value,label])=><button key={value||'default'} type="button" data-rhythm-prepare-pref={value||'default'} aria-pressed={rhythmPreparePref===value} onClick={()=>setRhythmPreparePref(rhythmPrepareSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmPreparePref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
             {/* ホールド・スライドを離した合図が遅れて届いたときに、離した時刻をどこまで戻すかの切り替え(2026-10-11 社長「たまに、ちゃんと押しているのに MISS」)。
@@ -154083,7 +154083,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='DEBUG_SETTINGS'&&(
           <div className="flex-1 flex flex-col h-full p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             <div className="flex items-center gap-2 mb-2 shrink-0"><button onClick={()=>{setGameState('SETTINGS');openHelp();}} className="p-3 text-slate-500"><ArrowLeft size={20}/></button><h2 className="text-base font-black text-slate-400 tracking-widest">DEBUG MENU</h2></div>
-            <p className="mb-2 shrink-0 text-[9px] leading-relaxed text-slate-500">用途ごとに畳んであります。よく使うものは一番上、名前でも探せます。開いた見出しはこの端末に覚えます。</p>
+            <p className="mb-2 shrink-0 text-[9px] leading-relaxed text-slate-500">用途ごとに畳んであります。よく使うものは1番上、名前でも探せます。開いた見出しはこの端末に覚えます。</p>
             {/* 名前で絞り込む欄(2026-10-27)。打った字を含む項目だけ残す。中の道具の動きには触らない */}
             <DebugMenuSearch rootRef={debugMenuRootRef}/>
             <div ref={debugMenuRootRef} className="flex-1 overflow-y-auto mh-scroll space-y-2">
@@ -154104,7 +154104,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <button data-debug-rhythm-mode onClick={openRhythmDebug} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🎵 モンヒロビート デバッグ<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">曲・難易度・設定・BEST保存基盤を確認</small></button>
                   {/* 条件が揃わないと始まらないもの(ログインボーナス・ミッション・購入・アイテム・育成)を用意する。
                       セーブデータを書き換えるので赤にしてある */}
-                  <button data-debug-data-setup onClick={()=>setGameState('DEBUG_DATA_SETUP')} className="w-full min-h-[58px] rounded-2xl border-2 border-rose-400/60 bg-rose-950/50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🧰 データを用意する<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">ダイヤ・アイテム・テストのマスモンを配る／ログインボーナスとミッションをもう一度出す</small></button>
+                  <button data-debug-data-setup onClick={()=>setGameState('DEBUG_DATA_SETUP')} className="w-full min-h-[58px] rounded-2xl border-2 border-rose-400/60 bg-rose-950/50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🧰 データを用意する<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">ダイヤ・アイテム・テストのマスモンを配る／ログインボーナスとミッションをもう1度出す</small></button>
                   {/* デバッグ戦の「難易度9個 → 敵10個 → 勇者モン → 開始」は、以前このメニューの中へ
                       そのまま埋まっていた。1500pxほど縦に伸びていて、次の欄へ行くのにそこを全部
                       スクロールする必要があった(2026-09-17・ユーザー指摘)。専用の画面へ移した。
@@ -154682,7 +154682,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <span className="text-[10px] font-black text-indigo-300 shrink-0 leading-tight">編成中<br/>{draftMonsterRoster.length}/{STARTER_MONSTER_IDS.length}</span>
                   {/* ★4体ずつ2段に並べる(2026-09-18・ユーザー指示)。
                       横スクロールだった頃は8体のうち7体しか見えず、いま誰を入れているのかを
-                      確かめるのに横へ送る必要があった。2段にすれば8体が一度に見える。 */}
+                      確かめるのに横へ送る必要があった。2段にすれば8体が1度に見える。 */}
                   {/* 縦向きで背の低い画面(高さ700以下)では8体を1段に並べる(2026-10-27・375×667で札が1.5段しか見えなかった)。
                       幅360未満は顔を26pxにして1段に収める。
                       横向きは一覧が右の列に分かれるので2段のまま(左の列が狭くはみ出す) */}
@@ -155564,7 +155564,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {/* プロフィールからの助手変更。仲良し度も呼び方も助手ごとに分けてあるので、
             切り替えても、もう片方のぶんは何も失われない */}
         {/* 助手の解放の演出(2026-11-11・59-assistant-partner-fx.jsx)。解放した戦いのあと、HOME に戻ったときに1人ずつ。
-            ほかのお話・小窓が出ているあいだは待つ。閉じたら見た印(noticed)を書き、二度出さない */}
+            ほかのお話・小窓が出ているあいだは待つ。閉じたら見た印(noticed)を書き、2度出さない */}
         {(()=>{
           if(onboardingPreview||!dataLoaded||bootPhase!=='GAME'||gameState!=='HOME'||eventReplay||rhythmEventStoryPending||rhythmHellGuide||showAssistantPicker) return null;
           const id=assistantPartnerPendingNotice(assistantPartner,(x)=>assistantPartnerOkWith(assistantPartner,rhythmEventStorySeen,x));
@@ -156709,7 +156709,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       {EVENT_REPLAY_RELEASE_FLAGS.monsucStoryEp2&&monsucStorySkip&&monsucStorySkip.skippedAt>0&&!monsucStorySkip.shownAt&&bootPhase==='GAME'&&gameState==='HOME'&&!eventReplay&&!rhythmEventStoryPending&&!rhythmHellGuide&&!dailyMasuAdvice&&!successScreenOpen&&updateGuideQueue.length===0&&(()=>{
         const who=assistantById('mua');if(!who)return null;
         const lv=assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current.mua).points);
-        const text=lv<=2?'{name}、HOMEに新しいボタンが出ています！ 一番乗りで、いっしょに行けたらうれしいです♪':'{name}、HOMEに新しいボタンが出てるよ！ 一番乗りで、いっしょに行こ♪';
+        const text=lv<=2?'{name}、HOMEに新しいボタンが出ています！ 1番乗りで、いっしょに行けたらうれしいです♪':'{name}、HOMEに新しいボタンが出てるよ！ 1番乗りで、いっしょに行こ♪';
         return(
         <div data-monsuc-story-skip-notice className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:75000,backgroundColor:'rgba(2,6,23,.9)'}} role="dialog" aria-modal="true" aria-label="みゅあからのお知らせ">
           <div className="w-full max-w-md rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
@@ -157288,7 +157288,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <div className="rounded-2xl border border-pink-500/40 bg-slate-900 p-3">
                   <div className="text-[10px] font-black text-pink-300 mb-1">いまの仲良し度</div>
                   <div className="text-[12px] text-white font-black">{points} ポイント ／ Lv{assistantBondLevelNow}（{(typeof assistantBondStageByLevel==='function'?assistantBondStageByLevel(assistantBondLevelNow,selectedAssistantId):{}).title||''}）</div>
-                  <div className="text-[9px] text-slate-400 mt-1">{next?`次のLv${next.level}まで あと${next.remain}`:'一番上まで来ています'}</div>
+                  <div className="text-[9px] text-slate-400 mt-1">{next?`次のLv${next.level}まで あと${next.remain}`:'1番上まで来ています'}</div>
                   <div className="text-[9px] text-slate-400">今日ぶん: {assistantBond.dailyTotal} / {(typeof ASSISTANT_BOND_DAILY_MAX!=='undefined'&&ASSISTANT_BOND_DAILY_MAX)||0}（{assistantBond.day||'未記録'}）</div>
                 </div>
                 <div>
@@ -157689,7 +157689,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 {/* クイック・AUTO設定・裏周回の案内を見返す(56-quick-guide.jsx)。光らせる所は無しで、ページだけ流す。見た印は動かさない */}
                 {topic.launch==='quickGuides'&&typeof QUICK_GUIDE_REPLAYS==='object'&&(
                   <div data-quick-guide-replays className="grid gap-2">
-                    {[['g1','🎓 クイックの案内をもう一度見る'],['g2','🎓 AUTO設定の案内をもう一度見る'],['g3','🎓 裏周回の案内をもう一度見る']].map(([id,label])=>(
+                    {[['g1','🎓 クイックの案内をもう1度見る'],['g2','🎓 AUTO設定の案内をもう1度見る'],['g3','🎓 裏周回の案内をもう1度見る']].map(([id,label])=>(
                       <button key={id} type="button" data-quick-guide-replay={id} onClick={()=>setQuickGuideReplay(id)} className="w-full rounded-2xl py-3 text-[12px] font-black text-black active:scale-95" style={{backgroundColor:cat.color}}>{label}</button>
                     ))}
                   </div>
@@ -157903,7 +157903,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
           <header className="flex shrink-0 items-center justify-between gap-2 border-b border-white/10 bg-slate-950/95 px-5 py-3">
             <div className="min-w-0">
               <h3 className="text-lg font-black italic uppercase text-amber-300">Battle Log</h3>
-              <small className="block font-black text-slate-400" style={JA_LABEL_STYLE}>{jaWrap(`古い順・一番下が最新（最大${BATTLE_LOG_LIMIT}件）`)}</small>
+              <small className="block font-black text-slate-400" style={JA_LABEL_STYLE}>{jaWrap(`古い順・1番下が最新（最大${BATTLE_LOG_LIMIT}件）`)}</small>
             </div>
             <button onClick={()=>setShowBattleLog(false)} className="min-h-[44px] shrink-0 whitespace-nowrap rounded-full bg-white/10 px-5 text-[11px] text-white active:scale-90">閉じる</button>
           </header>
@@ -158230,7 +158230,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
           {speciesChallengeClearCardNode()}
           <div className="w-full max-w-xs space-y-3">
             {speciesChallengeBattleRun?<button onClick={()=>{const keepSaving=speciesChallengeSaveRunRef.current;const keepDebug=speciesChallengeFromDebugRef.current;const keepMode=speciesChallengeRunMode(speciesChallengeBattleRunRef.current);runResultActionOnce(()=>{returnToHome();openSpeciesChallengeSelection({saveProgress:keepSaving,fromDebug:keepDebug,mode:keepMode});});}} disabled={resultActionPending} className="w-full bg-cyan-700 text-white py-3.5 rounded-2xl font-black disabled:opacity-50">種族チャレンジ選択へ戻る</button>:<>
-              <button onClick={()=>runResultActionOnce(()=>startDebugBattle(extremeRun))} disabled={resultActionPending} className="w-full bg-fuchsia-700 text-white py-3.5 rounded-2xl font-black disabled:opacity-50">同じ条件でもう一度</button>
+              <button onClick={()=>runResultActionOnce(()=>startDebugBattle(extremeRun))} disabled={resultActionPending} className="w-full bg-fuchsia-700 text-white py-3.5 rounded-2xl font-black disabled:opacity-50">同じ条件でもう1度</button>
               <button onClick={()=>runResultActionOnce(()=>{returnToHome();setGameState('DEBUG_SETTINGS');})} disabled={resultActionPending} className="w-full bg-slate-800 text-slate-200 py-3.5 rounded-2xl font-black disabled:opacity-50">デバッグ設定へ戻る</button>
               <button onClick={()=>runResultActionOnce(()=>{returnToHome();setGameState('SETTINGS');openHelp();})} disabled={resultActionPending} className="w-full bg-slate-900 border border-white/10 text-slate-400 py-3.5 rounded-2xl font-black disabled:opacity-50">ヘルプへ戻る</button>
             </>}
