@@ -3946,6 +3946,8 @@ const createAnimationStyle = () => {
     /* ---- 敵の技の格上げ(71-screen-battle.jsx の TacticsEnemyStageFx。覚醒ムー以外の大技)----
        技名の帯・当たる瞬間の閃光。色は敵の色(--em-c)。フィニッシュは固有技と同じ .spm__finish / .fin-*(.spm--enemy の中) */
     [data-enemy-banner] { left: 0; right: 0; top: 42%; height: 0; }
+    /* 敵の技名の札(画面の上・高さの14%)は、横の低い画面だと HP バーと強化の列に重なるので、その下へ下げる(r1126-083 の点検 11番) */
+    @media (orientation: landscape) and (max-height: 520px) { [data-enemy-skill-pill] { top: 30% !important; } }
     [data-enemy-banner-band] { position: absolute; left: -10%; right: -10%; top: -30px; height: 60px; transform: skewY(-5deg);
       background: linear-gradient(90deg, rgba(8,8,16,.2), rgba(10,10,24,.94) 16%, rgba(10,10,24,.94) 84%, rgba(8,8,16,.2));
       border-top: 2px solid rgb(var(--em-c)); border-bottom: 2px solid rgb(var(--em-c));

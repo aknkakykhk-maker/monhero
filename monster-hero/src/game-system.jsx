@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 21932ecb80ce7271
+// generated-sha256: 2b01fc8491b83bf6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -55432,7 +55432,7 @@ function BattleScreen({
             {enemyMotion&&<TacticsEnemyStageFx fx={enemyAttackFx} motion={enemyMotion} isMoo={enemyIsMoo} enemyId={tacticsEnemyMotionKey(enemy)} skillLabel={enemySkillName?.label||null} lite={fxLoad==='LIGHT'}/>}
             {/* ★覚醒ムーのカットインが出ている技は、上の小さな技名の札を出さない(同じ名前が2か所に出る) */}
             {enemySkillName&&!(enemyIsMoo&&emSet&&enemyAttackFx?.skill&&TACTICS_MOO_CUTIN_SKILLS.includes(enemyAttackFx.skill))&&ReactDOM.createPortal(
-              <div data-battle-float className="fixed left-1/2 -translate-x-1/2 pointer-events-none whitespace-nowrap" style={{top:'14%',zIndex:65000,animation:liteBattleView?undefined:'skillNamePop 350ms ease-out forwards'}}>
+              <div data-battle-float data-enemy-skill-pill className="fixed left-1/2 -translate-x-1/2 pointer-events-none whitespace-nowrap" style={{top:'14%',zIndex:65000,animation:liteBattleView?undefined:'skillNamePop 350ms ease-out forwards'}}>
                 <div className="px-4 py-1.5 rounded-xl font-black text-[13px] bg-red-700 border-2 border-red-200 text-white shadow-[0_2px_16px_rgba(0,0,0,0.9)] flex items-center gap-2"><span>{cardIconNode(enemySkillName.icon,16)}</span>{enemySkillName.label}</div>
               </div>,document.body
             )}
@@ -162456,6 +162456,8 @@ const createAnimationStyle = () => {
     /* ---- 敵の技の格上げ(71-screen-battle.jsx の TacticsEnemyStageFx。覚醒ムー以外の大技)----
        技名の帯・当たる瞬間の閃光。色は敵の色(--em-c)。フィニッシュは固有技と同じ .spm__finish / .fin-*(.spm--enemy の中) */
     [data-enemy-banner] { left: 0; right: 0; top: 42%; height: 0; }
+    /* 敵の技名の札(画面の上・高さの14%)は、横の低い画面だと HP バーと強化の列に重なるので、その下へ下げる(r1126-083 の点検 11番) */
+    @media (orientation: landscape) and (max-height: 520px) { [data-enemy-skill-pill] { top: 30% !important; } }
     [data-enemy-banner-band] { position: absolute; left: -10%; right: -10%; top: -30px; height: 60px; transform: skewY(-5deg);
       background: linear-gradient(90deg, rgba(8,8,16,.2), rgba(10,10,24,.94) 16%, rgba(10,10,24,.94) 84%, rgba(8,8,16,.2));
       border-top: 2px solid rgb(var(--em-c)); border-bottom: 2px solid rgb(var(--em-c));

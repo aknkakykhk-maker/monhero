@@ -21,6 +21,10 @@
 
 超宝屁は r1126-075 追記1(社長「屁をこく感じじゃないの？」)で、おならの見せ方に直した。効果音は手持ちにおならの音が無いので今のまま。
 
+開幕前の点検(r1126-083・OPENING-REVIEW-API.md「最終」)の直し:
+- 1番: レイドのお話の赤いサンタ(話し手 `xmas_santa`)の顔を、絵文字 🎅 からレイドの絵(santa-red.png)に → [9-story-santa-face-portrait.jpg](9-story-santa-face-portrait.jpg)
+- 11番: 横の低い画面で、敵の技名の札が HP バーと強化の列に重なっていた → その下へ下げた(縦はそのまま) → [10-skill-pill-landscape.jpg](10-skill-pill-landscape.jpg)
+
 ## 重さ
 
 CPU を4倍遅くした同じ条件(縦・オート)で、敵の技が出ているあいだのコマを数えた。
