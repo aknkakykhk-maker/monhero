@@ -316,7 +316,8 @@ const XMAS_NOVEL_FACES = Object.freeze(['normal', 'happy', 'wink', 'surprise', '
 const xmasNovelFigureSrc = (who, e) => {
   const c = xmasNovelCastOf(who);
   if (!c) return null;
-  const face = XMAS_NOVEL_FACES.includes(e) ? e : 'normal';
+  // 眠った顔(sleep)はドラの顔の絵だけにある(santa/dra_sleep.PNG・r1126-077 眠りのドラ)。ほかの人は normal に戻す
+  const face = XMAS_NOVEL_FACES.includes(e) || (who === 'dra' && e === 'sleep') ? e : 'normal';
   if (c.kind === 'assistant') {
     const dir = typeof STORY_OUTFIT_DIRS !== 'undefined' && STORY_OUTFIT_DIRS && STORY_OUTFIT_DIRS.santa ? STORY_OUTFIT_DIRS.santa : '';
     if (!dir) return null;

@@ -28,6 +28,8 @@ const PERSON_KEYS = { dora: 'dra', dra: 'dra', mua: 'myua', myua: 'myua', miyua:
   kyuko: 'kyuko', sorashido: 'sorashido', sora: 'sorashido', erubin: 'erubin', elvin: 'erubin', ichika: 'ichika', ichiika: 'ichika',
   mochimaru: 'mochimaru', mochi: 'mochimaru', kuroba: 'kuroba', shirase: 'shirase' };
 const EXPRESSIONS = ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited'];
+// 眠った顔はドラだけ(絵が santa/dra_sleep.PNG にしかない・r1126-077)
+const SLEEP_FACE_WHO = ['dra'];
 // 曲の印(SCRIPT.md §5)→ 曲のid。★ は推理の山場の新曲
 const BGM_MARKS = {
   日: 'kaze_ga_soyogu', 不: 'melo_dullahan_clockwork', 怖: 'melo_dullahan_steel_ghost', 推: 'melo_dullahan_clockwork_alt',
@@ -296,7 +298,8 @@ const parseRow = (cells, where) => {
   else if (/g1$/.test(idCell) && /^[A-Z]-/.test(idCell)) cond = { any: [{ all: [{ k: 'score', op: '<=', v: 3 }] }] };
   const row = { id: idCell };
   if (cond) row.c = cond;
-  if (who === '選択') return { ...parseQuestion(id, raw), ...(cond ? { c: cond } : {}), id: idCell };
+  // 条件つきの選択の行(`A7[f_A1=2]`)は、問いのIDを条件の前まで(f_A7。保存の正規化 /^f_\w+$/ で消えない・r1126-077)
+  if (who === '選択') return { ...parseQuestion(id, raw), ...(cond ? { c: cond } : {}), id: cm ? id : idCell };
   if (who === '帯' || who === '演出') {
     let s = stripMd(raw); const fx = [];
     // 〔遺体:黒羽〕… 亡くなっているのが見つかる行。その人の立ち絵を黒い影にして倒し、血だまりを広げる(r1126-065)。
@@ -360,7 +363,7 @@ const parseRow = (cells, where) => {
   if (sp.n && !sp.crowd && !PAST_SPEAKERS.includes(sp.n)) note(where, `知らない話し手「${sp.n}」(名前だけ出す)`);
   delete line.crowd;
   if (sp.secret) { line.n = '？？？'; delete line.w; }
-  if (face && face !== '—' && face !== '-') { if (EXPRESSIONS.includes(face)) line.e = face; else note(where, `知らない表情「${face}」`); }
+  if (face && face !== '—' && face !== '-') { if (EXPRESSIONS.includes(face) || (face === 'sleep' && SLEEP_FACE_WHO.includes(sp.w))) line.e = face; else note(where, `知らない表情「${face}」`); }
   const bgmM = memo && memo.match(/曲[:：]\s*([^\s)）]+)/);
   if (bgmM) { const mk = Object.keys(BGM_MARKS).find((k) => bgmM[1].startsWith(k)); line.bgm = bgmM[1].includes('★') ? 'melo_kiss_mystery' : mk ? BGM_MARKS[mk] : bgmM[1]; }
   const memo2 = memo ? memo.replace(/[(（]?曲[:：][^)）]*[)）]?/, '').replace(/^\s*(あつ派|ソラシド派|[0-9〜]+問[^)）]*のとき|7問とも一発のとき)\s*/, '').trim() : '';
