@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1a196f1cdd638da5
+// source-sha256: 55a8913b45c24e46
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -6868,16 +6868,7 @@ const BGM_TRACKS = [{
   src: 'audio/bgm-pandora-boss-remix.mp3',
   gain: 1,
   loop: true
-}];
-const BGM_PROTO_TRACKS = Object.freeze([{
-  id: 'melo_sheriruth_proto',
-  name: 'Sheriruth 試作',
-  creator: 'Team Grimoire',
-  src: 'audio/bgm-sheriruth-proto.mp3',
-  gain: 1,
-  loop: true
-}]);
-const BGM_UNRELEASED_TRACKS = Object.freeze([{
+}, {
   id: 'melo_battle_5',
   name: 'Battle #5',
   creator: 'オリジナル',
@@ -6891,9 +6882,20 @@ const BGM_UNRELEASED_TRACKS = Object.freeze([{
   src: 'audio/bgm-battle-5-short.mp3',
   gain: 1,
   loop: true
+}];
+const BGM_PROTO_TRACKS = Object.freeze([{
+  id: 'melo_sheriruth_proto',
+  name: 'Sheriruth 試作',
+  creator: 'Team Grimoire',
+  src: 'audio/bgm-sheriruth-proto.mp3',
+  gain: 1,
+  loop: true
 }]);
+const BGM_UNRELEASED_TRACKS = Object.freeze([]);
 const BGM_TRACK_BY_ID = Object.fromEntries(BGM_TRACKS.map(track => [track.id, track]));
 const BGM_TRACK_LISTED_FROM = Object.freeze({
+  melo_battle_5: '2026-11-28T10:00:00+09:00',
+  melo_battle_5_short: '2026-11-28T10:00:00+09:00',
   melo_kiss_mystery_short: '2026-11-28T10:00:00+09:00',
   melo_dear_santa: '2026-11-28T10:00:00+09:00',
   melo_dear_santa_short: '2026-11-28T10:00:00+09:00',
@@ -15942,6 +15944,7 @@ const FRIENDS_PUBLIC_RELEASE = true;
 const RAID_JACK_START_AT = '2026-10-05T04:00:00+09:00';
 const XMAS_COSTUME_START_AT = '2026-11-28T10:00:00+09:00';
 const RAID_XMAS_START_AT = '2026-11-28T10:00:00+09:00';
+const BATTLE5_RELEASE_AT = '2026-11-28T10:00:00+09:00';
 const RAID_JACK_PUBLIC_RELEASE = true;
 const RAID_JACK_RHYTHM_PUBLIC_RELEASE = true;
 const RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE = true;
@@ -15955,7 +15958,9 @@ const RELEASE_FLAGS = {
   speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE,
   tactics: TACTICS_MODE_PUBLIC_RELEASE,
   rhythmHell: true,
-  battle5: false,
+  get battle5() {
+    return Date.now() >= Date.parse(typeof BATTLE5_RELEASE_AT === 'string' ? BATTLE5_RELEASE_AT : '2026-11-28T10:00:00+09:00');
+  },
   battleLog: true,
   battleCardArt: true,
   assistantChat: true,
@@ -65246,6 +65251,7 @@ const RHYTHM_SONG_PRICES = Object.freeze({
   beyond_the_same_sky: 500,
   desert_crown: 500,
   walkure: 500,
+  battle_5: 500,
   kiss_mystery: 500,
   dear_santa: 500,
   winter_fall: 500
@@ -65261,6 +65267,7 @@ const RHYTHM_SONG_BUNDLE_OWNER = Object.freeze({
   erfolg_piano: 'erfolg',
   beyond_the_same_sky_short: 'beyond_the_same_sky',
   walkure_short: 'walkure',
+  battle_5_short: 'battle_5',
   kiss_mystery_short: 'kiss_mystery',
   dear_santa_short: 'dear_santa',
   winter_fall_short: 'winter_fall'
@@ -114539,6 +114546,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "画面いっぱいに、題字 ——『モンヒロ事件簿 ―呪いのセーブデータ― 十三番目の鐘』",
       "k": "OUT-0-2:0-25"
     }],
+    "frame": "far",
     "outside": true
   }, {
     "id": "C0-1",
@@ -114771,7 +114779,8 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "何でもないって。……きれいだなって思っただけ笑",
       "e": "happy",
       "k": "C1-1:1-1-10"
-    }]
+    }],
+    "frame": "far"
   }, {
     "id": "C1-2",
     "chapter": "C1",
@@ -114855,7 +114864,8 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "はいはい、名探偵が二人！ 助手のあたしは、あつくんのほうね！",
       "e": "wink",
       "k": "C1-2:1-2-12"
-    }]
+    }],
+    "frame": "far"
   }, {
     "id": "C1-3",
     "chapter": "C1",
@@ -114876,6 +114886,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "kuroba",
       "x": "開けたまえ。招待状には、部屋は用意してあると書いてあった。……吹雪の中で待たせるとは、時間の無駄だ",
+      "f": "far",
       "k": "C1-3:1-3-2"
     }, {
       "id": "1-3-3",
@@ -114899,6 +114910,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "shirase",
       "x": "白瀬と申します。……突然、ごめんなさい",
+      "f": "far",
       "k": "C1-3:1-3-6"
     }, {
       "id": "1-3-7",
@@ -114944,6 +114956,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "shirase",
       "x": "(小さく)……12年前……",
+      "f": "close",
       "k": "C1-3:1-3-12"
     }, {
       "id": "1-3-12c",
@@ -115203,7 +115216,8 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "ありがとうございます、{name}。ワトソンくんと3人で、記録から繋ぎましょう笑",
       "e": "happy",
       "k": "C1-5:1-5-14s"
-    }]
+    }],
+    "frame": "far"
   }, {
     "id": "C1-6",
     "chapter": "C1",
@@ -115229,6 +115243,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "secret": true,
       "x": "……やっと、そろった。12年、かかったね",
+      "f": "close",
       "n": "？？？",
       "e": "troubled",
       "k": "C1-6:1-6-3"
@@ -115346,7 +115361,8 @@ const XMAS_NOVEL_SCRIPT = {
       "n": "？？？",
       "e": "troubled",
       "k": "C1-M:1-M-16"
-    }]
+    }],
+    "frame": "close"
   }, {
     "id": "C2-1",
     "chapter": "C2",
@@ -115658,7 +115674,8 @@ const XMAS_NOVEL_SCRIPT = {
       "clue": "予告の手紙",
       "x": "探偵の部屋の枕の上に置かれていた、赤い字の手紙。ひらがなで「こんや 0じの かねが なったら ひとり かえって こない」。差出人は「黒いサンタ」",
       "k": "C2-L:2-L-14"
-    }]
+    }],
+    "frame": "close"
   }, {
     "id": "C2-M",
     "chapter": "C2",
@@ -115803,7 +115820,8 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "band",
       "x": "黒羽は、のろのろと立ち上がり、灰色のコートに手を伸ばした",
       "k": "C2-M:2-M-24"
-    }]
+    }],
+    "frame": "close"
   }, {
     "id": "C2-2",
     "chapter": "C2",
@@ -115920,6 +115938,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "momosuke",
       "x": "きゃっ！ 停電！？ 真っ暗〜！",
+      "f": "close",
       "e": "crying",
       "k": "C2-3:2-3-8"
     }, {
@@ -116020,6 +116039,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "shirase",
       "x": "黒羽さんの部屋の扉が……開いています。中に、誰も……",
+      "f": "close",
       "k": "C2-3:2-3-11"
     }]
   }, {
@@ -116190,7 +116210,8 @@ const XMAS_NOVEL_SCRIPT = {
         "st": "missing"
       }],
       "k": "C2-5:2-5-8"
-    }]
+    }],
+    "frame": "close"
   }, {
     "id": "C3-1",
     "chapter": "C3",
@@ -116318,7 +116339,8 @@ const XMAS_NOVEL_SCRIPT = {
         "st": "dead"
       }],
       "k": "C3-1:3-1-17"
-    }]
+    }],
+    "frame": "close"
   }, {
     "id": "C3-2",
     "chapter": "C3",
@@ -116410,6 +116432,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "atsu",
       "x": "……この中に、黒いサンタがいる",
+      "f": "close",
       "e": "normal",
       "k": "C3-2:3-2-5"
     }]
@@ -116438,6 +116461,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "kiki",
       "x": "そんな……",
+      "f": "close",
       "e": "crying",
       "k": "C3-3:3-3-3"
     }, {
@@ -116521,6 +116545,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "dra",
       "x": "そんなぁ……",
+      "f": "close",
       "e": "crying",
       "k": "C3-4:3-4-6"
     }, {
@@ -116569,6 +116594,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "shirase",
       "x": "わたし、12年前のクリスマスにも、ここにいたんです。……その時、取り返しのつかないことを、したのかもしれません",
+      "f": "close",
       "k": "C3-5:3-5-4"
     }, {
       "id": "3-5-5",
@@ -116593,6 +116619,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "secret": true,
       "x": "……一人。……ううん。まだ、終わってない",
+      "f": "close",
       "n": "？？？",
       "e": "troubled",
       "k": "C3-5:3-5-8"
@@ -116746,6 +116773,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "ichika",
       "x": "12年前のクリスマスに亡くなった方の部屋です。オルゴールを作る人で、カノンさんといいました。小さなお子さんと、毎年ここへ来てくださって",
+      "f": "close",
       "k": "C4-1:4-1-5"
     }, {
       "id": "4-1-6",
@@ -116786,6 +116814,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "myua",
       "x": "……そんなの、悲しすぎるぢゃん……",
+      "f": "close",
       "e": "crying",
       "k": "C4-1:4-1-10"
     }, {
@@ -117015,6 +117044,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "myua",
       "x": "……その歌。さっきの、オルゴールの……？",
+      "f": "close",
       "e": "surprise",
       "k": "C4-4:4-4-5"
     }, {
@@ -117055,6 +117085,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "momosuke",
       "x": "もう、誰もいなくならないよね……？",
+      "f": "close",
       "e": "crying",
       "k": "C4-5:4-5-2"
     }, {
@@ -117081,6 +117112,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "secret": true,
       "x": "……次は、白い人",
+      "f": "close",
       "n": "？？？",
       "e": "troubled",
       "k": "C4-5:4-5-6"
@@ -117191,7 +117223,8 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "band",
       "x": "足音は、白瀬の部屋の前で、ほんの少しだけ止まり——また、遠ざかっていった",
       "k": "C4-M:4-M-16"
-    }]
+    }],
+    "frame": "close"
   }, {
     "id": "C5-1",
     "chapter": "C5",
@@ -117228,6 +117261,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "shirase",
       "x": "12年前の夜、わたしは、言われた通りに、扉を……",
+      "f": "close",
       "k": "C5-1:5-1-5"
     }, {
       "id": "5-1-6",
@@ -117301,6 +117335,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "erubin",
       "x": "……え？ 今、誰か、鏡の中に……",
+      "f": "close",
       "e": "surprise",
       "k": "C5-2:5-2-7"
     }, {
@@ -117365,6 +117400,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "momosuke",
       "x": "やだ……また……",
+      "f": "close",
       "e": "crying",
       "k": "C5-3:5-3-5"
     }, {
@@ -117441,6 +117477,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "momosuke",
       "x": "でも、白瀬さん、今も寒い所にいるかもしれないんだよ……！ 早く、探しに行こうよ……！",
+      "f": "close",
       "e": "crying",
       "k": "C5-3:5-3-7b"
     }, {
@@ -117484,6 +117521,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "atsu",
       "x": "白瀬さんを探す！ どこだ……！",
+      "f": "close",
       "e": "angry",
       "k": "C5-3:5-3-8"
     }, {
@@ -117650,7 +117688,8 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "band",
       "x": "暗転",
       "k": "C5-4:5-4-15"
-    }]
+    }],
+    "frame": "close"
   }, {
     "id": "C5-5",
     "chapter": "C5",
@@ -117696,6 +117735,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "secret": true,
       "x": "……あの手が、閉めたんだ。……これで、いいんだよね",
+      "f": "close",
       "n": "？？？",
       "e": "troubled",
       "k": "C5-5:5-5-6"
@@ -117790,6 +117830,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "dra",
       "x": "……もちまる。知ってることを、知らないふりするのって、悪いことかな",
+      "f": "close",
       "e": "troubled",
       "k": "C5-M:5-M-12"
     }, {
@@ -117809,6 +117850,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "dra",
       "x": "(膝に顔をうずめる)……おで、どうしたらいいんだ……",
+      "f": "close",
       "e": "crying",
       "k": "C5-M:5-M-15"
     }, {
@@ -117925,6 +117967,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "dra",
       "x": "し、知らない！ おで、こんなの知らないぞ！",
+      "f": "close",
       "e": "surprise",
       "k": "C6-2:6-2-3"
     }, {
@@ -118104,6 +118147,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "myua",
       "x": "血……！ るびちん、血が……！",
+      "f": "close",
       "e": "crying",
       "k": "C6-5:6-5-4"
     }, {
@@ -118111,6 +118155,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "erubin",
       "x": "……大丈夫。……はしごの上で、黒いフードの人に、押されて……頭から……",
+      "f": "close",
       "e": "troubled",
       "k": "C6-5:6-5-5"
     }, {
@@ -118258,6 +118303,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "sorashido",
       "x": "……分かりました。記録が、全部繋がった気がします",
+      "f": "close",
       "e": "normal",
       "k": "C6-6:6-6-3a"
     }, {
@@ -118274,6 +118320,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "atsu",
       "x": "……分かった。全部、繋がった気がする",
+      "f": "close",
       "e": "normal",
       "k": "C6-6:6-6-3s"
     }, {
@@ -118492,7 +118539,8 @@ const XMAS_NOVEL_SCRIPT = {
       "clue": "崖の上のリボン",
       "x": "裏手の崖のふちに落ちていた、きゅうこのローズ色のリボン。足跡は崖で途切れ、形は薄い雪で分からない",
       "k": "C6-8:6-8-6c"
-    }]
+    }],
+    "frame": "close"
   }, {
     "id": "C6-9",
     "chapter": "C6",
@@ -118537,6 +118585,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "atsu",
       "x": "黒羽のおっちゃん、白瀬さん、エルちゃん、きゅうこちゃん……。もう、誰にも手は出させない",
+      "f": "close",
       "e": "angry",
       "k": "C6-9:6-9-5"
     }, {
@@ -118639,6 +118688,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "mochimaru",
       "x": "もし、あの時、ぼくが下りていって、扉を開けてたら……",
+      "f": "close",
       "k": "C6-M:6-M-13"
     }, {
       "id": "6-M-14",
@@ -118689,6 +118739,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "sorashido",
       "x": "……記録が、繋がりました。黒いサンタは、この中にいます",
+      "f": "close",
       "e": "normal",
       "bgm": "melo_kiss_mystery",
       "k": "C7-1:7-1-3a"
@@ -118706,6 +118757,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "atsu",
       "x": "……分かった。黒いサンタは、この中にいる！",
+      "f": "close",
       "e": "excited",
       "bgm": "melo_kiss_mystery",
       "k": "C7-1:7-1-3s"
@@ -118881,6 +118933,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "myua",
       "x": "……ありがと……",
+      "f": "close",
       "e": "crying",
       "k": "C7-1:7-1-9a"
     }, {
@@ -118897,6 +118950,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "myua",
       "x": "……あつくん……",
+      "f": "close",
       "e": "crying",
       "k": "C7-1:7-1-9s"
     }, {
@@ -119009,6 +119063,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "sorashido",
       "x": "黒いサンタは——ドラさんです",
+      "f": "close",
       "e": "normal",
       "k": "C7-1:7-1-13a"
     }, {
@@ -119025,6 +119080,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "atsu",
       "x": "黒いサンタは——ドラちゃんだ",
+      "f": "close",
       "e": "normal",
       "k": "C7-1:7-1-13s"
     }, {
@@ -119032,6 +119088,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "dra",
       "x": "(握ったリボンを見つめて、黙っている)……おで、は……",
+      "f": "close",
       "e": "troubled",
       "k": "C7-1:7-1-14"
     }, {
@@ -119249,6 +119306,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "ドラは自分から部屋に入り、扉に、外から鍵がかけられた",
       "k": "C7-A:7-A-7"
     }],
+    "frame": "close",
     "jumpOnly": true
   }, {
     "id": "C7-B",
@@ -119398,6 +119456,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "momosuke",
       "x": "なんで……？ ももが、黒羽さんを……？ 白瀬さんを……？ きゅうちゃんを……？ そんなこと、するわけないじゃん……！",
+      "f": "close",
       "e": "crying",
       "k": "C7-P1:7-P1-4"
     }, {
@@ -119412,6 +119471,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "momosuke",
       "x": "……みんな、目が怖い。ももを見る目が、黒いサンタを見る目になってる",
+      "f": "close",
       "e": "angry",
       "k": "C7-P1:7-P1-6"
     }, {
@@ -119419,6 +119479,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "momosuke",
       "x": "もう、いい。こんな所、いたくない！ ももは、ふもとまで歩いて帰る！",
+      "f": "close",
       "e": "crying",
       "k": "C7-P1:7-P1-7"
     }, {
@@ -119656,6 +119717,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "momosuke",
       "x": "やだ……おばけってこと……？",
+      "f": "close",
       "e": "crying",
       "k": "C7-P3:7-P3-5"
     }, {
@@ -119822,6 +119884,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "atsu",
       "x": "……そっか。助手に疑われたら、探偵は、おしまいだ",
+      "f": "close",
       "e": "troubled",
       "k": "C7-4a:7-4-6"
     }, {
@@ -119829,6 +119892,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "atsu",
       "x": "いいよ。俺を、部屋に閉じこめて。それで、みんなが今夜眠れるなら、そのほうがいい",
+      "f": "close",
       "e": "normal",
       "k": "C7-4a:7-4-7"
     }, {
@@ -119836,6 +119900,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "myua",
       "x": "やだ……あつくん……",
+      "f": "close",
       "e": "crying",
       "k": "C7-4a:7-4-8"
     }, {
@@ -119843,6 +119908,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "atsu",
       "x": "(探偵の帽子を、{name}の頭にのせて)……ここからは、{name}が探偵だ",
+      "f": "close",
       "e": "normal",
       "k": "C7-4a:7-4-9"
     }, {
@@ -119912,6 +119978,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "atsu",
       "x": "一人じゃなきゃ、証明になんないんだよ。……みゅあ、ここで待ってて",
+      "f": "close",
       "e": "normal",
       "k": "C7-4b:7-4b-7"
     }, {
@@ -119919,6 +119986,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "myua",
       "x": "あつくん……！",
+      "f": "close",
       "e": "crying",
       "k": "C7-4b:7-4b-8"
     }, {
@@ -119978,6 +120046,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "sorashido",
       "x": "……助手に疑われた探偵の推理を、誰が信じるでしょう",
+      "f": "close",
       "e": "troubled",
       "k": "C7-5a:7-5-6"
     }, {
@@ -119985,6 +120054,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "sorashido",
       "x": "自分を、部屋に閉じこめてください。それで、みなさんが今夜眠れるなら",
+      "f": "close",
       "e": "normal",
       "k": "C7-5a:7-5-7"
     }, {
@@ -120061,6 +120131,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "sorashido",
       "x": "一人は危ないと言ったのは、自分です。……それでも、一人でなければ、証明になりません。……ワトソンくん、記録を",
+      "f": "close",
       "e": "normal",
       "k": "C7-5b:7-5b-7"
     }, {
@@ -120386,6 +120457,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "atsu",
       "x": "謎は全て解けた!",
+      "f": "close",
       "e": "excited",
       "bgm": "melo_kiss_mystery",
       "k": "C8-1:8-1-14a"
@@ -120403,6 +120475,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "atsu",
       "x": "黒いサンタの正体は——きゅうこちゃんだ。……そして、きゅうこちゃんは、生きてる",
+      "f": "close",
       "e": "normal",
       "k": "C8-1:8-1-15a"
     }, {
@@ -120466,6 +120539,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "sorashido",
       "x": "真実はいつもひとつ!",
+      "f": "close",
       "e": "excited",
       "bgm": "melo_kiss_mystery",
       "k": "C8-1:8-1-15s"
@@ -120483,6 +120557,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "sorashido",
       "x": "黒いサンタの正体は——きゅうこちゃんです。……そして、きゅうこちゃんは、生きています",
+      "f": "close",
       "e": "normal",
       "k": "C8-1:8-1-16s"
     }, {
@@ -120490,6 +120565,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "momosuke",
       "x": "うそ……きゅうちゃんが……？",
+      "f": "close",
       "e": "crying",
       "k": "C8-1:8-1-17"
     }]
@@ -120599,7 +120675,8 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "うん。俺だよ。……イチーカさんも、女の子だと思ってたでしょ。ちっちゃい頃から、よく言われたんだ。……お母さんの名前は、カノン",
       "e": "normal",
       "k": "C8-2:8-2-8"
-    }]
+    }],
+    "frame": "close"
   }, {
     "id": "C8-3",
     "chapter": "C8",
@@ -120842,7 +120919,8 @@ const XMAS_NOVEL_SCRIPT = {
         "st": "normal"
       }],
       "k": "C8-3:8-3-24"
-    }]
+    }],
+    "frame": "close"
   }, {
     "id": "C9-1",
     "chapter": "C9",
@@ -120866,6 +120944,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "kyuko",
       "x": "……お母さんはね、鐘を目印に、戻ってきたんだよ。だから、俺も、鐘の鳴る所へ行く",
+      "f": "close",
       "e": "normal",
       "k": "C9-1:9-1-3"
     }, {
@@ -120885,6 +120964,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "atsu",
       "x": "きゅうこちゃん！！",
+      "f": "close",
       "e": "angry",
       "k": "C9-1:9-1-6"
     }]
@@ -121017,7 +121097,8 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "band",
       "x": "その夜、裏口のかんぬきは、朝まで、開いたままだった",
       "k": "C9-2:9-2-11"
-    }]
+    }],
+    "frame": "close"
   }, {
     "id": "C10-1",
     "chapter": "C10",
@@ -121143,6 +121224,7 @@ const XMAS_NOVEL_SCRIPT = {
       }],
       "k": "C10-1:10-1-13"
     }],
+    "frame": "close",
     "jumpOnly": true
   }, {
     "id": "C10-2",
@@ -121171,6 +121253,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "momosuke",
       "x": "聞こえたもん！ ももは、うそつかないもん！",
+      "f": "close",
       "e": "angry",
       "k": "C10-2:10-2-3"
     }, {
@@ -121246,6 +121329,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "dra",
       "x": "…………もも？ ……もも。……ももぉぉぉぉっ！！",
+      "f": "close",
       "e": "crying",
       "k": "C10-2:10-2-9"
     }, {
@@ -121266,6 +121350,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "dra",
       "x": "おでが……おでが、寝ちまったから……！ おでが、ちゃんと……！",
+      "f": "close",
       "e": "crying",
       "k": "C10-2:10-2-12"
     }, {
@@ -121353,6 +121438,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "ichika",
       "x": "もちまる……！ もちまる！！ いや……いやです、もちまる……！",
+      "f": "close",
       "k": "C10-3:10-3-8"
     }, {
       "id": "10-3-9",
@@ -121560,6 +121646,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "dra",
       "x": "(握ったリボンに、顔をうずめる)",
+      "f": "close",
       "e": "crying",
       "k": "C10-4:10-4-6"
     }, {
@@ -121618,7 +121705,8 @@ const XMAS_NOVEL_SCRIPT = {
       "once": true,
       "answer": ["kyuko"],
       "k": "C11-1:Q11a"
-    }]
+    }],
+    "frame": "far"
   }, {
     "id": "C11-N",
     "chapter": "C11",
@@ -121815,6 +121903,7 @@ const XMAS_NOVEL_SCRIPT = {
       }],
       "k": "C11-N:11-N-9"
     }],
+    "frame": "close",
     "jumpOnly": true
   }, {
     "id": "C11-A",
@@ -121915,6 +122004,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "ドラは自分から部屋に入り、扉に、外から鍵がかけられた",
       "k": "C11-A:11-A-6"
     }],
+    "frame": "close",
     "jumpOnly": true
   }, {
     "id": "C11-B",
@@ -121957,7 +122047,7 @@ const XMAS_NOVEL_SCRIPT = {
     "title": "暗い台所",
     "cond": null,
     "bgm": "melo_dullahan_steel_ghost",
-    "bg": "夜の台所(ろうそく",
+    "bg": "夜の台所(ろうそく)",
     "next": "END-X1",
     "rows": [{
       "id": "2-X-1a",
@@ -122147,6 +122237,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "……ソラシドさんの、応答がありません。……記録を、続けられません",
       "k": "C2-X:2-X-10s"
     }],
+    "frame": "close",
     "jumpOnly": true
   }, {
     "id": "END-X1",
@@ -122365,6 +122456,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "……ソラシドさんの、応答がありません。……記録を、続けられません",
       "k": "C5-X:5-X-9s"
     }],
+    "frame": "close",
     "jumpOnly": true
   }, {
     "id": "END-X2",
@@ -122402,7 +122494,7 @@ const XMAS_NOVEL_SCRIPT = {
     "title": "吹雪の裏口",
     "cond": null,
     "bgm": "melo_dullahan_steel_ghost",
-    "bg": "夜の裏口(吹雪",
+    "bg": "夜の裏口(吹雪)",
     "next": "END-X3",
     "rows": [{
       "id": "6-X-1a",
@@ -122610,6 +122702,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "……ソラシドさんの、応答がありません。……記録を、続けられません",
       "k": "C6-X:6-X-13s"
     }],
+    "frame": "close",
     "jumpOnly": true
   }, {
     "id": "END-X3",
@@ -122927,6 +123020,7 @@ const XMAS_NOVEL_SCRIPT = {
       "se": "bell",
       "k": "C2-Y:2-Y-17"
     }],
+    "frame": "close",
     "jumpOnly": true
   }, {
     "id": "END-X4",
@@ -123200,6 +123294,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "……ソラシドさんの、応答がありません。……記録を、続けられません",
       "k": "C10-X:10-X-14s"
     }],
+    "frame": "close",
     "jumpOnly": true
   }, {
     "id": "END-X5",
@@ -123282,6 +123377,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "——その名前を指さしたのは、{name}だった",
       "k": "END-M1:M1-7"
     }],
+    "frame": "close",
     "ending": {
       "id": "END-M1",
       "kind": "accuse",
@@ -123314,7 +123410,7 @@ const XMAS_NOVEL_SCRIPT = {
     }, {
       "id": "M2-4",
       "t": "band",
-      "x": "薪小屋の中。もちまるが、最後の一抱えの薪を抱いたまま、うつ伏せに倒れていた。後ろ頭の毛が、赤黒く固まっている",
+      "x": "薪小屋の中。もちまるが、最後の一抱えの薪を抱いたまま、うつ伏せに倒れていた。桃色の後ろ頭が、赤黒く汚れている",
       "fx": ["fallen"],
       "body": "mochimaru",
       "k": "END-M2:M2-4"
@@ -123344,6 +123440,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "——その名前を指さしたのは、{name}だった",
       "k": "END-M2:M2-8"
     }],
+    "frame": "close",
     "ending": {
       "id": "END-M2",
       "kind": "accuse",
@@ -123413,6 +123510,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "——その名前を指さしたのは、{name}だった",
       "k": "END-M3:M3-9"
     }],
+    "frame": "close",
     "ending": {
       "id": "END-M3",
       "kind": "accuse",
@@ -123515,6 +123613,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "——その名前を指さしたのは、{name}だった",
       "k": "END-M4:M4-10"
     }],
+    "frame": "close",
     "ending": {
       "id": "END-M4",
       "kind": "accuse",
@@ -123725,6 +123824,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "——その名前を指さしたのは、{name}だった",
       "k": "END-M5:M5-10"
     }],
+    "frame": "close",
     "ending": {
       "id": "END-M5",
       "kind": "accuse",
@@ -123771,6 +123871,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "kyuko",
       "x": "白瀬さんの手紙、読んだよ。……お母さんの曲は、お母さんの名前に戻す。約束する",
+      "f": "close",
       "e": "crying",
       "k": "END-G:G-6"
     }, {
@@ -123792,6 +123893,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "momosuke",
       "x": "もも、待ってるから。ずっと。……ドラちゃんも、きゅうちゃんも",
+      "f": "close",
       "e": "crying",
       "k": "END-G:G-9"
     }, {
@@ -123804,6 +123906,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "myua",
       "x": "……じゃーん。みんなに、マフラー。夜中に台所で編んでたの、ないしょだったの。あつくんのは、黒",
+      "f": "far",
       "e": "wink",
       "k": "END-G:G-11"
     }, {
@@ -123818,6 +123921,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "myua",
       "x": "きゅきゅの分も、ちゃんとあるよ。ふもとは、寒いから",
+      "f": "close",
       "e": "crying",
       "k": "END-G:G-13"
     }, {
@@ -123825,6 +123929,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "mochimaru",
       "x": "今日は、いっぱい食べてっちー。……みなさんがいてくれて、よかったっちー",
+      "f": "far",
       "k": "END-G:G-14"
     }, {
       "id": "G-15",
@@ -123838,6 +123943,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "ichika",
       "x": "……12年ぶりの、歌声ですね。カノンさん、聞こえていますか",
+      "f": "far",
       "k": "END-G:G-16"
     }, {
       "id": "G-16b",
@@ -124035,6 +124141,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "myua",
       "x": "……よかった。本当に、よかったぁ……",
+      "f": "close",
       "e": "crying",
       "k": "OUT-G:OUT-G-2"
     }, {
@@ -124083,6 +124190,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "——モンヒロ事件簿、続く",
       "k": "OUT-G:OUT-G-7"
     }],
+    "frame": "far",
     "outside": true
   }, {
     "id": "END-N",
@@ -124124,6 +124232,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "kyuko",
       "x": "……したことは、全部引き受ける。一生かけても、返せないけど",
+      "f": "close",
       "e": "crying",
       "k": "END-N:N-6"
     }, {
@@ -124138,6 +124247,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "myua",
       "x": "(マフラーを、もちまるの帳面の隣に置く)……みんなの分、編んだのに",
+      "f": "close",
       "e": "crying",
       "k": "END-N:N-8"
     }, {
@@ -124156,6 +124266,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "atsu",
       "x": "……もちまる……",
+      "f": "close",
       "e": "crying",
       "k": "END-N:N-11"
     }, {
@@ -124232,6 +124343,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "kyuko",
       "x": "(一度だけ振り返る)……ごめんね。……みんなのこと、ずっと、忘れないから",
+      "f": "close",
       "e": "crying",
       "k": "END-N:N-13c"
     }, {
@@ -124341,6 +124453,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "myua",
       "x": "……怖かった……。ゲームなのに、まだ手が震えてる",
+      "f": "close",
       "e": "crying",
       "k": "OUT-N:OUT-N-1b"
     }, {
@@ -124348,6 +124461,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "momosuke",
       "x": "ゲームの中のもも……いなくなっちゃった……",
+      "f": "close",
       "e": "crying",
       "k": "OUT-N:OUT-N-2"
     }, {
@@ -124443,6 +124557,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "dra",
       "x": "(小さく)……これで、いいんだ。……雪が溶けたら、遠くへ行けよ",
+      "f": "close",
       "e": "normal",
       "k": "END-A:A-7"
     }, {
@@ -124641,6 +124756,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "——あの日、選んだ名前は、正しかったのか(章を選んで、読み直せる)",
       "k": "END-B:B-18"
     }],
+    "frame": "close",
     "jumpOnly": true,
     "ending": {
       "id": "END-B",
@@ -124704,6 +124820,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "暗転",
       "k": "OUT-B:OUT-B-7"
     }],
+    "frame": "close",
     "outside": true
   }, {
     "id": "C1-O",
@@ -124885,11 +125002,19 @@ const XMAS_NOVEL_SCRIPT = {
       "e": "happy",
       "k": "C1-O:1-O-26"
     }, {
+      "id": "1-O-26b",
+      "t": "line",
+      "w": "kyuko",
+      "x": "(鼻のクリームをぬぐって、みんなの顔を見回して)……みんなとこうしてるの、なんか、いいね。来年も、こうしてたいなぁ",
+      "e": "happy",
+      "k": "C1-O:1-O-26b"
+    }, {
       "id": "1-O-27",
       "t": "band",
       "x": "その夜、ペンション・シュプールでは、誰もいなくならなかった。——黒いサンタが、7人もいたのに",
       "k": "C1-O:1-O-27"
     }],
+    "frame": "far",
     "jumpOnly": true
   }, {
     "id": "END-O",
@@ -124982,6 +125107,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "画面の中で、7人の黒いサンタが、そろって、ぺこりとお辞儀をした",
       "k": "OUT-O:OUT-O-7"
     }],
+    "frame": "far",
     "outside": true
   }, {
     "id": "C12-1",
@@ -125124,6 +125250,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "kuroba",
       "x": "……少し、頭を冷やしてもらうだけだ。吹雪の中で、身の程を知ればいい",
+      "f": "close",
       "k": "C12-2:12-2-10"
     }, {
       "id": "12-2-12",
@@ -125236,6 +125363,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "kuroba",
       "x": "ああ、主人。あの女なら、さっき戻ってきたよ。雪を払って、2階へ上がっていった。だから、閉めさせたんだ",
+      "f": "close",
       "k": "C12-4:12-4-7"
     }, {
       "id": "12-4-8",
@@ -125347,6 +125475,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "line",
       "w": "kuroba",
       "x": "……あいつが悪いんだ。売れと言ったのに。……わたしは、何もしていない。鐘が鳴って、扉が閉まった。それだけだ",
+      "f": "close",
       "k": "C12-6:12-6-5"
     }, {
       "id": "12-6-6",
@@ -125425,9 +125554,13 @@ const XMAS_NOVEL_CSS = `
   background-size: 260px 260px; animation: mh-nv-snow 14s linear infinite; }
 .mh-nv-snow.b { background-size: 170px 170px; opacity: .35; animation-duration: 9s; }
 @keyframes mh-nv-snow { from { background-position: 0 0; } to { background-position: 40px 260px; } }
-.mh-nv-fig { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); height: 78%; width: min(92vw, 560px); display: flex; align-items: flex-end; justify-content: center; pointer-events: none; }
-.mh-nv-fig img { max-height: 100%; max-width: 100%; object-fit: contain; object-position: bottom; filter: drop-shadow(0 6px 18px rgba(0,0,0,.6)); animation: mh-nv-in .35s ease; }
-.mh-nv-fig.face img { max-height: 46%; margin-bottom: 30%; border-radius: 50%; }
+/* 立ち絵の置き場(r1126-067)。上の端から文字の箱の上(名札の上)までの帯で、絵はその中に場面の見せ方(寄り・ふだん・引き)で置き、下の縁で切ってぼかす。
+   大きさと位置は useXmasNovelPlace が決める(置くまでは見せない) */
+.mh-nv-fig { position: absolute; left: 0; right: 0; top: 0; height: 78%; overflow: hidden; pointer-events: none;
+  -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 26px), transparent); mask-image: linear-gradient(180deg, #000 calc(100% - 26px), transparent); }
+.mh-nv-fig:not([data-placed]) > * { visibility: hidden; }
+.mh-nv-fig img { position: absolute; object-fit: contain; filter: drop-shadow(0 6px 18px rgba(0,0,0,.6)); animation: mh-nv-in .35s ease; }
+.mh-nv-fig.face img { border-radius: 50%; }
 .mh-nv-fig.dim img, .mh-nv-fig.dim svg { filter: brightness(.55) drop-shadow(0 6px 18px rgba(0,0,0,.6)); }
 @keyframes mh-nv-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 .mh-nv-box { position: absolute; left: 50%; transform: translateX(-50%); bottom: max(10px, env(safe-area-inset-bottom)); width: min(calc(100% - 20px), 880px); min-height: 132px;
@@ -125531,18 +125664,18 @@ const XMAS_NOVEL_CSS = `
 .mh-nv-fallen { position: absolute; left: 50%; bottom: 24%; width: min(80vw, 520px); transform: translateX(-50%); z-index: 4; filter: drop-shadow(0 0 2px rgba(190,200,230,.35)); pointer-events: none; animation: mh-nv-fade 1.2s ease both; }
 .mh-nv-body { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
 .mh-nv-body-dim { position: absolute; inset: 0; -webkit-backdrop-filter: grayscale(.9) brightness(.55); backdrop-filter: grayscale(.9) brightness(.55);
-  background: radial-gradient(70% 34% at 50% 74%, rgba(120,0,14,.42), rgba(120,0,14,0) 72%), radial-gradient(120% 90% at 50% 40%, rgba(6,10,34,.35), rgba(0,0,4,.88)); animation: mh-nv-fade 1.4s ease both; }
-.mh-nv-body-lie { --L: min(88vw, 580px, calc(26vh / var(--ar))); --H: calc(var(--L) * var(--ar)); position: absolute; left: 50%; bottom: 27%; width: var(--L); height: calc(var(--L) * var(--ar)); transform: translateX(-50%); }
-.mh-nv-body-lie img { position: absolute; left: 50%; top: 50%; width: calc(var(--L) * var(--ar)); height: var(--L); max-width: none; object-fit: fill;
-  transform: translate(-50%, -50%) rotate(-90deg); animation: mh-nv-body-in 1.6s ease-out both !important;
+  background: radial-gradient(70% 34% at var(--fx, 50%) var(--fy, 74%), rgba(120,0,14,.42), rgba(120,0,14,0) 72%), radial-gradient(120% 90% at 50% 40%, rgba(6,10,34,.35), rgba(0,0,4,.88)); animation: mh-nv-fade 1.4s ease both; }
+.mh-nv-body-lie { position: absolute; }
+.mh-nv-body-lie > img { position: absolute; left: 50%; top: 50%; max-width: none; object-fit: fill; transform: translate(-50%, -50%) rotate(-90deg); animation: mh-nv-body-in 1.6s ease-out both !important;
   filter: brightness(0) drop-shadow(0 0 1px rgba(210,30,40,.75)) drop-shadow(0 0 16px rgba(110,0,12,.6)) !important; }
-.mh-nv-body-lie.bust { --L: min(40vw, 300px, 17vh); transform: translateX(-100%); }
-.mh-nv-body-lie.bust .pool { left: -30%; top: calc(var(--H) * .6); width: calc(var(--L) * 1.9); height: calc(var(--L) * .3); }
-@media (orientation: landscape) { .mh-nv-body-lie { left: 31%; bottom: 22%; } }
-.mh-nv-body-lie img.bust { -webkit-mask-image: linear-gradient(180deg, #000 42%, transparent 80%); mask-image: linear-gradient(180deg, #000 42%, transparent 80%); }
-.mh-nv-body-lie.bust::after { content: ''; position: absolute; left: 52%; top: 22%; width: 120%; height: 62%; border-radius: 40% 50% 50% 40%; background: radial-gradient(60% 60% at 30% 50%, #000 40%, rgba(0,0,0,.85) 62%, rgba(0,0,0,0) 100%); filter: drop-shadow(0 0 10px rgba(110,0,12,.5)); animation: mh-nv-body-in 1.6s ease-out both; }
-.mh-nv-body-lie .pool { position: absolute; left: -14%; top: calc(var(--H) * .62); width: calc(var(--L) * 1.05); height: calc(var(--L) * .16); transform-origin: 18% 40%; filter: drop-shadow(0 0 6px rgba(140,0,16,.55));
+.mh-nv-body-lie > img.cut { -webkit-mask-image: linear-gradient(180deg, #000 50%, transparent 88%); mask-image: linear-gradient(180deg, #000 50%, transparent 88%); }
+.mh-nv-body-lie.sit > img { left: 0; top: 0; transform: none; transform-origin: 50% 100%; -webkit-mask-image: linear-gradient(180deg, #000 62%, transparent 100%); mask-image: linear-gradient(180deg, #000 62%, transparent 100%); }
+.mh-nv-body-lie .ground { position: absolute; left: -12%; right: -12%; bottom: -10%; height: 34%; border-radius: 50%; background: radial-gradient(50% 50% at 50% 50%, rgba(0,0,0,.72), rgba(0,0,0,0) 100%); }
+.mh-nv-body-lie .drift { position: absolute; left: -45%; bottom: -12%; width: 190%; height: 52%; pointer-events: none; filter: blur(1.5px); animation: mh-nv-body-in 1.6s ease-out both; }
+.mh-nv-body-lie.sit.prone .pool { left: -55%; bottom: -6%; width: 120%; height: 30%; }
+.mh-nv-body-lie .pool { position: absolute; left: -20%; bottom: -14%; width: 82%; height: 46%; transform-origin: 30% 50%; filter: drop-shadow(0 0 6px rgba(140,0,16,.55));
   animation: mh-nv-pool 3.2s cubic-bezier(.2,.6,.3,1) .5s both; }
+.mh-nv-body-lie.sit .pool { left: -30%; bottom: -8%; width: 160%; height: 22%; transform-origin: 50% 50%; }
 @keyframes mh-nv-body-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes mh-nv-pool { from { transform: scale(.08, .05); opacity: .6; } to { transform: scale(1); opacity: 1; } }
 .mh-nv-body.again .mh-nv-body-dim, .mh-nv-body.again img, .mh-nv-body.again .pool { animation-duration: .25s !important; animation-delay: 0s !important; }
@@ -125590,7 +125723,7 @@ const XMAS_NOVEL_CSS = `
 @keyframes mh-nv-zoom-out { 0% { transform: translate(-50%, -50%) scale(4); opacity: .2; } 100% { transform: translate(-50%, -50%) scale(.6); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .mh-nv-noise, .mh-nv-boot-logo, .mh-nv-boot-press { animation: none; } .mh-nv-transit { animation-duration: .01s !important; } }
 @media (orientation: landscape) and (max-height: 560px) {
-  .mh-nv-fig { left: 4%; transform: none; height: 96%; width: min(40vw, 420px); }
+  .mh-nv-fig { left: 0; right: auto; width: min(42vw, 460px); }
   .mh-nv-box { left: auto; right: 10px; transform: none; width: min(calc(60vw - 10px), 760px); min-height: 110px; padding-top: 20px; }
   .mh-nv-text { font-size: 15px; line-height: 1.65; }
   .mh-nv-cast { grid-template-columns: repeat(12, minmax(0, 1fr)); }
@@ -125651,6 +125784,9 @@ const XMAS_NOVEL_BG = Object.freeze([{
   re: /山道|外観/,
   img: 'mountain_road',
   snow: true
+}, {
+  re: /薪小屋/,
+  img: 'secret_passage'
 }, {
   re: /雪原|雪の庭|庭|森|足あと|崖/,
   img: 'snowfield_cliff',
@@ -125728,6 +125864,7 @@ const xmasNovelBgOf = name => {
   const tint = xmasNovelTintOf(n, b);
   return {
     img: XMAS_NOVEL_BG_IMG[b.img],
+    key: b.img,
     pos: b.pos,
     tint: tint ? XMAS_NOVEL_TINT[tint] : '',
     tintKind: tint,
@@ -125735,7 +125872,13 @@ const xmasNovelBgOf = name => {
   };
 };
 const XMAS_NOVEL_BG_SHIFT = Object.freeze({
-  'C10-3': [['10-3-4', 'ペンションのホール(朝)'], ['10-3-7', '朝の裏口'], ['10-3-12', 'ペンションのホール(朝)']],
+  'C10-3': [['10-3-4', 'ペンションのホール(朝)'], ['10-3-7', '朝の雪原(裏口の外)'], ['10-3-12', 'ペンションのホール(朝)']],
+  'C5-4': [['5-4-5', '鏡の裏の通り道']],
+  'C10-2': [['10-2-7', '朝の通り道(はしごの下)']],
+  'C2-X': [['2-X-6a', '夜の裏口(ろうそく)']],
+  'C6-X': [['6-X-10a', '明け方の雪原(裏口の外・吹雪)']],
+  'C2-Y': [['2-Y-10', '裏の階段(夜)'], ['2-Y-11', '夜のホール'], ['2-Y-13a', '裏の階段の下']],
+  'END-M2': [['M2-2', '朝の暖炉の前'], ['M2-3', '朝の雪原'], ['M2-4', '朝の薪小屋の中']],
   'END-G': [['G-10', '屋根裏の会場']]
 });
 const xmasNovelSceneBgName = (scene, idx) => {
@@ -125870,47 +126013,194 @@ const XmasNovelLaptop = () => React.createElement("svg", {
 }));
 const xmasNovelIsSilhouette = row => !!(row && /黒いサンタのシルエット|黒いサンタの影/.test(row.x || ''));
 const xmasNovelIsLaugh = row => !!(row && /ふふ|あはは|ははは/.test(row.x || ''));
-const XMAS_NOVEL_CHIN = Object.freeze({
-  atsu: 0.46,
-  myua: 0.47,
-  sorashido: 0.46,
-  kiki: 0.47,
-  momosuke: 0.47,
-  dra: 0.76,
-  kyuko: 0.47,
-  erubin: 0.47,
-  ichika: 0.30,
-  mochimaru: 0.35,
-  kuroba: 0.50,
-  shirase: 0.50,
-  shadow: 0.42,
-  boss: 0.40
+const XMAS_NOVEL_FRAMES = Object.freeze(['close', 'normal', 'far']);
+const XMAS_NOVEL_MARKS = Object.freeze({
+  atsu: {
+    chest: 0.62,
+    waist: 0.9,
+    l: 0.15,
+    r: 0.76
+  },
+  myua: {
+    chest: 0.6,
+    waist: 0.82,
+    l: 0.03,
+    r: 0.97
+  },
+  sorashido: {
+    chest: 0.6,
+    waist: 0.86,
+    l: 0.01,
+    r: 0.84
+  },
+  kiki: {
+    chest: 0.6,
+    waist: 0.81,
+    l: 0.01,
+    r: 0.93
+  },
+  momosuke: {
+    chest: 0.62,
+    waist: 0.76,
+    l: 0.12,
+    r: 0.93
+  },
+  kyuko: {
+    chest: 0.6,
+    waist: 0.77,
+    l: 0.28,
+    r: 0.9
+  },
+  erubin: {
+    chest: 0.65,
+    waist: 0.94,
+    l: 0.09,
+    r: 0.76
+  },
+  kuroba: {
+    chest: 0.74,
+    waist: 1,
+    l: 0,
+    r: 1
+  },
+  shirase: {
+    chest: 0.72,
+    waist: 1,
+    l: 0,
+    r: 1
+  },
+  ichika: {
+    chest: 0.42,
+    waist: 0.66,
+    l: 0.32,
+    r: 0.68
+  },
+  mochimaru: {
+    chest: 0.5,
+    waist: 0.75,
+    l: 0.18,
+    r: 0.82
+  },
+  dra: {
+    chest: 1,
+    waist: 1,
+    l: 0.1,
+    r: 0.9
+  },
+  shadow: {
+    chest: 0.58,
+    waist: 0.82,
+    l: 0.1,
+    r: 0.9
+  },
+  boss: {
+    chest: 0.5,
+    waist: 0.72,
+    l: 0.05,
+    r: 0.95
+  },
+  watson: {
+    chest: 1,
+    waist: 1,
+    l: 0.05,
+    r: 0.95
+  }
 });
-const XmasNovelLift = ({
-  chin,
-  children
+const XMAS_NOVEL_FRAME_FIT = Object.freeze({
+  close: {
+    cut: 'chest',
+    vis: 0.84,
+    maxW: 1.12
+  },
+  normal: {
+    cut: 'waist',
+    vis: 0.74,
+    maxW: 0.94
+  },
+  far: {
+    cut: 'all',
+    vis: 0.6,
+    maxW: 0.66
+  }
+});
+const xmasNovelFrameOf = (row, scene) => {
+  const f = row && row.f || scene && scene.frame || 'normal';
+  return XMAS_NOVEL_FRAMES.includes(f) ? f : 'normal';
+};
+const xmasNovelPlaceFig = ({
+  stageW,
+  top,
+  cutY,
+  ar,
+  mark,
+  frame
 }) => {
+  const fit = XMAS_NOVEL_FRAME_FIT[frame] || XMAS_NOVEL_FRAME_FIT.normal;
+  const m = mark || XMAS_NOVEL_MARKS.shadow;
+  const cutF = fit.cut === 'all' ? 1 : Math.min(1, Math.max(0.2, m[fit.cut]));
+  const avail = Math.max(60, cutY - top);
+  const span = Math.max(0.2, m.r - m.l);
+  let h = avail * fit.vis / cutF;
+  const maxH = stageW * fit.maxW / (ar * span);
+  if (h > maxH) h = maxH;
+  if (h * cutF > avail) h = avail / cutF;
+  const w = h * ar;
+  const left = stageW / 2 - w * ((m.l + m.r) / 2);
+  return {
+    w: Math.round(w),
+    h: Math.round(h),
+    left: Math.round(left),
+    top: Math.round(cutY - h * cutF)
+  };
+};
+const useXmasNovelPlace = (who, frame, artKey) => {
   const ref = useRef(null);
   useEffect(() => {
-    const wrap = ref.current;
-    const fig = wrap && wrap.firstElementChild;
-    if (!fig || !Number.isFinite(chin)) return undefined;
-    let lift = 0;
+    const fig = ref.current;
+    if (!fig) return undefined;
     let raf = 0;
     const fit = () => {
       raf = 0;
       const art = fig.firstElementChild;
+      const stage = fig.parentElement;
+      if (!art || !stage) return;
+      let ar = 0;
+      if (art.tagName === 'IMG') {
+        if (!art.naturalWidth || !art.naturalHeight) return;
+        ar = art.naturalWidth / art.naturalHeight;
+      } else {
+        const vb = art.tagName === 'svg' && art.viewBox && art.viewBox.baseVal;
+        ar = vb && vb.width && vb.height ? vb.width / vb.height : art.classList.contains('mh-nv-boss') ? 985 / 1347 : 0.7;
+      }
+      const s = stage.getBoundingClientRect();
+      const f = fig.getBoundingClientRect();
       const box = document.querySelector('[data-xmas-novel-box]');
-      if (!art || !box) return;
-      const a = art.getBoundingClientRect();
-      const b = box.getBoundingClientRect();
-      if (!a.height || !b.height) return;
-      const overlapX = Math.min(a.right, b.right) - Math.max(a.left, b.left) > a.width * 0.2;
-      const need = overlapX ? a.top + a.height * chin - (b.top - 6) : -lift;
-      const next = Math.max(0, Math.round(lift + need));
-      if (Math.abs(next - lift) < 1) return;
-      lift = next;
-      fig.style.translate = lift ? `0 ${-lift}px` : '';
+      const bar = document.querySelector('.mh-nv-top');
+      const b = box ? box.getBoundingClientRect() : null;
+      const overlapX = b && b.height ? Math.min(f.right, b.right) - Math.max(f.left, b.left) > f.width * 0.3 : false;
+      const cutY = overlapX ? b.top - s.top - 20 : s.height;
+      const top = bar ? bar.getBoundingClientRect().bottom - s.top + 8 : 56;
+      const p = xmasNovelPlaceFig({
+        stageW: f.width,
+        top,
+        cutY,
+        ar,
+        mark: XMAS_NOVEL_MARKS[who],
+        frame
+      });
+      fig.style.height = `${Math.max(0, Math.round(cutY))}px`;
+      Object.assign(art.style, {
+        position: 'absolute',
+        left: `${p.left}px`,
+        top: `${p.top}px`,
+        width: `${p.w}px`,
+        height: `${p.h}px`,
+        maxWidth: 'none',
+        maxHeight: 'none',
+        margin: '0'
+      });
+      fig.setAttribute('data-placed', '');
+      fig.setAttribute('data-xmas-novel-frame', frame);
     };
     const later = () => {
       if (!raf) raf = requestAnimationFrame(fit);
@@ -125922,7 +126212,7 @@ const XmasNovelLift = ({
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(later) : null;
     if (ro) {
       if (box) ro.observe(box);
-      ro.observe(fig);
+      if (fig.parentElement) ro.observe(fig.parentElement);
     }
     window.addEventListener('resize', later);
     return () => {
@@ -125931,32 +126221,30 @@ const XmasNovelLift = ({
       if (ro) ro.disconnect();
       window.removeEventListener('resize', later);
     };
-  }, [chin]);
-  return React.createElement("div", {
-    ref: ref,
-    style: {
-      display: 'contents'
-    }
-  }, children);
+  }, [who, frame, artKey]);
+  return ref;
 };
 const XmasNovelFigure = props => {
   const {
     row
   } = props;
   const who = !row ? '' : row.t === 'band' ? 'boss' : row.n === '？？？' ? xmasNovelIsLaugh(row) ? 'boss' : 'shadow' : row.w || '';
-  const inner = React.createElement(XmasNovelFigureArt, props);
-  const chin = XMAS_NOVEL_CHIN[who] || (who && who !== 'watson' ? XMAS_NOVEL_CHIN.shadow : NaN);
-  return React.createElement(XmasNovelLift, {
-    chin: chin,
+  return React.createElement(XmasNovelFigureArt, _extends({}, props, {
+    who: who,
+    frame: xmasNovelFrameOf(row, props.scene),
     key: `${who}-${row && row.e || ''}`
-  }, inner);
+  }));
 };
 const XmasNovelFigureArt = ({
   row,
-  dim = false
+  dim = false,
+  who = '',
+  frame = 'normal'
 }) => {
   const [broken, setBroken] = useState(0);
+  const ref = useXmasNovelPlace(who, frame, `${row ? row.id : ''}-${broken}`);
   if (row && row.t === 'band' && xmasNovelIsSilhouette(row)) return React.createElement("div", {
+    ref: ref,
     className: `mh-nv-fig${dim ? ' dim' : ''}`,
     key: `band-${row.id}`
   }, React.createElement(XmasNovelBossShadow, null));
@@ -125964,6 +126252,7 @@ const XmasNovelFigureArt = ({
   const key = `${row.w || row.n}-${row.e || ''}`;
   const laugh = row.n === '？？？' && xmasNovelIsLaugh(row);
   if (row.n === '？？？' || !row.w) return row.n === '？？？' ? React.createElement("div", {
+    ref: ref,
     className: `mh-nv-fig${dim ? ' dim' : ''}${laugh ? ' laugh' : ''}`,
     key: key
   }, laugh ? React.createElement(XmasNovelBossShadow, null) : React.createElement(XmasNovelShadow, {
@@ -125971,12 +126260,14 @@ const XmasNovelFigureArt = ({
     label: "？？？"
   })) : null;
   if (row.w === 'watson') return React.createElement("div", {
+    ref: ref,
     className: "mh-nv-fig",
     key: key
   }, React.createElement(XmasNovelLaptop, null));
   const c = xmasNovelCastOf(row.w);
   const fig = xmasNovelFigureSrc(row.w, row.e);
   if (!fig || broken >= 2) return React.createElement("div", {
+    ref: ref,
     className: `mh-nv-fig${dim ? ' dim' : ''}`,
     key: key
   }, React.createElement(XmasNovelShadow, {
@@ -125985,6 +126276,7 @@ const XmasNovelFigureArt = ({
   }));
   const src = broken === 1 && fig.fallback ? fig.fallback : fig.src;
   return React.createElement("div", {
+    ref: ref,
     className: `mh-nv-fig${fig.face ? ' face' : ''}${dim ? ' dim' : ''}`,
     key: key
   }, React.createElement("img", {
@@ -126059,37 +126351,279 @@ const xmasNovelBodySrc = who => {
   }
   return c.art || '';
 };
+const XMAS_NOVEL_BODY_FLOOR = Object.freeze({
+  backdoor: {
+    x: 0.5,
+    y: 0.83
+  },
+  kitchen: {
+    x: 0.5,
+    y: 0.84
+  },
+  snowfield_cliff: {
+    x: 0.5,
+    y: 0.82,
+    snow: true
+  },
+  mountain_road: {
+    x: 0.5,
+    y: 0.86,
+    snow: true
+  },
+  secret_passage: {
+    x: 0.52,
+    y: 0.84
+  },
+  mirror_hall: {
+    x: 0.5,
+    y: 0.88,
+    s: 0.9
+  },
+  guest_room: {
+    x: 0.57,
+    y: 0.64,
+    s: 0.8,
+    lift: true
+  },
+  study: {
+    x: 0.5,
+    y: 0.82,
+    desk: {
+      x: 0.47,
+      y: 0.585
+    }
+  },
+  hall_day: {
+    x: 0.5,
+    y: 0.86
+  },
+  hall_night: {
+    x: 0.5,
+    y: 0.86
+  },
+  attic: {
+    x: 0.5,
+    y: 0.86
+  },
+  attic_party: {
+    x: 0.5,
+    y: 0.86
+  },
+  dining: {
+    x: 0.5,
+    y: 0.86
+  },
+  locked_room: {
+    x: 0.5,
+    y: 0.86
+  }
+});
+const XMAS_NOVEL_BODY_FLOOR_DEFAULT = {
+  x: 0.5,
+  y: 0.84
+};
+const XMAS_NOVEL_BODY_POSE = Object.freeze({
+  'C5-4': 'sit',
+  'END-M5': 'sit',
+  'C5-X': 'slump'
+});
+const xmasNovelBodyPlace = ({
+  W,
+  H,
+  bg,
+  pose,
+  kind,
+  ar
+}) => {
+  const f = bg && XMAS_NOVEL_BODY_FLOOR[bg.key] || XMAS_NOVEL_BODY_FLOOR_DEFAULT;
+  const land = W > H;
+  const sc = Math.max(W / 1536, H / 1024);
+  const dw = 1536 * sc;
+  const dh = 1024 * sc;
+  const pxm = String(bg && bg.pos || '').match(/^(\d+)%/);
+  const px = pxm ? Number(pxm[1]) / 100 : 0.5;
+  const ox = (W - dw) * px;
+  const oy = (H - dh) / 2;
+  const k = f.s || 1;
+  let w;
+  let h;
+  if (pose === 'slump') {
+    const d = f.desk || {
+      x: f.x,
+      y: f.y
+    };
+    h = Math.min(0.55 * dh * k, H * (land ? 1.1 : 0.62));
+    w = h * ar;
+    return {
+      ...xmasNovelBodyClamp({
+        X: ox + d.x * dw,
+        Y: oy + d.y * dh,
+        w,
+        hv: h * 0.22,
+        W,
+        H,
+        land,
+        lift: true
+      }),
+      w,
+      h,
+      vis: 0.22,
+      snow: false
+    };
+  }
+  if (pose === 'sit') {
+    const vis = kind === 'guest' ? 0.95 : 0.45;
+    h = (kind === 'guest' ? 0.27 : 0.5) * dh * k;
+    h = Math.min(h, H * (land ? 0.62 : 0.34) / vis);
+    w = h * ar;
+    return {
+      ...xmasNovelBodyClamp({
+        X: ox + f.x * dw,
+        Y: oy + f.y * dh,
+        w,
+        hv: h * vis,
+        W,
+        H,
+        land
+      }),
+      w,
+      h,
+      vis,
+      snow: !!f.snow
+    };
+  }
+  if (kind === 'guest') {
+    h = Math.min(0.26 * dh * k, H * (land ? 0.5 : 0.3));
+    w = h * ar;
+    return {
+      ...xmasNovelBodyClamp({
+        X: ox + f.x * dw,
+        Y: oy + f.y * dh,
+        w,
+        hv: h * 0.5,
+        W,
+        H,
+        land
+      }),
+      w,
+      h,
+      vis: 0.5,
+      snow: !!f.snow
+    };
+  }
+  const len = (kind === 'monster' ? 0.17 : 0.27) * dw * k;
+  w = Math.min(len, W * (land ? 0.36 : 0.82));
+  h = w * ar;
+  return {
+    ...xmasNovelBodyClamp({
+      X: ox + f.x * dw,
+      Y: oy + f.y * dh,
+      w,
+      hv: h,
+      W,
+      H,
+      land,
+      lift: f.lift
+    }),
+    w,
+    h,
+    vis: 1,
+    snow: !!f.snow
+  };
+};
+const xmasNovelBodyClamp = ({
+  X,
+  Y,
+  w,
+  hv,
+  W,
+  H,
+  land,
+  lift
+}) => {
+  const boxTop = H - (land ? 140 : 170);
+  let y = Math.min(Y, land && !lift ? H - 10 : boxTop);
+  let x = X;
+  if (land && y > boxTop) x = Math.min(x, W * 0.4 - w / 2 - 6);
+  x = Math.max(w / 2 + 8, Math.min(W - w / 2 - 8, x));
+  y = Math.max(hv + 50, y);
+  return {
+    left: x - w / 2,
+    bottom: H - y
+  };
+};
 const XmasNovelBody = ({
   who,
   scene = '',
-  at = 0
+  at = 0,
+  bg = null
 }) => {
   const k = `${scene}:${who}`;
   const [again] = useState(() => xmasNovelBodyLast.k === k && Math.abs(at - xmasNovelBodyLast.at) <= 4);
   const [ar, setAr] = useState(0);
   const [broken, setBroken] = useState(false);
+  const [vp, setVp] = useState(() => ({
+    W: typeof window !== 'undefined' ? window.innerWidth : 390,
+    H: typeof window !== 'undefined' ? window.innerHeight : 844
+  }));
   useEffect(() => {
     xmasNovelBodyLast = {
       k,
       at
     };
   }, [k, at]);
+  useEffect(() => {
+    const on = () => setVp({
+      W: window.innerWidth,
+      H: window.innerHeight
+    });
+    window.addEventListener('resize', on);
+    return () => window.removeEventListener('resize', on);
+  }, []);
   const c = xmasNovelCastOf(who);
   const src = xmasNovelBodySrc(who);
-  const bust = !!(c && c.kind === 'guest');
+  const kind = c ? c.kind : '';
+  const bust = kind === 'guest';
+  const pose = XMAS_NOVEL_BODY_POSE[scene] || 'lie';
+  const slump = pose === 'slump';
+  const sit = pose === 'sit';
+  const prone = slump || !sit && bust;
+  const r = ar || (bust ? 1 : kind === 'monster' ? 1 : 0.4);
+  const p = xmasNovelBodyPlace({
+    W: vp.W,
+    H: vp.H,
+    bg,
+    pose,
+    kind,
+    ar: r
+  });
+  const boxH = sit || prone ? p.h * p.vis : p.h;
+  const fx = `${Math.round((p.left + p.w / 2) / vp.W * 100)}%`;
+  const fy = `${Math.round((vp.H - p.bottom) / vp.H * 100)}%`;
+  const fade = sit ? `linear-gradient(180deg, #000 ${Math.round(p.vis * 70)}%, transparent ${Math.round(p.vis * 100)}%)` : '';
   return React.createElement("div", {
     className: `mh-nv-body${again ? ' again' : ''}`,
     "data-xmas-novel-fallen": true,
     "data-xmas-novel-body": who,
-    "aria-label": c ? `${c.name}の倒れた影` : '倒れた影'
+    "data-xmas-novel-body-pose": pose,
+    "aria-label": c ? `${c.name}の倒れた影` : '倒れた影',
+    style: {
+      '--fx': fx,
+      '--fy': fy
+    }
   }, React.createElement("div", {
     className: "mh-nv-body-dim"
   }), React.createElement("div", {
-    className: `mh-nv-body-lie${bust ? ' bust' : ''}`,
+    className: `mh-nv-body-lie${sit ? ' sit' : prone ? ' sit prone' : ''}`,
     style: {
-      '--ar': ar || (bust ? 1 : 0.3)
+      left: p.left,
+      bottom: p.bottom,
+      width: p.w,
+      height: boxH
     }
-  }, React.createElement("svg", {
+  }, React.createElement("div", {
+    className: "ground"
+  }), React.createElement("svg", {
     className: "pool",
     viewBox: "0 0 300 60",
     preserveAspectRatio: "none",
@@ -126115,13 +126649,75 @@ const XmasNovelBody = ({
     src: src,
     alt: "",
     draggable: false,
-    className: bust ? 'bust' : '',
+    style: sit ? {
+      width: p.w,
+      height: p.h,
+      transform: `rotate(${pose === 'slump' ? 16 : 5}deg)`,
+      WebkitMaskImage: fade,
+      maskImage: fade
+    } : slump ? {
+      width: p.w,
+      height: p.h,
+      transformOrigin: '50% 0',
+      transform: 'scaleY(.7) rotate(-3deg)',
+      WebkitMaskImage: 'linear-gradient(180deg, #000 20%, transparent 31%)',
+      maskImage: 'linear-gradient(180deg, #000 20%, transparent 31%)'
+    } : prone ? {
+      width: p.w,
+      height: p.h,
+      transformOrigin: '50% 0',
+      transform: 'scaleY(.62) rotate(-4deg)',
+      WebkitMaskImage: 'linear-gradient(180deg, #000 48%, transparent 74%)',
+      maskImage: 'linear-gradient(180deg, #000 48%, transparent 74%)'
+    } : {
+      width: p.h,
+      height: p.w,
+      ...(kind === 'monster' ? {
+        transform: `translateY(${Math.round(p.h * 0.17)}px) translate(-50%, -50%) rotate(-90deg)`
+      } : {})
+    },
     onLoad: e => {
       const im = e.currentTarget;
       if (im.naturalWidth && im.naturalHeight) setAr(im.naturalWidth / im.naturalHeight);
     },
     onError: () => setBroken(true)
-  }), (!src || broken) && React.createElement(XmasNovelFallen, null)));
+  }), (!src || broken) && React.createElement(XmasNovelFallen, null), prone && !slump && React.createElement("svg", {
+    className: "drift",
+    viewBox: "0 0 100 40",
+    preserveAspectRatio: "none",
+    "aria-hidden": "true"
+  }, React.createElement("defs", null, React.createElement("linearGradient", {
+    id: "mh-nv-drift-g",
+    x1: "0",
+    y1: "0",
+    x2: "0",
+    y2: "1"
+  }, p.snow ? React.createElement(React.Fragment, null, React.createElement("stop", {
+    offset: "0%",
+    stopColor: "#5f6574",
+    stopOpacity: "0"
+  }), React.createElement("stop", {
+    offset: "22%",
+    stopColor: "#5f6574"
+  }), React.createElement("stop", {
+    offset: "100%",
+    stopColor: "#3c404b"
+  })) : React.createElement(React.Fragment, null, React.createElement("stop", {
+    offset: "0%",
+    stopColor: "#000",
+    stopOpacity: ".2"
+  }), React.createElement("stop", {
+    offset: "40%",
+    stopColor: "#000",
+    stopOpacity: ".9"
+  }), React.createElement("stop", {
+    offset: "100%",
+    stopColor: "#000",
+    stopOpacity: "0"
+  })))), React.createElement("path", {
+    d: "M0 40 C10 30 22 22 36 20 C46 16 56 16 66 19 C80 22 92 30 100 40 Z",
+    fill: "url(#mh-nv-drift-g)"
+  }))));
 };
 const XmasNovelBossShadow = () => {
   const src = typeof RAID_XMAS_BOSS_IMG !== 'undefined' ? RAID_XMAS_BOSS_IMG : '';
@@ -127134,12 +127730,14 @@ const XmasNovelScreen = ({
   }), bg.snow && React.createElement("div", {
     className: "mh-nv-snow b"
   })), !darkNow && (isLine || isBand && xmasNovelIsSilhouette(row)) && React.createElement(XmasNovelFigure, {
-    row: row
+    row: row,
+    scene: scene
   }), fx && React.createElement("div", {
     key: fx.n,
     className: `mh-nv-fx ${fx.kind}`
   }), isBand && row.body && React.createElement(XmasNovelBody, {
     key: `body-${row.body}`,
+    bg: bg,
     who: xmasNovelBodyWho(row.body, st && st.cur && st.cur.flags),
     scene: scene ? scene.id : '',
     at: st && st.cur && Number.isFinite(st.cur.idx) ? st.cur.idx : 0
