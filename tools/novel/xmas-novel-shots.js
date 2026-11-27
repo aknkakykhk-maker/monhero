@@ -40,7 +40,18 @@ const SHOTS_046 = [
   { name: '10-past-shirase', row: '12-6-3', side: 0, label: '過去編 雪原の朝(白瀬)' },
   { name: '11-past-mochi', row: '12-7-4', side: 0, label: '過去編 開けておく扉(もちまる)' },
 ];
-const LIST = process.argv.includes('--r1126-046') ? SHOTS_046 : SHOTS;
+// 真グッドと普通のグッドの終わり方の書き分け(r1126-054)
+const SHOTS_054 = [
+  { name: '01-c8-promise-atsu', row: '8-3-23a', side: 1, label: '真ルート 第8章 正しい時刻で鳴らそう(あつ派)' },
+  { name: '02-c9-soup', row: '9-2-10', side: 2, label: '終章 もちまるのスープ' },
+  { name: '03-g-promise', row: 'G-16f', side: 1, label: '真グッド いつか、お客さんとして' },
+  { name: '04-g-last', row: 'G-20z', side: 1, label: '真グッド 最後の一文' },
+  { name: '05-outg', row: 'OUT-G-3c', side: 1, label: '真グッドのあと 画面の前' },
+  { name: '06-c11n-sora', row: '11-N-82s', side: 2, label: '遅すぎた真相 もう、終わりにしましょう(ソラシド派)' },
+  { name: '07-n-leave', row: 'N-13c', side: 2, label: '普通のグッド 山道を下りる' },
+  { name: '08-n-last', row: 'N-13f', side: 2, label: '普通のグッド 最後の地の文' },
+];
+const LIST = process.argv.includes('--r1126-046') ? SHOTS_046 : process.argv.includes('--r1126-054') ? SHOTS_054 : SHOTS;
 
 const ctx = vm.createContext({});
 vm.runInContext(`${fs.readFileSync(path.join(ROOT, 'monster-hero/src/parts/79-xmas-novel-script.jsx'), 'utf8')}\nthis.S = XMAS_NOVEL_SCRIPT;`, ctx);

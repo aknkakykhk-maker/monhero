@@ -617,6 +617,7 @@
 | 8-3-21 | <img src="../../../monster-hero/images/assistant/santa/face/dra_normal.PNG" width="40"> | ドラ(ふつう) | 仲間だからだ。……でも、本当は、止めなきゃいけなかったんだな。ごめんな、みんな |
 | 8-3-22 | <img src="../../../monster-hero/images/assistant/santa/face/kyuko_crying.PNG" width="40"> | きゅうこ(泣き顔) | えるニキ。……押すつもりなんて、なかった。カメラだけ、取ろうとして……。ワトソンくんにも送ってあったなんて、知らなかった |
 | 8-3-23 | <img src="../../../monster-hero/images/assistant/santa/face/erubin_normal.PNG" width="40"> | えるびん(ふつう) | ……きゅうこちゃん。招待状が届いた日、『えるニキも、ちゃんと入ってる』って言ってくれたの、俺、嬉しかったんだ |
+| 8-3-23s | <img src="../../../monster-hero/images/assistant/santa/face/sorashido_normal.PNG" width="40"> | ソラシド(ふつう) | ……きゅうこちゃん。0時まで、まだ時間があります。今度の鐘は、正しい時刻で鳴らしましょう。みんなで |
 | 8-3-24 |  | 並び |  |
 | 9-1-1 |  | 帯 | 聖夜の名探偵 終章 〜聖夜の鐘〜 |
 | 9-1-2 |  | 帯 | ホール。きゅうこが、柱時計の針を13分戻す。正しくなった針が、0時に近づいていく |
@@ -633,6 +634,8 @@
 | 9-2-7 | <img src="../../../monster-hero/images/assistant/santa/face/dra_crying.PNG" width="40"> | ドラ(泣き顔) | きゅうこちゃん！ おで、まだ、言いたいこと、いっぱいあるんだ！ |
 | 9-2-8 |  | 帯 | 雪をかきわけて、ローズ色の髪が、ゆっくりと、灯りのほうへ戻ってくる |
 | 9-2-9 | <img src="../../../monster-hero/images/assistant/santa/face/kyuko_crying.PNG" width="40"> | きゅうこ(泣き顔) | ……ごめん。……ごめんね、みんな |
+| 9-2-10 | <img src="../../../monster-hero/images/monster-icons/face/mocchi.png" width="40"> | もちまる | (毛布を抱えて、裏口へ駆けつける)……スープ、温めてあるっちー。今度は、ちゃんと、飲んでもらうっちー |
+| 9-2-11 |  | 帯 | その夜、裏口のかんぬきは、朝まで、開いたままだった |
 | G-1 |  | 帯 | 聖夜の名探偵 エンディング「やり直しのクリスマス会」 |
 | G-2 |  | 帯 | 12月24日。雪がやみ、山の上に、真っ青な空 |
 | G-3 |  | 帯 | ホール。ソラシドが、柱時計のねじを巻く。針は、もうずれていない |
@@ -649,14 +652,23 @@
 | G-14 | <img src="../../../monster-hero/images/monster-icons/face/mocchi.png" width="40"> | もちまる | 今日は、いっぱい食べてっちー。……みなさんがいてくれて、よかったっちー |
 | G-15 |  | 帯 | ♪(きゅうこが、母のオルゴールのねじを巻く。子守歌に合わせて、みんなが小さな声で歌う) |
 | G-16 | <img src="../../../monster-hero/images/monster-icons/face/snegurochka.png" width="40"> | イチーカ | ……12年ぶりの、歌声ですね。カノンさん、聞こえていますか |
+| G-16b | <img src="../../../monster-hero/images/assistant/santa/face/momosuke_happy.PNG" width="40"> | ももすけ(笑顔) | ねえ、ドラちゃん。それ、何枚目のクッキー？w |
+| G-16c | <img src="../../../monster-hero/images/assistant/santa/face/dra_happy.PNG" width="40"> | ドラ(笑顔) | ……5枚目だ。今日は、数えないことにした |
+| G-16d |  | 帯 | ホールに、久しぶりに、みんなの笑い声が弾けた |
+| G-16e | <img src="../../../monster-hero/images/monster-icons/face/snegurochka.png" width="40"> | イチーカ | 来年のクリスマスも、その次も、ここで待っていますね。……裏口の灯りは、ずっと、つけておきますから |
+| G-16f | <img src="../../../monster-hero/images/assistant/santa/face/kyuko_normal.PNG" width="40"> | きゅうこ(ふつう) | ……うん。いつか、全部終わったら。今度は、ちゃんと、お客さんとして来るよ |
+| G-16g | <img src="../../../monster-hero/images/assistant/santa/face/myua_wink.PNG" width="40"> | みゅあ(ウインク) | 約束ね！ そのときは、あたしが、もっと長いマフラー編んどく！ |
 | G-17s | <img src="../../../monster-hero/images/assistant/santa/face/sorashido_normal.PNG" width="40"> | ソラシド(ふつう) | あつさん。……今回は、二人で解きました。引き分けです |
 | G-18s | <img src="../../../monster-hero/images/assistant/santa/face/atsu_normal.PNG" width="40"> | あつ(ふつう) | 次は、誰も失わないで解こう。……二人で |
 | G-19 |  | 帯 | 窓の外。雪の空を、赤いサンタのそりが、鈴を鳴らして横切っていった |
 | G-20g3 | <img src="../../../monster-hero/images/assistant/santa/face/sorashido_happy.PNG" width="40"> | ソラシド(笑顔) | (プレイヤー)、全部一回で当てましたね。……今回の一番の名探偵は、(プレイヤー)だったのかもしれません |
+| G-20z |  | 帯 | 長い事件の夜を越えて、ペンション・シュプールに残ったのは、灯りのぬくもりと、みんなの笑い声と、まだ湯気の立つスープだった |
 | G-21 |  | 帯 | 聖夜の名探偵 —— おしまい |
 | OUT-G-1 |  | 帯 | 画面の前。エンディングの曲が、静かに流れている |
 | OUT-G-2 | <img src="../../../monster-hero/images/assistant/santa/face/myua_crying.PNG" width="40"> | みゅあ(泣き顔) | ……よかった。本当に、よかったぁ…… |
 | OUT-G-3 | <img src="../../../monster-hero/images/assistant/santa/face/dra_happy.PNG" width="40"> | ドラ(笑顔) | ゲームの中のおで、がんばってたな。えへへ |
+| OUT-G-3b | <img src="../../../monster-hero/images/assistant/santa/face/momosuke_happy.PNG" width="40"> | ももすけ(笑顔) | ゲームの中のもも、最後、めっちゃ笑ってたw |
+| OUT-G-3c | <img src="../../../monster-hero/images/assistant/santa/face/kyuko_happy.PNG" width="40"> | きゅうこ(笑顔) | ……ゲームの中の俺も、ちゃんと帰ってこられて、よかった笑 |
 | OUT-G-4 | <img src="../../../monster-hero/images/assistant/santa/face/sorashido_normal.PNG" width="40"> | ソラシド(ふつう) | ……それにしても。このゲーム、誰が送ってきたんでしょう |
 | OUT-G-5 |  | 帯 | 小包の底に、小さな紙が1枚。『次の事件で、また会いましょう』 |
 | OUT-G-6 | <img src="../../../monster-hero/images/assistant/santa/face/atsu_surprise.PNG" width="40"> | あつ(驚き) | 次の事件……？ |
