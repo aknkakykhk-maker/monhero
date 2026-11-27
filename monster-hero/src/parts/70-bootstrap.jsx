@@ -3668,6 +3668,16 @@ const createAnimationStyle = () => {
       75% { transform: translateY(-10px) scale(1.03); }
       100% { transform: none; }
     }
+    /* 覚醒サンタの超宝屁: 後ろを向いてお尻を突き出し、ぷぅっと膨らんで、はじけて戻る(左右の反転は transform だけ) */
+    @keyframes emToot {
+      0% { transform: none; }
+      12% { transform: translate(-4px, 0) rotate(-5deg); }
+      22% { transform: scaleX(-1) translate(0, 2px) rotate(-6deg); }
+      44% { transform: scaleX(-1) translate(8px, 8px) rotate(-16deg) scale(1.12, .88); }
+      56% { transform: scaleX(-1) translate(-4px, -8px) rotate(5deg) scale(.92, 1.1); }
+      88% { transform: scaleX(-1) rotate(-2deg); }
+      100% { transform: none; }
+    }
     @keyframes emSway {
       0% { transform: none; }
       15% { transform: translate(-6px, -6px) rotate(-9deg) scale(.96, 1.06); }
@@ -3767,6 +3777,7 @@ const createAnimationStyle = () => {
     [data-tactics-look] [data-enemy-skill][data-em-body="stance"] > :is(span, [data-moo-body]) { animation-name: emStance; }
     [data-tactics-look] [data-enemy-skill][data-em-body="heal"] > :is(span, [data-moo-body]) { animation-name: emHeal; }
     [data-tactics-look] [data-enemy-skill][data-em-body="sway"] > :is(span, [data-moo-body]) { animation-name: emSway; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="toot"] > :is(span, [data-moo-body]) { animation-name: emToot; transform-origin: 50% 80%; }
     [data-tactics-look] [data-moo-stage] > [data-moo-body] { transform-origin: 50% 60%; }
     /* やられ(カワズモーと同じのけぞり) */
     [data-tactics-look] [data-enemy-ring][data-em-idle][data-enemy-hurt] > span, [data-tactics-look] [data-moo-stage][data-enemy-hurt] > [data-moo-body] { animation: kzHurt 520ms ease-out forwards; }
@@ -3976,6 +3987,14 @@ const createAnimationStyle = () => {
     [data-moo-claw] { left: -20%; width: 140%; height: 12px; margin-top: -6px; transform: rotate(-32deg) scaleX(0); transform-origin: 0 50%; border-radius: 6px; opacity: 0;
       background: linear-gradient(180deg, transparent, #dc2626 25%, #fff 45% 55%, #facc15 75%, transparent); box-shadow: 0 0 26px 8px rgba(220,38,38,.8); animation: mooClaw 520ms ease-out both; }
     @keyframes mooClaw { 0% { opacity: 1; transform: rotate(-32deg) scaleX(0); } 40% { opacity: 1; transform: rotate(-32deg) scaleX(1); } 100% { opacity: 0; transform: rotate(-32deg) scaleX(1) scaleY(.2); } }
+    /* 覚醒サンタの超宝屁のガスの雲(緑〜紫)。味方の枠ごとに1つ。中に小さな星と雪 */
+    [data-santa-gas] { position: absolute; width: var(--w); height: calc(var(--w) * .72); margin: calc(var(--w) * -.36) 0 0 calc(var(--w) * -.5); opacity: 0; pointer-events: none;
+      border-radius: 50%; background: radial-gradient(closest-side at 30% 58%, rgba(163,230,53,.95) 35%, rgba(163,230,53,0)), radial-gradient(closest-side at 68% 44%, rgba(192,132,252,.92) 35%, rgba(192,132,252,0)),
+        radial-gradient(closest-side at 50% 72%, rgba(74,222,128,.9) 35%, rgba(74,222,128,0)), radial-gradient(closest-side at 50% 40%, rgba(126,34,206,.7), rgba(126,34,206,0)); animation: santaGas 1s ease-out both; will-change: transform, opacity; }
+    [data-santa-gas] > b { position: absolute; font-size: 20px; line-height: 1; left: 30%; top: 30%; opacity: .9; }
+    [data-santa-gas] > b + b { left: 62%; top: 52%; font-size: 16px; }
+    @keyframes santaGas { 0% { opacity: 0; transform: scale(.3) translateY(10px); } 25% { opacity: 1; } 75% { opacity: .9; transform: scale(1.15) translateY(-4px); } 100% { opacity: 0; transform: scale(1.35) translateY(-14px); } }
+    @media (prefers-reduced-motion: reduce) { [data-santa-gas] { animation: none; display: none; } }
     [data-moo-meteor] { top: -12%; font-size: 64px; opacity: 0; filter: drop-shadow(0 0 16px rgba(251,146,60,1)); animation: mooMeteor 700ms cubic-bezier(.4,0,1,1) both; }
     @keyframes mooMeteor { 0% { opacity: 0; transform: translate(40vw, 0) rotate(-20deg) scale(.6); } 15% { opacity: 1; } 90% { opacity: 1; transform: translate(-30vw, 80vh) rotate(-20deg) scale(1.3); } 100% { opacity: 0; transform: translate(-34vw, 86vh) scale(1.8); } }
     [data-moo-tornado] { left: 0; font-size: 110px; margin-top: -55px; opacity: 0; filter: drop-shadow(0 0 20px rgba(250,204,21,.8)); animation: mooTornado 900ms ease-in-out both; }

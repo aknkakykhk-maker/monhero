@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 651f8681a0631dbf
+// source-sha256: 0e2a68818dd9940d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -10172,8 +10172,8 @@ const Audio_ = (() => {
   const preloadSE = src => {
     if (enabled && src) loadBuffer(src).catch(() => {});
   };
-  const playSeFile = async src => {
-    if (!enabled || !src || backgroundSeQuiet) return null;
+  const playSeFileOn = async (src, fg) => {
+    if (!enabled || !src || backgroundSeQuiet && !fg) return null;
     await ensure();
     if (!Tone || !seBus) return null;
     let buffer = null;
@@ -10214,6 +10214,8 @@ const Audio_ = (() => {
       return null;
     }
   };
+  const playSeFile = src => playSeFileOn(src, false);
+  const fgPlaySeFile = src => playSeFileOn(src, true);
   let returnHealTimer = null;
   const healAfterReturn = () => {
     if (returnHealTimer) clearTimeout(returnHealTimer);
@@ -11509,6 +11511,7 @@ const Audio_ = (() => {
     setStoryEndFade,
     setStoryOpenFade,
     playSeFile,
+    fgPlaySeFile,
     preloadSE,
     playBGM,
     fadeToBGM,
@@ -62343,11 +62346,15 @@ const FRIEND_PLACE_TEXT = Object.freeze({
   room: '部屋で待ち中',
   rhythmPlay: '🎵 モンヒロビートで演奏中',
   life: '🏡 助手ライフ',
-  roomPrivate: '🔑 プライベート中'
+  roomPrivate: '🔑 プライベート中',
+  xmasNovel: '事件簿を読んでいる',
+  xmasEvent: 'イベントページを見ている'
 });
 const FRIEND_AUTO_TEXT = '⚡ オート周回中';
 const FRIEND_IDLE_AUTO_MIN = 10;
 const FRIEND_IDLE_OPEN_TEXT = Object.freeze({
+  xmasNovel: '事件簿',
+  xmasEvent: 'イベントページ',
   home: 'ホーム',
   rhythm: 'モンヒロビート',
   multi: 'モンヒロビート',
@@ -62371,7 +62378,16 @@ if (typeof window !== 'undefined' && window.addEventListener) {
 }
 const friendsIdleMinutes = (now = Date.now()) => Math.max(0, Math.floor((now - _friendsLastInputAt) / 60000));
 const FRIEND_PRESENCE_SHOW_KEY = 'mh_friend_presence_show_v1';
-const FRIEND_SUB_PLACES = Object.freeze(['card', 'cardBattle', 'room', 'rhythmPlay', 'life', 'roomPrivate']);
+const FRIEND_SUB_PLACES = Object.freeze(['card', 'cardBattle', 'room', 'rhythmPlay', 'life', 'roomPrivate', 'xmasNovel', 'xmasEvent']);
+let _friendsXmasSpot = '';
+const friendsSetXmasSpot = spot => {
+  const next = spot === 'novel' || spot === 'event' ? spot : '';
+  if (next === _friendsXmasSpot) return;
+  _friendsXmasSpot = next;
+  try {
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event('mh-friend-spot'));
+  } catch (error) {}
+};
 let _friendsRoomWaiting = false;
 const friendsSetRoomWaiting = on => {
   _friendsRoomWaiting = !!on;
@@ -62449,6 +62465,8 @@ const friendsPlaceOfScreen = gameState => {
   if (_friendsLifeVisit > 0 && name !== 'RHYTHM_PLAY' && name !== 'CARD_BATTLE') return 'life';
   if (name === 'HOME' && typeof document !== 'undefined' && document.querySelector && document.querySelector('[data-assistant-life-screen]')) return 'life';
   if (name === 'HOME') return 'home';
+  if (name === 'RAID_JACK' && _friendsXmasSpot === 'novel') return 'xmasNovel';
+  if (name === 'RAID_JACK' && _friendsXmasSpot === 'event') return 'xmasEvent';
   if (name === 'CARD_BATTLE') return 'cardBattle';
   if (name.startsWith('CARD_')) return 'card';
   if (name === 'RHYTHM_MULTI') return 'multi';
@@ -70868,7 +70886,7 @@ const GROWTH_FX_KINDS = Object.freeze({
 });
 const growthFxKind = kind => GROWTH_FX_KINDS[kind] || GROWTH_FX_KINDS.bond;
 const GROWTH_FX_CALM_SCREENS = Object.freeze(new Set(['HOME', 'PROFILE', 'ITEM_INVENTORY', 'GIFT_BOX', 'MISSIONS', 'BREEDER_MARKET', 'MB_MANAGEMENT', 'MASU_MONS', 'OWNED_MONSTERS', 'MONSTER_DEX', 'MONSTER_DEX_DETAIL', 'MONSTER_LIST_MENU', 'FRIENDS', 'ASSISTANT_SELECT', 'MASU_ENHANCE', 'MASU_AUTO_ENHANCE', 'MASU_FUSION', 'MASU_DONATION', 'MASU_OFFERING', 'MASU_REBIRTH', 'MASU_REGENERATION', 'MASU_REGENERATION_DETAIL', 'MASU_REINCARNATE', 'MASU_SOUL_RANK', 'MASU_SOUL_TRAITS', 'MASU_TRANSCENDENCE', 'MASU_TRANSCEND_ENHANCE']));
-const GROWTH_FX_HOLD_ALL_SELECTOR = '[data-event-story],[data-story-stage],[data-story-sheet],[data-player-rank-up-fx]';
+const GROWTH_FX_HOLD_ALL_SELECTOR = '[data-event-story],[data-story-stage],[data-story-sheet],[data-player-rank-up-fx],[data-xmas-novel-host]';
 const GROWTH_FX_HOLD_SHEET_SELECTOR = '[data-assistant-chat],[data-life-quick-run="live"]';
 const GROWTH_FX_HOLD_LEVEL_OFF_HOME_SELECTOR = '[data-quick-anywhere]';
 const GROWTH_FX_MONSUC_SELECTOR = '[data-monhero-success]';
@@ -89222,6 +89240,7 @@ const tacticsEnemyMotionMs = (enemyId, skill, fallbackMs) => {
 };
 const TACTICS_ENEMY_BODY_HIT = Object.freeze({
   jab: .5,
+  toot: .58,
   lunge: .55,
   dash: .58,
   flurry: .7,
@@ -89401,7 +89420,7 @@ const TACTICS_ENEMY_MOTION_SETS = Object.freeze({
     idle: 'menace',
     skills: {
       normal: ['jab', 'burst', '❄️', 'shoot'],
-      sweep: ['sway', 'sparkle', '🎁', 'shoot'],
+      sweep: ['toot', 'sparkle', '💨', 'shoot'],
       rush: ['leap', 'burst', '🦵', 'shoot'],
       pierce: ['windup', 'beam', '🖤', 'rise'],
       special: ['dash', 'slash'],
@@ -90382,7 +90401,17 @@ const TacticsEnemyStageFx = ({
       left: `${8 + k * 29 % 90}%`,
       animationDelay: at(0.18 + k * 0.07)
     }
-  }, santa ? '❄️' : '☄️')), isMoo && !lite && skill === 'allout' && [0, 1, 2].map(k => React.createElement("i", {
+  }, santa ? '❄️' : '☄️')), santa && !lite && skill === 'sweep' && geo.all.map((t, k) => React.createElement("i", {
+    key: `gas-${k}`,
+    "data-santa-gas": true,
+    style: {
+      left: t.x,
+      top: t.y,
+      '--w': `${Math.round(Math.max(t.w, t.h) * 1.6)}px`,
+      animationDelay: at(0.48 + k * 0.04),
+      animationDuration: at(0.52)
+    }
+  }, React.createElement("b", null, k % 2 ? '❄️' : '✨'), React.createElement("b", null, k % 2 ? '✨' : '❄️'))), isMoo && !lite && skill === 'allout' && [0, 1, 2].map(k => React.createElement("i", {
     key: k,
     "data-moo-tornado": true,
     style: {
@@ -127560,8 +127589,9 @@ const XMAS_NOVEL_LAUGH_SE = 'audio/se-xmas-novel-laugh.mp3';
 const xmasNovelSe = kind => {
   try {
     if (typeof Audio_ === 'undefined' || !Audio_ || !Audio_.se) return;
-    if (kind === 'laugh' && typeof Audio_.playSeFile === 'function') {
-      void Audio_.playSeFile(XMAS_NOVEL_LAUGH_SE);
+    const playFile = typeof Audio_.fgPlaySeFile === 'function' ? Audio_.fgPlaySeFile : Audio_.playSeFile;
+    if (kind === 'laugh' && typeof playFile === 'function') {
+      void playFile(XMAS_NOVEL_LAUGH_SE);
       return;
     }
     const map = {
@@ -127574,7 +127604,7 @@ const xmasNovelSe = kind => {
       ok: 'victory',
       ng: 'guard'
     };
-    const fn = Audio_.se[map[kind] || 'tap'];
+    const fn = (Audio_.fgSe || Audio_.se)[map[kind] || 'tap'];
     if (typeof fn === 'function') fn();
   } catch (e) {}
 };
@@ -127613,7 +127643,7 @@ const xmasNovelSeHit = kind => {
       at: Date.now()
     };
     seq.play.forEach(name => {
-      const fn = Audio_.se[name];
+      const fn = (Audio_.fgSe || Audio_.se)[name];
       if (typeof fn === 'function') fn();
     });
   } catch (e) {}
@@ -128973,6 +129003,16 @@ const XmasNovelScreen = ({
   }, "閉じる(続きは残ります)"))))));
 };
 let xmasNovelHost = null;
+const xmasNovelPresence = {
+  open: false,
+  touchedAt: 0
+};
+const XMAS_NOVEL_PRESENCE_EVENT = 'mh-xmas-novel-presence';
+const xmasNovelPresenceEmit = () => {
+  try {
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event(XMAS_NOVEL_PRESENCE_EVENT));
+  } catch (e) {}
+};
 const openXmasNovel = (opts = {}) => {
   if (typeof document === 'undefined' || typeof ReactDOM === 'undefined' || !ReactDOM.createRoot) return false;
   if (xmasNovelHost) return true;
@@ -128981,13 +129021,37 @@ const openXmasNovel = (opts = {}) => {
   el.setAttribute('data-xmas-novel-host', '');
   document.body.appendChild(el);
   const root = ReactDOM.createRoot(el);
+  const touch = e => {
+    if (e && e.isTrusted) xmasNovelPresence.touchedAt = Date.now();
+  };
+  const TOUCH_EVENTS = ['pointerdown', 'keydown', 'wheel'];
+  TOUCH_EVENTS.forEach(t => {
+    try {
+      document.addEventListener(t, touch, {
+        capture: true,
+        passive: true
+      });
+    } catch (e) {}
+  });
   xmasNovelHost = {
     el,
     root
   };
+  xmasNovelPresence.open = true;
+  xmasNovelPresence.touchedAt = Date.now();
+  xmasNovelPresenceEmit();
   const done = () => {
     const h = xmasNovelHost;
     xmasNovelHost = null;
+    TOUCH_EVENTS.forEach(t => {
+      try {
+        document.removeEventListener(t, touch, {
+          capture: true
+        });
+      } catch (e) {}
+    });
+    xmasNovelPresence.open = false;
+    xmasNovelPresenceEmit();
     setTimeout(() => {
       try {
         h.root.unmount();
@@ -251348,6 +251412,19 @@ function MonsterHeroGame() {
   const offscreenEffectRef = useRef(null);
   const quickAnywhereSeQuietRef = useRef(false);
   const QUICK_RUN_ANYWHERE_RUN_SCREENS = ['HOME', 'PROFILE', 'ITEM_INVENTORY', 'GIFT_BOX', 'MISSIONS', 'SETTINGS', 'FRIENDS', 'BREEDER_MARKET'];
+  const raidEvRef = useRef('jack');
+  const isXmasQuietScreen = state => state === 'RAID_JACK' && raidEvRef.current === 'xmas';
+  const isQuickAnywhereRunScreen = state => QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(state) || isXmasQuietScreen(state);
+  const XMAS_NOVEL_QUICK_BOOST = 3;
+  const XMAS_NOVEL_QUICK_IDLE_MS = 3 * 60 * 1000;
+  const xmasNovelQuickBoostNow = (now = Date.now()) => {
+    if (!QUICK_RUN_ANYWHERE_RELEASE || !quickAnywhereRunRef.current || !isXmasQuietScreen(gameStateNowRef.current)) return 1;
+    if (typeof xmasNovelPresence === 'undefined' || !xmasNovelPresence.open) return 1;
+    if (typeof xmasNovelPlayableAt !== 'function' || !xmasNovelPlayableAt(now)) return 1;
+    const touched = Number(xmasNovelPresence.touchedAt);
+    if (!Number.isFinite(touched) || now - touched >= XMAS_NOVEL_QUICK_IDLE_MS) return 1;
+    return XMAS_NOVEL_QUICK_BOOST;
+  };
   const QUICK_RUN_ANYWHERE_BATTLE_ENTRY_SCREENS = ['BATTLE_SYSTEM_SELECT', 'BATTLE_MODE_SELECT', 'BATTLE_DIFFICULTY_SELECT', 'BATTLE_MENU', 'EXTREME_DIFFICULTY_SELECT', 'SPECIES_CHALLENGE_SELECT', 'SKIP_PICK', 'RAID_JACK_PREP', 'RAID_JACK', 'BATTLE_TUTORIAL', 'DEBUG_BATTLE_SETUP', 'RPG_DEBUG_SETUP'];
   const isQuickAnywhereScreen = state => QUICK_RUN_ANYWHERE_RELEASE && quickAnywhereRunRef.current && !RUN_STAGE_SCREENS.includes(state) && !isRhythmScreen(state) && !isCardRunScreen(state);
   const quickAnywhereEndingRef = useRef(false);
@@ -252359,8 +252436,9 @@ function MonsterHeroGame() {
   const catchUpUntilRef = useRef(0);
   const battleMs = useCallback(baseMs => {
     const base = Math.max(0, Math.round(baseMs / normalizeBattleSpeed(battleSpeedRef.current)));
-    if (!(catchUpUntilRef.current > Date.now())) return base;
-    return Math.max(0, Math.round(base / CATCH_UP_SPEED));
+    if (catchUpUntilRef.current > Date.now()) return Math.max(0, Math.round(base / CATCH_UP_SPEED));
+    const boost = xmasNovelQuickBoostNow();
+    return boost > 1 ? Math.max(0, Math.round(base / boost)) : base;
   }, []);
   const specialMoveImpact = useCallback(() => {
     Audio_.se.crit();
@@ -254414,7 +254492,8 @@ function MonsterHeroGame() {
     let show = true;
     try {
       const q = quickRunProgressRef.current;
-      auto = !!(q && !q.finished);
+      const gs = gameStateNowRef.current;
+      auto = !!(q && !q.finished) && !(isQuickAnywhereScreen(gs) && !isQuickAnywhereRunScreen(gs));
     } catch (error) {
       auto = false;
     }
@@ -255165,7 +255244,6 @@ function MonsterHeroGame() {
   const [raidJackDebugRealRules, setRaidJackDebugRealRules] = useState(false);
   const raidJackEventId = raidJackDebugForce ? RAID_JACK_DEBUG_EVENT_ID : RAID_JACK_EVENT.id;
   const [raidEv, setRaidEv] = useState('jack');
-  const raidEvRef = useRef('jack');
   const raidDef = raidEventDef(raidEv);
   const raidXmasOpen = raidEv === 'xmas';
   const [xmasEventTab, setXmasEventTab] = useState('story');
@@ -256814,7 +256892,7 @@ function MonsterHeroGame() {
   const assistantLifeScreenOpen = isAssistantLifeRunScreen(gameState);
   const assistantLifeBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && assistantLifeScreenOpen;
   const quickAnywhereScreenOpen = runStage !== null && isQuickAnywhereScreen(gameState);
-  const quickAnywhereBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && quickAnywhereScreenOpen && QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameState);
+  const quickAnywhereBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && quickAnywhereScreenOpen && isQuickAnywhereRunScreen(gameState);
   const runBackgroundAllowed = rhythmScreenOpen || cardScreenOpen || assistantLifeScreenOpen || quickAnywhereScreenOpen;
   runBackgroundAllowedRef.current = runBackgroundAllowed;
   if (effect && runBackgroundAllowed) offscreenEffectRef.current = effect;
@@ -256830,6 +256908,30 @@ function MonsterHeroGame() {
     setRunStage(null);
   };
   const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun || cardBackgroundRun || assistantLifeBackgroundRun || quickAnywhereBackgroundRun);
+  const [xmasNovelOpen, setXmasNovelOpen] = useState(() => typeof xmasNovelPresence !== 'undefined' && !!xmasNovelPresence.open);
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof XMAS_NOVEL_PRESENCE_EVENT === 'undefined') return undefined;
+    const sync = () => setXmasNovelOpen(typeof xmasNovelPresence !== 'undefined' && !!xmasNovelPresence.open);
+    window.addEventListener(XMAS_NOVEL_PRESENCE_EVENT, sync);
+    sync();
+    return () => window.removeEventListener(XMAS_NOVEL_PRESENCE_EVENT, sync);
+  }, []);
+  useEffect(() => {
+    if (typeof friendsSetXmasSpot !== 'function') return;
+    friendsSetXmasSpot(gameState === 'RAID_JACK' && raidEv === 'xmas' ? xmasNovelOpen ? 'novel' : 'event' : '');
+  }, [gameState, raidEv, xmasNovelOpen]);
+  if (typeof window !== 'undefined') {
+    window.__mhQuickAnywhereBoost = xmasNovelQuickBoostNow;
+    window.__mhQuickAnywhereProbe = () => ({
+      run: !!quickAnywhereRunRef.current && !!runStageRef.current,
+      loops: quickRunProgress ? quickRunProgress.loops : null,
+      wave,
+      finished: quickRunProgress ? !!quickRunProgress.finished : null,
+      reason: quickRunProgress ? quickRunProgress.reason || '' : '',
+      screen: gameStateNowRef.current,
+      quiet: isXmasQuietScreen(gameStateNowRef.current)
+    });
+  }
   const rhythmSongListScrollRef = useRef(0);
   const returnToBackgroundRun = () => {
     catchUpUntilRef.current = 0;
@@ -256844,6 +256946,12 @@ function MonsterHeroGame() {
     return '端末に進行を保存できていません';
   };
   const [quickRunProgress, setQuickRunProgress] = useState(null);
+  const quickRunLiveForFriends = !!(quickRunProgress && !quickRunProgress.finished);
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined') window.dispatchEvent(new Event('mh-friend-spot'));
+    } catch (error) {}
+  }, [quickRunLiveForFriends]);
   const [rhythmPlayRunAwardState, setRhythmPlayRunAwardState] = useState(null);
   const [beatRank, setBeatRank] = useState(() => normalizeBeatRank(null));
   const [beatRankAward, setBeatRankAward] = useState(null);
@@ -258344,6 +258452,7 @@ function MonsterHeroGame() {
   useEffect(() => {
     if (gameState === 'RHYTHM_PLAY') return;
     if (successScreenOpen) return;
+    if (xmasNovelOpen) return;
     if (rhythmWatchAudioOn) return;
     let key = bootPhase === 'GAME' ? bgmKeyForState(gameState, wave, enemy?.id, (waveHistory || []).length > 0, hp <= 0 || gaveUp) : bootPhase === 'TITLE' || bootPhase === 'ENTERING_GAME' ? bgmArrangement.title : null;
     if (key === '__keep_battle_bgm__' && bgmSuspendedByRhythmRef.current) {
@@ -258371,7 +258480,7 @@ function MonsterHeroGame() {
       key
     } : null;
     if (key && eventId && prev && prev.id === eventId && prev.key !== key) Audio_.fadeToBGM(key, EVENT_BGM_FADE_MS);else if (key) Audio_.playBGM(key);else Audio_.stopBGM();
-  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, successScreenOpen, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, cardScreenOpen, eventLineBgm, cardBgm, assistantLifeOpenNow, battleBgmOverlay, rhythmWatchAudioOn]);
+  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, successScreenOpen, xmasNovelOpen, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, cardScreenOpen, eventLineBgm, cardBgm, assistantLifeOpenNow, battleBgmOverlay, rhythmWatchAudioOn]);
   const assistantLifeRunMuted = assistantLifeScreenOpen && runStage !== null;
   useEffect(() => {
     Audio_.setSeVolume(ultraEcoSession && !cardScreenOpen || rhythmScreenOpen || assistantLifeRunMuted ? 0 : seVolume);
@@ -266948,8 +267057,9 @@ function MonsterHeroGame() {
   }, [quickAnywhereScreenOpen]);
   const renderQuickAnywhereStrip = () => {
     if (!QUICK_RUN_ANYWHERE_RELEASE || !quickAnywhereScreenOpen || assistantLifeOpenNow || !quickRunProgress) return null;
+    if (isXmasQuietScreen(gameState) || xmasNovelOpen) return null;
     const finished = !!quickRunProgress.finished;
-    const resting = !finished && !QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameState);
+    const resting = !finished && !isQuickAnywhereRunScreen(gameState);
     const paused = !finished && !resting && !quickAnywhereBackgroundRun;
     const pending = finished ? {
       xp: 0,
@@ -267082,14 +267192,20 @@ function MonsterHeroGame() {
       setQuickAnywhereSettling(false);
     }
   };
+  const xmasQuickSettleThen = async fn => {
+    if (quickAnywhereEndingRef.current) return;
+    if (QUICK_RUN_ANYWHERE_RELEASE && quickAnywhereRunRef.current && runStageRef.current) await settleQuickAnywhereRun();
+    fn();
+  };
   useEffect(() => {
     if (!QUICK_RUN_ANYWHERE_RELEASE || !quickAnywhereRunRef.current || !runStageRef.current) return;
     if (!QUICK_RUN_ANYWHERE_BATTLE_ENTRY_SCREENS.includes(gameState)) return;
+    if (isXmasQuietScreen(gameState)) return;
     void settleQuickAnywhereRun();
   }, [gameState]);
   const quickAnywhereTryStart = () => {
     if (!QUICK_RUN_ANYWHERE_RELEASE || !quickRhythmGuideReleased || !autoQuickRunAutoStartEnabled(autoSettings)) return false;
-    if (!QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameStateNowRef.current)) return false;
+    if (!isQuickAnywhereRunScreen(gameStateNowRef.current)) return false;
     if (quickRunProgressRef.current && !quickRunProgressRef.current.finished) return false;
     if (runStageRef.current && !runResultFinishedRef.current) return false;
     if (!repeatTemplateFromAutoSettings()) return false;
@@ -267103,7 +267219,7 @@ function MonsterHeroGame() {
     const prev = quickAnywherePrevScreenRef.current;
     quickAnywherePrevScreenRef.current = gameState;
     if (!QUICK_RUN_ANYWHERE_RELEASE || bootPhase !== 'GAME') return undefined;
-    if (!QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameState)) return undefined;
+    if (!isQuickAnywhereRunScreen(gameState)) return undefined;
     const boot = !quickAnywhereBootTriedRef.current;
     const fromBattle = RUN_STAGE_SCREENS.includes(prev) || QUICK_RUN_ANYWHERE_BATTLE_ENTRY_SCREENS.includes(prev) || prev === 'SKIP_RESULT';
     if (!boot && !fromBattle) return undefined;
@@ -267116,13 +267232,13 @@ function MonsterHeroGame() {
   useEffect(() => {
     if (!QUICK_RUN_ANYWHERE_RELEASE || assistantLifeOpenNow) return undefined;
     if (!quickRunProgress || !quickRunProgress.finished || quickRunProgress.reason !== 'defeat') return undefined;
-    if (!QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameState)) return undefined;
+    if (!isQuickAnywhereRunScreen(gameState)) return undefined;
     if (resultProcessing) return undefined;
     if (!quickRhythmGuideReleased || !autoQuickRunAutoStartEnabled(autoSettings)) return undefined;
     const retryAnywhere = () => {
       const current = quickRunProgressRef.current;
       if (!current || !current.finished || current.reason !== 'defeat') return;
-      if (!QUICK_RUN_ANYWHERE_RUN_SCREENS.includes(gameStateNowRef.current)) return;
+      if (!isQuickAnywhereRunScreen(gameStateNowRef.current)) return;
       startQuickRunFromRhythm();
     };
     const timer = setTimeout(retryAnywhere, QUICK_RUN_AUTO_RETRY_MS);
@@ -268509,7 +268625,7 @@ function MonsterHeroGame() {
       boss: wave >= 10,
       key: Date.now()
     });
-    if (!autoBattleRef.current || bgmArrangement.autoVictoryJingle === 'on') Audio_.playJingle('victory');
+    if ((!autoBattleRef.current || bgmArrangement.autoVictoryJingle === 'on') && !(runBackgroundAllowedRef.current && isXmasQuietScreen(gameStateNowRef.current))) Audio_.playJingle('victory');
     const totalWaveDamage = waveDamageAtDefeat(currentWaveDamageRef.current, currentWaveDamage, damage);
     const waveMult = 1.0 + wave * 0.1;
     const remainingTurns = Math.max(0, 21 - turnCount);
@@ -282752,7 +282868,9 @@ function MonsterHeroGame() {
       storyVersion: xmasStoryVersion,
       fightWays: xmasStoryFightWays,
       onReadChapter: openXmasStoryChapter,
-      onFightChapter: fightXmasStoryChapter,
+      onFightChapter: (chapter, way) => {
+        void xmasQuickSettleThen(() => fightXmasStoryChapter(chapter, way));
+      },
       raid: {
         ev: RAID_EVENT_XMAS,
         ways: ['battle', ...(typeof startRaidXmasRhythm === 'function' ? ['rhythm'] : []), ...(typeof startRaidXmasCard === 'function' ? ['card'] : [])],
@@ -282762,20 +282880,22 @@ function MonsterHeroGame() {
           setGameState(raidJackDebugForce && !RELEASE_FLAGS.raidXmas ? 'RAID_JACK_DEBUG' : 'HOME');
         },
         onChallenge: (kind, tierIndex, way) => {
-          raidJackReturnTierRef.current = tierIndex;
-          if (kind === 'a' && way === 'rhythm') {
-            if (typeof startRaidXmasRhythm === 'function') void startRaidXmasRhythm(tierIndex);
-            return;
-          }
-          if (kind === 'a' && way === 'card') {
-            if (typeof startRaidXmasCard === 'function') void startRaidXmasCard(tierIndex);
-            return;
-          }
-          setRaidJackPrep({
-            kind,
-            tierIndex
+          void xmasQuickSettleThen(() => {
+            raidJackReturnTierRef.current = tierIndex;
+            if (kind === 'a' && way === 'rhythm') {
+              if (typeof startRaidXmasRhythm === 'function') void startRaidXmasRhythm(tierIndex);
+              return;
+            }
+            if (kind === 'a' && way === 'card') {
+              if (typeof startRaidXmasCard === 'function') void startRaidXmasCard(tierIndex);
+              return;
+            }
+            setRaidJackPrep({
+              kind,
+              tierIndex
+            });
+            setGameState('RAID_JACK_PREP');
           });
-          setGameState('RAID_JACK_PREP');
         },
         onPurchase: purchaseRaidJackExtra,
         onClaimRewards: claimRaidXmasRewards,
@@ -291033,7 +291153,15 @@ function MonsterHeroGame() {
       title: ''
     }), React.createElement(EnemyDefeatFx, {
       fx: gameState === 'BATTLE' ? defeatFx : null
-    }), renderQuickAnywhereStrip(), quickAnywhereSettling && React.createElement("div", {
+    }), renderQuickAnywhereStrip(), quickAnywhereSettling && isXmasQuietScreen(gameState) && React.createElement("div", {
+      "data-quick-anywhere-settling": "quiet",
+      "aria-hidden": "true",
+      className: "fixed inset-0 z-[96]",
+      onClickCapture: e => {
+        e.stopPropagation();
+        e.preventDefault();
+      }
+    }), quickAnywhereSettling && !isXmasQuietScreen(gameState) && React.createElement("div", {
       "data-quick-anywhere-settling": true,
       role: "status",
       className: "fixed inset-0 z-[96] flex items-end justify-center bg-black/20 pb-24",
@@ -294953,6 +295081,16 @@ const createAnimationStyle = () => {
       75% { transform: translateY(-10px) scale(1.03); }
       100% { transform: none; }
     }
+    /* 覚醒サンタの超宝屁: 後ろを向いてお尻を突き出し、ぷぅっと膨らんで、はじけて戻る(左右の反転は transform だけ) */
+    @keyframes emToot {
+      0% { transform: none; }
+      12% { transform: translate(-4px, 0) rotate(-5deg); }
+      22% { transform: scaleX(-1) translate(0, 2px) rotate(-6deg); }
+      44% { transform: scaleX(-1) translate(8px, 8px) rotate(-16deg) scale(1.12, .88); }
+      56% { transform: scaleX(-1) translate(-4px, -8px) rotate(5deg) scale(.92, 1.1); }
+      88% { transform: scaleX(-1) rotate(-2deg); }
+      100% { transform: none; }
+    }
     @keyframes emSway {
       0% { transform: none; }
       15% { transform: translate(-6px, -6px) rotate(-9deg) scale(.96, 1.06); }
@@ -295052,6 +295190,7 @@ const createAnimationStyle = () => {
     [data-tactics-look] [data-enemy-skill][data-em-body="stance"] > :is(span, [data-moo-body]) { animation-name: emStance; }
     [data-tactics-look] [data-enemy-skill][data-em-body="heal"] > :is(span, [data-moo-body]) { animation-name: emHeal; }
     [data-tactics-look] [data-enemy-skill][data-em-body="sway"] > :is(span, [data-moo-body]) { animation-name: emSway; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="toot"] > :is(span, [data-moo-body]) { animation-name: emToot; transform-origin: 50% 80%; }
     [data-tactics-look] [data-moo-stage] > [data-moo-body] { transform-origin: 50% 60%; }
     /* やられ(カワズモーと同じのけぞり) */
     [data-tactics-look] [data-enemy-ring][data-em-idle][data-enemy-hurt] > span, [data-tactics-look] [data-moo-stage][data-enemy-hurt] > [data-moo-body] { animation: kzHurt 520ms ease-out forwards; }
@@ -295261,6 +295400,14 @@ const createAnimationStyle = () => {
     [data-moo-claw] { left: -20%; width: 140%; height: 12px; margin-top: -6px; transform: rotate(-32deg) scaleX(0); transform-origin: 0 50%; border-radius: 6px; opacity: 0;
       background: linear-gradient(180deg, transparent, #dc2626 25%, #fff 45% 55%, #facc15 75%, transparent); box-shadow: 0 0 26px 8px rgba(220,38,38,.8); animation: mooClaw 520ms ease-out both; }
     @keyframes mooClaw { 0% { opacity: 1; transform: rotate(-32deg) scaleX(0); } 40% { opacity: 1; transform: rotate(-32deg) scaleX(1); } 100% { opacity: 0; transform: rotate(-32deg) scaleX(1) scaleY(.2); } }
+    /* 覚醒サンタの超宝屁のガスの雲(緑〜紫)。味方の枠ごとに1つ。中に小さな星と雪 */
+    [data-santa-gas] { position: absolute; width: var(--w); height: calc(var(--w) * .72); margin: calc(var(--w) * -.36) 0 0 calc(var(--w) * -.5); opacity: 0; pointer-events: none;
+      border-radius: 50%; background: radial-gradient(closest-side at 30% 58%, rgba(163,230,53,.95) 35%, rgba(163,230,53,0)), radial-gradient(closest-side at 68% 44%, rgba(192,132,252,.92) 35%, rgba(192,132,252,0)),
+        radial-gradient(closest-side at 50% 72%, rgba(74,222,128,.9) 35%, rgba(74,222,128,0)), radial-gradient(closest-side at 50% 40%, rgba(126,34,206,.7), rgba(126,34,206,0)); animation: santaGas 1s ease-out both; will-change: transform, opacity; }
+    [data-santa-gas] > b { position: absolute; font-size: 20px; line-height: 1; left: 30%; top: 30%; opacity: .9; }
+    [data-santa-gas] > b + b { left: 62%; top: 52%; font-size: 16px; }
+    @keyframes santaGas { 0% { opacity: 0; transform: scale(.3) translateY(10px); } 25% { opacity: 1; } 75% { opacity: .9; transform: scale(1.15) translateY(-4px); } 100% { opacity: 0; transform: scale(1.35) translateY(-14px); } }
+    @media (prefers-reduced-motion: reduce) { [data-santa-gas] { animation: none; display: none; } }
     [data-moo-meteor] { top: -12%; font-size: 64px; opacity: 0; filter: drop-shadow(0 0 16px rgba(251,146,60,1)); animation: mooMeteor 700ms cubic-bezier(.4,0,1,1) both; }
     @keyframes mooMeteor { 0% { opacity: 0; transform: translate(40vw, 0) rotate(-20deg) scale(.6); } 15% { opacity: 1; } 90% { opacity: 1; transform: translate(-30vw, 80vh) rotate(-20deg) scale(1.3); } 100% { opacity: 0; transform: translate(-34vw, 86vh) scale(1.8); } }
     [data-moo-tornado] { left: 0; font-size: 110px; margin-top: -55px; opacity: 0; filter: drop-shadow(0 0 20px rgba(250,204,21,.8)); animation: mooTornado 900ms ease-in-out both; }

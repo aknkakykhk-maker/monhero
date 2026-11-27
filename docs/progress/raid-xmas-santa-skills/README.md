@@ -11,13 +11,15 @@
 | --- | --- | --- | --- | --- | --- |
 | 1 | 正拳・闇(通常攻撃) | 突く | 雪の結晶の拳が飛び、当たると雪の印 | [縦](1-normal-portrait.jpg) / [横](1-normal-landscape.jpg) | [縦](1-normal-portrait.mp4) / [横](1-normal-landscape.mp4) |
 | 2 | 瞬黒撃(必殺技) | 一瞬で横へ踏み込む | 赤黒い十字の斬り跡・黒い輪・雪が降る | [縦](2-special-portrait.jpg) / [横](2-special-landscape.jpg) | [縦](2-special-portrait.mp4) / [横](2-special-landscape.mp4) |
-| 3 | 超宝屁(間合い攻撃) | 揺れる | 毒々しい光の粒・プレゼントが飛ぶ | [縦](3-sweep-portrait.jpg) / [横](3-sweep-landscape.jpg) | [縦](3-sweep-portrait.mp4) / [横](3-sweep-landscape.mp4) |
+| 3 | 超宝屁(間合い攻撃) | 後ろを向いてお尻を突き出し、ぷぅっと膨らむ | おならの💨が飛び、緑〜紫のガスの雲が味方の列を包む(星と雪が混じる)。前の版(プレゼントが飛ぶ)は `3-sweep-before-*` | [縦](3-sweep-portrait.jpg) / [横](3-sweep-landscape.jpg) | [縦](3-sweep-portrait.mp4) / [横](3-sweep-landscape.mp4) |
 | 4 | 超飛び蹴り(連撃) | 跳んで落ちる | 蹴りが3回飛ぶ・赤い衝撃 | [縦](4-rush-portrait.jpg) / [横](4-rush-landscape.jpg) | [縦](4-rush-portrait.mp4) / [横](4-rush-landscape.mp4) |
 | 5 | 超暗けい(貫通) | 溜めて突く | 光の柱・黒いハート | [縦](5-pierce-portrait.jpg) / [横](5-pierce-landscape.jpg) | [縦](5-pierce-portrait.mp4) / [横](5-pierce-landscape.mp4) |
 | 6 | 怪しこの夜(攻撃力アップ) | 力を解き放つ | 鐘が鳴りながら立ちのぼる | [縦](6-roar-portrait.jpg) / [横](6-roar-landscape.jpg) | [縦](6-roar-portrait.mp4) / [横](6-roar-landscape.mp4) |
 | 7 | X’マスプレデター(全体攻撃) | 横へ駆ける | ソリが横切る・黒いプレゼントと雪が散る | [縦](7-allout-portrait.jpg) / [横](7-allout-landscape.jpg) | [縦](7-allout-portrait.mp4) / [横](7-allout-landscape.mp4) |
 
 通し: [8-run-result-portrait.jpg](8-run-result-portrait.jpg)(20ターン使い切り → 結果画面 → デバッグ用の記録へ送信。実行時エラー 0)
+
+超宝屁は r1126-075 追記1(社長「屁をこく感じじゃないの？」)で、おならの見せ方に直した。効果音は手持ちにおならの音が無いので今のまま。
 
 ## 重さ
 

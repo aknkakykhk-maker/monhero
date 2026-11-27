@@ -30,7 +30,8 @@ const GROWTH_FX_CALM_SCREENS = Object.freeze(new Set([
   'MASU_REGENERATION_DETAIL', 'MASU_REINCARNATE', 'MASU_SOUL_RANK', 'MASU_SOUL_TRAITS', 'MASU_TRANSCENDENCE', 'MASU_TRANSCEND_ENHANCE',
 ]));
 // 画面の上にこれが出ているあいだは出さない(お話・ほかの大きな演出・案内)。中・大の段だけ止める目印もある(おしゃべりの画面)
-const GROWTH_FX_HOLD_ALL_SELECTOR = '[data-event-story],[data-story-stage],[data-story-sheet],[data-player-rank-up-fx]';
+// 事件簿(79-screen-xmas-novel.jsx・body に重ねて開く data-xmas-novel-host)を開いているあいだも出さない。閉じたら出す(r1126-072 社長「音とか表示は絶対出さない」)
+const GROWTH_FX_HOLD_ALL_SELECTOR = '[data-event-story],[data-story-stage],[data-story-sheet],[data-player-rank-up-fx],[data-xmas-novel-host]';
 // 助手ライフで裏クイックが回っているあいだ(帯 data-life-quick-run="live")も、全面のお祝いは貯めておく。止めたり閉じたりしたら出す
 //   (モンヒロビート・カードの画面では裏の周回のお祝いは出ない作りなのに、助手ライフは HOME の上なので毎回全面で出ていた。2026-11-08 社長「中途半端」)
 const GROWTH_FX_HOLD_SHEET_SELECTOR = '[data-assistant-chat],[data-life-quick-run="live"]';

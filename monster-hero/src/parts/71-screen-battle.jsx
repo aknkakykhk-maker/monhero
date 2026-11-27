@@ -419,7 +419,7 @@ const tacticsEnemyMotionMs = (enemyId, skill, fallbackMs) => {
 };
 // 体の動きのうち「当たる瞬間」が全体の何割のところにあるか(攻撃が味方に届く時刻・ムーの揺れの時刻)
 const TACTICS_ENEMY_BODY_HIT = Object.freeze({
-  jab: .5, lunge: .55, dash: .58, flurry: .7, spin: .8, windup: .68, swing: .58, leap: .7, press: .7, rise: .74, sway: .55,
+  jab: .5, toot: .58, lunge: .55, dash: .58, flurry: .7, spin: .8, windup: .68, swing: .58, leap: .7, press: .7, rise: .74, sway: .55,
 });
 const tacticsEnemyHitFrac = (enemyId, skill) => {
   const motion = enemyId ? TACTICS_ENEMY_MOTIONS[enemyId] : null;
@@ -495,11 +495,11 @@ const TACTICS_ENEMY_MOTION_SETS = Object.freeze({
     regen:['heal','sparkle'], charge:['power','aura'], pierceCharge:['stance','lock'] } },
   // 覚醒サンタ(クリスマスのレイドボス・r1126-075): 重く息をして構える。雪・黒いプレゼント・鐘・ソリ
   //   正拳・闇 … 突いて雪の拳を飛ばす / 瞬黒撃 … 一瞬で踏み込み、黒い十字の斬り跡と雪が散る
-  //   超宝屁 … 揺れて毒々しい光の粒を出し、プレゼントが味方へ飛ぶ(id が Jack なのでムーと同じく光の玉で飛ばす) / 超飛び蹴り … 跳んで蹴り落とす
+  //   超宝屁 … 後ろを向いてお尻を突き出し、ぷぅっと膨らむ(toot)。おならの💨が飛び、緑〜紫のガスの雲が味方の列を包む(星と雪が混じる・r1126-075 追記1) / 超飛び蹴り … 跳んで蹴り落とす
   //   超暗けい … 溜めて黒い掌の気を通す / 怪しこの夜 … 力を解き放ち、鐘が鳴りながら立ちのぼる
   //   X’マスプレデター … 横へ駆け、ソリが味方全員へ突っ込み、黒いプレゼントと雪が散る
   santa: { idle:'menace', skills:{
-    normal:['jab','burst','❄️','shoot'], sweep:['sway','sparkle','🎁','shoot'], rush:['leap','burst','🦵','shoot'], pierce:['windup','beam','🖤','rise'],
+    normal:['jab','burst','❄️','shoot'], sweep:['toot','sparkle','💨','shoot'], rush:['leap','burst','🦵','shoot'], pierce:['windup','beam','🖤','rise'],
     special:['dash','slash'], allout:['dash','widebeam','🛷','shoot'], roar:['rise','aura','🔔','rise'],
     regen:['heal','sparkle'], charge:['power','aura'], pierceCharge:['stance','lock'] } },
   // 覚醒ムー(竜): 待機は今までの浮遊のまま。技ごとの動きだけ付ける
@@ -814,6 +814,11 @@ const TacticsEnemyStageFx = ({ fx, motion, isMoo, enemyId, skillLabel, lite = fa
       ))}
       {isMoo && !lite && !afterMovie && skill === 'special' && [0, 1, 2, 3, 4, 5, 6, 7].map((k) => (
         <i key={k} data-moo-meteor style={{ left: `${8 + ((k * 29) % 90)}%`, animationDelay: at(0.18 + k * 0.07) }}>{santa ? '❄️' : '☄️'}</i>
+      ))}
+      {santa && !lite && skill === 'sweep' && geo.all.map((t, k) => (
+        <i key={`gas-${k}`} data-santa-gas style={{ left: t.x, top: t.y, '--w': `${Math.round(Math.max(t.w, t.h) * 1.6)}px`, animationDelay: at(0.48 + k * 0.04), animationDuration: at(0.52) }}>
+          <b>{k % 2 ? '❄️' : '✨'}</b><b>{k % 2 ? '✨' : '❄️'}</b>
+        </i>
       ))}
       {isMoo && !lite && skill === 'allout' && [0, 1, 2].map((k) => (
         <i key={k} data-moo-tornado style={{ top: `${44 + k * 14}%`, animationDelay: at(0.22 + k * 0.1) }}>{santa ? '🛷' : '🌪️'}</i>
