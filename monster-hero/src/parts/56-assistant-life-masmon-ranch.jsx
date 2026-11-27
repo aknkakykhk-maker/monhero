@@ -199,7 +199,14 @@ const amgrUseStores = () => {
     const f = () => setTick(n => n + 1);
     AMGR_STORE.subs.add(f); AMG_STORE.subs.add(f);
     void AMGR_STORE.load().then(f); void AMG_STORE.load().then(f);
-    return () => { AMGR_STORE.subs.delete(f); AMG_STORE.subs.delete(f); };
+    // 助手のマスモンの一覧(だれが何を持っているか)と助手ライフ(いまどこにいるか)も、ここで読み込んで待つ。
+    //   HOME の入口の札から M/B管理へ直に入ると、マスモンの一覧がまだ読み込まれておらず、助手がいるのに帯が出なかった
+    //   (地図・部屋を先に開いたときだけ出ていた。2026-11-28 社長の報告・台帳 r1126-085)
+    const M = typeof ASSISTANT_MASMON_STORE !== 'undefined' ? ASSISTANT_MASMON_STORE : null;
+    const L = typeof ASSISTANT_LIFE_STORE !== 'undefined' ? ASSISTANT_LIFE_STORE : null;
+    if (M && M.subs) { M.subs.add(f); void Promise.resolve(M.load()).then(f, () => {}); }
+    if (L && L.listeners) { L.listeners.add(f); void Promise.resolve(L.load()).then(f, () => {}); }
+    return () => { AMGR_STORE.subs.delete(f); AMG_STORE.subs.delete(f); if (M && M.subs) M.subs.delete(f); if (L && L.listeners) L.listeners.delete(f); };
   }, []);
 };
 const amgrSignText = (n) => (n >= 0 ? `+${n}` : `−${-n}`);
