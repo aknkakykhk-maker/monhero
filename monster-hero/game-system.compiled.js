@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3bd4354b73ce69bc
+// source-sha256: 651f8681a0631dbf
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -16159,11 +16159,6 @@ const CHANGELOG_GROUPS = Object.freeze([{
   emoji: '🖥',
   match: /画面|表示|ボタン|レイアウト|ヘルプ|設定|HOME|更新情報|お知らせ|バナー|図鑑/
 }, {
-  id: 'event',
-  label: 'イベント',
-  emoji: '🎉',
-  match: null
-}, {
   id: 'other',
   label: 'その他',
   emoji: '✦',
@@ -16177,7 +16172,6 @@ const changelogGroupMatch = text => {
   return hit ? hit.id : null;
 };
 const changelogGroupIdOf = entry => {
-  if (entry && entry.type === 'event') return 'event';
   const written = typeof entry?.group === 'string' ? entry.group.trim() : '';
   if (written && CHANGELOG_GROUP_BY_ID[written]) return written;
   const byTitle = changelogGroupMatch(String(entry?.title || ''));
@@ -16337,11 +16331,6 @@ const changelogSafeLink = link => {
     return '';
   }
 };
-const CHANGELOG_TAB_OF_ID = new Map(CHANGELOG_ENTRIES.map(entry => [entry.id, CHANGELOG_ISSUE_TAB_TYPES.includes(entry.type) ? 'issue' : 'update']));
-const changelogKindLabelInTab = (info, tab) => (tab === 'issue' ? {
-  fix: '直しました',
-  issue: '調べています'
-}[info && info.tone] : null) || info && info.label || '';
 const CHANGELOG_IDS_BY_TYPE = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, changelogEntriesOfTab(type).map(entry => entry.id)]));
 const MONSTER_LIST_SORT_KEYS = ['base', 'masu', 'lineage', 'bond', 'power', 'name', 'active', 'fused', 'reborn'];
 const DEFAULT_MONSTER_LIST_SETTINGS = {
@@ -22822,6 +22811,14 @@ const storyChunkLines = (text, cap, maxLines) => {
       chunks.splice(i, 1);
     }
   }
+  if (chunks.length > 1 && /[ぁ-んァ-ヶ一-龠々a-zA-Z0-9０-９]/.test(chunks[0].t) && storyTextUnits(chunks[0].t) <= 2) {
+    chunks[1] = {
+      ...chunks[1],
+      t: chunks[0].t + (chunks[1].sp ? ' ' : '') + chunks[1].t,
+      sp: chunks[0].sp
+    };
+    chunks.splice(0, 1);
+  }
   if (chunks.length < 2) return null;
   const unitsOf = t => storyTextUnits(t) + (/[\x21-\x7e]/.test(t) ? 1 : 0) + 0.6 * (String(t).match(/\p{Extended_Pictographic}/gu) || []).length;
   let lines = 0,
@@ -22911,12 +22908,16 @@ const AssistantFace = ({
   }, who.emoji));
 };
 const HELP_NOWRAP_RE = /((?:[A-Za-z0-9∞]+ → )+[A-Za-z0-9∞]+|∞周回)/;
-const helpWrap = x => {
+const helpWrap = (x, max) => {
   if (typeof x !== 'string' || typeof jaWrap !== 'function') return x;
   const parts = x.split(HELP_NOWRAP_RE);
+  const wrapOne = t => typeof XmasNovelWrap === 'function' ? React.createElement(XmasNovelWrap, {
+    text: t,
+    max: max
+  }) : jaWrap(t);
   return React.createElement("span", {
     style: typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : undefined
-  }, parts.length === 1 ? jaWrap(x) : parts.map((t, i) => i % 2 === 1 ? React.createElement("span", {
+  }, parts.length === 1 ? wrapOne(x) : parts.map((t, i) => i % 2 === 1 ? React.createElement("span", {
     key: i,
     "data-help-nowrap": true,
     style: {
@@ -22924,7 +22925,7 @@ const helpWrap = x => {
     }
   }, t) : React.createElement(React.Fragment, {
     key: i
-  }, t ? jaWrap(t) : null)));
+  }, t ? wrapOne(t) : null)));
 };
 const renderHelpBlocks = (blocks, accent) => (blocks || []).map((b, i) => {
   if (b && b.playerFlag && !(typeof helpPlayerFlagOn === 'function' && helpPlayerFlagOn(b.playerFlag))) return null;
@@ -23006,7 +23007,7 @@ const renderHelpBlocks = (blocks, accent) => (blocks || []).map((b, i) => {
     kind: k,
     width: r[2].notes.length > 1 ? 44 : 54,
     height: r[2].notes.length > 1 ? 34 : 42
-  }))), r[0]), React.createElement("span", {
+  }))), helpWrap(r[0], 7)), React.createElement("span", {
     className: "flex-1 text-[11px] text-white leading-relaxed"
   }, helpWrap(r[1])))));
   if (b.t === 'data') {
@@ -23026,7 +23027,7 @@ const renderHelpBlocks = (blocks, accent) => (blocks || []).map((b, i) => {
       className: `flex gap-3 px-4 py-2.5 ${j > 0 ? 'border-t border-white/5' : ''}`
     }, React.createElement("span", {
       className: "shrink-0 w-24 text-[11px] font-black text-slate-400 leading-tight"
-    }, r[0]), React.createElement("span", {
+    }, helpWrap(r[0], 7)), React.createElement("span", {
       className: "flex-1 text-[11px] text-white leading-relaxed"
     }, helpWrap(r[1]))))));
   }
@@ -67777,7 +67778,9 @@ const jaKeepKanaRuns = (s, chunks, segs, {
   }
   return out.join('​');
 };
-const JA_WRAP_NO_BREAK = [/\d{1,4}\/\d{1,2}(?:\/\d{1,2})?(?:[(（][月火水木金土日](?:・祝)?[)）])?/g, /\d{1,2}:\d{2}/g, /聖夜の名探偵|名探偵|エンドヒストリー|手がかり帳|鐘が鳴る夜/g, /黒いサンタ|聖夜のロンド|十三番目の鐘|十二の鐘|招待状|ワトソンくん/g];
+const JA_WRAP_NO_BREAK = [/\d{1,4}\/\d{1,2}(?:\/\d{1,2})?(?:[(（][月火水木金土日](?:・祝)?[)）])?/g, /\d{1,2}:\d{2}/g, /聖夜の名探偵|名探偵|エンドヒストリー|手がかり帳|鐘が鳴る夜/g, /黒いサンタ|聖夜のロンド|十三番目の鐘|十二の鐘|招待状|ワトソンくん|ペンション・シュプール|クリスマス会|呪いのセーブデータ|モンヒロ事件簿/g, /—{2,}|―{2,}|…{2,}/g];
+const JA_WRAP_NAME_KEEP = /ペンション・シュプール|呪いのセーブデータ|聖夜の名探偵/;
+const JA_WRAP_NAME_SPLIT = /(ペンション・シュプール|呪いのセーブデータ|聖夜の名探偵)/;
 const jaWrapUnbreak = marked => {
   if (typeof marked !== 'string' || !marked.includes('​')) return marked;
   const plain = marked.replace(/​/g, '');
@@ -67960,9 +67963,10 @@ const jaWrap = text => {
       whiteSpace: 'nowrap'
     }
   }, t);
+  const names = (t, k) => JA_WRAP_NAME_KEEP.test(t) ? t.split(JA_WRAP_NAME_SPLIT).map((x, j) => j % 2 === 1 ? keep(x, `${k}n${j}`) : x) : t;
   return s.split('\u200B').map((seg, i) => React.createElement(React.Fragment, {
     key: i
-  }, i > 0 && !/^\s/.test(seg) && React.createElement("wbr", null), jaWrapPieces(seg).map(([t, kp], k) => kp ? keep(t, k) : t)));
+  }, i > 0 && !/^\s/.test(seg) && React.createElement("wbr", null), jaWrapPieces(seg).map(([t, kp], k) => kp ? keep(t, k) : names(t, k))));
 };
 const jaWrapParts = (...parts) => parts.map((p, i) => React.createElement(React.Fragment, {
   key: i
@@ -87663,7 +87667,6 @@ function HomeScreen({
   gifts,
   gold,
   hasUnreadChangelog,
-  changelogUnreadCount,
   homeBackgroundReady,
   homeArt,
   homePastureMasumons,
@@ -87922,23 +87925,10 @@ function HomeScreen({
     size: 19
   })), React.createElement("span", {
     className: "mh-home-side-lb"
-  }, "更新履歴"), hasUnreadChangelog && (() => {
-    const n = Number(changelogUnreadCount) || 0;
-    return n > 0 ? React.createElement("em", {
-      className: "mh-unread-badge",
-      "data-changelog-entry-count": n,
-      "aria-label": `未読${n}件`,
-      style: n > 9 ? {
-        width: 'auto',
-        minWidth: 17,
-        padding: '0 4px',
-        borderRadius: 9
-      } : undefined
-    }, n > 99 ? '99+' : n) : React.createElement("em", {
-      className: "mh-unread-badge",
-      "aria-label": "未読あり"
-    }, "!");
-  })()), React.createElement("button", {
+  }, "更新履歴"), hasUnreadChangelog && React.createElement("em", {
+    className: "mh-unread-badge",
+    "aria-label": "未読あり"
+  }, "!")), React.createElement("button", {
     onClick: openMissions,
     className: `mh-home-side-btn mh-home-mission${spotClass('reward')}`,
     "aria-label": "ミッション"
@@ -113557,7 +113547,7 @@ const XmasEventScreen = ({
     }, React.createElement(XmasHolly, {
       size: 24
     }), React.createElement("span", {
-      className: "mh-xmas-title"
+      className: "mh-xmas-title whitespace-nowrap"
     }, "聖夜の名探偵")),
     onBack: onBack,
     compact: true,
@@ -113591,7 +113581,7 @@ const XmasEventScreen = ({
       textShadow: '0 1px 3px #000'
     }
   }, "クリスマスイベント"), React.createElement("b", {
-    className: `mh-xmas-title leading-tight ${raidShown ? 'text-[20px]' : 'text-[38px]'}`,
+    className: `mh-xmas-title whitespace-nowrap leading-tight ${raidShown ? 'text-[20px]' : 'text-[38px]'}`,
     style: {
       fontFamily: "'Hiragino Mincho ProN', 'Yu Mincho', serif",
       filter: 'drop-shadow(0 2px 2px #000) drop-shadow(0 0 6px #000a)'
@@ -127765,13 +127755,31 @@ const xmasNovelWrapPlan = (text, max = XMAS_NOVEL_KEEP_MAX) => {
     for (let q = lo + 1; q < hi; q++) {
       if (q === b || spans.some(([x, e]) => q > x && q < e) || /^[、。！？!?」』）)…‥ー]/.test(s.slice(q)) || /[「『（(]$/.test(s.slice(0, q))) continue;
       if (xmasNovelBadBreak(s, q, segAt)) continue;
-      if (!xmasNovelGramBreak(s, q) && !(/[ぁ-ゖ、]$/.test(s.slice(0, q)) && /^[一-龯ァ-ヶ]/.test(s.slice(q)))) continue;
       if (len(lo, q) > max || len(q, hi) > max) continue;
       if (best < 0 || Math.abs(q - b) < Math.abs(best - b)) best = q;
     }
     if (best >= 0) {
       br.delete(b);
       br.add(best);
+    }
+  }
+  {
+    const sorted = [0, ...[...br].sort((x, y) => x - y), s.length];
+    for (let k = 1; k < sorted.length; k++) {
+      const lo = sorted[k - 1],
+        hi = sorted[k];
+      if (len(lo, hi) <= max || /^\s+$/.test(s.slice(lo, hi))) continue;
+      let start = lo,
+        lastOk = -1;
+      for (let q = lo + 1; q < hi; q++) {
+        if (len(start, q) > max) {
+          if (lastOk > start) {
+            br.add(lastOk);
+            start = lastOk;
+          } else break;
+        }
+        if (segAt.has(q) && !xmasNovelBadBreak(s, q, segAt) && !spans.some(([x, e]) => q > x && q < e) && !/^[、。！？!?」』）)…‥ー]/.test(s.slice(q)) && !/[「『（(]$/.test(s.slice(0, q))) lastOk = q;
+      }
     }
   }
   const cuts = [0, ...[...br].sort((a, b) => a - b), s.length];
@@ -254608,9 +254616,6 @@ function MonsterHeroGame() {
     update: [],
     issue: []
   });
-  const changelogListRef = useRef(null);
-  const [changelogScrolled, setChangelogScrolled] = useState(false);
-  const [changelogZoomImage, setChangelogZoomImage] = useState(null);
   const displayedChangelogTabRef = useRef(null);
   const [seVolume, setSeVolumeState] = useState(DEFAULT_VOLUME);
   const [bgmVolume, setBgmVolumeState] = useState(DEFAULT_VOLUME);
@@ -255014,7 +255019,6 @@ function MonsterHeroGame() {
     };
   }, [changelogSeen, showChangelog]);
   const hasUnreadChangelog = changelogUnread.update || changelogUnread.issue || changelogUnread.event;
-  const changelogUnreadCount = (changelogUnreadIds.update || []).length + (changelogUnreadIds.issue || []).length + (changelogUnreadIds.event || []).length;
   const markChangelogEventSeen = id => {
     if (!changelogUnreadIds.event.includes(id)) return;
     const entry = CHANGELOG_ENTRIES.find(e => e.id === id);
@@ -255051,12 +255055,6 @@ function MonsterHeroGame() {
     if (displayedChangelogTabRef.current === type) return;
     if (displayedChangelogTabRef.current) markChangelogTabSeen(displayedChangelogTabRef.current);
     displayedChangelogTabRef.current = type;
-    setChangelogScrolled(false);
-    try {
-      changelogListRef.current && changelogListRef.current.scrollTo({
-        top: 0
-      });
-    } catch {}
     setChangelogTab(type);
   };
   const openChangelog = () => {
@@ -255069,8 +255067,6 @@ function MonsterHeroGame() {
     if (displayedChangelogTabRef.current) markChangelogTabSeen(displayedChangelogTabRef.current);
     displayedChangelogTabRef.current = null;
     setChangelogOpenId(null);
-    setChangelogScrolled(false);
-    setChangelogZoomImage(null);
     setShowChangelog(false);
   };
   const [helpCatId, setHelpCatId] = useState(null);
@@ -275418,18 +275414,13 @@ function MonsterHeroGame() {
     "aria-label": "未読あり"
   }, "!"))))), React.createElement("div", {
     className: "mh-changelog-list",
-    "data-changelog-list": true,
-    ref: changelogListRef,
-    onScroll: e => {
-      const far = e.currentTarget.scrollTop > 600;
-      if (far !== changelogScrolled) setChangelogScrolled(far);
-    }
+    "data-changelog-list": true
   }, CHANGELOG_ENTRIES.length === 0 ? React.createElement("p", {
     className: "mh-changelog-empty",
     "data-changelog-empty": true
   }, "更新履歴を読み込めませんでした。通信状況を確かめてから、設定の「ゲームを更新」で読み込み直してください。") : (() => {
     const rows = changelogTab === 'event' ? [] : changelogRowsOfTab(changelogTab);
-    const unreadHere = new Set([...(changelogUnreadIds[changelogTab] || []), ...(changelogTab === 'event' ? [] : (changelogUnreadIds.event || []).filter(id => CHANGELOG_TAB_OF_ID.get(id) === changelogTab))]);
+    const unreadHere = new Set(changelogUnreadIds[changelogTab] || []);
     let shownDay = null;
     const pinnedEvents = changelogTab === 'event' ? changelogEventCards : [];
     if (changelogTab === 'event' && pinnedEvents.length === 0) return React.createElement("p", {
@@ -275588,18 +275579,12 @@ function MonsterHeroGame() {
         onError: e => {
           e.currentTarget.style.display = 'none';
         },
-        onClick: () => setChangelogZoomImage(c.image),
         loading: "lazy",
         decoding: "async",
         style: {
-          display: 'block',
           width: '100%',
-          maxHeight: 'min(34vh, 320px)',
-          objectFit: 'contain',
-          background: '#0008',
           borderRadius: 12,
-          margin: '8px 0 4px',
-          cursor: 'zoom-in'
+          margin: '8px 0 4px'
         }
       }), typeof c.video === 'string' && c.video && React.createElement("figure", {
         "data-changelog-pinned-video": true,
@@ -275623,7 +275608,9 @@ function MonsterHeroGame() {
           color: '#fed7aa',
           margin: '3px 0'
         }
-      }, "・", x))));
+      }, "・", typeof x === 'string' && typeof XmasNovelWrap === 'function' ? React.createElement(XmasNovelWrap, {
+        text: x
+      }) : x))));
     }), ...rows.map(row => {
       const open = changelogOpenId === row.key;
       const unreadCount = row.entries.filter(entry => unreadHere.has(entry.id)).length;
@@ -275633,7 +275620,7 @@ function MonsterHeroGame() {
         const found = kinds.find(kind => kind.tone === info.tone);
         if (found) found.count += 1;else kinds.push({
           tone: info.tone,
-          label: changelogKindLabelInTab(info, changelogTab),
+          label: info.label,
           count: 1
         });
       });
@@ -275659,7 +275646,7 @@ function MonsterHeroGame() {
         "aria-hidden": "true"
       }, row.emoji), React.createElement("b", null, row.label), React.createElement("span", {
         className: "mh-changelog-count"
-      }, row.entries.length, "件", unreadCount > 0 && React.createElement("em", null, "NEW")), React.createElement("small", null, open ? 'たたむ ▲' : '詳細 ▼')), React.createElement("span", {
+      }, row.entries.length, "件", unreadCount > 0 && React.createElement("em", null, "NEW")), React.createElement("small", null, open ? '閉じる ▲' : '詳細 ▼')), React.createElement("span", {
         className: "mh-changelog-kinds"
       }, kinds.map(kind => React.createElement("span", {
         key: kind.tone,
@@ -275678,16 +275665,18 @@ function MonsterHeroGame() {
       }, React.createElement("time", null, (c.date || '').slice(11) || c.date, unreadHere.has(c.id) && React.createElement("em", null, "NEW")), React.createElement("span", {
         className: "mh-changelog-kind",
         "data-kind": changelogTypeOf(c).tone
-      }, changelogKindLabelInTab(changelogTypeOf(c), changelogTab)), changelogEventLive(c) && React.createElement("span", {
+      }, changelogTypeOf(c).label), changelogEventLive(c) && React.createElement("span", {
         "data-changelog-event-live": true,
         className: "mh-changelog-kind",
         style: {
-          background: changelogEventUpcoming(c) ? '#38bdf8' : '#f97316',
+          background: '#f97316',
           color: '#1c1917',
           borderColor: '#fdba74',
           marginLeft: 4
         }
-      }, changelogEventUpcoming(c) ? '📅 開催予定' : `${typeof c.pinEmoji === 'string' && c.pinEmoji ? c.pinEmoji : '🎉'} 開催中`), React.createElement("b", null, c.title), c.image && React.createElement("img", {
+      }, "🎃 開催中"), React.createElement("b", null, typeof c.title === 'string' && typeof XmasNovelWrap === 'function' ? React.createElement(XmasNovelWrap, {
+        text: c.title
+      }) : c.title), c.image && React.createElement("img", {
         "data-changelog-image": true,
         src: c.image,
         alt: `${c.title}のお知らせ`,
@@ -275696,16 +275685,10 @@ function MonsterHeroGame() {
         },
         loading: "lazy",
         decoding: "async",
-        onClick: () => setChangelogZoomImage(c.image),
         style: {
-          display: 'block',
           width: '100%',
-          maxHeight: 'min(34vh, 320px)',
-          objectFit: 'contain',
-          background: '#0008',
           borderRadius: '12px',
-          margin: '6px 0',
-          cursor: 'zoom-in'
+          margin: '6px 0'
         }
       }), typeof c.video === 'string' && c.video && React.createElement("figure", {
         "data-changelog-video": true,
@@ -275722,7 +275705,9 @@ function MonsterHeroGame() {
         poster: typeof c.videoPoster === 'string' ? c.videoPoster : undefined
       })), (c.items || []).map((x, j) => React.createElement("p", {
         key: j
-      }, "・", x)), (Array.isArray(c.gallery) ? c.gallery : []).filter(g => g && typeof g.image === 'string' && g.image).map((g, j) => React.createElement("figure", {
+      }, "・", typeof x === 'string' && typeof XmasNovelWrap === 'function' ? React.createElement(XmasNovelWrap, {
+        text: x
+      }) : x)), (Array.isArray(c.gallery) ? c.gallery : []).filter(g => g && typeof g.image === 'string' && g.image).map((g, j) => React.createElement("figure", {
         key: `g${j}`,
         "data-changelog-gallery": true,
         style: {
@@ -275739,124 +275724,20 @@ function MonsterHeroGame() {
         onError: e => {
           e.currentTarget.style.display = 'none';
         },
-        onClick: () => setChangelogZoomImage(g.image),
         loading: "lazy",
         decoding: "async",
         style: {
-          display: 'block',
           width: '100%',
-          maxHeight: 'min(34vh, 320px)',
-          objectFit: 'contain',
-          background: '#0008',
-          borderRadius: '12px',
-          cursor: 'zoom-in'
+          borderRadius: '12px'
         }
       }))), changelogSafeLink(c.link) && React.createElement("a", {
         "data-changelog-link": true,
         href: changelogSafeLink(c.link),
         target: "_blank",
         rel: "noopener noreferrer"
-      }, c.link && c.link.label || '詳しく見る', " ↗"))), React.createElement("button", {
-        type: "button",
-        "data-changelog-fold-bottom": true,
-        onClick: e => {
-          const art = e.currentTarget.closest('article');
-          setChangelogOpenId(null);
-          requestAnimationFrame(() => {
-            try {
-              const list = changelogListRef.current;
-              if (art && list) {
-                const top = art.getBoundingClientRect().top - list.getBoundingClientRect().top;
-                if (top < 0) list.scrollTop += top - 8;
-              }
-            } catch {}
-          });
-        },
-        style: {
-          display: 'block',
-          width: '100%',
-          minHeight: 40,
-          marginTop: 8,
-          borderRadius: 10,
-          border: '1px solid #ffffff26',
-          background: '#ffffff0d',
-          color: '#c7d2fe',
-          fontSize: 12,
-          fontWeight: 900
-        }
-      }, "▲ たたむ"))));
-    }), rows.length > 0 && React.createElement("p", {
-      key: "changelog-end",
-      "data-changelog-end": true,
-      style: {
-        textAlign: 'center',
-        fontSize: 11,
-        color: '#94a3b8',
-        margin: '14px 0 6px'
-      }
-    }, "― ここまでです ―"), changelogScrolled && React.createElement("div", {
-      key: "changelog-to-top",
-      style: {
-        position: 'sticky',
-        bottom: 8,
-        height: 0,
-        display: 'flex',
-        justifyContent: 'flex-end',
-        pointerEvents: 'none'
-      }
-    }, React.createElement("button", {
-      type: "button",
-      "data-changelog-to-top": true,
-      onClick: () => {
-        try {
-          changelogListRef.current && changelogListRef.current.scrollTo({
-            top: 0,
-            behavior: 'smooth'
-          });
-        } catch {}
-      },
-      style: {
-        pointerEvents: 'auto',
-        transform: 'translateY(-100%)',
-        minHeight: 44,
-        padding: '0 14px',
-        borderRadius: 999,
-        border: '1px solid #c4b5fd88',
-        background: '#312e81f0',
-        color: '#fff',
-        fontSize: 12,
-        fontWeight: 900,
-        boxShadow: '0 4px 12px #000a'
-      }
-    }, "↑ 上へ"))];
-  })()), changelogZoomImage && React.createElement("div", {
-    "data-changelog-zoom": true,
-    role: "button",
-    "aria-label": "絵を閉じる",
-    onClick: e => {
-      e.stopPropagation();
-      setChangelogZoomImage(null);
-    },
-    style: {
-      position: 'fixed',
-      inset: 0,
-      zIndex: 100001,
-      background: '#000000e6',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: 'calc(12px + env(safe-area-inset-top)) 12px calc(12px + env(safe-area-inset-bottom))'
-    }
-  }, React.createElement("img", {
-    src: changelogZoomImage,
-    alt: "",
-    style: {
-      maxWidth: '100%',
-      maxHeight: '100%',
-      objectFit: 'contain',
-      borderRadius: 12
-    }
-  })), React.createElement("button", {
+      }, c.link && c.link.label || '詳しく見る', " ↗"))))));
+    })];
+  })()), React.createElement("button", {
     type: "button",
     className: "mh-dialog-close",
     "data-mh-back": true,
@@ -276740,10 +276621,7 @@ function MonsterHeroGame() {
     }
   }, React.createElement(Sparkles, {
     size: 19
-  }), React.createElement("span", null, "更新履歴"), hasUnreadChangelog && React.createElement("em", {
-    "data-changelog-entry-count": changelogUnreadCount,
-    "aria-label": `未読${changelogUnreadCount}件`
-  }, changelogUnreadCount > 99 ? '99+' : changelogUnreadCount)), React.createElement("button", {
+  }), React.createElement("span", null, "お知らせ"), hasUnreadChangelog && React.createElement("em", null, "NEW")), React.createElement("button", {
     onPointerDown: e => e.stopPropagation(),
     onClick: e => {
       e.stopPropagation();
@@ -276884,7 +276762,6 @@ function MonsterHeroGame() {
       gifts: gifts,
       gold: gold,
       hasUnreadChangelog: hasUnreadChangelog,
-      changelogUnreadCount: changelogUnreadCount,
       homeBackgroundReady: homeBackgroundReady,
       homeArt: homeArt,
       homePastureMasumons: homePastureMasumons,
@@ -296860,7 +296737,7 @@ const createAnimationStyle = () => {
     .mh-boot-screen.is-ready .mh-mocchi-wrap img{animation:mhReadyHop .75s ease-out 1,mhMocchiHop 1.8s ease-in-out .75s infinite}.mh-boot-screen.is-ready .mh-boot-copy{animation:titleReveal .55s ease-out both}.mh-boot-screen.is-ready .mh-mocchi-wrap i{display:block;animation:mhSparkle 1.5s infinite}.mh-boot-screen.is-ready .mh-mocchi-wrap i:nth-of-type(1){top:10%;left:4%}.mh-boot-screen.is-ready .mh-mocchi-wrap i:nth-of-type(2){top:24%;right:0;animation-delay:.55s}.mh-boot-screen.is-entering .mh-mocchi-wrap img{animation:mhBigHop .75s ease-in-out both}.mh-entry-flash{position:absolute;z-index:9;inset:0;pointer-events:none;background:radial-gradient(circle,#fff 0,#d8b4fe 18%,transparent 58%);opacity:0}.mh-boot-screen.is-entering .mh-entry-flash{animation:mhEntryFlash .76s ease-in both}
     .mh-title-gate,.mh-entering{position:fixed;inset:0;overflow:hidden;color:#fff;background:#05020e;isolation:isolate}.mh-title-gate{animation:titleReveal .65s ease-out both}.mh-title-visual,.mh-entering>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%}
     .mh-title-header{position:absolute;z-index:22;top:0;left:0;right:0;padding:calc(11px + env(safe-area-inset-top)) 12px 0;display:flex;justify-content:space-between;align-items:flex-start;text-shadow:0 2px 5px #000;pointer-events:none}.mh-title-build{display:grid;padding:6px 8px;text-align:left;font-family:monospace;line-height:1.15;border:1px solid #ffffff30;border-radius:10px;background:#160d2588;backdrop-filter:blur(3px)}.mh-title-build b{font-size:7px;letter-spacing:.18em;color:#eadcff}.mh-title-build span{font-size:8px;margin-bottom:5px;color:#fff;max-width:130px;overflow:hidden;text-overflow:ellipsis}.mh-title-actions{display:flex;gap:7px;pointer-events:auto}.mh-title-actions button{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:50px;height:50px;border-radius:50%;background:#26152ecc;border:1px solid #ffd87a;color:#fff;font-size:8px;font-weight:800;box-shadow:0 2px 8px #000}.mh-title-actions em{position:absolute;right:-3px;top:-6px;background:#e33;padding:2px 4px;border-radius:8px;font-size:6px;font-style:normal}.mh-title-start{position:absolute;z-index:21;inset:0;width:100%;height:100%;border:0;background:transparent;touch-action:manipulation}.mh-title-start:disabled{pointer-events:none}
-    .mh-title-modal{position:fixed;z-index:100;inset:0;display:flex;align-items:center;justify-content:center;padding:calc(20px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));background:#03020eef}.mh-title-dialog{display:flex;flex-direction:column;gap:12px;width:min(100%,380px);max-height:86vh;padding:18px;border:1px solid #a78bfa77;border-radius:22px;background:#0f172a;color:#fff;overflow:auto}.mh-dialog-head{display:flex;align-items:center;justify-content:space-between}.mh-dialog-head h3{font-weight:900}.mh-dialog-head button{padding:13px;margin:-6px -8px -6px 0}.mh-dialog-choice{display:flex;justify-content:space-between;align-items:center;padding:14px;border:1px solid #ffffff22;border-radius:14px;background:#ffffff0c;font-weight:800}/* 窓の閉じる(2026-11-19 r1119-013 ⑥ B-1・B-2)。メニューの行(.mh-dialog-choice)の形だと項目の1つに見えたので、参考の窓と同じ「下の中央の丸いボタン」にし、窓の中を送っても下に貼り付けて画面の外へ出さない */.mh-dialog-close{position:sticky;bottom:0;z-index:2;flex:none;align-self:center;min-width:168px;min-height:46px;margin-top:auto;padding:0 28px;border:1px solid #ffffff38;border-radius:999px;background:#334155;color:#f1f5f9;font-weight:900;box-shadow:0 3px 0 #0009,0 -14px 14px 2px #0f172a}.mh-dialog-close:active{transform:translateY(1px) scale(.98)}.mh-dialog-head:has(>h3:only-child){justify-content:center}/* 更新履歴の窓(2026-11-19 r1119-010・U-14)。参考の窓(見出しの帯/中身/下の中央のとじる)にそろえ、窓の中で送るのは一覧だけにする。送った札は日付の見出しと上のふちの下へもぐり、切れた枠に見えない。字は 10px より小さくしない */.mh-title-dialog--changelog{width:min(100%,440px);height:min(calc(var(--mh-vh) - 40px - env(safe-area-inset-top) - env(safe-area-inset-bottom)),760px);max-height:none;padding:0;gap:0;overflow:hidden;border:2px solid #a78bfa88}.mh-title-dialog--changelog>.mh-dialog-head{flex:none;justify-content:center;min-height:44px;padding:8px 16px;background:linear-gradient(180deg,#2b3150,#1b2036);border-bottom:1px solid #ffffff1f}.mh-title-dialog--changelog>.mh-dialog-head h3{font-size:15px;letter-spacing:.04em}.mh-title-dialog--changelog>.mh-changelog-tabs{flex:none;margin:10px 12px 0;padding:3px;gap:3px;border-radius:12px;background:#0b1222;border:1px solid #ffffff14}.mh-title-dialog--changelog>.mh-changelog-tabs button{display:flex;align-items:center;justify-content:center;gap:4px;min-height:44px;padding:0 4px;white-space:nowrap;border-radius:9px;background:transparent;color:#94a3b8;font-size:12px;font-weight:900}.mh-title-dialog--changelog>.mh-changelog-tabs button.active{background:linear-gradient(180deg,#d97706,#b45309);color:#fff;box-shadow:0 2px 0 #0006}.mh-title-dialog--changelog .mh-changelog-tabs .mh-unread-badge{position:static;width:16px;height:16px;border-width:1.5px;font-size:10px;box-shadow:none}.mh-title-dialog--changelog>.mh-changelog-list{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;margin-top:10px;padding:0 12px 12px;border-top:1px solid #ffffff1a;box-shadow:inset 0 8px 8px -8px #000c}.mh-title-dialog--changelog .mh-changelog-day{margin:0 -12px 8px;padding:6px 12px;background:#0f172af2;border-bottom:1px solid #ffffff12;box-shadow:0 6px 8px -6px #000c;font-size:11px;color:#c7d2fe}.mh-title-dialog--changelog .mh-changelog-day:first-child{margin-top:0}.mh-title-dialog--changelog .mh-changelog-list>details:first-child{margin-top:10px!important}.mh-title-dialog--changelog .mh-changelog-list article{padding:10px 12px;margin-bottom:8px;border-radius:14px;background:#111a2e}.mh-title-dialog--changelog .mh-changelog-list article.unread{border-color:#f59e0bb0;box-shadow:inset 3px 0 0 #f59e0b}.mh-title-dialog--changelog .mh-changelog-head{min-height:40px}.mh-title-dialog--changelog .mh-changelog-head b{font-size:13px;line-height:1.4}.mh-title-dialog--changelog .mh-changelog-head small{font-size:10px}.mh-title-dialog--changelog .mh-changelog-count{font-size:10px}.mh-title-dialog--changelog .mh-changelog-count em,.mh-title-dialog--changelog .mh-changelog-item time em{font-size:9px}.mh-title-dialog--changelog .mh-changelog-kind{font-size:10px}.mh-title-dialog--changelog .mh-changelog-peek{font-size:11px;color:#a8b3c7}.mh-title-dialog--changelog .mh-changelog-list p{font-size:12px;line-height:1.65}.mh-title-dialog--changelog .mh-changelog-item time{font-size:10px}.mh-title-dialog--changelog .mh-changelog-item b{font-size:12.5px}.mh-title-dialog--changelog>.mh-dialog-close{position:static;margin:10px auto 12px;box-shadow:0 3px 0 #0009}@media(orientation:landscape) and (max-height:500px){.mh-title-dialog--changelog{display:grid;grid-template-columns:minmax(150px,24%) 1fr;grid-template-rows:auto auto 1fr auto;width:min(100%,860px);height:calc(var(--mh-vh) - 16px);padding:0}.mh-title-dialog--changelog>.mh-dialog-head{grid-column:1;grid-row:1;border-right:1px solid #ffffff14}.mh-title-dialog--changelog>.mh-changelog-tabs{grid-column:1;grid-row:2;grid-template-columns:1fr;margin:10px}.mh-title-dialog--changelog>.mh-dialog-close{grid-column:1;grid-row:4;align-self:end;justify-self:center;min-width:0;width:calc(100% - 20px);margin:0 10px 10px}.mh-title-dialog--changelog>.mh-changelog-list{grid-column:2;grid-row:1/-1;margin:0;padding-top:0;border-top:0;border-left:1px solid #ffffff1a;box-shadow:none}}/* 2026-11-27 r1126-074 小4: タブレットでは窓を広げる。縦は幅680まで・高さは画面に合わせる。横は小さい横と同じ左右の組(左に見出し・タブ・閉じる、右に一覧) */@media(min-width:700px) and (orientation:portrait){.mh-title-dialog--changelog{width:min(100%,680px);height:min(calc(var(--mh-vh) - 40px - env(safe-area-inset-top) - env(safe-area-inset-bottom)),1100px)}}@media(orientation:landscape) and (min-height:501px){.mh-title-dialog--changelog{display:grid;grid-template-columns:minmax(190px,24%) 1fr;grid-template-rows:auto auto 1fr auto;width:min(100%,1040px);height:min(calc(var(--mh-vh) - 40px - env(safe-area-inset-top) - env(safe-area-inset-bottom)),860px);padding:0}.mh-title-dialog--changelog>.mh-dialog-head{grid-column:1;grid-row:1;border-right:1px solid #ffffff14}.mh-title-dialog--changelog>.mh-changelog-tabs{grid-column:1;grid-row:2;grid-template-columns:1fr;margin:10px}.mh-title-dialog--changelog>.mh-dialog-close{grid-column:1;grid-row:4;align-self:end;justify-self:center;min-width:0;width:calc(100% - 20px);margin:0 10px 10px}.mh-title-dialog--changelog>.mh-changelog-list{grid-column:2;grid-row:1/-1;margin:0;padding-top:0;border-top:0;border-left:1px solid #ffffff1a;box-shadow:none}}@media(orientation:landscape) and (max-height:500px){.mh-title-dialog--menu{display:grid;grid-template-columns:1fr 1fr;align-content:start}.mh-title-dialog--menu>.mh-dialog-head,.mh-title-dialog--menu>.mh-dialog-close{grid-column:1/-1;justify-self:center}.mh-title-dialog--menu>.mh-dialog-choice{padding:10px 12px}}.mh-changelog-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.mh-changelog-tabs button{position:relative;padding:9px;border-radius:10px;background:#1e293b;font-size:11px;font-weight:800}.mh-changelog-tabs button.active{background:#b45309}.mh-unread-badge{position:absolute;right:-5px;top:-6px;display:flex;align-items:center;justify-content:center;width:17px;height:17px;border:2px solid #fff;border-radius:50%;background:#dc2626;color:#fff;font:900 11px/1 sans-serif;font-style:normal;box-shadow:0 2px 5px #0008;pointer-events:none}.mh-changelog-list{overflow:auto}.mh-changelog-list article{padding:11px;margin-bottom:8px;border:1px solid #ffffff18;border-radius:13px;background:#0005}.mh-changelog-list time,.mh-changelog-list b{display:block}.mh-changelog-list time{font:9px monospace;color:#94a3b8}.mh-changelog-list b{font-size:12px;margin:4px 0}.mh-changelog-kind{display:inline-block;margin-top:5px;padding:2px 7px;border-radius:999px;border:1px solid currentColor;font:900 9px/1.5 sans-serif}.mh-changelog-kind[data-kind="fix"]{color:#fca5a5;background:#7f1d1d55}.mh-changelog-kind[data-kind="feature"]{color:#86efac;background:#14532d55}.mh-changelog-kind[data-kind="update"]{color:#93c5fd;background:#1e3a8a55}.mh-changelog-kind[data-kind="market"]{color:#fcd34d;background:#78350f55}.mh-changelog-kind[data-kind="issue"]{color:#d8b4fe;background:#4c1d9555}.mh-changelog-kind[data-kind="mode"]{color:#67e8f9;background:#164e6355}.mh-changelog-kind[data-kind="content"]{color:#f9a8d4;background:#83184355}.mh-changelog-kind[data-kind="event"]{color:#fdba74;background:#7c2d1255}.mh-changelog-list p{font-size:10px;color:#cbd5e1}.mh-changelog-head{display:flex;align-items:center;gap:8px;width:100%;min-height:36px;padding:0;border:0;background:transparent;color:inherit;text-align:left}.mh-changelog-head b{flex:1;min-width:0;margin:4px 0}.mh-changelog-head small{flex:none;font-size:8px;font-weight:900;color:#94a3b8;white-space:nowrap}.mh-changelog-detail{margin-top:2px;padding-top:6px;border-top:1px solid #ffffff14}.mh-changelog-empty{padding:18px 12px;text-align:center;line-height:1.7;color:#fbbf24}.mh-changelog-day{position:sticky;top:0;z-index:1;margin:10px 0 6px;padding:3px 0;background:#0f172a;color:#a5b4fc;font:900 10px/1.4 monospace;letter-spacing:.04em}.mh-changelog-day:first-child{margin-top:0}.mh-changelog-group-emoji{flex:none;font-size:13px;line-height:1}.mh-changelog-count{flex:none;position:relative;padding:2px 7px;border-radius:999px;background:#ffffff14;color:#cbd5e1;font:900 9px/1.5 sans-serif;white-space:nowrap}.mh-changelog-count em{margin-left:5px;padding:1px 4px;border-radius:5px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-changelog-peek{margin-top:4px;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;font-size:9px;line-height:1.5;color:#94a3b8}.mh-changelog-kinds{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}.mh-changelog-kinds .mh-changelog-kind{margin-top:0}.mh-changelog-kind i{margin-left:3px;font-style:normal;opacity:.85}.mh-changelog-item{padding:9px 0;border-top:1px solid #ffffff14}.mh-changelog-item:first-child{padding-top:2px;border-top:0}.mh-changelog-item time{display:inline-block;margin-right:6px;font:9px monospace;color:#94a3b8}.mh-changelog-item time em{margin-left:4px;padding:1px 4px;border-radius:5px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-changelog-item b{display:block;margin:4px 0;font-size:11px;line-height:1.5}.mh-changelog-item .mh-changelog-kind{margin-top:0}[data-changelog-link]{display:inline-flex;align-items:center;gap:4px;margin-top:8px;padding:8px 13px;border:1px solid #7dd3fc55;border-radius:11px;background:#0ea5e922;color:#7dd3fc;font:900 10px/1.4 sans-serif;text-decoration:none}.mh-title-dialog textarea{min-height:90px;padding:8px;border-radius:10px;background:#0008;font:9px monospace}
+    .mh-title-modal{position:fixed;z-index:100;inset:0;display:flex;align-items:center;justify-content:center;padding:calc(20px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));background:#03020eef}.mh-title-dialog{display:flex;flex-direction:column;gap:12px;width:min(100%,380px);max-height:86vh;padding:18px;border:1px solid #a78bfa77;border-radius:22px;background:#0f172a;color:#fff;overflow:auto}.mh-dialog-head{display:flex;align-items:center;justify-content:space-between}.mh-dialog-head h3{font-weight:900}.mh-dialog-head button{padding:13px;margin:-6px -8px -6px 0}.mh-dialog-choice{display:flex;justify-content:space-between;align-items:center;padding:14px;border:1px solid #ffffff22;border-radius:14px;background:#ffffff0c;font-weight:800}/* 窓の閉じる(2026-11-19 r1119-013 ⑥ B-1・B-2)。メニューの行(.mh-dialog-choice)の形だと項目の1つに見えたので、参考の窓と同じ「下の中央の丸いボタン」にし、窓の中を送っても下に貼り付けて画面の外へ出さない */.mh-dialog-close{position:sticky;bottom:0;z-index:2;flex:none;align-self:center;min-width:168px;min-height:46px;margin-top:auto;padding:0 28px;border:1px solid #ffffff38;border-radius:999px;background:#334155;color:#f1f5f9;font-weight:900;box-shadow:0 3px 0 #0009,0 -14px 14px 2px #0f172a}.mh-dialog-close:active{transform:translateY(1px) scale(.98)}.mh-dialog-head:has(>h3:only-child){justify-content:center}/* 更新履歴の窓(2026-11-19 r1119-010・U-14)。参考の窓(見出しの帯/中身/下の中央のとじる)にそろえ、窓の中で送るのは一覧だけにする。送った札は日付の見出しと上のふちの下へもぐり、切れた枠に見えない。字は 10px より小さくしない */.mh-title-dialog--changelog{width:min(100%,440px);height:min(calc(var(--mh-vh) - 40px - env(safe-area-inset-top) - env(safe-area-inset-bottom)),760px);max-height:none;padding:0;gap:0;overflow:hidden;border:2px solid #a78bfa88}.mh-title-dialog--changelog>.mh-dialog-head{flex:none;justify-content:center;min-height:44px;padding:8px 16px;background:linear-gradient(180deg,#2b3150,#1b2036);border-bottom:1px solid #ffffff1f}.mh-title-dialog--changelog>.mh-dialog-head h3{font-size:15px;letter-spacing:.04em}.mh-title-dialog--changelog>.mh-changelog-tabs{flex:none;margin:10px 12px 0;padding:3px;gap:3px;border-radius:12px;background:#0b1222;border:1px solid #ffffff14}.mh-title-dialog--changelog>.mh-changelog-tabs button{display:flex;align-items:center;justify-content:center;gap:4px;min-height:44px;padding:0 4px;white-space:nowrap;border-radius:9px;background:transparent;color:#94a3b8;font-size:12px;font-weight:900}.mh-title-dialog--changelog>.mh-changelog-tabs button.active{background:linear-gradient(180deg,#d97706,#b45309);color:#fff;box-shadow:0 2px 0 #0006}.mh-title-dialog--changelog .mh-changelog-tabs .mh-unread-badge{position:static;width:16px;height:16px;border-width:1.5px;font-size:10px;box-shadow:none}.mh-title-dialog--changelog>.mh-changelog-list{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;margin-top:10px;padding:0 12px 12px;border-top:1px solid #ffffff1a;box-shadow:inset 0 8px 8px -8px #000c}.mh-title-dialog--changelog .mh-changelog-day{margin:0 -12px 8px;padding:6px 12px;background:#0f172af2;border-bottom:1px solid #ffffff12;box-shadow:0 6px 8px -6px #000c;font-size:11px;color:#c7d2fe}.mh-title-dialog--changelog .mh-changelog-day:first-child{margin-top:0}.mh-title-dialog--changelog .mh-changelog-list>details:first-child{margin-top:10px!important}.mh-title-dialog--changelog .mh-changelog-list article{padding:10px 12px;margin-bottom:8px;border-radius:14px;background:#111a2e}.mh-title-dialog--changelog .mh-changelog-list article.unread{border-color:#f59e0bb0;box-shadow:inset 3px 0 0 #f59e0b}.mh-title-dialog--changelog .mh-changelog-head{min-height:40px}.mh-title-dialog--changelog .mh-changelog-head b{font-size:13px;line-height:1.4}.mh-title-dialog--changelog .mh-changelog-head small{font-size:10px}.mh-title-dialog--changelog .mh-changelog-count{font-size:10px}.mh-title-dialog--changelog .mh-changelog-count em,.mh-title-dialog--changelog .mh-changelog-item time em{font-size:9px}.mh-title-dialog--changelog .mh-changelog-kind{font-size:10px}.mh-title-dialog--changelog .mh-changelog-peek{font-size:11px;color:#a8b3c7}.mh-title-dialog--changelog .mh-changelog-list p{font-size:12px;line-height:1.65}.mh-title-dialog--changelog .mh-changelog-item time{font-size:10px}.mh-title-dialog--changelog .mh-changelog-item b{font-size:12.5px}.mh-title-dialog--changelog>.mh-dialog-close{position:static;margin:10px auto 12px;box-shadow:0 3px 0 #0009}@media(orientation:landscape) and (max-height:500px){.mh-title-dialog--changelog{display:grid;grid-template-columns:minmax(170px,30%) 1fr;grid-template-rows:auto auto 1fr auto;width:min(100%,860px);height:calc(var(--mh-vh) - 16px);padding:0}.mh-title-dialog--changelog>.mh-dialog-head{grid-column:1;grid-row:1;border-right:1px solid #ffffff14}.mh-title-dialog--changelog>.mh-changelog-tabs{grid-column:1;grid-row:2;grid-template-columns:1fr;margin:10px}.mh-title-dialog--changelog>.mh-dialog-close{grid-column:1;grid-row:4;align-self:end;justify-self:center;min-width:0;width:calc(100% - 20px);margin:0 10px 10px}.mh-title-dialog--changelog>.mh-changelog-list{grid-column:2;grid-row:1/-1;margin:0;padding-top:0;border-top:0;border-left:1px solid #ffffff1a;box-shadow:none}}@media(orientation:landscape) and (max-height:500px){.mh-title-dialog--menu{display:grid;grid-template-columns:1fr 1fr;align-content:start}.mh-title-dialog--menu>.mh-dialog-head,.mh-title-dialog--menu>.mh-dialog-close{grid-column:1/-1;justify-self:center}.mh-title-dialog--menu>.mh-dialog-choice{padding:10px 12px}}.mh-changelog-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.mh-changelog-tabs button{position:relative;padding:9px;border-radius:10px;background:#1e293b;font-size:11px;font-weight:800}.mh-changelog-tabs button.active{background:#b45309}.mh-unread-badge{position:absolute;right:-5px;top:-6px;display:flex;align-items:center;justify-content:center;width:17px;height:17px;border:2px solid #fff;border-radius:50%;background:#dc2626;color:#fff;font:900 11px/1 sans-serif;font-style:normal;box-shadow:0 2px 5px #0008;pointer-events:none}.mh-changelog-list{overflow:auto}.mh-changelog-list article{padding:11px;margin-bottom:8px;border:1px solid #ffffff18;border-radius:13px;background:#0005}.mh-changelog-list time,.mh-changelog-list b{display:block}.mh-changelog-list time{font:9px monospace;color:#94a3b8}.mh-changelog-list b{font-size:12px;margin:4px 0}.mh-changelog-kind{display:inline-block;margin-top:5px;padding:2px 7px;border-radius:999px;border:1px solid currentColor;font:900 9px/1.5 sans-serif}.mh-changelog-kind[data-kind="fix"]{color:#fca5a5;background:#7f1d1d55}.mh-changelog-kind[data-kind="feature"]{color:#86efac;background:#14532d55}.mh-changelog-kind[data-kind="update"]{color:#93c5fd;background:#1e3a8a55}.mh-changelog-kind[data-kind="market"]{color:#fcd34d;background:#78350f55}.mh-changelog-kind[data-kind="issue"]{color:#d8b4fe;background:#4c1d9555}.mh-changelog-kind[data-kind="mode"]{color:#67e8f9;background:#164e6355}.mh-changelog-kind[data-kind="content"]{color:#f9a8d4;background:#83184355}.mh-changelog-kind[data-kind="event"]{color:#fdba74;background:#7c2d1255}.mh-changelog-list p{font-size:10px;color:#cbd5e1}.mh-changelog-head{display:flex;align-items:center;gap:8px;width:100%;min-height:36px;padding:0;border:0;background:transparent;color:inherit;text-align:left}.mh-changelog-head b{flex:1;min-width:0;margin:4px 0}.mh-changelog-head small{flex:none;font-size:8px;font-weight:900;color:#94a3b8;white-space:nowrap}.mh-changelog-detail{margin-top:2px;padding-top:6px;border-top:1px solid #ffffff14}.mh-changelog-empty{padding:18px 12px;text-align:center;line-height:1.7;color:#fbbf24}.mh-changelog-day{position:sticky;top:0;z-index:1;margin:10px 0 6px;padding:3px 0;background:#0f172a;color:#a5b4fc;font:900 10px/1.4 monospace;letter-spacing:.04em}.mh-changelog-day:first-child{margin-top:0}.mh-changelog-group-emoji{flex:none;font-size:13px;line-height:1}.mh-changelog-count{flex:none;position:relative;padding:2px 7px;border-radius:999px;background:#ffffff14;color:#cbd5e1;font:900 9px/1.5 sans-serif;white-space:nowrap}.mh-changelog-count em{margin-left:5px;padding:1px 4px;border-radius:5px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-changelog-peek{margin-top:4px;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;font-size:9px;line-height:1.5;color:#94a3b8}.mh-changelog-kinds{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}.mh-changelog-kinds .mh-changelog-kind{margin-top:0}.mh-changelog-kind i{margin-left:3px;font-style:normal;opacity:.85}.mh-changelog-item{padding:9px 0;border-top:1px solid #ffffff14}.mh-changelog-item:first-child{padding-top:2px;border-top:0}.mh-changelog-item time{display:inline-block;margin-right:6px;font:9px monospace;color:#94a3b8}.mh-changelog-item time em{margin-left:4px;padding:1px 4px;border-radius:5px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-changelog-item b{display:block;margin:4px 0;font-size:11px;line-height:1.5}.mh-changelog-item .mh-changelog-kind{margin-top:0}[data-changelog-link]{display:inline-flex;align-items:center;gap:4px;margin-top:8px;padding:8px 13px;border:1px solid #7dd3fc55;border-radius:11px;background:#0ea5e922;color:#7dd3fc;font:900 10px/1.4 sans-serif;text-decoration:none}.mh-title-dialog textarea{min-height:90px;padding:8px;border-radius:10px;background:#0008;font:9px monospace}
     .mh-tile-viewport{touch-action:none;overscroll-behavior:contain;cursor:grab}.mh-tile-viewport:active{cursor:grabbing}.mh-tile-viewport.overview{overflow:auto}.mh-tile-viewport.overview .mh-tile-board{transform:none}.mh-training-tile{transform:scale(var(--map-scale,1))}.mh-training-tile.current{transform:scale(calc(var(--map-scale,1)*1.08))}.mh-tile-board>i.route{height:17px;border-color:#fef08a;background:#facc15;box-shadow:0 0 14px #fde047;animation:trainingRoutePulse .7s infinite alternate}.mh-training-tile.route-preview{border-color:#fde047;box-shadow:0 0 16px #fde047,0 5px 0 #713f12}.mh-training-tile.stop-preview{z-index:7;border-color:#fff;box-shadow:0 0 0 5px #f97316,0 0 25px #fb923c}.mh-board-buttons{display:flex;align-items:center;gap:4px}.mh-board-buttons button{min-height:34px;padding:0 8px;border-radius:9px;background:#164e63;font-size:8px;font-weight:900}.mh-board-buttons span{padding:3px 5px;border-radius:7px;background:#020617;color:#bae6fd;font:8px monospace}.mh-changelog-list article.unread{border-color:#f59e0b88}.mh-changelog-list time em{float:right;padding:2px 5px;border-radius:6px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-training-effect{position:fixed;z-index:45000;left:50%;top:43%;width:min(78vw,300px);min-height:150px;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;border:3px solid #fff;border-radius:28px;background:radial-gradient(circle,#0ea5e9dd,#020617ee 72%);box-shadow:0 0 55px #38bdf8;pointer-events:none;animation:trainingEffectPop 1.25s ease-out both}.mh-training-effect>span{font-size:58px;filter:drop-shadow(0 0 15px #fff)}.mh-training-effect>b{z-index:2;max-width:90%;text-align:center;color:#fff;font-size:16px;text-shadow:0 2px 5px #000}.mh-training-effect.xp,.mh-training-effect.effect,.mh-training-effect.turn{background:radial-gradient(circle,#22c55edd,#052e16ee 72%);box-shadow:0 0 55px #4ade80}.mh-training-effect.diamond{background:radial-gradient(circle,#38bdf8ee,#172554ee 72%)}.mh-training-effect.item,.mh-training-effect.tool,.mh-training-effect.goal{background:radial-gradient(circle,#fbbf24ee,#581c87ee 72%);box-shadow:0 0 70px #fde047}.mh-training-effect.move,.mh-training-effect.happening{background:radial-gradient(circle,#ef4444dd,#450a0aee 72%);box-shadow:0 0 55px #fb7185}.mh-training-effect i{position:absolute;width:9px;height:9px;border-radius:50%;background:#fff;box-shadow:0 0 12px #fff;animation:trainingParticle 1s ease-out both}.mh-training-effect i:nth-of-type(1){--a:0deg}.mh-training-effect i:nth-of-type(2){--a:60deg}.mh-training-effect i:nth-of-type(3){--a:120deg}.mh-training-effect i:nth-of-type(4){--a:180deg}.mh-training-effect i:nth-of-type(5){--a:240deg}.mh-training-effect i:nth-of-type(6){--a:300deg}@keyframes trainingEffectPop{0%{opacity:0;transform:translate(-50%,-50%) scale(.4)}18%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-58%) scale(.96)}}@keyframes trainingParticle{from{transform:rotate(var(--a)) translateX(18px);opacity:1}to{transform:rotate(var(--a)) translateX(115px) scale(.2);opacity:0}}@keyframes trainingRoutePulse{to{filter:brightness(1.6)}}
     .mh-entering>img{animation:mhGateZoom 1.15s ease-in both}.mh-gate-core{position:absolute;z-index:3;left:50%;top:44%;width:12vmin;height:12vmin;border-radius:50%;background:#fff;box-shadow:0 0 25px 12px #d8b4fe,0 0 90px 40px #7e22ce;transform:translate(-50%,-50%);animation:mhCoreGrow 1.15s ease-in both}.mh-gate-particles{position:absolute;z-index:2;inset:-30%;background:repeating-conic-gradient(from 0deg,transparent 0 8deg,#fbbf2444 9deg,#a855f766 10deg,transparent 11deg 19deg);animation:mhParticles 1.1s ease-in both}.mh-gate-flash{position:absolute;z-index:4;inset:0;background:#f5f0ff;animation:mhGateFlash 1.15s ease-in both}.mh-entering p{position:absolute;z-index:6;left:0;right:0;bottom:calc(9% + env(safe-area-inset-bottom));text-align:center;font-size:11px;font-weight:800;text-shadow:0 2px 6px #000}
     @keyframes mhMocchiHop{0%,100%{transform:translateY(0) scale(1.05,.95)}45%{transform:translateY(-14px) rotate(-2deg) scale(.98,1.02)}70%{transform:translateY(0) scale(1.08,.9)}}@keyframes mhReadyHop{45%{transform:translateY(-25px) scale(1.1)}100%{transform:translateY(0)}}@keyframes mhShadow{0%,100%{transform:scaleX(1);opacity:.6}45%{transform:scaleX(.65);opacity:.3}}@keyframes mhSparkle{50%{transform:scale(1.5) rotate(90deg);opacity:.35}}@keyframes mhBigHop{45%{transform:translateY(-34px) scale(.95,1.08)}100%{transform:translateY(5px) scale(1.12,.88)}}@keyframes mhEntryFlash{45%{opacity:0}80%{opacity:1}100%{opacity:0}}@keyframes titleReveal{from{opacity:0;filter:brightness(2)}to{opacity:1;filter:none}}@keyframes mhGateZoom{to{transform:scale(1.16);filter:blur(2px) brightness(1.5)}}@keyframes mhCoreGrow{0%{transform:translate(-50%,-50%) scale(.15);opacity:0}70%{opacity:1}100%{transform:translate(-50%,-50%) scale(18)}}@keyframes mhParticles{to{transform:rotate(35deg) scale(.2);opacity:0}}@keyframes mhGateFlash{0%,68%{opacity:0}85%{opacity:.95}100%{opacity:1}}

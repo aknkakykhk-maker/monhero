@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 84034a926cbf6e21
+// generated-sha256: da88234130681057
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -15703,6 +15703,11 @@ const storyChunkLines = (text, cap, maxLines) => {
       chunks.splice(i, 1);
     }
   }
+  // 先頭の2字以下のかたまり(「袋、」)は、次のかたまりにくっつける(くっつける前が無いので、それだけが1行目に残った・2026-11-27 r1126-078)
+  if (chunks.length > 1 && /[ぁ-んァ-ヶ一-龠々a-zA-Z0-9０-９]/.test(chunks[0].t) && storyTextUnits(chunks[0].t) <= 2) {
+    chunks[1] = { ...chunks[1], t: chunks[0].t + (chunks[1].sp ? ' ' : '') + chunks[1].t, sp: chunks[0].sp };
+    chunks.splice(0, 1);
+  }
   if (chunks.length < 2) return null;
   // 半角の字は幅の見込みがずれやすいので、1字ぶん余らせて見る。入りきらない長いかたまりは折らずに流す(flow)
   // 絵文字(🔥✨)は字1つより幅が広いので、1つにつき 0.6字ぶん足して見る
@@ -15785,11 +15790,14 @@ const AssistantFace = ({ who, size = 88, accent, expression = null }) => {
 // 矢印でつないだ切り替わりの順(「OFF → AUTO → ∞ → OFF」)と「∞周回」は1つの塊で出し、途中で折らない
 // (2026-11-22 点検 #7059 HOME の助手の説明「OFF → / AUTO」「その∞ / 周回」と折れて順が読めなかった・r1119-080)
 const HELP_NOWRAP_RE = /((?:[A-Za-z0-9∞]+ → )+[A-Za-z0-9∞]+|∞周回)/;
-const helpWrap = (x) => {
+// max: 1つにまとめる字数の上限(狭い欄では小さく。省くと XmasNovelWrap の既定)
+const helpWrap = (x, max) => {
   if (typeof x !== 'string' || typeof jaWrap !== 'function') return x;
   const parts = x.split(HELP_NOWRAP_RE);
-  return <span style={typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : undefined}>{parts.length === 1 ? jaWrap(x)
-    : parts.map((t, i) => (i % 2 === 1 ? <span key={i} data-help-nowrap style={{ whiteSpace:'nowrap' }}>{t}</span> : <React.Fragment key={i}>{t ? jaWrap(t) : null}</React.Fragment>))}</span>;
+  // 文節の切れ目だけで折る部品(事件簿と同じ XmasNovelWrap。名前・日時・かっこの中の名前・ひらがなの言葉の途中では折らない)があれば使う(2026-11-27 r1126-078)
+  const wrapOne = (t) => (typeof XmasNovelWrap === 'function' ? <XmasNovelWrap text={t} max={max} /> : jaWrap(t));
+  return <span style={typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : undefined}>{parts.length === 1 ? wrapOne(x)
+    : parts.map((t, i) => (i % 2 === 1 ? <span key={i} data-help-nowrap style={{ whiteSpace:'nowrap' }}>{t}</span> : <React.Fragment key={i}>{t ? wrapOne(t) : null}</React.Fragment>))}</span>;
 };
 const renderHelpBlocks = (blocks, accent) => (blocks || []).map((b, i) => {
   // その端末で条件を満たした人だけの本文(playerFlag)は、満たしていなければ見出しごと出さない
@@ -15802,9 +15810,9 @@ const renderHelpBlocks = (blocks, accent) => (blocks || []).map((b, i) => {
   if(b.t==='list') return <ul key={i} className="text-[12px] text-slate-300 leading-relaxed space-y-2 list-disc pl-5">{b.items.map((x,j)=><li key={j}>{helpWrap(x)}</li>)}</ul>;
   if(b.t==='steps') return <div key={i} className="space-y-2.5">{b.items.map((x,j)=>(<div key={j} className="flex items-start gap-3"><span className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-black text-black" style={{backgroundColor:accent}}>{j+1}</span><span className="text-[12px] text-slate-300 leading-relaxed pt-0.5">{helpWrap(x)}</span></div>))}</div>;
   // 表の行の3つ目 {notes:[…]} は、その行のノーツの見本の絵(2026-10-21)。演奏画面と同じ描き方の RhythmNoteSwatch で、見出しの上に並べる
-  if(b.t==='kv') return <div key={i} className="rounded-2xl bg-black/50 border border-white/5 overflow-hidden">{b.rows.map((r,j)=>(<div key={j} className={`flex gap-3 px-4 py-2.5 ${j>0?'border-t border-white/5':''}`}><span className="shrink-0 w-24 text-[11px] font-black text-slate-400 leading-tight">{Array.isArray(r[2]?.notes)&&r[2].notes.length>0&&<span data-help-note-swatches className="mb-1 flex gap-1">{r[2].notes.map(k=><RhythmNoteSwatch key={k} kind={k} width={r[2].notes.length>1?44:54} height={r[2].notes.length>1?34:42}/>)}</span>}{r[0]}</span><span className="flex-1 text-[11px] text-white leading-relaxed">{helpWrap(r[1])}</span></div>))}</div>;
+  if(b.t==='kv') return <div key={i} className="rounded-2xl bg-black/50 border border-white/5 overflow-hidden">{b.rows.map((r,j)=>(<div key={j} className={`flex gap-3 px-4 py-2.5 ${j>0?'border-t border-white/5':''}`}><span className="shrink-0 w-24 text-[11px] font-black text-slate-400 leading-tight">{Array.isArray(r[2]?.notes)&&r[2].notes.length>0&&<span data-help-note-swatches className="mb-1 flex gap-1">{r[2].notes.map(k=><RhythmNoteSwatch key={k} kind={k} width={r[2].notes.length>1?44:54} height={r[2].notes.length>1?34:42}/>)}</span>}{helpWrap(r[0],7)}</span><span className="flex-1 text-[11px] text-white leading-relaxed">{helpWrap(r[1])}</span></div>))}</div>;
   // 実データから作る表。難易度・アイテム・ログボ・ミッションはここで全件出るので取りこぼさない
-  if(b.t==='data'){const rows=helpDataRows(b.id);if(rows.length===0)return null;return(<div key={i}><div className="text-[10px] font-black mb-1 tracking-wider" style={{color:accent}}>{HELP_DATA_TITLES[b.id]||''}</div><div className="rounded-2xl bg-black/50 border border-white/5 overflow-hidden">{rows.map((r,j)=>(<div key={j} className={`flex gap-3 px-4 py-2.5 ${j>0?'border-t border-white/5':''}`}><span className="shrink-0 w-24 text-[11px] font-black text-slate-400 leading-tight">{r[0]}</span><span className="flex-1 text-[11px] text-white leading-relaxed">{helpWrap(r[1])}</span></div>))}</div></div>);}
+  if(b.t==='data'){const rows=helpDataRows(b.id);if(rows.length===0)return null;return(<div key={i}><div className="text-[10px] font-black mb-1 tracking-wider" style={{color:accent}}>{HELP_DATA_TITLES[b.id]||''}</div><div className="rounded-2xl bg-black/50 border border-white/5 overflow-hidden">{rows.map((r,j)=>(<div key={j} className={`flex gap-3 px-4 py-2.5 ${j>0?'border-t border-white/5':''}`}><span className="shrink-0 w-24 text-[11px] font-black text-slate-400 leading-tight">{helpWrap(r[0],7)}</span><span className="flex-1 text-[11px] text-white leading-relaxed">{helpWrap(r[1])}</span></div>))}</div></div>);}
   return <p key={i} className="text-[12px] text-slate-200 leading-relaxed">{helpWrap(b.text)}</p>;
 });
 // ---- 助手のひとことを出す回数(2026-10-10・改善 G6「助手の吹き出しが、ほぼ全画面に出たまま」→ 社長が選択肢1) ----
@@ -41832,8 +41840,12 @@ const JA_WRAP_NO_BREAK = [
   /\d{1,2}:\d{2}/g,
   /聖夜の名探偵|名探偵|エンドヒストリー|手がかり帳|鐘が鳴る夜/g,
   // 事件簿とクリスマスのお話の名前(2026-11-27 r1126-071「黒いサン／タ」)。お話の画面(レイド・イベントのお話)も jaWrap の折り目を使うので、ここで外す
-  /黒いサンタ|聖夜のロンド|十三番目の鐘|十二の鐘|招待状|ワトソンくん/g,
+  /黒いサンタ|聖夜のロンド|十三番目の鐘|十二の鐘|招待状|ワトソンくん|ペンション・シュプール|クリスマス会|呪いのセーブデータ|モンヒロ事件簿/g,
+  // 「——」「……」の並びの中(「—／—シュプール」2026-11-27 r1126-078 の点検)
+  /—{2,}|―{2,}|…{2,}/g,
 ];
+const JA_WRAP_NAME_KEEP = /ペンション・シュプール|呪いのセーブデータ|聖夜の名探偵/;
+const JA_WRAP_NAME_SPLIT = /(ペンション・シュプール|呪いのセーブデータ|聖夜の名探偵)/;
 const jaWrapUnbreak = (marked) => {
   if (typeof marked !== 'string' || !marked.includes('​')) return marked;
   const plain = marked.replace(/​/g, '');
@@ -42039,7 +42051,9 @@ const jaWrap = (text) => {
   const keep = (t, k) => <span key={k} data-ja-keep style={{ whiteSpace: 'nowrap' }}>{t}</span>;
   // 空白で始まるかたまりの手前には印(<wbr>)を置かない。空白はもともと折れるうえ、「折らない枠」+<wbr>+「空白で始まる字」の並びで
   // Chromium が落ちた(行の長さをそろえる text-wrap: balance・pretty のとき。2026-10-24 台詞「本当に極限…！ (>人<;)」で見つけた)
-  return s.split('\u200B').map((seg, i) => <React.Fragment key={i}>{i > 0 && !/^\s/.test(seg) && <wbr/>}{jaWrapPieces(seg).map(([t, kp], k) => (kp ? keep(t, k) : t))}</React.Fragment>);
+  // 事件簿とクリスマスのお話の名前(JA_WRAP_NAME_KEEP)は、長くても折らない枠で包む(「ペンション・／シュプール」ブラウザは「・」のあとで折る。2026-11-27 r1126-078)
+  const names = (t, k) => (JA_WRAP_NAME_KEEP.test(t) ? t.split(JA_WRAP_NAME_SPLIT).map((x, j) => (j % 2 === 1 ? keep(x, `${k}n${j}`) : x)) : t);
+  return s.split('\u200B').map((seg, i) => <React.Fragment key={i}>{i > 0 && !/^\s/.test(seg) && <wbr/>}{jaWrapPieces(seg).map(([t, kp], k) => (kp ? keep(t, k) : names(t, k)))}</React.Fragment>);
 };
 // 太字(<b>)などが混ざった文用。文字の部分だけを jaWrap に通す(2026-10-26 マスモン設定「金色のノー／ツに」)。JA_WRAP_STYLE と一緒に使う
 const jaWrapParts = (...parts) => parts.map((p, i) => <React.Fragment key={i}>{typeof p === 'string' ? jaWrap(p) : p}</React.Fragment>);
@@ -67627,7 +67641,7 @@ const XmasEventScreen = ({ tab = 'story', onTab, onBack, forced = false, preOpen
   ) : null;
   const head = (
     <div data-xmas-event-head className={`mx-auto w-full shrink-0 ${raidShown ? '' : 'max-w-2xl'}`}>
-      <ScreenHead title={<span className="flex items-center gap-1"><XmasHolly size={24} /><span className="mh-xmas-title">聖夜の名探偵</span></span>}
+      <ScreenHead title={<span className="flex items-center gap-1"><XmasHolly size={24} /><span className="mh-xmas-title whitespace-nowrap">聖夜の名探偵</span></span>}
         onBack={onBack} compact note={forced ? '(デバッグ表示・開始前でも見えます)' : ''} />
       {/* レイドの中身を出すときは小さく。背の低い横画面では、レイドの一覧が見えるように出さない(題と期間とタブだけ) */}
       <div data-xmas-event-poster className={`mh-xmas-frame mx-auto mb-2 w-fit max-w-full overflow-hidden rounded-xl bg-slate-950 ${raidShown ? '[@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`}>
@@ -67638,7 +67652,7 @@ const XmasEventScreen = ({ tab = 'story', onTab, onBack, forced = false, preOpen
             {!XMAS_EVENT_POSTER_OPEN_IMG && (
               <span className="absolute inset-0 flex flex-col items-center justify-center text-center" style={{ background: 'radial-gradient(80% 70% at 50% 55%, #0b1733cc 0%, #0b173388 55%, transparent 100%)' }}>
                 <span className={`font-black text-amber-100 ${raidShown ? 'text-[8px]' : 'text-[11px]'}`} style={{ letterSpacing: '.2em', textShadow: '0 1px 3px #000' }}>クリスマスイベント</span>
-                <b className={`mh-xmas-title leading-tight ${raidShown ? 'text-[20px]' : 'text-[38px]'}`} style={{ fontFamily: "'Hiragino Mincho ProN', 'Yu Mincho', serif", filter: 'drop-shadow(0 2px 2px #000) drop-shadow(0 0 6px #000a)' }}>聖夜の名探偵</b>
+                <b className={`mh-xmas-title whitespace-nowrap leading-tight ${raidShown ? 'text-[20px]' : 'text-[38px]'}`} style={{ fontFamily: "'Hiragino Mincho ProN', 'Yu Mincho', serif", filter: 'drop-shadow(0 2px 2px #000) drop-shadow(0 0 6px #000a)' }}>聖夜の名探偵</b>
                 <span className={`font-bold text-amber-50 ${raidShown ? 'text-[7px]' : 'text-[11px]'}`} style={{ textShadow: '0 1px 3px #000' }}>～十三番目の鐘が鳴る夜～</span>
               </span>
             )}
@@ -70318,11 +70332,23 @@ const xmasNovelWrapPlan = (text, max = XMAS_NOVEL_KEEP_MAX) => {
     for (let q = lo + 1; q < hi; q++) {
       if (q === b || spans.some(([x, e]) => q > x && q < e) || /^[、。！？!?」』）)…‥ー]/.test(s.slice(q)) || /[「『（(]$/.test(s.slice(0, q))) continue;
       if (xmasNovelBadBreak(s, q, segAt)) continue;
-      if (!xmasNovelGramBreak(s, q) && !(/[ぁ-ゖ、]$/.test(s.slice(0, q)) && /^[一-龯ァ-ヶ]/.test(s.slice(q)))) continue;
       if (len(lo, q) > max || len(q, hi) > max) continue;
       if (best < 0 || Math.abs(q - b) < Math.abs(best - b)) best = q;
     }
     if (best >= 0) { br.delete(b); br.add(best); }
+  }
+  // 枠(max)より長いかたまりは、中の言葉の切れ目で枠に入る長さずつに分ける(ブラウザの好きな所で折らせない・r1126-078 の点検「「お気に入りの魔／法」」)
+  {
+    const sorted = [0, ...[...br].sort((x, y) => x - y), s.length];
+    for (let k = 1; k < sorted.length; k++) {
+      const lo = sorted[k - 1], hi = sorted[k];
+      if (len(lo, hi) <= max || /^\s+$/.test(s.slice(lo, hi))) continue;
+      let start = lo, lastOk = -1;
+      for (let q = lo + 1; q < hi; q++) {
+        if (len(start, q) > max) { if (lastOk > start) { br.add(lastOk); start = lastOk; } else break; }
+        if (segAt.has(q) && !xmasNovelBadBreak(s, q, segAt) && !spans.some(([x, e]) => q > x && q < e) && !/^[、。！？!?」』）)…‥ー]/.test(s.slice(q)) && !/[「『（(]$/.test(s.slice(0, q))) lastOk = q;
+      }
+    }
   }
   const cuts = [0, ...[...br].sort((a, b) => a - b), s.length];
   const plan = [];
@@ -151365,7 +151391,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <figcaption style={{fontWeight:900,fontSize:12,color:'#ffedd5',margin:'0 0 4px'}}>▶ 予告動画</figcaption>
                   <ChangelogVideo src={c.video} poster={typeof c.videoPoster==='string'?c.videoPoster:undefined}/>
                 </figure>}
-                {(c.items||[]).map((x,j)=><p key={j} style={{fontSize:12,color:'#fed7aa',margin:'3px 0'}}>・{x}</p>)}
+                {(c.items||[]).map((x,j)=><p key={j} style={{fontSize:12,color:'#fed7aa',margin:'3px 0'}}>・{typeof x==='string'&&typeof XmasNovelWrap==='function'?<XmasNovelWrap text={x}/>:x}</p>)}
                 </div>
               </details>);}),
             ...rows.map(row=>{
@@ -151398,9 +151424,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   {open&&<div className="mh-changelog-detail" data-changelog-detail>
                     {row.entries.map(c=>(<section key={c.id} className="mh-changelog-item" data-changelog-type={c.type||'update'}>
                       <time>{(c.date||'').slice(11)||c.date}{unreadHere.has(c.id)&&<em>NEW</em>}</time>
+<<<<<<< HEAD
                       <span className="mh-changelog-kind" data-kind={changelogTypeOf(c).tone}>{changelogKindLabelInTab(changelogTypeOf(c),changelogTab)}</span>{/* 札と同じ決め方にする(2026-11-27 r1126-074 小1)。開始前は「📅 開催予定」、絵文字はイベントごと(pinEmoji)。ハロウィンの 🎃 のままだった */}
                       {changelogEventLive(c)&&<span data-changelog-event-live className="mh-changelog-kind" style={{background:changelogEventUpcoming(c)?'#38bdf8':'#f97316',color:'#1c1917',borderColor:'#fdba74',marginLeft:4}}>{changelogEventUpcoming(c)?'📅 開催予定':`${typeof c.pinEmoji==='string'&&c.pinEmoji?c.pinEmoji:'🎉'} 開催中`}</span>}
                       <b>{c.title}</b>
+=======
+                      <span className="mh-changelog-kind" data-kind={changelogTypeOf(c).tone}>{changelogTypeOf(c).label}</span>{changelogEventLive(c)&&<span data-changelog-event-live className="mh-changelog-kind" style={{background:'#f97316',color:'#1c1917',borderColor:'#fdba74',marginLeft:4}}>🎃 開催中</span>}
+                      <b>{typeof c.title==='string'&&typeof XmasNovelWrap==='function'?<XmasNovelWrap text={c.title}/>:c.title}</b>
+>>>>>>> origin/main
                       {/* 告知画像があれば本文の上に出す
                           (期間中いつでもここから見返せるように・2026-09-11・ユーザー指示) */}
                       {/* 絵の高さに上限(縦は一覧の約1/3・横は高さの半分ほど)。押すと大きく出す(2026-11-27 r1126-074 小3) */}
@@ -151413,7 +151444,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         <figcaption style={{fontWeight:900,margin:'0 0 4px'}}>▶ 予告動画</figcaption>
                         <ChangelogVideo src={c.video} poster={typeof c.videoPoster==='string'?c.videoPoster:undefined}/>
                       </figure>}
-                      {(c.items||[]).map((x,j)=><p key={j}>・{x}</p>)}
+                      {/* 本文は文節の切れ目だけで折る(2026-11-27 r1126-078・社長「文字の崩れ」) */}{(c.items||[]).map((x,j)=><p key={j}>・{typeof x==='string'&&typeof XmasNovelWrap==='function'?<XmasNovelWrap text={x}/>:x}</p>)}
                       {/* 本文の下に並べる見本の絵(2026-09-28・ユーザー提案「こんな感じに染色イメージを出したりしたらどう？」)。
                           gallery:[{ caption, image }] と書いたときだけ、見出しと絵を順に出す。
                           読めなかった絵は黙って消す(上の image と同じ)。助手の告知には出さない(告知は image の1枚だけ) */}
