@@ -288,6 +288,15 @@ const parseRow = (cells, where) => {
   if (who === '選択') return { ...parseQuestion(id, raw), ...(cond ? { c: cond } : {}), id: idCell };
   if (who === '帯' || who === '演出') {
     let s = stripMd(raw); const fx = [];
+    // 〔遺体:黒羽〕… 亡くなっているのが見つかる行。その人の立ち絵を黒い影にして倒し、血だまりを広げる(r1126-065)。
+    //   〔遺体:主役〕〔遺体:相手〕は A1 で選んだ方 / 選ばなかった方(画面が f_A1 で決める)。行の頭か末尾に書く
+    let body = '';
+    s = s.replace(/〔遺体\s*[:：]\s*([^〕]+)〕/g, (_, n) => {
+      const k = n.trim();
+      const w = k === '主役' ? 'lead' : k === '相手' ? 'partner' : speakerOf(k).w;
+      if (w) body = w; else note(where, `遺体の印の人が分からない「${k}」`);
+      return '';
+    }).trim();
     for (;;) {
       const m = s.match(/^[(（]([^)）]+)[)）]\s*/);
       if (!m || !FX_TAGS[m[1]]) break;
@@ -307,6 +316,7 @@ const parseRow = (cells, where) => {
     row.t = 'band'; row.x = s;
     const uniq = [...new Set(fx.filter((f) => f !== 'band'))];
     if (uniq.length) row.fx = uniq;
+    if (body) row.body = body;
     if (fx.includes('se')) row.se = /パチパチ|拍手/.test(s) ? 'clap' : /鐘|時計/.test(s) ? 'bell' : /悲鳴|ドン|バタン|ガタン|ブツン|ザザッ/.test(s) ? 'impact' : /オルゴール|♪/.test(s) ? 'music' : 'tap';
     return row;
   }
