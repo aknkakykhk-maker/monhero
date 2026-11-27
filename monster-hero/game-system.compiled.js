@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8d486e002899aa03
+// source-sha256: 83f10603dd71ae79
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -113403,7 +113403,7 @@ const XmasEventScreen = ({
     style: {
       textShadow: '0 1px 3px #000'
     }
-  }, "～雪山ペンションと消えたプレゼント～"))) : React.createElement("img", {
+  }, "～十三番目の鐘が鳴る夜～"))) : React.createElement("img", {
     src: XMAS_EVENT_POSTER_IMG,
     alt: "クリスマスイベント 聖夜の名探偵",
     className: `block h-auto w-auto max-w-full ${raidShown ? 'max-h-[13vh]' : 'max-h-[24vh]'}`
