@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 196702dce34803a1
+// generated-sha256: 49df75a041ecb939
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -5011,6 +5011,9 @@ const BGM_TRACKS = [
   // 元の曲・ショート版はそのまま残すので、バトルのBGMも今までの譜面も変わらない。
   { id:'eiki_boss_remix', name:'綺季一閃 ～花雪に舞う詠姫～ battle remix', creator:'オリジナル', src:'audio/bgm-eiki-boss-remix.mp3', gain:1, loop:true },
   { id:'pandora_boss_remix', name:'Stay With Me ～Locked Fate～ remix', creator:'オリジナル', src:'audio/bgm-pandora-boss-remix.mp3', gain:1, loop:true },
+  // Battle #5(2026-11-22 の新曲。11/28 10:00 に解禁・台帳 r1126-064)
+  { id:'melo_battle_5', name:'Battle #5', creator:'オリジナル', src:'audio/bgm-battle-5.mp3', gain:1, loop:true },
+  { id:'melo_battle_5_short', name:'Battle #5 short ver.', creator:'オリジナル', src:'audio/bgm-battle-5-short.mp3', gain:1, loop:true },
 ];
 // デバッグ専用の試作曲(モンヒロビートの「空中の段」の試作・2026-10-10)の音源。BGM_TRACKS へは入れない
 // (BGM_TRACKS はBGMアレンジ・自動周回のBGMの選択肢にそのまま並ぶので、入れるとプレイヤーに見えてしまう)。
@@ -5018,18 +5021,17 @@ const BGM_TRACKS = [
 const BGM_PROTO_TRACKS = Object.freeze([
   { id:'melo_sheriruth_proto', name:'Sheriruth 試作', creator:'Team Grimoire', src:'audio/bgm-sheriruth-proto.mp3', gain:1, loop:true },
 ]);
-// 公開を止めている曲の音源(2026-11-23 社長決定・台帳 r1119-120)。試作曲と同じ扱いで、BGM_TRACKS へは
-// 入れない(BGMアレンジ・自動周回の選択肢に出てしまうため)。曲データ(rhythm-mode.js)から id で引ける
-// よう、BGM_TRACK_BY_ID にだけ足す。★解禁するときは、この2行を BGM_TRACKS へ移す
-const BGM_UNRELEASED_TRACKS = Object.freeze([
-  { id:'melo_battle_5', name:'Battle #5', creator:'オリジナル', src:'audio/bgm-battle-5.mp3', gain:1, loop:true },
-  { id:'melo_battle_5_short', name:'Battle #5 short ver.', creator:'オリジナル', src:'audio/bgm-battle-5-short.mp3', gain:1, loop:true },
-]);
+// 公開を止めている曲の音源。BGM_TRACKS へは入れず、曲データ(rhythm-mode.js)から id で引けるよう BGM_TRACK_BY_ID にだけ足す(試作曲と同じ扱い)。
+// いまは空(Battle #5 は 2026-11-27 社長の決定・台帳 r1126-064 で BGM_TRACKS へ移した。一覧に出すのは 11/28 10:00 から=下の BGM_TRACK_LISTED_FROM)
+const BGM_UNRELEASED_TRACKS = Object.freeze([]);
 const BGM_TRACK_BY_ID = Object.fromEntries(BGM_TRACKS.map(track => [track.id, track]));
 // 曲を選ぶ一覧(BGMアレンジ・自動戦闘のBGM・MFバトルカードの対戦BGMとその「おまかせ」)に出すかどうか(2026-11-26 ミハリの指摘・PR #7771)。
-// 公開を止めている曲(Battle #5)は、はじめから BGM_TRACKS に入れていない(上の BGM_UNRELEASED_TRACKS)。鳴らす口(BGM_TRACK_BY_ID)は絞らない。HOME やレイドの曲として決まった時刻から鳴らす物は、一覧に出る前でも鳴らせる。
+// 公開を止めている曲は、はじめから BGM_TRACKS に入れない(上の BGM_UNRELEASED_TRACKS)。鳴らす口(BGM_TRACK_BY_ID)は絞らない。HOME やレイドの曲として決まった時刻から鳴らす物は、一覧に出る前でも鳴らせる。
 //  ・BGM_TRACK_LISTED_FROM … 一覧に出しはじめる時刻。モンヒロビートの RHYTHM_SONG_RELEASE_AT と同じ時刻にそろえる。見るたびに数え直す(CLAUDE.md ⑥-4)
 const BGM_TRACK_LISTED_FROM = Object.freeze({
+  // Battle #5(台帳 r1126-064)。クリスマスイベントの開幕 11/28 10:00 から
+  melo_battle_5: '2026-11-28T10:00:00+09:00',
+  melo_battle_5_short: '2026-11-28T10:00:00+09:00',
   // クリスマスイベントの曲(台帳 r1126-023)。開幕の 11/30 10:00 から(Kiss の全編はイベントページの曲として先に入っているので外さない)
   melo_kiss_mystery_short: '2026-11-30T10:00:00+09:00',
   melo_dear_santa: '2026-11-30T10:00:00+09:00',
@@ -10748,6 +10750,9 @@ const XMAS_COSTUME_START_AT = '2026-11-30T10:00:00+09:00';
 // クリスマスのレイド(r1119-172)の開始時刻。35-raid-xmas.jsx の RAID_XMAS_EVENT.startAt と同じ値(食い違いは tools/battle/raid-xmas-check.js が見る)。
 //   RELEASE_FLAGS.raidXmas はこの時刻まで偽を返す(見るたびに数え直す)。入口・HOMEのボス・ヘルプ・更新履歴はこれを見る
 const RAID_XMAS_START_AT = '2026-11-30T10:00:00+09:00';
+// 新曲「Battle #5」の解禁の時刻(2026-11-27 社長の決定・台帳 r1126-064。クリスマスイベントの開幕と同じ)。RELEASE_FLAGS.battle5 が見る。
+// 曲の公開(data/rhythm-mode.js の RHYTHM_SONG_RELEASE_AT)・BGM の一覧(13-bgm の BGM_TRACK_LISTED_FROM)も同じ時刻
+const BATTLE5_RELEASE_AT = '2026-11-28T10:00:00+09:00';
 // クリスマスのひとりで進める物語の序章(台帳 r1126-012/013)。RELEASE_FLAGS.xmasStoryPrologue は 35-raid-xmas.jsx の XMAS_STORY_PROLOGUE_OPEN_AT(11/27 13:00・r1126-060 で前倒し)まで偽を返す。
 //   序章のお話(EVENT_REPLAYS の xmas_story_00)の releaseFlag が見る。開幕(raidXmas)より前でも、この時刻からは序章だけ読める
 const RAID_JACK_PUBLIC_RELEASE = true;
@@ -10812,8 +10817,9 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   // 新曲「Battle #5」の告知(2026-11-23 社長決定・台帳 r1119-120)。曲のデータは入っているが公開は社長の
   //   タイミングで別途行うため、偽のあいだは更新履歴と助手の告知に出さない。曲そのものの公開は
   //   data/rhythm-mode.js の公開曲の一覧(RHYTHM_DEMO_SONG_IDS)が持つ(この印は告知だけの印)。
-  //   ★解禁するときは、ここを true にし、告知の date を解禁の日時に直す
-  battle5: false,
+  //   2026-11-27 社長の決定(台帳 r1126-064)で、クリスマスイベントの開幕 11/28 10:00 から真(見るたびに数え直す)。
+  //   曲の公開は data/rhythm-mode.js の RHYTHM_SONG_RELEASE_AT が同じ時刻で持つ
+  get battle5() { return Date.now() >= Date.parse(BATTLE5_RELEASE_AT); },
   // レイド・タクティクスプロ(ベースモンだけの回)の1回ごとの記録(raid_battle_logs・tactics_pro_logs)を送る(2026-10-21 社長「仕組みは作って」)。
   //   2026-10-22 窓口が表を2つとも作って確かめた(docs/sql/battle-log/BATTLE_LOGS_APPLY.sql)ので真にした。設計は docs/spec/BATTLE_LOG.md
   //   偽にすると何も送らず、タクティクスプロは入れ物も作らない(26-supabase.jsx)
@@ -40082,15 +40088,13 @@ const sbPutBeatRank = (row) => sbPutPlayerRank('beat', row);
 const RHYTHM_SONG_OWNED_KEY = 'mh_rhythm_owned_songs_v1';
 const RHYTHM_SONG_DEFAULT_PRICE = 500;
 // 有料の曲: { 曲の id: ビートP }。2026-11-26 クリスマスの3曲も有料(台帳 r1126-036・ショート版は全編といっしょに開く)。2026-11-14 の新曲3つから(departure!・RPG・Midnight Studio。LAMIA・サウダージ・メガロバニアは無料のまま)
-// ★Battle #5 は公開を止めている間(2026-11-23 社長決定・台帳 r1119-120)、ここと下の組の表のどちらにも入れない。
-//   解禁するときに battle_5: 500 と battle_5_short: 'battle_5' を、公開曲の一覧(RHYTHM_DEMO_SONG_IDS)と必ず同じ変更で戻す
-//   (一覧だけ戻して値段が無いと、印の無い曲=無料の曲として出てしまう)
-const RHYTHM_SONG_PRICES = Object.freeze({ departure: 500, rpg: 500, midnight_studio: 500, hopes_and_dreams: 500, sparkling_pink_overture: 500, seasons_of_a_little_plaza: 500, eiyuu_no_akashi: 500, gourmet_race_64: 500, dr_wily_stage_1: 500, erfolg: 500, amakakeru_tsubasa: 500, beyond_the_same_sky: 500, desert_crown: 500, walkure: 500, kiss_mystery: 500, dear_santa: 500, winter_fall: 500 });
+// Battle #5 は 2026-11-23 から止めていたが、11/28 10:00 に解禁(台帳 r1126-064)。公開曲の一覧と同じ変更で、値段(500)と組(short ver. は原曲と一緒に開く)を戻した
+const RHYTHM_SONG_PRICES = Object.freeze({ departure: 500, rpg: 500, midnight_studio: 500, hopes_and_dreams: 500, sparkling_pink_overture: 500, seasons_of_a_little_plaza: 500, eiyuu_no_akashi: 500, gourmet_race_64: 500, dr_wily_stage_1: 500, erfolg: 500, amakakeru_tsubasa: 500, beyond_the_same_sky: 500, desert_crown: 500, walkure: 500, battle_5: 500, kiss_mystery: 500, dear_santa: 500, winter_fall: 500 });
 // 1曲の値段で、組の別の版(short ver.)もいっしょに遊べる(2026-11-14 社長「1曲500で両方ついてくる」)。{ 別の版の id: 買う曲の id }。
 // 保存するのは買った曲(全編)の id だけ。別の版は、全編を持っていれば開く(保存の形は変えない)
 // 2026-11-19 英雄の証も同じ形にそろえた(ミラクル☆ミルクティ版 → 戦闘版。交換所で2枚に分かれて出ていたのを1枚・500Pで両版に)
 // 2026-11-19 Dr.WILY STAGE 1 も同じ形(おっくせんまん版 → 原曲。曲組500P・両版開放で、交換所では1枚のカードだけ出す)
-const RHYTHM_SONG_BUNDLE_OWNER = Object.freeze({ departure_short: 'departure', rpg_short: 'rpg', midnight_studio_short: 'midnight_studio', hopes_and_dreams_short: 'hopes_and_dreams', gourmet_race_dx: 'gourmet_race_64', eiyuu_no_akashi_milktea: 'eiyuu_no_akashi', dr_wily_stage_1_okkussenman: 'dr_wily_stage_1', erfolg_piano: 'erfolg', beyond_the_same_sky_short: 'beyond_the_same_sky', walkure_short: 'walkure', kiss_mystery_short: 'kiss_mystery', dear_santa_short: 'dear_santa', winter_fall_short: 'winter_fall' });
+const RHYTHM_SONG_BUNDLE_OWNER = Object.freeze({ departure_short: 'departure', rpg_short: 'rpg', midnight_studio_short: 'midnight_studio', hopes_and_dreams_short: 'hopes_and_dreams', gourmet_race_dx: 'gourmet_race_64', eiyuu_no_akashi_milktea: 'eiyuu_no_akashi', dr_wily_stage_1_okkussenman: 'dr_wily_stage_1', erfolg_piano: 'erfolg', beyond_the_same_sky_short: 'beyond_the_same_sky', walkure_short: 'walkure', battle_5_short: 'battle_5', kiss_mystery_short: 'kiss_mystery', dear_santa_short: 'dear_santa', winter_fall_short: 'winter_fall' });
 const rhythmSongOwnerId = (songId) => { const id = String(songId || ''); return RHYTHM_SONG_BUNDLE_OWNER[id] || id; };
 const rhythmSongHasBundle = (songId) => Object.values(RHYTHM_SONG_BUNDLE_OWNER).includes(rhythmSongOwnerId(songId));
 // 購入で一緒に開く版の songId(持ち主自身は除く)。バンドルの表が正本

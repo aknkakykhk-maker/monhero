@@ -85241,13 +85241,10 @@ const RHYTHM_DEMO_SONG_IDS=Object.freeze([
   'dear_santa_short',
   'winter_fall',
   'winter_fall_short',
-  // Battle #5(原曲とショート版の2つの版)は、譜面・音源・登録は全部入っているが、公開だけ止めている
-  // (2026-11-23 社長決定・台帳 r1119-120「データはマージするが完全非表示。解禁は社長のタイミング」)。
-  // 公開の印はこの一覧(RHYTHM_DEMO_SONG_IDS)なので、ここに入っていない間は曲えらび・交換所・
-  // 週間ランキング・助手の話題など、公開曲の一覧を使う場所のどこにも出ない。
-  // ★解禁するときは、ここに 'battle_5','battle_5_short' を戻し、あわせて値段と組の登録
-  //   (39-rhythm-song-owned.jsx)・版の組(RHYTHM_SONG_VERSION_GROUPS)・BGM_TRACKS の2行(13-bgm)・
-  //   告知の印 RELEASE_FLAGS.battle5(17-release)を同じ変更で戻すこと。手順の正本は台帳 r1119-120
+  // Battle #5(原曲とショート版の2つの版)。2026-11-23 から公開を止めていた(台帳 r1119-120)。2026-11-27 社長の決定(台帳 r1126-064)で、
+  // クリスマスイベントの開幕 11/28 10:00 と一緒に解禁する。出しはじめる時刻は RHYTHM_SONG_RELEASE_AT(見るたびに数え直す)
+  'battle_5',
+  'battle_5_short',
 ]);
 // 同じ曲の別の版(2026-10-03・ユーザー指示「同じ曲でショートとかリミックスとか色々あるけど
 // これを同じとこにまとめて難易度とか選ぶあたりに切り替えられるように」)。
@@ -85293,8 +85290,8 @@ const RHYTHM_SONG_VERSION_GROUPS=Object.freeze([
   Object.freeze([['kiss_mystery','原曲'],['kiss_mystery_short','short ver.']]),
   Object.freeze([['dear_santa','原曲'],['dear_santa_short','short ver.']]),
   Object.freeze([['winter_fall','原曲'],['winter_fall_short','short ver.']]),
-  // Battle #5 の組は、公開を止めている間は入れない(2026-11-23 社長決定・台帳 r1119-120)。
-  // 解禁するときに Object.freeze([['battle_5','原曲'],['battle_5_short','short ver.']]) をここへ戻す
+  // 2026-11-22 Battle #5(原曲とショート版。ジャケットは版ごとに違う絵)。11/28 10:00 に解禁(台帳 r1126-064)
+  Object.freeze([['battle_5','原曲'],['battle_5_short','short ver.']]),
 ]);
 const rhythmSongVersionGroup=songId=>RHYTHM_SONG_VERSION_GROUPS.find(group=>group.some(([id])=>id===songId))||null;
 // その曲の組の原曲の songId(組に入っていない曲はその曲自身)
@@ -85346,6 +85343,9 @@ const RHYTHM_SONG_RELEASE_AT=Object.freeze({
   crazy_party_night:'2026-10-04T08:00:00+09:00',
   crazy_party_night_full:'2026-10-04T08:00:00+09:00',
   // クリスマスイベント(RAID_XMAS_START_AT・data/rhythm-event.js の xmas_2026)の開始と同時(台帳 r1126-023)
+  // Battle #5 はクリスマスイベントの開幕と一緒に解禁(台帳 r1126-064)
+  battle_5:'2026-11-28T10:00:00+09:00',
+  battle_5_short:'2026-11-28T10:00:00+09:00',
   kiss_mystery:'2026-11-30T10:00:00+09:00',
   kiss_mystery_short:'2026-11-30T10:00:00+09:00',
   dear_santa:'2026-11-30T10:00:00+09:00',
