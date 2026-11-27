@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1a196f1cdd638da5
+// source-sha256: dc8c398dca8da6eb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -114537,6 +114537,7 @@ const XMAS_NOVEL_SCRIPT = {
       "id": "0-25",
       "t": "band",
       "x": "画面いっぱいに、題字 ——『モンヒロ事件簿 ―呪いのセーブデータ― 十三番目の鐘』",
+      "se": "bell",
       "k": "OUT-0-2:0-25"
     }],
     "outside": true
@@ -115222,7 +115223,8 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "band",
       "x": "カチ、カチ、カチ(柱時計の針が、ゆっくり動く音)",
       "fx": ["se"],
-      "se": "bell",
+      "se": "tick",
+      "seN": 3,
       "k": "C1-6:1-6-2"
     }, {
       "id": "1-6-3",
@@ -115268,6 +115270,8 @@ const XMAS_NOVEL_SCRIPT = {
       "id": "1-M-4",
       "t": "band",
       "x": "暗い部屋に、大きないびき。机の上で、金色の懐中時計が、カチ、カチ、と時を刻んでいる",
+      "se": "tick",
+      "seN": 2,
       "k": "C1-M:1-M-4"
     }, {
       "id": "1-M-5",
@@ -115487,6 +115491,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "band",
       "x": "こんや　0じの　かねが／なったら／ひとり　かえって　こない／——黒いサンタ",
       "fx": ["letter", "bleed"],
+      "se": "letter",
       "k": "C2-L:2-L-4"
     }, {
       "id": "2-L-5",
@@ -115503,7 +115508,8 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "band",
       "x": "カチ、カチ、カチ(柱時計の針の音だけが、やけに大きい)",
       "fx": ["se"],
-      "se": "bell",
+      "se": "tick",
+      "seN": 3,
       "k": "C2-L:2-L-7"
     }, {
       "id": "2-L-8",
@@ -115888,6 +115894,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "ボーン……ボーン……(柱時計が、12回鳴る)",
       "fx": ["se"],
       "se": "bell",
+      "seN": 2,
       "k": "C2-3:2-3-4"
     }, {
       "id": "2-3-5",
@@ -118581,7 +118588,8 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "band",
       "x": "カチ、カチ、カチ(柱時計は、まだ動いている)",
       "fx": ["se"],
-      "se": "bell",
+      "se": "tick",
+      "seN": 3,
       "k": "C6-M:6-M-3"
     }, {
       "id": "6-M-4",
@@ -119480,6 +119488,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "ボーン……ボーン……(柱時計が、0時の鐘を打つ)",
       "fx": ["se"],
       "se": "bell",
+      "seN": 2,
       "k": "C7-P1:7-P1-13"
     }, {
       "id": "7-P1-14",
@@ -119589,7 +119598,8 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "band",
       "x": "カチ、カチ、カチ(冷えきったホールに、柱時計の音だけが響く)",
       "fx": ["se"],
-      "se": "bell",
+      "se": "tick",
+      "seN": 3,
       "k": "C7-P2:7-P2-12"
     }],
     "jumpOnly": true
@@ -119760,13 +119770,14 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "ボーン……ボーン……(0時の鐘)",
       "fx": ["se"],
       "se": "bell",
+      "seN": 2,
       "k": "C7-P3:7-P3-11"
     }, {
       "id": "7-P3-12",
       "t": "band",
       "x": "……ギィ(鐘が鳴りやんだ後、2階の廊下の奥で、窓の開く音)",
       "fx": ["se"],
-      "se": "bell",
+      "se": "tap",
       "k": "C7-P3:7-P3-12"
     }],
     "jumpOnly": true
@@ -122682,7 +122693,8 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "band",
       "x": "カチ、カチ、カチ(下の柱時計の音が、床板ごしに、かすかに響く)",
       "fx": ["se"],
-      "se": "bell",
+      "se": "tick",
+      "seN": 3,
       "k": "C2-Y:2-Y-2"
     }, {
       "id": "2-Y-3",
@@ -122925,6 +122937,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "ボーン……ボーン……(その時、柱時計が、0時の鐘を打ち始めた)",
       "fx": ["se"],
       "se": "bell",
+      "seN": 2,
       "k": "C2-Y:2-Y-17"
     }],
     "jumpOnly": true
@@ -123397,6 +123410,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "band",
       "x": "おばけの　せいに　したね／つぎの　かねで／また　ひとり／——黒いサンタ",
       "fx": ["letter", "bleed"],
+      "se": "letter",
       "k": "END-M3:M3-7"
     }, {
       "id": "M3-8",
@@ -124526,6 +124540,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "ボーン……ボーン……(その夜。柱時計が、また早く鳴る)",
       "fx": ["se"],
       "se": "bell",
+      "seN": 2,
       "k": "END-B:B-2"
     }, {
       "id": "B-3",
@@ -124857,6 +124872,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "ボーン……ボーン……(柱時計が、ちょうど0時に、12回鳴る)",
       "fx": ["se"],
       "se": "bell",
+      "seN": 2,
       "k": "C1-O:1-O-22"
     }, {
       "id": "1-O-23",
@@ -125206,6 +125222,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "ボーン……ボーン……(柱時計が、12回鳴る)",
       "fx": ["se"],
       "se": "bell",
+      "seN": 2,
       "k": "C12-4:12-4-2"
     }, {
       "id": "12-4-3",
@@ -126345,7 +126362,6 @@ const xmasNovelSe = kind => {
     const map = {
       clap: 'join',
       laugh: 'enemySpecial',
-      bell: 'levelUp',
       impact: 'enemyAttack',
       music: 'heal',
       tap: 'tap',
@@ -126356,6 +126372,60 @@ const xmasNovelSe = kind => {
     const fn = Audio_.se[map[kind] || 'tap'];
     if (typeof fn === 'function') fn();
   } catch (e) {}
+};
+const XMAS_NOVEL_SE_SEQ = Object.freeze({
+  bell: {
+    gap: 1150,
+    hold: 900,
+    play: ['guard', 'trainingFail']
+  },
+  tick: {
+    gap: 520,
+    hold: 300,
+    play: ['xpTick']
+  },
+  letter: {
+    gap: 0,
+    hold: 1500,
+    play: ['enemyCharge']
+  }
+});
+let xmasNovelSeTimers = [];
+let xmasNovelSeLast = {
+  kind: '',
+  at: 0
+};
+const xmasNovelSeStop = () => {
+  xmasNovelSeTimers.forEach(t => clearTimeout(t));
+  xmasNovelSeTimers = [];
+};
+const xmasNovelSeHit = kind => {
+  try {
+    if (typeof Audio_ === 'undefined' || !Audio_ || !Audio_.se) return;
+    const seq = XMAS_NOVEL_SE_SEQ[kind];
+    xmasNovelSeLast = {
+      kind,
+      at: Date.now()
+    };
+    seq.play.forEach(name => {
+      const fn = Audio_.se[name];
+      if (typeof fn === 'function') fn();
+    });
+  } catch (e) {}
+};
+const xmasNovelRowSe = (kind, times) => {
+  xmasNovelSeStop();
+  const seq = XMAS_NOVEL_SE_SEQ[kind];
+  if (!seq) {
+    xmasNovelSe(kind);
+    return;
+  }
+  const n = Math.max(1, Math.min(3, Number.isFinite(times) ? times : 1));
+  const wait = xmasNovelSeLast.kind === kind ? Math.max(0, seq.hold - (Date.now() - xmasNovelSeLast.at)) : 0;
+  for (let i = 0; i < n; i += 1) {
+    const at = wait + i * seq.gap;
+    if (at <= 0) xmasNovelSeHit(kind);else xmasNovelSeTimers.push(setTimeout(() => xmasNovelSeHit(kind), at));
+  }
 };
 const XMAS_NOVEL_BGM_SHIFT = Object.freeze({
   'END-G': [['G-10', 'melo_dear_santa']]
@@ -126539,6 +126609,7 @@ const XmasNovelScreen = ({
     xmasNovelBgm('melo_kiss_mystery');
     return () => {
       alive = false;
+      xmasNovelSeStop();
       if (storeTimer.current) clearTimeout(storeTimer.current);
     };
   }, []);
@@ -126583,6 +126654,7 @@ const XmasNovelScreen = ({
       ...s,
       read: [...s.read, r.k]
     };
+    if (r.t === 'band' && r.se) xmasNovelRowSe(r.se, r.seN);else xmasNovelSeStop();
     if (r.t === 'band' && Array.isArray(r.fx)) {
       const vis = r.fx.find(f => ['dark', 'white', 'red', 'light', 'bleed'].includes(f));
       if (r.fx.includes('bleed') && r.fx.includes('red')) setTimeout(() => setFx({
@@ -126599,7 +126671,6 @@ const XmasNovelScreen = ({
         setCurtain('up');
         setTimeout(() => setCurtain(c => c === 'up' ? null : c), 1700);
       }
-      if (r.se) xmasNovelSe(r.se);
       if (r.fx.includes('title') || r.fx.includes('chapter')) {
         setCard({
           kind: r.fx.includes('title') ? 'title' : 'band',
