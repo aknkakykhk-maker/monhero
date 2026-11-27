@@ -1,0 +1,22 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><style>
+body{margin:0;padding:16px;width:1180px;font-family:"Noto Sans CJK JP","Noto Sans JP",sans-serif;background:#0f172a;color:#f1f5f9}
+h1{font-size:22px;margin:0 0 4px}p{margin:0 0 10px;font-size:13px;color:#cbd5e1}
+table{border-collapse:collapse;width:100%;font-size:14px}th,td{border:1px solid #334155;padding:6px 8px;vertical-align:top;text-align:left}
+th{background:#1e293b}td.k{white-space:nowrap;font-weight:900}.ch{color:#fbbf24;font-weight:900}.keep{color:#86efac}
+</style></head><body>
+<h1>コンテンツの入口の整理(案)</h1>
+<p>11/28 10:05 の画面を開いて、押せる所を全部拾った結果(道具: tools/browser/home-entry-inventory.js)と、時期・条件で出る入口。<span class="ch">黄色</span>が変える案、<span class="keep">緑</span>は残す。</p>
+<table><tr><th>コンテンツ</th><th>いまの入口</th><th>案</th><th>理由</th></tr>
+<tr><td class="k">クリスマス</td><td>①HOME の帯1枚目(→物語) ②HOME まん中のボス(→レイド) ③助手の告知 ④更新履歴の項目</td><td class="keep">残す(①②)</td><td>ボスは期間中の見せ物で置き方は決まり(r1126-006)。帯とボスは同じページの別のタブへ入る。③④は1回きりのお知らせ</td></tr>
+<tr><td class="k">ほかのイベント<br>(ハナウタ・ノート)</td><td>①帯2枚目(押すと<b>更新履歴</b>が開く) ②モンヒロビートの札の「開催中」</td><td class="ch">①の行き先をモンヒロビートへ変える</td><td>イベントの帯を押して更新履歴が開くのは寄り道。曲を遊ぶイベントなので、遊ぶ所へ直に入る。②は印として残す</td></tr>
+<tr><td class="k">モンヒロビート</td><td>①大きな札 ②裏クイック中の右下「周回を続けたままモンヒロビートへ」 ③マルチの誘いの帯 ④助手ライフの部屋の「誘う」</td><td class="keep">①が正。②③④は残す</td><td>②③は「そのときだけ出る近道」(押すとその場で応える)。④は助手ライフの遊び方の一部</td></tr>
+<tr><td class="k">モンヒロバトル</td><td>①大きな札 ②はじめての人の「次にやること」 ③助手の告知(新モード) ④助手ライフ「いま行くと得なこと」</td><td class="keep">①が正。②③④は残す</td><td>②③④は案内・1回きり</td></tr>
+<tr><td class="k">MFバトルカード</td><td>①大きな札 ②帯の公式杯(→大会) ③プロフィールのデッキ(→デッキ登録) ④助手ライフのカード部屋の誘い・札の「UP」</td><td class="keep">残す</td><td>②は大会の期間だけ帯の1枚に入る。③はプロフィールの見せ方の一部</td></tr>
+<tr><td class="k">モンヒロサクセス</td><td>①大きな札 ②<b>バトルの選ぶ画面</b>の「いまモンヒロバトルにいる助手」の札の「🌱モンヒロサクセス(β)」 ③助手ライフの部屋の「できること」 ④M/B管理のマスモンボックス</td><td class="ch">②を外す</td><td>バトルを選ぶ画面にサクセスの入口があると、どちらの遊びか迷う。HOME に大きな札がある。③は「その助手の編で始める」口なので残す。④は保存枠を見る口(助手部の部品なので外すのは助手部)</td></tr>
+<tr><td class="k">マーケット</td><td>①小さな丸 ②助手ライフ「いま行くと得なこと」 ③助手の告知(新商品) ④マーケットの中のビートP交換所</td><td class="keep">残す</td><td>②③は案内。④はマーケットの中のタブ</td></tr>
+<tr><td class="k">助手ライフ</td><td>①小さな丸 ②<b>入口の右上の赤い点</b>(ビート・バトル・カード・M/B管理など、助手がいる入口に付き、点を押すと助手ライフが開く) ③プロフィール ④アイテム一覧</td><td class="ch">②は押せない印にする(点のあたりを押しても、その入口が開く)</td><td>ビートの札の右上を押した人が助手ライフへ飛ぶ。入口は①の1つに。点は「そこに助手がいる」の印だけにする</td></tr>
+<tr><td class="k">ミッション・ギフト</td><td>①メニュー ②はじめての人の「次にやること」</td><td class="keep">残す</td><td>①に合計の数字。②は最初の3歩だけ</td></tr>
+<tr><td class="k">更新履歴</td><td>①メニュー ②帯2枚目(上の「ほかのイベント」) ③助手の告知</td><td class="ch">②を外す(上のとおり)</td><td>①だけにする</td></tr>
+<tr><td class="k">設定</td><td>①メニュー</td><td class="keep">そのまま</td><td>1つだけ</td></tr>
+<tr><td class="k">助手とおしゃべり</td><td>①吹き出しを押したメニュー ②助手ライフの部屋</td><td class="keep">残す</td><td>①はいま選んでいる助手、②は部屋にいる助手と話す</td></tr>
+</table></body></html>

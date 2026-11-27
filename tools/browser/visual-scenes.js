@@ -13,7 +13,19 @@
 
 // 正規表現の並びを、HOME から順に押す
 // ★小さい横(568×320)ではボタンが画面の下に隠れていることが多いので、見えていなければスクロールして出してから押す
+// HOME の作り直し(2026-11-27 r1126-073)で、ミッション・ギフト・更新履歴・設定はメニュー☰の中、助手の吹き出しは顔だけが既定になった。
+//   見つからないときは、HOME の閉じた物(メニュー☰・吹き出し)を開いてから、もう一度だけ探す
+//   (閉じたメニューの中のボタンは読み上げには残るので「見つかった」ことになるが、目に見えないので押せない。先に開く)
+const openHomeFolds = (s, re) => s.page.evaluate((src) => {
+  const r = new RegExp(src); let did = false;
+  const label = (el) => (el.getAttribute('aria-label') || el.innerText || el.textContent || '').replace(/\s+/g, ' ').trim();
+  const menu = document.querySelector('[data-home-menu-btn]');
+  if (menu && menu.getAttribute('aria-expanded') !== 'true' && [...document.querySelectorAll('.mh-home-menu button')].some((b) => r.test(label(b)))) { menu.click(); did = true; }
+  if (/のメニューを開く|詳しく/.test(src) && document.querySelector('[data-home-assistant-toggle="show"]') && typeof HOME_ASSISTANT_COMMENT_STORE !== 'undefined') { HOME_ASSISTANT_COMMENT_STORE.setOn(true); did = true; }
+  return did;
+}, re.source).catch(() => false);
 const tapAny = async (s, re) => {
+  if (await openHomeFolds(s, re)) await s.wait(600);
   if (await s.tapLabel(re, 1500)) return true;
   const hit = await s.page.evaluate((src) => {
     const re = new RegExp(src);

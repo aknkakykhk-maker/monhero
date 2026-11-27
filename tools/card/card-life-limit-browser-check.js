@@ -176,7 +176,8 @@ const run = async (browser, mode, errors) => {
     await force(); await page.waitForTimeout(1500);
     const slot = (await slotNow()).abs; const nx = await nextHour();
     // ① ソラシドと MASTER で勝つ(部屋のボタンから)
-    await page.locator('[data-assistant-life-home-face="sorashido"]').dispatchEvent('click');
+    // 2026-11-27 r1126-073 追記2: HOME の点は押せない印になった。助手ライフはソラシドを選んで開く(前に点が呼んでいたのと同じ口)
+    await page.evaluate(() => ASSISTANT_LIFE_STORE.set({ open: true, focus: 'sorashido' }));
     await page.locator('[data-assistant-life-room-act="card"]').waitFor({ timeout: 20000 });
     await page.locator('[data-assistant-life-room-act="card"]').dispatchEvent('click');
     await page.locator('[data-card-top="foe"]').waitFor({ timeout: 30000 });

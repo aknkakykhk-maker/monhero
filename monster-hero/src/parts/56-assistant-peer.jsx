@@ -702,8 +702,23 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
   const st = useAssistantPeerState();
   const auto = useAssistantPeerAuto();
   const [cur, setCur] = React.useState(null); // { talk, special, step, phase:'lines'|'choice'|'reply', pick, replay }
-  // 掛け合いが流れているあいだは、助手たちの今の帯(56-assistant-life.jsx)を隠す
-  React.useEffect(() => { if (ASSISTANT_PEER_STORE.state.talking !== !!cur) ASSISTANT_PEER_STORE.set({ talking: !!cur }); }, [!!cur]);
+  // HOME では窓を勝手に開かない(2026-11-27 台帳 r1126-073・HOME の作り直しの直し1)。掛け合いが始まっても、HOME の助手の顔の丸に💬の印だけを出し
+  //   (ASSISTANT_PEER_STORE.state.homeWaiting)、押されたら(homeOpenAt)その掛け合いの窓を開く。開いた掛け合いの id を覚え、次の掛け合いはまた印から。
+  //   窓が入口・イベントの帯・ボスを隠していた(点検 r1126-070 で 24枚中10枚)。見返し(replay)はこれまでどおりすぐ開く
+  const [homeOpenedId, setHomeOpenedId] = React.useState(null);
+  const homeWaiting = scene === 'home' && !!cur && !cur.replay && homeOpenedId !== cur.talk.id;
+  React.useEffect(() => { if (!!ASSISTANT_PEER_STORE.state.homeWaiting !== homeWaiting) ASSISTANT_PEER_STORE.set({ homeWaiting }); }, [homeWaiting]);
+  React.useEffect(() => () => { if (ASSISTANT_PEER_STORE.state.homeWaiting) ASSISTANT_PEER_STORE.set({ homeWaiting: false }); }, []);
+  const homeOpenRef = React.useRef(st.homeOpenAt || 0);
+  React.useEffect(() => {
+    const at = st.homeOpenAt || 0;
+    if (at === homeOpenRef.current) return;
+    homeOpenRef.current = at;
+    if (cur && !cur.replay) { setHomeOpenedId(cur.talk.id); setPeerFolded(false); }
+  }, [st.homeOpenAt]);
+  // 掛け合いが流れているあいだは、助手たちの今の帯(56-assistant-life.jsx)を隠す(HOME で印だけのあいだは隠さない)
+  const talkingNow = !!cur && !homeWaiting;
+  React.useEffect(() => { if (ASSISTANT_PEER_STORE.state.talking !== talkingNow) ASSISTANT_PEER_STORE.set({ talking: talkingNow }); }, [talkingNow]);
   const decidedRef = React.useRef('');
   const metKey = (metIds || []).join(',');
   React.useEffect(() => {
@@ -825,6 +840,7 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
           : `${a.name}と${b.name}の仲良し度が Lv${toast.level}${stage ? `「${stage.name}」` : ''}になりました`}
       </div>);
   }
+  if (homeWaiting) return null;
   if (peerFolded && !cur.replay) {
     return wrap(
       <div data-assistant-peer-folded className="flex justify-end">

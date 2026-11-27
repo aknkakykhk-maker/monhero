@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0e2a68818dd9940d
+// source-sha256: 36ccfccc31f8c242
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -23142,7 +23142,7 @@ const useAssistantBubbleState = () => {
 const HOME_ASSISTANT_COMMENT_KEY = 'mh_home_assistant_comment_v1';
 const HOME_ASSISTANT_COMMENT_STORE = (() => {
   let state = {
-    on: true,
+    on: false,
     loaded: false
   };
   let loading = null;
@@ -23157,9 +23157,9 @@ const HOME_ASSISTANT_COMMENT_STORE = (() => {
     load() {
       if (loading) return loading;
       loading = (async () => {
-        let on = true;
+        let on = false;
         try {
-          on = (await storeGet(HOME_ASSISTANT_COMMENT_KEY, true, false)) !== false;
+          on = (await storeGet(HOME_ASSISTANT_COMMENT_KEY, null, false)) === true;
         } catch (_) {}
         state = {
           on,
@@ -72127,10 +72127,11 @@ const GrowthFxLayer = ({
   const level = growthFxLevelOf(load);
   const atHome = screen === 'HOME' && !domHold.monsuc;
   const sheet = sheets.find(s => growthFxSheetReady(s, vis, atHome)) || null;
+  const smallMax = atHome ? 1 : GROWTH_FX_SMALL_MAX;
   return React.createElement(React.Fragment, null, !holdAll && !sheet && small.length > 0 && React.createElement(GrowthFxChipsBox, {
     level: level,
-    count: Math.min(small.length, GROWTH_FX_SMALL_MAX)
-  }, [...small].sort((a, b) => (b.text ? 1 : 0) - (a.text ? 1 : 0)).slice(0, GROWTH_FX_SMALL_MAX).map(c => React.createElement(GrowthFxChip, {
+    count: Math.min(small.length, smallMax)
+  }, [...small].sort((a, b) => (b.text ? 1 : 0) - (a.text ? 1 : 0)).slice(0, smallMax).map(c => React.createElement(GrowthFxChip, {
     key: c.id,
     chip: c,
     level: level,
@@ -72954,16 +72955,16 @@ function SettingsScreen({
   }, "ホームの助手コメント"), React.createElement("p", {
     className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
     style: JA_WRAP_STYLE
-  }, jaWrap('ホーム画面の上に出る助手の吹き出しです。「切」にすると吹き出しと「おしゃべり」のボタンが消えて、広場が広くなります。新しい機能のお知らせは、これまでどおり出ます。')), React.createElement("div", {
+  }, jaWrap('ホーム画面の上に出る助手の吹き出しです。はじめは「切」で、助手の顔だけが出ます(顔を押すと吹き出しが開きます)。「入」にすると、いつも吹き出しが出ます。新しい機能のお知らせは、これまでどおり出ます。')), React.createElement("div", {
     className: "mt-2 grid grid-cols-2 gap-2"
   }, [{
     on: false,
     label: '切',
-    note: '吹き出しを隠す'
+    note: '顔だけ(初めの形)'
   }, {
     on: true,
     label: '入',
-    note: 'これまでどおり'
+    note: '吹き出しを出す'
   }].map(option => React.createElement("button", {
     key: option.label,
     type: "button",
@@ -87039,8 +87040,8 @@ function MasuRegisterModal({
 }
 const HOME_EVENT_BADGE_STYLE = Object.freeze({
   position: 'absolute',
-  top: '-10px',
-  right: '-9px',
+  top: '4px',
+  left: '4px',
   zIndex: 8,
   display: 'block',
   overflow: 'hidden',
@@ -87049,10 +87050,10 @@ const HOME_EVENT_BADGE_STYLE = Object.freeze({
   borderRadius: '999px',
   background: 'linear-gradient(135deg,#f59e0b,#fde047 45%,#f97316)',
   color: '#4a1d00',
-  fontSize: '8px',
+  fontSize: '11px',
   fontWeight: 1000,
   fontStyle: 'normal',
-  lineHeight: 1.6,
+  lineHeight: 1.35,
   whiteSpace: 'nowrap',
   textShadow: '0 1px 0 #fff8',
   pointerEvents: 'none',
@@ -87086,6 +87087,125 @@ const HOME_EVENT_BADGE_CSS = `
   .mh-home-scene .mh-home-event-banner{padding:3px 10px;gap:0}
   .mh-home-scene .mh-home-event-banner b,.mh-home-scene .mh-home-event-banner .t2{font-size:10px;line-height:1.1}
   .mh-home-scene .mh-home-event-banner small{line-height:1.1}}
+`;
+const HOME_V2_CSS = `
+.mh-home-v2{--v2-panel:#102522eb;--v2-line:#f7df9a88}
+.mh-home-v2 .mh-home-top{display:flex;align-items:center;gap:6px;padding:calc(6px + env(safe-area-inset-top)) 8px 0;z-index:20}
+.mh-home-v2 .mh-home-top .mh-home-player{flex:1 1 auto;min-width:0;height:46px;padding:3px 10px 3px 4px;gap:7px}
+.mh-home-v2 .mh-home-top .mh-home-avatar{flex:0 0 36px;width:36px;height:36px}
+.mh-home-v2 .mh-home-top .mh-home-player-copy strong{max-width:none;font-size:13px;line-height:1.25}
+.mh-home-v2 .mh-home-top .mh-home-player-copy span{font-size:11px;line-height:1.25}
+.mh-home-v2 .mh-home-top .mh-home-top-wallet{display:flex;align-items:center;width:auto;height:46px;padding:0 10px;grid-template-columns:none}
+.mh-home-v2 .mh-home-top .mh-home-top-wallet>div{display:flex;align-items:center;gap:4px;padding:0}
+.mh-home-v2 .mh-home-top .mh-home-top-wallet>div b{font-size:14px;line-height:1.1}
+.mh-home-v2 .mh-home-top .mh-home-top-wallet>div small{font-size:11px}
+.mh-home-v2 .mh-home-menu-btn{position:relative;flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:56px;height:46px;border:1px solid var(--v2-line);border-radius:14px;background:var(--v2-panel);color:#fce6ab;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;pointer-events:auto;touch-action:manipulation}
+.mh-home-v2 .mh-home-menu-btn:active,.mh-home-v2 .mh-home-menu-btn.is-open{filter:brightness(1.3)}
+.mh-home-v2 .mh-home-menu-bars{display:flex;flex-direction:column;gap:3px}
+.mh-home-v2 .mh-home-menu-bars i{display:block;width:20px;height:2.5px;border-radius:2px;background:#fce6ab}
+.mh-home-v2 .mh-home-menu-lb{font-size:11px;font-weight:900;line-height:1}
+.mh-home-v2 .mh-home-menu-btn em,.mh-home-v2 .mh-home-menu .mh-home-side-btn em{display:flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:999px;border:2px solid #fff;background:#e11d48;color:#fff;font-size:11px;font-style:normal;font-weight:900;line-height:1;box-shadow:0 2px 6px #0008}
+.mh-home-v2 .mh-home-menu-btn em{position:absolute;top:-7px;right:-6px}
+.mh-home-v2 .mh-home-menu-shade{position:absolute;inset:0;z-index:28;border:0;background:#0006;cursor:default}
+.mh-home-v2 .mh-home-menu{position:absolute;z-index:29;right:8px;top:calc(58px + env(safe-area-inset-top));display:flex;flex-direction:column;gap:6px;width:min(240px,calc(100% - 16px));padding:8px;border:1px solid var(--v2-line);border-radius:16px;background:#0d1f1cf7;box-shadow:0 10px 30px #000c}
+/* 閉じているときは目に見えない形(読み上げには残す)。メニューの中の「設定」「ミッション」などを、読み上げの利用者と検査がいつでも見つけられるように */
+.mh-home-v2 .mh-home-menu:not(.is-open){width:1px;height:1px;padding:0;margin:0;border:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap;pointer-events:none;box-shadow:none}
+.mh-home-v2 .mh-home-menu.is-open{display:flex;animation:mhHomeMenuIn .15s ease-out}
+@keyframes mhHomeMenuIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.mh-home-v2 .mh-home-menu.is-open{animation:none}}
+.mh-home-v2 .mh-home-menu-info{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:0 2px 4px;border-bottom:1px solid #fff2}
+.mh-home-v2 .mh-home-menu .mh-tod-clock{position:static!important}
+.mh-home-v2 .mh-home-menu-bp{display:flex;align-items:center;gap:4px;margin-left:auto;color:#ffe08a;font-size:13px;font-weight:900}
+.mh-home-v2 .mh-home-menu-bp small{font-size:11px;color:#f4e7c3}
+.mh-home-v2 .mh-home-menu .mh-home-side-btn{display:flex;flex-direction:row;align-items:center;gap:10px;width:100%;min-height:46px;padding:5px 10px 5px 6px;border-radius:12px;background:#ffffff10;color:#fff;text-align:left}
+.mh-home-v2 .mh-home-menu .mh-home-side-btn:active{background:#ffffff26;transform:none}
+.mh-home-v2 .mh-home-menu .mh-home-side-ic{flex:0 0 34px;width:34px;height:34px}
+.mh-home-v2 .mh-home-menu .mh-home-side-lb{flex:1;font-size:14px;font-weight:900;text-shadow:none}
+.mh-home-v2 .mh-home-menu .mh-home-side-btn em{position:static;margin-left:auto}
+.mh-home-v2 .mh-home-settings .mh-home-side-ic{border-color:#cbd5e1aa;background:#1e293be8;color:#e2e8f0}
+.mh-home-v2 .mh-home-band{position:relative;z-index:6;margin:6px 8px 0}
+.mh-home-v2 .mh-home-band-view{overflow:hidden;border-radius:14px}
+.mh-home-v2 .mh-home-band-track{display:flex;transition:transform .35s ease}
+.mh-home-v2 .mh-home-band-slide{flex:0 0 100%;min-width:0;height:80px}
+.mh-home-v2 .mh-home-band-slide>button{width:100%;height:80px}
+.mh-home-v2 .mh-home-band .mh-home-event-banner{max-width:none;justify-content:center;gap:4px;padding:8px 14px;border-radius:14px;font-size:15px}
+.mh-home-v2 .mh-home-band .mh-home-event-banner .r1{column-gap:8px}
+.mh-home-v2 .mh-home-band .mh-home-event-banner small{font-size:11px}
+.mh-home-v2 .mh-home-band .mh-home-event-banner .t2{font-size:12px}
+.mh-home-v2 .mh-home-band .mh-home-tour-banner{max-width:none;gap:10px;padding:8px 14px;border-radius:14px}
+.mh-home-v2 .mh-home-band .mh-home-tour-banner>span:first-child{font-size:30px}
+.mh-home-v2 .mh-home-band .mh-home-tour-banner b{font-size:15px}
+.mh-home-v2 .mh-home-band .mh-home-tour-banner small,.mh-home-v2 .mh-home-band .mh-home-tour-banner em{font-size:11px}
+.mh-home-v2 .mh-home-band-nav{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:2px}
+.mh-home-v2 .mh-home-band-nav .mh-home-event-strip-dots button{display:flex;align-items:center;justify-content:center;width:22px;height:22px;padding:0;border:0;background:transparent}
+.mh-home-v2 .mh-home-band-nav .mh-home-event-strip-dots i{width:8px;height:8px;box-shadow:0 0 0 1px #0008}
+.mh-home-v2 .mh-home-band-nav .mh-home-event-strip-dots button.on i{width:18px;border-radius:4px;background:#fde68a}
+.mh-home-v2 .mh-home-band-next{min-width:0;max-width:72%;min-height:22px;overflow:hidden;padding:2px 9px;border-radius:999px;background:#000a;color:#fffbeb;font-size:11px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}
+.mh-home-v2 .mh-home-assistant{width:70%;max-width:360px;margin:6px 0 0 8px}
+.mh-home-v2 .mh-home-assistant-fold{margin:6px 0 0 8px}
+.mh-home-v2 .mh-home-assistant-show-mark{right:-8px;bottom:-6px;width:24px;height:24px;font-size:14px;background:#fff!important;box-shadow:0 0 0 2px #e11d48,0 2px 6px #0009;animation:mhHomePeerMark 1.4s ease-in-out infinite}
+@keyframes mhHomePeerMark{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+@media(prefers-reduced-motion:reduce){.mh-home-v2 .mh-home-assistant-show-mark{animation:none}}
+.mh-home-v2 .mh-home-assistant-news-dot{position:absolute;top:1px;right:1px;width:13px;height:13px;border-radius:50%;border:2px solid #fff;background:#e11d48;box-shadow:0 1px 4px #0009}
+.mh-home-v2 .mh-home-peer-mark{position:absolute;left:52px;top:calc(100% + 4px);width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:50%;border:1.5px solid #f9a8d4;background:#1e0b24ee;font-size:16px;box-shadow:0 2px 8px #0009}
+.mh-home-v2 .mh-home-dock{gap:6px;padding:8px 8px calc(8px + env(safe-area-inset-bottom))}
+.mh-home-v2 .mh-home-dock-row{gap:6px}
+.mh-home-v2 .mh-home-dock-top>.mh-home-dock-card,.mh-home-v2 .mh-home-dock-top>.mh-home-success{height:clamp(112px,18cqh,150px);padding:0;gap:0;overflow:hidden;border-radius:14px}
+.mh-home-v2 .mh-home-dock-top .mh-home-dock-pic,.mh-home-v2 .mh-home-dock-top .mh-home-success .pic{flex:1 1 auto;width:100%;max-width:none;height:auto;min-height:0;aspect-ratio:auto;border-radius:0}
+.mh-home-v2 .mh-home-dock-top .mh-home-dock-pic img,.mh-home-v2 .mh-home-dock-top .mh-home-success .pic img{object-position:50% 30%}
+.mh-home-v2 .mh-home-dock-top .mh-home-dock-txt,.mh-home-v2 .mh-home-dock-top .mh-home-success .txt{position:absolute;left:0;right:0;bottom:0;height:auto;gap:0;padding:14px 1px 4px;background:linear-gradient(#0000,#000000c8 45%)}
+.mh-home-v2 .mh-home-dock-top .mh-home-dock-name,.mh-home-v2 .mh-home-dock-top .mh-home-success .nm{font-size:11.5px;letter-spacing:-.04em;line-height:1.2}
+.mh-home-v2 .mh-home-dock-top .mh-home-dock-sub,.mh-home-v2 .mh-home-dock-top .mh-home-success .sb{font-size:11px;line-height:1.2}
+.mh-home-v2 .mh-home-dock-bottom{justify-content:space-around}
+.mh-home-v2 .mh-home-dock-bottom>.mh-home-dock-card{flex:1 1 0;max-width:96px;gap:3px;padding:0;border:0;background:transparent;box-shadow:none}
+.mh-home-v2 .mh-home-dock-bottom .mh-home-dock-pic{width:50px;height:50px;max-width:none;aspect-ratio:1;border-radius:50%;border:2px solid #ffe6a7c0;box-shadow:0 3px 10px #0009}
+.mh-home-v2 .mh-home-dock-bottom .mh-home-dock-txt{height:auto}
+.mh-home-v2 .mh-home-dock-bottom .mh-home-dock-name{font-size:11px;line-height:1.2}
+@media(max-width:350px){.mh-home-v2 .mh-home-dock-top .mh-home-dock-name,.mh-home-v2 .mh-home-dock-top .mh-home-success .nm{font-size:10.5px;letter-spacing:-.06em}}
+@media(orientation:landscape) and (max-height:600px){
+  .mh-home-v2 .mh-home-band{position:absolute;left:8px;top:calc(58px + env(safe-area-inset-top));width:min(37%,330px);margin:0}
+  .mh-home-v2 .mh-home-band-slide,.mh-home-v2 .mh-home-band-slide>button{height:68px}
+  .mh-home-v2 .mh-home-band-slide>button[data-home-xmas-entry]{height:68px!important}
+  .mh-home-v2 .mh-home-assistant,.mh-home-v2 .mh-home-assistant-fold{position:absolute;left:8px;top:calc(160px + env(safe-area-inset-top));margin:0}
+  .mh-home-v2 .mh-home-assistant{width:min(37%,330px)}
+  .mh-home-v2 .mh-home-dock{flex-direction:row;align-items:flex-end;gap:8px;padding:5px 8px calc(6px + env(safe-area-inset-bottom))}
+  .mh-home-v2 .mh-home-dock-top{flex:1.9 1 0}
+  .mh-home-v2 .mh-home-dock-bottom{flex:1 1 0}
+  .mh-home-v2 .mh-home-dock-top>.mh-home-dock-card,.mh-home-v2 .mh-home-dock-top>.mh-home-success{height:clamp(84px,25cqh,104px);max-width:none}
+  .mh-home-v2 .mh-home-dock-bottom .mh-home-dock-pic{width:44px;height:44px}
+}
+@container (min-width:700px) and (min-height:560px){
+  .mh-home-v2 .mh-home-band{width:min(600px,calc(100% - 16px));margin:8px auto 0}
+  .mh-home-v2 .mh-home-band-slide,.mh-home-v2 .mh-home-band-slide>button{height:92px}
+  .mh-home-v2 .mh-home-band-slide>button[data-home-xmas-entry]{height:92px!important}
+  .mh-home-v2 .mh-home-assistant{width:360px}
+  .mh-home-v2 .mh-home-dock{flex-direction:row;align-items:flex-end;gap:14px;padding:10px 14px calc(12px + env(safe-area-inset-bottom))}
+  .mh-home-v2 .mh-home-dock-top{flex:2 1 0;justify-content:center}
+  .mh-home-v2 .mh-home-dock-bottom{flex:1 1 0}
+  .mh-home-v2 .mh-home-dock-top>.mh-home-dock-card,.mh-home-v2 .mh-home-dock-top>.mh-home-success{height:min(170px,19cqh);max-width:180px;border-radius:16px}
+  .mh-home-v2 .mh-home-dock-top .mh-home-dock-name,.mh-home-v2 .mh-home-dock-top .mh-home-success .nm{font-size:13px}
+  .mh-home-v2 .mh-home-dock-top .mh-home-dock-sub,.mh-home-v2 .mh-home-dock-top .mh-home-success .sb{font-size:12px}
+  .mh-home-v2 .mh-home-dock-bottom .mh-home-dock-pic{width:62px;height:62px}
+  .mh-home-v2 .mh-home-dock-bottom .mh-home-dock-name{font-size:12px}
+}
+/* クリスマスの入口(79-screen-xmas-event.jsx)は、横向きで帯を右の列の横へ動かす決まりを持っている(前の HOME の形のため)。
+   新しい帯の中では、ほかの1枚と同じ位置・大きさのままにする(部品の中身は変えない。HOME の側で上書きするだけ) */
+.mh-home-v2 .mh-home-band-slide[data-home-xmas-entry-strip]{position:relative!important;left:auto!important;right:auto!important;top:auto!important;width:auto!important;margin:0!important}
+@media (orientation:landscape) and (max-height:520px){.mh-home-v2 .mh-home-band .mh-xmas-entry[data-home-xmas-entry="banner"] .mh-xmas-entry-sub{font-size:11px}}
+/* 横持ちの iPhone の切り欠き(カメラの欠け)に、押す物を入れない。左右の余白に端末の安全な余白(safe-area)を足す */
+.mh-home-v2 .mh-home-top{padding-left:calc(8px + env(safe-area-inset-left));padding-right:calc(8px + env(safe-area-inset-right))}
+.mh-home-v2 .mh-home-menu{right:calc(8px + env(safe-area-inset-right))}
+.mh-home-v2 .mh-home-band{margin-left:calc(8px + env(safe-area-inset-left));margin-right:calc(8px + env(safe-area-inset-right))}
+.mh-home-v2 .mh-home-assistant,.mh-home-v2 .mh-home-assistant-fold{margin-left:calc(8px + env(safe-area-inset-left))}
+.mh-home-v2 .mh-home-dock{padding-left:calc(8px + env(safe-area-inset-left));padding-right:calc(8px + env(safe-area-inset-right))}
+@media(orientation:landscape) and (max-height:600px){
+  .mh-home-v2 .mh-home-band{left:calc(8px + env(safe-area-inset-left));margin:0}
+  .mh-home-v2 .mh-home-assistant,.mh-home-v2 .mh-home-assistant-fold{left:calc(8px + env(safe-area-inset-left));margin:0}
+}
+@container (min-width:700px) and (min-height:560px){
+  .mh-home-v2 .mh-home-band{margin-left:auto;margin-right:auto}
+  .mh-home-v2 .mh-home-dock{padding-left:calc(14px + env(safe-area-inset-left));padding-right:calc(14px + env(safe-area-inset-right))}
+}
 `;
 const HOME_RAID_JACK_CSS = `
 .mh-home-raid-jack-img{animation:mhRaidJackHop 1.15s cubic-bezier(.3,.1,.4,1) infinite;transform-origin:50% 100%}
@@ -87762,6 +87882,13 @@ function HomeScreen({
     tag.textContent = HOME_EVENT_BADGE_CSS;
     document.head.appendChild(tag);
   }, []);
+  React.useEffect(() => {
+    if (typeof document === 'undefined' || document.getElementById('mh-home-v2-css')) return;
+    const tag = document.createElement('style');
+    tag.id = 'mh-home-v2-css';
+    tag.textContent = HOME_V2_CSS;
+    document.head.appendChild(tag);
+  }, []);
   const homeEventCampaign = (() => {
     if (typeof RELEASE_FLAGS === 'undefined' || !RELEASE_FLAGS || RELEASE_FLAGS.rhythmEventPoints !== true || typeof rhythmEventPointCampaignAt !== 'function') return null;
     const campaign = rhythmEventPointCampaignAt(Date.now());
@@ -87795,19 +87922,48 @@ function HomeScreen({
     if (!released || typeof rhythmLimitedEventAt !== 'function') return false;
     return !!rhythmLimitedEventAt(Date.now());
   })();
-  const homeStripCount = (homeEventCampaign ? 1 : 0) + (homeCardTour && typeof onOpenCardTour === 'function' ? 1 : 0);
-  const [homeStripIdx, setHomeStripIdx] = React.useState(0);
+  const homeBandSlides = [];
+  const homeBandEvent = homeEventCampaign && !(xmasEntry && homeEventCampaign.id === 'xmas_2026');
+  if (homeBandEvent && xmasEntry && xmasEntry.preOpen) homeBandSlides.push('event');
+  if (xmasEntry) homeBandSlides.push('xmas');
+  if (homeBandEvent && !homeBandSlides.includes('event')) homeBandSlides.push('event');
+  if (homeCardTour && typeof onOpenCardTour === 'function') homeBandSlides.push('tour');
+  const homeBandCount = homeBandSlides.length;
+  const [homeBandIdx, setHomeBandIdx] = React.useState(0);
+  const homeBandTouchRef = React.useRef({
+    x: null,
+    at: 0,
+    swiped: false
+  });
   React.useEffect(() => {
-    if (homeStripCount < 2) return undefined;
-    const id = setInterval(() => setHomeStripIdx(i => i + 1), 5000);
+    if (homeBandCount < 2) return undefined;
+    const id = setInterval(() => {
+      if (Date.now() - homeBandTouchRef.current.at >= 20000) setHomeBandIdx(i => i + 1);
+    }, 7000);
     return () => clearInterval(id);
-  }, [homeStripCount]);
-  const homeStripShow = homeStripCount ? homeStripIdx % homeStripCount : 0;
-  const xmasEntryInStrip = !!xmasEntry;
+  }, [homeBandCount]);
+  const homeBandShow = homeBandCount ? (homeBandIdx % homeBandCount + homeBandCount) % homeBandCount : 0;
+  const homeBandGo = step => {
+    homeBandTouchRef.current.at = Date.now();
+    setHomeBandIdx(i => i + step);
+  };
+  const homeBandTitle = k => k === 'xmas' ? '聖夜の名探偵' : k === 'event' && homeEventCampaign ? homeEventCampaign.banner.title : k === 'tour' && homeCardTour ? homeCardTour.name : '';
+  const [homeMenuOpen, setHomeMenuOpen] = React.useState(false);
+  const homeMissionCount = missionClaimableCount(normalizeMissions(missions));
+  const homeGiftCount = giftClaimableCount(gifts);
+  const homeMenuBadge = homeMissionCount + homeGiftCount + (hasUnreadChangelog ? 1 : 0);
+  const homeMenuSpot = `${spotClass('reward') || ''}${spotClass('settings') || ''}`.trim();
+  React.useEffect(() => {
+    if (homeMenuSpot) setHomeMenuOpen(true);
+  }, [homeMenuSpot]);
+  const homeMenuGo = fn => () => {
+    setHomeMenuOpen(false);
+    if (typeof fn === 'function') fn();
+  };
   const homeComment = useHomeAssistantComment();
   return React.createElement("main", {
     ref: homeSceneRef,
-    className: "mh-home-scene",
+    className: "mh-home-scene mh-home-v2",
     "aria-label": "村の広場"
   }, React.createElement("picture", {
     className: `mh-home-background ${homeBackgroundReady ? 'is-ready' : ''} ${homeBackgroundWide ? 'is-wide' : ''} ${homeBackgroundSquare ? 'is-square' : ''}`,
@@ -87839,7 +87995,7 @@ function HomeScreen({
     eventId: raidJackEventId,
     onOpen: onOpenRaidJack
   }), React.createElement("header", {
-    className: `mh-home-status${spotClass('settings')}`
+    className: `mh-home-status mh-home-top${spotClass('settings')}`
   }, React.createElement("button", {
     type: "button",
     className: "mh-home-player relative",
@@ -87851,122 +88007,177 @@ function HomeScreen({
     frameId: profileFrameId
   }), React.createElement("div", {
     className: "mh-home-player-copy"
-  }, React.createElement("strong", null, breederName), React.createElement("span", null, "ブリーダー Lv.", breederLevel.level), React.createElement("div", {
-    className: "mh-home-xp-row"
-  }, React.createElement("div", {
-    className: "mh-home-xp"
-  }, React.createElement("i", {
-    style: {
-      width: `${Math.min(100, breederLevel.xpIntoLevel / breederLevel.xpForNext * 100)}%`
-    }
-  })), React.createElement("small", null, breederLevel.xpIntoLevel.toLocaleString(), "/", breederLevel.xpForNext.toLocaleString(), " XP"))), React.createElement(ChevronRight, {
-    className: "mh-home-profile-arrow",
-    size: 15
-  }), Number(friendRequestCount) > 0 && React.createElement("span", {
+  }, React.createElement("strong", null, breederName), React.createElement("span", null, "Lv.", breederLevel.level)), Number(friendRequestCount) > 0 && React.createElement("span", {
     "data-home-friend-badge": true,
     "aria-label": `フレンド申請が${Number(friendRequestCount)}件届いています`,
     className: "absolute -right-1 -top-2 flex h-6 min-w-[24px] items-center justify-center rounded-full bg-rose-500 px-1.5 text-[12px] font-black text-white shadow-lg"
   }, Math.min(99, Number(friendRequestCount)))), React.createElement("section", {
-    className: "mh-home-wallet",
-    style: {
-      '--wal-grow': `${homeWalletGrowPx(compactCount(gold), compactCount(breederPoints))}px`
-    }
+    className: "mh-home-wallet mh-home-top-wallet",
+    "aria-label": "ダイヤ"
   }, React.createElement("div", null, React.createElement(Gem, {
-    size: 14
+    size: 15
   }), React.createElement(CompactCount, {
     value: gold,
     style: {
       '--len': String(compactCount(gold)).length
     }
-  }), React.createElement("small", null, "ダイヤ")), React.createElement("div", null, React.createElement(Coins, {
-    size: 14
-  }), React.createElement(CompactCount, {
-    value: breederPoints,
-    style: {
-      '--len': String(compactCount(breederPoints)).length
-    }
-  }), React.createElement("small", null, "ブリーダーP")), React.createElement("button", {
-    onClick: onOpenSettings,
-    className: `mh-home-settings${spotClass('settings')}`,
-    "aria-label": "設定"
-  }, React.createElement(Settings, {
-    size: 20
-  }), React.createElement("span", null, "設定")))), xmasEntryInStrip && React.createElement("div", {
-    className: "mh-home-event-strip",
-    "data-home-xmas-entry-strip": true,
-    style: {
-      width: 'calc(100% - 78px)'
-    }
-  }, React.createElement(HomeXmasEventEntry, {
-    onOpen: xmasEntry.onOpen,
-    preOpen: !!xmasEntry.preOpen
-  })), homeStripCount > 0 && !(xmasEntryInStrip && homeEventCampaign && homeEventCampaign.id === 'xmas_2026' && !homeCardTour) && React.createElement("div", {
-    className: "mh-home-event-strip",
-    "data-home-event-strip": true
-  }, homeEventCampaign && homeStripShow === 0 && React.createElement("button", {
+  }), React.createElement("small", null, "ダイヤ"))), React.createElement("button", {
     type: "button",
-    "data-home-event-banner": true,
-    className: "mh-home-event-banner",
-    onClick: homeEventCampaign.id === 'xmas_2026' && typeof onOpenXmasEvent === 'function' ? onOpenXmasEvent : openChangelog,
-    "aria-label": `${homeEventCampaign.banner.title}${homeEventCampaign.banner.title2 || ''} ${homeEventCampaign.banner.sub}`
-  }, React.createElement("b", {
-    className: "r1"
-  }, React.createElement("span", null, homeEventCampaign.banner.emoji, " ", homeEventCampaign.banner.title), React.createElement("small", null, homeEventCampaign.banner.sub)), homeEventCampaign.banner.title2 ? React.createElement("span", {
-    className: "t2"
-  }, homeEventCampaign.banner.title2) : null), homeCardTour && typeof onOpenCardTour === 'function' && homeStripShow === (homeEventCampaign ? 1 : 0) && React.createElement("button", {
-    type: "button",
-    "data-home-card-tour": homeCardTour.id,
-    className: "mh-home-tour-banner",
-    onClick: () => onOpenCardTour(homeCardTour.id),
-    "aria-label": `${homeCardTour.name} ${homeCardTour.sub}`
+    className: `mh-home-menu-btn${homeMenuOpen ? ' is-open' : ''}`,
+    "data-home-menu-btn": true,
+    onClick: () => setHomeMenuOpen(o => !o),
+    "aria-label": homeMenuBadge > 0 ? `メニュー(${homeMenuBadge}件)` : 'メニュー',
+    "aria-expanded": homeMenuOpen
   }, React.createElement("span", {
+    className: "mh-home-menu-bars",
     "aria-hidden": "true"
-  }, "🏆"), React.createElement("span", null, React.createElement("b", null, homeCardTour.name), React.createElement("small", null, homeCardTour.sub, homeCardTour.prize && React.createElement("em", null, homeCardTour.prize)))), homeStripCount > 1 && React.createElement("span", {
-    className: "mh-home-event-strip-dots",
-    "aria-hidden": "true"
-  }, Array.from({
-    length: homeStripCount
-  }, (_, i) => React.createElement("i", {
-    key: i,
-    className: i === homeStripShow ? 'on' : ''
-  })))), React.createElement("div", {
-    className: "mh-home-side-stack"
+  }, React.createElement("i", null), React.createElement("i", null), React.createElement("i", null)), React.createElement("span", {
+    className: "mh-home-menu-lb"
+  }, "メニュー"), homeMenuBadge > 0 && React.createElement("em", {
+    "data-home-menu-badge": true
+  }, Math.min(99, homeMenuBadge)))), homeMenuOpen && React.createElement("button", {
+    type: "button",
+    className: "mh-home-menu-shade",
+    "data-home-menu-shade": true,
+    "aria-label": "メニューを閉じる",
+    onClick: () => setHomeMenuOpen(false)
+  }), React.createElement("div", {
+    className: `mh-home-menu${homeMenuOpen ? ' is-open' : ''}`,
+    "data-home-menu": homeMenuOpen ? 'open' : 'closed'
+  }, React.createElement("div", {
+    className: "mh-home-menu-info"
   }, typeof TimeOfDayClock === 'function' && React.createElement(TimeOfDayClock, {
     home: true
-  }), React.createElement("button", {
-    onClick: openChangelog,
+  }), React.createElement("span", {
+    className: "mh-home-menu-bp"
+  }, React.createElement(Coins, {
+    size: 14
+  }), React.createElement("small", null, "ブリーダーP"), React.createElement(CompactCount, {
+    value: breederPoints
+  }))), React.createElement("button", {
+    onClick: homeMenuGo(openMissions),
+    className: `mh-home-side-btn mh-home-mission${spotClass('reward')}`,
+    "aria-label": "ミッション"
+  }, React.createElement("span", {
+    className: "mh-home-side-ic"
+  }, React.createElement(List, {
+    size: 18
+  })), React.createElement("span", {
+    className: "mh-home-side-lb"
+  }, "ミッション"), homeMissionCount > 0 && React.createElement("em", null, homeMissionCount)), React.createElement("button", {
+    onClick: homeMenuGo(openGiftBox),
+    className: `mh-home-side-btn mh-home-gift${spotClass('reward')}`,
+    "aria-label": "ギフト"
+  }, React.createElement("span", {
+    className: "mh-home-side-ic"
+  }, React.createElement(Package, {
+    size: 18
+  })), React.createElement("span", {
+    className: "mh-home-side-lb"
+  }, "ギフト"), homeGiftCount > 0 && React.createElement("em", null, homeGiftCount)), React.createElement("button", {
+    onClick: homeMenuGo(openChangelog),
     className: "mh-home-side-btn mh-home-update",
     "aria-label": "更新履歴"
   }, React.createElement("span", {
     className: "mh-home-side-ic"
   }, React.createElement(RefreshCcw, {
-    size: 19
+    size: 17
   })), React.createElement("span", {
     className: "mh-home-side-lb"
   }, "更新履歴"), hasUnreadChangelog && React.createElement("em", {
     className: "mh-unread-badge",
     "aria-label": "未読あり"
   }, "!")), React.createElement("button", {
-    onClick: openMissions,
-    className: `mh-home-side-btn mh-home-mission${spotClass('reward')}`,
-    "aria-label": "ミッション"
+    onClick: homeMenuGo(onOpenSettings),
+    className: `mh-home-side-btn mh-home-settings${spotClass('settings')}`,
+    "aria-label": "設定"
   }, React.createElement("span", {
     className: "mh-home-side-ic"
-  }, React.createElement(List, {
-    size: 20
+  }, React.createElement(Settings, {
+    size: 18
   })), React.createElement("span", {
     className: "mh-home-side-lb"
-  }, "ミッション"), missionClaimableCount(normalizeMissions(missions)) > 0 && React.createElement("em", null, missionClaimableCount(normalizeMissions(missions)))), React.createElement("button", {
-    onClick: openGiftBox,
-    className: `mh-home-side-btn mh-home-gift${spotClass('reward')}`,
-    "aria-label": "ギフト"
+  }, "設定"))), homeBandCount > 0 && React.createElement("div", {
+    className: "mh-home-band",
+    "data-home-band": homeBandSlides[homeBandShow],
+    onPointerDown: e => {
+      homeBandTouchRef.current = {
+        ...homeBandTouchRef.current,
+        x: e.clientX,
+        swiped: false
+      };
+    },
+    onPointerUp: e => {
+      const t = homeBandTouchRef.current;
+      if (t.x === null || homeBandCount < 2) return;
+      const dx = e.clientX - t.x;
+      t.x = null;
+      if (Math.abs(dx) >= 40) {
+        t.swiped = true;
+        homeBandGo(dx < 0 ? 1 : -1);
+      }
+    },
+    onClickCapture: e => {
+      if (homeBandTouchRef.current.swiped) {
+        homeBandTouchRef.current.swiped = false;
+        e.stopPropagation();
+        e.preventDefault();
+      }
+    }
+  }, React.createElement("div", {
+    className: "mh-home-band-view"
+  }, React.createElement("div", {
+    className: "mh-home-band-track",
+    style: {
+      transform: `translateX(${-homeBandShow * 100}%)`
+    }
+  }, homeBandSlides.map((k, i) => React.createElement("div", _extends({
+    key: k,
+    className: "mh-home-band-slide",
+    "aria-hidden": i !== homeBandShow
+  }, k === 'xmas' ? {
+    'data-home-xmas-entry-strip': ''
+  } : {
+    'data-home-event-strip': ''
+  }), k === 'xmas' && React.createElement(HomeXmasEventEntry, {
+    onOpen: xmasEntry.onOpen,
+    preOpen: !!xmasEntry.preOpen
+  }), k === 'event' && React.createElement("button", {
+    type: "button",
+    "data-home-event-banner": true,
+    className: "mh-home-event-banner",
+    tabIndex: i === homeBandShow ? 0 : -1,
+    onClick: homeEventCampaign.id === 'xmas_2026' && typeof onOpenXmasEvent === 'function' ? onOpenXmasEvent : onOpenRhythm,
+    "aria-label": `${homeEventCampaign.banner.title}${homeEventCampaign.banner.title2 || ''} ${homeEventCampaign.banner.sub}`
+  }, React.createElement("b", {
+    className: "r1"
+  }, React.createElement("span", null, homeEventCampaign.banner.emoji, " ", homeEventCampaign.banner.title), React.createElement("small", null, homeEventCampaign.banner.sub)), homeEventCampaign.banner.title2 ? React.createElement("span", {
+    className: "t2"
+  }, homeEventCampaign.banner.title2) : null), k === 'tour' && React.createElement("button", {
+    type: "button",
+    "data-home-card-tour": homeCardTour.id,
+    className: "mh-home-tour-banner",
+    tabIndex: i === homeBandShow ? 0 : -1,
+    onClick: () => onOpenCardTour(homeCardTour.id),
+    "aria-label": `${homeCardTour.name} ${homeCardTour.sub}`
   }, React.createElement("span", {
-    className: "mh-home-side-ic"
-  }, React.createElement(Package, {
-    size: 20
-  })), React.createElement("span", {
-    className: "mh-home-side-lb"
-  }, "ギフト"), giftClaimableCount(gifts) > 0 && React.createElement("em", null, giftClaimableCount(gifts)))), React.createElement("div", {
+    "aria-hidden": "true"
+  }, "🏆"), React.createElement("span", null, React.createElement("b", null, homeCardTour.name), React.createElement("small", null, homeCardTour.sub, homeCardTour.prize && React.createElement("em", null, homeCardTour.prize)))))))), homeBandCount > 1 && React.createElement("div", {
+    className: "mh-home-band-nav"
+  }, React.createElement("span", {
+    className: "mh-home-event-strip-dots"
+  }, homeBandSlides.map((k, i) => React.createElement("button", {
+    key: k,
+    type: "button",
+    className: i === homeBandShow ? 'on' : '',
+    "aria-label": `${i + 1}枚目を見る`,
+    onClick: () => homeBandGo(i - homeBandShow)
+  }, React.createElement("i", null)))), React.createElement("button", {
+    type: "button",
+    className: "mh-home-band-next",
+    "data-home-band-next": true,
+    onClick: () => homeBandGo(1)
+  }, "次:", homeBandTitle(homeBandSlides[(homeBandShow + 1) % homeBandCount]), " ›"))), React.createElement("div", {
     className: "mh-home-dock"
   }, nextStep && React.createElement("button", {
     type: "button",
@@ -87981,7 +88192,8 @@ function HomeScreen({
   }, React.createElement("b", null, ['①', '②', '③'][nextStep.n - 1], " ", nextStep.title), React.createElement("small", null, nextStep.sub)), React.createElement("i", {
     "aria-hidden": "true"
   }, "›")), React.createElement("div", {
-    className: "mh-home-dock-row mh-home-dock-top"
+    className: "mh-home-dock-row mh-home-dock-top",
+    "aria-label": "遊ぶ"
   }, successEntry, React.createElement("button", {
     type: "button",
     "data-home-fac": "battle",
@@ -88024,7 +88236,7 @@ function HomeScreen({
     "data-home-event-badge": true,
     className: "mh-home-event-badge",
     style: HOME_EVENT_BADGE_STYLE
-  }, "✨開催中✨")), cardBattleVisible && typeof onOpenCardBattle === 'function' && React.createElement("button", {
+  }, "開催中")), cardBattleVisible && typeof onOpenCardBattle === 'function' && React.createElement("button", {
     type: "button",
     "data-home-fac": "card",
     "data-home-card-battle": true,
@@ -88062,8 +88274,9 @@ function HomeScreen({
     className: "mh-home-dock-name"
   }, "MFバトルカード"), React.createElement("span", {
     className: "mh-home-dock-sub"
-  }, "カード対戦")), React.createElement("small", {
-    className: "mh-home-dock-chip"
+  }, "カード対戦")), React.createElement("em", {
+    "data-home-soon-badge": true,
+    style: HOME_EVENT_BADGE_STYLE
   }, "近日公開"))), React.createElement("nav", {
     className: "mh-home-dock-row mh-home-dock-bottom",
     "aria-label": "拠点施設"
@@ -88148,15 +88361,41 @@ function HomeScreen({
     }] : null
   }), React.createElement(HomeAssistantCommentToggle, {
     on: true
-  })), !homeComment.on && React.createElement("div", {
+  }), React.createElement(HomePeerTalkMark, null)), !homeComment.on && React.createElement("div", {
     className: `mh-home-assistant-fold${spotClass('assistant')}`
   }, React.createElement(HomeAssistantCommentToggle, {
-    on: false
+    on: false,
+    news: !!assistantBondUp || masuMons.length === 0
   })));
 }
+const useHomePeerWaiting = () => {
+  const has = typeof ASSISTANT_PEER_STORE !== 'undefined' && typeof useAssistantPeerState === 'function';
+  const st = has ? useAssistantPeerState() : null;
+  return {
+    waiting: !!(st && st.homeWaiting),
+    open: () => {
+      if (has) ASSISTANT_PEER_STORE.set({
+        homeOpenAt: Date.now()
+      });
+    }
+  };
+};
+function HomePeerTalkMark() {
+  const peer = useHomePeerWaiting();
+  if (!peer.waiting) return null;
+  return React.createElement("button", {
+    type: "button",
+    "data-home-peer-talk-mark": true,
+    onClick: peer.open,
+    "aria-label": "助手どうしの会話を見る",
+    className: "mh-home-peer-mark active:scale-95"
+  }, "💬");
+}
 function HomeAssistantCommentToggle({
-  on
+  on,
+  news = false
 }) {
+  const peer = useHomePeerWaiting();
   const bond = useAssistantBond();
   const who = assistantById(assistantSceneById('home')?.assistantId || bond.assistantId || null);
   const color = who.accent || ASSISTANT_FALLBACK.accent;
@@ -88174,23 +88413,30 @@ function HomeAssistantCommentToggle({
       }
     }, "隠す"));
   }
-  return React.createElement("button", {
-    type: "button",
-    "data-home-assistant-toggle": "show",
-    onClick: () => HOME_ASSISTANT_COMMENT_STORE.setOn(true),
-    "aria-label": `${who.name}のコメントを出す`,
-    className: "mh-home-assistant-show active:scale-95"
-  }, React.createElement(AssistantFace, {
-    who: who,
-    size: 40,
-    accent: color
-  }), React.createElement("span", {
-    className: "mh-home-assistant-show-mark",
-    style: {
-      borderColor: color
-    },
-    "aria-hidden": "true"
-  }, "💬"));
+  return (React.createElement("button", {
+      type: "button",
+      "data-home-assistant-toggle": "show",
+      "data-home-peer-waiting": peer.waiting ? '1' : undefined,
+      onClick: () => peer.waiting ? peer.open() : HOME_ASSISTANT_COMMENT_STORE.setOn(true),
+      "aria-label": peer.waiting ? '助手どうしの会話を見る' : `${who.name}のコメントを出す`,
+      className: "mh-home-assistant-show active:scale-95"
+    }, React.createElement(AssistantFace, {
+      who: who,
+      size: 40,
+      accent: color
+    }), peer.waiting ? React.createElement("span", {
+      className: "mh-home-assistant-show-mark",
+      "data-home-peer-talk-mark": true,
+      style: {
+        borderColor: color
+      },
+      "aria-hidden": "true"
+    }, "💬") : news ? React.createElement("span", {
+      className: "mh-home-assistant-news-dot",
+      "data-home-assistant-news": true,
+      "aria-hidden": "true"
+    }) : null)
+  );
 }
 function KikiIntroOverlay({
   kikiIntroStep,
@@ -131205,11 +131451,34 @@ function AssistantPeerTalk({
   const st = useAssistantPeerState();
   const auto = useAssistantPeerAuto();
   const [cur, setCur] = React.useState(null);
+  const [homeOpenedId, setHomeOpenedId] = React.useState(null);
+  const homeWaiting = scene === 'home' && !!cur && !cur.replay && homeOpenedId !== cur.talk.id;
   React.useEffect(() => {
-    if (ASSISTANT_PEER_STORE.state.talking !== !!cur) ASSISTANT_PEER_STORE.set({
-      talking: !!cur
+    if (!!ASSISTANT_PEER_STORE.state.homeWaiting !== homeWaiting) ASSISTANT_PEER_STORE.set({
+      homeWaiting
     });
-  }, [!!cur]);
+  }, [homeWaiting]);
+  React.useEffect(() => () => {
+    if (ASSISTANT_PEER_STORE.state.homeWaiting) ASSISTANT_PEER_STORE.set({
+      homeWaiting: false
+    });
+  }, []);
+  const homeOpenRef = React.useRef(st.homeOpenAt || 0);
+  React.useEffect(() => {
+    const at = st.homeOpenAt || 0;
+    if (at === homeOpenRef.current) return;
+    homeOpenRef.current = at;
+    if (cur && !cur.replay) {
+      setHomeOpenedId(cur.talk.id);
+      setPeerFolded(false);
+    }
+  }, [st.homeOpenAt]);
+  const talkingNow = !!cur && !homeWaiting;
+  React.useEffect(() => {
+    if (ASSISTANT_PEER_STORE.state.talking !== talkingNow) ASSISTANT_PEER_STORE.set({
+      talking: talkingNow
+    });
+  }, [talkingNow]);
   const decidedRef = React.useRef('');
   const metKey = (metIds || []).join(',');
   React.useEffect(() => {
@@ -131397,6 +131666,7 @@ function AssistantPeerTalk({
       className: "mx-auto w-fit rounded-full border border-pink-300/60 bg-slate-950/90 px-4 py-1.5 text-[11px] font-black text-pink-200 shadow-xl"
     }, toast.kind === 'daily' ? `今日のペア達成！ ${a.name}と${b.name}がもっと仲良くなりました` : toast.kind === 'makeup' ? `${a.name}と${b.name}が仲直りしました` : assistantPeerLifeOn() ? `${a.name}と${b.name}の友情Lvが ${toast.level}${stage ? `「${assistantPeerStageName(stage)}」` : ''}になりました` : `${a.name}と${b.name}の仲良し度が Lv${toast.level}${stage ? `「${stage.name}」` : ''}になりました`));
   }
+  if (homeWaiting) return null;
   if (peerFolded && !cur.replay) {
     return wrap(React.createElement("div", {
       "data-assistant-peer-folded": true,
@@ -141402,9 +141672,10 @@ function AssistantLifeHomeFaces({
     const r = rects[f];
     const shown = list.slice(0, 3);
     const extra = list.length - shown.length;
-    const rowW = size + Math.max(0, shown.length - 1) * step + (extra > 0 ? 22 : 0) + 6;
-    const left = r.x + r.w - rowW + 6;
-    const top = r.y - 9;
+    void step;
+    const rowW = 22;
+    const left = r.x + r.w - rowW - 1;
+    const top = r.y + 1;
     const names = list.map(id => {
       const who = assistantById(id);
       return who ? who.name : id;
@@ -141419,22 +141690,27 @@ function AssistantLifeHomeFaces({
         left,
         top,
         width: rowW,
-        height: size + 2
+        height: rowW
       }
-    }, React.createElement("button", {
-      type: "button",
+    }, React.createElement("span", {
+      role: "img",
       "data-assistant-life-home-badge": f,
-      "aria-label": `${names}がいます。助手ライフを開く`,
-      onClick: () => {
-        ASSISTANT_LIFE_STORE.set({
-          open: true,
-          focus: shown[0]
-        });
-      },
-      className: "pointer-events-auto flex items-center rounded-full bg-slate-950/70 px-[3px] shadow active:scale-95",
+      "aria-label": `${names}がいます`,
+      className: "pointer-events-none relative flex items-center justify-center rounded-full",
       style: {
-        height: size + 2
+        width: rowW,
+        height: rowW
       }
+    }, React.createElement("span", {
+      "data-assistant-life-home-dot": true,
+      "aria-hidden": "true",
+      className: "block rounded-full border-2 border-white bg-rose-500 shadow",
+      style: {
+        width: 14,
+        height: 14
+      }
+    }), React.createElement("span", {
+      className: "sr-only"
     }, shown.map((id, i) => {
       const who = assistantById(id);
       if (!who) return null;
@@ -141470,17 +141746,18 @@ function AssistantLifeHomeFaces({
         fontSize: 9,
         lineHeight: '14px'
       }
-    }, "+", extra)));
+    }, "+", extra))));
   }), rects.card && cardUp && React.createElement("span", {
     "data-assistant-life-home-card-up": true,
     className: "pointer-events-none fixed rounded-full bg-amber-300 font-black text-slate-950 shadow",
     style: {
       zIndex: 40,
-      left: Math.max(2, rects.card.x - 4),
-      top: rects.card.y - 8,
-      fontSize: 9,
-      lineHeight: '15px',
-      padding: '0 5px'
+      left: rects.card.x + 4,
+      top: rects.card.y + 4,
+      fontSize: 11,
+      lineHeight: 1.35,
+      padding: '2px 7px',
+      border: '1px solid #fff3c4'
     }
   }, "UP"), rects.life && typeof AssistantLifeFriendHomeBadge === 'function' && React.createElement(AssistantLifeFriendHomeBadge, {
     rect: rects.life,
@@ -143165,7 +143442,8 @@ function AssistantLifeMapRow({
   close = () => {},
   onRoom = null,
   onBeat = null,
-  onCard = null
+  onCard = null,
+  noSuccess = false
 }) {
   const a = assistantById(id);
   if (!a) return null;
@@ -143207,7 +143485,7 @@ function AssistantLifeMapRow({
     style: JA_LABEL_STYLE
   }, jaWrap(String(bi.label || '⚔ マスモンで対戦(β)').replace('で対戦', 'で\u200B対戦')));
   let si = null;
-  if (place === 'battle') {
+  if (place === 'battle' && !noSuccess) {
     try {
       si = typeof assistantLifeSuccessRowInfo === 'function' ? assistantLifeSuccessRowInfo(id) : null;
     } catch (_) {
@@ -143433,6 +143711,7 @@ function AssistantLifeBattleHall({
     life: life,
     cheerMsg: cheerMsg,
     setCheerMsg: setCheerMsg,
+    noSuccess: true,
     onRoom: rid => {
       try {
         ASSISTANT_LIFE_STORE.set({
