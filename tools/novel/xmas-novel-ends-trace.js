@@ -51,6 +51,13 @@ const ROUTES = [
   { name: '第3章、一人で切れた電話の線をたどる', want: 'END-X8', from: 'A3', picks: { A3: 'danger' } },
   { name: '第3章、ドラを部屋に閉じこめる', want: 'END-A2', from: 'A3b', picks: { A3b: 'go:C3-D' }, panel: { shirase: 'missing' } },
   { name: '第4章の夜、一人で子守歌を確かめに行く', want: 'END-X7', from: 'A4', picks: { A4: 'danger' } },
+  // r1126-108 第3弾: 真ルートの終章の選びまちがい(真相のその先)・おまけ2つ・寄り道3つ(どれも①が今までの道)
+  { name: '終章、走って追いかけて腕をつかむ', want: 'END-G2', from: 'A9', picks: { Q7a: 'kyuko', A9: 'danger' } },
+  { name: '終章、名前を大声で呼び続ける', want: 'END-G2', from: 'A9', picks: { Q7a: 'kyuko', A9: 'go:C9-Y' }, short: true },
+  { name: '第7章 A7b で「みゅあの助手の勘」', want: 'END-O3', from: 'A7b', picks: { A7b: 'opt:1' }, only: 'atsu' },
+  { name: '第7章 A7b は出ない(ソラシド派)', want: 'END-M4', from: 'Q7a', picks: { Q7a: 'P' }, only: 'sorashido', noQ: 'A7b', short: true },
+  { name: '真グッドのあと、A1 で「今日はゲームをやめて」', want: 'END-O4', from: 'A1', picks: { A1: 'opt:3' }, seen: ['END-G'] },
+  { name: '寄り道の2つめ(イチーカ・こっそり・ドラの声)を通って真グッドへ', want: 'END-G', from: 'A4y', picks: { A4y: 'opt:1', A6y: 'opt:1', A8y: 'go:C8-Z', Q7a: 'kyuko' }, short: true },
 ];
 
 const run = (side, route) => {

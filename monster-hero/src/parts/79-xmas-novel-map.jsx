@@ -33,6 +33,7 @@ const XMAS_NOVEL_MAP_CSS = `
 .mh-nvm-mk[data-k="action"] > span { transform: rotate(-45deg); }
 .mh-nvm-mk[data-k="present"] { border-radius: 50%; background: #173a2a; border: 2px solid #8fd6a8; }
 .mh-nvm-mk[data-k="person"] { border-radius: 6px; background: #3a2a5a; border: 2px solid #c7b2ff; }
+.mh-nvm-mk[data-k="detour"] { border-radius: 4px; background: #1d2a44; border: 2px dashed #9fb4e0; color: #cfdcff; }
 .mh-nvm-it[data-dark] .mh-nvm-mk { background: #1a2342; border-color: #3a4670; color: #5d6a90; }
 .mh-nvm-it[data-now] .mh-nvm-mk { box-shadow: 0 0 0 3px #fff, 0 0 16px 4px rgba(255,90,90,.9); }
 .mh-nvm-lab { min-width: 0; flex: 1; font-size: 12.5px; font-weight: 800; line-height: 1.35; }
@@ -167,8 +168,8 @@ const XmasNovelMap = ({ script, save, route, playerName, onRedo, onBack, onClose
     const q = n.q;
     const first = save && save.first && save.first[n.id];
     const sub = !lit ? 'まだ読んでいない' : isNow ? '考え中' : q.kind === 'present' && first ? (first.f ? '一発で正解' : '外して仲間が拾った') : n.id === 'A1' ? (side === 2 ? 'ソラシド派' : 'あつ派') : '';
-    const kind = n.id === 'A1' ? 'person' : q.kind; // 派を選ぶ所は名指しの印
-    const mark = kind === 'action' ? '◆' : kind === 'present' ? (xmasNovelMapNum(q.label) || '？') : '✦';
+    const kind = n.id === 'A1' ? 'person' : q.detour ? 'detour' : q.kind; // 派を選ぶ所は名指しの印・寄り道は点線の□(r1126-108 第3弾)
+    const mark = kind === 'detour' ? '□' : kind === 'action' ? '◆' : kind === 'present' ? (xmasNovelMapNum(q.label) || '？') : '✦';
     return (
       <div key={`q-${n.id}`} className="mh-nvm-it" data-xmas-novel-map-node={n.id} data-dark={lit ? undefined : ''} data-now={isNow ? '' : undefined}>
         <div className="mh-nvm-mk" data-k={kind}><span>{lit ? mark : '？'}</span></div>
@@ -194,7 +195,7 @@ const XmasNovelMap = ({ script, save, route, playerName, onRedo, onBack, onClose
           <div className="mh-nvm-ends" data-xmas-novel-map-count>エンド {seenCount}/{model.endTotal}</div>
         </div>
         {route && route.back && <button type="button" className="mh-nvm-back" data-xmas-novel-map-back onClick={onBack}>読み直す前の続きへ戻る</button>}
-        <div className="mh-nvm-legend"><span>◆ 行動の選択</span><span>① 推理の問い</span><span>✦ 名指し</span><span>● エンド</span><span>↺ ここから読み直す</span></div>
+        <div className="mh-nvm-legend"><span>◆ 行動の選択</span><span>① 推理の問い</span><span>✦ 名指し</span><span>□ 寄り道</span><span>● エンド</span><span>↺ ここから読み直す</span></div>
       </div>
       <div className="mh-nvm-body">
         {XMAS_NOVEL_MAP_LANES.map((lane) => (

@@ -246,5 +246,9 @@ grant execute on function public.xmas_novel_rank_submit(text, text, jsonb) to an
 insert into public.xmas_novel_end_ids (event_id, end_id, kind) values
   ('xmas_novel_2026', 'END-X6', 'forced'), ('xmas_novel_2026', 'END-X7', 'forced'), ('xmas_novel_2026', 'END-X8', 'forced'), ('xmas_novel_2026', 'END-A2', 'another')
 on conflict (event_id, end_id) do nothing;
+-- 第3弾(3つ・合わせて30)
+insert into public.xmas_novel_end_ids (event_id, end_id, kind) values
+  ('xmas_novel_2026', 'END-G2', 'truebad'), ('xmas_novel_2026', 'END-O3', 'omake'), ('xmas_novel_2026', 'END-O4', 'omake')
+on conflict (event_id, end_id) do nothing;
 -- ずるの疑いのある人を隠す(消さない)
 -- update public.xmas_novel_players set hidden = true where event_id = 'xmas_novel_2026' and user_name = '…';

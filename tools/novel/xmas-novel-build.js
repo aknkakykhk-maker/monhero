@@ -42,6 +42,8 @@ const FX_TAGS = { 赤いにじみ: 'bleed', 倒れた影: 'fallen', 赤く光る
 const SOUND_MARKS = { 鐘: 'bell', 時計: 'tick', 柱時計: 'tick', 手紙: 'letter' };
 // (手紙) … 紙の手紙を赤い字で浮かべる(文の「／」で改行・r1126-058)
 const ENDING_KIND = { G: 'good', N: 'normal', B: 'bad', A: 'another', X: 'forced', M: 'accuse', K: 'accuse', O: 'omake', L: 'unsolved' }; // K・L は r1126-108(動機ちがいの名指し・迷宮入り)
+// ID で決まる種類(先頭の英字と違う物)。END-G2 は真ルートの終章の選びまちがい「真相のその先」(r1126-108 第3弾)
+const ENDING_KIND_ID = { 'END-G2': 'truebad' };
 const CHAPTER_NO = { 序章: 0, 終章: 9 };
 
 const warn = [];
@@ -169,7 +171,7 @@ const parseSceneHead = (cells, chapter, seq) => {
     // 名前は見出しの題か、「### END-G 真グッド「…」」の小見出しから
     const src = title || (chapter.endingNames && chapter.endingNames[id]) || '';
     const nameM = src.match(/^([^「『]*?)\s*[「『]([^」』]*)[」』]/);
-    scene.ending = { id, kind: ENDING_KIND[em[1]] || 'normal', label: nameM ? nameM[1].trim() : '', name: nameM ? nameM[2] : src };
+    scene.ending = { id, kind: ENDING_KIND_ID[id] || ENDING_KIND[em[1]] || 'normal', label: nameM ? nameM[1].trim() : '', name: nameM ? nameM[2] : src };
   }
   return scene;
 };
@@ -223,6 +225,8 @@ const parseQuestion = (id, raw) => {
   const label = (tagText.match(/【([^】]*)】/) || [])[1];
   if (label) q.label = label.replace(/・?一発目で決まる[\s:：]*(f_\w+)?/, '').replace(/・?人を選ぶ/, '').replace(/・?動機を選ぶ/, '').trim();
   if (/最後の問い|1回目の推理/.test(tagText)) q.group = 'final';
+  // 【寄り道】… エンドの無い小さな分かれ道(数行で元の道へ戻る)。地図に点線の□で出す(r1126-108 第3弾)
+  if (/【寄り道】/.test(tagText)) q.detour = true;
   if (!/^A/.test(id) && !NOSCORE.test(tagText)) q.score = true;
   if (firstM) { q.first = firstM[1] || null; if (!firstM[1]) note(id, '【一発目で決まる】のフラグの名前が無い(【一発目で決まる f_kuroba】の形)'); }
   if (last.note) { q.route = parseRoutes(last.note, id); q.once = true; }
@@ -432,7 +436,7 @@ const parseScript = (md, srcName) => {
         chapters.push(chapter); scene = null; lastQ = null; seq = 0;
         continue;
       }
-      const cm = t.replace(/^後半\s*/, '').replace(/^(強制バッド|名指しエンド|おまけ|迷宮入り).*$/, 'エンディング').match(/^(序章|終章|第\s*(\d+)\s*章|エンディング|カーテンコール)\s*(?:[～〜]\s*([^～〜]+?)\s*[～〜])?/);
+      const cm = t.replace(/^後半\s*/, '').replace(/^(強制バッド|名指しエンド|おまけ|迷宮入り|真相のその先).*$/, 'エンディング').match(/^(序章|終章|第\s*(\d+)\s*章|エンディング|カーテンコール)\s*(?:[～〜]\s*([^～〜]+?)\s*[～〜])?/);
       if (cm) {
         started = true;
         const no = cm[2] ? Number(cm[2]) : CHAPTER_NO[cm[1]];
