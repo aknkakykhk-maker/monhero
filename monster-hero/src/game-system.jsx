@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 40c9a5251cfaefb4
+// generated-sha256: 4402c7a80c57c304
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -72650,7 +72650,7 @@ const XMAS_NOVEL_RANK_SHOW = 100;
 const XMAS_NOVEL_RANK_QIDS = ['Q2a', 'Q3a', 'Q4a', 'Q5a', 'Q6a', 'Q6b', 'Q7a', 'Q7m'];
 const XMAS_NOVEL_RANK_TABS = [
   { id: 'ends', label: '見たエンド', view: 'xmas_novel_rank_ends', col: 'ends', order: 'place.asc,ends_at.asc', rule: ['見たエンディングの種類の数。', '同じ数なら、先にその数に届いた人が上'] },
-  { id: 'perfect', label: '一発正解', view: 'xmas_novel_rank_perfect', col: 'perfect', order: 'place.asc,perfect_at.asc', rule: ['推理の問いを、一番はじめに答えたとき', '一発で当てた数(7問)。同じ数なら、', '見たエンディングの多い人が上'] },
+  { id: 'perfect', label: '一発正解', view: 'xmas_novel_rank_perfect', col: 'perfect', order: 'place.asc,perfect_at.asc', rule: ['推理の問いを、1番はじめに答えたとき', '一発で当てた数(7問)。同じ数なら、', '見たエンディングの多い人が上'] },
   { id: 'plays', label: '読んだ回数', view: 'xmas_novel_rank_plays', col: 'plays', order: 'place.asc,plays_at.asc', rule: ['エンディングに着いた回数。', '同じエンディングは、1日(朝4:00区切り)に', '1回まで数える'] },
 ];
 
@@ -72849,7 +72849,7 @@ const XmasNovelRank = ({ script = null, off = false, onBack }) => {
       </div>
       <div className="mh-nvr-rule">{t.rule.map((s, i) => <span key={i}>{s}{i < t.rule.length - 1 ? <br /> : null}</span>)}</div>
       {rows === undefined && <div className="mh-nvr-empty">読みこんでいます……</div>}
-      {rows === null && <div className="mh-nvr-empty" data-xmas-novel-rank-error>ランキングを読みこめませんでした。<br />通信のよい所で、もう一度開いてください。</div>}
+      {rows === null && <div className="mh-nvr-empty" data-xmas-novel-rank-error>ランキングを読みこめませんでした。<br />通信のよい所で、もう1度開いてください。</div>}
       {Array.isArray(rows) && !rows.length && <div className="mh-nvr-empty">まだ、だれも載っていません。</div>}
       {Array.isArray(rows) && rows.map((r, i) => (
         <div key={i} className="mh-nvr-row" data-top={r.place <= 3 ? String(r.place) : undefined} data-xmas-novel-rank-row>

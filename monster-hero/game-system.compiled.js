@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 021c782ccfb44994
+// source-sha256: 973ecfb1fd7ff370
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -133609,7 +133609,7 @@ const XMAS_NOVEL_RANK_TABS = [{
   view: 'xmas_novel_rank_perfect',
   col: 'perfect',
   order: 'place.asc,perfect_at.asc',
-  rule: ['推理の問いを、一番はじめに答えたとき', '一発で当てた数(7問)。同じ数なら、', '見たエンディングの多い人が上']
+  rule: ['推理の問いを、1番はじめに答えたとき', '一発で当てた数(7問)。同じ数なら、', '見たエンディングの多い人が上']
 }, {
   id: 'plays',
   label: '読んだ回数',
@@ -133937,7 +133937,7 @@ const XmasNovelRank = ({
   }, "読みこんでいます……"), rows === null && React.createElement("div", {
     className: "mh-nvr-empty",
     "data-xmas-novel-rank-error": true
-  }, "ランキングを読みこめませんでした。", React.createElement("br", null), "通信のよい所で、もう一度開いてください。"), Array.isArray(rows) && !rows.length && React.createElement("div", {
+  }, "ランキングを読みこめませんでした。", React.createElement("br", null), "通信のよい所で、もう1度開いてください。"), Array.isArray(rows) && !rows.length && React.createElement("div", {
     className: "mh-nvr-empty"
   }, "まだ、だれも載っていません。"), Array.isArray(rows) && rows.map((r, i) => React.createElement("div", {
     key: i,
