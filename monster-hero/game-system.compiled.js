@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9c87c65a1afa3889
+// source-sha256: 35114eff3a9aa796
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -116061,8 +116061,8 @@ const xmasNovelFreshCur = script => {
     panel: {}
   };
 };
-const xmasNovelJump = (script, cur, to) => {
-  const ctx = xmasNovelCtx(script, cur);
+const xmasNovelJump = (script, cur, to, seen) => {
+  const ctx = xmasNovelCtx(script, cur, seen && seen.endings, seen && seen.read);
   if (to === 'END') {
     const s = xmasNovelNextScene(script, {
       id: '__',
@@ -137950,7 +137950,7 @@ const XmasNovelScreen = ({
     if (!next.row && next.ending) {
       const scene = next.scene;
       const ending = next.ending;
-      const after = !replayRef.current && scene && scene.next && !xmasNovelSceneById(S, scene.next) && xmasNovelFindRow(S, scene.next) ? xmasNovelJump(S, next.cur, scene.next) : null;
+      const after = !replayRef.current && scene && scene.next && !xmasNovelSceneById(S, scene.next) && xmasNovelFindRow(S, scene.next) ? xmasNovelJump(S, next.cur, scene.next, xmasNovelSeenOf(saveRef.current)) : null;
       if (replayRef.current) {
         setSt(next);
         setSkip(false);
@@ -138216,7 +138216,8 @@ const XmasNovelScreen = ({
       return;
     }
     if (then && then.to) {
-      arrive(xmasNovelSettle(S, xmasNovelJump(S, cur, then.to), xmasNovelSeenOf(saveRef.current)));
+      const seen = xmasNovelSeenOf(saveRef.current);
+      arrive(xmasNovelSettle(S, xmasNovelJump(S, cur, then.to, seen), seen));
       return;
     }
     arrive(xmasNovelStep(S, cur, xmasNovelSeenOf(saveRef.current)));
