@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7fc278f4e8ccd6cf
+// source-sha256: d2bd00bfaf923c57
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -11441,6 +11441,261 @@ const Audio_ = (() => {
           sparkle.dispose();
         } catch (e) {}
       }, 2200);
+    },
+    nvTick: async high => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const s = new Tone.MetalSynth({
+        frequency: high ? 340 : 240,
+        envelope: {
+          attack: 0.001,
+          decay: 0.035,
+          release: 0.02
+        },
+        harmonicity: 3.1,
+        modulationIndex: 10,
+        resonance: high ? 2600 : 1800,
+        octaves: 0.6,
+        volume: -32
+      }).connect(seBus);
+      s.triggerAttackRelease('64n', t);
+      const k = new Tone.MembraneSynth({
+        pitchDecay: 0.01,
+        octaves: 2,
+        envelope: {
+          attack: 0.001,
+          decay: 0.05,
+          sustain: 0
+        },
+        volume: -30
+      }).connect(seBus);
+      k.triggerAttackRelease(high ? 'G2' : 'D2', '64n', t);
+      setTimeout(() => {
+        try {
+          s.dispose();
+          k.dispose();
+        } catch (e) {}
+      }, 300);
+    },
+    nvCreak: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const f = new Tone.Filter(700, 'lowpass').connect(seBus);
+      const s = new Tone.Synth({
+        oscillator: {
+          type: 'sawtooth'
+        },
+        envelope: {
+          attack: 0.08,
+          decay: 0.7,
+          sustain: 0,
+          release: 0.2
+        },
+        volume: -22
+      }).connect(f);
+      s.triggerAttackRelease('D3', '4n', t);
+      try {
+        s.frequency.rampTo('G2', 0.7, t);
+      } catch (e) {}
+      setTimeout(() => {
+        try {
+          s.dispose();
+          f.dispose();
+        } catch (e) {}
+      }, 1400);
+    },
+    nvThud: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const s = new Tone.MembraneSynth({
+        pitchDecay: 0.05,
+        octaves: 4,
+        envelope: {
+          attack: 0.002,
+          decay: 0.35,
+          sustain: 0
+        },
+        volume: -12
+      }).connect(seBus);
+      s.triggerAttackRelease('E1', '8n', t);
+      const n = new Tone.NoiseSynth({
+        noise: {
+          type: 'brown'
+        },
+        envelope: {
+          attack: 0.002,
+          decay: 0.15,
+          sustain: 0
+        },
+        volume: -20
+      }).connect(seBus);
+      n.triggerAttackRelease('16n', t);
+      setTimeout(() => {
+        try {
+          s.dispose();
+          n.dispose();
+        } catch (e) {}
+      }, 800);
+    },
+    nvWind: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const f = new Tone.Filter(520, 'lowpass').connect(seBus);
+      const n = new Tone.NoiseSynth({
+        noise: {
+          type: 'pink'
+        },
+        envelope: {
+          attack: 0.9,
+          decay: 0.4,
+          sustain: 0.6,
+          release: 1.2
+        },
+        volume: -24
+      }).connect(f);
+      n.triggerAttackRelease(1.2, t);
+      try {
+        f.frequency.rampTo(900, 0.9, t);
+        f.frequency.rampTo(380, 1.4, t + 0.9);
+      } catch (e) {}
+      setTimeout(() => {
+        try {
+          n.dispose();
+          f.dispose();
+        } catch (e) {}
+      }, 3200);
+    },
+    nvFire: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const f = new Tone.Filter(1800, 'bandpass').connect(seBus);
+      const n = new Tone.NoiseSynth({
+        noise: {
+          type: 'white'
+        },
+        envelope: {
+          attack: 0.001,
+          decay: 0.025,
+          sustain: 0
+        },
+        volume: -24
+      }).connect(f);
+      [0, 0.21, 0.37, 0.8, 1.05, 1.5].forEach(d => n.triggerAttackRelease('64n', t + d));
+      setTimeout(() => {
+        try {
+          n.dispose();
+          f.dispose();
+        } catch (e) {}
+      }, 2100);
+    },
+    nvRustle: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const f = new Tone.Filter(2600, 'highpass').connect(seBus);
+      const n = new Tone.NoiseSynth({
+        noise: {
+          type: 'white'
+        },
+        envelope: {
+          attack: 0.01,
+          decay: 0.12,
+          sustain: 0
+        },
+        volume: -28
+      }).connect(f);
+      n.triggerAttackRelease('16n', t);
+      n.triggerAttackRelease('32n', t + 0.14);
+      setTimeout(() => {
+        try {
+          n.dispose();
+          f.dispose();
+        } catch (e) {}
+      }, 600);
+    },
+    nvGlass: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const s = new Tone.MetalSynth({
+        frequency: 260,
+        envelope: {
+          attack: 0.001,
+          decay: 0.32,
+          release: 0.1
+        },
+        harmonicity: 7.1,
+        modulationIndex: 20,
+        resonance: 3200,
+        octaves: 1,
+        volume: -26
+      }).connect(reverb);
+      s.triggerAttackRelease('16n', t);
+      setTimeout(() => {
+        try {
+          s.dispose();
+        } catch (e) {}
+      }, 900);
+    },
+    nvDread: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const v = new Tone.PolySynth(Tone.Synth, {
+        oscillator: {
+          type: 'sine'
+        },
+        envelope: {
+          attack: 0.35,
+          decay: 0.6,
+          sustain: 0.4,
+          release: 1.6
+        },
+        volume: -20
+      }).connect(reverb);
+      v.triggerAttackRelease(['C2', 'C#2', 'G2'], 1.1, t);
+      setTimeout(() => {
+        try {
+          v.dispose();
+        } catch (e) {}
+      }, 3600);
+    },
+    nvMusicBox: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const s = new Tone.PolySynth(Tone.Synth, {
+        oscillator: {
+          type: 'triangle'
+        },
+        envelope: {
+          attack: 0.002,
+          decay: 0.9,
+          sustain: 0,
+          release: 0.6
+        },
+        volume: -24
+      }).connect(reverb);
+      [[0, 'E5'], [0.42, 'D5'], [0.84, 'C5'], [1.4, 'A4']].forEach(([d, n]) => s.triggerAttackRelease(n, '4n', t + d));
+      setTimeout(() => {
+        try {
+          s.dispose();
+        } catch (e) {}
+      }, 3200);
     }
   };
   const uiTap = async () => {
@@ -127601,7 +127856,35 @@ const XMAS_NOVEL_CSS = `
 /* 血を見せない影(白瀬など)は、真っ黒で見えなかった(社長「白瀬の死亡シーンって出てた？」)。冷たい光を当て、縁を白く光らせて形を見せる */
 .mh-nv-body.noblood .mh-nv-body-dim { background: radial-gradient(42% 30% at var(--fx, 50%) var(--fy, 74%), rgba(150,180,235,.30), rgba(150,180,235,0) 75%), radial-gradient(120% 90% at 50% 40%, rgba(6,10,34,.35), rgba(0,0,4,.88)) !important; }
 .mh-nv-body.noblood .mh-nv-body-lie img { filter: brightness(0) drop-shadow(0 0 1.5px rgba(225,235,255,.95)) drop-shadow(0 0 3px rgba(200,215,250,.6)) drop-shadow(0 0 20px rgba(140,170,230,.55)) !important; }
+/* 人物の並びの置き場(登場人物の行・カーテンコール): 上の帯(ボタンと章の題)と文字の箱のあいだの、まん中(台帳 r1126-094 追記4。上に寄せた枠が章の題の帯にかぶっていた) */
+.mh-nv-panelwrap { position: absolute; left: 0; right: 0; top: calc(max(8px, env(safe-area-inset-top)) + 54px); bottom: 172px; z-index: 5; display: flex; align-items: center; justify-content: center; padding: 0 3vw; pointer-events: none; }
+.mh-nv-panelin { width: min(100%, 640px); max-height: 100%; }
+.mh-nv-panelbox { border-radius: 16px; padding: 12px 12px 14px; background: radial-gradient(120% 90% at 50% 30%, rgba(14,20,44,.92), rgba(3,5,14,.95)); box-shadow: 0 0 0 1px rgba(232,196,106,.75), 0 18px 40px rgba(0,0,0,.6); }
+.mh-nv-panelhead { text-align: center; font-size: 17px; font-weight: 900; letter-spacing: .5em; padding-left: .5em; }
+.mh-nv-panelrule { height: 1px; margin: 8px auto 10px; width: 70%; background: linear-gradient(90deg, transparent, #e8c46a, transparent); }
+.mh-nv-cast.big .mh-nv-person { font-size: 11px; }
+@media (orientation: portrait) {
+  .mh-nv-panelwrap { top: calc(max(8px, env(safe-area-inset-top)) + 80px); }
+  .mh-nv-cast.big { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .mh-nv-cast.big .mh-nv-person { font-size: 12px; padding: 5px 3px 6px; }
+}
+@media (orientation: landscape) and (max-height: 560px) { .mh-nv-panelwrap { bottom: 132px; padding: 0 2vw; } .mh-nv-panelin { width: min(100%, 760px); } .mh-nv-panelbox { padding: 8px 10px 10px; } .mh-nv-panelhead { font-size: 14px; } .mh-nv-panelrule { margin: 5px auto 7px; } }
+/* 紹介の動き: 枠が暗がりから開き → 見出しの字の間が詰まり → 1人ずつ(0.16秒おき)影の姿から色が戻って名前と入る → そろったら全員に金の光が1度走る */
+.mh-nv-panelbox.intro { animation: mh-nv-panel-open .7s ease-out both; }
+.mh-nv-panelbox.intro .mh-nv-panelhead { animation: mh-nv-card-label 1.1s ease-out both; }
+.mh-nv-panelbox.intro .mh-nv-panelrule { animation: mh-nv-card-rule .9s ease-out .25s both; }
+.mh-nv-panelbox.intro .mh-nv-person { animation: mh-nv-cast-in .75s cubic-bezier(.2,.7,.3,1) calc(.55s + var(--i, 0) * .16s) both, mh-nv-cast-glow 1.2s ease-out 2.75s both; }
+.mh-nv-panelbox.intro .mh-nv-person .ph img { animation: mh-nv-cast-face .75s ease-out calc(.55s + var(--i, 0) * .16s) both; }
+.mh-nv-panelbox.intro.fast .mh-nv-person { animation: mh-nv-cast-in .3s ease-out calc(.1s + var(--i, 0) * .04s) both, mh-nv-cast-glow .8s ease-out .7s both; }
+.mh-nv-panelbox.intro.fast .mh-nv-person .ph img { animation: mh-nv-cast-face .3s ease-out calc(.1s + var(--i, 0) * .04s) both; }
+.mh-nv-panelbox.intro.fast, .mh-nv-panelbox.intro.fast .mh-nv-panelhead, .mh-nv-panelbox.intro.fast .mh-nv-panelrule { animation-duration: .3s; animation-delay: 0s; }
+.mh-nv-panelbox.intro.done, .mh-nv-panelbox.intro.done *, .mh-nv-panelbox.intro.done .mh-nv-person .ph img { animation: none !important; }
+@keyframes mh-nv-panel-open { from { opacity: 0; transform: scale(.96); filter: brightness(.3); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes mh-nv-cast-in { 0% { opacity: 0; transform: translateY(12px) scale(.94); } 60% { opacity: 1; } 100% { opacity: 1; transform: none; } }
+@keyframes mh-nv-cast-face { 0% { filter: brightness(0) blur(3px); } 45% { filter: brightness(0) blur(0); } 100% { filter: none; } }
+@keyframes mh-nv-cast-glow { 0% { box-shadow: 0 0 0 1px rgba(232,196,106,.3); } 35% { box-shadow: 0 0 0 1px rgba(232,196,106,.95), 0 0 14px rgba(232,196,106,.35); } 100% { box-shadow: 0 0 0 1px rgba(232,196,106,.3); } }
 @media (prefers-reduced-motion: reduce) {
+  .mh-nv-panelbox.intro, .mh-nv-panelbox.intro * { animation: none !important; }
   .mh-nv-veil { animation-duration: .01s !important; }
   .mh-nv-sw, .mh-nv-sw::after, .mh-nv-bg.in-place, .mh-nv-bg.in-time, .mh-nv-bg.in-open, .mh-nv-bg.in-past, .mh-nv-card.open *, .mh-nv-fig.enter-first img, .mh-nv-fig.enter-swap img, .mh-nv-fig.enter-face img, .mh-nv-intro, .mh-nv-intro * { animation-duration: .01s !important; animation-delay: 0s !important; }
 }
@@ -128868,10 +129151,11 @@ const XmasNovelBloodCross = () => React.createElement("svg", {
 const XmasNovelCast = ({
   states = {},
   changed = [],
-  onPick = null
+  onPick = null,
+  big = false
 }) => React.createElement("div", {
-  className: "mh-nv-cast"
-}, XMAS_NOVEL_CAST.map(c => {
+  className: `mh-nv-cast${big ? ' big' : ''}`
+}, XMAS_NOVEL_CAST.map((c, i) => {
   const st = states[c.id] || '';
   const fresh = changed.includes(c.id);
   const face = xmasNovelFaceOf(c.id);
@@ -128911,7 +129195,10 @@ const XmasNovelCast = ({
     "data-xmas-novel-cast": c.id,
     "data-st": st || undefined,
     "data-fresh": fresh ? '' : undefined,
-    className: "mh-nv-person"
+    className: "mh-nv-person",
+    style: {
+      '--i': i
+    }
   }, inner);
 }));
 const xmasNovelPanelStates = (panel, row) => {
@@ -128982,14 +129269,113 @@ const XMAS_NOVEL_SE_SEQ = Object.freeze({
   tick: {
     gap: 520,
     hold: 300,
-    play: ['trainingDice']
+    play: [['nvTick', true]]
   },
   letter: {
     gap: 0,
     hold: 1500,
-    play: ['trainingBad', 'trainingFail']
+    play: ['nvDread']
+  },
+  knock: {
+    gap: 460,
+    hold: 300,
+    play: ['nvThud']
+  },
+  thud: {
+    gap: 420,
+    hold: 250,
+    play: ['nvThud']
+  },
+  creak: {
+    gap: 0,
+    hold: 800,
+    play: ['nvCreak']
+  },
+  creakGlass: {
+    gap: 0,
+    hold: 1200,
+    play: ['nvCreak', ['nvGlass', undefined, 650]]
+  },
+  glass: {
+    gap: 0,
+    hold: 500,
+    play: ['nvGlass']
+  },
+  windGlass: {
+    gap: 0,
+    hold: 1500,
+    play: ['nvWind', ['nvGlass', undefined, 500], ['nvGlass', undefined, 1100]]
+  },
+  slamLock: {
+    gap: 0,
+    hold: 700,
+    play: ['nvThud', ['nvTick', true, 380], ['nvTick', false, 470]]
+  },
+  lock: {
+    gap: 0,
+    hold: 400,
+    play: [['nvTick', true], ['nvTick', false, 90]]
+  },
+  rustle: {
+    gap: 0,
+    hold: 400,
+    play: ['nvRustle']
+  },
+  dread: {
+    gap: 0,
+    hold: 1500,
+    play: ['nvDread']
+  },
+  lightsOut: {
+    gap: 0,
+    hold: 1500,
+    play: ['nvThud', ['nvDread', undefined, 120]]
+  },
+  musicbox: {
+    gap: 0,
+    hold: 1800,
+    play: ['nvMusicBox']
+  },
+  clap: {
+    gap: 0,
+    hold: 1200,
+    play: ['nvRustle', ['nvRustle', undefined, 650]]
+  },
+  fire: {
+    gap: 0,
+    hold: 1500,
+    play: ['nvFire']
+  },
+  wind: {
+    gap: 0,
+    hold: 2500,
+    play: ['nvWind']
   }
 });
+const xmasNovelSeKindOf = (kind, row) => {
+  if (kind === 'bell' || kind === 'tick' || kind === 'letter') return kind;
+  if (kind === 'music') return 'musicbox';
+  if (kind === 'clap') return 'clap';
+  const x = String(row && row.x || '');
+  if (/声|悲鳴|叫び|きゃ|うわ|っ！|ピー/.test(x)) return 'dread';
+  if (/ブツン|停電/.test(x)) return 'lightsOut';
+  if (/(ギィ|ギシ)[\s\S]*(ガシャン|割れ)/.test(x)) return 'creakGlass';
+  if (/吹雪[\s\S]*ガラス|ガラス[\s\S]*吹雪/.test(x)) return 'windGlass';
+  if (/ギィ|ギシ|きしむ|開く音/.test(x)) return 'creak';
+  if (/ガシャン|ガラス|カシャ|割れ/.test(x)) return 'glass';
+  if (/バタン[\s\S]*(カチャリ|鍵)/.test(x)) return 'slamLock';
+  if (/カチリ|カチャリ|留め金|鍵の音/.test(x)) return 'lock';
+  if (/封|カサ|プシュッ/.test(x)) return 'rustle';
+  if (/叩く|打ちつける|ドン、ドン|コン、コン/.test(x)) return 'knock';
+  if (/ドサッ|ゴッ|ゴトン|ガタ|重い|ドン/.test(x)) return 'thud';
+  return kind === 'impact' ? 'impact' : 'thud';
+};
+const xmasNovelSeTimesOf = (kind, row, times) => {
+  if (Number.isFinite(times)) return times;
+  if (kind !== 'knock' && kind !== 'thud') return 1;
+  const m = String(row && row.x || '').match(/ドン|コン/g);
+  return kind === 'knock' && m ? Math.min(3, m.length) : 1;
+};
 let xmasNovelSeTimers = [];
 let xmasNovelSeLast = {
   kind: '',
@@ -128999,6 +129385,14 @@ const xmasNovelSeStop = () => {
   xmasNovelSeTimers.forEach(t => clearTimeout(t));
   xmasNovelSeTimers = [];
 };
+const xmasNovelSeFn = name => {
+  try {
+    const fn = (Audio_.fgSe || Audio_.se)[name];
+    return typeof fn === 'function' ? fn : null;
+  } catch (e) {
+    return null;
+  }
+};
 const xmasNovelSeHit = kind => {
   try {
     if (typeof Audio_ === 'undefined' || !Audio_ || !Audio_.se) return;
@@ -129007,25 +129401,40 @@ const xmasNovelSeHit = kind => {
       kind,
       at: Date.now()
     };
-    seq.play.forEach(name => {
-      const fn = (Audio_.fgSe || Audio_.se)[name];
-      if (typeof fn === 'function') fn();
+    seq.play.forEach(item => {
+      const [name, arg, delay] = Array.isArray(item) ? item : [item];
+      const fn = xmasNovelSeFn(name);
+      if (!fn) return;
+      if (delay > 0) xmasNovelSeTimers.push(setTimeout(() => fn(arg), delay));else fn(arg);
     });
   } catch (e) {}
 };
-const xmasNovelRowSe = (kind, times) => {
+const xmasNovelRowSe = (kindIn, times, row) => {
   xmasNovelSeStop();
+  const kind = xmasNovelSeKindOf(kindIn, row);
   const seq = XMAS_NOVEL_SE_SEQ[kind];
   if (!seq) {
     xmasNovelSe(kind);
     return;
   }
-  const n = Math.max(1, Math.min(3, Number.isFinite(times) ? times : 1));
+  const n = Math.max(1, Math.min(3, xmasNovelSeTimesOf(kind, row, times)));
   const wait = xmasNovelSeLast.kind === kind ? Math.max(0, seq.hold - (Date.now() - xmasNovelSeLast.at)) : 0;
   for (let i = 0; i < n; i += 1) {
     const at = wait + i * seq.gap;
     if (at <= 0) xmasNovelSeHit(kind);else xmasNovelSeTimers.push(setTimeout(() => xmasNovelSeHit(kind), at));
   }
+};
+const xmasNovelAmbientOf = scene => {
+  const bg = String(scene && scene.bg || '');
+  if (/吹雪/.test(bg)) return 'wind';
+  if (/暖炉/.test(bg)) return 'fire';
+  if (/雪原|雪の山道/.test(bg)) return 'wind';
+  if (/柱時計/.test(bg)) return 'lock';
+  return '';
+};
+const xmasNovelAmbient = scene => {
+  const k = xmasNovelAmbientOf(scene);
+  if (k) xmasNovelSeHit(k);
 };
 const XMAS_NOVEL_BGM_SCENE = Object.freeze({
   'OUT-0-1': 'original_profile',
@@ -129530,6 +129939,21 @@ const XmasNovelScreen = ({
   const card = cards[0] || null;
   const setCard = c => setCards(list => c ? [...list, c] : []);
   const [sheet, setSheet] = useState(null);
+  useEffect(() => {
+    if (!sheet || typeof sheet !== 'object' || !sheet.q) return undefined;
+    let high = true;
+    const tick = () => {
+      const fn = xmasNovelSeFn('nvTick');
+      if (fn) fn(high);
+      high = !high;
+    };
+    const id = setInterval(tick, 640);
+    const first = setTimeout(tick, 250);
+    return () => {
+      clearInterval(id);
+      clearTimeout(first);
+    };
+  }, [sheet]);
   const [got, setGot] = useState(null);
   const [skip, setSkip] = useState(false);
   const [log, setLog] = useState([]);
@@ -129563,6 +129987,7 @@ const XmasNovelScreen = ({
   };
   const stageRef = useRef(null);
   const pendingQuakeRef = useRef(0);
+  const [panelIntro, setPanelIntro] = useState(null);
   const [titleOk, setTitleOk] = useState(false);
   const fxFast = unread => !unread || !!(saveRef.current && saveRef.current.auto);
   const fireSw = v => {
@@ -129638,7 +130063,8 @@ const XmasNovelScreen = ({
       ...s,
       read: [...s.read, r.k]
     };
-    if (r.t === 'band' && r.se) xmasNovelRowSe(r.se, r.seN);else xmasNovelSeStop();
+    if (r.t === 'band' && r.se) xmasNovelRowSe(r.se, r.seN, r);else xmasNovelSeStop();
+    if (!opts.quiet && r.t === 'band' && !r.se && Array.isArray(r.fx) && r.fx.includes('fallen')) xmasNovelSeHit('dread');
     pendingQuakeRef.current = 0;
     if (XMAS_NOVEL_SHAKE[r.id] && !skip) {
       if (opts.held) pendingQuakeRef.current = XMAS_NOVEL_SHAKE[r.id];else xmasNovelQuake(stageRef.current, XMAS_NOVEL_SHAKE[r.id]);
@@ -129689,6 +130115,12 @@ const XmasNovelScreen = ({
       lastBgm.current = XMAS_NOVEL_VOCAL_BGM[r.bgm] || r.bgm;
       xmasNovelBgm(r.bgm);
     }
+    if (r.t === 'panel' && !r.stamp && /登場人物/.test(String(r.x || ''))) setPanelIntro({
+      id: r.id,
+      fast: !unreadRef.current || !!(saveRef.current && saveRef.current.auto),
+      done: !!skip,
+      at: Date.now()
+    });else if (r.t !== 'panel') setPanelIntro(null);
     if (r.t === 'clue') {
       setGot({
         n: r.clue,
@@ -129774,6 +130206,7 @@ const XmasNovelScreen = ({
       lastBodyRef.current = '';
       setTitleOk(xmasNovelSceneDone(scene, s.read));
     }
+    if (scene && (!lastSceneRef.current || lastSceneRef.current.id !== scene.id)) xmasNovelAmbient(scene);
     const transitNow = !!(scene && lastSceneRef.current && !!lastSceneRef.current.outside !== !!scene.outside);
     if (transitNow) {
       setTransit({
@@ -129893,6 +130326,7 @@ const XmasNovelScreen = ({
     setReveal(null);
     pendingFxRef.current = null;
     lastBodyRef.current = '';
+    setPanelIntro(null);
     setMode('read');
     arrive(xmasNovelSettle(S, cur));
   };
@@ -129920,6 +130354,13 @@ const XmasNovelScreen = ({
     if (typing) {
       setShown(text.length);
       if (sw && !sw.fast) setSw(null);
+      return;
+    }
+    if (panelIntro && row && panelIntro.id === row.id && !panelIntro.done && Date.now() - panelIntro.at < (panelIntro.fast ? 900 : 3200)) {
+      setPanelIntro({
+        ...panelIntro,
+        done: true
+      });
       return;
     }
     if (!reply && reveal && row && reveal.id === row.id && reveal.stage === 'dark') {
@@ -130359,23 +130800,29 @@ const XmasNovelScreen = ({
     "data-st": curtain,
     "data-xmas-novel-curtain": curtain
   }), scene && scene.curtain && curtain === 'down' && !(row && row.t === 'panel') && React.createElement("div", {
-    className: "absolute inset-x-0 top-[14%] z-[5] mx-auto w-[min(94vw,640px)]",
+    className: "mh-nv-panelwrap",
     "data-xmas-novel-lineup": true
-  }, React.createElement(XmasNovelCast, {
-    states: {}
-  })), row && row.t === 'panel' && React.createElement("div", {
-    className: "absolute inset-x-0 top-[12%] z-[5] mx-auto w-[min(94vw,640px)] rounded-2xl p-3",
-    "data-xmas-novel-panel": true,
-    style: {
-      background: 'rgba(4,8,22,.88)',
-      boxShadow: '0 0 0 1px #e8c46a'
-    }
   }, React.createElement("div", {
-    className: "mh-nv-serif mh-nv-gold mb-2 text-center text-[15px] font-black"
-  }, "登場人物"), React.createElement(XmasNovelCast, {
+    className: "mh-nv-panelin"
+  }, React.createElement(XmasNovelCast, {
+    states: {},
+    big: true
+  }))), row && row.t === 'panel' && React.createElement("div", {
+    className: "mh-nv-panelwrap"
+  }, React.createElement("div", {
+    key: `panel-${row.id}`,
+    className: `mh-nv-panelin mh-nv-panelbox${panelIntro && panelIntro.id === row.id ? ` intro${panelIntro.fast ? ' fast' : ''}${panelIntro.done ? ' done' : ''}` : ''}`,
+    "data-xmas-novel-panel": true,
+    "data-xmas-novel-intro-panel": panelIntro && panelIntro.id === row.id ? panelIntro.done ? 'done' : 'play' : undefined
+  }, React.createElement("div", {
+    className: "mh-nv-panelhead mh-nv-serif mh-nv-gold"
+  }, "登場人物"), React.createElement("div", {
+    className: "mh-nv-panelrule"
+  }), React.createElement(XmasNovelCast, {
     states: xmasNovelPanelStates(st && st.cur && st.cur.panel, row),
-    changed: st && st.panelChanged || []
-  })), (isLine || isBand || row && (row.t === 'clue' || row.t === 'panel' || row.t === 'q')) && !(card && card.kind !== 'band') && React.createElement("div", {
+    changed: st && st.panelChanged || [],
+    big: true
+  }))), (isLine || isBand || row && (row.t === 'clue' || row.t === 'panel' || row.t === 'q')) && !(card && card.kind !== 'band') && React.createElement("div", {
     className: "mh-nv-box",
     style: {
       zIndex: 5
