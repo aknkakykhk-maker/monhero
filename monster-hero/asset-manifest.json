@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "c63fa50755a2",
-  "packs": {"beat":{"bytes":331569515,"count":175},"battle":{"bytes":842271873,"count":1870},"card":{"bytes":38085297,"count":1046},"all":{"bytes":1211926685,"count":3091},"core":{"bytes":27275512,"count":25}},
+  "id": "794e2ca94d82",
+  "packs": {"beat":{"bytes":331569515,"count":175},"battle":{"bytes":842271873,"count":1870},"card":{"bytes":38085297,"count":1046},"all":{"bytes":1211926685,"count":3091},"core":{"bytes":27279063,"count":25}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"b43d691d4773","size":2833344,"pack":"beat"},
@@ -3096,7 +3096,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"8e267d9f6392","size":322141,"pack":"core"},
+    "tailwind.css": {"v":"d0122fd7e4f8","size":322141,"pack":"core"},
     "data/images/images-ally.js": {"v":"7fcc9331d4b6","size":92225,"pack":"core"},
     "data/images/images-enemy.js": {"v":"fc6148828d29","size":4003,"pack":"core"},
     "data/ally-monsters.js": {"v":"6737b7dced48","size":60894,"pack":"core"},
@@ -3118,6 +3118,6 @@
     "data/assistant-masmon-techs.js": {"v":"353cf73676a6","size":113841,"pack":"core"},
     "data/assistant-life-rel-talks.js": {"v":"cde51ded5428","size":225977,"pack":"core"},
     "data/success-sounds.js": {"v":"9692dd51493a","size":19367,"pack":"core"},
-    "game-system.compiled.js": {"v":"140fb4d981c6","size":13254220,"pack":"core"}
+    "game-system.compiled.js": {"v":"dbf5e984639c","size":13257771,"pack":"core"}
   }
 }
