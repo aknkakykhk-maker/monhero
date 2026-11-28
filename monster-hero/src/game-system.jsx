@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d4b0c098d88ede22
+// generated-sha256: ba1e7672d29cb766
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -6428,6 +6428,12 @@ const Audio_ = (() => {
   //   タップ音もその seBus を通っていたので一緒に消えていた。タップ音だけはこの uiBus を通し、保存してある効果音の音量に従わせる
   //   (超省エネの0は呼ぶ側 60-app.jsx が渡す)。裏のバトルの音は今までどおり seBus のまま
   let uiBus = null, uiSeVolumePct = 0;
+  // 事件簿(ミステリーノベル)の専用の音量(2026-11-28 社長「読んでる最中に専用の音量設定がほしい」・台帳 r1126-116)。
+  //   { bgm, se, amb, clock } はそれぞれ 0〜1 の倍率で、ゲーム全体の音量(曲・効果音)に掛ける。事件簿を閉じている間は null(1倍)。
+  //   se は事件簿の1回の音(seBus)、amb は環境音(nvAmbBus)、clock は選択肢を待つ間のチクタク(nvClockBus)、bgm は曲
+  let nvVol = null;
+  const nvScale = (k) => (nvVol && Number.isFinite(nvVol[k]) ? Math.max(0, Math.min(1, nvVol[k])) : 1);
+  let nvAmbBus = null, nvClockBus = null;
   let backgroundSeQuiet = false; // 裏の周回の効果音を止める印(下の setBackgroundSeQuiet)
   let enabled = false;
   // 音ゲーのBGM音量は、メインのBGM音量設定(対数カーブ・bgmGain)を経由させず独立させる。
@@ -6460,7 +6466,7 @@ const Audio_ = (() => {
         //   Tone の時計は効果音を鳴らしていないあいだもずっと本体を起こし続けていた。
         //   効果音は Tone.now() から直接鳴らしていて時計の予定表(Transport)を使わないので、音の出方は変わらない
         try { const toneCtx = Tone.getContext && Tone.getContext(); if (toneCtx && 'updateInterval' in toneCtx) toneCtx.updateInterval = 0.25; } catch (e) {}
-        seBus = new Tone.Gain(_gainFromPct(seVolumePct)).toDestination();
+        seBus = new Tone.Gain(_gainFromPct(seVolumePct) * nvScale('se')).toDestination();
         uiBus = new Tone.Gain(_gainFromPct(uiSeVolumePct)).toDestination();
         reverb = new Tone.Reverb({ decay: 2.4, wet: 0.22 }).connect(seBus);
         try { await reverb.ready; } catch (e) {}
@@ -6650,7 +6656,7 @@ const Audio_ = (() => {
     masterOut.connect(analyser);
     analyser.connect(ctx.destination);
     bgmGain = ctx.createGain();
-    bgmGain.gain.value = _bgmGain(bgmVolumePct);
+    bgmGain.gain.value = _bgmGain(bgmVolumePct) * nvScale('bgm');
     bgmGain.connect(masterOut);
   };
   const getAudioCtx = () => {
@@ -6797,7 +6803,7 @@ const Audio_ = (() => {
   const resolveTrack = key => BGM_TRACK_BY_ID[key] || BGM_TRACK_BY_KEY[key] || null;
   const safeTrackGain = track => Math.max(0, Math.min(1.25, Number.isFinite(track?.gain) ? track.gain : 1));
   // ★fadeToBGM で下げている途中でも、次の曲を鳴らすときは予定を消してから音量を戻す(0のまま止まらないように)
-  const applyTrackGain = track => { if (bgmGain) { try { bgmGain.gain.cancelScheduledValues(0); } catch (e) {} bgmGain.gain.value = Math.min(1, _bgmGain(bgmVolumePct) * safeTrackGain(track)); } };
+  const applyTrackGain = track => { if (bgmGain) { try { bgmGain.gain.cancelScheduledValues(0); } catch (e) {} bgmGain.gain.value = Math.min(1, _bgmGain(bgmVolumePct) * safeTrackGain(track) * nvScale('bgm')); } };
 
   const startBgmBuffer = (key, track, buffer, request) => {
     const ctx = getAudioCtx();
@@ -7521,7 +7527,27 @@ const Audio_ = (() => {
   };
   const setUiSeVolume = (pct) => { uiSeVolumePct = pct; if (uiBus && Tone) { try { uiBus.gain.rampTo(_gainFromPct(pct), 0.05); } catch (e) {} } };
   const uiSeVolume = () => uiSeVolumePct; // 検査が「ボタンの音の口が0でないか」を見る口
-  const setSeVolume = (pct) => { seVolumePct = pct; if (seBus && Tone) { try { seBus.gain.rampTo(_gainFromPct(pct), 0.05); } catch (e) {} } };
+  const setSeVolume = (pct) => { seVolumePct = pct; nvApplyBuses(); };
+  // 効果音の口と、事件簿の環境音・時計の口の大きさを、いまの効果音の音量 × 事件簿の倍率にそろえる(どの口もゲームの効果音の音量の決まり=0にする画面などに従う)
+  const nvApplyBuses = () => {
+    if (!Tone) return;
+    const base = _gainFromPct(seVolumePct);
+    if (seBus) { try { seBus.gain.rampTo(base * nvScale('se'), 0.05); } catch (e) {} }
+    if (nvAmbBus) { try { nvAmbBus.gain.rampTo(base * nvScale('amb'), 0.05); } catch (e) {} }
+    if (nvClockBus) { try { nvClockBus.gain.rampTo(base * nvScale('clock'), 0.05); } catch (e) {} }
+  };
+  const nvBusOf = (k) => {
+    if (!Tone) return null;
+    const base = _gainFromPct(seVolumePct);
+    if (k === 'amb') { if (!nvAmbBus) nvAmbBus = new Tone.Gain(base * nvScale('amb')).toDestination(); return nvAmbBus; }
+    if (!nvClockBus) nvClockBus = new Tone.Gain(base * nvScale('clock')).toDestination(); return nvClockBus;
+  };
+  // 事件簿が開いている間の音量の倍率を入れる(null で閉じた=1倍へ戻す)。鳴っている曲・環境音にもすぐ効く
+  const setNovelVolume = (v) => {
+    nvVol = v && typeof v === 'object' ? { bgm: Number(v.bgm), se: Number(v.se), amb: Number(v.amb), clock: Number(v.clock) } : null;
+    nvApplyBuses();
+    try { applyTrackGain(resolveTrack(previewKey || currentKey)); } catch (e) {}
+  };
   const setBgmVolume = (pct) => { bgmVolumePct = pct; applyTrackGain(resolveTrack(previewKey || currentKey)); if (pct <= 0) { stopPreview(false); stopOthers(); } else if (enabled && currentKey && !previewKey) playBGM(currentKey); };
   const resumeIfNeeded = async () => { await ensureAudioCtxRunning(); if (Tone) { try { await Tone.start(); started = true; } catch (e) {} } if (enabled && currentKey && !bgmSource) playBGM(currentKey); if (enabled) nvAmbientResume(); };
   const unlock = async (playTestTone = false) => {
@@ -7625,6 +7651,8 @@ const Audio_ = (() => {
     //   どれも小さく、低く暗い音。その場で合成する(音源ファイルなし・権利の心配なし)。効果音の音量(seBus)を通る
     //   nvTick … 柱時計のチク(high)/タク。選択肢を待つ間に繰り返す。BGM とぶつからないよう、とても小さく短い
     nvTick: async (high) => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.MetalSynth({ frequency: high ? 640 : 470, envelope: { attack: 0.001, decay: 0.035, release: 0.02 }, harmonicity: 3.1, modulationIndex: 10, resonance: high ? 3800 : 3000, octaves: 0.8, volume: -12 }).connect(seBus); s.triggerAttackRelease('64n', t); const k = new Tone.MembraneSynth({ pitchDecay: 0.008, octaves: 2, envelope: { attack: 0.001, decay: 0.05, sustain: 0 }, volume: -20 }).connect(seBus); k.triggerAttackRelease(high ? 'C4' : 'G3', '64n', t); setTimeout(() => { try { s.dispose(); k.dispose(); } catch (e) {} }, 300); },
+    //   nvClockTick … 選択肢を待つ間のチク・タク(nvTick と同じ音で、事件簿の「時計の音」の音量の口を通る・r1126-116)
+    nvClockTick: async (high) => { if (!enabled) return; await ensure(); if (!Tone) return; const bus = nvBusOf('clock') || seBus; const t = Tone.now(); const s = new Tone.MetalSynth({ frequency: high ? 640 : 470, envelope: { attack: 0.001, decay: 0.035, release: 0.02 }, harmonicity: 3.1, modulationIndex: 10, resonance: high ? 3800 : 3000, octaves: 0.8, volume: -12 }).connect(bus); s.triggerAttackRelease('64n', t); const k = new Tone.MembraneSynth({ pitchDecay: 0.008, octaves: 2, envelope: { attack: 0.001, decay: 0.05, sustain: 0 }, volume: -20 }).connect(bus); k.triggerAttackRelease(high ? 'C4' : 'G3', '64n', t); setTimeout(() => { try { s.dispose(); k.dispose(); } catch (e) {} }, 300); },
     //   nvCreak … 扉・床のきしみ「ギィ」(低いのこぎり波が、ゆっくり下がる)
     nvCreak: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const f = new Tone.Filter(1800, 'lowpass').connect(seBus); const s = new Tone.Synth({ oscillator: { type: 'sawtooth' }, envelope: { attack: 0.08, decay: 0.7, sustain: 0, release: 0.2 }, volume: -8 }).connect(f); s.triggerAttackRelease('D4', '4n', t); try { s.frequency.rampTo('G3', 0.7, t); } catch (e) {} setTimeout(() => { try { s.dispose(); f.dispose(); } catch (e) {} }, 1400); },
     //   nvThud … 重い物の落ちる・ぶつかる「ゴッ」(遠くのこもった低音。enemyAttack より小さく遠い)
@@ -7669,7 +7697,7 @@ const Audio_ = (() => {
     if (!Tone || !enabled) { nvAmb = { kind: 'none', stop: null }; return; }
     const nodes = []; const timers = [];
     try {
-      const g = new Tone.Gain(0).connect(seBus); nodes.push(g);
+      const g = new Tone.Gain(0).connect(nvBusOf('amb') || seBus); nodes.push(g);
       // 2026-11-28 r1126-093 追記4: 前の作りは -74〜-89dB と小さく、音の大半がスマホのスピーカーで出ない 300Hz より下だった(社長「無音になってる？」)。
       //   大きさを上げ、帯域を 400〜2000Hz 寄り(スピーカーで聞こえる高さ)へ移した。目安: 効果音の音量が初期値のとき、ボタンの音と同じくらいに聞こえる
       if (kind === 'wind' || kind === 'blizzard' || kind === 'room') {
@@ -7738,7 +7766,8 @@ const Audio_ = (() => {
   // お知らせ・ヘルプの動画にかける音量(2026-11-14 社長「予告動画の音が設定の音量と関係なく鳴る」)。
   // 動画は曲と同じ扱いにして、BGM の音量と同じ曲線(_gainFromPct)で返す。音を切っている・BGM が 0 なら 0
   const videoGain = () => (enabled && bgmVolumePct > 0 ? _gainFromPct(bgmVolumePct) : 0);
-  return { nvAmbient, currentBgmKey: () => currentKey, isBackgroundSeQuiet, setVideoHold, videoGain, setStoryEndFade, setStoryOpenFade, playSeFile, fgPlaySeFile, preloadSE, playBGM, fadeToBGM, stopBGM, setBgmOnce, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setUiSeVolume, uiSeVolume, uiTap, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
+  // novelVolume … 事件簿の音量の倍率をいま入れているか(検査が見る口。null = 事件簿の外 = 1倍)
+  return { nvAmbient, setNovelVolume, novelVolume: () => (nvVol ? { ...nvVol } : null), currentBgmKey: () => currentKey, isBackgroundSeQuiet, setVideoHold, videoGain, setStoryEndFade, setStoryOpenFade, playSeFile, fgPlaySeFile, preloadSE, playBGM, fadeToBGM, stopBGM, setBgmOnce, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setUiSeVolume, uiSeVolume, uiTap, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
 })();
 
 // ---- part: 14-success-sound.jsx ----
@@ -11154,6 +11183,9 @@ const CHANGELOG_GROUPS = Object.freeze([
   // MFバトルカードのお知らせ(2026-10-25 社長「お知らせで新コンテンツとバトルのとかはMFバトルカードにして」)。
   // 「カード」「バトル」の言葉で ⚔ バトル へ入っていた。バトルより上に置き、名前そのもので拾う(これから先のお知らせも入る)
   { id:'cardBattle', label:'MFバトルカード', emoji:'🃏', match:/MFバトルカード/ },
+  // 『モンヒロ事件簿』のお知らせ(2026-11-28 r1126-120 社長「タブがバトルになってる」)。group:'battle' と書かれ、言葉の見当「バトル」にも
+  // 引っ張られていた。名前そのもので拾い、バトルより上に置く
+  { id:'novel',     label:'モンヒロ事件簿', emoji:'🕯', match:/事件簿/ },
   { id:'rhythm',    label:'モンヒロビート', emoji:'🎵', match:/モンヒロビート|モンビー|音ゲー|譜面|ノーツ|レーン|コンボ|判定|新曲|曲えらび|演奏|リズム/ },
   { id:'masu',      label:'マスモンの育成', emoji:'💜', match:/マスモン|強化|転生|限界突破|超越|魂格|合体|絆|トレーニング|育成|再生|染色|ブリーダー|オート強化/ },
   { id:'battle',    label:'バトル',         emoji:'⚔', match:/バトル|WAVE|難易度|勇者モン|供モン|カード|AUTO|クイック|極限|種族チャレンジ|スキップ|敵/ },
@@ -70831,7 +70863,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 // 入口は openXmasNovel(opts) の関数1つ(イベントページの物語タブなどから呼ぶ)。App の状態は使わず、自分で body に重ねて開き、閉じたら片づける。
 //   opts.playerName … 台詞の {name} に入れる名前 / opts.onClose() … 閉じたあと / opts.force … 期間の外でも開く(デバッグ・検査だけ)
 //   遊べるのはイベントの期間中だけ(xmasNovelPlayableAt)。期間の外は開かずに false を返す。保存の記録は消さない
-// 保存は新しいキー mh_xmas_novel_v1 と、分岐の地図の読み直しの mh_xmas_novel_route_v1(r1126-102)だけ(⑦)。ほかに読むのは、台詞の {name} に入れるブリーダー名(mh_breeder_name)だけ。形は xmasNovelNormalize。
+// 保存は新しいキー mh_xmas_novel_v1 と、分岐の地図の読み直しの mh_xmas_novel_route_v1(r1126-102)と、事件簿の中だけの音量の mh_xmas_novel_volume_v1(r1126-116)だけ(⑦)。ほかに読むのは、台詞の {name} に入れるブリーダー名(mh_breeder_name)だけ。形は xmasNovelNormalize。
 // 見た目: 暗めの紺と雪・金の細い縁・明朝寄りの見出し。縦・横・タブレットで、立ち絵と文の箱の置き方を変える。動きは prefers-reduced-motion で止める
 
 const XMAS_NOVEL_CSS = `
@@ -70914,6 +70946,8 @@ const XMAS_NOVEL_CSS = `
   background: radial-gradient(120% 70% at 50% 45%, rgba(18,32,72,.9), rgba(2,5,14,.97)); animation: mh-nv-fade .6s ease both; }
 .mh-nv-rule { width: min(70vw, 360px); height: 1px; background: linear-gradient(90deg, transparent, #e8c46a, transparent); margin: 14px auto; }
 .mh-nv-gold { color: #f3d98e; text-shadow: 0 0 12px rgba(232,196,106,.35), 0 2px 2px rgba(0,0,0,.6); }
+.mh-nv-vol-range { flex: 1 1 auto; min-width: 0; height: 30px; accent-color: #e8c46a; }
+.mh-nv-vol-row { padding: 8px 10px; border-radius: 10px; background: rgba(255,255,255,.04); box-shadow: inset 0 0 0 1px rgba(232,196,106,.25); }
 .mh-nv-sheet { position: absolute; inset: 0; z-index: 9; display: flex; align-items: flex-end; justify-content: center; background: rgba(0,0,0,.6); animation: mh-nv-fade .2s ease both; }
 .mh-nv-panel { width: min(100%, 720px); max-height: 92%; display: flex; flex-direction: column; border-radius: 16px 16px 0 0; padding: 14px 14px max(14px, env(safe-area-inset-bottom));
   background: linear-gradient(180deg, #13214a, #070e26); box-shadow: 0 0 0 1px rgba(232,196,106,.7); }
@@ -72396,7 +72430,63 @@ const XMAS_NOVEL_ICONS = {
   log: '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>',
   book: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><circle cx="12" cy="10" r="3"/><line x1="14.2" y1="12.2" x2="16.5" y2="14.5"/>',
   map: '<polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21 3 6"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/>',
+  vol: '<polygon points="4 9 8 9 13 5 13 19 8 15 4 15 4 9"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19 6a8.5 8.5 0 0 1 0 12"/>',
   menu: '<line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/>',
+};
+
+// ---- 事件簿の専用の音量(2026-11-28 社長「読んでる最中に専用の音量設定がほしい」・台帳 r1126-116) ----
+//  新しいキー mh_xmas_novel_volume_v1 に { v:1, bgm, se, amb, clock }(どれも 0〜100 の整数)。無い・壊れているときは 100(今までの聞こえ方)。
+//  ゲーム全体の音量(mh_bgm_volume・mh_se_volume など)は読まない・書かない。ここの値は、その上に掛ける倍率(14-audio.jsx の setNovelVolume)
+const XMAS_NOVEL_VOLUME_KEY = 'mh_xmas_novel_volume_v1';
+const XMAS_NOVEL_VOLUME_KINDS = Object.freeze([
+  { k: 'bgm', label: '曲', note: '流れる曲' },
+  { k: 'se', label: '効果音', note: '扉・足音・鐘などの1回の音' },
+  { k: 'amb', label: '環境音', note: '風・吹雪・暖炉・柱時計など、ずっと鳴る音' },
+  { k: 'clock', label: '時計の音', note: '選ぶのを待つ間のチクタク' },
+]);
+const xmasNovelVolumeNormalize = (raw) => {
+  const src = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const out = { v: 1 };
+  XMAS_NOVEL_VOLUME_KINDS.forEach(({ k }) => { const n = Number(src[k]); out[k] = Number.isFinite(n) ? Math.max(0, Math.min(100, Math.round(n))) : 100; });
+  return out;
+};
+//  0〜100 → 倍率(100 = 1倍 = 今までどおり。下へ 30dB の幅。0 は消す)
+const xmasNovelVolumeScale = (pct) => (pct <= 0 ? 0 : Math.pow(10, ((Math.min(100, pct) - 100) * 0.3) / 20));
+const xmasNovelVolumeScales = (vol) => { const v = xmasNovelVolumeNormalize(vol); return { bgm: xmasNovelVolumeScale(v.bgm), se: xmasNovelVolumeScale(v.se), amb: xmasNovelVolumeScale(v.amb), clock: xmasNovelVolumeScale(v.clock) }; };
+const xmasNovelVolumeLoad = async () => { try { return xmasNovelVolumeNormalize(await storeGet(XMAS_NOVEL_VOLUME_KEY, null, false)); } catch (e) { return xmasNovelVolumeNormalize(null); } };
+const xmasNovelVolumeStore = async (vol) => { try { await storeSet(XMAS_NOVEL_VOLUME_KEY, xmasNovelVolumeNormalize(vol), false); return true; } catch (e) { return false; } };
+const xmasNovelVolumeApply = (vol) => { try { if (typeof Audio_ !== 'undefined' && Audio_ && typeof Audio_.setNovelVolume === 'function') Audio_.setNovelVolume(vol ? xmasNovelVolumeScales(vol) : null); } catch (e) { /* 音が出せなくても読み進める */ } };
+//  音量の窓。起動画面と読む画面の上の帯の「音量」から開く。動かすとその場で鳴っている音に効く
+const XmasNovelVolumeSheet = ({ vol, onChange, onClose }) => {
+  const v = xmasNovelVolumeNormalize(vol);
+  const last = useRef({});
+  const set = (k, n) => { if (n > 0) last.current[k] = n; onChange({ ...v, [k]: n }); };
+  return (
+    <div className="mh-nv-sheet" data-xmas-novel-sheet="volume" onClick={onClose}>
+      <div className="mh-nv-panel" onClick={(e) => e.stopPropagation()}>
+        <div className="mh-nv-serif mh-nv-gold mb-1 text-center text-[18px] font-black">音量</div>
+        <div className="mh-nv-plain mb-3 text-center text-[11px] font-bold text-slate-300">事件簿の中だけの音量です(ゲーム全体の音量の設定に掛かります)</div>
+        <div className="space-y-3">
+          {XMAS_NOVEL_VOLUME_KINDS.map(({ k, label, note }) => (
+            <div key={k} data-xmas-novel-volume={k} className="mh-nv-vol-row">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="mh-nv-serif text-[14px] font-black text-amber-100">{label}</span>
+                <span className="mh-nv-plain text-[11px] font-bold text-slate-400">{note}</span>
+              </div>
+              <div className="mt-1 flex items-center gap-2">
+                <input type="range" min="0" max="100" step="5" value={v[k]} aria-label={`${label}の音量`} className="mh-nv-vol-range" data-xmas-novel-volume-range={k}
+                  onChange={(e) => set(k, Math.round(Number(e.target.value) || 0))} />
+                <span className="mh-nv-plain w-9 text-right text-[12px] font-black text-amber-100" data-xmas-novel-volume-value={k}>{v[k] <= 0 ? '0' : v[k]}</span>
+                <button type="button" className="mh-nv-btn" data-xmas-novel-volume-mute={k} data-on={v[k] <= 0 ? '' : undefined}
+                  onClick={() => set(k, v[k] > 0 ? 0 : (last.current[k] || 100))}>{v[k] > 0 ? '消す' : '戻す'}</button>
+              </div>
+            </div>
+          ))}
+        </div>
+        <button type="button" className="mh-nv-btn wide mt-4" data-xmas-novel-volume-close onClick={onClose}>閉じる</button>
+      </div>
+    </div>
+  );
 };
 
 // ---- 保存 ----
@@ -72463,7 +72553,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
   useEffect(() => {
     if (!sheet || typeof sheet !== 'object' || !sheet.q) return undefined;
     let high = true;
-    const tick = () => { const fn = xmasNovelSeFn('nvTick'); if (fn) fn(high); high = !high; };
+    const tick = () => { const fn = xmasNovelSeFn('nvClockTick') || xmasNovelSeFn('nvTick'); if (fn) fn(high); high = !high; };
     const id = setInterval(tick, 640);
     const first = setTimeout(tick, 250);
     return () => { clearInterval(id); clearTimeout(first); };
@@ -72472,6 +72562,24 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
   const [skip, setSkip] = useState(false);
   const [log, setLog] = useState([]);
   const [confirmNew, setConfirmNew] = useState(false);
+  // 事件簿の専用の音量(mh_xmas_novel_volume_v1・r1126-116)。読み込むまでは既定(今までどおり)。動かしたらすぐ鳴っている音に効かせ、少し落ち着いてから保存
+  const [vol, setVol] = useState(() => xmasNovelVolumeNormalize(null));
+  const [volOpen, setVolOpen] = useState(false);
+  const volTimer = useRef(null);
+  useEffect(() => {
+    let alive = true;
+    xmasNovelVolumeLoad().then((v) => { if (alive) setVol(v); });
+    return () => { alive = false; if (volTimer.current) clearTimeout(volTimer.current); xmasNovelVolumeApply(null); };
+  }, []);
+  useEffect(() => { xmasNovelVolumeApply(vol); }, [vol]);
+  const changeVol = (next) => {
+    const v = xmasNovelVolumeNormalize(next);
+    setVol(v);
+    if (volTimer.current) clearTimeout(volTimer.current);
+    volTimer.current = setTimeout(() => { void xmasNovelVolumeStore(v); }, 300);
+  };
+  const volBtn = (<button type="button" className="mh-nv-btn" data-xmas-novel-volume-open onClick={() => setVolOpen(true)} aria-label="音量"><XmasNovelIcon d={XMAS_NOVEL_ICONS.vol} /><span className="hidden sm:inline">音量</span></button>);
+  const volSheet = volOpen ? <XmasNovelVolumeSheet vol={vol} onChange={changeVol} onClose={() => { if (volTimer.current) { clearTimeout(volTimer.current); volTimer.current = null; } void xmasNovelVolumeStore(vol); setVolOpen(false); }} /> : null;
   const saveRef = useRef(null);
   const [route, setRoute] = useState(null); // 分岐の地図の読み直し(mh_xmas_novel_route_v1・r1126-102)
   const routeRef = useRef(null);
@@ -72827,7 +72935,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
     return (
       <div className="mh-nv mh-nv-boot" data-xmas-novel={mode}>
         <div className="mh-nv-noise" /><div className="mh-nv-scan" />
-        <div className="mh-nv-top"><span className="mh-nv-where" /><button type="button" className="mh-nv-btn" data-xmas-novel-close onClick={close} aria-label="閉じる"><X size={18} /></button></div>
+        <div className="mh-nv-top"><span className="mh-nv-where" />{volBtn}<button type="button" className="mh-nv-btn" data-xmas-novel-close onClick={close} aria-label="閉じる"><X size={18} /></button></div>
         {/* 長い一覧(エンドヒストリー15件など)が上ではみ出さないよう、中央寄せは子の my-auto で(justify-center だと上が切れてスクロールで戻れない) */}
         <div className="absolute inset-0 flex flex-col items-center overflow-y-auto px-4 py-16">
           {mode === 'title' && (
@@ -72934,6 +73042,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
             </div>
           )}
         </div>
+        {volSheet}
       </div>
     );
   }
@@ -73015,6 +73124,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
         </button>
         <button type="button" className="mh-nv-btn" data-xmas-novel-skip data-on={skip ? '' : undefined} onClick={toggleSkip} aria-label="既読スキップ"><XmasNovelIcon d={XMAS_NOVEL_ICONS.skip} /><span className="hidden sm:inline">スキップ</span></button>
         <button type="button" className="mh-nv-btn" data-xmas-novel-open-map onClick={() => setSheet('map')} aria-label="地図"><XmasNovelIcon d={XMAS_NOVEL_ICONS.map} /><span>地図</span></button>
+        {volBtn}
         <button type="button" className="mh-nv-btn" data-xmas-novel-menu onClick={() => setSheet('menu')} aria-label="メニュー"><XmasNovelIcon d={XMAS_NOVEL_ICONS.menu} /></button>
       </div>
 
@@ -73072,6 +73182,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
       {sheet === 'map' && save && (
         <XmasNovelMap script={S} save={save} route={route} playerName={playerName} onRedo={redoFrom} onBack={backFromRedo} onClose={() => setSheet(null)} />
       )}
+      {volSheet}
       {sheet && sheet !== 'map' && (
         <div className="mh-nv-sheet" data-xmas-novel-sheet={typeof sheet === 'string' ? sheet : sheet.kind}
           onClick={() => { if (typeof sheet === 'string') setSheet(null); }}>
