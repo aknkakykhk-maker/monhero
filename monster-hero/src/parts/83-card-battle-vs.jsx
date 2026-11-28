@@ -86,6 +86,16 @@ const CARD_VS_LINES = Object.freeze({
 // 練習試合のひとこと(みゅあ)
 const CARD_VS_TUTORIAL_LINE = Object.freeze({ e: 'happy', t: '練習だよ！ ゆっくりいこ♪' });
 // 出している長さ(ミリ秒)。タップで飛ばせる
+// レイドのボスの顔アイコン(クリスマスは RAID_XMAS_BOSS_IMG。顔だけの絵は無いので、全身の絵を顔が枠に入るよう寄せて出す。台帳 r1126-101)
+//   VS の画面の大きな丸と、対戦中の左上の小さな枠で同じ物を使う。絵が無いときだけ今までの仮の絵文字
+const CARD_RAID_BOSS_FACE = Object.freeze({ size: '200% auto', pos: '50% 24%' });
+const CardRaidBossFace = ({ className = '' }) => {
+  const src = typeof RAID_XMAS_BOSS_IMG !== 'undefined' ? RAID_XMAS_BOSS_IMG : '';
+  if (!src) return <span data-card-raid-boss-face="" className={`flex items-center justify-center text-[26px] ${className}`}>🎅</span>;
+  return <span data-card-raid-boss-face={src} role="img" aria-label="黒いサンタ" className={`block bg-no-repeat ${className}`}
+    style={{ backgroundImage: `url(${src})`, backgroundSize: CARD_RAID_BOSS_FACE.size, backgroundPosition: CARD_RAID_BOSS_FACE.pos }}/>;
+};
+
 const CARD_VS_MS = Object.freeze({ assistant: 2600, pvp: 2600, tutorial: 1300 });
 
 // 種族(血統)の名前。混血は主血統で数える
@@ -287,7 +297,10 @@ const CardVsIntro = ({ db, intro, onDone, meIcon = null }) => {
                   ? <div data-card-vs-foe-art className="w-full"><CardAssistantArt src={assistantFullImage(who, (foe.line && foe.line.e) || 'happy')} alt={who.name} className="w-full" style={{ aspectRatio: '3 / 4' }}/></div>
                   : <CardVsArt data-card-vs-foe-art src={assistantFullImage(who, (foe.line && foe.line.e) || 'happy')} alt={who.name} aspect={3 / 4}/>)
                                 // マルチの相手: プロフィールと同じ部品(フレーム付き)。アイコンの id は絵に直す(字のまま出していた。91 の CardPvpAvatar)
-                : <span data-card-vs-foe-icon className="block aspect-square w-full"><CardPvpAvatar icon={foe.icon} frame={foe.frame} className="h-full w-full"/></span>}
+                // レイドのボス: ボスの絵の顔の所を丸の枠に寄せて出す(CardRaidBossFace)
+                : foe.raidBoss
+                  ? <span data-card-vs-foe-icon data-card-vs-raid-boss className="block aspect-square w-full overflow-hidden rounded-full border-[3px] border-red-500 bg-slate-950 shadow-[0_0_18px_rgba(239,68,68,.45)]"><CardRaidBossFace className="h-full w-full"/></span>
+                  : <span data-card-vs-foe-icon className="block aspect-square w-full"><CardPvpAvatar icon={foe.icon} frame={foe.frame} className="h-full w-full"/></span>}
             </div>
             <div className="mh-vs-fade min-w-0 flex-1 pb-1" style={{ animationDelay: '250ms' }}>
               <b className="block text-[16px] font-black leading-tight" style={JA_LABEL_STYLE}>{foe.name || 'あいて'}</b>

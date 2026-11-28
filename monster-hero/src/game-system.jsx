@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 629a08dbbfa4f79f
+// generated-sha256: 5868c1c7287569cc
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -114208,13 +114208,21 @@ const CARD_RAID_BOSS = Object.freeze({
   id: 'raid_xmas_2026',
   name: '黒いサンタ',            // 仮の名前(社長が決める)
   deckName: '奪われた贈り物',    // 仮のデッキ名
-  // 3体(仮)。黒い服の子を集めた: ジョーカー(空中)・ゴースト(空中)・ゴーレム(地上・ライフが多い)
-  monsters: Object.freeze(['C-047', 'C-024', 'C-003']),
+  // 3体。黒いサンタはハムなので、ハム種(ハム・ダークハム・ハムライガー)から2体と、ほかの候補(黒い服の子)から1体を、挑むたびに選ぶ(台帳 r1126-101 追記1)
+  //   monsters … 種を渡さないとき(検査・代わりの組み方)の3体 / hare … ハム種の候補 / others … ほかの候補
+  monsters: Object.freeze(['C-008', 'C-055', 'C-003']),
+  hare: Object.freeze(['C-008', 'C-055', 'C-010']),
+  others: Object.freeze(['C-047', 'C-024', 'C-003']),
+  favor: 'hare',               // この種の札を少し好んで入れる(ハムの技が多い山札にする)
+  favorBonus: 0.6,
+  cardNoise: 0.45,             // 挑むたびに山札の中身が入れ替わる揺れ(種を渡したときだけ)
+  // ボスの3体のライフの合計の元(倍率をかける前)。組み合わせが変わっても強さの帯が変わらないよう、合計をこの値に寄せる(前の3体の合計 21)
+  baseLife: 21,
   // 考え方のくせ(重みの意味は 82-card-battle-core.jsx の CARD_AI_HABITS と同じ)。
   //   「贈り物を奪う」ので、相手の手札・ガッツをいじる札(disrupt)をいちばん好む。弱った子を狙い、全体攻撃も好き
   habit: Object.freeze({ attack: 1.2, keepGuard: 0.8, saveGuts: 0.8, big: 1.0, disrupt: 1.7, area: 1.3, finish: 1.3 }),
-  // デッキに先に入れる札(この3体で使える物だけが入る。無い名前は飛ばす)
-  prefer: Object.freeze(['大鎌']),
+  // デッキに先に入れる札(この3体で使える物だけが入る。無い名前は飛ばす)。「贈り物を奪う」ので相手の手札を捨てさせる「大声」
+  prefer: Object.freeze(['大声']),
 });
 
 // 段階ごと(レイドの5段階・0 始まり)のボスの強さ(仮)。
@@ -114235,18 +114243,32 @@ const cardRaidTierOf = (tierIndex) => CARD_RAID_TIERS[Math.min(CARD_RAID_TIERS.l
 //   投了しても、それまでに与えたぶんは足す(勝ちの上乗せは付かない)。途中で閉じた(結果が出なかった)ときは 0
 const CARD_RAID_DAMAGE = Object.freeze({ perPoint: 8000, perKo: 40000, win: 150000, cap: null });
 
-// ボスのデッキを組む(段階で決まる種。同じ段階なら毎回同じデッキ)
-const cardRaidBossDeck = (db, tierIndex = 0) => {
+// ボスの3体を選ぶ(ハム種から2体+ほかから1体)。rnd が無いときは決まった3体
+const cardRaidBossMonsters = (db, rnd = null) => {
+  const ok = (list) => list.filter((no) => cardMonsterOf(db, no));
+  if (!rnd) return ok(CARD_RAID_BOSS.monsters);
+  const pick = (list, n) => { const a = ok(list).slice(); const out = []; while (a.length && out.length < n) out.push(a.splice(Math.floor(rnd() * a.length), 1)[0]); return out; };
+  const out = [...pick(CARD_RAID_BOSS.hare, 2), ...pick(CARD_RAID_BOSS.others, 1)];
+  // 同じ種が2体にならないように(カードの表が変わったときの守り)。足りなければ決まった3体
+  const sp = out.map((no) => cardMonsterOf(db, no).species);
+  return out.length === 3 && new Set(sp).size === 3 ? out : ok(CARD_RAID_BOSS.monsters);
+};
+
+// ボスのデッキを組む。seed を渡すと挑むたびに3体と山札が少し変わる(画面は対戦の種を渡す)。渡さなければ段階ごとに毎回同じ(検査用)
+const cardRaidBossDeck = (db, tierIndex = 0, seed = null) => {
   const tier = cardRaidTierOf(tierIndex);
   const cfg = CARD_AI_BUILD[tier.level] || CARD_AI_BUILD.normal;
   const habit = CARD_RAID_BOSS.habit;
-  const rnd = cardAiSeededRand(`${CARD_RAID_BOSS.id}:${tier.level}`);
-  const monsters = CARD_RAID_BOSS.monsters.filter((no) => cardMonsterOf(db, no));
+  const roll = seed !== null && seed !== undefined && Number.isFinite(Number(seed));
+  const rnd = cardAiSeededRand(`${CARD_RAID_BOSS.id}:${tier.level}${roll ? `:${Math.floor(Number(seed))}` : ''}`);
+  const monsters = cardRaidBossMonsters(db, roll ? rnd : null);
   const mons = monsters.map((no) => cardMonsterOf(db, no));
+  const noise = cfg.noise + (roll ? CARD_RAID_BOSS.cardNoise : 0);
+  const favor = (c) => (c.user === CARD_RAID_BOSS.favor ? CARD_RAID_BOSS.favorBonus : 0);
   // 弾の制限はかけない(ボスは全部の弾の札を使う)。名前ごとに入れたい度の高い番号1つ
   const pool = Object.values(db.cards).filter((c) => c.ready && (c.user === 'any' || c.user === 'breeder' || mons.some((m) => cardUsableBy(c, { ...m, ko: false }))));
   const byName = {};
-  pool.forEach((c) => { const v = cardAiCardValue(c, habit) + cfg.noise * (rnd() * 2 - 1); if (!byName[c.name] || byName[c.name].v < v) byName[c.name] = { c, v }; });
+  pool.forEach((c) => { const v = cardAiCardValue(c, habit) + favor(c) + noise * (rnd() * 2 - 1); if (!byName[c.name] || byName[c.name].v < v) byName[c.name] = { c, v }; });
   const ranked = Object.values(byName).sort((a, b) => b.v - a.v || (a.c.no < b.c.no ? -1 : 1));
   const cards = [];
   const count = (no) => cards.filter((n) => n === no).length;
@@ -114293,7 +114315,10 @@ const cardRaidPrepareGame = (st, tierIndex = 0, p = 1) => {
   const tier = cardRaidTierOf(tierIndex);
   const pl = st && st.players && st.players[p];
   if (!pl) return st;
-  pl.mons.forEach((m) => { const life = Math.max(1, Math.round(m.max * tier.life)); m.life = life; m.max = life; });
+  // 3体の合計を CARD_RAID_BOSS.baseLife に寄せてから倍率をかける(組み合わせで合計が 17〜22 と揺れるため。強さの帯をそろえる)
+  const sum = pl.mons.reduce((a, m) => a + Math.max(0, Number(m.max) || 0), 0);
+  const fit = sum > 0 && CARD_RAID_BOSS.baseLife > 0 ? CARD_RAID_BOSS.baseLife / sum : 1;
+  pl.mons.forEach((m) => { const life = Math.max(1, Math.round(m.max * fit * tier.life)); m.life = life; m.max = life; });
   st.raid = { boss: CARD_RAID_BOSS.id, tier: Math.max(0, Math.floor(Number(tierIndex) || 0)), side: p };
   return st;
 };
@@ -115671,6 +115696,16 @@ const CARD_VS_LINES = Object.freeze({
 // 練習試合のひとこと(みゅあ)
 const CARD_VS_TUTORIAL_LINE = Object.freeze({ e: 'happy', t: '練習だよ！ ゆっくりいこ♪' });
 // 出している長さ(ミリ秒)。タップで飛ばせる
+// レイドのボスの顔アイコン(クリスマスは RAID_XMAS_BOSS_IMG。顔だけの絵は無いので、全身の絵を顔が枠に入るよう寄せて出す。台帳 r1126-101)
+//   VS の画面の大きな丸と、対戦中の左上の小さな枠で同じ物を使う。絵が無いときだけ今までの仮の絵文字
+const CARD_RAID_BOSS_FACE = Object.freeze({ size: '200% auto', pos: '50% 24%' });
+const CardRaidBossFace = ({ className = '' }) => {
+  const src = typeof RAID_XMAS_BOSS_IMG !== 'undefined' ? RAID_XMAS_BOSS_IMG : '';
+  if (!src) return <span data-card-raid-boss-face="" className={`flex items-center justify-center text-[26px] ${className}`}>🎅</span>;
+  return <span data-card-raid-boss-face={src} role="img" aria-label="黒いサンタ" className={`block bg-no-repeat ${className}`}
+    style={{ backgroundImage: `url(${src})`, backgroundSize: CARD_RAID_BOSS_FACE.size, backgroundPosition: CARD_RAID_BOSS_FACE.pos }}/>;
+};
+
 const CARD_VS_MS = Object.freeze({ assistant: 2600, pvp: 2600, tutorial: 1300 });
 
 // 種族(血統)の名前。混血は主血統で数える
@@ -115872,7 +115907,10 @@ const CardVsIntro = ({ db, intro, onDone, meIcon = null }) => {
                   ? <div data-card-vs-foe-art className="w-full"><CardAssistantArt src={assistantFullImage(who, (foe.line && foe.line.e) || 'happy')} alt={who.name} className="w-full" style={{ aspectRatio: '3 / 4' }}/></div>
                   : <CardVsArt data-card-vs-foe-art src={assistantFullImage(who, (foe.line && foe.line.e) || 'happy')} alt={who.name} aspect={3 / 4}/>)
                                 // マルチの相手: プロフィールと同じ部品(フレーム付き)。アイコンの id は絵に直す(字のまま出していた。91 の CardPvpAvatar)
-                : <span data-card-vs-foe-icon className="block aspect-square w-full"><CardPvpAvatar icon={foe.icon} frame={foe.frame} className="h-full w-full"/></span>}
+                // レイドのボス: ボスの絵の顔の所を丸の枠に寄せて出す(CardRaidBossFace)
+                : foe.raidBoss
+                  ? <span data-card-vs-foe-icon data-card-vs-raid-boss className="block aspect-square w-full overflow-hidden rounded-full border-[3px] border-red-500 bg-slate-950 shadow-[0_0_18px_rgba(239,68,68,.45)]"><CardRaidBossFace className="h-full w-full"/></span>
+                  : <span data-card-vs-foe-icon className="block aspect-square w-full"><CardPvpAvatar icon={foe.icon} frame={foe.frame} className="h-full w-full"/></span>}
             </div>
             <div className="mh-vs-fade min-w-0 flex-1 pb-1" style={{ animationDelay: '250ms' }}>
               <b className="block text-[16px] font-black leading-tight" style={JA_LABEL_STYLE}>{foe.name || 'あいて'}</b>
@@ -119135,7 +119173,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       {/* マルチの電波の知らせは、上の帯の番の札に出す(段を増やさない。2026-10-29 案B) */}
       {/* 相手の帯(隠さない) */}
       <div className={`flex ${tiny ? 'h-[36px]' : compact ? 'h-[42px]' : 'h-[50px]'} shrink-0 items-center gap-2 px-2`}>
-        {raid ? <span data-card-raid-foe aria-hidden="true" className={`flex ${tiny ? 'h-[34px] w-[34px] text-[20px]' : 'h-[42px] w-[42px] text-[26px]'} shrink-0 items-center justify-center rounded-xl border-2 border-red-500 bg-slate-950`}>🎅</span>
+        {raid ? <span data-card-raid-foe aria-hidden="true" className={`block ${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} shrink-0 overflow-hidden rounded-xl border-2 border-red-500 bg-slate-950`}><CardRaidBossFace className="h-full w-full"/></span>
           : (pvp || share) ? <span data-card-pvp-foe className={`block ${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} shrink-0`}><CardPvpAvatar icon={(pvp || share).icon} frame={(pvp || share).frame} className="h-full w-full"/></span>
           : <img src={assistantFaceImage(who, face)} alt={who.name} className={`${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} rounded-xl border-2 bg-black object-cover object-top`} style={{ borderColor: who.accent }}/>}
         <div className={`min-w-0 text-[13px] font-black leading-tight ${pvp ? 'max-w-[34%] truncate whitespace-nowrap' : 'shrink-0 whitespace-nowrap'}`}>{who.name}<small className="block text-[10px] font-bold text-rose-200">{pvp ? 'マルチ対戦' : raid ? 'レイドバトル' : cardBattleLevelLabel(game.level, game.share) || 'フリー対戦'}</small></div>
@@ -120893,14 +120931,15 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       try { ok = typeof rc.onStart === 'function' ? (await rc.onStart()) !== false : true; } catch (_) { ok = false; }
       if (!ok) { setNotice('きょうの挑戦の回数がありません'); setRaid(null); setView('top'); if (typeof rc.onClose === 'function') rc.onClose('noCount'); return; }
       const tier = cardRaidTierOf(rc.tierIndex);
-      const cpuDeck = cardRaidBossDeck(db, rc.tierIndex);
       const seed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
+      // 挑むたびに、ボスの3体(ハム種2体+ほか1体)と山札が少し変わる(台帳 r1126-101 追記1)
+      const cpuDeck = cardRaidBossDeck(db, rc.tierIndex, seed);
       const first = Math.random() < 0.5 ? CARD_ME : CARD_CPU;
       const bossName = rc.bossName || CARD_RAID_BOSS.name;
       const st = cardRaidPrepareGame(cardCreateGame(db, { decks: [{ monsters: deck.monsters, cards: deck.cards }, cpuDeck], names: ['あなた', bossName], seed, first }), rc.tierIndex, CARD_CPU);
       setResult(null);
       setRaidDone(null);
-      const intro = { mode: 'assistant', foe: { who: null, name: bossName, icon: null, frame: null, line: null, deckName: CARD_RAID_BOSS.deckName, monsters: vsMons(st, CARD_CPU) },
+      const intro = { mode: 'assistant', foe: { who: null, name: bossName, icon: null, frame: null, raidBoss: true, line: null, deckName: CARD_RAID_BOSS.deckName, monsters: vsMons(st, CARD_CPU) },
         me: { name: myName, deckName: deck.name || null, monsters: vsMons(st, CARD_ME) } };
       setGame({ key: `raid-${seed}`, st, who: 'raid', level: tier.level, settings: save.settings, intro, raid: { tier: Math.max(0, Math.floor(Number(rc.tierIndex) || 0)), tierName: rc.tierName || '', bossName, run: rc } });
       // レイドのボスとの対戦はクリスマスのレイドバトル曲「winter fall」(台帳 r1126-023)。曲が無いときは今までどおり

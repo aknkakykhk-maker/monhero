@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 05f6643ad5128a91
+// source-sha256: 6164c9e325a068eb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -219578,7 +219578,13 @@ const CARD_RAID_BOSS = Object.freeze({
   id: 'raid_xmas_2026',
   name: '黒いサンタ',
   deckName: '奪われた贈り物',
-  monsters: Object.freeze(['C-047', 'C-024', 'C-003']),
+  monsters: Object.freeze(['C-008', 'C-055', 'C-003']),
+  hare: Object.freeze(['C-008', 'C-055', 'C-010']),
+  others: Object.freeze(['C-047', 'C-024', 'C-003']),
+  favor: 'hare',
+  favorBonus: 0.6,
+  cardNoise: 0.45,
+  baseLife: 21,
   habit: Object.freeze({
     attack: 1.2,
     keepGuard: 0.8,
@@ -219588,7 +219594,7 @@ const CARD_RAID_BOSS = Object.freeze({
     area: 1.3,
     finish: 1.3
   }),
-  prefer: Object.freeze(['大鎌'])
+  prefer: Object.freeze(['大声'])
 });
 const CARD_RAID_TIERS = Object.freeze([Object.freeze({
   level: 'normal',
@@ -219618,20 +219624,36 @@ const CARD_RAID_DAMAGE = Object.freeze({
   win: 150000,
   cap: null
 });
-const cardRaidBossDeck = (db, tierIndex = 0) => {
+const cardRaidBossMonsters = (db, rnd = null) => {
+  const ok = list => list.filter(no => cardMonsterOf(db, no));
+  if (!rnd) return ok(CARD_RAID_BOSS.monsters);
+  const pick = (list, n) => {
+    const a = ok(list).slice();
+    const out = [];
+    while (a.length && out.length < n) out.push(a.splice(Math.floor(rnd() * a.length), 1)[0]);
+    return out;
+  };
+  const out = [...pick(CARD_RAID_BOSS.hare, 2), ...pick(CARD_RAID_BOSS.others, 1)];
+  const sp = out.map(no => cardMonsterOf(db, no).species);
+  return out.length === 3 && new Set(sp).size === 3 ? out : ok(CARD_RAID_BOSS.monsters);
+};
+const cardRaidBossDeck = (db, tierIndex = 0, seed = null) => {
   const tier = cardRaidTierOf(tierIndex);
   const cfg = CARD_AI_BUILD[tier.level] || CARD_AI_BUILD.normal;
   const habit = CARD_RAID_BOSS.habit;
-  const rnd = cardAiSeededRand(`${CARD_RAID_BOSS.id}:${tier.level}`);
-  const monsters = CARD_RAID_BOSS.monsters.filter(no => cardMonsterOf(db, no));
+  const roll = seed !== null && seed !== undefined && Number.isFinite(Number(seed));
+  const rnd = cardAiSeededRand(`${CARD_RAID_BOSS.id}:${tier.level}${roll ? `:${Math.floor(Number(seed))}` : ''}`);
+  const monsters = cardRaidBossMonsters(db, roll ? rnd : null);
   const mons = monsters.map(no => cardMonsterOf(db, no));
+  const noise = cfg.noise + (roll ? CARD_RAID_BOSS.cardNoise : 0);
+  const favor = c => c.user === CARD_RAID_BOSS.favor ? CARD_RAID_BOSS.favorBonus : 0;
   const pool = Object.values(db.cards).filter(c => c.ready && (c.user === 'any' || c.user === 'breeder' || mons.some(m => cardUsableBy(c, {
     ...m,
     ko: false
   }))));
   const byName = {};
   pool.forEach(c => {
-    const v = cardAiCardValue(c, habit) + cfg.noise * (rnd() * 2 - 1);
+    const v = cardAiCardValue(c, habit) + favor(c) + noise * (rnd() * 2 - 1);
     if (!byName[c.name] || byName[c.name].v < v) byName[c.name] = {
       c,
       v
@@ -219712,8 +219734,10 @@ const cardRaidPrepareGame = (st, tierIndex = 0, p = 1) => {
   const tier = cardRaidTierOf(tierIndex);
   const pl = st && st.players && st.players[p];
   if (!pl) return st;
+  const sum = pl.mons.reduce((a, m) => a + Math.max(0, Number(m.max) || 0), 0);
+  const fit = sum > 0 && CARD_RAID_BOSS.baseLife > 0 ? CARD_RAID_BOSS.baseLife / sum : 1;
   pl.mons.forEach(m => {
-    const life = Math.max(1, Math.round(m.max * tier.life));
+    const life = Math.max(1, Math.round(m.max * fit * tier.life));
     m.life = life;
     m.max = life;
   });
@@ -221928,6 +221952,30 @@ const CARD_VS_TUTORIAL_LINE = Object.freeze({
   e: 'happy',
   t: '練習だよ！ ゆっくりいこ♪'
 });
+const CARD_RAID_BOSS_FACE = Object.freeze({
+  size: '200% auto',
+  pos: '50% 24%'
+});
+const CardRaidBossFace = ({
+  className = ''
+}) => {
+  const src = typeof RAID_XMAS_BOSS_IMG !== 'undefined' ? RAID_XMAS_BOSS_IMG : '';
+  if (!src) return React.createElement("span", {
+    "data-card-raid-boss-face": "",
+    className: `flex items-center justify-center text-[26px] ${className}`
+  }, "🎅");
+  return React.createElement("span", {
+    "data-card-raid-boss-face": src,
+    role: "img",
+    "aria-label": "黒いサンタ",
+    className: `block bg-no-repeat ${className}`,
+    style: {
+      backgroundImage: `url(${src})`,
+      backgroundSize: CARD_RAID_BOSS_FACE.size,
+      backgroundPosition: CARD_RAID_BOSS_FACE.pos
+    }
+  });
+};
 const CARD_VS_MS = Object.freeze({
   assistant: 2600,
   pvp: 2600,
@@ -222298,7 +222346,13 @@ const CardVsIntro = ({
     src: assistantFullImage(who, foe.line && foe.line.e || 'happy'),
     alt: who.name,
     aspect: 3 / 4
-  }) : React.createElement("span", {
+  }) : foe.raidBoss ? React.createElement("span", {
+    "data-card-vs-foe-icon": true,
+    "data-card-vs-raid-boss": true,
+    className: "block aspect-square w-full overflow-hidden rounded-full border-[3px] border-red-500 bg-slate-950 shadow-[0_0_18px_rgba(239,68,68,.45)]"
+  }, React.createElement(CardRaidBossFace, {
+    className: "h-full w-full"
+  })) : React.createElement("span", {
     "data-card-vs-foe-icon": true,
     className: "block aspect-square w-full"
   }, React.createElement(CardPvpAvatar, {
@@ -227509,8 +227563,10 @@ const CardBattleBoard = ({
   }, raid ? React.createElement("span", {
     "data-card-raid-foe": true,
     "aria-hidden": "true",
-    className: `flex ${tiny ? 'h-[34px] w-[34px] text-[20px]' : 'h-[42px] w-[42px] text-[26px]'} shrink-0 items-center justify-center rounded-xl border-2 border-red-500 bg-slate-950`
-  }, "🎅") : pvp || share ? React.createElement("span", {
+    className: `block ${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} shrink-0 overflow-hidden rounded-xl border-2 border-red-500 bg-slate-950`
+  }, React.createElement(CardRaidBossFace, {
+    className: "h-full w-full"
+  })) : pvp || share ? React.createElement("span", {
     "data-card-pvp-foe": true,
     className: `block ${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} shrink-0`
   }, React.createElement(CardPvpAvatar, {
@@ -230773,8 +230829,8 @@ const CardBattleScreen = ({
         return;
       }
       const tier = cardRaidTierOf(rc.tierIndex);
-      const cpuDeck = cardRaidBossDeck(db, rc.tierIndex);
       const seed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
+      const cpuDeck = cardRaidBossDeck(db, rc.tierIndex, seed);
       const first = Math.random() < 0.5 ? CARD_ME : CARD_CPU;
       const bossName = rc.bossName || CARD_RAID_BOSS.name;
       const st = cardRaidPrepareGame(cardCreateGame(db, {
@@ -230795,6 +230851,7 @@ const CardBattleScreen = ({
           name: bossName,
           icon: null,
           frame: null,
+          raidBoss: true,
           line: null,
           deckName: CARD_RAID_BOSS.deckName,
           monsters: vsMons(st, CARD_CPU)

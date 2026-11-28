@@ -8,6 +8,7 @@
 //   ② デッキ選び → 対戦。相手の帯がボス(🎅・レイドバトル)で、ボスのライフに倍率が入っている
 //   ③ 投了すると、レイドバトルの結果(与ダメージ・レイドへのダメージ)が出る。デバッグの試しは送らない
 //   ④ 「レイドへ戻る」で閉じる / ⑤ 助手と対戦の記録に数えない・mh_card_* 以外の保存を書き換えない / ⑥ 実行時エラーが無い
+//   ⑦ 挑むたびにボスの3体が変わる(ハム種2体+ほか1体)。VS と対戦中の相手のアイコンがボスの絵(RAID_XMAS_BOSS_IMG)
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
@@ -88,9 +89,15 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.locator('[data-card-deck-pick-go]').waitFor({ timeout: 10000 });
     check('② デッキ選びにレイドの説明が出る', /レイドのボス/.test(await page.locator('[data-mh-screen]').first().innerText()));
     await page.locator('[data-card-deck-pick-go]').click();
+    // VS の画面: 相手のアイコンがボスの絵(顔の所)。空の人の形(CardPvpAvatar)ではない(台帳 r1126-101)
+    await page.locator('[data-card-vs-raid-boss]').waitFor({ timeout: 20000 }).catch(() => {});
+    const vsFace = await page.locator('[data-card-vs-raid-boss] [data-card-raid-boss-face]').getAttribute('data-card-raid-boss-face').catch(() => '');
+    check('② VS の画面の相手のアイコンがボスの絵', /santa-black/.test(vsFace || ''), vsFace || 'なし');
+    if (SHOT) { fs.mkdirSync(SHOT, { recursive: true }); await page.waitForTimeout(700); await page.screenshot({ path: path.join(SHOT, 'raid-vs.png') }); }
     await page.locator('[data-card-battle]').waitFor({ timeout: 20000 });
     await page.waitForTimeout(600);
     check('② 相手の帯にボスの印とレイドバトル', (await page.locator('[data-card-raid-foe]').count()) === 1 && /レイドバトル/.test(await page.locator('[data-card-battle]').innerText()));
+    check('② 対戦中の左上のアイコンがボスの絵', /santa-black/.test((await page.locator('[data-card-raid-foe] [data-card-raid-boss-face]').getAttribute('data-card-raid-boss-face').catch(() => '')) || ''));
     const foeLife = await page.evaluate(() => [...document.querySelectorAll('[data-card-mon^="1-"]')].map((e) => { const m = e.innerText.match(/(\d+)\s*\/\s*(\d+)/); return m ? Number(m[2]) : null; }));
     check('② ボスのライフに倍率が入っている(段階4は3倍)', foeLife.length === 3 && foeLife.every((n) => n === null || n >= 12), JSON.stringify(foeLife));
     if (SHOT) { fs.mkdirSync(SHOT, { recursive: true }); await page.screenshot({ path: path.join(SHOT, 'raid-board.png') }); }
@@ -117,6 +124,27 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     const volatile = /^mh_(debug_|last_|play_|session|boot|reload|device|playtime|visit|bgm_|se_|audio|login|daily_|mission|update|seen_build|build|assistant_peer|screen_trail)/;
     const changed = Object.keys(before).filter((k) => !volatile.test(k) && before[k] !== after[k]);
     check('⑤ mh_card_* 以外の保存を書き換えない', changed.length === 0, changed.join(','));
+    // ⑦ 挑むたびにボスの3体が変わる(ハム種2体+ほか1体・台帳 r1126-101 追記1)。SHOT_DIR のときは VS を撮る
+    const combos = [];
+    for (let k = 0; k < (SHOT ? 5 : 3); k++) {
+      await page.locator('[data-card-raid-debug-tier="1"]').click();
+      await page.locator('[data-card-deck-pick-go]').waitFor({ timeout: 10000 });
+      await page.locator('[data-card-deck-pick-go]').click();
+      await page.locator('[data-card-vs-raid-boss]').waitFor({ timeout: 20000 });
+      await page.waitForTimeout(500);
+      if (SHOT) await page.screenshot({ path: path.join(SHOT, `raid-vs-${k + 1}.png`) });
+      await page.locator('[data-card-battle]').waitFor({ timeout: 20000 });
+      await page.waitForTimeout(400);
+      combos.push((await page.evaluate(() => [...document.querySelectorAll('[data-card-mon^="1-"]')].map((e) => (e.innerText.split('\n')[0] || '').trim()).join('・'))));
+      if (SHOT) await page.screenshot({ path: path.join(SHOT, `raid-board-${k + 1}.png`) });
+      await page.locator('[data-card-quit]').click();
+      await page.locator('[data-confirm-sheet]').locator('xpath=..').getByRole('button', { name: '投了する' }).click();
+      await page.locator('[data-card-raid-result]').waitFor({ timeout: 20000 });
+      await page.locator('[data-card-raid-close]').click();
+      await page.locator('[data-card-top="top"]').waitFor({ timeout: 10000 });
+    }
+    console.log(`  ボスの3体: ${combos.join(' / ')}`);
+    check('⑦ 挑むたびにボスの3体が変わることがある', new Set(combos).size >= 2 || combos.length < 3, combos.join(' / '));
     check('⑥ 実行時エラーが無い', errors.length === 0, errors.slice(0, 3).join(' / '));
   } catch (e) {
     check('途中で止まらない', false, String(e && e.message || e).slice(0, 300));

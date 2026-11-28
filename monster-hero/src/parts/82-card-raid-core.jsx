@@ -10,13 +10,21 @@ const CARD_RAID_BOSS = Object.freeze({
   id: 'raid_xmas_2026',
   name: '黒いサンタ',            // 仮の名前(社長が決める)
   deckName: '奪われた贈り物',    // 仮のデッキ名
-  // 3体(仮)。黒い服の子を集めた: ジョーカー(空中)・ゴースト(空中)・ゴーレム(地上・ライフが多い)
-  monsters: Object.freeze(['C-047', 'C-024', 'C-003']),
+  // 3体。黒いサンタはハムなので、ハム種(ハム・ダークハム・ハムライガー)から2体と、ほかの候補(黒い服の子)から1体を、挑むたびに選ぶ(台帳 r1126-101 追記1)
+  //   monsters … 種を渡さないとき(検査・代わりの組み方)の3体 / hare … ハム種の候補 / others … ほかの候補
+  monsters: Object.freeze(['C-008', 'C-055', 'C-003']),
+  hare: Object.freeze(['C-008', 'C-055', 'C-010']),
+  others: Object.freeze(['C-047', 'C-024', 'C-003']),
+  favor: 'hare',               // この種の札を少し好んで入れる(ハムの技が多い山札にする)
+  favorBonus: 0.6,
+  cardNoise: 0.45,             // 挑むたびに山札の中身が入れ替わる揺れ(種を渡したときだけ)
+  // ボスの3体のライフの合計の元(倍率をかける前)。組み合わせが変わっても強さの帯が変わらないよう、合計をこの値に寄せる(前の3体の合計 21)
+  baseLife: 21,
   // 考え方のくせ(重みの意味は 82-card-battle-core.jsx の CARD_AI_HABITS と同じ)。
   //   「贈り物を奪う」ので、相手の手札・ガッツをいじる札(disrupt)をいちばん好む。弱った子を狙い、全体攻撃も好き
   habit: Object.freeze({ attack: 1.2, keepGuard: 0.8, saveGuts: 0.8, big: 1.0, disrupt: 1.7, area: 1.3, finish: 1.3 }),
-  // デッキに先に入れる札(この3体で使える物だけが入る。無い名前は飛ばす)
-  prefer: Object.freeze(['大鎌']),
+  // デッキに先に入れる札(この3体で使える物だけが入る。無い名前は飛ばす)。「贈り物を奪う」ので相手の手札を捨てさせる「大声」
+  prefer: Object.freeze(['大声']),
 });
 
 // 段階ごと(レイドの5段階・0 始まり)のボスの強さ(仮)。
@@ -37,18 +45,32 @@ const cardRaidTierOf = (tierIndex) => CARD_RAID_TIERS[Math.min(CARD_RAID_TIERS.l
 //   投了しても、それまでに与えたぶんは足す(勝ちの上乗せは付かない)。途中で閉じた(結果が出なかった)ときは 0
 const CARD_RAID_DAMAGE = Object.freeze({ perPoint: 8000, perKo: 40000, win: 150000, cap: null });
 
-// ボスのデッキを組む(段階で決まる種。同じ段階なら毎回同じデッキ)
-const cardRaidBossDeck = (db, tierIndex = 0) => {
+// ボスの3体を選ぶ(ハム種から2体+ほかから1体)。rnd が無いときは決まった3体
+const cardRaidBossMonsters = (db, rnd = null) => {
+  const ok = (list) => list.filter((no) => cardMonsterOf(db, no));
+  if (!rnd) return ok(CARD_RAID_BOSS.monsters);
+  const pick = (list, n) => { const a = ok(list).slice(); const out = []; while (a.length && out.length < n) out.push(a.splice(Math.floor(rnd() * a.length), 1)[0]); return out; };
+  const out = [...pick(CARD_RAID_BOSS.hare, 2), ...pick(CARD_RAID_BOSS.others, 1)];
+  // 同じ種が2体にならないように(カードの表が変わったときの守り)。足りなければ決まった3体
+  const sp = out.map((no) => cardMonsterOf(db, no).species);
+  return out.length === 3 && new Set(sp).size === 3 ? out : ok(CARD_RAID_BOSS.monsters);
+};
+
+// ボスのデッキを組む。seed を渡すと挑むたびに3体と山札が少し変わる(画面は対戦の種を渡す)。渡さなければ段階ごとに毎回同じ(検査用)
+const cardRaidBossDeck = (db, tierIndex = 0, seed = null) => {
   const tier = cardRaidTierOf(tierIndex);
   const cfg = CARD_AI_BUILD[tier.level] || CARD_AI_BUILD.normal;
   const habit = CARD_RAID_BOSS.habit;
-  const rnd = cardAiSeededRand(`${CARD_RAID_BOSS.id}:${tier.level}`);
-  const monsters = CARD_RAID_BOSS.monsters.filter((no) => cardMonsterOf(db, no));
+  const roll = seed !== null && seed !== undefined && Number.isFinite(Number(seed));
+  const rnd = cardAiSeededRand(`${CARD_RAID_BOSS.id}:${tier.level}${roll ? `:${Math.floor(Number(seed))}` : ''}`);
+  const monsters = cardRaidBossMonsters(db, roll ? rnd : null);
   const mons = monsters.map((no) => cardMonsterOf(db, no));
+  const noise = cfg.noise + (roll ? CARD_RAID_BOSS.cardNoise : 0);
+  const favor = (c) => (c.user === CARD_RAID_BOSS.favor ? CARD_RAID_BOSS.favorBonus : 0);
   // 弾の制限はかけない(ボスは全部の弾の札を使う)。名前ごとに入れたい度の高い番号1つ
   const pool = Object.values(db.cards).filter((c) => c.ready && (c.user === 'any' || c.user === 'breeder' || mons.some((m) => cardUsableBy(c, { ...m, ko: false }))));
   const byName = {};
-  pool.forEach((c) => { const v = cardAiCardValue(c, habit) + cfg.noise * (rnd() * 2 - 1); if (!byName[c.name] || byName[c.name].v < v) byName[c.name] = { c, v }; });
+  pool.forEach((c) => { const v = cardAiCardValue(c, habit) + favor(c) + noise * (rnd() * 2 - 1); if (!byName[c.name] || byName[c.name].v < v) byName[c.name] = { c, v }; });
   const ranked = Object.values(byName).sort((a, b) => b.v - a.v || (a.c.no < b.c.no ? -1 : 1));
   const cards = [];
   const count = (no) => cards.filter((n) => n === no).length;
@@ -95,7 +117,10 @@ const cardRaidPrepareGame = (st, tierIndex = 0, p = 1) => {
   const tier = cardRaidTierOf(tierIndex);
   const pl = st && st.players && st.players[p];
   if (!pl) return st;
-  pl.mons.forEach((m) => { const life = Math.max(1, Math.round(m.max * tier.life)); m.life = life; m.max = life; });
+  // 3体の合計を CARD_RAID_BOSS.baseLife に寄せてから倍率をかける(組み合わせで合計が 17〜22 と揺れるため。強さの帯をそろえる)
+  const sum = pl.mons.reduce((a, m) => a + Math.max(0, Number(m.max) || 0), 0);
+  const fit = sum > 0 && CARD_RAID_BOSS.baseLife > 0 ? CARD_RAID_BOSS.baseLife / sum : 1;
+  pl.mons.forEach((m) => { const life = Math.max(1, Math.round(m.max * fit * tier.life)); m.life = life; m.max = life; });
   st.raid = { boss: CARD_RAID_BOSS.id, tier: Math.max(0, Math.floor(Number(tierIndex) || 0)), side: p };
   return st;
 };
