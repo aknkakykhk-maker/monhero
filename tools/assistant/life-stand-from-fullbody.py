@@ -14,12 +14,14 @@
     8枚とも同じ大きさ・同じ顔の位置になる(広がった分は透明の余白で吸い、場面は見えている体の範囲で置くので余白で絵は動かない)
   ・色を減らさない・縮めない・引き伸ばさない(2026-11-15 r1115-143)。顔アイコンも全身画の画素のまま切る
   ・顔の表(ASSISTANT_LIFE_STAND_FACE_OUTFIT)の1行を出す(--write で書きこむ)。表情ごとに見えている体の範囲が違って場面で顔がずれるときは「顔のずれ」を出す
-使い方: python3 tools/assistant/life-stand-from-fullbody.py [--only キー] [--write] [--marks] [--face-only]   (--marks … 確かめ絵を docs/progress/assistant-art/stand-marks/ へ)
+使い方: python3 tools/assistant/life-stand-from-fullbody.py [--only キー] [--write] [--marks] [--face-only | --stand-only]   (--marks … 確かめ絵を docs/progress/assistant-art/stand-marks/ へ)
 足すときは下の HEADS に1つ足し、life-stand-marks.json に点を足す(初めの1回だけ手で測る。--marks の絵で確かめる)。
 """
 import os, sys, json, re, io, subprocess, hashlib
 import numpy as np
 from PIL import Image, ImageDraw
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import art_webp  # 重い絵(サンタ服の全身・立ち絵)は WebP(2026-11-28 r1126-095)
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 FB = os.path.join(ROOT, 'monster-hero/images/assistant/fullbody')
@@ -225,16 +227,14 @@ def files_hash(paths):
 
 def write_made(key, cfg):
     made = json.load(open(MADE, encoding='utf-8')) if os.path.exists(MADE) else {}
-    made[key] = dict(fullbody=files_hash([os.path.join(FB, '%s__%s.png' % (cfg['name'], e)) for e in EXPR]),
-                     stand=files_hash([os.path.join(ROOT, 'monster-hero/images/assistant', cfg['stand'], '%s_%s.png' % (cfg['prefix'], e)) for e in EXPR]))
+    made[key] = dict(fullbody=files_hash([art_webp.existing(os.path.join(FB, '%s__%s.png' % (cfg['name'], e))) for e in EXPR]),
+                     stand=files_hash([art_webp.existing(os.path.join(ROOT, 'monster-hero/images/assistant', cfg['stand'], '%s_%s.png' % (cfg['prefix'], e))) for e in EXPR]))
     with open(MADE, 'w', encoding='utf-8') as fp:
         fp.write('{\n' + ',\n'.join('  %s: %s' % (json.dumps(k), json.dumps(v)) for k, v in sorted(made.items())) + '\n}\n')
 
 
 def save_png(im, path):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    im.save(path, optimize=True)  # 色を減らさない(2026-11-15 r1115-143)
-    return os.path.getsize(path) // 1024
+    return os.path.getsize(art_webp.save(im, path)) // 1024  # 色を減らさない(r1115-143)。サンタ服の立ち絵は WebP(r1126-095)
 
 
 def write_face_row(stand, pid, row):
@@ -286,7 +286,7 @@ def with_cut(key, cfg):
 
 
 def run(key, cfg, marks, opts):
-    ims = [load(os.path.join(FB, '%s__%s.png' % (cfg['name'], e))) for e in EXPR]
+    ims = [load(art_webp.existing(os.path.join(FB, '%s__%s.png' % (cfg['name'], e)))) for e in EXPR]
     base = ims[0]
     mk, note = remeasure(key, marks[key], base)
     if note:
@@ -344,7 +344,7 @@ def run(key, cfg, marks, opts):
     fy = lambda y: round(float(((y - frame[1]) * k - by0) / vh), 4)
     row = dict(top=fy(mk['top']), eye=fy(mk['eye']), chin=fy(mk['chin']), m=round(float(f * k / vh / (0.82 * 0.1639)), 3))
     # 顔の横の真ん中(見えている体の左を0・右を1)。モードえらびの枠が顔で寄せるのに使う(r1119-153 追記4・life-stand-face-cx.py と同じ測り方)
-    _np = os.path.join(ROOT, 'monster-hero/images/assistant', cfg['stand'], '%s_normal.png' % cfg['prefix'])
+    _np = art_webp.existing(os.path.join(ROOT, 'monster-hero/images/assistant', cfg['stand'], '%s_normal.png' % cfg['prefix']))
     if os.path.exists(_np):
         import importlib.util
         _sp = importlib.util.spec_from_file_location('life_stand_face_cx', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'life-stand-face-cx.py'))
@@ -373,7 +373,8 @@ def run(key, cfg, marks, opts):
         print('   → 56-assistant-life-house.jsx に%s' % ('書いた' if ok else '書けなかった(手で足す)'))
     if opts['marks']:
         print('   確かめ絵: %s' % marks_image(key, base, mk, frame))
-    if cfg.get('face'):
+    # --stand-only … 立ち絵だけ書く(顔アイコンは書かない。2026-11-28 r1126-095: きゅうこの冬服の顔は #7943 で直した物を残す)
+    if cfg.get('face') and not opts.get('stand_only'):
         fc = cfg['face']
         if fc.get('head'):
             # 頭で決める(2026-11-23 r1119-153): 一辺 = 頭のてっぺんから顎までの head 倍。上は てっぺんより up だけ上。
@@ -421,7 +422,7 @@ def run(key, cfg, marks, opts):
         if cfg.get('sleep'):
             # 寝顔の全身画(<名前>__sleep.png。ききのツインテール・みゅあのサンタ)があれば、ふつう(normal)と同じ枠で寝顔の顔アイコンを切る。
             #   寝顔は normal と同じ立ち姿なので、normal と同じ倍率(match_scale のときは T)で縮め、重ね合わせは normal に合わせる
-            sp = os.path.join(FB, '%s__sleep.png' % cfg['name'])
+            sp = art_webp.existing(os.path.join(FB, '%s__sleep.png' % cfg['name']))
             if os.path.exists(sp):
                 sa = load(sp)
                 # 寝顔の絵は大きさが normal と違うことがある(ききのサンタは頭が約1割大きい)。ほかの表情と同じく、normal(縮めたあと)に
@@ -442,7 +443,7 @@ def run(key, cfg, marks, opts):
 if __name__ == '__main__':
     only = sys.argv[sys.argv.index('--only') + 1] if '--only' in sys.argv else None
     # --face-only … 顔アイコンだけ書く(立ち絵・life-stand-made.json は書かない。2026-11-25 r1125-023: 顔の位置合わせで立ち絵を動かさない)
-    opts = dict(write='--write' in sys.argv, marks='--marks' in sys.argv, face_only='--face-only' in sys.argv)
+    opts = dict(write='--write' in sys.argv, marks='--marks' in sys.argv, face_only='--face-only' in sys.argv, stand_only='--stand-only' in sys.argv)
     marks = json.load(open(MARKS, encoding='utf-8'))
     before = json.dumps(marks, sort_keys=True)
     for k, c in HEADS.items():

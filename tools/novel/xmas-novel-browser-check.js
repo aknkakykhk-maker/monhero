@@ -86,6 +86,15 @@ const CASES = CASES_ALL.filter((c) => !ONLY || c.shot === ONLY);
       const tap = (sel) => page.evaluate((s) => { const e = document.querySelector(s); if (e) e.click(); return !!e; }, sel);
       const answerOf = (id) => page.evaluate((qid) => { for (const s of window.__nvScript.scenes) for (const r of s.rows) if (r.id === qid) return r.answer || []; return []; }, id);
       const tried = new Set();
+      // 大事な選択は「押して選ぶ → 決定」(台帳 r1126-113)。押しただけでは窓が閉じず、決定で確かめる
+      const decide = async (kind) => {
+        await page.waitForTimeout(60);
+        const st2 = await page.evaluate(() => ({ open: !!document.querySelector('[data-xmas-novel-sheet]'), ready: !!document.querySelector('[data-xmas-novel-decide]:not([disabled])') }));
+        if (!st2.ready) return;
+        seen.decide = (seen.decide || 0) + 1;
+        if (!st2.open) seen.decideBroken = kind;
+        await tap('[data-xmas-novel-decide]');
+      };
       for (let i = 0; i < 400; i++) {
         const s = await look();
         if (i % 25 === 0) say(`${vp.label}: ${i}手目 ${s.scene} ${s.row}`);
@@ -99,15 +108,15 @@ const CASES = CASES_ALL.filter((c) => !ONLY || c.shot === ONLY);
           const wrong = names.find((n) => !answer.includes(n));
           const pick = wrong && !tried.has(s.qid) ? wrong : names.find((n) => answer.includes(n));
           if (pick === wrong) { seen.wrong++; tried.add(s.qid); }
-          await tap(`[data-xmas-novel-present="${pick}"]`);
+          await tap(`[data-xmas-novel-present="${pick}"]`); await decide('present');
         } else if (s.sheet === 'person') {
           seen.person++;
           if (!shots.has('person')) { shots.add('person'); await shot('06-person'); }
-          await tap(`[data-xmas-novel-person="${(await answerOf(s.qid))[0]}"]`);
+          await tap(`[data-xmas-novel-person="${(await answerOf(s.qid))[0]}"]`); await decide('person');
         } else if (s.sheet === 'action') {
           seen.action++;
           if (!shots.has('action')) { shots.add('action'); await shot('04-action'); }
-          await tap('[data-xmas-novel-option]');
+          await tap('[data-xmas-novel-option]'); await decide('action');
         } else if (s.card) {
           if (s.card === 'chapter') { seen.chapter++; if (!shots.has('chapter')) { shots.add('chapter'); await shot('02-chapter'); } }
           await tap('[data-xmas-novel-card]');
@@ -123,6 +132,7 @@ const CASES = CASES_ALL.filter((c) => !ONLY || c.shot === ONLY);
         await page.waitForTimeout(40);
       }
       check(`② ${vp.label}: 最後のエンディングまで通して読めた`, !!ending, ending || '着かなかった');
+      check(`② ${vp.label}: 突きつけ・人を選ぶは、押して選んでから「決定」で確かめる(r1126-113)`, (seen.decide || 0) >= seen.present + seen.person && !seen.decideBroken, `決定 ${seen.decide || 0} 回 / 突きつけ ${seen.present}・人 ${seen.person}`);
       check(`② ${vp.label}: 章の札・台詞・手がかり・行動の選択・突きつけ(まちがい1回)・人を選ぶ・外側からゲームの中への切り替え・赤いにじみ・倒れた影が出た`, seen.chapter > 0 && seen.line > 0 && seen.clue > 0 && seen.action > 0 && seen.present > 0 && seen.wrong > 0 && seen.person > 0 && seen.transit > 0 && seen.bleed > 0 && seen.fallen > 0, JSON.stringify(seen));
       await shot('07-ending');
 
