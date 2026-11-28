@@ -7343,6 +7343,8 @@ function MonsterHeroGame() {
       if (!btn) return;
       // モンヒロビートの演奏エリアの中は鳴らさない(ノーツの音と重ねない。今までもここは鳴っていなかった)
       if (btn.closest('[data-rhythm-play-area]')) return;
+      // 事件簿(ミステリーノベル)の中は、明るい「ピッ」ではなく低く小さい「コトッ」(手持ちの trainingDice)。表の口(fgSe)から鳴らす(r1126-093 追記1)
+      if (btn.closest('[data-xmas-novel]') && Audio_.fgSe && typeof Audio_.fgSe.trainingDice === 'function') { Audio_.fgSe.trainingDice(); return; }
       // ボタンの音は、裏のバトルの音と別の口(uiTap)で鳴らす。モンヒロビートの画面・助手ライフの裏クイック中は
       // 効果音の口(seBus)を0にしているので、se/fgSe では鳴らなかった(2026-11-24 r1119-164)
       if (Audio_.uiTap) { Audio_.uiTap(); return; }
@@ -25588,8 +25590,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // (storyBaseWho は 21-assistant.jsx。一部だけを動かす検査では無いことがあるので、無ければ id のまま)
         const storyBase=(id)=>typeof storyBaseWho==='function'?storyBaseWho(id):(typeof id==='string'?id.split('@')[0]:id);
         const castNow=(who)=>{for(let i=step;i>=0;i--){const w=script[i]&&script[i].who;if(storyBase(w)===who.id)return w===who.id?who:assistantById(w);}return who;};
-        const cast=storyCastOf(script).filter(who=>who.role!=='ゲスト')
-          .filter(who=>!hiddenUntil.includes(who.id)||script.slice(0,step+1).some(l=>l&&storyBase(l.who)===who.id));
+        // 下の欄で話すお客さん(speakBottom・クリスマスのハム・サンタ・謎の客など)は、顔の絵があれば助手と同じく顔の列にも並べる(r1126-090 追記2)
+        const cast=storyCastOf(script).filter(who=>who.role!=='ゲスト'||(who.speakBottom&&!who.noFace&&!!who.image))
+          .filter(who=>!hiddenUntil.includes(who.id)||script.slice(0,step+1).some(l=>l&&storyBase(l.who)===who.id))
+          // 同じ人の別の姿(storyFigureSlot が同じ・赤と黒のサンタ)は、いまの行までで最後に話したほうだけ
+          .filter((who,_,all)=>{if(!who.storyFigureSlot)return true;let lastId=null;for(let i=Math.min(step,script.length-1);i>=0&&!lastId;i--){const w=script[i]&&script[i].who&&assistantById(script[i].who);if(w&&w.storyFigureSlot===who.storyFigureSlot)lastId=w.id;}return lastId?lastId===who.id:all.find(x=>x.storyFigureSlot===who.storyFigureSlot)===who;});
         let stageIdx=-1;
         // 顔を出さない話し手(noFace・クリスマスのワトソンくん)は、話している行だけ上に出す(ジャックのように残し続けない)
         for(let i=step;i>=0;i--){const l=script[i];if(l.stage==='none'){stageIdx=-1;break;}if(l.stage||isGuestWho(l.who)){stageIdx=(i<step&&!l.stage&&assistantById(l.who).noFace)?-1:i;break;}}
@@ -25650,9 +25655,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const storyCplBubble=Math.max(6,storyLand?Math.floor((storyBoxW-118)/12)-3:Math.floor((storyBoxW-156)/14)-4);
         // 折り方を決める1行の字数は、ページ分けの控えめな見込みではなく、実際の欄の幅から出す(欄の内側の幅÷字の大きさ。端の1字ぶんは余らせる)
         const storyCapBottom=Math.floor((storyBoxW-64-(storyLand?62:100))/13-0.2);
-        // 全身の絵をまん中に出す話し手(storyFigure)は、下の欄に顔を置かないので、そのぶん1行の字数が増える
-        const storyFaceCols=Math.floor((storyLand?62:100)/13);
-        const storyCapBottomOf=(w)=>storyCapBottom+(w&&w.storyFigure?storyFaceCols:0);
+        // 下の欄の顔は、全身の絵をまん中に出す話し手(storyFigure)にも置く(r1126-090 追記2 社長「ハムとかさんたの顔アイコンがない」)。1行の字数はほかの話し手と同じ
+        const storyCapBottomOf=()=>storyCapBottom;
         const storyCapBubble=Math.floor((storyLand?(storyBoxW-118)/12:(storyBoxW-156)/14)-0.2);
         // 台詞を文の切れ目のかたまりごとに並べる(storyChunkLines)。かたまりで折ると行が増えるときは、今までどおり
         //   横の低い画面の吹き出しは高さ 84px で2行しか入らないので、かたまりで並べるのは2行まで(70-bootstrap.jsx)
@@ -25683,7 +25687,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const l=script[i];
           const w=l?assistantById(l.who):null;
           const text=l&&w&&!l.band?speakText(l,w):'';
-          const pages=storyZones&&typeof storySplitPages==='function'?storySplitPages(text,isGuestWho(l&&l.who)?storyCplBubble:storyCplBottom+(w&&w.storyFigure?storyFaceCols:0),3):[text];
+          const pages=storyZones&&typeof storySplitPages==='function'?storySplitPages(text,isGuestWho(l&&l.who)?storyCplBubble:storyCplBottom,3):[text];
           storyPageCache[i]=pages;
           return pages;
         };
@@ -25893,7 +25897,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 収まらない台詞は、上の storyPagesOf でページに分ける */}
             <div data-story-speaker-row={storyZones?'':undefined} className={storyZones?'flex items-start gap-2':undefined}>
             {/* 話している助手の顔(上部ゾーンのゲストと同じ大きさ・名前の札は顔の下)。ゲストが話しているあいだは、直前の助手を暗く残す */}
-            {storyZones&&bottomLine&&!bottomSpeaker.storyFigure&&<div key={`face-${bottomSpeaker.id}`} data-story-speaker={bottomSpeaker.id} className="shrink-0 text-center">
+            {storyZones&&bottomLine&&<div key={`face-${bottomSpeaker.id}`} data-story-speaker={bottomSpeaker.id} className="shrink-0 text-center">
               <span style={{display:'block',opacity:dimBottom?.55:1,filter:dimBottom?'brightness(.7)':`drop-shadow(0 0 10px ${bottomSpeaker.accent})`,transition:'opacity .2s, filter .2s'}}><AssistantFace who={bottomSpeaker} size={92} accent={bottomSpeaker.accent} expression={!dimBottom&&bottomLine===line?line.e:'normal'}/></span>
               <span className="mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-black" style={{color:dimBottom?bottomSpeaker.accent:'#0f172a',background:dimBottom?'rgba(15,23,42,.8)':bottomSpeaker.accent}}>{bottomLine.name||bottomSpeaker.name}</span>
             </div>}

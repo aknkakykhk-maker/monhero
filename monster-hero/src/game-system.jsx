@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2fa72530bfe81255
+// generated-sha256: 3db14ab852493161
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -10393,6 +10393,36 @@ const SoulRankAura = ({ soulRankStage = 0, className = '' }) => {
     <span className="mh-reincarnate-sparks"/>
   </span>;
 };
+// 次に歩いて行く所(歩く層の中の %)。レイドのボス(HP の札ごと)が出ているときは、ボスと重ならない所を選ぶ
+//   (2026-11-28 台帳 r1126-088 ①「まん中で黒いサンタ・歩くモンスター・HP の札が重なる」)。
+//   マスモンの絵は置き場所から左右へ幅の半分・上へ 72%・下へ 28% に描かれる(.mh-home-masumon の translate(-50%,-72%))ので、その分ボスの四角を広げて避ける。
+//   16回試して空いた所が無ければ、ボスの下へ。下に入らなければボスの左右の外へ行く
+const homeWalkingMasumonTarget = (el, laneCenter, laneWidth) => {
+  const pick = () => ({ x: Math.max(6, Math.min(94, laneCenter + (Math.random() - 0.5) * laneWidth)), y: 10 + Math.random() * 80 });
+  let avoid = null;
+  try {
+    const layer = el && el.parentElement;
+    const boss = typeof document !== 'undefined' ? document.querySelector('[data-home-raid-jack]') : null;
+    if (layer && boss && boss.getClientRects().length) {
+      const L = layer.getBoundingClientRect();
+      const rs = [boss, ...boss.querySelectorAll('img')].map((e) => e.getBoundingClientRect()).filter((r) => r.width > 1 && r.height > 1);
+      if (L.width > 0 && L.height > 0 && rs.length) {
+        const B = { left: Math.min(...rs.map((r) => r.left)), right: Math.max(...rs.map((r) => r.right)), top: Math.min(...rs.map((r) => r.top)), bottom: Math.max(...rs.map((r) => r.bottom)) };
+        const mw = el.offsetWidth || 56;
+        avoid = { x1: (B.left - mw / 2 - L.left) / L.width * 100, x2: (B.right + mw / 2 - L.left) / L.width * 100,
+          y1: (B.top - mw * 0.28 - L.top) / L.height * 100, y2: (B.bottom + mw * 0.72 - L.top) / L.height * 100 };
+      }
+    }
+  } catch (_) { avoid = null; }
+  if (!avoid) return pick();
+  const inside = (p) => p.x > avoid.x1 && p.x < avoid.x2 && p.y > avoid.y1 && p.y < avoid.y2;
+  for (let i = 0; i < 16; i++) { const p = pick(); if (!inside(p)) return p; }
+  const p = pick();
+  // ボスの下に入る余地があれば下へ。無ければ(背の低い横向きなど、ボスが歩く層より大きいとき)ボスの左右の外へ(層の外へ少し出てよい)
+  if (avoid.y2 <= 96) return { x: p.x, y: avoid.y2 + Math.random() * Math.max(0, 96 - avoid.y2) };
+  const left = p.x < 50 ? avoid.x1 - 2 - Math.random() * 12 : null, right = p.x >= 50 ? avoid.x2 + 2 + Math.random() * 12 : null;
+  return { x: Math.max(-30, Math.min(130, left !== null ? left : right)), y: p.y };
+};
 // HOME中央の安全領域だけを歩くマスモン。HOMEから外れるとコンポーネントごと破棄され、
 // visibilitychangeでもタイマーを止めるため、画面遷移やバックグラウンド復帰で処理が重複しない。
 const HomeWalkingMasumon = ({ masu, base, masuColors, index = 0, count = 1 }) => {
@@ -10403,6 +10433,7 @@ const HomeWalkingMasumon = ({ masu, base, masuColors, index = 0, count = 1 }) =>
   const timerRef = useRef(null);
   const mountedRef = useRef(true);
   const motionRef = useRef(motion);
+  const selfRef = useRef(null);
   useEffect(() => {
     mountedRef.current = true;
     const clearMotionTimer = () => { if (timerRef.current !== null) { clearTimeout(timerRef.current); timerRef.current = null; } };
@@ -10413,8 +10444,7 @@ const HomeWalkingMasumon = ({ masu, base, masuColors, index = 0, count = 1 }) =>
         const current = motionRef.current;
         // 横方向は個体ごとの緩いレーンを持たせ、5体が同じ場所に居続けるのを避ける。
         const laneWidth = count <= 1 ? 84 : 30;
-        const x = Math.max(6, Math.min(94, laneCenter + (Math.random() - 0.5) * laneWidth));
-        const y = 10 + Math.random() * 80;
+        const { x, y } = homeWalkingMasumonTarget(selfRef.current, laneCenter, laneWidth);
         const distance = Math.hypot(x - current.x, y - current.y);
         const duration = Math.max(2100, Math.min(4800, (1850 + distance * 32) * speedFactor));
         const next = { x, y, facing: x < current.x ? -1 : 1, walking: true, duration };
@@ -10441,7 +10471,7 @@ const HomeWalkingMasumon = ({ masu, base, masuColors, index = 0, count = 1 }) =>
     if (document.visibilityState !== 'hidden') scheduleWalk();
     return () => { mountedRef.current = false; clearMotionTimer(); document.removeEventListener('visibilitychange', onVisibilityChange); };
   }, [masu.id, index, count]);
-  return <div className={`mh-home-masumon ${motion.walking ? 'is-walking' : ''}`} style={{left:`${motion.x}%`,top:`${motion.y}%`,zIndex:Math.round(motion.y),transitionDuration:`${motion.duration}ms`}}>
+  return <div ref={selfRef} className={`mh-home-masumon ${motion.walking ? 'is-walking' : ''}`} style={{left:`${motion.x}%`,top:`${motion.y}%`,zIndex:Math.round(motion.y),transitionDuration:`${motion.duration}ms`}}>
     <div className="mh-home-masumon-bob" style={{transform:`scaleX(${motion.facing})`,isolation:'isolate'}}>
       <DyedMonsterImage baseId={masu.baseId} src={base.imgUrl || base.iconUrl} alt="" masuColors={masuColors} draggable={false}/>
       <SoulRankAura soulRankStage={masu.soulRankStage} className="is-home"/>
@@ -44487,8 +44517,20 @@ const QUICK_ANYWHERE_FLOAT_STEP = 6;
 const QUICK_ANYWHERE_FLOAT_MAX_LIFT = 0.6;
 // 画面ごとの最初の候補の隅(書いていない画面は右下)。神殿は横向きで右半分がスクロールする一覧なので左下
 const QUICK_ANYWHERE_FLOAT_SIDES = Object.freeze({ TEMPLE: 'left' });
+// 置き場所の指定(2026-11-28 台帳 r1126-088 ⑤「右の『1周目 W3/10』の札が1つだけ浮く」): 画面が [data-quick-anywhere-slot] の空き枠を出していれば、
+//   まずその枠のまん中に置く(新しい HOME はクリスマスの札の右の空き。前の HOME で時計の列があった所)。枠が無い・見えない・ほかのボタンにかかるときは、今までどおり隅から探す
+const quickAnywhereFloatSlot = (el) => {
+  if (typeof document === 'undefined' || !el) return null;
+  const slot = document.querySelector('[data-quick-anywhere-slot]');
+  if (!slot || !slot.getClientRects().length) return null;
+  const r = slot.getBoundingClientRect();
+  const w = el.offsetWidth || 70, h = el.offsetHeight || 34;
+  if (r.width < w || r.height < h) return null;
+  return { side: 'right', lift: 0, slot: true, top: Math.round(r.top + (r.height - h) / 2), left: Math.round(r.left + (r.width - w) / 2) };
+};
 const quickAnywhereFloatStyle = (spot) => {
   const s = spot.hidden ? { visibility: 'hidden', pointerEvents: 'none' } : { opacity: 0.86 };
+  if (spot.slot) return Object.assign(s, { position: 'fixed', top: `${spot.top}px`, left: `${spot.left}px` });
   Object.assign(s, { position: 'fixed', bottom: `max(${8 + spot.lift}px, calc(var(--mh-sa-bottom, 0px) + ${6 + spot.lift}px))` });
   if (spot.side === 'right') s.right = 'max(8px, calc(var(--mh-sa-right, 0px) + 6px))';
   else s.left = 'max(8px, calc(var(--mh-sa-left, 0px) + 6px))';
@@ -44497,6 +44539,7 @@ const quickAnywhereFloatStyle = (spot) => {
 // そこに置いたときの帯の四角(画面の座標)
 const quickAnywhereFloatRect = (el, spot) => {
   const w = el.offsetWidth || 70, h = el.offsetHeight || 34;
+  if (spot.slot) return { left: spot.left, top: spot.top, right: spot.left + w, bottom: spot.top + h };
   const css = getComputedStyle(document.documentElement);
   const num = (v) => { const n = parseFloat(v); return Number.isFinite(n) ? n : 0; };
   const saB = num(css.getPropertyValue('--mh-sa-bottom')), saL = num(css.getPropertyValue('--mh-sa-left')), saR = num(css.getPropertyValue('--mh-sa-right'));
@@ -44513,6 +44556,8 @@ const quickAnywhereFloatHits = (el, spot, known = null) => {
   let hits = 0;
   for (const o of document.querySelectorAll('button,a,[role=button],[data-quick-avoid]')) {
     if (o === el || el.contains(o) || o.contains(el) || o.closest('[data-quick-anywhere-detail]') || !o.getClientRects().length) continue;
+    // 見えないことにしてある物(HOME の送る札の、外へ送ってある札など。aria-hidden)は数えない(2026-11-28 r1126-088 追記3)
+    if (o.closest('[aria-hidden="true"]')) continue;
     if (known && known.has(o) && !o.hasAttribute('data-quick-avoid')) continue; // 隠したくない欄は、置いたときからあっても数える(スクロールで下に来たら札を隠す)
     const cs = getComputedStyle(o);
     if (cs.visibility === 'hidden' || cs.pointerEvents === 'none' || Number(cs.opacity) === 0) continue;
@@ -44525,6 +44570,8 @@ const quickAnywhereFloatHits = (el, spot, known = null) => {
 const quickAnywhereFloatPick = (el, screen) => {
   const first = QUICK_ANYWHERE_FLOAT_SIDES[screen] === 'left' ? 'left' : 'right';
   const sides = first === 'left' ? ['left', 'right'] : ['right', 'left'];
+  const slot = quickAnywhereFloatSlot(el);
+  if (slot && quickAnywhereFloatHits(el, slot) === 0) return slot;
   // まず隅そのもの(持ち上げない)を、最初の候補→反対の順に見る
   for (const side of sides) { const spot = { side, lift: 0 }; if (quickAnywhereFloatHits(el, spot) === 0) return spot; }
   const maxLift = Math.max(0, Math.floor(((typeof window !== 'undefined' ? window.innerHeight : 0) * QUICK_ANYWHERE_FLOAT_MAX_LIFT) / QUICK_ANYWHERE_FLOAT_STEP)) * QUICK_ANYWHERE_FLOAT_STEP;
@@ -44548,18 +44595,18 @@ const QuickAnywhereFloat = ({ screen, children, style, ...rest }) => {
     // 決めた場所にかかっているもの(画面を覆うシートなど)は入れない。かかっている間は隠し、どいたら出す
     const remember = (base) => { const set = new WeakSet(); const el = ref.current; if (typeof document !== 'undefined' && el) { const R = quickAnywhereFloatRect(el, base); for (const o of document.querySelectorAll('button,a,[role=button],[data-quick-avoid]')) { const r = o.getBoundingClientRect(); if (!(Math.min(R.right, r.right) - Math.max(R.left, r.left) > 1 && Math.min(R.bottom, r.bottom) - Math.max(R.top, r.top) > 1)) set.add(o); } } knownRef.current = set; };
     // 決める(画面が変わったとき・向きや大きさが変わったときだけ)
-    const decide = () => { if (!ref.current) return; const next = quickAnywhereFloatPick(ref.current, screen); const base = { side: next.side, lift: next.lift }; placedRef.current = { ...base, fromHidden: !!next.hidden }; remember(base); setSpot(next.hidden ? { ...base, hidden: true } : base); };
+    const decide = () => { if (!ref.current) return; const next = quickAnywhereFloatPick(ref.current, screen); const base = { side: next.side, lift: next.lift, ...(next.slot ? { slot: true, top: next.top, left: next.left } : {}) }; placedRef.current = { ...base, fromHidden: !!next.hidden }; remember(base); setSpot(next.hidden ? { ...base, hidden: true } : base); };
     // シート・確認の窓がかぶったかだけを見る。置いたときに無かったボタンにかかったら隠し、外れたら同じ場所に戻す(場所は変えない)
     // どこも空いていなくて隠れたとき(覆うシートが出ている最中に決めたとき)だけは、隠れたまま決め直す(見えている帯は動かさない)
-    const watch = () => { const el = ref.current, placed = placedRef.current; if (!el || !placed) return; if (placed.fromHidden) { decide(); return; } const base = { side: placed.side, lift: placed.lift }; const covered = quickAnywhereFloatHits(el, base, knownRef.current) > 0;
-      setSpot(prev => (!!prev.hidden === covered && prev.side === base.side && prev.lift === base.lift ? prev : covered ? { ...base, hidden: true } : base)); };
+    const watch = () => { const el = ref.current, placed = placedRef.current; if (!el || !placed) return; if (placed.fromHidden) { decide(); return; } const base = { side: placed.side, lift: placed.lift, ...(placed.slot ? { slot: true, top: placed.top, left: placed.left } : {}) }; const covered = quickAnywhereFloatHits(el, base, knownRef.current) > 0;
+      setSpot(prev => (!!prev.hidden === covered && prev.side === base.side && prev.lift === base.lift && prev.top === base.top && prev.left === base.left ? prev : covered ? { ...base, hidden: true } : base)); };
     decide();
     const t1 = setTimeout(decide, 300), t2 = setTimeout(decide, 1200), iv = setInterval(watch, 800);
     let rt = null; const onResize = () => { clearTimeout(rt); rt = setTimeout(decide, 250); };
     if (typeof window !== 'undefined') window.addEventListener('resize', onResize);
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(rt); clearInterval(iv); if (typeof window !== 'undefined') window.removeEventListener('resize', onResize); };
   }, [screen]);
-  return <button ref={ref} type="button" data-quick-anywhere-spot={spot.hidden ? 'hidden' : `${spot.side}-${spot.lift}`} {...rest} style={{ ...(style || {}), ...quickAnywhereFloatStyle(spot) }}>{children}</button>;
+  return <button ref={ref} type="button" data-quick-anywhere-spot={spot.hidden ? 'hidden' : spot.slot ? 'slot' : `${spot.side}-${spot.lift}`} {...rest} style={{ ...(style || {}), ...quickAnywhereFloatStyle(spot) }}>{children}</button>;
 };
 
 // ---- part: 50-error-boundary.jsx ----
@@ -52258,7 +52305,10 @@ const HOME_EVENT_BADGE_CSS = `
 //   字はいちばん小さくても 11px(すぐできる直し7)。横向き・タブレットは README の目安(帯の幅は最大 600px・入口は1列で遊ぶ4つを幅広に)
 const HOME_V2_CSS = `
 .mh-home-v2{--v2-panel:#102522eb;--v2-line:#f7df9a88}
-.mh-home-v2 .mh-home-top{display:flex;align-items:center;gap:6px;padding:calc(6px + env(safe-area-inset-top)) 8px 0;z-index:20}
+/* 上の1段の上は 6px だけ(2026-11-28 台帳 r1126-088 追記1・社長「上部空いてるのってなんだっけ？」)。
+   前は切り欠きの高さ env(safe-area-inset-top) も足していたが、body が同じ分をもう空けている(index.html)ので二重になり、時刻の段の下に空の絵だけの空きが出ていた。
+   body の空けで時刻の段にはかからない(Safari で開いたときは env が 0) */
+.mh-home-v2 .mh-home-top{display:flex;align-items:center;gap:6px;padding:6px 8px 0;z-index:20}
 .mh-home-v2 .mh-home-top .mh-home-player{flex:1 1 auto;min-width:0;height:46px;padding:3px 10px 3px 4px;gap:7px}
 .mh-home-v2 .mh-home-top .mh-home-avatar{flex:0 0 36px;width:36px;height:36px}
 .mh-home-v2 .mh-home-top .mh-home-player-copy strong{max-width:none;font-size:13px;line-height:1.25}
@@ -52275,7 +52325,7 @@ const HOME_V2_CSS = `
 .mh-home-v2 .mh-home-menu-btn em,.mh-home-v2 .mh-home-menu .mh-home-side-btn em{display:flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:999px;border:2px solid #fff;background:#e11d48;color:#fff;font-size:11px;font-style:normal;font-weight:900;line-height:1;box-shadow:0 2px 6px #0008}
 .mh-home-v2 .mh-home-menu-btn em{position:absolute;top:-7px;right:-6px}
 .mh-home-v2 .mh-home-menu-shade{position:absolute;inset:0;z-index:28;border:0;background:#0006;cursor:default}
-.mh-home-v2 .mh-home-menu{position:absolute;z-index:29;right:8px;top:calc(58px + env(safe-area-inset-top));display:flex;flex-direction:column;gap:6px;width:min(240px,calc(100% - 16px));padding:8px;border:1px solid var(--v2-line);border-radius:16px;background:#0d1f1cf7;box-shadow:0 10px 30px #000c}
+.mh-home-v2 .mh-home-menu{position:absolute;z-index:29;right:8px;top:58px;display:flex;flex-direction:column;gap:6px;width:min(240px,calc(100% - 16px));padding:8px;border:1px solid var(--v2-line);border-radius:16px;background:#0d1f1cf7;box-shadow:0 10px 30px #000c}
 /* 閉じているときは目に見えない形(読み上げには残す)。メニューの中の「設定」「ミッション」などを、読み上げの利用者と検査がいつでも見つけられるように */
 .mh-home-v2 .mh-home-menu:not(.is-open){width:1px;height:1px;padding:0;margin:0;border:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap;pointer-events:none;box-shadow:none}
 .mh-home-v2 .mh-home-menu.is-open{display:flex;animation:mhHomeMenuIn .15s ease-out}
@@ -52294,23 +52344,32 @@ const HOME_V2_CSS = `
 .mh-home-v2 .mh-home-menu .mh-home-side-btn em.mh-unread-badge{width:auto!important;height:20px!important;min-width:20px;padding:0 6px!important;border-radius:999px!important;font-size:11px!important;line-height:1!important;white-space:nowrap}
 .mh-home-v2 .mh-home-settings .mh-home-side-ic{border-color:#cbd5e1aa;background:#1e293be8;color:#e2e8f0}
 .mh-home-v2 .mh-home-band{position:relative;z-index:6;margin:6px 8px 0}
-.mh-home-v2 .mh-home-band-view{overflow:hidden;border-radius:14px}
-.mh-home-v2 .mh-home-band-track{display:flex;transition:transform .35s ease}
-.mh-home-v2 .mh-home-band-slide{flex:0 0 100%;min-width:0;height:80px}
-.mh-home-v2 .mh-home-band-slide>button{width:100%;height:80px}
-.mh-home-v2 .mh-home-band .mh-home-event-banner{max-width:none;justify-content:center;gap:4px;padding:8px 14px;border-radius:14px;font-size:15px}
-.mh-home-v2 .mh-home-band .mh-home-event-banner .r1{column-gap:8px}
-.mh-home-v2 .mh-home-band .mh-home-event-banner small{font-size:11px}
-.mh-home-v2 .mh-home-band .mh-home-event-banner .t2{font-size:12px}
-.mh-home-v2 .mh-home-band .mh-home-tour-banner{max-width:none;gap:10px;padding:8px 14px;border-radius:14px}
-.mh-home-v2 .mh-home-band .mh-home-tour-banner>span:first-child{font-size:30px}
-.mh-home-v2 .mh-home-band .mh-home-tour-banner b{font-size:15px}
-.mh-home-v2 .mh-home-band .mh-home-tour-banner small,.mh-home-v2 .mh-home-band .mh-home-tour-banner em{font-size:11px}
-.mh-home-v2 .mh-home-band-nav{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:2px}
-.mh-home-v2 .mh-home-band-nav .mh-home-event-strip-dots button{display:flex;align-items:center;justify-content:center;width:22px;height:22px;padding:0;border:0;background:transparent}
-.mh-home-v2 .mh-home-band-nav .mh-home-event-strip-dots i{width:8px;height:8px;box-shadow:0 0 0 1px #0008}
-.mh-home-v2 .mh-home-band-nav .mh-home-event-strip-dots button.on i{width:18px;border-radius:4px;background:#fde68a}
-.mh-home-v2 .mh-home-band-next{min-width:0;max-width:72%;min-height:22px;overflow:hidden;padding:2px 9px;border-radius:999px;background:#000a;color:#fffbeb;font-size:11px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}
+/* イベントの札(r1126-088)。追記1(社長「横幅もう少し小さく」): 前(312×80)より少し小さく 278×74。札の右の空きは裏クイックの札の置き場。
+   追記3(社長「フリックとかで動かせるように」): 札1枚分の場所を左右に送る。何枚目かの点は札の右下の中に小さく(札の外に段を足さない) */
+.mh-home-v2 .mh-home-band-view{position:relative;width:calc(100% - 96px);height:74px;overflow:hidden;border-radius:12px;touch-action:pan-y}
+.mh-home-v2 .mh-home-band-track{display:flex;height:100%;transition:transform .35s ease}
+@media(prefers-reduced-motion:reduce){.mh-home-v2 .mh-home-band-track{transition:none}}
+.mh-home-v2 .mh-home-band-slide{flex:0 0 100%;min-width:0;height:100%}
+.mh-home-v2 .mh-home-band-slide>button{width:100%;max-width:none;height:100%!important}
+.mh-home-v2 .mh-home-band-slide>.mh-home-event-banner{justify-content:center;border-radius:12px}
+.mh-home-v2 .mh-home-band-slide>.mh-home-tour-banner{border-radius:12px}
+.mh-home-v2 .mh-home-band-dots{position:absolute;right:5px;bottom:4px;z-index:3;display:flex;gap:1px;padding:0 3px;border-radius:999px;background:#0009}
+.mh-home-v2 .mh-home-band-dots button{display:flex;align-items:center;justify-content:center;width:16px;height:16px;padding:0;border:0;background:transparent}
+.mh-home-v2 .mh-home-band-dots i{display:block;width:6px;height:6px;border-radius:50%;background:#ffffff80}
+.mh-home-v2 .mh-home-band-dots button.on i{width:12px;border-radius:3px;background:#fde68a}
+.mh-home-v2 .mh-home-band-quick-slot{position:absolute;top:0;right:-6px;width:96px;height:74px;pointer-events:none}
+/* ほかのイベントの絵の札(追記2) */
+.mh-home-v2 .mh-home-event-art{position:relative;display:block;overflow:hidden;padding:0;border:2px solid #f9a8d4;border-radius:12px;background:#3b0a2e}
+.mh-home-v2 .mh-home-event-art:active{filter:brightness(1.15)}
+.mh-home-v2 .mh-home-event-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 12%;pointer-events:none}
+.mh-home-v2 .mh-home-event-art-sub{position:absolute;left:6px;bottom:4px;padding:1px 7px;border:1px solid #fbcfe8;border-radius:999px;background:#9d174de6;color:#fff;font-size:10px;font-weight:900;line-height:1.3;white-space:nowrap}
+/* クリスマスの札(追記3・社長「聖夜のバナーの文字で絵が半分隠れてる」): 部品(79-screen-xmas-event.jsx)の中身は変えず、HOME の側で見え方だけ変える。
+   絵は人物と館が見える所で切り、左半分を覆っていた濃い地は下の端の細い影だけに。字は「聖夜の名探偵」(13px)と期間の札だけを左下へ小さく寄せる */
+.mh-home-v2 .mh-home-band .mh-xmas-entry img.mh-xmas-entry-art{object-position:50% 52%!important}
+.mh-home-v2 .mh-home-band .mh-xmas-entry>span[style*="linear-gradient"]{background:linear-gradient(0deg,#0b1733e0 0,#0b1733a0 20px,transparent 40px)!important}
+.mh-home-v2 .mh-home-band .mh-xmas-entry [data-xmas-entry-kicker]{display:none}
+.mh-home-v2 .mh-home-band .mh-xmas-entry>span[style*="flex-direction"]{top:auto!important;bottom:4px;left:6px!important;right:auto!important;flex-direction:row!important;align-items:center!important;gap:5px!important}
+.mh-home-v2 .mh-home-band .mh-xmas-entry-title{font-size:13px!important;filter:drop-shadow(0 1px 2px #000)}
 .mh-home-v2 .mh-home-assistant{width:70%;max-width:360px;margin:6px 0 0 8px}
 .mh-home-v2 .mh-home-assistant-fold{margin:6px 0 0 8px}
 .mh-home-v2 .mh-home-assistant-show-mark{right:-8px;bottom:-6px;width:24px;height:24px;font-size:14px;background:#fff!important;box-shadow:0 0 0 2px #e11d48,0 2px 6px #0009;animation:mhHomePeerMark 1.4s ease-in-out infinite}
@@ -52318,7 +52377,11 @@ const HOME_V2_CSS = `
 @media(prefers-reduced-motion:reduce){.mh-home-v2 .mh-home-assistant-show-mark{animation:none}}
 .mh-home-v2 .mh-home-assistant-news-dot{position:absolute;top:1px;right:1px;width:13px;height:13px;border-radius:50%;border:2px solid #fff;background:#e11d48;box-shadow:0 1px 4px #0009}
 .mh-home-v2 .mh-home-peer-mark{position:absolute;left:52px;top:calc(100% + 4px);width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:50%;border:1.5px solid #f9a8d4;background:#1e0b24ee;font-size:16px;box-shadow:0 2px 8px #0009}
-.mh-home-v2 .mh-home-dock{gap:6px;padding:8px 8px calc(8px + env(safe-area-inset-bottom))}
+.mh-home-v2 .mh-home-dock{gap:6px;padding:8px}
+/* iPhone の下の安全域(ホームの棒の所)(2026-11-28 台帳 r1126-088 ③「入口の段の下に暗い余白、その下が黒い帯」)。
+   body が安全域の分だけ下を空けている(index.html)のに、ドックの下でも安全域の分をもう1回空けていた(暗い余白)。ドックの下は前の HOME と同じ 8px に戻し、
+   安全域(画面の外の親 .mh-app が切り取るので HOME を伸ばせない)は、HOME を出している間だけドックの下の端と同じ色で塗る(黒い帯にしない) */
+body:has(.mh-home-v2){background:linear-gradient(to top,#0b1f1a calc(env(safe-area-inset-bottom) + 1px),#000 0)}
 .mh-home-v2 .mh-home-dock-row{gap:6px}
 .mh-home-v2 .mh-home-dock-top>.mh-home-dock-card,.mh-home-v2 .mh-home-dock-top>.mh-home-success{height:clamp(112px,18cqh,150px);padding:0;gap:0;overflow:hidden;border-radius:14px}
 .mh-home-v2 .mh-home-dock-top .mh-home-dock-pic,.mh-home-v2 .mh-home-dock-top .mh-home-success .pic{flex:1 1 auto;width:100%;max-width:none;height:auto;min-height:0;aspect-ratio:auto;border-radius:0}
@@ -52333,12 +52396,11 @@ const HOME_V2_CSS = `
 .mh-home-v2 .mh-home-dock-bottom .mh-home-dock-name{font-size:11px;line-height:1.2}
 @media(max-width:350px){.mh-home-v2 .mh-home-dock-top .mh-home-dock-name,.mh-home-v2 .mh-home-dock-top .mh-home-success .nm{font-size:10.5px;letter-spacing:-.06em}}
 @media(orientation:landscape) and (max-height:600px){
-  .mh-home-v2 .mh-home-band{position:absolute;left:8px;top:calc(58px + env(safe-area-inset-top));width:min(37%,330px);margin:0}
-  .mh-home-v2 .mh-home-band-slide,.mh-home-v2 .mh-home-band-slide>button{height:68px}
-  .mh-home-v2 .mh-home-band-slide>button[data-home-xmas-entry]{height:68px!important}
-  .mh-home-v2 .mh-home-assistant,.mh-home-v2 .mh-home-assistant-fold{position:absolute;left:8px;top:calc(160px + env(safe-area-inset-top));margin:0}
+  .mh-home-v2 .mh-home-band{position:absolute;left:8px;top:58px;width:min(37%,330px);margin:0}
+  .mh-home-v2 .mh-home-band-view{width:100%;height:56px}
+  .mh-home-v2 .mh-home-assistant,.mh-home-v2 .mh-home-assistant-fold{position:absolute;left:8px;top:128px;margin:0}
   .mh-home-v2 .mh-home-assistant{width:min(37%,330px)}
-  .mh-home-v2 .mh-home-dock{flex-direction:row;align-items:flex-end;gap:8px;padding:5px 8px calc(6px + env(safe-area-inset-bottom))}
+  .mh-home-v2 .mh-home-dock{flex-direction:row;align-items:flex-end;gap:8px;padding:5px 8px 6px}
   .mh-home-v2 .mh-home-dock-top{flex:1.9 1 0}
   .mh-home-v2 .mh-home-dock-bottom{flex:1 1 0}
   .mh-home-v2 .mh-home-dock-top>.mh-home-dock-card,.mh-home-v2 .mh-home-dock-top>.mh-home-success{height:clamp(84px,25cqh,104px);max-width:none}
@@ -52346,10 +52408,9 @@ const HOME_V2_CSS = `
 }
 @container (min-width:700px) and (min-height:560px){
   .mh-home-v2 .mh-home-band{width:min(600px,calc(100% - 16px));margin:8px auto 0}
-  .mh-home-v2 .mh-home-band-slide,.mh-home-v2 .mh-home-band-slide>button{height:92px}
-  .mh-home-v2 .mh-home-band-slide>button[data-home-xmas-entry]{height:92px!important}
+  .mh-home-v2 .mh-home-band-view{width:100%;height:92px}
   .mh-home-v2 .mh-home-assistant{width:360px}
-  .mh-home-v2 .mh-home-dock{flex-direction:row;align-items:flex-end;gap:14px;padding:10px 14px calc(12px + env(safe-area-inset-bottom))}
+  .mh-home-v2 .mh-home-dock{flex-direction:row;align-items:flex-end;gap:14px;padding:10px 14px 12px}
   .mh-home-v2 .mh-home-dock-top{flex:2 1 0;justify-content:center}
   .mh-home-v2 .mh-home-dock-bottom{flex:1 1 0}
   .mh-home-v2 .mh-home-dock-top>.mh-home-dock-card,.mh-home-v2 .mh-home-dock-top>.mh-home-success{height:min(170px,19cqh);max-width:180px;border-radius:16px}
@@ -52358,9 +52419,12 @@ const HOME_V2_CSS = `
   .mh-home-v2 .mh-home-dock-bottom .mh-home-dock-pic{width:62px;height:62px}
   .mh-home-v2 .mh-home-dock-bottom .mh-home-dock-name{font-size:12px}
 }
-/* クリスマスの入口(79-screen-xmas-event.jsx)は、横向きで帯を右の列の横へ動かす決まりを持っている(前の HOME の形のため)。
-   新しい帯の中では、ほかの1枚と同じ位置・大きさのままにする(部品の中身は変えない。HOME の側で上書きするだけ) */
-.mh-home-v2 .mh-home-band-slide[data-home-xmas-entry-strip]{position:relative!important;left:auto!important;right:auto!important;top:auto!important;width:auto!important;margin:0!important}
+/* クリスマスの入口(79-screen-xmas-event.jsx)は、横向きで帯を右の列の横へ動かす決まりを持っている(前の HOME の右の列のため)。
+   新しい HOME には右の列が無いので、帯の置き場(.mh-home-band)の中に置いたままにする(部品の中身は変えない。HOME の側で上書きするだけ)。
+   背の低い横向きの高さ 54px と字の大きさは、部品の決まり(前の HOME と同じ)のまま */
+.mh-home-v2 .mh-home-band [data-home-xmas-entry-strip]{position:relative!important;left:auto!important;right:auto!important;top:auto!important;width:auto!important;margin:0!important}
+@media(orientation:landscape) and (max-height:600px){.mh-home-v2 .mh-home-event-art img{object-position:50% 4%}.mh-home-v2 .mh-home-band-quick-slot{display:none}}
+@container (min-width:700px) and (min-height:560px){.mh-home-v2 .mh-home-band-quick-slot{display:none}}
 @media (orientation:landscape) and (max-height:520px){.mh-home-v2 .mh-home-band .mh-xmas-entry[data-home-xmas-entry="banner"] .mh-xmas-entry-sub{font-size:11px}}
 /* 横持ちの iPhone の切り欠き(カメラの欠け)に、押す物を入れない。左右の余白に端末の安全な余白(safe-area)を足す */
 .mh-home-v2 .mh-home-top{padding-left:calc(8px + env(safe-area-inset-left));padding-right:calc(8px + env(safe-area-inset-right))}
@@ -52392,8 +52456,10 @@ const HOME_RAID_JACK_CSS = `
   82%{transform:translateY(0) scale(1.05,.94) rotate(1deg)}}
 @keyframes mhRaidJackShadow{0%,100%{transform:scaleX(1.05);opacity:.5}50%{transform:scaleX(.7);opacity:.3}}
 @media(prefers-reduced-motion:reduce){.mh-home-raid-jack-img,.mh-home-raid-jack-shadow{animation:none}}
+/* クリスマスのボス(背の高い絵)は、まん中に置く。前は translateX(-50%) で寄せていたが、跳ねる動き(transform)がそれを上書きして、
+   絵の幅の半分だけ右へずれていた(2026-11-28 台帳 r1126-088 ②「サンタが右寄りで大きすぎる」)。いまは left/right:0 と margin:auto で寄せ、高さも 135% → 110% に */
 /* 背の低い横画面: クリスマスのボスは枠より上へはみ出して描くので、耳が上の欄の裏に隠れた(#7857 点検の8)。絵を少し縮めて上を空ける。足もとの位置は変えない */
-@media(orientation:landscape) and (max-height:430px){.mh-home-raid-boss-tall{height:112% !important}}
+@media(orientation:landscape) and (max-height:430px){.mh-home-raid-boss-tall{height:100% !important}}
 `;
 // ★重なり順は 4(2026-10-11・社長の実機の指摘で、旧・施設の並び(z-index:3)より前にした)。
 //   枠そのものは押せなくして(pointerEvents:none)、吹き出しとジャック本体だけを押せるようにする
@@ -52593,9 +52659,9 @@ const HomeRaidJack = ({ eventId, onOpen, ev = RAID_EVENT_JACK }) => {
         <span style={{ display:'block', height:'7px', marginTop:'3px', borderRadius:'999px', overflow:'hidden', background:'#000a', border:'1px solid #fff3' }} role="progressbar" aria-valuemin={0} aria-valuemax={tier.hp} aria-valuenow={left}>
           <span style={{ display:'block', height:'100%', width:`${rate * 100}%`, background:'#f97316' }} />
         </span>
-        {totals === null ? <span style={{ display:'block', fontSize:'8px', opacity:.8 }}>準備中</span>
-          : totals === undefined ? <span style={{ display:'block', fontSize:'8px', opacity:.8 }}>…</span>
-          : <span style={{ display:'block', fontSize:'8px', opacity:.85 }}>共有HP {left.toLocaleString()}</span>}
+        {totals === null ? <span style={{ display:'block', fontSize:'11px', opacity:.8 }}>準備中</span>
+          : totals === undefined ? <span style={{ display:'block', fontSize:'11px', opacity:.8 }}>…</span>
+          : <span data-home-raid-hp-text style={{ display:'block', fontSize:'11px', opacity:.9 }}>共有HP {left.toLocaleString()}</span>}
         </>}
       </span>
   );
@@ -52639,8 +52705,10 @@ const HomeRaidJack = ({ eventId, onOpen, ev = RAID_EVENT_JACK }) => {
         {/* 大王を倒したあとは、小さなぱんぷきんが遊びに来る(オーラ・ポーズ絵なし。跳ねる動きは同じ) */}
         {allDone && isJack ? <img className="mh-home-raid-jack-img" src={PUMPKIN_ICON_IMG} alt="" draggable={false}
           style={{ position:'absolute', left:`${(1 - RAID_JACK_PUMPKIN_ART_SCALE) * 50}%`, bottom:0, width:`${RAID_JACK_PUMPKIN_ART_SCALE * 100}%`, height:'auto', filter:'drop-shadow(0 6px 10px #000a)', pointerEvents:'none' }} />
+        // ★真ん中へは left/right 0 と margin auto で寄せる。transform で寄せると、跳ねる動き(mhRaidJackHop の transform)に上書きされて
+        //   絵の幅の半分だけ右へずれる(2026-11-28 HOME の作り直しの点検: ボスの絵が共有HPの札より右にずれていた)
         : !isJack ? <img className="mh-home-raid-jack-img mh-home-raid-boss-tall" data-home-raid-boss={ev.key} src={allDone ? ev.afterBossImg() : ev.bossImg()} alt="" draggable={false}
-          style={{ position:'absolute', left:'50%', bottom:0, height:'135%', width:'auto', transform:'translateX(-50%)', filter:'drop-shadow(0 6px 10px #000a)', pointerEvents:'none' }} /> : <>
+          style={{ position:'absolute', left:0, right:0, margin:'0 auto', bottom:0, height:'110%', width:'auto', filter:'drop-shadow(0 6px 10px #000a)', pointerEvents:'none' }} /> : <>
         <img className="mh-home-raid-jack-img" src={JACK_IMG} alt="" draggable={false}
           style={{ position:'absolute', left:`${(1 - RAID_JACK_NORMAL_ART_SCALE) * 50}%`, bottom:0, width:`${RAID_JACK_NORMAL_ART_SCALE * 100}%`, height:'auto', opacity:pose ? 0 : 1, filter:`drop-shadow(0 6px 10px #000a) ${raidJackAuraGlowFilter(Number(String(tier.id).slice(1)) || 0, 0.8)}`, pointerEvents:'none' }} />
         <img className="mh-home-raid-jack-img" src={JACK_POSE_IMG} alt="" draggable={false} aria-hidden="true"
@@ -52663,7 +52731,23 @@ const homeWalletGrowPx=(goldText,bpText)=>{const w=t=>[...String(t)].reduce((n,c
 // ★HOME の作り直し(r1126-073)は、ゲームの中の時刻で切り替える(2026-11-28 台帳 r1126-086 追記1・社長「いままで2でやってたんだからそれでやればよくない？」)。
 //   2026-11-28 10:00(日本時間)より前は前の HOME(HomeScreenV1)、以後は新しい HOME(HomeScreenV2)。開いたまま 10:00 をまたいでも、15秒ごとに見直して切り替わる。
 //   新しい HOME と一緒に変えた所(吹き出しの既定・入口の印・会話の窓の出し方・小さい知らせの数・バトルを選ぶ画面のサクセスの入口)も homeV2At() で同じ時刻に切り替える
+// HOME の見た目の決まり(<head> へ入れる <style>)を、HOME を描く前にそろえる(2026-11-28 台帳 r1126-103・社長「ホームを開くと一瞬旧ホームが出てから新しいのにかわる」)。
+//   前は各部品の useEffect(描いたあと)で入れていたので、最初の1コマは新しい HOME の決まり(HOME_V2_CSS)もクリスマスの札の決まりも無いまま描かれ、
+//   前の HOME の決まり(70-bootstrap.jsx)だけで「四角い札8枚・左の丸いボタンの列・大きな告知の絵」に見えていた(docs/progress/home-flash-r1126-103/)。
+//   描く関数の中で呼ぶ(同じ id があれば何もしない。部品の useEffect も同じ id を見て入れない)
+const homeEnsureCss=()=>{
+  if(typeof document==='undefined'||!document.head)return;
+  const put=(id,text)=>{if(!text||document.getElementById(id))return;const tag=document.createElement('style');tag.id=id;tag.textContent=text;document.head.appendChild(tag);};
+  try{
+    put('mh-home-event-badge-css',HOME_EVENT_BADGE_CSS);
+    put('mh-home-v2-css',HOME_V2_CSS);
+    put('mh-home-raid-jack-css',HOME_RAID_JACK_CSS);
+    // クリスマスの入口の決まり(79-screen-xmas-event.jsx。読み込み順でこのファイルより後ろなので、描くときに見る)
+    if(typeof XMAS_HOME_ENTRY_CSS==='string')put('mh-xmas-home-entry-css',XMAS_HOME_ENTRY_CSS);
+  }catch(_){/* 入れられなくても、各部品の useEffect が後から入れる */}
+};
 function HomeScreen(props) {
+  homeEnsureCss();
   const v2=useHomeV2();
   return v2?<HomeScreenV2 {...props}/>:<HomeScreenV1 {...props}/>;
 }
@@ -53000,12 +53084,27 @@ function HomeScreenV2({
   //   帯の下の「次:」を押す)。手で触らなければ7秒ごとに次へ進み、触ったら20秒は止める。
   //   並び: クリスマスの入口(r1126-014 の大きな帯)→ ほかの開催中のイベント → 公式杯。クリスマスの入口があるときは、同じ中身の「クリスマスイベント」の帯は出さない
   //   ただしクリスマスがまだ予告(序章だけ)のあいだは、いま遊べるイベントを1枚目にする(API の点検 7・予告より開催中を先に)
+  // 【2026-11-28 台帳 r1126-088・社長「ホームのイベント表示の画像まえのほうがよくない？」→「前の形に戻す」】
+  //   帯1枚を左右に送る形(点・「次:〜」の札)はやめ、前の HOME(HomeScreenV1)と同じ並びにした:
+  //   上にクリスマスの絵の札(前と同じ大きさ・切り方)、その下にほかのイベントの細い帯(公式杯とは5秒ごとに切り替わる。手で送る操作は付けない)。
+  //   クリスマスの入口があるときは、同じ中身の「クリスマスイベント」の細い帯は出さない(前と同じ)。行き先は新しい HOME のまま(細い帯はモンヒロビートへ)
+  const homeBandXmas=!!xmasEntry;
+  const homeBandEvent=homeEventCampaign&&!(xmasEntry&&homeEventCampaign.id==='xmas_2026')?homeEventCampaign:null;
+  const homeBandTour=homeCardTour&&typeof onOpenCardTour==='function'?homeCardTour:null;
+  // 追記2(社長「咲かせてはなうたのーとのバナー作ってある画像出せない？」): ほかのイベントも、絵があれば絵の札で出す。
+  //   絵はいま開いているモンヒロビートのイベント(rhythmLimitedEventAt の banner・告知の絵)。題が同じときだけ使い、無ければ今までどおり字の帯
+  const homeBandEventArt=(()=>{
+    if(!homeBandEvent||typeof rhythmLimitedEventAt!=='function')return '';
+    try{const ev=rhythmLimitedEventAt(Date.now());return ev&&typeof ev.banner==='string'&&typeof ev.name==='string'&&ev.name.startsWith(homeBandEvent.banner.title)?ev.banner:'';}catch(_){return '';}
+  })();
+  // 追記3(社長「別のイベントの表示を同じバナー位置でフリックとかで動かせるようにして」): 縦に2枚並べる形はやめ、札1枚分の場所を左右に送る。
+  //   指で左右に払う(40px 以上)・札の右下の小さな点を押すと替わる。触らなければ7秒ごとに次へ、触ったら20秒は止める。押すとそのイベントのページ(今までどおり)。
+  //   並び: クリスマス → ほかの開催中のイベント → 公式杯。クリスマスがまだ予告のあいだは、開催中のイベントを先にする(API の点検 7)
   const homeBandSlides=[];
-  const homeBandEvent=homeEventCampaign&&!(xmasEntry&&homeEventCampaign.id==='xmas_2026');
-  if(homeBandEvent&&xmasEntry&&xmasEntry.preOpen)homeBandSlides.push('event');
-  if(xmasEntry)homeBandSlides.push('xmas');
+  if(homeBandEvent&&homeBandXmas&&xmasEntry.preOpen)homeBandSlides.push('event');
+  if(homeBandXmas)homeBandSlides.push('xmas');
   if(homeBandEvent&&!homeBandSlides.includes('event'))homeBandSlides.push('event');
-  if(homeCardTour&&typeof onOpenCardTour==='function')homeBandSlides.push('tour');
+  if(homeBandTour)homeBandSlides.push('tour');
   const homeBandCount=homeBandSlides.length;
   const [homeBandIdx,setHomeBandIdx]=React.useState(0);
   const homeBandTouchRef=React.useRef({x:null,at:0,swiped:false});
@@ -53016,7 +53115,6 @@ function HomeScreenV2({
   },[homeBandCount]);
   const homeBandShow=homeBandCount?((homeBandIdx%homeBandCount)+homeBandCount)%homeBandCount:0;
   const homeBandGo=(step)=>{homeBandTouchRef.current.at=Date.now();setHomeBandIdx(i=>i+step);};
-  const homeBandTitle=(k)=>k==='xmas'?'聖夜の名探偵':k==='event'&&homeEventCampaign?homeEventCampaign.banner.title:k==='tour'&&homeCardTour?homeCardTour.name:'';
   // メニュー☰(案A)。右の列(時計・更新履歴・ミッション・ギフト)と設定・ブリーダーP をここへまとめる。赤い数字は合計
   //   ボタンはいつも描いておき(閉じているときは見えないだけ)、案内(チュートリアル)がミッション・ギフト・設定を指すときは開いておく
   const [homeMenuOpen,setHomeMenuOpen]=React.useState(false);
@@ -53075,31 +53173,35 @@ function HomeScreenV2({
             :<em className="mh-unread-badge" aria-label="未読あり">!</em>)}</button>
           <button onClick={homeMenuGo(onOpenSettings)} className={`mh-home-side-btn mh-home-settings${spotClass('settings')}`} aria-label="設定"><span className="mh-home-side-ic"><Settings size={18}/></span><span className="mh-home-side-lb">設定</span></button>
         </div>
-        {/* イベントの帯1枚(案A)。2つ目からは横に送る。並びと送り方は上の homeBandSlides */}
-        {homeBandCount>0&&<div className="mh-home-band" data-home-band={homeBandSlides[homeBandShow]}
-          onPointerDown={e=>{homeBandTouchRef.current={...homeBandTouchRef.current,x:e.clientX,swiped:false};}}
-          onPointerUp={e=>{const t=homeBandTouchRef.current;if(t.x===null||homeBandCount<2)return;const dx=e.clientX-t.x;t.x=null;if(Math.abs(dx)>=40){t.swiped=true;homeBandGo(dx<0?1:-1);}}}
-          onClickCapture={e=>{if(homeBandTouchRef.current.swiped){homeBandTouchRef.current.swiped=false;e.stopPropagation();e.preventDefault();}}}>
-          <div className="mh-home-band-view">
+        {/* イベントの札(r1126-088・追記3): 札1枚分の場所を左右に送る。並びと送り方は上の homeBandSlides */}
+        {homeBandCount>0&&<div className="mh-home-band" data-home-band={homeBandSlides[homeBandShow]}>
+          <div className="mh-home-band-view"
+            onPointerDown={e=>{homeBandTouchRef.current={...homeBandTouchRef.current,x:e.clientX,swiped:false};}}
+            onPointerUp={e=>{const t=homeBandTouchRef.current;if(t.x===null||homeBandCount<2)return;const dx=e.clientX-t.x;t.x=null;if(Math.abs(dx)>=40){t.swiped=true;homeBandGo(dx<0?1:-1);}}}
+            onPointerCancel={()=>{homeBandTouchRef.current.x=null;}}
+            onClickCapture={e=>{if(homeBandTouchRef.current.swiped){homeBandTouchRef.current.swiped=false;e.stopPropagation();e.preventDefault();}}}>
             <div className="mh-home-band-track" style={{transform:`translateX(${-homeBandShow*100}%)`}}>
               {homeBandSlides.map((k,i)=>(
                 <div key={k} className="mh-home-band-slide" aria-hidden={i!==homeBandShow} {...(k==='xmas'?{'data-home-xmas-entry-strip':''}:{'data-home-event-strip':''})}>
                   {k==='xmas'&&<HomeXmasEventEntry onOpen={xmasEntry.onOpen} preOpen={!!xmasEntry.preOpen}/>}
-                  {/* 押すとモンヒロビートへ直に入る(2026-11-27 台帳 r1126-073 追記2・入口の整理①。前は更新履歴が開いた) */}
-                  {k==='event'&&<button type="button" data-home-event-banner className="mh-home-event-banner" tabIndex={i===homeBandShow?0:-1} onClick={homeEventCampaign.id==='xmas_2026'&&typeof onOpenXmasEvent==='function'?onOpenXmasEvent:onOpenRhythm} aria-label={`${homeEventCampaign.banner.title}${homeEventCampaign.banner.title2||''} ${homeEventCampaign.banner.sub}`}>
-                    {/* 1行目に題と期間(sub)、2行目に副題(title2)(r1119-131) */}
-                    <b className="r1"><span>{homeEventCampaign.banner.emoji} {homeEventCampaign.banner.title}</span><small>{homeEventCampaign.banner.sub}</small></b>{homeEventCampaign.banner.title2?<span className="t2">{homeEventCampaign.banner.title2}</span>:null}
+                  {/* 絵のあるイベントは絵の札(追記2)。押すとモンヒロビートへ直に入る(r1126-073 追記2) */}
+                  {k==='event'&&homeBandEventArt&&<button type="button" data-home-event-banner="art" className="mh-home-event-art" tabIndex={i===homeBandShow?0:-1} onClick={homeBandEvent.id==='xmas_2026'&&typeof onOpenXmasEvent==='function'?onOpenXmasEvent:onOpenRhythm} aria-label={`${homeBandEvent.banner.title}${homeBandEvent.banner.title2||''} ${homeBandEvent.banner.sub}`}>
+                    <img src={homeBandEventArt} alt="" draggable={false}/>
+                    <span className="mh-home-event-art-sub">{homeBandEvent.banner.sub}</span>
                   </button>}
-                  {k==='tour'&&<button type="button" data-home-card-tour={homeCardTour.id} className="mh-home-tour-banner" tabIndex={i===homeBandShow?0:-1} onClick={()=>onOpenCardTour(homeCardTour.id)} aria-label={`${homeCardTour.name} ${homeCardTour.sub}`}>
-                    <span aria-hidden="true">🏆</span><span><b>{homeCardTour.name}</b><small>{homeCardTour.sub}{homeCardTour.prize&&<em>{homeCardTour.prize}</em>}</small></span>
+                  {k==='event'&&!homeBandEventArt&&<button type="button" data-home-event-banner className="mh-home-event-banner" tabIndex={i===homeBandShow?0:-1} onClick={homeBandEvent.id==='xmas_2026'&&typeof onOpenXmasEvent==='function'?onOpenXmasEvent:onOpenRhythm} aria-label={`${homeBandEvent.banner.title}${homeBandEvent.banner.title2||''} ${homeBandEvent.banner.sub}`}>
+                    <b className="r1"><span>{homeBandEvent.banner.emoji} {homeBandEvent.banner.title}</span><small>{homeBandEvent.banner.sub}</small></b>{homeBandEvent.banner.title2?<span className="t2">{homeBandEvent.banner.title2}</span>:null}
+                  </button>}
+                  {k==='tour'&&<button type="button" data-home-card-tour={homeBandTour.id} className="mh-home-tour-banner" tabIndex={i===homeBandShow?0:-1} onClick={()=>onOpenCardTour(homeBandTour.id)} aria-label={`${homeBandTour.name} ${homeBandTour.sub}`}>
+                    <span aria-hidden="true">🏆</span><span><b>{homeBandTour.name}</b><small>{homeBandTour.sub}{homeBandTour.prize&&<em>{homeBandTour.prize}</em>}</small></span>
                   </button>}
                 </div>))}
             </div>
+            {/* 何枚目か(札の右下の中に小さく。札の外に段を足さない=マップを狭くしない)。押すとその札へ */}
+            {homeBandCount>1&&<span className="mh-home-band-dots" data-home-band-dots>{homeBandSlides.map((k,i)=><button key={k} type="button" className={i===homeBandShow?'on':''} aria-label={`${i+1}枚目を見る`} onClick={e=>{e.stopPropagation();homeBandGo(i-homeBandShow);}}><i/></button>)}</span>}
           </div>
-          {homeBandCount>1&&<div className="mh-home-band-nav">
-            <span className="mh-home-event-strip-dots">{homeBandSlides.map((k,i)=><button key={k} type="button" className={i===homeBandShow?'on':''} aria-label={`${i+1}枚目を見る`} onClick={()=>homeBandGo(i-homeBandShow)}><i/></button>)}</span>
-            <button type="button" className="mh-home-band-next" data-home-band-next onClick={()=>homeBandGo(1)}>次:{homeBandTitle(homeBandSlides[(homeBandShow+1)%homeBandCount])} ›</button>
-          </div>}
+          {/* 札の右の空き(前の HOME の時計の列の所)。裏クイックの札(45-quick-anywhere-float.jsx)はここに置く(r1126-088 ⑤)。押せない・何も描かない枠 */}
+          <span className="mh-home-band-quick-slot" data-quick-anywhere-slot aria-hidden="true"/>
         </div>}
         {/* 下部の統一ドック(2026-11-17 ホーム一新): 上から「次にやること」→施設カード×8(ふつうは4列×2段、広い場面と横画面では8枚1列。70-bootstrap.jsx)。
             施設ごとに担当の助手が分かれているので、8つとも同じ大きさ・同じ形の正方形カードにそろえた(2026-11-17 あっくん追加指示)。
@@ -67127,7 +67229,7 @@ const RaidJackTierRewards = ({ kind, index, claimed, ev = RAID_EVENT_JACK }) => 
   );
 };
 // 報酬一覧(モード別・難易度別)。レイド画面の「報酬一覧」から開く
-const RaidJackRewardList = ({ onClose, claimed, initialTab = 'a', ev = RAID_EVENT_JACK }) => {
+const RaidJackRewardList = ({ onClose, claimed, initialTab = 'a', ev = RAID_EVENT_JACK, lockedOf = null }) => {
   const [tab, setTab] = useState(initialTab);
   const have = Array.isArray(claimed) ? claimed : [];
   return (
@@ -67145,7 +67247,7 @@ const RaidJackRewardList = ({ onClose, claimed, initialTab = 'a', ev = RAID_EVEN
         </div>
         {ev.tiers(tab).map((t, i) => (
           <div key={t.id} data-raid-jack-reward-tier={t.id} className="rounded-2xl border border-white/10 bg-black/30 p-3">
-            <div className="mb-1 text-[12px] font-black text-white">{i + 1}. {t.name}</div>
+            <div className="mb-1 text-[12px] font-black text-white">{i + 1}. {raidTierNameOf(ev, tab, i, lockedOf)}</div>
             <RaidJackTierRewards kind={tab} index={i} claimed={have} ev={ev} />
           </div>
         ))}
@@ -67191,7 +67293,7 @@ const RaidJackRankingRows = ({ rows, myId, renderPlace, renderIcon, cardClass, l
 // ランキング画面(レイド画面の「ランキング」ボタンから開く)。モード別(レイドバトル/グランドスラム)・レイドバトルは段階別。
 //   レイドバトルは「累計ダメージ(全段階の合計)」もいつでも見られる(2026-10-15 社長「合計もいつでも累計を出す」。前は大王が倒れたあとだけ)。
 //   順位の報酬は、これまでどおり段階ごとの貢献で決まる。上位100位まで。自分の記録と順位は圏外でも出る
-const RaidJackRankingList = ({ onClose, eventId, initialTab = 'a', initialTier = 0, renderPlace, renderIcon, cardClass, ev = RAID_EVENT_JACK }) => {
+const RaidJackRankingList = ({ onClose, eventId, initialTab = 'a', initialTier = 0, renderPlace, renderIcon, cardClass, ev = RAID_EVENT_JACK, lockedOf = null }) => {
   const [tab, setTab] = useState(initialTab);
   const [tierIdx, setTierIdx] = useState(Math.min(Math.max(initialTier, 0), ev.aTiers.length - 1));
   const [allMode, setAllMode] = useState(false);   // A の「累計ダメージ(全段階の合計)」。合計・バトル・モンヒロビートのどれでもいつでも選べる
@@ -67248,10 +67350,10 @@ const RaidJackRankingList = ({ onClose, eventId, initialTab = 'a', initialTier =
     return () => { alive = false; };
   }, [tab, tierIdx, useAll, maxHit, maxTier, src, eventId]);
   const myTotal = (useSrc || maxHit) ? (Number(myMax) || 0) : self ? (useAll ? Object.values(self.a).reduce((sum, n) => sum + (Number(n) || 0), 0) : tab === 'a' ? (self.a[tierIdx + 1] || 0) : self.bTotal) : 0;
-  const maxTierName = maxTier >= 1 ? ev.tiers(tab)[maxTier - 1].name : '全難易度';
+  const maxTierName = maxTier >= 1 ? raidTierNameOf(ev, tab, maxTier - 1, lockedOf) : '全難易度';
   const title = useSrc && maxHit ? `${srcName}の最大ダメージ(${srcUnit}あたり・${maxTierName})`
-    : useSrc ? `${srcName}で与えたダメージの合計(${useAll ? '全段階の合計' : `${raidEventTierShort(ev, ev.aTiers[tierIdx])}`})`
-    : maxHit ? `${tab === 'a' ? 'レイドバトル' : 'グランドスラム'}の最大ダメージ(1戦あたり・${maxTierName})` : useAll ? 'レイドバトルの累計ダメージ(全段階の合計)' : tab === 'a' ? `${ev.aTiers[tierIdx].name}への貢献ランキング` : 'グランドスラムの累計ダメージ(5難易度の合計)';
+    : useSrc ? `${srcName}で与えたダメージの合計(${useAll ? '全段階の合計' : `${raidTierShortOf(ev, 'a', tierIdx, lockedOf)}`})`
+    : maxHit ? `${tab === 'a' ? 'レイドバトル' : 'グランドスラム'}の最大ダメージ(1戦あたり・${maxTierName})` : useAll ? 'レイドバトルの累計ダメージ(全段階の合計)' : tab === 'a' ? `${raidTierNameOf(ev, 'a', tierIdx, lockedOf)}への貢献ランキング` : 'グランドスラムの累計ダメージ(5難易度の合計)';
   return (
     <div data-raid-jack-ranking-list className="fixed inset-0 z-[32000] flex flex-col bg-slate-950 p-3" role="dialog" aria-modal="true" aria-label={`${ev.bossWord}のランキング`}
       style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top))', paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
@@ -67280,7 +67382,7 @@ const RaidJackRankingList = ({ onClose, eventId, initialTab = 'a', initialTier =
       </div>
       {maxHit && (
         <div data-raid-jack-ranking-max-tiers className="mb-2 flex shrink-0 gap-1.5 overflow-x-auto mh-scroll whitespace-nowrap text-[10px] font-black [&>*]:shrink-0">
-          {[{ id: 'all', name: '全難易度', n: 0 }, ...ev.tiers(tab).map((t, i) => ({ id: t.id, name: raidEventTierShort(ev, t), n: i + 1 }))].map((t) => (
+          {[{ id: 'all', name: '全難易度', n: 0 }, ...ev.tiers(tab).map((t, i) => ({ id: t.id, name: raidTierShortOf(ev, tab, i, lockedOf), n: i + 1 }))].map((t) => (
             <button type="button" key={t.id} data-raid-jack-ranking-max-tier={t.n} onClick={() => setMaxTier(t.n)}
               className={`min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${maxTier === t.n ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`}>{t.name}</button>
           ))}
@@ -67290,7 +67392,7 @@ const RaidJackRankingList = ({ onClose, eventId, initialTab = 'a', initialTier =
         <div data-raid-jack-ranking-tiers className="mb-2 flex shrink-0 gap-1.5 overflow-x-auto mh-scroll whitespace-nowrap text-[10px] font-black [&>*]:shrink-0">
           {ev.aTiers.map((t, i) => (
             <button type="button" key={t.id} data-raid-jack-ranking-tier={t.id} onClick={() => { setTierIdx(i); setAllMode(false); }}
-              className={`min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${!useAll && tierIdx === i ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`}>{raidEventTierShort(ev, t)}</button>
+              className={`min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${!useAll && tierIdx === i ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`}>{raidTierShortOf(ev, 'a', i, lockedOf)}</button>
           ))}
           <button type="button" data-raid-jack-ranking-all onClick={() => setAllMode(true)}
             className={`min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${useAll ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`}>累計ダメージ</button>
@@ -67315,6 +67417,11 @@ const RaidJackRankingList = ({ onClose, eventId, initialTab = 'a', initialTier =
 //   順位のメダル・ブリーダーのアイコン(プロフィール枠つき)・1位の金色のカードを、レイドでも同じ見た目にそろえる
 // ev … どのイベントか(36-raid-xmas-api.jsx の RAID_EVENT_JACK / RAID_EVENT_XMAS)。既定はジャック(これまでどおり)。
 // ways … レイドバトルの挑み方のボタン('battle' / 'rhythm' / 'card')。クリスマスは本体が、つないだ物だけ渡す
+// まだ開いていない段階の名前は伏せる(台帳 r1126-097 追記2・社長「レイドで開放されてない段階は名前伏せといて」)。番号・影の絵・案内の文はそのまま。
+//  lockedOf: (kind, i) => 伏せるか。渡さないとき(今までの呼び方)は伏せない
+const RAID_HIDDEN_TIER_NAME = '？？？';
+const raidTierNameOf = (ev, kind, i, lockedOf) => (typeof lockedOf === 'function' && lockedOf(kind, i) ? RAID_HIDDEN_TIER_NAME : ev.tiers(kind)[i].name);
+const raidTierShortOf = (ev, kind, i, lockedOf) => (typeof lockedOf === 'function' && lockedOf(kind, i) ? RAID_HIDDEN_TIER_NAME : raidEventTierShort(ev, ev.tiers(kind)[i]));
 const RAID_WAY_BUTTONS = Object.freeze({
   battle: { label: 'バトルで', data: 'data-raid-jack-challenge', tone: 'border-orange-300/70 bg-orange-700' },
   rhythm: { label: 'モンヒロビートで', data: 'data-raid-jack-challenge-rhythm', tone: 'border-fuchsia-300/70 bg-fuchsia-800' },
@@ -67337,6 +67444,8 @@ const RaidJackScreen = ({ ev = RAID_EVENT_JACK, ways = null, initialTier = 0, on
   const [showRanking, setShowRanking] = useState(false);
   // 大王を倒したあと、レイドバトルのランキングを「大王への貢献」から「累計ダメージ(全段階の合計)」へ切り替えられる
   const [aAll, setAAll] = useState(false);
+  // 詰めた形: クリスマスのイベントページ(head を渡す)だけ。ボスの一覧を広く見せる(台帳 r1126-097)。ジャックは今までどおり
+  const compact = !!head;
   const nowMs = Date.now();
   const windowState = ev.windowAt(nowMs);
   const open = forced || windowState === 'open';
@@ -67404,13 +67513,19 @@ const RaidJackScreen = ({ ev = RAID_EVENT_JACK, ways = null, initialTier = 0, on
   const isOpenTier = unlocked(current);
   const bossDownNow = tab === 'a' && !!totals && aDefeated(tiers.length - 1);
   const showAll = bossDownNow && aAll;
+  // 段階が開いているか(タブを問わず)。レイドバトルは共有の合計が読めるまで、最初の段階のほかは伏せる
+  const lockedOf = (kind, i) => {
+    if (unlimited || i <= 0) return false;
+    if (kind === 'a') { if (!totals || !totals.a || !totals.a[i]) return true; return totals.a[i].total < ev.tiers('a')[i - 1].hp; }
+    return i >= raidJackUnlockedCount('b', state.b.defeated);
+  };
   const myTotalHere = self ? (showAll ? Object.values(self.a).reduce((sum, n) => sum + (Number(n) || 0), 0) : tab === 'a' ? (self.a[current + 1] || 0) : self.bTotal) : 0;
 
   const buy = async () => {
     setBusy(true); setMessage('');
     try {
       const result = await onPurchase(tab);
-      if (result && result.ok) { setMessage(`追加の挑戦を1回ぶん買いました(ビートP ${ev.extraCost})`); setTick((n) => n + 1); }
+      if (result && result.ok) { setMessage(`追加の挑戦を1回ぶん買いました(ビートP ${Number(ev.extraCost).toLocaleString()})`); setTick((n) => n + 1); }
       else setMessage(result && result.reason === 'short' ? 'ビートPが足りません' : '買えませんでした。もう一度試してください');
     } finally { setBusy(false); }
   };
@@ -67435,26 +67550,44 @@ const RaidJackScreen = ({ ev = RAID_EVENT_JACK, ways = null, initialTier = 0, on
         </div>
       )}
       <ScreenTabs items={[{ id: 'a', label: 'レイドバトル' }, { id: 'b', label: 'グランドスラム' }]} value={tab} onChange={setTab} />
-      <div className="mb-2 flex shrink-0 items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[11px] text-slate-100">
-        <div>
-          <div className="font-black text-orange-200">{tab === 'a' ? 'ベースモンで挑戦' : 'マスモンで挑戦'}</div>
-          <div data-raid-jack-remaining>{unlimited ? <>今日の残り <b className="text-white">無制限</b>(デバッグ・全段階を選べます)</> : <>今日の残り <b className="text-white">{remaining}</b> 回(無料{ev.freePerDay}回+買い足し)</>}</div>
+      {compact ? (
+        // 残り回数・1回追加・ランキング・報酬一覧を1段にまとめる(小さいボタン)
+        <div data-raid-compact-bar className="mb-1.5 flex shrink-0 items-center gap-1.5 rounded-xl border border-white/10 bg-black/30 py-1 pl-2.5 pr-1 text-[10px] text-slate-100">
+          <div className="min-w-0 flex-1 leading-tight">
+            <div className="truncate font-black text-orange-200">{tab === 'a' ? 'ベースモンで挑戦' : 'マスモンで挑戦'}</div>
+            <div data-raid-jack-remaining className="truncate">{unlimited ? <>残り <b className="text-white">無制限</b>(デバッグ)</> : <>今日の残り <b className="text-[12px] text-white">{remaining}</b> 回</>}</div>
+          </div>
+          <button type="button" data-raid-jack-buy disabled={busy || !open || unlimited} onClick={buy}
+            className="min-h-[40px] shrink-0 rounded-lg border border-amber-400/60 bg-amber-950/40 px-1.5 text-[10px] font-black leading-tight text-amber-100 active:scale-95 disabled:opacity-40">
+            1回追加<br /><small className="text-[8px] opacity-80">{Number(ev.extraCost).toLocaleString()}P(所持 {(Number(beatPoints) || 0).toLocaleString()})</small>
+          </button>
+          <button type="button" data-raid-jack-ranking-open onClick={() => setShowRanking(true)} aria-label="ランキング"
+            className="min-h-[40px] w-[44px] shrink-0 rounded-lg border border-orange-300/60 bg-orange-950/50 text-[9px] font-black leading-tight text-orange-100 active:scale-95"><span className="block text-[14px]">🏆</span>順位</button>
+          <button type="button" data-raid-jack-reward-list-open-top onClick={() => setShowRewards(true)} aria-label="報酬一覧"
+            className="min-h-[40px] w-[44px] shrink-0 rounded-lg border border-orange-300/60 bg-orange-950/50 text-[9px] font-black leading-tight text-orange-100 active:scale-95"><span className="block text-[14px]">🎁</span>報酬</button>
         </div>
-        <button type="button" data-raid-jack-buy disabled={busy || !open || unlimited} onClick={buy}
-          className="min-h-[40px] shrink-0 rounded-xl border border-amber-400/60 bg-amber-950/40 px-3 text-[11px] font-black leading-tight text-amber-100 active:scale-95 disabled:opacity-40">
-          1回追加<br /><small className="text-[9px] opacity-80">ビートP {ev.extraCost}(所持 {beatPoints})</small>
-        </button>
-      </div>
-      <div className="mb-2 grid shrink-0 grid-cols-2 gap-2">
-        <button type="button" data-raid-jack-ranking-open onClick={() => setShowRanking(true)}
-          className="min-h-[40px] rounded-xl border border-orange-300/60 bg-orange-950/50 px-3 text-[12px] font-black text-orange-100 active:scale-95">🏆 ランキング</button>
-        <button type="button" data-raid-jack-reward-list-open-top onClick={() => setShowRewards(true)}
-          className="min-h-[40px] rounded-xl border border-orange-300/60 bg-orange-950/50 px-3 text-[12px] font-black text-orange-100 active:scale-95">🎁 報酬一覧</button>
-      </div>
+      ) : <>
+        <div className="mb-2 flex shrink-0 items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[11px] text-slate-100">
+          <div>
+            <div className="font-black text-orange-200">{tab === 'a' ? 'ベースモンで挑戦' : 'マスモンで挑戦'}</div>
+            <div data-raid-jack-remaining>{unlimited ? <>今日の残り <b className="text-white">無制限</b>(デバッグ・全段階を選べます)</> : <>今日の残り <b className="text-white">{remaining}</b> 回(無料{ev.freePerDay}回+買い足し)</>}</div>
+          </div>
+          <button type="button" data-raid-jack-buy disabled={busy || !open || unlimited} onClick={buy}
+            className="min-h-[40px] shrink-0 rounded-xl border border-amber-400/60 bg-amber-950/40 px-3 text-[11px] font-black leading-tight text-amber-100 active:scale-95 disabled:opacity-40">
+            1回追加<br /><small className="text-[9px] opacity-80">ビートP {Number(ev.extraCost).toLocaleString()}(所持 {(Number(beatPoints) || 0).toLocaleString()})</small>
+          </button>
+        </div>
+        <div className="mb-2 grid shrink-0 grid-cols-2 gap-2">
+          <button type="button" data-raid-jack-ranking-open onClick={() => setShowRanking(true)}
+            className="min-h-[40px] rounded-xl border border-orange-300/60 bg-orange-950/50 px-3 text-[12px] font-black text-orange-100 active:scale-95">🏆 ランキング</button>
+          <button type="button" data-raid-jack-reward-list-open-top onClick={() => setShowRewards(true)}
+            className="min-h-[40px] rounded-xl border border-orange-300/60 bg-orange-950/50 px-3 text-[12px] font-black text-orange-100 active:scale-95">🎁 報酬一覧</button>
+        </div>
+      </>}
       {message && <div className="mb-2 shrink-0 text-center text-[11px] font-black text-amber-200" role="status">{message}</div>}
       {totals === null && <div className="mb-2 shrink-0 rounded-xl border border-amber-400/40 bg-amber-950/30 p-2 text-center text-[10px] text-amber-100">サーバーを準備中です。みんなの記録は少し待ってから見られます(戦った記録はあとで自動で送られます)</div>}
 
-      <div className={`${SCREEN_LIST_CLASS} [@media(orientation:landscape)_and_(max-height:520px)]:flex-none [@media(orientation:landscape)_and_(max-height:520px)]:overflow-visible space-y-2`}>
+      <div className={`${SCREEN_LIST_CLASS} [@media(orientation:landscape)_and_(max-height:520px)]:flex-none [@media(orientation:landscape)_and_(max-height:520px)]:overflow-visible ${compact ? 'space-y-1.5' : 'space-y-2'}`}>
         {/* 初めて読み込むあいだは、段階もライフも分からないので一覧を出さない(出すと男爵・満タンから本当の姿へ切り替わって見える) */}
         {tab === 'a' && totals === undefined && <div data-raid-jack-loading className="py-6 text-center text-[11px] text-slate-300">読み込み中…</div>}
         {!(tab === 'a' && totals === undefined) && tiers.map((t, i) => {
@@ -67466,18 +67599,18 @@ const RaidJackScreen = ({ ev = RAID_EVENT_JACK, ways = null, initialTier = 0, on
           const on = i === current;
           return (
             <button type="button" key={t.id} data-raid-jack-tier={t.id} onClick={() => setSel((prev) => ({ ...prev, [tab]: i }))}
-              className={`flex w-full items-center gap-3 rounded-2xl border-2 p-2 text-left active:scale-[0.99] ${on ? 'border-orange-300 bg-orange-950/40' : 'border-white/10 bg-slate-900/60'}`}>
+              className={`flex w-full items-center rounded-2xl border-2 text-left active:scale-[0.99] ${compact ? 'gap-2 px-2 py-1' : 'gap-3 p-2'} ${on ? 'border-orange-300 bg-orange-950/40' : 'border-white/10 bg-slate-900/60'}`}>
               {/* 段階ごとに見た目が変わる(オーラの炎・絵の光の色)。未解放は黒いシルエットのまま */}
-              <span data-jack-aura={ev.aura && isOpen && !isPumpkin ? i + 1 : undefined} data-raid-pumpkin={isPumpkin ? 'true' : undefined} className="relative block h-14 w-16 shrink-0">
+              <span data-jack-aura={ev.aura && isOpen && !isPumpkin ? i + 1 : undefined} data-raid-pumpkin={isPumpkin ? 'true' : undefined} className={`relative block shrink-0 ${compact ? 'h-11 w-12' : 'h-14 w-16'}`}>
                 {ev.aura && isOpen && !isPumpkin && <JackAuraLayer tier={i + 1} limit={8} />}
                 {isPumpkin
-                  ? <img src={ev.afterBossImg()} alt="" className="relative mx-auto h-14 w-14 object-contain" />
-                  : <img src={ev.bossImg()} alt="" className="relative h-14 w-16 object-contain"
+                  ? <img src={ev.afterBossImg()} alt="" className={`relative mx-auto object-contain ${compact ? 'h-11 w-11' : 'h-14 w-14'}`} />
+                  : <img src={ev.bossImg()} alt="" className={`relative object-contain ${compact ? 'h-11 w-12' : 'h-14 w-16'}`}
                       style={isOpen ? (ev.aura ? { filter: raidJackAuraGlowFilter(i + 1, 0.4) } : undefined) : { filter: 'brightness(0)', opacity: 0.5 }} />}
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="truncate text-[13px] font-black text-white">{i + 1}. {isPumpkin ? ev.afterBoss.name : t.name}</span>
+                  <span className="truncate text-[13px] font-black text-white">{i + 1}. {isPumpkin ? ev.afterBoss.name : raidTierNameOf(ev, tab, i, lockedOf)}</span>
                   <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-black ${isPumpkin ? 'bg-amber-500 text-slate-950' : done ? 'bg-emerald-600 text-white' : isOpen ? 'bg-orange-600 text-white' : 'bg-slate-700 text-slate-300'}`}>
                     {isPumpkin ? ev.afterBossBadge : done ? '討伐済み' : isOpen ? '挑戦できる' : '未解放'}
                   </span>
@@ -67501,7 +67634,7 @@ const RaidJackScreen = ({ ev = RAID_EVENT_JACK, ways = null, initialTier = 0, on
 
         <div data-raid-jack-rewards className="rounded-2xl border border-white/10 bg-black/30 p-3 text-[11px] text-slate-100">
           <div className="mb-1 flex items-center justify-between gap-2">
-            <span className="font-black text-orange-200">{tier.name}の報酬</span>
+            <span className="font-black text-orange-200">{raidTierNameOf(ev, tab, current, lockedOf)}の報酬</span>
             <button type="button" data-raid-jack-reward-list-open onClick={() => setShowRewards(true)}
               className="min-h-[32px] shrink-0 rounded-xl border border-orange-300/50 bg-orange-950/40 px-3 text-[10px] font-black text-orange-100 active:scale-95">報酬一覧</button>
           </div>
@@ -67510,7 +67643,7 @@ const RaidJackScreen = ({ ev = RAID_EVENT_JACK, ways = null, initialTier = 0, on
 
         <div className="rounded-2xl border border-white/10 bg-black/30 p-3">
           <div className="mb-1 flex items-baseline justify-between text-[11px]">
-            <span className="font-black text-orange-200">{showAll ? 'レイドバトルの累計ダメージ(全段階の合計)' : tab === 'a' ? `${tier.name}への貢献ランキング` : '累計ダメージランキング(5段階の合計)'}</span>
+            <span className="font-black text-orange-200">{showAll ? 'レイドバトルの累計ダメージ(全段階の合計)' : tab === 'a' ? `${raidTierNameOf(ev, 'a', current, lockedOf)}への貢献ランキング` : '累計ダメージランキング(5段階の合計)'}</span>
             {myTotalHere > 0 && <span data-raid-jack-mine className="text-[10px] text-slate-200">あなた {myTotalHere.toLocaleString()}{ahead !== null ? `(${ahead + 1}位)` : ''}</span>}
           </div>
           {bossDownNow && (
@@ -67535,12 +67668,12 @@ const RaidJackScreen = ({ ev = RAID_EVENT_JACK, ways = null, initialTier = 0, on
         {/* レイドバトルは「バトル」と「モンヒロビート」の2つの挑み方(2026-10-06・ユーザー指示)。回数は同じものを使う。
             挑めないとき(開始前・未解放・倒された・回数切れ)は、これまでどおり理由を出す1つのボタンにする */}
         {tab === 'a' && open && isOpenTier && !closedTier && remaining > 0 && Array.isArray(ways) && ways.length > 1 ? (
-          <div data-raid-ways={ways.join(' ')} className={`grid gap-2 ${ways.length >= 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+          <div data-raid-ways={ways.join(' ')} className={`grid ${compact ? 'gap-1.5' : 'gap-2'} ${ways.length >= 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
             {ways.map((way) => {
               const w = RAID_WAY_BUTTONS[way];
               return w ? (
                 <button type="button" key={way} {...{ [w.data]: true }} onClick={() => onChallenge(tab, current, way)}
-                  className={`min-h-[48px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[36px] rounded-2xl border-2 px-1 text-[12px] font-black leading-tight text-white active:scale-95 ${w.tone}`}>{w.label}<br className="[@media(orientation:landscape)_and_(max-height:520px)]:hidden" />挑戦する</button>
+                  className={`${compact ? 'min-h-[40px] rounded-xl py-0.5 text-[11px]' : 'min-h-[48px] rounded-2xl text-[12px]'} [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[36px] border-2 px-1 font-black leading-tight text-white active:scale-95 ${w.tone}`}>{w.label}<br className="[@media(orientation:landscape)_and_(max-height:520px)]:hidden" />{compact ? <small className="text-[9px] opacity-90">挑戦する</small> : '挑戦する'}</button>
               ) : null;
             })}
           </div>
@@ -67554,13 +67687,13 @@ const RaidJackScreen = ({ ev = RAID_EVENT_JACK, ways = null, initialTier = 0, on
         ) : (
           <button type="button" data-raid-jack-challenge disabled={!open || !isOpenTier || closedTier || remaining <= 0}
             onClick={() => onChallenge(tab, current, 'battle')}
-            className="w-full min-h-[48px] rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400">
+            className={`w-full ${compact ? 'min-h-[40px] rounded-xl' : 'min-h-[48px] rounded-2xl'} border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400`}>
             {challengeLabel}
           </button>
         )}
       </div>
-      {showRanking && <RaidJackRankingList ev={ev} eventId={eventId} initialTab={tab} initialTier={current} renderPlace={renderPlace} renderIcon={renderIcon} cardClass={cardClass} onClose={() => setShowRanking(false)} />}
-      {showRewards && <RaidJackRewardList ev={ev} claimed={state.claimed} initialTab={tab} onClose={() => setShowRewards(false)} />}
+      {showRanking && <RaidJackRankingList ev={ev} lockedOf={lockedOf} eventId={eventId} initialTab={tab} initialTier={current} renderPlace={renderPlace} renderIcon={renderIcon} cardClass={cardClass} onClose={() => setShowRanking(false)} />}
+      {showRewards && <RaidJackRewardList ev={ev} lockedOf={lockedOf} claimed={state.claimed} initialTab={tab} onClose={() => setShowRewards(false)} />}
     </div>
   );
 };
@@ -68150,26 +68283,27 @@ const XmasEventScreen = ({ tab = 'story', onTab, onBack, forced = false, preOpen
     </div>
   ) : null;
   const head = (
-    <div data-xmas-event-head className={`mx-auto w-full shrink-0 ${raidShown ? '' : 'max-w-2xl'}`}>
+    // 看板・期間の帯・タブの段は、どのタブでも同じ大きさ・同じ位置(台帳 r1126-097 追記1・社長「タブごとに位置が変わるのやだ」)。
+    //  高さは前のレイドのタブくらいにそろえ、ボスの一覧を広く見せる(r1126-097)。背の低い横画面では、どのタブでも看板を出さない
+    <div data-xmas-event-head className="mx-auto w-full shrink-0">
       <ScreenHead title={<span className="flex items-center gap-1"><XmasHolly size={24} /><span className="mh-xmas-title whitespace-nowrap">聖夜の名探偵</span></span>}
         onBack={onBack} compact note={forced ? '(デバッグ表示・開始前でも見えます)' : ''} />
-      {/* レイドの中身を出すときは小さく。背の低い横画面では、レイドの一覧が見えるように出さない(題と期間とタブだけ) */}
-      <div data-xmas-event-poster className={`mh-xmas-frame mx-auto mb-2 w-fit max-w-full overflow-hidden rounded-xl bg-slate-950 ${raidShown ? '[@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`}>
+      <div data-xmas-event-poster className="mh-xmas-frame mx-auto mb-1.5 w-fit max-w-full overflow-hidden rounded-xl bg-slate-950 [@media(orientation:landscape)_and_(max-height:520px)]:hidden">
         {posterOpen ? (
           // 開催中: 「開催予告」の文字とボスの影が入った予告の絵は出さず、ペンションの雪景色に題字を重ねた帯にする(本番用の絵が届いたら XMAS_EVENT_POSTER_OPEN_IMG に差し替える)
-          <div data-xmas-event-title-band className="relative overflow-hidden" style={{ width: raidShown ? 'min(100vw - 32px, 26vh)' : 'min(100vw - 32px, 48vh)', aspectRatio: '2 / 1' }}>
+          <div data-xmas-event-title-band className="relative overflow-hidden" style={{ width: 'min(100vw - 32px, 26vh)', aspectRatio: '2 / 1' }}>
             <img src={XMAS_EVENT_POSTER_OPEN_IMG || XMAS_EVENT_TITLE_BAND_BG} alt="" className="absolute inset-0 h-full w-full object-cover" style={{ objectPosition: '50% 40%' }} />
             {!XMAS_EVENT_POSTER_OPEN_IMG && (
               <span className="absolute inset-0 flex flex-col items-center justify-center text-center" style={{ background: 'radial-gradient(80% 70% at 50% 55%, #0b1733cc 0%, #0b173388 55%, transparent 100%)' }}>
-                <span className={`font-black text-amber-100 ${raidShown ? 'text-[8px]' : 'text-[11px]'}`} style={{ letterSpacing: '.2em', textShadow: '0 1px 3px #000' }}>クリスマスイベント</span>
-                <b className={`mh-xmas-title whitespace-nowrap leading-tight ${raidShown ? 'text-[20px]' : 'text-[38px]'}`} style={{ fontFamily: "'Hiragino Mincho ProN', 'Yu Mincho', serif", filter: 'drop-shadow(0 2px 2px #000) drop-shadow(0 0 6px #000a)' }}>聖夜の名探偵</b>
-                <span className={`font-bold text-amber-50 ${raidShown ? 'text-[7px]' : 'text-[11px]'}`} style={{ textShadow: '0 1px 3px #000' }}>～十三番目の鐘が鳴る夜～</span>
+                <span className="text-[8px] font-black text-amber-100" style={{ letterSpacing: '.2em', textShadow: '0 1px 3px #000' }}>クリスマスイベント</span>
+                <b className="mh-xmas-title whitespace-nowrap text-[20px] leading-tight" style={{ fontFamily: "'Hiragino Mincho ProN', 'Yu Mincho', serif", filter: 'drop-shadow(0 2px 2px #000) drop-shadow(0 0 6px #000a)' }}>聖夜の名探偵</b>
+                <span className="text-[7px] font-bold text-amber-50" style={{ textShadow: '0 1px 3px #000' }}>～十三番目の鐘が鳴る夜～</span>
               </span>
             )}
           </div>
-        ) : <img src={XMAS_EVENT_POSTER_IMG} alt="クリスマスイベント 聖夜の名探偵" className={`block h-auto w-auto max-w-full ${raidShown ? 'max-h-[13vh]' : 'max-h-[24vh]'}`} />}
+        ) : <img src={XMAS_EVENT_POSTER_IMG} alt="クリスマスイベント 聖夜の名探偵" className="block h-auto w-auto max-w-full max-h-[13vh]" />}
       </div>
-      <div data-xmas-event-period className="mh-xmas-ribbon mx-auto mb-2 max-w-md px-5 py-1 text-center text-[11px] font-black text-amber-50">
+      <div data-xmas-event-period className="mh-xmas-ribbon mx-auto mb-1.5 max-w-md px-5 py-0.5 text-center text-[10px] font-black text-amber-50">
         開催期間 {xmasEventPeriodText()}
       </div>
       <ScreenTabs items={XMAS_EVENT_TABS} value={tab} onChange={(id) => onTab && onTab(id)} />
@@ -68537,6 +68671,21 @@ const xmasNovelAnswer = (script, cur, q, pick, endings) => {
     const to = xmasNovelRepliesTo(replies);
     return { cur: next, ok: true, replies, then: to ? { to } : 'next' };
   }
+  // まちがえても進む問い(r1126-099 追記1・q.pass): 返し(近い手がかり / 1回目のまちがい)→ 話し手が正しい手がかりを突きつける帯 → 正解の返しで先へ。
+  //   一発目を外したことは ans の f(成績)に残る。ans の形 { t, f, w, done } は変えない
+  if (q.pass && q.kind === 'present') {
+    const okRows = xmasNovelPickReplies(q, 'ok');
+    const why = Array.isArray(q.near) && q.near.includes(pick) && xmasNovelPickReplies(q, 'near').length ? xmasNovelPickReplies(q, 'near') : xmasNovelPickReplies(q, 'x1');
+    const by = okRows[0] && okRows[0].w ? xmasNovelCastOf(okRows[0].w) : null;
+    const clue = answers[0] || '';
+    const band = clue ? [{ id: `${q.id}-pass`, t: 'band', x: `${by && by.name ? by.name : '探偵'}が、手がかり帳から【${clue}】を突きつけた` }] : [];
+    // 正解の返しの頭の「はい。」は、選んだ人への返事なので、仲間が自分で突きつけたときは外す
+    const okSelf = okRows.map((r, i) => (i === 0 && r && typeof r.x === 'string' && /^はい。\s*/.test(r.x) ? { ...r, x: r.x.replace(/^はい。\s*/, '') } : r));
+    const replies = [...why, ...band, ...okSelf];
+    const passed = { ...next, ans: { ...next.ans, [q.id]: { ...next.ans[q.id], done: true } } };
+    const to = xmasNovelRepliesTo(replies);
+    return { cur: passed, ok: false, replies, then: to ? { to } : 'next' };
+  }
   // まちがい: 人ごとの返し → 近い手がかりの返し → 回数の返し(3回目からは x3)
   const personal = q.kind === 'person' ? xmasNovelPickReplies(q, String(pick)) : [];
   const near = q.kind === 'present' && Array.isArray(q.near) && q.near.includes(pick) ? xmasNovelPickReplies(q, 'near') : [];
@@ -68550,6 +68699,23 @@ const xmasNovelAnswer = (script, cur, q, pick, endings) => {
 const xmasNovelRepliesTo = (replies) => {
   for (let i = (replies || []).length - 1; i >= 0; i -= 1) if (replies[i] && replies[i].to) return replies[i].to;
   return null;
+};
+// 行動の選択肢の行き先の先にあるエンディングのID(強制バッドの「見たエンド」の印・r1126-099 追記1)。場面を next でたどる。無ければ null
+const xmasNovelEndingAhead = (script, to) => {
+  let s = to ? xmasNovelSceneById(script, to) : null;
+  for (let k = 0; s && k < 12; k += 1) {
+    if (s.ending && s.ending.id) return s.ending.id;
+    s = typeof s.next === 'string' ? xmasNovelSceneById(script, s.next) : null;
+  }
+  return null;
+};
+// 手がかり帳のうち、問いで突きつけられる物(q.narrow があれば、その候補だけ・r1126-099 追記1)。絞った結果に正解が無ければ全部
+const xmasNovelPresentable = (q, clues) => {
+  const list = Array.isArray(clues) ? clues : [];
+  if (!q || !Array.isArray(q.narrow) || !q.narrow.length) return list;
+  const picked = list.filter((c) => q.narrow.includes(c.n));
+  const ans = Array.isArray(q.answer) ? q.answer : [];
+  return picked.some((c) => ans.includes(c.n)) ? picked : list;
 };
 // 行動の選択肢のうち、いま出せる物(条件つきの選択肢: 「オルゴールを鳴らす」は f_lullaby=1 のときだけ)
 const xmasNovelOptionsOf = (q, ctx) => (Array.isArray(q && q.options) ? q.options : [])
@@ -68882,7 +69048,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"2-4-3","t":"line","w":"kiki","x":"停電の前から、玄関は私が見てまちた。誰も通ってないでつ","e":"troubled","k":"C2-4:2-4-3"},
 {"id":"2-4-4","t":"line","w":"mochimaru","x":"……あれ？ ろうそくを取りに行った帰りに、台所をのぞいたら、裏口のかんぬきが閉まってたっちー。ぼく、開けておいたのに……","k":"C2-4:2-4-4"},
 {"id":"2-4-4c","t":"clue","clue":"閉まった裏口","x":"もちまるが開けておいた裏口のかんぬきが、停電の後、閉まっていた","k":"C2-4:2-4-4c"},
-{"id":"2-4-5","t":"line","w":"myua","x":"あつくん、早く！ どこを探す！？","e":"surprise","k":"C2-4:2-4-5"},{"t":"q","id":"Q2a","kind":"present","x":"黒羽は、どこにいる？ 居場所を示す手がかりを、手がかり帳から1つ突きつけよう","replies":{"x1":[{"id":"Q2a-x1","t":"line","w":"watson","x":"その手がかりは、今、黒羽さんがいる場所とは結びつきません"}],"x2":[{"id":"Q2a-x2","t":"line","w":"myua","x":"違うっぽい……！ もちまるん、さっきなんて言ってた？","e":"troubled"}],"x3":[{"id":"Q2a-x3","t":"line","w":"sorashido","x":"開けておいたはずの物が、閉まっていた。……誰かを、外に出したままにするためです","e":"normal"}],"near":[{"id":"Q2a-near","t":"line","w":"atsu","x":"鐘がずれてるのは気になる。……けど、今は、おっさんがどこにいるか！","e":"troubled"}],"ok":[{"id":"Q2a-ok","t":"line","w":"atsu","x":"裏口だ！ 開けておいたのが閉まってたってことは——外に、閉め出されたんだ！","e":"normal","to":"C2-5"}]},"label":"推理の問い①","score":true,"answer":["閉まった裏口"],"k":"C2-4:Q2a","near":["早く鳴った鐘"]}]},
+{"id":"2-4-5","t":"line","w":"myua","x":"あつくん、早く！ どこを探す！？","e":"surprise","k":"C2-4:2-4-5"},{"t":"q","id":"Q2a","kind":"present","x":"黒羽は、どこにいる？ 居場所を示す手がかりを、手がかり帳から1つ突きつけよう","replies":{"x1":[{"id":"Q2a-x1","t":"line","w":"watson","x":"その手がかりは、今、黒羽さんがいる場所とは結びつきません"}],"x2":[{"id":"Q2a-x2","t":"line","w":"myua","x":"違うっぽい……！ もちまるん、さっきなんて言ってた？","e":"troubled"}],"x3":[{"id":"Q2a-x3","t":"line","w":"sorashido","x":"開けておいたはずの物が、閉まっていた。……誰かを、外に出したままにするためです","e":"normal"}],"near":[{"id":"Q2a-near","t":"line","w":"atsu","x":"鐘がずれてるのは気になる。……けど、今は、おっさんがどこにいるか！","e":"troubled"}],"ok":[{"id":"Q2a-ok","t":"line","w":"atsu","x":"裏口だ！ 開けておいたのが閉まってたってことは——外に、閉め出されたんだ！","e":"normal","to":"C2-5"}]},"label":"推理の問い①","score":true,"pass":true,"answer":["閉まった裏口"],"k":"C2-4:Q2a","near":["早く鳴った鐘"]}]},
 {"id":"C2-5","chapter":"C2","title":"吹雪の向こう","cond":null,"bgm":"melo_dullahan_steel_ghost","bg":"夜の裏口(吹雪","next":"C3-1","rows":[{"id":"2-5-1","t":"band","x":"ガタン！(あつが、かんぬきを外す)","fx":["se"],"se":"impact","k":"C2-5:2-5-1"},
 {"id":"2-5-2","t":"band","x":"扉の外は、真っ白な吹雪。ろうそくの火が、一息で消える","k":"C2-5:2-5-2"},
 {"id":"2-5-3","t":"band","x":"……ァ……(吹雪の向こうで、かすかな声)","fx":["se"],"se":"tap","k":"C2-5:2-5-3"},
@@ -68915,7 +69081,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"3-2-2","t":"line","w":"sorashido","x":"長靴の足跡は、雪原の真ん中まで行って……そこで、ぷっつり消えています","e":"normal","k":"C3-2:3-2-2"},
 {"id":"3-2-3","t":"line","w":"dra","x":"き、消えてる……。空でも飛んだのか？","e":"surprise","k":"C3-2:3-2-3"},
 {"id":"3-2-4","t":"line","w":"myua","x":"あつくん、見て。最後の足跡だけ、ほかより深くて、ふちが二重にぶれてない？","e":"normal","k":"C3-2:3-2-4"},
-{"id":"3-2-4c","t":"clue","clue":"深い足跡","x":"雪原の真ん中で消えた長靴の足跡。最後の1つだけ、ほかより深く、ふちが二重にぶれている","k":"C3-2:3-2-4c"},{"t":"q","id":"Q3a","kind":"present","x":"黒いサンタは、雪原から外へ逃げた？ それとも——。わけを示す手がかりを、手がかり帳から1つ突きつけよう","replies":{"x1":[{"id":"Q3a-x1","t":"line","w":"watson","x":"その手がかりは、雪原の足跡とは別の場所の物です。足跡そのものを、よく見てみましょう"}],"x2":[{"id":"Q3a-x2","t":"line","w":"myua","x":"うーん……。最後のほうの足跡、なんか違ったよね？","e":"troubled"}],"x3":[{"id":"Q3a-x3","t":"line","w":"sorashido","x":"同じ所を2回踏んだら、足跡はどうなるでしょう","e":"normal"}],"near":[{"id":"Q3a-near","t":"line","w":"atsu","x":"裏口から出たのは分かってる。……知りたいのは、その後、どこへ行ったか","e":"troubled"}],"ok":[{"id":"Q3a-ok","t":"line","w":"sorashido","x":"はい。同じ足跡を踏んで、後ろ向きに戻ったんです。黒いサンタは、外へ逃げていない。……戻ったのは、このペンションの中です","e":"normal"}]},"label":"推理の問い②","score":true,"answer":["深い足跡"],"k":"C3-2:Q3a","near":["閉まった裏口"]},
+{"id":"3-2-4c","t":"clue","clue":"深い足跡","x":"雪原の真ん中で消えた長靴の足跡。最後の1つだけ、ほかより深く、ふちが二重にぶれている","k":"C3-2:3-2-4c"},{"t":"q","id":"Q3a","kind":"present","x":"黒いサンタは、雪原から外へ逃げた？ それとも——。わけを示す手がかりを、手がかり帳から1つ突きつけよう","replies":{"x1":[{"id":"Q3a-x1","t":"line","w":"watson","x":"その手がかりは、雪原の足跡とは別の場所の物です。足跡そのものを、よく見てみましょう"}],"x2":[{"id":"Q3a-x2","t":"line","w":"myua","x":"うーん……。最後のほうの足跡、なんか違ったよね？","e":"troubled"}],"x3":[{"id":"Q3a-x3","t":"line","w":"sorashido","x":"同じ所を2回踏んだら、足跡はどうなるでしょう","e":"normal"}],"near":[{"id":"Q3a-near","t":"line","w":"atsu","x":"裏口から出たのは分かってる。……知りたいのは、その後、どこへ行ったか","e":"troubled"}],"ok":[{"id":"Q3a-ok","t":"line","w":"sorashido","x":"はい。同じ足跡を踏んで、後ろ向きに戻ったんです。黒いサンタは、外へ逃げていない。……戻ったのは、このペンションの中です","e":"normal"}]},"label":"推理の問い②","score":true,"pass":true,"answer":["深い足跡"],"k":"C3-2:Q3a","near":["閉まった裏口"]},
 {"id":"3-2-5","t":"line","w":"atsu","x":"……この中に、黒いサンタがいる","f":"close","e":"normal","k":"C3-2:3-2-5"}]},
 {"id":"C3-3","chapter":"C3","title":"閉ざされた山","cond":null,"bgm":"melo_dullahan_clockwork","bg":"ペンションのホール","next":"C3-4","rows":[{"id":"3-3-1","t":"line","w":"mochimaru","x":"大変だっちー！ 電話が、繋がらないっちー！ 線が、外で切れてたっちー","k":"C3-3:3-3-1"},
 {"id":"3-3-2","t":"line","w":"ichika","x":"山道も、ゆうべの雪で、塞がってしまいました。……道があくまで、誰もここへは来られませんし、誰も出られません","k":"C3-3:3-3-2"},
@@ -68986,7 +69152,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"4-3-3","t":"line","w":"sorashido","x":"読みます。『0時の鐘、なんだか早かったっちー。オーナーが裏口を開けに行ったら、もう、かんぬきが閉まってたっちー』","e":"normal","k":"C4-3:4-3-3"},
 {"id":"4-3-3c","t":"clue","clue":"12年前の帳面","x":"もちまるの12年前の帳面。12月24日「0時の鐘、なんだか早かったっちー」。オーナーが行った時、裏口はもう閉まっていた","k":"C4-3:4-3-3c"},
 {"id":"4-3-4","t":"line","w":"mochimaru","x":"ぼく、うそは書けないっちー。……本当に、早かったっちー","k":"C4-3:4-3-4"},
-{"id":"4-3-5","t":"line","w":"atsu","x":"……おっちゃんがいなくなった夜の鐘も、早かった","e":"normal","k":"C4-3:4-3-5"},{"t":"q","id":"Q4a","kind":"present","x":"あの夜の鐘と、12年前の鐘。黒いサンタが、12年前と同じ仕掛けを使ったと示す手がかりを、手がかり帳から1つ突きつけよう","replies":{"x1":[{"id":"Q4a-x1","t":"line","w":"watson","x":"その手がかりは、12年前のことを示していません"}],"x2":[{"id":"Q4a-x2","t":"line","w":"atsu","x":"あの夜のことは分かってる。……12年前のことが書いてある物、あったよね","e":"normal"}],"x3":[{"id":"Q4a-x3","t":"line","w":"mochimaru","x":"ぼくの帳面、見てほしいっちー……"}],"near":[{"id":"Q4a-near","t":"line","w":"sorashido","x":"それは、黒羽さんがいなくなった夜の鐘です。12年前の鐘も早かったと分かる物が、もう一つ要ります","e":"normal"}],"ok":[{"id":"Q4a-ok","t":"line","w":"sorashido","x":"はい。12年前も、鐘は早く鳴り、裏口は閉まっていた。あの夜と、同じです。……黒いサンタは、12年前の夜を、もう一度やろうとしているのかもしれません","e":"normal"}]},"label":"推理の問い③","score":true,"answer":["12年前の帳面"],"k":"C4-3:Q4a","near":["早く鳴った鐘"]},
+{"id":"4-3-5","t":"line","w":"atsu","x":"……おっちゃんがいなくなった夜の鐘も、早かった","e":"normal","k":"C4-3:4-3-5"},{"t":"q","id":"Q4a","kind":"present","x":"あの夜の鐘と、12年前の鐘。黒いサンタが、12年前と同じ仕掛けを使ったと示す手がかりを、手がかり帳から1つ突きつけよう","replies":{"x1":[{"id":"Q4a-x1","t":"line","w":"watson","x":"その手がかりは、12年前のことを示していません"}],"x2":[{"id":"Q4a-x2","t":"line","w":"atsu","x":"あの夜のことは分かってる。……12年前のことが書いてある物、あったよね","e":"normal"}],"x3":[{"id":"Q4a-x3","t":"line","w":"mochimaru","x":"ぼくの帳面、見てほしいっちー……"}],"near":[{"id":"Q4a-near","t":"line","w":"sorashido","x":"それは、黒羽さんがいなくなった夜の鐘です。12年前の鐘も早かったと分かる物が、もう一つ要ります","e":"normal"}],"ok":[{"id":"Q4a-ok","t":"line","w":"sorashido","x":"はい。12年前も、鐘は早く鳴り、裏口は閉まっていた。あの夜と、同じです。……黒いサンタは、12年前の夜を、もう一度やろうとしているのかもしれません","e":"normal"}]},"label":"推理の問い③","score":true,"pass":true,"answer":["12年前の帳面"],"k":"C4-3:Q4a","near":["早く鳴った鐘"]},
 {"id":"4-3-6","t":"line","w":"kiki","x":"12年前のことを、知ってる人……？","e":"troubled","k":"C4-3:4-3-6"},
 {"id":"4-3-7","t":"line","w":"sorashido","x":"それに、柱時計の針を動かせる人です","e":"normal","k":"C4-3:4-3-7"},
 {"id":"4-3-7b","t":"band","x":"みんなが台所を出ていった後。ワトソンくんの画面の隅に、小さな字が出る","k":"C4-3:4-3-7b"},
@@ -69052,7 +69218,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"5-3-7a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"myua","x":"あつくん、一人で！？ 書斎、さっきから誰もいないよ……","e":"troubled","k":"C5-3:5-3-7a"},
 {"id":"5-3-7s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"watson","x":"ソラシドさん。お一人で動くのは、危険です","k":"C5-3:5-3-7s"},
 {"id":"5-3-7b","t":"line","w":"momosuke","x":"でも、白瀬さん、今も寒い所にいるかもしれないんだよ……！ 早く、探しに行こうよ……！","f":"close","e":"crying","k":"C5-3:5-3-7b"},{"t":"q","id":"A5","kind":"action","x":"写真の影の正体か、白瀬の居場所か——","replies":{},"label":"行動の選択","options":[{"c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"to":"C5-X","x":"あつが、一人で書斎にこもり、えるびんのカメラの写真を拡大して、影の正体を探る"},{"c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"to":"C5-X","x":"ソラシドが、一人で書斎にこもり、ワトソンくんの中の写真を拡大して、影の正体を探る"},{"to":"5-3-8","x":"写真は後にして、みんなで冷たい空気の流れをたどる"}],"k":"C5-3:A5"},
-{"id":"5-3-8","t":"line","w":"atsu","x":"白瀬さんを探す！ どこだ……！","f":"close","e":"angry","k":"C5-3:5-3-8"},{"t":"q","id":"Q5a","kind":"present","x":"白瀬は、どこに閉じこめられている？ 場所を示す手がかりを、手がかり帳から1つ突きつけよう","replies":{"x1":[{"id":"Q5a-x1","t":"line","w":"watson","x":"その手がかりは、白瀬さんのいる場所とは結びつきません"}],"x2":[{"id":"Q5a-x2","t":"line","w":"myua","x":"冷たい空気……どこから来てるの……？","e":"troubled"}],"x3":[{"id":"Q5a-x3","t":"line","w":"mochimaru","x":"奥の1枚だけ、ふちがきれいだったっちー……"}],"near":[{"id":"Q5a-near","t":"line","w":"sorashido","x":"写真の影は、鏡の廊下にいました。……知りたいのは、その廊下の、どこが扉になっているかです","e":"normal"}],"ok":[{"id":"Q5a-ok","t":"line","w":"atsu","x":"鏡だ！ あの1枚だけ、誰かが何度も触ってる。……あれが、扉なんだ！","e":"normal","to":"C5-4"}]},"label":"推理の問い④","score":true,"answer":["ほこりのない鏡のふち"],"k":"C5-3:Q5a","near":["えるびんの写真"]}]},
+{"id":"5-3-8","t":"line","w":"atsu","x":"白瀬さんを探す！ どこだ……！","f":"close","e":"angry","k":"C5-3:5-3-8"},{"t":"q","id":"Q5a","kind":"present","x":"白瀬は、どこに閉じこめられている？ 場所を示す手がかりを、手がかり帳から1つ突きつけよう","replies":{"x1":[{"id":"Q5a-x1","t":"line","w":"watson","x":"その手がかりは、白瀬さんのいる場所とは結びつきません"}],"x2":[{"id":"Q5a-x2","t":"line","w":"myua","x":"冷たい空気……どこから来てるの……？","e":"troubled"}],"x3":[{"id":"Q5a-x3","t":"line","w":"mochimaru","x":"奥の1枚だけ、ふちがきれいだったっちー……"}],"near":[{"id":"Q5a-near","t":"line","w":"sorashido","x":"写真の影は、鏡の廊下にいました。……知りたいのは、その廊下の、どこが扉になっているかです","e":"normal"}],"ok":[{"id":"Q5a-ok","t":"line","w":"atsu","x":"鏡だ！ あの1枚だけ、誰かが何度も触ってる。……あれが、扉なんだ！","e":"normal","to":"C5-4"}]},"label":"推理の問い④","score":true,"pass":true,"answer":["ほこりのない鏡のふち"],"k":"C5-3:Q5a","near":["えるびんの写真"]}]},
 {"id":"C5-4","chapter":"C5","title":"鏡の向こう","cond":null,"bgm":"melo_sad_song_short","bg":"朝の鏡の廊下","next":"C5-5","rows":[{"id":"5-4-1","t":"band","x":"けれど、奥の1枚は、押しても、叩いても、びくともしない。開け方が分からないまま、みんなで夜通し、鏡の前を調べ続けた","k":"C5-4:5-4-1"},
 {"id":"5-4-2","t":"band","x":"朝。雪の光が差しこむと、奥の鏡の下の隙間に、赤い手袋の指先が挟まっているのが見えた","k":"C5-4:5-4-2"},
 {"id":"5-4-2c","t":"clue","clue":"赤い手袋","x":"白瀬の赤い毛糸の手袋。朝、鏡の廊下の奥の鏡の下の隙間に、片方挟まっていた","k":"C5-4:5-4-2c"},
@@ -69114,7 +69280,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"6-2-5","t":"line","w":"watson","x":"……写真に残しておきます。12月20日の夕方に撮った、この部屋の写真とも、見比べておきます","k":"C6-2:6-2-5"},
 {"id":"6-2-6","t":"line","w":"atsu","x":"……ドラちゃん。今は、信じたい。でも、これは記録しとく","e":"troubled","k":"C6-2:6-2-6"}]},
 {"id":"C6-3","chapter":"C6","title":"止まった針","cond":null,"bgm":"melo_dullahan_clockwork_alt","bg":"食堂","next":"C6-4","rows":[{"id":"6-3-1","t":"line","w":"sorashido","x":"整理します。あの夜、柱時計の鐘は、ワトソンくんの時計より早く鳴った。黒羽さんが外へ出たのは、鐘のすぐ後です","e":"normal","k":"C6-3:6-3-1"},
-{"id":"6-3-2","t":"line","w":"atsu","x":"おっちゃん、いつも懐中時計を見てた。『時は金なり』って。……あの時計が、ずれてたとは思えない","e":"normal","k":"C6-3:6-3-2"},{"t":"q","id":"Q6a","kind":"present","x":"あの夜、柱時計の鐘が本当に鳴ったのは、何時ごろ？ 本当の時刻を示す手がかりを、手がかり帳から1つ突きつけよう","replies":{"x1":[{"id":"Q6a-x1","t":"line","w":"watson","x":"その手がかりには、時刻が書かれていません"}],"x2":[{"id":"Q6a-x2","t":"line","w":"atsu","x":"時刻が分かる物……。雪の上で、おっちゃんのそばに落ちてた物は？","e":"normal"}],"x3":[{"id":"Q6a-x3","t":"line","w":"sorashido","x":"黒羽さんが外へ出て、すぐに止まった物です","e":"normal"}],"near":[{"id":"Q6a-near","t":"line","w":"watson","x":"鐘が早かったことは分かっています。何分早かったかを示す物が、要ります"}],"ok":[{"id":"Q6a-ok","t":"line","w":"sorashido","x":"はい。懐中時計は23時47分で止まっていた。鐘は、本当は23時47分ごろ。……柱時計は、13分、進められていたんです。12年前と同じように","e":"normal"}]},"label":"推理の問い⑤","score":true,"answer":["止まった懐中時計"],"k":"C6-3:Q6a","near":["早く鳴った鐘"]},
+{"id":"6-3-2","t":"line","w":"atsu","x":"おっちゃん、いつも懐中時計を見てた。『時は金なり』って。……あの時計が、ずれてたとは思えない","e":"normal","k":"C6-3:6-3-2"},{"t":"q","id":"Q6a","kind":"present","x":"あの夜、柱時計の鐘が本当に鳴ったのは、何時ごろ？ 本当の時刻を示す手がかりを、手がかり帳から1つ突きつけよう","replies":{"x1":[{"id":"Q6a-x1","t":"line","w":"watson","x":"その手がかりには、時刻が書かれていません"}],"x2":[{"id":"Q6a-x2","t":"line","w":"atsu","x":"時刻が分かる物……。雪の上で、おっちゃんのそばに落ちてた物は？","e":"normal"}],"x3":[{"id":"Q6a-x3","t":"line","w":"sorashido","x":"黒羽さんが外へ出て、すぐに止まった物です","e":"normal"}],"near":[{"id":"Q6a-near","t":"line","w":"watson","x":"鐘が早かったことは分かっています。何分早かったかを示す物が、要ります"}],"ok":[{"id":"Q6a-ok","t":"line","w":"sorashido","x":"はい。懐中時計は23時47分で止まっていた。鐘は、本当は23時47分ごろ。……柱時計は、13分、進められていたんです。12年前と同じように","e":"normal"}]},"label":"推理の問い⑤","score":true,"pass":true,"narrow":["早く鳴った鐘","止まった懐中時計","12年前の帳面","白瀬の手紙"],"answer":["止まった懐中時計"],"k":"C6-3:Q6a","near":["早く鳴った鐘"]},
 {"id":"6-3-3","t":"line","w":"mochimaru","x":"針を……。柱時計のねじ巻きは、毎晩、きゅうこさんだったっちー……","k":"C6-3:6-3-3"},
 {"id":"6-3-4","t":"line","w":"atsu","x":"……時計は、誰でも触れられる。ホールの真ん中にあるんだから","e":"troubled","k":"C6-3:6-3-4"}]},
 {"id":"C6-4","chapter":"C6","title":"うしろの人","cond":null,"bgm":"melo_dullahan_clockwork","bg":"ペンションのホール","next":"C6-5","rows":[{"id":"6-4-1","t":"line","w":"erubin","x":"……俺、あの写真の影、もう一度確かめてくる。通り道の、鏡の廊下のほう","e":"normal","k":"C6-4:6-4-1"},
@@ -69128,7 +69294,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"6-5-4","t":"line","w":"myua","x":"血……！ るびちん、血が……！","f":"close","e":"crying","k":"C6-5:6-5-4"},
 {"id":"6-5-5","t":"line","w":"erubin","x":"……大丈夫。……はしごの上で、黒いフードの人に、押されて……頭から……","f":"close","e":"troubled","k":"C6-5:6-5-5"},
 {"id":"6-5-6","t":"band","x":"みゅあが、自分のハンカチで額を押さえる。白いハンカチが、みるみる赤く染まっていく","fx":["bleed"],"k":"C6-5:6-5-6"},
-{"id":"6-5-7","t":"line","w":"erubin","x":"カメラ、取られちゃった。……ごめん","e":"troubled","k":"C6-5:6-5-7"},{"t":"q","id":"Q6b","kind":"present","x":"黒いサンタは、えるびんから、何を取ろうとした？ わけを示す手がかりを、手がかり帳から1つ突きつけよう","replies":{"x1":[{"id":"Q6b-x1","t":"line","w":"watson","x":"その手がかりは、えるびんさんが持っていた物ではありません"}],"x2":[{"id":"Q6b-x2","t":"line","w":"myua","x":"るびちんが、鏡の廊下で撮った……","e":"troubled"}],"x3":[{"id":"Q6b-x3","t":"line","w":"erubin","x":"カメラの中の、あの1枚……","e":"troubled"}],"near":[{"id":"Q6b-near","t":"line","w":"sorashido","x":"鏡の廊下までは合っています。……そこで、えるさんが残した物は？","e":"normal"}],"ok":[{"id":"Q6b-ok","t":"line","w":"sorashido","x":"はい。黒いサンタは、あの写真を消したかった。……写っていた影は、見られたら困る、誰かです","e":"normal"}]},"label":"推理の問い⑥","score":true,"answer":["えるびんの写真"],"k":"C6-5:Q6b","near":["ほこりのない鏡のふち"]},
+{"id":"6-5-7","t":"line","w":"erubin","x":"カメラ、取られちゃった。……ごめん","e":"troubled","k":"C6-5:6-5-7"},{"t":"q","id":"Q6b","kind":"present","x":"黒いサンタは、えるびんから、何を取ろうとした？ わけを示す手がかりを、手がかり帳から1つ突きつけよう","replies":{"x1":[{"id":"Q6b-x1","t":"line","w":"watson","x":"その手がかりは、えるびんさんが持っていた物ではありません"}],"x2":[{"id":"Q6b-x2","t":"line","w":"myua","x":"るびちんが、鏡の廊下で撮った……","e":"troubled"}],"x3":[{"id":"Q6b-x3","t":"line","w":"erubin","x":"カメラの中の、あの1枚……","e":"troubled"}],"near":[{"id":"Q6b-near","t":"line","w":"sorashido","x":"鏡の廊下までは合っています。……そこで、えるさんが残した物は？","e":"normal"}],"ok":[{"id":"Q6b-ok","t":"line","w":"sorashido","x":"はい。黒いサンタは、あの写真を消したかった。……写っていた影は、見られたら困る、誰かです","e":"normal"}]},"label":"推理の問い⑥","score":true,"pass":true,"narrow":["えるびんの写真","ほこりのない鏡のふち","赤い手袋","かばんの黒い服"],"answer":["えるびんの写真"],"k":"C6-5:Q6b","near":["ほこりのない鏡のふち"]},
 {"id":"6-5-8b","t":"line","w":"erubin","x":"……でも、写真は、ソラくんのパソコンにも送ってあるよ","e":"troubled","k":"C6-5:6-5-8b"},
 {"id":"6-5-8c","t":"line","w":"watson","x":"写真は、わたしの所に残っています","k":"C6-5:6-5-8c"},
 {"id":"6-5-9","t":"band","x":"はしごの下。血のしずくのそばに、何か小さな物が光っている","k":"C6-5:6-5-9"}]},
@@ -69489,7 +69655,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"10-3-12","t":"band","x":"もみの木の下。箱は、一つも減っていなかった","k":"C10-3:10-3-12"},
 {"id":"10-3-12c","t":"clue","clue":"箱のない犠牲者","x":"もちまるは世話役で、初めから箱を持っていない。もちまるが亡くなった朝、木の下の箱は、一つも減っていなかった","k":"C10-3:10-3-12c"},
 {"id":"10-3-13","t":"panel","x":"","ops":[{"id":"mochimaru","st":"dead"}],"k":"C10-3:10-3-13"}]},
-{"id":"C10-4","chapter":"C10","title":"誤算","cond":null,"bgm":"melo_kiss_mystery","bg":"ペンションのホール","next":"C11-1","rows":[{"id":"10-4-1","t":"line","w":"myua","x":"……ねえ、あつくん。今度は、箱がなくなってない。……もちまるん、世話役だから、箱、持ってなかったもんね","e":"troubled","k":"C10-4:10-4-1"},{"t":"q","id":"Q10a","kind":"present","x":"もちまるが亡くなった朝は、今までに亡くなった人たちの時と、違う所がある。それを示す手がかりを、手がかり帳から1つ突きつけよう","replies":{"x1":[{"id":"Q10a-x1","t":"line","w":"watson","x":"その手がかりは、前に見つけた物です。今朝、新しく分かったことを選んでください"}],"x2":[{"id":"Q10a-x2","t":"line","w":"sorashido","x":"……木の下を、もう一度見てください","e":"troubled"}],"x3":[{"id":"Q10a-x3","t":"line","w":"myua","x":"もちまるんは、世話役だから……","e":"troubled"}],"near":[{"id":"Q10a-near","t":"line","w":"atsu","x":"そう、今までは箱が消えてた。……今回は？","e":"normal"}],"ok":[{"id":"Q10a-ok","t":"line","w":"sorashido","x":"はい。黒いサンタは、箱を持つお客を狙い、その箱を持っていく。でも、もちまるさんは世話役で、箱を持っていなかった。……決まりから外れています。もちまるさんは、狙われていなかったんです","e":"normal"}]},"label":"推理の問い⑦","answer":["箱のない犠牲者"],"k":"C10-4:Q10a","near":["消えた箱"]},
+{"id":"C10-4","chapter":"C10","title":"誤算","cond":null,"bgm":"melo_kiss_mystery","bg":"ペンションのホール","next":"C11-1","rows":[{"id":"10-4-1","t":"line","w":"myua","x":"……ねえ、あつくん。今度は、箱がなくなってない。……もちまるん、世話役だから、箱、持ってなかったもんね","e":"troubled","k":"C10-4:10-4-1"},{"t":"q","id":"Q10a","kind":"present","x":"もちまるが亡くなった朝は、今までに亡くなった人たちの時と、違う所がある。それを示す手がかりを、手がかり帳から1つ突きつけよう","replies":{"x1":[{"id":"Q10a-x1","t":"line","w":"watson","x":"その手がかりは、前に見つけた物です。今朝、新しく分かったことを選んでください"}],"x2":[{"id":"Q10a-x2","t":"line","w":"sorashido","x":"……木の下を、もう一度見てください","e":"troubled"}],"x3":[{"id":"Q10a-x3","t":"line","w":"myua","x":"もちまるんは、世話役だから……","e":"troubled"}],"near":[{"id":"Q10a-near","t":"line","w":"atsu","x":"そう、今までは箱が消えてた。……今回は？","e":"normal"}],"ok":[{"id":"Q10a-ok","t":"line","w":"sorashido","x":"はい。黒いサンタは、箱を持つお客を狙い、その箱を持っていく。でも、もちまるさんは世話役で、箱を持っていなかった。……決まりから外れています。もちまるさんは、狙われていなかったんです","e":"normal"}]},"label":"推理の問い⑦","pass":true,"narrow":["消えた箱","帳面の最後の行","箱のない犠牲者","鳴りやまないオルゴール"],"answer":["箱のない犠牲者"],"k":"C10-4:Q10a","near":["消えた箱"]},
 {"id":"10-4-2a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"atsu","x":"帳面の最後の行、『柱時計の前に、誰か』。もちまるは、見ちゃいけない物を見ちゃったんだ。……狙ってたんじゃない。黒いサンタにとっても、計算外だった","e":"normal","k":"C10-4:10-4-2a"},
 {"id":"10-4-2s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"sorashido","x":"帳面の最後の行。『柱時計の前に、誰か』。もちまるさんは、見てはいけない物を見てしまった。計画の外。……誤算です","e":"normal","k":"C10-4:10-4-2s"},
 {"id":"10-4-3a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"sorashido","x":"柱時計の前で、何をしていたんでしょう……","e":"normal","k":"C10-4:10-4-3a"},
@@ -70064,8 +70230,6 @@ const XMAS_NOVEL_CSS = `
 .mh-nv-fallen { position: absolute; left: 50%; bottom: 24%; width: min(80vw, 520px); transform: translateX(-50%); z-index: 4; filter: drop-shadow(0 0 2px rgba(190,200,230,.35)); pointer-events: none; animation: mh-nv-fade 1.2s ease both; }
 .mh-nv-body { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
 .mh-nv-body.noblood .pool { display: none; }
-.mh-nv-body.noblood .mh-nv-body-lie img { filter: brightness(0) drop-shadow(0 0 1px rgba(190,205,235,.55)) drop-shadow(0 0 14px rgba(120,150,200,.35)) !important; }
-.mh-nv-body.noblood .mh-nv-body-dim { background: radial-gradient(120% 90% at 50% 40%, rgba(6,10,34,.35), rgba(0,0,4,.88)) !important; }
 .mh-nv-body-dim { position: absolute; inset: 0; -webkit-backdrop-filter: grayscale(.9) brightness(.55); backdrop-filter: grayscale(.9) brightness(.55);
   background: radial-gradient(70% 34% at var(--fx, 50%) var(--fy, 74%), rgba(120,0,14,.42), rgba(120,0,14,0) 72%), radial-gradient(120% 90% at 50% 40%, rgba(6,10,34,.35), rgba(0,0,4,.88)); animation: mh-nv-fade 1.4s ease both; }
 .mh-nv-body-lie { position: absolute; }
@@ -70146,6 +70310,86 @@ const XMAS_NOVEL_CSS = `
   .mh-nv-boot [data-xmas-novel-perfect] { margin-top: 8px; }
 }
 @media (min-width: 900px) and (min-height: 700px) { .mh-nv-text { font-size: 19px; } .mh-nv-box { min-height: 150px; } }
+/* ---- 場面の切り替えと人物の登場の演出(台帳 r1126-094)。暗い側に合わせ、光らせない・跳ねさせない ----
+   切り替え(.mh-nv-sw): place=場所が替わる(暗い幕が横に流れて明ける) / time=時間が飛ぶ(暗転して、ゆっくり明ける) /
+   past=過去編へ入る(色あせた光がにじんで、古い写真の色になる) / open=章の札のあと・読み始め(黒から明ける)。
+   既読・オートは .fast で短く、スキップ中は出さない。札(.mh-nv-place)は場所の名前 */
+.mh-nv-sw { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
+.mh-nv-sw.place { background: linear-gradient(90deg, transparent 0%, rgba(0,0,0,.85) 14%, #000 26%, #000 100%); animation: mh-nv-sw-wipe 1.15s cubic-bezier(.55,.05,.35,1) both; }
+@keyframes mh-nv-sw-wipe { 0% { transform: translateX(-26%); opacity: 1; } 100% { transform: translateX(105%); opacity: 1; } }
+.mh-nv-sw.time { background: #000; animation: mh-nv-sw-time 2.1s ease-in both; }
+@keyframes mh-nv-sw-time { 0%, 30% { opacity: 1; } 100% { opacity: 0; } }
+.mh-nv-sw.open { background: #000; animation: mh-nv-sw-time 1.5s ease-in both; }
+.mh-nv-sw.past { background: radial-gradient(80% 70% at 50% 45%, rgba(214,182,128,.55) 0%, rgba(90,60,24,.8) 60%, rgba(12,7,2,1) 100%); animation: mh-nv-sw-past 2.6s ease-out both; }
+.mh-nv-sw.past::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, rgba(0,0,0,.18) 0 1px, transparent 1px 7px); animation: mh-nv-sw-film .18s steps(2) 8; }
+@keyframes mh-nv-sw-past { 0% { opacity: 1; filter: blur(10px); } 35% { opacity: .92; filter: blur(4px); } 100% { opacity: 0; filter: none; } }
+@keyframes mh-nv-sw-film { 50% { transform: translateX(3px); opacity: .5; } }
+.mh-nv-sw.fast { animation-duration: .45s; }
+.mh-nv-sw.fast.place { animation-duration: .5s; }
+.mh-nv-sw.fast::after { animation: none; }
+/* 背景の絵は、替わったときにゆっくり寄る(押し込みすぎない) */
+.mh-nv-bg.in-place { animation: mh-nv-bg-push 2.2s ease-out both; }
+.mh-nv-bg.in-time, .mh-nv-bg.in-open { animation: mh-nv-bg-push 3s ease-out both; }
+.mh-nv-bg.in-past { animation: mh-nv-bg-push 3.4s ease-out both; }
+.mh-nv-bg.fast { animation-duration: .5s; }
+@keyframes mh-nv-bg-push { from { transform: scale(1.06); } to { transform: none; } }
+.mh-nv-place { position: absolute; left: 14px; top: calc(max(8px, env(safe-area-inset-top)) + 50px); z-index: 5; pointer-events: none; max-width: calc(100% - 28px);
+  padding: 6px 14px 6px 12px; border-left: 2px solid rgba(232,196,106,.8); background: linear-gradient(90deg, rgba(0,0,0,.72), rgba(0,0,0,0));
+  color: #e6dcc0; font-size: 14px; font-weight: 800; letter-spacing: .14em; text-shadow: 0 1px 3px #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  animation: mh-nv-place 3.2s ease both; }
+.mh-nv-place.past { border-left-color: rgba(196,150,90,.85); color: #e2cfa6; }
+.mh-nv-place.fast { animation-duration: 1.4s; }
+@keyframes mh-nv-place { 0% { opacity: 0; transform: translateX(-12px); } 18% { opacity: 1; transform: none; } 78% { opacity: 1; } 100% { opacity: 0; } }
+@media (orientation: portrait) { .mh-nv-place { top: calc(max(8px, env(safe-area-inset-top)) + 72px); } }
+/* 章の札: 黒から明けて、章の名前が字の間を詰めながら浮かび、線が中から伸び、題がにじみから浮かぶ */
+.mh-nv-card.open { animation: mh-nv-fade 1s ease both; background: radial-gradient(110% 70% at 50% 45%, rgba(26,22,40,.92), rgba(1,2,6,.99)); }
+.mh-nv-card.open .mh-nv-card-label { animation: mh-nv-card-label 1.6s ease-out both; }
+.mh-nv-card.open .mh-nv-rule { animation: mh-nv-card-rule 1.1s ease-out .35s both; }
+.mh-nv-card.open .mh-nv-card-title { animation: mh-nv-card-title 1.5s ease-out .6s both; }
+.mh-nv-card.open .mh-nv-card-hint { animation: mh-nv-fade .8s ease 1.9s both; }
+.mh-nv-card.open .mh-nv-card-ghost { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; overflow: hidden;
+  font-size: min(26vw, 220px); font-weight: 900; color: rgba(160,20,30,.08); letter-spacing: -.02em; white-space: nowrap; animation: mh-nv-card-ghost 4s ease-out both; }
+.mh-nv-cardtext { position: relative; }
+@keyframes mh-nv-card-label { from { opacity: 0; letter-spacing: 1.2em; } to { opacity: 1; letter-spacing: .5em; } }
+@keyframes mh-nv-card-rule { from { transform: scaleX(0); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes mh-nv-card-title { 0% { opacity: 0; filter: blur(8px); transform: translateY(8px); } 100% { opacity: 1; filter: none; transform: none; } }
+@keyframes mh-nv-card-ghost { from { opacity: 0; transform: scale(1.08); } to { opacity: 1; transform: none; } }
+/* 人物の登場: first=その人が初めて出る(影の姿から浮かぶ) / swap=話し手が替わる(少し寄って出る) / face=表情だけ替わる(すっと替わる)。fast は短く */
+.mh-nv-fig.enter-first img { animation: mh-nv-enter-first 1.5s ease-out both; }
+.mh-nv-fig.enter-swap img { animation: mh-nv-enter-swap .5s cubic-bezier(.2,.7,.3,1) both; }
+.mh-nv-fig.enter-face img { animation: mh-nv-enter-face .22s ease both; }
+.mh-nv-fig.fast img { animation-duration: .3s; }
+@keyframes mh-nv-enter-first {
+  0% { opacity: 0; transform: translateY(10px) scale(.985); filter: brightness(0) blur(4px) drop-shadow(0 6px 18px rgba(0,0,0,.6)); }
+  40% { opacity: 1; transform: none; filter: brightness(0) blur(1px) drop-shadow(0 0 6px rgba(180,190,220,.35)); }
+  100% { opacity: 1; transform: none; filter: brightness(1) blur(0) drop-shadow(0 6px 18px rgba(0,0,0,.6)); } }
+@keyframes mh-nv-enter-swap { from { opacity: 0; transform: translateX(-16px) scale(.97); filter: brightness(.7) drop-shadow(0 6px 18px rgba(0,0,0,.6)); } to { opacity: 1; transform: none; filter: brightness(1) drop-shadow(0 6px 18px rgba(0,0,0,.6)); } }
+@keyframes mh-nv-enter-face { from { opacity: .55; } to { opacity: 1; } }
+/* 初めて出る人の名札: 立ち絵の左上に、金の線が左から伸びてから肩書きと名前が浮かぶ。しばらくして消える */
+.mh-nv-intro { position: absolute !important; left: 6%; top: 18%; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 0 18px 8px 2px; pointer-events: none; z-index: 2;
+  animation: mh-nv-intro 3.6s ease both; }
+.mh-nv-intro .bar { position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: linear-gradient(90deg, #e8c46a, rgba(232,196,106,.6) 70%, transparent); transform-origin: left; animation: mh-nv-intro-bar .7s ease-out both; }
+.mh-nv-intro .nm { font-size: clamp(24px, 6.4vw, 32px); font-weight: 900; letter-spacing: .16em; line-height: 1.2; color: #f1e6c8; white-space: nowrap; text-shadow: 0 0 12px rgba(0,0,0,.95), 0 2px 3px #000; animation: mh-nv-intro-nm 1.1s ease-out .3s both; }
+.mh-nv-intro .role { font-size: 12px; font-weight: 800; letter-spacing: .3em; color: #d2b272; white-space: nowrap; text-shadow: 0 0 8px #000, 0 1px 3px #000; animation: mh-nv-intro-nm .9s ease-out .15s both; }
+.mh-nv-intro.fast { animation-duration: 1.6s; }
+.mh-nv-intro.fast .bar, .mh-nv-intro.fast .nm, .mh-nv-intro.fast .role { animation-duration: .3s; animation-delay: 0s; }
+@keyframes mh-nv-intro { 0% { opacity: 1; } 82% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes mh-nv-intro-bar { from { transform: scaleX(0); } to { transform: none; } }
+@keyframes mh-nv-intro-nm { from { opacity: 0; filter: blur(6px); transform: translateX(-10px); } to { opacity: 1; filter: none; transform: none; } }
+@media (orientation: landscape) and (max-height: 560px) { .mh-nv-intro { left: 4%; top: 22%; } .mh-nv-intro .nm { font-size: 24px; } }
+/* 遺体・倒れた影を見つける行(台帳 r1126-094 追記1): 文のあいだは暗転(dark)、文が出きって一拍おいてから、ゆっくり明ける(show)。影はその下から浮かぶ */
+.mh-nv-veil { position: absolute; inset: 0; z-index: 4; pointer-events: none; background: #000; }
+.mh-nv-veil.dark { animation: mh-nv-fade .35s ease both; }
+.mh-nv-veil.show { animation: mh-nv-veil-lift 1.8s ease-in both; }
+.mh-nv-veil.fast.show { animation-duration: .5s; }
+@keyframes mh-nv-veil-lift { 0%, 15% { opacity: 1; } 100% { opacity: 0; } }
+/* 血を見せない影(白瀬など)は、真っ黒で見えなかった(社長「白瀬の死亡シーンって出てた？」)。冷たい光を当て、縁を白く光らせて形を見せる */
+.mh-nv-body.noblood .mh-nv-body-dim { background: radial-gradient(42% 30% at var(--fx, 50%) var(--fy, 74%), rgba(150,180,235,.30), rgba(150,180,235,0) 75%), radial-gradient(120% 90% at 50% 40%, rgba(6,10,34,.35), rgba(0,0,4,.88)) !important; }
+.mh-nv-body.noblood .mh-nv-body-lie img { filter: brightness(0) drop-shadow(0 0 1.5px rgba(225,235,255,.95)) drop-shadow(0 0 3px rgba(200,215,250,.6)) drop-shadow(0 0 20px rgba(140,170,230,.55)) !important; }
+@media (prefers-reduced-motion: reduce) {
+  .mh-nv-veil { animation-duration: .01s !important; }
+  .mh-nv-sw, .mh-nv-sw::after, .mh-nv-bg.in-place, .mh-nv-bg.in-time, .mh-nv-bg.in-open, .mh-nv-bg.in-past, .mh-nv-card.open *, .mh-nv-fig.enter-first img, .mh-nv-fig.enter-swap img, .mh-nv-fig.enter-face img, .mh-nv-intro, .mh-nv-intro * { animation-duration: .01s !important; animation-delay: 0s !important; }
+}
 @media (prefers-reduced-motion: reduce) { .mh-nv-snow, .mh-nv-next, .mh-nv-shake, .mh-nv-get, .mh-nv-fig img { animation: none !important; } }
 `;
 const useXmasNovelCss = () => {
@@ -70248,6 +70492,98 @@ const xmasNovelSceneBgName = (scene, idx) => {
     if (i >= 0 && at >= i) name = bg;
   });
   return name;
+};
+
+// ---- 場面の切り替えの演出(台帳 r1126-094) ----
+//  背景の名前の移り変わりから、どの切り替えかを決める(純粋な計算。検査からも呼ぶ)
+//  '' = 出さない / 'open' = 読み始め / 'past' = 過去編(12年前)へ入る / 'time' = 時間が飛ぶ・過去編から戻る / 'place' = 場所が替わる
+const xmasNovelTimeOf = (n) => (/12年前/.test(n) ? 'past' : /明け方|朝/.test(n) ? 'morning' : /夜|ろうそく|停電|暗転/.test(n) ? 'night' : 'day');
+const xmasNovelSwitchKind = (prevName, nextName) => {
+  const a = String(prevName || '').split('→')[0];
+  const b = String(nextName || '').split('→')[0];
+  const tb = xmasNovelTimeOf(b);
+  if (prevName == null) return tb === 'past' ? 'past' : 'open';
+  if (a === b) return '';
+  const ta = xmasNovelTimeOf(a);
+  if (tb === 'past' && ta !== 'past') return 'past';
+  if (ta !== tb) return 'time';
+  const ia = xmasNovelBgOf(a);
+  const ib = xmasNovelBgOf(b);
+  if ((ia.img || ia.grad) === (ib.img || ib.grad) && (ia.tint || '') === (ib.tint || '')) return '';
+  return 'place';
+};
+//  場所の札に出す名前(「夜の裏口(吹雪」→「夜の裏口　吹雪」)。外側の広場など、絵の名前そのままの物は出さない
+const xmasNovelPlaceLabel = (name) => {
+  const n = String(name || '').split('→')[0].trim();
+  if (!n || /^[a-z0-9_]+(?=$|[(（])/.test(n) || /ゲーム機をかこむ/.test(n)) return '';
+  const m = n.match(/^([^(（]+)(?:[(（]([^)）]*)[)）]?)?/);
+  if (!m) return n;
+  const base = m[1].trim();
+  const inner = (m[2] || '').trim();
+  return inner ? `${base}　${inner}` : base;
+};
+
+//  人ごとに、台本でいちばん初めに話す行(名札と「影から浮かぶ」はこの行だけ。つづきから読んでも、もう出た人には出さない)
+const XMAS_NOVEL_FIRST_LINE_CACHE = new WeakMap();
+const xmasNovelFirstLines = (script) => {
+  if (!script || typeof script !== 'object') return {};
+  if (XMAS_NOVEL_FIRST_LINE_CACHE.has(script)) return XMAS_NOVEL_FIRST_LINE_CACHE.get(script);
+  const out = {};
+  (Array.isArray(script.scenes) ? script.scenes : []).forEach((s) => (Array.isArray(s.rows) ? s.rows : []).forEach((r) => {
+    if (r && r.t === 'line' && r.w && r.n !== '？？？' && !out[r.w]) out[r.w] = r.id;
+  }));
+  XMAS_NOVEL_FIRST_LINE_CACHE.set(script, out);
+  return out;
+};
+
+// ---- 先の展開が分かる題を伏せる(台帳 r1126-094 追記3・社長「ところどころのタイトルで展開が見えるから出し方かえたほうがいい」) ----
+//  場面の題: その場面を1度読み終えるまでは出さない(上の帯は章だけ。場所は場所の札で分かる)
+//  章の題: 先が分かる章(遺体が見つかる・最初の推理がはずれる・人が減っていく)は、その先の章を読むまで別の題で出す
+const XMAS_NOVEL_CHAPTER_VEIL = Object.freeze({ C3: '白い朝', C8: 'ひとつずつ', C10: '長い夜' });
+const XMAS_NOVEL_CH_KEYS_CACHE = new WeakMap();
+const xmasNovelChapterDone = (script, ch, read) => {
+  if (!script || !ch) return false;
+  let keys = XMAS_NOVEL_CH_KEYS_CACHE.get(script);
+  if (!keys) {
+    keys = {};
+    (Array.isArray(script.scenes) ? script.scenes : []).forEach((s) => { (keys[s.chapter] = keys[s.chapter] || []).push(...(Array.isArray(s.rows) ? s.rows : []).map((r) => r && r.k).filter(Boolean)); });
+    XMAS_NOVEL_CH_KEYS_CACHE.set(script, keys);
+  }
+  const set = read instanceof Set ? read : new Set(Array.isArray(read) ? read : []);
+  return (Array.isArray(script.chapters) ? script.chapters : []).some((c) => c && !c.past && !c.outside && c.no > ch.no && c.no < 90 && (keys[c.id] || []).some((k) => set.has(k)));
+};
+const xmasNovelChapterTitle = (script, ch, read) => {
+  if (!ch) return '';
+  const veil = XMAS_NOVEL_CHAPTER_VEIL[ch.id];
+  return veil && !xmasNovelChapterDone(script, ch, read) ? veil : (ch.title || '');
+};
+const xmasNovelSceneDone = (scene, read) => {
+  const rows = scene && Array.isArray(scene.rows) ? scene.rows : [];
+  const last = [...rows].reverse().find((r) => r && r.k);
+  return !!(last && Array.isArray(read) && read.includes(last.k));
+};
+// ---- 場面ごとの揺れ(台帳 r1126-094 追記3・社長「場面場面の振動とかそういうのちゃんとして」) ----
+//  行ID → 強さ(1 小さく / 2 ふつう / 3 強く)。音の帯は音と同時、遺体を見つける行は暗転が明けるときに 1。
+//  端末の振動は、navigator.vibrate がある端末(Android)だけ短く。iPhone は画面の揺れと音で伝える。動きを減らす設定の端末では、どちらも出さない
+const XMAS_NOVEL_SHAKE = Object.freeze({
+  '1-3-1': 2, '2-1-10': 1, '2-3-4': 1, '2-3-7': 1, '2-3-9b': 1, '2-3-9c': 2, '2-5-1': 2, '5-4-4': 1, '6-5-1': 3, '6-7-4b': 2,
+  '7-P1-13': 1, '7-P3-11': 1, '7-P3-12': 1, '7-W-8': 1, '9-1-4': 1, '10-2-6': 2,
+  '2-X-2': 3, '5-X-3': 3, '6-X-4': 3, '6-X-5': 2, '6-X-8': 2, '2-Y-9': 3, '2-Y-17': 1, '10-X-8': 3,
+  'B-2': 1, 'B-3': 1, 'B-4': 2, 'B-13': 2, '1-O-22': 1, '12-3-2': 1, '12-4-2': 1, '12-4-5': 1,
+});
+const XMAS_NOVEL_SHAKE_PX = [0, 2.5, 5, 9];
+const XMAS_NOVEL_BUZZ = [0, 20, 45, [70, 40, 90]];
+const xmasNovelQuake = (el, lv) => {
+  const a = XMAS_NOVEL_SHAKE_PX[lv] || 0;
+  if (!a) return;
+  try { if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return; } catch (e) { /* 分からなければ揺らす */ }
+  if (el && typeof el.animate === 'function') {
+    try {
+      el.animate([{ transform: 'none' }, { transform: `translate(${-a}px, ${a / 2}px)` }, { transform: `translate(${a}px, ${-a / 3}px)` }, { transform: `translate(${-a * 0.6}px, ${a / 3}px)` },
+        { transform: `translate(${a * 0.35}px, 0)` }, { transform: 'none' }], { duration: 240 + lv * 100, easing: 'ease-out' });
+    } catch (e) { /* 揺れなくても続ける */ }
+  }
+  try { if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(XMAS_NOVEL_BUZZ[lv]); } catch (e) { /* ふるえなくても続ける */ }
 };
 
 // ---- 立ち絵 ----
@@ -70389,25 +70725,37 @@ const useXmasNovelPlace = (who, frame, artKey) => {
 };
 const XmasNovelFigure = (props) => {
   const { row } = props;
-  const who = !row ? '' : (row.t === 'band' ? 'boss' : (row.n === '？？？' ? (xmasNovelIsLaugh(row) ? 'boss' : 'shadow') : (row.w || '')));
+  const who = !row ? '' : (row.t === 'band' ? 'boss' : (row.n === '？？？' ? 'boss' : (row.w || '')));
   return <XmasNovelFigureArt {...props} who={who} frame={xmasNovelFrameOf(row, props.scene)} key={`${who}-${(row && row.e) || ''}`} />;
 };
-const XmasNovelFigureArt = ({ row, dim = false, who = '', frame = 'normal' }) => {
+//  初めて出る人の名札。肩書きは台本で本人や周りが名乗る物だけ(助手たちは名前だけ)。名前は名札と同じ呼び名(フルネームは本人が名乗るまで出さない)
+const XMAS_NOVEL_INTRO_ROLE = Object.freeze({ ichika: 'ペンションのオーナー', mochimaru: 'ペンションの世話役', kuroba: '招かれざる客', shirase: '招かれざる客' });
+const XmasNovelIntro = ({ c, fast }) => (c ? (
+  <div className={`mh-nv-intro mh-nv-serif${fast ? ' fast' : ''}`} data-xmas-novel-intro={c.id}>
+    {XMAS_NOVEL_INTRO_ROLE[c.id] && <span className="role">{XMAS_NOVEL_INTRO_ROLE[c.id]}</span>}
+    <span className="nm">{c.name}</span>
+    <span className="bar" />
+  </div>
+) : null);
+const XmasNovelFigureArt = ({ row, dim = false, who = '', frame = 'normal', enter = null }) => {
   const [broken, setBroken] = useState(0);
+  const ek = enter && enter.kind ? ` enter-${enter.kind}${enter.fast ? ' fast' : ''}` : '';
   const ref = useXmasNovelPlace(who, frame, `${row ? row.id : ''}-${broken}`);
   if (row && row.t === 'band' && xmasNovelIsSilhouette(row)) return <div ref={ref} className={`mh-nv-fig${dim ? ' dim' : ''}`} key={`band-${row.id}`}><XmasNovelBossShadow /></div>;
   if (!row || row.t !== 'line') return null;
   const key = `${row.w || row.n}-${row.e || ''}`;
   const laugh = row.n === '？？？' && xmasNovelIsLaugh(row);
-  if (row.n === '？？？' || !row.w) return row.n === '？？？' ? <div ref={ref} className={`mh-nv-fig${dim ? ' dim' : ''}${laugh ? ' laugh' : ''}`} key={key}>{laugh ? <XmasNovelBossShadow /> : <XmasNovelShadow tone="#1c2240" label="？？？" />}</div> : null;
+  if (row.n === '？？？' || !row.w) return row.n === '？？？' ? <div ref={ref} className={`mh-nv-fig${dim ? ' dim' : ''}${laugh ? ' laugh' : ''}`} key={key}><XmasNovelBossShadow />{/* 名前を伏せた話し手は、いつも黒いサンタの影(丸い頭の影はやめた・台帳 r1126-094 追記2) */}</div> : null;
   if (row.w === 'watson') return <div ref={ref} className="mh-nv-fig" key={key}><XmasNovelLaptop /></div>;
   const c = xmasNovelCastOf(row.w);
   const fig = xmasNovelFigureSrc(row.w, row.e);
-  if (!fig || broken >= 2) return <div ref={ref} className={`mh-nv-fig${dim ? ' dim' : ''}`} key={key}><XmasNovelShadow tone={(c && c.tone) || '#2a3350'} label={c ? c.name : ''} /></div>;
+  const intro = enter && enter.kind === 'first' && enter.intro ? <XmasNovelIntro c={c} fast={enter.fast} /> : null;
+  if (!fig || broken >= 2) return <div ref={ref} className={`mh-nv-fig${dim ? ' dim' : ''}`} key={key}><XmasNovelShadow tone={(c && c.tone) || '#2a3350'} label={c ? c.name : ''} />{intro}</div>;
   const src = broken === 1 && fig.fallback ? fig.fallback : fig.src;
   return (
-    <div ref={ref} className={`mh-nv-fig${fig.face ? ' face' : ''}${dim ? ' dim' : ''}`} key={key}>
+    <div ref={ref} className={`mh-nv-fig${fig.face ? ' face' : ''}${dim ? ' dim' : ''}${ek}`} key={key} data-xmas-novel-enter={enter && enter.kind ? enter.kind : undefined}>
       <img src={src} alt={c ? c.name : ''} draggable={false} onError={() => setBroken((b) => (b === 0 && fig.fallback ? 1 : 2))} />
+      {intro}
     </div>
   );
 };
@@ -70686,19 +71034,23 @@ const xmasNovelSe = (kind) => {
     //   se・playSeFile だと事件簿の音まで消える(r1126-072)。口が無い古い作りなら今までの口へ
     const playFile = typeof Audio_.fgPlaySeFile === 'function' ? Audio_.fgPlaySeFile : Audio_.playSeFile;
     if (kind === 'laugh' && typeof playFile === 'function') { void playFile(XMAS_NOVEL_LAUGH_SE); return; }
-    const map = { clap: 'join', laugh: 'enemySpecial', impact: 'enemyAttack', music: 'heal', tap: 'tap', clue: 'card', ok: 'victory', ng: 'guard' };
-    const fn = (Audio_.fgSe || Audio_.se)[map[kind] || 'tap'];
+    // 2026-11-28 社長「SEとかも明るすぎる」(台帳 r1126-093 追記1): 明るい・軽い音をやめ、手持ちの低く重い・静かな音へ。
+    //   物音(tap・clap)= 低いこもった「コトッ」(trainingDice)/ オルゴール(music)= 下がっていく2音(trainingFail)/ 手がかり = 低い2音(enemyMove)/
+    //   正解 = 重い「ドン」(attack。前の victory はファンファーレで、曲まで止めていた)/ はずれ = 低いうなり(trainingBad)/ 衝撃 = 今のまま(enemyAttack)
+    const map = { clap: 'trainingDice', laugh: 'enemySpecial', impact: 'enemyAttack', music: 'trainingFail', tap: 'trainingDice', clue: 'enemyMove', ok: 'attack', ng: 'trainingBad' };
+    const fn = (Audio_.fgSe || Audio_.se)[map[kind] || 'trainingDice'];
     if (typeof fn === 'function') fn();
   } catch (e) { /* 音が出せなくても読み進める */ }
 };
 // 台本の〔音:鐘〕〔音:時計〕〔音:手紙〕の行の音(r1126-066)。手持ちの効果音だけを使う(新しい音は作らない)。
-//   鐘 = 金属の音(guard)に、低く下がる余韻(trainingFail)を重ねた「ボーン」/ 時計 = 短い針の音(xpTick)/ 手紙 = 不穏にふくらむ音(enemyCharge)。
+//   鐘 = 金属の音(guard)に、低く下がる余韻(trainingFail)を重ねた「ボーン」/ 時計・手紙は下の表(r1126-093 追記1 で暗い音へ替えた)。
 //   効果音の音量(seBus)を通るので設定どおりの大きさ。BGM は止めない。
 //   連打しても重ねない: 次の行へ進んだら残りの回数は鳴らさず、同じ音を前の音のすぐあと(hold の間)には鳴らし直さない
 const XMAS_NOVEL_SE_SEQ = Object.freeze({
   bell: { gap: 1150, hold: 900, play: ['guard', 'trainingFail'] },
-  tick: { gap: 520, hold: 300, play: ['xpTick'] },
-  letter: { gap: 0, hold: 1500, play: ['enemyCharge'] },
+  //   r1126-093 追記1(暗く): 時計 = 高い「チッ」(xpTick)をやめ、低くこもった「コツ」(trainingDice)/ 手紙 = きらめきの入った enemyCharge をやめ、低いうなりと下がる2音(trainingBad・trainingFail)
+  tick: { gap: 520, hold: 300, play: ['trainingDice'] },
+  letter: { gap: 0, hold: 1500, play: ['trainingBad', 'trainingFail'] },
 });
 let xmasNovelSeTimers = [];
 let xmasNovelSeLast = { kind: '', at: 0 };
@@ -70724,29 +71076,88 @@ const xmasNovelRowSe = (kind, times) => {
     else xmasNovelSeTimers.push(setTimeout(() => xmasNovelSeHit(kind), at));
   }
 };
-//  場面の途中で曲を変える所(台本の「切→温」のうち、新曲を当てた所・台帳 r1126-039)。場面ID → [その行から先, 曲の鍵]
-//  END-G: 屋根裏の会場のやり直しのクリスマス会と本物のサンタのそり(「温 ★」)から Dear Santa。それより前のせつない所は今の曲のまま
-const XMAS_NOVEL_BGM_SHIFT = Object.freeze({
-  'END-G': [['G-10', 'melo_dear_santa']],
+//  事件簿の曲(2026-11-28 社長「音楽で声有りはやめて」「ちゃんとばめんにあったやつに」「音無しとかばめんによって」「全体的に暗く」・台帳 r1126-093)。
+//    歌(声)の入った曲は使わない。声の有無は声の分離器で測った(表と測り方: docs/progress/event-xmas-2026/NOVEL-BGM-R1126-093.md)。
+//    'silence' は曲を止める(死の場面・張りつめた所・静かな独白)。台本データ(79-xmas-novel-script.jsx)の曲より、この表が勝つ
+const XMAS_NOVEL_BGM_SCENE = Object.freeze({
+  'OUT-0-1': 'original_profile', 'OUT-0-2': 'melo_dullahan_clockwork', 'C0-1': 'original_profile', 'C0-2': 'original_profile',
+  'OUT-1': 'melo_dullahan_clockwork', 'C1-1': 'original_profile', 'C1-2': 'original_profile', 'C1-3': 'melo_dullahan_clockwork',
+  'C1-4': 'melo_dullahan_clockwork', 'C1-5': 'close_to_your_heart_alt', 'C1-6': 'melo_dullahan_steel_ghost', 'C1-M': 'silence',
+  'C2-1': 'melo_dullahan_clockwork', 'C2-L': 'silence', 'C2-M': 'makutsu_no_senritsu', 'C2-2': 'original_profile',
+  'C2-3': 'melo_dullahan_steel_ghost', 'C2-4': 'melo_dullahan_steel_ghost_alt', 'C2-5': 'original_dullahan', 'C3-1': 'silence',
+  'C3-2': 'melo_dullahan_clockwork_alt', 'C3-3': 'melo_dullahan_clockwork', 'C3-4': 'melo_dullahan_clockwork_alt', 'C3-5': 'melo_erfolg_piano',
+  'C3-M': 'melo_erfolg_piano', 'C4-1': 'makutsu_no_senritsu', 'C4-2': 'silence', 'C4-3': 'melo_dullahan_clockwork_alt',
+  'C4-4': 'melo_dullahan_clockwork', 'C4-5': 'melo_dullahan_steel_ghost', 'C4-M': 'silence', 'C5-1': 'melo_erfolg_piano',
+  'C5-2': 'melo_dullahan_steel_ghost_alt', 'C5-3': 'melo_dullahan_steel_ghost', 'C5-4': 'melo_dullahan_steel_ghost', 'C5-5': 'makutsu_no_senritsu',
+  'C5-M': 'melo_dullahan_clockwork', 'C6-1': 'melo_dullahan_clockwork_alt', 'C6-2': 'melo_dullahan_steel_ghost',
+  'C6-3': 'melo_dullahan_clockwork_alt', 'C6-4': 'melo_dullahan_steel_ghost_alt', 'C6-5': 'melo_dullahan_steel_ghost',
+  'C6-6': 'melo_dullahan_clockwork_alt', 'C6-7': 'original_dullahan', 'C6-8': 'melo_erfolg_piano', 'C6-9': 'melo_dullahan_steel_ghost',
+  'C6-M': 'melo_erfolg_piano', 'C7-1': 'melo_dullahan_clockwork_alt', 'C7-2': 'melo_dullahan_steel_ghost_alt', 'C7-A': 'melo_erfolg_piano',
+  'C7-B': 'melo_dullahan_clockwork', 'C7-P1': 'original_dullahan', 'C7-P2': 'melo_erfolg_piano', 'C7-P3': 'melo_dullahan_clockwork',
+  'C7-4a': 'melo_erfolg_piano', 'C7-4b': 'melo_dullahan_steel_ghost', 'C7-5a': 'melo_erfolg_piano', 'C7-5b': 'melo_dullahan_steel_ghost',
+  'C7-W': 'melo_dullahan_clockwork_alt', 'C8-1': 'melo_dullahan_steel_ghost_alt', 'C8-2': 'makutsu_no_senritsu', 'C8-3': 'melo_erfolg_piano',
+  'C9-1': 'silence', 'C9-2': 'close_to_your_heart_alt', 'C10-1': 'melo_dullahan_steel_ghost', 'C10-2': 'makutsu_no_senritsu',
+  'C10-3': 'melo_dullahan_steel_ghost', 'C10-4': 'melo_dullahan_steel_ghost_alt', 'C11-1': 'melo_dullahan_steel_ghost_alt',
+  'C11-N': 'melo_erfolg_piano', 'C11-A': 'melo_erfolg_piano', 'C11-B': 'melo_dullahan_clockwork', 'C2-X': 'melo_dullahan_steel_ghost',
+  'END-X1': 'original_game_over', 'C5-X': 'melo_dullahan_steel_ghost', 'END-X2': 'original_game_over', 'C6-X': 'melo_dullahan_steel_ghost',
+  'END-X3': 'original_game_over', 'C2-Y': 'melo_dullahan_steel_ghost', 'END-X4': 'original_game_over', 'C10-X': 'melo_dullahan_steel_ghost',
+  'END-X5': 'original_game_over', 'END-M1': 'original_game_over', 'END-M2': 'melo_dullahan_steel_ghost', 'END-M3': 'melo_dullahan_steel_ghost',
+  'END-M4': 'original_game_over', 'END-M5': 'melo_dullahan_steel_ghost', 'END-G': 'melo_erfolg_piano', 'OUT-G': 'close_to_your_heart_alt',
+  'END-N': 'melo_erfolg_piano', 'OUT-N': 'melo_erfolg_piano', 'END-A': 'melo_dullahan_clockwork', 'OUT-A': 'melo_dullahan_clockwork',
+  'END-B': 'melo_dullahan_steel_ghost', 'OUT-B': 'melo_dullahan_steel_ghost', 'C1-O': 'original_profile', 'END-O': 'original_profile',
+  'OUT-O': 'original_profile', 'END-O2': 'close_to_your_heart_alt', 'OUT-O2': 'close_to_your_heart_alt', 'C12-1': 'close_to_your_heart_alt',
+  'C12-2': 'melo_erfolg_piano', 'C12-3': 'original_dullahan', 'C12-4': 'melo_dullahan_clockwork', 'C12-5': 'melo_dullahan_steel_ghost',
+  'C12-6': 'silence', 'C12-7': 'melo_erfolg_piano',
 });
-//  いまの行で鳴らす曲: 場面の曲 → その場面のいまの行までに出てきた行の曲・上の表の曲(あとのものが勝つ)
+//  場面の途中で曲を変える・止める所。場面ID → [その行から先, 曲の鍵](a/s の2つある行は、前の方の行に付ける)
+const XMAS_NOVEL_BGM_SHIFT = Object.freeze({
+  'C2-3': [['2-3-7', 'silence']],
+  'C5-4': [['5-4-5', 'silence']],
+  'C6-5': [['6-5-3', 'silence']],
+  'C7-1': [['7-1-3a', 'melo_dullahan_steel_ghost_alt']],
+  'C7-W': [['7-W-14', 'melo_dullahan_steel_ghost_alt']],
+  'C10-1': [['10-1-5', 'silence']],
+  'C10-2': [['10-2-7', 'silence']],
+  'C10-3': [['10-3-7', 'silence']],
+  'C2-X': [['2-X-6a', 'silence']],
+  'C5-X': [['5-X-4a', 'silence']],
+  'C6-X': [['6-X-8', 'silence']],
+  'C2-Y': [['2-Y-10', 'silence']],
+  'C10-X': [['10-X-8', 'silence']],
+  'END-M2': [['M2-4', 'silence']],
+  'END-M5': [['M5-5a', 'silence']],
+  'END-B': [['B-3', 'silence']],
+  'END-G': [['G-10', 'close_to_your_heart_alt']],
+  'C12-4': [['12-4-5', 'silence']],
+});
+//  歌の入った曲を、まちがって鳴らさないための網(台本データの古い曲の鍵が残っていても、声の無い曲へ替える)
+const XMAS_NOVEL_VOCAL_BGM = Object.freeze({
+  kaze_ga_soyogu: 'original_profile', melo_kiss_mystery: 'melo_dullahan_steel_ghost_alt', melo_kiss_mystery_short: 'melo_dullahan_steel_ghost_alt',
+  melo_sad_song: 'melo_erfolg_piano', melo_sad_song_short: 'melo_erfolg_piano', melo_dear_santa: 'close_to_your_heart_alt', melo_dear_santa_short: 'close_to_your_heart_alt',
+  melo_winter_fall: 'close_to_your_heart_alt', melo_winter_fall_short: 'close_to_your_heart_alt', close_to_your_heart: 'close_to_your_heart_alt',
+});
+//  いまの行で鳴らす曲: 場面の曲(上の表 → 台本データ)→ その場面のいまの行までの切り替え(あとのものが勝つ)。
+//    上の表にある場面は、台本データの行の曲(歌の入った新曲を指していた)を使わない
 const xmasNovelBgmAt = (scene, idx) => {
   if (!scene) return '';
-  let key = scene.bgm || '';
+  const fixed = Object.prototype.hasOwnProperty.call(XMAS_NOVEL_BGM_SCENE, scene.id);
+  let key = fixed ? XMAS_NOVEL_BGM_SCENE[scene.id] : (scene.bgm || '');
   const rows = Array.isArray(scene.rows) ? scene.rows : [];
   const at = Number.isFinite(idx) ? idx : 0;
   const shifts = XMAS_NOVEL_BGM_SHIFT[scene.id] || [];
   for (let i = 0; i <= at && i < rows.length; i += 1) {
     const r = rows[i];
-    if (r && r.bgm) key = r.bgm;
+    if (!fixed && r && r.bgm) key = r.bgm;
     shifts.forEach(([rowId, k]) => { if (r && r.id === rowId) key = k; });
   }
-  return key;
+  return XMAS_NOVEL_VOCAL_BGM[key] || key;
 };
-const xmasNovelBgm = (key) => {
+const xmasNovelBgm = (keyIn) => {
+  let key = keyIn;
   try {
     if (typeof Audio_ === 'undefined' || !Audio_) return;
     if (!key) return;
+    key = XMAS_NOVEL_VOCAL_BGM[key] || key; // 歌の入った曲は鳴らさない(r1126-093)
     if (key === 'silence') { Audio_.stopBGM(); return; }
     if (typeof Audio_.fadeToBGM === 'function') Audio_.fadeToBGM(key, 700); else Audio_.playBGM(key);
   } catch (e) { /* 曲が鳴らせなくても読み進める */ }
@@ -71016,7 +71427,6 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
   const [reply, setReply] = useState(null); // { list:[行], i, then, q } 問いの返しを読んでいるところ
   const [shown, setShown] = useState(0); // 文字送りで出した字数
   const [fx, setFx] = useState(null); // { kind, n }
-  const [shake, setShake] = useState(0);
   const [curtain, setCurtain] = useState(null);
   const [transit, setTransit] = useState(null); // { dir:'in'|'out', n } 外側⇔ゲームの中の切り替え(画面に吸い込まれる/画面から引く) // 'down'(下りて閉じたまま)/ 'up'(上がっていく)
   const replayRef = useRef(false);
@@ -71035,12 +71445,39 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
   const prevBgm = useRef(null);
   const storeTimer = useRef(null);
   const unreadRef = useRef(false); // いまの行が、着く前はまだ読んでいなかったか(既読スキップを止める)
+  // 場面の切り替えと人物の登場の演出(台帳 r1126-094)
+  const [sw, setSw] = useState(null); // { kind:'place'|'time'|'past'|'open', fast, place, n } 背景が替わった所
+  const [figEnter, setFigEnter] = useState(null); // { kind:'first'|'swap'|'face', fast, intro, n } 立ち絵の出かた
+  const lastBgRef = useRef(null); // 前の行の背景の名前(null = 読み始め)
+  const pendingSwRef = useRef(null); // 章の札を閉じたあとに出す切り替え
+  const seenWhoRef = useRef(new Set()); // この読み始めから立ち絵が出た人
+  const lastWhoRef = useRef('');
+  // 出すタイミング(台帳 r1126-094 追記1): 「文が出る → 一拍 → 演出」。遺体の影は、見つける文のあいだ暗転させ、文が出きってから明けて出す
+  const [reveal, setReveal] = useState(null); // { id, stage:'dark'|'show' } 遺体・倒れた影を見つける行
+  const pendingFxRef = useRef(null); // 文が出きってから出す演出 { id, vis, bleedAfter, shake }
+  const lastBodyRef = useRef('');
+  const fireFx = (p) => {
+    if (!p) return;
+    if (p.bleedAfter) setTimeout(() => setFx({ kind: 'bleed', n: Date.now() }), 380); // 赤く光ってから、にじむ
+    setFx(p.vis ? { kind: p.vis, n: Date.now() } : null);
+    if (p.shake) xmasNovelQuake(stageRef.current, 2);
+  };
+  const stageRef = useRef(null);
+  const pendingQuakeRef = useRef(0);
+  const [titleOk, setTitleOk] = useState(false); // いまの場面を前に読み終えているか(場面の題を出すか)
+  const fxFast = (unread) => !unread || !!(saveRef.current && saveRef.current.auto);
+  const fireSw = (v) => {
+    if (!v) { setSw(null); return; }
+    const n = Date.now();
+    setSw({ ...v, n });
+    setTimeout(() => setSw((x) => (x && x.n === n ? null : x)), v.fast ? 1500 : 3400);
+  };
 
   useEffect(() => {
     let alive = true;
     try { prevBgm.current = typeof Audio_ !== 'undefined' && Audio_.currentBgmKey ? Audio_.currentBgmKey() : null; } catch (e) { prevBgm.current = null; }
     xmasNovelLoad(S).then((s) => { if (alive) { saveRef.current = s; setSave(s); } });
-    xmasNovelBgm('melo_kiss_mystery');
+    xmasNovelBgm('melo_dullahan_clockwork'); // 開いた所(題の画面)。歌の入った Kiss からはじまるミステリーをやめ、柱時計の不穏な曲に(r1126-093)
     return () => { alive = false; xmasNovelSeStop(); if (storeTimer.current) clearTimeout(storeTimer.current); };
   }, []);
   const persist = (next, now = false) => {
@@ -71070,18 +71507,38 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
     unreadRef.current = !!(r.k && !s.read.includes(r.k));
     if (r.k && !s.read.includes(r.k)) s = { ...s, read: [...s.read, r.k] };
     if (r.t === 'band' && r.se) xmasNovelRowSe(r.se, r.seN); else xmasNovelSeStop();
+    // 章の札の下で着いた行は、札を閉じてから揺らす(札に隠れて見えなかった)
+    pendingQuakeRef.current = 0;
+    if (XMAS_NOVEL_SHAKE[r.id] && !skip) { if (opts.held) pendingQuakeRef.current = XMAS_NOVEL_SHAKE[r.id]; else xmasNovelQuake(stageRef.current, XMAS_NOVEL_SHAKE[r.id]); }
     if (r.t === 'band' && Array.isArray(r.fx)) {
       const vis = r.fx.find((f) => ['dark', 'white', 'red', 'light', 'bleed'].includes(f));
-      if (r.fx.includes('bleed') && r.fx.includes('red')) setTimeout(() => setFx({ kind: 'bleed', n: Date.now() }), 380); // 赤く光ってから、にじむ
-      setFx(vis ? { kind: vis, n: Date.now() } : null);
-      if (r.fx.includes('shake')) setShake((n) => n + 1);
+      const p = { id: r.id, vis, bleedAfter: r.fx.includes('bleed') && r.fx.includes('red'), shake: r.fx.includes('shake') };
+      // 音の行(ドン・ギィ など)と暗転は文と同時。様子を書いた行の赤・にじみ・揺れは、文が出きって一拍おいてから
+      if (xmasNovelIsSeRow(r) || vis === 'dark' || skip || (!vis && !p.shake)) { pendingFxRef.current = null; fireFx(p); } else { pendingFxRef.current = p; setFx(null); }
       if (r.fx.includes('curtainDown')) setCurtain('down');
       if (r.fx.includes('curtainUp')) { setCurtain('up'); setTimeout(() => setCurtain((c) => (c === 'up' ? null : c)), 1700); }
       if (r.fx.includes('title') || r.fx.includes('chapter')) { setCard({ kind: r.fx.includes('title') ? 'title' : 'band', text: r.x }); setShown(99999); return s; }
-    } else setFx((f) => (f && f.kind === 'dark' ? null : f));
-    if (r.bgm && r.bgm !== lastBgm.current) { lastBgm.current = r.bgm; xmasNovelBgm(r.bgm); }
+    } else { pendingFxRef.current = null; setFx((f) => (f && f.kind === 'dark' ? null : f)); }
+    // 遺体・倒れた影が初めて出る行: 文のあいだは暗転、出きってから明けて出す(同じ人が続く行はそのまま)
+    {
+      const bodyKey = r.t === 'band' ? (r.body || (Array.isArray(r.fx) && r.fx.includes('fallen') ? `fallen-${r.id}` : '')) : '';
+      if (bodyKey && bodyKey !== lastBodyRef.current) setReveal({ id: r.id, stage: skip ? 'show' : 'dark', fast: !unreadRef.current, n: Date.now() });
+      else setReveal(null);
+      if (bodyKey) lastBodyRef.current = bodyKey; // 台詞をはさんで同じ人の影に戻るときは、暗転させない(場面が替わったら忘れる)
+    }
+    // 行の曲(台本データ)は、返しの行のときだけここで鳴らす。本筋の行は下の xmasNovelBgmAt(場面の曲の表)が決める(r1126-093)
+    if (opts.quiet && r.bgm && (XMAS_NOVEL_VOCAL_BGM[r.bgm] || r.bgm) !== lastBgm.current) { lastBgm.current = XMAS_NOVEL_VOCAL_BGM[r.bgm] || r.bgm; xmasNovelBgm(r.bgm); }
     if (r.t === 'clue') { setGot({ n: r.clue, d: r.x, add: !!r.add }); xmasNovelSe('clue'); }
     if (r.t === 'line' && r.n === '？？？' && xmasNovelIsLaugh(r)) xmasNovelSe('laugh');
+    if (r.t === 'line') {
+      // 立ち絵の出かた: その人が初めて出る / 話し手が替わる / 表情だけ替わる。スキップ中は演出なし
+      const who = r.n === '？？？' ? '？？？' : (r.w || '');
+      const first = !!(who && who !== '？？？' && who !== 'watson' && !seenWhoRef.current.has(who) && xmasNovelFirstLines(S)[who] === r.id);
+      if (who) seenWhoRef.current.add(who);
+      const kind = first ? 'first' : who !== lastWhoRef.current ? 'swap' : 'face';
+      lastWhoRef.current = who;
+      setFigEnter(skip ? null : { kind, fast: fxFast(unreadRef.current), intro: first, n: Date.now() });
+    } else if (r.t === 'band') lastWhoRef.current = '';
     if (r.t === 'line' || r.t === 'band') setLog((l) => [...l.slice(-299), { who: r.t === 'line' ? xmasNovelNameOf(r) : '', text: xmasNovelFill(r.x, playerName) }]);
     if (r.t === 'q' && !opts.quiet && !opts.held) setSheet({ kind: r.kind, q: r });
     setShown(opts.instant ? 99999 : 0);
@@ -71108,7 +71565,9 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
     const scene = next.scene;
     let chapterCard = false;
     // 外側(助手たち本人)⇔ゲームの中が切り替わったら、画面に吸い込まれる/画面から引く
-    if (scene && lastSceneRef.current && !!lastSceneRef.current.outside !== !!scene.outside) { setTransit({ dir: scene.outside ? 'out' : 'in', n: Date.now() }); xmasNovelSe('tap'); }
+    if (lastSceneRef.current !== (scene || null)) { lastBodyRef.current = ''; setTitleOk(xmasNovelSceneDone(scene, s.read)); }
+    const transitNow = !!(scene && lastSceneRef.current && !!lastSceneRef.current.outside !== !!scene.outside);
+    if (transitNow) { setTransit({ dir: scene.outside ? 'out' : 'in', n: Date.now() }); xmasNovelSe('tap'); }
     // カーテンコールの場面を出たら、下りていた幕を上げる
     if (scene && lastSceneRef.current && lastSceneRef.current.curtain && !scene.curtain) { setCurtain((c) => (c === 'down' ? 'up' : c)); setTimeout(() => setCurtain((c) => (c === 'up' ? null : c)), 1700); }
     lastSceneRef.current = scene || null;
@@ -71120,8 +71579,18 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
       lastChapter.current = scene.chapter;
       if (ch && ch.id !== 'END' && !ch.outside) {
         if (!s.snaps[ch.id] || next.cur.idx === 0) s = { ...s, snaps: { ...s.snaps, [ch.id]: { scene: scene.id, idx: 0, flags: next.cur.flags, clues: next.cur.clues, ans: next.cur.ans, panel: next.cur.panel || {} } } };
-        if (opening) { setCard({ kind: 'chapter', label: xmasNovelChapterLabel(ch), title: ch.title }); setSkip(false); chapterCard = true; }
+        if (opening) { setCard({ kind: 'chapter', label: xmasNovelChapterLabel(ch), title: xmasNovelChapterTitle(S, ch, s.read) }); setSkip(false); chapterCard = true; }
       }
+    }
+    // 背景が替わった所の切り替え(外側⇔ゲームの中は吸い込まれる演出があるので出さない・章の札のあとは札を閉じてから)
+    {
+      const bgNow = xmasNovelSceneBgName(scene, next.cur ? next.cur.idx : 0);
+      const kind = xmasNovelSwitchKind(lastBgRef.current, bgNow);
+      lastBgRef.current = bgNow;
+      const unread = !!(next.row && next.row.k && !s.read.includes(next.row.k));
+      const bodyRow = !!(next.row && next.row.t === 'band' && (next.row.body || (Array.isArray(next.row.fx) && next.row.fx.includes('fallen'))));
+      const v = kind && !skip && !bodyRow ? { kind, fast: fxFast(unread), place: scene && !scene.outside ? xmasNovelPlaceLabel(bgNow) : '' } : null;
+      if (chapterCard) { pendingSwRef.current = v ? { ...v, kind: v.kind === 'place' ? 'open' : v.kind } : { kind: 'open', fast: false, place: '' }; fireSw(null); } else if (v && !transitNow) fireSw(v);
     }
     let cur = next.cur;
     let panelChanged = [];
@@ -71141,6 +71610,8 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
     setCurtain(null); setTransit(null);
     lastBgm.current = null; lastChapter.current = null;
     setLog([]); setCard(null); setSheet(null); setGot(null); setFx(null); setSkip(false);
+    lastBgRef.current = null; pendingSwRef.current = null; seenWhoRef.current = new Set(); lastWhoRef.current = ''; setSw(null); setFigEnter(null);
+    setReveal(null); pendingFxRef.current = null; lastBodyRef.current = '';
     setMode('read');
     arrive(xmasNovelSettle(S, cur));
   };
@@ -71150,6 +71621,9 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
     if (card) {
       if (card.kind === 'ending') return;
       setCards((list) => list.slice(1));
+      // 章の札を閉じたら、黒から場面が明ける(既読スキップ中は出さない)
+      if (card.kind === 'chapter' && cards.length === 1 && pendingSwRef.current) { const v = pendingSwRef.current; pendingSwRef.current = null; if (!skip) fireSw(v); }
+      if (cards.length === 1 && pendingQuakeRef.current) { const lv = pendingQuakeRef.current; pendingQuakeRef.current = 0; if (!skip) setTimeout(() => xmasNovelQuake(stageRef.current, lv), 250); }
       // 題字・帯の札は、その行そのもの。札を閉じたら次の行へ(章の札は行ではないので、閉じるだけ)
       if ((card.kind === 'title' || card.kind === 'band') && cards.length === 1) goNext();
       return;
@@ -71158,7 +71632,8 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
   };
   const goNext = () => {
     if (sheet || !row) return;
-    if (typing) { setShown(text.length); return; }
+    if (typing) { setShown(text.length); if (sw && !sw.fast) setSw(null); return; }
+    if (!reply && reveal && row && reveal.id === row.id && reveal.stage === 'dark') { setReveal({ ...reveal, stage: 'show' }); xmasNovelQuake(stageRef.current, 1); return; } // 暗いままで進めない(見つける所を必ず見せる)
     if (got) setGot(null);
     if (reply) {
       if (reply.i + 1 < reply.list.length) {
@@ -71202,11 +71677,28 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
     const id = setTimeout(() => setShown((n) => Math.min(text.length, n + (skip ? 99999 : 2))), skip ? 0 : 38);
     return () => clearTimeout(id);
   }, [typing, shown, text, skip]);
+  // 文が出きったら: 一拍おいて遺体の影を明ける / 様子の演出を出す
+  const rowKey = row ? row.id : '';
+  const revealDark = !!(reveal && reveal.id === rowKey && reveal.stage === 'dark');
+  useEffect(() => {
+    if (mode !== 'read' || !rowKey || typing) return undefined;
+    if (revealDark) {
+      const id = setTimeout(() => { setReveal((v) => (v && v.id === rowKey && v.stage === 'dark' ? { ...v, stage: 'show' } : v)); if (!skip) xmasNovelQuake(stageRef.current, 1); }, reveal.fast || skip ? 150 : 700);
+      return () => clearTimeout(id);
+    }
+    const p = pendingFxRef.current;
+    if (p && p.id === rowKey) {
+      const id = setTimeout(() => { if (pendingFxRef.current === p) { pendingFxRef.current = null; fireFx(p); } }, reveal && reveal.id === rowKey ? 1300 : 300);
+      return () => clearTimeout(id);
+    }
+    return undefined;
+  }, [mode, rowKey, typing, revealDark]);
   // オート・スキップ(スキップは読んだ行だけ。まだ読んでいない行・問い・札で止まる)
   const autoLevel = save ? save.auto : 0;
   useEffect(() => {
     if (mode !== 'read' || !row || sheet || typing) return undefined;
     if (card && card.kind === 'ending') return undefined;
+    if (revealDark && !skip) return undefined; // 明けるのを待つ
     if (card && !skip) return undefined;
     if (skip) {
       if ((row.t === 'q' && !reply) || (unreadRef.current && !reply)) { setSkip(false); return undefined; }
@@ -71312,7 +71804,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
                       <button type="button" data-xmas-novel-chapter={c.id} disabled={!snap} className="mh-nv-clue flex items-center gap-3 disabled:opacity-40"
                         onClick={() => snap && start({ ...snap, idx: 0 })}>
                         <span className="mh-nv-serif mh-nv-gold w-14 shrink-0 text-[14px] font-black">{xmasNovelChapterLabel(c)}</span>
-                        <span className="mh-nv-serif min-w-0 flex-1 truncate text-[15px] font-black">{snap ? c.title : '？？？'}</span>
+                        <span className="mh-nv-serif min-w-0 flex-1 truncate text-[15px] font-black">{snap ? xmasNovelChapterTitle(S, c, save.read) : '？？？'}</span>
                         {snap ? <ChevronRight size={16} className="text-amber-200" /> : <Lock size={14} />}
                       </button>
                     </li>
@@ -71333,15 +71825,19 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
   const darkNow = fx && fx.kind === 'dark';
   const name = isLine ? xmasNovelNameOf(row) : '';
   const q = sheet && typeof sheet === 'object' ? sheet.q : null;
+  const presentList = q && q.kind === 'present' ? xmasNovelPresentable(q, clues) : clues; // 候補を絞る問い(r1126-099 追記1)
   return (
     <div className="mh-nv" data-xmas-novel="read" data-scene={scene ? scene.id : ''} data-row={row ? row.id : ''}>
-      <div key={`stage-${shake}`} className={`mh-nv-stage${shake ? ' mh-nv-shake' : ''}`} onClick={advance}>
-        <div className="mh-nv-bg" key={bgName || (scene ? scene.id : 'bg')} data-xmas-novel-bg={bg.tintKind || ''} style={bg.img ? { backgroundImage: `${bg.tint ? `${bg.tint}, ` : ''}url(${bg.img})`, backgroundPosition: bg.pos || 'center' } : { background: bg.grad }} />
+      <div ref={stageRef} className="mh-nv-stage" onClick={advance}>
+        <div className={`mh-nv-bg${sw ? ` in-${sw.kind}${sw.fast ? ' fast' : ''}` : ''}`} key={bgName || (scene ? scene.id : 'bg')} data-xmas-novel-bg={bg.tintKind || ''} style={bg.img ? { backgroundImage: `${bg.tint ? `${bg.tint}, ` : ''}url(${bg.img})`, backgroundPosition: bg.pos || 'center' } : { background: bg.grad }} />
         {(bg.snow || !bg.img) && <><div className="mh-nv-snow" />{bg.snow && <div className="mh-nv-snow b" />}</>}
-        {!darkNow && (isLine || (isBand && xmasNovelIsSilhouette(row))) && <XmasNovelFigure row={row} scene={scene} />}
+        {!darkNow && (isLine || (isBand && xmasNovelIsSilhouette(row))) && <XmasNovelFigure row={row} scene={scene} enter={isLine ? figEnter : null} />}
+        {sw && <div key={`sw-${sw.n}`} className={`mh-nv-sw ${sw.kind}${sw.fast ? ' fast' : ''}`} data-xmas-novel-switch={sw.kind} />}
+        {sw && sw.place && <div key={`place-${sw.n}`} className={`mh-nv-place mh-nv-serif${sw.kind === 'past' ? ' past' : ''}${sw.fast ? ' fast' : ''}`} data-xmas-novel-place>{sw.place}</div>}
+        {isBand && row.body && !revealDark && <XmasNovelBody key={`body-${row.body}`} bg={bg} who={xmasNovelBodyWho(row.body, st && st.cur && st.cur.flags)} scene={scene ? scene.id : ''} at={st && st.cur && Number.isFinite(st.cur.idx) ? st.cur.idx : 0} noBlood={!!row.noBlood} />}
+        {isBand && !row.body && !revealDark && Array.isArray(row.fx) && row.fx.includes('fallen') && <XmasNovelFallen />}
+        {reveal && reveal.id === rowKey && <div key={`veil-${reveal.n}`} className={`mh-nv-veil ${reveal.stage}${reveal.fast ? ' fast' : ''}`} data-xmas-novel-veil={reveal.stage} />}
         {fx && <div key={fx.n} className={`mh-nv-fx ${fx.kind}`} />}
-        {isBand && row.body && <XmasNovelBody key={`body-${row.body}`} bg={bg} who={xmasNovelBodyWho(row.body, st && st.cur && st.cur.flags)} scene={scene ? scene.id : ''} at={st && st.cur && Number.isFinite(st.cur.idx) ? st.cur.idx : 0} noBlood={!!row.noBlood} />}
-        {isBand && !row.body && Array.isArray(row.fx) && row.fx.includes('fallen') && <XmasNovelFallen />}
         {isBand && Array.isArray(row.fx) && row.fx.includes('letter') && <div key={`letter-${row.id}`} className="mh-nv-letter mh-nv-serif" data-xmas-novel-letter>{String(text).replace(/／/g, '\n')}</div>}
         {inside && <div className="mh-nv-crt" data-xmas-novel-inside />}
         {transit && <div key={transit.n} className="mh-nv-transit" data-dir={transit.dir} data-xmas-novel-transit={transit.dir} onAnimationEnd={(e) => { if (e.target === e.currentTarget) setTransit(null); }}><div className="scr" /><div className="mh-nv-noise" /><div className="mh-nv-scan" /></div>}
@@ -71375,7 +71871,11 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
         )}
       </div>
       <div className="mh-nv-top">
-        <span className="mh-nv-where mh-nv-serif" data-xmas-novel-where>{/* エンドの場面のあいだは章名だけ(場面名がエンド名を先に明かす・台帳 r1126-087「結末まで伏せる」) */}{chapter && !chapter.outside ? <span className="ch">{`${xmasNovelChapterLabel(chapter)}${chapter.title ? `　${chapter.title}` : ''}`}<span className="sep">　/　</span></span> : null}{scene && scene.title && !(scene.ending || (chapter && chapter.id === 'END') || /^END-/.test(String(scene.next || ''))) ? <span className="sc">{scene.title}</span> : null}</span>
+        <span className="mh-nv-where mh-nv-serif" data-xmas-novel-where>{/* エンドの場面のあいだは章名だけ(場面名がエンド名を先に明かす・台帳 r1126-087「結末まで伏せる」) */}{/* 場面の題は、その場面を1度読み終えてから(先の展開が題で分かる・台帳 r1126-094 追記3)。章の題も先が分かる物は伏せる */}{(() => {
+          const chTitle = chapter && !chapter.outside ? xmasNovelChapterTitle(S, chapter, save.read) : '';
+          const showScene = !!(titleOk && scene && scene.title && !(scene.ending || (chapter && chapter.id === 'END') || /^END-/.test(String(scene.next || ''))));
+          return <>{chapter && !chapter.outside ? <span className="ch">{`${xmasNovelChapterLabel(chapter)}${chTitle ? `　${chTitle}` : ''}`}{showScene ? <span className="sep">　/　</span> : null}</span> : null}{showScene ? <span className="sc">{scene.title}</span> : null}</>;
+        })()}</span>
         <button type="button" className="mh-nv-btn" data-xmas-novel-open-book onClick={() => setSheet('book')} aria-label="手がかり帳"><XmasNovelIcon d={XMAS_NOVEL_ICONS.book} /><span className="hidden sm:inline">手がかり帳</span><b className="text-[11px]">{clues.length}</b></button>
         <button type="button" className="mh-nv-btn" data-xmas-novel-log onClick={() => setSheet('log')} aria-label="ログ"><XmasNovelIcon d={XMAS_NOVEL_ICONS.log} /><span className="hidden sm:inline">ログ</span></button>
         <button type="button" className="mh-nv-btn" data-xmas-novel-auto data-on={autoLevel ? '' : undefined} onClick={() => persist({ ...saveRef.current, auto: (autoLevel + 1) % 3 }, true)} aria-label="オート">
@@ -71394,17 +71894,18 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
       )}
 
       {card && (
-        <div className="mh-nv-card" data-xmas-novel-card={card.kind} onClick={advance}>
+        <div key={`card-${card.kind}-${card.label || card.text || ''}`} className={`mh-nv-card${card.kind !== 'ending' ? ' open' : ''}`} data-xmas-novel-card={card.kind} onClick={advance}>
+          {card.kind === 'chapter' && card.label && <div className="mh-nv-card-ghost mh-nv-serif" aria-hidden="true">{card.label}</div>}
           {card.kind === 'chapter' && (<div className="mh-nv-plain mh-nv-cardtext">
-            <div className="mh-nv-serif text-[15px] tracking-[0.5em] text-slate-200">{card.label}</div>
+            <div className="mh-nv-card-label mh-nv-serif text-[15px] tracking-[0.5em] text-slate-200">{card.label}</div>
             <div className="mh-nv-rule" />
-            <div className="mh-nv-serif mh-nv-gold text-[30px] font-black leading-tight sm:text-[38px]">{xmasNovelWrap(card.title, 10)}</div>
+            <div className="mh-nv-card-title mh-nv-serif mh-nv-gold text-[30px] font-black leading-tight sm:text-[38px]">{xmasNovelWrap(card.title, 10)}</div>
             <div className="mh-nv-rule" />
-            <div className="mt-6 text-[11px] text-slate-400">タップで進む</div>
+            <div className="mh-nv-card-hint mt-6 text-[11px] text-slate-400">タップで進む</div>
           </div>)}
           {(card.kind === 'title' || card.kind === 'band') && (<div className="mh-nv-plain mh-nv-cardtext">
             <div className="mh-nv-rule" />
-            <div className="mh-nv-serif mh-nv-gold text-[30px] font-black leading-tight sm:text-[40px]">{xmasNovelWrap(card.text, 10)}</div>
+            <div className="mh-nv-card-title mh-nv-serif mh-nv-gold text-[30px] font-black leading-tight sm:text-[40px]">{xmasNovelWrap(card.text, 10)}</div>
             <div className="mh-nv-rule" />
           </div>)}
           {card.kind === 'ending' && (() => {
@@ -71448,14 +71949,15 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
               <button type="button" className="mh-nv-btn wide mt-3" onClick={() => setSheet(null)}>閉じる</button>
             </>)}
             {(sheet === 'book' || (q && q.kind === 'present')) && (<>
-              <div className="mh-nv-serif mh-nv-gold text-[18px] font-black">手がかり帳 <span className="text-[12px] text-slate-300">{clues.length}個</span></div>
+              <div className="mh-nv-serif mh-nv-gold text-[18px] font-black">手がかり帳 <span className="text-[12px] text-slate-300">{presentList.length}個</span></div>
               {q && <div data-xmas-novel-question={q.id} className="mt-2 rounded-lg p-2 text-[13px] font-bold leading-relaxed" style={{ background: 'rgba(120,20,30,.35)', boxShadow: '0 0 0 1px rgba(232,120,120,.6)' }}>
                 {q.label && <div className="mh-nv-serif text-[11px] font-black text-rose-200">{q.label}</div>}
                 {xmasNovelWrap(xmasNovelFill(q.x, playerName))}
-                <div className="mt-1 text-[11px] text-rose-100">突きつける手がかりを1つ選ぼう</div>
+                <div className="mt-1 text-[11px] text-rose-100">{presentList.length < clues.length ? `候補を${presentList.length}つに絞った。突きつける手がかりを1つ選ぼう` : '突きつける手がかりを1つ選ぼう'}</div>
+                {q.pass && <div data-xmas-novel-pass className="mh-nv-plain mt-1 text-[11px] text-rose-200">外しても、仲間が拾って話は進む。一発で当てると成績に残る</div>}
               </div>}
               <div className="mh-nv-scroll mt-2 flex-1 space-y-2 pr-1">
-                {clues.length ? clues.map((c) => (
+                {presentList.length ? presentList.map((c) => (
                   <div key={c.n} className="mh-nv-clue" data-xmas-novel-clue={c.n}>
                     <div className="flex items-center gap-2">
                       <div className="mh-nv-serif mh-nv-gold min-w-0 flex-1 text-[15px] font-black">【{c.n}】</div>
@@ -71483,9 +71985,17 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
             {q && q.kind === 'action' && (<>
               <div data-xmas-novel-question={q.id} className="mh-nv-plain mh-nv-serif mh-nv-gold mb-3 text-[17px] font-black">{xmasNovelWrap(xmasNovelFill(q.x, playerName))}</div>
               <div className="space-y-2.5">
-                {xmasNovelOptionsOf(q, xmasNovelCtx(S, st.cur, save.endings)).map((o) => (
-                  <button type="button" key={o.i} className="mh-nv-choice mh-nv-serif" data-xmas-novel-option={o.i} onClick={() => answer(q, o.i)}>{xmasNovelWrap(xmasNovelFill(o.x, playerName))}</button>
-                ))}
+                {xmasNovelOptionsOf(q, xmasNovelCtx(S, st.cur, save.endings)).map((o) => {
+                  // 一度見た強制バッドの選択肢には「見たエンド」の印(r1126-099 追記1)
+                  const endAhead = !q.once && o.to ? xmasNovelEndingAhead(S, o.to) : null;
+                  const seenEnd = endAhead && Array.isArray(save.endings) && save.endings.includes(endAhead) ? xmasNovelSceneById(S, endAhead) : null;
+                  return (
+                    <button type="button" key={o.i} className="mh-nv-choice mh-nv-serif" data-xmas-novel-option={o.i} onClick={() => answer(q, o.i)}>
+                      {xmasNovelWrap(xmasNovelFill(o.x, playerName))}
+                      {seenEnd && <span data-xmas-novel-seen-end={endAhead} className="mh-nv-plain mt-1 block text-[11px] font-bold text-rose-200">見たエンド: {seenEnd.ending && seenEnd.ending.name ? `「${seenEnd.ending.name}」` : 'バッドエンド'}</span>}
+                    </button>
+                  );
+                })}
               </div>
               {q.once && <div className="mh-nv-plain mt-2 text-[11px] font-bold text-rose-200">選んだら、やり直しはできません</div>}
             </>)}
@@ -115560,6 +116070,17 @@ const CARD_VS_LINES = Object.freeze({
 // 練習試合のひとこと(みゅあ)
 const CARD_VS_TUTORIAL_LINE = Object.freeze({ e: 'happy', t: '練習だよ！ ゆっくりいこ♪' });
 // 出している長さ(ミリ秒)。タップで飛ばせる
+// レイドのボスの顔アイコン(クリスマスは RAID_XMAS_BOSS_IMG。顔だけの絵は無いので、全身の絵を顔が枠に入るよう寄せて出す。台帳 r1126-101)
+//   VS の画面の大きな丸と、対戦中の左上の小さな枠で同じ物を使う。絵が無いときだけ今までの仮の絵文字
+const CARD_RAID_BOSS_FACE = Object.freeze({ size: '200% auto', pos: '50% 24%' });
+//   ★このファイルは検査(card-deck-name-check など)が JSX 抜きで読むので、JSX を使わず React.createElement で書く
+const CardRaidBossFace = ({ className = '' }) => {
+  const src = typeof RAID_XMAS_BOSS_IMG !== 'undefined' ? RAID_XMAS_BOSS_IMG : '';
+  if (!src) return React.createElement('span', { 'data-card-raid-boss-face': '', className: `flex items-center justify-center text-[26px] ${className}` }, '🎅');
+  return React.createElement('span', { 'data-card-raid-boss-face': src, role: 'img', 'aria-label': '黒いサンタ', className: `block bg-no-repeat ${className}`,
+    style: { backgroundImage: `url(${src})`, backgroundSize: CARD_RAID_BOSS_FACE.size, backgroundPosition: CARD_RAID_BOSS_FACE.pos } });
+};
+
 const CARD_VS_MS = Object.freeze({ assistant: 2600, pvp: 2600, tutorial: 1300 });
 
 // 種族(血統)の名前。混血は主血統で数える
@@ -115761,7 +116282,10 @@ const CardVsIntro = ({ db, intro, onDone, meIcon = null }) => {
                   ? <div data-card-vs-foe-art className="w-full"><CardAssistantArt src={assistantFullImage(who, (foe.line && foe.line.e) || 'happy')} alt={who.name} className="w-full" style={{ aspectRatio: '3 / 4' }}/></div>
                   : <CardVsArt data-card-vs-foe-art src={assistantFullImage(who, (foe.line && foe.line.e) || 'happy')} alt={who.name} aspect={3 / 4}/>)
                                 // マルチの相手: プロフィールと同じ部品(フレーム付き)。アイコンの id は絵に直す(字のまま出していた。91 の CardPvpAvatar)
-                : <span data-card-vs-foe-icon className="block aspect-square w-full"><CardPvpAvatar icon={foe.icon} frame={foe.frame} className="h-full w-full"/></span>}
+                // レイドのボス: ボスの絵の顔の所を丸の枠に寄せて出す(CardRaidBossFace)
+                : foe.raidBoss
+                  ? <span data-card-vs-foe-icon data-card-vs-raid-boss className="block aspect-square w-full overflow-hidden rounded-full border-[3px] border-red-500 bg-slate-950 shadow-[0_0_18px_rgba(239,68,68,.45)]"><CardRaidBossFace className="h-full w-full"/></span>
+                  : <span data-card-vs-foe-icon className="block aspect-square w-full"><CardPvpAvatar icon={foe.icon} frame={foe.frame} className="h-full w-full"/></span>}
             </div>
             <div className="mh-vs-fade min-w-0 flex-1 pb-1" style={{ animationDelay: '250ms' }}>
               <b className="block text-[16px] font-black leading-tight" style={JA_LABEL_STYLE}>{foe.name || 'あいて'}</b>
@@ -119024,7 +119548,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       {/* マルチの電波の知らせは、上の帯の番の札に出す(段を増やさない。2026-10-29 案B) */}
       {/* 相手の帯(隠さない) */}
       <div className={`flex ${tiny ? 'h-[36px]' : compact ? 'h-[42px]' : 'h-[50px]'} shrink-0 items-center gap-2 px-2`}>
-        {raid ? <span data-card-raid-foe aria-hidden="true" className={`flex ${tiny ? 'h-[34px] w-[34px] text-[20px]' : 'h-[42px] w-[42px] text-[26px]'} shrink-0 items-center justify-center rounded-xl border-2 border-red-500 bg-slate-950`}>🎅</span>
+        {raid ? <span data-card-raid-foe aria-hidden="true" className={`block ${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} shrink-0 overflow-hidden rounded-xl border-2 border-red-500 bg-slate-950`}><CardRaidBossFace className="h-full w-full"/></span>
           : (pvp || share) ? <span data-card-pvp-foe className={`block ${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} shrink-0`}><CardPvpAvatar icon={(pvp || share).icon} frame={(pvp || share).frame} className="h-full w-full"/></span>
           : <img src={assistantFaceImage(who, face)} alt={who.name} className={`${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} rounded-xl border-2 bg-black object-cover object-top`} style={{ borderColor: who.accent }}/>}
         <div className={`min-w-0 text-[13px] font-black leading-tight ${pvp ? 'max-w-[34%] truncate whitespace-nowrap' : 'shrink-0 whitespace-nowrap'}`}>{who.name}<small className="block text-[10px] font-bold text-rose-200">{pvp ? 'マルチ対戦' : raid ? 'レイドバトル' : cardBattleLevelLabel(game.level, game.share) || 'フリー対戦'}</small></div>
@@ -120789,7 +121313,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       const st = cardRaidPrepareGame(cardCreateGame(db, { decks: [{ monsters: deck.monsters, cards: deck.cards }, cpuDeck], names: ['あなた', bossName], seed, first }), rc.tierIndex, CARD_CPU);
       setResult(null);
       setRaidDone(null);
-      const intro = { mode: 'assistant', foe: { who: null, name: bossName, icon: null, frame: null, line: null, deckName: CARD_RAID_BOSS.deckName, monsters: vsMons(st, CARD_CPU) },
+      const intro = { mode: 'assistant', foe: { who: null, name: bossName, icon: null, frame: null, raidBoss: true, line: null, deckName: CARD_RAID_BOSS.deckName, monsters: vsMons(st, CARD_CPU) },
         me: { name: myName, deckName: deck.name || null, monsters: vsMons(st, CARD_ME) } };
       setGame({ key: `raid-${seed}`, st, who: 'raid', level: tier.level, settings: save.settings, intro, raid: { tier: Math.max(0, Math.floor(Number(rc.tierIndex) || 0)), tierName: rc.tierName || '', bossName, run: rc } });
       // レイドのボスとの対戦はクリスマスのレイドバトル曲「winter fall」(台帳 r1126-023)。曲が無いときは今までどおり
@@ -139354,6 +139878,8 @@ function MonsterHeroGame() {
       if (!btn) return;
       // モンヒロビートの演奏エリアの中は鳴らさない(ノーツの音と重ねない。今までもここは鳴っていなかった)
       if (btn.closest('[data-rhythm-play-area]')) return;
+      // 事件簿(ミステリーノベル)の中は、明るい「ピッ」ではなく低く小さい「コトッ」(手持ちの trainingDice)。表の口(fgSe)から鳴らす(r1126-093 追記1)
+      if (btn.closest('[data-xmas-novel]') && Audio_.fgSe && typeof Audio_.fgSe.trainingDice === 'function') { Audio_.fgSe.trainingDice(); return; }
       // ボタンの音は、裏のバトルの音と別の口(uiTap)で鳴らす。モンヒロビートの画面・助手ライフの裏クイック中は
       // 効果音の口(seBus)を0にしているので、se/fgSe では鳴らなかった(2026-11-24 r1119-164)
       if (Audio_.uiTap) { Audio_.uiTap(); return; }
@@ -157599,8 +158125,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // (storyBaseWho は 21-assistant.jsx。一部だけを動かす検査では無いことがあるので、無ければ id のまま)
         const storyBase=(id)=>typeof storyBaseWho==='function'?storyBaseWho(id):(typeof id==='string'?id.split('@')[0]:id);
         const castNow=(who)=>{for(let i=step;i>=0;i--){const w=script[i]&&script[i].who;if(storyBase(w)===who.id)return w===who.id?who:assistantById(w);}return who;};
-        const cast=storyCastOf(script).filter(who=>who.role!=='ゲスト')
-          .filter(who=>!hiddenUntil.includes(who.id)||script.slice(0,step+1).some(l=>l&&storyBase(l.who)===who.id));
+        // 下の欄で話すお客さん(speakBottom・クリスマスのハム・サンタ・謎の客など)は、顔の絵があれば助手と同じく顔の列にも並べる(r1126-090 追記2)
+        const cast=storyCastOf(script).filter(who=>who.role!=='ゲスト'||(who.speakBottom&&!who.noFace&&!!who.image))
+          .filter(who=>!hiddenUntil.includes(who.id)||script.slice(0,step+1).some(l=>l&&storyBase(l.who)===who.id))
+          // 同じ人の別の姿(storyFigureSlot が同じ・赤と黒のサンタ)は、いまの行までで最後に話したほうだけ
+          .filter((who,_,all)=>{if(!who.storyFigureSlot)return true;let lastId=null;for(let i=Math.min(step,script.length-1);i>=0&&!lastId;i--){const w=script[i]&&script[i].who&&assistantById(script[i].who);if(w&&w.storyFigureSlot===who.storyFigureSlot)lastId=w.id;}return lastId?lastId===who.id:all.find(x=>x.storyFigureSlot===who.storyFigureSlot)===who;});
         let stageIdx=-1;
         // 顔を出さない話し手(noFace・クリスマスのワトソンくん)は、話している行だけ上に出す(ジャックのように残し続けない)
         for(let i=step;i>=0;i--){const l=script[i];if(l.stage==='none'){stageIdx=-1;break;}if(l.stage||isGuestWho(l.who)){stageIdx=(i<step&&!l.stage&&assistantById(l.who).noFace)?-1:i;break;}}
@@ -157661,9 +158190,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const storyCplBubble=Math.max(6,storyLand?Math.floor((storyBoxW-118)/12)-3:Math.floor((storyBoxW-156)/14)-4);
         // 折り方を決める1行の字数は、ページ分けの控えめな見込みではなく、実際の欄の幅から出す(欄の内側の幅÷字の大きさ。端の1字ぶんは余らせる)
         const storyCapBottom=Math.floor((storyBoxW-64-(storyLand?62:100))/13-0.2);
-        // 全身の絵をまん中に出す話し手(storyFigure)は、下の欄に顔を置かないので、そのぶん1行の字数が増える
-        const storyFaceCols=Math.floor((storyLand?62:100)/13);
-        const storyCapBottomOf=(w)=>storyCapBottom+(w&&w.storyFigure?storyFaceCols:0);
+        // 下の欄の顔は、全身の絵をまん中に出す話し手(storyFigure)にも置く(r1126-090 追記2 社長「ハムとかさんたの顔アイコンがない」)。1行の字数はほかの話し手と同じ
+        const storyCapBottomOf=()=>storyCapBottom;
         const storyCapBubble=Math.floor((storyLand?(storyBoxW-118)/12:(storyBoxW-156)/14)-0.2);
         // 台詞を文の切れ目のかたまりごとに並べる(storyChunkLines)。かたまりで折ると行が増えるときは、今までどおり
         //   横の低い画面の吹き出しは高さ 84px で2行しか入らないので、かたまりで並べるのは2行まで(70-bootstrap.jsx)
@@ -157694,7 +158222,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const l=script[i];
           const w=l?assistantById(l.who):null;
           const text=l&&w&&!l.band?speakText(l,w):'';
-          const pages=storyZones&&typeof storySplitPages==='function'?storySplitPages(text,isGuestWho(l&&l.who)?storyCplBubble:storyCplBottom+(w&&w.storyFigure?storyFaceCols:0),3):[text];
+          const pages=storyZones&&typeof storySplitPages==='function'?storySplitPages(text,isGuestWho(l&&l.who)?storyCplBubble:storyCplBottom,3):[text];
           storyPageCache[i]=pages;
           return pages;
         };
@@ -157904,7 +158432,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 収まらない台詞は、上の storyPagesOf でページに分ける */}
             <div data-story-speaker-row={storyZones?'':undefined} className={storyZones?'flex items-start gap-2':undefined}>
             {/* 話している助手の顔(上部ゾーンのゲストと同じ大きさ・名前の札は顔の下)。ゲストが話しているあいだは、直前の助手を暗く残す */}
-            {storyZones&&bottomLine&&!bottomSpeaker.storyFigure&&<div key={`face-${bottomSpeaker.id}`} data-story-speaker={bottomSpeaker.id} className="shrink-0 text-center">
+            {storyZones&&bottomLine&&<div key={`face-${bottomSpeaker.id}`} data-story-speaker={bottomSpeaker.id} className="shrink-0 text-center">
               <span style={{display:'block',opacity:dimBottom?.55:1,filter:dimBottom?'brightness(.7)':`drop-shadow(0 0 10px ${bottomSpeaker.accent})`,transition:'opacity .2s, filter .2s'}}><AssistantFace who={bottomSpeaker} size={92} accent={bottomSpeaker.accent} expression={!dimBottom&&bottomLine===line?line.e:'normal'}/></span>
               <span className="mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-black" style={{color:dimBottom?bottomSpeaker.accent:'#0f172a',background:dimBottom?'rgba(15,23,42,.8)':bottomSpeaker.accent}}>{bottomLine.name||bottomSpeaker.name}</span>
             </div>}
