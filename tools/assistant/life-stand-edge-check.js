@@ -38,7 +38,7 @@ let ng = 0, rest = 0, total = 0;
 for (const dir of standDirs()) {
   const d = path.join(IMG, dir);
   if (!fs.existsSync(d)) { ng++; console.log(`NG ${dir}/: 置き場が無い`); continue; }
-  for (const f of fs.readdirSync(d).filter((x) => /\.png$/i.test(x)).sort()) {
+  for (const f of fs.readdirSync(d).filter((x) => /\.(png|webp)$/i.test(x)).sort()) {
     total++;
     const e = edges(path.join(d, f));
     if (!e.length) continue;

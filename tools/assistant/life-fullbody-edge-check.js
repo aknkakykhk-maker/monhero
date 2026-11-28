@@ -25,7 +25,16 @@ const MATTE_HALO = { atsu: 0.004, kiki: 0.011, kiki_halloween: 0.004, kyuko: 0.0
 const MATTE_BASE = { 'kiki__': 0.040, 'kiki_halloween__': 0.020, erubin: 0.001, erubin_sekiyuou: 0.040, momosuke_halloween: 0.015, mua: 0.110, 'mua_card-master': 0.050, mua_halloween: 0.010, sorashido_hosei: 0.138 }; // sorashido_hosei=いままでのソラシド(2026-11-15 から服『補正』。新しい絵 sorashido は標準の上限)
 const MATTE_MARGIN = 0.01;
 
+// WebP(重い絵を WebP にした服・2026-11-28 r1126-095・tools/assistant/art_webp.py)は Python(PIL)で画素を読み出す
+function readWebp(file) {
+  const out = require('child_process').execFileSync('python3', ['-c', 'import sys;from PIL import Image;im=Image.open(sys.argv[1]).convert("RGBA");sys.stdout.buffer.write(b"%d %d\\n"%im.size+im.tobytes())', file], { maxBuffer: 512 * 1024 * 1024 });
+  const nl = out.indexOf(10), [w, h] = out.toString('ascii', 0, nl).split(' ').map(Number), px = out.subarray(nl + 1);
+  const alpha = new Uint8Array(w * h), rgb = new Uint8Array(w * h * 3);
+  for (let i = 0; i < w * h; i++) { alpha[i] = px[i * 4 + 3]; rgb[i * 3] = px[i * 4]; rgb[i * 3 + 1] = px[i * 4 + 1]; rgb[i * 3 + 2] = px[i * 4 + 2]; }
+  return { w, h, alpha, rgb };
+}
 function readAlpha(file) {
+  if (/\.webp$/i.test(file)) return readWebp(file);
   const buf = fs.readFileSync(file);
   let p = 8, w = 0, h = 0, depth = 0, type = 0, inter = 0, trns = null, plte = null;
   const idat = [];
@@ -125,11 +134,11 @@ function matte({ w, h, alpha, rgb }) {
 module.exports = { readAlpha }; // 立ち絵の端の検査(life-stand-edge-check.js)も使う
 if (require.main === module) {
 let failed = 0, n = 0, worst = { hard: 0, name: '' };
-for (const f of fs.readdirSync(DIR).filter((x) => /\.png$/i.test(x)).sort()) {
+for (const f of fs.readdirSync(DIR).filter((x) => /\.(png|webp)$/i.test(x)).sort()) {
   n++;
   const img = readAlpha(path.join(DIR, f));
   const m = measure(img);
-  const key = f.replace(/\.png$/i, ''), base = key.split('__')[0];
+  const key = f.replace(/\.(png|webp)$/i, ''), base = key.split('__')[0];
   const mt = matte(img);
   const exprKey = key.includes('__') ? `${base}__` : null; // 表情の絵だけの上限があればそれ
   const lim = exprKey && MATTE_BASE[exprKey] != null ? MATTE_BASE[exprKey] + MATTE_MARGIN
