@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>事件簿 ランキングと見取り図の見た目案</title>
+<!-- 事件簿のランキング(r1126-107)・見取り図(r1126-102)・エンドの種類の札(r1126-108)の見た目の案(台帳 r1126-112)。
+     本体の案(../design-proposal/)と同じ「古い捜査記録(調書)」の方向にそろえる。iPhone 縦 390×844 の3枚。他作品の見た目は写さない。
+     名前・数は仮。まだ読んでいない所・エンドの名前は「？？？」のまま(ネタバレしない) -->
+<style>
+:root {
+  --ink: #06070a; --paper: #14120e; --paper2: #1c1914; --bone: #e8e0cc; --bone2: #b9b09a; --dim: #7d7666;
+  --red: #8f1d24; --red2: #c0343c; --brass: #b8955a; --brass2: #8a6d3e;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #2a2a2e; font-family: 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif; color: var(--bone); padding: 24px; }
+.serif { font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', serif; }
+.boards { display: flex; flex-wrap: wrap; gap: 28px; }
+.label { font-size: 13px; color: #ddd; margin-bottom: 8px; font-weight: 700; }
+.ab { position: relative; width: 390px; height: 844px; overflow: hidden; background: radial-gradient(90% 60% at 50% 20%, #1d1a14, #08080a 75%); border-radius: 4px; }
+.ab::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(120% 85% at 50% 40%, transparent 50%, rgba(0,0,0,.8) 100%); }
+.close { position: absolute; top: 14px; right: 14px; width: 34px; height: 34px; border: 1px solid rgba(184,149,90,.45); display: grid; place-items: center; color: var(--bone2); font-size: 14px; z-index: 3; }
+/* 見出し: 綴りの見出しの札 */
+.hd { position: relative; z-index: 2; padding: 22px 20px 0; }
+.hd .tag { display: inline-block; padding: 4px 12px; font-size: 11px; letter-spacing: .3em; color: var(--bone2); background: var(--paper2); border: 1px solid rgba(184,149,90,.45); border-bottom: 0; }
+.hd h1 { font-size: 24px; font-weight: 900; letter-spacing: .12em; color: var(--bone); margin-top: 10px; }
+.hd p { font-size: 11px; color: var(--bone2); letter-spacing: .08em; margin-top: 4px; }
+.hd .rule { height: 1px; background: linear-gradient(90deg, var(--brass), transparent); margin-top: 12px; }
+/* タブ: 綴りの見出しのつまみ */
+.tabs { position: relative; z-index: 2; display: flex; gap: 4px; padding: 12px 20px 0; }
+.tabs span { flex: 1; text-align: center; padding: 8px 0 7px; font-size: 13px; font-weight: 800; letter-spacing: .1em; color: var(--bone2); background: rgba(20,18,14,.8); border: 1px solid rgba(184,149,90,.3); border-bottom: 0; }
+.tabs span.on { color: var(--bone); background: var(--paper2); border-color: rgba(184,149,90,.7); box-shadow: inset 0 3px 0 var(--red); }
+.sheet { position: relative; z-index: 2; margin: 0 20px; border: 1px solid rgba(184,149,90,.45); background: linear-gradient(180deg, #1b1813, #12100d); padding: 10px 14px 6px; }
+.note { font-size: 11px; line-height: 1.7; color: var(--bone2); padding-bottom: 8px; border-bottom: 1px solid rgba(184,149,90,.2); }
+/* 順位の行: 帳簿の1行。点線の先に数 */
+.ln { display: flex; align-items: center; gap: 10px; padding: 9px 2px; border-bottom: 1px solid rgba(184,149,90,.14); }
+.ln .no { width: 30px; flex: none; text-align: right; font-size: 17px; font-weight: 900; color: var(--brass); }
+.ln .who { flex: 1; min-width: 0; }
+.ln .who b { display: block; font-size: 14px; font-weight: 800; color: var(--bone); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ln .ticks { display: flex; gap: 2px; margin-top: 4px; }
+.ln .ticks i { width: 6px; height: 6px; background: #2e2a22; }
+.ln .val { flex: none; font-size: 17px; font-weight: 900; color: var(--bone); }
+.ln .val small { font-size: 10px; color: var(--dim); margin-left: 2px; }
+.ln.top .no { color: var(--red2); }
+.seal1 { position: absolute; right: 64px; margin-top: -4px; width: 34px; height: 34px; border: 2px solid var(--red2); color: var(--red2); border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 900; transform: rotate(-12deg); opacity: .85; }
+/* 自分: 綴りにクリップで留めた紙片 */
+.me { position: absolute; z-index: 4; left: 16px; right: 16px; bottom: 18px; padding: 12px 14px; background: linear-gradient(180deg, #2a251c, #1b1813); border: 1px solid var(--brass); box-shadow: 0 -10px 30px rgba(0,0,0,.7); display: flex; align-items: center; gap: 10px; }
+.me::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--red); }
+.me .clip { position: absolute; top: -12px; left: 26px; width: 12px; height: 26px; border: 2px solid #8d8a83; border-radius: 6px; }
+.me .no { width: 44px; text-align: right; font-size: 20px; font-weight: 900; color: var(--brass); }
+.me .who { flex: 1; font-size: 14px; font-weight: 800; }
+.me .who em { font-style: normal; font-size: 10px; letter-spacing: .2em; color: var(--red2); border: 1px solid var(--red2); padding: 1px 5px; margin-right: 6px; }
+.me .val { font-size: 20px; font-weight: 900; }
+.me .val small { font-size: 10px; color: var(--dim); }
+/* 見取り図: 赤い糸でつないだ捜査の板 */
+.board { position: relative; z-index: 2; margin: 12px 14px 0; height: 640px; overflow: hidden; }
+.thread { position: absolute; left: 34px; top: 0; bottom: 0; width: 2px; background: var(--red); box-shadow: 0 0 0 1px rgba(0,0,0,.4); }
+.thread.dash { background: repeating-linear-gradient(var(--red) 0 7px, transparent 7px 13px); opacity: .55; }
+.div { position: relative; display: flex; align-items: center; gap: 10px; margin: 14px 0 6px; }
+.div .ch { position: relative; z-index: 1; width: 70px; padding: 6px 0; text-align: center; font-size: 12px; font-weight: 900; letter-spacing: .15em; color: var(--bone); background: var(--paper2); border: 1px solid rgba(184,149,90,.7); }
+.div .ch.dark { color: var(--dim); border-color: rgba(125,118,102,.4); }
+.div .tt { font-size: 15px; font-weight: 900; letter-spacing: .08em; }
+.div .tt.dark { color: var(--dim); }
+.nd { position: relative; display: flex; align-items: center; gap: 8px; margin: 7px 0 7px 22px; }
+.pin { position: relative; z-index: 1; width: 26px; height: 26px; flex: none; display: grid; place-items: center; font-size: 11px; font-weight: 900; }
+.pin.act { background: var(--red); color: var(--bone); border: 1px solid var(--red2); }
+.pin.q { border-radius: 50%; background: var(--paper2); border: 1px solid var(--brass); color: var(--brass); }
+.pin.side { background: transparent; border: 1px dashed var(--bone2); color: var(--bone2); }
+.pin.dark { background: #12100d; border: 1px solid #3a352c; color: var(--dim); }
+.nd .tx { flex: 1; font-size: 13px; font-weight: 800; }
+.nd .tx small { display: block; font-size: 10px; font-weight: 500; color: var(--bone2); }
+.nd .tx.dark { color: var(--dim); }
+.cards { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
+.card { position: relative; min-width: 120px; padding: 5px 10px 5px 12px; font-size: 11px; font-weight: 800; color: var(--bone); background: #211d16; border: 1px solid rgba(184,149,90,.4); transform: rotate(-1deg); }
+.card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; }
+.card small { display: block; font-size: 9px; font-weight: 600; letter-spacing: .15em; }
+.card.un { color: var(--dim); background: #100e0b; border-color: #2e2a22; transform: none; }
+.card.un::before { background: #2e2a22; }
+.lane { position: relative; margin: 16px 0 4px; padding-left: 10px; font-size: 11px; letter-spacing: .2em; color: var(--bone2); border-left: 2px solid var(--red); }
+.lane.if { border-left: 2px dashed var(--brass); color: var(--brass); }
+.cnt { position: absolute; right: 20px; top: 74px; z-index: 3; font-size: 12px; font-weight: 900; color: var(--bone); padding: 4px 10px; border: 1px solid var(--red2); }
+/* 種類の判 */
+.stamps { position: relative; z-index: 2; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 18px 20px 0; }
+.st { display: flex; align-items: center; gap: 10px; padding: 10px; background: rgba(20,18,14,.8); border: 1px solid rgba(184,149,90,.2); }
+.st .mk { width: 46px; height: 46px; flex: none; border: 2px solid; border-radius: 50%; display: grid; place-items: center; font-size: 10px; font-weight: 900; letter-spacing: .05em; transform: rotate(-10deg); text-align: center; line-height: 1.15; }
+.st .mk.sq { border-radius: 2px; }
+.st b { font-size: 12.5px; font-weight: 800; white-space: nowrap; }
+.st small { display: block; font-size: 10px; color: var(--bone2); margin-top: 2px; white-space: nowrap; }
+.endcard { position: relative; z-index: 2; margin: 22px 20px 0; padding: 26px 20px 20px; text-align: center; background: linear-gradient(180deg, #1d1a14, #110f0c); border: 1px solid rgba(184,149,90,.45); }
+.endcard .big { position: absolute; right: 18px; top: 16px; width: 84px; height: 84px; border: 3px solid #8fa3c8; color: #8fa3c8; border-radius: 50%; display: grid; place-items: center; font-size: 15px; font-weight: 900; transform: rotate(-14deg); opacity: .8; }
+.endcard .kind { font-size: 11px; letter-spacing: .4em; color: #8fa3c8; }
+.endcard .nm { margin-top: 10px; font-size: 22px; font-weight: 900; letter-spacing: .06em; }
+.endcard .rl { height: 1px; margin: 14px 30px; background: linear-gradient(90deg, transparent, var(--brass), transparent); }
+.endcard p { font-size: 11px; color: var(--bone2); line-height: 1.8; }
+.endcard .btn { margin-top: 16px; padding: 12px 0; font-size: 14px; font-weight: 800; letter-spacing: .1em; border: 1px solid rgba(184,149,90,.5); border-left: 4px solid var(--brass); text-align: left; padding-left: 16px; }
+</style>
+</head>
+<body>
+<div class="boards">
+
+  <!-- 1. ランキング -->
+  <div>
+    <div class="label">1. ランキング(見たエンドのタブ)</div>
+    <div class="ab">
+      <div class="close">✕</div>
+      <div class="hd"><span class="tag serif">全国の記録</span><h1 class="serif">事件簿ランキング</h1><p>12月31日 3:59 まで(そのあとも見られます)</p><div class="rule"></div></div>
+      <div class="tabs serif"><span class="on">見たエンド</span><span>一発正解</span><span>読んだ回数</span></div>
+      <div class="sheet">
+        <div class="note">見たエンディングの種類の数。<br>同じ数なら、先にその数に届いた人が上</div>
+        <div id="rows"></div>
+      </div>
+      <div class="me"><div class="clip"></div><div class="no serif">128</div><div class="who"><em>あなた</em>テストブリーダー</div><div class="val serif">9<small>/23</small></div></div>
+    </div>
+  </div>
+
+  <!-- 2. 見取り図 -->
+  <div>
+    <div class="label">2. 聖夜の見取り図(赤い糸の捜査の板)</div>
+    <div class="ab">
+      <div class="close">✕</div>
+      <div class="hd"><span class="tag serif">分岐の記録</span><h1 class="serif">聖夜の見取り図</h1><div class="rule"></div></div>
+      <div class="cnt serif">エンド 9 / 23</div>
+      <div class="tabs serif"><span class="on">あつ派</span><span>ソラシド派</span></div>
+      <div class="board">
+        <div class="thread"></div>
+        <div class="div"><span class="ch serif">第六章</span><span class="tt serif">壁の中の通り道</span></div>
+        <div class="nd"><span class="pin q serif">⑤</span><div class="tx">推理の問い⑤<small>一発で正解</small></div></div>
+        <div class="nd"><span class="pin act">◆</span><div class="tx">行動の選択</div><div class="cards"><span class="card" style="--c:#c0343c"><span style="position:absolute;left:0;top:0;bottom:0;width:3px;background:#c0343c"></span>再び閉ざされた扉<small style="color:#c0343c">強制バッド</small></span></div></div>
+        <div class="div"><span class="ch serif">第七章</span><span class="tt serif">ひとつめの推理</span></div>
+        <div class="nd"><span class="pin q serif">✦</span><div class="tx">1回目の推理<small>犯人を名指し</small></div>
+          <div class="cards">
+            <span class="card"><span style="position:absolute;left:0;top:0;bottom:0;width:3px;background:#a78bd8"></span>吹雪の向こうへ<small style="color:#a78bd8">名指し</small></span>
+            <span class="card un">？？？<small>まだ見ていない</small></span>
+            <span class="card un">？？？<small>まだ見ていない</small></span>
+          </div></div>
+        <div class="nd"><span class="pin dark">？</span><div class="tx dark">？？？<small>まだ読んでいない</small></div><div class="cards"><span class="card un">？？？<small>まだ見ていない</small></span></div></div>
+        <div class="nd"><span class="pin side">□</span><div class="tx dark">寄り道<small>エンドのない分かれ道</small></div></div>
+        <div class="lane serif">当てられなかった道</div>
+        <div class="div"><span class="ch serif dark">第？章</span><span class="tt serif dark">？？？</span></div>
+        <div class="nd"><span class="pin dark">？</span><div class="tx dark">？？？</div><div class="cards"><span class="card un">？？？<small>まだ見ていない</small></span></div></div>
+        <div class="lane if serif">もしもの道(真グッドのあと)</div>
+        <div class="nd"><span class="pin dark" style="border-style:dashed;border-color:var(--brass2)">？</span><div class="tx dark">？？？</div><div class="cards"><span class="card un">？？？<small>まだ見ていない</small></span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. エンドの種類の札 -->
+  <div>
+    <div class="label">3. エンドの種類の判と、エンドの札(迷宮入り)</div>
+    <div class="ab">
+      <div class="close">✕</div>
+      <div class="hd"><span class="tag serif">エンドの種類</span><h1 class="serif">判の見本</h1><div class="rule"></div></div>
+      <div class="stamps serif" id="stamps"></div>
+      <div class="endcard serif">
+        <div class="big">迷宮<br>入り</div>
+        <div class="kind">迷宮入り</div>
+        <div class="nm">「？？？」</div>
+        <div class="rl"></div>
+        <p>エンドヒストリーに記録しました<br>推理の問い 一発で当てた数 5 / 7</p>
+        <div class="btn">タイトルへ</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+<script>
+const kinds = [['good','真グッド','#d9b25e'],['normal','ノーマルグッド','#a9b6cf'],['another','偽りエンド','#c98a45'],['bad','バッドエンド','#c0343c'],['forced','強制バッド','#8f1d24'],['accuse','名指しエンド','#9a83c4'],['unsolved','迷宮入り','#8fa3c8'],['omake','おまけ','#6fbf94']];
+const tone = Object.fromEntries(kinds.map(k => [k[0], k[2]]));
+const order = ['good','normal','another','bad','forced','forced','forced','forced','forced','accuse','accuse','accuse','accuse','accuse','accuse','accuse','accuse','accuse','accuse','unsolved','unsolved','omake','omake'];
+const people = [['ゆきんこ探偵',23,1],['ねじまき係',22,2],['13分の男',21,3],['モッチー推し',19,4],['あつ派一筋',18,5],['ききの見張り番',16,6],['ペンション常連',16,6],['暖炉の番人',14,8],['ワトソン好き',12,9],['雪原の足あと',11,10]];
+document.getElementById('rows').innerHTML = people.map(([n, v, p]) => `<div class="ln ${p <= 3 ? 'top' : ''}"><div class="no serif">${p}</div><div class="who"><b>${n}</b><div class="ticks">${order.map((k, i) => `<i style="${i < v ? 'background:' + tone[k] : ''}"></i>`).join('')}</div></div>${p === 1 ? '<span class="seal1 serif">首位</span>' : ''}<div class="val serif">${v}<small>/23</small></div></div>`).join('');
+const marks = { good: '真', normal: '善', another: '偽', bad: '悪', forced: '強制', accuse: '名指', unsolved: '迷宮', omake: '戯' };
+const desc = { good: '真相に届いた', normal: '真相に遅れた', another: '偽りの解決', bad: '誰もいない', forced: '一人で動いた', accuse: '名指しの結末', unsolved: '名前のないまま', omake: 'ゲームの外の話' };
+document.getElementById('stamps').innerHTML = kinds.map(([k, label, c]) => `<div class="st"><div class="mk ${k === 'forced' || k === 'bad' ? 'sq' : ''}" style="border-color:${c};color:${c}">${marks[k]}</div><div><b>${label}</b><small>${desc[k]}</small></div></div>`).join('');
+</script>
+</body>
+</html>

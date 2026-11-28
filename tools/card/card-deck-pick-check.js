@@ -41,7 +41,7 @@ check('① 前に使ったデッキが使えないときは、使える最初の
 // ② 84 のつなぎ
 const opens = (src) => (src.match(/setDeckPick\(\{ next: '(cpu|pvp)'/g) || []).length;
 check('② 「対戦する」はデッキ選びを開く(すぐには始めない)', /data-card-start [^\n]*setDeckPick\(\{ next: 'cpu', pick: foe \}\); setView\('deckPick'\)/.test(p84));
-check('② 結果の「もう一度」もデッキ選びを開く', /setDeckPick\(\{ next: 'cpu', pick: again \}\); setView\('deckPick'\); \}\}>もう一度/.test(p84));
+check('② 結果の「もう一度」もデッキ選びを開く', /setDeckPick\(\{ next: 'cpu', pick: again \}\); setView\('deckPick'\); \}\}>もう1度/.test(p84));
 // 2026-10-30 社長「マルチを押したらデッキ選択になるけど相手を選んだあとにしてほしい」: マルチは先に入口、相手を決めたところでデッキ選び
 check('② 「マルチ対戦」は先に入口を開く(デッキ選びはまだ出さない)', /data-card-mode-multi [^\n]*onClick=\{\(\) => \{ Audio_\.fgSe\.tap\(\); setView\('pvp'\); \}\}/.test(p84));
 check('② 入口で相手を決めたらデッキ選びを開く(onPickDeck)', /onPickDeck=\{\(\) => \{ setDeckPick\(\{ next: 'pvp' \}\); setView\('deckPick'\); \}\}/.test(p84));
