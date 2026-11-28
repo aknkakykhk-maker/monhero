@@ -120,6 +120,7 @@
   "market/frame-shop-check.js",
   "market/halloween-icon-check.js",
   "market/icon-group-check.js",
+  "market/xmas-icon-check.js",
   "masu/breeder-level-cap-check.js",
   "masu/direct-enhance-input-check.js",
   "masu/donation-check.js",

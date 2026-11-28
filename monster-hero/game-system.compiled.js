@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 99fa7423f3cecf20
+// source-sha256: 03c5086dcddcb4f4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -10274,6 +10274,7 @@ const Audio_ = (() => {
       stopPreview(false);
       stopOthers();
       stopJingles();
+      void nvAmbient('none');
     } else if (currentKey) playBGM(currentKey);
     await ensure();
   };
@@ -11447,6 +11448,620 @@ const Audio_ = (() => {
           sparkle.dispose();
         } catch (e) {}
       }, 2200);
+    },
+    nvTick: async high => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const s = new Tone.MetalSynth({
+        frequency: high ? 340 : 240,
+        envelope: {
+          attack: 0.001,
+          decay: 0.035,
+          release: 0.02
+        },
+        harmonicity: 3.1,
+        modulationIndex: 10,
+        resonance: high ? 2600 : 1800,
+        octaves: 0.6,
+        volume: -32
+      }).connect(seBus);
+      s.triggerAttackRelease('64n', t);
+      const k = new Tone.MembraneSynth({
+        pitchDecay: 0.01,
+        octaves: 2,
+        envelope: {
+          attack: 0.001,
+          decay: 0.05,
+          sustain: 0
+        },
+        volume: -30
+      }).connect(seBus);
+      k.triggerAttackRelease(high ? 'G2' : 'D2', '64n', t);
+      setTimeout(() => {
+        try {
+          s.dispose();
+          k.dispose();
+        } catch (e) {}
+      }, 300);
+    },
+    nvCreak: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const f = new Tone.Filter(700, 'lowpass').connect(seBus);
+      const s = new Tone.Synth({
+        oscillator: {
+          type: 'sawtooth'
+        },
+        envelope: {
+          attack: 0.08,
+          decay: 0.7,
+          sustain: 0,
+          release: 0.2
+        },
+        volume: -22
+      }).connect(f);
+      s.triggerAttackRelease('D3', '4n', t);
+      try {
+        s.frequency.rampTo('G2', 0.7, t);
+      } catch (e) {}
+      setTimeout(() => {
+        try {
+          s.dispose();
+          f.dispose();
+        } catch (e) {}
+      }, 1400);
+    },
+    nvThud: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const s = new Tone.MembraneSynth({
+        pitchDecay: 0.05,
+        octaves: 4,
+        envelope: {
+          attack: 0.002,
+          decay: 0.35,
+          sustain: 0
+        },
+        volume: -12
+      }).connect(seBus);
+      s.triggerAttackRelease('E1', '8n', t);
+      const n = new Tone.NoiseSynth({
+        noise: {
+          type: 'brown'
+        },
+        envelope: {
+          attack: 0.002,
+          decay: 0.15,
+          sustain: 0
+        },
+        volume: -20
+      }).connect(seBus);
+      n.triggerAttackRelease('16n', t);
+      setTimeout(() => {
+        try {
+          s.dispose();
+          n.dispose();
+        } catch (e) {}
+      }, 800);
+    },
+    nvWind: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const f = new Tone.Filter(520, 'lowpass').connect(seBus);
+      const n = new Tone.NoiseSynth({
+        noise: {
+          type: 'pink'
+        },
+        envelope: {
+          attack: 0.9,
+          decay: 0.4,
+          sustain: 0.6,
+          release: 1.2
+        },
+        volume: -24
+      }).connect(f);
+      n.triggerAttackRelease(1.2, t);
+      try {
+        f.frequency.rampTo(900, 0.9, t);
+        f.frequency.rampTo(380, 1.4, t + 0.9);
+      } catch (e) {}
+      setTimeout(() => {
+        try {
+          n.dispose();
+          f.dispose();
+        } catch (e) {}
+      }, 3200);
+    },
+    nvFire: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const f = new Tone.Filter(1800, 'bandpass').connect(seBus);
+      const n = new Tone.NoiseSynth({
+        noise: {
+          type: 'white'
+        },
+        envelope: {
+          attack: 0.001,
+          decay: 0.025,
+          sustain: 0
+        },
+        volume: -24
+      }).connect(f);
+      [0, 0.21, 0.37, 0.8, 1.05, 1.5].forEach(d => n.triggerAttackRelease('64n', t + d));
+      setTimeout(() => {
+        try {
+          n.dispose();
+          f.dispose();
+        } catch (e) {}
+      }, 2100);
+    },
+    nvRustle: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const f = new Tone.Filter(2600, 'highpass').connect(seBus);
+      const n = new Tone.NoiseSynth({
+        noise: {
+          type: 'white'
+        },
+        envelope: {
+          attack: 0.01,
+          decay: 0.12,
+          sustain: 0
+        },
+        volume: -28
+      }).connect(f);
+      n.triggerAttackRelease('16n', t);
+      n.triggerAttackRelease('32n', t + 0.14);
+      setTimeout(() => {
+        try {
+          n.dispose();
+          f.dispose();
+        } catch (e) {}
+      }, 600);
+    },
+    nvGlass: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const s = new Tone.MetalSynth({
+        frequency: 260,
+        envelope: {
+          attack: 0.001,
+          decay: 0.32,
+          release: 0.1
+        },
+        harmonicity: 7.1,
+        modulationIndex: 20,
+        resonance: 3200,
+        octaves: 1,
+        volume: -26
+      }).connect(reverb);
+      s.triggerAttackRelease('16n', t);
+      setTimeout(() => {
+        try {
+          s.dispose();
+        } catch (e) {}
+      }, 900);
+    },
+    nvDread: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const v = new Tone.PolySynth(Tone.Synth, {
+        oscillator: {
+          type: 'sine'
+        },
+        envelope: {
+          attack: 0.35,
+          decay: 0.6,
+          sustain: 0.4,
+          release: 1.6
+        },
+        volume: -20
+      }).connect(reverb);
+      v.triggerAttackRelease(['C2', 'C#2', 'G2'], 1.1, t);
+      setTimeout(() => {
+        try {
+          v.dispose();
+        } catch (e) {}
+      }, 3600);
+    },
+    nvMusicBox: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const s = new Tone.PolySynth(Tone.Synth, {
+        oscillator: {
+          type: 'triangle'
+        },
+        envelope: {
+          attack: 0.002,
+          decay: 0.9,
+          sustain: 0,
+          release: 0.6
+        },
+        volume: -24
+      }).connect(reverb);
+      [[0, 'E5'], [0.42, 'D5'], [0.84, 'C5'], [1.4, 'A4']].forEach(([d, n]) => s.triggerAttackRelease(n, '4n', t + d));
+      setTimeout(() => {
+        try {
+          s.dispose();
+        } catch (e) {}
+      }, 3200);
+    },
+    nvStep: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const s = new Tone.MembraneSynth({
+        pitchDecay: 0.02,
+        octaves: 2,
+        envelope: {
+          attack: 0.002,
+          decay: 0.09,
+          sustain: 0
+        },
+        volume: -22
+      }).connect(seBus);
+      [0, 0.55, 1.1].forEach((d, i) => s.triggerAttackRelease(i % 2 ? 'A1' : 'G1', '32n', t + d));
+      setTimeout(() => {
+        try {
+          s.dispose();
+        } catch (e) {}
+      }, 1700);
+    },
+    nvRun: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const s = new Tone.MembraneSynth({
+        pitchDecay: 0.02,
+        octaves: 2,
+        envelope: {
+          attack: 0.002,
+          decay: 0.07,
+          sustain: 0
+        },
+        volume: -20
+      }).connect(seBus);
+      [0, 0.2, 0.4, 0.6, 0.8, 1.0].forEach((d, i) => s.triggerAttackRelease(i % 2 ? 'A1' : 'G1', '32n', t + d));
+      setTimeout(() => {
+        try {
+          s.dispose();
+        } catch (e) {}
+      }, 1500);
+    },
+    nvHit: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const s = new Tone.MembraneSynth({
+        pitchDecay: 0.015,
+        octaves: 3,
+        envelope: {
+          attack: 0.001,
+          decay: 0.16,
+          sustain: 0
+        },
+        volume: -8
+      }).connect(seBus);
+      s.triggerAttackRelease('C2', '16n', t);
+      const n = new Tone.NoiseSynth({
+        noise: {
+          type: 'pink'
+        },
+        envelope: {
+          attack: 0.001,
+          decay: 0.06,
+          sustain: 0
+        },
+        volume: -16
+      }).connect(seBus);
+      n.triggerAttackRelease('64n', t);
+      setTimeout(() => {
+        try {
+          s.dispose();
+          n.dispose();
+        } catch (e) {}
+      }, 600);
+    },
+    nvFall: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const s = new Tone.MembraneSynth({
+        pitchDecay: 0.06,
+        octaves: 4,
+        envelope: {
+          attack: 0.003,
+          decay: 0.5,
+          sustain: 0
+        },
+        volume: -11
+      }).connect(seBus);
+      s.triggerAttackRelease('D1', '4n', t);
+      s.triggerAttackRelease('C1', '8n', t + 0.18);
+      const n = new Tone.NoiseSynth({
+        noise: {
+          type: 'brown'
+        },
+        envelope: {
+          attack: 0.01,
+          decay: 0.4,
+          sustain: 0
+        },
+        volume: -22
+      }).connect(seBus);
+      n.triggerAttackRelease('8n', t + 0.05);
+      setTimeout(() => {
+        try {
+          s.dispose();
+          n.dispose();
+        } catch (e) {}
+      }, 1200);
+    },
+    nvGasp: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const f = new Tone.Filter(1400, 'bandpass').connect(seBus);
+      const n = new Tone.NoiseSynth({
+        noise: {
+          type: 'pink'
+        },
+        envelope: {
+          attack: 0.12,
+          decay: 0.18,
+          sustain: 0,
+          release: 0.08
+        },
+        volume: -22
+      }).connect(f);
+      n.triggerAttackRelease(0.16, t);
+      try {
+        f.frequency.rampTo(2200, 0.25, t);
+      } catch (e) {}
+      setTimeout(() => {
+        try {
+          n.dispose();
+          f.dispose();
+        } catch (e) {}
+      }, 800);
+    },
+    nvDoor: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const m = new Tone.MetalSynth({
+        frequency: 180,
+        envelope: {
+          attack: 0.001,
+          decay: 0.05,
+          release: 0.02
+        },
+        harmonicity: 3.1,
+        modulationIndex: 8,
+        resonance: 1500,
+        octaves: 0.5,
+        volume: -28
+      }).connect(seBus);
+      m.triggerAttackRelease('64n', t);
+      const f = new Tone.Filter(600, 'lowpass').connect(seBus);
+      const s = new Tone.Synth({
+        oscillator: {
+          type: 'sawtooth'
+        },
+        envelope: {
+          attack: 0.05,
+          decay: 0.45,
+          sustain: 0,
+          release: 0.15
+        },
+        volume: -25
+      }).connect(f);
+      s.triggerAttackRelease('A2', '8n', t + 0.08);
+      try {
+        s.frequency.rampTo('E2', 0.45, t + 0.08);
+      } catch (e) {}
+      setTimeout(() => {
+        try {
+          m.dispose();
+          s.dispose();
+          f.dispose();
+        } catch (e) {}
+      }, 1200);
+    },
+    nvGust: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const f = new Tone.Filter(600, 'lowpass').connect(seBus);
+      const n = new Tone.NoiseSynth({
+        noise: {
+          type: 'pink'
+        },
+        envelope: {
+          attack: 0.25,
+          decay: 0.5,
+          sustain: 0.2,
+          release: 0.6
+        },
+        volume: -18
+      }).connect(f);
+      n.triggerAttackRelease(0.6, t);
+      try {
+        f.frequency.rampTo(1500, 0.3, t);
+        f.frequency.rampTo(400, 0.9, t + 0.3);
+      } catch (e) {}
+      setTimeout(() => {
+        try {
+          n.dispose();
+          f.dispose();
+        } catch (e) {}
+      }, 2000);
+    }
+  };
+  let nvAmb = {
+    kind: 'none',
+    stop: null
+  };
+  const nvAmbient = async kindIn => {
+    const kind = kindIn || 'none';
+    if (kind === nvAmb.kind) return;
+    const prev = nvAmb;
+    const me = {
+      kind,
+      stop: null
+    };
+    nvAmb = me;
+    if (prev.stop) {
+      try {
+        prev.stop();
+      } catch (e) {}
+    }
+    if (kind === 'none' || !enabled) return;
+    await ensure();
+    if (!Tone || nvAmb !== me || !enabled) return;
+    const nodes = [];
+    const timers = [];
+    try {
+      const g = new Tone.Gain(0).connect(seBus);
+      nodes.push(g);
+      if (kind === 'wind' || kind === 'blizzard' || kind === 'room') {
+        const n = new Tone.Noise(kind === 'room' ? 'brown' : 'pink');
+        n.volume.value = kind === 'blizzard' ? -27 : kind === 'wind' ? -31 : -36;
+        const f = new Tone.Filter(kind === 'blizzard' ? 650 : kind === 'wind' ? 420 : 200, 'lowpass');
+        const lfo = new Tone.LFO(kind === 'blizzard' ? 0.21 : 0.09, kind === 'room' ? 120 : 260, kind === 'blizzard' ? 1250 : kind === 'wind' ? 780 : 320);
+        n.connect(f);
+        f.connect(g);
+        lfo.connect(f.frequency);
+        n.start();
+        lfo.start();
+        nodes.push(n, f, lfo);
+      }
+      if (kind === 'fire') {
+        const n = new Tone.Noise('brown');
+        n.volume.value = -36;
+        const f = new Tone.Filter(170, 'lowpass');
+        n.connect(f);
+        f.connect(g);
+        n.start();
+        nodes.push(n, f);
+        const bp = new Tone.Filter(1700, 'bandpass').connect(g);
+        const c = new Tone.NoiseSynth({
+          noise: {
+            type: 'white'
+          },
+          envelope: {
+            attack: 0.001,
+            decay: 0.02,
+            sustain: 0
+          },
+          volume: -31
+        }).connect(bp);
+        nodes.push(bp, c);
+        const pop = () => {
+          if (nvAmb !== me) return;
+          if (enabled) {
+            try {
+              c.triggerAttackRelease('64n');
+            } catch (e) {}
+          }
+          timers.push(setTimeout(pop, 140 + Math.random() * 620));
+        };
+        timers.push(setTimeout(pop, 300));
+      }
+      if (kind === 'clock') {
+        const m = new Tone.MetalSynth({
+          frequency: 300,
+          envelope: {
+            attack: 0.001,
+            decay: 0.03,
+            release: 0.02
+          },
+          harmonicity: 3.1,
+          modulationIndex: 10,
+          resonance: 2200,
+          octaves: 0.6,
+          volume: -37
+        }).connect(g);
+        const k = new Tone.MembraneSynth({
+          pitchDecay: 0.01,
+          octaves: 2,
+          envelope: {
+            attack: 0.001,
+            decay: 0.04,
+            sustain: 0
+          },
+          volume: -36
+        }).connect(g);
+        nodes.push(m, k);
+        let high = true;
+        const tick = () => {
+          if (nvAmb !== me || !enabled) return;
+          try {
+            m.frequency.value = high ? 330 : 230;
+            m.triggerAttackRelease('64n');
+            k.triggerAttackRelease(high ? 'G2' : 'D2', '64n');
+          } catch (e) {}
+          high = !high;
+        };
+        timers.push(setInterval(tick, 1000));
+      }
+      try {
+        g.gain.rampTo(1, 1.5);
+      } catch (e) {
+        g.gain.value = 1;
+      }
+      me.stop = () => {
+        timers.forEach(id => {
+          clearTimeout(id);
+          clearInterval(id);
+        });
+        try {
+          g.gain.rampTo(0, 1.2);
+        } catch (e) {
+          g.gain.value = 0;
+        }
+        setTimeout(() => {
+          nodes.forEach(x => {
+            try {
+              if (x.stop) x.stop();
+            } catch (e) {}
+            try {
+              x.dispose();
+            } catch (e) {}
+          });
+        }, 1400);
+      };
+    } catch (e) {
+      nodes.forEach(x => {
+        try {
+          x.dispose();
+        } catch (e2) {}
+      });
     }
   };
   const uiTap = async () => {
@@ -11510,6 +12125,7 @@ const Audio_ = (() => {
   };
   const videoGain = () => enabled && bgmVolumePct > 0 ? _gainFromPct(bgmVolumePct) : 0;
   return {
+    nvAmbient,
     currentBgmKey: () => currentKey,
     isBackgroundSeQuiet,
     setVideoHold,
@@ -44880,6 +45496,7 @@ const RhythmTapTest = ({
   onComplete,
   onExit,
   raidPlay = false,
+  holdResultCount = false,
   quickRunAward = null,
   beatRankAward = null,
   onRankBarFull = null,
@@ -47009,9 +47626,10 @@ const RhythmTapTest = ({
   const [touchReportSent, setTouchReportSent] = useState(null);
   const resultRootRef = useRef(null);
   const recordSeFireRef = useRef(null);
-  const resultCountId = view.status === 'result' && view.result && view.result.countAnim ? view.result.countAnim.id : null;
+  const resultCountIdRaw = view.status === 'result' && view.result && view.result.countAnim ? view.result.countAnim.id : null;
+  const resultCountId = holdResultCount ? null : resultCountIdRaw;
   const [resultCountDoneId, setResultCountDoneId] = useState(null);
-  const resultCountRunning = resultCountId !== null && resultCountDoneId !== resultCountId;
+  const resultCountRunning = resultCountIdRaw !== null && resultCountDoneId !== resultCountIdRaw;
   React.useLayoutEffect(() => {
     const root = resultRootRef.current;
     if (!resultCountId || !root) return undefined;
@@ -68447,13 +69065,27 @@ const TrainingCountUp = ({
     setValue(from);
     let raf = 0;
     let startAt = 0;
+    const fmt = v => String(format ? format(v) : v);
     const timer = setTimeout(() => {
       const tick = now => {
         if (!startAt) startAt = now;
         const t = Math.min(1, (now - startAt) / Math.max(1, duration));
         const eased = 1 - Math.pow(1 - t, 3);
-        setValue(Math.round(from + (to - from) * eased));
-        if (t < 1) raf = requestAnimationFrame(tick);
+        const v = Math.round(from + (to - from) * eased);
+        const node = holderRef.current && holderRef.current.firstChild;
+        if (!node || node.nodeType !== 3) {
+          setValue(v);
+          if (t < 1) raf = requestAnimationFrame(tick);
+          return;
+        }
+        if (t >= 1) {
+          node.nodeValue = fmt(to);
+          setValue(to);
+          return;
+        }
+        const text = fmt(v);
+        if (node.nodeValue !== text) node.nodeValue = text;
+        raf = requestAnimationFrame(tick);
       };
       raf = requestAnimationFrame(tick);
     }, Math.max(0, delay));
@@ -72341,6 +72973,7 @@ const quickAnywhereFloatHits = (el, spot, known = null) => {
   let hits = 0;
   for (const o of document.querySelectorAll('button,a,[role=button],[data-quick-avoid]')) {
     if (o === el || el.contains(o) || o.contains(el) || o.closest('[data-quick-anywhere-detail]') || !o.getClientRects().length) continue;
+    if (o.closest('[aria-hidden="true"]')) continue;
     if (known && known.has(o) && !o.hasAttribute('data-quick-avoid')) continue;
     const cs = getComputedStyle(o);
     if (cs.visibility === 'hidden' || cs.pointerEvents === 'none' || Number(cs.opacity) === 0) continue;
@@ -87312,21 +87945,32 @@ const HOME_V2_CSS = `
 .mh-home-v2 .mh-home-menu .mh-home-side-btn em.mh-unread-badge{width:auto!important;height:20px!important;min-width:20px;padding:0 6px!important;border-radius:999px!important;font-size:11px!important;line-height:1!important;white-space:nowrap}
 .mh-home-v2 .mh-home-settings .mh-home-side-ic{border-color:#cbd5e1aa;background:#1e293be8;color:#e2e8f0}
 .mh-home-v2 .mh-home-band{position:relative;z-index:6;margin:6px 8px 0}
-/* イベントの表示(r1126-088 で前の形に戻した): クリスマスの絵の札 → その下に細い帯(前の HOME と同じ作り)。
-   追記1(社長「イベントバナーをもう少し横幅小さくして」): 札は前(312×80)より少し小さく 278×74(縦横の比をほぼ同じにして、絵の切り方を前と同じに)。
-   細い帯も札と同じ幅まで。札の右の空きは裏クイックの札の置き場 */
-.mh-home-v2 .mh-home-band-xmas{width:calc(100% - 96px)}
-.mh-home-v2 .mh-home-band-xmas>button[data-home-xmas-entry]{height:74px!important}
+/* イベントの札(r1126-088)。追記1(社長「横幅もう少し小さく」): 前(312×80)より少し小さく 278×74。札の右の空きは裏クイックの札の置き場。
+   追記3(社長「フリックとかで動かせるように」): 札1枚分の場所を左右に送る。何枚目かの点は札の右下の中に小さく(札の外に段を足さない) */
+.mh-home-v2 .mh-home-band-view{position:relative;width:calc(100% - 96px);height:74px;overflow:hidden;border-radius:12px;touch-action:pan-y}
+.mh-home-v2 .mh-home-band-track{display:flex;height:100%;transition:transform .35s ease}
+@media(prefers-reduced-motion:reduce){.mh-home-v2 .mh-home-band-track{transition:none}}
+.mh-home-v2 .mh-home-band-slide{flex:0 0 100%;min-width:0;height:100%}
+.mh-home-v2 .mh-home-band-slide>button{width:100%;max-width:none;height:100%!important}
+.mh-home-v2 .mh-home-band-slide>.mh-home-event-banner{justify-content:center;border-radius:12px}
+.mh-home-v2 .mh-home-band-slide>.mh-home-tour-banner{border-radius:12px}
+.mh-home-v2 .mh-home-band-dots{position:absolute;right:5px;bottom:4px;z-index:3;display:flex;gap:1px;padding:0 3px;border-radius:999px;background:#0009}
+.mh-home-v2 .mh-home-band-dots button{display:flex;align-items:center;justify-content:center;width:16px;height:16px;padding:0;border:0;background:transparent}
+.mh-home-v2 .mh-home-band-dots i{display:block;width:6px;height:6px;border-radius:50%;background:#ffffff80}
+.mh-home-v2 .mh-home-band-dots button.on i{width:12px;border-radius:3px;background:#fde68a}
 .mh-home-v2 .mh-home-band-quick-slot{position:absolute;top:0;right:-6px;width:96px;height:74px;pointer-events:none}
-.mh-home-v2 .mh-home-band-strip{display:flex;align-items:center;gap:6px;width:fit-content;max-width:100%;margin-top:3px}
-.mh-home-v2 .mh-home-band-strip .mh-home-event-banner{max-width:calc(100cqw - 112px)}
-.mh-home-v2 .mh-home-band-strip .mh-home-tour-banner{max-width:min(72vw,300px)}
-/* ほかのイベントの絵の札(追記2)。クリスマスの札と同じ幅・少し低く(マップを狭くしない) */
-.mh-home-v2 .mh-home-band-strip:has(.mh-home-event-art){width:calc(100% - 96px)}
-.mh-home-v2 .mh-home-event-art{position:relative;display:block;flex:1 1 auto;width:100%;height:62px;overflow:hidden;padding:0;border:2px solid #f9a8d4;border-radius:12px;background:#3b0a2e;box-shadow:0 4px 12px #0009}
-.mh-home-v2 .mh-home-event-art:active{transform:scale(.97);filter:brightness(1.15)}
+/* ほかのイベントの絵の札(追記2) */
+.mh-home-v2 .mh-home-event-art{position:relative;display:block;overflow:hidden;padding:0;border:2px solid #f9a8d4;border-radius:12px;background:#3b0a2e}
+.mh-home-v2 .mh-home-event-art:active{filter:brightness(1.15)}
 .mh-home-v2 .mh-home-event-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 12%;pointer-events:none}
 .mh-home-v2 .mh-home-event-art-sub{position:absolute;left:6px;bottom:4px;padding:1px 7px;border:1px solid #fbcfe8;border-radius:999px;background:#9d174de6;color:#fff;font-size:10px;font-weight:900;line-height:1.3;white-space:nowrap}
+/* クリスマスの札(追記3・社長「聖夜のバナーの文字で絵が半分隠れてる」): 部品(79-screen-xmas-event.jsx)の中身は変えず、HOME の側で見え方だけ変える。
+   絵は人物と館が見える所で切り、左半分を覆っていた濃い地は下の端の細い影だけに。字は「聖夜の名探偵」(13px)と期間の札だけを左下へ小さく寄せる */
+.mh-home-v2 .mh-home-band .mh-xmas-entry img.mh-xmas-entry-art{object-position:50% 52%!important}
+.mh-home-v2 .mh-home-band .mh-xmas-entry>span[style*="linear-gradient"]{background:linear-gradient(0deg,#0b1733e0 0,#0b1733a0 20px,transparent 40px)!important}
+.mh-home-v2 .mh-home-band .mh-xmas-entry [data-xmas-entry-kicker]{display:none}
+.mh-home-v2 .mh-home-band .mh-xmas-entry>span[style*="flex-direction"]{top:auto!important;bottom:4px;left:6px!important;right:auto!important;flex-direction:row!important;align-items:center!important;gap:5px!important}
+.mh-home-v2 .mh-home-band .mh-xmas-entry-title{font-size:13px!important;filter:drop-shadow(0 1px 2px #000)}
 .mh-home-v2 .mh-home-assistant{width:70%;max-width:360px;margin:6px 0 0 8px}
 .mh-home-v2 .mh-home-assistant-fold{margin:6px 0 0 8px}
 .mh-home-v2 .mh-home-assistant-show-mark{right:-8px;bottom:-6px;width:24px;height:24px;font-size:14px;background:#fff!important;box-shadow:0 0 0 2px #e11d48,0 2px 6px #0009;animation:mhHomePeerMark 1.4s ease-in-out infinite}
@@ -87354,9 +87998,8 @@ body:has(.mh-home-v2){background:linear-gradient(to top,#0b1f1a calc(env(safe-ar
 @media(max-width:350px){.mh-home-v2 .mh-home-dock-top .mh-home-dock-name,.mh-home-v2 .mh-home-dock-top .mh-home-success .nm{font-size:10.5px;letter-spacing:-.06em}}
 @media(orientation:landscape) and (max-height:600px){
   .mh-home-v2 .mh-home-band{position:absolute;left:8px;top:58px;width:min(37%,330px);margin:0}
-  .mh-home-v2 .mh-home-band-xmas{width:100%}
-  .mh-home-v2 .mh-home-band-strip .mh-home-event-banner,.mh-home-v2 .mh-home-band-strip .mh-home-tour-banner{max-width:100%}
-  .mh-home-v2 .mh-home-assistant,.mh-home-v2 .mh-home-assistant-fold{position:absolute;left:8px;top:172px;margin:0}
+  .mh-home-v2 .mh-home-band-view{width:100%;height:56px}
+  .mh-home-v2 .mh-home-assistant,.mh-home-v2 .mh-home-assistant-fold{position:absolute;left:8px;top:128px;margin:0}
   .mh-home-v2 .mh-home-assistant{width:min(37%,330px)}
   .mh-home-v2 .mh-home-dock{flex-direction:row;align-items:flex-end;gap:8px;padding:5px 8px 6px}
   .mh-home-v2 .mh-home-dock-top{flex:1.9 1 0}
@@ -87366,8 +88009,7 @@ body:has(.mh-home-v2){background:linear-gradient(to top,#0b1f1a calc(env(safe-ar
 }
 @container (min-width:700px) and (min-height:560px){
   .mh-home-v2 .mh-home-band{width:min(600px,calc(100% - 16px));margin:8px auto 0}
-  .mh-home-v2 .mh-home-band-xmas{width:100%}
-  .mh-home-v2 .mh-home-band-xmas>button[data-home-xmas-entry]{height:92px!important}
+  .mh-home-v2 .mh-home-band-view{width:100%;height:92px}
   .mh-home-v2 .mh-home-assistant{width:360px}
   .mh-home-v2 .mh-home-dock{flex-direction:row;align-items:flex-end;gap:14px;padding:10px 14px 12px}
   .mh-home-v2 .mh-home-dock-top{flex:2 1 0;justify-content:center}
@@ -87381,10 +88023,9 @@ body:has(.mh-home-v2){background:linear-gradient(to top,#0b1f1a calc(env(safe-ar
 /* クリスマスの入口(79-screen-xmas-event.jsx)は、横向きで帯を右の列の横へ動かす決まりを持っている(前の HOME の右の列のため)。
    新しい HOME には右の列が無いので、帯の置き場(.mh-home-band)の中に置いたままにする(部品の中身は変えない。HOME の側で上書きするだけ)。
    背の低い横向きの高さ 54px と字の大きさは、部品の決まり(前の HOME と同じ)のまま */
-.mh-home-v2 .mh-home-band [data-home-xmas-entry-strip]{position:relative!important;left:auto!important;right:auto!important;top:auto!important;margin:0!important}
-.mh-home-v2 .mh-home-band .mh-home-band-xmas{width:calc(100% - 96px)!important}
-@media(orientation:landscape) and (max-height:600px){.mh-home-v2 .mh-home-band-strip:has(.mh-home-event-art){width:100%}.mh-home-v2 .mh-home-event-art{height:50px}.mh-home-v2 .mh-home-event-art img{object-position:50% 3%}.mh-home-v2 .mh-home-band .mh-home-band-xmas{width:100%!important}.mh-home-v2 .mh-home-band-xmas>button[data-home-xmas-entry]{height:54px!important}.mh-home-v2 .mh-home-band-quick-slot{display:none}}
-@container (min-width:700px) and (min-height:560px){.mh-home-v2 .mh-home-band-strip:has(.mh-home-event-art){width:100%}.mh-home-v2 .mh-home-event-art{height:84px}.mh-home-v2 .mh-home-band .mh-home-band-xmas{width:100%!important}.mh-home-v2 .mh-home-band-quick-slot{display:none}}
+.mh-home-v2 .mh-home-band [data-home-xmas-entry-strip]{position:relative!important;left:auto!important;right:auto!important;top:auto!important;width:auto!important;margin:0!important}
+@media(orientation:landscape) and (max-height:600px){.mh-home-v2 .mh-home-event-art img{object-position:50% 4%}.mh-home-v2 .mh-home-band-quick-slot{display:none}}
+@container (min-width:700px) and (min-height:560px){.mh-home-v2 .mh-home-band-quick-slot{display:none}}
 @media (orientation:landscape) and (max-height:520px){.mh-home-v2 .mh-home-band .mh-xmas-entry[data-home-xmas-entry="banner"] .mh-xmas-entry-sub{font-size:11px}}
 /* 横持ちの iPhone の切り欠き(カメラの欠け)に、押す物を入れない。左右の余白に端末の安全な余白(safe-area)を足す */
 .mh-home-v2 .mh-home-top{padding-left:calc(8px + env(safe-area-inset-left));padding-right:calc(8px + env(safe-area-inset-right))}
@@ -87993,7 +88634,24 @@ const homeWalletGrowPx = (goldText, bpText) => {
   const w = t => [...String(t)].reduce((n, c) => n + (c.charCodeAt(0) > 0x7f ? 2.5 : 1), 0);
   return Math.min(24, Math.max(0, Math.ceil(w(goldText) * 6.4 - 50), Math.ceil(w(bpText) * 6.4 - 29)));
 };
+const homeEnsureCss = () => {
+  if (typeof document === 'undefined' || !document.head) return;
+  const put = (id, text) => {
+    if (!text || document.getElementById(id)) return;
+    const tag = document.createElement('style');
+    tag.id = id;
+    tag.textContent = text;
+    document.head.appendChild(tag);
+  };
+  try {
+    put('mh-home-event-badge-css', HOME_EVENT_BADGE_CSS);
+    put('mh-home-v2-css', HOME_V2_CSS);
+    put('mh-home-raid-jack-css', HOME_RAID_JACK_CSS);
+    if (typeof XMAS_HOME_ENTRY_CSS === 'string') put('mh-xmas-home-entry-css', XMAS_HOME_ENTRY_CSS);
+  } catch (_) {}
+};
 function HomeScreen(props) {
+  homeEnsureCss();
   const v2 = useHomeV2();
   return v2 ? React.createElement(HomeScreenV2, props) : React.createElement(HomeScreenV1, props);
 }
@@ -88620,15 +89278,30 @@ function HomeScreenV2({
       return '';
     }
   })();
-  const homeBandStripCount = (homeBandEvent ? 1 : 0) + (homeBandTour ? 1 : 0);
+  const homeBandSlides = [];
+  if (homeBandEvent && homeBandXmas && xmasEntry.preOpen) homeBandSlides.push('event');
+  if (homeBandXmas) homeBandSlides.push('xmas');
+  if (homeBandEvent && !homeBandSlides.includes('event')) homeBandSlides.push('event');
+  if (homeBandTour) homeBandSlides.push('tour');
+  const homeBandCount = homeBandSlides.length;
   const [homeBandIdx, setHomeBandIdx] = React.useState(0);
+  const homeBandTouchRef = React.useRef({
+    x: null,
+    at: 0,
+    swiped: false
+  });
   React.useEffect(() => {
-    if (homeBandStripCount < 2) return undefined;
-    const id = setInterval(() => setHomeBandIdx(i => i + 1), 5000);
+    if (homeBandCount < 2) return undefined;
+    const id = setInterval(() => {
+      if (Date.now() - homeBandTouchRef.current.at >= 20000) setHomeBandIdx(i => i + 1);
+    }, 7000);
     return () => clearInterval(id);
-  }, [homeBandStripCount]);
-  const homeBandStripShow = homeBandStripCount ? homeBandIdx % homeBandStripCount : 0;
-  const homeBandCount = (homeBandXmas ? 1 : 0) + homeBandStripCount;
+  }, [homeBandCount]);
+  const homeBandShow = homeBandCount ? (homeBandIdx % homeBandCount + homeBandCount) % homeBandCount : 0;
+  const homeBandGo = step => {
+    homeBandTouchRef.current.at = Date.now();
+    setHomeBandIdx(i => i + step);
+  };
   const [homeMenuOpen, setHomeMenuOpen] = React.useState(false);
   const homeMissionCount = missionClaimableCount(normalizeMissions(missions));
   const homeGiftCount = giftClaimableCount(gifts);
@@ -88785,24 +89458,57 @@ function HomeScreenV2({
     className: "mh-home-side-lb"
   }, "設定"))), homeBandCount > 0 && React.createElement("div", {
     className: "mh-home-band",
-    "data-home-band": homeBandXmas ? 'xmas' : 'strip'
-  }, homeBandXmas && React.createElement("div", {
-    className: "mh-home-band-xmas",
-    "data-home-xmas-entry-strip": true
-  }, React.createElement(HomeXmasEventEntry, {
+    "data-home-band": homeBandSlides[homeBandShow]
+  }, React.createElement("div", {
+    className: "mh-home-band-view",
+    onPointerDown: e => {
+      homeBandTouchRef.current = {
+        ...homeBandTouchRef.current,
+        x: e.clientX,
+        swiped: false
+      };
+    },
+    onPointerUp: e => {
+      const t = homeBandTouchRef.current;
+      if (t.x === null || homeBandCount < 2) return;
+      const dx = e.clientX - t.x;
+      t.x = null;
+      if (Math.abs(dx) >= 40) {
+        t.swiped = true;
+        homeBandGo(dx < 0 ? 1 : -1);
+      }
+    },
+    onPointerCancel: () => {
+      homeBandTouchRef.current.x = null;
+    },
+    onClickCapture: e => {
+      if (homeBandTouchRef.current.swiped) {
+        homeBandTouchRef.current.swiped = false;
+        e.stopPropagation();
+        e.preventDefault();
+      }
+    }
+  }, React.createElement("div", {
+    className: "mh-home-band-track",
+    style: {
+      transform: `translateX(${-homeBandShow * 100}%)`
+    }
+  }, homeBandSlides.map((k, i) => React.createElement("div", _extends({
+    key: k,
+    className: "mh-home-band-slide",
+    "aria-hidden": i !== homeBandShow
+  }, k === 'xmas' ? {
+    'data-home-xmas-entry-strip': ''
+  } : {
+    'data-home-event-strip': ''
+  }), k === 'xmas' && React.createElement(HomeXmasEventEntry, {
     onOpen: xmasEntry.onOpen,
     preOpen: !!xmasEntry.preOpen
-  })), homeBandXmas && React.createElement("span", {
-    className: "mh-home-band-quick-slot",
-    "data-quick-anywhere-slot": true,
-    "aria-hidden": "true"
-  }), homeBandStripCount > 0 && React.createElement("div", {
-    className: "mh-home-band-strip",
-    "data-home-event-strip": true
-  }, homeBandEvent && homeBandStripShow === 0 && homeBandEventArt && React.createElement("button", {
+  }), k === 'event' && homeBandEventArt && React.createElement("button", {
     type: "button",
     "data-home-event-banner": "art",
     className: "mh-home-event-art",
+    tabIndex: i === homeBandShow ? 0 : -1,
     onClick: homeBandEvent.id === 'xmas_2026' && typeof onOpenXmasEvent === 'function' ? onOpenXmasEvent : onOpenRhythm,
     "aria-label": `${homeBandEvent.banner.title}${homeBandEvent.banner.title2 || ''} ${homeBandEvent.banner.sub}`
   }, React.createElement("img", {
@@ -88811,33 +89517,43 @@ function HomeScreenV2({
     draggable: false
   }), React.createElement("span", {
     className: "mh-home-event-art-sub"
-  }, homeBandEvent.banner.sub)), homeBandEvent && homeBandStripShow === 0 && !homeBandEventArt && React.createElement("button", {
+  }, homeBandEvent.banner.sub)), k === 'event' && !homeBandEventArt && React.createElement("button", {
     type: "button",
     "data-home-event-banner": true,
     className: "mh-home-event-banner",
+    tabIndex: i === homeBandShow ? 0 : -1,
     onClick: homeBandEvent.id === 'xmas_2026' && typeof onOpenXmasEvent === 'function' ? onOpenXmasEvent : onOpenRhythm,
     "aria-label": `${homeBandEvent.banner.title}${homeBandEvent.banner.title2 || ''} ${homeBandEvent.banner.sub}`
   }, React.createElement("b", {
     className: "r1"
   }, React.createElement("span", null, homeBandEvent.banner.emoji, " ", homeBandEvent.banner.title), React.createElement("small", null, homeBandEvent.banner.sub)), homeBandEvent.banner.title2 ? React.createElement("span", {
     className: "t2"
-  }, homeBandEvent.banner.title2) : null), homeBandTour && homeBandStripShow === (homeBandEvent ? 1 : 0) && React.createElement("button", {
+  }, homeBandEvent.banner.title2) : null), k === 'tour' && React.createElement("button", {
     type: "button",
     "data-home-card-tour": homeBandTour.id,
     className: "mh-home-tour-banner",
+    tabIndex: i === homeBandShow ? 0 : -1,
     onClick: () => onOpenCardTour(homeBandTour.id),
     "aria-label": `${homeBandTour.name} ${homeBandTour.sub}`
   }, React.createElement("span", {
     "aria-hidden": "true"
-  }, "🏆"), React.createElement("span", null, React.createElement("b", null, homeBandTour.name), React.createElement("small", null, homeBandTour.sub, homeBandTour.prize && React.createElement("em", null, homeBandTour.prize)))), homeBandStripCount > 1 && React.createElement("span", {
-    className: "mh-home-event-strip-dots",
+  }, "🏆"), React.createElement("span", null, React.createElement("b", null, homeBandTour.name), React.createElement("small", null, homeBandTour.sub, homeBandTour.prize && React.createElement("em", null, homeBandTour.prize))))))), homeBandCount > 1 && React.createElement("span", {
+    className: "mh-home-band-dots",
+    "data-home-band-dots": true
+  }, homeBandSlides.map((k, i) => React.createElement("button", {
+    key: k,
+    type: "button",
+    className: i === homeBandShow ? 'on' : '',
+    "aria-label": `${i + 1}枚目を見る`,
+    onClick: e => {
+      e.stopPropagation();
+      homeBandGo(i - homeBandShow);
+    }
+  }, React.createElement("i", null))))), React.createElement("span", {
+    className: "mh-home-band-quick-slot",
+    "data-quick-anywhere-slot": true,
     "aria-hidden": "true"
-  }, Array.from({
-    length: homeBandStripCount
-  }, (_, i) => React.createElement("i", {
-    key: i,
-    className: i === homeBandStripShow ? 'on' : ''
-  }))))), React.createElement("div", {
+  })), React.createElement("div", {
     className: "mh-home-dock"
   }, nextStep && React.createElement("button", {
     type: "button",
@@ -112904,7 +113620,8 @@ const RaidJackRewardList = ({
   onClose,
   claimed,
   initialTab = 'a',
-  ev = RAID_EVENT_JACK
+  ev = RAID_EVENT_JACK,
+  lockedOf = null
 }) => {
   const [tab, setTab] = useState(initialTab);
   const have = Array.isArray(claimed) ? claimed : [];
@@ -112955,7 +113672,7 @@ const RaidJackRewardList = ({
     className: "rounded-2xl border border-white/10 bg-black/30 p-3"
   }, React.createElement("div", {
     className: "mb-1 text-[12px] font-black text-white"
-  }, i + 1, ". ", t.name), React.createElement(RaidJackTierRewards, {
+  }, i + 1, ". ", raidTierNameOf(ev, tab, i, lockedOf)), React.createElement(RaidJackTierRewards, {
     kind: tab,
     index: i,
     claimed: have,
@@ -113025,7 +113742,8 @@ const RaidJackRankingList = ({
   renderPlace,
   renderIcon,
   cardClass,
-  ev = RAID_EVENT_JACK
+  ev = RAID_EVENT_JACK,
+  lockedOf = null
 }) => {
   const [tab, setTab] = useState(initialTab);
   const [tierIdx, setTierIdx] = useState(Math.min(Math.max(initialTier, 0), ev.aTiers.length - 1));
@@ -113087,8 +113805,8 @@ const RaidJackRankingList = ({
     };
   }, [tab, tierIdx, useAll, maxHit, maxTier, src, eventId]);
   const myTotal = useSrc || maxHit ? Number(myMax) || 0 : self ? useAll ? Object.values(self.a).reduce((sum, n) => sum + (Number(n) || 0), 0) : tab === 'a' ? self.a[tierIdx + 1] || 0 : self.bTotal : 0;
-  const maxTierName = maxTier >= 1 ? ev.tiers(tab)[maxTier - 1].name : '全難易度';
-  const title = useSrc && maxHit ? `${srcName}の最大ダメージ(${srcUnit}あたり・${maxTierName})` : useSrc ? `${srcName}で与えたダメージの合計(${useAll ? '全段階の合計' : `${raidEventTierShort(ev, ev.aTiers[tierIdx])}`})` : maxHit ? `${tab === 'a' ? 'レイドバトル' : 'グランドスラム'}の最大ダメージ(1戦あたり・${maxTierName})` : useAll ? 'レイドバトルの累計ダメージ(全段階の合計)' : tab === 'a' ? `${ev.aTiers[tierIdx].name}への貢献ランキング` : 'グランドスラムの累計ダメージ(5難易度の合計)';
+  const maxTierName = maxTier >= 1 ? raidTierNameOf(ev, tab, maxTier - 1, lockedOf) : '全難易度';
+  const title = useSrc && maxHit ? `${srcName}の最大ダメージ(${srcUnit}あたり・${maxTierName})` : useSrc ? `${srcName}で与えたダメージの合計(${useAll ? '全段階の合計' : `${raidTierShortOf(ev, 'a', tierIdx, lockedOf)}`})` : maxHit ? `${tab === 'a' ? 'レイドバトル' : 'グランドスラム'}の最大ダメージ(1戦あたり・${maxTierName})` : useAll ? 'レイドバトルの累計ダメージ(全段階の合計)' : tab === 'a' ? `${raidTierNameOf(ev, 'a', tierIdx, lockedOf)}への貢献ランキング` : 'グランドスラムの累計ダメージ(5難易度の合計)';
   return React.createElement("div", {
     "data-raid-jack-ranking-list": true,
     className: "fixed inset-0 z-[32000] flex flex-col bg-slate-950 p-3",
@@ -113156,7 +113874,7 @@ const RaidJackRankingList = ({
     n: 0
   }, ...ev.tiers(tab).map((t, i) => ({
     id: t.id,
-    name: raidEventTierShort(ev, t),
+    name: raidTierShortOf(ev, tab, i, lockedOf),
     n: i + 1
   }))].map(t => React.createElement("button", {
     type: "button",
@@ -113176,7 +113894,7 @@ const RaidJackRankingList = ({
       setAllMode(false);
     },
     className: `min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${!useAll && tierIdx === i ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`
-  }, raidEventTierShort(ev, t))), React.createElement("button", {
+  }, raidTierShortOf(ev, 'a', i, lockedOf))), React.createElement("button", {
     type: "button",
     "data-raid-jack-ranking-all": true,
     onClick: () => setAllMode(true),
@@ -113206,6 +113924,9 @@ const RaidJackRankingList = ({
     cardClass: cardClass
   })));
 };
+const RAID_HIDDEN_TIER_NAME = '？？？';
+const raidTierNameOf = (ev, kind, i, lockedOf) => typeof lockedOf === 'function' && lockedOf(kind, i) ? RAID_HIDDEN_TIER_NAME : ev.tiers(kind)[i].name;
+const raidTierShortOf = (ev, kind, i, lockedOf) => typeof lockedOf === 'function' && lockedOf(kind, i) ? RAID_HIDDEN_TIER_NAME : raidEventTierShort(ev, ev.tiers(kind)[i]);
 const RAID_WAY_BUTTONS = Object.freeze({
   battle: {
     label: 'バトルで',
@@ -113264,6 +113985,7 @@ const RaidJackScreen = ({
   const [showRewards, setShowRewards] = useState(false);
   const [showRanking, setShowRanking] = useState(false);
   const [aAll, setAAll] = useState(false);
+  const compact = !!head;
   const nowMs = Date.now();
   const windowState = ev.windowAt(nowMs);
   const open = forced || windowState === 'open';
@@ -113331,6 +114053,14 @@ const RaidJackScreen = ({
   const isOpenTier = unlocked(current);
   const bossDownNow = tab === 'a' && !!totals && aDefeated(tiers.length - 1);
   const showAll = bossDownNow && aAll;
+  const lockedOf = (kind, i) => {
+    if (unlimited || i <= 0) return false;
+    if (kind === 'a') {
+      if (!totals || !totals.a || !totals.a[i]) return true;
+      return totals.a[i].total < ev.tiers('a')[i - 1].hp;
+    }
+    return i >= raidJackUnlockedCount('b', state.b.defeated);
+  };
   const myTotalHere = self ? showAll ? Object.values(self.a).reduce((sum, n) => sum + (Number(n) || 0), 0) : tab === 'a' ? self.a[current + 1] || 0 : self.bTotal : 0;
   const buy = async () => {
     setBusy(true);
@@ -113338,7 +114068,7 @@ const RaidJackScreen = ({
     try {
       const result = await onPurchase(tab);
       if (result && result.ok) {
-        setMessage(`追加の挑戦を1回ぶん買いました(ビートP ${ev.extraCost})`);
+        setMessage(`追加の挑戦を1回ぶん買いました(ビートP ${Number(ev.extraCost).toLocaleString()})`);
         setTick(n => n + 1);
       } else setMessage(result && result.reason === 'short' ? 'ビートPが足りません' : '買えませんでした。もう一度試してください');
     } finally {
@@ -113379,7 +114109,45 @@ const RaidJackScreen = ({
     }],
     value: tab,
     onChange: setTab
-  }), React.createElement("div", {
+  }), compact ? React.createElement("div", {
+    "data-raid-compact-bar": true,
+    className: "mb-1.5 flex shrink-0 items-center gap-1.5 rounded-xl border border-white/10 bg-black/30 py-1 pl-2.5 pr-1 text-[10px] text-slate-100"
+  }, React.createElement("div", {
+    className: "min-w-0 flex-1 leading-tight"
+  }, React.createElement("div", {
+    className: "truncate font-black text-orange-200"
+  }, tab === 'a' ? 'ベースモンで挑戦' : 'マスモンで挑戦'), React.createElement("div", {
+    "data-raid-jack-remaining": true,
+    className: "truncate"
+  }, unlimited ? React.createElement(React.Fragment, null, "残り ", React.createElement("b", {
+    className: "text-white"
+  }, "無制限"), "(デバッグ)") : React.createElement(React.Fragment, null, "今日の残り ", React.createElement("b", {
+    className: "text-[12px] text-white"
+  }, remaining), " 回"))), React.createElement("button", {
+    type: "button",
+    "data-raid-jack-buy": true,
+    disabled: busy || !open || unlimited,
+    onClick: buy,
+    className: "min-h-[40px] shrink-0 rounded-lg border border-amber-400/60 bg-amber-950/40 px-1.5 text-[10px] font-black leading-tight text-amber-100 active:scale-95 disabled:opacity-40"
+  }, "1回追加", React.createElement("br", null), React.createElement("small", {
+    className: "text-[8px] opacity-80"
+  }, Number(ev.extraCost).toLocaleString(), "P(所持 ", (Number(beatPoints) || 0).toLocaleString(), ")")), React.createElement("button", {
+    type: "button",
+    "data-raid-jack-ranking-open": true,
+    onClick: () => setShowRanking(true),
+    "aria-label": "ランキング",
+    className: "min-h-[40px] w-[44px] shrink-0 rounded-lg border border-orange-300/60 bg-orange-950/50 text-[9px] font-black leading-tight text-orange-100 active:scale-95"
+  }, React.createElement("span", {
+    className: "block text-[14px]"
+  }, "🏆"), "順位"), React.createElement("button", {
+    type: "button",
+    "data-raid-jack-reward-list-open-top": true,
+    onClick: () => setShowRewards(true),
+    "aria-label": "報酬一覧",
+    className: "min-h-[40px] w-[44px] shrink-0 rounded-lg border border-orange-300/60 bg-orange-950/50 text-[9px] font-black leading-tight text-orange-100 active:scale-95"
+  }, React.createElement("span", {
+    className: "block text-[14px]"
+  }, "🎁"), "報酬")) : React.createElement(React.Fragment, null, React.createElement("div", {
     className: "mb-2 flex shrink-0 items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[11px] text-slate-100"
   }, React.createElement("div", null, React.createElement("div", {
     className: "font-black text-orange-200"
@@ -113397,7 +114165,7 @@ const RaidJackScreen = ({
     className: "min-h-[40px] shrink-0 rounded-xl border border-amber-400/60 bg-amber-950/40 px-3 text-[11px] font-black leading-tight text-amber-100 active:scale-95 disabled:opacity-40"
   }, "1回追加", React.createElement("br", null), React.createElement("small", {
     className: "text-[9px] opacity-80"
-  }, "ビートP ", ev.extraCost, "(所持 ", beatPoints, ")"))), React.createElement("div", {
+  }, "ビートP ", Number(ev.extraCost).toLocaleString(), "(所持 ", (Number(beatPoints) || 0).toLocaleString(), ")"))), React.createElement("div", {
     className: "mb-2 grid shrink-0 grid-cols-2 gap-2"
   }, React.createElement("button", {
     type: "button",
@@ -113409,13 +114177,13 @@ const RaidJackScreen = ({
     "data-raid-jack-reward-list-open-top": true,
     onClick: () => setShowRewards(true),
     className: "min-h-[40px] rounded-xl border border-orange-300/60 bg-orange-950/50 px-3 text-[12px] font-black text-orange-100 active:scale-95"
-  }, "🎁 報酬一覧")), message && React.createElement("div", {
+  }, "🎁 報酬一覧"))), message && React.createElement("div", {
     className: "mb-2 shrink-0 text-center text-[11px] font-black text-amber-200",
     role: "status"
   }, message), totals === null && React.createElement("div", {
     className: "mb-2 shrink-0 rounded-xl border border-amber-400/40 bg-amber-950/30 p-2 text-center text-[10px] text-amber-100"
   }, "サーバーを準備中です。みんなの記録は少し待ってから見られます(戦った記録はあとで自動で送られます)"), React.createElement("div", {
-    className: `${SCREEN_LIST_CLASS} [@media(orientation:landscape)_and_(max-height:520px)]:flex-none [@media(orientation:landscape)_and_(max-height:520px)]:overflow-visible space-y-2`
+    className: `${SCREEN_LIST_CLASS} [@media(orientation:landscape)_and_(max-height:520px)]:flex-none [@media(orientation:landscape)_and_(max-height:520px)]:overflow-visible ${compact ? 'space-y-1.5' : 'space-y-2'}`
   }, tab === 'a' && totals === undefined && React.createElement("div", {
     "data-raid-jack-loading": true,
     className: "py-6 text-center text-[11px] text-slate-300"
@@ -113433,22 +114201,22 @@ const RaidJackScreen = ({
         ...prev,
         [tab]: i
       })),
-      className: `flex w-full items-center gap-3 rounded-2xl border-2 p-2 text-left active:scale-[0.99] ${on ? 'border-orange-300 bg-orange-950/40' : 'border-white/10 bg-slate-900/60'}`
+      className: `flex w-full items-center rounded-2xl border-2 text-left active:scale-[0.99] ${compact ? 'gap-2 px-2 py-1' : 'gap-3 p-2'} ${on ? 'border-orange-300 bg-orange-950/40' : 'border-white/10 bg-slate-900/60'}`
     }, React.createElement("span", {
       "data-jack-aura": ev.aura && isOpen && !isPumpkin ? i + 1 : undefined,
       "data-raid-pumpkin": isPumpkin ? 'true' : undefined,
-      className: "relative block h-14 w-16 shrink-0"
+      className: `relative block shrink-0 ${compact ? 'h-11 w-12' : 'h-14 w-16'}`
     }, ev.aura && isOpen && !isPumpkin && React.createElement(JackAuraLayer, {
       tier: i + 1,
       limit: 8
     }), isPumpkin ? React.createElement("img", {
       src: ev.afterBossImg(),
       alt: "",
-      className: "relative mx-auto h-14 w-14 object-contain"
+      className: `relative mx-auto object-contain ${compact ? 'h-11 w-11' : 'h-14 w-14'}`
     }) : React.createElement("img", {
       src: ev.bossImg(),
       alt: "",
-      className: "relative h-14 w-16 object-contain",
+      className: `relative object-contain ${compact ? 'h-11 w-12' : 'h-14 w-16'}`,
       style: isOpen ? ev.aura ? {
         filter: raidJackAuraGlowFilter(i + 1, 0.4)
       } : undefined : {
@@ -113461,7 +114229,7 @@ const RaidJackScreen = ({
       className: "flex items-center gap-2"
     }, React.createElement("span", {
       className: "truncate text-[13px] font-black text-white"
-    }, i + 1, ". ", isPumpkin ? ev.afterBoss.name : t.name), React.createElement("span", {
+    }, i + 1, ". ", isPumpkin ? ev.afterBoss.name : raidTierNameOf(ev, tab, i, lockedOf)), React.createElement("span", {
       className: `shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-black ${isPumpkin ? 'bg-amber-500 text-slate-950' : done ? 'bg-emerald-600 text-white' : isOpen ? 'bg-orange-600 text-white' : 'bg-slate-700 text-slate-300'}`
     }, isPumpkin ? ev.afterBossBadge : done ? '討伐済み' : isOpen ? '挑戦できる' : '未解放')), tab === 'a' ? isPumpkin ? React.createElement("div", {
       "data-raid-pumpkin-note": true,
@@ -113484,7 +114252,7 @@ const RaidJackScreen = ({
     className: "mb-1 flex items-center justify-between gap-2"
   }, React.createElement("span", {
     className: "font-black text-orange-200"
-  }, tier.name, "の報酬"), React.createElement("button", {
+  }, raidTierNameOf(ev, tab, current, lockedOf), "の報酬"), React.createElement("button", {
     type: "button",
     "data-raid-jack-reward-list-open": true,
     onClick: () => setShowRewards(true),
@@ -113500,7 +114268,7 @@ const RaidJackScreen = ({
     className: "mb-1 flex items-baseline justify-between text-[11px]"
   }, React.createElement("span", {
     className: "font-black text-orange-200"
-  }, showAll ? 'レイドバトルの累計ダメージ(全段階の合計)' : tab === 'a' ? `${tier.name}への貢献ランキング` : '累計ダメージランキング(5段階の合計)'), myTotalHere > 0 && React.createElement("span", {
+  }, showAll ? 'レイドバトルの累計ダメージ(全段階の合計)' : tab === 'a' ? `${raidTierNameOf(ev, 'a', current, lockedOf)}への貢献ランキング` : '累計ダメージランキング(5段階の合計)'), myTotalHere > 0 && React.createElement("span", {
     "data-raid-jack-mine": true,
     className: "text-[10px] text-slate-200"
   }, "あなた ", myTotalHere.toLocaleString(), ahead !== null ? `(${ahead + 1}位)` : '')), bossDownNow && React.createElement("div", {
@@ -113529,7 +114297,7 @@ const RaidJackScreen = ({
     className: `${SCREEN_FOOTER_CLASS} [@media(orientation:landscape)_and_(max-height:520px)]:sticky [@media(orientation:landscape)_and_(max-height:520px)]:bottom-0 [@media(orientation:landscape)_and_(max-height:520px)]:z-20 [@media(orientation:landscape)_and_(max-height:520px)]:-mx-4 [@media(orientation:landscape)_and_(max-height:520px)]:-mb-4 [@media(orientation:landscape)_and_(max-height:520px)]:px-4 [@media(orientation:landscape)_and_(max-height:520px)]:pb-3 [@media(orientation:landscape)_and_(max-height:520px)]:bg-slate-950 [@media(orientation:landscape)_and_(max-height:520px)]:shadow-[0_32px_0_0_#020617]`
   }, tab === 'a' && open && isOpenTier && !closedTier && remaining > 0 && Array.isArray(ways) && ways.length > 1 ? React.createElement("div", {
     "data-raid-ways": ways.join(' '),
-    className: `grid gap-2 ${ways.length >= 3 ? 'grid-cols-3' : 'grid-cols-2'}`
+    className: `grid ${compact ? 'gap-1.5' : 'gap-2'} ${ways.length >= 3 ? 'grid-cols-3' : 'grid-cols-2'}`
   }, ways.map(way => {
     const w = RAID_WAY_BUTTONS[way];
     return w ? React.createElement("button", {
@@ -113537,10 +114305,12 @@ const RaidJackScreen = ({
       key: way,
       [w.data]: true,
       onClick: () => onChallenge(tab, current, way),
-      className: `min-h-[48px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[36px] rounded-2xl border-2 px-1 text-[12px] font-black leading-tight text-white active:scale-95 ${w.tone}`
+      className: `${compact ? 'min-h-[40px] rounded-xl py-0.5 text-[11px]' : 'min-h-[48px] rounded-2xl text-[12px]'} [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[36px] border-2 px-1 font-black leading-tight text-white active:scale-95 ${w.tone}`
     }, w.label, React.createElement("br", {
       className: "[@media(orientation:landscape)_and_(max-height:520px)]:hidden"
-    }), "挑戦する") : null;
+    }), compact ? React.createElement("small", {
+      className: "text-[9px] opacity-90"
+    }, "挑戦する") : '挑戦する') : null;
   })) : tab === 'a' && open && isOpenTier && !closedTier && remaining > 0 && !Array.isArray(ways) && (RELEASE_FLAGS.raidJackRhythm === true || forced) ? React.createElement("div", {
     className: "grid grid-cols-2 gap-2"
   }, React.createElement("button", {
@@ -113562,9 +114332,10 @@ const RaidJackScreen = ({
     "data-raid-jack-challenge": true,
     disabled: !open || !isOpenTier || closedTier || remaining <= 0,
     onClick: () => onChallenge(tab, current, 'battle'),
-    className: "w-full min-h-[48px] rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400"
+    className: `w-full ${compact ? 'min-h-[40px] rounded-xl' : 'min-h-[48px] rounded-2xl'} border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400`
   }, challengeLabel)), showRanking && React.createElement(RaidJackRankingList, {
     ev: ev,
+    lockedOf: lockedOf,
     eventId: eventId,
     initialTab: tab,
     initialTier: current,
@@ -113574,6 +114345,7 @@ const RaidJackScreen = ({
     onClose: () => setShowRanking(false)
   }), showRewards && React.createElement(RaidJackRewardList, {
     ev: ev,
+    lockedOf: lockedOf,
     claimed: state.claimed,
     initialTab: tab,
     onClose: () => setShowRewards(false)
@@ -114485,7 +115257,7 @@ const XmasEventScreen = ({
   }, "閉じる"))) : null;
   const head = React.createElement("div", {
     "data-xmas-event-head": true,
-    className: `mx-auto w-full shrink-0 ${raidShown ? '' : 'max-w-2xl'}`
+    className: "mx-auto w-full shrink-0"
   }, React.createElement(ScreenHead, {
     title: React.createElement("span", {
       className: "flex items-center gap-1"
@@ -114499,12 +115271,12 @@ const XmasEventScreen = ({
     note: forced ? '(デバッグ表示・開始前でも見えます)' : ''
   }), React.createElement("div", {
     "data-xmas-event-poster": true,
-    className: `mh-xmas-frame mx-auto mb-2 w-fit max-w-full overflow-hidden rounded-xl bg-slate-950 ${raidShown ? '[@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`
+    className: "mh-xmas-frame mx-auto mb-1.5 w-fit max-w-full overflow-hidden rounded-xl bg-slate-950 [@media(orientation:landscape)_and_(max-height:520px)]:hidden"
   }, posterOpen ? React.createElement("div", {
     "data-xmas-event-title-band": true,
     className: "relative overflow-hidden",
     style: {
-      width: raidShown ? 'min(100vw - 32px, 26vh)' : 'min(100vw - 32px, 48vh)',
+      width: 'min(100vw - 32px, 26vh)',
       aspectRatio: '2 / 1'
     }
   }, React.createElement("img", {
@@ -114520,29 +115292,29 @@ const XmasEventScreen = ({
       background: 'radial-gradient(80% 70% at 50% 55%, #0b1733cc 0%, #0b173388 55%, transparent 100%)'
     }
   }, React.createElement("span", {
-    className: `font-black text-amber-100 ${raidShown ? 'text-[8px]' : 'text-[11px]'}`,
+    className: "text-[8px] font-black text-amber-100",
     style: {
       letterSpacing: '.2em',
       textShadow: '0 1px 3px #000'
     }
   }, "クリスマスイベント"), React.createElement("b", {
-    className: `mh-xmas-title whitespace-nowrap leading-tight ${raidShown ? 'text-[20px]' : 'text-[38px]'}`,
+    className: "mh-xmas-title whitespace-nowrap text-[20px] leading-tight",
     style: {
       fontFamily: "'Hiragino Mincho ProN', 'Yu Mincho', serif",
       filter: 'drop-shadow(0 2px 2px #000) drop-shadow(0 0 6px #000a)'
     }
   }, "聖夜の名探偵"), React.createElement("span", {
-    className: `font-bold text-amber-50 ${raidShown ? 'text-[7px]' : 'text-[11px]'}`,
+    className: "text-[7px] font-bold text-amber-50",
     style: {
       textShadow: '0 1px 3px #000'
     }
   }, "～十三番目の鐘が鳴る夜～"))) : React.createElement("img", {
     src: XMAS_EVENT_POSTER_IMG,
     alt: "クリスマスイベント 聖夜の名探偵",
-    className: `block h-auto w-auto max-w-full ${raidShown ? 'max-h-[13vh]' : 'max-h-[24vh]'}`
+    className: "block h-auto w-auto max-w-full max-h-[13vh]"
   })), React.createElement("div", {
     "data-xmas-event-period": true,
-    className: "mh-xmas-ribbon mx-auto mb-2 max-w-md px-5 py-1 text-center text-[11px] font-black text-amber-50"
+    className: "mh-xmas-ribbon mx-auto mb-1.5 max-w-md px-5 py-0.5 text-center text-[10px] font-black text-amber-50"
   }, "開催期間 ", xmasEventPeriodText()), React.createElement(ScreenTabs, {
     items: XMAS_EVENT_TABS,
     value: tab,
@@ -115171,6 +115943,41 @@ const xmasNovelAnswer = (script, cur, q, pick, endings) => {
       } : 'next'
     };
   }
+  if (q.pass && q.kind === 'present') {
+    const okRows = xmasNovelPickReplies(q, 'ok');
+    const why = Array.isArray(q.near) && q.near.includes(pick) && xmasNovelPickReplies(q, 'near').length ? xmasNovelPickReplies(q, 'near') : xmasNovelPickReplies(q, 'x1');
+    const by = okRows[0] && okRows[0].w ? xmasNovelCastOf(okRows[0].w) : null;
+    const clue = answers[0] || '';
+    const band = clue ? [{
+      id: `${q.id}-pass`,
+      t: 'band',
+      x: `${by && by.name ? by.name : '探偵'}が、手がかり帳から【${clue}】を突きつけた`
+    }] : [];
+    const okSelf = okRows.map((r, i) => i === 0 && r && typeof r.x === 'string' && /^はい。\s*/.test(r.x) ? {
+      ...r,
+      x: r.x.replace(/^はい。\s*/, '')
+    } : r);
+    const replies = [...why, ...band, ...okSelf];
+    const passed = {
+      ...next,
+      ans: {
+        ...next.ans,
+        [q.id]: {
+          ...next.ans[q.id],
+          done: true
+        }
+      }
+    };
+    const to = xmasNovelRepliesTo(replies);
+    return {
+      cur: passed,
+      ok: false,
+      replies,
+      then: to ? {
+        to
+      } : 'next'
+    };
+  }
   const personal = q.kind === 'person' ? xmasNovelPickReplies(q, String(pick)) : [];
   const near = q.kind === 'present' && Array.isArray(q.near) && q.near.includes(pick) ? xmasNovelPickReplies(q, 'near') : [];
   const n = Math.min(3, Math.max(1, wrongs));
@@ -115190,6 +115997,22 @@ const xmasNovelAnswer = (script, cur, q, pick, endings) => {
 const xmasNovelRepliesTo = replies => {
   for (let i = (replies || []).length - 1; i >= 0; i -= 1) if (replies[i] && replies[i].to) return replies[i].to;
   return null;
+};
+const xmasNovelEndingAhead = (script, to) => {
+  let s = to ? xmasNovelSceneById(script, to) : null;
+  for (let k = 0; s && k < 12; k += 1) {
+    if (s.ending && s.ending.id) return s.ending.id;
+    if ((s.rows || []).some(r => r && r.t === 'q')) return null;
+    s = typeof s.next === 'string' ? xmasNovelSceneById(script, s.next) : null;
+  }
+  return null;
+};
+const xmasNovelPresentable = (q, clues) => {
+  const list = Array.isArray(clues) ? clues : [];
+  if (!q || !Array.isArray(q.narrow) || !q.narrow.length) return list;
+  const picked = list.filter(c => q.narrow.includes(c.n));
+  const ans = Array.isArray(q.answer) ? q.answer : [];
+  return picked.some(c => ans.includes(c.n)) ? picked : list;
 };
 const xmasNovelOptionsOf = (q, ctx) => (Array.isArray(q && q.options) ? q.options : []).map((o, i) => ({
   ...o,
@@ -115350,6 +116173,112 @@ const XMAS_NOVEL_ENDING_KINDS = Object.freeze({
     tone: '#7fd6a8'
   }
 });
+const XMAS_NOVEL_ROUTE_KEY = 'mh_xmas_novel_route_v1';
+const xmasNovelRouteKeyOf = (qid, cur) => {
+  const side = cur && cur.flags && Number.isFinite(cur.flags.f_A1) ? Math.max(0, Math.min(2, Math.floor(cur.flags.f_A1))) : 0;
+  return `${qid}|${side}`;
+};
+const xmasNovelRowAt = (script, cur) => {
+  const scene = cur ? xmasNovelSceneById(script, cur.scene) : null;
+  const row = scene && Array.isArray(scene.rows) ? scene.rows[Number(cur.idx) || 0] : null;
+  return row || null;
+};
+const xmasNovelRouteNormalize = (raw, script = null) => {
+  const r = raw && typeof raw === 'object' ? raw : {};
+  const at = {};
+  if (r.at && typeof r.at === 'object') Object.keys(r.at).slice(0, 120).forEach(k => {
+    const m = /^([AQ]\d+[a-z]?)\|([0-2])$/.exec(k);
+    if (!m) return;
+    const c = xmasNovelNormalizeCur(r.at[k], script);
+    if (!c) return;
+    if (script) {
+      const row = xmasNovelRowAt(script, c);
+      if (!row || row.t !== 'q' || row.id !== m[1]) return;
+    }
+    at[k] = c;
+  });
+  return {
+    v: 1,
+    at,
+    back: xmasNovelNormalizeCur(r.back, script),
+    seeded: r.seeded === 1 ? 1 : 0
+  };
+};
+const xmasNovelRouteRecord = (route, script, cur) => {
+  const row = xmasNovelRowAt(script, cur);
+  if (!route || !row || row.t !== 'q') return route;
+  const c = xmasNovelNormalizeCur(cur, script);
+  if (!c) return route;
+  return {
+    ...route,
+    at: {
+      ...route.at,
+      [xmasNovelRouteKeyOf(row.id, c)]: c
+    }
+  };
+};
+const xmasNovelRouteSeed = (script, save, route) => {
+  const base = route || xmasNovelRouteNormalize(null, script);
+  if (base.seeded === 1) return base;
+  const read = new Set(save && Array.isArray(save.read) ? save.read : []);
+  let at = {
+    ...base.at
+  };
+  const keep = (cur, row) => {
+    const k = xmasNovelRouteKeyOf(row.id, cur);
+    if (!at[k] && read.has(row.k)) {
+      const c = xmasNovelNormalizeCur(cur, script);
+      if (c) at = {
+        ...at,
+        [k]: c
+      };
+    }
+  };
+  const sideOfSave = save && save.cur && save.cur.flags && Number.isFinite(save.cur.flags.f_A1) ? save.cur.flags.f_A1 : 0;
+  const snaps = save && save.snaps && typeof save.snaps === 'object' ? save.snaps : {};
+  Object.keys(snaps).filter(k => /^C\d+$/.test(k)).forEach(chId => {
+    let st = xmasNovelSettle(script, snaps[chId]);
+    for (let guard = 0; st && st.row && guard < 3000; guard += 1) {
+      if (!st.scene || st.scene.chapter !== chId) break;
+      const r = st.row;
+      if (r.t !== 'q') {
+        st = xmasNovelStep(script, xmasNovelApplyRow(st.cur, r));
+        continue;
+      }
+      keep(st.cur, r);
+      if (r.once) break;
+      let pick = null;
+      if (r.kind === 'present') pick = (r.answer || [])[0];else if (r.kind === 'action') {
+        const opts = xmasNovelOptionsOf(r, xmasNovelCtx(script, st.cur, save && save.endings || []));
+        if (r.id === 'A1') {
+          const o = opts.find(x => x.i === sideOfSave - 1);
+          if (!o) break;
+          pick = o.i;
+        } else {
+          const safe = opts.find(o => !(o.to && xmasNovelEndingAhead(script, o.to)));
+          if (!safe) break;
+          pick = safe.i;
+        }
+      }
+      if (pick === null || pick === undefined) break;
+      const a = xmasNovelAnswer(script, st.cur, r, pick, save && save.endings || []);
+      let c = a.cur;
+      (a.replies || []).forEach(x => {
+        c = xmasNovelApplyRow(c, x);
+      });
+      st = a.then === 'next' ? xmasNovelStep(script, c) : a.then === 'retry' ? null : xmasNovelSettle(script, xmasNovelJump(script, c, a.then.to));
+    }
+  });
+  if (save && save.cur) {
+    const row = xmasNovelRowAt(script, save.cur);
+    if (row && row.t === 'q') keep(save.cur, row);
+  }
+  return {
+    ...base,
+    at,
+    seeded: 1
+  };
+};
 const XMAS_NOVEL_SCRIPT = {
   "v": 1,
   "src": "docs/progress/event-xmas-2026/SCRIPT.md",
@@ -117231,6 +118160,7 @@ const XMAS_NOVEL_SCRIPT = {
       },
       "label": "推理の問い①",
       "score": true,
+      "pass": true,
       "answer": ["閉まった裏口"],
       "k": "C2-4:Q2a",
       "near": ["早く鳴った鐘"]
@@ -117518,6 +118448,7 @@ const XMAS_NOVEL_SCRIPT = {
       },
       "label": "推理の問い②",
       "score": true,
+      "pass": true,
       "answer": ["深い足跡"],
       "k": "C3-2:Q3a",
       "near": ["閉まった裏口"]
@@ -118070,6 +119001,7 @@ const XMAS_NOVEL_SCRIPT = {
       },
       "label": "推理の問い③",
       "score": true,
+      "pass": true,
       "answer": ["12年前の帳面"],
       "k": "C4-3:Q4a",
       "near": ["早く鳴った鐘"]
@@ -118661,6 +119593,7 @@ const XMAS_NOVEL_SCRIPT = {
       },
       "label": "推理の問い④",
       "score": true,
+      "pass": true,
       "answer": ["ほこりのない鏡のふち"],
       "k": "C5-3:Q5a",
       "near": ["えるびんの写真"]
@@ -119152,6 +120085,8 @@ const XMAS_NOVEL_SCRIPT = {
       },
       "label": "推理の問い⑤",
       "score": true,
+      "pass": true,
+      "narrow": ["早く鳴った鐘", "止まった懐中時計", "12年前の帳面", "白瀬の手紙"],
       "answer": ["止まった懐中時計"],
       "k": "C6-3:Q6a",
       "near": ["早く鳴った鐘"]
@@ -119311,6 +120246,8 @@ const XMAS_NOVEL_SCRIPT = {
       },
       "label": "推理の問い⑥",
       "score": true,
+      "pass": true,
+      "narrow": ["えるびんの写真", "ほこりのない鏡のふち", "赤い手袋", "かばんの黒い服"],
       "answer": ["えるびんの写真"],
       "k": "C6-5:Q6b",
       "near": ["ほこりのない鏡のふち"]
@@ -122993,6 +123930,8 @@ const XMAS_NOVEL_SCRIPT = {
         }]
       },
       "label": "推理の問い⑦",
+      "pass": true,
+      "narrow": ["消えた箱", "帳面の最後の行", "箱のない犠牲者", "鳴りやまないオルゴール"],
       "answer": ["箱のない犠牲者"],
       "k": "C10-4:Q10a",
       "near": ["消えた箱"]
@@ -127254,8 +128193,6 @@ const XMAS_NOVEL_CSS = `
 .mh-nv-fallen { position: absolute; left: 50%; bottom: 24%; width: min(80vw, 520px); transform: translateX(-50%); z-index: 4; filter: drop-shadow(0 0 2px rgba(190,200,230,.35)); pointer-events: none; animation: mh-nv-fade 1.2s ease both; }
 .mh-nv-body { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
 .mh-nv-body.noblood .pool { display: none; }
-.mh-nv-body.noblood .mh-nv-body-lie img { filter: brightness(0) drop-shadow(0 0 1px rgba(190,205,235,.55)) drop-shadow(0 0 14px rgba(120,150,200,.35)) !important; }
-.mh-nv-body.noblood .mh-nv-body-dim { background: radial-gradient(120% 90% at 50% 40%, rgba(6,10,34,.35), rgba(0,0,4,.88)) !important; }
 .mh-nv-body-dim { position: absolute; inset: 0; -webkit-backdrop-filter: grayscale(.9) brightness(.55); backdrop-filter: grayscale(.9) brightness(.55);
   background: radial-gradient(70% 34% at var(--fx, 50%) var(--fy, 74%), rgba(120,0,14,.42), rgba(120,0,14,0) 72%), radial-gradient(120% 90% at 50% 40%, rgba(6,10,34,.35), rgba(0,0,4,.88)); animation: mh-nv-fade 1.4s ease both; }
 .mh-nv-body-lie { position: absolute; }
@@ -127336,6 +128273,114 @@ const XMAS_NOVEL_CSS = `
   .mh-nv-boot [data-xmas-novel-perfect] { margin-top: 8px; }
 }
 @media (min-width: 900px) and (min-height: 700px) { .mh-nv-text { font-size: 19px; } .mh-nv-box { min-height: 150px; } }
+/* ---- 場面の切り替えと人物の登場の演出(台帳 r1126-094)。暗い側に合わせ、光らせない・跳ねさせない ----
+   切り替え(.mh-nv-sw): place=場所が替わる(暗い幕が横に流れて明ける) / time=時間が飛ぶ(暗転して、ゆっくり明ける) /
+   past=過去編へ入る(色あせた光がにじんで、古い写真の色になる) / open=章の札のあと・読み始め(黒から明ける)。
+   既読・オートは .fast で短く、スキップ中は出さない。札(.mh-nv-place)は場所の名前 */
+.mh-nv-sw { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
+.mh-nv-sw.place { background: linear-gradient(90deg, transparent 0%, rgba(0,0,0,.85) 14%, #000 26%, #000 100%); animation: mh-nv-sw-wipe 1.15s cubic-bezier(.55,.05,.35,1) both; }
+@keyframes mh-nv-sw-wipe { 0% { transform: translateX(-26%); opacity: 1; } 100% { transform: translateX(105%); opacity: 1; } }
+.mh-nv-sw.time { background: #000; animation: mh-nv-sw-time 2.1s ease-in both; }
+@keyframes mh-nv-sw-time { 0%, 30% { opacity: 1; } 100% { opacity: 0; } }
+.mh-nv-sw.open { background: #000; animation: mh-nv-sw-time 1.5s ease-in both; }
+.mh-nv-sw.past { background: radial-gradient(80% 70% at 50% 45%, rgba(214,182,128,.55) 0%, rgba(90,60,24,.8) 60%, rgba(12,7,2,1) 100%); animation: mh-nv-sw-past 2.6s ease-out both; }
+.mh-nv-sw.past::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, rgba(0,0,0,.18) 0 1px, transparent 1px 7px); animation: mh-nv-sw-film .18s steps(2) 8; }
+@keyframes mh-nv-sw-past { 0% { opacity: 1; filter: blur(10px); } 35% { opacity: .92; filter: blur(4px); } 100% { opacity: 0; filter: none; } }
+@keyframes mh-nv-sw-film { 50% { transform: translateX(3px); opacity: .5; } }
+.mh-nv-sw.fast { animation-duration: .45s; }
+.mh-nv-sw.fast.place { animation-duration: .5s; }
+.mh-nv-sw.fast::after { animation: none; }
+/* 背景の絵は、替わったときにゆっくり寄る(押し込みすぎない) */
+.mh-nv-bg.in-place { animation: mh-nv-bg-push 2.2s ease-out both; }
+.mh-nv-bg.in-time, .mh-nv-bg.in-open { animation: mh-nv-bg-push 3s ease-out both; }
+.mh-nv-bg.in-past { animation: mh-nv-bg-push 3.4s ease-out both; }
+.mh-nv-bg.fast { animation-duration: .5s; }
+@keyframes mh-nv-bg-push { from { transform: scale(1.06); } to { transform: none; } }
+.mh-nv-place { position: absolute; left: 14px; top: calc(max(8px, env(safe-area-inset-top)) + 50px); z-index: 5; pointer-events: none; max-width: calc(100% - 28px);
+  padding: 6px 14px 6px 12px; border-left: 2px solid rgba(232,196,106,.8); background: linear-gradient(90deg, rgba(0,0,0,.72), rgba(0,0,0,0));
+  color: #e6dcc0; font-size: 14px; font-weight: 800; letter-spacing: .14em; text-shadow: 0 1px 3px #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  animation: mh-nv-place 3.2s ease both; }
+.mh-nv-place.past { border-left-color: rgba(196,150,90,.85); color: #e2cfa6; }
+.mh-nv-place.fast { animation-duration: 1.4s; }
+@keyframes mh-nv-place { 0% { opacity: 0; transform: translateX(-12px); } 18% { opacity: 1; transform: none; } 78% { opacity: 1; } 100% { opacity: 0; } }
+@media (orientation: portrait) { .mh-nv-place { top: calc(max(8px, env(safe-area-inset-top)) + 72px); } }
+/* 章の札: 黒から明けて、章の名前が字の間を詰めながら浮かび、線が中から伸び、題がにじみから浮かぶ */
+.mh-nv-card.open { animation: mh-nv-fade 1s ease both; background: radial-gradient(110% 70% at 50% 45%, rgba(26,22,40,.92), rgba(1,2,6,.99)); }
+.mh-nv-card.open .mh-nv-card-label { animation: mh-nv-card-label 1.6s ease-out both; }
+.mh-nv-card.open .mh-nv-rule { animation: mh-nv-card-rule 1.1s ease-out .35s both; }
+.mh-nv-card.open .mh-nv-card-title { animation: mh-nv-card-title 1.5s ease-out .6s both; }
+.mh-nv-card.open .mh-nv-card-hint { animation: mh-nv-fade .8s ease 1.9s both; }
+.mh-nv-card.open .mh-nv-card-ghost { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; overflow: hidden;
+  font-size: min(26vw, 220px); font-weight: 900; color: rgba(160,20,30,.08); letter-spacing: -.02em; white-space: nowrap; animation: mh-nv-card-ghost 4s ease-out both; }
+.mh-nv-cardtext { position: relative; }
+@keyframes mh-nv-card-label { from { opacity: 0; letter-spacing: 1.2em; } to { opacity: 1; letter-spacing: .5em; } }
+@keyframes mh-nv-card-rule { from { transform: scaleX(0); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes mh-nv-card-title { 0% { opacity: 0; filter: blur(8px); transform: translateY(8px); } 100% { opacity: 1; filter: none; transform: none; } }
+@keyframes mh-nv-card-ghost { from { opacity: 0; transform: scale(1.08); } to { opacity: 1; transform: none; } }
+/* 人物の登場: first=その人が初めて出る(影の姿から浮かぶ) / swap=話し手が替わる(少し寄って出る) / face=表情だけ替わる(すっと替わる)。fast は短く */
+.mh-nv-fig.enter-first img { animation: mh-nv-enter-first 1.5s ease-out both; }
+.mh-nv-fig.enter-swap img { animation: mh-nv-enter-swap .5s cubic-bezier(.2,.7,.3,1) both; }
+.mh-nv-fig.enter-face img { animation: mh-nv-enter-face .22s ease both; }
+.mh-nv-fig.fast img { animation-duration: .3s; }
+@keyframes mh-nv-enter-first {
+  0% { opacity: 0; transform: translateY(10px) scale(.985); filter: brightness(0) blur(4px) drop-shadow(0 6px 18px rgba(0,0,0,.6)); }
+  40% { opacity: 1; transform: none; filter: brightness(0) blur(1px) drop-shadow(0 0 6px rgba(180,190,220,.35)); }
+  100% { opacity: 1; transform: none; filter: brightness(1) blur(0) drop-shadow(0 6px 18px rgba(0,0,0,.6)); } }
+@keyframes mh-nv-enter-swap { from { opacity: 0; transform: translateX(-16px) scale(.97); filter: brightness(.7) drop-shadow(0 6px 18px rgba(0,0,0,.6)); } to { opacity: 1; transform: none; filter: brightness(1) drop-shadow(0 6px 18px rgba(0,0,0,.6)); } }
+@keyframes mh-nv-enter-face { from { opacity: .55; } to { opacity: 1; } }
+/* 初めて出る人の名札: 立ち絵の左上に、金の線が左から伸びてから肩書きと名前が浮かぶ。しばらくして消える */
+.mh-nv-intro { position: absolute !important; left: 6%; top: 18%; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 0 18px 8px 2px; pointer-events: none; z-index: 2;
+  animation: mh-nv-intro 3.6s ease both; }
+.mh-nv-intro .bar { position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: linear-gradient(90deg, #e8c46a, rgba(232,196,106,.6) 70%, transparent); transform-origin: left; animation: mh-nv-intro-bar .7s ease-out both; }
+.mh-nv-intro .nm { font-size: clamp(24px, 6.4vw, 32px); font-weight: 900; letter-spacing: .16em; line-height: 1.2; color: #f1e6c8; white-space: nowrap; text-shadow: 0 0 12px rgba(0,0,0,.95), 0 2px 3px #000; animation: mh-nv-intro-nm 1.1s ease-out .3s both; }
+.mh-nv-intro .role { font-size: 12px; font-weight: 800; letter-spacing: .3em; color: #d2b272; white-space: nowrap; text-shadow: 0 0 8px #000, 0 1px 3px #000; animation: mh-nv-intro-nm .9s ease-out .15s both; }
+.mh-nv-intro.fast { animation-duration: 1.6s; }
+.mh-nv-intro.fast .bar, .mh-nv-intro.fast .nm, .mh-nv-intro.fast .role { animation-duration: .3s; animation-delay: 0s; }
+@keyframes mh-nv-intro { 0% { opacity: 1; } 82% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes mh-nv-intro-bar { from { transform: scaleX(0); } to { transform: none; } }
+@keyframes mh-nv-intro-nm { from { opacity: 0; filter: blur(6px); transform: translateX(-10px); } to { opacity: 1; filter: none; transform: none; } }
+@media (orientation: landscape) and (max-height: 560px) { .mh-nv-intro { left: 4%; top: 22%; } .mh-nv-intro .nm { font-size: 24px; } }
+/* 遺体・倒れた影を見つける行(台帳 r1126-094 追記1): 文のあいだは暗転(dark)、文が出きって一拍おいてから、ゆっくり明ける(show)。影はその下から浮かぶ */
+.mh-nv-veil { position: absolute; inset: 0; z-index: 4; pointer-events: none; background: #000; }
+.mh-nv-veil.dark { animation: mh-nv-fade .35s ease both; }
+.mh-nv-veil.show { animation: mh-nv-veil-lift 1.8s ease-in both; }
+.mh-nv-veil.fast.show { animation-duration: .5s; }
+@keyframes mh-nv-veil-lift { 0%, 15% { opacity: 1; } 100% { opacity: 0; } }
+/* 血を見せない影(白瀬など)は、真っ黒で見えなかった(社長「白瀬の死亡シーンって出てた？」)。冷たい光を当て、縁を白く光らせて形を見せる */
+.mh-nv-body.noblood .mh-nv-body-dim { background: radial-gradient(42% 30% at var(--fx, 50%) var(--fy, 74%), rgba(150,180,235,.30), rgba(150,180,235,0) 75%), radial-gradient(120% 90% at 50% 40%, rgba(6,10,34,.35), rgba(0,0,4,.88)) !important; }
+.mh-nv-body.noblood .mh-nv-body-lie img { filter: brightness(0) drop-shadow(0 0 1.5px rgba(225,235,255,.95)) drop-shadow(0 0 3px rgba(200,215,250,.6)) drop-shadow(0 0 20px rgba(140,170,230,.55)) !important; }
+/* 人物の並びの置き場(登場人物の行・カーテンコール): 上の帯(ボタンと章の題)と文字の箱のあいだの、まん中(台帳 r1126-094 追記4。上に寄せた枠が章の題の帯にかぶっていた) */
+.mh-nv-panelwrap { position: absolute; left: 0; right: 0; top: calc(max(8px, env(safe-area-inset-top)) + 54px); bottom: 172px; z-index: 5; display: flex; align-items: center; justify-content: center; padding: 0 3vw; pointer-events: none; }
+.mh-nv-panelin { width: min(100%, 640px); max-height: 100%; }
+.mh-nv-panelbox { border-radius: 16px; padding: 12px 12px 14px; background: radial-gradient(120% 90% at 50% 30%, rgba(14,20,44,.92), rgba(3,5,14,.95)); box-shadow: 0 0 0 1px rgba(232,196,106,.75), 0 18px 40px rgba(0,0,0,.6); }
+.mh-nv-panelhead { text-align: center; font-size: 17px; font-weight: 900; letter-spacing: .5em; padding-left: .5em; }
+.mh-nv-panelrule { height: 1px; margin: 8px auto 10px; width: 70%; background: linear-gradient(90deg, transparent, #e8c46a, transparent); }
+.mh-nv-cast.big .mh-nv-person { font-size: 11px; }
+@media (orientation: portrait) {
+  .mh-nv-panelwrap { top: calc(max(8px, env(safe-area-inset-top)) + 80px); }
+  .mh-nv-cast.big { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .mh-nv-cast.big .mh-nv-person { font-size: 12px; padding: 5px 3px 6px; }
+}
+@media (orientation: landscape) and (max-height: 560px) { .mh-nv-panelwrap { bottom: 132px; padding: 0 2vw; } .mh-nv-panelin { width: min(100%, 760px); } .mh-nv-panelbox { padding: 8px 10px 10px; } .mh-nv-panelhead { font-size: 14px; } .mh-nv-panelrule { margin: 5px auto 7px; } }
+/* 紹介の動き: 枠が暗がりから開き → 見出しの字の間が詰まり → 1人ずつ(0.16秒おき)影の姿から色が戻って名前と入る → そろったら全員に金の光が1度走る */
+.mh-nv-panelbox.intro { animation: mh-nv-panel-open .7s ease-out both; }
+.mh-nv-panelbox.intro .mh-nv-panelhead { animation: mh-nv-card-label 1.1s ease-out both; }
+.mh-nv-panelbox.intro .mh-nv-panelrule { animation: mh-nv-card-rule .9s ease-out .25s both; }
+.mh-nv-panelbox.intro .mh-nv-person { animation: mh-nv-cast-in .75s cubic-bezier(.2,.7,.3,1) calc(.55s + var(--i, 0) * .16s) both, mh-nv-cast-glow 1.2s ease-out 2.75s both; }
+.mh-nv-panelbox.intro .mh-nv-person .ph img { animation: mh-nv-cast-face .75s ease-out calc(.55s + var(--i, 0) * .16s) both; }
+.mh-nv-panelbox.intro.fast .mh-nv-person { animation: mh-nv-cast-in .3s ease-out calc(.1s + var(--i, 0) * .04s) both, mh-nv-cast-glow .8s ease-out .7s both; }
+.mh-nv-panelbox.intro.fast .mh-nv-person .ph img { animation: mh-nv-cast-face .3s ease-out calc(.1s + var(--i, 0) * .04s) both; }
+.mh-nv-panelbox.intro.fast, .mh-nv-panelbox.intro.fast .mh-nv-panelhead, .mh-nv-panelbox.intro.fast .mh-nv-panelrule { animation-duration: .3s; animation-delay: 0s; }
+.mh-nv-panelbox.intro.done, .mh-nv-panelbox.intro.done *, .mh-nv-panelbox.intro.done .mh-nv-person .ph img { animation: none !important; }
+@keyframes mh-nv-panel-open { from { opacity: 0; transform: scale(.96); filter: brightness(.3); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes mh-nv-cast-in { 0% { opacity: 0; transform: translateY(12px) scale(.94); } 60% { opacity: 1; } 100% { opacity: 1; transform: none; } }
+@keyframes mh-nv-cast-face { 0% { filter: brightness(0) blur(3px); } 45% { filter: brightness(0) blur(0); } 100% { filter: none; } }
+@keyframes mh-nv-cast-glow { 0% { box-shadow: 0 0 0 1px rgba(232,196,106,.3); } 35% { box-shadow: 0 0 0 1px rgba(232,196,106,.95), 0 0 14px rgba(232,196,106,.35); } 100% { box-shadow: 0 0 0 1px rgba(232,196,106,.3); } }
+@media (prefers-reduced-motion: reduce) {
+  .mh-nv-panelbox.intro, .mh-nv-panelbox.intro * { animation: none !important; }
+  .mh-nv-veil { animation-duration: .01s !important; }
+  .mh-nv-sw, .mh-nv-sw::after, .mh-nv-bg.in-place, .mh-nv-bg.in-time, .mh-nv-bg.in-open, .mh-nv-bg.in-past, .mh-nv-card.open *, .mh-nv-fig.enter-first img, .mh-nv-fig.enter-swap img, .mh-nv-fig.enter-face img, .mh-nv-intro, .mh-nv-intro * { animation-duration: .01s !important; animation-delay: 0s !important; }
+}
 @media (prefers-reduced-motion: reduce) { .mh-nv-snow, .mh-nv-next, .mh-nv-shake, .mh-nv-get, .mh-nv-fig img { animation: none !important; } }
 `;
 const useXmasNovelCss = () => {
@@ -127489,6 +128534,136 @@ const xmasNovelSceneBgName = (scene, idx) => {
     if (i >= 0 && at >= i) name = bg;
   });
   return name;
+};
+const xmasNovelTimeOf = n => /12年前/.test(n) ? 'past' : /明け方|朝/.test(n) ? 'morning' : /夜|ろうそく|停電|暗転/.test(n) ? 'night' : 'day';
+const xmasNovelSwitchKind = (prevName, nextName) => {
+  const a = String(prevName || '').split('→')[0];
+  const b = String(nextName || '').split('→')[0];
+  const tb = xmasNovelTimeOf(b);
+  if (prevName == null) return tb === 'past' ? 'past' : 'open';
+  if (a === b) return '';
+  const ta = xmasNovelTimeOf(a);
+  if (tb === 'past' && ta !== 'past') return 'past';
+  if (ta !== tb) return 'time';
+  const ia = xmasNovelBgOf(a);
+  const ib = xmasNovelBgOf(b);
+  if ((ia.img || ia.grad) === (ib.img || ib.grad) && (ia.tint || '') === (ib.tint || '')) return '';
+  return 'place';
+};
+const xmasNovelPlaceLabel = name => {
+  const n = String(name || '').split('→')[0].trim();
+  if (!n || /^[a-z0-9_]+(?=$|[(（])/.test(n) || /ゲーム機をかこむ/.test(n)) return '';
+  const m = n.match(/^([^(（]+)(?:[(（]([^)）]*)[)）]?)?/);
+  if (!m) return n;
+  const base = m[1].trim();
+  const inner = (m[2] || '').trim();
+  return inner ? `${base}　${inner}` : base;
+};
+const XMAS_NOVEL_FIRST_LINE_CACHE = new WeakMap();
+const xmasNovelFirstLines = script => {
+  if (!script || typeof script !== 'object') return {};
+  if (XMAS_NOVEL_FIRST_LINE_CACHE.has(script)) return XMAS_NOVEL_FIRST_LINE_CACHE.get(script);
+  const out = {};
+  (Array.isArray(script.scenes) ? script.scenes : []).forEach(s => (Array.isArray(s.rows) ? s.rows : []).forEach(r => {
+    if (r && r.t === 'line' && r.w && r.n !== '？？？' && !out[r.w]) out[r.w] = r.id;
+  }));
+  XMAS_NOVEL_FIRST_LINE_CACHE.set(script, out);
+  return out;
+};
+const XMAS_NOVEL_CHAPTER_VEIL = Object.freeze({
+  C3: '白い朝',
+  C8: 'ひとつずつ',
+  C10: '長い夜'
+});
+const XMAS_NOVEL_CH_KEYS_CACHE = new WeakMap();
+const xmasNovelChapterDone = (script, ch, read) => {
+  if (!script || !ch) return false;
+  let keys = XMAS_NOVEL_CH_KEYS_CACHE.get(script);
+  if (!keys) {
+    keys = {};
+    (Array.isArray(script.scenes) ? script.scenes : []).forEach(s => {
+      (keys[s.chapter] = keys[s.chapter] || []).push(...(Array.isArray(s.rows) ? s.rows : []).map(r => r && r.k).filter(Boolean));
+    });
+    XMAS_NOVEL_CH_KEYS_CACHE.set(script, keys);
+  }
+  const set = read instanceof Set ? read : new Set(Array.isArray(read) ? read : []);
+  return (Array.isArray(script.chapters) ? script.chapters : []).some(c => c && !c.past && !c.outside && c.no > ch.no && c.no < 90 && (keys[c.id] || []).some(k => set.has(k)));
+};
+const xmasNovelChapterTitle = (script, ch, read) => {
+  if (!ch) return '';
+  const veil = XMAS_NOVEL_CHAPTER_VEIL[ch.id];
+  return veil && !xmasNovelChapterDone(script, ch, read) ? veil : ch.title || '';
+};
+const xmasNovelSceneDone = (scene, read) => {
+  const rows = scene && Array.isArray(scene.rows) ? scene.rows : [];
+  const last = [...rows].reverse().find(r => r && r.k);
+  return !!(last && Array.isArray(read) && read.includes(last.k));
+};
+const XMAS_NOVEL_SHAKE = Object.freeze({
+  '1-3-1': 2,
+  '2-1-10': 1,
+  '2-3-4': 1,
+  '2-3-7': 1,
+  '2-3-9b': 1,
+  '2-3-9c': 2,
+  '2-5-1': 2,
+  '5-4-4': 1,
+  '6-5-1': 3,
+  '6-7-4b': 2,
+  '7-P1-13': 1,
+  '7-P3-11': 1,
+  '7-P3-12': 1,
+  '7-W-8': 1,
+  '9-1-4': 1,
+  '10-2-6': 2,
+  '2-X-2': 3,
+  '5-X-3': 3,
+  '6-X-4': 3,
+  '6-X-5': 2,
+  '6-X-8': 2,
+  '2-Y-9': 3,
+  '2-Y-17': 1,
+  '10-X-8': 3,
+  'B-2': 1,
+  'B-3': 1,
+  'B-4': 2,
+  'B-13': 2,
+  '1-O-22': 1,
+  '12-3-2': 1,
+  '12-4-2': 1,
+  '12-4-5': 1
+});
+const XMAS_NOVEL_SHAKE_PX = [0, 2.5, 5, 9];
+const XMAS_NOVEL_BUZZ = [0, 20, 45, [70, 40, 90]];
+const xmasNovelQuake = (el, lv) => {
+  const a = XMAS_NOVEL_SHAKE_PX[lv] || 0;
+  if (!a) return;
+  try {
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  } catch (e) {}
+  if (el && typeof el.animate === 'function') {
+    try {
+      el.animate([{
+        transform: 'none'
+      }, {
+        transform: `translate(${-a}px, ${a / 2}px)`
+      }, {
+        transform: `translate(${a}px, ${-a / 3}px)`
+      }, {
+        transform: `translate(${-a * 0.6}px, ${a / 3}px)`
+      }, {
+        transform: `translate(${a * 0.35}px, 0)`
+      }, {
+        transform: 'none'
+      }], {
+        duration: 240 + lv * 100,
+        easing: 'ease-out'
+      });
+    } catch (e) {}
+  }
+  try {
+    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(XMAS_NOVEL_BUZZ[lv]);
+  } catch (e) {}
 };
 const XMAS_NOVEL_FACES = Object.freeze(['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited']);
 const xmasNovelFigureSrc = (who, e) => {
@@ -127825,20 +129000,41 @@ const XmasNovelFigure = props => {
   const {
     row
   } = props;
-  const who = !row ? '' : row.t === 'band' ? 'boss' : row.n === '？？？' ? xmasNovelIsLaugh(row) ? 'boss' : 'shadow' : row.w || '';
+  const who = !row ? '' : row.t === 'band' ? 'boss' : row.n === '？？？' ? 'boss' : row.w || '';
   return React.createElement(XmasNovelFigureArt, _extends({}, props, {
     who: who,
     frame: xmasNovelFrameOf(row, props.scene),
     key: `${who}-${row && row.e || ''}`
   }));
 };
+const XMAS_NOVEL_INTRO_ROLE = Object.freeze({
+  ichika: 'ペンションのオーナー',
+  mochimaru: 'ペンションの世話役',
+  kuroba: '招かれざる客',
+  shirase: '招かれざる客'
+});
+const XmasNovelIntro = ({
+  c,
+  fast
+}) => c ? React.createElement("div", {
+  className: `mh-nv-intro mh-nv-serif${fast ? ' fast' : ''}`,
+  "data-xmas-novel-intro": c.id
+}, XMAS_NOVEL_INTRO_ROLE[c.id] && React.createElement("span", {
+  className: "role"
+}, XMAS_NOVEL_INTRO_ROLE[c.id]), React.createElement("span", {
+  className: "nm"
+}, c.name), React.createElement("span", {
+  className: "bar"
+})) : null;
 const XmasNovelFigureArt = ({
   row,
   dim = false,
   who = '',
-  frame = 'normal'
+  frame = 'normal',
+  enter = null
 }) => {
   const [broken, setBroken] = useState(0);
+  const ek = enter && enter.kind ? ` enter-${enter.kind}${enter.fast ? ' fast' : ''}` : '';
   const ref = useXmasNovelPlace(who, frame, `${row ? row.id : ''}-${broken}`);
   if (row && row.t === 'band' && xmasNovelIsSilhouette(row)) return React.createElement("div", {
     ref: ref,
@@ -127852,10 +129048,7 @@ const XmasNovelFigureArt = ({
     ref: ref,
     className: `mh-nv-fig${dim ? ' dim' : ''}${laugh ? ' laugh' : ''}`,
     key: key
-  }, laugh ? React.createElement(XmasNovelBossShadow, null) : React.createElement(XmasNovelShadow, {
-    tone: "#1c2240",
-    label: "？？？"
-  })) : null;
+  }, React.createElement(XmasNovelBossShadow, null)) : null;
   if (row.w === 'watson') return React.createElement("div", {
     ref: ref,
     className: "mh-nv-fig",
@@ -127863,6 +129056,10 @@ const XmasNovelFigureArt = ({
   }, React.createElement(XmasNovelLaptop, null));
   const c = xmasNovelCastOf(row.w);
   const fig = xmasNovelFigureSrc(row.w, row.e);
+  const intro = enter && enter.kind === 'first' && enter.intro ? React.createElement(XmasNovelIntro, {
+    c: c,
+    fast: enter.fast
+  }) : null;
   if (!fig || broken >= 2) return React.createElement("div", {
     ref: ref,
     className: `mh-nv-fig${dim ? ' dim' : ''}`,
@@ -127870,18 +129067,19 @@ const XmasNovelFigureArt = ({
   }, React.createElement(XmasNovelShadow, {
     tone: c && c.tone || '#2a3350',
     label: c ? c.name : ''
-  }));
+  }), intro);
   const src = broken === 1 && fig.fallback ? fig.fallback : fig.src;
   return React.createElement("div", {
     ref: ref,
-    className: `mh-nv-fig${fig.face ? ' face' : ''}${dim ? ' dim' : ''}`,
-    key: key
+    className: `mh-nv-fig${fig.face ? ' face' : ''}${dim ? ' dim' : ''}${ek}`,
+    key: key,
+    "data-xmas-novel-enter": enter && enter.kind ? enter.kind : undefined
   }, React.createElement("img", {
     src: src,
     alt: c ? c.name : '',
     draggable: false,
     onError: () => setBroken(b => b === 0 && fig.fallback ? 1 : 2)
-  }));
+  }), intro);
 };
 const xmasNovelFaceOf = id => {
   const c = xmasNovelCastOf(id);
@@ -128446,10 +129644,11 @@ const XmasNovelBloodCross = () => React.createElement("svg", {
 const XmasNovelCast = ({
   states = {},
   changed = [],
-  onPick = null
+  onPick = null,
+  big = false
 }) => React.createElement("div", {
-  className: "mh-nv-cast"
-}, XMAS_NOVEL_CAST.map(c => {
+  className: `mh-nv-cast${big ? ' big' : ''}`
+}, XMAS_NOVEL_CAST.map((c, i) => {
   const st = states[c.id] || '';
   const fresh = changed.includes(c.id);
   const face = xmasNovelFaceOf(c.id);
@@ -128489,7 +129688,10 @@ const XmasNovelCast = ({
     "data-xmas-novel-cast": c.id,
     "data-st": st || undefined,
     "data-fresh": fresh ? '' : undefined,
-    className: "mh-nv-person"
+    className: "mh-nv-person",
+    style: {
+      '--i': i
+    }
   }, inner);
 }));
 const xmasNovelPanelStates = (panel, row) => {
@@ -128560,14 +129762,202 @@ const XMAS_NOVEL_SE_SEQ = Object.freeze({
   tick: {
     gap: 520,
     hold: 300,
-    play: ['trainingDice']
+    play: [['nvTick', true]]
   },
   letter: {
     gap: 0,
     hold: 1500,
-    play: ['trainingBad', 'trainingFail']
+    play: ['nvDread']
+  },
+  knock: {
+    gap: 460,
+    hold: 300,
+    play: ['nvThud']
+  },
+  thud: {
+    gap: 420,
+    hold: 250,
+    play: ['nvThud']
+  },
+  creak: {
+    gap: 0,
+    hold: 800,
+    play: ['nvCreak']
+  },
+  creakGlass: {
+    gap: 0,
+    hold: 1200,
+    play: ['nvCreak', ['nvGlass', undefined, 650]]
+  },
+  glass: {
+    gap: 0,
+    hold: 500,
+    play: ['nvGlass']
+  },
+  windGlass: {
+    gap: 0,
+    hold: 1500,
+    play: ['nvWind', ['nvGlass', undefined, 500], ['nvGlass', undefined, 1100]]
+  },
+  slamLock: {
+    gap: 0,
+    hold: 700,
+    play: ['nvThud', ['nvTick', true, 380], ['nvTick', false, 470]]
+  },
+  lock: {
+    gap: 0,
+    hold: 400,
+    play: [['nvTick', true], ['nvTick', false, 90]]
+  },
+  rustle: {
+    gap: 0,
+    hold: 400,
+    play: ['nvRustle']
+  },
+  dread: {
+    gap: 0,
+    hold: 1500,
+    play: ['nvDread']
+  },
+  lightsOut: {
+    gap: 0,
+    hold: 1500,
+    play: ['nvThud', ['nvDread', undefined, 120]]
+  },
+  musicbox: {
+    gap: 0,
+    hold: 1800,
+    play: ['nvMusicBox']
+  },
+  clap: {
+    gap: 0,
+    hold: 1200,
+    play: ['nvRustle', ['nvRustle', undefined, 650]]
+  },
+  fire: {
+    gap: 0,
+    hold: 1500,
+    play: ['nvFire']
+  },
+  wind: {
+    gap: 0,
+    hold: 2500,
+    play: ['nvWind']
+  },
+  steps: {
+    gap: 0,
+    hold: 1500,
+    play: ['nvStep']
+  },
+  run: {
+    gap: 0,
+    hold: 1300,
+    play: ['nvRun']
+  },
+  hit: {
+    gap: 0,
+    hold: 500,
+    play: ['nvHit']
+  },
+  hitFall: {
+    gap: 0,
+    hold: 1200,
+    play: ['nvHit', ['nvFall', undefined, 420]]
+  },
+  fall: {
+    gap: 0,
+    hold: 1000,
+    play: ['nvFall']
+  },
+  scream: {
+    gap: 0,
+    hold: 1500,
+    play: ['nvGasp', ['nvDread', undefined, 260]]
+  },
+  door: {
+    gap: 0,
+    hold: 900,
+    play: ['nvDoor']
+  },
+  doorGust: {
+    gap: 0,
+    hold: 1500,
+    play: ['nvDoor', ['nvGust', undefined, 200]]
+  },
+  gust: {
+    gap: 0,
+    hold: 1500,
+    play: ['nvGust']
+  },
+  glassKnock: {
+    gap: 380,
+    hold: 300,
+    play: ['nvGlass']
+  },
+  winding: {
+    gap: 330,
+    hold: 250,
+    play: [['nvTick', true], ['nvTick', false, 120]]
   }
 });
+const XMAS_NOVEL_SE_ROW = Object.freeze({
+  '2-L-12': ['knock', 2],
+  '2-M-15': ['windGlass'],
+  '2-5-2': ['doorGust'],
+  '2-5-6b': ['gust'],
+  '4-4-1': ['winding', 3],
+  '4-M-16': ['steps'],
+  '5-4-1': ['knock', 2],
+  '5-X-4a': ['run'],
+  '5-X-4s': ['run'],
+  '6-X-6': ['run'],
+  '2-Y-7': ['steps'],
+  '2-Y-10': ['hitFall'],
+  '2-Y-11': ['fall'],
+  '6-7-4': ['doorGust'],
+  '7-P1-8': ['doorGust'],
+  '9-1-2': ['winding', 2],
+  '9-1-5': ['doorGust'],
+  '6-X-1a': ['doorGust'],
+  '6-X-1s': ['doorGust'],
+  '10-3-9': ['fall'],
+  'M5-2': ['steps'],
+  'B-13': ['fall'],
+  'G-3': ['winding', 3],
+  'N-3': ['winding', 2],
+  '1-O-19': ['winding', 2],
+  '12-2-9': ['lock'],
+  '12-3-6': ['knock', 3],
+  '12-5-3': ['glassKnock', 3]
+});
+const xmasNovelSeKindOf = (kind, row) => {
+  if (kind === 'bell' || kind === 'tick' || kind === 'letter') return kind;
+  if (kind === 'music') return 'musicbox';
+  if (kind === 'clap') return 'clap';
+  const x = String(row && row.x || '');
+  if (/声|悲鳴|叫び|きゃ|うわ|っ！/.test(x)) return 'scream';
+  if (/ピー/.test(x)) return 'dread';
+  if (/ブツン|停電/.test(x)) return 'lightsOut';
+  if (/(ギィ|ギシ)[\s\S]*(ガシャン|割れ)/.test(x)) return 'creakGlass';
+  if (/吹雪[\s\S]*ガラス|ガラス[\s\S]*吹雪/.test(x)) return 'windGlass';
+  if (/ギィ|ギシ|きしむ|開く音/.test(x)) return 'creak';
+  if (/ガシャン|ガラス|カシャ|割れ/.test(x)) return 'glass';
+  if (/バタン[\s\S]*(カチャリ|鍵)/.test(x)) return 'slamLock';
+  if (/カチリ|カチャリ|留め金|鍵の音/.test(x)) return 'lock';
+  if (/封|カサ|プシュッ/.test(x)) return 'rustle';
+  if (/叩く|打ちつける|ドン、ドン|コン、コン/.test(x)) return 'knock';
+  if (/ガタッ[\s\S]*ゴッ/.test(x)) return 'hitFall';
+  if (/ドサッ/.test(x)) return 'fall';
+  if (/^ゴッ|ゴッ[(（]|鈍い音/.test(x)) return 'hit';
+  if (/ドサッ|ゴッ|ゴトン|ガタ|重い|ドン/.test(x)) return 'thud';
+  return kind === 'impact' ? 'impact' : 'thud';
+};
+const xmasNovelSeTimesOf = (kind, row, times) => {
+  if (Number.isFinite(times)) return times;
+  if (kind !== 'knock' && kind !== 'thud') return 1;
+  const m = String(row && row.x || '').match(/ドン|コン/g);
+  return kind === 'knock' && m ? Math.min(3, m.length) : 1;
+};
 let xmasNovelSeTimers = [];
 let xmasNovelSeLast = {
   kind: '',
@@ -128577,6 +129967,14 @@ const xmasNovelSeStop = () => {
   xmasNovelSeTimers.forEach(t => clearTimeout(t));
   xmasNovelSeTimers = [];
 };
+const xmasNovelSeFn = name => {
+  try {
+    const fn = (Audio_.fgSe || Audio_.se)[name];
+    return typeof fn === 'function' ? fn : null;
+  } catch (e) {
+    return null;
+  }
+};
 const xmasNovelSeHit = kind => {
   try {
     if (typeof Audio_ === 'undefined' || !Audio_ || !Audio_.se) return;
@@ -128585,122 +129983,149 @@ const xmasNovelSeHit = kind => {
       kind,
       at: Date.now()
     };
-    seq.play.forEach(name => {
-      const fn = (Audio_.fgSe || Audio_.se)[name];
-      if (typeof fn === 'function') fn();
+    seq.play.forEach(item => {
+      const [name, arg, delay] = Array.isArray(item) ? item : [item];
+      const fn = xmasNovelSeFn(name);
+      if (!fn) return;
+      if (delay > 0) xmasNovelSeTimers.push(setTimeout(() => fn(arg), delay));else fn(arg);
     });
   } catch (e) {}
 };
-const xmasNovelRowSe = (kind, times) => {
+let xmasNovelSeQuiet = false;
+const xmasNovelRowSe = (kindIn, times, row) => {
   xmasNovelSeStop();
+  if (xmasNovelSeQuiet) return;
+  const kind = xmasNovelSeKindOf(kindIn, row);
   const seq = XMAS_NOVEL_SE_SEQ[kind];
   if (!seq) {
     xmasNovelSe(kind);
     return;
   }
-  const n = Math.max(1, Math.min(3, Number.isFinite(times) ? times : 1));
+  const n = Math.max(1, Math.min(3, xmasNovelSeTimesOf(kind, row, times)));
   const wait = xmasNovelSeLast.kind === kind ? Math.max(0, seq.hold - (Date.now() - xmasNovelSeLast.at)) : 0;
   for (let i = 0; i < n; i += 1) {
     const at = wait + i * seq.gap;
     if (at <= 0) xmasNovelSeHit(kind);else xmasNovelSeTimers.push(setTimeout(() => xmasNovelSeHit(kind), at));
   }
 };
+const XMAS_NOVEL_AMBIENT_SCENE = Object.freeze({
+  'C2-M': 'wind',
+  'C12-2': 'wind',
+  'C2-L': 'clock',
+  'C1-6': 'clock'
+});
+const xmasNovelAmbientOf = (scene, bgName) => {
+  if (!scene || scene.outside) return 'none';
+  if (Object.prototype.hasOwnProperty.call(XMAS_NOVEL_AMBIENT_SCENE, scene.id)) return XMAS_NOVEL_AMBIENT_SCENE[scene.id];
+  const bg = String(bgName || scene.bg || '');
+  if (!bg || /助手たち|monhero_/.test(bg)) return 'none';
+  if (/吹雪/.test(bg)) return 'blizzard';
+  if (/雪原|雪の山道|崖/.test(bg)) return 'wind';
+  if (/暖炉/.test(bg)) return 'fire';
+  if (/柱時計|ホール/.test(bg)) return 'clock';
+  return 'room';
+};
+const xmasNovelSetAmbient = kind => {
+  try {
+    if (typeof Audio_ !== 'undefined' && Audio_ && typeof Audio_.nvAmbient === 'function') void Audio_.nvAmbient(kind || 'none');
+  } catch (e) {}
+};
 const XMAS_NOVEL_BGM_SCENE = Object.freeze({
   'OUT-0-1': 'original_profile',
-  'OUT-0-2': 'melo_dullahan_clockwork',
+  'OUT-0-2': 'silence',
   'C0-1': 'original_profile',
   'C0-2': 'original_profile',
-  'OUT-1': 'melo_dullahan_clockwork',
+  'OUT-1': 'silence',
   'C1-1': 'original_profile',
   'C1-2': 'original_profile',
-  'C1-3': 'melo_dullahan_clockwork',
-  'C1-4': 'melo_dullahan_clockwork',
+  'C1-3': 'silence',
+  'C1-4': 'silence',
   'C1-5': 'close_to_your_heart_alt',
-  'C1-6': 'melo_dullahan_steel_ghost',
+  'C1-6': 'silence',
   'C1-M': 'silence',
-  'C2-1': 'melo_dullahan_clockwork',
+  'C2-1': 'silence',
   'C2-L': 'silence',
-  'C2-M': 'makutsu_no_senritsu',
+  'C2-M': 'silence',
   'C2-2': 'original_profile',
-  'C2-3': 'melo_dullahan_steel_ghost',
-  'C2-4': 'melo_dullahan_steel_ghost_alt',
-  'C2-5': 'original_dullahan',
+  'C2-3': 'silence',
+  'C2-4': 'silence',
+  'C2-5': 'silence',
   'C3-1': 'silence',
-  'C3-2': 'melo_dullahan_clockwork_alt',
-  'C3-3': 'melo_dullahan_clockwork',
-  'C3-4': 'melo_dullahan_clockwork_alt',
+  'C3-2': 'silence',
+  'C3-3': 'silence',
+  'C3-4': 'silence',
   'C3-5': 'melo_erfolg_piano',
   'C3-M': 'melo_erfolg_piano',
-  'C4-1': 'makutsu_no_senritsu',
+  'C4-1': 'silence',
   'C4-2': 'silence',
-  'C4-3': 'melo_dullahan_clockwork_alt',
-  'C4-4': 'melo_dullahan_clockwork',
-  'C4-5': 'melo_dullahan_steel_ghost',
+  'C4-3': 'silence',
+  'C4-4': 'silence',
+  'C4-5': 'silence',
   'C4-M': 'silence',
   'C5-1': 'melo_erfolg_piano',
-  'C5-2': 'melo_dullahan_steel_ghost_alt',
-  'C5-3': 'melo_dullahan_steel_ghost',
-  'C5-4': 'melo_dullahan_steel_ghost',
-  'C5-5': 'makutsu_no_senritsu',
-  'C5-M': 'melo_dullahan_clockwork',
-  'C6-1': 'melo_dullahan_clockwork_alt',
-  'C6-2': 'melo_dullahan_steel_ghost',
-  'C6-3': 'melo_dullahan_clockwork_alt',
-  'C6-4': 'melo_dullahan_steel_ghost_alt',
-  'C6-5': 'melo_dullahan_steel_ghost',
-  'C6-6': 'melo_dullahan_clockwork_alt',
-  'C6-7': 'original_dullahan',
+  'C5-2': 'silence',
+  'C5-3': 'silence',
+  'C5-4': 'silence',
+  'C5-5': 'silence',
+  'C5-M': 'silence',
+  'C6-1': 'silence',
+  'C6-2': 'silence',
+  'C6-3': 'silence',
+  'C6-4': 'silence',
+  'C6-5': 'silence',
+  'C6-6': 'silence',
+  'C6-7': 'silence',
   'C6-8': 'melo_erfolg_piano',
-  'C6-9': 'melo_dullahan_steel_ghost',
+  'C6-9': 'silence',
   'C6-M': 'melo_erfolg_piano',
-  'C7-1': 'melo_dullahan_clockwork_alt',
-  'C7-2': 'melo_dullahan_steel_ghost_alt',
+  'C7-1': 'silence',
+  'C7-2': 'silence',
   'C7-A': 'melo_erfolg_piano',
-  'C7-B': 'melo_dullahan_clockwork',
-  'C7-P1': 'original_dullahan',
+  'C7-B': 'silence',
+  'C7-P1': 'silence',
   'C7-P2': 'melo_erfolg_piano',
-  'C7-P3': 'melo_dullahan_clockwork',
+  'C7-P3': 'silence',
   'C7-4a': 'melo_erfolg_piano',
-  'C7-4b': 'melo_dullahan_steel_ghost',
+  'C7-4b': 'silence',
   'C7-5a': 'melo_erfolg_piano',
-  'C7-5b': 'melo_dullahan_steel_ghost',
-  'C7-W': 'melo_dullahan_clockwork_alt',
-  'C8-1': 'melo_dullahan_steel_ghost_alt',
-  'C8-2': 'makutsu_no_senritsu',
+  'C7-5b': 'silence',
+  'C7-W': 'silence',
+  'C8-1': 'silence',
+  'C8-2': 'silence',
   'C8-3': 'melo_erfolg_piano',
   'C9-1': 'silence',
   'C9-2': 'close_to_your_heart_alt',
-  'C10-1': 'melo_dullahan_steel_ghost',
-  'C10-2': 'makutsu_no_senritsu',
-  'C10-3': 'melo_dullahan_steel_ghost',
-  'C10-4': 'melo_dullahan_steel_ghost_alt',
-  'C11-1': 'melo_dullahan_steel_ghost_alt',
+  'C10-1': 'silence',
+  'C10-2': 'silence',
+  'C10-3': 'silence',
+  'C10-4': 'silence',
+  'C11-1': 'silence',
   'C11-N': 'melo_erfolg_piano',
   'C11-A': 'melo_erfolg_piano',
-  'C11-B': 'melo_dullahan_clockwork',
-  'C2-X': 'melo_dullahan_steel_ghost',
+  'C11-B': 'silence',
+  'C2-X': 'silence',
   'END-X1': 'original_game_over',
-  'C5-X': 'melo_dullahan_steel_ghost',
+  'C5-X': 'silence',
   'END-X2': 'original_game_over',
-  'C6-X': 'melo_dullahan_steel_ghost',
+  'C6-X': 'silence',
   'END-X3': 'original_game_over',
-  'C2-Y': 'melo_dullahan_steel_ghost',
+  'C2-Y': 'silence',
   'END-X4': 'original_game_over',
-  'C10-X': 'melo_dullahan_steel_ghost',
+  'C10-X': 'silence',
   'END-X5': 'original_game_over',
   'END-M1': 'original_game_over',
-  'END-M2': 'melo_dullahan_steel_ghost',
-  'END-M3': 'melo_dullahan_steel_ghost',
+  'END-M2': 'silence',
+  'END-M3': 'silence',
   'END-M4': 'original_game_over',
-  'END-M5': 'melo_dullahan_steel_ghost',
+  'END-M5': 'silence',
   'END-G': 'melo_erfolg_piano',
   'OUT-G': 'close_to_your_heart_alt',
   'END-N': 'melo_erfolg_piano',
   'OUT-N': 'melo_erfolg_piano',
-  'END-A': 'melo_dullahan_clockwork',
-  'OUT-A': 'melo_dullahan_clockwork',
-  'END-B': 'melo_dullahan_steel_ghost',
-  'OUT-B': 'melo_dullahan_steel_ghost',
+  'END-A': 'silence',
+  'OUT-A': 'silence',
+  'END-B': 'silence',
+  'OUT-B': 'silence',
   'C1-O': 'original_profile',
   'END-O': 'original_profile',
   'OUT-O': 'original_profile',
@@ -128708,9 +130133,9 @@ const XMAS_NOVEL_BGM_SCENE = Object.freeze({
   'OUT-O2': 'close_to_your_heart_alt',
   'C12-1': 'close_to_your_heart_alt',
   'C12-2': 'melo_erfolg_piano',
-  'C12-3': 'original_dullahan',
-  'C12-4': 'melo_dullahan_clockwork',
-  'C12-5': 'melo_dullahan_steel_ghost',
+  'C12-3': 'silence',
+  'C12-4': 'silence',
+  'C12-5': 'silence',
   'C12-6': 'silence',
   'C12-7': 'melo_erfolg_piano'
 });
@@ -128718,8 +130143,8 @@ const XMAS_NOVEL_BGM_SHIFT = Object.freeze({
   'C2-3': [['2-3-7', 'silence']],
   'C5-4': [['5-4-5', 'silence']],
   'C6-5': [['6-5-3', 'silence']],
-  'C7-1': [['7-1-3a', 'melo_dullahan_steel_ghost_alt']],
-  'C7-W': [['7-W-14', 'melo_dullahan_steel_ghost_alt']],
+  'C7-1': [['7-1-3a', 'silence']],
+  'C7-W': [['7-W-14', 'silence']],
   'C10-1': [['10-1-5', 'silence']],
   'C10-2': [['10-2-7', 'silence']],
   'C10-3': [['10-3-7', 'silence']],
@@ -129042,6 +130467,7 @@ const XMAS_NOVEL_ICONS = {
   skip: '<polygon points="4 5 12 12 4 19 4 5"/><polygon points="12 5 20 12 12 19 12 5"/>',
   log: '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>',
   book: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><circle cx="12" cy="10" r="3"/><line x1="14.2" y1="12.2" x2="16.5" y2="14.5"/>',
+  map: '<polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21 3 6"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/>',
   menu: '<line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/>'
 };
 const xmasNovelLoad = async (script = XMAS_NOVEL_SCRIPT) => {
@@ -129054,6 +130480,21 @@ const xmasNovelLoad = async (script = XMAS_NOVEL_SCRIPT) => {
 const xmasNovelStore = async (save, script = XMAS_NOVEL_SCRIPT) => {
   try {
     await storeSet(XMAS_NOVEL_STORAGE_KEY, xmasNovelNormalize(save, script), false);
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
+const xmasNovelRouteLoad = async (script = XMAS_NOVEL_SCRIPT) => {
+  try {
+    return xmasNovelRouteNormalize(await storeGet(XMAS_NOVEL_ROUTE_KEY, null, false), script);
+  } catch (e) {
+    return xmasNovelRouteNormalize(null, script);
+  }
+};
+const xmasNovelRouteStore = async (route, script = XMAS_NOVEL_SCRIPT) => {
+  try {
+    await storeSet(XMAS_NOVEL_ROUTE_KEY, xmasNovelRouteNormalize(route, script), false);
     return true;
   } catch (e) {
     return false;
@@ -129100,7 +130541,6 @@ const XmasNovelScreen = ({
   const [reply, setReply] = useState(null);
   const [shown, setShown] = useState(0);
   const [fx, setFx] = useState(null);
-  const [shake, setShake] = useState(0);
   const [curtain, setCurtain] = useState(null);
   const [transit, setTransit] = useState(null);
   const replayRef = useRef(false);
@@ -129109,16 +130549,71 @@ const XmasNovelScreen = ({
   const card = cards[0] || null;
   const setCard = c => setCards(list => c ? [...list, c] : []);
   const [sheet, setSheet] = useState(null);
+  useEffect(() => {
+    if (!sheet || typeof sheet !== 'object' || !sheet.q) return undefined;
+    let high = true;
+    const tick = () => {
+      const fn = xmasNovelSeFn('nvTick');
+      if (fn) fn(high);
+      high = !high;
+    };
+    const id = setInterval(tick, 640);
+    const first = setTimeout(tick, 250);
+    return () => {
+      clearInterval(id);
+      clearTimeout(first);
+    };
+  }, [sheet]);
   const [got, setGot] = useState(null);
   const [skip, setSkip] = useState(false);
   const [log, setLog] = useState([]);
   const [confirmNew, setConfirmNew] = useState(false);
   const saveRef = useRef(null);
+  const [route, setRoute] = useState(null);
+  const routeRef = useRef(null);
   const lastBgm = useRef(null);
   const lastChapter = useRef(null);
   const prevBgm = useRef(null);
   const storeTimer = useRef(null);
   const unreadRef = useRef(false);
+  const [sw, setSw] = useState(null);
+  const [figEnter, setFigEnter] = useState(null);
+  const lastBgRef = useRef(null);
+  const pendingSwRef = useRef(null);
+  const seenWhoRef = useRef(new Set());
+  const lastWhoRef = useRef('');
+  const [reveal, setReveal] = useState(null);
+  const pendingFxRef = useRef(null);
+  const lastBodyRef = useRef('');
+  const fireFx = p => {
+    if (!p) return;
+    if (p.bleedAfter) setTimeout(() => setFx({
+      kind: 'bleed',
+      n: Date.now()
+    }), 380);
+    setFx(p.vis ? {
+      kind: p.vis,
+      n: Date.now()
+    } : null);
+    if (p.shake) xmasNovelQuake(stageRef.current, 2);
+  };
+  const stageRef = useRef(null);
+  const pendingQuakeRef = useRef(0);
+  const [panelIntro, setPanelIntro] = useState(null);
+  const [titleOk, setTitleOk] = useState(false);
+  const fxFast = unread => !unread || !!(saveRef.current && saveRef.current.auto);
+  const fireSw = v => {
+    if (!v) {
+      setSw(null);
+      return;
+    }
+    const n = Date.now();
+    setSw({
+      ...v,
+      n
+    });
+    setTimeout(() => setSw(x => x && x.n === n ? null : x), v.fast ? 1500 : 3400);
+  };
   useEffect(() => {
     let alive = true;
     try {
@@ -129127,17 +130622,67 @@ const XmasNovelScreen = ({
       prevBgm.current = null;
     }
     xmasNovelLoad(S).then(s => {
-      if (alive) {
-        saveRef.current = s;
-        setSave(s);
-      }
+      if (!alive) return;
+      saveRef.current = s;
+      setSave(s);
+      xmasNovelRouteLoad(S).then(r => {
+        if (!alive) return;
+        const seeded = r.seeded === 1 ? r : xmasNovelRouteSeed(S, s, r);
+        routeRef.current = seeded;
+        setRoute(seeded);
+        if (seeded !== r) void xmasNovelRouteStore(seeded, S);
+      });
     });
-    xmasNovelBgm('melo_dullahan_clockwork');
+    xmasNovelBgm('silence');
     return () => {
       alive = false;
       xmasNovelSeStop();
       if (storeTimer.current) clearTimeout(storeTimer.current);
     };
+  }, []);
+  const putRoute = next => {
+    if (!next) return;
+    routeRef.current = next;
+    setRoute(next);
+    void xmasNovelRouteStore(next, S);
+  };
+  const redoFrom = cur => {
+    const r = routeRef.current || xmasNovelRouteNormalize(null, S);
+    const now = saveRef.current && saveRef.current.cur;
+    putRoute({
+      ...r,
+      back: r.back || now || null
+    });
+    setSheet(null);
+    start(cur);
+  };
+  const backFromRedo = () => {
+    const r = routeRef.current;
+    if (!r || !r.back) return;
+    const b = r.back;
+    putRoute({
+      ...r,
+      back: null
+    });
+    setSheet(null);
+    start(b);
+  };
+  useEffect(() => {
+    xmasNovelSeQuiet = !!skip;
+    if (skip) xmasNovelSeStop();
+  }, [skip]);
+  const ambSceneId = st && st.scene ? st.scene.id : '';
+  const ambBg = st && st.scene ? xmasNovelSceneBgName(st.scene, st.cur ? st.cur.idx : 0) : '';
+  const ambWait = !!(sheet && typeof sheet === 'object' && sheet.q);
+  useEffect(() => {
+    let kind = mode === 'read' ? xmasNovelAmbientOf(st && st.scene, ambBg) : mode === 'title' ? 'clock' : 'none';
+    if (ambWait && kind === 'clock') kind = 'none';
+    const id = setTimeout(() => xmasNovelSetAmbient(kind), 350);
+    return () => clearTimeout(id);
+  }, [mode, ambSceneId, ambBg, ambWait]);
+  useEffect(() => () => {
+    xmasNovelSeQuiet = false;
+    xmasNovelSetAmbient('none');
   }, []);
   const persist = (next, now = false) => {
     saveRef.current = next;
@@ -129180,18 +130725,27 @@ const XmasNovelScreen = ({
       ...s,
       read: [...s.read, r.k]
     };
-    if (r.t === 'band' && r.se) xmasNovelRowSe(r.se, r.seN);else xmasNovelSeStop();
+    if (r.t === 'band' && r.se) xmasNovelRowSe(r.se, r.seN, r);else xmasNovelSeStop();
+    if (!opts.quiet && r.t === 'band' && !r.se && XMAS_NOVEL_SE_ROW[r.id]) xmasNovelRowSe(XMAS_NOVEL_SE_ROW[r.id][0], XMAS_NOVEL_SE_ROW[r.id][1], r);else if (!opts.quiet && !xmasNovelSeQuiet && r.t === 'band' && !r.se && Array.isArray(r.fx) && r.fx.includes('fallen')) xmasNovelSeHit('dread');
+    pendingQuakeRef.current = 0;
+    if (XMAS_NOVEL_SHAKE[r.id] && !skip) {
+      if (opts.held) pendingQuakeRef.current = XMAS_NOVEL_SHAKE[r.id];else xmasNovelQuake(stageRef.current, XMAS_NOVEL_SHAKE[r.id]);
+    }
     if (r.t === 'band' && Array.isArray(r.fx)) {
       const vis = r.fx.find(f => ['dark', 'white', 'red', 'light', 'bleed'].includes(f));
-      if (r.fx.includes('bleed') && r.fx.includes('red')) setTimeout(() => setFx({
-        kind: 'bleed',
-        n: Date.now()
-      }), 380);
-      setFx(vis ? {
-        kind: vis,
-        n: Date.now()
-      } : null);
-      if (r.fx.includes('shake')) setShake(n => n + 1);
+      const p = {
+        id: r.id,
+        vis,
+        bleedAfter: r.fx.includes('bleed') && r.fx.includes('red'),
+        shake: r.fx.includes('shake')
+      };
+      if (xmasNovelIsSeRow(r) || vis === 'dark' || skip || !vis && !p.shake) {
+        pendingFxRef.current = null;
+        fireFx(p);
+      } else {
+        pendingFxRef.current = p;
+        setFx(null);
+      }
       if (r.fx.includes('curtainDown')) setCurtain('down');
       if (r.fx.includes('curtainUp')) {
         setCurtain('up');
@@ -129205,11 +130759,30 @@ const XmasNovelScreen = ({
         setShown(99999);
         return s;
       }
-    } else setFx(f => f && f.kind === 'dark' ? null : f);
+    } else {
+      pendingFxRef.current = null;
+      setFx(f => f && f.kind === 'dark' ? null : f);
+    }
+    {
+      const bodyKey = r.t === 'band' ? r.body || (Array.isArray(r.fx) && r.fx.includes('fallen') ? `fallen-${r.id}` : '') : '';
+      if (bodyKey && bodyKey !== lastBodyRef.current) setReveal({
+        id: r.id,
+        stage: skip ? 'show' : 'dark',
+        fast: !unreadRef.current,
+        n: Date.now()
+      });else setReveal(null);
+      if (bodyKey) lastBodyRef.current = bodyKey;
+    }
     if (opts.quiet && r.bgm && (XMAS_NOVEL_VOCAL_BGM[r.bgm] || r.bgm) !== lastBgm.current) {
       lastBgm.current = XMAS_NOVEL_VOCAL_BGM[r.bgm] || r.bgm;
       xmasNovelBgm(r.bgm);
     }
+    if (r.t === 'panel' && !r.stamp && /登場人物/.test(String(r.x || ''))) setPanelIntro({
+      id: r.id,
+      fast: !unreadRef.current || !!(saveRef.current && saveRef.current.auto),
+      done: !!skip,
+      at: Date.now()
+    });else if (r.t !== 'panel') setPanelIntro(null);
     if (r.t === 'clue') {
       setGot({
         n: r.clue,
@@ -129219,6 +130792,19 @@ const XmasNovelScreen = ({
       xmasNovelSe('clue');
     }
     if (r.t === 'line' && r.n === '？？？' && xmasNovelIsLaugh(r)) xmasNovelSe('laugh');
+    if (r.t === 'line') {
+      const who = r.n === '？？？' ? '？？？' : r.w || '';
+      const first = !!(who && who !== '？？？' && who !== 'watson' && !seenWhoRef.current.has(who) && xmasNovelFirstLines(S)[who] === r.id);
+      if (who) seenWhoRef.current.add(who);
+      const kind = first ? 'first' : who !== lastWhoRef.current ? 'swap' : 'face';
+      lastWhoRef.current = who;
+      setFigEnter(skip ? null : {
+        kind,
+        fast: fxFast(unreadRef.current),
+        intro: first,
+        n: Date.now()
+      });
+    } else if (r.t === 'band') lastWhoRef.current = '';
     if (r.t === 'line' || r.t === 'band') setLog(l => [...l.slice(-299), {
       who: r.t === 'line' ? xmasNovelNameOf(r) : '',
       text: xmasNovelFill(r.x, playerName)
@@ -129278,7 +130864,12 @@ const XmasNovelScreen = ({
     }
     const scene = next.scene;
     let chapterCard = false;
-    if (scene && lastSceneRef.current && !!lastSceneRef.current.outside !== !!scene.outside) {
+    if (lastSceneRef.current !== (scene || null)) {
+      lastBodyRef.current = '';
+      setTitleOk(xmasNovelSceneDone(scene, s.read));
+    }
+    const transitNow = !!(scene && lastSceneRef.current && !!lastSceneRef.current.outside !== !!scene.outside);
+    if (transitNow) {
       setTransit({
         dir: scene.outside ? 'out' : 'in',
         n: Date.now()
@@ -129321,12 +130912,35 @@ const XmasNovelScreen = ({
           setCard({
             kind: 'chapter',
             label: xmasNovelChapterLabel(ch),
-            title: ch.title
+            title: xmasNovelChapterTitle(S, ch, s.read)
           });
           setSkip(false);
           chapterCard = true;
         }
       }
+    }
+    {
+      const bgNow = xmasNovelSceneBgName(scene, next.cur ? next.cur.idx : 0);
+      const kind = xmasNovelSwitchKind(lastBgRef.current, bgNow);
+      lastBgRef.current = bgNow;
+      const unread = !!(next.row && next.row.k && !s.read.includes(next.row.k));
+      const bodyRow = !!(next.row && next.row.t === 'band' && (next.row.body || Array.isArray(next.row.fx) && next.row.fx.includes('fallen')));
+      const v = kind && !skip && !bodyRow ? {
+        kind,
+        fast: fxFast(unread),
+        place: scene && !scene.outside ? xmasNovelPlaceLabel(bgNow) : ''
+      } : null;
+      if (chapterCard) {
+        pendingSwRef.current = v ? {
+          ...v,
+          kind: v.kind === 'place' ? 'open' : v.kind
+        } : {
+          kind: 'open',
+          fast: false,
+          place: ''
+        };
+        fireSw(null);
+      } else if (v && !transitNow) fireSw(v);
     }
     let cur = next.cur;
     let panelChanged = [];
@@ -129342,6 +130956,7 @@ const XmasNovelScreen = ({
       cur,
       panelChanged
     };
+    if (next.row.t === 'q' && !replayRef.current && routeRef.current) putRoute(xmasNovelRouteRecord(routeRef.current, S, cur));
     s = arriveRow(next.row, {
       ...s,
       cur
@@ -129364,6 +130979,16 @@ const XmasNovelScreen = ({
     setGot(null);
     setFx(null);
     setSkip(false);
+    lastBgRef.current = null;
+    pendingSwRef.current = null;
+    seenWhoRef.current = new Set();
+    lastWhoRef.current = '';
+    setSw(null);
+    setFigEnter(null);
+    setReveal(null);
+    pendingFxRef.current = null;
+    lastBodyRef.current = '';
+    setPanelIntro(null);
     setMode('read');
     arrive(xmasNovelSettle(S, cur));
   };
@@ -129371,6 +130996,16 @@ const XmasNovelScreen = ({
     if (card) {
       if (card.kind === 'ending') return;
       setCards(list => list.slice(1));
+      if (card.kind === 'chapter' && cards.length === 1 && pendingSwRef.current) {
+        const v = pendingSwRef.current;
+        pendingSwRef.current = null;
+        if (!skip) fireSw(v);
+      }
+      if (cards.length === 1 && pendingQuakeRef.current) {
+        const lv = pendingQuakeRef.current;
+        pendingQuakeRef.current = 0;
+        if (!skip) setTimeout(() => xmasNovelQuake(stageRef.current, lv), 250);
+      }
       if ((card.kind === 'title' || card.kind === 'band') && cards.length === 1) goNext();
       return;
     }
@@ -129380,6 +131015,22 @@ const XmasNovelScreen = ({
     if (sheet || !row) return;
     if (typing) {
       setShown(text.length);
+      if (sw && !sw.fast) setSw(null);
+      return;
+    }
+    if (panelIntro && row && panelIntro.id === row.id && !panelIntro.done && Date.now() - panelIntro.at < (panelIntro.fast ? 900 : 3200)) {
+      setPanelIntro({
+        ...panelIntro,
+        done: true
+      });
+      return;
+    }
+    if (!reply && reveal && row && reveal.id === row.id && reveal.stage === 'dark') {
+      setReveal({
+        ...reveal,
+        stage: 'show'
+      });
+      xmasNovelQuake(stageRef.current, 1);
       return;
     }
     if (got) setGot(null);
@@ -129469,10 +131120,37 @@ const XmasNovelScreen = ({
     const id = setTimeout(() => setShown(n => Math.min(text.length, n + (skip ? 99999 : 2))), skip ? 0 : 38);
     return () => clearTimeout(id);
   }, [typing, shown, text, skip]);
+  const rowKey = row ? row.id : '';
+  const revealDark = !!(reveal && reveal.id === rowKey && reveal.stage === 'dark');
+  useEffect(() => {
+    if (mode !== 'read' || !rowKey || typing) return undefined;
+    if (revealDark) {
+      const id = setTimeout(() => {
+        setReveal(v => v && v.id === rowKey && v.stage === 'dark' ? {
+          ...v,
+          stage: 'show'
+        } : v);
+        if (!skip) xmasNovelQuake(stageRef.current, 1);
+      }, reveal.fast || skip ? 150 : 700);
+      return () => clearTimeout(id);
+    }
+    const p = pendingFxRef.current;
+    if (p && p.id === rowKey) {
+      const id = setTimeout(() => {
+        if (pendingFxRef.current === p) {
+          pendingFxRef.current = null;
+          fireFx(p);
+        }
+      }, reveal && reveal.id === rowKey ? 1300 : 300);
+      return () => clearTimeout(id);
+    }
+    return undefined;
+  }, [mode, rowKey, typing, revealDark]);
   const autoLevel = save ? save.auto : 0;
   useEffect(() => {
     if (mode !== 'read' || !row || sheet || typing) return undefined;
     if (card && card.kind === 'ending') return undefined;
+    if (revealDark && !skip) return undefined;
     if (card && !skip) return undefined;
     if (skip) {
       if (row.t === 'q' && !reply || unreadRef.current && !reply) {
@@ -129690,7 +131368,7 @@ const XmasNovelScreen = ({
         className: "mh-nv-serif mh-nv-gold w-14 shrink-0 text-[14px] font-black"
       }, xmasNovelChapterLabel(c)), React.createElement("span", {
         className: "mh-nv-serif min-w-0 flex-1 truncate text-[15px] font-black"
-      }, snap ? c.title : '？？？'), snap ? React.createElement(ChevronRight, {
+      }, snap ? xmasNovelChapterTitle(S, c, save.read) : '？？？'), snap ? React.createElement(ChevronRight, {
         size: 16,
         className: "text-amber-200"
       }) : React.createElement(Lock, {
@@ -129707,17 +131385,18 @@ const XmasNovelScreen = ({
   const darkNow = fx && fx.kind === 'dark';
   const name = isLine ? xmasNovelNameOf(row) : '';
   const q = sheet && typeof sheet === 'object' ? sheet.q : null;
+  const presentList = q && q.kind === 'present' ? xmasNovelPresentable(q, clues) : clues;
   return React.createElement("div", {
     className: "mh-nv",
     "data-xmas-novel": "read",
     "data-scene": scene ? scene.id : '',
     "data-row": row ? row.id : ''
   }, React.createElement("div", {
-    key: `stage-${shake}`,
-    className: `mh-nv-stage${shake ? ' mh-nv-shake' : ''}`,
+    ref: stageRef,
+    className: "mh-nv-stage",
     onClick: advance
   }, React.createElement("div", {
-    className: "mh-nv-bg",
+    className: `mh-nv-bg${sw ? ` in-${sw.kind}${sw.fast ? ' fast' : ''}` : ''}`,
     key: bgName || (scene ? scene.id : 'bg'),
     "data-xmas-novel-bg": bg.tintKind || '',
     style: bg.img ? {
@@ -129732,18 +131411,31 @@ const XmasNovelScreen = ({
     className: "mh-nv-snow b"
   })), !darkNow && (isLine || isBand && xmasNovelIsSilhouette(row)) && React.createElement(XmasNovelFigure, {
     row: row,
-    scene: scene
-  }), fx && React.createElement("div", {
-    key: fx.n,
-    className: `mh-nv-fx ${fx.kind}`
-  }), isBand && row.body && React.createElement(XmasNovelBody, {
+    scene: scene,
+    enter: isLine ? figEnter : null
+  }), sw && React.createElement("div", {
+    key: `sw-${sw.n}`,
+    className: `mh-nv-sw ${sw.kind}${sw.fast ? ' fast' : ''}`,
+    "data-xmas-novel-switch": sw.kind
+  }), sw && sw.place && React.createElement("div", {
+    key: `place-${sw.n}`,
+    className: `mh-nv-place mh-nv-serif${sw.kind === 'past' ? ' past' : ''}${sw.fast ? ' fast' : ''}`,
+    "data-xmas-novel-place": true
+  }, sw.place), isBand && row.body && !revealDark && React.createElement(XmasNovelBody, {
     key: `body-${row.body}`,
     bg: bg,
     who: xmasNovelBodyWho(row.body, st && st.cur && st.cur.flags),
     scene: scene ? scene.id : '',
     at: st && st.cur && Number.isFinite(st.cur.idx) ? st.cur.idx : 0,
     noBlood: !!row.noBlood
-  }), isBand && !row.body && Array.isArray(row.fx) && row.fx.includes('fallen') && React.createElement(XmasNovelFallen, null), isBand && Array.isArray(row.fx) && row.fx.includes('letter') && React.createElement("div", {
+  }), isBand && !row.body && !revealDark && Array.isArray(row.fx) && row.fx.includes('fallen') && React.createElement(XmasNovelFallen, null), reveal && reveal.id === rowKey && React.createElement("div", {
+    key: `veil-${reveal.n}`,
+    className: `mh-nv-veil ${reveal.stage}${reveal.fast ? ' fast' : ''}`,
+    "data-xmas-novel-veil": reveal.stage
+  }), fx && React.createElement("div", {
+    key: fx.n,
+    className: `mh-nv-fx ${fx.kind}`
+  }), isBand && Array.isArray(row.fx) && row.fx.includes('letter') && React.createElement("div", {
     key: `letter-${row.id}`,
     className: "mh-nv-letter mh-nv-serif",
     "data-xmas-novel-letter": true
@@ -129770,23 +131462,29 @@ const XmasNovelScreen = ({
     "data-st": curtain,
     "data-xmas-novel-curtain": curtain
   }), scene && scene.curtain && curtain === 'down' && !(row && row.t === 'panel') && React.createElement("div", {
-    className: "absolute inset-x-0 top-[14%] z-[5] mx-auto w-[min(94vw,640px)]",
+    className: "mh-nv-panelwrap",
     "data-xmas-novel-lineup": true
-  }, React.createElement(XmasNovelCast, {
-    states: {}
-  })), row && row.t === 'panel' && React.createElement("div", {
-    className: "absolute inset-x-0 top-[12%] z-[5] mx-auto w-[min(94vw,640px)] rounded-2xl p-3",
-    "data-xmas-novel-panel": true,
-    style: {
-      background: 'rgba(4,8,22,.88)',
-      boxShadow: '0 0 0 1px #e8c46a'
-    }
   }, React.createElement("div", {
-    className: "mh-nv-serif mh-nv-gold mb-2 text-center text-[15px] font-black"
-  }, "登場人物"), React.createElement(XmasNovelCast, {
+    className: "mh-nv-panelin"
+  }, React.createElement(XmasNovelCast, {
+    states: {},
+    big: true
+  }))), row && row.t === 'panel' && React.createElement("div", {
+    className: "mh-nv-panelwrap"
+  }, React.createElement("div", {
+    key: `panel-${row.id}`,
+    className: `mh-nv-panelin mh-nv-panelbox${panelIntro && panelIntro.id === row.id ? ` intro${panelIntro.fast ? ' fast' : ''}${panelIntro.done ? ' done' : ''}` : ''}`,
+    "data-xmas-novel-panel": true,
+    "data-xmas-novel-intro-panel": panelIntro && panelIntro.id === row.id ? panelIntro.done ? 'done' : 'play' : undefined
+  }, React.createElement("div", {
+    className: "mh-nv-panelhead mh-nv-serif mh-nv-gold"
+  }, "登場人物"), React.createElement("div", {
+    className: "mh-nv-panelrule"
+  }), React.createElement(XmasNovelCast, {
     states: xmasNovelPanelStates(st && st.cur && st.cur.panel, row),
-    changed: st && st.panelChanged || []
-  })), (isLine || isBand || row && (row.t === 'clue' || row.t === 'panel' || row.t === 'q')) && !(card && card.kind !== 'band') && React.createElement("div", {
+    changed: st && st.panelChanged || [],
+    big: true
+  }))), (isLine || isBand || row && (row.t === 'clue' || row.t === 'panel' || row.t === 'q')) && !(card && card.kind !== 'band') && React.createElement("div", {
     className: "mh-nv-box",
     style: {
       zIndex: 5
@@ -129819,13 +131517,17 @@ const XmasNovelScreen = ({
   }, React.createElement("span", {
     className: "mh-nv-where mh-nv-serif",
     "data-xmas-novel-where": true
-  }, chapter && !chapter.outside ? React.createElement("span", {
-    className: "ch"
-  }, `${xmasNovelChapterLabel(chapter)}${chapter.title ? `　${chapter.title}` : ''}`, React.createElement("span", {
-    className: "sep"
-  }, "\u3000/\u3000")) : null, scene && scene.title && !(scene.ending || chapter && chapter.id === 'END' || /^END-/.test(String(scene.next || ''))) ? React.createElement("span", {
-    className: "sc"
-  }, scene.title) : null), React.createElement("button", {
+  }, (() => {
+    const chTitle = chapter && !chapter.outside ? xmasNovelChapterTitle(S, chapter, save.read) : '';
+    const showScene = !!(titleOk && scene && scene.title && !(scene.ending || chapter && chapter.id === 'END' || /^END-/.test(String(scene.next || ''))));
+    return React.createElement(React.Fragment, null, chapter && !chapter.outside ? React.createElement("span", {
+      className: "ch"
+    }, `${xmasNovelChapterLabel(chapter)}${chTitle ? `　${chTitle}` : ''}`, showScene ? React.createElement("span", {
+      className: "sep"
+    }, "\u3000/\u3000") : null) : null, showScene ? React.createElement("span", {
+      className: "sc"
+    }, scene.title) : null);
+  })()), React.createElement("button", {
     type: "button",
     className: "mh-nv-btn",
     "data-xmas-novel-open-book": true,
@@ -129873,6 +131575,14 @@ const XmasNovelScreen = ({
   }, "スキップ")), React.createElement("button", {
     type: "button",
     className: "mh-nv-btn",
+    "data-xmas-novel-open-map": true,
+    onClick: () => setSheet('map'),
+    "aria-label": "地図"
+  }, React.createElement(XmasNovelIcon, {
+    d: XMAS_NOVEL_ICONS.map
+  }), React.createElement("span", null, "地図")), React.createElement("button", {
+    type: "button",
+    className: "mh-nv-btn",
     "data-xmas-novel-menu": true,
     onClick: () => setSheet('menu'),
     "aria-label": "メニュー"
@@ -129889,27 +131599,31 @@ const XmasNovelScreen = ({
   }, "【", got.n, "】"), React.createElement("p", {
     className: "mh-nv-plain mt-1 whitespace-pre-wrap text-[12px] leading-relaxed text-slate-100"
   }, xmasNovelWrap(got.d))), card && React.createElement("div", {
-    className: "mh-nv-card",
+    key: `card-${card.kind}-${card.label || card.text || ''}`,
+    className: `mh-nv-card${card.kind !== 'ending' ? ' open' : ''}`,
     "data-xmas-novel-card": card.kind,
     onClick: advance
-  }, card.kind === 'chapter' && React.createElement("div", {
+  }, card.kind === 'chapter' && card.label && React.createElement("div", {
+    className: "mh-nv-card-ghost mh-nv-serif",
+    "aria-hidden": "true"
+  }, card.label), card.kind === 'chapter' && React.createElement("div", {
     className: "mh-nv-plain mh-nv-cardtext"
   }, React.createElement("div", {
-    className: "mh-nv-serif text-[15px] tracking-[0.5em] text-slate-200"
+    className: "mh-nv-card-label mh-nv-serif text-[15px] tracking-[0.5em] text-slate-200"
   }, card.label), React.createElement("div", {
     className: "mh-nv-rule"
   }), React.createElement("div", {
-    className: "mh-nv-serif mh-nv-gold text-[30px] font-black leading-tight sm:text-[38px]"
+    className: "mh-nv-card-title mh-nv-serif mh-nv-gold text-[30px] font-black leading-tight sm:text-[38px]"
   }, xmasNovelWrap(card.title, 10)), React.createElement("div", {
     className: "mh-nv-rule"
   }), React.createElement("div", {
-    className: "mt-6 text-[11px] text-slate-400"
+    className: "mh-nv-card-hint mt-6 text-[11px] text-slate-400"
   }, "タップで進む")), (card.kind === 'title' || card.kind === 'band') && React.createElement("div", {
     className: "mh-nv-plain mh-nv-cardtext"
   }, React.createElement("div", {
     className: "mh-nv-rule"
   }), React.createElement("div", {
-    className: "mh-nv-serif mh-nv-gold text-[30px] font-black leading-tight sm:text-[40px]"
+    className: "mh-nv-card-title mh-nv-serif mh-nv-gold text-[30px] font-black leading-tight sm:text-[40px]"
   }, xmasNovelWrap(card.text, 10)), React.createElement("div", {
     className: "mh-nv-rule"
   })), card.kind === 'ending' && (() => {
@@ -129978,7 +131692,15 @@ const XmasNovelScreen = ({
         setMode('title');
       }
     }, "タイトルへ")));
-  })()), sheet && React.createElement("div", {
+  })()), sheet === 'map' && save && React.createElement(XmasNovelMap, {
+    script: S,
+    save: save,
+    route: route,
+    playerName: playerName,
+    onRedo: redoFrom,
+    onBack: backFromRedo,
+    onClose: () => setSheet(null)
+  }), sheet && sheet !== 'map' && React.createElement("div", {
     className: "mh-nv-sheet",
     "data-xmas-novel-sheet": typeof sheet === 'string' ? sheet : sheet.kind,
     onClick: () => {
@@ -130011,7 +131733,7 @@ const XmasNovelScreen = ({
     className: "mh-nv-serif mh-nv-gold text-[18px] font-black"
   }, "手がかり帳 ", React.createElement("span", {
     className: "text-[12px] text-slate-300"
-  }, clues.length, "個")), q && React.createElement("div", {
+  }, presentList.length, "個")), q && React.createElement("div", {
     "data-xmas-novel-question": q.id,
     className: "mt-2 rounded-lg p-2 text-[13px] font-bold leading-relaxed",
     style: {
@@ -130022,9 +131744,12 @@ const XmasNovelScreen = ({
     className: "mh-nv-serif text-[11px] font-black text-rose-200"
   }, q.label), xmasNovelWrap(xmasNovelFill(q.x, playerName)), React.createElement("div", {
     className: "mt-1 text-[11px] text-rose-100"
-  }, "突きつける手がかりを1つ選ぼう")), React.createElement("div", {
+  }, presentList.length < clues.length ? `候補を${presentList.length}つに絞った。突きつける手がかりを1つ選ぼう` : '突きつける手がかりを1つ選ぼう'), q.pass && React.createElement("div", {
+    "data-xmas-novel-pass": true,
+    className: "mh-nv-plain mt-1 text-[11px] text-rose-200"
+  }, "外しても、仲間が拾って話は進む。一発で当てると成績に残る")), React.createElement("div", {
     className: "mh-nv-scroll mt-2 flex-1 space-y-2 pr-1"
-  }, clues.length ? clues.map(c => React.createElement("div", {
+  }, presentList.length ? presentList.map(c => React.createElement("div", {
     key: c.n,
     className: "mh-nv-clue",
     "data-xmas-novel-clue": c.n
@@ -130079,13 +131804,20 @@ const XmasNovelScreen = ({
     className: "mh-nv-plain mh-nv-serif mh-nv-gold mb-3 text-[17px] font-black"
   }, xmasNovelWrap(xmasNovelFill(q.x, playerName))), React.createElement("div", {
     className: "space-y-2.5"
-  }, xmasNovelOptionsOf(q, xmasNovelCtx(S, st.cur, save.endings)).map(o => React.createElement("button", {
-    type: "button",
-    key: o.i,
-    className: "mh-nv-choice mh-nv-serif",
-    "data-xmas-novel-option": o.i,
-    onClick: () => answer(q, o.i)
-  }, xmasNovelWrap(xmasNovelFill(o.x, playerName))))), q.once && React.createElement("div", {
+  }, xmasNovelOptionsOf(q, xmasNovelCtx(S, st.cur, save.endings)).map(o => {
+    const endAhead = !q.once && o.to ? xmasNovelEndingAhead(S, o.to) : null;
+    const seenEnd = endAhead && Array.isArray(save.endings) && save.endings.includes(endAhead) ? xmasNovelSceneById(S, endAhead) : null;
+    return React.createElement("button", {
+      type: "button",
+      key: o.i,
+      className: "mh-nv-choice mh-nv-serif",
+      "data-xmas-novel-option": o.i,
+      onClick: () => answer(q, o.i)
+    }, xmasNovelWrap(xmasNovelFill(o.x, playerName)), seenEnd && React.createElement("span", {
+      "data-xmas-novel-seen-end": endAhead,
+      className: "mh-nv-plain mt-1 block text-[11px] font-bold text-rose-200"
+    }, "見たエンド: ", seenEnd.ending && seenEnd.ending.name ? `「${seenEnd.ending.name}」` : 'バッドエンド'));
+  })), q.once && React.createElement("div", {
     className: "mh-nv-plain mt-2 text-[11px] font-bold text-rose-200"
   }, "選んだら、やり直しはできません")), sheet === 'menu' && React.createElement(React.Fragment, null, React.createElement("div", {
     className: "mh-nv-serif mh-nv-gold mb-3 text-center text-[18px] font-black"
@@ -130180,6 +131912,344 @@ const openXmasNovel = (opts = {}) => {
     script: opts.script || null
   }));
   return true;
+};
+const XMAS_NOVEL_MAP_CSS = `
+.mh-nvm { position: absolute; inset: 0; z-index: 12; display: flex; flex-direction: column; color: #eef3ff; font-family: inherit; animation: mh-nv-fade .2s ease both;
+  background: radial-gradient(ellipse at 50% -10%, rgba(232,200,115,.18), transparent 55%),
+    linear-gradient(rgba(120,150,220,.07) 1px, transparent 1px) 0 0/22px 22px,
+    linear-gradient(90deg, rgba(120,150,220,.07) 1px, transparent 1px) 0 0/22px 22px,
+    linear-gradient(#0b1430, #101b3d 60%, #0b1430); }
+.mh-nvm-head { flex: none; padding: calc(max(10px, env(safe-area-inset-top)) + 2px) 16px 8px; background: linear-gradient(#0b1430 75%, rgba(11,20,48,0)); }
+.mh-nvm-ttl { display: flex; align-items: center; gap: 8px; }
+.mh-nvm-ttl h2 { font-size: 19px; font-weight: 900; color: #e8c873; letter-spacing: .06em; }
+.mh-nvm-x { margin-left: auto; width: 32px; height: 32px; border-radius: 50%; border: 1px solid #b8913a; color: #e8c873; display: grid; place-items: center; font-weight: 900; }
+.mh-nvm-row { display: flex; gap: 8px; margin-top: 8px; align-items: center; }
+.mh-nvm-tab { flex: 1; min-width: 0; text-align: center; padding: 6px 0; border-radius: 999px; font-size: 13px; font-weight: 900; border: 1px solid #b8913a; color: #e8c873; }
+.mh-nvm-tab[data-on] { background: linear-gradient(#e8c873, #b8913a); color: #2a1a05; }
+.mh-nvm-ends { flex: none; font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 999px; background: rgba(200,50,60,.25); border: 1px solid rgba(232,120,120,.6); white-space: nowrap; }
+.mh-nvm-back { display: block; width: 100%; margin-top: 8px; padding: 7px 0; border-radius: 10px; font-size: 13px; font-weight: 900; color: #fff; background: rgba(200,50,60,.55); border: 1px solid #f0a0a0; }
+.mh-nvm-legend { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 8px; font-size: 10px; color: #9fb0d8; }
+.mh-nvm-body { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 0 16px calc(max(16px, env(safe-area-inset-bottom)) + 12px); }
+.mh-nvm-it { position: relative; display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 4px 0 4px 52px; }
+.mh-nvm-it::before { content: ""; position: absolute; left: 30px; top: 0; bottom: 0; width: 4px; border-radius: 2px; background: linear-gradient(#e8c873, #b8913a); box-shadow: 0 0 8px rgba(232,200,115,.45); }
+.mh-nvm-it[data-dark]::before { background: repeating-linear-gradient(#2b3658 0 8px, transparent 8px 14px); box-shadow: none; }
+.mh-nvm-door { position: absolute; left: 0; width: 64px; height: 38px; border-radius: 19px 19px 4px 4px; background: linear-gradient(#6b4423, #3e2612); border: 2px solid #e8c873; display: grid; place-items: center; font-size: 11px; font-weight: 900; color: #e8c873; box-shadow: 0 0 12px rgba(232,200,115,.4); z-index: 1; }
+.mh-nvm-it[data-dark] .mh-nvm-door { background: #1a2342; border-color: #3a4670; color: #5d6a90; box-shadow: none; }
+.mh-nvm-chap { padding-left: 76px; min-height: 50px; margin-top: 6px; }
+.mh-nvm-cname { font-size: 15px; font-weight: 900; line-height: 1.3; }
+.mh-nvm-it[data-dark] .mh-nvm-cname { color: #5d6a90; }
+.mh-nvm-mk { position: absolute; left: 18px; width: 28px; height: 28px; display: grid; place-items: center; font-size: 12px; font-weight: 900; z-index: 1; }
+.mh-nvm-mk[data-k="action"] { transform: rotate(45deg) scale(.86); background: #7a1f28; border: 2px solid #f0a0a0; border-radius: 4px; }
+.mh-nvm-mk[data-k="action"] > span { transform: rotate(-45deg); }
+.mh-nvm-mk[data-k="present"] { border-radius: 50%; background: #173a2a; border: 2px solid #8fd6a8; }
+.mh-nvm-mk[data-k="person"] { border-radius: 6px; background: #3a2a5a; border: 2px solid #c7b2ff; }
+.mh-nvm-it[data-dark] .mh-nvm-mk { background: #1a2342; border-color: #3a4670; color: #5d6a90; }
+.mh-nvm-it[data-now] .mh-nvm-mk { box-shadow: 0 0 0 3px #fff, 0 0 16px 4px rgba(255,90,90,.9); }
+.mh-nvm-lab { min-width: 0; flex: 1; font-size: 12.5px; font-weight: 800; line-height: 1.35; }
+.mh-nvm-lab small { display: block; font-size: 10.5px; font-weight: 600; color: #9fb0d8; }
+.mh-nvm-it[data-dark] .mh-nvm-lab { color: #5d6a90; }
+.mh-nvm-it[data-dark] .mh-nvm-lab small { color: #3f4b70; }
+.mh-nvm-redo { flex: none; width: 32px; height: 32px; border-radius: 50%; border: 1px solid #b8913a; color: #e8c873; background: rgba(232,200,115,.08); display: grid; place-items: center; font-size: 15px; font-weight: 900; }
+.mh-nvm-now { flex: none; padding: 3px 8px; font-size: 10px; font-weight: 900; color: #fff; background: #c8323c; border-radius: 3px; box-shadow: 0 0 0 2px #fff, 0 0 14px rgba(255,80,80,.9); white-space: nowrap; }
+.mh-nvm-ends-list { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; flex: none; max-width: 52%; }
+.mh-nvm-orn { position: relative; min-width: 96px; max-width: 150px; padding: 5px 8px 5px 24px; border-radius: 13px; font-size: 10.5px; font-weight: 800; line-height: 1.3; background: linear-gradient(135deg, #8a1c26, #4a0f15); border: 1px solid #f0a0a0; color: #ffe9e9; }
+.mh-nvm-orn::before { content: ""; position: absolute; left: 7px; top: 50%; width: 12px; height: 12px; margin-top: -6px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ffd2d2, #c8323c 60%, #6a1018); box-shadow: 0 0 6px rgba(255,120,120,.8); }
+.mh-nvm-orn small { display: block; font-size: 9.5px; font-weight: 600; color: #f7c2c2; }
+.mh-nvm-orn[data-good] { background: linear-gradient(135deg, #7a5a14, #3d2c08); border-color: #e8c873; }
+.mh-nvm-orn[data-good]::before { background: radial-gradient(circle at 35% 30%, #fff3c0, #e8c873 60%, #7a5a14); }
+.mh-nvm-orn[data-unseen] { background: #151d38; border-color: #3a4670; color: #5d6a90; }
+.mh-nvm-orn[data-unseen]::before { background: #2a3456; box-shadow: none; }
+.mh-nvm-orn[data-unseen] small { color: #3f4b70; }
+.mh-nvm-lane { margin: 14px 0 0; padding: 4px 10px; border-left: 3px solid #b8913a; font-size: 11px; font-weight: 900; color: #e8c873; letter-spacing: .08em; }
+.mh-nvm-lane[data-dark] { border-left-color: #3a4670; color: #5d6a90; }
+.mh-nvm-foot { margin-top: 16px; padding: 10px 12px; border-radius: 12px; border: 1px solid #3a4670; font-size: 11px; color: #9fb0d8; line-height: 1.6; background: rgba(20,33,74,.6); }
+.mh-nvm-sheet { position: absolute; inset: 0; z-index: 2; display: flex; align-items: flex-end; background: rgba(5,8,20,.55); }
+.mh-nvm-panel { width: 100%; padding: 16px 16px calc(max(16px, env(safe-area-inset-bottom)) + 6px); border-radius: 18px 18px 0 0; background: linear-gradient(#18244d, #0d1634); border-top: 2px solid #e8c873; box-shadow: 0 -10px 30px rgba(0,0,0,.5); }
+.mh-nvm-panel h3 { font-size: 15px; font-weight: 900; color: #e8c873; }
+.mh-nvm-q { margin-top: 8px; padding: 8px 10px; border-radius: 10px; background: rgba(120,20,30,.35); box-shadow: 0 0 0 1px rgba(232,120,120,.6); font-size: 13px; font-weight: 800; line-height: 1.5; }
+.mh-nvm-panel ul { margin-top: 10px; font-size: 12px; line-height: 1.7; color: #d9e2ff; }
+.mh-nvm-btn { display: block; width: 100%; margin-top: 10px; padding: 12px 0; text-align: center; border-radius: 12px; font-weight: 900; font-size: 15px; }
+.mh-nvm-btn[data-main] { background: linear-gradient(#e8c873, #b8913a); color: #2a1a05; }
+.mh-nvm-btn[data-sub] { border: 1px solid #b8913a; color: #e8c873; }
+@media (orientation: landscape) and (max-height: 500px) { .mh-nvm-body, .mh-nvm-head { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); } .mh-nvm-panel { max-width: 560px; margin: 0 auto; border-radius: 18px 18px 0 0; } }
+`;
+const XMAS_NOVEL_MAP_SIDES = [{
+  v: 1,
+  label: 'あつ派'
+}, {
+  v: 2,
+  label: 'ソラシド派'
+}];
+const XMAS_NOVEL_MAP_LANES = [{
+  id: 'main',
+  chapters: ['C0', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7']
+}, {
+  id: 'late',
+  name: '当てられなかった道',
+  chapters: ['C10', 'C11']
+}, {
+  id: 'true',
+  name: '真相への道',
+  chapters: ['C8', 'C9']
+}];
+let xmasNovelMapModelCache = null;
+const xmasNovelMapModel = script => {
+  if (xmasNovelMapModelCache && xmasNovelMapModelCache.script === script) return xmasNovelMapModelCache.model;
+  const scenes = xmasNovelScenes(script);
+  const order = {};
+  scenes.forEach((s, i) => {
+    order[s.id] = i;
+  });
+  const laneChapters = new Set(XMAS_NOVEL_MAP_LANES.flatMap(l => l.chapters));
+  const endInfo = {};
+  scenes.forEach(s => {
+    if (s.ending && s.ending.id && !endInfo[s.ending.id]) endInfo[s.ending.id] = s.ending;
+  });
+  const endsOf = (q, chId) => {
+    const tos = [];
+    (q.options || []).forEach(o => {
+      if (o && o.to) tos.push(o.to);
+    });
+    Object.values(q.route || {}).forEach(t => {
+      if (typeof t === 'string') tos.push(t);
+    });
+    const out = [];
+    tos.forEach(to => {
+      const sc = xmasNovelSceneById(script, to);
+      if (!sc || sc.chapter !== chId && laneChapters.has(sc.chapter)) return;
+      const e = xmasNovelEndingAhead(script, to);
+      if (e && !out.includes(e)) out.push(e);
+    });
+    return out;
+  };
+  const chapters = {};
+  xmasNovelChapters(script).forEach(ch => {
+    const scs = scenes.filter(s => s.chapter === ch.id && !(s.ending && s.ending.id));
+    const nodes = [];
+    scs.forEach(s => (s.rows || []).forEach((r, idx) => {
+      if (r && r.t === 'q') nodes.push({
+        id: r.id,
+        q: r,
+        scene: s.id,
+        idx,
+        pos: order[s.id] * 10000 + idx,
+        ends: endsOf(r, ch.id)
+      });
+    }));
+    chapters[ch.id] = {
+      ch,
+      scenes: scs.map(s => s.id),
+      keys: new Set(scs.flatMap(s => (s.rows || []).filter(r => r && r.k).map(r => r.k))),
+      nodes
+    };
+  });
+  const model = {
+    chapters,
+    order,
+    endInfo,
+    endTotal: Object.keys(endInfo).length
+  };
+  xmasNovelMapModelCache = {
+    script,
+    model
+  };
+  return model;
+};
+const xmasNovelMapNum = label => {
+  const m = String(label || '').match(/[①-⑨]/);
+  return m ? m[0] : '';
+};
+const XmasNovelMap = ({
+  script,
+  save,
+  route,
+  playerName,
+  onRedo,
+  onBack,
+  onClose
+}) => {
+  const model = xmasNovelMapModel(script);
+  const curSide = save && save.cur && save.cur.flags && Number.isFinite(save.cur.flags.f_A1) ? save.cur.flags.f_A1 : 0;
+  const [side, setSide] = useState(curSide === 2 ? 2 : 1);
+  const [pick, setPick] = useState(null);
+  const read = useMemo(() => new Set(save && save.read || []), [save]);
+  const endings = save && save.endings || [];
+  const at = route && route.at || {};
+  const keyOf = id => `${id}|${id === 'A1' ? 0 : side}`;
+  const nodeLit = n => !!at[keyOf(n.id)] || !!n.q.k && read.has(n.q.k) && (n.id === 'A1' || curSide === side);
+  const chEntered = c => [...c.keys].some(k => read.has(k));
+  const chLit = c => {
+    if (!c || !chEntered(c)) return false;
+    if (c.ch.id === 'C0' || c.ch.id === 'C1' || curSide === side) return true;
+    return c.nodes.some(nodeLit) || Object.keys(at).some(k => k.endsWith(`|${side}`) && c.scenes.includes(at[k].scene));
+  };
+  const now = (() => {
+    const cur = save && save.cur;
+    if (!cur || curSide && curSide !== side) return null;
+    const sc = xmasNovelSceneById(script, cur.scene);
+    if (!sc || !model.chapters[sc.chapter]) return null;
+    const p = (model.order[sc.id] || 0) * 10000 + (Number(cur.idx) || 0);
+    const n = model.chapters[sc.chapter].nodes.find(x => x.pos >= p);
+    return n ? {
+      node: n.id
+    } : {
+      chapter: sc.chapter
+    };
+  })();
+  const seenCount = Object.keys(model.endInfo).filter(e => endings.includes(e)).length;
+  const pickedSnap = pick ? at[keyOf(pick.id)] : null;
+  const pickedCh = pick ? model.chapters[xmasNovelSceneById(script, pick.scene) ? xmasNovelSceneById(script, pick.scene).chapter : ''] : null;
+  const endCard = e => {
+    const info = model.endInfo[e] || {};
+    const seen = endings.includes(e);
+    const good = info.kind === 'good' || info.kind === 'normal' || info.kind === 'extra';
+    return React.createElement("div", {
+      key: e,
+      className: "mh-nvm-orn",
+      "data-xmas-novel-map-end": e,
+      "data-unseen": seen ? undefined : '',
+      "data-good": seen && good ? '' : undefined
+    }, seen ? xmasNovelWrap(info.name || '') : '？？？', React.createElement("small", null, seen ? info.label || 'エンド' : '未見のエンド'));
+  };
+  const chapterItem = c => {
+    const lit = chLit(c);
+    const label = xmasNovelChapterLabel(c.ch) || c.ch.label || '';
+    const title = lit ? xmasNovelChapterTitle(script, c.ch, save.read) : '？？？';
+    const isNow = now && now.chapter === c.ch.id;
+    return React.createElement("div", {
+      key: `ch-${c.ch.id}`,
+      className: "mh-nvm-it mh-nvm-chap",
+      "data-xmas-novel-map-chapter": c.ch.id,
+      "data-dark": lit ? undefined : ''
+    }, React.createElement("div", {
+      className: "mh-nvm-door"
+    }, lit ? label : c.ch.past ? '🔒' : c.ch.no === 0 ? '序章' : '第？章'), React.createElement("div", {
+      className: "mh-nvm-cname"
+    }, xmasNovelWrap(title)), isNow && React.createElement("span", {
+      className: "mh-nvm-now",
+      "data-xmas-novel-map-now": true
+    }, "いまここ"));
+  };
+  const nodeItem = n => {
+    const lit = nodeLit(n);
+    const isNow = now && now.node === n.id;
+    const canRedo = !!at[keyOf(n.id)];
+    const q = n.q;
+    const first = save && save.first && save.first[n.id];
+    const sub = !lit ? 'まだ読んでいない' : isNow ? '考え中' : q.kind === 'present' && first ? first.f ? '一発で正解' : '外して仲間が拾った' : n.id === 'A1' ? side === 2 ? 'ソラシド派' : 'あつ派' : '';
+    const kind = n.id === 'A1' ? 'person' : q.kind;
+    const mark = kind === 'action' ? '◆' : kind === 'present' ? xmasNovelMapNum(q.label) || '？' : '✦';
+    return React.createElement("div", {
+      key: `q-${n.id}`,
+      className: "mh-nvm-it",
+      "data-xmas-novel-map-node": n.id,
+      "data-dark": lit ? undefined : '',
+      "data-now": isNow ? '' : undefined
+    }, React.createElement("div", {
+      className: "mh-nvm-mk",
+      "data-k": kind
+    }, React.createElement("span", null, lit ? mark : '？')), React.createElement("div", {
+      className: "mh-nvm-lab"
+    }, lit ? xmasNovelWrap(q.label || '分かれ道') : '？？？', sub ? React.createElement("small", null, sub) : null), isNow && React.createElement("span", {
+      className: "mh-nvm-now",
+      "data-xmas-novel-map-now": true
+    }, "いまここ"), canRedo && !isNow && React.createElement("button", {
+      type: "button",
+      className: "mh-nvm-redo",
+      "data-xmas-novel-map-redo": n.id,
+      "aria-label": "ここから読み直す",
+      onClick: () => setPick(n)
+    }, "↺"), n.ends.length > 0 && React.createElement("div", {
+      className: "mh-nvm-ends-list"
+    }, n.ends.map(endCard)));
+  };
+  const laneLit = lane => lane.chapters.some(id => model.chapters[id] && chLit(model.chapters[id]));
+  const past = xmasNovelChapters(script).find(c => c.past);
+  const pastOpen = endings.includes('END-G');
+  return React.createElement("div", {
+    className: "mh-nvm",
+    "data-xmas-novel-map": true,
+    onClick: e => e.stopPropagation()
+  }, React.createElement("style", null, XMAS_NOVEL_MAP_CSS), React.createElement("div", {
+    className: "mh-nvm-head"
+  }, React.createElement("div", {
+    className: "mh-nvm-ttl"
+  }, React.createElement("h2", {
+    className: "mh-nv-serif"
+  }, "聖夜の見取り図"), React.createElement("span", {
+    className: "text-[11px] text-slate-400"
+  }, "分岐の地図"), React.createElement("button", {
+    type: "button",
+    className: "mh-nvm-x",
+    "data-xmas-novel-map-close": true,
+    "aria-label": "閉じる",
+    onClick: onClose
+  }, "✕")), React.createElement("div", {
+    className: "mh-nvm-row"
+  }, XMAS_NOVEL_MAP_SIDES.map(s => React.createElement("button", {
+    type: "button",
+    key: s.v,
+    className: "mh-nvm-tab",
+    "data-xmas-novel-map-side": s.v,
+    "data-on": side === s.v ? '' : undefined,
+    onClick: () => setSide(s.v)
+  }, s.label)), React.createElement("div", {
+    className: "mh-nvm-ends",
+    "data-xmas-novel-map-count": true
+  }, "エンド ", seenCount, "/", model.endTotal)), route && route.back && React.createElement("button", {
+    type: "button",
+    className: "mh-nvm-back",
+    "data-xmas-novel-map-back": true,
+    onClick: onBack
+  }, "読み直す前の続きへ戻る"), React.createElement("div", {
+    className: "mh-nvm-legend"
+  }, React.createElement("span", null, "◆ 行動の選択"), React.createElement("span", null, "① 推理の問い"), React.createElement("span", null, "✦ 名指し"), React.createElement("span", null, "● エンド"), React.createElement("span", null, "↺ ここから読み直す"))), React.createElement("div", {
+    className: "mh-nvm-body"
+  }, XMAS_NOVEL_MAP_LANES.map(lane => React.createElement("div", {
+    key: lane.id,
+    "data-xmas-novel-map-lane": lane.id
+  }, lane.name && React.createElement("div", {
+    className: "mh-nvm-lane",
+    "data-dark": laneLit(lane) ? undefined : ''
+  }, laneLit(lane) ? lane.name : '？？？へ続く道'), lane.chapters.map(id => model.chapters[id]).filter(Boolean).map(c => [chapterItem(c), ...c.nodes.map(nodeItem)]))), past && React.createElement("div", {
+    className: "mh-nvm-it mh-nvm-chap",
+    "data-xmas-novel-map-chapter": past.id,
+    "data-dark": pastOpen ? undefined : ''
+  }, React.createElement("div", {
+    className: "mh-nvm-door"
+  }, pastOpen ? xmasNovelChapterLabel(past) : '🔒'), React.createElement("div", {
+    className: "mh-nvm-cname"
+  }, pastOpen ? past.title : '？？？')), React.createElement("div", {
+    className: "mh-nvm-foot"
+  }, "明るい所は読んだ所。↺ を押すと、その分かれ道の直前から読み直せます(手がかり帳・登場人物パネル・選んだ派も、その時のまま)。一発で当てた記録と見たエンドは消えません。")), pick && pickedSnap && React.createElement("div", {
+    className: "mh-nvm-sheet",
+    onClick: () => setPick(null)
+  }, React.createElement("div", {
+    className: "mh-nvm-panel",
+    "data-xmas-novel-map-sheet": pick.id,
+    onClick: e => e.stopPropagation()
+  }, React.createElement("h3", {
+    className: "mh-nv-serif"
+  }, pickedCh ? `${xmasNovelChapterLabel(pickedCh.ch)}　${xmasNovelChapterTitle(script, pickedCh.ch, save.read)}` : '', " ― ", pick.q.label || '分かれ道'), React.createElement("div", {
+    className: "mh-nvm-q"
+  }, xmasNovelWrap(xmasNovelFill(pick.q.x, playerName))), React.createElement("ul", null, React.createElement("li", null, "・手がかり帳: ", (pickedSnap.clues || []).length, "個(その時のまま)"), React.createElement("li", null, "・登場人物パネル・選んだ派も、その時のまま"), React.createElement("li", null, "・一発で当てた記録・見たエンドは消えません")), React.createElement("button", {
+    type: "button",
+    className: "mh-nvm-btn",
+    "data-main": "",
+    "data-xmas-novel-map-go": true,
+    onClick: () => {
+      const c = pickedSnap;
+      setPick(null);
+      onRedo && onRedo(c);
+    }
+  }, "ここから読み直す"), React.createElement("button", {
+    type: "button",
+    className: "mh-nvm-btn",
+    "data-sub": "",
+    onClick: () => setPick(null)
+  }, "やめる"), React.createElement("div", {
+    className: "mt-2 text-[10.5px] leading-relaxed text-slate-400"
+  }, "いまの続きは残ります。地図の「読み直す前の続きへ戻る」で、いつでも戻れます。"))));
 };
 const ASSISTANT_CHAT_URL = `${SUPABASE_URL}/functions/v1/assistant-chat`;
 const ASSISTANT_CHAT_LOG_KEY = 'mh_assistant_chat_log_v1';
@@ -140199,11 +142269,11 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   },
   'stand-sekiyuou': {
     erubin: {
-      top: -0.0059,
-      eye: 0.2449,
-      chin: 0.4297,
-      m: 1.376,
-      cx: 0.5112
+      top: 0.0034,
+      eye: 0.285,
+      chin: 0.43,
+      m: 1.079,
+      cx: 0.5166
     }
   },
   'stand-hosei': {
@@ -140279,11 +142349,11 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   },
   'stand-twintail': {
     kiki: {
-      top: 0.1807,
-      eye: 0.3402,
-      chin: 0.4301,
-      m: 1.014,
-      cx: 0.5119,
+      top: 0.1823,
+      eye: 0.3406,
+      chin: 0.4299,
+      m: 0.664,
+      cx: 0.5227,
       above: 0.95
     }
   },
@@ -219603,7 +221673,12 @@ const CARD_RAID_BOSS = Object.freeze({
   id: 'raid_xmas_2026',
   name: '黒いサンタ',
   deckName: '奪われた贈り物',
-  monsters: Object.freeze(['C-047', 'C-024', 'C-003']),
+  monsters: Object.freeze(['C-008', 'C-055', 'C-003']),
+  hare: Object.freeze(['C-008', 'C-055', 'C-010']),
+  others: Object.freeze(['C-047', 'C-024', 'C-003']),
+  favor: 'hare',
+  favorBonus: 0.6,
+  cardNoise: 0.45,
   habit: Object.freeze({
     attack: 1.2,
     keepGuard: 0.8,
@@ -219613,28 +221688,53 @@ const CARD_RAID_BOSS = Object.freeze({
     area: 1.3,
     finish: 1.3
   }),
-  prefer: Object.freeze(['大鎌'])
+  prefer: Object.freeze(['大声'])
 });
 const CARD_RAID_TIERS = Object.freeze([Object.freeze({
-  level: 'normal',
-  life: 2,
-  rate: 1.0
-}), Object.freeze({
   level: 'hard',
-  life: 2,
-  rate: 1.25
+  life: 1,
+  rate: 1.0,
+  ai: Object.freeze({
+    whim: 0.04,
+    sloppy: 0.08,
+    readHand: true
+  })
 }), Object.freeze({
   level: 'expert',
-  life: 2.5,
-  rate: 1.5
+  life: 1,
+  rate: 1.25,
+  ai: Object.freeze({
+    whim: 0.02,
+    sloppy: 0.03,
+    readHand: true
+  })
 }), Object.freeze({
   level: 'master',
-  life: 3,
-  rate: 1.75
+  life: 1,
+  rate: 1.5,
+  ai: Object.freeze({
+    whim: 0.01,
+    sloppy: 0,
+    readHand: true
+  })
 }), Object.freeze({
   level: 'master',
-  life: 3,
-  rate: 2.0
+  life: 1,
+  rate: 1.75,
+  ai: Object.freeze({
+    whim: 0,
+    sloppy: 0,
+    readHand: true
+  })
+}), Object.freeze({
+  level: 'master',
+  life: 1,
+  rate: 2.0,
+  ai: Object.freeze({
+    whim: 0,
+    sloppy: 0,
+    readHand: true
+  })
 })]);
 const cardRaidTierOf = tierIndex => CARD_RAID_TIERS[Math.min(CARD_RAID_TIERS.length - 1, Math.max(0, Math.floor(Number(tierIndex) || 0)))];
 const CARD_RAID_DAMAGE = Object.freeze({
@@ -219643,20 +221743,36 @@ const CARD_RAID_DAMAGE = Object.freeze({
   win: 150000,
   cap: null
 });
-const cardRaidBossDeck = (db, tierIndex = 0) => {
+const cardRaidBossMonsters = (db, rnd = null) => {
+  const ok = list => list.filter(no => cardMonsterOf(db, no));
+  if (!rnd) return ok(CARD_RAID_BOSS.monsters);
+  const pick = (list, n) => {
+    const a = ok(list).slice();
+    const out = [];
+    while (a.length && out.length < n) out.push(a.splice(Math.floor(rnd() * a.length), 1)[0]);
+    return out;
+  };
+  const out = [...pick(CARD_RAID_BOSS.hare, 2), ...pick(CARD_RAID_BOSS.others, 1)];
+  const sp = out.map(no => cardMonsterOf(db, no).species);
+  return out.length === 3 && new Set(sp).size === 3 ? out : ok(CARD_RAID_BOSS.monsters);
+};
+const cardRaidBossDeck = (db, tierIndex = 0, seed = null) => {
   const tier = cardRaidTierOf(tierIndex);
   const cfg = CARD_AI_BUILD[tier.level] || CARD_AI_BUILD.normal;
   const habit = CARD_RAID_BOSS.habit;
-  const rnd = cardAiSeededRand(`${CARD_RAID_BOSS.id}:${tier.level}`);
-  const monsters = CARD_RAID_BOSS.monsters.filter(no => cardMonsterOf(db, no));
+  const roll = seed !== null && seed !== undefined && Number.isFinite(Number(seed));
+  const rnd = cardAiSeededRand(`${CARD_RAID_BOSS.id}:${tier.level}${roll ? `:${Math.floor(Number(seed))}` : ''}`);
+  const monsters = cardRaidBossMonsters(db, roll ? rnd : null);
   const mons = monsters.map(no => cardMonsterOf(db, no));
+  const noise = cfg.noise + (roll ? CARD_RAID_BOSS.cardNoise : 0);
+  const favor = c => c.user === CARD_RAID_BOSS.favor ? CARD_RAID_BOSS.favorBonus : 0;
   const pool = Object.values(db.cards).filter(c => c.ready && (c.user === 'any' || c.user === 'breeder' || mons.some(m => cardUsableBy(c, {
     ...m,
     ko: false
   }))));
   const byName = {};
   pool.forEach(c => {
-    const v = cardAiCardValue(c, habit) + cfg.noise * (rnd() * 2 - 1);
+    const v = cardAiCardValue(c, habit) + favor(c) + noise * (rnd() * 2 - 1);
     if (!byName[c.name] || byName[c.name].v < v) byName[c.name] = {
       c,
       v
@@ -219728,6 +221844,10 @@ const cardRaidBossPolicy = (tierIndex = 0) => {
   });
   return {
     ...base,
+    level: {
+      ...base.level,
+      ...(tier.ai || {})
+    },
     habit: {
       ...CARD_RAID_BOSS.habit
     }
@@ -221953,6 +224073,30 @@ const CARD_VS_TUTORIAL_LINE = Object.freeze({
   e: 'happy',
   t: '練習だよ！ ゆっくりいこ♪'
 });
+const CARD_RAID_BOSS_FACE = Object.freeze({
+  size: '200% auto',
+  pos: '50% 24%'
+});
+const CardRaidBossFace = ({
+  className = ''
+}) => {
+  const src = typeof RAID_XMAS_BOSS_IMG !== 'undefined' ? RAID_XMAS_BOSS_IMG : '';
+  if (!src) return React.createElement('span', {
+    'data-card-raid-boss-face': '',
+    className: `flex items-center justify-center text-[26px] ${className}`
+  }, '🎅');
+  return React.createElement('span', {
+    'data-card-raid-boss-face': src,
+    role: 'img',
+    'aria-label': '黒いサンタ',
+    className: `block bg-no-repeat ${className}`,
+    style: {
+      backgroundImage: `url(${src})`,
+      backgroundSize: CARD_RAID_BOSS_FACE.size,
+      backgroundPosition: CARD_RAID_BOSS_FACE.pos
+    }
+  });
+};
 const CARD_VS_MS = Object.freeze({
   assistant: 2600,
   pvp: 2600,
@@ -222323,7 +224467,13 @@ const CardVsIntro = ({
     src: assistantFullImage(who, foe.line && foe.line.e || 'happy'),
     alt: who.name,
     aspect: 3 / 4
-  }) : React.createElement("span", {
+  }) : foe.raidBoss ? React.createElement("span", {
+    "data-card-vs-foe-icon": true,
+    "data-card-vs-raid-boss": true,
+    className: "block aspect-square w-full overflow-hidden rounded-full border-[3px] border-red-500 bg-slate-950 shadow-[0_0_18px_rgba(239,68,68,.45)]"
+  }, React.createElement(CardRaidBossFace, {
+    className: "h-full w-full"
+  })) : React.createElement("span", {
     "data-card-vs-foe-icon": true,
     className: "block aspect-square w-full"
   }, React.createElement(CardPvpAvatar, {
@@ -227534,8 +229684,10 @@ const CardBattleBoard = ({
   }, raid ? React.createElement("span", {
     "data-card-raid-foe": true,
     "aria-hidden": "true",
-    className: `flex ${tiny ? 'h-[34px] w-[34px] text-[20px]' : 'h-[42px] w-[42px] text-[26px]'} shrink-0 items-center justify-center rounded-xl border-2 border-red-500 bg-slate-950`
-  }, "🎅") : pvp || share ? React.createElement("span", {
+    className: `block ${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} shrink-0 overflow-hidden rounded-xl border-2 border-red-500 bg-slate-950`
+  }, React.createElement(CardRaidBossFace, {
+    className: "h-full w-full"
+  })) : pvp || share ? React.createElement("span", {
     "data-card-pvp-foe": true,
     className: `block ${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} shrink-0`
   }, React.createElement(CardPvpAvatar, {
@@ -230798,8 +232950,8 @@ const CardBattleScreen = ({
         return;
       }
       const tier = cardRaidTierOf(rc.tierIndex);
-      const cpuDeck = cardRaidBossDeck(db, rc.tierIndex);
       const seed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
+      const cpuDeck = cardRaidBossDeck(db, rc.tierIndex, seed);
       const first = Math.random() < 0.5 ? CARD_ME : CARD_CPU;
       const bossName = rc.bossName || CARD_RAID_BOSS.name;
       const st = cardRaidPrepareGame(cardCreateGame(db, {
@@ -230820,6 +232972,7 @@ const CardBattleScreen = ({
           name: bossName,
           icon: null,
           frame: null,
+          raidBoss: true,
           line: null,
           deckName: CARD_RAID_BOSS.deckName,
           monsters: vsMons(st, CARD_CPU)
@@ -259764,6 +261917,8 @@ function MonsterHeroGame() {
     if (RAID_JACK_BGM_STATES.includes(state)) return raidEvRef.current === 'xmas' ? XMAS_EVENT_BGM_TRACK : RAID_JACK_BGM_TRACK;
     const halloweenNightOpen = Date.now() >= Date.parse(HALLOWEEN_NIGHT_START_AT) && Date.now() < Date.parse(HALLOWEEN_NIGHT_END_AT);
     const homeBgm = (RELEASE_FLAGS.raidJack === true && raidJackWindowAt(Date.now()) === 'open' || raidJackDebugForce || halloweenNightOpen) && bgmArrangement.home === DEFAULT_BGM_ARRANGEMENT.home ? RAID_JACK_BGM_TRACK : xmasEventBgmOpenAt(Date.now()) && bgmArrangement.home === DEFAULT_BGM_ARRANGEMENT.home ? XMAS_HOME_BGM_TRACK : bgmArrangement.home;
+    if (state === 'CARD_TOP' || state === 'CARD_BATTLE') return cardBgm || homeBgm;
+    if (state === 'CARD_PACK_OPEN') return homeBgm;
     if (isGameOver) return bgmArrangement.gameOver;
     if (!debugBattleRef.current && currentWave === 10 && (state === 'WAVE_RESULT' || state === 'CHAMPION')) {
       if (allowKeep && autoRepeatRef.current && bgmArrangement.autoRepeatResultBgm !== 'on') return '__keep_battle_bgm__';
@@ -270020,7 +272175,7 @@ function MonsterHeroGame() {
       boss: wave >= 10,
       key: Date.now()
     });
-    if ((!autoBattleRef.current || bgmArrangement.autoVictoryJingle === 'on') && !(runBackgroundAllowedRef.current && isXmasQuietScreen(gameStateNowRef.current))) Audio_.playJingle('victory');
+    if ((!autoBattleRef.current || bgmArrangement.autoVictoryJingle === 'on') && !(runBackgroundAllowedRef.current && (isXmasQuietScreen(gameStateNowRef.current) || isCardRunScreen(gameStateNowRef.current)))) Audio_.playJingle('victory');
     const totalWaveDamage = waveDamageAtDefeat(currentWaveDamageRef.current, currentWaveDamage, damage);
     const waveMult = 1.0 + wave * 0.1;
     const remainingTurns = Math.max(0, 21 - turnCount);
@@ -282778,6 +284933,7 @@ function MonsterHeroGame() {
     }), gameState === 'RHYTHM_PLAY' && rhythmPlay && React.createElement(RhythmTapTest, {
       key: rhythmPlay.from === 'lineAdjust' && rhythmLineAdjust ? `line-adjust-${rhythmLineAdjust.key}` : rhythmPlay.from === 'preview' && rhythmPreview ? `option-preview-${rhythmPreview.key}` : undefined,
       raidPlay: rhythmPlay.from === 'raid',
+      holdResultCount: rhythmPlay.from === 'raid' && !!raidDamageFx,
       song: rhythmPlay.song,
       difficulty: rhythmPlay.difficulty,
       settings: rhythmPlay.from === 'multi' ? rhythmMultiPlaySettings : rhythmPlay.from === 'preview' && rhythmPreview ? rhythmPreview.draft : rhythmSettings,
@@ -289556,7 +291712,15 @@ function MonsterHeroGame() {
         }
         return who;
       };
-      const cast = storyCastOf(script).filter(who => who.role !== 'ゲスト').filter(who => !hiddenUntil.includes(who.id) || script.slice(0, step + 1).some(l => l && storyBase(l.who) === who.id));
+      const cast = storyCastOf(script).filter(who => who.role !== 'ゲスト' || who.speakBottom && !who.noFace && !!who.image).filter(who => !hiddenUntil.includes(who.id) || script.slice(0, step + 1).some(l => l && storyBase(l.who) === who.id)).filter((who, _, all) => {
+        if (!who.storyFigureSlot) return true;
+        let lastId = null;
+        for (let i = Math.min(step, script.length - 1); i >= 0 && !lastId; i--) {
+          const w = script[i] && script[i].who && assistantById(script[i].who);
+          if (w && w.storyFigureSlot === who.storyFigureSlot) lastId = w.id;
+        }
+        return lastId ? lastId === who.id : all.find(x => x.storyFigureSlot === who.storyFigureSlot) === who;
+      });
       let stageIdx = -1;
       for (let i = step; i >= 0; i--) {
         const l = script[i];
@@ -289655,8 +291819,7 @@ function MonsterHeroGame() {
       const storyCplBottom = Math.max(8, Math.floor((storyBoxW - 64 - (storyZones ? storyLand ? 62 : 100 : 0)) / 13) - (storyZones ? 4 : 2));
       const storyCplBubble = Math.max(6, storyLand ? Math.floor((storyBoxW - 118) / 12) - 3 : Math.floor((storyBoxW - 156) / 14) - 4);
       const storyCapBottom = Math.floor((storyBoxW - 64 - (storyLand ? 62 : 100)) / 13 - 0.2);
-      const storyFaceCols = Math.floor((storyLand ? 62 : 100) / 13);
-      const storyCapBottomOf = w => storyCapBottom + (w && w.storyFigure ? storyFaceCols : 0);
+      const storyCapBottomOf = () => storyCapBottom;
       const storyCapBubble = Math.floor((storyLand ? (storyBoxW - 118) / 12 : (storyBoxW - 156) / 14) - 0.2);
       const storyChunkMax = cap => storyLand && cap === storyCapBubble ? 2 : 3;
       const storyLineNodes = (text, cap) => {
@@ -289714,7 +291877,7 @@ function MonsterHeroGame() {
         const l = script[i];
         const w = l ? assistantById(l.who) : null;
         const text = l && w && !l.band ? speakText(l, w) : '';
-        const pages = storyZones && typeof storySplitPages === 'function' ? storySplitPages(text, isGuestWho(l && l.who) ? storyCplBubble : storyCplBottom + (w && w.storyFigure ? storyFaceCols : 0), 3) : [text];
+        const pages = storyZones && typeof storySplitPages === 'function' ? storySplitPages(text, isGuestWho(l && l.who) ? storyCplBubble : storyCplBottom, 3) : [text];
         storyPageCache[i] = pages;
         return pages;
       };
@@ -290158,7 +292321,7 @@ function MonsterHeroGame() {
       })(), React.createElement("div", {
         "data-story-speaker-row": storyZones ? '' : undefined,
         className: storyZones ? 'flex items-start gap-2' : undefined
-      }, storyZones && bottomLine && !bottomSpeaker.storyFigure && React.createElement("div", {
+      }, storyZones && bottomLine && React.createElement("div", {
         key: `face-${bottomSpeaker.id}`,
         "data-story-speaker": bottomSpeaker.id,
         className: "shrink-0 text-center"
@@ -297575,7 +299738,10 @@ const createAnimationStyle = () => {
     .mh-rjdmg-life { position: relative; font-size: 10px; font-weight: 900; color: #fca5a5; font-variant-numeric: tabular-nums; animation: mhRjRise .4s ease-out .6s both; }
     .mh-rjdmg-damage { position: relative; text-align: center; opacity: 0; animation: mhRjSlam .55s cubic-bezier(.2,1.4,.4,1) 1s both; }
     .mh-rjdmg-damage small { display: block; font-size: 11px; font-weight: 900; letter-spacing: .4em; color: #fecaca; }
-    .mh-rjdmg-damage b { display: block; padding: 0 .15em; font-size: 52px; font-weight: 900; font-style: italic; line-height: 1; font-variant-numeric: tabular-nums; background: linear-gradient(180deg, #fff, #fde68a 45%, #f59e0b); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 4px 0 rgba(0,0,0,.85)) drop-shadow(0 0 20px rgba(251,191,36,.9)); }
+    .mh-rjdmg-damage b { display: block; padding: 0 .15em; font-size: 52px; font-weight: 900; font-style: italic; line-height: 1; font-variant-numeric: tabular-nums; background: linear-gradient(180deg, #fff, #fde68a 45%, #f59e0b); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 4px 0 rgba(0,0,0,.85)); }
+    /* 数字のまわりの金色の光(2026-11-28 r1126-098)。前は数字そのものに drop-shadow(0 0 20px) を掛けていたが、数え上げで毎コマ数字が変わるたびに
+       ぼかしごと描き直しになり、コマが落ちた(社長「数字の動きがかくかく」)。光は数字の後ろの動かない1枚(ぼかし無しの放射の色)にした */
+    .mh-rjdmg-damage:not(.mh-rjdmg-damage-none)::before { content: ''; position: absolute; z-index: -1; left: 50%; top: 62%; width: calc(100% + 56px); height: 96px; transform: translate(-50%, -50%); background: radial-gradient(closest-side, rgba(251,191,36,.55), rgba(251,191,36,.22) 55%, rgba(251,191,36,0)); pointer-events: none; }
     .mh-rjdmg-damage-none b { font-size: 26px; background: none; color: #cbd5e1; filter: drop-shadow(0 2px 0 #000); }
     .mh-rjdmg-damage-none small { margin-top: 4px; font-size: 10px; letter-spacing: .05em; color: #94a3b8; }
     .mh-rjdmg-down { position: absolute; left: 0; right: 0; top: 40%; text-align: center; font-size: 64px; font-weight: 900; font-style: italic; color: #fde047; text-shadow: 0 5px 0 #7c2d12, 0 0 28px rgba(250,204,21,.95); opacity: 0; animation: mhRjSlam .6s cubic-bezier(.2,1.4,.4,1) 2.3s both; pointer-events: none; z-index: 3; }
