@@ -120,6 +120,18 @@ const recorder = () => {
   await page.locator('button[aria-label="マーケット"]').first().click({ timeout: 10000 }).catch(() => {});
   await page.waitForTimeout(2000);
   await burst('back-to-home', async () => { await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => x.offsetParent && /HOME|ホーム|戻る|閉じる/.test((x.getAttribute('aria-label') || '') + (x.innerText || ''))); if (b) b.click(); }); });
+  // ほかの画面から HOME へ戻る(SCREENS=ラベル,ラベル… で指定。HOME の入口・帯を押して開き、戻るボタンで戻る)
+  const screens = (process.env.SCREENS || '').split(',').filter(Boolean);
+  for (const lb of screens) {
+    await page.waitForTimeout(1500);
+    const opened = await page.evaluate((l) => { const b = [...document.querySelectorAll('button,[role=button]')].find((x) => x.getClientRects().length && ((x.getAttribute('aria-label') || '') + ' ' + (x.innerText || '')).includes(l)); if (b) b.click(); return !!b; }, lb);
+    await page.waitForTimeout(2500);
+    for (let i = 0; i < 4; i++) { const b = page.getByRole('button', { name: /^(確認|閉じる|OK|あとで|スキップ)$/ }).first(); if (!(await b.isVisible().catch(() => false))) break; await b.click().catch(() => {}); await page.waitForTimeout(300); }
+    console.log('開いた', lb, opened);
+    // FIRST=1 … アプリを開いて初めて HOME を開く場面を作る(HOME の見た目の決まりを外してから戻る。イベントページなどから最初に HOME へ来たときと同じ)
+    if (process.env.FIRST) await page.evaluate(() => ['mh-home-v2-css', 'mh-xmas-home-entry-css', 'mh-home-raid-jack-css', 'mh-home-event-badge-css'].forEach((id) => { const e = document.getElementById(id); if (e) e.remove(); }));
+    await burst(`from-${lb}`, async () => { await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => x.getClientRects().length && /^(← ?)?(HOME|ホーム)|HOMEへ|ホームへ|^←? ?戻る|ホームに戻る/.test(((x.getAttribute('aria-label') || '') + ' ' + (x.innerText || '')).trim())); if (b) b.click(); }); }, 3000);
+  }
   // 見た目の決まり(<head> へあとから入れる <style>)が入る前の1コマが、どう見えるかを撮る(決まりを外して撮り、戻す)
   const ids = ['mh-home-v2-css', 'mh-xmas-home-entry-css', 'mh-home-raid-jack-css', 'mh-home-event-badge-css'];
   await page.evaluate((list) => { window.__keptCss = list.map((id) => document.getElementById(id)).filter(Boolean); window.__keptCss.forEach((e) => e.remove()); }, ids);
