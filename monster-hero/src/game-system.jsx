@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 31877fdd987ecc22
+// generated-sha256: 937f77fa810450d4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -67509,7 +67509,7 @@ const XmasStoryTab = ({ version = 0, allOpen = false, fightWays = [], onRead, on
       )}
       <XmasCastPanel no={reached} compact />
       <section>
-        <XmasSectionTitle>{preMain ? 'ひとりで進める物語' : '序章を読み返す'}</XmasSectionTitle>
+        <XmasSectionTitle>{preMain ? 'ミステリーノベル『モンヒロ事件簿』' : '序章を読み返す'}</XmasSectionTitle>
         <p className="mb-2 px-0.5 text-[10px] font-bold leading-relaxed text-slate-300" style={JA_LABEL_STYLE}>{jaWrap(storyNote)}</p>
         <ol data-xmas-story-list className="space-y-1.5">
           {shownChapters.map((c) => {

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4fa9f74588eeb5a0
+// source-sha256: 4844926ce4a186a5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -113347,7 +113347,7 @@ const XmasStoryTab = ({
   }, novelEnded ? '遊べる期間は終わりました(記録は残っています)' : typeof XMAS_NOVEL_GAME !== 'undefined' ? `副題「${XMAS_NOVEL_GAME.sub}」` : ''))), React.createElement(XmasCastPanel, {
     no: reached,
     compact: true
-  }), React.createElement("section", null, React.createElement(XmasSectionTitle, null, preMain ? 'ひとりで進める物語' : '序章を読み返す'), React.createElement("p", {
+  }), React.createElement("section", null, React.createElement(XmasSectionTitle, null, preMain ? 'ミステリーノベル『モンヒロ事件簿』' : '序章を読み返す'), React.createElement("p", {
     className: "mb-2 px-0.5 text-[10px] font-bold leading-relaxed text-slate-300",
     style: JA_LABEL_STYLE
   }, jaWrap(storyNote)), React.createElement("ol", {
