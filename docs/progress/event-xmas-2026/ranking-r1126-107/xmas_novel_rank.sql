@@ -252,5 +252,13 @@ on conflict (event_id, end_id) do nothing;
 insert into public.xmas_novel_end_ids (event_id, end_id, kind) values
   ('xmas_novel_2026', 'END-G2', 'truebad'), ('xmas_novel_2026', 'END-O3', 'omake'), ('xmas_novel_2026', 'END-O4', 'omake')
 on conflict (event_id, end_id) do nothing;
+-- もしもの話 ① 仮面のワルツ(r1126-115・3つ・合わせて33)
+insert into public.xmas_novel_end_ids (event_id, end_id, kind) values
+  ('xmas_novel_2026', 'END-R1', 'ifroute'), ('xmas_novel_2026', 'END-R2', 'ifroute'), ('xmas_novel_2026', 'END-R3', 'ifroute')
+on conflict (event_id, end_id) do nothing;
+-- 視点の編 ドラの編(r1126-115・2つ・合わせて35)
+insert into public.xmas_novel_end_ids (event_id, end_id, kind) values
+  ('xmas_novel_2026', 'END-PD1', 'pov'), ('xmas_novel_2026', 'END-PD2', 'ifroute')
+on conflict (event_id, end_id) do nothing;
 -- ずるの疑いのある人を隠す(消さない)
 -- update public.xmas_novel_players set hidden = true where event_id = 'xmas_novel_2026' and user_name = '…';

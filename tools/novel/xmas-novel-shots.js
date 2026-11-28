@@ -221,7 +221,25 @@ const SHOTS_117 = [];
   SHOTS_117.push({ name: `${name}-yoko`, row, side, wait, land: true, label: `${label}(横)` });
   SHOTS_117.push({ name: `${name}-yokosmall`, row, side, wait, vp: { width: 667, height: 375 }, label: `${label}(横小)` });
 });
-const LIST_ALL = process.argv.includes('--r1126-117') ? SHOTS_117 : process.argv.includes('--r1126-108c') ? SHOTS_108C : process.argv.includes('--r1126-108b') ? SHOTS_108B : process.argv.includes('--r1126-108') ? SHOTS_108 : process.argv.includes('--spoil') ? SHOTS_SPOIL : process.argv.includes('--r1126-091') ? SHOTS_091 : process.argv.includes('--final') ? SHOTS_FINAL : process.argv.includes('--r1126-077') ? SHOTS_077 : process.argv.includes('--r1126-071') ? SHOTS_071 : process.argv.includes('--r1126-076') ? SHOTS_076 : process.argv.includes('--r1126-067') ? SHOTS_067 : process.argv.includes('--r1126-065') ? SHOTS_065 : process.argv.includes('--r1126-062') ? SHOTS_062 : process.argv.includes('--r1126-046') ? SHOTS_046 : process.argv.includes('--r1126-054') ? SHOTS_054 : process.argv.includes('--r1126-058') ? SHOTS_058 : SHOTS;
+// r1126-115 もしもの話 ① 仮面のワルツ(紅のしおりを持っている人だけ)
+const SHOTS_115 = [
+  { name: '51-a1b-red', row: 'A1b', side: 1, endings: ['END-G', 'END-M1', 'END-M2', 'END-M3', 'END-M4', 'END-M5'], label: 'しおりのあと 第1章 A1b の③' },
+  { name: '52-piano', row: 'RW-1-5', side: 1, endings: ['END-G', 'END-M1', 'END-M2', 'END-M3', 'END-M4', 'END-M5'], label: 'RW-1 真夜中のピアノ(灰谷)' },
+  { name: '53-stairs', row: 'RW-2-11', side: 2, endings: ['END-G', 'END-M1', 'END-M2', 'END-M3', 'END-M4', 'END-M5'], label: 'RW-2 12年ぶり' },
+  { name: '54-waltz', row: 'RW-4-10', side: 1, endings: ['END-G', 'END-M1', 'END-M2', 'END-M3', 'END-M4', 'END-M5'], label: 'RW-4 ワルツ' },
+  { name: '55-ar1', row: 'AR1', side: 1, endings: ['END-G', 'END-M1', 'END-M2', 'END-M3', 'END-M4', 'END-M5'], label: 'ワルツのあとの選択' },
+  { name: '56-r3', row: 'RW-5c-6', side: 2, endings: ['END-G', 'END-M1', 'END-M2', 'END-M3', 'END-M4', 'END-M5'], label: 'RW-5c 釣りはいらない' },
+  { name: '57-r1-card', row: 'R1-4', side: 1, tap: 3, endings: ['END-G', 'END-M1', 'END-M2', 'END-M3', 'END-M4', 'END-M5'], label: 'END-R1 エンドの札(もしも)' },
+  { name: '58-out', row: 'OUT-RW-1', side: 1, endings: ['END-G', 'END-M1', 'END-M2', 'END-M3', 'END-M4', 'END-M5'], label: 'OUT-RW 画面の前で' },
+];
+// r1126-115 視点の編 ドラの編
+const SHOTS_115PD = [
+  { name: '61-a2-pd', row: 'A2', side: 1, endings: ['END-G'], label: '真グッドのあと 第2章 A2 の③(✦)' },
+  { name: '62-pantry', row: 'PD-1-11', side: 1, endings: ['END-G'], label: 'PD-1 すれ違う一瞬' },
+  { name: '63-apd1', row: 'APD1', side: 2, endings: ['END-G'], label: '時刻つきの選択' },
+  { name: '64-ribbon', row: 'PD-3-4', side: 2, endings: ['END-G'], label: 'PD-3 崖の上のリボン' },
+];
+const LIST_ALL = process.argv.includes('--r1126-117') ? SHOTS_117 : process.argv.includes('--r1126-115pd') ? SHOTS_115PD : process.argv.includes('--r1126-115') ? SHOTS_115 : process.argv.includes('--r1126-108c') ? SHOTS_108C : process.argv.includes('--r1126-108b') ? SHOTS_108B : process.argv.includes('--r1126-108') ? SHOTS_108 : process.argv.includes('--spoil') ? SHOTS_SPOIL : process.argv.includes('--r1126-091') ? SHOTS_091 : process.argv.includes('--final') ? SHOTS_FINAL : process.argv.includes('--r1126-077') ? SHOTS_077 : process.argv.includes('--r1126-071') ? SHOTS_071 : process.argv.includes('--r1126-076') ? SHOTS_076 : process.argv.includes('--r1126-067') ? SHOTS_067 : process.argv.includes('--r1126-065') ? SHOTS_065 : process.argv.includes('--r1126-062') ? SHOTS_062 : process.argv.includes('--r1126-046') ? SHOTS_046 : process.argv.includes('--r1126-054') ? SHOTS_054 : process.argv.includes('--r1126-058') ? SHOTS_058 : SHOTS;
 
 //  --only <語>: 名前にその語を含む物だけ撮る(例: --only kuroba)
 const ONLY = process.argv.includes('--only') ? process.argv[process.argv.indexOf('--only') + 1] || '' : '';
