@@ -37,6 +37,7 @@
 
 ### ⑥ から移した: 絵を差し替えたとき
 
+- 助手の絵の縁は原本のまま(r1126-095 追記2・`assistant-image-registry` スキル)
 - モンスターの絵やアイコンを差し替え・追加したら、`node tools/build.js` でキャッシュキーを
   更新したうえで `node tools/image-asset-check.js` を通す。絵の実体は `monster-hero/images/` の
   PNGで、`data/images/images-*.js` と `data/breeder.js` にはそのパスだけを書く(base64で埋め戻さない)

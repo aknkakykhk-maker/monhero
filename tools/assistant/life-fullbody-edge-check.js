@@ -134,7 +134,13 @@ function matte({ w, h, alpha, rgb }) {
 module.exports = { readAlpha }; // 立ち絵の端の検査(life-stand-edge-check.js)も使う
 if (require.main === module) {
 let failed = 0, n = 0, worst = { hard: 0, name: '' };
+// 縁を削らない口(tools/assistant/art_edge.py)で作った絵は、ここでは見ない(2026-11-28 r1126-095 追記2)。
+//   この検査の「縁に半透明が5割」「縁の白は取る」は、縁をぼかす・内側の色で塗り直す方へ道具を押し、外の黒い線を消していた。
+//   これらの絵は原本と比べる tools/assistant/art-edge-check.js が見張る(原本より白い縁取り・線の消え・ギザギザ・ぼやけが悪ければ落ちる)
+const EDGE_KEEP = /^[a-z]+_(santa|winter)(__[a-z]+)?\.(png|webp)$/;
+let skipped = 0;
 for (const f of fs.readdirSync(DIR).filter((x) => /\.(png|webp)$/i.test(x)).sort()) {
+  if (EDGE_KEEP.test(f)) { skipped++; continue; }
   n++;
   const img = readAlpha(path.join(DIR, f));
   const m = measure(img);
@@ -153,6 +159,7 @@ for (const f of fs.readdirSync(DIR).filter((x) => /\.(png|webp)$/i.test(x)).sort
     console.log(`NG ${f}: ふちの段の硬さ ${m.hard.toFixed(3)}(上限 ${MAX_HARD})・ふちの半透明 ${m.mid.toFixed(2)}(下限 ${MIN_MID}) — tools/assistant/life-fullbody-art.py で作り直す`);
   }
 }
+if (skipped) console.log(`縁を削らない口で作った ${skipped} 枚は art-edge-check.js が見る`);
 console.log(failed ? `全身画のふち: ${failed}件 NG(上の行)` : `全身画のふちの透過・白マット: OK(${n}枚・いちばん硬いのは ${worst.name} の ${worst.hard.toFixed(3)})`);
 process.exitCode = failed ? 1 : 0;
 }
