@@ -80,14 +80,14 @@ const classify = (file, cat) => {
   const byPrefix = (prefix) => Object.keys(cat.who).find(id => cat.who[id].prefix === prefix) || null;
   const outfitOf = (who, dir) => (dir === '' || dir === 'normal') ? 'normal' : (cat.who[who] && cat.who[who].outfits[dir] ? dir : null);
   if (parts[0] === 'fullbody' && parts.length === 2) {
-    const m = base.match(/^(.+?)(?:__([a-z]+))?\.png$/);
+    const m = base.match(/^(.+?)(?:__([a-z]+))?\.(?:png|webp)$/); // 重い絵は WebP の組あり(2026-11-28 r1126-095・data/assistants.js の assistantArtFile)
     if (!m) return null;
     const hit = Object.keys(cat.fullbodyNames).find(k => cat.fullbodyNames[k] === m[1]);
     if (!hit) return null;
     const [who, outfit] = hit.split('/');
     return { key: `${who}/${outfit}/fullbody`, who, outfit, kind: 'fullbody', sleep: false, base: !m[2] };
   }
-  const m = base.match(/^([a-z]+)_([a-z]+)\.(png|PNG)$/);
+  const m = base.match(/^([a-z]+)_([a-z]+)\.(png|PNG|webp)$/);
   if (!m) return null;
   const who = byPrefix(m[1]);
   if (!who) return null;
@@ -341,6 +341,9 @@ const selftest = () => {
   t('stand-halloween/myua_happy.png', 'mua/halloween/stand');
   t('fullbody/mua_halloween__angry.png', 'mua/halloween/fullbody');
   t('fullbody/mua.png', 'mua/normal/fullbody base');
+  t('fullbody/mua_halloween__angry.webp', 'mua/halloween/fullbody'); // 重い絵は WebP の組あり(r1126-095)
+  t('stand-halloween/myua_happy.webp', 'mua/halloween/stand');
+  t('halloween/myua_happy.webp', 'mua/halloween/bust');
   t('fullbody/mua_old.png', null);
   t('old/myua_happy.PNG', null);
   t('myua_happy_v1.PNG', null);
