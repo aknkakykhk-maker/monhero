@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8d21926397255c06
+// source-sha256: 685521183f59bc63
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -87639,20 +87639,21 @@ const HomeRaidJack = ({
   })), totals === null ? React.createElement("span", {
     style: {
       display: 'block',
-      fontSize: '8px',
+      fontSize: '11px',
       opacity: .8
     }
   }, "準備中") : totals === undefined ? React.createElement("span", {
     style: {
       display: 'block',
-      fontSize: '8px',
+      fontSize: '11px',
       opacity: .8
     }
   }, "…") : React.createElement("span", {
+    "data-home-raid-hp-text": true,
     style: {
       display: 'block',
-      fontSize: '8px',
-      opacity: .85
+      fontSize: '11px',
+      opacity: .9
     }
   }, "共有HP ", left.toLocaleString())));
   return React.createElement(React.Fragment, null, !allDone && ev.aura && React.createElement("div", {
@@ -87806,11 +87807,13 @@ const HomeRaidJack = ({
     draggable: false,
     style: {
       position: 'absolute',
-      left: '50%',
+      left: 0,
+      right: 0,
+      margin: '0 auto',
       bottom: 0,
       height: '135%',
       width: 'auto',
-      transform: 'translateX(-50%)',
+      maxWidth: 'none',
       filter: 'drop-shadow(0 6px 10px #000a)',
       pointerEvents: 'none'
     }
