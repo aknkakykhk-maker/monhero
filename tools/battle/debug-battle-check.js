@@ -37,7 +37,7 @@ assert(nextWave.indexOf('debugBattleRef.current') < nextWave.indexOf('awardRunRe
 assert(/debugBattleRef\.current\s*=\s*false;[^\n]+setDebugBattle\(false\)/.test(source), 'normal battle entry must clear debug mode');
 assert(/debugBattleRef\.current = false;[\s\S]{0,120}debugResultRef\.current = false;/.test(source), 'leaving a debug battle must clear synchronous flags');
 assert(source.includes("debugBattle&&<span") && source.includes('>DEBUG</span>'), 'battle HUD must identify debug mode');
-assert(source.includes('同じ条件でもう一度') && source.includes('デバッグ設定へ戻る') && source.includes('ヘルプへ戻る'), 'debug result actions must all be present');
+assert(source.includes('同じ条件でもう1度') && source.includes('デバッグ設定へ戻る') && source.includes('ヘルプへ戻る'), 'debug result actions must all be present');
 assert(source.includes('>💊</button>'), 'hidden help entry must use the pill emoji');
 assert(source.includes("name:'🛠 デバッグ最強モン'"), 'debug battle must provide the strongest runtime monster');
 for (const stat of ['baseHp','baseAtk','baseDef','baseGuts']) {

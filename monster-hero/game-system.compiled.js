@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 291816f5cb5153ed
+// source-sha256: d3d445bf0650ec0c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -182754,15 +182754,15 @@ const ALF_VISIT_LINES = Object.freeze({
   "atsu": {
     "greet": ["お、いらっしゃい！ {h}さんの友だちだよね笑", "{name}、来てくれたんだ！ ゆっくりしてって笑", "おっ、お客さん笑 遠慮しないで入って！"],
     "doing": {
-      "snack": "ちょうどおやつ食べてた笑 1個どう？",
-      "practice": "いま1曲叩いてたとこ笑 {name}も聞いてく？",
+      "snack": "ちょうどおやつ食べてた笑 一個どう？",
+      "practice": "いま一曲叩いてたとこ笑 {name}も聞いてく？",
       "training": "ドラゴンの世話してた笑 ちょっと待ってて！",
       "cards": "デッキ組み直してたとこ笑 見ていく？",
       "read": "本読んでたら、ちょっと寝そうだった笑 来てくれて助かる！",
       "idle": "ぼーっとしてた笑 ちょうど話し相手ほしかった！"
     },
     "reply": ["ありがと笑 くつろいでって！", "そう言ってもらえると、うれしい笑", "いいって笑 {h}さんにも伝えとく！"],
-    "sleep": ["……次の1曲、いける……", "……ドラゴン、えらいぞ……( *'ω'*)ノ"]
+    "sleep": ["……次の一曲、いける……", "……ドラゴン、えらいぞ……( *'ω'*)ノ"]
   },
   "kyuko": {
     "greet": ["ほい、いらっしゃ〜い。{name}、ようこそだよぉ", "あ、お客さんだぁ。{h}さんの友だちかな？", "ちょうどひと休みしたかったんだぁ。どうぞどうぞ"],

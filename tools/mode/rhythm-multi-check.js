@@ -495,7 +495,7 @@ const flush = () => new Promise((resolve) => setImmediate(resolve));
   // チャットの使いやすさ(2026-10-03・ユーザー指示「結果画面でもチャットできるように。もういっかいとかありがとうとか」)
   const [h, a] = ['h', 'a'].map(makeClient);
   const stamps = h.stamps('result');
-  check('結果画面の定型文は「もう一回!」「ありがとう!」が先頭', stamps[0] === 'もう一回!' && stamps[1] === 'ありがとう!', stamps.slice(0, 3).join(' / '));
+  check('結果画面の定型文は「もう1回!」「ありがとう!」が先頭', stamps[0] === 'もう1回!' && stamps[1] === 'ありがとう!', stamps.slice(0, 3).join(' / '));
   check('定型文は重ならず、どれも送れる長さ', ['matching', 'select', 'ready', 'playing', 'result', ''].every((ph) => {
     const list = h.stamps(ph);
     return list.length >= 5 && new Set(list).size === list.length && list.every((t) => t.length <= h.chatMax);

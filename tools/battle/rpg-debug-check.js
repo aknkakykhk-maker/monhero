@@ -465,7 +465,7 @@ check('公開ヘルプにRPGの項目を作っていない',
 
 // --- 画面の作り ---
 check('結果画面から再戦・編成変更・デバッグ設定へ戻れる',
-  rpgUi.includes('同じ条件でもう一度') && rpgUi.includes('編成・Lv・ステータスを変更') && rpgUi.includes('デバッグ設定へ戻る'));
+  rpgUi.includes('同じ条件でもう1度') && rpgUi.includes('編成・Lv・ステータスを変更') && rpgUi.includes('デバッグ設定へ戻る'));
 check('セットアップで基礎→ステ振り後と使用ポイントが見える',
   rpgUi.includes('mh-rpg-stat-base') && rpgUi.includes('mh-rpg-stat-final') && rpgUi.includes('使用 {used} / {limit}P'));
 check('セットアップのステ振りは6ステータスすべてを RPG_STAT_KEYS から作る',
