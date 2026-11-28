@@ -16,6 +16,10 @@
 //   --to <ms>           途中で止める(試し用)
 //   --alloc 1           どこでメモリを作っているか(CDP のヒープのサンプリング)の上位も出す。少し重くなるので前後の比べには使わない
 //   --lines <関数名>    その関数の中で時間を食っている行(compiled の行番号)を出す
+//   --dense <ms>        いちばんノーツの密な区間(その長さ)だけ測る(from・to を自動で決める)
+//   --from <ms>         その時刻から測る(曲の頭からボットが叩き、測るのは from〜to だけ)
+//   --ls '{"k":"v"}'    測る前に localStorage へ入れる(値は文字のまま)
+//   見た目の計算(スタイル・配置)の時間も出す(CDP Performance.getMetrics の RecalcStyleDuration・LayoutDuration)
 //   --draw webgl        ノーツを WebGL で描く(iPhone は GPU があるので自動でこちら。手元は GPU が無いので既定は 2D)
 const path = require('path'), fs = require('fs');
 const ROOT_DEFAULT = path.resolve(__dirname, '../..');
@@ -23,7 +27,16 @@ const arg = (name, fallback = null) => { const i = process.argv.indexOf(`--${nam
 const ROOT = path.resolve(arg('root', ROOT_DEFAULT));
 const SONG = arg('song', 'walkure'), DIFF = arg('diff', 'MASTER'), CPU = Number(arg('cpu', 4));
 const LINES = arg('lines', ''), DRAW = arg('draw', ''), ALLOC = arg('alloc', '0') === '1';
-const LAND = arg('landscape', '0') === '1', OUT = arg('out', ''), TO = Number(arg('to', 0)) || 0;
+const LAND = arg('landscape', '0') === '1', OUT = arg('out', ''), DENSE = Number(arg('dense', 0)) || 0;
+let TO = Number(arg('to', 0)) || 0, FROM = Number(arg('from', 0)) || 0;
+// --ls '{"キー":"値"}' … 測る前に localStorage へ入れる(設定の前後を比べる・2026-11-28 r1128-071)
+// --set '{"judgmentTextDisplay":false}' … 演奏の設定(mh_rhythm_settings_v1)の一部だけ変える(比べるとき用)
+// --bot 0 … ボットに押させない(全部ミス。押したときだけ走る処理を外して比べる)
+const BOT = arg('bot', '1') !== '0';
+// --inval 1 … 測る区間の頭の5秒だけ、スタイルを計算し直させた書き換え(要素・属性)をブラウザの記録(トレース)から数えて上位を出す
+const INVAL = arg('inval', '0') === '1';
+const SET = (() => { try { const v = JSON.parse(arg('set', '{}')); return v && typeof v === 'object' ? v : {}; } catch { return {}; } })();
+const LS = (() => { try { const v = JSON.parse(arg('ls', '{}')); return v && typeof v === 'object' ? v : {}; } catch { return {}; } })();
 const W = LAND ? 844 : 390, H = LAND ? 390 : 844;
 const req = (m) => { try { return require(path.join(ROOT_DEFAULT, 'tools/node_modules', m)); } catch { return require(m); } };
 const { chromium } = req('playwright');
@@ -40,6 +53,8 @@ const seed = (songId) => `(() => {
   put('mh_monster_roster', ['Suezo', 'Golem', 'Tiger', 'Ham', 'Pixie', 'Monol', 'Oboro', 'Mocchi']);
   put('mh_rhythm_owned_songs_v1', [${JSON.stringify(songId)}]);
   localStorage.setItem('mh_rhythm_perf_v1', '1');
+  ${Object.keys(SET).length ? `try { const k = 'mh_rhythm_settings_v1'; const cur = JSON.parse(localStorage.getItem(k) || '{}') || {}; localStorage.setItem(k, JSON.stringify({ ...cur, ...${JSON.stringify(SET)} })); } catch (e) {}` : ''}
+  ${Object.entries(LS).map(([k, v]) => `localStorage.setItem(${JSON.stringify(k)}, ${JSON.stringify(String(v))});`).join(' ')}
   ${DRAW ? `localStorage.setItem('mh_rhythm_canvas_v1', ${JSON.stringify(DRAW)});` : ''}
   put('mh_rhythm_best_v1', { ${JSON.stringify(songId)}: Object.fromEntries(['EASY','NORMAL','HARD','EXPERT','MASTER'].map(d => [d, { bestScore: 900000, maxCombo: 10, played: true, clear: true }])) });
 })()`;
@@ -99,6 +114,7 @@ const pct = (a, p) => a.length ? a[Math.min(a.length - 1, Math.floor(a.length * 
   if (!started) throw new Error(`曲を始められなかった(${SONG} ${DIFF})`);
   await page.waitForFunction(() => !!document.querySelector('[data-rhythm-play-area]') && window.__mhTestHooks?.rhythmNotes?.(), null, { timeout: 60000, polling: 100 });
   const notes = await page.evaluate(() => window.__mhTestHooks.rhythmNotes().map(n => n.timeMs));
+  if (DENSE > 0) { const t = notes.slice().sort((x, y) => x - y); let best = 0, at = 0; for (let i = 0, j = 0; i < t.length; i++) { while (t[i] - t[j] > DENSE) j++; if (i - j + 1 > best) { best = i - j + 1; at = t[j]; } } FROM = Math.max(1, Math.floor(at)); TO = FROM + DENSE; console.log(`いちばん密な${DENSE / 1000}秒: ${(FROM / 1000).toFixed(1)}〜${(TO / 1000).toFixed(1)}秒 ${best}ノーツ`); }
   const backend = await page.evaluate(() => document.querySelector('[data-rhythm-note-backend]')?.dataset.rhythmNoteBackend || '?');
   const head = await page.evaluate(() => (document.querySelector('[data-rhythm-play-area]')?.closest('main')?.innerText || '').replace(/\s+/g, ' ').slice(0, 80));
   console.log(`演奏: ${SONG} ${DIFF} ノーツ ${notes.length} / 描き方 ${backend} / ${head}`);
@@ -115,13 +131,32 @@ const pct = (a, p) => a.length ? a[Math.min(a.length - 1, Math.floor(a.length * 
   const target = 'const p = fingerAt(c, hab, null, now);';
   const src = installPlayer.toString();
   const player = src.includes(target) ? src.replace(target, 'const p = (() => { const q = fingerAt(c, hab, null, now); const sh = Number(n.skyHeight) > 0 ? Number(n.skyHeight) : 0; if (!sh || typeof RHYTHM_SKY_LIFT === "undefined") return q; const rr = area.getBoundingClientRect(); return { x: q.x, y: q.y - rr.height * RHYTHM_SKY_LIFT.ratio * sh }; })();') : src;
-  await page.evaluate(`(${player})(${JSON.stringify({ sigma: 0, missRate: 0, seed: 7, human: false, persona: 'center', input: 'ios', dropRate: 0, lateRate: 0, touchSrc: touchInputSource })})`);
+  if (BOT) await page.evaluate(`(${player})(${JSON.stringify({ sigma: 0, missRate: 0, seed: 7, human: false, persona: 'center', input: 'ios', dropRate: 0, lateRate: 0, touchSrc: touchInputSource })})`);
   if (CPU > 1) await cdp.send('Emulation.setCPUThrottlingRate', { rate: CPU });
   await cdp.send('Profiler.enable'); await cdp.send('Profiler.setSamplingInterval', { interval: 1000 });
   if (ALLOC) { await cdp.send('HeapProfiler.enable'); await cdp.send('HeapProfiler.startSampling', { samplingInterval: 16384, includeObjectsCollectedByMajorGC: true, includeObjectsCollectedByMinorGC: true }); }
   const segs = [], lineTicks = new Map();
   const endMs = TO || (await page.evaluate(() => { const n = window.__mhTestHooks.rhythmNotes(); return Math.max(...n.map(x => Number(x.endTimeMs) || Number(x.timeMs) || 0)) + 1500; }));
   const songMs = () => page.evaluate(() => window.__mhTestHooks?.rhythmSongMs?.() ?? -1);
+  if (FROM > 0) await page.waitForFunction((a) => (window.__mhTestHooks?.rhythmSongMs?.() ?? -1) >= a, FROM, { timeout: 900000, polling: 200 });
+  await cdp.send('Performance.enable');
+  const metric = async () => { const { metrics } = await cdp.send('Performance.getMetrics'); const m = Object.fromEntries(metrics.map(x => [x.name, x.value])); return { style: m.RecalcStyleDuration || 0, layout: m.LayoutDuration || 0, script: m.ScriptDuration || 0, task: m.TaskDuration || 0, t: m.Timestamp || 0 }; };
+  const m0 = await metric();
+  if (INVAL) {
+    const evs = []; cdp.on('Tracing.dataCollected', (e) => evs.push(...e.value));
+    await cdp.send('Tracing.start', { transferMode: 'ReportEvents', traceConfig: { includedCategories: ['devtools.timeline', 'disabled-by-default-devtools.timeline.invalidationTracking'] } });
+    await page.waitForTimeout(5000);
+    const done = new Promise((r) => cdp.once('Tracing.tracingComplete', r)); await cdp.send('Tracing.end'); await done;
+    const cnt = new Map(); let recalc = 0, recalcMs = 0;
+    for (const e of evs) {
+      if (e.name === 'UpdateLayoutTree' && e.ph === 'X') { recalc++; recalcMs += (e.dur || 0) / 1000; }
+      if (!/Invalidat/.test(e.name)) continue; const d = (e.args && e.args.data) || {};
+      const k = `${e.name.replace('StyleInvalidatorInvalidationTracking', 'SI').replace('StyleRecalcInvalidationTracking', 'SR').replace('ScheduleStyleInvalidationTracking', 'SS')} ${d.nodeName || ''} ${d.changedAttribute || d.changedId || d.changedClass || d.changedPseudo || ''} ${d.reason || d.invalidationSet?.[0]?.id || ''}`.replace(/\s+/g, ' ').trim();
+      cnt.set(k, (cnt.get(k) || 0) + 1);
+    }
+    console.log(`  スタイルの計算し直し ${recalc}回 ${Math.round(recalcMs)}ms(5秒) / 書き換えの上位:`);
+    [...cnt].sort((a, b) => b[1] - a[1]).slice(0, 25).forEach(([k, n]) => console.log(`    ${n} ${k.slice(0, 160)}`));
+  }
   for (;;) {
     const a = await songMs();
     await cdp.send('Profiler.start');
@@ -147,6 +182,7 @@ const pct = (a, p) => a.length ? a[Math.min(a.length - 1, Math.floor(a.length * 
     if (b < 0 || b >= endMs) break;
     if (b <= a) { const res = await page.evaluate(() => (document.querySelector('main')?.innerText || '').replace(/\s+/g, ' ').slice(0, 120)); console.log('  曲の時計が進まない:', res); break; }
   }
+  const m1 = await metric();
   if (CPU > 1) await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
   if (ALLOC) {
     const { profile: hp } = await cdp.send('HeapProfiler.stopSampling');
@@ -161,10 +197,10 @@ const pct = (a, p) => a.length ? a[Math.min(a.length - 1, Math.floor(a.length * 
   // 1秒ごと
   const sec = new Map();
   const S = (k) => { if (!sec.has(k)) sec.set(k, { f: 0, o33: 0, o50: 0, max: 0, drawSum: 0, tickSum: 0, dens: 0 }); return sec.get(k); };
-  ft.filter(([s]) => s >= 0 && s < endMs).forEach(([s, dt, d, sc, tk]) => { const b = S(Math.floor(s / 1000)); b.f++; if (dt > 33.4) b.o33++; if (dt > 50) b.o50++; if (dt > b.max) b.max = dt; b.drawSum += d; b.tickSum += tk; });
+  ft.filter(([s]) => s >= FROM && s < endMs).forEach(([s, dt, d, sc, tk]) => { const b = S(Math.floor(s / 1000)); b.f++; if (dt > 33.4) b.o33++; if (dt > 50) b.o50++; if (dt > b.max) b.max = dt; b.drawSum += d; b.tickSum += tk; });
   notes.forEach(t => { if (t >= 0 && t < endMs) S(Math.floor(t / 1000)).dens++; });
   const rows = [...sec].sort((a, b) => a[0] - b[0]).map(([k, v]) => ({ s: k, frames: v.f, o33: v.o33, o50: v.o50, max: v.max, draw: v.f ? Math.round(v.drawSum / v.f * 10) / 10 : 0, tick: v.f ? Math.round(v.tickSum / v.f * 10) / 10 : 0, dens: v.dens }));
-  const dts = ft.filter(([s]) => s >= 0 && s < endMs).map(([, dt]) => dt).sort((a, b) => a - b);
+  const dts = ft.filter(([s]) => s >= FROM && s < endMs).map(([, dt]) => dt).sort((a, b) => a - b);
   // 密度と重さの重なり: 密度の上位25%の秒と、それ以外の秒で 33ms 超の割合を比べる
   const play = rows.filter(r => r.frames > 0), byDens = play.map(r => r.dens).sort((a, b) => a - b), q75 = pct(byDens, .75);
   const rate = (rs) => { const f = rs.reduce((p, r) => p + r.frames, 0); return f ? rs.reduce((p, r) => p + r.o33, 0) / f : 0; };
@@ -183,13 +219,15 @@ const pct = (a, p) => a.length ? a[Math.min(a.length - 1, Math.floor(a.length * 
     judge: { n: deltas.length, miss: results.filter(r => r.judgment === 'MISS').length, avg: deltas.length ? deltas.reduce((p, q) => p + q, 0) / deltas.length : 0, p95: pct(deltas, .95), max: deltas[deltas.length - 1] || 0 },
     clock: { stallRate: perf.songStallRate, stepMax: perf.songStepMaxMs, judgeMsAvg: perf.judgeMsAvg, judgeMsMax: perf.judgeMsMax },
     decode: (() => { const at = dec.filter(d => d.song != null && d.song > 0).map(d => d.song); const near = (s) => at.some(a => s >= a - 100 && s < a + 1000);
-      const all = ft.filter(([s]) => s >= 0 && s < endMs), inW = all.filter(([s]) => near(s)), outW = all.filter(([s]) => !near(s));
+      const all = ft.filter(([s]) => s >= FROM && s < endMs), inW = all.filter(([s]) => near(s)), outW = all.filter(([s]) => !near(s));
       const r = (a) => a.length ? a.filter(([, d]) => d > 33.4).length / a.length : 0;
       return { count: at.length, nearFrames: inW.length, near33: r(inW), other33: r(outW), nearMax: Math.max(0, ...inW.map(x => x[1])) }; })(),
+    look: (() => { const sec = Math.max(1e-3, m1.t - m0.t); return { styleMsPerSec: (m1.style - m0.style) * 1000 / sec, layoutMsPerSec: (m1.layout - m0.layout) * 1000 / sec, scriptMsPerSec: (m1.script - m0.script) * 1000 / sec, taskMsPerSec: (m1.task - m0.task) * 1000 / sec }; })(),
     worst: [...rows].sort((a, b) => b.o33 - a.o33 || b.max - a.max).slice(0, 12),
   };
   const f1 = (x) => (Math.round(x * 10) / 10).toFixed(1);
   console.log(`${SONG} ${DIFF} CPU${CPU}倍 ${W}x${H} ノーツ${notes.length} 描き方${backend}`);
+  console.log(`  見た目の計算 スタイル${Math.round(summary.look.styleMsPerSec)}ms/秒・配置${Math.round(summary.look.layoutMsPerSec)}ms/秒 / JS ${Math.round(summary.look.scriptMsPerSec)}ms/秒 / メインスレッドの仕事 ${Math.round(summary.look.taskMsPerSec)}ms/秒`);
   console.log(`  1コマ: ${summary.frames}コマ 平均${f1(summary.avgMs)}ms 95%${f1(summary.p95)} 99%${f1(summary.p99)} 最長${f1(summary.maxMs)}ms 33ms超${summary.o33} 50ms超${summary.o50}`);
   console.log(`  密度上位(1秒${q75}ノーツ以上)の33ms超の割合 ${(summary.denseRate33 * 100).toFixed(1)}% / それ以外 ${(summary.sparseRate33 * 100).toFixed(1)}%`);
   console.log(`  描いたノーツ 平均${f1(summary.drawAvg)}/コマ 最大${summary.drawMax} / 忙しさ ${Math.round(summary.busyMsPerSec)}ms/秒 GC ${f1(summary.gcMsPerSec)}ms/秒`);

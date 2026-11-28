@@ -132,13 +132,13 @@ unreached.forEach((e) => fail(`エンディング ${e} に着く道が無い(台
 S.chapters.filter((c) => c.past).forEach((c) => {
   const first = S.scenes.find((x) => x.chapter === c.id);
   if (!first) { fail(`${c.id}: 過去編の場面が無い`); return; }
-  let st = E.xmasNovelSettle(S, { ...E.xmasNovelFreshCur(S), scene: first.id, idx: 0 });
+  let st = E.xmasNovelSettle(S, { ...E.xmasNovelFreshCur(S), scene: first.id, idx: 0 }, { endings: SEEN });
   const seen = new Set();
   for (let n = 0; n < 2000 && st.row; n += 1) {
     seen.add(st.cur.scene); visited.add(st.cur.scene);
     if (st.scene && st.scene.chapter !== c.id) { fail(`${c.id}: 過去編から別の章(${st.scene.id})へ出てしまう`); break; }
     if (st.row.t === 'q') { fail(`${c.id}: 過去編に選択がある(${st.row.id})`); break; }
-    st = E.xmasNovelStep(S, st.cur);
+    st = E.xmasNovelStep(S, st.cur, { endings: SEEN });
   }
   if (st.ending) fail(`${c.id}: 過去編のあとにエンディング(${st.ending.id})へ進んでしまう`);
   const miss = S.scenes.filter((x) => x.chapter === c.id && !seen.has(x.id)).map((x) => x.id);
