@@ -516,7 +516,24 @@ const parseScript = (md, srcName) => {
   scenes.forEach((sc) => { delete sc.stopHere; });
   const seenCh = new Set();
   const chs = chapters.filter((c) => scenes.some((s) => s.chapter === c.id) && !seenCh.has(c.id) && seenCh.add(c.id));
-  return { v: 1, src: srcName, chapters: chs.map(({ id, no, label, disp, title, outside, past }) => ({ id, no, label, disp, title, ...(outside ? { outside: true } : {}), ...(past ? { past: true } : {}) })), scenes };
+  const ruby = parseRuby(md);
+  return { v: 1, src: srcName, chapters: chs.map(({ id, no, label, disp, title, outside, past }) => ({ id, no, label, disp, title, ...(outside ? { outside: true } : {}), ...(past ? { past: true } : {}) })), ...(ruby.length ? { ruby } : {}), scenes };
+};
+
+// ---- ふりがなの表(「### ふりがな」の見出しの下の「| 字 | 読み |」・r1126-117) ----
+const parseRuby = (md) => {
+  const out = []; let on = false;
+  for (const line of md.split(/\r?\n/)) {
+    if (/^# 旧案/.test(line)) break;
+    if (/^#{2,4}\s/.test(line)) { on = /^#{2,4}\s+ふりがな/.test(line); continue; }
+    if (!on) continue;
+    const m = line.match(/^\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*$/);
+    if (!m || /^-+$/.test(m[1]) || m[1] === '字') continue;
+    const b = stripMd(m[1]), r = stripMd(m[2]);
+    if (!/^[ぁ-ゖー]+$/.test(r)) { note('ふりがな', `「${b}」の読み「${r}」はひらがなで書く`); continue; }
+    if (!out.some((x) => x.b === b)) out.push({ b, r });
+  }
+  return out;
 };
 
 // ---- 見直し(行き先・答え・エンディング) ----
@@ -556,7 +573,7 @@ const render = (data) => {
   const json = JSON.stringify(data, null, 0).replace(/\},\{"id"/g, '},\n{"id"');
   return `// ===== クリスマスのミステリーノベルの台本データ(生成物・手で直さない) =====
 // 直すのは台本 ${data.src}。作り直し: node tools/novel/xmas-novel-build.js(書き方は docs/progress/xmas-novel/FORMAT.md)
-// 形: { v, src, chapters:[{id,no,label,title}], scenes:[{id,chapter,title,cond,bgm,bg,next,ending?,rows:[行]}] }。行の t は line/band/clue/panel/flag/q
+// 形: { v, src, chapters:[{id,no,label,title}], ruby?:[{b:字,r:読み}], scenes:[{id,chapter,title,cond,bgm,bg,next,ending?,rows:[行]}] }。行の t は line/band/clue/panel/flag/q
 const XMAS_NOVEL_SCRIPT = ${json};
 `;
 };
