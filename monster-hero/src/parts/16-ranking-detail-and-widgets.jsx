@@ -276,6 +276,36 @@ const SoulRankAura = ({ soulRankStage = 0, className = '' }) => {
     <span className="mh-reincarnate-sparks"/>
   </span>;
 };
+// 次に歩いて行く所(歩く層の中の %)。レイドのボス(HP の札ごと)が出ているときは、ボスと重ならない所を選ぶ
+//   (2026-11-28 台帳 r1126-088 ①「まん中で黒いサンタ・歩くモンスター・HP の札が重なる」)。
+//   マスモンの絵は置き場所から左右へ幅の半分・上へ 72%・下へ 28% に描かれる(.mh-home-masumon の translate(-50%,-72%))ので、その分ボスの四角を広げて避ける。
+//   16回試して空いた所が無ければ、ボスの下へ。下に入らなければボスの左右の外へ行く
+const homeWalkingMasumonTarget = (el, laneCenter, laneWidth) => {
+  const pick = () => ({ x: Math.max(6, Math.min(94, laneCenter + (Math.random() - 0.5) * laneWidth)), y: 10 + Math.random() * 80 });
+  let avoid = null;
+  try {
+    const layer = el && el.parentElement;
+    const boss = typeof document !== 'undefined' ? document.querySelector('[data-home-raid-jack]') : null;
+    if (layer && boss && boss.getClientRects().length) {
+      const L = layer.getBoundingClientRect();
+      const rs = [boss, ...boss.querySelectorAll('img')].map((e) => e.getBoundingClientRect()).filter((r) => r.width > 1 && r.height > 1);
+      if (L.width > 0 && L.height > 0 && rs.length) {
+        const B = { left: Math.min(...rs.map((r) => r.left)), right: Math.max(...rs.map((r) => r.right)), top: Math.min(...rs.map((r) => r.top)), bottom: Math.max(...rs.map((r) => r.bottom)) };
+        const mw = el.offsetWidth || 56;
+        avoid = { x1: (B.left - mw / 2 - L.left) / L.width * 100, x2: (B.right + mw / 2 - L.left) / L.width * 100,
+          y1: (B.top - mw * 0.28 - L.top) / L.height * 100, y2: (B.bottom + mw * 0.72 - L.top) / L.height * 100 };
+      }
+    }
+  } catch (_) { avoid = null; }
+  if (!avoid) return pick();
+  const inside = (p) => p.x > avoid.x1 && p.x < avoid.x2 && p.y > avoid.y1 && p.y < avoid.y2;
+  for (let i = 0; i < 16; i++) { const p = pick(); if (!inside(p)) return p; }
+  const p = pick();
+  // ボスの下に入る余地があれば下へ。無ければ(背の低い横向きなど、ボスが歩く層より大きいとき)ボスの左右の外へ(層の外へ少し出てよい)
+  if (avoid.y2 <= 96) return { x: p.x, y: avoid.y2 + Math.random() * Math.max(0, 96 - avoid.y2) };
+  const left = p.x < 50 ? avoid.x1 - 2 - Math.random() * 12 : null, right = p.x >= 50 ? avoid.x2 + 2 + Math.random() * 12 : null;
+  return { x: Math.max(-30, Math.min(130, left !== null ? left : right)), y: p.y };
+};
 // HOME中央の安全領域だけを歩くマスモン。HOMEから外れるとコンポーネントごと破棄され、
 // visibilitychangeでもタイマーを止めるため、画面遷移やバックグラウンド復帰で処理が重複しない。
 const HomeWalkingMasumon = ({ masu, base, masuColors, index = 0, count = 1 }) => {
@@ -286,6 +316,7 @@ const HomeWalkingMasumon = ({ masu, base, masuColors, index = 0, count = 1 }) =>
   const timerRef = useRef(null);
   const mountedRef = useRef(true);
   const motionRef = useRef(motion);
+  const selfRef = useRef(null);
   useEffect(() => {
     mountedRef.current = true;
     const clearMotionTimer = () => { if (timerRef.current !== null) { clearTimeout(timerRef.current); timerRef.current = null; } };
@@ -296,8 +327,7 @@ const HomeWalkingMasumon = ({ masu, base, masuColors, index = 0, count = 1 }) =>
         const current = motionRef.current;
         // 横方向は個体ごとの緩いレーンを持たせ、5体が同じ場所に居続けるのを避ける。
         const laneWidth = count <= 1 ? 84 : 30;
-        const x = Math.max(6, Math.min(94, laneCenter + (Math.random() - 0.5) * laneWidth));
-        const y = 10 + Math.random() * 80;
+        const { x, y } = homeWalkingMasumonTarget(selfRef.current, laneCenter, laneWidth);
         const distance = Math.hypot(x - current.x, y - current.y);
         const duration = Math.max(2100, Math.min(4800, (1850 + distance * 32) * speedFactor));
         const next = { x, y, facing: x < current.x ? -1 : 1, walking: true, duration };
@@ -324,7 +354,7 @@ const HomeWalkingMasumon = ({ masu, base, masuColors, index = 0, count = 1 }) =>
     if (document.visibilityState !== 'hidden') scheduleWalk();
     return () => { mountedRef.current = false; clearMotionTimer(); document.removeEventListener('visibilitychange', onVisibilityChange); };
   }, [masu.id, index, count]);
-  return <div className={`mh-home-masumon ${motion.walking ? 'is-walking' : ''}`} style={{left:`${motion.x}%`,top:`${motion.y}%`,zIndex:Math.round(motion.y),transitionDuration:`${motion.duration}ms`}}>
+  return <div ref={selfRef} className={`mh-home-masumon ${motion.walking ? 'is-walking' : ''}`} style={{left:`${motion.x}%`,top:`${motion.y}%`,zIndex:Math.round(motion.y),transitionDuration:`${motion.duration}ms`}}>
     <div className="mh-home-masumon-bob" style={{transform:`scaleX(${motion.facing})`,isolation:'isolate'}}>
       <DyedMonsterImage baseId={masu.baseId} src={base.imgUrl || base.iconUrl} alt="" masuColors={masuColors} draggable={false}/>
       <SoulRankAura soulRankStage={masu.soulRankStage} className="is-home"/>
