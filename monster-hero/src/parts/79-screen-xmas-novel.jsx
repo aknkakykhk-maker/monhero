@@ -3,7 +3,7 @@
 // 入口は openXmasNovel(opts) の関数1つ(イベントページの物語タブなどから呼ぶ)。App の状態は使わず、自分で body に重ねて開き、閉じたら片づける。
 //   opts.playerName … 台詞の {name} に入れる名前 / opts.onClose() … 閉じたあと / opts.force … 期間の外でも開く(デバッグ・検査だけ)
 //   遊べるのはイベントの期間中だけ(xmasNovelPlayableAt)。期間の外は開かずに false を返す。保存の記録は消さない
-// 保存は新しいキー mh_xmas_novel_v1 と、分岐の地図の読み直しの mh_xmas_novel_route_v1(r1126-102)だけ(⑦)。ほかに読むのは、台詞の {name} に入れるブリーダー名(mh_breeder_name)だけ。形は xmasNovelNormalize。
+// 保存は新しいキー mh_xmas_novel_v1 と、分岐の地図の読み直しの mh_xmas_novel_route_v1(r1126-102)と、事件簿の中だけの音量の mh_xmas_novel_volume_v1(r1126-116)だけ(⑦)。ほかに読むのは、台詞の {name} に入れるブリーダー名(mh_breeder_name)だけ。形は xmasNovelNormalize。
 // 見た目: 暗めの紺と雪・金の細い縁・明朝寄りの見出し。縦・横・タブレットで、立ち絵と文の箱の置き方を変える。動きは prefers-reduced-motion で止める
 
 const XMAS_NOVEL_CSS = `
@@ -86,6 +86,8 @@ const XMAS_NOVEL_CSS = `
   background: radial-gradient(120% 70% at 50% 45%, rgba(18,32,72,.9), rgba(2,5,14,.97)); animation: mh-nv-fade .6s ease both; }
 .mh-nv-rule { width: min(70vw, 360px); height: 1px; background: linear-gradient(90deg, transparent, #e8c46a, transparent); margin: 14px auto; }
 .mh-nv-gold { color: #f3d98e; text-shadow: 0 0 12px rgba(232,196,106,.35), 0 2px 2px rgba(0,0,0,.6); }
+.mh-nv-vol-range { flex: 1 1 auto; min-width: 0; height: 30px; accent-color: #e8c46a; }
+.mh-nv-vol-row { padding: 8px 10px; border-radius: 10px; background: rgba(255,255,255,.04); box-shadow: inset 0 0 0 1px rgba(232,196,106,.25); }
 .mh-nv-sheet { position: absolute; inset: 0; z-index: 9; display: flex; align-items: flex-end; justify-content: center; background: rgba(0,0,0,.6); animation: mh-nv-fade .2s ease both; }
 .mh-nv-panel { width: min(100%, 720px); max-height: 92%; display: flex; flex-direction: column; border-radius: 16px 16px 0 0; padding: 14px 14px max(14px, env(safe-area-inset-bottom));
   background: linear-gradient(180deg, #13214a, #070e26); box-shadow: 0 0 0 1px rgba(232,196,106,.7); }
@@ -343,6 +345,126 @@ const XMAS_NOVEL_CSS = `
   .mh-nv-sw, .mh-nv-sw::after, .mh-nv-bg.in-place, .mh-nv-bg.in-time, .mh-nv-bg.in-open, .mh-nv-bg.in-past, .mh-nv-card.open *, .mh-nv-fig.enter-first img, .mh-nv-fig.enter-swap img, .mh-nv-fig.enter-face img, .mh-nv-intro, .mh-nv-intro * { animation-duration: .01s !important; animation-delay: 0s !important; }
 }
 @media (prefers-reduced-motion: reduce) { .mh-nv-snow, .mh-nv-next, .mh-nv-shake, .mh-nv-get, .mh-nv-fig img { animation: none !important; } }
+
+/* ===================== ホラーの見た目(台帳 r1126-112 追記3・社長が選んだホラー案 #8082) =====================
+   墨の黒・暗い紙・にじむ暗い赤・ちらつき・傷んだ紙・ゆっくり寄る黒いサンタの影。字の大きさ・押せる大きさは変えない(色・縁・背景・動きだけ)。
+   明るく光らせない(r1126-093 追記1)。動きを減らす設定では、ちらつき・影の寄り・垂れる赤・闇の息・ざらつきの動きを止める */
+.mh-nv { --hr-ink: #030304; --hr-paper: #120e0b; --hr-paper2: #18120f; --hr-bone: #e2d9c4; --hr-bone2: #a59c87; --hr-red: #6d0b12; --hr-red2: #a3161f; background: var(--hr-ink); }
+.mh-nv::before { content: ''; position: absolute; inset: -10%; z-index: 30; pointer-events: none; opacity: .14;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>");
+  animation: mh-hr-grain .45s steps(3) infinite; }
+@keyframes mh-hr-grain { 33% { transform: translate(-2%, 1%); } 66% { transform: translate(1%, -2%); } }
+.mh-nv-stage::after { content: ''; position: absolute; inset: 0; z-index: 3; pointer-events: none;
+  background: linear-gradient(180deg, rgba(0,0,0,.5), transparent 28%, transparent 62%, rgba(0,0,0,.6)), radial-gradient(40% 25% at 0% 0%, rgba(110,8,14,.30), transparent 70%), radial-gradient(45% 30% at 100% 100%, rgba(110,8,14,.26), transparent 70%);
+  animation: mh-hr-breathe 7s ease-in-out infinite; }
+@keyframes mh-hr-breathe { 50% { opacity: .7; } }
+.mh-nv-bg { filter: saturate(.45) brightness(.62) contrast(1.1) sepia(.18); }
+.mh-nv-bg[data-xmas-novel-bg="past"] { filter: sepia(.85) saturate(.55) contrast(.92) brightness(.72); }
+.mh-nv-bg::after { background: linear-gradient(180deg, transparent 50%, rgba(0,0,0,.55) 100%), radial-gradient(120% 85% at 50% 40%, transparent 34%, rgba(0,0,0,.86) 100%); }
+/* 字の色: 金 → 古い紙の白、にじむ暗い赤 */
+.mh-nv-gold { color: var(--hr-bone); text-shadow: 0 0 1px rgba(163,22,31,.85), 0 2px 6px rgba(109,11,18,.8), 1px 0 0 rgba(109,11,18,.55); }
+.mh-nv-red { color: #c7323b; text-shadow: 0 0 1px rgba(80,0,6,.9), 0 2px 8px rgba(109,11,18,.85); }
+.mh-nv-rule { background: linear-gradient(90deg, transparent, var(--hr-red2), transparent); }
+.mh-hr-flick { animation: mh-hr-flick 5s steps(1) infinite; }
+@keyframes mh-hr-flick { 0%, 88%, 92%, 100% { opacity: 1; } 89% { opacity: .35; } 90% { opacity: .9; } 91% { opacity: .2; } }
+/* 傷んだ紙(しみ)・欠けた縁 */
+.mh-hr-stain { background-image: radial-gradient(18% 12% at 22% 30%, rgba(70,20,12,.38), transparent 70%), radial-gradient(10% 7% at 80% 64%, rgba(60,16,10,.42), transparent 70%), radial-gradient(28% 16% at 60% 90%, rgba(20,10,6,.5), transparent 70%); }
+.mh-hr-torn { clip-path: polygon(0 3%, 6% 0, 14% 2%, 23% 0, 31% 1.5%, 44% 0, 52% 2%, 63% .5%, 74% 2.5%, 86% 0, 94% 1.5%, 100% 0, 100% 97%, 93% 100%, 81% 98%, 70% 100%, 57% 98.5%, 45% 100%, 33% 98%, 20% 100%, 9% 98.5%, 0 100%); }
+.mh-hr-drip { position: absolute; width: 3px; background: linear-gradient(180deg, var(--hr-red), #3a0508); border-radius: 0 0 3px 3px; transform-origin: top; pointer-events: none; animation: mh-hr-drip 5s ease-in infinite; }
+@keyframes mh-hr-drip { 0%, 30% { transform: scaleY(.2); } 100% { transform: scaleY(1); } }
+/* ゆっくり寄る黒いサンタの影(レイドのボスの絵を黒く塗る。目だけ暗い赤) */
+.mh-hr-stalker { position: absolute; pointer-events: none; z-index: 0; }
+.mh-hr-stalker img { width: 100%; display: block; opacity: .7; filter: brightness(0) drop-shadow(0 0 2px rgba(130,12,20,.75)) drop-shadow(0 0 18px rgba(90,6,12,.5)); }
+.mh-hr-stalker { animation: mh-hr-creep 14s ease-in-out infinite alternate; }
+.mh-hr-stalker .eye { position: absolute; top: 34.5%; width: 3.2%; height: 1.4%; border-radius: 50%; background: #7a0d14; box-shadow: 0 0 6px 2px rgba(122,13,20,.55); animation: mh-hr-blink 6s steps(1) infinite; }
+@keyframes mh-hr-creep { from { transform: translateX(-10px) scale(.97); } to { transform: translateX(6px) scale(1.03); } }
+@keyframes mh-hr-blink { 0%, 93%, 100% { opacity: 1; } 94%, 96% { opacity: 0; } }
+/* 上の帯のボタン */
+.mh-nv-btn { color: var(--hr-bone); background: rgba(6,4,4,.82); box-shadow: 0 0 0 1px rgba(109,11,18,.75); }
+.mh-nv-btn[data-on] { background: var(--hr-red); color: var(--hr-bone); }
+.mh-nv-where { color: var(--hr-bone2); }
+/* 文字の窓: 墨の黒、上だけ暗い赤の細い線。名札は左に赤い刻み */
+.mh-nv-box { border-radius: 4px; background: linear-gradient(180deg, rgba(16,11,10,.95), rgba(4,3,3,.97));
+  box-shadow: 0 -1px 0 rgba(109,11,18,.95), inset 0 1px 0 rgba(0,0,0,.6), 0 3px 0 -2px rgba(109,11,18,.35), 0 18px 40px rgba(0,0,0,.75); }
+.mh-nv-box::before { content: ''; position: absolute; inset: 0; pointer-events: none; border-radius: inherit; background-image: radial-gradient(18% 30% at 82% 70%, rgba(60,16,10,.28), transparent 70%), radial-gradient(12% 40% at 10% 20%, rgba(40,12,8,.3), transparent 70%); }
+.mh-nv-name { border-radius: 2px; background: #120d0b; color: var(--hr-bone); box-shadow: 0 0 0 1px rgba(109,11,18,.9); padding-left: 20px; }
+.mh-nv-name::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: var(--hr-red2); }
+.mh-nv-name::after { content: ''; position: absolute; left: 7px; top: 100%; width: 3px; height: 16px; background: linear-gradient(180deg, var(--hr-red), #3a0508); border-radius: 0 0 3px 3px; transform-origin: top; animation: mh-hr-drip 5s ease-in infinite; }
+.mh-nv-text, .mh-nv-text.say .mh-nv-say-lead.only { color: var(--hr-bone); }
+.mh-nv-text.band { color: #c8bfab; }
+.mh-nv-text.say .mh-nv-say-lead { color: var(--hr-bone2); }
+.mh-nv-se-sound { color: var(--hr-bone); text-shadow: 0 0 1px rgba(163,22,31,.85), 0 2px 8px rgba(109,11,18,.8); }
+.mh-nv-se-note { color: var(--hr-bone2); }
+.mh-nv-next { border-top-color: var(--hr-red2); animation: mh-nv-bob 1s ease-in-out infinite, mh-hr-flick 2.2s steps(1) infinite; }
+.mh-nv-place { border-left-color: var(--hr-red2); color: var(--hr-bone2); }
+/* 選ぶ窓(行動・突きつけ・名指し): 墨の板。札は左に赤い線と欠けた縁 */
+.mh-nv-sheet { background: rgba(2,1,1,.74); }
+.mh-nv-panel { position: relative; background: linear-gradient(180deg, #120d0b, #060404); box-shadow: 0 0 0 1px rgba(109,11,18,.85), 0 -10px 40px rgba(0,0,0,.6); }
+.mh-nv-panel > * { position: relative; z-index: 1; }
+.mh-nv-choice { border-radius: 3px; color: var(--hr-bone); background: linear-gradient(180deg, #19120f, #0b0807); box-shadow: inset 3px 0 0 var(--hr-red2), 0 0 0 1px rgba(109,11,18,.55), 0 6px 16px rgba(0,0,0,.5); }
+.mh-nv-choice[data-pick] { background: linear-gradient(180deg, #2a0d0f, #120506); box-shadow: inset 3px 0 0 var(--hr-red2), 0 0 0 2px var(--hr-red2), inset 0 0 24px rgba(109,11,18,.4); }
+.mh-nv-clue { border-radius: 3px; background: rgba(14,9,8,.85); box-shadow: inset 3px 0 0 var(--hr-red), 0 0 0 1px rgba(109,11,18,.45); }
+.mh-nv-clue[data-pick] { box-shadow: inset 3px 0 0 var(--hr-red2), 0 0 0 2px var(--hr-red2); }
+.mh-nv-person { background: rgba(14,9,8,.8); box-shadow: 0 0 0 1px rgba(109,11,18,.45); }
+.mh-nv-person .ph img { filter: saturate(.6) contrast(1.05) brightness(.9) sepia(.12); }
+.mh-nv-person[data-pick] { background: rgba(48,8,12,.9); box-shadow: 0 0 0 2px var(--hr-red2), inset 0 0 16px rgba(109,11,18,.45); }
+.mh-nv-decide { border-top-color: rgba(109,11,18,.6); }
+.mh-nv-decide-what { color: var(--hr-bone); }
+.mh-nv-decide .mh-nv-btn:not(:disabled) { background: var(--hr-red); color: var(--hr-bone); box-shadow: 0 0 0 1px var(--hr-red2); }
+.mh-nv-q { background: rgba(70,6,12,.4) !important; box-shadow: 0 0 0 1px rgba(163,22,31,.7) !important; }
+.mh-nv-qtag { display: inline-block; margin-bottom: 4px; padding: 1px 8px; font-size: 11px; letter-spacing: .3em; color: var(--hr-bone); background: var(--hr-red); }
+.mh-nv-get { background: linear-gradient(180deg, #19110e, #080505); box-shadow: 0 0 0 1px var(--hr-red2), 0 14px 34px rgba(0,0,0,.6); }
+/* 人物紹介 */
+.mh-nv-panelbox { background: radial-gradient(120% 90% at 50% 30%, rgba(20,12,10,.94), rgba(3,2,2,.96)); box-shadow: 0 0 0 1px rgba(109,11,18,.8), 0 18px 40px rgba(0,0,0,.65); }
+.mh-nv-panelrule { background: linear-gradient(90deg, transparent, var(--hr-red2), transparent); }
+@keyframes mh-nv-cast-glow { 0% { box-shadow: 0 0 0 1px rgba(109,11,18,.45); } 35% { box-shadow: 0 0 0 1px rgba(163,22,31,.95), inset 0 0 14px rgba(109,11,18,.5); } 100% { box-shadow: 0 0 0 1px rgba(109,11,18,.45); } }
+/* 章の札・題の札 */
+.mh-nv-card { background: radial-gradient(90% 60% at 50% 45%, rgba(24,10,10,.95), rgba(2,1,1,.995)); }
+.mh-nv-card.open { background: radial-gradient(90% 60% at 50% 45%, rgba(24,10,10,.95), rgba(2,1,1,.995)); }
+.mh-nv-card.open .mh-nv-card-ghost { color: rgba(109,11,18,.16); filter: blur(1px); }
+[data-xmas-novel-title] > *:not(.mh-hr-stalker) { position: relative; z-index: 1; }
+.mh-nv-sheet-stalker { left: 50%; top: 4%; width: min(80vw, 360px); margin-left: calc(min(80vw, 360px) / -2); }
+.mh-nv-card-stalker { right: -70px; bottom: 6%; width: min(62vw, 300px); opacity: .9; }
+/* エンドの札: 上から赤が垂れ、斜めの「記録終了」の判 */
+.mh-nv-card:has(.mh-nv-gameover) { background: radial-gradient(90% 60% at 50% 40%, rgba(40,4,6,.95), rgba(2,1,1,.995)); }
+.mh-nv-card[data-xmas-novel-card="ending"] { background: radial-gradient(90% 60% at 50% 40%, rgba(34,4,6,.95), rgba(2,1,1,.995)); }
+.mh-hr-stamp { display: inline-block; margin-bottom: 14px; padding: 4px 14px; border: 3px solid var(--hr-red); color: var(--hr-red2); font-size: 20px; font-weight: 900; letter-spacing: .3em; transform: rotate(-6deg); filter: blur(.3px); animation: mh-hr-stamp .5s cubic-bezier(.2,1.6,.4,1) .2s both; }
+@keyframes mh-hr-stamp { from { opacity: 0; transform: rotate(-6deg) scale(1.8); } to { opacity: .92; transform: rotate(-6deg) scale(1); } }
+.mh-nv-gameover-title { color: #b8121f; text-shadow: 0 0 1px rgba(60,0,4,.9), 0 3px 10px rgba(109,11,18,.85), 2px 0 rgba(120,0,0,.5); }
+.mh-hr-drips { position: absolute; left: 0; right: 0; top: 0; height: 0; pointer-events: none; }
+/* 起動画面: 傷んだ事件ファイルの表紙と、番号つきの目次 */
+.mh-nv-boot { background: radial-gradient(90% 60% at 50% 30%, #1a1310, #030304 70%); }
+.mh-hr-folder { position: relative; padding: 30px 22px 24px; text-align: left; background: linear-gradient(180deg, #1a1410, #0e0b09); box-shadow: 0 0 0 1px rgba(109,11,18,.55), 0 30px 60px rgba(0,0,0,.6), inset 0 0 60px rgba(0,0,0,.5); }
+.mh-hr-tab { display: inline-block; margin-bottom: -1px; padding: 4px 12px; font-size: 11px; letter-spacing: .3em; color: var(--hr-bone2); background: #18120f; box-shadow: 0 0 0 1px rgba(109,11,18,.55); }
+.mh-hr-seal { position: absolute; right: 14px; bottom: 12px; width: 64px; height: 64px; border: 3px solid var(--hr-red); border-radius: 50%; display: grid; place-items: center; color: var(--hr-red2); font-size: 15px; font-weight: 900; letter-spacing: .1em; transform: rotate(-12deg); opacity: .85; filter: blur(.3px); }
+.mh-nv-boot .mh-nv-boot-series { color: var(--hr-bone); text-shadow: 0 0 1px rgba(163,22,31,.85), 0 2px 6px rgba(109,11,18,.8), 1px 0 0 rgba(109,11,18,.55); letter-spacing: .04em; }
+.mh-nv-boot .mh-nv-boot-title { color: var(--hr-bone2); }
+.mh-nv-boot .mh-nv-boot-sub { color: var(--hr-bone); text-shadow: 0 2px 6px rgba(109,11,18,.7); letter-spacing: .12em; }
+.mh-nv-boot .mh-nv-rule { margin-left: 0; background: linear-gradient(90deg, var(--hr-red2), transparent); }
+.mh-nv-boot-btn { justify-content: flex-start; gap: 12px; border-radius: 2px; color: var(--hr-bone); background: transparent; box-shadow: none; border-bottom: 1px solid rgba(109,11,18,.45); }
+.mh-nv-boot-btn .no { width: 18px; color: var(--hr-red2); font-size: 13px; }
+.mh-nv-boot-btn .lead { flex: 1; align-self: center; border-bottom: 1px dotted rgba(165,156,135,.35); }
+.mh-nv-boot-btn .cnt { font-size: 12px; color: var(--hr-bone2); }
+.mh-nv-boot-btn:disabled { opacity: .45; }
+.mh-nv-boot-press { color: var(--hr-bone2); }
+.mh-hr-scratch { position: absolute; height: 1px; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(226,217,196,.22), transparent); }
+.mh-nv-boot-stalker { left: 38%; top: 30%; width: min(90vw, 420px); }
+@media (orientation: landscape) and (max-height: 560px) {
+  .mh-hr-folder { padding: 14px 16px 14px; }
+  .mh-hr-seal { width: 48px; height: 48px; font-size: 12px; }
+  .mh-nv-boot-stalker { left: 55%; top: 5%; width: min(50vw, 330px); }
+}
+@media (orientation: landscape) and (max-height: 420px) {
+  .mh-hr-tab { display: none; }
+  .mh-hr-folder { padding: 8px 14px 8px; }
+  .mh-hr-seal { width: 40px; height: 40px; font-size: 11px; right: 10px; bottom: 8px; }
+  .mh-nv-boot .mh-nv-boot-press { display: none; }
+  .mh-nv-card-stalker { width: min(32vw, 220px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mh-nv::before, .mh-nv-stage::after, .mh-hr-flick, .mh-hr-drip, .mh-hr-stalker, .mh-hr-stalker .eye, .mh-nv-name::after, .mh-hr-stamp { animation: none !important; }
+  .mh-nv-next { animation: none !important; }
+}
 `;
 const useXmasNovelCss = () => {
   useEffect(() => {
@@ -886,6 +1008,17 @@ const XmasNovelBody = ({ who, scene = '', at = 0, bg = null, noBlood = false }) 
           </svg>
         )}
       </div>
+    </div>
+  );
+};
+// ゆっくり寄る黒いサンタの影(ホラーの見た目・台帳 r1126-112 追記3)。レイドのボスの絵を黒く塗り、目だけ暗い赤。絵が無ければ出さない
+const XmasNovelStalker = ({ className = '', eyes = true }) => {
+  const src = typeof RAID_XMAS_BOSS_IMG !== 'undefined' ? RAID_XMAS_BOSS_IMG : '';
+  if (!src) return null;
+  return (
+    <div className={`mh-hr-stalker ${className}`} aria-hidden="true" data-xmas-novel-stalker>
+      <img src={src} alt="" draggable={false} />
+      {eyes && <><span className="eye" style={{ left: '41%' }} /><span className="eye" style={{ left: '58%' }} /></>}
     </div>
   );
 };
@@ -1437,7 +1570,63 @@ const XMAS_NOVEL_ICONS = {
   log: '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>',
   book: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><circle cx="12" cy="10" r="3"/><line x1="14.2" y1="12.2" x2="16.5" y2="14.5"/>',
   map: '<polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21 3 6"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/>',
+  vol: '<polygon points="4 9 8 9 13 5 13 19 8 15 4 15 4 9"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19 6a8.5 8.5 0 0 1 0 12"/>',
   menu: '<line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/>',
+};
+
+// ---- 事件簿の専用の音量(2026-11-28 社長「読んでる最中に専用の音量設定がほしい」・台帳 r1126-116) ----
+//  新しいキー mh_xmas_novel_volume_v1 に { v:1, bgm, se, amb, clock }(どれも 0〜100 の整数)。無い・壊れているときは 100(今までの聞こえ方)。
+//  ゲーム全体の音量(mh_bgm_volume・mh_se_volume など)は読まない・書かない。ここの値は、その上に掛ける倍率(14-audio.jsx の setNovelVolume)
+const XMAS_NOVEL_VOLUME_KEY = 'mh_xmas_novel_volume_v1';
+const XMAS_NOVEL_VOLUME_KINDS = Object.freeze([
+  { k: 'bgm', label: '曲', note: '流れる曲' },
+  { k: 'se', label: '効果音', note: '扉・足音・鐘などの1回の音' },
+  { k: 'amb', label: '環境音', note: '風・吹雪・暖炉・柱時計など、ずっと鳴る音' },
+  { k: 'clock', label: '時計の音', note: '選ぶのを待つ間のチクタク' },
+]);
+const xmasNovelVolumeNormalize = (raw) => {
+  const src = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const out = { v: 1 };
+  XMAS_NOVEL_VOLUME_KINDS.forEach(({ k }) => { const n = Number(src[k]); out[k] = Number.isFinite(n) ? Math.max(0, Math.min(100, Math.round(n))) : 100; });
+  return out;
+};
+//  0〜100 → 倍率(100 = 1倍 = 今までどおり。下へ 30dB の幅。0 は消す)
+const xmasNovelVolumeScale = (pct) => (pct <= 0 ? 0 : Math.pow(10, ((Math.min(100, pct) - 100) * 0.3) / 20));
+const xmasNovelVolumeScales = (vol) => { const v = xmasNovelVolumeNormalize(vol); return { bgm: xmasNovelVolumeScale(v.bgm), se: xmasNovelVolumeScale(v.se), amb: xmasNovelVolumeScale(v.amb), clock: xmasNovelVolumeScale(v.clock) }; };
+const xmasNovelVolumeLoad = async () => { try { return xmasNovelVolumeNormalize(await storeGet(XMAS_NOVEL_VOLUME_KEY, null, false)); } catch (e) { return xmasNovelVolumeNormalize(null); } };
+const xmasNovelVolumeStore = async (vol) => { try { await storeSet(XMAS_NOVEL_VOLUME_KEY, xmasNovelVolumeNormalize(vol), false); return true; } catch (e) { return false; } };
+const xmasNovelVolumeApply = (vol) => { try { if (typeof Audio_ !== 'undefined' && Audio_ && typeof Audio_.setNovelVolume === 'function') Audio_.setNovelVolume(vol ? xmasNovelVolumeScales(vol) : null); } catch (e) { /* 音が出せなくても読み進める */ } };
+//  音量の窓。起動画面と読む画面の上の帯の「音量」から開く。動かすとその場で鳴っている音に効く
+const XmasNovelVolumeSheet = ({ vol, onChange, onClose }) => {
+  const v = xmasNovelVolumeNormalize(vol);
+  const last = useRef({});
+  const set = (k, n) => { if (n > 0) last.current[k] = n; onChange({ ...v, [k]: n }); };
+  return (
+    <div className="mh-nv-sheet" data-xmas-novel-sheet="volume" onClick={onClose}>
+      <div className="mh-nv-panel" onClick={(e) => e.stopPropagation()}>
+        <div className="mh-nv-serif mh-nv-gold mb-1 text-center text-[18px] font-black">音量</div>
+        <div className="mh-nv-plain mb-3 text-center text-[11px] font-bold text-slate-300">事件簿の中だけの音量です(ゲーム全体の音量の設定に掛かります)</div>
+        <div className="space-y-3">
+          {XMAS_NOVEL_VOLUME_KINDS.map(({ k, label, note }) => (
+            <div key={k} data-xmas-novel-volume={k} className="mh-nv-vol-row">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="mh-nv-serif text-[14px] font-black text-amber-100">{label}</span>
+                <span className="mh-nv-plain text-[11px] font-bold text-slate-400">{note}</span>
+              </div>
+              <div className="mt-1 flex items-center gap-2">
+                <input type="range" min="0" max="100" step="5" value={v[k]} aria-label={`${label}の音量`} className="mh-nv-vol-range" data-xmas-novel-volume-range={k}
+                  onChange={(e) => set(k, Math.round(Number(e.target.value) || 0))} />
+                <span className="mh-nv-plain w-9 text-right text-[12px] font-black text-amber-100" data-xmas-novel-volume-value={k}>{v[k] <= 0 ? '0' : v[k]}</span>
+                <button type="button" className="mh-nv-btn" data-xmas-novel-volume-mute={k} data-on={v[k] <= 0 ? '' : undefined}
+                  onClick={() => set(k, v[k] > 0 ? 0 : (last.current[k] || 100))}>{v[k] > 0 ? '消す' : '戻す'}</button>
+              </div>
+            </div>
+          ))}
+        </div>
+        <button type="button" className="mh-nv-btn wide mt-4" data-xmas-novel-volume-close onClick={onClose}>閉じる</button>
+      </div>
+    </div>
+  );
 };
 
 // ---- 保存 ----
@@ -1504,7 +1693,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
   useEffect(() => {
     if (!sheet || typeof sheet !== 'object' || !sheet.q) return undefined;
     let high = true;
-    const tick = () => { const fn = xmasNovelSeFn('nvTick'); if (fn) fn(high); high = !high; };
+    const tick = () => { const fn = xmasNovelSeFn('nvClockTick') || xmasNovelSeFn('nvTick'); if (fn) fn(high); high = !high; };
     const id = setInterval(tick, 640);
     const first = setTimeout(tick, 250);
     return () => { clearInterval(id); clearTimeout(first); };
@@ -1513,6 +1702,24 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
   const [skip, setSkip] = useState(false);
   const [log, setLog] = useState([]);
   const [confirmNew, setConfirmNew] = useState(false);
+  // 事件簿の専用の音量(mh_xmas_novel_volume_v1・r1126-116)。読み込むまでは既定(今までどおり)。動かしたらすぐ鳴っている音に効かせ、少し落ち着いてから保存
+  const [vol, setVol] = useState(() => xmasNovelVolumeNormalize(null));
+  const [volOpen, setVolOpen] = useState(false);
+  const volTimer = useRef(null);
+  useEffect(() => {
+    let alive = true;
+    xmasNovelVolumeLoad().then((v) => { if (alive) setVol(v); });
+    return () => { alive = false; if (volTimer.current) clearTimeout(volTimer.current); xmasNovelVolumeApply(null); };
+  }, []);
+  useEffect(() => { xmasNovelVolumeApply(vol); }, [vol]);
+  const changeVol = (next) => {
+    const v = xmasNovelVolumeNormalize(next);
+    setVol(v);
+    if (volTimer.current) clearTimeout(volTimer.current);
+    volTimer.current = setTimeout(() => { void xmasNovelVolumeStore(v); }, 300);
+  };
+  const volBtn = (<button type="button" className="mh-nv-btn" data-xmas-novel-volume-open onClick={() => setVolOpen(true)} aria-label="音量"><XmasNovelIcon d={XMAS_NOVEL_ICONS.vol} /><span className="hidden sm:inline">音量</span></button>);
+  const volSheet = volOpen ? <XmasNovelVolumeSheet vol={vol} onChange={changeVol} onClose={() => { if (volTimer.current) { clearTimeout(volTimer.current); volTimer.current = null; } void xmasNovelVolumeStore(vol); setVolOpen(false); }} /> : null;
   const saveRef = useRef(null);
   const [route, setRoute] = useState(null); // 分岐の地図の読み直し(mh_xmas_novel_route_v1・r1126-102)
   const routeRef = useRef(null);
@@ -1683,12 +1890,13 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
       // 「選び直す」はエンディングの「次」が問いの行(Q7a)のときだけ。場面(カーテンコール)へは settle が続けて入る
       const after = !replayRef.current && scene && scene.next && !xmasNovelSceneById(S, scene.next) && xmasNovelFindRow(S, scene.next) ? xmasNovelJump(S, next.cur, scene.next) : null;
       if (replayRef.current) { setSt(next); setSkip(false); setSheet(null); setCard({ kind: 'ending', ending, replay: true }); return; }
-      const firstTime = !s.endings.includes(ending.id);
+      const firstTime = !s.endings.includes(ending.id); const marksBefore = xmasNovelBookmarks(s.endings); // 特別なしおり(r1126-115)は見たエンドから数えるだけ(保存は増やさない)
       s = { ...xmasNovelRecordEnding(s, ending.id, new Date().toISOString()), cur: after };
       if (typeof xmasNovelRankNote === 'function') xmasNovelRankNote({ k: 'end', id: ending.id }, { off: rankOff, script: S }); // ランキング(r1126-107)。見返すときは通らない
+      const marksNew = xmasNovelBookmarks(s.endings).filter((id) => !marksBefore.includes(id));
       persist(s, true);
       setSt(next); setSkip(false); setSheet(null);
-      setCard({ kind: 'ending', ending, retry: !!after, fresh: firstTime, count: xmasNovelPerfectCount(S, s), total: xmasNovelScoreGroups(S).length });
+      setCard({ kind: 'ending', ending, retry: !!after, fresh: firstTime, count: xmasNovelPerfectCount(S, s), total: xmasNovelScoreGroups(S).length, marks: marksNew });
       return;
     }
     if (!next.row) { persist({ ...s, cur: null }, true); setSt(null); setMode('title'); return; }
@@ -1791,7 +1999,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
   // 答える
   const answer = (q, pick) => {
     setPick(null);
-    const res = xmasNovelAnswer(S, st.cur, q, pick, (saveRef.current && saveRef.current.endings) || []);
+    const res = xmasNovelAnswer(S, st.cur, q, pick, (saveRef.current && saveRef.current.endings) || [], (saveRef.current && saveRef.current.read) || []);
     let s = saveRef.current;
     if (q.score) {
       if (!(s.first && s.first[q.id]) && typeof xmasNovelRankNote === 'function') xmasNovelRankNote({ k: 'first', id: q.id, ok: !!res.ok }, { off: rankOff, script: S }); // 一番はじめの答えだけ(r1126-107)
@@ -1867,26 +2075,47 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
     return (
       <div className="mh-nv mh-nv-boot" data-xmas-novel={mode}>
         <div className="mh-nv-noise" /><div className="mh-nv-scan" />
-        <div className="mh-nv-top"><span className="mh-nv-where" /><button type="button" className="mh-nv-btn" data-xmas-novel-close onClick={close} aria-label="閉じる"><X size={18} /></button></div>
+        <div className="mh-nv-top"><span className="mh-nv-where" />{volBtn}<button type="button" className="mh-nv-btn" data-xmas-novel-close onClick={close} aria-label="閉じる"><X size={18} /></button></div>
         {/* 長い一覧(エンドヒストリー15件など)が上ではみ出さないよう、中央寄せは子の my-auto で(justify-center だと上が切れてスクロールで戻れない) */}
         <div className="absolute inset-0 flex flex-col items-center overflow-y-auto px-4 py-16">
           {mode === 'title' && (
-            <div className="my-auto w-full max-w-sm text-center" data-xmas-novel-title>
-              <div className="mh-nv-boot-logo" data-xmas-novel-game={XMAS_NOVEL_GAME.series}>
-                <div className="mh-nv-serif mh-nv-boot-series">{XMAS_NOVEL_GAME.series}</div>
-                <div className="mh-nv-serif mh-nv-boot-title">―{XMAS_NOVEL_GAME.title}―</div>
+            <div className="relative my-auto w-full max-w-sm text-left" data-xmas-novel-title>
+              {/* ホラーの見た目(台帳 r1126-112 追記3): 傷んだ事件ファイルの表紙。後ろに黒いサンタの影がゆっくり寄る */}
+              <XmasNovelStalker className="mh-nv-boot-stalker" />
+              <div className="mh-hr-tab mh-nv-serif">事件記録　No.13</div>
+              <div className="mh-nv-boot-logo mh-hr-folder mh-hr-torn mh-hr-stain" data-xmas-novel-game={XMAS_NOVEL_GAME.series}>
+                <div className="mh-nv-serif mh-nv-boot-series mh-hr-flick">{XMAS_NOVEL_GAME.series}</div>
+                <div className="mh-nv-serif mh-nv-boot-title">{XMAS_NOVEL_GAME.title}</div>
                 <div className="mh-nv-rule" />
                 <div className="mh-nv-serif mh-nv-boot-sub">{XMAS_NOVEL_GAME.sub}</div>
+                <div className="mh-hr-seal mh-nv-serif" aria-hidden="true">記録</div>
               </div>
               <div className="mh-nv-boot-press mt-5 text-[11px] tracking-[0.3em]">SELECT</div>
               <div className="mt-3 space-y-2.5">
-                {save.cur && <button type="button" className="mh-nv-btn wide mh-nv-serif mh-nv-boot-btn" data-xmas-novel-continue onClick={() => start(save.cur)}>つづきから</button>}
-                <button type="button" className="mh-nv-btn wide mh-nv-serif mh-nv-boot-btn" data-xmas-novel-new onClick={() => (save.cur ? setConfirmNew(true) : start(xmasNovelFreshCur(S)))}>はじめから</button>
-                <button type="button" className="mh-nv-btn wide mh-nv-serif mh-nv-boot-btn" data-xmas-novel-chapters disabled={!Object.keys(save.snaps).length} onClick={() => setMode('chapters')}>章から</button>
-                <button type="button" className="mh-nv-btn wide mh-nv-serif mh-nv-boot-btn" data-xmas-novel-endings onClick={() => setMode('endings')}>エンドヒストリー {seenCount} / {endingsAll.length}</button>
-                {typeof XmasNovelRank === 'function' && <button type="button" className="mh-nv-btn wide mh-nv-serif mh-nv-boot-btn" data-xmas-novel-ranking onClick={() => setMode('ranking')}>ランキング</button>}
+                {(() => {
+                  // 目次: 番号・項目・点線・数(押せる大きさは前のまま)
+                  const items = [
+                    save.cur ? { key: 'continue', label: 'つづきから', attr: { 'data-xmas-novel-continue': '' }, on: () => start(save.cur) } : null,
+                    { key: 'new', label: 'はじめから', attr: { 'data-xmas-novel-new': '' }, on: () => (save.cur ? setConfirmNew(true) : start(xmasNovelFreshCur(S))) },
+                    { key: 'chapters', label: '章から', attr: { 'data-xmas-novel-chapters': '' }, off: !Object.keys(save.snaps).length, on: () => setMode('chapters') },
+                    { key: 'endings', label: 'エンドヒストリー', cnt: `${seenCount} / ${endingsAll.length}`, attr: { 'data-xmas-novel-endings': '' }, on: () => setMode('endings') },
+                    typeof XmasNovelRank === 'function' ? { key: 'ranking', label: 'ランキング', attr: { 'data-xmas-novel-ranking': '' }, on: () => setMode('ranking') } : null,
+                  ].filter(Boolean);
+                  return items.map((it, i) => (
+                    <button type="button" key={it.key} className="mh-nv-btn wide mh-nv-serif mh-nv-boot-btn" {...it.attr} disabled={!!it.off} onClick={it.on}>
+                      <span className="no">{i + 1}</span><span>{it.label}</span><span className="lead" />{it.cnt ? <span className="cnt">{it.cnt}</span> : null}
+                    </button>
+                  ));
+                })()}
               </div>
               <div data-xmas-novel-perfect className="mt-4 text-[10px] text-slate-400">推理の問い 一発で当てた数 {xmasNovelPerfectCount(S, save)} / {perfectTotal}</div>
+              {/* 特別なしおり(r1126-115): 持っている物だけ、本から垂れるリボンで見せる。数も条件も出さない */}
+              {xmasNovelBookmarks(save.endings).length > 0 && (
+                <div className="mt-3 flex items-end gap-2" data-xmas-novel-ribbons aria-label="挟まれたリボン">
+                  {xmasNovelBookmarks(save.endings).map((id) => { const b = xmasNovelBookmarkOf(id); return b ? <span key={id} data-xmas-novel-ribbon={id} title={b.name} style={{ display: 'block', width: 8, height: 34, background: b.tone, clipPath: 'polygon(0 0,100% 0,100% 100%,50% 82%,0 100%)', boxShadow: '0 2px 4px rgba(0,0,0,.6)' }} /> : null; })}
+                  <span className="mh-nv-serif text-[10px] tracking-[0.2em] text-slate-400">挟まれたリボン</span>
+                </div>
+              )}
               {confirmNew && (
                 <div className="mh-nv-sheet" onClick={() => setConfirmNew(false)}>
                   <div className="mh-nv-panel mb-auto mt-auto max-w-sm text-center" onClick={(e) => e.stopPropagation()}>
@@ -1953,6 +2182,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
             </div>
           )}
         </div>
+        {volSheet}
       </div>
     );
   }
@@ -2034,6 +2264,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
         </button>
         <button type="button" className="mh-nv-btn" data-xmas-novel-skip data-on={skip ? '' : undefined} onClick={toggleSkip} aria-label="既読スキップ"><XmasNovelIcon d={XMAS_NOVEL_ICONS.skip} /><span className="hidden sm:inline">スキップ</span></button>
         <button type="button" className="mh-nv-btn" data-xmas-novel-open-map onClick={() => setSheet('map')} aria-label="地図"><XmasNovelIcon d={XMAS_NOVEL_ICONS.map} /><span>地図</span></button>
+        {volBtn}
         <button type="button" className="mh-nv-btn" data-xmas-novel-menu onClick={() => setSheet('menu')} aria-label="メニュー"><XmasNovelIcon d={XMAS_NOVEL_ICONS.menu} /></button>
       </div>
 
@@ -2048,10 +2279,11 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
       {card && (
         <div key={`card-${card.kind}-${card.label || card.text || ''}`} className={`mh-nv-card${card.kind !== 'ending' ? ' open' : ''}`} data-xmas-novel-card={card.kind} onClick={advance}>
           {card.kind === 'chapter' && card.label && <div className="mh-nv-card-ghost mh-nv-serif" aria-hidden="true">{card.label}</div>}
+          {card.kind === 'chapter' && <XmasNovelStalker className="mh-nv-card-stalker" eyes={false} />}
           {card.kind === 'chapter' && (<div className="mh-nv-plain mh-nv-cardtext">
             <div className="mh-nv-card-label mh-nv-serif text-[15px] tracking-[0.5em] text-slate-200">{card.label}</div>
             <div className="mh-nv-rule" />
-            <div className="mh-nv-card-title mh-nv-serif mh-nv-gold text-[30px] font-black leading-tight sm:text-[38px]">{xmasNovelWrap(card.title, 10)}</div>
+            <div className="mh-nv-card-title mh-hr-flick mh-nv-serif mh-nv-gold text-[30px] font-black leading-tight sm:text-[38px]">{xmasNovelWrap(card.title, 10)}</div>
             <div className="mh-nv-rule" />
             <div className="mh-nv-card-hint mt-6 text-[11px] text-slate-400">タップで進む</div>
           </div>)}
@@ -2064,6 +2296,8 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
             const kind = { ...(XMAS_NOVEL_ENDING_KINDS[card.ending.kind] || XMAS_NOVEL_ENDING_KINDS.normal), ...(card.ending.label ? { label: card.ending.label } : {}) };
             return (
               <div className={`w-full max-w-sm${card.ending.kind === 'forced' ? ' mh-nv-gameover' : ''}`} data-xmas-novel-ending-card={card.ending.id}>
+                <div className="mh-hr-drips" aria-hidden="true">{[[8, 120, 0], [26, 70, .8], [74, 160, 2], [90, 60, 1.2]].map(([x, hgt, d]) => <span key={x} className="mh-hr-drip" style={{ left: `${x}%`, height: hgt, animationDelay: `${d}s` }} />)}</div>
+                <div className="mh-hr-stamp mh-nv-serif" data-xmas-novel-stamp>記録終了</div>
                 {card.ending.kind === 'forced' && <div className="mh-nv-gameover-title" data-xmas-novel-gameover>GAME OVER</div>}
                 <div className="mh-nv-serif text-[13px] tracking-[0.4em]" style={{ color: kind.tone }}>{/エンド$/.test(kind.label) ? kind.label : `${kind.label} END`}</div>
                 <div className="mh-nv-rule" />
@@ -2071,6 +2305,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
                 <div className="mh-nv-rule" />
                 {!card.replay && <div className="text-[12px] text-slate-200">{card.fresh ? 'エンドヒストリーに記録しました' : 'エンドヒストリーに記録ずみ'}</div>}
                 {!card.replay && <div className="mt-1 text-[11px] text-slate-300">推理の問い 一発で当てた数 {card.count} / {card.total}</div>}
+                {!card.replay && (card.marks || []).map((id) => { const b = xmasNovelBookmarkOf(id); return b ? <div key={id} className="mh-nv-serif mt-3 text-[13px] font-black" style={{ ...JA_LABEL_STYLE, color: b.tone }} data-xmas-novel-mark-got={id}>{jaWrap(`頁のあいだに、${b.color}リボンが挟まっていた`)}</div> : null; })}
                 {!card.replay && card.ending.id === 'END-G' && xmasNovelChapters(S).some((c) => c.past) && <div className="mh-nv-serif mh-nv-gold mt-3 text-[13px] font-black" data-xmas-novel-past-open style={JA_LABEL_STYLE}>{jaWrap('過去編「12年前の聖夜」が、「章から」で読めるようになりました')}</div>}
                 <div className="mt-5 space-y-2">
                   {card.retry && <button type="button" className="mh-nv-btn wide mh-nv-serif" data-xmas-novel-retry onClick={() => { setCard(null); start(saveRef.current.cur); }}>{card.ending && card.ending.kind === 'forced' ? '選択の直前からやり直す' : '選び直す'}</button>}
@@ -2087,9 +2322,11 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
       {sheet === 'map' && save && (
         <XmasNovelMap script={S} save={save} route={route} playerName={playerName} onRedo={redoFrom} onBack={backFromRedo} onClose={() => setSheet(null)} />
       )}
+      {volSheet}
       {sheet && sheet !== 'map' && (
         <div className="mh-nv-sheet" data-xmas-novel-sheet={typeof sheet === 'string' ? sheet : sheet.kind}
           onClick={() => { if (typeof sheet === 'string') setSheet(null); }}>
+          {q && <XmasNovelStalker className="mh-nv-sheet-stalker" />}
           <div className="mh-nv-panel" onClick={(e) => e.stopPropagation()}>
             {sheet === 'log' && (<>
               <div className="mh-nv-serif mh-nv-gold mb-2 text-[18px] font-black">ログ</div>
@@ -2105,7 +2342,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
             </>)}
             {(sheet === 'book' || (q && q.kind === 'present')) && (<>
               <div className="mh-nv-serif mh-nv-gold text-[18px] font-black">手がかり帳 <span className="text-[12px] text-slate-300">{presentList.length}個</span></div>
-              {q && <div data-xmas-novel-question={q.id} className="mt-2 rounded-lg p-2 text-[13px] font-bold leading-relaxed" style={{ background: 'rgba(120,20,30,.35)', boxShadow: '0 0 0 1px rgba(232,120,120,.6)' }}>
+              {q && <div data-xmas-novel-question={q.id} className="mh-nv-q mt-2 rounded-lg p-2 text-[13px] font-bold leading-relaxed" style={{ background: 'rgba(120,20,30,.35)', boxShadow: '0 0 0 1px rgba(232,120,120,.6)' }}>
                 {q.label && <div className="mh-nv-serif text-[11px] font-black text-rose-200">{q.label}</div>}
                 {xmasNovelWrap(xmasNovelFill(q.x, playerName))}
                 <div className="mt-1 text-[11px] text-rose-100">{presentList.length < clues.length ? `候補を${presentList.length}つに絞った。突きつける手がかりを1つ選ぼう` : '突きつける手がかりを1つ選ぼう'}</div>
@@ -2127,7 +2364,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
               {q && <button type="button" className="mh-nv-btn wide mt-2" onClick={() => { setPick(null); setSheet(null); }}>話をもう1度見る</button>}
             </>)}
             {q && q.kind === 'person' && (<>
-              <div data-xmas-novel-question={q.id} className="mb-3 rounded-lg p-2 text-[13px] font-bold leading-relaxed" style={{ background: 'rgba(120,20,30,.35)', boxShadow: '0 0 0 1px rgba(232,120,120,.6)' }}>
+              <div data-xmas-novel-question={q.id} className="mh-nv-q mb-3 rounded-lg p-2 text-[13px] font-bold leading-relaxed" style={{ background: 'rgba(120,20,30,.35)', boxShadow: '0 0 0 1px rgba(232,120,120,.6)' }}>
                 {q.label && <div className="mh-nv-serif text-[11px] font-black text-rose-200">{q.label}</div>}
                 {xmasNovelWrap(xmasNovelFill(q.x, playerName))}
               </div>
@@ -2142,14 +2379,14 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
             {q && q.kind === 'action' && (<>
               <div data-xmas-novel-question={q.id} className="mh-nv-plain mh-nv-serif mh-nv-gold mb-3 text-[17px] font-black">{xmasNovelWrap(xmasNovelFill(q.x, playerName))}</div>
               <div className="space-y-2.5">
-                {xmasNovelOptionsOf(q, xmasNovelCtx(S, st.cur, save.endings)).map((o) => {
+                {xmasNovelOptionsOf(q, xmasNovelCtx(S, st.cur, save.endings, save.read)).map((o) => {
                   // 一度見た強制バッドの選択肢には「見たエンド」の印(r1126-099 追記1)
                   const endAhead = !q.once && o.to ? xmasNovelEndingAhead(S, o.to) : null;
                   const seenEnd = endAhead && Array.isArray(save.endings) && save.endings.includes(endAhead) ? xmasNovelSceneById(S, endAhead) : null;
                   return (
                     <button type="button" key={o.i} className="mh-nv-choice mh-nv-serif" data-xmas-novel-option={o.i} data-pick={picked && picked.key === o.i ? '' : undefined} aria-pressed={!!(picked && picked.key === o.i)}
                       onClick={() => (q.score || q.once ? choose(o.i, xmasNovelFill(o.x, playerName)) : answer(q, o.i))}>
-                      {xmasNovelWrap(xmasNovelFill(o.x, playerName))}
+                      {o.mark ? <span data-xmas-novel-option-mark className="mr-1 text-[12px]" style={{ color: '#e8c873' }} aria-label="新しい選択肢">✦</span> : null}{xmasNovelWrap(xmasNovelFill(o.x, playerName))}
                       {seenEnd && <span data-xmas-novel-seen-end={endAhead} className="mh-nv-plain mt-1 block text-[11px] font-bold text-rose-200">見たエンド: {seenEnd.ending && seenEnd.ending.name ? `「${seenEnd.ending.name}」` : 'バッドエンド'}</span>}
                     </button>
                   );
