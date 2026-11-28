@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f7c293b25d052f4a
+// source-sha256: 967ad260e790df39
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -116058,7 +116058,11 @@ const xmasNovelSetFlags = (flags, sets) => {
   });
   return next;
 };
-const xmasNovelSettle = (script, cur) => {
+const xmasNovelSeenOf = save => ({
+  endings: save && Array.isArray(save.endings) ? save.endings : [],
+  read: save && Array.isArray(save.read) ? save.read : []
+});
+const xmasNovelSettle = (script, cur, seen) => {
   let c = cur;
   for (let guard = 0; guard < 4000; guard += 1) {
     const scene = xmasNovelSceneById(script, c.scene);
@@ -116069,7 +116073,7 @@ const xmasNovelSettle = (script, cur) => {
       ending: null
     };
     const rows = scene.rows || [];
-    const ctx = xmasNovelCtx(script, c);
+    const ctx = xmasNovelCtx(script, c, seen && seen.endings, seen && seen.read);
     let i = Math.max(0, Number(c.idx) || 0);
     while (i < rows.length && !xmasNovelCondOk(rows[i] && rows[i].c, ctx)) i += 1;
     if (i < rows.length) return {
@@ -116130,10 +116134,10 @@ const xmasNovelSettle = (script, cur) => {
     ending: null
   };
 };
-const xmasNovelStep = (script, cur) => xmasNovelSettle(script, {
+const xmasNovelStep = (script, cur, seen) => xmasNovelSettle(script, {
   ...cur,
   idx: (Number(cur.idx) || 0) + 1
-});
+}, seen);
 const xmasNovelPickReplies = (q, key) => q.replies && Array.isArray(q.replies[key]) ? q.replies[key] : [];
 const xmasNovelAnswer = (script, cur, q, pick, endings, read) => {
   if (!q || q.t !== 'q') return {
@@ -116702,6 +116706,19 @@ const XMAS_NOVEL_SCRIPT = {
     "disp": "過去編",
     "title": "12年前の聖夜",
     "past": true
+  }],
+  "ruby": [{
+    "b": "黒羽",
+    "r": "くろば"
+  }, {
+    "b": "宗一郎",
+    "r": "そういちろう"
+  }, {
+    "b": "白瀬",
+    "r": "しらせ"
+  }, {
+    "b": "雪絵",
+    "r": "ゆきえ"
   }],
   "scenes": [{
     "id": "OUT-0-1",
@@ -133719,6 +133736,8 @@ const XMAS_NOVEL_CSS = `
   box-shadow: 0 0 0 1px rgba(232,196,106,.75), 0 0 0 4px rgba(10,20,48,.9), 0 0 0 5px rgba(232,196,106,.35), 0 12px 30px rgba(0,0,0,.55); }
 .mh-nv-name { position: absolute; top: -15px; left: 16px; padding: 3px 16px; border-radius: 6px; font-size: 15px; font-weight: 800; letter-spacing: .08em;
   background: linear-gradient(180deg, #1b2c5c, #0c1636); color: #f8e3a4; box-shadow: 0 0 0 1px rgba(232,196,106,.85); }
+.mh-nv-rb { position: relative; display: inline; }
+.mh-nv-rt { position: absolute; left: 50%; bottom: calc(100% + .04em); transform: translateX(-50%); font-size: .5em; line-height: 1; font-weight: 700; letter-spacing: .02em; text-indent: 0; white-space: nowrap; pointer-events: none; opacity: .92; }
 .mh-nv-text { font-size: 17px; line-height: 1.75; font-weight: 600; white-space: pre-wrap; min-height: 3.5em; text-align: left; word-break: normal; line-break: normal; overflow-wrap: anywhere; text-wrap: wrap; }
 .mh-nv-plain { text-align: left; word-break: normal; line-break: normal; overflow-wrap: anywhere; text-wrap: wrap; }
 /* 章の札・題の札の文も左寄せ(事件簿の中の文は左寄せ・r1126-048。折るのは文節の切れ目だけ・XmasNovelWrap・r1126-071。飾りの見出しは起動画面の題字とエンドの札だけ) */
@@ -133966,6 +133985,8 @@ const XMAS_NOVEL_CSS = `
 .mh-nv-intro .bar { position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: linear-gradient(90deg, #e8c46a, rgba(232,196,106,.6) 70%, transparent); transform-origin: left; animation: mh-nv-intro-bar .7s ease-out both; }
 .mh-nv-intro .nm { font-size: clamp(24px, 6.4vw, 32px); font-weight: 900; letter-spacing: .16em; line-height: 1.2; color: #f1e6c8; white-space: nowrap; text-shadow: 0 0 12px rgba(0,0,0,.95), 0 2px 3px #000; animation: mh-nv-intro-nm 1.1s ease-out .3s both; }
 .mh-nv-intro .role { font-size: 12px; font-weight: 800; letter-spacing: .3em; color: #d2b272; white-space: nowrap; text-shadow: 0 0 8px #000, 0 1px 3px #000; animation: mh-nv-intro-nm .9s ease-out .15s both; }
+.mh-nv-intro .nm:has(.mh-nv-rb) { padding-top: .5em; }
+.mh-nv-intro .nm .mh-nv-rt { font-size: .42em; letter-spacing: .12em; color: #d2b272; }
 .mh-nv-intro.fast { animation-duration: 1.6s; }
 .mh-nv-intro.fast .bar, .mh-nv-intro.fast .nm, .mh-nv-intro.fast .role { animation-duration: .3s; animation-delay: 0s; }
 @keyframes mh-nv-intro { 0% { opacity: 1; } 82% { opacity: 1; } 100% { opacity: 0; } }
@@ -134788,7 +134809,8 @@ const XMAS_NOVEL_INTRO_ROLE = Object.freeze({
 });
 const XmasNovelIntro = ({
   c,
-  fast
+  fast,
+  ruby
 }) => c ? React.createElement("div", {
   className: `mh-nv-intro mh-nv-serif${fast ? ' fast' : ''}`,
   "data-xmas-novel-intro": c.id
@@ -134796,7 +134818,7 @@ const XmasNovelIntro = ({
   className: "role"
 }, XMAS_NOVEL_INTRO_ROLE[c.id]), React.createElement("span", {
   className: "nm"
-}, c.name), React.createElement("span", {
+}, xmasNovelRubyText(c.name, ruby)), React.createElement("span", {
   className: "bar"
 })) : null;
 const XmasNovelFigureArt = ({
@@ -134831,7 +134853,8 @@ const XmasNovelFigureArt = ({
   const fig = xmasNovelFigureSrc(row.w, row.e);
   const intro = enter && enter.kind === 'first' && enter.intro ? React.createElement(XmasNovelIntro, {
     c: c,
-    fast: enter.fast
+    fast: enter.fast,
+    ruby: enter.ruby
   }) : null;
   if (!fig || broken >= 2) return React.createElement("div", {
     ref: ref,
@@ -136025,6 +136048,9 @@ const xmasNovelKeepWords = () => {
       if (c.name) set.add(c.name);
       if (c.full) set.add(c.full);
     });
+    if (S && Array.isArray(S.ruby)) S.ruby.forEach(x => {
+      if (x && x.b) set.add(x.b);
+    });
   } catch (e) {}
   _xmasNovelKeepWords = [...set].filter(w => typeof w === 'string' && [...w].length >= 2 && [...w].length <= XMAS_NOVEL_KEEP_MAX).sort((a, b) => b.length - a.length);
   return _xmasNovelKeepWords;
@@ -136166,19 +136192,98 @@ const XMAS_NOVEL_NOWRAP = Object.freeze({
 const XMAS_NOVEL_HIDE = Object.freeze({
   visibility: 'hidden'
 });
+const XmasNovelRuby = ({
+  b,
+  r,
+  vis = Infinity
+}) => {
+  const n = Math.max(0, Math.min(b.length, vis));
+  return React.createElement("span", {
+    className: "mh-nv-rb",
+    "data-xmas-novel-ruby": b
+  }, n >= b.length ? b : React.createElement(React.Fragment, null, b.slice(0, n), React.createElement("span", {
+    style: XMAS_NOVEL_HIDE
+  }, b.slice(n))), React.createElement("span", {
+    className: "mh-nv-rt",
+    "aria-hidden": "true",
+    style: n >= b.length ? undefined : XMAS_NOVEL_HIDE
+  }, r));
+};
+const xmasNovelRubyAt = (s, ruby) => {
+  const out = [];
+  (Array.isArray(ruby) ? ruby : []).forEach(x => {
+    const at = x && x.b ? s.indexOf(x.b) : -1;
+    if (at >= 0 && !out.some(o => at < o.at + o.b.length && o.at < at + x.b.length)) out.push({
+      at,
+      b: x.b,
+      r: x.r
+    });
+  });
+  return out.sort((a, b) => a.at - b.at);
+};
+const xmasNovelRubyText = (t, ruby) => {
+  const s = String(t || '');
+  const marks = xmasNovelRubyAt(s, ruby);
+  if (!marks.length) return s;
+  const out = [];
+  let p = 0;
+  marks.forEach((m, i) => {
+    if (m.at > p) out.push(s.slice(p, m.at));
+    out.push(React.createElement(XmasNovelRuby, {
+      key: i,
+      b: m.b,
+      r: m.r
+    }));
+    p = m.at + m.b.length;
+  });
+  if (p < s.length) out.push(s.slice(p));
+  return out;
+};
+const xmasNovelPieceBody = (t, a, vis, marks) => {
+  const inside = marks.filter(m => m.at >= a && m.at + m.b.length <= a + t.length);
+  if (!inside.length) return vis >= t.length ? t : React.createElement(React.Fragment, null, t.slice(0, vis), React.createElement("span", {
+    style: XMAS_NOVEL_HIDE
+  }, t.slice(vis)));
+  const out = [];
+  let p = 0;
+  const plain = (x, y) => {
+    if (y <= x) return;
+    const v = Math.max(0, Math.min(y - x, vis - x));
+    out.push(v >= y - x ? t.slice(x, y) : React.createElement(React.Fragment, {
+      key: `h${x}`
+    }, t.slice(x, x + v), React.createElement("span", {
+      style: XMAS_NOVEL_HIDE
+    }, t.slice(x + v, y))));
+  };
+  inside.forEach(m => {
+    const x = m.at - a;
+    plain(p, x);
+    out.push(React.createElement(XmasNovelRuby, {
+      key: `r${x}`,
+      b: m.b,
+      r: m.r,
+      vis: vis - x
+    }));
+    p = x + m.b.length;
+  });
+  plain(p, t.length);
+  return React.createElement(React.Fragment, null, out);
+};
 const XmasNovelWrap = ({
   text,
   shown,
-  max
+  max,
+  ruby
 }) => {
   const plan = xmasNovelWrapPlan(text, max);
   const lim = typeof shown === 'number' && Number.isFinite(shown) ? shown : Infinity;
+  const marks = ruby && ruby.length ? xmasNovelRubyAt(String(text ?? ''), ruby) : [];
   let pos = 0;
   return plan.map((p, i) => {
     const a = pos;
     pos += p.t.length;
     const vis = Math.max(0, Math.min(p.t.length, lim - a));
-    const body = vis >= p.t.length ? p.t : React.createElement(React.Fragment, null, p.t.slice(0, vis), React.createElement("span", {
+    const body = marks.length ? xmasNovelPieceBody(p.t, a, vis, marks) : vis >= p.t.length ? p.t : React.createElement(React.Fragment, null, p.t.slice(0, vis), React.createElement("span", {
       style: XMAS_NOVEL_HIDE
     }, p.t.slice(vis)));
     const prev = plan[i - 1];
@@ -136202,20 +136307,25 @@ const xmasNovelSplitSe = s => {
 };
 const XmasNovelSeText = ({
   text,
-  shown
+  shown,
+  ruby
 }) => {
   const [sound, note] = xmasNovelSplitSe(text);
   const vis = Math.max(0, shown);
+  const rbS = (ruby || []).filter(x => sound.includes(x.b)),
+    rbN = (ruby || []).filter(x => !sound.includes(x.b));
   return React.createElement(React.Fragment, null, sound && React.createElement("span", {
     className: "mh-nv-se-sound"
   }, React.createElement(XmasNovelWrap, {
     text: sound,
-    shown: vis
+    shown: vis,
+    ruby: rbS
   })), note && vis > sound.length && React.createElement("span", {
     className: "mh-nv-se-note"
   }, React.createElement(XmasNovelWrap, {
     text: note,
-    shown: vis - sound.length - 1
+    shown: vis - sound.length - 1,
+    ruby: rbN
   })));
 };
 const xmasNovelSplitLead = s => {
@@ -136224,7 +136334,8 @@ const xmasNovelSplitLead = s => {
 };
 const XmasNovelSayText = ({
   text,
-  shown
+  shown,
+  ruby
 }) => {
   const [lead, body] = xmasNovelSplitLead(text);
   const vis = Math.max(0, shown);
@@ -136232,19 +136343,24 @@ const XmasNovelSayText = ({
     className: "mh-nv-say-lead only"
   }, React.createElement(XmasNovelWrap, {
     text: text,
-    shown: vis
+    shown: vis,
+    ruby: ruby
   }));
+  const rbL = (ruby || []).filter(x => lead.includes(x.b)),
+    rbB = (ruby || []).filter(x => !lead.includes(x.b));
   const bodyVis = body.slice(0, Math.max(0, vis - lead.length));
   return React.createElement(React.Fragment, null, lead && React.createElement("span", {
     className: "mh-nv-say-lead"
   }, React.createElement(XmasNovelWrap, {
     text: lead,
-    shown: vis
+    shown: vis,
+    ruby: rbL
   })), (bodyVis || !lead || vis > lead.length) && React.createElement("span", {
     className: "mh-nv-say-body"
   }, React.createElement(XmasNovelWrap, {
     text: `「${body}」`,
-    shown: vis >= text.length ? Infinity : 1 + bodyVis.length
+    shown: vis >= text.length ? Infinity : 1 + bodyVis.length,
+    ruby: rbB
   })));
 };
 const XmasNovelIcon = ({
@@ -136566,6 +136682,10 @@ const XmasNovelScreen = ({
   const lastBgRef = useRef(null);
   const pendingSwRef = useRef(null);
   const seenWhoRef = useRef(new Set());
+  const rubyRef = useRef({
+    seen: new Set(),
+    at: new WeakMap()
+  });
   const lastWhoRef = useRef('');
   const [reveal, setReveal] = useState(null);
   const pendingFxRef = useRef(null);
@@ -136778,6 +136898,18 @@ const XmasNovelScreen = ({
       xmasNovelSe('clue');
     }
     if (r.t === 'line' && r.n === '？？？' && xmasNovelIsLaugh(r)) xmasNovelSe('laugh');
+    if ((r.t === 'line' || r.t === 'band') && !rubyRef.current.at.has(r)) {
+      const R = rubyRef.current,
+        nm = r.t === 'line' ? xmasNovelNameOf(r) : '',
+        tx = xmasNovelFill(r.x, playerName);
+      const pick = str => (Array.isArray(S.ruby) ? S.ruby : []).filter(x => x && x.b && !R.seen.has(x.b) && str.includes(x.b) && (R.seen.add(x.b), true));
+      const name = pick(nm),
+        body = pick(tx);
+      R.at.set(r, {
+        name,
+        text: body
+      });
+    }
     if (r.t === 'line') {
       const who = r.n === '？？？' ? '？？？' : r.w || '';
       const first = !!(who && who !== '？？？' && who !== 'watson' && !seenWhoRef.current.has(who) && xmasNovelFirstLines(S)[who] === r.id);
@@ -136788,6 +136920,7 @@ const XmasNovelScreen = ({
         kind,
         fast: fxFast(unreadRef.current),
         intro: first,
+        ruby: (rubyRef.current.at.get(r) || {}).name,
         n: Date.now()
       });
     } else if (r.t === 'band') lastWhoRef.current = '';
@@ -136961,7 +137094,7 @@ const XmasNovelScreen = ({
     });
     setSt(settled);
     persist(s);
-    if (next.row.t === 'flag') setTimeout(() => arrive(xmasNovelStep(S, cur)), 0);
+    if (next.row.t === 'flag') setTimeout(() => arrive(xmasNovelStep(S, cur, xmasNovelSeenOf(saveRef.current))), 0);
   };
   const start = (cur, replay = false) => {
     replayRef.current = replay;
@@ -136978,6 +137111,10 @@ const XmasNovelScreen = ({
     lastBgRef.current = null;
     pendingSwRef.current = null;
     seenWhoRef.current = new Set();
+    rubyRef.current = {
+      seen: new Set(),
+      at: new WeakMap()
+    };
     lastWhoRef.current = '';
     setSw(null);
     setFigEnter(null);
@@ -136986,7 +137123,7 @@ const XmasNovelScreen = ({
     lastBodyRef.current = '';
     setPanelIntro(null);
     setMode('read');
-    arrive(xmasNovelSettle(S, cur));
+    arrive(xmasNovelSettle(S, cur, xmasNovelSeenOf(saveRef.current)));
   };
   const advance = () => {
     if (card) {
@@ -137057,7 +137194,7 @@ const XmasNovelScreen = ({
       });
       return;
     }
-    arrive(xmasNovelStep(S, st.cur));
+    arrive(xmasNovelStep(S, st.cur, xmasNovelSeenOf(saveRef.current)));
   };
   const finishReply = (then, q, cur) => {
     setReply(null);
@@ -137070,10 +137207,10 @@ const XmasNovelScreen = ({
       return;
     }
     if (then && then.to) {
-      arrive(xmasNovelSettle(S, xmasNovelJump(S, cur, then.to)));
+      arrive(xmasNovelSettle(S, xmasNovelJump(S, cur, then.to), xmasNovelSeenOf(saveRef.current)));
       return;
     }
-    arrive(xmasNovelStep(S, cur));
+    arrive(xmasNovelStep(S, cur, xmasNovelSeenOf(saveRef.current)));
   };
   const answer = (q, pick) => {
     setPick(null);
@@ -137453,6 +137590,7 @@ const XmasNovelScreen = ({
   const isLine = row && row.t === 'line';
   const darkNow = fx && fx.kind === 'dark';
   const name = isLine ? xmasNovelNameOf(row) : '';
+  const rowRuby = row && rubyRef.current.at.get(row) || null;
   const q = sheet && typeof sheet === 'object' ? sheet.q : null;
   const picked = pick && q && pick.qid === q.id ? pick : null;
   const choose = (key, label) => setPick({
@@ -137581,22 +137719,26 @@ const XmasNovelScreen = ({
     "data-xmas-novel-box": true
   }, name && React.createElement("div", {
     className: "mh-nv-name mh-nv-serif"
-  }, name), React.createElement("div", {
+  }, rowRuby && rowRuby.name.length ? xmasNovelRubyText(name, rowRuby.name) : name), React.createElement("div", {
     className: `mh-nv-text${isBand ? xmasNovelIsSeRow(row) ? ' se mh-nv-serif' : ` band mh-nv-serif${Array.isArray(row.fx) && row.fx.includes('letter') ? ' letter' : ''}` : ''}${isLine ? ' say' : ''}`,
     "data-xmas-novel-text": true,
     "data-xmas-novel-kind": isBand ? xmasNovelIsSeRow(row) ? 'se' : 'band' : isLine ? 'line' : row.t
   }, row.t === 'clue' ? xmasNovelWrap(`手がかり帳に「${row.clue}」を書きとめた`) : row.t === 'panel' ? xmasNovelWrap(row.x || (row.stamp ? '……' : '登場人物')) : row.t === 'q' ? xmasNovelWrap(xmasNovelFill(row.x, playerName)) : isBand && xmasNovelIsSeRow(row) ? React.createElement(XmasNovelSeText, {
     text: text,
-    shown: shown
+    shown: shown,
+    ruby: rowRuby && rowRuby.text
   }) : isLine ? React.createElement(XmasNovelSayText, {
     text: text,
-    shown: shown
+    shown: shown,
+    ruby: rowRuby && rowRuby.text
   }) : isBand && Array.isArray(row.fx) && row.fx.includes('letter') ? React.createElement(XmasNovelWrap, {
     text: text.replace(/／/g, '　'),
-    shown: shown
+    shown: shown,
+    ruby: rowRuby && rowRuby.text
   }) : React.createElement(XmasNovelWrap, {
     text: text,
-    shown: shown
+    shown: shown,
+    ruby: rowRuby && rowRuby.text
   })), isLine && row.note && !typing && React.createElement("div", {
     className: "mh-nv-note"
   }, "(", row.note, ")"), !typing && row.t !== 'q' && React.createElement("span", {
