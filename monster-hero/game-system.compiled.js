@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7418856988f69b7a
+// source-sha256: 08eb634c4be67ec6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -41030,8 +41030,11 @@ const RhythmSongSelect = ({
     });
   };
   const playable = (songs || []).filter(song => (difficulties || []).some(difficulty => rhythmChartPlayable(song, difficulty.id)));
+  const onSongIdRef = React.useRef(onSongId);
+  onSongIdRef.current = onSongId;
   const setSongId = id => {
-    if (typeof onSongId === 'function') onSongId(id);
+    const fn = onSongIdRef.current;
+    if (typeof fn === 'function') fn(id);
   };
   const setDifficultyId = id => {
     if (typeof onDifficultyId === 'function') onDifficultyId(id);
@@ -41129,7 +41132,7 @@ const RhythmSongSelect = ({
     const head = rhythmSongVersionHead(entry.songId);
     return playable.filter(item => rhythmSongVersionHead(item.songId) === head).sort((a, b) => rhythmSongVersionIndex(a.songId) - rhythmSongVersionIndex(b.songId));
   };
-  const firstSongId = (() => {
+  const firstSongId = React.useMemo(() => {
     const recs = bestRecords && typeof bestRecords === 'object' ? bestRecords : {};
     const playedAny = Object.keys(recs).some(id => recs[id] && typeof recs[id] === 'object' && Object.keys(recs[id]).some(d => {
       const r = rhythmBestRecord(recs, id, d);
@@ -41149,8 +41152,12 @@ const RhythmSongSelect = ({
       };
     }
     return pick ? pick.id : null;
-  })();
-  const rows = (() => {
+  }, [bestRecords, playable.map(entry => entry.songId).join('|'), (difficulties || []).map(item => item.id).join('|')]);
+  const songsKey = playable.map(entry => entry.songId).join('|');
+  const difficultiesKey = (difficulties || []).map(item => item.id).join('|');
+  const eventKey = [...eventSongIds].join('|');
+  const favoritesKey = [...favoriteIds].join('|');
+  const rows = React.useMemo(() => {
     const out = [],
       at = new Map();
     for (const entry of playable.filter(genreMatches)) {
@@ -41182,7 +41189,7 @@ const RhythmSongSelect = ({
       levelOf: rowLevel,
       difficulties
     }).map(entry => byEntry.get(entry.songId));
-  })();
+  }, [songsKey, difficultiesKey, song ? song.songId : '', difficulty ? difficulty.id : '', genre.id, state.sort, state.desc, eventKey, favoritesKey]);
   const sortLabel = (RHYTHM_SORT_ORDERS.find(item => item.id === state.sort) || RHYTHM_SORT_ORDERS[0]).label;
   React.useEffect(() => {
     if (song && song.songId !== songId) setSongId(song.songId);
@@ -41385,96 +41392,8 @@ const RhythmSongSelect = ({
     };
   }, []);
   const noteTight = noteFitShow && noteFit >= 1;
-  return React.createElement("div", {
-    "data-rhythm-song-select": true,
-    "data-rhythm-song-genre": genre ? genre.id : 'all',
-    className: "flex min-h-0 flex-1 flex-col landscape:flex-row"
-  }, React.createElement("div", {
-    className: "flex min-h-0 min-w-0 flex-1 flex-col landscape:flex-row landscape:border-r landscape:border-white/10"
-  }, notice && noticeOpen && React.createElement("div", {
-    "data-rhythm-song-notice": true,
-    className: "shrink-0 px-2 pt-2 landscape:hidden"
-  }, React.isValidElement(notice) && notice.props && notice.props.scene ? React.cloneElement(notice, {
-    oneLine: true,
-    faceSize: 28
-  }) : notice), React.createElement("div", {
-    "data-rhythm-song-toolbar": true,
-    className: "flex shrink-0 items-center gap-1.5 px-2 pt-2 landscape:w-[104px] landscape:flex-col landscape:items-stretch landscape:gap-2 landscape:pb-2 landscape:pr-0"
-  }, React.createElement("button", {
-    type: "button",
-    "data-rhythm-genre-open": true,
-    "aria-haspopup": "dialog",
-    onClick: () => setGenreOpen(true),
-    className: `flex min-h-[40px] w-[42%] min-w-0 items-center justify-between gap-1 rounded-xl border px-3 text-[11px] font-black landscape:min-h-[52px] landscape:w-full landscape:px-2 ${genre && genre.id !== 'all' ? 'border-cyan-200/80 bg-cyan-500/20 text-cyan-50' : 'border-white/15 bg-slate-900/80 text-slate-200'}`
-  }, React.createElement("span", {
-    "data-rhythm-genre-current": genre ? genre.id : 'all',
-    className: "min-w-0 truncate landscape:flex landscape:flex-col landscape:items-start landscape:leading-tight"
-  }, React.createElement("small", {
-    className: "text-[11px] font-black max-[359px]:hidden landscape:text-[10px] landscape:text-slate-400"
-  }, "ジャンル", React.createElement("span", {
-    className: "landscape:hidden"
-  }, "：")), React.createElement("b", {
-    className: "max-w-full truncate font-black landscape:text-[13px]"
-  }, genre && genre.favorite ? '♥ ' : '', genre ? genre.label : 'ALL')), React.createElement("span", {
-    "aria-hidden": "true",
-    className: "shrink-0 text-slate-400"
-  }, "▾")), React.createElement("button", {
-    type: "button",
-    "data-rhythm-song-sort": true,
-    onClick: () => setSortOpen(true),
-    className: "flex min-h-[40px] min-w-0 flex-1 items-center justify-between gap-1 rounded-xl border border-white/15 bg-slate-900/80 px-3 text-[11px] font-black text-slate-200 landscape:min-h-[52px] landscape:flex-none landscape:px-2"
-  }, React.createElement("span", {
-    className: "min-w-0 truncate landscape:flex landscape:flex-col landscape:items-start landscape:leading-tight"
-  }, React.createElement("small", {
-    className: "text-[11px] font-black max-[359px]:hidden landscape:text-[10px] landscape:text-slate-400"
-  }, "並べ替え", React.createElement("span", {
-    className: "landscape:hidden"
-  }, "：")), React.createElement("b", {
-    className: "max-w-full truncate font-black landscape:text-[12px]"
-  }, sortLabel, state.desc ? '（逆）' : '')), React.createElement("span", {
-    "aria-hidden": "true",
-    className: "shrink-0 text-slate-400"
-  }, "▾")), notice && React.createElement("button", {
-    type: "button",
-    "data-rhythm-song-notice-toggle": true,
-    "aria-pressed": noticeOpen,
-    onClick: () => setView(isShortScreen ? {
-      ...state,
-      noticeOpenShort: !noticeOpen
-    } : {
-      ...state,
-      noticeOpen: !noticeOpen,
-      noticeTouched: true
-    }),
-    title: noticeOpen ? '助手のひとこと: 入(押すと切)' : '助手のひとこと: 切(押すと入)',
-    "aria-label": noticeOpen ? '助手のひとことと案内を畳む' : noticeHidden > 0 ? `畳んである案内が${noticeHidden + 1}つあります。出す` : '助手のひとことを出す',
-    className: `relative flex h-[40px] w-[52px] shrink-0 items-center justify-center gap-0.5 rounded-xl border text-[11px] font-black landscape:h-[44px] landscape:w-full ${noticeOpen ? 'border-fuchsia-300/60 bg-fuchsia-900/40 text-fuchsia-100' : 'border-white/15 bg-slate-900/80 text-slate-300'}`
-  }, React.createElement("span", {
-    "aria-hidden": "true"
-  }, "💬"), React.createElement("span", {
-    "aria-hidden": "true",
-    className: "hidden landscape:inline"
-  }, "ひとこと"), React.createElement("b", {
-    "data-rhythm-song-notice-state": noticeOpen ? 'on' : 'off',
-    "aria-hidden": "true",
-    className: `rounded px-0.5 leading-tight ${noticeOpen ? 'bg-fuchsia-300 text-fuchsia-950' : 'bg-slate-600 text-slate-100'}`
-  }, noticeOpen ? '入' : '切'), React.createElement("span", {
-    "aria-hidden": "true",
-    className: "text-[9px]"
-  }, noticeOpen ? '▲' : '▼'), !noticeOpen && noticeHidden > 0 && React.createElement("b", {
-    "data-rhythm-song-notice-badge": true,
-    className: "absolute -right-1 -top-1 min-w-[16px] rounded-full bg-fuchsia-400 px-1 text-[10px] leading-4 text-slate-950"
-  }, noticeHidden)), toolbarExtra), React.createElement("div", {
-    ref: listRef,
-    onScroll: handleListScroll,
-    "data-rhythm-song-list": true,
-    "data-rhythm-song-loop": loopEnabled ? '1' : '0',
-    className: `min-h-0 min-w-0 flex-1 overflow-y-auto mh-scroll px-2 py-2${spot('songList')}`
-  }, list.length === 0 ? React.createElement("p", {
-    style: JA_WRAP_STYLE,
-    "data-rhythm-song-empty": true,
-    className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-xs text-slate-300"
-  }, genre && genre.favorite ? jaWrap('お気に入りの曲はまだありません。曲を選んで「♡ お気に入り」を押すと、ここに並びます。') : genre && genre.id !== 'all' ? jaWrap('このジャンルの曲はまだありません。') : emptyText) : React.createElement("ul", {
+  const songRowsSpotKey = ['achievement', 'songLevel'].map(spot).join('|');
+  const songRowsList = React.useMemo(() => React.createElement("ul", {
     className: "space-y-0.5"
   }, blocks.map(copy => rows.map(row => {
     const entry = row.entry;
@@ -41617,7 +41536,97 @@ const RhythmSongSelect = ({
     }), "🏆", React.createElement("span", {
       className: "[@container(max-width:380px)]:hidden"
     }, " イベント対象"))))));
-  }))))), React.createElement("aside", {
+  }))), [rows, blocks.length, song ? song.songId : '', bestRecords, difficultiesKey, difficulty ? difficulty.id : '', eventKey, favoritesKey, firstSongId, songLock ? songLock.owned : null, unlockAll, songRowsSpotKey]);
+  return React.createElement("div", {
+    "data-rhythm-song-select": true,
+    "data-rhythm-song-genre": genre ? genre.id : 'all',
+    className: "flex min-h-0 flex-1 flex-col landscape:flex-row"
+  }, React.createElement("div", {
+    className: "flex min-h-0 min-w-0 flex-1 flex-col landscape:flex-row landscape:border-r landscape:border-white/10"
+  }, notice && noticeOpen && React.createElement("div", {
+    "data-rhythm-song-notice": true,
+    className: "shrink-0 px-2 pt-2 landscape:hidden"
+  }, React.isValidElement(notice) && notice.props && notice.props.scene ? React.cloneElement(notice, {
+    oneLine: true,
+    faceSize: 28
+  }) : notice), React.createElement("div", {
+    "data-rhythm-song-toolbar": true,
+    className: "flex shrink-0 items-center gap-1.5 px-2 pt-2 landscape:w-[104px] landscape:flex-col landscape:items-stretch landscape:gap-2 landscape:pb-2 landscape:pr-0"
+  }, React.createElement("button", {
+    type: "button",
+    "data-rhythm-genre-open": true,
+    "aria-haspopup": "dialog",
+    onClick: () => setGenreOpen(true),
+    className: `flex min-h-[40px] w-[42%] min-w-0 items-center justify-between gap-1 rounded-xl border px-3 text-[11px] font-black landscape:min-h-[52px] landscape:w-full landscape:px-2 ${genre && genre.id !== 'all' ? 'border-cyan-200/80 bg-cyan-500/20 text-cyan-50' : 'border-white/15 bg-slate-900/80 text-slate-200'}`
+  }, React.createElement("span", {
+    "data-rhythm-genre-current": genre ? genre.id : 'all',
+    className: "min-w-0 truncate landscape:flex landscape:flex-col landscape:items-start landscape:leading-tight"
+  }, React.createElement("small", {
+    className: "text-[11px] font-black max-[359px]:hidden landscape:text-[10px] landscape:text-slate-400"
+  }, "ジャンル", React.createElement("span", {
+    className: "landscape:hidden"
+  }, "：")), React.createElement("b", {
+    className: "max-w-full truncate font-black landscape:text-[13px]"
+  }, genre && genre.favorite ? '♥ ' : '', genre ? genre.label : 'ALL')), React.createElement("span", {
+    "aria-hidden": "true",
+    className: "shrink-0 text-slate-400"
+  }, "▾")), React.createElement("button", {
+    type: "button",
+    "data-rhythm-song-sort": true,
+    onClick: () => setSortOpen(true),
+    className: "flex min-h-[40px] min-w-0 flex-1 items-center justify-between gap-1 rounded-xl border border-white/15 bg-slate-900/80 px-3 text-[11px] font-black text-slate-200 landscape:min-h-[52px] landscape:flex-none landscape:px-2"
+  }, React.createElement("span", {
+    className: "min-w-0 truncate landscape:flex landscape:flex-col landscape:items-start landscape:leading-tight"
+  }, React.createElement("small", {
+    className: "text-[11px] font-black max-[359px]:hidden landscape:text-[10px] landscape:text-slate-400"
+  }, "並べ替え", React.createElement("span", {
+    className: "landscape:hidden"
+  }, "：")), React.createElement("b", {
+    className: "max-w-full truncate font-black landscape:text-[12px]"
+  }, sortLabel, state.desc ? '（逆）' : '')), React.createElement("span", {
+    "aria-hidden": "true",
+    className: "shrink-0 text-slate-400"
+  }, "▾")), notice && React.createElement("button", {
+    type: "button",
+    "data-rhythm-song-notice-toggle": true,
+    "aria-pressed": noticeOpen,
+    onClick: () => setView(isShortScreen ? {
+      ...state,
+      noticeOpenShort: !noticeOpen
+    } : {
+      ...state,
+      noticeOpen: !noticeOpen,
+      noticeTouched: true
+    }),
+    title: noticeOpen ? '助手のひとこと: 入(押すと切)' : '助手のひとこと: 切(押すと入)',
+    "aria-label": noticeOpen ? '助手のひとことと案内を畳む' : noticeHidden > 0 ? `畳んである案内が${noticeHidden + 1}つあります。出す` : '助手のひとことを出す',
+    className: `relative flex h-[40px] w-[52px] shrink-0 items-center justify-center gap-0.5 rounded-xl border text-[11px] font-black landscape:h-[44px] landscape:w-full ${noticeOpen ? 'border-fuchsia-300/60 bg-fuchsia-900/40 text-fuchsia-100' : 'border-white/15 bg-slate-900/80 text-slate-300'}`
+  }, React.createElement("span", {
+    "aria-hidden": "true"
+  }, "💬"), React.createElement("span", {
+    "aria-hidden": "true",
+    className: "hidden landscape:inline"
+  }, "ひとこと"), React.createElement("b", {
+    "data-rhythm-song-notice-state": noticeOpen ? 'on' : 'off',
+    "aria-hidden": "true",
+    className: `rounded px-0.5 leading-tight ${noticeOpen ? 'bg-fuchsia-300 text-fuchsia-950' : 'bg-slate-600 text-slate-100'}`
+  }, noticeOpen ? '入' : '切'), React.createElement("span", {
+    "aria-hidden": "true",
+    className: "text-[9px]"
+  }, noticeOpen ? '▲' : '▼'), !noticeOpen && noticeHidden > 0 && React.createElement("b", {
+    "data-rhythm-song-notice-badge": true,
+    className: "absolute -right-1 -top-1 min-w-[16px] rounded-full bg-fuchsia-400 px-1 text-[10px] leading-4 text-slate-950"
+  }, noticeHidden)), toolbarExtra), React.createElement("div", {
+    ref: listRef,
+    onScroll: handleListScroll,
+    "data-rhythm-song-list": true,
+    "data-rhythm-song-loop": loopEnabled ? '1' : '0',
+    className: `min-h-0 min-w-0 flex-1 overflow-y-auto mh-scroll px-2 py-2${spot('songList')}`
+  }, list.length === 0 ? React.createElement("p", {
+    style: JA_WRAP_STYLE,
+    "data-rhythm-song-empty": true,
+    className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-xs text-slate-300"
+  }, genre && genre.favorite ? jaWrap('お気に入りの曲はまだありません。曲を選んで「♡ お気に入り」を押すと、ここに並びます。') : genre && genre.id !== 'all' ? jaWrap('このジャンルの曲はまだありません。') : emptyText) : songRowsList)), React.createElement("aside", {
     "data-rhythm-song-detail": true,
     ref: detailRef,
     "data-rhythm-song-note-fit": noteFit,

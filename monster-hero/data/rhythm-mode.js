@@ -85323,7 +85323,14 @@ const RHYTHM_SONG_VERSION_GROUPS=Object.freeze([
   // 2026-11-22 Battle #5(原曲とショート版。ジャケットは版ごとに違う絵)。11/28 10:00 に解禁(台帳 r1126-064)
   Object.freeze([['battle_5','原曲'],['battle_5_short','short ver.']]),
 ]);
-const rhythmSongVersionGroup=songId=>RHYTHM_SONG_VERSION_GROUPS.find(group=>group.some(([id])=>id===songId))||null;
+// 曲 → 組の表は最初に1回だけ作る(2026-11-28 r1126-104 案A)。曲えらびの一覧は描き直しのたびに曲の数×曲の数だけ呼ぶので、
+//   28組を毎回頭から探していた形だと、裏クイックが回っている間の曲の一覧が重かった(iPhone の目安で CPU がほぼ埋まる)。
+//   RHYTHM_SONG_VERSION_GROUPS は凍結してあり後から変わらないので、答えは前と同じ(同じ曲が2つの組にあれば先の組を返すのも同じ)
+let rhythmSongVersionGroupMap=null;
+const rhythmSongVersionGroup=songId=>{
+  if(!rhythmSongVersionGroupMap){rhythmSongVersionGroupMap=new Map();for(const group of RHYTHM_SONG_VERSION_GROUPS)for(const [id] of group)if(!rhythmSongVersionGroupMap.has(id))rhythmSongVersionGroupMap.set(id,group);}
+  return rhythmSongVersionGroupMap.get(songId)||null;
+};
 // その曲の組の原曲の songId(組に入っていない曲はその曲自身)
 const rhythmSongVersionHead=songId=>{const group=rhythmSongVersionGroup(songId);return group?group[0][0]:songId;};
 const rhythmSongVersionLabel=songId=>{const group=rhythmSongVersionGroup(songId);const row=group&&group.find(([id])=>id===songId);return row?row[1]:'';};
@@ -85392,9 +85399,13 @@ const rhythmSongReleased=(songId,nowMs=Date.now())=>{
   const ms=Date.parse(at);
   return Number.isFinite(ms)&&Number(nowMs)>=ms;
 };
-const rhythmDemoSongs=songs=>RHYTHM_DEMO_SONG_IDS
+// 曲の id ごとに全曲を頭から探さず、表を1回作って引く(2026-11-28 r1126-104 案A。曲えらびは描き直しのたびに呼ぶ)。
+//   同じ id が2つあれば先の曲を返すのは find と同じ
+//   ★rhythmDemoSongs は最後を「.filter(Boolean);」で終える形のまま(tools/mode/rhythm-total-ranking-check.js がそこまでを切り出して使う)
+const rhythmSongsById=songs=>{const byId=new Map();for(const song of (songs||[]))if(song&&!byId.has(song.songId))byId.set(song.songId,song);return byId;};
+const rhythmDemoSongs=(songs,byId=rhythmSongsById(songs))=>RHYTHM_DEMO_SONG_IDS
   .filter(songId=>rhythmSongReleased(songId))
-  .map(songId=>(songs||[]).find(song=>song.songId===songId))
+  .map(songId=>byId.get(songId))
   .filter(Boolean);
 // 体験版で選べる難易度そのもの(曲ごとの絞り込みは rhythmDemoDifficulties が行う)。
 const rhythmDemoDifficultyList=difficulties=>(difficulties||[])
