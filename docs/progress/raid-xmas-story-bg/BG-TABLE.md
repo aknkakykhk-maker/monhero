@@ -46,3 +46,16 @@
 
 `docs/progress/raid-xmas-story-bg/shots/`(縦 390×844・タブレット 820×1180・横 844×390)。撮り直し:
 `SHOT_DIR=docs/progress/raid-xmas-story-bg/shots node tools/battle/raid-xmas-story-bg-shots.js`
+
+## 決めごとと止め絵の突き合わせ
+
+| 決めごと | どの止め絵のどこで満たすか |
+| --- | --- |
+| r1126-090 場面ごとに背景を画面いっぱいに敷き、その上に今の会話の窓 | 全部の止め絵。例 `phone-r0-hall.jpg`(広間の夜)・`phone-r1-roof.jpg`(雪原の崖)・`phone-r1-hill.jpg`(雪の山道)。道具が「背景が表の絵」「画面いっぱい」を全33枚で確かめた |
+| 同 事件簿の16枚から話の場所に合う絵(新しい絵は描かない) | 上の表。吹雪・明かりの消えたホールは色だけ替える: `phone-r0-kurosanta-storm.jpg`・`phone-r0-candle.jpg`。朝は `phone-ra-morning.jpg` |
+| 同 初回も回想も同じ見た目 | 同じお話の窓で流す。初回(HOME で流れる)は `raid-xmas-story-browser-check.js` で確認、止め絵は回想から |
+| 同 ほかの助手のお話には背景を出さない | 背景は台本の行の `bg:'xmas_…'` だけで出る。書いたのはレイドのお話8本だけ |
+| 同 iPhone 縦・タブレット・横で背景が切れない・窓が読める | `phone-*`・`tablet-*`・`land-*`。道具が「窓が画面の中」「全身の絵が窓に重ならない・上で切れない」を確かめた |
+| 追記1 ハム・サンタは画面のまん中に全身の絵、窓は今のまま下 | `phone-r0-ham.jpg`・`phone-r0-santa.jpg`(話していないハムは暗く残る)・`phone-r0-kurosanta-storm.jpg`・`tablet-r0-santa.jpg`・`land-r0-santa.jpg` |
+| 追記1 ハムの上にもう1つの枠が出ない | 全部の止め絵で上の段(`data-story-stage`)が無いことを道具が確かめた |
+| 追記1 顔の絵がある話し手をそろえるかは部の案 | 顔の枠のまま(上の「全身の絵」の節)。`phone-r0-hall.jpg`(ももすけ)・`phone-r4-hall.jpg`(ソラシド)・`phone-r0-candle.jpg`(イチーカ) |
