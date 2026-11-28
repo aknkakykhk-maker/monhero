@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0fbce3e8811e1525
+// source-sha256: cc14af0b85aeeeb0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -127383,7 +127383,7 @@ const XMAS_NOVEL_SCRIPT = {
     "cond": null,
     "bgm": "melo_sad_song_short",
     "bg": "きゅうこの部屋",
-    "next": "C10-L",
+    "next": null,
     "rows": [{
       "id": "K1-1",
       "t": "band",
@@ -127577,7 +127577,7 @@ const XMAS_NOVEL_SCRIPT = {
     "cond": null,
     "bgm": "melo_sad_song_short",
     "bg": "朝の雪原",
-    "next": "C11-L",
+    "next": null,
     "rows": [{
       "id": "L2-1",
       "t": "band",

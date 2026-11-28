@@ -97,6 +97,11 @@ const NAME = { atsu: 'あつ派', sorashido: 'ソラシド派' };
 const FACE = { normal: 'ふつう', happy: '笑顔', wink: 'ウインク', surprise: '驚き', troubled: '困り顔', angry: 'むくれ顔', crying: '泣き顔', excited: 'わくわく', sleep: '寝顔' };
 const ng = [];
 const summary = [];
+// どのエンディングも、「次」は無いか・選択の行(やり直し)か・外側(OUT-*)の場面だけ(r1126-108)
+S.scenes.filter((sc) => sc.ending).forEach((sc) => {
+  const nx = sc.next;
+  if (nx && !/^OUT-/.test(nx) && S.scenes.some((x) => x.id === nx)) ng.push(`${sc.ending.id}: エンディングのあとに場面 ${nx} が続く(外側の場面だけのはず)`);
+});
 ['atsu', 'sorashido'].forEach((side) => {
   const md = [`# 事件簿 足したエンドの通し読み(${NAME[side]}・r1126-062)`, '',
     '`node tools/novel/xmas-novel-ends-trace.js --out docs/progress/event-xmas-2026` で作った一覧(手で直さない)。画面と同じ手順で、生成物の台本をたどった順。分かれ目の選択からエンドまで。', ''];
@@ -108,6 +113,9 @@ const summary = [];
     if (res.err) bad.push(res.err);
     if (r.noQ && (res.asked || []).includes(r.noQ)) bad.push(`${r.noQ} が出た(出ないはず)`);
     if (res.end !== r.want) bad.push(`着いたのは ${res.end || '(なし)'}(${r.want} のはず)`);
+    // エンディングの場面に入ったあとに出てよいのは、そのエンディングと外側(OUT-*)の場面の行だけ(r1126-108: END-K1 のあとに C10-L が流れていた)
+    const endAt = res.lines.findIndex((l) => l.scene && /^END-/.test(l.scene));
+    if (endAt >= 0) res.lines.slice(endAt).filter((l) => l.scene && !/^END-/.test(l.scene) && !/^OUT-/.test(l.scene)).slice(0, 1).forEach((l) => bad.push(`エンディングのあとに ${l.scene} の行 ${l.id} が出た(外側の場面だけのはず)`));
     Object.entries(r.panel || {}).forEach(([k, v]) => { const id = pq[k] || k; if ((res.panel || {})[id] !== v) bad.push(`パネル ${id} が ${(res.panel || {})[id] || 'ふつう'}(${v} のはず)`); });
     // 派の行: 相手の派の行(末尾 a / s)が混ざっていないか
     const other = side === 'atsu' ? /\d s$/ : /\d a$/;
