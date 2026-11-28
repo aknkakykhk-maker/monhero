@@ -14,6 +14,7 @@ const PAGE_URL = process.env.SMOKE_URL || `http://localhost:${PORT}/monster-hero
 const errors = [];
 const ng = (m) => errors.push(m);
 
+const QUIET = require(path.join(__dirname, '..', 'boot', 'quiet-boot-seed'));
 const SAVE = () => { if (sessionStorage.getItem('s')) return; sessionStorage.setItem('s', '1'); const put = (k, v) => localStorage.setItem(k, JSON.stringify(v));
   put('mh_breeder_name', 'テスト'); put('mh_breeder_icon', '🐣'); put('mh_intro_done', true); put('mh_onboarded', true); put('mh_tutorial_seen_v1', true);
   put('mh_battle_tutorial_seen_v1', true); put('mh_battle_tutorial_guide_shown_v1', true); put('mh_assistant_selected_v1', 'mua'); put('mh_assistant_unlock_seen_v1', true);
@@ -61,6 +62,8 @@ const MEASURE = () => {
     for (const [name, vp, rot] of [['縦', { width: 390, height: 844 }, 0], ['横', { width: 844, height: 390 }, 0], ['🔄横', { width: 390, height: 844 }, 90]]) {
       const page = await browser.newPage({ viewport: vp, isMobile: true, hasTouch: true });
       await page.addInitScript(SAVE);
+      // 起動時のお話・告知を出さない(イベントのお話の窓が前に出て、HOME の時計やメニューを押せず時間切れになっていた・2026-11-28)
+      await page.addInitScript(QUIET.quietBootSeed()); await page.addInitScript(QUIET.updateNoticeSeed()); await page.addInitScript(QUIET.oneTimeNoticeSeed());
       await page.goto(PAGE_URL, { waitUntil: 'load', timeout: 90000 });
       await page.waitForFunction(() => document.body?.innerText.includes('TAP TO START'), { timeout: 90000 });
       await page.getByRole('button', { name: 'TAP TO START' }).click({ force: true });
@@ -74,7 +77,7 @@ const MEASURE = () => {
       }
       if (rot) { await page.evaluate(a => RHYTHM_VIEW_ROTATION.set(a), rot); await page.waitForTimeout(1200); }
       // 夜の 21:34 にする(いちばん幅の広い時刻の形で測る)
-      await page.evaluate(() => { TIME_OF_DAY_STORE.slot = TIME_OF_DAY_SLOTS[3]; TIME_OF_DAY_STORE.minute = '21:34'; timeOfDayEmit(); });
+      await page.evaluate(() => { TIME_OF_DAY_STORE.slot = TIME_OF_DAY_SLOTS.find(s => s.from === 18); TIME_OF_DAY_STORE.minute = '21:34'; timeOfDayEmit(); });
       await page.waitForTimeout(800);
       const look = async (where) => {
         const res = await page.evaluate(MEASURE);
@@ -87,8 +90,16 @@ const MEASURE = () => {
         return true;
       };
       if (!(await look('HOME'))) ng(`${name} HOME: 時刻の札が無い`);
-      // HOME の時計は押すと表示形式のシートが開き、選んだ瞬間に表示と保存へ反映する
-      const homeClock = page.locator('[data-time-of-day-clock]').first();
+      // 表示形式のシートはメニューの中の時計から開く。選んだ瞬間に表示と保存へ反映する
+      //   2026-11-28 r1126-118: HOME の上の段(ダイヤの下)の時計は見せるだけ(押せない)になった。ページで最初の時計はそちらなので、
+      //   メニュー(☰)を開いてからメニューの中の時計を押す。前の HOME(メニューが無い)はページの時計をそのまま押す
+      const menuBtn = page.locator('[data-home-menu-btn]');
+      const hasMenu = await menuBtn.isVisible().catch(() => false);
+      if (hasMenu) { await menuBtn.click(); await page.waitForTimeout(300); }
+      const homeClock = hasMenu ? page.locator('[data-home-menu] [data-time-of-day-clock]').first() : page.locator('[data-time-of-day-clock]').first();
+      // 上の段の時計は押せない(ボタンでない)ことも見る
+      const topClockTag = await page.evaluate(() => { const e = document.querySelector('[data-home-top-clock] [data-time-of-day-clock]'); return e ? e.tagName : null; });
+      if (topClockTag && topClockTag === 'BUTTON') ng(`${name} HOME: 上の段の時計が押せる作りになっている(見せるだけのはず)`);
       await homeClock.click();
       const fmtSheet = page.locator('[data-time-of-day-format-sheet]');
       if (!(await fmtSheet.isVisible().catch(() => false))) ng(`${name} HOME: 時計を押しても時刻表示の設定が開かない`);
@@ -109,14 +120,19 @@ const MEASURE = () => {
         if (!saved24 || saved24.format !== '24h') ng(`${name} HOME: 24時間の設定が保存されない`);
         await page.locator('[data-time-of-day-format-close]').click();
         if (await fmtSheet.isVisible().catch(() => false)) ng(`${name} HOME: 「閉じる」で時刻表示の設定が閉じない`);
+        // 上の段の時計も同じ形式で出る(24時間へ戻したあと)
+        const topText = await page.evaluate(() => { const e = document.querySelector('[data-home-top-clock] [data-time-of-day-clock]'); return e ? e.textContent.trim() : null; });
+        if (topText !== null && /\b(?:AM|PM)\b/.test(topText)) ng(`${name} HOME: 上の段の時計が24時間に戻らない(${topText})`);
         // このあとの重なり検査は従来どおり最も幅の広い夜21:34へ戻す
-        await page.evaluate(() => { TIME_OF_DAY_STORE.slot = TIME_OF_DAY_SLOTS[3]; TIME_OF_DAY_STORE.minute = '21:34'; timeOfDayEmit(); });
+        await page.evaluate(() => { TIME_OF_DAY_STORE.slot = TIME_OF_DAY_SLOTS.find(s => s.from === 18); TIME_OF_DAY_STORE.minute = '21:34'; timeOfDayEmit(); });
       }
+      // 開いたメニューを閉じる(このあとの家の入口を押せるように)
+      if (hasMenu) { await page.evaluate(() => { const b = document.querySelector('[data-home-menu-shade]'); b && b.click(); }); await page.waitForTimeout(300); }
       // 助手ライフの家(公開の印が真のときだけ入口がある)
       const life = await page.evaluate(() => { const el = document.querySelector('[data-home-assistant-life]'); if (el) { el.click(); return true; } return false; });
       if (life) {
         await page.waitForTimeout(2000);
-        await page.evaluate(() => { TIME_OF_DAY_STORE.slot = TIME_OF_DAY_SLOTS[3]; TIME_OF_DAY_STORE.minute = '21:34'; timeOfDayEmit(); });
+        await page.evaluate(() => { TIME_OF_DAY_STORE.slot = TIME_OF_DAY_SLOTS.find(s => s.from === 18); TIME_OF_DAY_STORE.minute = '21:34'; timeOfDayEmit(); });
         await page.waitForTimeout(500);
         await look('助手ライフの家');
         // 家の見出しの題そのものが切れていないか(札を見出しに置かないときも、時間帯の札と並ぶため)
@@ -129,7 +145,7 @@ const MEASURE = () => {
       if (!rot) {
         await page.locator('.mh-home-player').click();
         await page.waitForTimeout(1500);
-        await page.evaluate(() => { TIME_OF_DAY_STORE.slot = TIME_OF_DAY_SLOTS[3]; TIME_OF_DAY_STORE.minute = '21:34'; timeOfDayEmit(); });
+        await page.evaluate(() => { TIME_OF_DAY_STORE.slot = TIME_OF_DAY_SLOTS.find(s => s.from === 18); TIME_OF_DAY_STORE.minute = '21:34'; timeOfDayEmit(); });
         await page.waitForTimeout(300);
         if (!(await look('プロフィール'))) ng(`${name} プロフィール: 時刻の札が無い`);
       }
