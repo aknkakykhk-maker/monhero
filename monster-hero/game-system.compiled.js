@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6dec11ce6bd3462c
+// source-sha256: 7bc0fc5db0cb814e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -290076,7 +290076,15 @@ function MonsterHeroGame() {
         }
         return who;
       };
-      const cast = storyCastOf(script).filter(who => who.role !== 'ゲスト').filter(who => !hiddenUntil.includes(who.id) || script.slice(0, step + 1).some(l => l && storyBase(l.who) === who.id));
+      const cast = storyCastOf(script).filter(who => who.role !== 'ゲスト' || who.speakBottom && !who.noFace && !!who.image).filter(who => !hiddenUntil.includes(who.id) || script.slice(0, step + 1).some(l => l && storyBase(l.who) === who.id)).filter((who, _, all) => {
+        if (!who.storyFigureSlot) return true;
+        let lastId = null;
+        for (let i = Math.min(step, script.length - 1); i >= 0 && !lastId; i--) {
+          const w = script[i] && script[i].who && assistantById(script[i].who);
+          if (w && w.storyFigureSlot === who.storyFigureSlot) lastId = w.id;
+        }
+        return lastId ? lastId === who.id : all.find(x => x.storyFigureSlot === who.storyFigureSlot) === who;
+      });
       let stageIdx = -1;
       for (let i = step; i >= 0; i--) {
         const l = script[i];
@@ -290175,8 +290183,7 @@ function MonsterHeroGame() {
       const storyCplBottom = Math.max(8, Math.floor((storyBoxW - 64 - (storyZones ? storyLand ? 62 : 100 : 0)) / 13) - (storyZones ? 4 : 2));
       const storyCplBubble = Math.max(6, storyLand ? Math.floor((storyBoxW - 118) / 12) - 3 : Math.floor((storyBoxW - 156) / 14) - 4);
       const storyCapBottom = Math.floor((storyBoxW - 64 - (storyLand ? 62 : 100)) / 13 - 0.2);
-      const storyFaceCols = Math.floor((storyLand ? 62 : 100) / 13);
-      const storyCapBottomOf = w => storyCapBottom + (w && w.storyFigure ? storyFaceCols : 0);
+      const storyCapBottomOf = () => storyCapBottom;
       const storyCapBubble = Math.floor((storyLand ? (storyBoxW - 118) / 12 : (storyBoxW - 156) / 14) - 0.2);
       const storyChunkMax = cap => storyLand && cap === storyCapBubble ? 2 : 3;
       const storyLineNodes = (text, cap) => {
@@ -290234,7 +290241,7 @@ function MonsterHeroGame() {
         const l = script[i];
         const w = l ? assistantById(l.who) : null;
         const text = l && w && !l.band ? speakText(l, w) : '';
-        const pages = storyZones && typeof storySplitPages === 'function' ? storySplitPages(text, isGuestWho(l && l.who) ? storyCplBubble : storyCplBottom + (w && w.storyFigure ? storyFaceCols : 0), 3) : [text];
+        const pages = storyZones && typeof storySplitPages === 'function' ? storySplitPages(text, isGuestWho(l && l.who) ? storyCplBubble : storyCplBottom, 3) : [text];
         storyPageCache[i] = pages;
         return pages;
       };
@@ -290678,7 +290685,7 @@ function MonsterHeroGame() {
       })(), React.createElement("div", {
         "data-story-speaker-row": storyZones ? '' : undefined,
         className: storyZones ? 'flex items-start gap-2' : undefined
-      }, storyZones && bottomLine && !bottomSpeaker.storyFigure && React.createElement("div", {
+      }, storyZones && bottomLine && React.createElement("div", {
         key: `face-${bottomSpeaker.id}`,
         "data-story-speaker": bottomSpeaker.id,
         className: "shrink-0 text-center"
