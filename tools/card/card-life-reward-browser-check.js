@@ -126,7 +126,8 @@ const run = async (browser, mode, errors) => {
     if (!mode.skipHome) check(`① ${mode.label} HOME: カードのボタンのバッジの顔(ソラシド・えるびん)に「UP」が出て、画面に入っている`, faces && up === true, `顔 ${faces} / UP ${up}`);
     await snap('1-home');
     // ② 部屋の窓
-    await page.locator('[data-assistant-life-home-face="sorashido"]').dispatchEvent('click');
+    // 2026-11-27 r1126-073 追記2: HOME の点は押せない印になった。助手ライフはソラシドを選んで開く(前に点が呼んでいたのと同じ口)
+    await page.evaluate(() => ASSISTANT_LIFE_STORE.set({ open: true, focus: 'sorashido' }));
     await page.locator('[data-assistant-life-room-sheet="sorashido"]').waitFor({ timeout: 20000 }).catch(() => {});
     await page.waitForTimeout(800);
     await page.evaluate(() => document.querySelector('[data-assistant-life-room-act="card"]')?.scrollIntoView({ block: 'center' }));

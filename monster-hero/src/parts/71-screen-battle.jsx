@@ -2514,7 +2514,7 @@ function BattleScreen({
             {/* ★body の直下へ出す(ReactDOM.createPortal)。画面の揺れ(screenShake)は transform で作ってあり、
                 transform の掛かった要素の中の position:fixed は、揺れているあいだだけ基準がその要素へ切り替わる。
                 そのため敵の攻撃が当たった瞬間に技名の札が飛ぶように「ずれ」ていた(2026-09-24 ユーザー指摘
-                「大回転落としとか技名表示がずれる」)。バトル中の設定メニューで一度直したのと同じ原因 */}
+                「大回転落としとか技名表示がずれる」)。バトル中の設定メニューで1度直したのと同じ原因 */}
             {/* 敵の技の全画面の演出(攻撃が味方の枠まで届く・必殺技で暗くなる・覚醒ムーのカットインなど) */}
             {/* ボスの必殺技ムービー(画面を切り替えて流す)。流すかどうかは 60-app が playBossMovie で決める */}
             <BossMovieLayer shake={battleFx.shake!=='OFF'}/>
@@ -3082,7 +3082,7 @@ function BattleScreen({
           {/* ライフ・ガッツのポップアップ(吸収・ガードの余り・回復カードなど)。
               ★1体ずつの帯は**カードの中へ入れた**(2026-09-22 ユーザー指摘「距離いれると縦が
                 狭くなりすぎる」)。同じ4列が2段あるだけで枠1つぶんと余白を丸ごと使っていたため。
-              ★帯を消すときに、出す場所ごと消してはいけない(2026-09-20 に一度やって、回復も
+              ★帯を消すときに、出す場所ごと消してはいけない(2026-09-20 に1度やって、回復も
                 ガードの余りもどこにも出なくなった)。入れ物だけここに残す */}
           {Array.isArray(tacticsUnits)?(
             <div data-tactics-party-popups className="absolute inset-x-0 top-0 flex flex-col items-center gap-0.5 pointer-events-none" style={{zIndex:210}}>

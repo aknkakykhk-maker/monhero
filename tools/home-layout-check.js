@@ -42,8 +42,35 @@ const SIZES = [
   { name: '横画面 小  667x375', width: 667, height: 375 },
 ];
 
+
+// 2026-11-27 r1126-073(HOME の作り直し・案A＋Bの入口): 入口は「遊ぶ4つ(大)」と「たまに行く4つ(小さな丸)」。
+//   見ること: 遊ぶ4つは同じ大きさ・同じ高さに並ぶ / たまに行く4つも同じ大きさ / 遊ぶほうがはっきり大きい(高さ1.4倍以上) /
+//   たまに行く4つの絵は丸(正方形) / 名前の字は 10.5px 以上
+const DOCK_READ = () => [...document.querySelectorAll('[data-home-fac],[data-home-monhero-success]')].filter(e => e.offsetParent).map(e => {
+  const r = e.getBoundingClientRect(); const pic = e.querySelector('.mh-home-dock-pic,.pic'); const pr = pic ? pic.getBoundingClientRect() : null;
+  const nm = e.querySelector('.mh-home-dock-name,.nm');
+  return { k: e.getAttribute('data-home-fac') || 'success', play: !!e.closest('.mh-home-dock-top'), w: r.width, h: r.height, top: r.top, picW: pr ? pr.width : 0, picH: pr ? pr.height : 0, fs: nm ? parseFloat(getComputedStyle(nm).fontSize) : 0 };
+});
+const dockShapeChecks = (label, cards) => {
+  const play = cards.filter(c => c.play), few = cards.filter(c => !c.play);
+  const same = (l, f) => l.length > 0 && Math.max(...l.map(f)) - Math.min(...l.map(f)) <= 2;
+  const fmt = (l) => l.map(c => `${c.k}:${Math.round(c.w)}x${Math.round(c.h)}`).join(' / ');
+  check(`  ${label}遊ぶ入口(3〜4つ)が同じ大きさで横に並ぶ`, play.length >= 3 && same(play, c => c.w) && same(play, c => c.h) && same(play, c => c.top), fmt(play));
+  check(`  ${label}たまに行く入口(3〜4つ)が同じ大きさ`, few.length >= 3 && same(few, c => c.w) && same(few, c => c.h), fmt(few));
+  check(`  ${label}遊ぶ入口がたまに行く入口よりはっきり大きい(高さ1.4倍以上)`, play.length && few.length && Math.min(...play.map(c => c.h)) >= 1.4 * Math.max(...few.map(c => c.picH)),
+    `遊ぶ ${Math.round(Math.min(...play.map(c => c.h)))}px / 小さな丸 ${Math.round(Math.max(...few.map(c => c.picH)))}px`);
+  check(`  ${label}たまに行く入口の絵は丸(正方形)`, few.length >= 3 && few.every(c => c.picW > 0 && Math.abs(c.picW - c.picH) <= 2), few.map(c => `${c.k}:${Math.round(c.picW)}x${Math.round(c.picH)}`).join(' / '));
+  check(`  ${label}入口の名前の字は 10.5px 以上`, cards.length >= 7 && cards.every(c => c.fs >= 10.5), cards.map(c => `${c.k}:${c.fs}px`).join(' / '));
+};
+
 (async () => {
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+  // HOME の作り直しは 2026-11-28 10:00 にゲームの中で切り替わる(r1126-086 追記1)。それより前に回すときは、時計を 10:05 にずらして新しい HOME を測る
+  if (Date.now() < Date.parse('2026-11-28T10:00:00+09:00')) {
+    const shift = `(()=>{const off=Date.parse('2026-11-28T10:05:00+09:00')-Date.now();const RD=Date;class D extends RD{constructor(...a){if(a.length===0)super(RD.now()+off);else super(...a);}static now(){return RD.now()+off;}}D.parse=RD.parse;D.UTC=RD.UTC;window.Date=D;})();`;
+    const np = browser.newPage.bind(browser);
+    browser.newPage = async (...a) => { const pg = await np(...a); await pg.addInitScript({ content: shift }); return pg; };
+  }
   // ---- 本物の画面でも測る(2026-10-20 改善部 M7) ----
   // 上の見本は .mh-home- の CSS だけで組むので、index.html の CSS や吹き出しの本当の文の長さが入らない。
   // 320×568 で「みゅあの吹き出しが施設の左上を隠す」のを見逃していた。本物を開いて、
@@ -64,7 +91,9 @@ const SIZES = [
         put('mh_battle_tutorial_seen_v1', true); put('mh_battle_tutorial_guide_shown_v1', true); put('mh_assistant_selected_v1', 'mua'); put('mh_assistant_unlock_seen_v1', true);
         put('mh_update_notice_seen_v1', true); put('mh_rhythm_tutorial_seen_v1', true); put('mh_inherited_unique_level_compensation_v1', true); put('mh_masu_level_cap_compensation_notice_seen_v1', true);
         // 10桁のダイヤ・9桁のブリーダーP(2026-10-21 改善部 N5「数の字が約6px まで縮む」)。財布の字の大きさを下で測る
-        put('mh_gold', 6736760000); put('mh_breeder_points', 123456790); put('mh_breeder_points_granted', true); });
+        put('mh_gold', 6736760000); put('mh_breeder_points', 123456790); put('mh_breeder_points_granted', true);
+        // 2026-11-27 r1126-073 から HOME の吹き出しは「切」(顔だけ)が既定。吹き出しの長さを測るので「入」にしておく
+        put('mh_home_assistant_comment_v1', true); });
       await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'load', timeout: 60000 });
       await page.waitForFunction(() => document.body?.innerText.includes('TAP TO START'), { timeout: 40000 });
       await page.getByRole('button', { name: 'TAP TO START' }).click({ force: true });
@@ -97,8 +126,9 @@ const SIZES = [
       check('  みゅあの吹き出しが下のドックを隠さない', res.dockTop === null || res.bubbleBottom <= res.dockTop + 1,
         `吹き出しの下端 ${res.bubbleBottom}px / ドックの上端 ${res.dockTop}px`);
       // N5: 9桁(1億)からは「67.3億」のように縮めて出し、財布の字が8px 以上に保たれる。押すと細かい数が出る
-      const wallet = await page.evaluate(() => [...document.querySelectorAll('.mh-home-wallet > div b')].map(b => ({ t: b.innerText.trim(), px: parseFloat(getComputedStyle(b).fontSize) })));
-      check('  財布の数は9桁から縮めて出し、字は8px 以上(10桁のダイヤ・9桁のブリーダーP)', wallet.length === 2 && wallet[0].t === '67.3億' && wallet[1].t === '1.23億' && wallet.every(x => x.px >= 8),
+      // 2026-11-27 r1126-073: ダイヤは上の1段、ブリーダーP はメニュー☰の中(開かなくても描いてある)。字は 11px 以上(すぐできる直し7)
+      const wallet = await page.evaluate(() => [...document.querySelectorAll('.mh-home-wallet > div b, .mh-home-menu-bp b')].map(b => ({ t: b.innerText.trim() || b.textContent.trim(), px: parseFloat(getComputedStyle(b).fontSize) })));
+      check('  ダイヤ・ブリーダーPの数は9桁から縮めて出し、字は11px 以上(10桁のダイヤ・9桁のブリーダーP)', wallet.length === 2 && wallet[0].t === '67.3億' && wallet[1].t === '1.23億' && wallet.every(x => x.px >= 11),
         wallet.map(x => `${x.t}@${x.px}px`).join(' / '));
       const exact = await page.evaluate(() => { const b = document.querySelector('.mh-home-wallet [data-compact-count]'); if (!b) return ''; b.click(); return new Promise(r => setTimeout(() => r((document.querySelector('[data-compact-count-exact]') || {}).textContent || ''), 200)); });
       check('  縮めた数を押すと、細かい数(6,736,760,000)が出る', exact === '6,736,760,000', exact);
@@ -198,16 +228,7 @@ const SIZES = [
         const page = await openHome({ width: 844, height: 390 });
         const bg = await page.evaluate(() => { const p = document.querySelector('.mh-home-background'); const img = p && p.querySelector('img.mh-home-main'); return { wide: !!(p && p.classList.contains('is-wide')), src: img ? (img.getAttribute('src') || '') : '' }; });
         check('  横画面では背景が横長版(クラシック)になる', bg.wide && bg.src.includes('home-background-wide.jpg'), `${bg.src} / is-wide ${bg.wide}`);
-        const cards = await page.evaluate(() => [...document.querySelectorAll('[data-home-fac],[data-home-monhero-success]')].filter(e => e.offsetParent).map(e => { const r = e.getBoundingClientRect(); const pic = e.querySelector('.mh-home-dock-pic,.pic'); const nm = e.querySelector('.mh-home-dock-name,.nm'); const pr = pic ? pic.getBoundingClientRect() : null; const nr = nm ? nm.getBoundingClientRect() : null; const sb = e.querySelector('.mh-home-dock-sub,.sb'); const sr = sb ? sb.getBoundingClientRect() : null; const tx = e.querySelector('.mh-home-dock-txt,.txt'); const tr = tx ? tx.getBoundingClientRect() : null; return { k: e.getAttribute('data-home-fac') || 'success', w: r.width, h: r.height, top: r.top, picW: pr ? pr.width : 0, picH: pr ? pr.height : 0, picOff: pr ? pr.top - r.top : -1, nameGap: pr && nr ? nr.top - pr.bottom : -1, below: (sr || nr) ? r.bottom - (sr ? sr.bottom : nr.bottom) : -1, fh: tr ? tr.height : 0, ctr: (tr && nr) ? (nr.top + (sr ? sr.bottom : nr.bottom)) / 2 - (tr.top + tr.bottom) / 2 : 999 }; }));
-        const ws = cards.map(c => c.w), hs = cards.map(c => c.h), tops = cards.map(c => c.top);
-        check('  横画面のドックは1段で、施設カードが同じ大きさ', cards.length >= 7 && Math.max(...ws) - Math.min(...ws) <= 2 && Math.max(...hs) - Math.min(...hs) <= 2 && Math.max(...tops) - Math.min(...tops) <= 2,
-          cards.map(c => `${c.k}:${Math.round(c.w)}x${Math.round(c.h)}`).join(' / '));
-        check('  横画面でも絵の上端がそろっている(カードごとの差が2px以内)', cards.length >= 7 && cards.every(c => c.picOff >= 0) && Math.max(...cards.map(c => c.picOff)) - Math.min(...cards.map(c => c.picOff)) <= 2,
-          cards.map(c => `${c.k}:上端${Math.round(c.picOff)}`).join(' / '));
-        check('  横画面でも文字の枠の中で文字が縦中央にある(枠の中心と文字の中心の差が2px以内・枠の高さもそろっている)', cards.length >= 7 && cards.every(c => c.fh > 0 && Math.abs(c.ctr) <= 2) && Math.max(...cards.map(c => c.fh)) - Math.min(...cards.map(c => c.fh)) <= 2,
-          cards.map(c => `${c.k}:枠${Math.round(c.fh)} 中心差${c.ctr.toFixed(1)}`).join(' / '));
-        check('  横画面でもカードの絵は正方形', cards.length >= 7 && cards.every(c => c.picW > 0 && Math.abs(c.picW - c.picH) <= Math.max(2, c.picW * 0.06)),
-          cards.map(c => `${c.k}:${Math.round(c.picW)}x${Math.round(c.picH)}`).join(' / '));
+        dockShapeChecks('(横画面)', await page.evaluate(DOCK_READ));
         const ng = await homeFacesProblems(page);
         check('  (横画面)ドック・細バナー・右端ボタン・吹き出しが重ならず、画面の外へ出ない', ng.length === 0, ng.join(' / '));
         await page.close();
@@ -219,16 +240,7 @@ const SIZES = [
         check('  タブレット縦では背景が正方形の絵(クラシック)になる', bg.square && bg.src.includes('home-background-square.jpg'), `${bg.src} / is-square ${bg.square}`);
         const m = await page.evaluate(() => { const s = document.querySelector('.mh-home-scene'); return { sceneW: s ? s.getBoundingClientRect().width : 0 }; });
         check('  タブレットでは場面が600pxに張り付かず広がる', m.sceneW >= 700, `場面の幅 ${Math.round(m.sceneW)}px`);
-        const cards = await page.evaluate(() => [...document.querySelectorAll('[data-home-fac],[data-home-monhero-success]')].filter(e => e.offsetParent).map(e => { const r = e.getBoundingClientRect(); const pic = e.querySelector('.mh-home-dock-pic,.pic'); const nm = e.querySelector('.mh-home-dock-name,.nm'); const pr = pic ? pic.getBoundingClientRect() : null; const nr = nm ? nm.getBoundingClientRect() : null; const sb = e.querySelector('.mh-home-dock-sub,.sb'); const sr = sb ? sb.getBoundingClientRect() : null; const tx = e.querySelector('.mh-home-dock-txt,.txt'); const tr = tx ? tx.getBoundingClientRect() : null; return { k: e.getAttribute('data-home-fac') || 'success', w: r.width, h: r.height, top: r.top, picW: pr ? pr.width : 0, picH: pr ? pr.height : 0, picOff: pr ? pr.top - r.top : -1, nameGap: pr && nr ? nr.top - pr.bottom : -1, below: (sr || nr) ? r.bottom - (sr ? sr.bottom : nr.bottom) : -1, fh: tr ? tr.height : 0, ctr: (tr && nr) ? (nr.top + (sr ? sr.bottom : nr.bottom)) / 2 - (tr.top + tr.bottom) / 2 : 999 }; }));
-        const ws = cards.map(c => c.w), hs = cards.map(c => c.h), tops = cards.map(c => c.top);
-        check('  タブレット縦のドックは1段で、施設カードが同じ大きさ', cards.length >= 7 && Math.max(...ws) - Math.min(...ws) <= 2 && Math.max(...hs) - Math.min(...hs) <= 2 && Math.max(...tops) - Math.min(...tops) <= 2,
-          cards.map(c => `${c.k}:${Math.round(c.w)}x${Math.round(c.h)}`).join(' / '));
-        check('  タブレット縦でも絵の上端がそろっている(カードごとの差が2px以内)', cards.length >= 7 && cards.every(c => c.picOff >= 0) && Math.max(...cards.map(c => c.picOff)) - Math.min(...cards.map(c => c.picOff)) <= 2,
-          cards.map(c => `${c.k}:上端${Math.round(c.picOff)}`).join(' / '));
-        check('  タブレット縦でも文字の枠の中で文字が縦中央にある(枠の中心と文字の中心の差が2px以内・枠の高さもそろっている)', cards.length >= 7 && cards.every(c => c.fh > 0 && Math.abs(c.ctr) <= 2) && Math.max(...cards.map(c => c.fh)) - Math.min(...cards.map(c => c.fh)) <= 2,
-          cards.map(c => `${c.k}:枠${Math.round(c.fh)} 中心差${c.ctr.toFixed(1)}`).join(' / '));
-        check('  タブレット縦でもカードの絵は正方形', cards.length >= 7 && cards.every(c => c.picW > 0 && Math.abs(c.picW - c.picH) <= Math.max(2, c.picW * 0.06)),
-          cards.map(c => `${c.k}:${Math.round(c.picW)}x${Math.round(c.picH)}`).join(' / '));
+        dockShapeChecks('(タブレット縦)', await page.evaluate(DOCK_READ));
         const ng = await homeFacesProblems(page);
         check('  (タブレット)ドック・顔バッジが重ならず、画面の外へ出ない', ng.length === 0, ng.join(' / '));
         await page.close();
@@ -238,14 +250,7 @@ const SIZES = [
         const page = await openHome({ width: 1024, height: 768 });
         const bg = await page.evaluate(() => { const p = document.querySelector('.mh-home-background'); const img = p && p.querySelector('img.mh-home-main'); return { wide: !!(p && p.classList.contains('is-wide')), src: img ? (img.getAttribute('src') || '') : '' }; });
         check('  タブレット横では背景が横長版(クラシック)になる', bg.wide && bg.src.includes('home-background-wide.jpg'), `${bg.src} / is-wide ${bg.wide}`);
-        const cards = await page.evaluate(() => [...document.querySelectorAll('[data-home-fac],[data-home-monhero-success]')].filter(e => e.offsetParent).map(e => { const r = e.getBoundingClientRect(); const pic = e.querySelector('.mh-home-dock-pic,.pic'); const nm = e.querySelector('.mh-home-dock-name,.nm'); const pr = pic ? pic.getBoundingClientRect() : null; const nr = nm ? nm.getBoundingClientRect() : null; const sb = e.querySelector('.mh-home-dock-sub,.sb'); const sr = sb ? sb.getBoundingClientRect() : null; const tx = e.querySelector('.mh-home-dock-txt,.txt'); const tr = tx ? tx.getBoundingClientRect() : null; return { k: e.getAttribute('data-home-fac') || 'success', w: r.width, h: r.height, top: r.top, picOff: pr ? pr.top - r.top : -1, nameGap: pr && nr ? nr.top - pr.bottom : -1, below: (sr || nr) ? r.bottom - (sr ? sr.bottom : nr.bottom) : -1, fh: tr ? tr.height : 0, ctr: (tr && nr) ? (nr.top + (sr ? sr.bottom : nr.bottom)) / 2 - (tr.top + tr.bottom) / 2 : 999 }; }));
-        const ws = cards.map(c => c.w), hs = cards.map(c => c.h), tops = cards.map(c => c.top);
-        check('  タブレット横のドックは1段で、施設カードが同じ大きさ', cards.length >= 7 && Math.max(...ws) - Math.min(...ws) <= 2 && Math.max(...hs) - Math.min(...hs) <= 2 && Math.max(...tops) - Math.min(...tops) <= 2,
-          cards.map(c => `${c.k}:${Math.round(c.w)}x${Math.round(c.h)}`).join(' / '));
-        check('  タブレット横でも絵の上端がそろっている(カードごとの差が2px以内)', cards.length >= 7 && cards.every(c => c.picOff >= 0) && Math.max(...cards.map(c => c.picOff)) - Math.min(...cards.map(c => c.picOff)) <= 2,
-          cards.map(c => `${c.k}:上端${Math.round(c.picOff)}`).join(' / '));
-        check('  タブレット横でも文字の枠の中で文字が縦中央にある(枠の中心と文字の中心の差が2px以内・枠の高さもそろっている)', cards.length >= 7 && cards.every(c => c.fh > 0 && Math.abs(c.ctr) <= 2) && Math.max(...cards.map(c => c.fh)) - Math.min(...cards.map(c => c.fh)) <= 2,
-          cards.map(c => `${c.k}:枠${Math.round(c.fh)} 中心差${c.ctr.toFixed(1)}`).join(' / '));
+        dockShapeChecks('(タブレット横)', await page.evaluate(DOCK_READ));
         const ng = await homeFacesProblems(page);
         check('  (タブレット横)ドック・右端ボタン・吹き出しが重ならず、画面の外へ出ない', ng.length === 0, ng.join(' / '));
         await page.close();
@@ -273,27 +278,18 @@ const SIZES = [
         await page.waitForTimeout(2500); // 顔バッジの測定(700msごと)が落ち着くのを待つ
         const ng = await homeFacesProblems(page);
         check(`  ドック・吹き出し・顔バッジが重ならず、画面の外へ出ない`, ng.length === 0, ng.join(' / '));
-        const over = await page.evaluate(() => { const a = document.querySelector('.mh-home-assistant'), p = document.querySelector('.mh-home-player'); if (!a || !p) return 'みゅあの吹き出しかプロフィールが無い';
+        const over = await page.evaluate(() => { const a = document.querySelector('.mh-home-assistant, .mh-home-assistant-fold'), p = document.querySelector('.mh-home-player'); if (!a || !p) return 'みゅあの吹き出し(顔)かプロフィールが無い';
           const r = a.getBoundingClientRect(), q = p.getBoundingClientRect(); return (r.left < q.right && r.right > q.left && r.top < q.bottom && r.bottom > q.top) ? `重なり ${Math.round(Math.min(r.bottom, q.bottom) - Math.max(r.top, q.top))}px` : ''; });
         check('  みゅあの吹き出しがプロフィールに重ならない', !over, over);
-        // 施設カードの縦位置(2026-11-17 あっくん追加指示)。絵は全カードで上端をそろえ、文字は「名前1行+間+下の言葉1行」ぶんの
-        // 固定の高さの枠(.mh-home-dock-txt。サクセス入口は .txt)の中で縦に中央寄せする。見るのは2つ:
-        // (1) 絵の上端(カード自身の箱から測る)が8枚でそろっているか
-        // (2) 枠の中心と文字の塊(名前〜下の言葉)の中心が合っているかと、枠の高さが8枚で同じか
-        // カードの箱・枠からの相対で測るので、2段(縦画面)でも1段(横画面)でも同じ物差しで見られる
-        const align = await page.evaluate(() => [...document.querySelectorAll('[data-home-fac],[data-home-monhero-success]')].filter(e => e.offsetParent).map(e => { const r = e.getBoundingClientRect(); const pic = e.querySelector('.mh-home-dock-pic,.pic'); const nm = e.querySelector('.mh-home-dock-name,.nm'); const sb = e.querySelector('.mh-home-dock-sub,.sb'); const tx = e.querySelector('.mh-home-dock-txt,.txt'); const pr = pic ? pic.getBoundingClientRect() : null; const nr = nm ? nm.getBoundingClientRect() : null; const sr = sb ? sb.getBoundingClientRect() : null; const tr = tx ? tx.getBoundingClientRect() : null; const last = sr || nr; return { k: e.getAttribute('data-home-fac') || 'success', picOff: pr ? pr.top - r.top : -1, fh: tr ? tr.height : 0, ctr: (tr && nr && last) ? (nr.top + last.bottom) / 2 - (tr.top + tr.bottom) / 2 : 999 }; }));
-        check('  施設カードの絵の上端がそろっている(8枚の差が2px以内)', align.length >= 7 && align.every(c => c.picOff >= 0) && Math.max(...align.map(c => c.picOff)) - Math.min(...align.map(c => c.picOff)) <= 2,
-          align.map(c => `${c.k}:上端${Math.round(c.picOff)}`).join(' / '));
-        check('  文字の枠の中で文字が縦中央にある(枠の中心と文字の中心の差が2px以内・枠の高さもそろっている)', align.length >= 7 && align.every(c => c.fh > 0 && Math.abs(c.ctr) <= 2) && Math.max(...align.map(c => c.fh)) - Math.min(...align.map(c => c.fh)) <= 2,
-          align.map(c => `${c.k}:枠${Math.round(c.fh)} 中心差${c.ctr.toFixed(1)}`).join(' / '));
+        dockShapeChecks('', await page.evaluate(DOCK_READ));
         // 期間ものの細バナー: イベントのバナーがあれば、隠して(無いとき)もう一度測る
-        const hasEvent = await page.locator('.mh-home-event-banner').count();
+        const hasEvent = await page.locator('.mh-home-band').count();
         if (hasEvent) {
-          await page.evaluate(() => { document.querySelector('.mh-home-event-banner').style.display = 'none'; window.dispatchEvent(new Event('resize')); });
+          await page.evaluate(() => { document.querySelector('.mh-home-band').style.display = 'none'; window.dispatchEvent(new Event('resize')); });
           await page.waitForTimeout(1500);
           const ng2 = await homeFacesProblems(page);
-          check('  (イベントのバナーが無いとき)ドック・顔バッジが重ならず、画面の外へ出ない', ng2.length === 0, ng2.join(' / '));
-          await page.evaluate(() => { document.querySelector('.mh-home-event-banner').style.display = ''; });
+          check('  (イベントの帯が無いとき)ドック・顔バッジが重ならず、画面の外へ出ない', ng2.length === 0, ng2.join(' / '));
+          await page.evaluate(() => { document.querySelector('.mh-home-band').style.display = ''; });
         }
         // 右上の枠: 8桁でも数とラベルが1行のまま・枠とプロフィールの高さが変わらない(2026-10-13 社長「8桁で『ダイヤ』が縦に折れた」)
         const wal = await page.evaluate(() => {

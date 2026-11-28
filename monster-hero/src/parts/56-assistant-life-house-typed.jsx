@@ -173,7 +173,7 @@ function AssistantLifeRoomTyped({ id, who, land = false, tabs, tab = 'house', on
     <div className="alu-card" data-assistant-life-room-head data-assistant-life-bond-road={lv != null ? lv : undefined}>
       <div className="alu-t" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '2px 8px' }}>
         {lv != null ? <span className="alu-nw">💗 仲良し度 <b>Lv{lv}</b></span> : null}
-        {lv != null ? <span className="alu-n alu-nw" data-assistant-life-bond-road-remain={next ? next.remain : undefined}>{next ? `あと ${next.remain} で Lv${next.level}` : '一番上まで来ました'}</span> : null}
+        {lv != null ? <span className="alu-n alu-nw" data-assistant-life-bond-road-remain={next ? next.remain : undefined}>{next ? `あと ${next.remain} で Lv${next.level}` : '1番上まで来ました'}</span> : null}
         <AluCond id={id} sleeping={sleeping} hour={hour} />
       </div>
       {/* 「· 」で区切った塊の途中では折らない(「気分: ご機 / 嫌」と折れていた・2026-11-22 r1119-098) */}
@@ -244,7 +244,7 @@ function AssistantLifeRoomTypedCheki({ id }) {
   const st = typeof useAssistantLifeGiftState === 'function' ? useAssistantLifeGiftState() : null;
   const days = (st && st.cheki && st.cheki[String(id)]) || [];
   if (!days.length) return null;
-  return <div data-assistant-life-cheki={id}><AluRow pic="📸" text={`チェキ ${days.length}枚`} note={`一番新しい日 ${String(days[days.length - 1]).slice(5).replace('-', '/')}`} /></div>;
+  return <div data-assistant-life-cheki={id}><AluRow pic="📸" text={`チェキ ${days.length}枚`} note={`1番新しい日 ${String(days[days.length - 1]).slice(5).replace('-', '/')}`} /></div>;
 }
 
 // ===== 助手ライフの作り直し 段10: 友情を型に載せる(docs/progress/assistant-life/step10-friendship/・2026-11-22 社長 r1119-099 は案A 型どおり) =====

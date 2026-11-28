@@ -125,8 +125,10 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
   const assistantBubble = useAssistantBubbleState();
   // 助手どうしの会話を自動で進めるか(56-assistant-peer.jsx の ASSISTANT_PEER_AUTO_STORE。既定は切)
   const peerAuto = typeof useAssistantPeerAuto === 'function' ? useAssistantPeerAuto() : null;
-  // HOMEの助手コメントを出すか(21-assistant.jsx の HOME_ASSISTANT_COMMENT_STORE。既定は入)
-  const homeComment = useHomeAssistantComment();
+  // HOMEの助手コメントを出すか(21-assistant.jsx の HOME_ASSISTANT_COMMENT_STORE。既定は切=顔だけ・r1126-073)
+  const homeComment0 = useHomeAssistantComment();
+  // 10:00 より前は、選んでいない人の既定を前のまま「入」で見せる(r1126-086 追記1)
+  const homeComment = homeComment0.explicit || homeV2At() ? homeComment0 : { ...homeComment0, on: true };
   // 行動カードの見た目(71-screen-battle.jsx の BATTLE_CARD_LOOK。端末に保存する。バトル画面は開くたびに読む)
   const [battleCardLook, setBattleCardLook] = useState(() => BATTLE_CARD_LOOK.value);
   if (assetDownloadOpen) return <AssetDownloadPage onBack={() => setAssetDownloadOpen(false)}/>;
@@ -249,7 +251,7 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
           <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('モンヒロビートの演奏中は、どの設定でも出ません（レーンの上に重なってしまうため）。曲が終わってから出ます。')}</p>
         </div>
         {/* 助手のひとことを出す回数(2026-10-10・改善 G6)。選べるのは3つ(ASSISTANT_BUBBLE_MODE_LABELS が正本)。
-            止めるのは画面ごとのひとことだけ。はじめての案内・一度きりの案内・HOMEの助手・助手の告知は出る(21-assistant.jsx) */}
+            止めるのは画面ごとのひとことだけ。はじめての案内・1度きりの案内・HOMEの助手・助手の告知は出る(21-assistant.jsx) */}
         <div data-assistant-bubble-setting className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
           <b className="block text-[13px] font-black text-slate-200">助手のひとこと</b>
           <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('画面の上に出る助手の吹き出しです。「1日1回」にすると、同じ画面のひとことは1日1回だけ出ます(朝4:00で戻ります)。「出さない」にしても、初めての案内やHOMEの助手、新しい機能のお知らせは出ます。')}</p>
@@ -270,9 +272,9 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
             「切」にすると HOME の吹き出しと「おしゃべり」のボタンが消えて、広場が広くなる */}
         <div data-home-assistant-comment-setting className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
           <b className="block text-[13px] font-black text-slate-200">ホームの助手コメント</b>
-          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('ホーム画面の上に出る助手の吹き出しです。「切」にすると吹き出しと「おしゃべり」のボタンが消えて、広場が広くなります。新しい機能のお知らせは、これまでどおり出ます。')}</p>
+          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('ホーム画面の上に出る助手の吹き出しです。はじめは「切」で、助手の顔だけが出ます(顔を押すと吹き出しが開きます)。「入」にすると、いつも吹き出しが出ます。新しい機能のお知らせは、これまでどおり出ます。')}</p>
           <div className="mt-2 grid grid-cols-2 gap-2">
-            {[{ on: false, label: '切', note: '吹き出しを隠す' }, { on: true, label: '入', note: 'これまでどおり' }].map(option => (
+            {[{ on: false, label: '切', note: '顔だけ(初めの形)' }, { on: true, label: '入', note: '吹き出しを出す' }].map(option => (
               <button key={option.label} type="button" data-home-assistant-comment={option.on ? 'on' : 'off'}
                 aria-pressed={homeComment.on === option.on}
                 onClick={() => HOME_ASSISTANT_COMMENT_STORE.setOn(option.on)}

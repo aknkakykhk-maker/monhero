@@ -702,8 +702,51 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
   const st = useAssistantPeerState();
   const auto = useAssistantPeerAuto();
   const [cur, setCur] = React.useState(null); // { talk, special, step, phase:'lines'|'choice'|'reply', pick, replay }
-  // 掛け合いが流れているあいだは、助手たちの今の帯(56-assistant-life.jsx)を隠す
-  React.useEffect(() => { if (ASSISTANT_PEER_STORE.state.talking !== !!cur) ASSISTANT_PEER_STORE.set({ talking: !!cur }); }, [!!cur]);
+  // HOME では窓を勝手に開かない(2026-11-27 台帳 r1126-073・HOME の作り直しの直し1)。掛け合いが始まっても、HOME の助手の顔の丸に💬の印だけを出し
+  //   (ASSISTANT_PEER_STORE.state.homeWaiting)、押されたら(homeOpenAt)その掛け合いの窓を開く。開いた掛け合いの id を覚え、次の掛け合いはまた印から。
+  //   窓が入口・イベントの帯・ボスを隠していた(点検 r1126-070 で 24枚中10枚)。見返し(replay)はこれまでどおりすぐ開く
+  const [homeOpenedId, setHomeOpenedId] = React.useState(null);
+  // 10:00 より前(前の HOME)は今までどおりすぐ開く(r1126-086 追記1)
+  const homeV2Now = typeof homeV2At === 'function' ? homeV2At() : true;
+  const homeWaiting = homeV2Now && scene === 'home' && !!cur && !cur.replay && homeOpenedId !== cur.talk.id;
+  React.useEffect(() => { if (!!ASSISTANT_PEER_STORE.state.homeWaiting !== homeWaiting) ASSISTANT_PEER_STORE.set({ homeWaiting }); }, [homeWaiting]);
+  React.useEffect(() => () => { if (ASSISTANT_PEER_STORE.state.homeWaiting) ASSISTANT_PEER_STORE.set({ homeWaiting: false }); }, []);
+  const homeOpenRef = React.useRef(st.homeOpenAt || 0);
+  React.useEffect(() => {
+    const at = st.homeOpenAt || 0;
+    if (at === homeOpenRef.current) return;
+    homeOpenRef.current = at;
+    if (cur && !cur.replay) { setHomeOpenedId(cur.talk.id); setPeerFolded(false); }
+  }, [st.homeOpenAt]);
+  // HOME で窓を開いたら、押した顔の近くに出す(2026-11-28 台帳 r1126-073 追記3。前は画面の下のまん中に出て、入口の札にかぶった)。
+  //   出す位置だけを HOME の部品の位置から測って決める(中身は変えない)。縦とタブレットは顔の下、背の低い横は帯の右。
+  //   下の入口(ドック)の上端までに収め、収まらない分は窓の中で送る。測れないときは今までどおり画面の下
+  const [homeBox, setHomeBox] = React.useState(null);
+  const homeShown = homeV2Now && scene === 'home' && !!cur && !homeWaiting && !(peerFolded && !cur.replay);
+  React.useEffect(() => {
+    if (!homeShown || typeof document === 'undefined') { setHomeBox(null); return undefined; }
+    const measure = () => {
+      const face = document.querySelector('main.mh-home-scene .mh-home-assistant-fold, main.mh-home-scene .mh-home-assistant');
+      const dock = document.querySelector('main.mh-home-scene .mh-home-dock');
+      const band = document.querySelector('main.mh-home-scene .mh-home-band');
+      if (!face || !dock) { setHomeBox(null); return; }
+      const f = face.getBoundingClientRect(), d = dock.getBoundingClientRect(), b = band ? band.getBoundingClientRect() : null;
+      const W = window.innerWidth, low = W > window.innerHeight && window.innerHeight < 600;
+      const left = Math.round(low ? Math.max(f.right, b ? b.right : 0) + 8 : Math.max(8, f.left));
+      const top = Math.round(low ? (b ? b.top : f.top) : f.bottom + 6);
+      const width = Math.round(Math.min(448, W - left - 8));
+      const maxH = Math.round(d.top - top - 6);
+      if (width < 240 || maxH < 120) { setHomeBox(null); return; }
+      setHomeBox((p) => (p && p.left === left && p.top === top && p.width === width && p.maxH === maxH ? p : { left, top, width, maxH }));
+    };
+    measure();
+    const t = setInterval(measure, 800);
+    window.addEventListener('resize', measure);
+    return () => { clearInterval(t); window.removeEventListener('resize', measure); };
+  }, [homeShown]);
+  // 掛け合いが流れているあいだは、助手たちの今の帯(56-assistant-life.jsx)を隠す(HOME で印だけのあいだは隠さない)
+  const talkingNow = !!cur && !homeWaiting;
+  React.useEffect(() => { if (ASSISTANT_PEER_STORE.state.talking !== talkingNow) ASSISTANT_PEER_STORE.set({ talking: talkingNow }); }, [talkingNow]);
   const decidedRef = React.useRef('');
   const metKey = (metIds || []).join(',');
   React.useEffect(() => {
@@ -807,12 +850,17 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
   }, [cur, advance, auto.on]);
   React.useEffect(() => { if (!toast) return undefined; const t = setTimeout(() => setToast(null), 3200); return () => clearTimeout(t); }, [toast]);
 
-  const wrap = (children, attrs = {}) => (
+  const wrap = (children, attrs = {}) => (homeBox && homeShown ? (
+    // HOME: 顔の近く(上の homeBox)
+    <div data-assistant-peer-home-box className="fixed pointer-events-none" style={{ zIndex: 8500, left: homeBox.left, top: homeBox.top, width: homeBox.width }} {...attrs}>
+      <div className="pointer-events-auto w-full" style={{ maxHeight: homeBox.maxH, overflowY: 'auto', overscrollBehavior: 'contain' }}>{children}</div>
+    </div>
+  ) : (
     // 助手ライフの画面(z 9000)を開いているときは、その上の場面で流す
     <div className="fixed inset-x-0 flex justify-center px-2 pointer-events-none" style={{ zIndex: (typeof ASSISTANT_LIFE_STORE !== 'undefined' && ASSISTANT_LIFE_STORE.state.open) ? 9150 : 8500, bottom: 'calc(5.5rem + env(safe-area-inset-bottom))' }} {...attrs}>
       <div className="pointer-events-auto w-full max-w-md">{children}</div>
     </div>
-  );
+  ));
   if (!cur) {
     if (!toast) return null;
     const [a, b] = toast.pair.map(id => assistantById(id));
@@ -825,6 +873,7 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
           : `${a.name}と${b.name}の仲良し度が Lv${toast.level}${stage ? `「${stage.name}」` : ''}になりました`}
       </div>);
   }
+  if (homeWaiting) return null;
   if (peerFolded && !cur.replay) {
     return wrap(
       <div data-assistant-peer-folded className="flex justify-end">
@@ -1114,7 +1163,7 @@ function AssistantPeerMap({ metIds, onReplay, peerItems = null, onUseItem = null
               </span>
               <span className="mt-1 flex items-start gap-2">
                 <span className="mt-1.5 h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-slate-700" aria-hidden="true"><span className="block h-full bg-pink-400" style={{ width: `${nextStage ? Math.min(100, Math.round(100 * (x.pts - stage.min) / (nextStage.min - stage.min))) : 100}%` }}/></span>
-<span data-assistant-peer-next className="min-w-0 flex-1 text-[11.5px] font-bold leading-snug text-emerald-300" style={{ wordBreak: 'auto-phrase' }}>{nextStage ? <>あと<b className="text-amber-200">{nextStage.min - x.pts}ポイント</b>で Lv{nextStage.level}「{assistantPeerStageName(nextStage)}」{(() => { const gain = (typeof ASSISTANT_LIFE_PEER_LV_GAIN !== 'undefined' && ASSISTANT_LIFE_PEER_LV_GAIN[nextStage.level]) || opens; return gain ? <span data-assistant-peer-gain className="block text-emerald-200">Lv{nextStage.level}になると → {gain}</span> : null; })()}</> : '一番上まで来ました'}</span>
+<span data-assistant-peer-next className="min-w-0 flex-1 text-[11.5px] font-bold leading-snug text-emerald-300" style={{ wordBreak: 'auto-phrase' }}>{nextStage ? <>あと<b className="text-amber-200">{nextStage.min - x.pts}ポイント</b>で Lv{nextStage.level}「{assistantPeerStageName(nextStage)}」{(() => { const gain = (typeof ASSISTANT_LIFE_PEER_LV_GAIN !== 'undefined' && ASSISTANT_LIFE_PEER_LV_GAIN[nextStage.level]) || opens; return gain ? <span data-assistant-peer-gain className="block text-emerald-200">Lv{nextStage.level}になると → {gain}</span> : null; })()}</> : '1番上まで来ました'}</span>
               </span>
             </button>); }
           return (

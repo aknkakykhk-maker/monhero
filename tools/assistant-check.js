@@ -300,7 +300,8 @@ check('どこを指しているかが分かるように矢印を出す',
   has("content:'▼'") && has('@keyframes mhTutorialArrow'));
 check('施設以外(ミッション・ギフト・みゅあ・設定)も光る',
   has('.mh-home-mission.is-tutorial-spot,.mh-home-gift.is-tutorial-spot,.mh-home-assistant.is-tutorial-spot,.mh-home-settings.is-tutorial-spot{')
-    && has('className={`mh-home-settings${spotClass(\'settings\')}`}'));
+    // 2026-11-27 r1126-073: 設定はメニュー☰の中の行(mh-home-side-btn mh-home-settings)。案内が指すときはメニューを開いておく
+    && has('mh-home-settings${spotClass(\'settings\')}`}') && has('React.useEffect(()=>{if(homeMenuSpot)setHomeMenuOpen(true);},[homeMenuSpot]);'));
 check('場所を指すページでは暗幕を薄くする',
   has("backgroundColor:page.spot?'rgba(2,6,23,0.74)':'rgba(2,6,23,0.92)'"));
 check('光らせる場所もデータで持つ', (() => {

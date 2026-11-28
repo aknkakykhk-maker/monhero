@@ -576,6 +576,7 @@ const browser = async (core) => {
       await btn.dispatchEvent('click').catch(() => {});
       await page.waitForTimeout(250);
     }
+    await page.evaluate(() => { try { HOME_ASSISTANT_COMMENT_STORE.setOn(true); } catch (_) {} }); await page.waitForTimeout(400); // 2026-11-27 r1126-073: HOME の吹き出しは顔だけが既定。開いてからメニューを出す
     await page.locator('.mh-home-assistant [data-bubble-menu-toggle]').first().waitFor({ timeout: 10000 }).catch(() => {});
     await page.locator('.mh-home-assistant [data-bubble-menu-toggle]').first().dispatchEvent('click').catch(() => {}); await page.waitForTimeout(200); // おしゃべりは吹き出しを押して出るメニューの中(r1119-050 窓-36)
     check('⑧ 公開の印が立っていて、HOMEに「💬 おしゃべり」が出る', await page.locator('[data-home-assistant-chat]').count() === 1);
