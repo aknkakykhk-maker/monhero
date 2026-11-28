@@ -5,7 +5,8 @@
 //
 //   見ること(縦 390×844・タブレット 820×1180・横 844×390):
 //   ① 決めた行で、背景(data-story-bg)が表 docs/progress/raid-xmas-story-bg/BG-TABLE.md の絵になり、画面いっぱいに出ている(絵が読めている)
-//   ② ハム・サンタが話す行で、まん中に全身の絵(data-story-figures)が出て、下の窓に顔の枠(data-story-speaker)が出ない。上の段(data-story-stage)も出ない
+//   ② ハム・サンタが話す行で、まん中に全身の絵(data-story-figures)が出る。上の段(data-story-stage)は出ない。
+//      下の窓の顔の枠(data-story-speaker)と顔の列には、全身の絵から切り出した顔アイコンを出す(追記2)
 //   ③ 全身の絵と会話の窓が重ならない・窓が画面の中に収まる
 //   共有の合計(Supabase)は空の返事にしてある(本番の表には触らない)
 const http = require('http'), path = require('path'), fs = require('fs');
@@ -114,7 +115,9 @@ const VIEWS = [['phone', 390, 844], ['tablet', 820, 1180], ['land', 844, 390]];
           // 絵の中身の下端(object-contain の余白を除く)
           const figInner = figs.map((im) => { const b = im.getBoundingClientRect(); const s = Math.min(b.width / im.naturalWidth, b.height / im.naturalHeight) || 0; const ih = im.naturalHeight * s; return { top: b.top + (b.height - ih) / 2, bottom: b.top + (b.height + ih) / 2 }; });
           return { step: Number(r.getAttribute('data-story-step')), bgUrl, bg: rect(bgEl), sheet: rect(r.querySelector('[data-story-sheet]')), figs: figBox, figInner,
-            face: !!r.querySelector('[data-story-speaker]'), stage: !!r.querySelector('[data-story-stage]'), banner: rect(r.querySelector('[data-story-banner]')) };
+            face: !!r.querySelector('[data-story-speaker]'),
+            faceImg: (() => { const im = r.querySelector('[data-story-speaker] img'); return im ? { src: im.getAttribute('src') || '', ok: im.complete && im.naturalWidth > 0 } : null; })(),
+            row: [...r.querySelectorAll('[data-story-cast-member]')].map((x) => x.getAttribute('data-story-cast-member')), stage: !!r.querySelector('[data-story-stage]'), banner: rect(r.querySelector('[data-story-banner]')) };
         });
         const label = `${vname} ${name}(${title} ${step}行目)`;
         if (!st) { check(`${label}: お話が開いている`, false); continue; }
@@ -123,6 +126,9 @@ const VIEWS = [['phone', 390, 844], ['tablet', 820, 1180], ['land', 844, 390]];
         check(`${label}: 窓が画面の中`, !!st.sheet && st.sheet.b <= h + 1 && st.sheet.t >= 0, JSON.stringify(st.sheet));
         check(`${label}: 上の段に別の枠が出ない`, !st.stage);
         if (fig) {
+          // 追記2(社長「ハムとかさんたの顔アイコンがない」): 下の窓にも顔アイコン(全身の絵を縮めた物ではない)。顔の列にも並ぶ
+          check(`${label}: 下の窓に顔アイコン`, !!st.faceImg && st.faceImg.ok && /monster-icons\/face\//.test(st.faceImg.src), JSON.stringify(st.faceImg));
+          check(`${label}: 顔の列にハム・サンタが並ぶ(サンタは1人ぶん)`, st.row.some((id) => /^(ham|xmas_santa|xmas_kurosanta)$/.test(id)) && !(st.row.includes('xmas_santa') && st.row.includes('xmas_kurosanta')), st.row.join(','));
           check(`${label}: まん中に全身の絵`, st.figs.length > 0 && st.figs.every((f) => f.ok), JSON.stringify(st.figs.map((f) => f.ok)));
           check(`${label}: 全身の絵が窓に重ならない`, st.figInner.every((f) => f.bottom <= st.sheet.t + 2 || vname === 'land'), JSON.stringify(st.figInner.map((f) => Math.round(f.bottom))) + ' / 窓 ' + Math.round(st.sheet.t));
           check(`${label}: 全身の絵が上で切れない`, st.figInner.every((f) => f.top >= -1), JSON.stringify(st.figInner.map((f) => Math.round(f.top))));
