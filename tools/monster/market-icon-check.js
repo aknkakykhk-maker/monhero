@@ -102,7 +102,8 @@ check('デバッグ画面で全アイコンの数値と4つの本番表示を調
     && source.includes("slider('x','左右位置 X'")
     && source.includes("slider('y','上下位置 Y'")
     && source.includes('const HomeProfileIcon =')
-    && (source.match(/<HomeProfileIcon /g) || []).length === 2
+    // HOME は 2026-11-28 10:00 に前の HOME(V1)から新しい HOME(V2)へ時刻で切り替わる(r1126-086 追記1)ので、HOME の中に2か所ある
+    && (source.match(/<HomeProfileIcon /g) || []).length === 3
     && source.includes('HOME左上プロフィール')
     && source.includes('.mh-home-avatar>span{width:100%;height:100%}')
     && !source.includes('.mh-home-avatar img')

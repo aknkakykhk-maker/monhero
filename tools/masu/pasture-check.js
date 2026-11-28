@@ -21,11 +21,12 @@ check('重複・未所持・不明な種を除外する', JSON.stringify(normali
 // HOME は 69-screen-home.jsx へ切り出した。並びが本体より前になるので「gameState==='HOME' の
 // あとに homePastureMasumons.map が出てくる」では見られない。本体の呼び出しと画面の中身の2段で見る
 check('HOMEだけで歩行コンポーネントを生成する', (() => {
-  const home = screenSource('HOME', 'HomeScreen');
+  // HOME は時刻で前の HOME(V1)と新しい HOME(V2)を切り替える(r1126-086 追記1)。描くのは HomeScreenV2(と V1)の中
+  const home = screenSource('HOME', 'HomeScreenV2');
   return /gameState==='HOME'&&\(\s*<HomeScreen/.test(source)
     && /homePastureMasumons\.map\([\s\S]*HomeWalkingMasumon/.test(home)
     // 歩くマスモンを作っているのは HOME だけ(ほかの画面へ広がっていないこと)
-    && (source.match(/<HomeWalkingMasumon/g) || []).length === 1;
+    && (source.match(/<HomeWalkingMasumon/g) || []).length === 2; // 前の HOME(V1)と新しい HOME(V2)に1つずつ
 })());
 check('画面離脱と非表示でタイマーを破棄する', /return \(\) => \{ mountedRef\.current = false; clearMotionTimer\(\); document\.removeEventListener\('visibilitychange'/.test(source));
 check('保存キーと選択上限を実装する', source.includes("storeSet('mh_home_pasture_ids',next,false)") && /prev\.length>=5 \? prev/.test(source));

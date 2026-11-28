@@ -165,7 +165,7 @@ const albSendLike = async (hostId, spot) => {
   if (x.liked.includes(spot)) return { ok: true, reason: '' };
   if (x.liked.length >= ALB_MAX.likes) return { ok: false, reason: `この家への「すてき」は1日${ALB_MAX.likes}つまでです(朝4時に戻ります)` };
   const self = await alfSelf();
-  if (!self) return { ok: false, reason: '通信がうまくいきませんでした(時間をおいてもう1度)' };
+  if (!self) return { ok: false, reason: '通信がうまくいきませんでした(時間をおいてもう一度)' };
   try {
     await alfRequest(ALB_TABLE_LIKES, { method: 'POST', prefer: 'return=minimal', soft: true, body: { visitor_id: self, host_id: hostId, day: alfDay(), spot } });
   } catch (e) {
