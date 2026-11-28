@@ -84,6 +84,8 @@ const BGM_TRACKS = [
   { id:'melo_dear_santa_short', name:'Dear Santa short ver.', creator:'オリジナル', src:'audio/bgm-dear-santa-short.mp3', gain:1, loop:true },
   { id:'melo_winter_fall', name:'winter fall', creator:'オリジナル', src:'audio/bgm-winter-fall.mp3', gain:1, loop:true },
   { id:'melo_winter_fall_short', name:'winter fall short ver.', creator:'オリジナル', src:'audio/bgm-winter-fall-short.mp3', gain:1, loop:true },
+  // 3y3s(2026-11-28 社長・台帳 r1126-110・ボス曲)。頭に2秒の無音を足した版。元の音源(WAV)は tools/art-sources/song-audio/three_y_three_s/
+  { id:'melo_three_y_three_s', name:'3y3s', creator:'オリジナル', src:'audio/bgm-three-y-three-s.mp3', gain:1, loop:true },
   { id:'melo_emerald_rush', name:'Emerald Rush', creator:'オリジナル', src:'audio/bgm-emerald-rush.mp3', gain:1, loop:true },
   { id:'melo_wrath_of_the_thorn_king', name:'Wrath of the Thorn King「茨の王の怒り」', creator:'オリジナル', src:'audio/bgm-wrath-of-the-thorn-king.mp3', gain:1, loop:true },
   { id:'melo_monster', name:'Monster', creator:'オリジナル', src:'audio/bgm-monster.mp3', gain:1, loop:true },

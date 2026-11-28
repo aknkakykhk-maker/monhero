@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "4b58bedc6791",
-  "packs": {"beat":{"bytes":331569515,"count":175},"battle":{"bytes":819930458,"count":1870},"card":{"bytes":38085297,"count":1046},"all":{"bytes":1189585270,"count":3091},"core":{"bytes":27270618,"count":25}},
+  "id": "48c17caa6f6b",
+  "packs": {"beat":{"bytes":335238636,"count":177},"battle":{"bytes":819930458,"count":1870},"card":{"bytes":38085297,"count":1046},"all":{"bytes":1193254391,"count":3093},"core":{"bytes":27331987,"count":25}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"b43d691d4773","size":2833344,"pack":"beat"},
@@ -121,6 +121,7 @@
     "audio/bgm-sparkling-pink-overture.mp3": {"v":"6e474b21b5d9","size":2986560,"pack":"beat"},
     "audio/bgm-stay-with-me-short.mp3": {"v":"d836a069998d","size":2825822,"pack":"beat"},
     "audio/bgm-the-city-beneath-the-comets.mp3": {"v":"900fda0dc05e","size":1920240,"pack":"beat"},
+    "audio/bgm-three-y-three-s.mp3": {"v":"904d75645164","size":3000384,"pack":"beat"},
     "audio/bgm-title-theme.mp3": {"v":"8af0684e79e7","size":270378,"pack":"battle"},
     "audio/bgm-title.mp3": {"v":"b7bdc68bb0c0","size":500759,"pack":"battle"},
     "audio/bgm-toriko.mp3": {"v":"3870d26f6322","size":953036,"pack":"beat"},
@@ -2609,6 +2610,7 @@
     "images/song-art/sparkling-pink-overture.jpg": {"v":"576a7a4f19e6","size":73524,"pack":"beat"},
     "images/song-art/stay-with-me.jpg": {"v":"0a8784f80cf1","size":80845,"pack":"beat"},
     "images/song-art/the-city-beneath-the-comets.jpg": {"v":"8fd08d30ea81","size":59752,"pack":"beat"},
+    "images/song-art/three-y-three-s.jpg": {"v":"e96c2ac7e163","size":668737,"pack":"beat"},
     "images/song-art/toriko.jpg": {"v":"6958512f6e28","size":39282,"pack":"beat"},
     "images/song-art/toward-the-stars.jpg": {"v":"b586e7a271b9","size":65308,"pack":"beat"},
     "images/song-art/tsuki-ga-michiru-mae-ni.jpg": {"v":"cc3224d7112f","size":32682,"pack":"beat"},
@@ -3096,7 +3098,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"07733646c084","size":322141,"pack":"core"},
+    "tailwind.css": {"v":"5834bf1f652b","size":322141,"pack":"core"},
     "data/images/images-ally.js": {"v":"7fcc9331d4b6","size":92225,"pack":"core"},
     "data/images/images-enemy.js": {"v":"fc6148828d29","size":4003,"pack":"core"},
     "data/ally-monsters.js": {"v":"6737b7dced48","size":60894,"pack":"core"},
@@ -3104,7 +3106,7 @@
     "data/breeder.js": {"v":"d88e8ee15b28","size":160948,"pack":"core"},
     "data/enemy-monsters.js": {"v":"6811f59c3732","size":7879,"pack":"core"},
     "data/skills.js": {"v":"06be9af9b367","size":4375,"pack":"core"},
-    "data/rhythm-mode.js": {"v":"71f623224a4e","size":7248055,"pack":"core"},
+    "data/rhythm-mode.js": {"v":"44f8ff030e5a","size":7308163,"pack":"core"},
     "data/rhythm-lane-svg.js": {"v":"2c49090a007d","size":13321,"pack":"core"},
     "data/rhythm-geometry-calibration.js": {"v":"02534cca12f6","size":15552,"pack":"core"},
     "data/rhythm-result-replay-remount.js": {"v":"381554180360","size":5743,"pack":"core"},
@@ -3118,6 +3120,6 @@
     "data/assistant-masmon-techs.js": {"v":"353cf73676a6","size":113841,"pack":"core"},
     "data/assistant-life-rel-talks.js": {"v":"cde51ded5428","size":225977,"pack":"core"},
     "data/success-sounds.js": {"v":"9692dd51493a","size":19367,"pack":"core"},
-    "game-system.compiled.js": {"v":"d38f6e496d22","size":13253206,"pack":"core"}
+    "game-system.compiled.js": {"v":"7229c2f5450f","size":13254467,"pack":"core"}
   }
 }

@@ -2273,6 +2273,20 @@
         "source": "command"
       },
       "chartIntensity": "strong"
+    },
+    "three_y_three_s": {
+      "flowPlacement": true,
+      "audio": "monster-hero/audio/bgm-three-y-three-s.mp3",
+      "chartRevision": 42,
+      "audioSha256": "904d756451648ed32f907d5b4ef3b05ced2dbdd6e8205c3035802069e612bc75",
+      "durationMs": 125016,
+      "analyzedTiming": {
+        "bpm": 190.981,
+        "beatZeroMs": 1010.4,
+        "beatsPerBar": 4,
+        "subdivisionsPerBeat": 4,
+        "source": "detected"
+      }
     }
   }
 }
