@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1942fb5e728892be
+// source-sha256: 440e02c20d71541f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -127856,7 +127856,35 @@ const XMAS_NOVEL_CSS = `
 /* 血を見せない影(白瀬など)は、真っ黒で見えなかった(社長「白瀬の死亡シーンって出てた？」)。冷たい光を当て、縁を白く光らせて形を見せる */
 .mh-nv-body.noblood .mh-nv-body-dim { background: radial-gradient(42% 30% at var(--fx, 50%) var(--fy, 74%), rgba(150,180,235,.30), rgba(150,180,235,0) 75%), radial-gradient(120% 90% at 50% 40%, rgba(6,10,34,.35), rgba(0,0,4,.88)) !important; }
 .mh-nv-body.noblood .mh-nv-body-lie img { filter: brightness(0) drop-shadow(0 0 1.5px rgba(225,235,255,.95)) drop-shadow(0 0 3px rgba(200,215,250,.6)) drop-shadow(0 0 20px rgba(140,170,230,.55)) !important; }
+/* 人物の並びの置き場(登場人物の行・カーテンコール): 上の帯(ボタンと章の題)と文字の箱のあいだの、まん中(台帳 r1126-094 追記4。上に寄せた枠が章の題の帯にかぶっていた) */
+.mh-nv-panelwrap { position: absolute; left: 0; right: 0; top: calc(max(8px, env(safe-area-inset-top)) + 54px); bottom: 172px; z-index: 5; display: flex; align-items: center; justify-content: center; padding: 0 3vw; pointer-events: none; }
+.mh-nv-panelin { width: min(100%, 640px); max-height: 100%; }
+.mh-nv-panelbox { border-radius: 16px; padding: 12px 12px 14px; background: radial-gradient(120% 90% at 50% 30%, rgba(14,20,44,.92), rgba(3,5,14,.95)); box-shadow: 0 0 0 1px rgba(232,196,106,.75), 0 18px 40px rgba(0,0,0,.6); }
+.mh-nv-panelhead { text-align: center; font-size: 17px; font-weight: 900; letter-spacing: .5em; padding-left: .5em; }
+.mh-nv-panelrule { height: 1px; margin: 8px auto 10px; width: 70%; background: linear-gradient(90deg, transparent, #e8c46a, transparent); }
+.mh-nv-cast.big .mh-nv-person { font-size: 11px; }
+@media (orientation: portrait) {
+  .mh-nv-panelwrap { top: calc(max(8px, env(safe-area-inset-top)) + 80px); }
+  .mh-nv-cast.big { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .mh-nv-cast.big .mh-nv-person { font-size: 12px; padding: 5px 3px 6px; }
+}
+@media (orientation: landscape) and (max-height: 560px) { .mh-nv-panelwrap { bottom: 132px; padding: 0 2vw; } .mh-nv-panelin { width: min(100%, 760px); } .mh-nv-panelbox { padding: 8px 10px 10px; } .mh-nv-panelhead { font-size: 14px; } .mh-nv-panelrule { margin: 5px auto 7px; } }
+/* 紹介の動き: 枠が暗がりから開き → 見出しの字の間が詰まり → 1人ずつ(0.16秒おき)影の姿から色が戻って名前と入る → そろったら全員に金の光が1度走る */
+.mh-nv-panelbox.intro { animation: mh-nv-panel-open .7s ease-out both; }
+.mh-nv-panelbox.intro .mh-nv-panelhead { animation: mh-nv-card-label 1.1s ease-out both; }
+.mh-nv-panelbox.intro .mh-nv-panelrule { animation: mh-nv-card-rule .9s ease-out .25s both; }
+.mh-nv-panelbox.intro .mh-nv-person { animation: mh-nv-cast-in .75s cubic-bezier(.2,.7,.3,1) calc(.55s + var(--i, 0) * .16s) both, mh-nv-cast-glow 1.2s ease-out 2.75s both; }
+.mh-nv-panelbox.intro .mh-nv-person .ph img { animation: mh-nv-cast-face .75s ease-out calc(.55s + var(--i, 0) * .16s) both; }
+.mh-nv-panelbox.intro.fast .mh-nv-person { animation: mh-nv-cast-in .3s ease-out calc(.1s + var(--i, 0) * .04s) both, mh-nv-cast-glow .8s ease-out .7s both; }
+.mh-nv-panelbox.intro.fast .mh-nv-person .ph img { animation: mh-nv-cast-face .3s ease-out calc(.1s + var(--i, 0) * .04s) both; }
+.mh-nv-panelbox.intro.fast, .mh-nv-panelbox.intro.fast .mh-nv-panelhead, .mh-nv-panelbox.intro.fast .mh-nv-panelrule { animation-duration: .3s; animation-delay: 0s; }
+.mh-nv-panelbox.intro.done, .mh-nv-panelbox.intro.done *, .mh-nv-panelbox.intro.done .mh-nv-person .ph img { animation: none !important; }
+@keyframes mh-nv-panel-open { from { opacity: 0; transform: scale(.96); filter: brightness(.3); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes mh-nv-cast-in { 0% { opacity: 0; transform: translateY(12px) scale(.94); } 60% { opacity: 1; } 100% { opacity: 1; transform: none; } }
+@keyframes mh-nv-cast-face { 0% { filter: brightness(0) blur(3px); } 45% { filter: brightness(0) blur(0); } 100% { filter: none; } }
+@keyframes mh-nv-cast-glow { 0% { box-shadow: 0 0 0 1px rgba(232,196,106,.3); } 35% { box-shadow: 0 0 0 1px rgba(232,196,106,.95), 0 0 14px rgba(232,196,106,.35); } 100% { box-shadow: 0 0 0 1px rgba(232,196,106,.3); } }
 @media (prefers-reduced-motion: reduce) {
+  .mh-nv-panelbox.intro, .mh-nv-panelbox.intro * { animation: none !important; }
   .mh-nv-veil { animation-duration: .01s !important; }
   .mh-nv-sw, .mh-nv-sw::after, .mh-nv-bg.in-place, .mh-nv-bg.in-time, .mh-nv-bg.in-open, .mh-nv-bg.in-past, .mh-nv-card.open *, .mh-nv-fig.enter-first img, .mh-nv-fig.enter-swap img, .mh-nv-fig.enter-face img, .mh-nv-intro, .mh-nv-intro * { animation-duration: .01s !important; animation-delay: 0s !important; }
 }
@@ -129123,10 +129151,11 @@ const XmasNovelBloodCross = () => React.createElement("svg", {
 const XmasNovelCast = ({
   states = {},
   changed = [],
-  onPick = null
+  onPick = null,
+  big = false
 }) => React.createElement("div", {
-  className: "mh-nv-cast"
-}, XMAS_NOVEL_CAST.map(c => {
+  className: `mh-nv-cast${big ? ' big' : ''}`
+}, XMAS_NOVEL_CAST.map((c, i) => {
   const st = states[c.id] || '';
   const fresh = changed.includes(c.id);
   const face = xmasNovelFaceOf(c.id);
@@ -129166,7 +129195,10 @@ const XmasNovelCast = ({
     "data-xmas-novel-cast": c.id,
     "data-st": st || undefined,
     "data-fresh": fresh ? '' : undefined,
-    className: "mh-nv-person"
+    className: "mh-nv-person",
+    style: {
+      '--i': i
+    }
   }, inner);
 }));
 const xmasNovelPanelStates = (panel, row) => {
@@ -129955,6 +129987,7 @@ const XmasNovelScreen = ({
   };
   const stageRef = useRef(null);
   const pendingQuakeRef = useRef(0);
+  const [panelIntro, setPanelIntro] = useState(null);
   const [titleOk, setTitleOk] = useState(false);
   const fxFast = unread => !unread || !!(saveRef.current && saveRef.current.auto);
   const fireSw = v => {
@@ -130082,6 +130115,12 @@ const XmasNovelScreen = ({
       lastBgm.current = XMAS_NOVEL_VOCAL_BGM[r.bgm] || r.bgm;
       xmasNovelBgm(r.bgm);
     }
+    if (r.t === 'panel' && !r.stamp && /登場人物/.test(String(r.x || ''))) setPanelIntro({
+      id: r.id,
+      fast: !unreadRef.current || !!(saveRef.current && saveRef.current.auto),
+      done: !!skip,
+      at: Date.now()
+    });else if (r.t !== 'panel') setPanelIntro(null);
     if (r.t === 'clue') {
       setGot({
         n: r.clue,
@@ -130287,6 +130326,7 @@ const XmasNovelScreen = ({
     setReveal(null);
     pendingFxRef.current = null;
     lastBodyRef.current = '';
+    setPanelIntro(null);
     setMode('read');
     arrive(xmasNovelSettle(S, cur));
   };
@@ -130314,6 +130354,13 @@ const XmasNovelScreen = ({
     if (typing) {
       setShown(text.length);
       if (sw && !sw.fast) setSw(null);
+      return;
+    }
+    if (panelIntro && row && panelIntro.id === row.id && !panelIntro.done && Date.now() - panelIntro.at < (panelIntro.fast ? 900 : 3200)) {
+      setPanelIntro({
+        ...panelIntro,
+        done: true
+      });
       return;
     }
     if (!reply && reveal && row && reveal.id === row.id && reveal.stage === 'dark') {
@@ -130753,23 +130800,29 @@ const XmasNovelScreen = ({
     "data-st": curtain,
     "data-xmas-novel-curtain": curtain
   }), scene && scene.curtain && curtain === 'down' && !(row && row.t === 'panel') && React.createElement("div", {
-    className: "absolute inset-x-0 top-[14%] z-[5] mx-auto w-[min(94vw,640px)]",
+    className: "mh-nv-panelwrap",
     "data-xmas-novel-lineup": true
-  }, React.createElement(XmasNovelCast, {
-    states: {}
-  })), row && row.t === 'panel' && React.createElement("div", {
-    className: "absolute inset-x-0 top-[12%] z-[5] mx-auto w-[min(94vw,640px)] rounded-2xl p-3",
-    "data-xmas-novel-panel": true,
-    style: {
-      background: 'rgba(4,8,22,.88)',
-      boxShadow: '0 0 0 1px #e8c46a'
-    }
   }, React.createElement("div", {
-    className: "mh-nv-serif mh-nv-gold mb-2 text-center text-[15px] font-black"
-  }, "登場人物"), React.createElement(XmasNovelCast, {
+    className: "mh-nv-panelin"
+  }, React.createElement(XmasNovelCast, {
+    states: {},
+    big: true
+  }))), row && row.t === 'panel' && React.createElement("div", {
+    className: "mh-nv-panelwrap"
+  }, React.createElement("div", {
+    key: `panel-${row.id}`,
+    className: `mh-nv-panelin mh-nv-panelbox${panelIntro && panelIntro.id === row.id ? ` intro${panelIntro.fast ? ' fast' : ''}${panelIntro.done ? ' done' : ''}` : ''}`,
+    "data-xmas-novel-panel": true,
+    "data-xmas-novel-intro-panel": panelIntro && panelIntro.id === row.id ? panelIntro.done ? 'done' : 'play' : undefined
+  }, React.createElement("div", {
+    className: "mh-nv-panelhead mh-nv-serif mh-nv-gold"
+  }, "登場人物"), React.createElement("div", {
+    className: "mh-nv-panelrule"
+  }), React.createElement(XmasNovelCast, {
     states: xmasNovelPanelStates(st && st.cur && st.cur.panel, row),
-    changed: st && st.panelChanged || []
-  })), (isLine || isBand || row && (row.t === 'clue' || row.t === 'panel' || row.t === 'q')) && !(card && card.kind !== 'band') && React.createElement("div", {
+    changed: st && st.panelChanged || [],
+    big: true
+  }))), (isLine || isBand || row && (row.t === 'clue' || row.t === 'panel' || row.t === 'q')) && !(card && card.kind !== 'band') && React.createElement("div", {
     className: "mh-nv-box",
     style: {
       zIndex: 5
