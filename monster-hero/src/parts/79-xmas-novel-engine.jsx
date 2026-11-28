@@ -237,13 +237,15 @@ const xmasNovelSetFlags = (flags, sets) => {
 };
 // いまの場所から、条件の合う次の行へ(idx が今の行を指していれば、その次から探す)。
 //   返り値 { cur, row, scene, ending, chapterChanged }。row=null で ending があれば、そのエンディングの終わり
-const xmasNovelSettle = (script, cur) => {
+//   seen … { endings, read }(省略可)。行・場面の条件の end_G / bm_red / rd_* に使う(保存は読むだけ・r1126-115。省略すると今までどおり「何も見ていない」)
+const xmasNovelSeenOf = (save) => ({ endings: (save && Array.isArray(save.endings)) ? save.endings : [], read: (save && Array.isArray(save.read)) ? save.read : [] });
+const xmasNovelSettle = (script, cur, seen) => {
   let c = cur;
   for (let guard = 0; guard < 4000; guard += 1) {
     const scene = xmasNovelSceneById(script, c.scene);
     if (!scene) return { cur: c, row: null, scene: null, ending: null };
     const rows = scene.rows || [];
-    const ctx = xmasNovelCtx(script, c);
+    const ctx = xmasNovelCtx(script, c, seen && seen.endings, seen && seen.read);
     let i = Math.max(0, Number(c.idx) || 0);
     while (i < rows.length && !xmasNovelCondOk(rows[i] && rows[i].c, ctx)) i += 1;
     if (i < rows.length) return { cur: { ...c, idx: i }, row: rows[i], scene, ending: null };
@@ -262,7 +264,7 @@ const xmasNovelSettle = (script, cur) => {
   return { cur: c, row: null, scene: null, ending: null };
 };
 // 1行すすめる(問いの行では使わない。問いは xmasNovelAnswer)
-const xmasNovelStep = (script, cur) => xmasNovelSettle(script, { ...cur, idx: (Number(cur.idx) || 0) + 1 });
+const xmasNovelStep = (script, cur, seen) => xmasNovelSettle(script, { ...cur, idx: (Number(cur.idx) || 0) + 1 }, seen);
 
 // ---- 問いに答える ----
 //  pick … 突きつけ: 手がかりの名前 / 人を選ぶ: 人のid / 行動: 選択肢の番号(0から)

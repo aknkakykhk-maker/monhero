@@ -14,6 +14,7 @@
 8. 書いたら通す: `node tools/novel/xmas-novel-build.js` → `node tools/novel/xmas-canon-check.js` → `node tools/novel/xmas-novel-check.js` → `node tools/novel/xmas-novel-ends-trace.js`(`ROUTES` に自分の道を1本ずつ足す・`seen` に開く条件のエンド)→ `python3 tools/assistant/script-peer-calls-check.py <自分のファイル>` → `node tools/build.js` と必須の4本
 9. 公開の前に止め絵(`tools/novel/xmas-novel-shots.js` に自分の組を足す)。エンドの id と種類(もしも=`ifroute`・視点の編=`pov`)を、最後の発言に SQL の行で書く(窓口が本番に流す)
 10. 更新履歴・ヘルプは、編ごとには足さない(窓口がまとめて書く)
+11. 公開の前に、台詞の細かい点検を分析の API に1回読ませる(台帳 r1126-115 追記6)。送る物: 自分の編のファイル全部・`CANON.md`・`CRAFT.md`・SCRIPT.md の「話の決まり」「もちまるの話し方」の節。観点: ①辻褄 ②その子らしい口調 ③誤字・不自然な言い回し・ひらがなの多すぎ ④真相のネタバレ ⑤全年齢 ⑥怖さ・面白さ(大きい順に「行ID・何がおかしいか・直し案」の表)。`node tools/analysis/gateway-client.js message --kind balance --system <ファイル> --prompt <ファイル> --out <結果>`(`ANALYSIS_GATEWAY_TOKEN=proxy`。先に `--dry-run`)。その場の呼び出しは150秒で時間切れになりやすいので、返事が長いときはバッチ(`send({ action: 'batch_submit', … })` → `batch-get`)。返事は `docs/progress/event-xmas-2026/arcs/review/<編のファイル名>-API.md` に置き、大きい所から直す。直さない物は理由を1行。使った額を報告に
 
 ## 割り振り表
 
