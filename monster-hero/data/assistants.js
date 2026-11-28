@@ -828,6 +828,12 @@ const assistantExpressionName = (who, expression) => {
   const fallback = (who && who.defaultExpression) || ASSISTANT_DEFAULT_EXPRESSION;
   return list.includes(expression) ? expression : fallback;
 };
+// 重い絵を WebP にした服(2026-11-28 r1126-095 社長「助手画像が全部荒い」→ 原本から2倍で作り直し。PNG だと重すぎるので WebP 画質90)。
+//   サンタ服の全身(fullbody/<名前>_santa…)・半身の置き場(santa/<接頭辞>_<表情>)・立ち絵(stand-santa/)と、きゅうこの冬服の全身・立ち絵(fullbody/kyuko_winter…・stand-winter/)だけ。
+//   顔アイコン(santa/face/ など)は軽いので PNG のまま。冬服の半身の置き場(winter/)は受け取った絵そのままなので PNG のまま
+//   絵の道筋を作る所(assistantCostumeImage・assistantStandArt・assistantFullBodyImageOf・寝顔・事件簿)は、最後にこれを通す
+const ASSISTANT_WEBP_ART_RE = /(images\/assistant\/(?:santa\/(?!face\/)[^/?#]+|stand-(?:santa|winter)\/[^/?#]+|fullbody\/[a-z]+_(?:santa|winter)(?:__[a-z]+)?))\.(?:PNG|png)(?=$|[?#])/;
+const assistantArtFile = (path) => (typeof path === 'string' ? path.replace(ASSISTANT_WEBP_ART_RE, '$1.webp') : path);
 // 吹き出しの丸い顔に使う軽い画像
 // ★着替え(data/breeder.js の assistantCostumeImage)を着ているときは、その服の絵を返す。服の絵が決まらないときは元の服
 // ★大きい絵がまだ届いていない助手(tempImageDir を持つ)は、顔の絵を吹き出しにも大きい絵の場所にも使う(2026-10-22 あつ)
@@ -853,7 +859,7 @@ const assistantStandArt = (who, expression, outfit = '') => {
   if (!who || !who.id || !who.imagePrefix) return null;
   const dir = ASSISTANT_STAND_ART[outfit ? `${who.id}:${outfit}` : who.id];
   const ex = assistantExpressionName(who, expression);
-  return dir && ASSISTANT_STAND_EXPRESSIONS.includes(ex) ? `images/assistant/${dir}/${who.imagePrefix}_${ex}.png` : null;
+  return dir && ASSISTANT_STAND_EXPRESSIONS.includes(ex) ? assistantArtFile(`images/assistant/${dir}/${who.imagePrefix}_${ex}.png`) : null;
 };
 // いま着ている服の名前(服の絵のフォルダの名前。ふだんの服は '')
 const assistantWornOutfitName = (who) => {
@@ -863,7 +869,7 @@ const assistantFullImage = (who, expression) => (who && who.imagePrefix)
   ? (assistantStandArt(who, expression, assistantWornOutfitName(who))
     || (typeof assistantCostumeImage === 'function' && assistantCostumeImage(who, assistantExpressionName(who, expression), 'full'))
     || assistantTempImage(who, expression)
-    || `${who.imageDir}/${who.imagePrefix}_${assistantExpressionName(who, expression)}.PNG`)
+    || assistantArtFile(`${who.imageDir}/${who.imagePrefix}_${assistantExpressionName(who, expression)}.PNG`))
   : ASSISTANT_NO_IMAGE;
 
 // 社長の全身画(2026-11-11 社長「全身画作ってるから…助手の紹介ページに使って」)。キーは「助手id」か「助手id:服の名前」。
@@ -888,7 +894,7 @@ const ASSISTANT_FULLBODY_EXPRESSIONS = Object.freeze({
 const assistantFullBodyImageOf = (name, expression = 'happy') => {
   if (!name) return null;
   const exprs = ASSISTANT_FULLBODY_EXPRESSIONS[name];
-  return `images/assistant/fullbody/${name}${Array.isArray(exprs) && exprs.includes(expression) ? `__${expression}` : ''}.png`;
+  return assistantArtFile(`images/assistant/fullbody/${name}${Array.isArray(exprs) && exprs.includes(expression) ? `__${expression}` : ''}.png`);
 };
 // その助手が(いま着ている服で)全身画を持っていれば絵の置き場所を返す。服の全身画が無いときは null(今の立ち絵へ)
 const assistantFullBodyImage = (who, expression = 'happy') => {

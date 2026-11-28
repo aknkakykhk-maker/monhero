@@ -3,6 +3,6 @@ listen:seasons_of_a_little_plaza | kiki normal 0:24の静かなところ、音�
 listen:seasons_of_a_little_plaza | momosuke excited 1:31でいちばん強くなって、1:47からまたサビ！！ ももはここが大好き♡
 listen:seasons_of_a_little_plaza | dra happy 0:00は静かでも0:47から強めになるぞ。旅立ちの合図みたいだな
 listen:seasons_of_a_little_plaza | atsu happy 2:26で静かに終わるの、締めがきれいだね笑
-listen:seasons_of_a_little_plaza | kyuko happy 1:37で一度静かにしてから1:47のサビ、ためが効いてるんだよね〜
+listen:seasons_of_a_little_plaza | kyuko happy 1:37で1度静かにしてから1:47のサビ、ためが効いてるんだよね〜
 listen:seasons_of_a_little_plaza | sorashido normal BPM170です。強い音36%に軽い音1%、芯のある音の配分です
 listen:seasons_of_a_little_plaza | erubin normal 0:00と0:24の静かな所は落ち着くね。息を整えてから行けるかな
