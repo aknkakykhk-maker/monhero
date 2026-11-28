@@ -4563,8 +4563,10 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
     const ms = modeSelect;
     const tile = 'flex min-h-[48px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border px-0.5 leading-none';
     const assistToggles = (cls, withLabel) => <ModeSelectAssistToggles assistant={ms.assistant} showArt={ms.showArt} showComment={ms.showComment} onToggle={ms.onToggleAssistant} cls={cls} withLabel={withLabel} />;
+    // 横画面の切り欠き(カメラの欠け)に、左の助手の欄・戻る・🔄 が入らないよう、左右に安全な余白(--mh-sa-left/right)を取る(2026-11-28)。
+    //   縦・PC・🔄横は 0 なので今までどおり。舞台の飾り(RhythmModeSelectStage)は absolute なので画面いっぱいのまま
     return (
-      <main data-rhythm-mode-select data-rhythm-multi-step="rooms" className={`${shell} mhms-stage`}>
+      <main data-rhythm-mode-select data-rhythm-multi-step="rooms" className={`${shell} mhms-stage`} style={{ paddingLeft: 'var(--mh-sa-left, 0px)', paddingRight: 'var(--mh-sa-right, 0px)' }}>
         <RhythmModeSelectStage />
         <header className="relative z-10 flex shrink-0 items-center gap-1.5 border-b border-fuchsia-300/20 bg-slate-950/70 px-2 py-1" style={{ paddingTop: 'calc(0.25rem + var(--mh-sa-top))' }}>
           {/* 戻るとHOMEへ。裏でクイック∞周回が回っているときは、締めてから戻る(曲えらびにあった戻るボタンの役目をここへ移した) */}

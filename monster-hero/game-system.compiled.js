@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b156453e111e604d
+// source-sha256: 6e6e88e6b9832045
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -106776,7 +106776,11 @@ function RhythmMultiScreenBody({
     return React.createElement("main", {
       "data-rhythm-mode-select": true,
       "data-rhythm-multi-step": "rooms",
-      className: `${shell} mhms-stage`
+      className: `${shell} mhms-stage`,
+      style: {
+        paddingLeft: 'var(--mh-sa-left, 0px)',
+        paddingRight: 'var(--mh-sa-right, 0px)'
+      }
     }, React.createElement(RhythmModeSelectStage, null), React.createElement("header", {
       className: "relative z-10 flex shrink-0 items-center gap-1.5 border-b border-fuchsia-300/20 bg-slate-950/70 px-2 py-1",
       style: {
