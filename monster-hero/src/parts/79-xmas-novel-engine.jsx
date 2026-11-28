@@ -420,6 +420,7 @@ const XMAS_NOVEL_ENDING_KINDS = Object.freeze({
   forced: { label: '強制バッド', tone: '#b0303a' },
   accuse: { label: '名指しエンド', tone: '#a78bd8' },
   omake: { label: 'おまけ', tone: '#7fd6a8' },
+  unsolved: { label: '迷宮入り', tone: '#8fa3c8' }, // r1126-108: 黒いサンタが誰か分からないまま終わる
 });
 
 // ---- 分岐の地図「聖夜の見取り図」の読み直し(r1126-102) ----
