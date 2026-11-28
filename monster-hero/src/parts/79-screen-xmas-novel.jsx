@@ -1814,12 +1814,13 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
       // 「選び直す」はエンディングの「次」が問いの行(Q7a)のときだけ。場面(カーテンコール)へは settle が続けて入る
       const after = !replayRef.current && scene && scene.next && !xmasNovelSceneById(S, scene.next) && xmasNovelFindRow(S, scene.next) ? xmasNovelJump(S, next.cur, scene.next) : null;
       if (replayRef.current) { setSt(next); setSkip(false); setSheet(null); setCard({ kind: 'ending', ending, replay: true }); return; }
-      const firstTime = !s.endings.includes(ending.id);
+      const firstTime = !s.endings.includes(ending.id); const marksBefore = xmasNovelBookmarks(s.endings); // 特別なしおり(r1126-115)は見たエンドから数えるだけ(保存は増やさない)
       s = { ...xmasNovelRecordEnding(s, ending.id, new Date().toISOString()), cur: after };
       if (typeof xmasNovelRankNote === 'function') xmasNovelRankNote({ k: 'end', id: ending.id }, { off: rankOff, script: S }); // ランキング(r1126-107)。見返すときは通らない
+      const marksNew = xmasNovelBookmarks(s.endings).filter((id) => !marksBefore.includes(id));
       persist(s, true);
       setSt(next); setSkip(false); setSheet(null);
-      setCard({ kind: 'ending', ending, retry: !!after, fresh: firstTime, count: xmasNovelPerfectCount(S, s), total: xmasNovelScoreGroups(S).length });
+      setCard({ kind: 'ending', ending, retry: !!after, fresh: firstTime, count: xmasNovelPerfectCount(S, s), total: xmasNovelScoreGroups(S).length, marks: marksNew });
       return;
     }
     if (!next.row) { persist({ ...s, cur: null }, true); setSt(null); setMode('title'); return; }
@@ -1922,7 +1923,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
   // 答える
   const answer = (q, pick) => {
     setPick(null);
-    const res = xmasNovelAnswer(S, st.cur, q, pick, (saveRef.current && saveRef.current.endings) || []);
+    const res = xmasNovelAnswer(S, st.cur, q, pick, (saveRef.current && saveRef.current.endings) || [], (saveRef.current && saveRef.current.read) || []);
     let s = saveRef.current;
     if (q.score) {
       if (!(s.first && s.first[q.id]) && typeof xmasNovelRankNote === 'function') xmasNovelRankNote({ k: 'first', id: q.id, ok: !!res.ok }, { off: rankOff, script: S }); // 一番はじめの答えだけ(r1126-107)
@@ -2032,6 +2033,13 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
                 })()}
               </div>
               <div data-xmas-novel-perfect className="mt-4 text-[10px] text-slate-400">推理の問い 一発で当てた数 {xmasNovelPerfectCount(S, save)} / {perfectTotal}</div>
+              {/* 特別なしおり(r1126-115): 持っている物だけ、本から垂れるリボンで見せる。数も条件も出さない */}
+              {xmasNovelBookmarks(save.endings).length > 0 && (
+                <div className="mt-3 flex items-end gap-2" data-xmas-novel-ribbons aria-label="挟まれたリボン">
+                  {xmasNovelBookmarks(save.endings).map((id) => { const b = xmasNovelBookmarkOf(id); return b ? <span key={id} data-xmas-novel-ribbon={id} title={b.name} style={{ display: 'block', width: 8, height: 34, background: b.tone, clipPath: 'polygon(0 0,100% 0,100% 100%,50% 82%,0 100%)', boxShadow: '0 2px 4px rgba(0,0,0,.6)' }} /> : null; })}
+                  <span className="mh-nv-serif text-[10px] tracking-[0.2em] text-slate-400">挟まれたリボン</span>
+                </div>
+              )}
               {confirmNew && (
                 <div className="mh-nv-sheet" onClick={() => setConfirmNew(false)}>
                   <div className="mh-nv-panel mb-auto mt-auto max-w-sm text-center" onClick={(e) => e.stopPropagation()}>
@@ -2219,6 +2227,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
                 <div className="mh-nv-rule" />
                 {!card.replay && <div className="text-[12px] text-slate-200">{card.fresh ? 'エンドヒストリーに記録しました' : 'エンドヒストリーに記録ずみ'}</div>}
                 {!card.replay && <div className="mt-1 text-[11px] text-slate-300">推理の問い 一発で当てた数 {card.count} / {card.total}</div>}
+                {!card.replay && (card.marks || []).map((id) => { const b = xmasNovelBookmarkOf(id); return b ? <div key={id} className="mh-nv-serif mt-3 text-[13px] font-black" style={{ ...JA_LABEL_STYLE, color: b.tone }} data-xmas-novel-mark-got={id}>{jaWrap(`頁のあいだに、${b.color}リボンが挟まっていた`)}</div> : null; })}
                 {!card.replay && card.ending.id === 'END-G' && xmasNovelChapters(S).some((c) => c.past) && <div className="mh-nv-serif mh-nv-gold mt-3 text-[13px] font-black" data-xmas-novel-past-open style={JA_LABEL_STYLE}>{jaWrap('過去編「12年前の聖夜」が、「章から」で読めるようになりました')}</div>}
                 <div className="mt-5 space-y-2">
                   {card.retry && <button type="button" className="mh-nv-btn wide mh-nv-serif" data-xmas-novel-retry onClick={() => { setCard(null); start(saveRef.current.cur); }}>{card.ending && card.ending.kind === 'forced' ? '選択の直前からやり直す' : '選び直す'}</button>}
@@ -2291,14 +2300,14 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
             {q && q.kind === 'action' && (<>
               <div data-xmas-novel-question={q.id} className="mh-nv-plain mh-nv-serif mh-nv-gold mb-3 text-[17px] font-black">{xmasNovelWrap(xmasNovelFill(q.x, playerName))}</div>
               <div className="space-y-2.5">
-                {xmasNovelOptionsOf(q, xmasNovelCtx(S, st.cur, save.endings)).map((o) => {
+                {xmasNovelOptionsOf(q, xmasNovelCtx(S, st.cur, save.endings, save.read)).map((o) => {
                   // 一度見た強制バッドの選択肢には「見たエンド」の印(r1126-099 追記1)
                   const endAhead = !q.once && o.to ? xmasNovelEndingAhead(S, o.to) : null;
                   const seenEnd = endAhead && Array.isArray(save.endings) && save.endings.includes(endAhead) ? xmasNovelSceneById(S, endAhead) : null;
                   return (
                     <button type="button" key={o.i} className="mh-nv-choice mh-nv-serif" data-xmas-novel-option={o.i} data-pick={picked && picked.key === o.i ? '' : undefined} aria-pressed={!!(picked && picked.key === o.i)}
                       onClick={() => (q.score || q.once ? choose(o.i, xmasNovelFill(o.x, playerName)) : answer(q, o.i))}>
-                      {xmasNovelWrap(xmasNovelFill(o.x, playerName))}
+                      {o.mark ? <span data-xmas-novel-option-mark className="mr-1 text-[12px]" style={{ color: '#e8c873' }} aria-label="新しい選択肢">✦</span> : null}{xmasNovelWrap(xmasNovelFill(o.x, playerName))}
                       {seenEnd && <span data-xmas-novel-seen-end={endAhead} className="mh-nv-plain mt-1 block text-[11px] font-bold text-rose-200">見たエンド: {seenEnd.ending && seenEnd.ending.name ? `「${seenEnd.ending.name}」` : 'バッドエンド'}</span>}
                     </button>
                   );
