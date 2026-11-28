@@ -264,10 +264,10 @@ const RaidJackRankingList = ({ onClose, eventId, initialTab = 'a', initialTier =
           <span className="font-black text-orange-200">{title}</span>
           {myTotal > 0 && <span data-raid-jack-ranking-mine className="shrink-0 text-[10px] text-slate-200">あなた {myTotal.toLocaleString()}{ahead !== null ? `(${ahead + 1}位)` : ''}</span>}
         </div>
-        <div className="mb-2 text-[9px] text-slate-400">{useSrc && maxHit ? `${src === 'rhythm' ? '1曲' : '1回の戦い'}で出した、一番大きいダメージで競います。難易度ごとにも見られます。順位報酬はありません。` : useSrc ? `${srcName}だけで与えたダメージで競います。順位報酬はありません(報酬は全体の貢献ランキングで決まります)。` : maxHit ? '1回の戦いで出した、一番大きいダメージで競います。難易度ごとにも見られます。順位報酬はありません。' : useAll ? '全段階へ与えたダメージの合計です。この順位に報酬はありません(報酬は段階ごとの貢献で決まります)。' : tab === 'a' ? `1〜5位に報酬があります。${ev.rankNote}(報酬一覧)。` : '1〜5位に報酬があります。期間の終わりに順位が決まります(報酬一覧)。'}</div>
+        <div className="mb-2 text-[9px] text-slate-400">{useSrc && maxHit ? `${src === 'rhythm' ? '1曲' : '1回の戦い'}で出した、1番大きいダメージで競います。難易度ごとにも見られます。順位報酬はありません。` : useSrc ? `${srcName}だけで与えたダメージで競います。順位報酬はありません(報酬は全体の貢献ランキングで決まります)。` : maxHit ? '1回の戦いで出した、1番大きいダメージで競います。難易度ごとにも見られます。順位報酬はありません。' : useAll ? '全段階へ与えたダメージの合計です。この順位に報酬はありません(報酬は段階ごとの貢献で決まります)。' : tab === 'a' ? `1〜5位に報酬があります。${ev.rankNote}(報酬一覧)。` : '1〜5位に報酬があります。期間の終わりに順位が決まります(報酬一覧)。'}</div>
         {rows === undefined && <div className="py-3 text-center text-[10px] text-slate-400">読み込み中…</div>}
         {rows === null && <div className="py-3 text-center text-[10px] text-slate-400">ランキングは準備中です</div>}
-        {Array.isArray(rows) && rows.length === 0 && <div className="py-3 text-center text-[10px] text-slate-400">まだ記録がありません。一番乗りを目指そう！</div>}
+        {Array.isArray(rows) && rows.length === 0 && <div className="py-3 text-center text-[10px] text-slate-400">まだ記録がありません。1番乗りを目指そう！</div>}
         <RaidJackRankingRows rows={rows} myId={myId} renderPlace={renderPlace} renderIcon={renderIcon} cardClass={cardClass} />
       </div>
     </div>
@@ -374,7 +374,7 @@ const RaidJackScreen = ({ ev = RAID_EVENT_JACK, ways = null, initialTier = 0, on
     try {
       const result = await onPurchase(tab);
       if (result && result.ok) { setMessage(`追加の挑戦を1回ぶん買いました(ビートP ${ev.extraCost})`); setTick((n) => n + 1); }
-      else setMessage(result && result.reason === 'short' ? 'ビートPが足りません' : '買えませんでした。もう一度試してください');
+      else setMessage(result && result.reason === 'short' ? 'ビートPが足りません' : '買えませんでした。もう1度試してください');
     } finally { setBusy(false); }
   };
 
@@ -486,7 +486,7 @@ const RaidJackScreen = ({ ev = RAID_EVENT_JACK, ways = null, initialTier = 0, on
           )}
           {rows === undefined && <div className="py-3 text-center text-[10px] text-slate-400">読み込み中…</div>}
           {rows === null && <div className="py-3 text-center text-[10px] text-slate-400">ランキングは準備中です</div>}
-          {Array.isArray(rows) && rows.length === 0 && <div className="py-3 text-center text-[10px] text-slate-400">まだ記録がありません。一番乗りを目指そう！</div>}
+          {Array.isArray(rows) && rows.length === 0 && <div className="py-3 text-center text-[10px] text-slate-400">まだ記録がありません。1番乗りを目指そう！</div>}
           <RaidJackRankingRows rows={rows} myId={myId} renderPlace={renderPlace} renderIcon={renderIcon} cardClass={cardClass} />
         </div>
       </div>

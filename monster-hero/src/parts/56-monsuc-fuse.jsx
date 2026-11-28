@@ -312,7 +312,7 @@ function MonsucFuseShow({ a, b, child, childName, onDone }) {
   return (
     <div className={`mf-show st${st}${calm ? ' calm' : ''}`} data-monsuc-fuse-show={st} onClick={() => { if (st < 3) setSt((n) => Math.min(3, n + 1)); }}>{/* 画面を押すと次の段へ(早送りのボタンはやめた・窓-38) */}
       <img className="bgimg" src="images/story-bg/monhero_plaza.jpg" alt=""/>
-      <div className="mf-head"><small>合体</small><span style={{ display: 'block', whiteSpace: 'nowrap' }}>{st >= 3 ? `${childName}が生まれた!` : st >= 1 ? '2体の力が円盤石に集まっていく…' : '2体が一つになっていく…'}</span></div>
+      <div className="mf-head"><small>合体</small><span style={{ display: 'block', whiteSpace: 'nowrap' }}>{st >= 3 ? `${childName}が生まれた!` : st >= 1 ? '2体の力が円盤石に集まっていく…' : '2体が1つになっていく…'}</span></div>
       
       <div className="mf-stage">
         <img className="mf-mon a" src={monsucFuseImg(a)} alt=""/><img className="mf-mon b" src={monsucFuseImg(b)} alt=""/>

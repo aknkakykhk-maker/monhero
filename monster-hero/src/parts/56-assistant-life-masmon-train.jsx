@@ -198,7 +198,7 @@ const amgtBackupBeforeTech2 = async (trainRaw) => {
     const copies = [[AMGT_PRE_TECH2_KEY, trainRaw], [AMGT_SLEEP_PRE_TECH2_KEY, sleepRaw]].filter(([, r]) => amgtHasOldTechId(r));
     for (const [key, r] of copies) { const had = await storeGet(key, null, false); if (had == null) await storeSet(key, r, false); } // すでにあれば上書きしない
     await storeSet(AMGT_TECH2_FLAG, true, false);
-  } catch (_) { /* 写せなかったときは印を付けない(次に開いたときもう一度やる) */ }
+  } catch (_) { /* 写せなかったときは印を付けない(次に開いたときもう1度やる) */ }
 };
 const AMGT_STORE = { state: normalizeAssistantMasmonTrain(null), loaded: false, subs: new Set(), dirty: false,
   set(next) { this.state = next; this.subs.forEach(f => { try { f(next); } catch (_) {} }); },
