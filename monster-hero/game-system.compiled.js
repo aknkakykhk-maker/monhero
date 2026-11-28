@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 70e8b3aba0948125
+// source-sha256: 05f6643ad5128a91
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -87296,6 +87296,12 @@ const HOME_V2_CSS = `
 .mh-home-v2 .mh-home-band-strip{display:flex;align-items:center;gap:6px;width:fit-content;max-width:100%;margin-top:3px}
 .mh-home-v2 .mh-home-band-strip .mh-home-event-banner{max-width:calc(100cqw - 112px)}
 .mh-home-v2 .mh-home-band-strip .mh-home-tour-banner{max-width:min(72vw,300px)}
+/* ほかのイベントの絵の札(追記2)。クリスマスの札と同じ幅・少し低く(マップを狭くしない) */
+.mh-home-v2 .mh-home-band-strip:has(.mh-home-event-art){width:calc(100% - 96px)}
+.mh-home-v2 .mh-home-event-art{position:relative;display:block;flex:1 1 auto;width:100%;height:62px;overflow:hidden;padding:0;border:2px solid #f9a8d4;border-radius:12px;background:#3b0a2e;box-shadow:0 4px 12px #0009}
+.mh-home-v2 .mh-home-event-art:active{transform:scale(.97);filter:brightness(1.15)}
+.mh-home-v2 .mh-home-event-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 12%;pointer-events:none}
+.mh-home-v2 .mh-home-event-art-sub{position:absolute;left:6px;bottom:4px;padding:1px 7px;border:1px solid #fbcfe8;border-radius:999px;background:#9d174de6;color:#fff;font-size:10px;font-weight:900;line-height:1.3;white-space:nowrap}
 .mh-home-v2 .mh-home-assistant{width:70%;max-width:360px;margin:6px 0 0 8px}
 .mh-home-v2 .mh-home-assistant-fold{margin:6px 0 0 8px}
 .mh-home-v2 .mh-home-assistant-show-mark{right:-8px;bottom:-6px;width:24px;height:24px;font-size:14px;background:#fff!important;box-shadow:0 0 0 2px #e11d48,0 2px 6px #0009;animation:mhHomePeerMark 1.4s ease-in-out infinite}
@@ -87325,7 +87331,7 @@ body:has(.mh-home-v2){background:linear-gradient(to top,#0b1f1a calc(env(safe-ar
   .mh-home-v2 .mh-home-band{position:absolute;left:8px;top:58px;width:min(37%,330px);margin:0}
   .mh-home-v2 .mh-home-band-xmas{width:100%}
   .mh-home-v2 .mh-home-band-strip .mh-home-event-banner,.mh-home-v2 .mh-home-band-strip .mh-home-tour-banner{max-width:100%}
-  .mh-home-v2 .mh-home-assistant,.mh-home-v2 .mh-home-assistant-fold{position:absolute;left:8px;top:160px;margin:0}
+  .mh-home-v2 .mh-home-assistant,.mh-home-v2 .mh-home-assistant-fold{position:absolute;left:8px;top:172px;margin:0}
   .mh-home-v2 .mh-home-assistant{width:min(37%,330px)}
   .mh-home-v2 .mh-home-dock{flex-direction:row;align-items:flex-end;gap:8px;padding:5px 8px 6px}
   .mh-home-v2 .mh-home-dock-top{flex:1.9 1 0}
@@ -87352,8 +87358,8 @@ body:has(.mh-home-v2){background:linear-gradient(to top,#0b1f1a calc(env(safe-ar
    背の低い横向きの高さ 54px と字の大きさは、部品の決まり(前の HOME と同じ)のまま */
 .mh-home-v2 .mh-home-band [data-home-xmas-entry-strip]{position:relative!important;left:auto!important;right:auto!important;top:auto!important;margin:0!important}
 .mh-home-v2 .mh-home-band .mh-home-band-xmas{width:calc(100% - 96px)!important}
-@media(orientation:landscape) and (max-height:600px){.mh-home-v2 .mh-home-band .mh-home-band-xmas{width:100%!important}.mh-home-v2 .mh-home-band-xmas>button[data-home-xmas-entry]{height:54px!important}.mh-home-v2 .mh-home-band-quick-slot{display:none}}
-@container (min-width:700px) and (min-height:560px){.mh-home-v2 .mh-home-band .mh-home-band-xmas{width:100%!important}.mh-home-v2 .mh-home-band-quick-slot{display:none}}
+@media(orientation:landscape) and (max-height:600px){.mh-home-v2 .mh-home-band-strip:has(.mh-home-event-art){width:100%}.mh-home-v2 .mh-home-event-art{height:50px}.mh-home-v2 .mh-home-event-art img{object-position:50% 3%}.mh-home-v2 .mh-home-band .mh-home-band-xmas{width:100%!important}.mh-home-v2 .mh-home-band-xmas>button[data-home-xmas-entry]{height:54px!important}.mh-home-v2 .mh-home-band-quick-slot{display:none}}
+@container (min-width:700px) and (min-height:560px){.mh-home-v2 .mh-home-band-strip:has(.mh-home-event-art){width:100%}.mh-home-v2 .mh-home-event-art{height:84px}.mh-home-v2 .mh-home-band .mh-home-band-xmas{width:100%!important}.mh-home-v2 .mh-home-band-quick-slot{display:none}}
 @media (orientation:landscape) and (max-height:520px){.mh-home-v2 .mh-home-band .mh-xmas-entry[data-home-xmas-entry="banner"] .mh-xmas-entry-sub{font-size:11px}}
 /* 横持ちの iPhone の切り欠き(カメラの欠け)に、押す物を入れない。左右の余白に端末の安全な余白(safe-area)を足す */
 .mh-home-v2 .mh-home-top{padding-left:calc(8px + env(safe-area-inset-left));padding-right:calc(8px + env(safe-area-inset-right))}
@@ -88580,6 +88586,15 @@ function HomeScreenV2({
   const homeBandXmas = !!xmasEntry;
   const homeBandEvent = homeEventCampaign && !(xmasEntry && homeEventCampaign.id === 'xmas_2026') ? homeEventCampaign : null;
   const homeBandTour = homeCardTour && typeof onOpenCardTour === 'function' ? homeCardTour : null;
+  const homeBandEventArt = (() => {
+    if (!homeBandEvent || typeof rhythmLimitedEventAt !== 'function') return '';
+    try {
+      const ev = rhythmLimitedEventAt(Date.now());
+      return ev && typeof ev.banner === 'string' && typeof ev.name === 'string' && ev.name.startsWith(homeBandEvent.banner.title) ? ev.banner : '';
+    } catch (_) {
+      return '';
+    }
+  })();
   const homeBandStripCount = (homeBandEvent ? 1 : 0) + (homeBandTour ? 1 : 0);
   const [homeBandIdx, setHomeBandIdx] = React.useState(0);
   React.useEffect(() => {
@@ -88759,7 +88774,19 @@ function HomeScreenV2({
   }), homeBandStripCount > 0 && React.createElement("div", {
     className: "mh-home-band-strip",
     "data-home-event-strip": true
-  }, homeBandEvent && homeBandStripShow === 0 && React.createElement("button", {
+  }, homeBandEvent && homeBandStripShow === 0 && homeBandEventArt && React.createElement("button", {
+    type: "button",
+    "data-home-event-banner": "art",
+    className: "mh-home-event-art",
+    onClick: homeBandEvent.id === 'xmas_2026' && typeof onOpenXmasEvent === 'function' ? onOpenXmasEvent : onOpenRhythm,
+    "aria-label": `${homeBandEvent.banner.title}${homeBandEvent.banner.title2 || ''} ${homeBandEvent.banner.sub}`
+  }, React.createElement("img", {
+    src: homeBandEventArt,
+    alt: "",
+    draggable: false
+  }), React.createElement("span", {
+    className: "mh-home-event-art-sub"
+  }, homeBandEvent.banner.sub)), homeBandEvent && homeBandStripShow === 0 && !homeBandEventArt && React.createElement("button", {
     type: "button",
     "data-home-event-banner": true,
     className: "mh-home-event-banner",
