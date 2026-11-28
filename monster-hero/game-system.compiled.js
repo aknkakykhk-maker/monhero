@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5b03c5885ee9aa18
+// source-sha256: e1b49248d5e9f4a9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -221936,14 +221936,14 @@ const CardRaidBossFace = ({
   className = ''
 }) => {
   const src = typeof RAID_XMAS_BOSS_IMG !== 'undefined' ? RAID_XMAS_BOSS_IMG : '';
-  if (!src) return React.createElement("span", {
-    "data-card-raid-boss-face": "",
+  if (!src) return React.createElement('span', {
+    'data-card-raid-boss-face': '',
     className: `flex items-center justify-center text-[26px] ${className}`
-  }, "🎅");
-  return React.createElement("span", {
-    "data-card-raid-boss-face": src,
-    role: "img",
-    "aria-label": "黒いサンタ",
+  }, '🎅');
+  return React.createElement('span', {
+    'data-card-raid-boss-face': src,
+    role: 'img',
+    'aria-label': '黒いサンタ',
     className: `block bg-no-repeat ${className}`,
     style: {
       backgroundImage: `url(${src})`,

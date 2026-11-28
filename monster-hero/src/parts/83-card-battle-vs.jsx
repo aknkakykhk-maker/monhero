@@ -89,11 +89,12 @@ const CARD_VS_TUTORIAL_LINE = Object.freeze({ e: 'happy', t: '練習だよ！ �
 // レイドのボスの顔アイコン(クリスマスは RAID_XMAS_BOSS_IMG。顔だけの絵は無いので、全身の絵を顔が枠に入るよう寄せて出す。台帳 r1126-101)
 //   VS の画面の大きな丸と、対戦中の左上の小さな枠で同じ物を使う。絵が無いときだけ今までの仮の絵文字
 const CARD_RAID_BOSS_FACE = Object.freeze({ size: '200% auto', pos: '50% 24%' });
+//   ★このファイルは検査(card-deck-name-check など)が JSX 抜きで読むので、JSX を使わず React.createElement で書く
 const CardRaidBossFace = ({ className = '' }) => {
   const src = typeof RAID_XMAS_BOSS_IMG !== 'undefined' ? RAID_XMAS_BOSS_IMG : '';
-  if (!src) return <span data-card-raid-boss-face="" className={`flex items-center justify-center text-[26px] ${className}`}>🎅</span>;
-  return <span data-card-raid-boss-face={src} role="img" aria-label="黒いサンタ" className={`block bg-no-repeat ${className}`}
-    style={{ backgroundImage: `url(${src})`, backgroundSize: CARD_RAID_BOSS_FACE.size, backgroundPosition: CARD_RAID_BOSS_FACE.pos }}/>;
+  if (!src) return React.createElement('span', { 'data-card-raid-boss-face': '', className: `flex items-center justify-center text-[26px] ${className}` }, '🎅');
+  return React.createElement('span', { 'data-card-raid-boss-face': src, role: 'img', 'aria-label': '黒いサンタ', className: `block bg-no-repeat ${className}`,
+    style: { backgroundImage: `url(${src})`, backgroundSize: CARD_RAID_BOSS_FACE.size, backgroundPosition: CARD_RAID_BOSS_FACE.pos } });
 };
 
 const CARD_VS_MS = Object.freeze({ assistant: 2600, pvp: 2600, tutorial: 1300 });
