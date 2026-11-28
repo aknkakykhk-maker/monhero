@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6e6e88e6b9832045
+// source-sha256: 94e327737f4297dd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -16162,6 +16162,11 @@ const CHANGELOG_GROUPS = Object.freeze([{
   emoji: '🖥',
   match: /画面|表示|ボタン|レイアウト|ヘルプ|設定|HOME|更新情報|お知らせ|バナー|図鑑/
 }, {
+  id: 'event',
+  label: 'イベント',
+  emoji: '🎉',
+  match: null
+}, {
   id: 'other',
   label: 'その他',
   emoji: '✦',
@@ -16175,6 +16180,7 @@ const changelogGroupMatch = text => {
   return hit ? hit.id : null;
 };
 const changelogGroupIdOf = entry => {
+  if (entry && entry.type === 'event') return 'event';
   const written = typeof entry?.group === 'string' ? entry.group.trim() : '';
   if (written && CHANGELOG_GROUP_BY_ID[written]) return written;
   const byTitle = changelogGroupMatch(String(entry?.title || ''));
@@ -16334,6 +16340,11 @@ const changelogSafeLink = link => {
     return '';
   }
 };
+const CHANGELOG_TAB_OF_ID = new Map(CHANGELOG_ENTRIES.map(entry => [entry.id, CHANGELOG_ISSUE_TAB_TYPES.includes(entry.type) ? 'issue' : 'update']));
+const changelogKindLabelInTab = (info, tab) => (tab === 'issue' ? {
+  fix: '直しました',
+  issue: '調べています'
+}[info && info.tone] : null) || info && info.label || '';
 const CHANGELOG_IDS_BY_TYPE = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, changelogEntriesOfTab(type).map(entry => entry.id)]));
 const MONSTER_LIST_SORT_KEYS = ['base', 'masu', 'lineage', 'bond', 'power', 'name', 'active', 'fused', 'reborn'];
 const DEFAULT_MONSTER_LIST_SETTINGS = {
@@ -23139,10 +23150,23 @@ const useAssistantBubbleState = () => {
   }, []);
   return state;
 };
+const HOME_V2_FROM = Date.parse('2026-11-28T10:00:00+09:00');
+const homeV2At = (t = Date.now()) => t >= HOME_V2_FROM;
+const useHomeV2 = () => {
+  const [v2, setV2] = useState(() => homeV2At());
+  useEffect(() => {
+    if (v2) return undefined;
+    const id = setInterval(() => {
+      if (homeV2At()) setV2(true);
+    }, 15000);
+    return () => clearInterval(id);
+  }, [v2]);
+  return v2;
+};
 const HOME_ASSISTANT_COMMENT_KEY = 'mh_home_assistant_comment_v1';
 const HOME_ASSISTANT_COMMENT_STORE = (() => {
   let state = {
-    on: true,
+    on: false,
     loaded: false
   };
   let loading = null;
@@ -23157,12 +23181,16 @@ const HOME_ASSISTANT_COMMENT_STORE = (() => {
     load() {
       if (loading) return loading;
       loading = (async () => {
-        let on = true;
+        let on = false,
+          explicit = false;
         try {
-          on = (await storeGet(HOME_ASSISTANT_COMMENT_KEY, true, false)) !== false;
+          const v = await storeGet(HOME_ASSISTANT_COMMENT_KEY, null, false);
+          explicit = v === true || v === false;
+          on = v === true;
         } catch (_) {}
         state = {
           on,
+          explicit,
           loaded: true
         };
         emit();
@@ -23177,6 +23205,7 @@ const HOME_ASSISTANT_COMMENT_STORE = (() => {
       state = {
         ...state,
         on: next === true,
+        explicit: true,
         loaded: true
       };
       emit();
@@ -72127,10 +72156,11 @@ const GrowthFxLayer = ({
   const level = growthFxLevelOf(load);
   const atHome = screen === 'HOME' && !domHold.monsuc;
   const sheet = sheets.find(s => growthFxSheetReady(s, vis, atHome)) || null;
+  const smallMax = atHome && (typeof homeV2At !== 'function' || homeV2At()) ? 1 : GROWTH_FX_SMALL_MAX;
   return React.createElement(React.Fragment, null, !holdAll && !sheet && small.length > 0 && React.createElement(GrowthFxChipsBox, {
     level: level,
-    count: Math.min(small.length, GROWTH_FX_SMALL_MAX)
-  }, [...small].sort((a, b) => (b.text ? 1 : 0) - (a.text ? 1 : 0)).slice(0, GROWTH_FX_SMALL_MAX).map(c => React.createElement(GrowthFxChip, {
+    count: Math.min(small.length, smallMax)
+  }, [...small].sort((a, b) => (b.text ? 1 : 0) - (a.text ? 1 : 0)).slice(0, smallMax).map(c => React.createElement(GrowthFxChip, {
     key: c.id,
     chip: c,
     level: level,
@@ -72725,7 +72755,11 @@ function SettingsScreen({
   const [homeScreenGuideOpen, setHomeScreenGuideOpen] = useState(false);
   const assistantBubble = useAssistantBubbleState();
   const peerAuto = typeof useAssistantPeerAuto === 'function' ? useAssistantPeerAuto() : null;
-  const homeComment = useHomeAssistantComment();
+  const homeComment0 = useHomeAssistantComment();
+  const homeComment = homeComment0.explicit || homeV2At() ? homeComment0 : {
+    ...homeComment0,
+    on: true
+  };
   const [battleCardLook, setBattleCardLook] = useState(() => BATTLE_CARD_LOOK.value);
   if (assetDownloadOpen) return React.createElement(AssetDownloadPage, {
     onBack: () => setAssetDownloadOpen(false)
@@ -72954,16 +72988,16 @@ function SettingsScreen({
   }, "ホームの助手コメント"), React.createElement("p", {
     className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
     style: JA_WRAP_STYLE
-  }, jaWrap('ホーム画面の上に出る助手の吹き出しです。「切」にすると吹き出しと「おしゃべり」のボタンが消えて、広場が広くなります。新しい機能のお知らせは、これまでどおり出ます。')), React.createElement("div", {
+  }, jaWrap('ホーム画面の上に出る助手の吹き出しです。はじめは「切」で、助手の顔だけが出ます(顔を押すと吹き出しが開きます)。「入」にすると、いつも吹き出しが出ます。新しい機能のお知らせは、これまでどおり出ます。')), React.createElement("div", {
     className: "mt-2 grid grid-cols-2 gap-2"
   }, [{
     on: false,
     label: '切',
-    note: '吹き出しを隠す'
+    note: '顔だけ(初めの形)'
   }, {
     on: true,
     label: '入',
-    note: 'これまでどおり'
+    note: '吹き出しを出す'
   }].map(option => React.createElement("button", {
     key: option.label,
     type: "button",
@@ -87037,7 +87071,7 @@ function MasuRegisterModal({
     className: "w-3/5 bg-pink-600 text-white py-3 rounded-2xl font-black text-xs uppercase shadow-lg active:scale-95"
   }, "登録する"))));
 }
-const HOME_EVENT_BADGE_STYLE = Object.freeze({
+const HOME_EVENT_BADGE_STYLE_V1 = Object.freeze({
   position: 'absolute',
   top: '-10px',
   right: '-9px',
@@ -87053,6 +87087,27 @@ const HOME_EVENT_BADGE_STYLE = Object.freeze({
   fontWeight: 1000,
   fontStyle: 'normal',
   lineHeight: 1.6,
+  whiteSpace: 'nowrap',
+  textShadow: '0 1px 0 #fff8',
+  pointerEvents: 'none',
+  boxShadow: '0 0 0 1px #0006,0 2px 8px #000a,0 0 10px #fbbf24cc,0 0 18px #f59e0b80'
+});
+const HOME_EVENT_BADGE_STYLE = Object.freeze({
+  position: 'absolute',
+  top: '4px',
+  left: '4px',
+  zIndex: 8,
+  display: 'block',
+  overflow: 'hidden',
+  padding: '2px 7px',
+  border: '1px solid #fff3c4',
+  borderRadius: '999px',
+  background: 'linear-gradient(135deg,#f59e0b,#fde047 45%,#f97316)',
+  color: '#4a1d00',
+  fontSize: '11px',
+  fontWeight: 1000,
+  fontStyle: 'normal',
+  lineHeight: 1.35,
   whiteSpace: 'nowrap',
   textShadow: '0 1px 0 #fff8',
   pointerEvents: 'none',
@@ -87086,6 +87141,127 @@ const HOME_EVENT_BADGE_CSS = `
   .mh-home-scene .mh-home-event-banner{padding:3px 10px;gap:0}
   .mh-home-scene .mh-home-event-banner b,.mh-home-scene .mh-home-event-banner .t2{font-size:10px;line-height:1.1}
   .mh-home-scene .mh-home-event-banner small{line-height:1.1}}
+`;
+const HOME_V2_CSS = `
+.mh-home-v2{--v2-panel:#102522eb;--v2-line:#f7df9a88}
+.mh-home-v2 .mh-home-top{display:flex;align-items:center;gap:6px;padding:calc(6px + env(safe-area-inset-top)) 8px 0;z-index:20}
+.mh-home-v2 .mh-home-top .mh-home-player{flex:1 1 auto;min-width:0;height:46px;padding:3px 10px 3px 4px;gap:7px}
+.mh-home-v2 .mh-home-top .mh-home-avatar{flex:0 0 36px;width:36px;height:36px}
+.mh-home-v2 .mh-home-top .mh-home-player-copy strong{max-width:none;font-size:13px;line-height:1.25}
+.mh-home-v2 .mh-home-top .mh-home-player-copy span{font-size:11px;line-height:1.25}
+.mh-home-v2 .mh-home-top .mh-home-top-wallet{display:flex;align-items:center;width:auto;height:46px;padding:0 10px;grid-template-columns:none}
+.mh-home-v2 .mh-home-top .mh-home-top-wallet>div{display:flex;align-items:center;gap:4px;padding:0}
+.mh-home-v2 .mh-home-top .mh-home-top-wallet>div b{font-size:14px;line-height:1.1}
+.mh-home-v2 .mh-home-top .mh-home-top-wallet>div small{font-size:11px}
+.mh-home-v2 .mh-home-menu-btn{position:relative;flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:56px;height:46px;border:1px solid var(--v2-line);border-radius:14px;background:var(--v2-panel);color:#fce6ab;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;pointer-events:auto;touch-action:manipulation}
+.mh-home-v2 .mh-home-menu-btn:active,.mh-home-v2 .mh-home-menu-btn.is-open{filter:brightness(1.3)}
+.mh-home-v2 .mh-home-menu-bars{display:flex;flex-direction:column;gap:3px}
+.mh-home-v2 .mh-home-menu-bars i{display:block;width:20px;height:2.5px;border-radius:2px;background:#fce6ab}
+.mh-home-v2 .mh-home-menu-lb{font-size:11px;font-weight:900;line-height:1}
+.mh-home-v2 .mh-home-menu-btn em,.mh-home-v2 .mh-home-menu .mh-home-side-btn em{display:flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:999px;border:2px solid #fff;background:#e11d48;color:#fff;font-size:11px;font-style:normal;font-weight:900;line-height:1;box-shadow:0 2px 6px #0008}
+.mh-home-v2 .mh-home-menu-btn em{position:absolute;top:-7px;right:-6px}
+.mh-home-v2 .mh-home-menu-shade{position:absolute;inset:0;z-index:28;border:0;background:#0006;cursor:default}
+.mh-home-v2 .mh-home-menu{position:absolute;z-index:29;right:8px;top:calc(58px + env(safe-area-inset-top));display:flex;flex-direction:column;gap:6px;width:min(240px,calc(100% - 16px));padding:8px;border:1px solid var(--v2-line);border-radius:16px;background:#0d1f1cf7;box-shadow:0 10px 30px #000c}
+/* 閉じているときは目に見えない形(読み上げには残す)。メニューの中の「設定」「ミッション」などを、読み上げの利用者と検査がいつでも見つけられるように */
+.mh-home-v2 .mh-home-menu:not(.is-open){width:1px;height:1px;padding:0;margin:0;border:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap;pointer-events:none;box-shadow:none}
+.mh-home-v2 .mh-home-menu.is-open{display:flex;animation:mhHomeMenuIn .15s ease-out}
+@keyframes mhHomeMenuIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.mh-home-v2 .mh-home-menu.is-open{animation:none}}
+.mh-home-v2 .mh-home-menu-info{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:0 2px 4px;border-bottom:1px solid #fff2}
+.mh-home-v2 .mh-home-menu .mh-tod-clock{position:static!important}
+.mh-home-v2 .mh-home-menu-bp{display:flex;align-items:center;gap:4px;margin-left:auto;color:#ffe08a;font-size:13px;font-weight:900}
+.mh-home-v2 .mh-home-menu-bp small{font-size:11px;color:#f4e7c3}
+.mh-home-v2 .mh-home-menu .mh-home-side-btn{display:flex;flex-direction:row;align-items:center;gap:10px;width:100%;min-height:46px;padding:5px 10px 5px 6px;border-radius:12px;background:#ffffff10;color:#fff;text-align:left}
+.mh-home-v2 .mh-home-menu .mh-home-side-btn:active{background:#ffffff26;transform:none}
+.mh-home-v2 .mh-home-menu .mh-home-side-ic{flex:0 0 34px;width:34px;height:34px}
+.mh-home-v2 .mh-home-menu .mh-home-side-lb{flex:1;font-size:14px;font-weight:900;text-shadow:none}
+.mh-home-v2 .mh-home-menu .mh-home-side-btn em{position:static;margin-left:auto}
+/* 更新履歴の未読の数(r1126-074)は「99+」まで出るので、丸を字の幅に合わせて伸ばす */
+.mh-home-v2 .mh-home-menu .mh-home-side-btn em.mh-unread-badge{width:auto!important;height:20px!important;min-width:20px;padding:0 6px!important;border-radius:999px!important;font-size:11px!important;line-height:1!important;white-space:nowrap}
+.mh-home-v2 .mh-home-settings .mh-home-side-ic{border-color:#cbd5e1aa;background:#1e293be8;color:#e2e8f0}
+.mh-home-v2 .mh-home-band{position:relative;z-index:6;margin:6px 8px 0}
+.mh-home-v2 .mh-home-band-view{overflow:hidden;border-radius:14px}
+.mh-home-v2 .mh-home-band-track{display:flex;transition:transform .35s ease}
+.mh-home-v2 .mh-home-band-slide{flex:0 0 100%;min-width:0;height:80px}
+.mh-home-v2 .mh-home-band-slide>button{width:100%;height:80px}
+.mh-home-v2 .mh-home-band .mh-home-event-banner{max-width:none;justify-content:center;gap:4px;padding:8px 14px;border-radius:14px;font-size:15px}
+.mh-home-v2 .mh-home-band .mh-home-event-banner .r1{column-gap:8px}
+.mh-home-v2 .mh-home-band .mh-home-event-banner small{font-size:11px}
+.mh-home-v2 .mh-home-band .mh-home-event-banner .t2{font-size:12px}
+.mh-home-v2 .mh-home-band .mh-home-tour-banner{max-width:none;gap:10px;padding:8px 14px;border-radius:14px}
+.mh-home-v2 .mh-home-band .mh-home-tour-banner>span:first-child{font-size:30px}
+.mh-home-v2 .mh-home-band .mh-home-tour-banner b{font-size:15px}
+.mh-home-v2 .mh-home-band .mh-home-tour-banner small,.mh-home-v2 .mh-home-band .mh-home-tour-banner em{font-size:11px}
+.mh-home-v2 .mh-home-band-nav{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:2px}
+.mh-home-v2 .mh-home-band-nav .mh-home-event-strip-dots button{display:flex;align-items:center;justify-content:center;width:22px;height:22px;padding:0;border:0;background:transparent}
+.mh-home-v2 .mh-home-band-nav .mh-home-event-strip-dots i{width:8px;height:8px;box-shadow:0 0 0 1px #0008}
+.mh-home-v2 .mh-home-band-nav .mh-home-event-strip-dots button.on i{width:18px;border-radius:4px;background:#fde68a}
+.mh-home-v2 .mh-home-band-next{min-width:0;max-width:72%;min-height:22px;overflow:hidden;padding:2px 9px;border-radius:999px;background:#000a;color:#fffbeb;font-size:11px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}
+.mh-home-v2 .mh-home-assistant{width:70%;max-width:360px;margin:6px 0 0 8px}
+.mh-home-v2 .mh-home-assistant-fold{margin:6px 0 0 8px}
+.mh-home-v2 .mh-home-assistant-show-mark{right:-8px;bottom:-6px;width:24px;height:24px;font-size:14px;background:#fff!important;box-shadow:0 0 0 2px #e11d48,0 2px 6px #0009;animation:mhHomePeerMark 1.4s ease-in-out infinite}
+@keyframes mhHomePeerMark{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+@media(prefers-reduced-motion:reduce){.mh-home-v2 .mh-home-assistant-show-mark{animation:none}}
+.mh-home-v2 .mh-home-assistant-news-dot{position:absolute;top:1px;right:1px;width:13px;height:13px;border-radius:50%;border:2px solid #fff;background:#e11d48;box-shadow:0 1px 4px #0009}
+.mh-home-v2 .mh-home-peer-mark{position:absolute;left:52px;top:calc(100% + 4px);width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:50%;border:1.5px solid #f9a8d4;background:#1e0b24ee;font-size:16px;box-shadow:0 2px 8px #0009}
+.mh-home-v2 .mh-home-dock{gap:6px;padding:8px 8px calc(8px + env(safe-area-inset-bottom))}
+.mh-home-v2 .mh-home-dock-row{gap:6px}
+.mh-home-v2 .mh-home-dock-top>.mh-home-dock-card,.mh-home-v2 .mh-home-dock-top>.mh-home-success{height:clamp(112px,18cqh,150px);padding:0;gap:0;overflow:hidden;border-radius:14px}
+.mh-home-v2 .mh-home-dock-top .mh-home-dock-pic,.mh-home-v2 .mh-home-dock-top .mh-home-success .pic{flex:1 1 auto;width:100%;max-width:none;height:auto;min-height:0;aspect-ratio:auto;border-radius:0}
+.mh-home-v2 .mh-home-dock-top .mh-home-dock-pic img,.mh-home-v2 .mh-home-dock-top .mh-home-success .pic img{object-position:50% 30%}
+.mh-home-v2 .mh-home-dock-top .mh-home-dock-txt,.mh-home-v2 .mh-home-dock-top .mh-home-success .txt{position:absolute;left:0;right:0;bottom:0;height:auto;gap:0;padding:14px 1px 4px;background:linear-gradient(#0000,#000000c8 45%)}
+.mh-home-v2 .mh-home-dock-top .mh-home-dock-name,.mh-home-v2 .mh-home-dock-top .mh-home-success .nm{font-size:11.5px;letter-spacing:-.04em;line-height:1.2}
+.mh-home-v2 .mh-home-dock-top .mh-home-dock-sub,.mh-home-v2 .mh-home-dock-top .mh-home-success .sb{font-size:11px;line-height:1.2}
+.mh-home-v2 .mh-home-dock-bottom{justify-content:space-around}
+.mh-home-v2 .mh-home-dock-bottom>.mh-home-dock-card{flex:1 1 0;max-width:96px;gap:3px;padding:0;border:0;background:transparent;box-shadow:none}
+.mh-home-v2 .mh-home-dock-bottom .mh-home-dock-pic{width:50px;height:50px;max-width:none;aspect-ratio:1;border-radius:50%;border:2px solid #ffe6a7c0;box-shadow:0 3px 10px #0009}
+.mh-home-v2 .mh-home-dock-bottom .mh-home-dock-txt{height:auto}
+.mh-home-v2 .mh-home-dock-bottom .mh-home-dock-name{font-size:11px;line-height:1.2}
+@media(max-width:350px){.mh-home-v2 .mh-home-dock-top .mh-home-dock-name,.mh-home-v2 .mh-home-dock-top .mh-home-success .nm{font-size:10.5px;letter-spacing:-.06em}}
+@media(orientation:landscape) and (max-height:600px){
+  .mh-home-v2 .mh-home-band{position:absolute;left:8px;top:calc(58px + env(safe-area-inset-top));width:min(37%,330px);margin:0}
+  .mh-home-v2 .mh-home-band-slide,.mh-home-v2 .mh-home-band-slide>button{height:68px}
+  .mh-home-v2 .mh-home-band-slide>button[data-home-xmas-entry]{height:68px!important}
+  .mh-home-v2 .mh-home-assistant,.mh-home-v2 .mh-home-assistant-fold{position:absolute;left:8px;top:calc(160px + env(safe-area-inset-top));margin:0}
+  .mh-home-v2 .mh-home-assistant{width:min(37%,330px)}
+  .mh-home-v2 .mh-home-dock{flex-direction:row;align-items:flex-end;gap:8px;padding:5px 8px calc(6px + env(safe-area-inset-bottom))}
+  .mh-home-v2 .mh-home-dock-top{flex:1.9 1 0}
+  .mh-home-v2 .mh-home-dock-bottom{flex:1 1 0}
+  .mh-home-v2 .mh-home-dock-top>.mh-home-dock-card,.mh-home-v2 .mh-home-dock-top>.mh-home-success{height:clamp(84px,25cqh,104px);max-width:none}
+  .mh-home-v2 .mh-home-dock-bottom .mh-home-dock-pic{width:44px;height:44px}
+}
+@container (min-width:700px) and (min-height:560px){
+  .mh-home-v2 .mh-home-band{width:min(600px,calc(100% - 16px));margin:8px auto 0}
+  .mh-home-v2 .mh-home-band-slide,.mh-home-v2 .mh-home-band-slide>button{height:92px}
+  .mh-home-v2 .mh-home-band-slide>button[data-home-xmas-entry]{height:92px!important}
+  .mh-home-v2 .mh-home-assistant{width:360px}
+  .mh-home-v2 .mh-home-dock{flex-direction:row;align-items:flex-end;gap:14px;padding:10px 14px calc(12px + env(safe-area-inset-bottom))}
+  .mh-home-v2 .mh-home-dock-top{flex:2 1 0;justify-content:center}
+  .mh-home-v2 .mh-home-dock-bottom{flex:1 1 0}
+  .mh-home-v2 .mh-home-dock-top>.mh-home-dock-card,.mh-home-v2 .mh-home-dock-top>.mh-home-success{height:min(170px,19cqh);max-width:180px;border-radius:16px}
+  .mh-home-v2 .mh-home-dock-top .mh-home-dock-name,.mh-home-v2 .mh-home-dock-top .mh-home-success .nm{font-size:13px}
+  .mh-home-v2 .mh-home-dock-top .mh-home-dock-sub,.mh-home-v2 .mh-home-dock-top .mh-home-success .sb{font-size:12px}
+  .mh-home-v2 .mh-home-dock-bottom .mh-home-dock-pic{width:62px;height:62px}
+  .mh-home-v2 .mh-home-dock-bottom .mh-home-dock-name{font-size:12px}
+}
+/* クリスマスの入口(79-screen-xmas-event.jsx)は、横向きで帯を右の列の横へ動かす決まりを持っている(前の HOME の形のため)。
+   新しい帯の中では、ほかの1枚と同じ位置・大きさのままにする(部品の中身は変えない。HOME の側で上書きするだけ) */
+.mh-home-v2 .mh-home-band-slide[data-home-xmas-entry-strip]{position:relative!important;left:auto!important;right:auto!important;top:auto!important;width:auto!important;margin:0!important}
+@media (orientation:landscape) and (max-height:520px){.mh-home-v2 .mh-home-band .mh-xmas-entry[data-home-xmas-entry="banner"] .mh-xmas-entry-sub{font-size:11px}}
+/* 横持ちの iPhone の切り欠き(カメラの欠け)に、押す物を入れない。左右の余白に端末の安全な余白(safe-area)を足す */
+.mh-home-v2 .mh-home-top{padding-left:calc(8px + env(safe-area-inset-left));padding-right:calc(8px + env(safe-area-inset-right))}
+.mh-home-v2 .mh-home-menu{right:calc(8px + env(safe-area-inset-right))}
+.mh-home-v2 .mh-home-band{margin-left:calc(8px + env(safe-area-inset-left));margin-right:calc(8px + env(safe-area-inset-right))}
+.mh-home-v2 .mh-home-assistant,.mh-home-v2 .mh-home-assistant-fold{margin-left:calc(8px + env(safe-area-inset-left))}
+.mh-home-v2 .mh-home-dock{padding-left:calc(8px + env(safe-area-inset-left));padding-right:calc(8px + env(safe-area-inset-right))}
+@media(orientation:landscape) and (max-height:600px){
+  .mh-home-v2 .mh-home-band{left:calc(8px + env(safe-area-inset-left));margin:0}
+  .mh-home-v2 .mh-home-assistant,.mh-home-v2 .mh-home-assistant-fold{left:calc(8px + env(safe-area-inset-left));margin:0}
+}
+@container (min-width:700px) and (min-height:560px){
+  .mh-home-v2 .mh-home-band{margin-left:auto;margin-right:auto}
+  .mh-home-v2 .mh-home-dock{padding-left:calc(14px + env(safe-area-inset-left));padding-right:calc(14px + env(safe-area-inset-right))}
+}
 `;
 const HOME_RAID_JACK_CSS = `
 .mh-home-raid-jack-img{animation:mhRaidJackHop 1.15s cubic-bezier(.3,.1,.4,1) infinite;transform-origin:50% 100%}
@@ -87675,7 +87851,11 @@ const homeWalletGrowPx = (goldText, bpText) => {
   const w = t => [...String(t)].reduce((n, c) => n + (c.charCodeAt(0) > 0x7f ? 2.5 : 1), 0);
   return Math.min(24, Math.max(0, Math.ceil(w(goldText) * 6.4 - 50), Math.ceil(w(bpText) * 6.4 - 29)));
 };
-function HomeScreen({
+function HomeScreen(props) {
+  const v2 = useHomeV2();
+  return v2 ? React.createElement(HomeScreenV2, props) : React.createElement(HomeScreenV1, props);
+}
+function HomeScreenV1({
   assistantBondUp,
   friendRequestCount = 0,
   breederIcon,
@@ -87804,7 +87984,11 @@ function HomeScreen({
   }, [homeStripCount]);
   const homeStripShow = homeStripCount ? homeStripIdx % homeStripCount : 0;
   const xmasEntryInStrip = !!xmasEntry;
-  const homeComment = useHomeAssistantComment();
+  const homeComment0 = useHomeAssistantComment();
+  const homeComment = homeComment0.explicit ? homeComment0 : {
+    ...homeComment0,
+    on: true
+  };
   return React.createElement("main", {
     ref: homeSceneRef,
     className: "mh-home-scene",
@@ -88023,7 +88207,7 @@ function HomeScreen({
   }, "音ゲー")), homeRhythmEventOpen && React.createElement("em", {
     "data-home-event-badge": true,
     className: "mh-home-event-badge",
-    style: HOME_EVENT_BADGE_STYLE
+    style: HOME_EVENT_BADGE_STYLE_V1
   }, "✨開催中✨")), cardBattleVisible && typeof onOpenCardBattle === 'function' && React.createElement("button", {
     type: "button",
     "data-home-fac": "card",
@@ -88154,9 +88338,613 @@ function HomeScreen({
     on: false
   })));
 }
-function HomeAssistantCommentToggle({
-  on
+function HomeScreenV2({
+  assistantBondUp,
+  friendRequestCount = 0,
+  breederIcon,
+  breederLevel,
+  breederName,
+  breederPoints,
+  gifts,
+  gold,
+  hasUnreadChangelog,
+  changelogUnreadCount,
+  homeBackgroundReady,
+  homeArt,
+  homePastureMasumons,
+  masuMons,
+  missions,
+  onOpenBattle,
+  onOpenManagement,
+  onOpenMarket,
+  onOpenProfile,
+  onOpenRhythm,
+  onOpenSettings,
+  onOpenTemple,
+  openChangelog,
+  openGiftBox,
+  openMissions,
+  profileFrameId,
+  resolveIconUrl,
+  spotClass,
+  raidJackVisible = false,
+  raidJackEventId,
+  onOpenRaidJack,
+  onOpenXmasEvent = null,
+  raidXmasVisible = false,
+  raidXmasEventId = '',
+  onOpenRaidXmas = null,
+  xmasEntry = null,
+  onOpenAssistantChat = null,
+  cardBattleVisible = false,
+  onOpenCardBattle = null,
+  cardBattleTeaser = false,
+  onOpenCardTeaser = null,
+  cardTourVisible = false,
+  onOpenCardTour = null,
+  nextStep = null,
+  successEntry = null
 }) {
+  React.useEffect(() => {
+    if (typeof ASSISTANT_LIFE_LINKS !== 'undefined' && ASSISTANT_LIFE_LINKS) ASSISTANT_LIFE_LINKS.goPlace = {
+      ranch: onOpenManagement,
+      temple: onOpenTemple,
+      market: onOpenMarket,
+      battle: onOpenBattle
+    };
+  });
+  const homeSceneRef = React.useRef(null);
+  const [homeSceneShape, setHomeSceneShape] = React.useState('portrait');
+  React.useEffect(() => {
+    const el = homeSceneRef.current;
+    if (!el) return undefined;
+    const measure = () => {
+      const w = el.clientWidth,
+        h = el.clientHeight;
+      if (w > 0 && h > 0) {
+        const r = w / h;
+        setHomeSceneShape(r > 1.2 ? 'wide' : r >= 0.75 ? 'square' : 'portrait');
+      }
+    };
+    measure();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', measure);
+      return () => window.removeEventListener('resize', measure);
+    }
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const homeBackgroundSrc = homeArtSrc(homeArt, homeSceneShape);
+  const homeBackgroundWide = homeArtIsWide(homeArt, homeSceneShape);
+  const homeBackgroundSquare = homeArtIsSquare(homeArt, homeSceneShape);
+  React.useEffect(() => {
+    if (typeof document === 'undefined') return;
+    if (document.getElementById('mh-home-event-badge-css')) return;
+    const tag = document.createElement('style');
+    tag.id = 'mh-home-event-badge-css';
+    tag.textContent = HOME_EVENT_BADGE_CSS;
+    document.head.appendChild(tag);
+  }, []);
+  React.useEffect(() => {
+    if (typeof document === 'undefined' || document.getElementById('mh-home-v2-css')) return;
+    const tag = document.createElement('style');
+    tag.id = 'mh-home-v2-css';
+    tag.textContent = HOME_V2_CSS;
+    document.head.appendChild(tag);
+  }, []);
+  const homeEventCampaign = (() => {
+    if (typeof RELEASE_FLAGS === 'undefined' || !RELEASE_FLAGS || RELEASE_FLAGS.rhythmEventPoints !== true || typeof rhythmEventPointCampaignAt !== 'function') return null;
+    const campaign = rhythmEventPointCampaignAt(Date.now());
+    return campaign && campaign.banner ? campaign : null;
+  })();
+  const [cardTourList, setCardTourList] = React.useState(null);
+  const [cardTourNow, setCardTourNow] = React.useState(() => Date.now());
+  React.useEffect(() => {
+    if (!cardTourVisible || typeof cardTourFetchList !== 'function') return undefined;
+    let alive = true;
+    const load = () => {
+      cardTourFetchList().then(l => {
+        if (alive) setCardTourList(Array.isArray(l) ? l : null);
+      }).catch(() => {});
+    };
+    load();
+    let ticks = 0;
+    const id = setInterval(() => {
+      ticks += 1;
+      setCardTourNow(Date.now());
+      if (ticks % 10 === 0) load();
+    }, 60000);
+    return () => {
+      alive = false;
+      clearInterval(id);
+    };
+  }, [cardTourVisible]);
+  const homeCardTour = cardTourVisible && typeof cardTourHomeBanner === 'function' ? cardTourHomeBanner(cardTourList, cardTourNow) : null;
+  const homeRhythmEventOpen = (() => {
+    const released = typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS && RELEASE_FLAGS.rhythmWeeklyRanking === true;
+    if (!released || typeof rhythmLimitedEventAt !== 'function') return false;
+    return !!rhythmLimitedEventAt(Date.now());
+  })();
+  const homeBandSlides = [];
+  const homeBandEvent = homeEventCampaign && !(xmasEntry && homeEventCampaign.id === 'xmas_2026');
+  if (homeBandEvent && xmasEntry && xmasEntry.preOpen) homeBandSlides.push('event');
+  if (xmasEntry) homeBandSlides.push('xmas');
+  if (homeBandEvent && !homeBandSlides.includes('event')) homeBandSlides.push('event');
+  if (homeCardTour && typeof onOpenCardTour === 'function') homeBandSlides.push('tour');
+  const homeBandCount = homeBandSlides.length;
+  const [homeBandIdx, setHomeBandIdx] = React.useState(0);
+  const homeBandTouchRef = React.useRef({
+    x: null,
+    at: 0,
+    swiped: false
+  });
+  React.useEffect(() => {
+    if (homeBandCount < 2) return undefined;
+    const id = setInterval(() => {
+      if (Date.now() - homeBandTouchRef.current.at >= 20000) setHomeBandIdx(i => i + 1);
+    }, 7000);
+    return () => clearInterval(id);
+  }, [homeBandCount]);
+  const homeBandShow = homeBandCount ? (homeBandIdx % homeBandCount + homeBandCount) % homeBandCount : 0;
+  const homeBandGo = step => {
+    homeBandTouchRef.current.at = Date.now();
+    setHomeBandIdx(i => i + step);
+  };
+  const homeBandTitle = k => k === 'xmas' ? '聖夜の名探偵' : k === 'event' && homeEventCampaign ? homeEventCampaign.banner.title : k === 'tour' && homeCardTour ? homeCardTour.name : '';
+  const [homeMenuOpen, setHomeMenuOpen] = React.useState(false);
+  const homeMissionCount = missionClaimableCount(normalizeMissions(missions));
+  const homeGiftCount = giftClaimableCount(gifts);
+  const homeChangelogCount = Number(changelogUnreadCount) || 0;
+  const homeMenuBadge = homeMissionCount + homeGiftCount + (hasUnreadChangelog ? Math.max(1, homeChangelogCount) : 0);
+  const homeMenuSpot = `${spotClass('reward') || ''}${spotClass('settings') || ''}`.trim();
+  React.useEffect(() => {
+    if (homeMenuSpot) setHomeMenuOpen(true);
+  }, [homeMenuSpot]);
+  const homeMenuGo = fn => () => {
+    setHomeMenuOpen(false);
+    if (typeof fn === 'function') fn();
+  };
+  const homeComment = useHomeAssistantComment();
+  return React.createElement("main", {
+    ref: homeSceneRef,
+    className: "mh-home-scene mh-home-v2",
+    "aria-label": "村の広場"
+  }, React.createElement("picture", {
+    className: `mh-home-background ${homeBackgroundReady ? 'is-ready' : ''} ${homeBackgroundWide ? 'is-wide' : ''} ${homeBackgroundSquare ? 'is-square' : ''}`,
+    "aria-hidden": "true"
+  }, React.createElement("img", {
+    className: "mh-home-backdrop",
+    src: homeBackgroundSrc,
+    alt: ""
+  }), React.createElement("img", {
+    className: "mh-home-main",
+    src: homeBackgroundSrc,
+    alt: ""
+  })), React.createElement("div", {
+    className: "mh-home-masumon-layer",
+    "aria-hidden": "true"
+  }, homePastureMasumons.map((masu, index) => React.createElement(HomeWalkingMasumon, {
+    key: masu.id,
+    masu: masu,
+    base: ALL_PLAYER_MONSTERS[masu.baseId],
+    masuColors: getMasuColors(masu),
+    index: index,
+    count: homePastureMasumons.length
+  }))), raidXmasVisible && typeof onOpenRaidXmas === 'function' ? React.createElement(HomeRaidJack, {
+    key: "raid-xmas",
+    ev: RAID_EVENT_XMAS,
+    eventId: raidXmasEventId,
+    onOpen: onOpenRaidXmas
+  }) : raidJackVisible && React.createElement(HomeRaidJack, {
+    eventId: raidJackEventId,
+    onOpen: onOpenRaidJack
+  }), React.createElement("header", {
+    className: `mh-home-status mh-home-top${spotClass('settings')}`
+  }, React.createElement("button", {
+    type: "button",
+    className: "mh-home-player relative",
+    onClick: onOpenProfile,
+    "aria-label": "プロフィールを開く"
+  }, React.createElement(HomeProfileIcon, {
+    src: resolveIconUrl(breederIcon),
+    id: breederIcon,
+    frameId: profileFrameId
+  }), React.createElement("div", {
+    className: "mh-home-player-copy"
+  }, React.createElement("strong", null, breederName), React.createElement("span", null, "Lv.", breederLevel.level)), Number(friendRequestCount) > 0 && React.createElement("span", {
+    "data-home-friend-badge": true,
+    "aria-label": `フレンド申請が${Number(friendRequestCount)}件届いています`,
+    className: "absolute -right-1 -top-2 flex h-6 min-w-[24px] items-center justify-center rounded-full bg-rose-500 px-1.5 text-[12px] font-black text-white shadow-lg"
+  }, Math.min(99, Number(friendRequestCount)))), React.createElement("section", {
+    className: "mh-home-wallet mh-home-top-wallet",
+    "aria-label": "ダイヤ"
+  }, React.createElement("div", null, React.createElement(Gem, {
+    size: 15
+  }), React.createElement(CompactCount, {
+    value: gold,
+    style: {
+      '--len': String(compactCount(gold)).length
+    }
+  }), React.createElement("small", null, "ダイヤ"))), React.createElement("button", {
+    type: "button",
+    className: `mh-home-menu-btn${homeMenuOpen ? ' is-open' : ''}`,
+    "data-home-menu-btn": true,
+    onClick: () => setHomeMenuOpen(o => !o),
+    "aria-label": homeMenuBadge > 0 ? `メニュー(${homeMenuBadge}件)` : 'メニュー',
+    "aria-expanded": homeMenuOpen
+  }, React.createElement("span", {
+    className: "mh-home-menu-bars",
+    "aria-hidden": "true"
+  }, React.createElement("i", null), React.createElement("i", null), React.createElement("i", null)), React.createElement("span", {
+    className: "mh-home-menu-lb"
+  }, "メニュー"), homeMenuBadge > 0 && React.createElement("em", {
+    "data-home-menu-badge": true
+  }, Math.min(99, homeMenuBadge)))), homeMenuOpen && React.createElement("button", {
+    type: "button",
+    className: "mh-home-menu-shade",
+    "data-home-menu-shade": true,
+    "aria-label": "メニューを閉じる",
+    onClick: () => setHomeMenuOpen(false)
+  }), React.createElement("div", {
+    className: `mh-home-menu${homeMenuOpen ? ' is-open' : ''}`,
+    "data-home-menu": homeMenuOpen ? 'open' : 'closed'
+  }, React.createElement("div", {
+    className: "mh-home-menu-info"
+  }, typeof TimeOfDayClock === 'function' && React.createElement(TimeOfDayClock, {
+    home: true
+  }), React.createElement("span", {
+    className: "mh-home-menu-bp"
+  }, React.createElement(Coins, {
+    size: 14
+  }), React.createElement("small", null, "ブリーダーP"), React.createElement(CompactCount, {
+    value: breederPoints
+  }))), React.createElement("button", {
+    onClick: homeMenuGo(openMissions),
+    className: `mh-home-side-btn mh-home-mission${spotClass('reward')}`,
+    "aria-label": "ミッション"
+  }, React.createElement("span", {
+    className: "mh-home-side-ic"
+  }, React.createElement(List, {
+    size: 18
+  })), React.createElement("span", {
+    className: "mh-home-side-lb"
+  }, "ミッション"), homeMissionCount > 0 && React.createElement("em", null, homeMissionCount)), React.createElement("button", {
+    onClick: homeMenuGo(openGiftBox),
+    className: `mh-home-side-btn mh-home-gift${spotClass('reward')}`,
+    "aria-label": "ギフト"
+  }, React.createElement("span", {
+    className: "mh-home-side-ic"
+  }, React.createElement(Package, {
+    size: 18
+  })), React.createElement("span", {
+    className: "mh-home-side-lb"
+  }, "ギフト"), homeGiftCount > 0 && React.createElement("em", null, homeGiftCount)), React.createElement("button", {
+    onClick: homeMenuGo(openChangelog),
+    className: "mh-home-side-btn mh-home-update",
+    "aria-label": "更新履歴"
+  }, React.createElement("span", {
+    className: "mh-home-side-ic"
+  }, React.createElement(RefreshCcw, {
+    size: 17
+  })), React.createElement("span", {
+    className: "mh-home-side-lb"
+  }, "更新履歴"), hasUnreadChangelog && (homeChangelogCount > 0 ? React.createElement("em", {
+    className: "mh-unread-badge",
+    "data-changelog-entry-count": homeChangelogCount,
+    "aria-label": `未読${homeChangelogCount}件`
+  }, homeChangelogCount > 99 ? '99+' : homeChangelogCount) : React.createElement("em", {
+    className: "mh-unread-badge",
+    "aria-label": "未読あり"
+  }, "!"))), React.createElement("button", {
+    onClick: homeMenuGo(onOpenSettings),
+    className: `mh-home-side-btn mh-home-settings${spotClass('settings')}`,
+    "aria-label": "設定"
+  }, React.createElement("span", {
+    className: "mh-home-side-ic"
+  }, React.createElement(Settings, {
+    size: 18
+  })), React.createElement("span", {
+    className: "mh-home-side-lb"
+  }, "設定"))), homeBandCount > 0 && React.createElement("div", {
+    className: "mh-home-band",
+    "data-home-band": homeBandSlides[homeBandShow],
+    onPointerDown: e => {
+      homeBandTouchRef.current = {
+        ...homeBandTouchRef.current,
+        x: e.clientX,
+        swiped: false
+      };
+    },
+    onPointerUp: e => {
+      const t = homeBandTouchRef.current;
+      if (t.x === null || homeBandCount < 2) return;
+      const dx = e.clientX - t.x;
+      t.x = null;
+      if (Math.abs(dx) >= 40) {
+        t.swiped = true;
+        homeBandGo(dx < 0 ? 1 : -1);
+      }
+    },
+    onClickCapture: e => {
+      if (homeBandTouchRef.current.swiped) {
+        homeBandTouchRef.current.swiped = false;
+        e.stopPropagation();
+        e.preventDefault();
+      }
+    }
+  }, React.createElement("div", {
+    className: "mh-home-band-view"
+  }, React.createElement("div", {
+    className: "mh-home-band-track",
+    style: {
+      transform: `translateX(${-homeBandShow * 100}%)`
+    }
+  }, homeBandSlides.map((k, i) => React.createElement("div", _extends({
+    key: k,
+    className: "mh-home-band-slide",
+    "aria-hidden": i !== homeBandShow
+  }, k === 'xmas' ? {
+    'data-home-xmas-entry-strip': ''
+  } : {
+    'data-home-event-strip': ''
+  }), k === 'xmas' && React.createElement(HomeXmasEventEntry, {
+    onOpen: xmasEntry.onOpen,
+    preOpen: !!xmasEntry.preOpen
+  }), k === 'event' && React.createElement("button", {
+    type: "button",
+    "data-home-event-banner": true,
+    className: "mh-home-event-banner",
+    tabIndex: i === homeBandShow ? 0 : -1,
+    onClick: homeEventCampaign.id === 'xmas_2026' && typeof onOpenXmasEvent === 'function' ? onOpenXmasEvent : onOpenRhythm,
+    "aria-label": `${homeEventCampaign.banner.title}${homeEventCampaign.banner.title2 || ''} ${homeEventCampaign.banner.sub}`
+  }, React.createElement("b", {
+    className: "r1"
+  }, React.createElement("span", null, homeEventCampaign.banner.emoji, " ", homeEventCampaign.banner.title), React.createElement("small", null, homeEventCampaign.banner.sub)), homeEventCampaign.banner.title2 ? React.createElement("span", {
+    className: "t2"
+  }, homeEventCampaign.banner.title2) : null), k === 'tour' && React.createElement("button", {
+    type: "button",
+    "data-home-card-tour": homeCardTour.id,
+    className: "mh-home-tour-banner",
+    tabIndex: i === homeBandShow ? 0 : -1,
+    onClick: () => onOpenCardTour(homeCardTour.id),
+    "aria-label": `${homeCardTour.name} ${homeCardTour.sub}`
+  }, React.createElement("span", {
+    "aria-hidden": "true"
+  }, "🏆"), React.createElement("span", null, React.createElement("b", null, homeCardTour.name), React.createElement("small", null, homeCardTour.sub, homeCardTour.prize && React.createElement("em", null, homeCardTour.prize)))))))), homeBandCount > 1 && React.createElement("div", {
+    className: "mh-home-band-nav"
+  }, React.createElement("span", {
+    className: "mh-home-event-strip-dots"
+  }, homeBandSlides.map((k, i) => React.createElement("button", {
+    key: k,
+    type: "button",
+    className: i === homeBandShow ? 'on' : '',
+    "aria-label": `${i + 1}枚目を見る`,
+    onClick: () => homeBandGo(i - homeBandShow)
+  }, React.createElement("i", null)))), React.createElement("button", {
+    type: "button",
+    className: "mh-home-band-next",
+    "data-home-band-next": true,
+    onClick: () => homeBandGo(1)
+  }, "次:", homeBandTitle(homeBandSlides[(homeBandShow + 1) % homeBandCount]), " ›"))), React.createElement("div", {
+    className: "mh-home-dock"
+  }, nextStep && React.createElement("button", {
+    type: "button",
+    className: "mh-home-nextstep",
+    "data-home-next-step": nextStep.n,
+    onClick: nextStep.onTap,
+    "aria-label": `次にやること ${nextStep.n}/3 ${nextStep.title}`
+  }, React.createElement("span", {
+    className: "mh-home-nextstep-lab"
+  }, "次に", React.createElement("br", null), "やること", React.createElement("b", null, nextStep.n, "/3")), React.createElement("span", {
+    className: "mh-home-nextstep-body"
+  }, React.createElement("b", null, ['①', '②', '③'][nextStep.n - 1], " ", nextStep.title), React.createElement("small", null, nextStep.sub)), React.createElement("i", {
+    "aria-hidden": "true"
+  }, "›")), React.createElement("div", {
+    className: "mh-home-dock-row mh-home-dock-top",
+    "aria-label": "遊ぶ"
+  }, successEntry, React.createElement("button", {
+    type: "button",
+    "data-home-fac": "battle",
+    className: `mh-home-dock-card battle${spotClass('battle')}`,
+    onClick: onOpenBattle,
+    "aria-label": "モンヒロバトル"
+  }, React.createElement("span", {
+    className: "mh-home-dock-pic"
+  }, React.createElement("img", {
+    src: "images/home/facility-battle.webp",
+    alt: "",
+    draggable: false
+  })), React.createElement("span", {
+    className: "mh-home-dock-txt"
+  }, React.createElement("span", {
+    className: "mh-home-dock-name"
+  }, "モンヒロバトル"), React.createElement("span", {
+    className: "mh-home-dock-sub"
+  }, "挑戦"))), React.createElement("button", {
+    type: "button",
+    "data-home-fac": "rhythm",
+    className: "mh-home-dock-card rhythm",
+    onClick: onOpenRhythm,
+    "aria-label": RHYTHM_MODE_PUBLIC_RELEASE ? "モンヒロビート" : "モンヒロビート（準備中）"
+  }, React.createElement("span", {
+    className: "mh-home-dock-pic"
+  }, React.createElement("img", {
+    src: "images/home/facility-beat.webp",
+    alt: "",
+    draggable: false
+  })), React.createElement("span", {
+    className: "mh-home-dock-txt"
+  }, React.createElement("span", {
+    className: "mh-home-dock-name"
+  }, "モンヒロビート", !RHYTHM_MODE_PUBLIC_RELEASE && React.createElement("small", {
+    className: "mh-home-dock-soon"
+  }, "準備中")), React.createElement("span", {
+    className: "mh-home-dock-sub"
+  }, "音ゲー")), homeRhythmEventOpen && React.createElement("em", {
+    "data-home-event-badge": true,
+    className: "mh-home-event-badge",
+    style: HOME_EVENT_BADGE_STYLE
+  }, "開催中")), cardBattleVisible && typeof onOpenCardBattle === 'function' && React.createElement("button", {
+    type: "button",
+    "data-home-fac": "card",
+    "data-home-card-battle": true,
+    className: "mh-home-dock-card card",
+    onClick: onOpenCardBattle,
+    "aria-label": "MFバトルカード"
+  }, React.createElement("span", {
+    className: "mh-home-dock-pic"
+  }, React.createElement("img", {
+    src: "images/home/facility-card.webp",
+    alt: "",
+    draggable: false
+  })), React.createElement("span", {
+    className: "mh-home-dock-txt"
+  }, React.createElement("span", {
+    className: "mh-home-dock-name"
+  }, "MFバトルカード"), React.createElement("span", {
+    className: "mh-home-dock-sub"
+  }, "カード対戦"))), !cardBattleVisible && cardBattleTeaser && typeof onOpenCardTeaser === 'function' && React.createElement("button", {
+    type: "button",
+    "data-home-fac": "card",
+    "data-home-card-battle-teaser": true,
+    className: "mh-home-dock-card card soon",
+    onClick: onOpenCardTeaser,
+    "aria-label": "MFバトルカード 近日公開"
+  }, React.createElement("span", {
+    className: "mh-home-dock-pic"
+  }, React.createElement("img", {
+    src: "images/home/facility-card.webp",
+    alt: "",
+    draggable: false
+  })), React.createElement("span", {
+    className: "mh-home-dock-txt"
+  }, React.createElement("span", {
+    className: "mh-home-dock-name"
+  }, "MFバトルカード"), React.createElement("span", {
+    className: "mh-home-dock-sub"
+  }, "カード対戦")), React.createElement("em", {
+    "data-home-soon-badge": true,
+    style: HOME_EVENT_BADGE_STYLE
+  }, "近日公開"))), React.createElement("nav", {
+    className: "mh-home-dock-row mh-home-dock-bottom",
+    "aria-label": "拠点施設"
+  }, React.createElement("button", {
+    type: "button",
+    "data-home-fac": "management",
+    className: `mh-home-dock-card management${spotClass('management')}`,
+    onClick: onOpenManagement,
+    "aria-label": "M/B管理"
+  }, React.createElement("span", {
+    className: "mh-home-dock-pic"
+  }, React.createElement("img", {
+    src: "images/home/facility-management.webp",
+    alt: "",
+    draggable: false
+  })), React.createElement("span", {
+    className: "mh-home-dock-txt"
+  }, React.createElement("span", {
+    className: "mh-home-dock-name"
+  }, "M/B管理"))), React.createElement("button", {
+    type: "button",
+    "data-home-fac": "temple",
+    className: `mh-home-dock-card temple${spotClass('temple')}`,
+    onClick: onOpenTemple,
+    "aria-label": "神殿"
+  }, React.createElement("span", {
+    className: "mh-home-dock-pic"
+  }, React.createElement("img", {
+    src: "images/home/facility-temple.webp",
+    alt: "",
+    draggable: false
+  })), React.createElement("span", {
+    className: "mh-home-dock-txt"
+  }, React.createElement("span", {
+    className: "mh-home-dock-name"
+  }, "神殿"))), React.createElement("button", {
+    type: "button",
+    "data-home-fac": "market",
+    className: `mh-home-dock-card market${spotClass('market')}`,
+    onClick: onOpenMarket,
+    "aria-label": "マーケット"
+  }, React.createElement("span", {
+    className: "mh-home-dock-pic"
+  }, React.createElement("img", {
+    src: "images/home/facility-market.webp",
+    alt: "",
+    draggable: false
+  })), React.createElement("span", {
+    className: "mh-home-dock-txt"
+  }, React.createElement("span", {
+    className: "mh-home-dock-name"
+  }, "マーケット"))), typeof assistantLifeEnabled === 'function' && assistantLifeEnabled() && React.createElement("button", {
+    type: "button",
+    "data-home-fac": "life",
+    "data-home-assistant-life": true,
+    className: "mh-home-dock-card life",
+    onClick: () => assistantLifeOpenScreen(),
+    "aria-label": "助手ライフ"
+  }, React.createElement("span", {
+    className: "mh-home-dock-pic"
+  }, React.createElement("img", {
+    src: "images/home/facility-life.webp",
+    alt: "",
+    draggable: false
+  })), React.createElement("span", {
+    className: "mh-home-dock-txt"
+  }, React.createElement("span", {
+    className: "mh-home-dock-name"
+  }, "助手ライフ"))))), homeComment.on && React.createElement("div", {
+    className: `mh-home-assistant${spotClass('assistant')}`
+  }, React.createElement(AssistantBubble, {
+    scene: "home",
+    condition: assistantBondUp ? 'bondUp' : masuMons.length === 0 ? 'firstRun' : null,
+    compact: true,
+    menu: typeof onOpenAssistantChat === 'function' ? [{
+      key: 'chat',
+      label: '💬 おしゃべりする',
+      onClick: onOpenAssistantChat,
+      attr: {
+        'data-home-assistant-chat': ''
+      }
+    }] : null
+  }), React.createElement(HomeAssistantCommentToggle, {
+    on: true
+  }), React.createElement(HomePeerTalkMark, null)), !homeComment.on && React.createElement("div", {
+    className: `mh-home-assistant-fold${spotClass('assistant')}`
+  }, React.createElement(HomeAssistantCommentToggle, {
+    on: false,
+    news: !!assistantBondUp || masuMons.length === 0
+  })));
+}
+const useHomePeerWaiting = () => {
+  const has = typeof ASSISTANT_PEER_STORE !== 'undefined' && typeof useAssistantPeerState === 'function';
+  const st = has ? useAssistantPeerState() : null;
+  return {
+    waiting: !!(st && st.homeWaiting),
+    open: () => {
+      if (has) ASSISTANT_PEER_STORE.set({
+        homeOpenAt: Date.now()
+      });
+    }
+  };
+};
+function HomePeerTalkMark() {
+  const peer = useHomePeerWaiting();
+  if (!peer.waiting) return null;
+  return React.createElement("button", {
+    type: "button",
+    "data-home-peer-talk-mark": true,
+    onClick: peer.open,
+    "aria-label": "助手どうしの会話を見る",
+    className: "mh-home-peer-mark active:scale-95"
+  }, "💬");
+}
+function HomeAssistantCommentToggle({
+  on,
+  news = false
+}) {
+  const peer = useHomePeerWaiting();
   const bond = useAssistantBond();
   const who = assistantById(assistantSceneById('home')?.assistantId || bond.assistantId || null);
   const color = who.accent || ASSISTANT_FALLBACK.accent;
@@ -88174,23 +88962,30 @@ function HomeAssistantCommentToggle({
       }
     }, "隠す"));
   }
-  return React.createElement("button", {
-    type: "button",
-    "data-home-assistant-toggle": "show",
-    onClick: () => HOME_ASSISTANT_COMMENT_STORE.setOn(true),
-    "aria-label": `${who.name}のコメントを出す`,
-    className: "mh-home-assistant-show active:scale-95"
-  }, React.createElement(AssistantFace, {
-    who: who,
-    size: 40,
-    accent: color
-  }), React.createElement("span", {
-    className: "mh-home-assistant-show-mark",
-    style: {
-      borderColor: color
-    },
-    "aria-hidden": "true"
-  }, "💬"));
+  return (React.createElement("button", {
+      type: "button",
+      "data-home-assistant-toggle": "show",
+      "data-home-peer-waiting": peer.waiting ? '1' : undefined,
+      onClick: () => peer.waiting ? peer.open() : HOME_ASSISTANT_COMMENT_STORE.setOn(true),
+      "aria-label": peer.waiting ? '助手どうしの会話を見る' : `${who.name}のコメントを出す`,
+      className: "mh-home-assistant-show active:scale-95"
+    }, React.createElement(AssistantFace, {
+      who: who,
+      size: 40,
+      accent: color
+    }), peer.waiting ? React.createElement("span", {
+      className: "mh-home-assistant-show-mark",
+      "data-home-peer-talk-mark": true,
+      style: {
+        borderColor: color
+      },
+      "aria-hidden": "true"
+    }, "💬") : news ? React.createElement("span", {
+      className: "mh-home-assistant-news-dot",
+      "data-home-assistant-news": true,
+      "aria-hidden": "true"
+    }) : null)
+  );
 }
 function KikiIntroOverlay({
   kikiIntroStep,
@@ -112019,7 +112814,7 @@ const RaidJackRewardList = ({
     className: "mb-2 flex shrink-0 items-center justify-between"
   }, React.createElement("div", {
     className: "text-[14px] font-black text-orange-200"
-  }, ev.icon, " ", ev.bossWord, "の報酬一覧"), React.createElement("button", {
+  }, cardIconNode(ev.icon, 16), " ", ev.bossWord, "の報酬一覧"), React.createElement("button", {
     type: "button",
     "data-raid-jack-reward-close": true,
     onClick: onClose,
@@ -131236,11 +132031,78 @@ function AssistantPeerTalk({
   const st = useAssistantPeerState();
   const auto = useAssistantPeerAuto();
   const [cur, setCur] = React.useState(null);
+  const [homeOpenedId, setHomeOpenedId] = React.useState(null);
+  const homeV2Now = typeof homeV2At === 'function' ? homeV2At() : true;
+  const homeWaiting = homeV2Now && scene === 'home' && !!cur && !cur.replay && homeOpenedId !== cur.talk.id;
   React.useEffect(() => {
-    if (ASSISTANT_PEER_STORE.state.talking !== !!cur) ASSISTANT_PEER_STORE.set({
-      talking: !!cur
+    if (!!ASSISTANT_PEER_STORE.state.homeWaiting !== homeWaiting) ASSISTANT_PEER_STORE.set({
+      homeWaiting
     });
-  }, [!!cur]);
+  }, [homeWaiting]);
+  React.useEffect(() => () => {
+    if (ASSISTANT_PEER_STORE.state.homeWaiting) ASSISTANT_PEER_STORE.set({
+      homeWaiting: false
+    });
+  }, []);
+  const homeOpenRef = React.useRef(st.homeOpenAt || 0);
+  React.useEffect(() => {
+    const at = st.homeOpenAt || 0;
+    if (at === homeOpenRef.current) return;
+    homeOpenRef.current = at;
+    if (cur && !cur.replay) {
+      setHomeOpenedId(cur.talk.id);
+      setPeerFolded(false);
+    }
+  }, [st.homeOpenAt]);
+  const [homeBox, setHomeBox] = React.useState(null);
+  const homeShown = homeV2Now && scene === 'home' && !!cur && !homeWaiting && !(peerFolded && !cur.replay);
+  React.useEffect(() => {
+    if (!homeShown || typeof document === 'undefined') {
+      setHomeBox(null);
+      return undefined;
+    }
+    const measure = () => {
+      const face = document.querySelector('main.mh-home-scene .mh-home-assistant-fold, main.mh-home-scene .mh-home-assistant');
+      const dock = document.querySelector('main.mh-home-scene .mh-home-dock');
+      const band = document.querySelector('main.mh-home-scene .mh-home-band');
+      if (!face || !dock) {
+        setHomeBox(null);
+        return;
+      }
+      const f = face.getBoundingClientRect(),
+        d = dock.getBoundingClientRect(),
+        b = band ? band.getBoundingClientRect() : null;
+      const W = window.innerWidth,
+        low = W > window.innerHeight && window.innerHeight < 600;
+      const left = Math.round(low ? Math.max(f.right, b ? b.right : 0) + 8 : Math.max(8, f.left));
+      const top = Math.round(low ? b ? b.top : f.top : f.bottom + 6);
+      const width = Math.round(Math.min(448, W - left - 8));
+      const maxH = Math.round(d.top - top - 6);
+      if (width < 240 || maxH < 120) {
+        setHomeBox(null);
+        return;
+      }
+      setHomeBox(p => p && p.left === left && p.top === top && p.width === width && p.maxH === maxH ? p : {
+        left,
+        top,
+        width,
+        maxH
+      });
+    };
+    measure();
+    const t = setInterval(measure, 800);
+    window.addEventListener('resize', measure);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener('resize', measure);
+    };
+  }, [homeShown]);
+  const talkingNow = !!cur && !homeWaiting;
+  React.useEffect(() => {
+    if (ASSISTANT_PEER_STORE.state.talking !== talkingNow) ASSISTANT_PEER_STORE.set({
+      talking: talkingNow
+    });
+  }, [talkingNow]);
   const decidedRef = React.useRef('');
   const metKey = (metIds || []).join(',');
   React.useEffect(() => {
@@ -131410,7 +132272,23 @@ function AssistantPeerTalk({
     const t = setTimeout(() => setToast(null), 3200);
     return () => clearTimeout(t);
   }, [toast]);
-  const wrap = (children, attrs = {}) => React.createElement("div", _extends({
+  const wrap = (children, attrs = {}) => homeBox && homeShown ? React.createElement("div", _extends({
+    "data-assistant-peer-home-box": true,
+    className: "fixed pointer-events-none",
+    style: {
+      zIndex: 8500,
+      left: homeBox.left,
+      top: homeBox.top,
+      width: homeBox.width
+    }
+  }, attrs), React.createElement("div", {
+    className: "pointer-events-auto w-full",
+    style: {
+      maxHeight: homeBox.maxH,
+      overflowY: 'auto',
+      overscrollBehavior: 'contain'
+    }
+  }, children)) : React.createElement("div", _extends({
     className: "fixed inset-x-0 flex justify-center px-2 pointer-events-none",
     style: {
       zIndex: typeof ASSISTANT_LIFE_STORE !== 'undefined' && ASSISTANT_LIFE_STORE.state.open ? 9150 : 8500,
@@ -131428,6 +132306,7 @@ function AssistantPeerTalk({
       className: "mx-auto w-fit rounded-full border border-pink-300/60 bg-slate-950/90 px-4 py-1.5 text-[11px] font-black text-pink-200 shadow-xl"
     }, toast.kind === 'daily' ? `今日のペア達成！ ${a.name}と${b.name}がもっと仲良くなりました` : toast.kind === 'makeup' ? `${a.name}と${b.name}が仲直りしました` : assistantPeerLifeOn() ? `${a.name}と${b.name}の友情Lvが ${toast.level}${stage ? `「${assistantPeerStageName(stage)}」` : ''}になりました` : `${a.name}と${b.name}の仲良し度が Lv${toast.level}${stage ? `「${stage.name}」` : ''}になりました`));
   }
+  if (homeWaiting) return null;
   if (peerFolded && !cur.replay) {
     return wrap(React.createElement("div", {
       "data-assistant-peer-folded": true,
@@ -141375,7 +142254,11 @@ const ASSISTANT_LIFE_FACILITY_SEL = Object.freeze({
   life: 'main.mh-home-scene [data-home-fac="life"]'
 });
 const ASSISTANT_LIFE_BADGE_FACE = 24;
-function AssistantLifeHomeFaces({
+function AssistantLifeHomeFaces(props) {
+  const v2 = typeof useHomeV2 === 'function' ? useHomeV2() : true;
+  return v2 ? React.createElement(AssistantLifeHomeFacesV2, props) : React.createElement(AssistantLifeHomeFacesV1, props);
+}
+function AssistantLifeHomeFacesV1({
   metIds
 }) {
   const st = useAssistantLifeNow(metIds);
@@ -141512,6 +142395,164 @@ function AssistantLifeHomeFaces({
       fontSize: 9,
       lineHeight: '15px',
       padding: '0 5px'
+    }
+  }, "UP"), rects.life && typeof AssistantLifeFriendHomeBadge === 'function' && React.createElement(AssistantLifeFriendHomeBadge, {
+    rect: rects.life,
+    dockTop: rects.__dockTop
+  }));
+}
+function AssistantLifeHomeFacesV2({
+  metIds
+}) {
+  const st = useAssistantLifeNow(metIds);
+  const [rects, setRects] = React.useState({});
+  React.useEffect(() => {
+    if (!assistantLifeEnabled()) return undefined;
+    const measure = () => {
+      const o = {};
+      const rot = typeof RHYTHM_VIEW_ROTATION !== 'undefined' && RHYTHM_VIEW_ROTATION.active();
+      const rectOf = el => rot ? RHYTHM_VIEW_ROTATION.rectOf(el) : el.getBoundingClientRect();
+      const vw = rot ? window.innerHeight : window.innerWidth;
+      for (const [k, sel] of Object.entries(ASSISTANT_LIFE_FACILITY_SEL)) {
+        const el = document.querySelector(sel);
+        if (!el || !el.offsetParent) continue;
+        const r = rectOf(el);
+        o[k] = {
+          x: r.left,
+          y: r.top,
+          w: r.width,
+          h: r.height,
+          right: r.left + r.width / 2 > vw / 2
+        };
+      }
+      const dk = document.querySelector('.mh-home-dock');
+      if (dk && dk.offsetParent) o.__dockTop = rectOf(dk).top;
+      setRects(prev => JSON.stringify(prev) === JSON.stringify(o) ? prev : o);
+    };
+    measure();
+    const t = setInterval(measure, 700);
+    window.addEventListener('resize', measure);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener('resize', measure);
+    };
+  }, []);
+  if (!assistantLifeEnabled() || !st.loaded || st.open) return null;
+  const life = st.life;
+  if (!life || life.abs !== assistantLifeSlotAt().abs) return null;
+  const ids = (metIds || []).filter(id => ASSISTANT_LIFE_PREFS[id]);
+  const by = {};
+  for (const id of ASSISTANT_LIFE_HOUSE_ORDER) {
+    if (!ids.includes(id)) continue;
+    let f = assistantLifeFacilityOf(assistantLifeWhereOf(life, id));
+    if (!rects[f]) f = 'life';
+    if (!rects[f]) continue;
+    (by[f] = by[f] || []).push(id);
+  }
+  const cardUp = typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && assistantLifeHouseCardIds().some(id => (by.card || []).includes(id) && !assistantLifeCardSpent(id));
+  const peer = typeof ASSISTANT_PEER_STORE !== 'undefined' ? ASSISTANT_PEER_STORE.state : null;
+  const q = peer && peer.quarrel && peer.quarrel.pending;
+  const after = new Set(q && q.pair ? String(q.pair).split('-') : []);
+  const size = ASSISTANT_LIFE_BADGE_FACE;
+  const step = size - 8;
+  return React.createElement(React.Fragment, null, Object.entries(by).map(([f, list]) => {
+    const r = rects[f];
+    const shown = list.slice(0, 3);
+    const extra = list.length - shown.length;
+    void step;
+    const rowW = 24;
+    const left = r.x + r.w - rowW - 1;
+    const top = r.y + 1;
+    const names = list.map(id => {
+      const who = assistantById(id);
+      return who ? who.name : id;
+    }).join('・');
+    return React.createElement("div", {
+      key: f,
+      "data-assistant-life-home-faces": f,
+      "data-assistant-life-home-faces-ids": list.join(','),
+      className: "pointer-events-none fixed",
+      style: {
+        zIndex: 40,
+        left,
+        top,
+        width: rowW,
+        height: rowW
+      }
+    }, React.createElement("span", {
+      role: "img",
+      "data-assistant-life-home-badge": f,
+      "aria-label": `${names}がいます`,
+      className: "pointer-events-none relative flex items-center justify-center rounded-full",
+      style: {
+        width: rowW,
+        height: rowW
+      }
+    }, (() => {
+      const who = assistantById(shown[0]);
+      return React.createElement("span", {
+        "data-assistant-life-home-dot": true,
+        "data-assistant-life-home-dot-who": shown[0],
+        "aria-hidden": "true",
+        className: "block overflow-hidden rounded-full border-2 border-white bg-slate-900 shadow",
+        style: {
+          width: rowW,
+          height: rowW
+        }
+      }, who && React.createElement(AssistantFace, {
+        who: who,
+        size: rowW - 4,
+        accent: who.accent
+      }));
+    })(), React.createElement("span", {
+      className: "sr-only"
+    }, shown.map((id, i) => {
+      const who = assistantById(id);
+      if (!who) return null;
+      const w = assistantLifeWhereOf(life, id);
+      const lonely = w && w.reason === 'lonely';
+      const spent = f === 'card' && !!assistantLifeCardSpent(id);
+      return React.createElement("span", {
+        key: id,
+        "data-assistant-life-home-face": id,
+        "data-assistant-life-home-face-spent": spent ? '1' : undefined,
+        className: "relative shrink-0 rounded-full",
+        style: {
+          marginLeft: i ? -8 : 0,
+          boxShadow: lonely ? '0 0 0 1.5px #fbbf24,0 0 6px #fbbf24' : after.has(id) ? '0 0 0 1.5px #7dd3fc' : '0 0 0 1.5px #fff'
+        }
+      }, React.createElement("span", {
+        className: "block",
+        style: spent ? {
+          filter: 'grayscale(.6) brightness(.8)'
+        } : undefined
+      }, React.createElement(AssistantFace, {
+        who: who,
+        size: size,
+        accent: who.accent
+      })), spent && React.createElement(AssistantLifeSpentMark, {
+        size: size
+      }));
+    }), extra > 0 && React.createElement("span", {
+      "data-assistant-life-home-faces-extra": extra,
+      className: "shrink-0 rounded-full bg-slate-100 px-1 font-black text-slate-900 shadow",
+      style: {
+        marginLeft: 2,
+        fontSize: 9,
+        lineHeight: '14px'
+      }
+    }, "+", extra))));
+  }), rects.card && cardUp && React.createElement("span", {
+    "data-assistant-life-home-card-up": true,
+    className: "pointer-events-none fixed rounded-full bg-amber-300 font-black text-slate-950 shadow",
+    style: {
+      zIndex: 40,
+      left: rects.card.x + 4,
+      top: rects.card.y + 4,
+      fontSize: 11,
+      lineHeight: 1.35,
+      padding: '2px 7px',
+      border: '1px solid #fff3c4'
     }
   }, "UP"), rects.life && typeof AssistantLifeFriendHomeBadge === 'function' && React.createElement(AssistantLifeFriendHomeBadge, {
     rect: rects.life,
@@ -143039,7 +144080,6 @@ const ASSISTANT_LIFE_MAP_HEAD = Object.freeze({
   erubin: [0.01, 0.45]
 });
 const ASSISTANT_LIFE_MAP_FIT = Object.freeze({
-  'stand-normal/myua': 0.74,
   'stand-normal/sorashido': 0.83,
   'stand-normal/erubin': 0.7,
   sorashido_sleep: 0.82
@@ -143196,7 +144236,8 @@ function AssistantLifeMapRow({
   close = () => {},
   onRoom = null,
   onBeat = null,
-  onCard = null
+  onCard = null,
+  noSuccess = false
 }) {
   const a = assistantById(id);
   if (!a) return null;
@@ -143238,7 +144279,7 @@ function AssistantLifeMapRow({
     style: JA_LABEL_STYLE
   }, jaWrap(String(bi.label || '⚔ マスモンで対戦(β)').replace('で対戦', 'で\u200B対戦')));
   let si = null;
-  if (place === 'battle') {
+  if (place === 'battle' && !noSuccess) {
     try {
       si = typeof assistantLifeSuccessRowInfo === 'function' ? assistantLifeSuccessRowInfo(id) : null;
     } catch (_) {
@@ -143464,6 +144505,7 @@ function AssistantLifeBattleHall({
     life: life,
     cheerMsg: cheerMsg,
     setCheerMsg: setCheerMsg,
+    noSuccess: typeof homeV2At !== 'function' || homeV2At(),
     onRoom: rid => {
       try {
         ASSISTANT_LIFE_STORE.set({
@@ -147833,7 +148875,7 @@ const AluTabBar = ({
   "data-alu-tab": t.key,
   "data-assistant-life-icon": t.key,
   onClick: () => onTab && onTab(t.key)
-}, React.createElement("i", null, t.icon), t.label)));
+}, React.createElement("i", null, cardIconNode(t.icon, 16)), t.label)));
 const AluFrame = ({
   title,
   onBack,
@@ -148001,7 +149043,7 @@ const AluResult = ({
   key: i
 }, React.createElement("span", {
   className: "alu-n"
-}, g.icon, " ", g.label), React.createElement("b", {
+}, cardIconNode(g.icon, 14), " ", g.label), React.createElement("b", {
   className: "alu-num"
 }, "+", g.v)))), finds.length ? React.createElement("div", {
   className: "alu-t",
@@ -176562,7 +177604,7 @@ function MsxEvResult({
       style: {
         fontWeight: 900
       }
-    }, d.icon, " ", d.name, "になった(", d.dur, ")"), React.createElement("br", null), String(d.text).split('・').map((t, i) => React.createElement("span", {
+    }, cardIconNode(d.icon, 14), " ", d.name, "になった(", d.dur, ")"), React.createElement("br", null), String(d.text).split('・').map((t, i) => React.createElement("span", {
       key: i,
       style: {
         display: 'inline-block',
@@ -188419,7 +189461,7 @@ function MonheroSuccessHomeEntry({
   }, React.createElement("em", {
     className: "rb mh-home-event-badge",
     "aria-hidden": "true",
-    style: HOME_EVENT_BADGE_STYLE
+    style: typeof homeV2At === 'function' && !homeV2At() && typeof HOME_EVENT_BADGE_STYLE_V1 !== 'undefined' ? HOME_EVENT_BADGE_STYLE_V1 : HOME_EVENT_BADGE_STYLE
   }, "β版 開幕！"), React.createElement("span", {
     className: "pic"
   }, React.createElement("img", {
@@ -254738,6 +255780,9 @@ function MonsterHeroGame() {
     update: [],
     issue: []
   });
+  const changelogListRef = useRef(null);
+  const [changelogScrolled, setChangelogScrolled] = useState(false);
+  const [changelogZoomImage, setChangelogZoomImage] = useState(null);
   const displayedChangelogTabRef = useRef(null);
   const [seVolume, setSeVolumeState] = useState(DEFAULT_VOLUME);
   const [bgmVolume, setBgmVolumeState] = useState(DEFAULT_VOLUME);
@@ -255141,6 +256186,7 @@ function MonsterHeroGame() {
     };
   }, [changelogSeen, showChangelog]);
   const hasUnreadChangelog = changelogUnread.update || changelogUnread.issue || changelogUnread.event;
+  const changelogUnreadCount = (changelogUnreadIds.update || []).length + (changelogUnreadIds.issue || []).length + (changelogUnreadIds.event || []).length;
   const markChangelogEventSeen = id => {
     if (!changelogUnreadIds.event.includes(id)) return;
     const entry = CHANGELOG_ENTRIES.find(e => e.id === id);
@@ -255177,6 +256223,12 @@ function MonsterHeroGame() {
     if (displayedChangelogTabRef.current === type) return;
     if (displayedChangelogTabRef.current) markChangelogTabSeen(displayedChangelogTabRef.current);
     displayedChangelogTabRef.current = type;
+    setChangelogScrolled(false);
+    try {
+      changelogListRef.current && changelogListRef.current.scrollTo({
+        top: 0
+      });
+    } catch {}
     setChangelogTab(type);
   };
   const openChangelog = () => {
@@ -255189,6 +256241,8 @@ function MonsterHeroGame() {
     if (displayedChangelogTabRef.current) markChangelogTabSeen(displayedChangelogTabRef.current);
     displayedChangelogTabRef.current = null;
     setChangelogOpenId(null);
+    setChangelogScrolled(false);
+    setChangelogZoomImage(null);
     setShowChangelog(false);
   };
   const [helpCatId, setHelpCatId] = useState(null);
@@ -275583,13 +276637,18 @@ function MonsterHeroGame() {
     "aria-label": "未読あり"
   }, "!"))))), React.createElement("div", {
     className: "mh-changelog-list",
-    "data-changelog-list": true
+    "data-changelog-list": true,
+    ref: changelogListRef,
+    onScroll: e => {
+      const far = e.currentTarget.scrollTop > 600;
+      if (far !== changelogScrolled) setChangelogScrolled(far);
+    }
   }, CHANGELOG_ENTRIES.length === 0 ? React.createElement("p", {
     className: "mh-changelog-empty",
     "data-changelog-empty": true
   }, "更新履歴を読み込めませんでした。通信状況を確かめてから、設定の「ゲームを更新」で読み込み直してください。") : (() => {
     const rows = changelogTab === 'event' ? [] : changelogRowsOfTab(changelogTab);
-    const unreadHere = new Set(changelogUnreadIds[changelogTab] || []);
+    const unreadHere = new Set([...(changelogUnreadIds[changelogTab] || []), ...(changelogTab === 'event' ? [] : (changelogUnreadIds.event || []).filter(id => CHANGELOG_TAB_OF_ID.get(id) === changelogTab))]);
     let shownDay = null;
     const pinnedEvents = changelogTab === 'event' ? changelogEventCards : [];
     if (changelogTab === 'event' && pinnedEvents.length === 0) return React.createElement("p", {
@@ -275748,12 +276807,18 @@ function MonsterHeroGame() {
         onError: e => {
           e.currentTarget.style.display = 'none';
         },
+        onClick: () => setChangelogZoomImage(c.image),
         loading: "lazy",
         decoding: "async",
         style: {
+          display: 'block',
           width: '100%',
+          maxHeight: 'min(34vh, 320px)',
+          objectFit: 'contain',
+          background: '#0008',
           borderRadius: 12,
-          margin: '8px 0 4px'
+          margin: '8px 0 4px',
+          cursor: 'zoom-in'
         }
       }), typeof c.video === 'string' && c.video && React.createElement("figure", {
         "data-changelog-pinned-video": true,
@@ -275789,7 +276854,7 @@ function MonsterHeroGame() {
         const found = kinds.find(kind => kind.tone === info.tone);
         if (found) found.count += 1;else kinds.push({
           tone: info.tone,
-          label: info.label,
+          label: changelogKindLabelInTab(info, changelogTab),
           count: 1
         });
       });
@@ -275815,7 +276880,7 @@ function MonsterHeroGame() {
         "aria-hidden": "true"
       }, row.emoji), React.createElement("b", null, row.label), React.createElement("span", {
         className: "mh-changelog-count"
-      }, row.entries.length, "件", unreadCount > 0 && React.createElement("em", null, "NEW")), React.createElement("small", null, open ? '閉じる ▲' : '詳細 ▼')), React.createElement("span", {
+      }, row.entries.length, "件", unreadCount > 0 && React.createElement("em", null, "NEW")), React.createElement("small", null, open ? 'たたむ ▲' : '詳細 ▼')), React.createElement("span", {
         className: "mh-changelog-kinds"
       }, kinds.map(kind => React.createElement("span", {
         key: kind.tone,
@@ -275834,16 +276899,16 @@ function MonsterHeroGame() {
       }, React.createElement("time", null, (c.date || '').slice(11) || c.date, unreadHere.has(c.id) && React.createElement("em", null, "NEW")), React.createElement("span", {
         className: "mh-changelog-kind",
         "data-kind": changelogTypeOf(c).tone
-      }, changelogTypeOf(c).label), changelogEventLive(c) && React.createElement("span", {
+      }, changelogKindLabelInTab(changelogTypeOf(c), changelogTab)), changelogEventLive(c) && React.createElement("span", {
         "data-changelog-event-live": true,
         className: "mh-changelog-kind",
         style: {
-          background: '#f97316',
+          background: changelogEventUpcoming(c) ? '#38bdf8' : '#f97316',
           color: '#1c1917',
           borderColor: '#fdba74',
           marginLeft: 4
         }
-      }, "🎃 開催中"), React.createElement("b", null, typeof c.title === 'string' && typeof XmasNovelWrap === 'function' ? React.createElement(XmasNovelWrap, {
+      }, changelogEventUpcoming(c) ? '📅 開催予定' : `${typeof c.pinEmoji === 'string' && c.pinEmoji ? c.pinEmoji : '🎉'} 開催中`), React.createElement("b", null, typeof c.title === 'string' && typeof XmasNovelWrap === 'function' ? React.createElement(XmasNovelWrap, {
         text: c.title
       }) : c.title), c.image && React.createElement("img", {
         "data-changelog-image": true,
@@ -275854,10 +276919,16 @@ function MonsterHeroGame() {
         },
         loading: "lazy",
         decoding: "async",
+        onClick: () => setChangelogZoomImage(c.image),
         style: {
+          display: 'block',
           width: '100%',
+          maxHeight: 'min(34vh, 320px)',
+          objectFit: 'contain',
+          background: '#0008',
           borderRadius: '12px',
-          margin: '6px 0'
+          margin: '6px 0',
+          cursor: 'zoom-in'
         }
       }), typeof c.video === 'string' && c.video && React.createElement("figure", {
         "data-changelog-video": true,
@@ -275893,20 +276964,124 @@ function MonsterHeroGame() {
         onError: e => {
           e.currentTarget.style.display = 'none';
         },
+        onClick: () => setChangelogZoomImage(g.image),
         loading: "lazy",
         decoding: "async",
         style: {
+          display: 'block',
           width: '100%',
-          borderRadius: '12px'
+          maxHeight: 'min(34vh, 320px)',
+          objectFit: 'contain',
+          background: '#0008',
+          borderRadius: '12px',
+          cursor: 'zoom-in'
         }
       }))), changelogSafeLink(c.link) && React.createElement("a", {
         "data-changelog-link": true,
         href: changelogSafeLink(c.link),
         target: "_blank",
         rel: "noopener noreferrer"
-      }, c.link && c.link.label || '詳しく見る', " ↗"))))));
-    })];
-  })()), React.createElement("button", {
+      }, c.link && c.link.label || '詳しく見る', " ↗"))), React.createElement("button", {
+        type: "button",
+        "data-changelog-fold-bottom": true,
+        onClick: e => {
+          const art = e.currentTarget.closest('article');
+          setChangelogOpenId(null);
+          requestAnimationFrame(() => {
+            try {
+              const list = changelogListRef.current;
+              if (art && list) {
+                const top = art.getBoundingClientRect().top - list.getBoundingClientRect().top;
+                if (top < 0) list.scrollTop += top - 8;
+              }
+            } catch {}
+          });
+        },
+        style: {
+          display: 'block',
+          width: '100%',
+          minHeight: 40,
+          marginTop: 8,
+          borderRadius: 10,
+          border: '1px solid #ffffff26',
+          background: '#ffffff0d',
+          color: '#c7d2fe',
+          fontSize: 12,
+          fontWeight: 900
+        }
+      }, "▲ たたむ"))));
+    }), rows.length > 0 && React.createElement("p", {
+      key: "changelog-end",
+      "data-changelog-end": true,
+      style: {
+        textAlign: 'center',
+        fontSize: 11,
+        color: '#94a3b8',
+        margin: '14px 0 6px'
+      }
+    }, "― ここまでです ―"), changelogScrolled && React.createElement("div", {
+      key: "changelog-to-top",
+      style: {
+        position: 'sticky',
+        bottom: 8,
+        height: 0,
+        display: 'flex',
+        justifyContent: 'flex-end',
+        pointerEvents: 'none'
+      }
+    }, React.createElement("button", {
+      type: "button",
+      "data-changelog-to-top": true,
+      onClick: () => {
+        try {
+          changelogListRef.current && changelogListRef.current.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+          });
+        } catch {}
+      },
+      style: {
+        pointerEvents: 'auto',
+        transform: 'translateY(-100%)',
+        minHeight: 44,
+        padding: '0 14px',
+        borderRadius: 999,
+        border: '1px solid #c4b5fd88',
+        background: '#312e81f0',
+        color: '#fff',
+        fontSize: 12,
+        fontWeight: 900,
+        boxShadow: '0 4px 12px #000a'
+      }
+    }, "↑ 上へ"))];
+  })()), changelogZoomImage && React.createElement("div", {
+    "data-changelog-zoom": true,
+    role: "button",
+    "aria-label": "絵を閉じる",
+    onClick: e => {
+      e.stopPropagation();
+      setChangelogZoomImage(null);
+    },
+    style: {
+      position: 'fixed',
+      inset: 0,
+      zIndex: 100001,
+      background: '#000000e6',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 'calc(12px + env(safe-area-inset-top)) 12px calc(12px + env(safe-area-inset-bottom))'
+    }
+  }, React.createElement("img", {
+    src: changelogZoomImage,
+    alt: "",
+    style: {
+      maxWidth: '100%',
+      maxHeight: '100%',
+      objectFit: 'contain',
+      borderRadius: 12
+    }
+  })), React.createElement("button", {
     type: "button",
     className: "mh-dialog-close",
     "data-mh-back": true,
@@ -276790,7 +277965,10 @@ function MonsterHeroGame() {
     }
   }, React.createElement(Sparkles, {
     size: 19
-  }), React.createElement("span", null, "お知らせ"), hasUnreadChangelog && React.createElement("em", null, "NEW")), React.createElement("button", {
+  }), React.createElement("span", null, "更新履歴"), hasUnreadChangelog && React.createElement("em", {
+    "data-changelog-entry-count": changelogUnreadCount,
+    "aria-label": `未読${changelogUnreadCount}件`
+  }, changelogUnreadCount > 99 ? '99+' : changelogUnreadCount)), React.createElement("button", {
     onPointerDown: e => e.stopPropagation(),
     onClick: e => {
       e.stopPropagation();
@@ -276931,6 +278109,7 @@ function MonsterHeroGame() {
       gifts: gifts,
       gold: gold,
       hasUnreadChangelog: hasUnreadChangelog,
+      changelogUnreadCount: changelogUnreadCount,
       homeBackgroundReady: homeBackgroundReady,
       homeArt: homeArt,
       homePastureMasumons: homePastureMasumons,
@@ -296944,7 +298123,7 @@ const createAnimationStyle = () => {
     .mh-boot-screen.is-ready .mh-mocchi-wrap img{animation:mhReadyHop .75s ease-out 1,mhMocchiHop 1.8s ease-in-out .75s infinite}.mh-boot-screen.is-ready .mh-boot-copy{animation:titleReveal .55s ease-out both}.mh-boot-screen.is-ready .mh-mocchi-wrap i{display:block;animation:mhSparkle 1.5s infinite}.mh-boot-screen.is-ready .mh-mocchi-wrap i:nth-of-type(1){top:10%;left:4%}.mh-boot-screen.is-ready .mh-mocchi-wrap i:nth-of-type(2){top:24%;right:0;animation-delay:.55s}.mh-boot-screen.is-entering .mh-mocchi-wrap img{animation:mhBigHop .75s ease-in-out both}.mh-entry-flash{position:absolute;z-index:9;inset:0;pointer-events:none;background:radial-gradient(circle,#fff 0,#d8b4fe 18%,transparent 58%);opacity:0}.mh-boot-screen.is-entering .mh-entry-flash{animation:mhEntryFlash .76s ease-in both}
     .mh-title-gate,.mh-entering{position:fixed;inset:0;overflow:hidden;color:#fff;background:#05020e;isolation:isolate}.mh-title-gate{animation:titleReveal .65s ease-out both}.mh-title-visual,.mh-entering>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%}
     .mh-title-header{position:absolute;z-index:22;top:0;left:0;right:0;padding:calc(11px + env(safe-area-inset-top)) 12px 0;display:flex;justify-content:space-between;align-items:flex-start;text-shadow:0 2px 5px #000;pointer-events:none}.mh-title-build{display:grid;padding:6px 8px;text-align:left;font-family:monospace;line-height:1.15;border:1px solid #ffffff30;border-radius:10px;background:#160d2588;backdrop-filter:blur(3px)}.mh-title-build b{font-size:7px;letter-spacing:.18em;color:#eadcff}.mh-title-build span{font-size:8px;margin-bottom:5px;color:#fff;max-width:130px;overflow:hidden;text-overflow:ellipsis}.mh-title-actions{display:flex;gap:7px;pointer-events:auto}.mh-title-actions button{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:50px;height:50px;border-radius:50%;background:#26152ecc;border:1px solid #ffd87a;color:#fff;font-size:8px;font-weight:800;box-shadow:0 2px 8px #000}.mh-title-actions em{position:absolute;right:-3px;top:-6px;background:#e33;padding:2px 4px;border-radius:8px;font-size:6px;font-style:normal}.mh-title-start{position:absolute;z-index:21;inset:0;width:100%;height:100%;border:0;background:transparent;touch-action:manipulation}.mh-title-start:disabled{pointer-events:none}
-    .mh-title-modal{position:fixed;z-index:100;inset:0;display:flex;align-items:center;justify-content:center;padding:calc(20px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));background:#03020eef}.mh-title-dialog{display:flex;flex-direction:column;gap:12px;width:min(100%,380px);max-height:86vh;padding:18px;border:1px solid #a78bfa77;border-radius:22px;background:#0f172a;color:#fff;overflow:auto}.mh-dialog-head{display:flex;align-items:center;justify-content:space-between}.mh-dialog-head h3{font-weight:900}.mh-dialog-head button{padding:13px;margin:-6px -8px -6px 0}.mh-dialog-choice{display:flex;justify-content:space-between;align-items:center;padding:14px;border:1px solid #ffffff22;border-radius:14px;background:#ffffff0c;font-weight:800}/* 窓の閉じる(2026-11-19 r1119-013 ⑥ B-1・B-2)。メニューの行(.mh-dialog-choice)の形だと項目の1つに見えたので、参考の窓と同じ「下の中央の丸いボタン」にし、窓の中を送っても下に貼り付けて画面の外へ出さない */.mh-dialog-close{position:sticky;bottom:0;z-index:2;flex:none;align-self:center;min-width:168px;min-height:46px;margin-top:auto;padding:0 28px;border:1px solid #ffffff38;border-radius:999px;background:#334155;color:#f1f5f9;font-weight:900;box-shadow:0 3px 0 #0009,0 -14px 14px 2px #0f172a}.mh-dialog-close:active{transform:translateY(1px) scale(.98)}.mh-dialog-head:has(>h3:only-child){justify-content:center}/* 更新履歴の窓(2026-11-19 r1119-010・U-14)。参考の窓(見出しの帯/中身/下の中央のとじる)にそろえ、窓の中で送るのは一覧だけにする。送った札は日付の見出しと上のふちの下へもぐり、切れた枠に見えない。字は 10px より小さくしない */.mh-title-dialog--changelog{width:min(100%,440px);height:min(calc(var(--mh-vh) - 40px - env(safe-area-inset-top) - env(safe-area-inset-bottom)),760px);max-height:none;padding:0;gap:0;overflow:hidden;border:2px solid #a78bfa88}.mh-title-dialog--changelog>.mh-dialog-head{flex:none;justify-content:center;min-height:44px;padding:8px 16px;background:linear-gradient(180deg,#2b3150,#1b2036);border-bottom:1px solid #ffffff1f}.mh-title-dialog--changelog>.mh-dialog-head h3{font-size:15px;letter-spacing:.04em}.mh-title-dialog--changelog>.mh-changelog-tabs{flex:none;margin:10px 12px 0;padding:3px;gap:3px;border-radius:12px;background:#0b1222;border:1px solid #ffffff14}.mh-title-dialog--changelog>.mh-changelog-tabs button{display:flex;align-items:center;justify-content:center;gap:4px;min-height:44px;padding:0 4px;white-space:nowrap;border-radius:9px;background:transparent;color:#94a3b8;font-size:12px;font-weight:900}.mh-title-dialog--changelog>.mh-changelog-tabs button.active{background:linear-gradient(180deg,#d97706,#b45309);color:#fff;box-shadow:0 2px 0 #0006}.mh-title-dialog--changelog .mh-changelog-tabs .mh-unread-badge{position:static;width:16px;height:16px;border-width:1.5px;font-size:10px;box-shadow:none}.mh-title-dialog--changelog>.mh-changelog-list{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;margin-top:10px;padding:0 12px 12px;border-top:1px solid #ffffff1a;box-shadow:inset 0 8px 8px -8px #000c}.mh-title-dialog--changelog .mh-changelog-day{margin:0 -12px 8px;padding:6px 12px;background:#0f172af2;border-bottom:1px solid #ffffff12;box-shadow:0 6px 8px -6px #000c;font-size:11px;color:#c7d2fe}.mh-title-dialog--changelog .mh-changelog-day:first-child{margin-top:0}.mh-title-dialog--changelog .mh-changelog-list>details:first-child{margin-top:10px!important}.mh-title-dialog--changelog .mh-changelog-list article{padding:10px 12px;margin-bottom:8px;border-radius:14px;background:#111a2e}.mh-title-dialog--changelog .mh-changelog-list article.unread{border-color:#f59e0bb0;box-shadow:inset 3px 0 0 #f59e0b}.mh-title-dialog--changelog .mh-changelog-head{min-height:40px}.mh-title-dialog--changelog .mh-changelog-head b{font-size:13px;line-height:1.4}.mh-title-dialog--changelog .mh-changelog-head small{font-size:10px}.mh-title-dialog--changelog .mh-changelog-count{font-size:10px}.mh-title-dialog--changelog .mh-changelog-count em,.mh-title-dialog--changelog .mh-changelog-item time em{font-size:9px}.mh-title-dialog--changelog .mh-changelog-kind{font-size:10px}.mh-title-dialog--changelog .mh-changelog-peek{font-size:11px;color:#a8b3c7}.mh-title-dialog--changelog .mh-changelog-list p{font-size:12px;line-height:1.65}.mh-title-dialog--changelog .mh-changelog-item time{font-size:10px}.mh-title-dialog--changelog .mh-changelog-item b{font-size:12.5px}.mh-title-dialog--changelog>.mh-dialog-close{position:static;margin:10px auto 12px;box-shadow:0 3px 0 #0009}@media(orientation:landscape) and (max-height:500px){.mh-title-dialog--changelog{display:grid;grid-template-columns:minmax(170px,30%) 1fr;grid-template-rows:auto auto 1fr auto;width:min(100%,860px);height:calc(var(--mh-vh) - 16px);padding:0}.mh-title-dialog--changelog>.mh-dialog-head{grid-column:1;grid-row:1;border-right:1px solid #ffffff14}.mh-title-dialog--changelog>.mh-changelog-tabs{grid-column:1;grid-row:2;grid-template-columns:1fr;margin:10px}.mh-title-dialog--changelog>.mh-dialog-close{grid-column:1;grid-row:4;align-self:end;justify-self:center;min-width:0;width:calc(100% - 20px);margin:0 10px 10px}.mh-title-dialog--changelog>.mh-changelog-list{grid-column:2;grid-row:1/-1;margin:0;padding-top:0;border-top:0;border-left:1px solid #ffffff1a;box-shadow:none}}@media(orientation:landscape) and (max-height:500px){.mh-title-dialog--menu{display:grid;grid-template-columns:1fr 1fr;align-content:start}.mh-title-dialog--menu>.mh-dialog-head,.mh-title-dialog--menu>.mh-dialog-close{grid-column:1/-1;justify-self:center}.mh-title-dialog--menu>.mh-dialog-choice{padding:10px 12px}}.mh-changelog-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.mh-changelog-tabs button{position:relative;padding:9px;border-radius:10px;background:#1e293b;font-size:11px;font-weight:800}.mh-changelog-tabs button.active{background:#b45309}.mh-unread-badge{position:absolute;right:-5px;top:-6px;display:flex;align-items:center;justify-content:center;width:17px;height:17px;border:2px solid #fff;border-radius:50%;background:#dc2626;color:#fff;font:900 11px/1 sans-serif;font-style:normal;box-shadow:0 2px 5px #0008;pointer-events:none}.mh-changelog-list{overflow:auto}.mh-changelog-list article{padding:11px;margin-bottom:8px;border:1px solid #ffffff18;border-radius:13px;background:#0005}.mh-changelog-list time,.mh-changelog-list b{display:block}.mh-changelog-list time{font:9px monospace;color:#94a3b8}.mh-changelog-list b{font-size:12px;margin:4px 0}.mh-changelog-kind{display:inline-block;margin-top:5px;padding:2px 7px;border-radius:999px;border:1px solid currentColor;font:900 9px/1.5 sans-serif}.mh-changelog-kind[data-kind="fix"]{color:#fca5a5;background:#7f1d1d55}.mh-changelog-kind[data-kind="feature"]{color:#86efac;background:#14532d55}.mh-changelog-kind[data-kind="update"]{color:#93c5fd;background:#1e3a8a55}.mh-changelog-kind[data-kind="market"]{color:#fcd34d;background:#78350f55}.mh-changelog-kind[data-kind="issue"]{color:#d8b4fe;background:#4c1d9555}.mh-changelog-kind[data-kind="mode"]{color:#67e8f9;background:#164e6355}.mh-changelog-kind[data-kind="content"]{color:#f9a8d4;background:#83184355}.mh-changelog-kind[data-kind="event"]{color:#fdba74;background:#7c2d1255}.mh-changelog-list p{font-size:10px;color:#cbd5e1}.mh-changelog-head{display:flex;align-items:center;gap:8px;width:100%;min-height:36px;padding:0;border:0;background:transparent;color:inherit;text-align:left}.mh-changelog-head b{flex:1;min-width:0;margin:4px 0}.mh-changelog-head small{flex:none;font-size:8px;font-weight:900;color:#94a3b8;white-space:nowrap}.mh-changelog-detail{margin-top:2px;padding-top:6px;border-top:1px solid #ffffff14}.mh-changelog-empty{padding:18px 12px;text-align:center;line-height:1.7;color:#fbbf24}.mh-changelog-day{position:sticky;top:0;z-index:1;margin:10px 0 6px;padding:3px 0;background:#0f172a;color:#a5b4fc;font:900 10px/1.4 monospace;letter-spacing:.04em}.mh-changelog-day:first-child{margin-top:0}.mh-changelog-group-emoji{flex:none;font-size:13px;line-height:1}.mh-changelog-count{flex:none;position:relative;padding:2px 7px;border-radius:999px;background:#ffffff14;color:#cbd5e1;font:900 9px/1.5 sans-serif;white-space:nowrap}.mh-changelog-count em{margin-left:5px;padding:1px 4px;border-radius:5px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-changelog-peek{margin-top:4px;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;font-size:9px;line-height:1.5;color:#94a3b8}.mh-changelog-kinds{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}.mh-changelog-kinds .mh-changelog-kind{margin-top:0}.mh-changelog-kind i{margin-left:3px;font-style:normal;opacity:.85}.mh-changelog-item{padding:9px 0;border-top:1px solid #ffffff14}.mh-changelog-item:first-child{padding-top:2px;border-top:0}.mh-changelog-item time{display:inline-block;margin-right:6px;font:9px monospace;color:#94a3b8}.mh-changelog-item time em{margin-left:4px;padding:1px 4px;border-radius:5px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-changelog-item b{display:block;margin:4px 0;font-size:11px;line-height:1.5}.mh-changelog-item .mh-changelog-kind{margin-top:0}[data-changelog-link]{display:inline-flex;align-items:center;gap:4px;margin-top:8px;padding:8px 13px;border:1px solid #7dd3fc55;border-radius:11px;background:#0ea5e922;color:#7dd3fc;font:900 10px/1.4 sans-serif;text-decoration:none}.mh-title-dialog textarea{min-height:90px;padding:8px;border-radius:10px;background:#0008;font:9px monospace}
+    .mh-title-modal{position:fixed;z-index:100;inset:0;display:flex;align-items:center;justify-content:center;padding:calc(20px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));background:#03020eef}.mh-title-dialog{display:flex;flex-direction:column;gap:12px;width:min(100%,380px);max-height:86vh;padding:18px;border:1px solid #a78bfa77;border-radius:22px;background:#0f172a;color:#fff;overflow:auto}.mh-dialog-head{display:flex;align-items:center;justify-content:space-between}.mh-dialog-head h3{font-weight:900}.mh-dialog-head button{padding:13px;margin:-6px -8px -6px 0}.mh-dialog-choice{display:flex;justify-content:space-between;align-items:center;padding:14px;border:1px solid #ffffff22;border-radius:14px;background:#ffffff0c;font-weight:800}/* 窓の閉じる(2026-11-19 r1119-013 ⑥ B-1・B-2)。メニューの行(.mh-dialog-choice)の形だと項目の1つに見えたので、参考の窓と同じ「下の中央の丸いボタン」にし、窓の中を送っても下に貼り付けて画面の外へ出さない */.mh-dialog-close{position:sticky;bottom:0;z-index:2;flex:none;align-self:center;min-width:168px;min-height:46px;margin-top:auto;padding:0 28px;border:1px solid #ffffff38;border-radius:999px;background:#334155;color:#f1f5f9;font-weight:900;box-shadow:0 3px 0 #0009,0 -14px 14px 2px #0f172a}.mh-dialog-close:active{transform:translateY(1px) scale(.98)}.mh-dialog-head:has(>h3:only-child){justify-content:center}/* 更新履歴の窓(2026-11-19 r1119-010・U-14)。参考の窓(見出しの帯/中身/下の中央のとじる)にそろえ、窓の中で送るのは一覧だけにする。送った札は日付の見出しと上のふちの下へもぐり、切れた枠に見えない。字は 10px より小さくしない */.mh-title-dialog--changelog{width:min(100%,440px);height:min(calc(var(--mh-vh) - 40px - env(safe-area-inset-top) - env(safe-area-inset-bottom)),760px);max-height:none;padding:0;gap:0;overflow:hidden;border:2px solid #a78bfa88}.mh-title-dialog--changelog>.mh-dialog-head{flex:none;justify-content:center;min-height:44px;padding:8px 16px;background:linear-gradient(180deg,#2b3150,#1b2036);border-bottom:1px solid #ffffff1f}.mh-title-dialog--changelog>.mh-dialog-head h3{font-size:15px;letter-spacing:.04em}.mh-title-dialog--changelog>.mh-changelog-tabs{flex:none;margin:10px 12px 0;padding:3px;gap:3px;border-radius:12px;background:#0b1222;border:1px solid #ffffff14}.mh-title-dialog--changelog>.mh-changelog-tabs button{display:flex;align-items:center;justify-content:center;gap:4px;min-height:44px;padding:0 4px;white-space:nowrap;border-radius:9px;background:transparent;color:#94a3b8;font-size:12px;font-weight:900}.mh-title-dialog--changelog>.mh-changelog-tabs button.active{background:linear-gradient(180deg,#d97706,#b45309);color:#fff;box-shadow:0 2px 0 #0006}.mh-title-dialog--changelog .mh-changelog-tabs .mh-unread-badge{position:static;width:16px;height:16px;border-width:1.5px;font-size:10px;box-shadow:none}.mh-title-dialog--changelog>.mh-changelog-list{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;margin-top:10px;padding:0 12px 12px;border-top:1px solid #ffffff1a;box-shadow:inset 0 8px 8px -8px #000c}.mh-title-dialog--changelog .mh-changelog-day{margin:0 -12px 8px;padding:6px 12px;background:#0f172af2;border-bottom:1px solid #ffffff12;box-shadow:0 6px 8px -6px #000c;font-size:11px;color:#c7d2fe}.mh-title-dialog--changelog .mh-changelog-day:first-child{margin-top:0}.mh-title-dialog--changelog .mh-changelog-list>details:first-child{margin-top:10px!important}.mh-title-dialog--changelog .mh-changelog-list article{padding:10px 12px;margin-bottom:8px;border-radius:14px;background:#111a2e}.mh-title-dialog--changelog .mh-changelog-list article.unread{border-color:#f59e0bb0;box-shadow:inset 3px 0 0 #f59e0b}.mh-title-dialog--changelog .mh-changelog-head{min-height:40px}.mh-title-dialog--changelog .mh-changelog-head b{font-size:13px;line-height:1.4}.mh-title-dialog--changelog .mh-changelog-head small{font-size:10px}.mh-title-dialog--changelog .mh-changelog-count{font-size:10px}.mh-title-dialog--changelog .mh-changelog-count em,.mh-title-dialog--changelog .mh-changelog-item time em{font-size:9px}.mh-title-dialog--changelog .mh-changelog-kind{font-size:10px}.mh-title-dialog--changelog .mh-changelog-peek{font-size:11px;color:#a8b3c7}.mh-title-dialog--changelog .mh-changelog-list p{font-size:12px;line-height:1.65}.mh-title-dialog--changelog .mh-changelog-item time{font-size:10px}.mh-title-dialog--changelog .mh-changelog-item b{font-size:12.5px}.mh-title-dialog--changelog>.mh-dialog-close{position:static;margin:10px auto 12px;box-shadow:0 3px 0 #0009}@media(orientation:landscape) and (max-height:500px){.mh-title-dialog--changelog{display:grid;grid-template-columns:minmax(150px,24%) 1fr;grid-template-rows:auto auto 1fr auto;width:min(100%,860px);height:calc(var(--mh-vh) - 16px);padding:0}.mh-title-dialog--changelog>.mh-dialog-head{grid-column:1;grid-row:1;border-right:1px solid #ffffff14}.mh-title-dialog--changelog>.mh-changelog-tabs{grid-column:1;grid-row:2;grid-template-columns:1fr;margin:10px}.mh-title-dialog--changelog>.mh-dialog-close{grid-column:1;grid-row:4;align-self:end;justify-self:center;min-width:0;width:calc(100% - 20px);margin:0 10px 10px}.mh-title-dialog--changelog>.mh-changelog-list{grid-column:2;grid-row:1/-1;margin:0;padding-top:0;border-top:0;border-left:1px solid #ffffff1a;box-shadow:none}}/* 2026-11-27 r1126-074 小4: タブレットでは窓を広げる。縦は幅680まで・高さは画面に合わせる。横は小さい横と同じ左右の組(左に見出し・タブ・閉じる、右に一覧) */@media(min-width:700px) and (orientation:portrait){.mh-title-dialog--changelog{width:min(100%,680px);height:min(calc(var(--mh-vh) - 40px - env(safe-area-inset-top) - env(safe-area-inset-bottom)),1100px)}}@media(orientation:landscape) and (min-height:501px){.mh-title-dialog--changelog{display:grid;grid-template-columns:minmax(190px,24%) 1fr;grid-template-rows:auto auto 1fr auto;width:min(100%,1040px);height:min(calc(var(--mh-vh) - 40px - env(safe-area-inset-top) - env(safe-area-inset-bottom)),860px);padding:0}.mh-title-dialog--changelog>.mh-dialog-head{grid-column:1;grid-row:1;border-right:1px solid #ffffff14}.mh-title-dialog--changelog>.mh-changelog-tabs{grid-column:1;grid-row:2;grid-template-columns:1fr;margin:10px}.mh-title-dialog--changelog>.mh-dialog-close{grid-column:1;grid-row:4;align-self:end;justify-self:center;min-width:0;width:calc(100% - 20px);margin:0 10px 10px}.mh-title-dialog--changelog>.mh-changelog-list{grid-column:2;grid-row:1/-1;margin:0;padding-top:0;border-top:0;border-left:1px solid #ffffff1a;box-shadow:none}}@media(orientation:landscape) and (max-height:500px){.mh-title-dialog--menu{display:grid;grid-template-columns:1fr 1fr;align-content:start}.mh-title-dialog--menu>.mh-dialog-head,.mh-title-dialog--menu>.mh-dialog-close{grid-column:1/-1;justify-self:center}.mh-title-dialog--menu>.mh-dialog-choice{padding:10px 12px}}.mh-changelog-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.mh-changelog-tabs button{position:relative;padding:9px;border-radius:10px;background:#1e293b;font-size:11px;font-weight:800}.mh-changelog-tabs button.active{background:#b45309}.mh-unread-badge{position:absolute;right:-5px;top:-6px;display:flex;align-items:center;justify-content:center;width:17px;height:17px;border:2px solid #fff;border-radius:50%;background:#dc2626;color:#fff;font:900 11px/1 sans-serif;font-style:normal;box-shadow:0 2px 5px #0008;pointer-events:none}.mh-changelog-list{overflow:auto}.mh-changelog-list article{padding:11px;margin-bottom:8px;border:1px solid #ffffff18;border-radius:13px;background:#0005}.mh-changelog-list time,.mh-changelog-list b{display:block}.mh-changelog-list time{font:9px monospace;color:#94a3b8}.mh-changelog-list b{font-size:12px;margin:4px 0}.mh-changelog-kind{display:inline-block;margin-top:5px;padding:2px 7px;border-radius:999px;border:1px solid currentColor;font:900 9px/1.5 sans-serif}.mh-changelog-kind[data-kind="fix"]{color:#fca5a5;background:#7f1d1d55}.mh-changelog-kind[data-kind="feature"]{color:#86efac;background:#14532d55}.mh-changelog-kind[data-kind="update"]{color:#93c5fd;background:#1e3a8a55}.mh-changelog-kind[data-kind="market"]{color:#fcd34d;background:#78350f55}.mh-changelog-kind[data-kind="issue"]{color:#d8b4fe;background:#4c1d9555}.mh-changelog-kind[data-kind="mode"]{color:#67e8f9;background:#164e6355}.mh-changelog-kind[data-kind="content"]{color:#f9a8d4;background:#83184355}.mh-changelog-kind[data-kind="event"]{color:#fdba74;background:#7c2d1255}.mh-changelog-list p{font-size:10px;color:#cbd5e1}.mh-changelog-head{display:flex;align-items:center;gap:8px;width:100%;min-height:36px;padding:0;border:0;background:transparent;color:inherit;text-align:left}.mh-changelog-head b{flex:1;min-width:0;margin:4px 0}.mh-changelog-head small{flex:none;font-size:8px;font-weight:900;color:#94a3b8;white-space:nowrap}.mh-changelog-detail{margin-top:2px;padding-top:6px;border-top:1px solid #ffffff14}.mh-changelog-empty{padding:18px 12px;text-align:center;line-height:1.7;color:#fbbf24}.mh-changelog-day{position:sticky;top:0;z-index:1;margin:10px 0 6px;padding:3px 0;background:#0f172a;color:#a5b4fc;font:900 10px/1.4 monospace;letter-spacing:.04em}.mh-changelog-day:first-child{margin-top:0}.mh-changelog-group-emoji{flex:none;font-size:13px;line-height:1}.mh-changelog-count{flex:none;position:relative;padding:2px 7px;border-radius:999px;background:#ffffff14;color:#cbd5e1;font:900 9px/1.5 sans-serif;white-space:nowrap}.mh-changelog-count em{margin-left:5px;padding:1px 4px;border-radius:5px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-changelog-peek{margin-top:4px;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;font-size:9px;line-height:1.5;color:#94a3b8}.mh-changelog-kinds{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}.mh-changelog-kinds .mh-changelog-kind{margin-top:0}.mh-changelog-kind i{margin-left:3px;font-style:normal;opacity:.85}.mh-changelog-item{padding:9px 0;border-top:1px solid #ffffff14}.mh-changelog-item:first-child{padding-top:2px;border-top:0}.mh-changelog-item time{display:inline-block;margin-right:6px;font:9px monospace;color:#94a3b8}.mh-changelog-item time em{margin-left:4px;padding:1px 4px;border-radius:5px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-changelog-item b{display:block;margin:4px 0;font-size:11px;line-height:1.5}.mh-changelog-item .mh-changelog-kind{margin-top:0}[data-changelog-link]{display:inline-flex;align-items:center;gap:4px;margin-top:8px;padding:8px 13px;border:1px solid #7dd3fc55;border-radius:11px;background:#0ea5e922;color:#7dd3fc;font:900 10px/1.4 sans-serif;text-decoration:none}.mh-title-dialog textarea{min-height:90px;padding:8px;border-radius:10px;background:#0008;font:9px monospace}
     .mh-tile-viewport{touch-action:none;overscroll-behavior:contain;cursor:grab}.mh-tile-viewport:active{cursor:grabbing}.mh-tile-viewport.overview{overflow:auto}.mh-tile-viewport.overview .mh-tile-board{transform:none}.mh-training-tile{transform:scale(var(--map-scale,1))}.mh-training-tile.current{transform:scale(calc(var(--map-scale,1)*1.08))}.mh-tile-board>i.route{height:17px;border-color:#fef08a;background:#facc15;box-shadow:0 0 14px #fde047;animation:trainingRoutePulse .7s infinite alternate}.mh-training-tile.route-preview{border-color:#fde047;box-shadow:0 0 16px #fde047,0 5px 0 #713f12}.mh-training-tile.stop-preview{z-index:7;border-color:#fff;box-shadow:0 0 0 5px #f97316,0 0 25px #fb923c}.mh-board-buttons{display:flex;align-items:center;gap:4px}.mh-board-buttons button{min-height:34px;padding:0 8px;border-radius:9px;background:#164e63;font-size:8px;font-weight:900}.mh-board-buttons span{padding:3px 5px;border-radius:7px;background:#020617;color:#bae6fd;font:8px monospace}.mh-changelog-list article.unread{border-color:#f59e0b88}.mh-changelog-list time em{float:right;padding:2px 5px;border-radius:6px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-training-effect{position:fixed;z-index:45000;left:50%;top:43%;width:min(78vw,300px);min-height:150px;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;border:3px solid #fff;border-radius:28px;background:radial-gradient(circle,#0ea5e9dd,#020617ee 72%);box-shadow:0 0 55px #38bdf8;pointer-events:none;animation:trainingEffectPop 1.25s ease-out both}.mh-training-effect>span{font-size:58px;filter:drop-shadow(0 0 15px #fff)}.mh-training-effect>b{z-index:2;max-width:90%;text-align:center;color:#fff;font-size:16px;text-shadow:0 2px 5px #000}.mh-training-effect.xp,.mh-training-effect.effect,.mh-training-effect.turn{background:radial-gradient(circle,#22c55edd,#052e16ee 72%);box-shadow:0 0 55px #4ade80}.mh-training-effect.diamond{background:radial-gradient(circle,#38bdf8ee,#172554ee 72%)}.mh-training-effect.item,.mh-training-effect.tool,.mh-training-effect.goal{background:radial-gradient(circle,#fbbf24ee,#581c87ee 72%);box-shadow:0 0 70px #fde047}.mh-training-effect.move,.mh-training-effect.happening{background:radial-gradient(circle,#ef4444dd,#450a0aee 72%);box-shadow:0 0 55px #fb7185}.mh-training-effect i{position:absolute;width:9px;height:9px;border-radius:50%;background:#fff;box-shadow:0 0 12px #fff;animation:trainingParticle 1s ease-out both}.mh-training-effect i:nth-of-type(1){--a:0deg}.mh-training-effect i:nth-of-type(2){--a:60deg}.mh-training-effect i:nth-of-type(3){--a:120deg}.mh-training-effect i:nth-of-type(4){--a:180deg}.mh-training-effect i:nth-of-type(5){--a:240deg}.mh-training-effect i:nth-of-type(6){--a:300deg}@keyframes trainingEffectPop{0%{opacity:0;transform:translate(-50%,-50%) scale(.4)}18%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-58%) scale(.96)}}@keyframes trainingParticle{from{transform:rotate(var(--a)) translateX(18px);opacity:1}to{transform:rotate(var(--a)) translateX(115px) scale(.2);opacity:0}}@keyframes trainingRoutePulse{to{filter:brightness(1.6)}}
     .mh-entering>img{animation:mhGateZoom 1.15s ease-in both}.mh-gate-core{position:absolute;z-index:3;left:50%;top:44%;width:12vmin;height:12vmin;border-radius:50%;background:#fff;box-shadow:0 0 25px 12px #d8b4fe,0 0 90px 40px #7e22ce;transform:translate(-50%,-50%);animation:mhCoreGrow 1.15s ease-in both}.mh-gate-particles{position:absolute;z-index:2;inset:-30%;background:repeating-conic-gradient(from 0deg,transparent 0 8deg,#fbbf2444 9deg,#a855f766 10deg,transparent 11deg 19deg);animation:mhParticles 1.1s ease-in both}.mh-gate-flash{position:absolute;z-index:4;inset:0;background:#f5f0ff;animation:mhGateFlash 1.15s ease-in both}.mh-entering p{position:absolute;z-index:6;left:0;right:0;bottom:calc(9% + env(safe-area-inset-bottom));text-align:center;font-size:11px;font-weight:800;text-shadow:0 2px 6px #000}
     @keyframes mhMocchiHop{0%,100%{transform:translateY(0) scale(1.05,.95)}45%{transform:translateY(-14px) rotate(-2deg) scale(.98,1.02)}70%{transform:translateY(0) scale(1.08,.9)}}@keyframes mhReadyHop{45%{transform:translateY(-25px) scale(1.1)}100%{transform:translateY(0)}}@keyframes mhShadow{0%,100%{transform:scaleX(1);opacity:.6}45%{transform:scaleX(.65);opacity:.3}}@keyframes mhSparkle{50%{transform:scale(1.5) rotate(90deg);opacity:.35}}@keyframes mhBigHop{45%{transform:translateY(-34px) scale(.95,1.08)}100%{transform:translateY(5px) scale(1.12,.88)}}@keyframes mhEntryFlash{45%{opacity:0}80%{opacity:1}100%{opacity:0}}@keyframes titleReveal{from{opacity:0;filter:brightness(2)}to{opacity:1;filter:none}}@keyframes mhGateZoom{to{transform:scale(1.16);filter:blur(2px) brightness(1.5)}}@keyframes mhCoreGrow{0%{transform:translate(-50%,-50%) scale(.15);opacity:0}70%{opacity:1}100%{transform:translate(-50%,-50%) scale(18)}}@keyframes mhParticles{to{transform:rotate(35deg) scale(.2);opacity:0}}@keyframes mhGateFlash{0%,68%{opacity:0}85%{opacity:.95}100%{opacity:1}}

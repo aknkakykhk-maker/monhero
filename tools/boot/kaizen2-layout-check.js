@@ -61,7 +61,8 @@ check('HOME: ジャックの吹き出しは、どの幅でもかぼちゃの上(
   check('N5 大きな所持数の縮め方(8桁まではそのまま・端は切り捨て)', ok, got);
 }
 check('N5 HOME の財布・プロフィールの所持数・マーケットの入口の札は縮めた数で出す(押すと細かい数)',
-  home.includes("<CompactCount value={gold} style=") && home.includes("<CompactCount value={breederPoints} style=")
+  // 2026-11-27 r1126-073: ブリーダーP はメニュー☰の中(縮めた数のまま)
+  home.includes("<CompactCount value={gold} style=") && home.includes("<CompactCount value={breederPoints}")
   && P('56-screen-profile.jsx').includes('<CompactCount value={gold} className=') && P('55-screen-breeder-market.jsx').includes('value:compactCount(gold),'));
 
 const multi = P('77-screen-rhythm-multi.jsx');
