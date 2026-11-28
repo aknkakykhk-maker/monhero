@@ -2121,7 +2121,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
               </div>
               {!q && <button type="button" className="mh-nv-btn wide mt-3" onClick={() => setSheet(null)}>閉じる</button>}
               {q && decideBar('を突きつける')}
-              {q && <button type="button" className="mh-nv-btn wide mt-2" onClick={() => { setPick(null); setSheet(null); }}>話をもう一度見る</button>}
+              {q && <button type="button" className="mh-nv-btn wide mt-2" onClick={() => { setPick(null); setSheet(null); }}>話をもう1度見る</button>}
             </>)}
             {q && q.kind === 'person' && (<>
               <div data-xmas-novel-question={q.id} className="mb-3 rounded-lg p-2 text-[13px] font-bold leading-relaxed" style={{ background: 'rgba(120,20,30,.35)', boxShadow: '0 0 0 1px rgba(232,120,120,.6)' }}>
@@ -2134,7 +2134,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
               ))}
               {q.once && <div className="mh-nv-plain mt-2 text-[11px] font-bold text-rose-200">決定したら、やり直しはできません</div>}
               {decideBar(q.extra && q.extra.some((x) => picked && picked.key === x.key) ? 'に決める' : 'を名指しする')}
-              <button type="button" className="mh-nv-btn wide mt-2" onClick={() => { setPick(null); setSheet(null); }}>話をもう一度見る</button>
+              <button type="button" className="mh-nv-btn wide mt-2" onClick={() => { setPick(null); setSheet(null); }}>話をもう1度見る</button>
             </>)}
             {q && q.kind === 'action' && (<>
               <div data-xmas-novel-question={q.id} className="mh-nv-plain mh-nv-serif mh-nv-gold mb-3 text-[17px] font-black">{xmasNovelWrap(xmasNovelFill(q.x, playerName))}</div>
