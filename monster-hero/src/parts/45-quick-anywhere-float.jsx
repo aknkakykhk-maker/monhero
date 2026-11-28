@@ -53,6 +53,8 @@ const quickAnywhereFloatHits = (el, spot, known = null) => {
   let hits = 0;
   for (const o of document.querySelectorAll('button,a,[role=button],[data-quick-avoid]')) {
     if (o === el || el.contains(o) || o.contains(el) || o.closest('[data-quick-anywhere-detail]') || !o.getClientRects().length) continue;
+    // 見えないことにしてある物(HOME の送る札の、外へ送ってある札など。aria-hidden)は数えない(2026-11-28 r1126-088 追記3)
+    if (o.closest('[aria-hidden="true"]')) continue;
     if (known && known.has(o) && !o.hasAttribute('data-quick-avoid')) continue; // 隠したくない欄は、置いたときからあっても数える(スクロールで下に来たら札を隠す)
     const cs = getComputedStyle(o);
     if (cs.visibility === 'hidden' || cs.pointerEvents === 'none' || Number(cs.opacity) === 0) continue;
