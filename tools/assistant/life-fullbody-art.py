@@ -19,6 +19,7 @@ from PIL import Image, ImageDraw
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import art_webp
 import art_source  # 原本の場所を引く・正本が「現行そのもの」の組(旧版が元の組)は作らない(台帳 r1119-128)
 OUT = os.path.join(ROOT, 'monster-hero/images/assistant/fullbody')
 # キー → 受け取った絵。キーは「助手id」か「助手id:服の名前」。
@@ -31,37 +32,39 @@ ART = {
     # ききの8表情(2026-11-12 社長から。枝 hq/incoming-kiki-fullbody8 の incoming/kiki-fullbody/ をそのまま置いた)
     **{'kiki@%s' % e: 'kiki__%s.png' % e for e in ('angry', 'crying', 'excited', 'happy', 'normal', 'surprise', 'troubled', 'wink')},
     'kyuko': 'kyuuko_transparent_fixed.png',
-    # きゅうこの冬服(2026-11-16)。受け取り絵は1枚ずつ(単色ベタ背景から色抜きした透過PNG)
-    'kyuko:winter': 'kyuko_winter__normal.png',
-    **{'kyuko:winter@%s' % e: 'kyuko_winter__%s.png' % e for e in ('angry', 'crying', 'excited', 'happy', 'normal', 'surprise', 'troubled', 'wink')},
+    # きゅうこの冬服(2026-11-16)。受け取り絵は1枚ずつ(単色ベタ背景から色抜きした透過PNG)。2026-11-28 r1126-095 から拡大の道具で2倍にした物(kyuko/winter/upscaled-2026-11-28/fullbody/)
+    'kyuko:winter': 'kyuko_winter__normal_x2.webp',
+    **{'kyuko:winter@%s' % e: 'kyuko_winter__%s_x2.webp' % e for e in ('angry', 'crying', 'excited', 'happy', 'normal', 'surprise', 'troubled', 'wink')},
     'momosuke': 'msg1-pink-bunny.png',
     'momosuke:halloween': 'msg5-pink-bunny-devil-halloween.png',
     'mua': 'msg2-blonde-angel.png',
     'mua:halloween': 'msg3-blonde-halloween-witch.png',
     'mua:card-master': 'msg4-blonde-blue-cape.png',
+    # サンタ服(7人)は 2026-11-28 r1126-095(社長「助手画像が全部荒い」)から、受け取った原本を拡大の道具(tools/image/upscale-anime/upscale.py・Real-ESRGAN アニメ用)で
+    #   2倍にした物(<キャラ>/santa/upscaled-2026-11-28/received/<原本の名前>_x2.webp・中間なので WebP 画質95)から作る。書き出しは WebP 画質90(art_webp.py)
     # みゅあのサンタ(2026-11-25 クリスマスイベント r1119-172)。チャッピーで作った全身の10枚(tools/art-sources/assistants/mua/santa/received/・加工せずに保管)。
     #   表情も全身で届いた。fullbody と normal は同じ絵。sleep は両目を閉じた寝顔の全身(ききのツインテールと同じく fullbody/<名前>__sleep.png も作る)
-    'mua:santa': 'mua_santa_fullbody.png',
-    **{'mua:santa@%s' % e: 'mua_santa_%s.png' % e for e in ('angry', 'crying', 'excited', 'happy', 'normal', 'surprise', 'troubled', 'wink', 'sleep')},
+    'mua:santa': 'mua_santa_fullbody_x2.webp',
+    **{'mua:santa@%s' % e: 'mua_santa_%s_x2.webp' % e for e in ('angry', 'crying', 'excited', 'happy', 'normal', 'surprise', 'troubled', 'wink', 'sleep')},
     # ききのサンタ(2026-11-25 r1119-172)。みゅあと同じく全身の10枚(スカートは指示と違って赤だが、社長はこのままでよい)
-    'kiki:santa': 'kiki_santa_fullbody.png',
-    **{'kiki:santa@%s' % e: 'kiki_santa_%s.png' % e for e in ('angry', 'crying', 'excited', 'happy', 'normal', 'surprise', 'troubled', 'wink', 'sleep')},
+    'kiki:santa': 'kiki_santa_fullbody_x2.webp',
+    **{'kiki:santa@%s' % e: 'kiki_santa_%s_x2.webp' % e for e in ('angry', 'crying', 'excited', 'happy', 'normal', 'surprise', 'troubled', 'wink', 'sleep')},
     # ももすけのサンタ(2026-11-25 r1119-172)。全身の10枚(表情ごとにポーズが違う・寝顔は座った姿の横長 1134×1387)。服は指示の真っ赤ではなく濃いピンク(社長「このまま」)
-    'momosuke:santa': 'momosuke_santa_fullbody.png',
-    **{'momosuke:santa@%s' % e: 'momosuke_santa_%s.png' % e for e in ('angry', 'crying', 'excited', 'happy', 'normal', 'surprise', 'troubled', 'wink', 'sleep')},
+    'momosuke:santa': 'momosuke_santa_fullbody_x2.webp',
+    **{'momosuke:santa@%s' % e: 'momosuke_santa_%s_x2.webp' % e for e in ('angry', 'crying', 'excited', 'happy', 'normal', 'surprise', 'troubled', 'wink', 'sleep')},
     # ソラシドのクリスマス(探偵の衣装・2026-11-25 r1119-172)。全身の10枚(表情ごとにポーズが違う・寝顔は立ったままうとうとする縦長)。虫めがねは無く、手の小物はノートPCだけ(社長「このまま」)
-    'sorashido:santa': 'sorashido_santa_fullbody.png',
-    **{'sorashido:santa@%s' % e: 'sorashido_santa_%s.png' % e for e in ('angry', 'crying', 'excited', 'happy', 'normal', 'surprise', 'troubled', 'wink', 'sleep')},
+    'sorashido:santa': 'sorashido_santa_fullbody_x2.webp',
+    **{'sorashido:santa@%s' % e: 'sorashido_santa_%s_x2.webp' % e for e in ('angry', 'crying', 'excited', 'happy', 'normal', 'surprise', 'troubled', 'wink', 'sleep')},
     # あつのクリスマス(探偵の衣装・2026-11-25 r1119-172)。全身の10枚(表情ごとにポーズが違う・寝顔は立ったまま目を閉じた縦長)。王冠は金・マフラーはグレーのチェック(社長「このまま」)
     # 2026-11-25 r1125-050 作り直し版(_v2・社長「顔色が悪い」→ 肌・髪・目の色をふだんのあつに合わせた)。前の10枚は received に残す(使わない)
-    'atsu:santa': 'atsu_santa_fullbody_v2.png',
-    **{'atsu:santa@%s' % e: 'atsu_santa_%s_v2.png' % e for e in ('angry', 'crying', 'excited', 'happy', 'normal', 'surprise', 'troubled', 'wink', 'sleep')},
+    'atsu:santa': 'atsu_santa_fullbody_v2_x2.webp',
+    **{'atsu:santa@%s' % e: 'atsu_santa_%s_v2_x2.webp' % e for e in ('angry', 'crying', 'excited', 'happy', 'normal', 'surprise', 'troubled', 'wink', 'sleep')},
     # えるびんのサンタ(2026-11-25 r1119-172)。全身の10枚(大きさがばらばら: ふつう 887×1774・surprise と excited は 1024×1536・寝顔はプレゼント箱に座った横長 1174×1339)
-    'erubin:santa': 'erubin_santa_fullbody.png',
-    **{'erubin:santa@%s' % e: 'erubin_santa_%s.png' % e for e in ('angry', 'crying', 'excited', 'happy', 'normal', 'surprise', 'troubled', 'wink', 'sleep')},
+    'erubin:santa': 'erubin_santa_fullbody_x2.webp',
+    **{'erubin:santa@%s' % e: 'erubin_santa_%s_x2.webp' % e for e in ('angry', 'crying', 'excited', 'happy', 'normal', 'surprise', 'troubled', 'wink', 'sleep')},
     # きゅうこのサンタ(2026-11-25 r1119-172)。全身の10枚(1024×1536・寝顔はプレゼント箱に座った絵)。服は指示のローズピンクではなく黄色(社長「このまま」)。輪郭の外に薄いもやが多い
-    'kyuko:santa': 'kyuko_santa_fullbody.png',
-    **{'kyuko:santa@%s' % e: 'kyuko_santa_%s.png' % e for e in ('angry', 'crying', 'excited', 'happy', 'normal', 'surprise', 'troubled', 'wink', 'sleep')},
+    'kyuko:santa': 'kyuko_santa_fullbody_x2.webp',
+    **{'kyuko:santa@%s' % e: 'kyuko_santa_%s_x2.webp' % e for e in ('angry', 'crying', 'excited', 'happy', 'normal', 'surprise', 'troubled', 'wink', 'sleep')},
     'sorashido:hosei': 'msg6-kimono-boy.png',  # 2026-11-15 から服『補正』(いままでのソラシド)。新しい絵が既定の服『馬骨』(sorashido)
     'erubin': 'msg7-curly-man-casual.png',
     'erubin:sekiyuou': 'msg8-curly-man-robe.png',
@@ -699,10 +702,8 @@ def quant(im):
 
 
 def save(im, path):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    # 色を減らさない(2026-11-15 r1115-143)。quant は使わない
-    im.save(path, optimize=True)
-    return os.path.getsize(path)
+    # 色を減らさない(2026-11-15 r1115-143)。quant は使わない。サンタ服の全身は WebP 画質90(2026-11-28 r1126-095・art_webp.py)
+    return os.path.getsize(art_webp.save(im, path))
 
 
 def sheet_cells():
@@ -830,7 +831,7 @@ def main():
             im = drop_specks(im)
         n = save(im, os.path.join(OUT, name + '.png'))
         total += n
-        tiles.append(Image.open(os.path.join(OUT, name + '.png')).convert('RGBA'))
+        tiles.append(Image.open(art_webp.existing(os.path.join(OUT, name + '.png'))).convert('RGBA'))
         print('%-32s %s %4d KB' % (name + '.png', im.size, n // 1024))
     print('計 %d 枚 %d KB' % (len(tiles), total // 1024))
     if '--sheet' in sys.argv:

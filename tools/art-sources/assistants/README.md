@@ -18,6 +18,17 @@ tools/art-sources/assistants/
 - 絵や原本を替えたら `node tools/image/assistant-art-catalog.js`(目録を書き直す)。検査は `--check`、その絵が正本か旧版かは `--why <語>`
 - 新しい原本を受け取ったら `<キャラ>/<服>/` へ置き、`assistant-art-catalog.json` の `groups` の `master` に書く
 
+## クリスマスの服の拡大版(2026-11-28 r1126-095)
+
+社長「助手画像が全部荒い」→「クリスマスで出したやつは原本全部あるはずだから直して」。受け取った原本(`<キャラ>/santa/received/`・
+`kyuko/winter/fullbody/`)は高さ 1500〜3200px ほどで、iPhone(倍率3)のモンヒロバトルの入口などで足りなかった。
+
+- `<キャラ>/santa/upscaled-2026-11-28/received/<原本の名前>_x2.webp` … 原本を拡大の道具(`tools/image/upscale-anime/upscale.py`・Real-ESRGAN のアニメ用。
+  線や色は描き変えない)で4倍にして2倍へ縮めた物(PNG だと1枚 3.5MB になるので、中間の置き場は WebP 画質95)。きゅうこの冬服は `kyuko/winter/upscaled-2026-11-28/fullbody/`
+- ゲームの絵はここから `python3 tools/assistant/life-xmas-art-remake.py` で作る(全身 → 半身の置き場 → 立ち絵・顔アイコン)。全身・半身・立ち絵は WebP 画質90
+  (`tools/assistant/art_webp.py`。ゲーム側は `assistantArtFile`)。ドラ(顔だけの絵)は原本が 1254px あるので拡大せず `tools/assistant/life-dra-santa-art.py`
+- 受け取った原本(received)は加工せずにそのまま残す
+
 以下は、原本ごとの切り出し方の控え(道筋は 2026-11-23 の並べ直しに合わせてある)。
 
 ## ドラ

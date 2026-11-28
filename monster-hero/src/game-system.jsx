@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 46fa329e0e98a72e
+// generated-sha256: e2490c69ea24a9bd
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -15700,7 +15700,8 @@ const storyAssistantArtOf = (id, outfit) => {
   if (!who || !who.imageDir || !who.imagePrefix) return null;
   const dirs = (typeof STORY_OUTFIT_DIRS !== 'undefined' && STORY_OUTFIT_DIRS) || {};
   const dir = outfit ? dirs[outfit] : who.imageDir;
-  return dir ? `${dir}/${who.imagePrefix}_normal.PNG` : null;
+  const file = dir ? `${dir}/${who.imagePrefix}_normal.PNG` : null;
+  return file && typeof assistantArtFile === 'function' ? assistantArtFile(file) : file; // 重い絵は WebP の服あり(r1126-095)
 };
 // お話の真ん中に出すモンスターの全身の絵(台本の monsters の id → 絵。2026-10-27「推しに会える夜」)。足すときはここへ1行
 const STORY_MONSTER_ART = Object.freeze({
@@ -62904,7 +62905,7 @@ function ModeSelectAssistantPanel({ assistant, showArt, showComment, onToggle, a
             {standPlace
               ? <img data-rhythm-mode-assistant-art data-rhythm-mode-assistant-art-face src={assistant.image} alt="" draggable={false} onLoad={onArtLoad} className="mhms-art-face absolute max-w-none" style={{ width: standPlace.width, height: 'auto', left: standPlace.left, top: standPlace.top }} />
               : RHYTHM_MODE_ASSISTANT_FRAMES[assistant.id]
-              ? (() => { const fr = RHYTHM_MODE_ASSISTANT_FRAMES[assistant.id]; const ex = (/_([a-z]+)\.png$/i.exec(assistant.image || '') || [])[1]; const cx = (fr.cxBy && fr.cxBy[ex]) || fr.cx; const masks = [Number.isFinite(fr.fadeBottom) ? `linear-gradient(to bottom, #000 ${fr.fadeBottom * 100}%, transparent 100%)` : null, Number.isFinite(fr.fadeSides) ? `linear-gradient(to right, transparent 0%, #000 ${fr.fadeSides * 100}%, #000 ${100 - fr.fadeSides * 100}%, transparent 100%)` : null].filter(Boolean); const mask = masks.length ? { WebkitMaskImage: masks.join(', '), maskImage: masks.join(', '), WebkitMaskComposite: masks.length > 1 ? 'source-in' : undefined, maskComposite: masks.length > 1 ? 'intersect' : undefined } : {}; return <img data-rhythm-mode-assistant-art src={assistant.image} alt="" draggable={false} onLoad={onArtLoad} className="mhms-art-img absolute max-w-none" style={{ '--mhms-w': `${fr.zoom * 100}%`, '--mhms-cover': '0px', '--mhms-cap': capOf(fr.show || 1), height: 'auto', left: '50%', top: `${fr.top * 100}%`, transform: `translate(-${cx * 100}%, -${fr.cy * 100}%)`, ...mask }} />; })()
+              ? (() => { const fr = RHYTHM_MODE_ASSISTANT_FRAMES[assistant.id]; const ex = (/_([a-z]+)\.(?:png|webp)$/i.exec(assistant.image || '') || [])[1]; const cx = (fr.cxBy && fr.cxBy[ex]) || fr.cx; const masks = [Number.isFinite(fr.fadeBottom) ? `linear-gradient(to bottom, #000 ${fr.fadeBottom * 100}%, transparent 100%)` : null, Number.isFinite(fr.fadeSides) ? `linear-gradient(to right, transparent 0%, #000 ${fr.fadeSides * 100}%, #000 ${100 - fr.fadeSides * 100}%, transparent 100%)` : null].filter(Boolean); const mask = masks.length ? { WebkitMaskImage: masks.join(', '), maskImage: masks.join(', '), WebkitMaskComposite: masks.length > 1 ? 'source-in' : undefined, maskComposite: masks.length > 1 ? 'intersect' : undefined } : {}; return <img data-rhythm-mode-assistant-art src={assistant.image} alt="" draggable={false} onLoad={onArtLoad} className="mhms-art-img absolute max-w-none" style={{ '--mhms-w': `${fr.zoom * 100}%`, '--mhms-cover': '0px', '--mhms-cap': capOf(fr.show || 1), height: 'auto', left: '50%', top: `${fr.top * 100}%`, transform: `translate(-${cx * 100}%, -${fr.cy * 100}%)`, ...mask }} />; })()
               : <img data-rhythm-mode-assistant-art src={assistant.image} alt="" draggable={false} onLoad={onArtLoad} className="mhms-art-img absolute max-w-none [--mhms-y:0.22] landscape:[--mhms-y:0.3]" style={{ ...(artRatio && artRatio > 1.1 ? { '--mhms-y': 0.03 } : null), '--mhms-w': '100%', '--mhms-cover': artRatio ? `${(100 / artRatio).toFixed(2)}cqh` : '0px', '--mhms-cap': capOf(RHYTHM_MODE_ASSISTANT_DEFAULT_SHOW), height: 'auto', left: '50%', top: 'calc(var(--mhms-y) * 100%)', transform: 'translate(-50%, calc(var(--mhms-y) * -100%))' }} />}
           </div>
         </div>
@@ -70801,8 +70802,9 @@ const xmasNovelFigureSrc = (who, e) => {
   if (c.kind === 'assistant') {
     const dir = typeof STORY_OUTFIT_DIRS !== 'undefined' && STORY_OUTFIT_DIRS && STORY_OUTFIT_DIRS.santa ? STORY_OUTFIT_DIRS.santa : '';
     if (!dir) return null;
-    if (who === 'dra') return { src: `${dir}/dra_${face}.PNG`, face: true };
-    return { src: `${dir.replace(/\/santa$/, '/stand-santa')}/${who}_${face}.png`, fallback: `${dir}/${who}_${face}.PNG` };
+    if (who === 'dra') return { src: typeof assistantArtFile === 'function' ? assistantArtFile(`${dir}/dra_${face}.PNG`) : `${dir}/dra_${face}.PNG`, face: true };
+    const art = (p) => (typeof assistantArtFile === 'function' ? assistantArtFile(p) : p); // 重い絵は WebP(r1126-095)
+    return { src: art(`${dir.replace(/\/santa$/, '/stand-santa')}/${who}_${face}.png`), fallback: art(`${dir}/${who}_${face}.PNG`) };
   }
   if (c.kind === 'monster' || c.kind === 'guest') return { src: c.art };
   return null;
@@ -70999,7 +71001,7 @@ const xmasNovelBodySrc = (who) => {
   if (!c) return '';
   if (c.kind === 'assistant') {
     const dir = typeof STORY_OUTFIT_DIRS !== 'undefined' && STORY_OUTFIT_DIRS && STORY_OUTFIT_DIRS.santa ? STORY_OUTFIT_DIRS.santa : '';
-    return dir ? `${dir}/${who}_normal.PNG` : '';
+    return dir ? (typeof assistantArtFile === 'function' ? assistantArtFile(`${dir}/${who}_normal.PNG`) : `${dir}/${who}_normal.PNG`) : '';
   }
   return c.art || '';
 };
@@ -77582,9 +77584,10 @@ const ASSISTANT_LIFE_STAND_BOX = new Map();
 //   2026-11-23 r1119-153 社長「助手絵は最新の全身絵に切り替えて」: 全身画がある組は全部この形で切り出したので、立ち絵の置き場(stand-*)はどれも normal の範囲で置く
 const assistantLifeStandFrameSrc = (src) => {
   const s = String(src || '');
-  const m = /\/assistant\/(stand-[a-z0-9-]+)\/([a-z]+)_([a-z]+)\.png/i.exec(s);
+  // 立ち絵は .png か .webp(重い絵を WebP にした服・2026-11-28 r1126-095)。拡張子はそのまま残す
+  const m = /\/assistant\/(stand-[a-z0-9-]+)\/([a-z]+)_([a-z]+)\.(png|webp)/i.exec(s);
   if (!m || m[3] === 'normal') return src;
-  return s.replace(`/${m[1]}/${m[2]}_${m[3]}.png`, `/${m[1]}/${m[2]}_normal.png`);
+  return s.replace(`/${m[1]}/${m[2]}_${m[3]}.${m[4]}`, `/${m[1]}/${m[2]}_normal.${m[4]}`);
 };
 const assistantLifeStandBox = (src) => new Promise((res) => {
   if (ASSISTANT_LIFE_STAND_BOX.has(src)) { res(ASSISTANT_LIFE_STAND_BOX.get(src)); return; }
@@ -77659,7 +77662,7 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   'stand-card-master': { mua: { top: 0.116, eye: 0.3209, chin: 0.4298, m: 1.01, cx: 0.4725, above: 0.75 } },
   // 冬の装いの寝顔(winter/kyuko_sleep.PNG・392×1440の全身)。目・顎は絵を目盛りつきで測った(2026-11-19)
   winter: { kyuko: { top: 0.004, eye: 0.132, chin: 0.191, m: 0.441 } },
-  'stand-winter': { kyuko: { top: 0.0146, eye: 0.3312, chin: 0.4299, m: 0.734, cx: 0.5313 } },
+  'stand-winter': { kyuko: { top: 0.0134, eye: 0.3307, chin: 0.4296, m: 0.736, cx: 0.5293 } },
   // ききのツインテール(全身画から実測。2026-11-20)。top はリボンを除いた頭のてっぺん、above は大きなリボンが切れないように
   //   2026-11-24 r1119-153 追記4: stand-* の行は、立ち絵を縮めた組で点がずれていたのを直して出し直した(life-stand-from-fullbody.py)。ツインテールの印も目の真ん中・顎の先へ直した
   twintail: { kiki: { top: 0.112, eye: 0.183, chin: 0.244, m: 0.383, above: 0.95 } },
@@ -77667,10 +77670,10 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   // みゅあのサンタ(2026-11-25 クリスマスイベント r1119-172)。santa はバスト絵の置き場に置いた全身画(santa/myua_<表情>.PNG)の点、
   //   stand-santa は life-stand-from-fullbody.py の出力(目印は life-stand-marks.json の mua:santa。top は帽子を除いた頭のてっぺん)
   santa: { mua: { top: 0.1007, eye: 0.2132, chin: 0.2677, m: 0.406, above: 0.95 }, kiki: { top: 0.0941, eye: 0.1797, chin: 0.2325, m: 0.393, above: 0.95 }, momosuke: { top: 0.0735, eye: 0.1865, chin: 0.2374, m: 0.379, above: 0.95 }, sorashido: { top: 0.0026, eye: 0.1116, chin: 0.1664, m: 0.408, above: 0.95 }, atsu: { top: 0.0175, eye: 0.0994, chin: 0.1473, m: 0.357, above: 0.95 }, erubin: { top: 0.0589, eye: 0.1006, chin: 0.147, m: 0.345, above: 0.95 }, kyuko: { top: 0.0727, eye: 0.1552, chin: 0.218, m: 0.467, above: 0.95 } },
-  'stand-santa': { mua: { top: 0.1614, eye: 0.342, chin: 0.4296, m: 0.652, cx: 0.4783, above: 0.95 }, kiki: { top: 0.1746, eye: 0.3328, chin: 0.4303, m: 0.725, cx: 0.551, above: 0.95 }, momosuke: { top: 0.1333, eye: 0.338, chin: 0.4302, m: 0.686, cx: 0.4985, above: 0.95 }, sorashido: { top: 0.0065, eye: 0.2884, chin: 0.4301, m: 1.054, cx: 0.577, above: 0.95 }, atsu: { top: 0.0562, eye: 0.305, chin: 0.4302, m: 0.932, cx: 0.4455, above: 0.95 }, erubin: { top: 0.1725, eye: 0.2944, chin: 0.4303, m: 1.011, cx: 0.5528, above: 0.95 }, kyuko: { top: 0.143, eye: 0.3059, chin: 0.4298, m: 0.922, cx: 0.4314, above: 0.95 } },
+  'stand-santa': { mua: { top: 0.1614, eye: 0.3425, chin: 0.4303, m: 0.653, cx: 0.4595, above: 0.95 }, kiki: { top: 0.1741, eye: 0.3324, chin: 0.43, m: 0.726, cx: 0.5647, above: 0.95 }, momosuke: { top: 0.1331, eye: 0.3379, chin: 0.43, m: 0.686, cx: 0.4919, above: 0.95 }, sorashido: { top: 0.0066, eye: 0.2884, chin: 0.4299, m: 1.053, cx: 0.5794, above: 0.95 }, atsu: { top: 0.0562, eye: 0.3048, chin: 0.4299, m: 0.931, cx: 0.4538, above: 0.95 }, erubin: { top: 0.1728, eye: 0.2944, chin: 0.43, m: 1.008, cx: 0.5503, above: 0.95 }, kyuko: { top: 0.1427, eye: 0.3059, chin: 0.4299, m: 0.923, cx: 0.4351, above: 0.95 } },
 });
 // 絵の置き場所から、着替えの名前を引く(ふだんの服は null)
-const assistantLifeStandOutfitOf = (src) => { const m = /\/assistant\/([a-z0-9-]+)\/[a-z]+_[a-z]+\.png/i.exec(String(src || '')); return m && m[1] !== 'face' && m[1] !== 'temp' ? m[1] : null; };
+const assistantLifeStandOutfitOf = (src) => { const m = /\/assistant\/([a-z0-9-]+)\/[a-z]+_[a-z]+\.(?:png|webp)/i.exec(String(src || '')); return m && m[1] !== 'face' && m[1] !== 'temp' ? m[1] : null; };
 // 着替えなど表に無い絵は、8人のふつうの形で見る
 const assistantLifeStandFace = (pid, src) => {
   const who = typeof assistantById === 'function' ? assistantById(pid) : null;
@@ -79185,7 +79188,7 @@ function AssistantLifeMapFig({ who, h, sleep, spent = false }) {
   //   場面の立ち絵の表は目〜顎と頬の幅でそろえていて、髪やうさ耳で頭が大きく見える人が出ていた。さらに、寝ている絵・ハロウィンのももすけなど表の点が合わない絵が大きく出ていた。
   //   表(assistantLifeStandFace)に顎の点がある絵はそれを使い、無い絵は下の ASSISTANT_LIFE_MAP_HEAD(絵を目盛りつきで切り出して手で読んだ 上・顎。見えている体の高さに対する割合)を使う
   const face0 = typeof assistantLifeStandFace === 'function' ? assistantLifeStandFace(who && who.id, src) : null;
-  const headKey = String(src || '').replace(/[?#].*$/, '').replace(/^.*assistant\//, '').replace(/\.png$/i, '').replace(/_(?!sleep$)[a-z]+$/i, '');
+  const headKey = String(src || '').replace(/[?#].*$/, '').replace(/^.*assistant\//, '').replace(/\.(?:png|webp)$/i, '').replace(/_(?!sleep$)[a-z]+$/i, '');
   const head = ASSISTANT_LIFE_MAP_HEAD[headKey] || null;
   const topChin = head ? { top: head[0], chin: head[1] } : (face0 && Number.isFinite(face0.top) && (Number.isFinite(face0.chin) || face0.head) ? { top: face0.top, chin: face0.head ? 1 : face0.chin } : null);
   const face = face0 && topChin && typeof ASSISTANT_LIFE_STAND_EC === 'number'
@@ -79937,8 +79940,10 @@ function assistantLifeSleepMeasured(pid, src) {
 function assistantLifeSleepArt(pid, src) {
   const who = typeof assistantById === 'function' ? assistantById(pid) : null;
   const s0 = String(src || '').replace(/[?#].*$/, ''), dir = who && who.imageDir ? `${who.imageDir}/` : null;
-  const rel = dir && s0.includes(dir) ? s0.slice(s0.indexOf(dir) + dir.length) : null;
-  return rel && ASSISTANT_LIFE_SLEEP_ART.has(rel) ? `${dir}${rel.replace(/_normal\.PNG$/, '_sleep.PNG')}` : null;
+  // WebP にした服の絵(assistantArtFile)も、表の名前(.PNG)で引く
+  const rel = dir && s0.includes(dir) ? s0.slice(s0.indexOf(dir) + dir.length).replace(/\.webp$/, '.PNG') : null;
+  const out = rel && ASSISTANT_LIFE_SLEEP_ART.has(rel) ? `${dir}${rel.replace(/_normal\.PNG$/, '_sleep.PNG')}` : null;
+  return out && typeof assistantArtFile === 'function' ? assistantArtFile(out) : out;
 }
 // 寝ているときに出す全身の絵: 社長の寝顔の絵があればそれ、無ければ元の絵のまま。
 //   起きているときの全身の絵が別の場所(全身画など)を指す助手もいるので、見つからないときは顔アイコン(ふつうの顔)のパスから、どの服の寝顔かを割り出す(…/face/◯◯_normal.PNG → …/◯◯_sleep.PNG)
@@ -81833,7 +81838,7 @@ const ASSISTANT_LIFE_PROFILE_FULL_MAX_H = Object.freeze({
 });
 const ASSISTANT_LIFE_PROFILE_FULL_NH = new Map(); // 読み込んだ絵の高さ(画素)
 const assistantLifeProfileFullMaxH = (src) => {
-  const m = /\/fullbody\/(.+?)__[a-z]+\.png/.exec(String(src || ''));
+  const m = /\/fullbody\/(.+?)__[a-z]+\.(?:png|webp)/.exec(String(src || ''));
   return (m && ASSISTANT_LIFE_PROFILE_FULL_MAX_H[m[1]]) || 0;
 };
 function AssistantLifeProfileStand({ who, head = 0.32, top = 0.16, expr = 'happy' }) {
