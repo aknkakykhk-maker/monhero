@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 80509cdf68a473ac
+// generated-sha256: fea96f013b562729
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -42298,11 +42298,13 @@ const JA_LABEL_STYLE = Object.freeze({ ...JA_WRAP_STYLE, textWrap: 'balance' });
 // 大きな所持数を縮めて出す(2026-10-21 改善部の見直し N5「ダイヤが10桁になると HOME(320)の数が約6px まで縮む」)。
 // 8桁まではそのまま(1,234,567 のように)。9桁(1億)からは「1.23億」「67.3億」「6,736億」、13桁からは「兆」で、上から3桁ぶん。
 // 切り上げると持っていない数に見えるので、端は切り捨てる。保存値は変えない(出し方だけ)
+// 1億未満の書式は、呼ぶたびに作らず1つを使い回す(toLocaleString() と同じ既定の書式。裏クイック中の HOME で毎秒十数回呼ばれる・2026-11-28 台帳 r1126-104 追記4)
+let compactCountFmt = null;
 const compactCount = (value) => {
   const n = Math.floor(Number(value));
   if (!Number.isFinite(n)) return '0';
   const a = Math.abs(n);
-  if (a < 1e8) return n.toLocaleString();
+  if (a < 1e8) { try { if (!compactCountFmt) compactCountFmt = new Intl.NumberFormat(); return compactCountFmt.format(n); } catch (_) { return n.toLocaleString(); } }
   const [unit, div] = a >= 1e12 ? ['兆', 1e12] : ['億', 1e8];
   const v = a / div, digits = v >= 100 ? 0 : v >= 10 ? 1 : 2, f = Math.pow(10, digits);
   return `${n < 0 ? '-' : ''}${(Math.floor(v * f) / f).toLocaleString(undefined, { maximumFractionDigits: digits })}${unit}`;
@@ -52426,18 +52428,29 @@ const HOME_EVENT_BADGE_STYLE = Object.freeze({
   lineHeight:1.35, whiteSpace:'nowrap', textShadow:'0 1px 0 #fff8', pointerEvents:'none',
   boxShadow:'0 0 0 1px #0006,0 2px 8px #000a,0 0 10px #fbbf24cc,0 0 18px #f59e0b80',
 });
+// 2026-11-28 台帳 r1126-104 追記4(HOME を軽く・見た目はそのまま): 前は脈を box-shadow、光を left で動かしていて、
+//   札が出ているあいだ毎コマ描き直しと配置の計算が走っていた(CPU 4倍遅くで HOME 464ms/秒のうち約370ms/秒)。
+//   いまは合成だけで動く形にした。脈 … 大きさ(transform)はそのまま。光の輪は前の2つの形(ふだん・いちばん光る時)を
+//   ::before / ::after に1枚ずつ描いて、透明度で入れ替える。光の帯 … 中の空の部品(.mh-home-event-badge-shine)で札の形に切り抜き、
+//   left のかわりに transform で同じ道のりを動かす(帯の幅45%に対して -60%→120% は 400% ぶん)。
+//   黒い縁取り・下の影は光の帯の部品に移し、前と同じく光の輪より上に重ねる。札の本体の影は消す(二重にしない)
 const HOME_EVENT_BADGE_CSS = `
-.mh-home-event-badge{animation:mhHomeEventBadgePulse 1.6s ease-in-out infinite}
-.mh-home-event-badge::after{content:'';position:absolute;top:0;bottom:0;left:-60%;width:45%;
+.mh-home-event-badge{overflow:visible!important;box-shadow:none!important;animation:mhHomeEventBadgePulse 1.6s ease-in-out infinite}
+.mh-home-event-badge::before,.mh-home-event-badge::after{content:'';position:absolute;inset:-1px;z-index:-1;border-radius:inherit;pointer-events:none}
+.mh-home-event-badge::before{box-shadow:0 0 10px #fbbf24cc,0 0 18px #f59e0b80;animation:mhHomeEventBadgeGlowA 1.6s ease-in-out infinite}
+.mh-home-event-badge::after{box-shadow:0 0 16px #fde047,0 0 30px #f59e0bcc;opacity:0;animation:mhHomeEventBadgeGlowB 1.6s ease-in-out infinite}
+.mh-home-event-badge-shine{position:absolute;inset:-1px;border-radius:inherit;overflow:hidden;pointer-events:none;box-shadow:0 0 0 1px #0006,0 2px 8px #000a}
+.mh-home-event-badge-shine::after{content:'';position:absolute;top:0;bottom:0;left:-60%;width:45%;
   background:linear-gradient(100deg,#fff0,#ffffffcc,#fff0);
   animation:mhHomeEventBadgeShine 2.4s ease-in-out infinite}
-@keyframes mhHomeEventBadgePulse{
-  0%,100%{box-shadow:0 0 0 1px #0006,0 2px 8px #000a,0 0 10px #fbbf24cc,0 0 18px #f59e0b80;transform:scale(1)}
-  50%{box-shadow:0 0 0 1px #0006,0 2px 8px #000a,0 0 16px #fde047,0 0 30px #f59e0bcc;transform:scale(1.06)}}
-@keyframes mhHomeEventBadgeShine{0%{left:-60%}55%{left:120%}100%{left:120%}}
+@keyframes mhHomeEventBadgePulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+@keyframes mhHomeEventBadgeGlowA{0%,100%{opacity:1}50%{opacity:0}}
+@keyframes mhHomeEventBadgeGlowB{0%,100%{opacity:0}50%{opacity:1}}
+@keyframes mhHomeEventBadgeShine{0%{transform:translateX(0)}55%{transform:translateX(400%)}100%{transform:translateX(400%)}}
 @media(prefers-reduced-motion:reduce){
   .mh-home-event-badge{animation:none;transform:none}
-  .mh-home-event-badge::after{display:none}}
+  .mh-home-event-badge::before,.mh-home-event-badge::after{animation:none}
+  .mh-home-event-badge-shine::after{display:none}}
 /* イベントの札の題の2行目(title2)。背の低い横画面では、2行のまま字と余白を詰めて札の高さを1行の題のときと同じくらいにする
    (2026-11-14 横 568×320 の長い台詞で、背が伸びた札が M/B管理 にかかった。1行に並べると横に伸びてモンヒロビートの顔の列にかかる) */
 .mh-home-event-banner .t2{display:block}
@@ -53093,7 +53106,7 @@ function HomeScreenV1({
             <button type="button" data-home-fac="rhythm" className="mh-home-dock-card rhythm" onClick={onOpenRhythm} aria-label={RHYTHM_MODE_PUBLIC_RELEASE?"モンヒロビート":"モンヒロビート（準備中）"}>
               <span className="mh-home-dock-pic"><img src="images/home/facility-beat.webp" alt="" draggable={false}/></span>
               <span className="mh-home-dock-txt"><span className="mh-home-dock-name">モンヒロビート{!RHYTHM_MODE_PUBLIC_RELEASE&&<small className="mh-home-dock-soon">準備中</small>}</span><span className="mh-home-dock-sub">音ゲー</span></span>
-              {homeRhythmEventOpen&&<em data-home-event-badge className="mh-home-event-badge" style={HOME_EVENT_BADGE_STYLE_V1}>✨開催中✨</em>}
+              {homeRhythmEventOpen&&<em data-home-event-badge className="mh-home-event-badge" style={HOME_EVENT_BADGE_STYLE_V1}><i className="mh-home-event-badge-shine" aria-hidden="true"/>✨開催中✨</em>}
             </button>
             {/* MFバトルカード(公開の印 cardBattle が立ち、公開のお話を見た人だけ。60-app.jsx が決める) */}
             {cardBattleVisible&&typeof onOpenCardBattle==='function'&&<button type="button" data-home-fac="card" data-home-card-battle className="mh-home-dock-card card" onClick={onOpenCardBattle} aria-label="MFバトルカード">
@@ -53389,7 +53402,7 @@ function HomeScreenV2({
             <button type="button" data-home-fac="rhythm" className="mh-home-dock-card rhythm" onClick={onOpenRhythm} aria-label={RHYTHM_MODE_PUBLIC_RELEASE?"モンヒロビート":"モンヒロビート（準備中）"}>
               <span className="mh-home-dock-pic"><img src="images/home/facility-beat.webp" alt="" draggable={false}/></span>
               <span className="mh-home-dock-txt"><span className="mh-home-dock-name">モンヒロビート{!RHYTHM_MODE_PUBLIC_RELEASE&&<small className="mh-home-dock-soon">準備中</small>}</span><span className="mh-home-dock-sub">音ゲー</span></span>
-              {homeRhythmEventOpen&&<em data-home-event-badge className="mh-home-event-badge" style={HOME_EVENT_BADGE_STYLE}>開催中</em>}
+              {homeRhythmEventOpen&&<em data-home-event-badge className="mh-home-event-badge" style={HOME_EVENT_BADGE_STYLE}><i className="mh-home-event-badge-shine" aria-hidden="true"/>開催中</em>}
             </button>
             {/* MFバトルカード(公開の印 cardBattle が立ち、公開のお話を見た人だけ。60-app.jsx が決める) */}
             {cardBattleVisible&&typeof onOpenCardBattle==='function'&&<button type="button" data-home-fac="card" data-home-card-battle className="mh-home-dock-card card" onClick={onOpenCardBattle} aria-label="MFバトルカード">
@@ -68596,11 +68609,42 @@ const xmasNovelCastOf = (id) => XMAS_NOVEL_CAST.find((c) => c.id === id) || XMAS
 // ---- 条件 ----
 //  条件のデータ: { any: [ { all: [ { k:'f_kuroba', op:'=', v:1 }, ... ] }, ... ] }(または のどれか・かつ の全部)。null は「いつでも」
 //  k は f_* のフラグ、score(いまの読み進めで一発目で当てた数)、clues(手がかりの数)
+// ---- 特別なしおり(r1126-115) ----
+//  エンドを集めると手に入り、もしもの話の選択肢が開く。持っているかは見たエンド(mh_xmas_novel_v1 の endings)から毎回数える。
+//  保存のキーも形も増やさない(⑦)。need: all … 全部見た / some … of のうち n 個 / marks … ほかのしおりを全部持っている
+const XMAS_NOVEL_BOOKMARK_ACCUSE = ['END-M1', 'END-M2', 'END-M3', 'END-M4', 'END-M5', 'END-M6', 'END-M7', 'END-M8', 'END-M9', 'END-K1'];
+const XMAS_NOVEL_BOOKMARKS = Object.freeze([
+  { id: 'red', name: '紅のしおり', color: '紅い', tone: '#9b1c28', need: { all: ['END-G'], some: { of: XMAS_NOVEL_BOOKMARK_ACCUSE, n: 5 } } },
+  { id: 'ash', name: '灰のしおり', color: '灰色の', tone: '#8a8580', need: { all: ['END-G', 'END-X1', 'END-X2', 'END-X3', 'END-X4', 'END-X5', 'END-X6', 'END-X7', 'END-X8'] } },
+  { id: 'green', name: '緑のしおり', color: '緑の', tone: '#3f7a52', need: { all: ['END-G', 'END-O', 'END-O2', 'END-O3', 'END-O4'] } },
+  { id: 'silver', name: '銀のしおり', color: '銀色の', tone: '#c8ccd4', need: { all: ['END-G', 'END-G2', 'END-L1', 'END-L2'] } },
+  { id: 'white', name: '白紙のしおり', color: '白い', tone: '#eeeae0', need: { marks: ['red', 'ash', 'green', 'silver'] } },
+]);
+const xmasNovelBookmarkMet = (b, list, owned) => {
+  const n = b.need || {};
+  if (Array.isArray(n.all) && !n.all.every((e) => list.includes(e))) return false;
+  if (n.some && n.some.of.filter((e) => list.includes(e)).length < n.some.n) return false;
+  if (Array.isArray(n.marks) && !n.marks.every((m) => owned.includes(m))) return false;
+  return true;
+};
+// 持っているしおりの id の並び(XMAS_NOVEL_BOOKMARKS の順)
+const xmasNovelBookmarks = (endings) => {
+  const list = Array.isArray(endings) ? endings : [];
+  const owned = [];
+  XMAS_NOVEL_BOOKMARKS.forEach((b) => { if (xmasNovelBookmarkMet(b, list, owned)) owned.push(b.id); });
+  return owned;
+};
+const xmasNovelBookmarkOf = (id) => XMAS_NOVEL_BOOKMARKS.find((b) => b.id === id) || null;
+
 const xmasNovelValueOf = (k, ctx) => {
   if (k === 'score') return Number(ctx.score) || 0;
   if (k === 'clues') return Array.isArray(ctx.clues) ? ctx.clues.length : 0;
   // end_G … そのエンディングを見たことがあれば 1(エンドヒストリー。おまけの選択肢・r1126-062)
   if (/^end_[A-Z]+\d*$/.test(k)) return Array.isArray(ctx.endings) && ctx.endings.includes(`END-${k.slice(4)}`) ? 1 : 0;
+  // bm_red … その特別なしおりを持っていれば 1(見たエンドから毎回数える。保存は増やさない・r1126-115)
+  if (/^bm_[a-z]+$/.test(k)) return xmasNovelBookmarks(ctx.endings).includes(k.slice(3)) ? 1 : 0;
+  // rd_RW_5a … その場面(RW-5a)を一度でも読んでいれば 1(読んだ印 read「場面ID:行ID」から。別の編の途中まで読んだ、の条件・r1126-115)
+  if (/^rd_[A-Za-z0-9_]+$/.test(k)) { const sc = `${k.slice(3).replace(/_/g, '-')}:`; return Array.isArray(ctx.read) && ctx.read.some((m) => typeof m === 'string' && m.startsWith(sc)) ? 1 : 0; }
   const v = ctx.flags ? ctx.flags[k] : undefined;
   return Number.isFinite(v) ? v : 0;
 };
@@ -68648,7 +68692,7 @@ const xmasNovelScoreOf = (script, ans) => {
   const a = ans && typeof ans === 'object' ? ans : {};
   return xmasNovelScoreGroups(script).filter((g) => g.qs.every((q) => a[q] && a[q].f === true)).length;
 };
-const xmasNovelCtx = (script, cur, endings) => ({ flags: (cur && cur.flags) || {}, clues: (cur && cur.clues) || [], score: xmasNovelScoreOf(script, cur && cur.ans), endings: Array.isArray(endings) ? endings : [] });
+const xmasNovelCtx = (script, cur, endings, read) => ({ read: Array.isArray(read) ? read : [], flags: (cur && cur.flags) || {}, clues: (cur && cur.clues) || [], score: xmasNovelScoreOf(script, cur && cur.ans), endings: Array.isArray(endings) ? endings : [] });
 
 // 場面へ入る: id の場面の条件が合わなければ、同じ仲間(C3-1a→C3-1b)で条件の合う場面へ。どれも合わなければ null
 const xmasNovelResolveScene = (script, id, ctx) => {
@@ -68790,7 +68834,7 @@ const xmasNovelStep = (script, cur) => xmasNovelSettle(script, { ...cur, idx: (N
 //  返り値 { cur, ok, replies:[行], then:'retry'|'next'|{to} }。replies を読ませたあと then のとおりに進める
 const xmasNovelPickReplies = (q, key) => (q.replies && Array.isArray(q.replies[key]) ? q.replies[key] : []);
 // endings … 見たエンディングの一覧(おまけの選択肢など end_G の条件に使う)
-const xmasNovelAnswer = (script, cur, q, pick, endings) => {
+const xmasNovelAnswer = (script, cur, q, pick, endings, read) => {
   if (!q || q.t !== 'q') return { cur, ok: false, replies: [], then: 'next' };
   const was = (cur.ans && cur.ans[q.id]) || null;
   const tries = (was ? was.t : 0) + 1;
@@ -68807,7 +68851,7 @@ const xmasNovelAnswer = (script, cur, q, pick, endings) => {
     return { cur: next, ok, replies, then: rto ? { to: rto } : to ? { to } : 'next' };
   }
   if (q.kind === 'action') {
-    const ctx = xmasNovelCtx(script, cur, endings);
+    const ctx = xmasNovelCtx(script, cur, endings, read);
     const opts = xmasNovelOptionsOf(q, ctx);
     const opt = opts.find((o) => o.i === pick) || null;
     if (!opt) return { cur, ok: false, replies: [], then: 'retry' };
@@ -68974,6 +69018,8 @@ const XMAS_NOVEL_ENDING_KINDS = Object.freeze({
   omake: { label: 'おまけ', tone: '#7fd6a8' },
   unsolved: { label: '迷宮入り', tone: '#8fa3c8' }, // r1126-108: 黒いサンタが誰か分からないまま終わる
   truebad: { label: '真相のその先', tone: '#8fd0e6' }, // r1126-108 第3弾: 真ルートの終章で選びまちがえる
+  ifroute: { label: 'もしも', tone: '#d9a7c7' }, // r1126-115: しおりで開く、別ジャンルのもしもの話
+  pov: { label: '視点の編', tone: '#b6c98f' }, // r1126-115: 真グッドのあとに開く、助手の視点の編
 });
 
 // ---- 分岐の地図「聖夜の見取り図」の読み直し(r1126-102) ----
@@ -69182,7 +69228,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"C1-6","chapter":"C1","title":"最初の夜","cond":null,"bgm":"melo_dullahan_steel_ghost","bg":"夜のホール","next":"C1-M","rows":[{"id":"1-6-1","t":"band","x":"夜。みんなが眠った後。暖炉の火だけが、ホールを照らしている","k":"C1-6:1-6-1"},
 {"id":"1-6-2","t":"band","x":"カチ、カチ、カチ(柱時計の針が、ゆっくり動く音)","fx":["se"],"se":"tick","seN":3,"k":"C1-6:1-6-2"},
 {"id":"1-6-3","t":"line","secret":true,"x":"……やっと、そろった。12年、かかったね","f":"close","n":"？？？","e":"troubled","k":"C1-6:1-6-3"},
-{"id":"1-6-4","t":"panel","x":"登場人物 12人","missing":[],"hurt":[],"dead":[],"k":"C1-6:1-6-4"},{"t":"q","id":"A1b","kind":"action","x":"真夜中。2階の廊下で、床のきしむ音がした——","replies":{},"label":"行動の選択","options":[{"to":"C1-M","x":"気のせいにして、朝まで眠る"},{"c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"to":"C1-X","x":"あつが、1人で廊下を見に行く"},{"c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"to":"C1-X","x":"ソラシドが、1人で廊下を見に行く"}],"k":"C1-6:A1b"}]},
+{"id":"1-6-4","t":"panel","x":"登場人物 12人","missing":[],"hurt":[],"dead":[],"k":"C1-6:1-6-4"},{"t":"q","id":"A1b","kind":"action","x":"真夜中。2階の廊下で、床のきしむ音がした——","replies":{},"label":"行動の選択","options":[{"to":"C1-M","x":"気のせいにして、朝まで眠る"},{"c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"to":"C1-X","x":"あつが、1人で廊下を見に行く"},{"c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"to":"C1-X","x":"ソラシドが、1人で廊下を見に行く"},{"c":{"any":[{"all":[{"k":"bm_red","op":"=","v":1}]}]},"to":"RW-1","x":"眠れない。ホールへ下りて、暖炉の残り火にあたる"}],"k":"C1-6:A1b"}]},
 {"id":"C1-M","chapter":"C1","title":"幕間 眠る客","cond":null,"bgm":"melo_dullahan_steel_ghost","bg":"黒羽の部屋(夜","next":"C2-1","rows":[{"id":"1-M-1","t":"band","x":"幕間 〜眠る客〜","k":"C1-M:1-M-1"},
 {"id":"1-M-2","t":"band","x":"同じ夜。2階の、黒羽の部屋の前","k":"C1-M:1-M-2"},
 {"id":"1-M-3","t":"band","x":"扉の取っ手が、音もなく回る。……鍵は、かかっていなかった","k":"C1-M:1-M-3"},
@@ -69273,7 +69319,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"2-3-9b","t":"band","x":"ゴトン(暗い2階で、何かが動く音)","fx":["se"],"se":"tap","k":"C2-3:2-3-9b"},
 {"id":"2-3-9c","t":"band","x":"……ガタン(続けて、台所の奥。裏口のほうで、重い木の落ちるような音)","fx":["se"],"se":"impact","k":"C2-3:2-3-9c"},
 {"id":"2-3-9a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"atsu","x":"……上と、台所の奥。二か所、鳴った。……台所の奥って、裏口だよな","e":"normal","k":"C2-3:2-3-9a"},
-{"id":"2-3-9s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"sorashido","x":"……2階と、台所の奥。音が2つです。台所の奥には、裏口があります","e":"normal","k":"C2-3:2-3-9s"},{"t":"q","id":"A2","kind":"action","x":"暗闇の中、2階と台所の奥で、物音が1つずつ——","replies":{},"label":"行動の選択","options":[{"c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"to":"C2-X","x":"あつが、1人で台所の裏口を確かめに行く(もちまるは、吹雪の夜は開けておくと言っていた)"},{"c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"to":"C2-X","x":"ソラシドが、1人で台所の裏口を確かめに行く(もちまるは、吹雪の夜は開けておくと言っていた)"},{"to":"2-3-10","x":"ろうそくを待って、みんなで2階の黒羽の部屋へ行く"}],"k":"C2-3:A2"},
+{"id":"2-3-9s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"sorashido","x":"……2階と、台所の奥。音が2つです。台所の奥には、裏口があります","e":"normal","k":"C2-3:2-3-9s"},{"t":"q","id":"A2","kind":"action","x":"暗闇の中、2階と台所の奥で、物音が1つずつ——","replies":{},"label":"行動の選択","options":[{"c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"to":"C2-X","x":"あつが、1人で台所の裏口を確かめに行く(もちまるは、吹雪の夜は開けておくと言っていた)"},{"c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"to":"C2-X","x":"ソラシドが、1人で台所の裏口を確かめに行く(もちまるは、吹雪の夜は開けておくと言っていた)"},{"to":"2-3-10","x":"ろうそくを待って、みんなで2階の黒羽の部屋へ行く"},{"mark":1,"c":{"any":[{"all":[{"k":"end_G","op":"=","v":1}]}]},"to":"PD-1","x":"そのころ、台所の奥の食料庫で——(ドラの目で)"}],"k":"C2-3:A2"},
 {"id":"2-3-10","t":"band","x":"もちまるのろうそくが届く。みんなで2階へ上がると、黒羽の部屋の前に、白瀬が立ちつくしていた","k":"C2-3:2-3-10"},
 {"id":"2-3-11","t":"line","w":"shirase","x":"黒羽さんの部屋の扉が……開いています。中に、誰も……","f":"close","k":"C2-3:2-3-11"}]},
 {"id":"C2-4","chapter":"C2","title":"どこへ","cond":null,"bgm":"melo_dullahan_clockwork_alt","bg":"ペンションのホール(ろうそく","next":"C2-5","rows":[{"id":"2-4-1","t":"line","w":"atsu","x":"鍵をかけて朝まで出ないって言ってたのに！","e":"angry","k":"C2-4:2-4-1"},
@@ -70654,7 +70700,157 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"12-7-3","t":"line","n":"祖父","x":"カノンさんの部屋は、あのままにしておこう。あの子がいつか戻ってきた時、迷わないように。……それから、もちまる。これからは、吹雪の夜は、裏口のかんぬきを開けておいておくれ","k":"C12-7:12-7-3"},
 {"id":"12-7-4","t":"line","w":"mochimaru","x":"……はいっちー。外に出た人が、すぐ戻れるように。ぼく、ずっと、そうするっちー","k":"C12-7:12-7-4"},
 {"id":"12-7-5","t":"band","x":"♪……ポロン、ポロロン……(——そして、12年後の聖夜。開け放した裏口から、同じ子守歌が、雪の中へ流れていく)","fx":["se"],"se":"music","k":"C12-7:12-7-5"},
-{"id":"12-7-6","t":"band","x":"過去編 〜12年前の聖夜〜 おしまい","fx":["title"],"k":"C12-7:12-7-6"}],"jumpOnly":true,"past":true}]};
+{"id":"12-7-6","t":"band","x":"過去編 〜12年前の聖夜〜 おしまい","fx":["title"],"k":"C12-7:12-7-6"}],"jumpOnly":true,"past":true},
+{"id":"PD-1","chapter":"END","title":"食料庫の暗闇","cond":null,"bgm":"melo_dullahan_steel_ghost","bg":"夜の台所(ろうそく","next":"PD-2","rows":[{"id":"PD-1-1","t":"band","x":"——これは、同じ夜を、ドラの目で見た話","k":"PD-1:PD-1-1"},
+{"id":"PD-1-2","t":"band","x":"柱時計が0時を打つ少し前。みゅあが台所を出ていったあと、ドラは1人、台所の奥の食料庫で、クッキーの缶を探していた","k":"PD-1:PD-1-2"},
+{"id":"PD-1-3","t":"line","w":"dra","x":"(小声で)……もちまるが、この棚の上だって言ってたな。……あった","e":"happy","k":"PD-1:PD-1-3"},
+{"id":"PD-1-4","t":"band","x":"ボーン……ボーン……(遠く、ホールの柱時計)","fx":["se"],"se":"tap","k":"PD-1:PD-1-4"},
+{"id":"PD-1-5","t":"line","w":"dra","x":"……もう0時か。もちまる、もう寝たかな","e":"normal","k":"PD-1:PD-1-5"},
+{"id":"PD-1-6","t":"band","x":"ブツン(灯りが、いっせいに消える)","fx":["se"],"se":"impact","k":"PD-1:PD-1-6"},
+{"id":"PD-1-7","t":"band","x":"真っ暗な食料庫。何も聞こえない。缶の中で、クッキーが小さく鳴っただけだった。……そのとき、台所の向こうで、裏口の扉が、きい、と開く音がした","k":"PD-1:PD-1-7"},
+{"id":"PD-1-8","t":"band","x":"冷たい風。雪のにおい。それから、扉の閉まる音と——","k":"PD-1:PD-1-8"},
+{"id":"PD-1-9","t":"band","x":"……ガタン(重い木の落ちる音。かんぬきの音だ)","fx":["se"],"se":"impact","k":"PD-1:PD-1-9"},
+{"id":"PD-1-10","t":"band","x":"ドラは、手さぐりで食料庫の戸を開けた。窓から入る雪明かりの中を、黒い服の人が、こちらへ歩いてくる","k":"PD-1:PD-1-10"},
+{"id":"PD-1-11","t":"band","x":"すれ違う一瞬、雪明かりが横顔を照らした。フードの端からこぼれた、ローズ色の髪。……きゅうこちゃん、だった。頬が、濡れて光っていた","k":"PD-1:PD-1-11"},
+{"id":"PD-1-12","t":"line","w":"dra","x":"(声にならない)……っ","f":"close","e":"surprise","k":"PD-1:PD-1-12"},
+{"id":"PD-1-13","t":"band","x":"黒い服の人は、ドラに気づかないまま、台所の暗がりへ消えた。かすかに、しゃくりあげる息の音だけが残った","k":"PD-1:PD-1-13"},{"t":"q","id":"APD1","kind":"action","x":"0時の鐘のすぐあと。雪明かりの台所。今なら、まだ、呼び止められる——","replies":{},"label":"行動の選択","options":[{"to":"PD-2","x":"黙って、見送る"},{"to":"PD-Y","x":"名前を、呼ぶ"}],"k":"PD-1:APD1"}],"jumpOnly":true},
+{"id":"PD-2","chapter":"END","title":"毛くずの朝","cond":null,"bgm":"melo_sad_song_short","bg":"裏口","next":"PD-2b","rows":[{"id":"PD-2-1","t":"band","x":"次の朝。雪原で、黒羽が見つかった。裏口の下の雪から、止まった懐中時計が出てきた。ドラの耳の奥で、あの夜の鐘が、まだ鳴っていた","k":"PD-2:PD-2-1"},
+{"id":"PD-2-2","t":"line","w":"dra","x":"(心の中で)……あの夜、裏口から入ってきたのは。……あのかんぬきを下ろしたのは","e":"troubled","k":"PD-2:PD-2-2"},
+{"id":"PD-2-3","t":"band","x":"裏口の戸の隙間に、緑の毛くず。みんなの目が、ドラの帽子へ向いた","k":"PD-2:PD-2-3"},
+{"id":"PD-2-4","t":"line","w":"momosuke","x":"ドラちゃんが、そんなことするわけないじゃん！","e":"angry","k":"PD-2:PD-2-4"},
+{"id":"PD-2-5","t":"line","w":"dra","x":"(心の中で)言えば、おでは疑われない。……でも、言ったら、あの子が","e":"troubled","k":"PD-2:PD-2-5"},
+{"id":"PD-2-6","t":"line","w":"dra","x":"……おで、何も見てない。……何も","f":"close","e":"troubled","k":"PD-2:PD-2-6"},
+{"id":"PD-2-7","t":"band","x":"口にした瞬間、それは、もう取り消せない言葉になった","k":"PD-2:PD-2-7"}],"jumpOnly":true},
+{"id":"PD-2b","chapter":"END","title":"かばんの中","cond":null,"bgm":"melo_dullahan_steel_ghost","bg":"ドラの部屋","next":"PD-3","rows":[{"id":"PD-2b-1","t":"band","x":"壁の中の通り道が見つかった日。部屋に戻ると、かばんの口から、黒い布がのぞいていた","k":"PD-2b:PD-2b-1"},
+{"id":"PD-2b-2","t":"band","x":"引き出すと、黒いサンタの服だった。ドラの手が、止まった","k":"PD-2b:PD-2b-2"},
+{"id":"PD-2b-3","t":"line","w":"dra","x":"し、知らない！ おで、こんなの知らないぞ！","f":"close","e":"surprise","k":"PD-2b:PD-2b-3"},
+{"id":"PD-2b-4","t":"line","w":"dra","x":"(心の中で)……本当に、知らない。おでのかばんに、誰が。……考えちゃ、だめだ","e":"troubled","k":"PD-2b:PD-2b-4"},
+{"id":"PD-2b-5","t":"band","x":"ドラは、もう一度、口の中で言った。「何も見てない」。言うたびに、喉の奥が冷たくなった","k":"PD-2b:PD-2b-5"}]},
+{"id":"PD-3","chapter":"END","title":"崖の上のリボン","cond":null,"bgm":"melo_sad_song_short","bg":"朝の雪原(崖","next":"PD-4","rows":[{"id":"PD-3-1","t":"band","x":"何日かあとの朝。崖のふちで、足跡は途切れていた。雪の上に、ローズ色のリボンが1つ","k":"PD-3:PD-3-1"},
+{"id":"PD-3-2","t":"line","w":"momosuke","x":"きゅうちゃん……！ きゅうちゃん！！","e":"crying","k":"PD-3:PD-3-2"},
+{"id":"PD-3-3","t":"band","x":"ドラはリボンを拾い、両手で握りしめた。まだ、少しだけ、あたたかい気がした","k":"PD-3:PD-3-3"},
+{"id":"PD-3-4","t":"line","w":"dra","x":"(心の中で)……あの夜、泣いてたのに。おで、何もしてやれなかった","e":"crying","k":"PD-3:PD-3-4"},
+{"id":"PD-3-5","t":"line","w":"dra","x":"(心の中で)……この下に、いるのか。……さむかっただろうな","e":"crying","k":"PD-3:PD-3-5"},
+{"id":"PD-3-6","t":"band","x":"ドラは、首を横に振った。考えたら、誰かに言いたくなってしまうから","k":"PD-3:PD-3-6"}]},
+{"id":"PD-4","chapter":"END","title":"名指しの前","cond":null,"bgm":"melo_dullahan_clockwork","bg":"ペンションのホール","next":"END-PD1","rows":[{"id":"PD-4-1","t":"band","x":"ホールに、残った人がみんな集まる。誰も口をきかない。柱時計の音だけが響く。……やがて、みんなの目が、ドラへ集まった","k":"PD-4:PD-4-1"},
+{"id":"PD-4-2","t":"line","w":"dra","x":"(心の中で)毛くずも、かばんの黒い服も、台所に1人だったのも、ぜんぶ、おでのほうを向いてる","e":"troubled","k":"PD-4:PD-4-2"},
+{"id":"PD-4-3","t":"line","w":"dra","x":"(心の中で)……それで、いい。誰かが犯人にされるなら、おででいい","e":"troubled","k":"PD-4:PD-4-3"},
+{"id":"PD-4-4","t":"band","x":"握ったリボンの端が、手のひらに食いこんだ","k":"PD-4:PD-4-4"},
+{"id":"PD-4-5","t":"line","w":"dra","x":"……おで、は……","f":"close","e":"troubled","k":"PD-4:PD-4-5"}]},
+{"id":"END-PD1","chapter":"END","title":"視点の編「何も見てない」","cond":null,"bgm":"melo_sad_song_short","bg":"ペンションのホール","next":"OUT-PD","rows":[{"id":"PD1-1","t":"band","x":"聖夜の名探偵 エンディング「何も見てない」","k":"END-PD1:PD1-1"},
+{"id":"PD1-2","t":"band","x":"ドラは、ずっと「何も見てない」と言い続けた。本当のことを話せる、その夜が来るまで","k":"END-PD1:PD1-2"},
+{"id":"PD1-3","t":"band","x":"ただ、あの夜の台所の雪明かりと、濡れた頬の光を、ドラは一度も忘れなかった","k":"END-PD1:PD1-3"},
+{"id":"PD1-4","t":"band","x":"聖夜の名探偵 —— 視点の編、おしまい","k":"END-PD1:PD1-4"}],"ending":{"id":"END-PD1","kind":"pov","label":"視点の編","name":"何も見てない"}},
+{"id":"PD-Y","chapter":"END","title":"呼び止めた夜","cond":null,"bgm":"melo_dullahan_steel_ghost","bg":"夜の台所(ろうそく","next":"END-PD2","rows":[{"id":"PD-Y-1","t":"band","x":"——ここから先は、起きなかった夜の話","k":"PD-Y:PD-Y-1"},
+{"id":"PD-Y-2","t":"line","w":"dra","x":"……きゅうこちゃん？","e":"surprise","k":"PD-Y:PD-Y-2"},
+{"id":"PD-Y-3","t":"band","x":"黒い服の背中が、びくりと止まった。振り向いた顔は、フードの影で見えない","k":"PD-Y:PD-Y-3"},
+{"id":"PD-Y-4","t":"line","w":"kyuko","x":"……っ","e":"crying","note":"息をのんで、暗がりへ走り去る","k":"PD-Y:PD-Y-4"},
+{"id":"PD-Y-5","t":"band","x":"黒い服は、暗がりに溶けた。ドラは、追いかけなかった。(心の中で)泣いてた。……おで、言わない","k":"PD-Y:PD-Y-5"},
+{"id":"PD-Y-6","t":"band","x":"次の朝から、きゅうこは、ドラと目を合わせなくなった。柱時計のねじを巻く夜も、ホールで隣になっても","k":"PD-Y:PD-Y-6"},
+{"id":"PD-Y-7","t":"line","w":"dra","x":"(心の中で)……呼ばなきゃ、よかったのかな。……呼んだのに、止められなかった","e":"crying","k":"PD-Y:PD-Y-7"}],"jumpOnly":true},
+{"id":"END-PD2","chapter":"END","title":"もしも「呼び止めた夜」","cond":null,"bgm":"melo_sad_song_short","bg":"夜の台所(ろうそく","next":"OUT-PD","rows":[{"id":"PD2-1","t":"band","x":"聖夜の名探偵 エンディング「呼び止めた夜」","k":"END-PD2:PD2-1"},
+{"id":"PD2-2","t":"band","x":"名前を呼んでも、届かない夜がある。呼んだことで、遠くなってしまう背中もある","k":"END-PD2:PD2-2"},
+{"id":"PD2-3","t":"band","x":"聖夜の名探偵 —— もしも、おしまい","k":"END-PD2:PD2-3"}],"ending":{"id":"END-PD2","kind":"pov","label":"もしも","name":"呼び止めた夜"}},
+{"id":"OUT-PD","chapter":"END","title":"画面の前で(ドラの編のあと)","cond":null,"bgm":"close_to_your_heart_alt","bg":"ゲーム機をかこむ助手たち","next":null,"rows":[{"id":"OUT-PD-0","t":"band","x":"画面の前。ドラが、コントローラーを握ったまま、黙っている","k":"OUT-PD:OUT-PD-0"},
+{"id":"OUT-PD-1","t":"line","w":"dra","x":"……ゲームの中のおで、呼んでも、呼ばなくても、つらかったんだな","e":"troubled","k":"OUT-PD:OUT-PD-1"},
+{"id":"OUT-PD-2","t":"line","w":"kyuko","x":"……なんか、ゲームの中の俺のせいで、ごめんね、ドラちゃん","e":"troubled","k":"OUT-PD:OUT-PD-2"},
+{"id":"OUT-PD-3","t":"line","w":"dra","x":"なんで本物のきゅうこちゃんが謝るんだ。えへへ。……おで、こっちのきゅうこちゃんとは、いっぱい話す","e":"happy","k":"OUT-PD:OUT-PD-3"},
+{"id":"OUT-PD-4","t":"line","w":"myua","x":"ドラケン、いいやつすぎぢゃん……","e":"crying","k":"OUT-PD:OUT-PD-4"},
+{"id":"OUT-PD-5","t":"line","w":"sorashido","x":"本編で、ドラさんが黙っていた場面を、もう一度読み返したくなりますね","e":"normal","k":"OUT-PD:OUT-PD-5"},
+{"id":"OUT-PD-6","t":"band","x":"画面の中で、台所の窓の雪明かりが、静かに揺れていた","k":"OUT-PD:OUT-PD-6"}],"frame":"far","outside":true},
+{"id":"RW-1","chapter":"END","title":"真夜中のピアノ","cond":null,"bgm":"close_to_your_heart_alt","bg":"夜のホール","next":"RW-2","rows":[{"id":"RW-1-1","t":"band","x":"——これは、起きなかった夜の話","k":"RW-1:RW-1-1"},
+{"id":"RW-1-2","t":"band","x":"真夜中のホール。柱時計の振り子の音と、残り火のはぜる音だけ。……その中に、低い音がひとつ混じった","k":"RW-1:RW-1-2"},
+{"id":"RW-1-3","t":"band","x":"♪……(古いピアノの、ゆっくりとしたワルツ。ピアノの前に、黒いコートの背中)","fx":["se"],"se":"music","k":"RW-1:RW-1-3"},
+{"id":"RW-1-4","t":"band","x":"振り向いた顔は、黒いサンタではなかった。白髪まじりの髪を無造作に後ろで束ねた、見知らぬ男。コートの肩に、まだ雪が残っていた","k":"RW-1:RW-1-4"},
+{"id":"RW-1-5","t":"line","n":"灰谷","x":"……起こしてしまいましたか。すみません。最終のバスが雪で途中で止まりまして。そこから歩いて、さっき、ここに","k":"RW-1:RW-1-5"},
+{"id":"RW-1-6","t":"line","n":"灰谷","x":"灰谷といいます。昔、ピアノを弾いていた者です。……ふもとの駅で、よく知っている人に似た人が、ここ行きのバスに乗るのを見かけまして。それで、つい","k":"RW-1:RW-1-6"},
+{"id":"RW-1-7","t":"band","x":"男は鍵盤から手を下ろすと、2階の廊下を一度だけ見上げた","k":"RW-1:RW-1-7"},
+{"id":"RW-1-8","t":"line","n":"灰谷","x":"このペンションに、白瀬という人が泊まっていませんか。……いえ。答えなくて、いいです","k":"RW-1:RW-1-8"}],"jumpOnly":true},
+{"id":"RW-2","chapter":"END","title":"仮面の朝","cond":null,"bgm":"kaze_ga_soyogu","bg":"ペンションのホール","next":"RW-3","rows":[{"id":"RW-2-1","t":"band","x":"次の朝。ホールに、イチーカが箱を1つ抱えて現れた","k":"RW-2:RW-2-1"},
+{"id":"RW-2-2","t":"line","w":"ichika","x":"ふふっ。この吹雪では、今日はどなたも山を下りられそうにありませんね。……でしたら、今夜は、仮面舞踏会にしましょうね","k":"RW-2:RW-2-2"},
+{"id":"RW-2-3","t":"band","x":"箱の中には、古い仮面がいくつも入っていた。銀の縁どり、黒いレース、羽根飾り","k":"RW-2:RW-2-3"},
+{"id":"RW-2-4","t":"line","w":"myua","x":"まぢ！？ 仮面舞踏会とか、映画でしか見たことないぢゃん！","e":"excited","k":"RW-2:RW-2-4"},
+{"id":"RW-2-5","t":"line","w":"dra","x":"おで、ごちそうを運ぶ係がいいな。運びながら、ちょっと食う","e":"happy","k":"RW-2:RW-2-5"},
+{"id":"RW-2-6","t":"line","w":"mochimaru","x":"ドラさん、運ぶ係は、食べない係でもあるっちー","k":"RW-2:RW-2-6"},
+{"id":"RW-2-7","t":"line","w":"sorashido","x":"音楽は、どうしましょう。ワトソンくんに流してもらうこともできますが","e":"normal","k":"RW-2:RW-2-7"},
+{"id":"RW-2-8","t":"line","n":"灰谷","x":"……それなら、わたしが弾きましょう。今夜の一宿一飯のお礼に","k":"RW-2:RW-2-8"},
+{"id":"RW-2-9","t":"band","x":"階段の途中で、白瀬が立ち止まっていた。手すりを握った指が、白くなっている","k":"RW-2:RW-2-9"},
+{"id":"RW-2-10","t":"line","w":"shirase","x":"……灰谷、さん","k":"RW-2:RW-2-10"},
+{"id":"RW-2-11","t":"line","n":"灰谷","x":"15年ぶりですね、白瀬さん。……相変わらず、目を伏せて話す","k":"RW-2:RW-2-11"},
+{"id":"RW-2-12","t":"line","w":"shirase","x":"……ごめんなさい","k":"RW-2:RW-2-12"},
+{"id":"RW-2-13","t":"line","n":"灰谷","x":"その口ぐせも、相変わらずだ","k":"RW-2:RW-2-13"},
+{"id":"RW-2-14","t":"band","x":"食堂の入り口で、黒羽が、懐中時計のふたを、ぱちんと閉じた","k":"RW-2:RW-2-14"},
+{"id":"RW-2-15","t":"line","w":"kuroba","x":"……伴奏屋が、何の用かね。時は金なり、だよ。きみの時間には、もう値がつかないと思っていたが","k":"RW-2:RW-2-15"},
+{"id":"RW-2-16","t":"line","n":"灰谷","x":"ええ。ですから、今夜はただで弾きます","k":"RW-2:RW-2-16"},
+{"id":"RW-2-17","t":"line","w":"kiki","x":"(小声で)……空気が、ぴりぴりしてまつ","e":"troubled","k":"RW-2:RW-2-17"},
+{"id":"RW-2-18","t":"line","w":"atsu","x":"(小声で)知り合い、みたいだね。……3人とも","e":"normal","k":"RW-2:RW-2-18"}],"frame":"far"},
+{"id":"RW-3","chapter":"END","title":"二人の昔","cond":null,"bgm":"melo_sad_song_short","bg":"食堂","next":"RW-4","rows":[{"id":"RW-3-1","t":"band","x":"夕方。食堂の窓辺で、白瀬が仮面を膝にのせて、雪を見ていた。給仕の練習をしていたえるびんが、お茶を置く","k":"RW-3:RW-3-1"},
+{"id":"RW-3-2","t":"line","w":"erubin","x":"白瀬さん。……けさの人、昔の知り合い？","e":"normal","k":"RW-3:RW-3-2"},
+{"id":"RW-3-3","t":"line","w":"shirase","x":"……わたしが歌い始めた頃、伴奏をしてくれていた人です。小さな店で、毎晩","k":"RW-3:RW-3-3"},
+{"id":"RW-3-4","t":"line","w":"shirase","x":"黒羽さんの事務所に入る時に、言われました。『伴奏屋とは組むな。きみは、もっと大きな舞台に立つ』と","k":"RW-3:RW-3-4"},
+{"id":"RW-3-5","t":"line","w":"shirase","x":"わたしは、その言葉に従いました。灰谷さんには、さよならも言わずに","k":"RW-3:RW-3-5"},
+{"id":"RW-3-6","t":"line","w":"erubin","x":"……言わなかったんじゃなくて、言えなかったのかな","e":"troubled","k":"RW-3:RW-3-6"},
+{"id":"RW-3-7","t":"line","w":"shirase","x":"……どちらでも、同じことです","k":"RW-3:RW-3-7"},
+{"id":"RW-3-8","t":"band","x":"白瀬は、仮面を、そっと顔に当ててみた。窓ガラスに映ったのは、目もとだけ隠れた、知らない女の人だった","k":"RW-3:RW-3-8"},
+{"id":"RW-3-9","t":"line","w":"shirase","x":"仮面をつけると、少しだけ、言えることが増える気がしますね","k":"RW-3:RW-3-9"}]},
+{"id":"RW-4","chapter":"END","title":"ワルツ","cond":null,"bgm":"close_to_your_heart_alt","bg":"ペンションのホール","next":null,"rows":[{"id":"RW-4-1","t":"band","x":"夜。ホールのシャンデリアに、灯りが入る。仮面をつけたみんなの影が、壁に長く伸びた","k":"RW-4:RW-4-1"},
+{"id":"RW-4-2","t":"band","x":"♪……(灰谷のピアノ。ゆったりとした三拍子)","fx":["se"],"se":"music","k":"RW-4:RW-4-2"},
+{"id":"RW-4-3","t":"line","w":"momosuke","x":"わぁ……みんな、誰が誰だか分かんない♡","e":"excited","k":"RW-4:RW-4-3"},
+{"id":"RW-4-4","t":"line","w":"kyuko","x":"ほい、ドラちゃんは分かるよぉ。仮面の下から、クッキーのくず、こぼれてるもん","e":"happy","k":"RW-4:RW-4-4"},
+{"id":"RW-4-5","t":"band","x":"黒羽が、白瀬の前に立ち、黒い革の手袋をはめた手を差し出した","k":"RW-4:RW-4-5"},
+{"id":"RW-4-6","t":"line","w":"kuroba","x":"一曲、どうかね。……昔は、わたしの言うことなら、何でも聞いたじゃないか","k":"RW-4:RW-4-6"},
+{"id":"RW-4-7","t":"line","w":"shirase","x":"……昔は、です","k":"RW-4:RW-4-7"},
+{"id":"RW-4-8","t":"band","x":"それでも、白瀬は、その手を取った。ピアノの音が、ほんの一瞬だけ乱れて、すぐに戻る","k":"RW-4:RW-4-8"},
+{"id":"RW-4-9","t":"band","x":"くるり、くるりと回るたびに、白瀬の目が、ピアノのほうへ流れる。黒羽は、それに気づいていた。手袋の指に、力がこもる","k":"RW-4:RW-4-9"},
+{"id":"RW-4-10","t":"line","w":"kuroba","x":"どこを見ている。……あの頃も、きみは、あの男のほうばかり見ていた","k":"RW-4:RW-4-10"},
+{"id":"RW-4-11","t":"line","w":"shirase","x":"……見ていません","k":"RW-4:RW-4-11"},
+{"id":"RW-4-12","t":"line","w":"kuroba","x":"うそが下手なのも、変わらんな","k":"RW-4:RW-4-12"},
+{"id":"RW-4-13","t":"line","w":"myua","x":"(小声で、給仕のトレイを抱えて)……なにこの空気。大人すぎぢゃん……","e":"troubled","k":"RW-4:RW-4-13"},
+{"id":"RW-4-14","t":"line","w":"sorashido","x":"(小声で)……この曲、あと16小節です。次の曲で、相手が変わるかもしれません","e":"troubled","k":"RW-4:RW-4-14"},{"t":"q","id":"AR1","kind":"action","x":"ワルツが終わる。次の曲の前に、{name}は——","replies":{},"label":"行動の選択","options":[{"to":"RW-5a","x":"ピアノの灰谷に「次は、あなたが踊る番です」と、そっと耳打ちする"},{"to":"RW-5b","x":"黒羽に、懐中時計の話を聞いて、引き止める"},{"to":"RW-5c","x":"何もしない。仮面の下で、3人を見守る"}],"k":"RW-4:AR1"}],"frame":"far"},
+{"id":"RW-5a","chapter":"END","title":"交代","cond":null,"bgm":"close_to_your_heart_alt","bg":"ペンションのホール","next":"END-R1","rows":[{"id":"RW-5a-1","t":"band","x":"{name}が耳打ちすると、灰谷の指が、最後の和音の上で止まった。少しのあいだ鍵盤を見つめてから、灰谷は立ち上がった。ピアノの前に、ソラシドが座る","k":"RW-5a:RW-5a-1"},
+{"id":"RW-5a-2","t":"line","w":"sorashido","x":"……ワトソンくん、楽譜を。三拍子でお願いします","e":"normal","k":"RW-5a:RW-5a-2"},
+{"id":"RW-5a-3","t":"line","w":"watson","x":"はい。……ゆっくりめに、しておきます","k":"RW-5a:RW-5a-3"},
+{"id":"RW-5a-4","t":"line","n":"灰谷","x":"黒羽さん。次の曲は、わたしに譲っていただけますか","k":"RW-5a:RW-5a-4"},
+{"id":"RW-5a-5","t":"line","w":"kuroba","x":"……ふん。伴奏屋が、表に出てくるとはな","k":"RW-5a:RW-5a-5"},
+{"id":"RW-5a-6","t":"band","x":"灰谷は、手袋をしていない手を差し出した。鍵盤の形にくせのついた、長い指だった。白瀬は、その手と灰谷の顔を、何度も見比べた","k":"RW-5a:RW-5a-6"},
+{"id":"RW-5a-7","t":"line","n":"灰谷","x":"あの頃、言いそびれたことがあります。……今夜は仮面をしているので、言えそうです","k":"RW-5a:RW-5a-7"},
+{"id":"RW-5a-8","t":"line","w":"shirase","x":"……仮面を外してから、聞かせてください","k":"RW-5a:RW-5a-8"},
+{"id":"RW-5a-9","t":"band","x":"二人は、ホールの真ん中で、ゆっくりと回り始めた。誰も、そのあいだに割って入らなかった","k":"RW-5a:RW-5a-9"},
+{"id":"RW-5a-10","t":"band","x":"黒羽は懐中時計のふたを開けて、二人が回り終えるまで、閉じなかった","k":"RW-5a:RW-5a-10"}],"jumpOnly":true},
+{"id":"RW-5b","chapter":"END","title":"引き止める手","cond":null,"bgm":"melo_sad_song_short","bg":"ペンションのホール","next":"END-R2","rows":[{"id":"RW-5b-1","t":"band","x":"{name}が懐中時計のことをたずねると、黒羽はふたを開けて、長い話を始めた","k":"RW-5b:RW-5b-1"},
+{"id":"RW-5b-2","t":"line","w":"kuroba","x":"時計の話を聞きたがるとは、気が利くじゃないか。時は金なり、だが、こういう時間は、悪くない","k":"RW-5b:RW-5b-2"},
+{"id":"RW-5b-3","t":"band","x":"ピアノは、次の曲を弾き始めない。灰谷は、鍵盤の上で手を止めたまま、白瀬を見ていた","k":"RW-5b:RW-5b-3"},
+{"id":"RW-5b-4","t":"band","x":"白瀬は、誰の手も取らずに、ホールの真ん中に、ひとりで立った。仮面を外す","k":"RW-5b:RW-5b-4"},
+{"id":"RW-5b-5","t":"line","w":"shirase","x":"……灰谷さん。あの頃の曲を、弾いていただけますか。わたしが、まだ誰のものでもなかった頃の","k":"RW-5b:RW-5b-5"},
+{"id":"RW-5b-6","t":"band","x":"♪……(ピアノが、そっと鳴る)","fx":["se"],"se":"music","k":"RW-5b:RW-5b-6"},
+{"id":"RW-5b-7","t":"band","x":"白瀬は、歌い始めた。あの小さな店で、毎晩歌っていた頃と、同じ声で","k":"RW-5b:RW-5b-7"}],"jumpOnly":true},
+{"id":"RW-5c","chapter":"END","title":"見守る","cond":null,"bgm":"melo_dullahan_clockwork","bg":"ペンションのホール","next":"END-R3","rows":[{"id":"RW-5c-1","t":"band","x":"{name}は、何もしなかった。仮面の下で、3人を見ていた","k":"RW-5c:RW-5c-1"},
+{"id":"RW-5c-2","t":"band","x":"次の曲が始まっても、黒羽は白瀬の手を離さなかった。灰谷は、目を閉じて弾き続けた","k":"RW-5c:RW-5c-2"},
+{"id":"RW-5c-3","t":"band","x":"曲の途中で、黒羽が、ふいに足を止めた","k":"RW-5c:RW-5c-3"},
+{"id":"RW-5c-4","t":"line","w":"kuroba","x":"……もういい。踊りながら、ほかの男のピアノを聞いている女と回っても、つまらん","k":"RW-5c:RW-5c-4"},
+{"id":"RW-5c-5","t":"band","x":"黒羽は、懐中時計を外すと、ピアノの上に置いた","k":"RW-5c:RW-5c-5"},
+{"id":"RW-5c-6","t":"line","w":"kuroba","x":"伴奏屋。……時は金なり、だ。今夜の残りの時間は、きみにくれてやる。釣りはいらんよ","k":"RW-5c:RW-5c-6"},
+{"id":"RW-5c-7","t":"band","x":"黒羽は、それきり振り返らずに、階段を上っていった。革の手袋が、手すりの上に、片方だけ残っていた","k":"RW-5c:RW-5c-7"}],"jumpOnly":true},
+{"id":"END-R1","chapter":"END","title":"もしも「仮面の下の約束」","cond":null,"bgm":"close_to_your_heart_alt","bg":"ペンションのホール","next":"OUT-RW","rows":[{"id":"R1-1","t":"band","x":"聖夜の名探偵 エンディング「仮面の下の約束」","k":"END-R1:R1-1"},
+{"id":"R1-2","t":"band","x":"明け方。雪のやんだ窓辺に、仮面が2つ、並べて置いてあった","k":"END-R1:R1-2"},
+{"id":"R1-3","t":"band","x":"灰谷が言いそびれた言葉を、白瀬がどう受け取ったのかは、誰も知らない。ただ、その朝、白瀬は一度も「ごめんなさい」と言わなかった","k":"END-R1:R1-3"},
+{"id":"R1-4","t":"band","x":"聖夜の名探偵 —— もしも、おしまい","k":"END-R1:R1-4"}],"ending":{"id":"END-R1","kind":"ifroute","label":"もしも","name":"仮面の下の約束"}},
+{"id":"END-R2","chapter":"END","title":"もしも「ひとりの歌」","cond":null,"bgm":"melo_sad_song_short","bg":"ペンションのホール","next":"OUT-RW","rows":[{"id":"R2-1","t":"band","x":"聖夜の名探偵 エンディング「ひとりの歌」","k":"END-R2:R2-1"},
+{"id":"R2-2","t":"band","x":"白瀬の歌は、誰の名前も呼ばなかった。それでも、ピアノの音だけは、最後まで、ぴたりと寄り添っていた","k":"END-R2:R2-2"},
+{"id":"R2-3","t":"band","x":"黒羽は懐中時計のふたを開けたまま、一度も閉じずに、それを聞いていた","k":"END-R2:R2-3"},
+{"id":"R2-4","t":"band","x":"聖夜の名探偵 —— もしも、おしまい","k":"END-R2:R2-4"}],"ending":{"id":"END-R2","kind":"ifroute","label":"もしも","name":"ひとりの歌"}},
+{"id":"END-R3","chapter":"END","title":"もしも「釣りはいらない」","cond":null,"bgm":"close_to_your_heart_alt","bg":"ペンションのホール","next":"OUT-RW","rows":[{"id":"R3-1","t":"band","x":"聖夜の名探偵 エンディング「釣りはいらない」","k":"END-R3:R3-1"},
+{"id":"R3-2","t":"band","x":"残りの曲を、白瀬と灰谷が踊ったのか、ただ並んで聞いていたのか。ピアノの上の懐中時計だけが、その時間を数えていた","k":"END-R3:R3-2"},
+{"id":"R3-3","t":"band","x":"次の朝、黒羽は、いつもより少しだけ遅く、食堂に下りてきた","k":"END-R3:R3-3"},
+{"id":"R3-4","t":"band","x":"聖夜の名探偵 —— もしも、おしまい","k":"END-R3:R3-4"}],"ending":{"id":"END-R3","kind":"ifroute","label":"もしも","name":"釣りはいらない"}},
+{"id":"OUT-RW","chapter":"END","title":"画面の前で(仮面のワルツのあと)","cond":null,"bgm":"close_to_your_heart_alt","bg":"ゲーム機をかこむ助手たち","next":null,"rows":[{"id":"OUT-RW-0","t":"band","x":"画面の前。エンディングの曲が、三拍子で流れている","k":"OUT-RW:OUT-RW-0"},
+{"id":"OUT-RW-1","t":"line","w":"myua","x":"待って、なにこれ、まぢドキドキしたんだけど！ 映画ぢゃん……！","e":"excited","k":"OUT-RW:OUT-RW-1"},
+{"id":"OUT-RW-2","t":"line","w":"mochimaru","x":"……ゲームの中で、黒羽さまが、ちょっとだけかっこよかったっちー","k":"OUT-RW:OUT-RW-2"},
+{"id":"OUT-RW-3","t":"line","w":"sorashido","x":"事件が起きなかった夜も、ちゃんと何かが起きている。……そういう書き方ですね","e":"normal","k":"OUT-RW:OUT-RW-3"},
+{"id":"OUT-RW-4","t":"line","w":"dra","x":"ゲームの中のおで、仮面の下で、ずっと食ってた。えへへ","e":"happy","k":"OUT-RW:OUT-RW-4"},
+{"id":"OUT-RW-5","t":"line","w":"kiki","x":"白瀬さん、最後はちょっとだけ、前を向けた気がしまつ","e":"happy","k":"OUT-RW:OUT-RW-5"},
+{"id":"OUT-RW-6","t":"line","w":"atsu","x":"……本編だと、黒羽さんと白瀬さんに、こんな夜は来なかったんだよね","e":"normal","k":"OUT-RW:OUT-RW-6"},
+{"id":"OUT-RW-7","t":"band","x":"画面の中で、誰もいないピアノのふたが、そっと閉じた","k":"OUT-RW:OUT-RW-7"}],"frame":"far","outside":true}]};
 
 // ---- part: 79-screen-xmas-novel.jsx ----
 // ===== クリスマスのミステリーノベル「聖夜の名探偵」の再生画面(台帳 r1126-022) =====
@@ -72549,12 +72745,13 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
       // 「選び直す」はエンディングの「次」が問いの行(Q7a)のときだけ。場面(カーテンコール)へは settle が続けて入る
       const after = !replayRef.current && scene && scene.next && !xmasNovelSceneById(S, scene.next) && xmasNovelFindRow(S, scene.next) ? xmasNovelJump(S, next.cur, scene.next) : null;
       if (replayRef.current) { setSt(next); setSkip(false); setSheet(null); setCard({ kind: 'ending', ending, replay: true }); return; }
-      const firstTime = !s.endings.includes(ending.id);
+      const firstTime = !s.endings.includes(ending.id); const marksBefore = xmasNovelBookmarks(s.endings); // 特別なしおり(r1126-115)は見たエンドから数えるだけ(保存は増やさない)
       s = { ...xmasNovelRecordEnding(s, ending.id, new Date().toISOString()), cur: after };
       if (typeof xmasNovelRankNote === 'function') xmasNovelRankNote({ k: 'end', id: ending.id }, { off: rankOff, script: S }); // ランキング(r1126-107)。見返すときは通らない
+      const marksNew = xmasNovelBookmarks(s.endings).filter((id) => !marksBefore.includes(id));
       persist(s, true);
       setSt(next); setSkip(false); setSheet(null);
-      setCard({ kind: 'ending', ending, retry: !!after, fresh: firstTime, count: xmasNovelPerfectCount(S, s), total: xmasNovelScoreGroups(S).length });
+      setCard({ kind: 'ending', ending, retry: !!after, fresh: firstTime, count: xmasNovelPerfectCount(S, s), total: xmasNovelScoreGroups(S).length, marks: marksNew });
       return;
     }
     if (!next.row) { persist({ ...s, cur: null }, true); setSt(null); setMode('title'); return; }
@@ -72657,7 +72854,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
   // 答える
   const answer = (q, pick) => {
     setPick(null);
-    const res = xmasNovelAnswer(S, st.cur, q, pick, (saveRef.current && saveRef.current.endings) || []);
+    const res = xmasNovelAnswer(S, st.cur, q, pick, (saveRef.current && saveRef.current.endings) || [], (saveRef.current && saveRef.current.read) || []);
     let s = saveRef.current;
     if (q.score) {
       if (!(s.first && s.first[q.id]) && typeof xmasNovelRankNote === 'function') xmasNovelRankNote({ k: 'first', id: q.id, ok: !!res.ok }, { off: rankOff, script: S }); // 一番はじめの答えだけ(r1126-107)
@@ -72767,6 +72964,13 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
                 })()}
               </div>
               <div data-xmas-novel-perfect className="mt-4 text-[10px] text-slate-400">推理の問い 一発で当てた数 {xmasNovelPerfectCount(S, save)} / {perfectTotal}</div>
+              {/* 特別なしおり(r1126-115): 持っている物だけ、本から垂れるリボンで見せる。数も条件も出さない */}
+              {xmasNovelBookmarks(save.endings).length > 0 && (
+                <div className="mt-3 flex items-end gap-2" data-xmas-novel-ribbons aria-label="挟まれたリボン">
+                  {xmasNovelBookmarks(save.endings).map((id) => { const b = xmasNovelBookmarkOf(id); return b ? <span key={id} data-xmas-novel-ribbon={id} title={b.name} style={{ display: 'block', width: 8, height: 34, background: b.tone, clipPath: 'polygon(0 0,100% 0,100% 100%,50% 82%,0 100%)', boxShadow: '0 2px 4px rgba(0,0,0,.6)' }} /> : null; })}
+                  <span className="mh-nv-serif text-[10px] tracking-[0.2em] text-slate-400">挟まれたリボン</span>
+                </div>
+              )}
               {confirmNew && (
                 <div className="mh-nv-sheet" onClick={() => setConfirmNew(false)}>
                   <div className="mh-nv-panel mb-auto mt-auto max-w-sm text-center" onClick={(e) => e.stopPropagation()}>
@@ -72956,6 +73160,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
                 <div className="mh-nv-rule" />
                 {!card.replay && <div className="text-[12px] text-slate-200">{card.fresh ? 'エンドヒストリーに記録しました' : 'エンドヒストリーに記録ずみ'}</div>}
                 {!card.replay && <div className="mt-1 text-[11px] text-slate-300">推理の問い 一発で当てた数 {card.count} / {card.total}</div>}
+                {!card.replay && (card.marks || []).map((id) => { const b = xmasNovelBookmarkOf(id); return b ? <div key={id} className="mh-nv-serif mt-3 text-[13px] font-black" style={{ ...JA_LABEL_STYLE, color: b.tone }} data-xmas-novel-mark-got={id}>{jaWrap(`頁のあいだに、${b.color}リボンが挟まっていた`)}</div> : null; })}
                 {!card.replay && card.ending.id === 'END-G' && xmasNovelChapters(S).some((c) => c.past) && <div className="mh-nv-serif mh-nv-gold mt-3 text-[13px] font-black" data-xmas-novel-past-open style={JA_LABEL_STYLE}>{jaWrap('過去編「12年前の聖夜」が、「章から」で読めるようになりました')}</div>}
                 <div className="mt-5 space-y-2">
                   {card.retry && <button type="button" className="mh-nv-btn wide mh-nv-serif" data-xmas-novel-retry onClick={() => { setCard(null); start(saveRef.current.cur); }}>{card.ending && card.ending.kind === 'forced' ? '選択の直前からやり直す' : '選び直す'}</button>}
@@ -73029,14 +73234,14 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
             {q && q.kind === 'action' && (<>
               <div data-xmas-novel-question={q.id} className="mh-nv-plain mh-nv-serif mh-nv-gold mb-3 text-[17px] font-black">{xmasNovelWrap(xmasNovelFill(q.x, playerName))}</div>
               <div className="space-y-2.5">
-                {xmasNovelOptionsOf(q, xmasNovelCtx(S, st.cur, save.endings)).map((o) => {
+                {xmasNovelOptionsOf(q, xmasNovelCtx(S, st.cur, save.endings, save.read)).map((o) => {
                   // 一度見た強制バッドの選択肢には「見たエンド」の印(r1126-099 追記1)
                   const endAhead = !q.once && o.to ? xmasNovelEndingAhead(S, o.to) : null;
                   const seenEnd = endAhead && Array.isArray(save.endings) && save.endings.includes(endAhead) ? xmasNovelSceneById(S, endAhead) : null;
                   return (
                     <button type="button" key={o.i} className="mh-nv-choice mh-nv-serif" data-xmas-novel-option={o.i} data-pick={picked && picked.key === o.i ? '' : undefined} aria-pressed={!!(picked && picked.key === o.i)}
                       onClick={() => (q.score || q.once ? choose(o.i, xmasNovelFill(o.x, playerName)) : answer(q, o.i))}>
-                      {xmasNovelWrap(xmasNovelFill(o.x, playerName))}
+                      {o.mark ? <span data-xmas-novel-option-mark className="mr-1 text-[12px]" style={{ color: '#e8c873' }} aria-label="新しい選択肢">✦</span> : null}{xmasNovelWrap(xmasNovelFill(o.x, playerName))}
                       {seenEnd && <span data-xmas-novel-seen-end={endAhead} className="mh-nv-plain mt-1 block text-[11px] font-bold text-rose-200">見たエンド: {seenEnd.ending && seenEnd.ending.name ? `「${seenEnd.ending.name}」` : 'バッドエンド'}</span>}
                     </button>
                   );
@@ -73233,7 +73438,7 @@ const xmasNovelRankMine = async () => {
 };
 
 // 見たエンドの内訳の点(種類の色だけ。どのエンドかは出さない)
-const XMAS_NOVEL_RANK_KIND_ORDER = ['good', 'truebad', 'normal', 'another', 'bad', 'forced', 'accuse', 'unsolved', 'omake'];
+const XMAS_NOVEL_RANK_KIND_ORDER = ['good', 'truebad', 'normal', 'another', 'bad', 'forced', 'accuse', 'unsolved', 'pov', 'ifroute', 'omake'];
 const XmasNovelRankDots = ({ list, kinds, total }) => {
   const seen = (Array.isArray(list) ? list : []).map((id) => kinds[id] || 'normal')
     .sort((a, b) => XMAS_NOVEL_RANK_KIND_ORDER.indexOf(a) - XMAS_NOVEL_RANK_KIND_ORDER.indexOf(b));
@@ -102003,7 +102208,7 @@ function MonheroSuccessHomeEntry({ callNameOf, bondLvOf, onOpenChange }) {
             (ホーム略称「サクセス」は 2026-11-17 の一新で一時使ったが、同日のあっくん追加指示でフルネームへ戻した) */}
         {/* 2026-11-23 r1119-130 社長「モンビーのイベント開催中と同じ作りにすればいい」: 傾けた10pxの字がにじんでいたので、
             モンヒロビートの入口の「開催中」の札と同じ部品(HOME_EVENT_BADGE_STYLE・光り方の mh-home-event-badge)にそろえる。文と黄色はそのまま */}
-        <em className="rb mh-home-event-badge" aria-hidden="true" style={typeof homeV2At === 'function' && !homeV2At() && typeof HOME_EVENT_BADGE_STYLE_V1 !== 'undefined' ? HOME_EVENT_BADGE_STYLE_V1 : HOME_EVENT_BADGE_STYLE}>β版 開幕！</em>
+        <em className="rb mh-home-event-badge" aria-hidden="true" style={typeof homeV2At === 'function' && !homeV2At() && typeof HOME_EVENT_BADGE_STYLE_V1 !== 'undefined' ? HOME_EVENT_BADGE_STYLE_V1 : HOME_EVENT_BADGE_STYLE}><i className="mh-home-event-badge-shine" aria-hidden="true"/>β版 開幕！</em>
         <span className="pic"><img src="images/home/facility-success.webp" alt="" draggable={false}/></span>
         <span className="txt"><span className="nm">モンヒロサクセス</span><span className="sb">育成</span></span>
       </button>
