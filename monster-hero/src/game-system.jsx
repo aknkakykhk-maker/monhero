@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e43b4efab1c869d2
+// generated-sha256: d7b1dfd2c401d935
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -68657,6 +68657,21 @@ const xmasNovelAnswer = (script, cur, q, pick, endings) => {
     const to = xmasNovelRepliesTo(replies);
     return { cur: next, ok: true, replies, then: to ? { to } : 'next' };
   }
+  // まちがえても進む問い(r1126-099 追記1・q.pass): 返し(近い手がかり / 1回目のまちがい)→ 話し手が正しい手がかりを突きつける帯 → 正解の返しで先へ。
+  //   一発目を外したことは ans の f(成績)に残る。ans の形 { t, f, w, done } は変えない
+  if (q.pass && q.kind === 'present') {
+    const okRows = xmasNovelPickReplies(q, 'ok');
+    const why = Array.isArray(q.near) && q.near.includes(pick) && xmasNovelPickReplies(q, 'near').length ? xmasNovelPickReplies(q, 'near') : xmasNovelPickReplies(q, 'x1');
+    const by = okRows[0] && okRows[0].w ? xmasNovelCastOf(okRows[0].w) : null;
+    const clue = answers[0] || '';
+    const band = clue ? [{ id: `${q.id}-pass`, t: 'band', x: `${by && by.name ? by.name : '探偵'}が、手がかり帳から【${clue}】を突きつけた` }] : [];
+    // 正解の返しの頭の「はい。」は、選んだ人への返事なので、仲間が自分で突きつけたときは外す
+    const okSelf = okRows.map((r, i) => (i === 0 && r && typeof r.x === 'string' && /^はい。\s*/.test(r.x) ? { ...r, x: r.x.replace(/^はい。\s*/, '') } : r));
+    const replies = [...why, ...band, ...okSelf];
+    const passed = { ...next, ans: { ...next.ans, [q.id]: { ...next.ans[q.id], done: true } } };
+    const to = xmasNovelRepliesTo(replies);
+    return { cur: passed, ok: false, replies, then: to ? { to } : 'next' };
+  }
   // まちがい: 人ごとの返し → 近い手がかりの返し → 回数の返し(3回目からは x3)
   const personal = q.kind === 'person' ? xmasNovelPickReplies(q, String(pick)) : [];
   const near = q.kind === 'present' && Array.isArray(q.near) && q.near.includes(pick) ? xmasNovelPickReplies(q, 'near') : [];
@@ -68670,6 +68685,23 @@ const xmasNovelAnswer = (script, cur, q, pick, endings) => {
 const xmasNovelRepliesTo = (replies) => {
   for (let i = (replies || []).length - 1; i >= 0; i -= 1) if (replies[i] && replies[i].to) return replies[i].to;
   return null;
+};
+// 行動の選択肢の行き先の先にあるエンディングのID(強制バッドの「見たエンド」の印・r1126-099 追記1)。場面を next でたどる。無ければ null
+const xmasNovelEndingAhead = (script, to) => {
+  let s = to ? xmasNovelSceneById(script, to) : null;
+  for (let k = 0; s && k < 12; k += 1) {
+    if (s.ending && s.ending.id) return s.ending.id;
+    s = typeof s.next === 'string' ? xmasNovelSceneById(script, s.next) : null;
+  }
+  return null;
+};
+// 手がかり帳のうち、問いで突きつけられる物(q.narrow があれば、その候補だけ・r1126-099 追記1)。絞った結果に正解が無ければ全部
+const xmasNovelPresentable = (q, clues) => {
+  const list = Array.isArray(clues) ? clues : [];
+  if (!q || !Array.isArray(q.narrow) || !q.narrow.length) return list;
+  const picked = list.filter((c) => q.narrow.includes(c.n));
+  const ans = Array.isArray(q.answer) ? q.answer : [];
+  return picked.some((c) => ans.includes(c.n)) ? picked : list;
 };
 // 行動の選択肢のうち、いま出せる物(条件つきの選択肢: 「オルゴールを鳴らす」は f_lullaby=1 のときだけ)
 const xmasNovelOptionsOf = (q, ctx) => (Array.isArray(q && q.options) ? q.options : [])
@@ -69002,7 +69034,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"2-4-3","t":"line","w":"kiki","x":"停電の前から、玄関は私が見てまちた。誰も通ってないでつ","e":"troubled","k":"C2-4:2-4-3"},
 {"id":"2-4-4","t":"line","w":"mochimaru","x":"……あれ？ ろうそくを取りに行った帰りに、台所をのぞいたら、裏口のかんぬきが閉まってたっちー。ぼく、開けておいたのに……","k":"C2-4:2-4-4"},
 {"id":"2-4-4c","t":"clue","clue":"閉まった裏口","x":"もちまるが開けておいた裏口のかんぬきが、停電の後、閉まっていた","k":"C2-4:2-4-4c"},
-{"id":"2-4-5","t":"line","w":"myua","x":"あつくん、早く！ どこを探す！？","e":"surprise","k":"C2-4:2-4-5"},{"t":"q","id":"Q2a","kind":"present","x":"黒羽は、どこにいる？ 居場所を示す手がかりを、手がかり帳から1つ突きつけよう","replies":{"x1":[{"id":"Q2a-x1","t":"line","w":"watson","x":"その手がかりは、今、黒羽さんがいる場所とは結びつきません"}],"x2":[{"id":"Q2a-x2","t":"line","w":"myua","x":"違うっぽい……！ もちまるん、さっきなんて言ってた？","e":"troubled"}],"x3":[{"id":"Q2a-x3","t":"line","w":"sorashido","x":"開けておいたはずの物が、閉まっていた。……誰かを、外に出したままにするためです","e":"normal"}],"near":[{"id":"Q2a-near","t":"line","w":"atsu","x":"鐘がずれてるのは気になる。……けど、今は、おっさんがどこにいるか！","e":"troubled"}],"ok":[{"id":"Q2a-ok","t":"line","w":"atsu","x":"裏口だ！ 開けておいたのが閉まってたってことは——外に、閉め出されたんだ！","e":"normal","to":"C2-5"}]},"label":"推理の問い①","score":true,"answer":["閉まった裏口"],"k":"C2-4:Q2a","near":["早く鳴った鐘"]}]},
+{"id":"2-4-5","t":"line","w":"myua","x":"あつくん、早く！ どこを探す！？","e":"surprise","k":"C2-4:2-4-5"},{"t":"q","id":"Q2a","kind":"present","x":"黒羽は、どこにいる？ 居場所を示す手がかりを、手がかり帳から1つ突きつけよう","replies":{"x1":[{"id":"Q2a-x1","t":"line","w":"watson","x":"その手がかりは、今、黒羽さんがいる場所とは結びつきません"}],"x2":[{"id":"Q2a-x2","t":"line","w":"myua","x":"違うっぽい……！ もちまるん、さっきなんて言ってた？","e":"troubled"}],"x3":[{"id":"Q2a-x3","t":"line","w":"sorashido","x":"開けておいたはずの物が、閉まっていた。……誰かを、外に出したままにするためです","e":"normal"}],"near":[{"id":"Q2a-near","t":"line","w":"atsu","x":"鐘がずれてるのは気になる。……けど、今は、おっさんがどこにいるか！","e":"troubled"}],"ok":[{"id":"Q2a-ok","t":"line","w":"atsu","x":"裏口だ！ 開けておいたのが閉まってたってことは——外に、閉め出されたんだ！","e":"normal","to":"C2-5"}]},"label":"推理の問い①","score":true,"pass":true,"answer":["閉まった裏口"],"k":"C2-4:Q2a","near":["早く鳴った鐘"]}]},
 {"id":"C2-5","chapter":"C2","title":"吹雪の向こう","cond":null,"bgm":"melo_dullahan_steel_ghost","bg":"夜の裏口(吹雪","next":"C3-1","rows":[{"id":"2-5-1","t":"band","x":"ガタン！(あつが、かんぬきを外す)","fx":["se"],"se":"impact","k":"C2-5:2-5-1"},
 {"id":"2-5-2","t":"band","x":"扉の外は、真っ白な吹雪。ろうそくの火が、一息で消える","k":"C2-5:2-5-2"},
 {"id":"2-5-3","t":"band","x":"……ァ……(吹雪の向こうで、かすかな声)","fx":["se"],"se":"tap","k":"C2-5:2-5-3"},
@@ -69035,7 +69067,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"3-2-2","t":"line","w":"sorashido","x":"長靴の足跡は、雪原の真ん中まで行って……そこで、ぷっつり消えています","e":"normal","k":"C3-2:3-2-2"},
 {"id":"3-2-3","t":"line","w":"dra","x":"き、消えてる……。空でも飛んだのか？","e":"surprise","k":"C3-2:3-2-3"},
 {"id":"3-2-4","t":"line","w":"myua","x":"あつくん、見て。最後の足跡だけ、ほかより深くて、ふちが二重にぶれてない？","e":"normal","k":"C3-2:3-2-4"},
-{"id":"3-2-4c","t":"clue","clue":"深い足跡","x":"雪原の真ん中で消えた長靴の足跡。最後の1つだけ、ほかより深く、ふちが二重にぶれている","k":"C3-2:3-2-4c"},{"t":"q","id":"Q3a","kind":"present","x":"黒いサンタは、雪原から外へ逃げた？ それとも——。わけを示す手がかりを、手がかり帳から1つ突きつけよう","replies":{"x1":[{"id":"Q3a-x1","t":"line","w":"watson","x":"その手がかりは、雪原の足跡とは別の場所の物です。足跡そのものを、よく見てみましょう"}],"x2":[{"id":"Q3a-x2","t":"line","w":"myua","x":"うーん……。最後のほうの足跡、なんか違ったよね？","e":"troubled"}],"x3":[{"id":"Q3a-x3","t":"line","w":"sorashido","x":"同じ所を2回踏んだら、足跡はどうなるでしょう","e":"normal"}],"near":[{"id":"Q3a-near","t":"line","w":"atsu","x":"裏口から出たのは分かってる。……知りたいのは、その後、どこへ行ったか","e":"troubled"}],"ok":[{"id":"Q3a-ok","t":"line","w":"sorashido","x":"はい。同じ足跡を踏んで、後ろ向きに戻ったんです。黒いサンタは、外へ逃げていない。……戻ったのは、このペンションの中です","e":"normal"}]},"label":"推理の問い②","score":true,"answer":["深い足跡"],"k":"C3-2:Q3a","near":["閉まった裏口"]},
+{"id":"3-2-4c","t":"clue","clue":"深い足跡","x":"雪原の真ん中で消えた長靴の足跡。最後の1つだけ、ほかより深く、ふちが二重にぶれている","k":"C3-2:3-2-4c"},{"t":"q","id":"Q3a","kind":"present","x":"黒いサンタは、雪原から外へ逃げた？ それとも——。わけを示す手がかりを、手がかり帳から1つ突きつけよう","replies":{"x1":[{"id":"Q3a-x1","t":"line","w":"watson","x":"その手がかりは、雪原の足跡とは別の場所の物です。足跡そのものを、よく見てみましょう"}],"x2":[{"id":"Q3a-x2","t":"line","w":"myua","x":"うーん……。最後のほうの足跡、なんか違ったよね？","e":"troubled"}],"x3":[{"id":"Q3a-x3","t":"line","w":"sorashido","x":"同じ所を2回踏んだら、足跡はどうなるでしょう","e":"normal"}],"near":[{"id":"Q3a-near","t":"line","w":"atsu","x":"裏口から出たのは分かってる。……知りたいのは、その後、どこへ行ったか","e":"troubled"}],"ok":[{"id":"Q3a-ok","t":"line","w":"sorashido","x":"はい。同じ足跡を踏んで、後ろ向きに戻ったんです。黒いサンタは、外へ逃げていない。……戻ったのは、このペンションの中です","e":"normal"}]},"label":"推理の問い②","score":true,"pass":true,"answer":["深い足跡"],"k":"C3-2:Q3a","near":["閉まった裏口"]},
 {"id":"3-2-5","t":"line","w":"atsu","x":"……この中に、黒いサンタがいる","f":"close","e":"normal","k":"C3-2:3-2-5"}]},
 {"id":"C3-3","chapter":"C3","title":"閉ざされた山","cond":null,"bgm":"melo_dullahan_clockwork","bg":"ペンションのホール","next":"C3-4","rows":[{"id":"3-3-1","t":"line","w":"mochimaru","x":"大変だっちー！ 電話が、繋がらないっちー！ 線が、外で切れてたっちー","k":"C3-3:3-3-1"},
 {"id":"3-3-2","t":"line","w":"ichika","x":"山道も、ゆうべの雪で、塞がってしまいました。……道があくまで、誰もここへは来られませんし、誰も出られません","k":"C3-3:3-3-2"},
@@ -69106,7 +69138,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"4-3-3","t":"line","w":"sorashido","x":"読みます。『0時の鐘、なんだか早かったっちー。オーナーが裏口を開けに行ったら、もう、かんぬきが閉まってたっちー』","e":"normal","k":"C4-3:4-3-3"},
 {"id":"4-3-3c","t":"clue","clue":"12年前の帳面","x":"もちまるの12年前の帳面。12月24日「0時の鐘、なんだか早かったっちー」。オーナーが行った時、裏口はもう閉まっていた","k":"C4-3:4-3-3c"},
 {"id":"4-3-4","t":"line","w":"mochimaru","x":"ぼく、うそは書けないっちー。……本当に、早かったっちー","k":"C4-3:4-3-4"},
-{"id":"4-3-5","t":"line","w":"atsu","x":"……おっちゃんがいなくなった夜の鐘も、早かった","e":"normal","k":"C4-3:4-3-5"},{"t":"q","id":"Q4a","kind":"present","x":"あの夜の鐘と、12年前の鐘。黒いサンタが、12年前と同じ仕掛けを使ったと示す手がかりを、手がかり帳から1つ突きつけよう","replies":{"x1":[{"id":"Q4a-x1","t":"line","w":"watson","x":"その手がかりは、12年前のことを示していません"}],"x2":[{"id":"Q4a-x2","t":"line","w":"atsu","x":"あの夜のことは分かってる。……12年前のことが書いてある物、あったよね","e":"normal"}],"x3":[{"id":"Q4a-x3","t":"line","w":"mochimaru","x":"ぼくの帳面、見てほしいっちー……"}],"near":[{"id":"Q4a-near","t":"line","w":"sorashido","x":"それは、黒羽さんがいなくなった夜の鐘です。12年前の鐘も早かったと分かる物が、もう一つ要ります","e":"normal"}],"ok":[{"id":"Q4a-ok","t":"line","w":"sorashido","x":"はい。12年前も、鐘は早く鳴り、裏口は閉まっていた。あの夜と、同じです。……黒いサンタは、12年前の夜を、もう一度やろうとしているのかもしれません","e":"normal"}]},"label":"推理の問い③","score":true,"answer":["12年前の帳面"],"k":"C4-3:Q4a","near":["早く鳴った鐘"]},
+{"id":"4-3-5","t":"line","w":"atsu","x":"……おっちゃんがいなくなった夜の鐘も、早かった","e":"normal","k":"C4-3:4-3-5"},{"t":"q","id":"Q4a","kind":"present","x":"あの夜の鐘と、12年前の鐘。黒いサンタが、12年前と同じ仕掛けを使ったと示す手がかりを、手がかり帳から1つ突きつけよう","replies":{"x1":[{"id":"Q4a-x1","t":"line","w":"watson","x":"その手がかりは、12年前のことを示していません"}],"x2":[{"id":"Q4a-x2","t":"line","w":"atsu","x":"あの夜のことは分かってる。……12年前のことが書いてある物、あったよね","e":"normal"}],"x3":[{"id":"Q4a-x3","t":"line","w":"mochimaru","x":"ぼくの帳面、見てほしいっちー……"}],"near":[{"id":"Q4a-near","t":"line","w":"sorashido","x":"それは、黒羽さんがいなくなった夜の鐘です。12年前の鐘も早かったと分かる物が、もう一つ要ります","e":"normal"}],"ok":[{"id":"Q4a-ok","t":"line","w":"sorashido","x":"はい。12年前も、鐘は早く鳴り、裏口は閉まっていた。あの夜と、同じです。……黒いサンタは、12年前の夜を、もう一度やろうとしているのかもしれません","e":"normal"}]},"label":"推理の問い③","score":true,"pass":true,"answer":["12年前の帳面"],"k":"C4-3:Q4a","near":["早く鳴った鐘"]},
 {"id":"4-3-6","t":"line","w":"kiki","x":"12年前のことを、知ってる人……？","e":"troubled","k":"C4-3:4-3-6"},
 {"id":"4-3-7","t":"line","w":"sorashido","x":"それに、柱時計の針を動かせる人です","e":"normal","k":"C4-3:4-3-7"},
 {"id":"4-3-7b","t":"band","x":"みんなが台所を出ていった後。ワトソンくんの画面の隅に、小さな字が出る","k":"C4-3:4-3-7b"},
@@ -69172,7 +69204,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"5-3-7a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"myua","x":"あつくん、一人で！？ 書斎、さっきから誰もいないよ……","e":"troubled","k":"C5-3:5-3-7a"},
 {"id":"5-3-7s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"watson","x":"ソラシドさん。お一人で動くのは、危険です","k":"C5-3:5-3-7s"},
 {"id":"5-3-7b","t":"line","w":"momosuke","x":"でも、白瀬さん、今も寒い所にいるかもしれないんだよ……！ 早く、探しに行こうよ……！","f":"close","e":"crying","k":"C5-3:5-3-7b"},{"t":"q","id":"A5","kind":"action","x":"写真の影の正体か、白瀬の居場所か——","replies":{},"label":"行動の選択","options":[{"c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"to":"C5-X","x":"あつが、一人で書斎にこもり、えるびんのカメラの写真を拡大して、影の正体を探る"},{"c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"to":"C5-X","x":"ソラシドが、一人で書斎にこもり、ワトソンくんの中の写真を拡大して、影の正体を探る"},{"to":"5-3-8","x":"写真は後にして、みんなで冷たい空気の流れをたどる"}],"k":"C5-3:A5"},
-{"id":"5-3-8","t":"line","w":"atsu","x":"白瀬さんを探す！ どこだ……！","f":"close","e":"angry","k":"C5-3:5-3-8"},{"t":"q","id":"Q5a","kind":"present","x":"白瀬は、どこに閉じこめられている？ 場所を示す手がかりを、手がかり帳から1つ突きつけよう","replies":{"x1":[{"id":"Q5a-x1","t":"line","w":"watson","x":"その手がかりは、白瀬さんのいる場所とは結びつきません"}],"x2":[{"id":"Q5a-x2","t":"line","w":"myua","x":"冷たい空気……どこから来てるの……？","e":"troubled"}],"x3":[{"id":"Q5a-x3","t":"line","w":"mochimaru","x":"奥の1枚だけ、ふちがきれいだったっちー……"}],"near":[{"id":"Q5a-near","t":"line","w":"sorashido","x":"写真の影は、鏡の廊下にいました。……知りたいのは、その廊下の、どこが扉になっているかです","e":"normal"}],"ok":[{"id":"Q5a-ok","t":"line","w":"atsu","x":"鏡だ！ あの1枚だけ、誰かが何度も触ってる。……あれが、扉なんだ！","e":"normal","to":"C5-4"}]},"label":"推理の問い④","score":true,"answer":["ほこりのない鏡のふち"],"k":"C5-3:Q5a","near":["えるびんの写真"]}]},
+{"id":"5-3-8","t":"line","w":"atsu","x":"白瀬さんを探す！ どこだ……！","f":"close","e":"angry","k":"C5-3:5-3-8"},{"t":"q","id":"Q5a","kind":"present","x":"白瀬は、どこに閉じこめられている？ 場所を示す手がかりを、手がかり帳から1つ突きつけよう","replies":{"x1":[{"id":"Q5a-x1","t":"line","w":"watson","x":"その手がかりは、白瀬さんのいる場所とは結びつきません"}],"x2":[{"id":"Q5a-x2","t":"line","w":"myua","x":"冷たい空気……どこから来てるの……？","e":"troubled"}],"x3":[{"id":"Q5a-x3","t":"line","w":"mochimaru","x":"奥の1枚だけ、ふちがきれいだったっちー……"}],"near":[{"id":"Q5a-near","t":"line","w":"sorashido","x":"写真の影は、鏡の廊下にいました。……知りたいのは、その廊下の、どこが扉になっているかです","e":"normal"}],"ok":[{"id":"Q5a-ok","t":"line","w":"atsu","x":"鏡だ！ あの1枚だけ、誰かが何度も触ってる。……あれが、扉なんだ！","e":"normal","to":"C5-4"}]},"label":"推理の問い④","score":true,"pass":true,"answer":["ほこりのない鏡のふち"],"k":"C5-3:Q5a","near":["えるびんの写真"]}]},
 {"id":"C5-4","chapter":"C5","title":"鏡の向こう","cond":null,"bgm":"melo_sad_song_short","bg":"朝の鏡の廊下","next":"C5-5","rows":[{"id":"5-4-1","t":"band","x":"けれど、奥の1枚は、押しても、叩いても、びくともしない。開け方が分からないまま、みんなで夜通し、鏡の前を調べ続けた","k":"C5-4:5-4-1"},
 {"id":"5-4-2","t":"band","x":"朝。雪の光が差しこむと、奥の鏡の下の隙間に、赤い手袋の指先が挟まっているのが見えた","k":"C5-4:5-4-2"},
 {"id":"5-4-2c","t":"clue","clue":"赤い手袋","x":"白瀬の赤い毛糸の手袋。朝、鏡の廊下の奥の鏡の下の隙間に、片方挟まっていた","k":"C5-4:5-4-2c"},
@@ -69234,7 +69266,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"6-2-5","t":"line","w":"watson","x":"……写真に残しておきます。12月20日の夕方に撮った、この部屋の写真とも、見比べておきます","k":"C6-2:6-2-5"},
 {"id":"6-2-6","t":"line","w":"atsu","x":"……ドラちゃん。今は、信じたい。でも、これは記録しとく","e":"troubled","k":"C6-2:6-2-6"}]},
 {"id":"C6-3","chapter":"C6","title":"止まった針","cond":null,"bgm":"melo_dullahan_clockwork_alt","bg":"食堂","next":"C6-4","rows":[{"id":"6-3-1","t":"line","w":"sorashido","x":"整理します。あの夜、柱時計の鐘は、ワトソンくんの時計より早く鳴った。黒羽さんが外へ出たのは、鐘のすぐ後です","e":"normal","k":"C6-3:6-3-1"},
-{"id":"6-3-2","t":"line","w":"atsu","x":"おっちゃん、いつも懐中時計を見てた。『時は金なり』って。……あの時計が、ずれてたとは思えない","e":"normal","k":"C6-3:6-3-2"},{"t":"q","id":"Q6a","kind":"present","x":"あの夜、柱時計の鐘が本当に鳴ったのは、何時ごろ？ 本当の時刻を示す手がかりを、手がかり帳から1つ突きつけよう","replies":{"x1":[{"id":"Q6a-x1","t":"line","w":"watson","x":"その手がかりには、時刻が書かれていません"}],"x2":[{"id":"Q6a-x2","t":"line","w":"atsu","x":"時刻が分かる物……。雪の上で、おっちゃんのそばに落ちてた物は？","e":"normal"}],"x3":[{"id":"Q6a-x3","t":"line","w":"sorashido","x":"黒羽さんが外へ出て、すぐに止まった物です","e":"normal"}],"near":[{"id":"Q6a-near","t":"line","w":"watson","x":"鐘が早かったことは分かっています。何分早かったかを示す物が、要ります"}],"ok":[{"id":"Q6a-ok","t":"line","w":"sorashido","x":"はい。懐中時計は23時47分で止まっていた。鐘は、本当は23時47分ごろ。……柱時計は、13分、進められていたんです。12年前と同じように","e":"normal"}]},"label":"推理の問い⑤","score":true,"answer":["止まった懐中時計"],"k":"C6-3:Q6a","near":["早く鳴った鐘"]},
+{"id":"6-3-2","t":"line","w":"atsu","x":"おっちゃん、いつも懐中時計を見てた。『時は金なり』って。……あの時計が、ずれてたとは思えない","e":"normal","k":"C6-3:6-3-2"},{"t":"q","id":"Q6a","kind":"present","x":"あの夜、柱時計の鐘が本当に鳴ったのは、何時ごろ？ 本当の時刻を示す手がかりを、手がかり帳から1つ突きつけよう","replies":{"x1":[{"id":"Q6a-x1","t":"line","w":"watson","x":"その手がかりには、時刻が書かれていません"}],"x2":[{"id":"Q6a-x2","t":"line","w":"atsu","x":"時刻が分かる物……。雪の上で、おっちゃんのそばに落ちてた物は？","e":"normal"}],"x3":[{"id":"Q6a-x3","t":"line","w":"sorashido","x":"黒羽さんが外へ出て、すぐに止まった物です","e":"normal"}],"near":[{"id":"Q6a-near","t":"line","w":"watson","x":"鐘が早かったことは分かっています。何分早かったかを示す物が、要ります"}],"ok":[{"id":"Q6a-ok","t":"line","w":"sorashido","x":"はい。懐中時計は23時47分で止まっていた。鐘は、本当は23時47分ごろ。……柱時計は、13分、進められていたんです。12年前と同じように","e":"normal"}]},"label":"推理の問い⑤","score":true,"pass":true,"narrow":["早く鳴った鐘","止まった懐中時計","12年前の帳面","白瀬の手紙"],"answer":["止まった懐中時計"],"k":"C6-3:Q6a","near":["早く鳴った鐘"]},
 {"id":"6-3-3","t":"line","w":"mochimaru","x":"針を……。柱時計のねじ巻きは、毎晩、きゅうこさんだったっちー……","k":"C6-3:6-3-3"},
 {"id":"6-3-4","t":"line","w":"atsu","x":"……時計は、誰でも触れられる。ホールの真ん中にあるんだから","e":"troubled","k":"C6-3:6-3-4"}]},
 {"id":"C6-4","chapter":"C6","title":"うしろの人","cond":null,"bgm":"melo_dullahan_clockwork","bg":"ペンションのホール","next":"C6-5","rows":[{"id":"6-4-1","t":"line","w":"erubin","x":"……俺、あの写真の影、もう一度確かめてくる。通り道の、鏡の廊下のほう","e":"normal","k":"C6-4:6-4-1"},
@@ -69248,7 +69280,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"6-5-4","t":"line","w":"myua","x":"血……！ るびちん、血が……！","f":"close","e":"crying","k":"C6-5:6-5-4"},
 {"id":"6-5-5","t":"line","w":"erubin","x":"……大丈夫。……はしごの上で、黒いフードの人に、押されて……頭から……","f":"close","e":"troubled","k":"C6-5:6-5-5"},
 {"id":"6-5-6","t":"band","x":"みゅあが、自分のハンカチで額を押さえる。白いハンカチが、みるみる赤く染まっていく","fx":["bleed"],"k":"C6-5:6-5-6"},
-{"id":"6-5-7","t":"line","w":"erubin","x":"カメラ、取られちゃった。……ごめん","e":"troubled","k":"C6-5:6-5-7"},{"t":"q","id":"Q6b","kind":"present","x":"黒いサンタは、えるびんから、何を取ろうとした？ わけを示す手がかりを、手がかり帳から1つ突きつけよう","replies":{"x1":[{"id":"Q6b-x1","t":"line","w":"watson","x":"その手がかりは、えるびんさんが持っていた物ではありません"}],"x2":[{"id":"Q6b-x2","t":"line","w":"myua","x":"るびちんが、鏡の廊下で撮った……","e":"troubled"}],"x3":[{"id":"Q6b-x3","t":"line","w":"erubin","x":"カメラの中の、あの1枚……","e":"troubled"}],"near":[{"id":"Q6b-near","t":"line","w":"sorashido","x":"鏡の廊下までは合っています。……そこで、えるさんが残した物は？","e":"normal"}],"ok":[{"id":"Q6b-ok","t":"line","w":"sorashido","x":"はい。黒いサンタは、あの写真を消したかった。……写っていた影は、見られたら困る、誰かです","e":"normal"}]},"label":"推理の問い⑥","score":true,"answer":["えるびんの写真"],"k":"C6-5:Q6b","near":["ほこりのない鏡のふち"]},
+{"id":"6-5-7","t":"line","w":"erubin","x":"カメラ、取られちゃった。……ごめん","e":"troubled","k":"C6-5:6-5-7"},{"t":"q","id":"Q6b","kind":"present","x":"黒いサンタは、えるびんから、何を取ろうとした？ わけを示す手がかりを、手がかり帳から1つ突きつけよう","replies":{"x1":[{"id":"Q6b-x1","t":"line","w":"watson","x":"その手がかりは、えるびんさんが持っていた物ではありません"}],"x2":[{"id":"Q6b-x2","t":"line","w":"myua","x":"るびちんが、鏡の廊下で撮った……","e":"troubled"}],"x3":[{"id":"Q6b-x3","t":"line","w":"erubin","x":"カメラの中の、あの1枚……","e":"troubled"}],"near":[{"id":"Q6b-near","t":"line","w":"sorashido","x":"鏡の廊下までは合っています。……そこで、えるさんが残した物は？","e":"normal"}],"ok":[{"id":"Q6b-ok","t":"line","w":"sorashido","x":"はい。黒いサンタは、あの写真を消したかった。……写っていた影は、見られたら困る、誰かです","e":"normal"}]},"label":"推理の問い⑥","score":true,"pass":true,"narrow":["えるびんの写真","ほこりのない鏡のふち","赤い手袋","かばんの黒い服"],"answer":["えるびんの写真"],"k":"C6-5:Q6b","near":["ほこりのない鏡のふち"]},
 {"id":"6-5-8b","t":"line","w":"erubin","x":"……でも、写真は、ソラくんのパソコンにも送ってあるよ","e":"troubled","k":"C6-5:6-5-8b"},
 {"id":"6-5-8c","t":"line","w":"watson","x":"写真は、わたしの所に残っています","k":"C6-5:6-5-8c"},
 {"id":"6-5-9","t":"band","x":"はしごの下。血のしずくのそばに、何か小さな物が光っている","k":"C6-5:6-5-9"}]},
@@ -69609,7 +69641,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"10-3-12","t":"band","x":"もみの木の下。箱は、一つも減っていなかった","k":"C10-3:10-3-12"},
 {"id":"10-3-12c","t":"clue","clue":"箱のない犠牲者","x":"もちまるは世話役で、初めから箱を持っていない。もちまるが亡くなった朝、木の下の箱は、一つも減っていなかった","k":"C10-3:10-3-12c"},
 {"id":"10-3-13","t":"panel","x":"","ops":[{"id":"mochimaru","st":"dead"}],"k":"C10-3:10-3-13"}]},
-{"id":"C10-4","chapter":"C10","title":"誤算","cond":null,"bgm":"melo_kiss_mystery","bg":"ペンションのホール","next":"C11-1","rows":[{"id":"10-4-1","t":"line","w":"myua","x":"……ねえ、あつくん。今度は、箱がなくなってない。……もちまるん、世話役だから、箱、持ってなかったもんね","e":"troubled","k":"C10-4:10-4-1"},{"t":"q","id":"Q10a","kind":"present","x":"もちまるが亡くなった朝は、今までに亡くなった人たちの時と、違う所がある。それを示す手がかりを、手がかり帳から1つ突きつけよう","replies":{"x1":[{"id":"Q10a-x1","t":"line","w":"watson","x":"その手がかりは、前に見つけた物です。今朝、新しく分かったことを選んでください"}],"x2":[{"id":"Q10a-x2","t":"line","w":"sorashido","x":"……木の下を、もう一度見てください","e":"troubled"}],"x3":[{"id":"Q10a-x3","t":"line","w":"myua","x":"もちまるんは、世話役だから……","e":"troubled"}],"near":[{"id":"Q10a-near","t":"line","w":"atsu","x":"そう、今までは箱が消えてた。……今回は？","e":"normal"}],"ok":[{"id":"Q10a-ok","t":"line","w":"sorashido","x":"はい。黒いサンタは、箱を持つお客を狙い、その箱を持っていく。でも、もちまるさんは世話役で、箱を持っていなかった。……決まりから外れています。もちまるさんは、狙われていなかったんです","e":"normal"}]},"label":"推理の問い⑦","answer":["箱のない犠牲者"],"k":"C10-4:Q10a","near":["消えた箱"]},
+{"id":"C10-4","chapter":"C10","title":"誤算","cond":null,"bgm":"melo_kiss_mystery","bg":"ペンションのホール","next":"C11-1","rows":[{"id":"10-4-1","t":"line","w":"myua","x":"……ねえ、あつくん。今度は、箱がなくなってない。……もちまるん、世話役だから、箱、持ってなかったもんね","e":"troubled","k":"C10-4:10-4-1"},{"t":"q","id":"Q10a","kind":"present","x":"もちまるが亡くなった朝は、今までに亡くなった人たちの時と、違う所がある。それを示す手がかりを、手がかり帳から1つ突きつけよう","replies":{"x1":[{"id":"Q10a-x1","t":"line","w":"watson","x":"その手がかりは、前に見つけた物です。今朝、新しく分かったことを選んでください"}],"x2":[{"id":"Q10a-x2","t":"line","w":"sorashido","x":"……木の下を、もう一度見てください","e":"troubled"}],"x3":[{"id":"Q10a-x3","t":"line","w":"myua","x":"もちまるんは、世話役だから……","e":"troubled"}],"near":[{"id":"Q10a-near","t":"line","w":"atsu","x":"そう、今までは箱が消えてた。……今回は？","e":"normal"}],"ok":[{"id":"Q10a-ok","t":"line","w":"sorashido","x":"はい。黒いサンタは、箱を持つお客を狙い、その箱を持っていく。でも、もちまるさんは世話役で、箱を持っていなかった。……決まりから外れています。もちまるさんは、狙われていなかったんです","e":"normal"}]},"label":"推理の問い⑦","pass":true,"narrow":["消えた箱","帳面の最後の行","箱のない犠牲者","鳴りやまないオルゴール"],"answer":["箱のない犠牲者"],"k":"C10-4:Q10a","near":["消えた箱"]},
 {"id":"10-4-2a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"atsu","x":"帳面の最後の行、『柱時計の前に、誰か』。もちまるは、見ちゃいけない物を見ちゃったんだ。……狙ってたんじゃない。黒いサンタにとっても、計算外だった","e":"normal","k":"C10-4:10-4-2a"},
 {"id":"10-4-2s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"sorashido","x":"帳面の最後の行。『柱時計の前に、誰か』。もちまるさんは、見てはいけない物を見てしまった。計画の外。……誤算です","e":"normal","k":"C10-4:10-4-2s"},
 {"id":"10-4-3a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"sorashido","x":"柱時計の前で、何をしていたんでしょう……","e":"normal","k":"C10-4:10-4-3a"},
@@ -71779,6 +71811,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
   const darkNow = fx && fx.kind === 'dark';
   const name = isLine ? xmasNovelNameOf(row) : '';
   const q = sheet && typeof sheet === 'object' ? sheet.q : null;
+  const presentList = q && q.kind === 'present' ? xmasNovelPresentable(q, clues) : clues; // 候補を絞る問い(r1126-099 追記1)
   return (
     <div className="mh-nv" data-xmas-novel="read" data-scene={scene ? scene.id : ''} data-row={row ? row.id : ''}>
       <div ref={stageRef} className="mh-nv-stage" onClick={advance}>
@@ -71902,14 +71935,15 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
               <button type="button" className="mh-nv-btn wide mt-3" onClick={() => setSheet(null)}>閉じる</button>
             </>)}
             {(sheet === 'book' || (q && q.kind === 'present')) && (<>
-              <div className="mh-nv-serif mh-nv-gold text-[18px] font-black">手がかり帳 <span className="text-[12px] text-slate-300">{clues.length}個</span></div>
+              <div className="mh-nv-serif mh-nv-gold text-[18px] font-black">手がかり帳 <span className="text-[12px] text-slate-300">{presentList.length}個</span></div>
               {q && <div data-xmas-novel-question={q.id} className="mt-2 rounded-lg p-2 text-[13px] font-bold leading-relaxed" style={{ background: 'rgba(120,20,30,.35)', boxShadow: '0 0 0 1px rgba(232,120,120,.6)' }}>
                 {q.label && <div className="mh-nv-serif text-[11px] font-black text-rose-200">{q.label}</div>}
                 {xmasNovelWrap(xmasNovelFill(q.x, playerName))}
-                <div className="mt-1 text-[11px] text-rose-100">突きつける手がかりを1つ選ぼう</div>
+                <div className="mt-1 text-[11px] text-rose-100">{presentList.length < clues.length ? `候補を${presentList.length}つに絞った。突きつける手がかりを1つ選ぼう` : '突きつける手がかりを1つ選ぼう'}</div>
+                {q.pass && <div data-xmas-novel-pass className="mh-nv-plain mt-1 text-[11px] text-rose-200">外しても、仲間が拾って話は進む。一発で当てると成績に残る</div>}
               </div>}
               <div className="mh-nv-scroll mt-2 flex-1 space-y-2 pr-1">
-                {clues.length ? clues.map((c) => (
+                {presentList.length ? presentList.map((c) => (
                   <div key={c.n} className="mh-nv-clue" data-xmas-novel-clue={c.n}>
                     <div className="flex items-center gap-2">
                       <div className="mh-nv-serif mh-nv-gold min-w-0 flex-1 text-[15px] font-black">【{c.n}】</div>
@@ -71937,9 +71971,17 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
             {q && q.kind === 'action' && (<>
               <div data-xmas-novel-question={q.id} className="mh-nv-plain mh-nv-serif mh-nv-gold mb-3 text-[17px] font-black">{xmasNovelWrap(xmasNovelFill(q.x, playerName))}</div>
               <div className="space-y-2.5">
-                {xmasNovelOptionsOf(q, xmasNovelCtx(S, st.cur, save.endings)).map((o) => (
-                  <button type="button" key={o.i} className="mh-nv-choice mh-nv-serif" data-xmas-novel-option={o.i} onClick={() => answer(q, o.i)}>{xmasNovelWrap(xmasNovelFill(o.x, playerName))}</button>
-                ))}
+                {xmasNovelOptionsOf(q, xmasNovelCtx(S, st.cur, save.endings)).map((o) => {
+                  // 一度見た強制バッドの選択肢には「見たエンド」の印(r1126-099 追記1)
+                  const endAhead = !q.once && o.to ? xmasNovelEndingAhead(S, o.to) : null;
+                  const seenEnd = endAhead && Array.isArray(save.endings) && save.endings.includes(endAhead) ? xmasNovelSceneById(S, endAhead) : null;
+                  return (
+                    <button type="button" key={o.i} className="mh-nv-choice mh-nv-serif" data-xmas-novel-option={o.i} onClick={() => answer(q, o.i)}>
+                      {xmasNovelWrap(xmasNovelFill(o.x, playerName))}
+                      {seenEnd && <span data-xmas-novel-seen-end={endAhead} className="mh-nv-plain mt-1 block text-[11px] font-bold text-rose-200">見たエンド: {seenEnd.ending && seenEnd.ending.name ? `「${seenEnd.ending.name}」` : 'バッドエンド'}</span>}
+                    </button>
+                  );
+                })}
               </div>
               {q.once && <div className="mh-nv-plain mt-2 text-[11px] font-bold text-rose-200">選んだら、やり直しはできません</div>}
             </>)}

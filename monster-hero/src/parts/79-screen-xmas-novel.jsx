@@ -1734,6 +1734,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
   const darkNow = fx && fx.kind === 'dark';
   const name = isLine ? xmasNovelNameOf(row) : '';
   const q = sheet && typeof sheet === 'object' ? sheet.q : null;
+  const presentList = q && q.kind === 'present' ? xmasNovelPresentable(q, clues) : clues; // 候補を絞る問い(r1126-099 追記1)
   return (
     <div className="mh-nv" data-xmas-novel="read" data-scene={scene ? scene.id : ''} data-row={row ? row.id : ''}>
       <div ref={stageRef} className="mh-nv-stage" onClick={advance}>
@@ -1857,14 +1858,15 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
               <button type="button" className="mh-nv-btn wide mt-3" onClick={() => setSheet(null)}>閉じる</button>
             </>)}
             {(sheet === 'book' || (q && q.kind === 'present')) && (<>
-              <div className="mh-nv-serif mh-nv-gold text-[18px] font-black">手がかり帳 <span className="text-[12px] text-slate-300">{clues.length}個</span></div>
+              <div className="mh-nv-serif mh-nv-gold text-[18px] font-black">手がかり帳 <span className="text-[12px] text-slate-300">{presentList.length}個</span></div>
               {q && <div data-xmas-novel-question={q.id} className="mt-2 rounded-lg p-2 text-[13px] font-bold leading-relaxed" style={{ background: 'rgba(120,20,30,.35)', boxShadow: '0 0 0 1px rgba(232,120,120,.6)' }}>
                 {q.label && <div className="mh-nv-serif text-[11px] font-black text-rose-200">{q.label}</div>}
                 {xmasNovelWrap(xmasNovelFill(q.x, playerName))}
-                <div className="mt-1 text-[11px] text-rose-100">突きつける手がかりを1つ選ぼう</div>
+                <div className="mt-1 text-[11px] text-rose-100">{presentList.length < clues.length ? `候補を${presentList.length}つに絞った。突きつける手がかりを1つ選ぼう` : '突きつける手がかりを1つ選ぼう'}</div>
+                {q.pass && <div data-xmas-novel-pass className="mh-nv-plain mt-1 text-[11px] text-rose-200">外しても、仲間が拾って話は進む。一発で当てると成績に残る</div>}
               </div>}
               <div className="mh-nv-scroll mt-2 flex-1 space-y-2 pr-1">
-                {clues.length ? clues.map((c) => (
+                {presentList.length ? presentList.map((c) => (
                   <div key={c.n} className="mh-nv-clue" data-xmas-novel-clue={c.n}>
                     <div className="flex items-center gap-2">
                       <div className="mh-nv-serif mh-nv-gold min-w-0 flex-1 text-[15px] font-black">【{c.n}】</div>
@@ -1892,9 +1894,17 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
             {q && q.kind === 'action' && (<>
               <div data-xmas-novel-question={q.id} className="mh-nv-plain mh-nv-serif mh-nv-gold mb-3 text-[17px] font-black">{xmasNovelWrap(xmasNovelFill(q.x, playerName))}</div>
               <div className="space-y-2.5">
-                {xmasNovelOptionsOf(q, xmasNovelCtx(S, st.cur, save.endings)).map((o) => (
-                  <button type="button" key={o.i} className="mh-nv-choice mh-nv-serif" data-xmas-novel-option={o.i} onClick={() => answer(q, o.i)}>{xmasNovelWrap(xmasNovelFill(o.x, playerName))}</button>
-                ))}
+                {xmasNovelOptionsOf(q, xmasNovelCtx(S, st.cur, save.endings)).map((o) => {
+                  // 一度見た強制バッドの選択肢には「見たエンド」の印(r1126-099 追記1)
+                  const endAhead = !q.once && o.to ? xmasNovelEndingAhead(S, o.to) : null;
+                  const seenEnd = endAhead && Array.isArray(save.endings) && save.endings.includes(endAhead) ? xmasNovelSceneById(S, endAhead) : null;
+                  return (
+                    <button type="button" key={o.i} className="mh-nv-choice mh-nv-serif" data-xmas-novel-option={o.i} onClick={() => answer(q, o.i)}>
+                      {xmasNovelWrap(xmasNovelFill(o.x, playerName))}
+                      {seenEnd && <span data-xmas-novel-seen-end={endAhead} className="mh-nv-plain mt-1 block text-[11px] font-bold text-rose-200">見たエンド: {seenEnd.ending && seenEnd.ending.name ? `「${seenEnd.ending.name}」` : 'バッドエンド'}</span>}
+                    </button>
+                  );
+                })}
               </div>
               {q.once && <div className="mh-nv-plain mt-2 text-[11px] font-bold text-rose-200">選んだら、やり直しはできません</div>}
             </>)}
