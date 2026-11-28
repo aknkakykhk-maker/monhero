@@ -82,7 +82,10 @@ const HOME_EVENT_BADGE_CSS = `
 //   字はいちばん小さくても 11px(すぐできる直し7)。横向き・タブレットは README の目安(帯の幅は最大 600px・入口は1列で遊ぶ4つを幅広に)
 const HOME_V2_CSS = `
 .mh-home-v2{--v2-panel:#102522eb;--v2-line:#f7df9a88}
-.mh-home-v2 .mh-home-top{display:flex;align-items:center;gap:6px;padding:calc(6px + env(safe-area-inset-top)) 8px 0;z-index:20}
+/* 上の1段の上は 6px だけ(2026-11-28 台帳 r1126-088 追記1・社長「上部空いてるのってなんだっけ？」)。
+   前は切り欠きの高さ env(safe-area-inset-top) も足していたが、body が同じ分をもう空けている(index.html)ので二重になり、時刻の段の下に空の絵だけの空きが出ていた。
+   body の空けで時刻の段にはかからない(Safari で開いたときは env が 0) */
+.mh-home-v2 .mh-home-top{display:flex;align-items:center;gap:6px;padding:6px 8px 0;z-index:20}
 .mh-home-v2 .mh-home-top .mh-home-player{flex:1 1 auto;min-width:0;height:46px;padding:3px 10px 3px 4px;gap:7px}
 .mh-home-v2 .mh-home-top .mh-home-avatar{flex:0 0 36px;width:36px;height:36px}
 .mh-home-v2 .mh-home-top .mh-home-player-copy strong{max-width:none;font-size:13px;line-height:1.25}
@@ -99,7 +102,7 @@ const HOME_V2_CSS = `
 .mh-home-v2 .mh-home-menu-btn em,.mh-home-v2 .mh-home-menu .mh-home-side-btn em{display:flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:999px;border:2px solid #fff;background:#e11d48;color:#fff;font-size:11px;font-style:normal;font-weight:900;line-height:1;box-shadow:0 2px 6px #0008}
 .mh-home-v2 .mh-home-menu-btn em{position:absolute;top:-7px;right:-6px}
 .mh-home-v2 .mh-home-menu-shade{position:absolute;inset:0;z-index:28;border:0;background:#0006;cursor:default}
-.mh-home-v2 .mh-home-menu{position:absolute;z-index:29;right:8px;top:calc(58px + env(safe-area-inset-top));display:flex;flex-direction:column;gap:6px;width:min(240px,calc(100% - 16px));padding:8px;border:1px solid var(--v2-line);border-radius:16px;background:#0d1f1cf7;box-shadow:0 10px 30px #000c}
+.mh-home-v2 .mh-home-menu{position:absolute;z-index:29;right:8px;top:58px;display:flex;flex-direction:column;gap:6px;width:min(240px,calc(100% - 16px));padding:8px;border:1px solid var(--v2-line);border-radius:16px;background:#0d1f1cf7;box-shadow:0 10px 30px #000c}
 /* 閉じているときは目に見えない形(読み上げには残す)。メニューの中の「設定」「ミッション」などを、読み上げの利用者と検査がいつでも見つけられるように */
 .mh-home-v2 .mh-home-menu:not(.is-open){width:1px;height:1px;padding:0;margin:0;border:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap;pointer-events:none;box-shadow:none}
 .mh-home-v2 .mh-home-menu.is-open{display:flex;animation:mhHomeMenuIn .15s ease-out}
@@ -118,12 +121,14 @@ const HOME_V2_CSS = `
 .mh-home-v2 .mh-home-menu .mh-home-side-btn em.mh-unread-badge{width:auto!important;height:20px!important;min-width:20px;padding:0 6px!important;border-radius:999px!important;font-size:11px!important;line-height:1!important;white-space:nowrap}
 .mh-home-v2 .mh-home-settings .mh-home-side-ic{border-color:#cbd5e1aa;background:#1e293be8;color:#e2e8f0}
 .mh-home-v2 .mh-home-band{position:relative;z-index:6;margin:6px 8px 0}
-/* イベントの表示(r1126-088 で前の形に戻した): クリスマスの絵の札は前の HOME と同じ大きさ(幅は画面から78px引いた分・高さ80px)。
-   幅が同じなので、絵の切り方(object-fit:cover の見える範囲)も前と同じになる。その下の細い帯も前と同じ作り(幅は中身に合わせる) */
-.mh-home-v2 .mh-home-band-xmas{width:calc(100% - 62px)}
-.mh-home-v2 .mh-home-band-quick-slot{position:absolute;top:0;right:-6px;width:64px;height:80px;pointer-events:none}
+/* イベントの表示(r1126-088 で前の形に戻した): クリスマスの絵の札 → その下に細い帯(前の HOME と同じ作り)。
+   追記1(社長「イベントバナーをもう少し横幅小さくして」): 札は前(312×80)より少し小さく 278×74(縦横の比をほぼ同じにして、絵の切り方を前と同じに)。
+   細い帯も札と同じ幅まで。札の右の空きは裏クイックの札の置き場 */
+.mh-home-v2 .mh-home-band-xmas{width:calc(100% - 96px)}
+.mh-home-v2 .mh-home-band-xmas>button[data-home-xmas-entry]{height:74px!important}
+.mh-home-v2 .mh-home-band-quick-slot{position:absolute;top:0;right:-6px;width:96px;height:74px;pointer-events:none}
 .mh-home-v2 .mh-home-band-strip{display:flex;align-items:center;gap:6px;width:fit-content;max-width:100%;margin-top:3px}
-.mh-home-v2 .mh-home-band-strip .mh-home-event-banner{max-width:calc(100cqw - 97px)}
+.mh-home-v2 .mh-home-band-strip .mh-home-event-banner{max-width:calc(100cqw - 112px)}
 .mh-home-v2 .mh-home-band-strip .mh-home-tour-banner{max-width:min(72vw,300px)}
 .mh-home-v2 .mh-home-assistant{width:70%;max-width:360px;margin:6px 0 0 8px}
 .mh-home-v2 .mh-home-assistant-fold{margin:6px 0 0 8px}
@@ -151,10 +156,10 @@ body:has(.mh-home-v2){background:linear-gradient(to top,#0b1f1a calc(env(safe-ar
 .mh-home-v2 .mh-home-dock-bottom .mh-home-dock-name{font-size:11px;line-height:1.2}
 @media(max-width:350px){.mh-home-v2 .mh-home-dock-top .mh-home-dock-name,.mh-home-v2 .mh-home-dock-top .mh-home-success .nm{font-size:10.5px;letter-spacing:-.06em}}
 @media(orientation:landscape) and (max-height:600px){
-  .mh-home-v2 .mh-home-band{position:absolute;left:8px;top:calc(58px + env(safe-area-inset-top));width:min(37%,330px);margin:0}
+  .mh-home-v2 .mh-home-band{position:absolute;left:8px;top:58px;width:min(37%,330px);margin:0}
   .mh-home-v2 .mh-home-band-xmas{width:100%}
   .mh-home-v2 .mh-home-band-strip .mh-home-event-banner,.mh-home-v2 .mh-home-band-strip .mh-home-tour-banner{max-width:100%}
-  .mh-home-v2 .mh-home-assistant,.mh-home-v2 .mh-home-assistant-fold{position:absolute;left:8px;top:calc(160px + env(safe-area-inset-top));margin:0}
+  .mh-home-v2 .mh-home-assistant,.mh-home-v2 .mh-home-assistant-fold{position:absolute;left:8px;top:160px;margin:0}
   .mh-home-v2 .mh-home-assistant{width:min(37%,330px)}
   .mh-home-v2 .mh-home-dock{flex-direction:row;align-items:flex-end;gap:8px;padding:5px 8px 6px}
   .mh-home-v2 .mh-home-dock-top{flex:1.9 1 0}
@@ -180,8 +185,8 @@ body:has(.mh-home-v2){background:linear-gradient(to top,#0b1f1a calc(env(safe-ar
    新しい HOME には右の列が無いので、帯の置き場(.mh-home-band)の中に置いたままにする(部品の中身は変えない。HOME の側で上書きするだけ)。
    背の低い横向きの高さ 54px と字の大きさは、部品の決まり(前の HOME と同じ)のまま */
 .mh-home-v2 .mh-home-band [data-home-xmas-entry-strip]{position:relative!important;left:auto!important;right:auto!important;top:auto!important;margin:0!important}
-.mh-home-v2 .mh-home-band .mh-home-band-xmas{width:calc(100% - 62px)!important}
-@media(orientation:landscape) and (max-height:600px){.mh-home-v2 .mh-home-band .mh-home-band-xmas{width:100%!important}.mh-home-v2 .mh-home-band-quick-slot{display:none}}
+.mh-home-v2 .mh-home-band .mh-home-band-xmas{width:calc(100% - 96px)!important}
+@media(orientation:landscape) and (max-height:600px){.mh-home-v2 .mh-home-band .mh-home-band-xmas{width:100%!important}.mh-home-v2 .mh-home-band-xmas>button[data-home-xmas-entry]{height:54px!important}.mh-home-v2 .mh-home-band-quick-slot{display:none}}
 @container (min-width:700px) and (min-height:560px){.mh-home-v2 .mh-home-band .mh-home-band-xmas{width:100%!important}.mh-home-v2 .mh-home-band-quick-slot{display:none}}
 @media (orientation:landscape) and (max-height:520px){.mh-home-v2 .mh-home-band .mh-xmas-entry[data-home-xmas-entry="banner"] .mh-xmas-entry-sub{font-size:11px}}
 /* 横持ちの iPhone の切り欠き(カメラの欠け)に、押す物を入れない。左右の余白に端末の安全な余白(safe-area)を足す */
