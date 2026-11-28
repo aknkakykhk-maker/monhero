@@ -77,10 +77,6 @@
    "date": "2026-11-05T02:11:35+00:00",
    "subject": "受け取り: 新しい助手えるびんの表情の絵(社長から・未加工・実装はまだ)"
   },
-  "3ec3d725a": {
-   "date": "2026-11-21T03:31:21+09:00",
-   "subject": "Add files via upload"
-  },
   "3f56c113c": {
    "date": "2026-11-25T07:04:36+00:00",
    "subject": "みゅあのサンタきせかえを組み込む(作業途中・r1119-172)"
@@ -172,6 +168,10 @@
   "69cee4cd": {
    "date": "2026-11-23T21:54:49+00:00",
    "subject": "助手部ナカヨシ: 全身画がある全助手・全服の立ち絵と顔アイコンを最新の全身画から切り出す(r1119-153 追記2)"
+  },
+  "6bca39f1": {
+   "date": "2026-11-28T06:35:32+00:00",
+   "subject": "ききのツインテールの胸像の黒い残りを消す(直した全身画から作り直す・r1126-105)"
   },
   "6cbd2b4be": {
    "date": "2026-11-25T17:59:18+09:00",
@@ -1133,14 +1133,14 @@
   "monster-hero/images/assistant/stand-santa/sorashido_surprise.png": "2dd2d7b6f41b 5bbc4a4de",
   "monster-hero/images/assistant/stand-santa/sorashido_troubled.png": "913f4e3e30d8 5bbc4a4de",
   "monster-hero/images/assistant/stand-santa/sorashido_wink.png": "f38c9c4279fb 5bbc4a4de",
-  "monster-hero/images/assistant/stand-sekiyuou/erubin_angry.png": "0545b1d17814 69cee4cd",
-  "monster-hero/images/assistant/stand-sekiyuou/erubin_crying.png": "e308a2bee5fb 69cee4cd",
-  "monster-hero/images/assistant/stand-sekiyuou/erubin_excited.png": "ba55f52b6d40 69cee4cd",
-  "monster-hero/images/assistant/stand-sekiyuou/erubin_happy.png": "ee1c888e0806 69cee4cd",
-  "monster-hero/images/assistant/stand-sekiyuou/erubin_normal.png": "e2547690bc46 69cee4cd",
-  "monster-hero/images/assistant/stand-sekiyuou/erubin_surprise.png": "82773fd171c8 69cee4cd",
-  "monster-hero/images/assistant/stand-sekiyuou/erubin_troubled.png": "cee39fcd78d2 69cee4cd",
-  "monster-hero/images/assistant/stand-sekiyuou/erubin_wink.png": "b5b2e4c11177 69cee4cd",
+  "monster-hero/images/assistant/stand-sekiyuou/erubin_angry.png": "7fa3257ee606 (まだコミットしていない)",
+  "monster-hero/images/assistant/stand-sekiyuou/erubin_crying.png": "07cd261e3ce7 (まだコミットしていない)",
+  "monster-hero/images/assistant/stand-sekiyuou/erubin_excited.png": "42b7d52dde0b (まだコミットしていない)",
+  "monster-hero/images/assistant/stand-sekiyuou/erubin_happy.png": "17bbbc4d860e (まだコミットしていない)",
+  "monster-hero/images/assistant/stand-sekiyuou/erubin_normal.png": "9774af1a1fe2 (まだコミットしていない)",
+  "monster-hero/images/assistant/stand-sekiyuou/erubin_surprise.png": "7b69df3d58c9 (まだコミットしていない)",
+  "monster-hero/images/assistant/stand-sekiyuou/erubin_troubled.png": "223566beb0f6 (まだコミットしていない)",
+  "monster-hero/images/assistant/stand-sekiyuou/erubin_wink.png": "f020a66fe03b (まだコミットしていない)",
   "monster-hero/images/assistant/stand-twintail/kiki_angry.png": "523c7527e89f f5434676",
   "monster-hero/images/assistant/stand-twintail/kiki_crying.png": "adb99167de48 f5434676",
   "monster-hero/images/assistant/stand-twintail/kiki_excited.png": "29f9ab70e1b7 f5434676",
@@ -1166,15 +1166,15 @@
   "monster-hero/images/assistant/twintail/face/kiki_surprise.PNG": "92b8d9fa4f1f 75cd141c",
   "monster-hero/images/assistant/twintail/face/kiki_troubled.PNG": "5efc930300fc 75cd141c",
   "monster-hero/images/assistant/twintail/face/kiki_wink.PNG": "74397c169f81 75cd141c",
-  "monster-hero/images/assistant/twintail/kiki_angry.PNG": "7da9eb0d925f 3ec3d725a",
-  "monster-hero/images/assistant/twintail/kiki_crying.PNG": "ae05ad5dac24 3ec3d725a",
-  "monster-hero/images/assistant/twintail/kiki_excited.PNG": "34dcaa7656d7 3ec3d725a",
-  "monster-hero/images/assistant/twintail/kiki_happy.PNG": "10b7bcb9fc97 3ec3d725a",
-  "monster-hero/images/assistant/twintail/kiki_normal.PNG": "f20c7ee91239 3ec3d725a",
-  "monster-hero/images/assistant/twintail/kiki_sleep.PNG": "c32a448156c3 3ec3d725a",
-  "monster-hero/images/assistant/twintail/kiki_surprise.PNG": "76da6f1f8000 3ec3d725a",
-  "monster-hero/images/assistant/twintail/kiki_troubled.PNG": "fcc9df1ba39b 3ec3d725a",
-  "monster-hero/images/assistant/twintail/kiki_wink.PNG": "5999785be474 3ec3d725a",
+  "monster-hero/images/assistant/twintail/kiki_angry.PNG": "2c23d372e57a 6bca39f1",
+  "monster-hero/images/assistant/twintail/kiki_crying.PNG": "0760c2fab2d6 6bca39f1",
+  "monster-hero/images/assistant/twintail/kiki_excited.PNG": "99c7f8b3f561 6bca39f1",
+  "monster-hero/images/assistant/twintail/kiki_happy.PNG": "3515b9492bb4 6bca39f1",
+  "monster-hero/images/assistant/twintail/kiki_normal.PNG": "8c775f386e62 6bca39f1",
+  "monster-hero/images/assistant/twintail/kiki_sleep.PNG": "b1b56b3e0989 6bca39f1",
+  "monster-hero/images/assistant/twintail/kiki_surprise.PNG": "ecc53e3843cb 6bca39f1",
+  "monster-hero/images/assistant/twintail/kiki_troubled.PNG": "541849c8ddc4 6bca39f1",
+  "monster-hero/images/assistant/twintail/kiki_wink.PNG": "68f25206fe2c 6bca39f1",
   "monster-hero/images/assistant/winter/face/kyuko_angry.PNG": "115cb6c37874 e770e97c",
   "monster-hero/images/assistant/winter/face/kyuko_crying.PNG": "b48fe085c9a0 e770e97c",
   "monster-hero/images/assistant/winter/face/kyuko_excited.PNG": "504f15ae4b01 e770e97c",

@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><title>分かれ道を増やした地図 見本</title>
+<style>
+:root{--gold:#e8c873;--gold2:#b8913a;--snow:#eef3ff}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#05080f;width:1218px;display:flex;gap:24px;padding:12px;font-family:"Noto Serif JP",serif;color:var(--snow)}
+.ph{position:relative;width:390px;height:844px;overflow:hidden;border-radius:22px;background:linear-gradient(rgba(120,150,220,.07) 1px,transparent 1px) 0 0/22px 22px,linear-gradient(90deg,rgba(120,150,220,.07) 1px,transparent 1px) 0 0/22px 22px,linear-gradient(#0b1430,#101b3d 60%,#0b1430)}
+.cap{position:absolute;left:0;right:0;bottom:0;padding:8px 12px;background:rgba(0,0,0,.78);font:700 12px/1.55 "Noto Sans JP",sans-serif;color:#ffe9a8;z-index:9}
+.top{padding:12px 14px 6px}.top h1{font-size:19px;color:var(--gold);display:inline}.top small{font:11px sans-serif;color:#9fb0d8;margin-left:6px}
+.row{display:flex;gap:6px;margin-top:8px}.tab{flex:1;text-align:center;padding:6px 0;border-radius:999px;font:800 13px sans-serif;border:1px solid var(--gold2);color:var(--gold)}.tab.on{background:linear-gradient(#e8c873,#b8913a);color:#2a1a05}
+.ends{font:12px sans-serif;padding:6px 10px;border-radius:999px;background:rgba(200,50,60,.25);border:1px solid rgba(232,120,120,.6);white-space:nowrap}
+.map{position:relative;padding:4px 12px 0}
+.spine{position:absolute;left:44px;top:0;bottom:0;width:4px;background:linear-gradient(var(--gold),var(--gold2))}
+.spine.dark{background:repeating-linear-gradient(#2b3658 0 8px,transparent 8px 14px)}
+.chap{position:relative;display:flex;align-items:center;gap:10px;margin:12px 0 4px}
+.door{width:64px;height:38px;border-radius:19px 19px 4px 4px;background:linear-gradient(#6b4423,#3e2612);border:2px solid var(--gold);display:grid;place-items:center;font:900 11px sans-serif;color:var(--gold);z-index:1}
+.chap .nm{font-size:15px;font-weight:900}.chap.dark .door{background:#1a2342;border-color:#3a4670;color:#5d6a90}.chap.dark .nm{color:#5d6a90}
+.node{position:relative;display:flex;align-items:center;gap:8px;margin:7px 0 7px 18px;min-height:32px}
+.mk{width:26px;height:26px;display:grid;place-items:center;flex:none;z-index:1;font:900 12px sans-serif}
+.mk.act{transform:rotate(45deg);background:#7a1f28;border:2px solid #f0a0a0;border-radius:4px}.mk.act span{transform:rotate(-45deg)}
+.mk.q{border-radius:50%;background:#1f4a35;border:2px solid #8fe0b0}
+.mk.side{border-radius:6px;background:#2b3e66;border:2px dashed #9fb6e8}
+.mk.dark{background:#1a2342!important;border-color:#3a4670!important;color:#5d6a90}
+.mk.if{transform:rotate(45deg);background:#5a4a14;border:2px solid #f5d27a;border-radius:4px}.mk.if span{transform:rotate(-45deg);color:#f5d27a}
+.lbl{flex:1;font:800 13px sans-serif;line-height:1.3}.lbl small{display:block;font:400 10.5px sans-serif;color:#9fb0d8}
+.lbl.dark{color:#5d6a90}
+.chips{display:flex;flex-direction:column;gap:4px;align-items:flex-end}
+.chip{min-width:118px;padding:4px 9px;border-radius:10px;font:800 11px sans-serif;line-height:1.25;display:flex;align-items:center;gap:6px}
+.chip i{width:9px;height:9px;border-radius:50%;flex:none}
+.chip.seen{background:linear-gradient(#8a1f2a,#5a1018);border:1px solid #f0a0a0}.chip.seen i{background:#ff6b6b}
+.chip.acc{background:linear-gradient(#4b3780,#2e2156);border:1px solid #c8b3f5}.chip.acc i{background:#c8b3f5}
+.chip.un{background:rgba(26,35,66,.9);border:1px solid #3a4670;color:#7f8bb0}.chip.un i{background:#3a4670}
+.chip.new{position:relative}.chip.new:after{content:"増";position:absolute;right:-6px;top:-7px;font:900 9px sans-serif;background:#c8323c;color:#fff;border-radius:999px;padding:1px 4px}
+.chip small{display:block;font:400 9.5px sans-serif;opacity:.85}
+.lane{margin:12px 0 2px 2px;padding-left:8px;border-left:3px solid #5d6a90;font:800 12px sans-serif;color:#9fb0d8}
+.lane.if{border-color:#f5d27a;color:#f5d27a}
+.spine.ifl{background:repeating-linear-gradient(#f5d27a 0 6px,transparent 6px 11px);opacity:.7}
+</style></head><body>
+
+<div class="ph">
+  <div class="top"><h1>聖夜の見取り図</h1><small>分岐の地図</small>
+    <div class="row"><div class="tab on">あつ派</div><div class="tab">ソラシド派</div><div class="ends">エンド 9/33</div></div></div>
+  <div class="map"><div class="spine"></div>
+    <div class="chap"><div class="door">第一章</div><div class="nm">ペンション・シュプール</div></div>
+    <div class="node"><div class="mk" style="background:#3b2a6b;border:2px solid #c8b3f5;border-radius:6px">✦</div><div class="lbl">どっちを手伝う？<small>あつ派</small></div><div class="chips"><div class="chip un"><i></i>？？？<small>未見のエンド</small></div></div></div>
+    <div class="node"><div class="mk act dark"><span>？</span></div><div class="lbl dark">？？？<small>まだ読んでいない</small></div><div class="chips"><div class="chip un new"><i></i>？？？<small>未見のエンド</small></div></div></div>
+    <div class="chap"><div class="door">第二章</div><div class="nm">十二の鐘</div></div>
+    <div class="node"><div class="mk act"><span>◆</span></div><div class="lbl">行動の選択</div><div class="chips"><div class="chip seen"><i></i>鐘を待たずに<small>強制バッド</small></div></div></div>
+    <div class="node"><div class="mk act"><span>◆</span></div><div class="lbl">行動の選択</div><div class="chips"><div class="chip seen"><i></i>名探偵の消えた夜<small>強制バッド</small></div></div></div>
+    <div class="node"><div class="mk q">①</div><div class="lbl">推理の問い①<small>一発で正解</small></div></div>
+    <div class="chap"><div class="door">第三章</div><div class="nm">雪の上の影</div></div>
+    <div class="node"><div class="mk q">②</div><div class="lbl">推理の問い②<small>一発で正解</small></div></div>
+    <div class="node"><div class="mk act dark"><span>？</span></div><div class="lbl dark">？？？<small>まだ読んでいない</small></div><div class="chips"><div class="chip un new"><i></i>？？？<small>未見のエンド</small></div></div></div>
+    <div class="node"><div class="mk act dark"><span>？</span></div><div class="lbl dark">？？？<small>まだ読んでいない</small></div><div class="chips"><div class="chip un new"><i></i>？？？<small>未見のエンド</small></div></div></div>
+    <div class="chap"><div class="door">第四章</div><div class="nm">開かずの部屋</div></div>
+    <div class="node"><div class="mk side dark">？</div><div class="lbl dark">？？？<small>寄り道(エンドなし)</small></div></div>
+    <div class="node"><div class="mk q">③</div><div class="lbl">推理の問い③<small>外して仲間が拾った</small></div></div>
+    <div class="node"><div class="mk act dark"><span>？</span></div><div class="lbl dark">？？？<small>まだ読んでいない</small></div><div class="chips"><div class="chip un new"><i></i>？？？<small>未見のエンド</small></div></div></div>
+  </div>
+  <div class="cap">① 前半: 第1・3・4章に行動の選択が増える(暗い◆と<br>「？？？」の札)。第4章には、エンドのない寄り道(点線の□)。<br>既に読んだ所は今までどおり明るいまま</div>
+</div>
+
+<div class="ph">
+  <div class="top"><h1>聖夜の見取り図</h1><small>分岐の地図</small>
+    <div class="row"><div class="tab on">あつ派</div><div class="tab">ソラシド派</div><div class="ends">エンド 9/33</div></div></div>
+  <div class="map"><div class="spine"></div>
+    <div class="chap"><div class="door">第七章</div><div class="nm">ひとつめの推理</div></div>
+    <div class="node"><div class="mk act dark"><span>？</span></div><div class="lbl dark">？？？<small>まだ読んでいない</small></div><div class="chips"><div class="chip un"><i></i>？？？<small>未見のエンド</small></div></div></div>
+    <div class="node" style="align-items:flex-start"><div class="mk" style="background:#4b3780;border:2px solid #c8b3f5;border-radius:50%">✦</div><div class="lbl">1回目の推理<small>犯人を名指し</small></div>
+      <div class="chips">
+        <div class="chip acc"><i></i>吹雪の向こうへ<small>名指しエンド</small></div>
+        <div class="chip acc"><i></i>火の消えた夜<small>名指しエンド</small></div>
+        <div class="chip un"><i></i>？？？<small>未見のエンド</small></div>
+        <div class="chip un"><i></i>？？？<small>未見のエンド</small></div>
+        <div class="chip un"><i></i>？？？<small>未見のエンド</small></div>
+        <div class="chip seen" style="background:linear-gradient(#8a5a1f,#5a3a10);border-color:#e8a95b"><i style="background:#e8a95b"></i>偽りの解決<small>偽りエンド</small></div>
+      </div></div>
+    <div class="node" style="align-items:flex-start"><div class="mk act dark"><span>？</span></div><div class="lbl dark">？？？<small>名指しのあと</small></div>
+      <div class="chips">
+        <div class="chip un new"><i></i>？？？<small>未見のエンド</small></div>
+        <div class="chip un new"><i></i>？？？<small>未見のエンド</small></div>
+        <div class="chip un new"><i></i>？？？<small>未見のエンド</small></div>
+        <div class="chip un new"><i></i>？？？<small>未見のエンド</small></div>
+      </div></div>
+    <div class="node"><div class="mk act dark"><span>？</span></div><div class="lbl dark">？？？<small>動機のあと</small></div><div class="chips"><div class="chip un new"><i></i>？？？<small>未見のエンド</small></div></div></div>
+  </div>
+  <div class="cap">② 第7章: 名指しのあとに「閉じこめる／もう一度考える」、<br>動機のあとに「探す／もう一度考える」が足される。<br>増えた札は「増」の印(見本だけの印)</div>
+</div>
+
+<div class="ph">
+  <div class="top"><h1>聖夜の見取り図</h1><small>分岐の地図</small>
+    <div class="row"><div class="tab on">あつ派</div><div class="tab">ソラシド派</div><div class="ends">エンド 9/33</div></div></div>
+  <div class="map"><div class="spine dark"></div>
+    <div class="lane">当てられなかった道</div>
+    <div class="chap dark"><div class="door">第？章</div><div class="nm">？？？</div></div>
+    <div class="node"><div class="mk act dark"><span>？</span></div><div class="lbl dark">？？？</div><div class="chips"><div class="chip un"><i></i>？？？</div></div></div>
+    <div class="node"><div class="mk act dark"><span>？</span></div><div class="lbl dark">？？？</div><div class="chips"><div class="chip un new"><i></i>？？？</div></div></div>
+    <div class="chap dark"><div class="door">第？章</div><div class="nm">？？？</div></div>
+    <div class="node"><div class="mk act dark"><span>？</span></div><div class="lbl dark">？？？</div><div class="chips"><div class="chip un new"><i></i>？？？</div></div></div>
+    <div class="lane">真相への道</div>
+    <div class="chap dark"><div class="door">第？章</div><div class="nm">？？？</div></div>
+    <div class="node"><div class="mk act dark"><span>？</span></div><div class="lbl dark">？？？</div><div class="chips"><div class="chip un new"><i></i>？？？</div></div></div>
+    <div class="lane if">もしもの道(真グッドのあと)</div>
+    <div style="position:relative"><div class="spine ifl"></div>
+    <div class="node"><div class="mk if"><span>？</span></div><div class="lbl dark">？？？<small>第？章のどこか</small></div><div class="chips"><div class="chip un new"><i></i>？？？</div></div></div>
+    <div class="node"><div class="mk if"><span>？</span></div><div class="lbl dark">？？？<small>第？章のどこか</small></div><div class="chips"><div class="chip un new"><i></i>？？？</div></div></div>
+    <div class="node"><div class="mk if"><span>？</span></div><div class="lbl dark">？？？<small>12年前</small></div><div class="chips"><div class="chip un new"><i></i>？？？</div></div></div>
+    </div>
+  </div>
+  <div class="cap">③ 後ろの道にも選択が増える。真グッドのあとだけ開く<br>「もしもの道」は金の点線で別の段にまとめる<br>(開く前は形だけ見せる・名前と場所は伏せる)</div>
+</div>
+</body></html>
