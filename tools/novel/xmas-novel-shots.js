@@ -158,7 +158,10 @@ const SHOTS_091 = [
   { name: '02-where-390', row: '1-2-1', side: 0, label: '第一章 ホールのもみの木(390×844)' },
   { name: '03-where-c7', row: '7-1-12a', side: 1, vp: { width: 375, height: 667 }, label: '第七章(375×667)' },
 ];
-const LIST_ALL = process.argv.includes('--r1126-091') ? SHOTS_091 : process.argv.includes('--final') ? SHOTS_FINAL : process.argv.includes('--r1126-077') ? SHOTS_077 : process.argv.includes('--r1126-071') ? SHOTS_071 : process.argv.includes('--r1126-076') ? SHOTS_076 : process.argv.includes('--r1126-067') ? SHOTS_067 : process.argv.includes('--r1126-065') ? SHOTS_065 : process.argv.includes('--r1126-062') ? SHOTS_062 : process.argv.includes('--r1126-046') ? SHOTS_046 : process.argv.includes('--r1126-054') ? SHOTS_054 : process.argv.includes('--r1126-058') ? SHOTS_058 : SHOTS;
+// ネタバレの点検(第3章の前に死んだ人が分かる表示が無いか)
+const SHOTS_SPOIL = [['01-c1-panel', '1-6-4'], ['02-c2-panel', '2-5-8'], ['03-c2-end', '2-5-6'], ['04-c1-start', '1-1-5'], ['05-c2-mid', '2-3-1']]
+  .map(([name, row]) => ({ name, row, side: 0, label: `ネタバレの点検 ${row}` }));
+const LIST_ALL = process.argv.includes('--spoil') ? SHOTS_SPOIL : process.argv.includes('--r1126-091') ? SHOTS_091 : process.argv.includes('--final') ? SHOTS_FINAL : process.argv.includes('--r1126-077') ? SHOTS_077 : process.argv.includes('--r1126-071') ? SHOTS_071 : process.argv.includes('--r1126-076') ? SHOTS_076 : process.argv.includes('--r1126-067') ? SHOTS_067 : process.argv.includes('--r1126-065') ? SHOTS_065 : process.argv.includes('--r1126-062') ? SHOTS_062 : process.argv.includes('--r1126-046') ? SHOTS_046 : process.argv.includes('--r1126-054') ? SHOTS_054 : process.argv.includes('--r1126-058') ? SHOTS_058 : SHOTS;
 
 //  --only <語>: 名前にその語を含む物だけ撮る(例: --only kuroba)
 const ONLY = process.argv.includes('--only') ? process.argv[process.argv.indexOf('--only') + 1] || '' : '';

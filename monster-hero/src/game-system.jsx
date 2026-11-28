@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 72d51b16adb97f00
+// generated-sha256: 763cf159ffddfe52
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -68866,7 +68866,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"2-5-6","t":"line","w":"myua","x":"でも……！ でも、あの声……！","e":"crying","k":"C2-5:2-5-6"},
 {"id":"2-5-6b","t":"band","x":"吹雪が、扉を押し戻す。かすかな声は、風にかき消されて、どこから聞こえるのかも分からない。もちまるが、震える手で、扉を閉めるしかなかった","k":"C2-5:2-5-6b"},
 {"id":"2-5-7","t":"band","x":"暗転","k":"C2-5:2-5-7"},
-{"id":"2-5-8","t":"panel","x":"","ops":[{"id":"kuroba","st":"missing"}],"k":"C2-5:2-5-8"}],"frame":"close"},
+{"id":"2-5-8","t":"panel","x":"登場人物 12人","missing":[],"hurt":[],"dead":[],"k":"C2-5:2-5-8"}],"frame":"close"},
 {"id":"C3-1","chapter":"C3","title":"雪の上の影","cond":null,"bgm":"melo_sad_song_short","bg":"朝の雪原","next":"C3-2","rows":[{"id":"3-1-1","t":"band","x":"聖夜の名探偵 第3章 〜雪の上の影〜","k":"C3-1:3-1-1"},
 {"id":"3-1-2","t":"band","x":"朝。吹雪は、真夜中すぎにやんでいた。雪原が、しんと白い","k":"C3-1:3-1-2"},
 {"id":"3-1-3","t":"line","w":"momosuke","x":"……ねえ。あれ、何？ 雪の上……誰か、倒れてる……？","e":"surprise","k":"C3-1:3-1-3"},
