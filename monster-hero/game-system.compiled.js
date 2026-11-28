@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 950dc9e349d63b68
+// source-sha256: cc5693f4b1290a0c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -127504,6 +127504,101 @@ const xmasNovelFirstLines = script => {
   XMAS_NOVEL_FIRST_LINE_CACHE.set(script, out);
   return out;
 };
+const XMAS_NOVEL_CHAPTER_VEIL = Object.freeze({
+  C3: '白い朝',
+  C8: 'ひとつずつ',
+  C10: '長い夜'
+});
+const XMAS_NOVEL_CH_KEYS_CACHE = new WeakMap();
+const xmasNovelChapterDone = (script, ch, read) => {
+  if (!script || !ch) return false;
+  let keys = XMAS_NOVEL_CH_KEYS_CACHE.get(script);
+  if (!keys) {
+    keys = {};
+    (Array.isArray(script.scenes) ? script.scenes : []).forEach(s => {
+      (keys[s.chapter] = keys[s.chapter] || []).push(...(Array.isArray(s.rows) ? s.rows : []).map(r => r && r.k).filter(Boolean));
+    });
+    XMAS_NOVEL_CH_KEYS_CACHE.set(script, keys);
+  }
+  const set = read instanceof Set ? read : new Set(Array.isArray(read) ? read : []);
+  return (Array.isArray(script.chapters) ? script.chapters : []).some(c => c && !c.past && !c.outside && c.no > ch.no && c.no < 90 && (keys[c.id] || []).some(k => set.has(k)));
+};
+const xmasNovelChapterTitle = (script, ch, read) => {
+  if (!ch) return '';
+  const veil = XMAS_NOVEL_CHAPTER_VEIL[ch.id];
+  return veil && !xmasNovelChapterDone(script, ch, read) ? veil : ch.title || '';
+};
+const xmasNovelSceneDone = (scene, read) => {
+  const rows = scene && Array.isArray(scene.rows) ? scene.rows : [];
+  const last = [...rows].reverse().find(r => r && r.k);
+  return !!(last && Array.isArray(read) && read.includes(last.k));
+};
+const XMAS_NOVEL_SHAKE = Object.freeze({
+  '1-3-1': 2,
+  '2-1-10': 1,
+  '2-3-4': 1,
+  '2-3-7': 1,
+  '2-3-9b': 1,
+  '2-3-9c': 2,
+  '2-5-1': 2,
+  '5-4-4': 1,
+  '6-5-1': 3,
+  '6-7-4b': 2,
+  '7-P1-13': 1,
+  '7-P3-11': 1,
+  '7-P3-12': 1,
+  '7-W-8': 1,
+  '9-1-4': 1,
+  '10-2-6': 2,
+  '2-X-2': 3,
+  '5-X-3': 3,
+  '6-X-4': 3,
+  '6-X-5': 2,
+  '6-X-8': 2,
+  '2-Y-9': 3,
+  '2-Y-17': 1,
+  '10-X-8': 3,
+  'B-2': 1,
+  'B-3': 1,
+  'B-4': 2,
+  'B-13': 2,
+  '1-O-22': 1,
+  '12-3-2': 1,
+  '12-4-2': 1,
+  '12-4-5': 1
+});
+const XMAS_NOVEL_SHAKE_PX = [0, 2.5, 5, 9];
+const XMAS_NOVEL_BUZZ = [0, 20, 45, [70, 40, 90]];
+const xmasNovelQuake = (el, lv) => {
+  const a = XMAS_NOVEL_SHAKE_PX[lv] || 0;
+  if (!a) return;
+  try {
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  } catch (e) {}
+  if (el && typeof el.animate === 'function') {
+    try {
+      el.animate([{
+        transform: 'none'
+      }, {
+        transform: `translate(${-a}px, ${a / 2}px)`
+      }, {
+        transform: `translate(${a}px, ${-a / 3}px)`
+      }, {
+        transform: `translate(${-a * 0.6}px, ${a / 3}px)`
+      }, {
+        transform: `translate(${a * 0.35}px, 0)`
+      }, {
+        transform: 'none'
+      }], {
+        duration: 240 + lv * 100,
+        easing: 'ease-out'
+      });
+    } catch (e) {}
+  }
+  try {
+    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(XMAS_NOVEL_BUZZ[lv]);
+  } catch (e) {}
+};
 const XMAS_NOVEL_FACES = Object.freeze(['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited']);
 const xmasNovelFigureSrc = (who, e) => {
   const c = xmasNovelCastOf(who);
@@ -128996,7 +129091,6 @@ const XmasNovelScreen = ({
   const [reply, setReply] = useState(null);
   const [shown, setShown] = useState(0);
   const [fx, setFx] = useState(null);
-  const [shake, setShake] = useState(0);
   const [curtain, setCurtain] = useState(null);
   const [transit, setTransit] = useState(null);
   const replayRef = useRef(false);
@@ -129034,8 +129128,11 @@ const XmasNovelScreen = ({
       kind: p.vis,
       n: Date.now()
     } : null);
-    if (p.shake) setShake(n => n + 1);
+    if (p.shake) xmasNovelQuake(stageRef.current, 2);
   };
+  const stageRef = useRef(null);
+  const pendingQuakeRef = useRef(0);
+  const [titleOk, setTitleOk] = useState(false);
   const fxFast = unread => !unread || !!(saveRef.current && saveRef.current.auto);
   const fireSw = v => {
     if (!v) {
@@ -129111,6 +129208,10 @@ const XmasNovelScreen = ({
       read: [...s.read, r.k]
     };
     if (r.t === 'band' && r.se) xmasNovelRowSe(r.se, r.seN);else xmasNovelSeStop();
+    pendingQuakeRef.current = 0;
+    if (XMAS_NOVEL_SHAKE[r.id] && !skip) {
+      if (opts.held) pendingQuakeRef.current = XMAS_NOVEL_SHAKE[r.id];else xmasNovelQuake(stageRef.current, XMAS_NOVEL_SHAKE[r.id]);
+    }
     if (r.t === 'band' && Array.isArray(r.fx)) {
       const vis = r.fx.find(f => ['dark', 'white', 'red', 'light', 'bleed'].includes(f));
       const p = {
@@ -129238,7 +129339,10 @@ const XmasNovelScreen = ({
     }
     const scene = next.scene;
     let chapterCard = false;
-    if (lastSceneRef.current !== (scene || null)) lastBodyRef.current = '';
+    if (lastSceneRef.current !== (scene || null)) {
+      lastBodyRef.current = '';
+      setTitleOk(xmasNovelSceneDone(scene, s.read));
+    }
     const transitNow = !!(scene && lastSceneRef.current && !!lastSceneRef.current.outside !== !!scene.outside);
     if (transitNow) {
       setTransit({
@@ -129283,7 +129387,7 @@ const XmasNovelScreen = ({
           setCard({
             kind: 'chapter',
             label: xmasNovelChapterLabel(ch),
-            title: ch.title
+            title: xmasNovelChapterTitle(S, ch, s.read)
           });
           setSkip(false);
           chapterCard = true;
@@ -129370,6 +129474,11 @@ const XmasNovelScreen = ({
         pendingSwRef.current = null;
         if (!skip) fireSw(v);
       }
+      if (cards.length === 1 && pendingQuakeRef.current) {
+        const lv = pendingQuakeRef.current;
+        pendingQuakeRef.current = 0;
+        if (!skip) setTimeout(() => xmasNovelQuake(stageRef.current, lv), 250);
+      }
       if ((card.kind === 'title' || card.kind === 'band') && cards.length === 1) goNext();
       return;
     }
@@ -129387,6 +129496,7 @@ const XmasNovelScreen = ({
         ...reveal,
         stage: 'show'
       });
+      xmasNovelQuake(stageRef.current, 1);
       return;
     }
     if (got) setGot(null);
@@ -129481,10 +129591,13 @@ const XmasNovelScreen = ({
   useEffect(() => {
     if (mode !== 'read' || !rowKey || typing) return undefined;
     if (revealDark) {
-      const id = setTimeout(() => setReveal(v => v && v.id === rowKey && v.stage === 'dark' ? {
-        ...v,
-        stage: 'show'
-      } : v), reveal.fast || skip ? 150 : 700);
+      const id = setTimeout(() => {
+        setReveal(v => v && v.id === rowKey && v.stage === 'dark' ? {
+          ...v,
+          stage: 'show'
+        } : v);
+        if (!skip) xmasNovelQuake(stageRef.current, 1);
+      }, reveal.fast || skip ? 150 : 700);
       return () => clearTimeout(id);
     }
     const p = pendingFxRef.current;
@@ -129721,7 +129834,7 @@ const XmasNovelScreen = ({
         className: "mh-nv-serif mh-nv-gold w-14 shrink-0 text-[14px] font-black"
       }, xmasNovelChapterLabel(c)), React.createElement("span", {
         className: "mh-nv-serif min-w-0 flex-1 truncate text-[15px] font-black"
-      }, snap ? c.title : '？？？'), snap ? React.createElement(ChevronRight, {
+      }, snap ? xmasNovelChapterTitle(S, c, save.read) : '？？？'), snap ? React.createElement(ChevronRight, {
         size: 16,
         className: "text-amber-200"
       }) : React.createElement(Lock, {
@@ -129744,8 +129857,8 @@ const XmasNovelScreen = ({
     "data-scene": scene ? scene.id : '',
     "data-row": row ? row.id : ''
   }, React.createElement("div", {
-    key: `stage-${shake}`,
-    className: `mh-nv-stage${shake ? ' mh-nv-shake' : ''}`,
+    ref: stageRef,
+    className: "mh-nv-stage",
     onClick: advance
   }, React.createElement("div", {
     className: `mh-nv-bg${sw ? ` in-${sw.kind}${sw.fast ? ' fast' : ''}` : ''}`,
@@ -129863,13 +129976,17 @@ const XmasNovelScreen = ({
   }, React.createElement("span", {
     className: "mh-nv-where mh-nv-serif",
     "data-xmas-novel-where": true
-  }, chapter && !chapter.outside ? React.createElement("span", {
-    className: "ch"
-  }, `${xmasNovelChapterLabel(chapter)}${chapter.title ? `　${chapter.title}` : ''}`, React.createElement("span", {
-    className: "sep"
-  }, "\u3000/\u3000")) : null, scene && scene.title && !(scene.ending || chapter && chapter.id === 'END' || /^END-/.test(String(scene.next || ''))) ? React.createElement("span", {
-    className: "sc"
-  }, scene.title) : null), React.createElement("button", {
+  }, (() => {
+    const chTitle = chapter && !chapter.outside ? xmasNovelChapterTitle(S, chapter, save.read) : '';
+    const showScene = !!(titleOk && scene && scene.title && !(scene.ending || chapter && chapter.id === 'END' || /^END-/.test(String(scene.next || ''))));
+    return React.createElement(React.Fragment, null, chapter && !chapter.outside ? React.createElement("span", {
+      className: "ch"
+    }, `${xmasNovelChapterLabel(chapter)}${chTitle ? `　${chTitle}` : ''}`, showScene ? React.createElement("span", {
+      className: "sep"
+    }, "\u3000/\u3000") : null) : null, showScene ? React.createElement("span", {
+      className: "sc"
+    }, scene.title) : null);
+  })()), React.createElement("button", {
     type: "button",
     className: "mh-nv-btn",
     "data-xmas-novel-open-book": true,

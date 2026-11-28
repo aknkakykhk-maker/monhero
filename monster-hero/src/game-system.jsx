@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b2f5b63b27a68bb6
+// generated-sha256: 938ae70bb3db3a9b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -70356,6 +70356,56 @@ const xmasNovelFirstLines = (script) => {
   return out;
 };
 
+// ---- 先の展開が分かる題を伏せる(台帳 r1126-094 追記3・社長「ところどころのタイトルで展開が見えるから出し方かえたほうがいい」) ----
+//  場面の題: その場面を1度読み終えるまでは出さない(上の帯は章だけ。場所は場所の札で分かる)
+//  章の題: 先が分かる章(遺体が見つかる・最初の推理がはずれる・人が減っていく)は、その先の章を読むまで別の題で出す
+const XMAS_NOVEL_CHAPTER_VEIL = Object.freeze({ C3: '白い朝', C8: 'ひとつずつ', C10: '長い夜' });
+const XMAS_NOVEL_CH_KEYS_CACHE = new WeakMap();
+const xmasNovelChapterDone = (script, ch, read) => {
+  if (!script || !ch) return false;
+  let keys = XMAS_NOVEL_CH_KEYS_CACHE.get(script);
+  if (!keys) {
+    keys = {};
+    (Array.isArray(script.scenes) ? script.scenes : []).forEach((s) => { (keys[s.chapter] = keys[s.chapter] || []).push(...(Array.isArray(s.rows) ? s.rows : []).map((r) => r && r.k).filter(Boolean)); });
+    XMAS_NOVEL_CH_KEYS_CACHE.set(script, keys);
+  }
+  const set = read instanceof Set ? read : new Set(Array.isArray(read) ? read : []);
+  return (Array.isArray(script.chapters) ? script.chapters : []).some((c) => c && !c.past && !c.outside && c.no > ch.no && c.no < 90 && (keys[c.id] || []).some((k) => set.has(k)));
+};
+const xmasNovelChapterTitle = (script, ch, read) => {
+  if (!ch) return '';
+  const veil = XMAS_NOVEL_CHAPTER_VEIL[ch.id];
+  return veil && !xmasNovelChapterDone(script, ch, read) ? veil : (ch.title || '');
+};
+const xmasNovelSceneDone = (scene, read) => {
+  const rows = scene && Array.isArray(scene.rows) ? scene.rows : [];
+  const last = [...rows].reverse().find((r) => r && r.k);
+  return !!(last && Array.isArray(read) && read.includes(last.k));
+};
+// ---- 場面ごとの揺れ(台帳 r1126-094 追記3・社長「場面場面の振動とかそういうのちゃんとして」) ----
+//  行ID → 強さ(1 小さく / 2 ふつう / 3 強く)。音の帯は音と同時、遺体を見つける行は暗転が明けるときに 1。
+//  端末の振動は、navigator.vibrate がある端末(Android)だけ短く。iPhone は画面の揺れと音で伝える。動きを減らす設定の端末では、どちらも出さない
+const XMAS_NOVEL_SHAKE = Object.freeze({
+  '1-3-1': 2, '2-1-10': 1, '2-3-4': 1, '2-3-7': 1, '2-3-9b': 1, '2-3-9c': 2, '2-5-1': 2, '5-4-4': 1, '6-5-1': 3, '6-7-4b': 2,
+  '7-P1-13': 1, '7-P3-11': 1, '7-P3-12': 1, '7-W-8': 1, '9-1-4': 1, '10-2-6': 2,
+  '2-X-2': 3, '5-X-3': 3, '6-X-4': 3, '6-X-5': 2, '6-X-8': 2, '2-Y-9': 3, '2-Y-17': 1, '10-X-8': 3,
+  'B-2': 1, 'B-3': 1, 'B-4': 2, 'B-13': 2, '1-O-22': 1, '12-3-2': 1, '12-4-2': 1, '12-4-5': 1,
+});
+const XMAS_NOVEL_SHAKE_PX = [0, 2.5, 5, 9];
+const XMAS_NOVEL_BUZZ = [0, 20, 45, [70, 40, 90]];
+const xmasNovelQuake = (el, lv) => {
+  const a = XMAS_NOVEL_SHAKE_PX[lv] || 0;
+  if (!a) return;
+  try { if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return; } catch (e) { /* 分からなければ揺らす */ }
+  if (el && typeof el.animate === 'function') {
+    try {
+      el.animate([{ transform: 'none' }, { transform: `translate(${-a}px, ${a / 2}px)` }, { transform: `translate(${a}px, ${-a / 3}px)` }, { transform: `translate(${-a * 0.6}px, ${a / 3}px)` },
+        { transform: `translate(${a * 0.35}px, 0)` }, { transform: 'none' }], { duration: 240 + lv * 100, easing: 'ease-out' });
+    } catch (e) { /* 揺れなくても続ける */ }
+  }
+  try { if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(XMAS_NOVEL_BUZZ[lv]); } catch (e) { /* ふるえなくても続ける */ }
+};
+
 // ---- 立ち絵 ----
 //  助手はサンタのきせかえの立ち絵(stand-santa。ドラは顔の絵なので santa の顔)。イチーカ・もちまるは絵が1枚。謎の客2人・？？？は影
 const XMAS_NOVEL_FACES = Object.freeze(['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited']);
@@ -71134,7 +71184,6 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
   const [reply, setReply] = useState(null); // { list:[行], i, then, q } 問いの返しを読んでいるところ
   const [shown, setShown] = useState(0); // 文字送りで出した字数
   const [fx, setFx] = useState(null); // { kind, n }
-  const [shake, setShake] = useState(0);
   const [curtain, setCurtain] = useState(null);
   const [transit, setTransit] = useState(null); // { dir:'in'|'out', n } 外側⇔ゲームの中の切り替え(画面に吸い込まれる/画面から引く) // 'down'(下りて閉じたまま)/ 'up'(上がっていく)
   const replayRef = useRef(false);
@@ -71168,8 +71217,11 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
     if (!p) return;
     if (p.bleedAfter) setTimeout(() => setFx({ kind: 'bleed', n: Date.now() }), 380); // 赤く光ってから、にじむ
     setFx(p.vis ? { kind: p.vis, n: Date.now() } : null);
-    if (p.shake) setShake((n) => n + 1);
+    if (p.shake) xmasNovelQuake(stageRef.current, 2);
   };
+  const stageRef = useRef(null);
+  const pendingQuakeRef = useRef(0);
+  const [titleOk, setTitleOk] = useState(false); // いまの場面を前に読み終えているか(場面の題を出すか)
   const fxFast = (unread) => !unread || !!(saveRef.current && saveRef.current.auto);
   const fireSw = (v) => {
     if (!v) { setSw(null); return; }
@@ -71212,6 +71264,9 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
     unreadRef.current = !!(r.k && !s.read.includes(r.k));
     if (r.k && !s.read.includes(r.k)) s = { ...s, read: [...s.read, r.k] };
     if (r.t === 'band' && r.se) xmasNovelRowSe(r.se, r.seN); else xmasNovelSeStop();
+    // 章の札の下で着いた行は、札を閉じてから揺らす(札に隠れて見えなかった)
+    pendingQuakeRef.current = 0;
+    if (XMAS_NOVEL_SHAKE[r.id] && !skip) { if (opts.held) pendingQuakeRef.current = XMAS_NOVEL_SHAKE[r.id]; else xmasNovelQuake(stageRef.current, XMAS_NOVEL_SHAKE[r.id]); }
     if (r.t === 'band' && Array.isArray(r.fx)) {
       const vis = r.fx.find((f) => ['dark', 'white', 'red', 'light', 'bleed'].includes(f));
       const p = { id: r.id, vis, bleedAfter: r.fx.includes('bleed') && r.fx.includes('red'), shake: r.fx.includes('shake') };
@@ -71266,7 +71321,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
     const scene = next.scene;
     let chapterCard = false;
     // 外側(助手たち本人)⇔ゲームの中が切り替わったら、画面に吸い込まれる/画面から引く
-    if (lastSceneRef.current !== (scene || null)) lastBodyRef.current = '';
+    if (lastSceneRef.current !== (scene || null)) { lastBodyRef.current = ''; setTitleOk(xmasNovelSceneDone(scene, s.read)); }
     const transitNow = !!(scene && lastSceneRef.current && !!lastSceneRef.current.outside !== !!scene.outside);
     if (transitNow) { setTransit({ dir: scene.outside ? 'out' : 'in', n: Date.now() }); xmasNovelSe('tap'); }
     // カーテンコールの場面を出たら、下りていた幕を上げる
@@ -71280,7 +71335,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
       lastChapter.current = scene.chapter;
       if (ch && ch.id !== 'END' && !ch.outside) {
         if (!s.snaps[ch.id] || next.cur.idx === 0) s = { ...s, snaps: { ...s.snaps, [ch.id]: { scene: scene.id, idx: 0, flags: next.cur.flags, clues: next.cur.clues, ans: next.cur.ans, panel: next.cur.panel || {} } } };
-        if (opening) { setCard({ kind: 'chapter', label: xmasNovelChapterLabel(ch), title: ch.title }); setSkip(false); chapterCard = true; }
+        if (opening) { setCard({ kind: 'chapter', label: xmasNovelChapterLabel(ch), title: xmasNovelChapterTitle(S, ch, s.read) }); setSkip(false); chapterCard = true; }
       }
     }
     // 背景が替わった所の切り替え(外側⇔ゲームの中は吸い込まれる演出があるので出さない・章の札のあとは札を閉じてから)
@@ -71324,6 +71379,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
       setCards((list) => list.slice(1));
       // 章の札を閉じたら、黒から場面が明ける(既読スキップ中は出さない)
       if (card.kind === 'chapter' && cards.length === 1 && pendingSwRef.current) { const v = pendingSwRef.current; pendingSwRef.current = null; if (!skip) fireSw(v); }
+      if (cards.length === 1 && pendingQuakeRef.current) { const lv = pendingQuakeRef.current; pendingQuakeRef.current = 0; if (!skip) setTimeout(() => xmasNovelQuake(stageRef.current, lv), 250); }
       // 題字・帯の札は、その行そのもの。札を閉じたら次の行へ(章の札は行ではないので、閉じるだけ)
       if ((card.kind === 'title' || card.kind === 'band') && cards.length === 1) goNext();
       return;
@@ -71333,7 +71389,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
   const goNext = () => {
     if (sheet || !row) return;
     if (typing) { setShown(text.length); if (sw && !sw.fast) setSw(null); return; }
-    if (!reply && reveal && row && reveal.id === row.id && reveal.stage === 'dark') { setReveal({ ...reveal, stage: 'show' }); return; } // 暗いままで進めない(見つける所を必ず見せる)
+    if (!reply && reveal && row && reveal.id === row.id && reveal.stage === 'dark') { setReveal({ ...reveal, stage: 'show' }); xmasNovelQuake(stageRef.current, 1); return; } // 暗いままで進めない(見つける所を必ず見せる)
     if (got) setGot(null);
     if (reply) {
       if (reply.i + 1 < reply.list.length) {
@@ -71383,7 +71439,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
   useEffect(() => {
     if (mode !== 'read' || !rowKey || typing) return undefined;
     if (revealDark) {
-      const id = setTimeout(() => setReveal((v) => (v && v.id === rowKey && v.stage === 'dark' ? { ...v, stage: 'show' } : v)), reveal.fast || skip ? 150 : 700);
+      const id = setTimeout(() => { setReveal((v) => (v && v.id === rowKey && v.stage === 'dark' ? { ...v, stage: 'show' } : v)); if (!skip) xmasNovelQuake(stageRef.current, 1); }, reveal.fast || skip ? 150 : 700);
       return () => clearTimeout(id);
     }
     const p = pendingFxRef.current;
@@ -71504,7 +71560,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
                       <button type="button" data-xmas-novel-chapter={c.id} disabled={!snap} className="mh-nv-clue flex items-center gap-3 disabled:opacity-40"
                         onClick={() => snap && start({ ...snap, idx: 0 })}>
                         <span className="mh-nv-serif mh-nv-gold w-14 shrink-0 text-[14px] font-black">{xmasNovelChapterLabel(c)}</span>
-                        <span className="mh-nv-serif min-w-0 flex-1 truncate text-[15px] font-black">{snap ? c.title : '？？？'}</span>
+                        <span className="mh-nv-serif min-w-0 flex-1 truncate text-[15px] font-black">{snap ? xmasNovelChapterTitle(S, c, save.read) : '？？？'}</span>
                         {snap ? <ChevronRight size={16} className="text-amber-200" /> : <Lock size={14} />}
                       </button>
                     </li>
@@ -71527,7 +71583,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
   const q = sheet && typeof sheet === 'object' ? sheet.q : null;
   return (
     <div className="mh-nv" data-xmas-novel="read" data-scene={scene ? scene.id : ''} data-row={row ? row.id : ''}>
-      <div key={`stage-${shake}`} className={`mh-nv-stage${shake ? ' mh-nv-shake' : ''}`} onClick={advance}>
+      <div ref={stageRef} className="mh-nv-stage" onClick={advance}>
         <div className={`mh-nv-bg${sw ? ` in-${sw.kind}${sw.fast ? ' fast' : ''}` : ''}`} key={bgName || (scene ? scene.id : 'bg')} data-xmas-novel-bg={bg.tintKind || ''} style={bg.img ? { backgroundImage: `${bg.tint ? `${bg.tint}, ` : ''}url(${bg.img})`, backgroundPosition: bg.pos || 'center' } : { background: bg.grad }} />
         {(bg.snow || !bg.img) && <><div className="mh-nv-snow" />{bg.snow && <div className="mh-nv-snow b" />}</>}
         {!darkNow && (isLine || (isBand && xmasNovelIsSilhouette(row))) && <XmasNovelFigure row={row} scene={scene} enter={isLine ? figEnter : null} />}
@@ -71570,7 +71626,11 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
         )}
       </div>
       <div className="mh-nv-top">
-        <span className="mh-nv-where mh-nv-serif" data-xmas-novel-where>{/* エンドの場面のあいだは章名だけ(場面名がエンド名を先に明かす・台帳 r1126-087「結末まで伏せる」) */}{chapter && !chapter.outside ? <span className="ch">{`${xmasNovelChapterLabel(chapter)}${chapter.title ? `　${chapter.title}` : ''}`}<span className="sep">　/　</span></span> : null}{scene && scene.title && !(scene.ending || (chapter && chapter.id === 'END') || /^END-/.test(String(scene.next || ''))) ? <span className="sc">{scene.title}</span> : null}</span>
+        <span className="mh-nv-where mh-nv-serif" data-xmas-novel-where>{/* エンドの場面のあいだは章名だけ(場面名がエンド名を先に明かす・台帳 r1126-087「結末まで伏せる」) */}{/* 場面の題は、その場面を1度読み終えてから(先の展開が題で分かる・台帳 r1126-094 追記3)。章の題も先が分かる物は伏せる */}{(() => {
+          const chTitle = chapter && !chapter.outside ? xmasNovelChapterTitle(S, chapter, save.read) : '';
+          const showScene = !!(titleOk && scene && scene.title && !(scene.ending || (chapter && chapter.id === 'END') || /^END-/.test(String(scene.next || ''))));
+          return <>{chapter && !chapter.outside ? <span className="ch">{`${xmasNovelChapterLabel(chapter)}${chTitle ? `　${chTitle}` : ''}`}{showScene ? <span className="sep">　/　</span> : null}</span> : null}{showScene ? <span className="sc">{scene.title}</span> : null}</>;
+        })()}</span>
         <button type="button" className="mh-nv-btn" data-xmas-novel-open-book onClick={() => setSheet('book')} aria-label="手がかり帳"><XmasNovelIcon d={XMAS_NOVEL_ICONS.book} /><span className="hidden sm:inline">手がかり帳</span><b className="text-[11px]">{clues.length}</b></button>
         <button type="button" className="mh-nv-btn" data-xmas-novel-log onClick={() => setSheet('log')} aria-label="ログ"><XmasNovelIcon d={XMAS_NOVEL_ICONS.log} /><span className="hidden sm:inline">ログ</span></button>
         <button type="button" className="mh-nv-btn" data-xmas-novel-auto data-on={autoLevel ? '' : undefined} onClick={() => persist({ ...saveRef.current, auto: (autoLevel + 1) % 3 }, true)} aria-label="オート">
