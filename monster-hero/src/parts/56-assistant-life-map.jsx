@@ -92,7 +92,7 @@ function AssistantLifeMapFig({ who, h, sleep, spent = false }) {
   //   場面の立ち絵の表は目〜顎と頬の幅でそろえていて、髪やうさ耳で頭が大きく見える人が出ていた。さらに、寝ている絵・ハロウィンのももすけなど表の点が合わない絵が大きく出ていた。
   //   表(assistantLifeStandFace)に顎の点がある絵はそれを使い、無い絵は下の ASSISTANT_LIFE_MAP_HEAD(絵を目盛りつきで切り出して手で読んだ 上・顎。見えている体の高さに対する割合)を使う
   const face0 = typeof assistantLifeStandFace === 'function' ? assistantLifeStandFace(who && who.id, src) : null;
-  const headKey = String(src || '').replace(/[?#].*$/, '').replace(/^.*assistant\//, '').replace(/\.png$/i, '').replace(/_(?!sleep$)[a-z]+$/i, '');
+  const headKey = String(src || '').replace(/[?#].*$/, '').replace(/^.*assistant\//, '').replace(/\.(?:png|webp)$/i, '').replace(/_(?!sleep$)[a-z]+$/i, '');
   const head = ASSISTANT_LIFE_MAP_HEAD[headKey] || null;
   const topChin = head ? { top: head[0], chin: head[1] } : (face0 && Number.isFinite(face0.top) && (Number.isFinite(face0.chin) || face0.head) ? { top: face0.top, chin: face0.head ? 1 : face0.chin } : null);
   const face = face0 && topChin && typeof ASSISTANT_LIFE_STAND_EC === 'number'
