@@ -87,6 +87,12 @@ const ROUTES = [
   { name: 'もしも 宝の地図、オルゴールを最後まで聞く', want: 'END-T1', from: 'A6y', picks: { A6y: 'go:TK-1', AT1: 'opt:0', AT2: 'opt:0' }, seen: ['END-G', 'END-O', 'END-O2', 'END-O3', 'END-O4'] },
   { name: 'もしも 宝の地図、くすぐってから台所へ', want: 'END-T2', from: 'AT1', picks: { A6y: 'go:TK-1', AT1: 'opt:1', AT2: 'opt:1' }, seen: ['END-G', 'END-O', 'END-O2', 'END-O3', 'END-O4'], short: true },
   { name: '緑のしおりが無いと A6y に③は出ない', want: 'END-G', from: 'A6y', picks: { A6y: 'opt:0', Q7a: 'kyuko' }, seen: ['END-G'], noOpt: { A6y: 'TK-1' }, short: true },
+  // r1126-108 第4弾 もしもの道(真グッドのあとだけ・金の選択肢)。I3 は I1・I2 を両方見たあとだけ A2b に出る。I2 は過去編(C12-1)から読む
+  { name: 'もしも 白瀬のそばを離れない', want: 'END-I1', from: 'A5i', picks: { A5i: 'go:IF1-1' }, seen: ['END-G'] },
+  { name: 'もしも 過去編、主人がもう一度裏口を開けに行く', want: 'END-I2', from: 'A12i', start: 'C12-1', picks: { A12i: 'go:IF2-1' }, seen: ['END-G'] },
+  { name: 'もしも 柱時計の針を13分戻す', want: 'END-I3', from: 'A2b', picks: { A2b: 'go:IF3-1' }, seen: ['END-G', 'END-I1', 'END-I2'] },
+  { name: 'I2 を見ていないと A2b に③は出ない', want: 'END-X4', from: 'A2b', picks: { A2b: 'danger' }, seen: ['END-G', 'END-I1'], noOpt: { A2b: 'IF3-1' }, short: true },
+  { name: '真グッドの前は C5-2 の最後に選択が出ない', want: 'END-G', from: 'Q7a', picks: { Q7a: 'kyuko' }, short: true, noQ: 'A5i' },
   { name: '寄り道の2つめ(イチーカ・こっそり・ドラの声)を通って真グッドへ', want: 'END-G', from: 'A4y', picks: { A4y: 'opt:1', A6y: 'opt:1', A8y: 'go:C8-Z', Q7a: 'kyuko' }, short: true },
 ];
 
@@ -100,7 +106,8 @@ const run = (side, route) => {
   const offered = {};
   let rec = false;
   const SEEN = { endings: seen, read: [] }; // 行・場面の条件(end_G など)にも、見たエンドを渡す(画面と同じ・r1126-115)
-  let st = E.xmasNovelSettle(S, E.xmasNovelFreshCur(S), SEEN);
+  // start … その場面から読み始める(過去編など、並びでは入らない章・r1126-108 第4弾)
+  let st = route.start ? E.xmasNovelSettle(S, E.xmasNovelJump(S, E.xmasNovelFreshCur(S), route.start, SEEN), SEEN) : E.xmasNovelSettle(S, E.xmasNovelFreshCur(S), SEEN);
   const push = (r, scene) => { if (rec) lines.push({ id: r.id, scene, t: r.t, w: r.w || null, n: r.n || null, e: r.e || null, x: r.x || '' }); };
   for (let steps = 0; steps < 8000; steps += 1) {
     if (!st.row) {
