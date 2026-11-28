@@ -7,6 +7,7 @@
 //   iPhone 縦(390×844)では、(Safari の帯を除いた 390×664 も)ボスの札が3枚ぶん以上、一覧の中に見える
 //   iPhone の小さい縦(375×667)でも、ボスの札が3枚ぶん以上見える
 //   どの大きさでも、看板・期間の帯・タブの段が「物語」「ボーナス」「レイド」で1pxも動かない(r1126-097 追記1)
+//   まだ開いていない段階の名前は「？？？」(一覧・報酬一覧・ランキング。r1126-097 追記2)
 //   どの大きさでも、挑戦のボタンが画面の中にあり、横にはみ出さない。実行時エラーが無い
 const http = require('http'), path = require('path'), fs = require('fs');
 const seeds = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
@@ -97,6 +98,28 @@ const SIZES = [
           footIn: !!fr && fr.bottom <= vh + 1 && fr.top >= 0, wide: document.documentElement.scrollWidth <= vw + 1,
           buyText: buy ? buy.innerText.replace(/\s+/g, ' ') : '' };
       });
+      // まだ開いていない段階の名前は伏せる(r1126-097 追記2)。番号は残す。画面・報酬一覧・ランキングのどこにも出ない
+      const HIDDEN = ['黒いサンタ・戒', '黒いサンタ・罰', '黒いサンタ・断罪', '黒いサンタ・煉獄'];
+      const leak = (txt) => HIDDEN.filter((n) => txt.includes(n));
+      const scr = await page.evaluate(() => document.body.innerText);
+      check(`${c.id}: 未解放の段階の名前が一覧に出ない(「2. ？？？」)`, leak(scr).length === 0 && /2\.\s*？？？/.test(scr) && /1\.\s*黒いサンタ・咎/.test(scr), leak(scr).join(','));
+      if (c.id === 'iphone-safari-390x664') {
+        await page.locator('[data-raid-jack-reward-list-open-top]').click();
+        await page.waitForTimeout(500);
+        let txt = await page.evaluate(() => (document.querySelector('[data-raid-jack-reward-list]') || {}).innerText || '');
+        if (SHOT_DIR) await page.screenshot({ path: path.join(SHOT_DIR, `rewards-${c.id}.jpg`), type: 'jpeg', quality: 80 });
+        check(`${c.id}: 報酬一覧に未解放の名前が出ない`, txt.includes('？？？') && leak(txt).length === 0, leak(txt).join(','));
+        await page.locator('[data-raid-jack-reward-close]').click();
+        await page.locator('[data-raid-jack-ranking-open]').click();
+        await page.waitForTimeout(500);
+        txt = await page.evaluate(() => (document.querySelector('[data-raid-jack-ranking-list]') || {}).innerText || '');
+        await page.locator('[data-raid-jack-ranking-kind="max"]').click();
+        await page.waitForTimeout(300);
+        txt += await page.evaluate(() => (document.querySelector('[data-raid-jack-ranking-list]') || {}).innerText || '');
+        if (SHOT_DIR) await page.screenshot({ path: path.join(SHOT_DIR, `ranking-${c.id}.jpg`), type: 'jpeg', quality: 80 });
+        check(`${c.id}: ランキングに未解放の名前が出ない`, txt.includes('？？？') && leak(txt).length === 0, leak(txt).join(','));
+        await page.locator('[data-raid-jack-ranking-close]').click();
+      }
       if (c.minCards) check(`${c.id}: ボスの札が${c.minCards}枚ぶん以上見える`, st.seen >= c.minCards, `${st.seen}枚ぶん(1枚 ${st.cardH}px)`);
       if (c.minCards) check(`${c.id}: 挑戦のボタンが画面の中にある`, st.footIn);
       check(`${c.id}: 横にはみ出さない`, st.wide);

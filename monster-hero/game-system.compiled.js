@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 018a426918ad77c2
+// source-sha256: 38d8ad517a89d612
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -112879,7 +112879,8 @@ const RaidJackRewardList = ({
   onClose,
   claimed,
   initialTab = 'a',
-  ev = RAID_EVENT_JACK
+  ev = RAID_EVENT_JACK,
+  lockedOf = null
 }) => {
   const [tab, setTab] = useState(initialTab);
   const have = Array.isArray(claimed) ? claimed : [];
@@ -112930,7 +112931,7 @@ const RaidJackRewardList = ({
     className: "rounded-2xl border border-white/10 bg-black/30 p-3"
   }, React.createElement("div", {
     className: "mb-1 text-[12px] font-black text-white"
-  }, i + 1, ". ", t.name), React.createElement(RaidJackTierRewards, {
+  }, i + 1, ". ", raidTierNameOf(ev, tab, i, lockedOf)), React.createElement(RaidJackTierRewards, {
     kind: tab,
     index: i,
     claimed: have,
@@ -113000,7 +113001,8 @@ const RaidJackRankingList = ({
   renderPlace,
   renderIcon,
   cardClass,
-  ev = RAID_EVENT_JACK
+  ev = RAID_EVENT_JACK,
+  lockedOf = null
 }) => {
   const [tab, setTab] = useState(initialTab);
   const [tierIdx, setTierIdx] = useState(Math.min(Math.max(initialTier, 0), ev.aTiers.length - 1));
@@ -113062,8 +113064,8 @@ const RaidJackRankingList = ({
     };
   }, [tab, tierIdx, useAll, maxHit, maxTier, src, eventId]);
   const myTotal = useSrc || maxHit ? Number(myMax) || 0 : self ? useAll ? Object.values(self.a).reduce((sum, n) => sum + (Number(n) || 0), 0) : tab === 'a' ? self.a[tierIdx + 1] || 0 : self.bTotal : 0;
-  const maxTierName = maxTier >= 1 ? ev.tiers(tab)[maxTier - 1].name : '全難易度';
-  const title = useSrc && maxHit ? `${srcName}の最大ダメージ(${srcUnit}あたり・${maxTierName})` : useSrc ? `${srcName}で与えたダメージの合計(${useAll ? '全段階の合計' : `${raidEventTierShort(ev, ev.aTiers[tierIdx])}`})` : maxHit ? `${tab === 'a' ? 'レイドバトル' : 'グランドスラム'}の最大ダメージ(1戦あたり・${maxTierName})` : useAll ? 'レイドバトルの累計ダメージ(全段階の合計)' : tab === 'a' ? `${ev.aTiers[tierIdx].name}への貢献ランキング` : 'グランドスラムの累計ダメージ(5難易度の合計)';
+  const maxTierName = maxTier >= 1 ? raidTierNameOf(ev, tab, maxTier - 1, lockedOf) : '全難易度';
+  const title = useSrc && maxHit ? `${srcName}の最大ダメージ(${srcUnit}あたり・${maxTierName})` : useSrc ? `${srcName}で与えたダメージの合計(${useAll ? '全段階の合計' : `${raidTierShortOf(ev, 'a', tierIdx, lockedOf)}`})` : maxHit ? `${tab === 'a' ? 'レイドバトル' : 'グランドスラム'}の最大ダメージ(1戦あたり・${maxTierName})` : useAll ? 'レイドバトルの累計ダメージ(全段階の合計)' : tab === 'a' ? `${raidTierNameOf(ev, 'a', tierIdx, lockedOf)}への貢献ランキング` : 'グランドスラムの累計ダメージ(5難易度の合計)';
   return React.createElement("div", {
     "data-raid-jack-ranking-list": true,
     className: "fixed inset-0 z-[32000] flex flex-col bg-slate-950 p-3",
@@ -113131,7 +113133,7 @@ const RaidJackRankingList = ({
     n: 0
   }, ...ev.tiers(tab).map((t, i) => ({
     id: t.id,
-    name: raidEventTierShort(ev, t),
+    name: raidTierShortOf(ev, tab, i, lockedOf),
     n: i + 1
   }))].map(t => React.createElement("button", {
     type: "button",
@@ -113151,7 +113153,7 @@ const RaidJackRankingList = ({
       setAllMode(false);
     },
     className: `min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${!useAll && tierIdx === i ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`
-  }, raidEventTierShort(ev, t))), React.createElement("button", {
+  }, raidTierShortOf(ev, 'a', i, lockedOf))), React.createElement("button", {
     type: "button",
     "data-raid-jack-ranking-all": true,
     onClick: () => setAllMode(true),
@@ -113181,6 +113183,9 @@ const RaidJackRankingList = ({
     cardClass: cardClass
   })));
 };
+const RAID_HIDDEN_TIER_NAME = '？？？';
+const raidTierNameOf = (ev, kind, i, lockedOf) => typeof lockedOf === 'function' && lockedOf(kind, i) ? RAID_HIDDEN_TIER_NAME : ev.tiers(kind)[i].name;
+const raidTierShortOf = (ev, kind, i, lockedOf) => typeof lockedOf === 'function' && lockedOf(kind, i) ? RAID_HIDDEN_TIER_NAME : raidEventTierShort(ev, ev.tiers(kind)[i]);
 const RAID_WAY_BUTTONS = Object.freeze({
   battle: {
     label: 'バトルで',
@@ -113307,6 +113312,14 @@ const RaidJackScreen = ({
   const isOpenTier = unlocked(current);
   const bossDownNow = tab === 'a' && !!totals && aDefeated(tiers.length - 1);
   const showAll = bossDownNow && aAll;
+  const lockedOf = (kind, i) => {
+    if (unlimited || i <= 0) return false;
+    if (kind === 'a') {
+      if (!totals || !totals.a || !totals.a[i]) return true;
+      return totals.a[i].total < ev.tiers('a')[i - 1].hp;
+    }
+    return i >= raidJackUnlockedCount('b', state.b.defeated);
+  };
   const myTotalHere = self ? showAll ? Object.values(self.a).reduce((sum, n) => sum + (Number(n) || 0), 0) : tab === 'a' ? self.a[current + 1] || 0 : self.bTotal : 0;
   const buy = async () => {
     setBusy(true);
@@ -113475,7 +113488,7 @@ const RaidJackScreen = ({
       className: "flex items-center gap-2"
     }, React.createElement("span", {
       className: "truncate text-[13px] font-black text-white"
-    }, i + 1, ". ", isPumpkin ? ev.afterBoss.name : t.name), React.createElement("span", {
+    }, i + 1, ". ", isPumpkin ? ev.afterBoss.name : raidTierNameOf(ev, tab, i, lockedOf)), React.createElement("span", {
       className: `shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-black ${isPumpkin ? 'bg-amber-500 text-slate-950' : done ? 'bg-emerald-600 text-white' : isOpen ? 'bg-orange-600 text-white' : 'bg-slate-700 text-slate-300'}`
     }, isPumpkin ? ev.afterBossBadge : done ? '討伐済み' : isOpen ? '挑戦できる' : '未解放')), tab === 'a' ? isPumpkin ? React.createElement("div", {
       "data-raid-pumpkin-note": true,
@@ -113498,7 +113511,7 @@ const RaidJackScreen = ({
     className: "mb-1 flex items-center justify-between gap-2"
   }, React.createElement("span", {
     className: "font-black text-orange-200"
-  }, tier.name, "の報酬"), React.createElement("button", {
+  }, raidTierNameOf(ev, tab, current, lockedOf), "の報酬"), React.createElement("button", {
     type: "button",
     "data-raid-jack-reward-list-open": true,
     onClick: () => setShowRewards(true),
@@ -113514,7 +113527,7 @@ const RaidJackScreen = ({
     className: "mb-1 flex items-baseline justify-between text-[11px]"
   }, React.createElement("span", {
     className: "font-black text-orange-200"
-  }, showAll ? 'レイドバトルの累計ダメージ(全段階の合計)' : tab === 'a' ? `${tier.name}への貢献ランキング` : '累計ダメージランキング(5段階の合計)'), myTotalHere > 0 && React.createElement("span", {
+  }, showAll ? 'レイドバトルの累計ダメージ(全段階の合計)' : tab === 'a' ? `${raidTierNameOf(ev, 'a', current, lockedOf)}への貢献ランキング` : '累計ダメージランキング(5段階の合計)'), myTotalHere > 0 && React.createElement("span", {
     "data-raid-jack-mine": true,
     className: "text-[10px] text-slate-200"
   }, "あなた ", myTotalHere.toLocaleString(), ahead !== null ? `(${ahead + 1}位)` : '')), bossDownNow && React.createElement("div", {
@@ -113581,6 +113594,7 @@ const RaidJackScreen = ({
     className: `w-full ${compact ? 'min-h-[40px] rounded-xl' : 'min-h-[48px] rounded-2xl'} border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400`
   }, challengeLabel)), showRanking && React.createElement(RaidJackRankingList, {
     ev: ev,
+    lockedOf: lockedOf,
     eventId: eventId,
     initialTab: tab,
     initialTier: current,
@@ -113590,6 +113604,7 @@ const RaidJackScreen = ({
     onClose: () => setShowRanking(false)
   }), showRewards && React.createElement(RaidJackRewardList, {
     ev: ev,
+    lockedOf: lockedOf,
     claimed: state.claimed,
     initialTab: tab,
     onClose: () => setShowRewards(false)
