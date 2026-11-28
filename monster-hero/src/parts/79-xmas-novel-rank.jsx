@@ -134,7 +134,7 @@ const xmasNovelRankMine = async () => {
 };
 
 // 見たエンドの内訳の点(種類の色だけ。どのエンドかは出さない)
-const XMAS_NOVEL_RANK_KIND_ORDER = ['good', 'normal', 'another', 'bad', 'forced', 'accuse', 'unsolved', 'omake'];
+const XMAS_NOVEL_RANK_KIND_ORDER = ['good', 'truebad', 'normal', 'another', 'bad', 'forced', 'accuse', 'unsolved', 'omake'];
 const XmasNovelRankDots = ({ list, kinds, total }) => {
   const seen = (Array.isArray(list) ? list : []).map((id) => kinds[id] || 'normal')
     .sort((a, b) => XMAS_NOVEL_RANK_KIND_ORDER.indexOf(a) - XMAS_NOVEL_RANK_KIND_ORDER.indexOf(b));
