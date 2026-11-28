@@ -125,7 +125,7 @@ const HOME_V2_CSS = `
 .mh-home-v2 .mh-home-top .mh-home-top-wallet:has(.mh-tod-clock){flex-direction:column;justify-content:center;align-items:flex-end;gap:2px}
 .mh-home-v2 .mh-home-top-clock{display:flex;line-height:1}
 .mh-home-v2 .mh-home-top-clock:empty{display:none}
-.mh-home-v2 .mh-home-top .mh-tod-clock{position:static!important;padding:0;border:0;background:none;color:#fce6ab;font-size:12px;line-height:1.1;white-space:nowrap}
+.mh-home-v2 .mh-home-top .mh-tod-clock{position:static!important;pointer-events:none;padding:0;border:0;background:none;color:#fce6ab;font-size:12px;line-height:1.1;white-space:nowrap}
 .mh-home-v2 .mh-home-top .mh-tod-clock i{font-size:12px}
 .mh-home-v2 .mh-home-menu-bp{display:flex;align-items:center;gap:4px;margin-left:auto;color:#ffe08a;font-size:13px;font-weight:900}
 .mh-home-v2 .mh-home-menu-bp small{font-size:11px;color:#f4e7c3}
@@ -943,8 +943,9 @@ function HomeScreenV2({
           <section className="mh-home-wallet mh-home-top-wallet" aria-label="ダイヤ">
             <div><Gem size={15}/><CompactCount value={gold} style={{'--len':String(compactCount(gold)).length}}/><small>ダイヤ</small></div>
             {/* 時計は HOME にいつも出す(2026-11-28 台帳 r1126-118 社長「時計表示はホームに出てるほうがいい」)。メニューの中の時計も残す。
-                ダイヤの枠の2行目に置く(上の段に枠を足すと、ダイヤが8桁のとき名前の欄がつぶれた)。押すと今までどおり 24時間/AM・PM を選べる */}
-            {typeof TimeOfDayClock==='function'&&<span className="mh-home-top-clock" data-home-top-clock><TimeOfDayClock home/></span>}
+                ダイヤの枠の2行目に置く(上の段に枠を足すと、ダイヤが8桁のとき名前の欄がつぶれた)。
+                ここは見せるだけ(押せない)。押せる所が 44px に届かないため(ミハリの指摘・社長の選択)。24時間/AM・PM の切り替えはメニューの中の時計から */}
+            {typeof TimeOfDayClock==='function'&&<span className="mh-home-top-clock" data-home-top-clock><TimeOfDayClock/></span>}
           </section>
           <button type="button" className={`mh-home-menu-btn${homeMenuOpen?' is-open':''}`} data-home-menu-btn onClick={()=>setHomeMenuOpen(o=>!o)} aria-label={homeMenuBadge>0?`メニュー(${homeMenuBadge}件)`:'メニュー'} aria-expanded={homeMenuOpen}>
             <span className="mh-home-menu-bars" aria-hidden="true"><i/><i/><i/></span><span className="mh-home-menu-lb">メニュー</span>

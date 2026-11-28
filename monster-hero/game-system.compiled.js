@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 445231dffea558f9
+// source-sha256: 9000f5d8b6512f38
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -88087,7 +88087,7 @@ const HOME_V2_CSS = `
 .mh-home-v2 .mh-home-top .mh-home-top-wallet:has(.mh-tod-clock){flex-direction:column;justify-content:center;align-items:flex-end;gap:2px}
 .mh-home-v2 .mh-home-top-clock{display:flex;line-height:1}
 .mh-home-v2 .mh-home-top-clock:empty{display:none}
-.mh-home-v2 .mh-home-top .mh-tod-clock{position:static!important;padding:0;border:0;background:none;color:#fce6ab;font-size:12px;line-height:1.1;white-space:nowrap}
+.mh-home-v2 .mh-home-top .mh-tod-clock{position:static!important;pointer-events:none;padding:0;border:0;background:none;color:#fce6ab;font-size:12px;line-height:1.1;white-space:nowrap}
 .mh-home-v2 .mh-home-top .mh-tod-clock i{font-size:12px}
 .mh-home-v2 .mh-home-menu-bp{display:flex;align-items:center;gap:4px;margin-left:auto;color:#ffe08a;font-size:13px;font-weight:900}
 .mh-home-v2 .mh-home-menu-bp small{font-size:11px;color:#f4e7c3}
@@ -89537,9 +89537,7 @@ function HomeScreenV2({
   }), React.createElement("small", null, "ダイヤ")), typeof TimeOfDayClock === 'function' && React.createElement("span", {
     className: "mh-home-top-clock",
     "data-home-top-clock": true
-  }, React.createElement(TimeOfDayClock, {
-    home: true
-  }))), React.createElement("button", {
+  }, React.createElement(TimeOfDayClock, null))), React.createElement("button", {
     type: "button",
     className: `mh-home-menu-btn${homeMenuOpen ? ' is-open' : ''}`,
     "data-home-menu-btn": true,
