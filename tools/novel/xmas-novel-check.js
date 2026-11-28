@@ -52,7 +52,8 @@ const clueNames = (cur) => (cur.clues || []).map((c) => c.n);
 
 const walk = (cur0, depth, log) => {
   if (paths >= MAX_PATHS) return;
-  let st = E.xmasNovelSettle(S, cur0);
+  // 行・場面の条件(「選択を足す」の [end_G=1] など)にも見たエンドを渡す(画面・ends-trace と同じ・r1126-115 #8128)
+  let st = E.xmasNovelSettle(S, cur0, { endings: SEEN, read: [] });
   for (let steps = 0; steps < 5000; steps += 1) {
     if (!st.row) {
       paths += 1;
@@ -69,7 +70,7 @@ const walk = (cur0, depth, log) => {
     }
     const row = st.row;
     visited.add(st.cur.scene);
-    if (row.t !== 'q') { st = E.xmasNovelStep(S, E.xmasNovelApplyRow(st.cur, row)); continue; }
+    if (row.t !== 'q') { st = E.xmasNovelStep(S, E.xmasNovelApplyRow(st.cur, row), { endings: SEEN, read: [] }); continue; }
     // 問い: 分かれる
     const tries = [];
     if (row.kind === 'action') {
