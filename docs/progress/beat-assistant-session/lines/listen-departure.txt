@@ -1,6 +1,6 @@
 listen:departure | mua excited 3:59からいちばん強くなるの！ ずっとアガるよ♪
 listen:departure | kiki normal 最初の静かなところ、そっと始まってきれいでつ
-listen:departure | momosuke excited 4:36でもう一回いちばん強くなるの！！ 最高だよ♡
+listen:departure | momosuke excited 4:36でもう1回いちばん強くなるの！！ 最高だよ♡
 listen:departure | dra happy BPM156で強い音がいっぱいだぞ。旅の出発みたいだな
 listen:departure | atsu happy 4:48でスッと静かに終わるの、きれいだよね笑
 listen:departure | kyuko happy 1:51でいったん落として、2:04からまた上げるのがいいんだよね〜

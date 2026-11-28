@@ -1,8 +1,8 @@
 listen:dr_wily_stage_1 | mua excited サビは0:44から！ ここから一気にいちばん強くなるの、まぢでアガるぢゃん♪
-listen:dr_wily_stage_1 | kiki normal 1:13で一度ふつうに戻る所も、静かできれいでつ
+listen:dr_wily_stage_1 | kiki normal 1:13で1度ふつうに戻る所も、静かできれいでつ
 listen:dr_wily_stage_1 | momosuke excited 1:58から2回目のサビ！！ 最後までいちばん強いまま駆け抜けるの、最高♡
 listen:dr_wily_stage_1 | dra normal BPM180は速いな。おでの冒険も駆け足になるやつだな
 listen:dr_wily_stage_1 | atsu happy 2:29から静かに締めるの、余韻があっていいよね笑
-listen:dr_wily_stage_1 | kyuko happy 0:44と1:58、二度サビが来る構成がいいんだよね〜。1:13で一度落とすのも効いてる
+listen:dr_wily_stage_1 | kyuko happy 0:44と1:58、2度サビが来る構成がいいんだよね〜。1:13で1度落とすのも効いてる
 listen:dr_wily_stage_1 | sorashido normal BPM180で863ノーツ、Lv.43。強い音16%・軽い音9%の混ざり具合です・・・！
 listen:dr_wily_stage_1 | erubin normal 1:13でふつうに戻る所、ひと息つけるね。そのあとまた強くなるしね

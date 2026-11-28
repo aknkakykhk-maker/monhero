@@ -303,5 +303,41 @@ check('「モンビーへ誘う」は払えないとき部屋へ行かずに知�
 check('誘いは5分で消える・1回だけ使う(部屋に入る前にやめたら何もしない)', /RHYTHM_ASSIST_SESSION_INVITE_TTL_MS = 5 \* 60 \* 1000/.test(SCREEN) && /const rhythmAssistSessionTakeInvite = /.test(SCREEN));
 check('誘いで開いたら自分だけの部屋を作り、入れてから呼ぶ(払うのは呼ぶシートと同じ callAssistant)', /rhythmAssistSessionPeekInvite\(\) \|\| RHYTHM_MULTI\.view\(\)\) return;\s*createPrivate\(\);/.test(MULTI) && /void callAssistant\(who\)\.then\(\(r\) => done\(/.test(MULTI));
 check('友情Lv の上がり方に段の名前を添える「+3(Lv4 いい友だち)」', /const rhythmAssistSessionPeerGainText = /.test(SCREEN) && /ASSISTANT_PEER_BOND_LEVELS\.find\(\(x\) => x\.level === level\)/.test(SCREEN) && /gains\[rhythmAssistSessionPairKey\(ids\[i\], ids\[j\]\)\] = \{ gained: r\.gained, level: r\.levelAfter \}/.test(SCREEN));
+// 助手のひとことを本当に動かす(2026-11-28 r1126-111 社長「モンビーで助手入れても喋らなくなった」)。
+// 結果への反応(reactResult)の中で後から const special を宣言していて、上の special() が「初期化の前に使った」エラーになり、
+// 例外を握りつぶして毎回黙っていた。部品を正規表現で探すだけでは見つからないので、場面ごと・Lv ごとに実際に呼んで、
+// 例外を出さず台詞を返すことを見る
+{
+  const m = SCREEN.match(/const RHYTHM_ASSIST_SESSION_CALL = [\s\S]*?\n\};\n(?=\n\/\/ 部屋の中の「頭」)/);
+  const ctx = { Math, String, Number, Object, Array, Set, Map, console };
+  vm.createContext(ctx);
+  let api = null; let loadErr = '';
+  try {
+    vm.runInContext(`${BUDDY}\n${SESSION}\n${LINES}\nconst RHYTHM_ASSIST_SESSION_WAKE = { woke: new Set() };\nlet __st = { mons: {}, talk: 'all' };\nconst RHYTHM_ASSIST_SESSION_STORE = { get: () => __st };\nconst RHYTHM_PLAY_DIFFICULTIES = [{ id: 'NORMAL', maxScore: 1000000 }];\n${m ? m[0] : ''}\n;globalThis.__k={talk:rhythmAssistSessionTalk,ids:RHYTHM_ASSIST_SESSION_IDS,setSt:(x)=>{__st=x;},lv:rhythmBuddyLevelInfo};`, ctx);
+    api = ctx.__k;
+  } catch (e) { loadErr = e.message; }
+  check('助手のひとことの関数(rhythmAssistSessionTalk)を切り出して動かせる', !!(m && api), loadErr);
+  if (api) {
+    let exp100 = 1; while (api.lv(exp100).level < 100 && exp100 < 1e9) exp100 *= 2;
+    const errs = []; const silent = [];
+    for (const exp of [0, exp100]) {
+      const mons = {}; api.ids.forEach((id) => { mons[id] = { exp }; });
+      api.setSt({ mons, talk: 'all' });
+      for (const id of api.ids) {
+        const cases = [['join', {}], ['combo', {}], ['climax', {}], ['reactResult', { score: 950000, diffId: 'NORMAL' }], ['reactResult', { score: 800000, diffId: 'NORMAL' }],
+          ['reactResult', { score: 500000, diffId: 'NORMAL' }], ['reactResult', { score: 1000000, diffId: 'NORMAL', fc: 1 }], ['result', { mvp: true }]];
+        for (const [kind, extra] of cases) {
+          let said = '';
+          for (let i = 0; i < 6 && !said; i++) {
+            try { said = api.talk({ assistantId: id, kind, songId: 'monster_hero', ...extra }); } catch (e) { errs.push(`${id} ${kind} Lv${api.lv(exp).level}: ${e.message}`); break; }
+          }
+          if (!said) silent.push(`${id} ${kind} Lv${api.lv(exp).level}`);
+        }
+      }
+    }
+    check('助手のひとこと: どの助手・どの場面(来た・コンボ・サビ・結果への反応・MVP)も例外を出さない(Lv1・Lv100)', !errs.length, errs.slice(0, 3).join(' / '));
+    check('助手のひとこと: どの助手・どの場面も、何か話す(黙らない)', !silent.length, silent.slice(0, 5).join(' / '));
+  }
+}
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

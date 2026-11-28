@@ -1,8 +1,8 @@
 listen:zenbu_hissatsuwaza | mua excited 1:31からいちばん強いの！ 最後まで全開で駆け抜けるやつなのー♪
-listen:zenbu_hissatsuwaza | kiki normal 1:03の静かなところで一回ひと息つけるでつ。そこからまた全力でつ
+listen:zenbu_hissatsuwaza | kiki normal 1:03の静かなところで1回ひと息つけるでつ。そこからまた全力でつ
 listen:zenbu_hissatsuwaza | momosuke excited サビは1:31から最後までだよ♡ ずっと最高潮で止まらないよ♡
 listen:zenbu_hissatsuwaza | dra happy BPM193の全力疾走だな。2分足らずで一気に突っ切るぞ
-listen:zenbu_hissatsuwaza | atsu happy 1:45でもう一回いちばん強くなって、そのまま締めるのいいね笑
-listen:zenbu_hissatsuwaza | kyuko happy 0:34で強めに入って、1:03で一回静かにして、1:31で爆発する構成なんだよね〜
+listen:zenbu_hissatsuwaza | atsu happy 1:45でもう1回いちばん強くなって、そのまま締めるのいいね笑
+listen:zenbu_hissatsuwaza | kyuko happy 0:34で強めに入って、1:03で1回静かにして、1:31で爆発する構成なんだよね〜
 listen:zenbu_hissatsuwaza | sorashido normal BPM193です。強く打つ音が46%・・・！ 叩きごたえのある音です
 listen:zenbu_hissatsuwaza | erubin normal 1:03の静かなところ、ここで落ち着いて息を整えようね

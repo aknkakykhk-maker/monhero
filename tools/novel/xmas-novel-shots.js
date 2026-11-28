@@ -10,6 +10,7 @@
 //         node tools/novel/xmas-novel-shots.js <出力ディレクトリ> --r1126-067   立ち絵の見せ方(寄り・ふだん・引き)の組を縦と横で撮る
 //         node tools/novel/xmas-novel-shots.js <出力ディレクトリ> --r1126-062   足した選択肢とエンド(r1126-062)の組を撮る
 //         node tools/novel/xmas-novel-shots.js <出力ディレクトリ> --r1126-077   眠りのドラ(r1126-077)のルートを縦と横で撮る
+//         node tools/novel/xmas-novel-shots.js <出力ディレクトリ> --r1126-108   分かれ道とエンド 第1弾(r1126-108)の組を撮る
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -161,7 +162,57 @@ const SHOTS_091 = [
 // ネタバレの点検(第3章の前に死んだ人が分かる表示が無いか)
 const SHOTS_SPOIL = [['01-c1-panel', '1-6-4'], ['02-c2-panel', '2-5-8'], ['03-c2-end', '2-5-6'], ['04-c1-start', '1-1-5'], ['05-c2-mid', '2-3-1']]
   .map(([name, row]) => ({ name, row, side: 0, label: `ネタバレの点検 ${row}` }));
-const LIST_ALL = process.argv.includes('--spoil') ? SHOTS_SPOIL : process.argv.includes('--r1126-091') ? SHOTS_091 : process.argv.includes('--final') ? SHOTS_FINAL : process.argv.includes('--r1126-077') ? SHOTS_077 : process.argv.includes('--r1126-071') ? SHOTS_071 : process.argv.includes('--r1126-076') ? SHOTS_076 : process.argv.includes('--r1126-067') ? SHOTS_067 : process.argv.includes('--r1126-065') ? SHOTS_065 : process.argv.includes('--r1126-062') ? SHOTS_062 : process.argv.includes('--r1126-046') ? SHOTS_046 : process.argv.includes('--r1126-054') ? SHOTS_054 : process.argv.includes('--r1126-058') ? SHOTS_058 : SHOTS;
+// r1126-108 第1弾: 名指しのあとの選択・動機ちがい・迷宮入り(縦。エンドの札とエンドヒストリーも)
+const SHOTS_108 = [
+  { name: '01-a7c-atsu', row: 'A7c', side: 1, label: 'あつ派 みゅあを名指ししたあとの選択' },
+  { name: '02-m6', row: 'M6-6', side: 1, label: 'END-M6 人数分のマフラー' },
+  { name: '03-a7d-sora', row: 'A7d', side: 2, label: 'ソラシド派 ききを名指ししたあとの選択' },
+  { name: '04-m7', row: 'M7-7', side: 2, label: 'END-M7 白いページ' },
+  { name: '05-r3', row: '7-R3-4', side: 1, label: 'えるびんの部屋の扉' },
+  { name: '06-m8-sora', row: 'M8-5s', side: 2, label: 'ソラシド派 END-M8「鍵をかけたのは、自分たちです」' },
+  { name: '07-a7f', row: 'A7f', side: 1, label: 'イチーカを名指ししたあとの選択' },
+  { name: '08-m9', row: 'M9-5', side: 1, label: 'END-M9 イチーカ' },
+  { name: '09-a7k-sora', row: 'A7k', side: 2, label: 'ソラシド派 動機ちがいのあとの選択' },
+  { name: '10-k1-letter', row: 'K1-6', side: 2, label: 'END-K1「ちがうよ」の紙' },
+  { name: '11-a10b-atsu', row: 'A10b', side: 1, label: 'あつ派 後半 見回りの選択' },
+  { name: '12-a10b-sora', row: 'A10b', side: 2, label: 'ソラシド派 後半 見回りの選択' },
+  { name: '13-l-shadow', row: '10-L-6', side: 2, label: '柱時計の前の影' },
+  { name: '14-l2', row: 'L2-7', side: 1, label: 'END-L2 帳面の最後の行' },
+  { name: '15-a11', row: 'A11', side: 1, label: '後半 今夜決めるかの選択' },
+  { name: '16-l1-card', row: 'L1-9', side: 1, tap: 3, label: 'END-L1 エンドの札(迷宮入り)' },
+  { name: '17-history', history: true, endings: [...ALL_ENDS, 'END-M6', 'END-M7', 'END-M8', 'END-M9', 'END-K1', 'END-L1', 'END-L2'], label: 'エンドヒストリー(23本・全部見たあと)' },
+];
+// r1126-108 第2弾: 前半の行動の選択4つと、そのエンド
+const SHOTS_108B = [
+  { name: '21-a1b-atsu', row: 'A1b', side: 1, label: 'あつ派 第1章の夜の選択' },
+  { name: '22-x6-sora', row: '1-X-11', side: 2, label: 'ソラシド派 END-X6 楽譜のケースが無い' },
+  { name: '23-a3-sora', row: 'A3', side: 2, label: 'ソラシド派 第3章 切れた電話の線' },
+  { name: '24-x8-atsu', row: '3-X-8', side: 1, label: 'あつ派 END-X8 雪の山道' },
+  { name: '25-a3b', row: 'A3b', side: 1, label: '第3章 ドラを閉じこめるか' },
+  { name: '26-a2', row: 'A2-5s', side: 2, label: 'ソラシド派 END-A2 白瀬が消えた朝' },
+  { name: '27-a4-atsu', row: 'A4', side: 1, label: 'あつ派 第4章の夜の選択' },
+  { name: '28-x7-shadow', row: '4-X-3', side: 2, label: '開かずの部屋の影' },
+  { name: '29-x7-card', row: 'X7-3', side: 1, tap: 3, label: 'END-X7 エンドの札' },
+];
+// r1126-108 第3弾: 真相のその先・おまけ2つ・寄り道3つ
+const SHOTS_108C = [
+  { name: '31-a9-atsu', row: 'A9', side: 1, label: 'あつ派 終章 きゅうこを呼び戻す選択' },
+  { name: '32-g2-grab', row: '9-X-5', side: 2, label: 'ソラシド派 C9-X 振りほどかれた手' },
+  { name: '33-g2-cliff', row: '9-Y-7', side: 1, label: 'C9-Y 明け方の雪原(背景の切り替え)' },
+  { name: '34-g2-card', row: 'G2-9', side: 1, tap: 3, label: 'END-G2 エンドの札(真相のその先)' },
+  { name: '35-a7b', row: 'A7b', side: 1, label: 'あつ派 第7章 みゅあの助手の勘' },
+  { name: '36-o3-santa', row: '7-V-11', side: 1, label: 'C7-V サンタさん本人' },
+  { name: '37-o3-out', row: 'OUT-O3-1', side: 1, label: 'OUT-O3 画面の前で' },
+  { name: '38-a1-four', row: 'A1', side: 1, endings: ['END-G'], label: '真グッドのあと A1 の④' },
+  { name: '39-o4-save', row: '1-O4-17', side: 1, label: 'C1-O4 セーブデータの名前' },
+  { name: '40-o4-card', row: 'O4-3', side: 1, tap: 3, label: 'END-O4 エンドの札' },
+  { name: '41-a4y', row: 'A4y', side: 1, label: '第4章 寄り道(帳面)' },
+  { name: '42-a6y', row: 'A6y', side: 2, label: '第6章 寄り道(かばん)' },
+  { name: '43-c6z', row: '6-Z-4', side: 2, label: 'C6-Z ドラが入り口に' },
+  { name: '44-a8y', row: 'A8y', side: 2, label: '真ルート第8章 寄り道(屋根裏)' },
+  { name: '45-c8z', row: '8-Z-5', side: 1, label: 'C8-Z ドラの声で開ける' },
+];
+const LIST_ALL = process.argv.includes('--r1126-108c') ? SHOTS_108C : process.argv.includes('--r1126-108b') ? SHOTS_108B : process.argv.includes('--r1126-108') ? SHOTS_108 : process.argv.includes('--spoil') ? SHOTS_SPOIL : process.argv.includes('--r1126-091') ? SHOTS_091 : process.argv.includes('--final') ? SHOTS_FINAL : process.argv.includes('--r1126-077') ? SHOTS_077 : process.argv.includes('--r1126-071') ? SHOTS_071 : process.argv.includes('--r1126-076') ? SHOTS_076 : process.argv.includes('--r1126-067') ? SHOTS_067 : process.argv.includes('--r1126-065') ? SHOTS_065 : process.argv.includes('--r1126-062') ? SHOTS_062 : process.argv.includes('--r1126-046') ? SHOTS_046 : process.argv.includes('--r1126-054') ? SHOTS_054 : process.argv.includes('--r1126-058') ? SHOTS_058 : SHOTS;
 
 //  --only <語>: 名前にその語を含む物だけ撮る(例: --only kuroba)
 const ONLY = process.argv.includes('--only') ? process.argv[process.argv.indexOf('--only') + 1] || '' : '';

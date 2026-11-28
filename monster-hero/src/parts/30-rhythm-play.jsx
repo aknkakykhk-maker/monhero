@@ -2285,6 +2285,9 @@ useEffect(()=>{
     const run=runRef.current,ticks=note&&note._rhythmComboTicks;
     if(!run||!run.tickRules||!Array.isArray(ticks)||!ticks.length)return 0;
     const okNow=()=>Number(note._rhythmComboOk)||0,dropNow=()=>Number(note._rhythmComboDrop)||0;
+    // 曲の鑑賞では、外れて通った刻みも通ったとして数える(2026-11-28 台帳 r1126-100 追記1 社長「鑑賞でかくついたときにコンボが切れた。鑑賞なのに切れるのおかしい」)。
+    // 自動の手はコマごとに帯をなぞるので、コマが大きく飛ぶと帯から外れて見えることがある。鑑賞の成績はどこにも残さない(今までどおり)
+    if(lineAdjustRef.current&&lineAdjustRef.current.listen){const d=dropNow();if(d>0){note._rhythmComboOk=okNow()+d;note._rhythmComboDrop=0;}if(judgment)judgment='MARVELOUS';}
     if(judgment){const rest=ticks.length-okNow()-dropNow();if(rest>0){if(judgment==='BAD'||judgment==='MISS')note._rhythmComboDrop=dropNow()+rest;else note._rhythmComboOk=okNow()+rest;}note._rhythmComboIdx=ticks.length;}
     const ok=okNow()-(Number(note._rhythmComboSeenOk)||0),drop=dropNow()-(Number(note._rhythmComboSeenDrop)||0);
     if(!(ok>0)&&!(drop>0))return 0;
@@ -2302,7 +2305,10 @@ useEffect(()=>{
     }
     return ok;
   };
-  const applyJudgment=useCallback((note,judgment,deltaMs)=>{const _judgeT0=RHYTHM_PERF.enabled&&typeof performance!=='undefined'?performance.now():0;const run=runRef.current;if(!run||run.finished||run.paused||note.done)return;comboTicksRef.current(note,judgment);
+  const applyJudgment=useCallback((note,judgment,deltaMs)=>{const _judgeT0=RHYTHM_PERF.enabled&&typeof performance!=='undefined'?performance.now():0;const run=runRef.current;if(!run||run.finished||run.paused||note.done)return;/* 曲の鑑賞では、自動の手がいつも時刻どおりに取った扱いにする(2026-11-28 r1126-100 追記1)。自動の手はコマが来たときに押すので、
+   かくついて1コマが長いと押すのが遅れ、判定の窓を外れて MISS・BAD になりコンボが切れていた。鑑賞の成績はランキングにも自己ベストにも入れない(今までどおり) */
+if(lineAdjustRef.current&&lineAdjustRef.current.listen){deltaMs=0;judgment='MARVELOUS';}
+comboTicksRef.current(note,judgment);
 // 必死(ユグドラシル血統の能力)のあいだは、GREAT・EXCELLENTをMARVELOUSとして数える(判定だけをここで置き換える。
 // ずれは変えないので、ジャストのMARVELOUSになるのは本当にぴったりだったときだけ。2026-10-06 ユーザー指示)
 if(rhythmHisshiUpgrades(run.abilities,judgment,run.audio?.songTimeMs?.()??0))judgment='MARVELOUS';

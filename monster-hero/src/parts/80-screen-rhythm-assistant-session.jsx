@@ -142,8 +142,10 @@ const rhythmAssistSessionTalk = ({ assistantId, kind, songId = '', score = 0, di
     const sp = mode === 'few' ? '' : special();
     if (sp) return sp;
     const sid = songId || roomSong();
-    const special = rhythmAssistSessionSongScene(assistantId, sid);
-    if (special && rand() < 0.5) return say(special);
+    // 好きな曲・苦手な曲の専用の場面。名前を special にすると、上の special() がこの塊の const を指して
+    // 「初期化の前に使った」エラーになり、結果への反応が毎回黙っていた(2026-11-28 r1126-111)
+    const songScene = rhythmAssistSessionSongScene(assistantId, sid);
+    if (songScene && rand() < 0.5) return say(songScene);
     if (rhythmAssistSessionTaste(assistantId, sid) === 'dislike' && rand() < 0.5) return say('overcome');
     if (Number(fc) > 0) return say('fc');
     const ratio = rhythmAssistSessionRatio(score, diffId);

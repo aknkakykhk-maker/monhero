@@ -303,11 +303,11 @@ const IDS = ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'er
     check('⑪ くわしい控えの表は soft で読む(表が無くても行き来ぜんぶを準備中にしない)', /ALF_TABLE_MORE\}\?on_conflict=breeder_id`, \{[^\n]*soft: true/.test(page) && /limit=1`, \{ soft: true \}/.test(page));
     check('⑪ くわしい控えに、よその人の名前が入る行(フレンドの家との行き来)を写さない', /x\.kind !== 'friend' && !\/さんの\|さんち\//.test(page)); }
 
-  // ⑬ 訪ねた家の台本(コトバ・ツムギ 2026-11-08): 8人そろう・口調の見張り(作った場面と同じ alfApiLineOk)に通る・数字や「子」が無い・穴は {name}/{h}/{f} だけ
+  // ⑬ 訪ねた家の台本(コトバ・ツムギ 2026-11-08): 8人そろう・口調の見張り(作った場面と同じ alfApiLineOk)に通る・数(1個・2回・3人など「数＋単位」の算用数字は許す・r1126-080)以外の数字や「子」が無い・穴は {name}/{h}/{f} だけ
   { const V = G('ALF_VISIT_LINES'); const ok = G('alfApiLineOk'); const ids = G('ALF_IDS'); const bad = [];
     const all = []; for (const id of ids) { const v = V[id]; if (!v || v.greet.length < 3 || Object.keys(v.doing).length < 6 || v.reply.length < 3 || v.sleep.length < 2) bad.push(`${id}: 本数`); if (v) all.push(...[...v.greet, ...Object.values(v.doing), ...v.reply, ...v.sleep].map(t => [id, t])); for (const t of [...(G('ALF_GO_MORE')[id] || []), ...(G('ALF_WELCOME_MORE')[id] || [])]) all.push([id, t]); }
-    for (const [id, t] of all) { const filled = t.replace(/\{h\}/g, 'あおい').replace(/\{f\}/g, 'あおいさんのドラ').replace(/\{name\}/g, 'ゆうとさん'); if (ok(id, filled) == null) bad.push(`${id}「${t}」口調`); if (/[0-9０-９]/.test(t) || /(この|あの|その)子|子たち/.test(t) || /[{}]/.test(t.replace(/\{(name|h|f)\}/g, '')) || t.length > 60) bad.push(`${id}「${t}」`); if (/\{h\}(?!さん)/.test(t)) bad.push(`${id}「${t}」{h}さん`); }
-    check('⑬ 訪ねた家の台本が8人そろい、口調・数字・「子」・穴の決まりを守る', bad.length === 0, bad.slice(0, 5).join(' / ')); }
+    for (const [id, t] of all) { const filled = t.replace(/\{h\}/g, 'あおい').replace(/\{f\}/g, 'あおいさんのドラ').replace(/\{name\}/g, 'ゆうとさん'); if (ok(id, filled) == null) bad.push(`${id}「${t}」口調`); if (/[0-9０-９]/.test(t.replace(/[0-9]+(?:つ|番|度|回|曲|人|個|枚|戦|日|年|体)/g, '')) || /(この|あの|その)子|子たち/.test(t) || /[{}]/.test(t.replace(/\{(name|h|f)\}/g, '')) || t.length > 60) bad.push(`${id}「${t}」`); if (/\{h\}(?!さん)/.test(t)) bad.push(`${id}「${t}」{h}さん`); }
+    check('⑬ 訪ねた家の台本が8人そろい、口調・数字(数＋単位は可)・「子」・穴の決まりを守る', bad.length === 0, bad.slice(0, 5).join(' / ')); }
 
   // ⑭ フレンドの最近(2026-11-08 社長): 種類と長さの決まり・控えの ac1・設定 act の既定は入
   { const na = G('alfNormalizeAc');

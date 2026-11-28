@@ -19,6 +19,9 @@ const SHOT = arg('shot') != null ? Number(arg('shot')) : null, OUT = arg('out'),
 const GPU = argv.includes('--gpu');
 // --click-hud … 鑑賞が始まったら「判定」の入/切を1回押す(r1119-151 追記・r1119-162 で判定とコンボを分けた。押す前と後の状態を出す)
 const CLICK_HUD = argv.includes('--click-hud');
+// --stall <間隔ms>,<止めるms> … 鑑賞のあいだ、決まった間隔でメインスレッドをわざと止める(かくつきの再現・2026-11-28 r1126-100 追記1
+//   社長「ワルキューレのヘルの鑑賞でかくついたときにコンボが切れた」)。コンボの数が途中で減ったら(切れたら)NG にする
+const STALL = (() => { const v = arg('stall'); if (!v) return null; const [every, ms] = String(v).split(',').map(Number); return every > 0 && ms > 0 ? { every, ms } : null; })();
 const { chromium } = (() => { try { return require(path.join(ROOT, 'tools/node_modules/playwright')); } catch { return require('playwright'); } })();
 const { createFakeSupabase } = require(path.join(ROOT, 'tools/playbot/lib/fake-supabase.js'));
 const { eventStorySeed } = require(path.join(ROOT, 'tools/boot/quiet-boot-seed.js'));
@@ -85,6 +88,14 @@ const seed = (songId) => `(() => {
     for (const t of ['pointerdown', 'pointermove', 'pointerup']) document.addEventListener(t, e => { if (e.pointerId >= 900) tr.push([window.__mhTestHooks?.rhythmSongMs?.(), t, e.pointerId + ' ' + Math.round(e.clientX) + ',' + Math.round(e.clientY)]); }, true);
   });
   await page.evaluate(() => document.querySelector('[data-rhythm-listen-start]')?.click());
+  if (STALL) await page.evaluate(({ every, ms }) => {
+    // コンボが減った回数を見張る(鑑賞の「-10秒」で戻したときは数えない。この検査では戻さない)
+    window.__comboBreaks = []; let last = 0;
+    const watch = () => { const h = typeof RHYTHM_PLAY_WATCH !== 'undefined' && RHYTHM_PLAY_WATCH.hud ? RHYTHM_PLAY_WATCH.hud.get() : null;
+      if (h) { const c = Number(h.combo) || 0; if (c < last) window.__comboBreaks.push([Math.round(window.__mhTestHooks?.rhythmSongMs?.() ?? -1), last, c]); last = c; } requestAnimationFrame(watch); };
+    requestAnimationFrame(watch);
+    window.__stalls = 0; setInterval(() => { if ((window.__mhTestHooks?.rhythmSongMs?.() ?? -1) <= 0) return; const t = performance.now(); while (performance.now() - t < ms) {} window.__stalls++; }, every);
+  }, STALL);
   await page.waitForFunction(() => !!document.querySelector('[data-rhythm-play-area]') && window.__mhTestHooks?.rhythmNotes?.(), null, { timeout: 30000, polling: 100 });
   const info = await page.evaluate(() => { const n = window.__mhTestHooks.rhythmNotes() || []; return { types: n.map(x => x.type), count: n.length, last: n.reduce((m, x) => Math.max(m, Number(x.endTimeMs) || 0, Number(x.timeMs) || 0), 0) }; });
   const end = Math.min(info.last, TO);
@@ -115,6 +126,8 @@ const seed = (songId) => `(() => {
     if (!snap) break; res = snap; if (snap.ms != null && snap.ms > end + 1500) break; await page.waitForTimeout(1000);
   }
   if (!res) throw new Error('演奏の結果を読めなかった');
+  res.breaks = await page.evaluate(() => window.__comboBreaks || []).catch(() => []);
+  res.stalls = await page.evaluate(() => window.__stalls || 0).catch(() => 0);
   res.se = await page.evaluate(() => window.__listenSe || []);
   res.trace = await page.evaluate(() => window.__listenTrace || []);
   await context.close(); await browser.close();
@@ -124,7 +137,9 @@ const seed = (songId) => `(() => {
     const r = byIdx.get(o.note) || { index: o.note }; if (!r.judgment) { r.judgment = o.j; byIdx.set(o.note, r); } }
   const seen = res.notes.filter(n => n.timeMs >= FROM && n.timeMs <= TO);
   const bad = [];
-  for (const n of seen) { const r = byIdx.get(n.index) || {}; const j = r.judgment; if (!j || j === 'MISS' || j === 'BAD' || r.holdJudgment === 'MISS' || r.releaseJudgment === 'MISS') bad.push({ n, r }); }
+  for (const n of seen) { const r = byIdx.get(n.index) || {}; const j = r.judgment; if (!j || j === 'MISS' || j === 'BAD' || (!STALL && (r.holdJudgment === 'MISS' || r.releaseJudgment === 'MISS'))) bad.push({ n, r }); }
+  // --stall のときは、最後の判定(画面に出る判定・コンボを決める物)だけで数える。わざと止めると自動の手の押し始め・離しは遅れるが、
+  // 鑑賞では遅れても取った扱いにする(30-rhythm-play.jsx の applyJudgment)ので、内側の押し始め・離しの記録は MISS のまま残ることがある
   const se = {}; for (const [k] of res.se) se[k] = (se[k] || 0) + 1;
   // 演奏中はフリックの種類が HOLD に書き換わるので、始めの時点の種類で数える(終点フリックは控えに無いので数えない)
   const flicks = seen.filter(n => info.types[n.index] === 'FLICK').length;
@@ -132,5 +147,6 @@ const seed = (songId) => `(() => {
   if (LIST || bad.length <= 30) for (const { n, r } of bad) console.log(`   ${(n.timeMs / 1000).toFixed(2)}秒 #${n.index} ${n.type}${n.skyHeight > 0 ? '(空中)' : ''} lane${n.lane}${n.subLane != null ? ' sub' + n.subLane + '/' + n.subLaneWidth : ''} → ${r.judgment || '判定なし'}${r.holdJudgment ? ' 押し' + r.holdJudgment : ''}${r.releaseJudgment ? ' 離し' + r.releaseJudgment : ''}`);
   if (argv.includes('--trace')) for (const [ms, k, d] of res.trace) if (ms >= FROM && ms <= Math.min(TO, FROM + 20000)) console.log(`   ${Math.round(ms)} ${k} ${d}`);
   if (errors.length) console.log('  ページのエラー:', errors.slice(0, 3).join(' / '));
-  process.exitCode = bad.length ? 1 : 0;
+  if (STALL) { console.log(`  わざと止めた回数 ${res.stalls}(${STALL.every}msおきに${STALL.ms}ms) / コンボが切れた回数 ${res.breaks.length}${res.breaks.length ? ' ' + res.breaks.slice(0, 5).map(([t, a, b]) => `${(t / 1000).toFixed(1)}秒 ${a}→${b}`).join(' / ') : ''}`); }
+  process.exitCode = bad.length || (STALL && (res.breaks.length || !res.stalls)) ? 1 : 0;
 })().catch(e => { console.error(e); process.exit(2); });

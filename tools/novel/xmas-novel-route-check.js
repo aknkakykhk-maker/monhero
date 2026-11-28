@@ -3,7 +3,7 @@
 //   ① 通しで遊んだ時に問いの行で残す状態と、地図より前の保存(章の頭 snaps・読んだ印 read)から機械で作る状態が、中身まで同じ
 //   ② 機械で作るのは1回だけ(seeded の印があれば何もしない)
 //   ③ 正規化: 壊れた値・台本に無い場面・問いの行でなくなった物・形の違うキーを捨てる。back も cur と同じ正規化
-//   ④ 大きさ: 両方の派で全部通っても 6万字以下
+//   ④ 大きさ: 両方の派で全部通っても 9万字以下(r1126-108 で 6万字から上げた)
 //   ⑤ mh_xmas_novel_v1 の正規化(xmasNovelNormalize)は route のキーを持たない(今の保存の形を変えていない)
 // 使い方: node tools/novel/xmas-novel-route-check.js
 'use strict';
@@ -68,7 +68,8 @@ let total = 0;
   const a = play(0, true, null).route; const b = play(1, true, null).route; const c = play(0, false, null).route; const d = play(1, false, null).route;
   const all = { v: 1, at: { ...a.at, ...b.at, ...c.at, ...d.at }, back: null, seeded: 1 };
   const n = JSON.stringify(E.xmasNovelRouteNormalize(all, S)).length;
-  check('④ 両方の派で全部通っても 6万字以下', n <= 60000, `${Object.keys(all.at).length}か所 ${n}字`);
+  // 上限は r1126-108(分かれ道を弾ごとに足す)で 6万字 → 9万字。端末の保存(数MB)に対して十分小さい
+  check('④ 両方の派で全部通っても 9万字以下', n <= 90000, `${Object.keys(all.at).length}か所 ${n}字`);
 }
 // ③ 正規化
 {

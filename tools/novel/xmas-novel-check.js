@@ -37,7 +37,8 @@ const endingsAll = S.scenes.filter((s) => s.ending).map((s) => s.ending.id);
 const reached = new Map();
 let paths = 0; let stuck = 0;
 const visited = new Set();
-const MAX_PATHS = 4000;
+const endBranchSeen = new Set();
+const MAX_PATHS = 20000; // r1126-108 で分かれ道が増え、4000 では A1 の③(おまけ)までたどり着けなくなった
 
 // 返しを読んだあと then のとおりに進める(画面の XmasNovelScreen と同じ手順)
 const afterAnswer = (res, q) => {
@@ -77,7 +78,12 @@ const walk = (cur0, depth, log) => {
       const gated = (row.options || []).filter((o) => JSON.stringify(o.c || '').includes('end_'));
       if (gated.length && E.xmasNovelOptionsOf(row, E.xmasNovelCtx(S, st.cur, [])).some((o) => gated.some((g) => g.x === o.x))) fail(`${row.id}: エンディングを見る前から、見たあとだけの選択肢が出ている`);
       if (!opts.length) { fail(`${row.id}: 出せる選択肢が1つも無い`); return; }
-      opts.forEach((o) => tries.push([o.i]));
+      // 強制バッド・偽りエンドなど、エンディングの章(END)の場面へ飛ぶ枝は、同じ選択・同じ派で一度たどれば十分(戻るだけ・r1126-108 で道が増えて上限を超えた)
+      opts.forEach((o) => {
+        const sc = o.to ? S.scenes.find((x) => x.id === o.to) : null;
+        if (sc && sc.chapter === 'END') { const key = `${row.id}|${o.i}|${(st.cur.flags || {}).f_A1 || 0}`; if (endBranchSeen.has(key)) return; endBranchSeen.add(key); }
+        tries.push([o.i]);
+      });
     } else {
       const ans = row.answer || [];
       if (row.kind === 'present') {

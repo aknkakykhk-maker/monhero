@@ -5,10 +5,10 @@
 #   えるびん=Wrath of the Thorn King・Altar of the World Tree 好き/Crazy Party Night 苦手
 
 listen:only_my_railgun | mua excited 0:52からずっとサビで盛り上がるの、テンション上がるぢゃん♪
-listen:only_my_railgun | kiki normal 0:25のところで一度静かになるのが、きれいでつね
-listen:only_my_railgun | momosuke excited サビは0:52から最後まで！！ ももが一番かわいく踊れるとこw
+listen:only_my_railgun | kiki normal 0:25のところで1度静かになるのが、きれいでつね
+listen:only_my_railgun | momosuke excited サビは0:52から最後まで！！ ももが1番かわいく踊れるとこw
 listen:only_my_railgun | dra happy 出だしからいきなり強めでくるからな。最初から冒険が始まってる感じだ
-listen:only_my_railgun | atsu happy 1:22からもう一回いちばん強くなって、そのまま締めるのが最高笑
+listen:only_my_railgun | atsu happy 1:22からもう1回いちばん強くなって、そのまま締めるのが最高笑
 listen:only_my_railgun | kyuko normal 強め→静か→サビ、の3段なんだよねぇ。短いのに組み立てがきれい
 listen:only_my_railgun | sorashido excited BPM143で325ノーツ。1:30しかないのに、Lv.29は手ごわいですね・・・！
 listen:only_my_railgun | erubin happy 0:25からの静かな所で、ひと息つけるのがいいね
@@ -17,8 +17,8 @@ listen:big_bridge_no_shitou | mua excited 0:08でいきなりサビ！？ 始ま
 listen:big_bridge_no_shitou | kiki normal 最後の2:15で静かに終わるところ、余韻がありますね
 listen:big_bridge_no_shitou | momosuke excited 0:08からもう盛り上がりMAX！！ 最初から全力だよw
 listen:big_bridge_no_shitou | dra excited おでの好きな曲だ。0:08からずっと戦ってる感じで、冒険そのものだな
-listen:big_bridge_no_shitou | atsu happy 1:24でもう一回いちばん強くなるとこ、ここが勝負所だよね笑
-listen:big_bridge_no_shitou | kyuko normal サビが最初に来て、1:24でもう一回山がある構成なんだよねぇ
+listen:big_bridge_no_shitou | atsu happy 1:24でもう1回いちばん強くなるとこ、ここが勝負所だよね笑
+listen:big_bridge_no_shitou | kyuko normal サビが最初に来て、1:24でもう1回山がある構成なんだよねぇ
 listen:big_bridge_no_shitou | sorashido surprise 768ノーツでLv.34です。2分25秒でこの数は、でーじ多いです笑
 listen:big_bridge_no_shitou | erubin normal 1:08のふつうになる所で、少し落ち着けるかな
 
@@ -49,18 +49,18 @@ listen:crazy_party_night | kyuko normal 軽い音が15%もあるんだよねぇ�
 listen:crazy_party_night | sorashido normal Lv.23で307ノーツ。はじめての人にも、ちょうどいい数ですね
 listen:crazy_party_night | erubin troubled にぎやかなのは少し疲れちゃうけど…1:19からは落ち着けるかな
 
-listen:emerald_rush | mua surprise 0:31でいきなり一番強くなるの、ドキッとするぢゃんｗ
+listen:emerald_rush | mua surprise 0:31でいきなり1番強くなるの、ドキッとするぢゃんｗ
 listen:emerald_rush | kiki normal 強い音と軽い音がまざっていて、きらきらした感じですね
 listen:emerald_rush | momosuke excited サビは1:55から！！ 最後に全部持っていく感じがいいの！！
 listen:emerald_rush | dra normal 2分半近くあるからな。山を2つ越える長い冒険だ
 listen:emerald_rush | atsu excited 1:55からのサビで締めて、2:21で静かに終わる！ かっこいい笑
-listen:emerald_rush | kyuko normal 0:31に一回山があって、最後の1:55で本番なんだよねぇ
+listen:emerald_rush | kyuko normal 0:31に1回山があって、最後の1:55で本番なんだよねぇ
 listen:emerald_rush | sorashido happy 415ノーツでLv.25。BPM152なので、落ち着いて数えられますよ
 listen:emerald_rush | erubin happy 1:42でふつうに戻る所が、サビ前のひと休みだね
 
 listen:wrath_of_the_thorn_king | mua excited 1:05からのサビ、最後までずっと強いの！ アガる〜♪
 listen:wrath_of_the_thorn_king | kiki normal 最初の14秒の静けさが、少しずつ重くなっていくのが好きでつ
-listen:wrath_of_the_thorn_king | momosuke surprise 0:29で一回ドーンってくるの！！ そこでもうテンション上がる！！
+listen:wrath_of_the_thorn_king | momosuke surprise 0:29で1回ドーンってくるの！！ そこでもうテンション上がる！！
 listen:wrath_of_the_thorn_king | dra normal だんだん強くなって、最後に大きな山だ。冒険の終わりって感じだな
 listen:wrath_of_the_thorn_king | atsu happy 1:05からのサビでそのまま終わる、締め方が潔い笑
 listen:wrath_of_the_thorn_king | kyuko normal 静か→ふつう→強め→最強を、30秒で上がりきる構成なんだよねぇ
@@ -69,25 +69,25 @@ listen:wrath_of_the_thorn_king | erubin happy ここに来たときの曲なん�
 
 listen:monster | mua excited サビが2回あるの！ 1:10と3:34、どっちもアガるぢゃん♪
 listen:monster | kiki normal 2:42の静かな所で、長い曲のなかにひと息ありますね
-listen:monster | momosuke excited 3:34からのラストのサビ！！ ここでもう一回盛り上がるの♡
+listen:monster | momosuke excited 3:34からのラストのサビ！！ ここでもう1回盛り上がるの♡
 listen:monster | dra happy 4分半近くあるからな。山がいくつもある、長旅の冒険だ
 listen:monster | atsu happy 3:34からのサビで締めるとこ、最後まで気が抜けない笑
-listen:monster | kyuko normal サビ→静か→もう一回サビ、って大きく2回まわる構成だねぇ
+listen:monster | kyuko normal サビ→静か→もう1回サビ、って大きく2回まわる構成だねぇ
 listen:monster | sorashido happy 4:25で675ノーツ。長いけど、BPM135なので数えやすいです
-listen:monster | erubin normal 1:45でふつうに戻る所で、一度落ち着けるね
+listen:monster | erubin normal 1:45でふつうに戻る所で、1度落ち着けるね
 
 listen:anima | mua excited 0:28からもうサビ！？ 早めに上がるの、テンションまぢ上がる！
 listen:anima | kiki normal 1:51で最後にすっと静かになるのが、きれいですね
-listen:anima | momosuke excited 1:46でもう一回いちばん強くなるの！！ ラストまで全力！！
+listen:anima | momosuke excited 1:46でもう1回いちばん強くなるの！！ ラストまで全力！！
 listen:anima | dra troubled Lv.44だぞ。おでの膝には、なかなかの大冒険だな
 listen:anima | atsu excited 1:46からの最後の山で締める、ここ取りきりたい笑
-listen:anima | kyuko normal サビが0:28からと長めで、1:46にもう一回山があるんだよねぇ
+listen:anima | kyuko normal サビが0:28からと長めで、1:46にもう1回山があるんだよねぇ
 listen:anima | sorashido excited BPM184で567ノーツ、Lv.44。数字が全部でかいですね・・・！
 listen:anima | erubin normal 1:08でふつうに戻る所で、少し落ち着けるかな
 
 listen:journey | mua happy 1:58からラストまでサビ！ 長く盛り上がるの好き♪
 listen:journey | kiki normal 1:04で静かになるところ、旅の途中で休むみたいでつ
-listen:journey | momosuke excited 0:34で一回ドーンってきて、最後にもう一回なの！！
+listen:journey | momosuke excited 0:34で1回ドーンってきて、最後にもう1回なの！！
 listen:journey | dra excited 最初の34秒は静かで、そこから一気に走り出す。冒険の始まりだな
 listen:journey | atsu excited 1:58から最後までいちばん強いまま終わる！ 締めが熱い笑
 listen:journey | kyuko normal 山が0:34と1:58の2つで、間にちゃんと谷があるんだよねぇ
@@ -95,8 +95,8 @@ listen:journey | sorashido surprise BPM128なのに731ノーツ、Lv.36。ゆっ
 listen:journey | erubin happy 1:04からの静かな所、ゆっくり景色を見てる気分になるね
 
 listen:sheriruth | mua excited いちばん強いのは2:03からの5秒だけ！ そこでテンション爆発ぢゃんｗ
-listen:sheriruth | kiki normal 0:36で一度静かになるところ、すっと息をのむ感じです
-listen:sheriruth | momosuke excited 最後の2:03！！ 一瞬だけど、そこが一番の見せ場なの！！
+listen:sheriruth | kiki normal 0:36で1度静かになるところ、すっと息をのむ感じです
+listen:sheriruth | momosuke excited 最後の2:03！！ 一瞬だけど、そこが1番の見せ場なの！！
 listen:sheriruth | dra normal 強めとふつうを行ったり来たりだな。迷路を進む冒険みたいだ
 listen:sheriruth | atsu happy 2:03でいちばん強くなって、すぐ2:08で終わる！ 締めがキレてる笑
 listen:sheriruth | kyuko happy ずっとためて、最後の5秒で出しきる構成なんだよねぇ
@@ -105,7 +105,7 @@ listen:sheriruth | erubin normal 1:16でふつうに戻る所で、少しひと�
 
 listen:against_my_own_shadow | mua surprise 0:54でいきなりいちばん強くなるの、ドキッとするよね！
 listen:against_my_own_shadow | kiki happy 最初の30秒くらい静かなのが、落ち着いていて好きでつ
-listen:against_my_own_shadow | momosuke excited 1:41からラストまで！！ 最後にもう一回盛り上がるの♡
+listen:against_my_own_shadow | momosuke excited 1:41からラストまで！！ 最後にもう1回盛り上がるの♡
 listen:against_my_own_shadow | dra happy 静かに始まって、0:54で一気に駆けだすからな。冒険っぽいぞ
 listen:against_my_own_shadow | atsu excited 俺の曲だしな笑 1:41から最後まで、いちばん強いまま締める！
 listen:against_my_own_shadow | kyuko normal 山が0:54と1:41の2つで、きれいに分かれてるんだよねぇ
@@ -113,7 +113,7 @@ listen:against_my_own_shadow | sorashido normal BPM143で397ノーツ、Lv.29で
 listen:against_my_own_shadow | erubin happy 1:28で強めに落ちる所、少し落ち着いてサビを待てるね
 
 listen:grievous_lady | mua troubled 速すぎて目が回るけど…1:41からのサビは、まぢでアガる！
-listen:grievous_lady | kiki normal 1:07で一度静かになるところ、嵐の前の静けさみたいでつ
+listen:grievous_lady | kiki normal 1:07で1度静かになるところ、嵐の前の静けさみたいでつ
 listen:grievous_lady | momosuke surprise 1:41から2:16まで、ずーっといちばん強いの！！ すごすぎ！！
 listen:grievous_lady | dra surprise BPM210でLv.50だぞ。これはもう、ラスボスに挑む冒険だな
 listen:grievous_lady | atsu happy 1:41から最後まで強いまま、2:16でぴたっと締まる笑
@@ -125,7 +125,7 @@ listen:rose | mua happy 1:27からのサビ、ふわっと上がる感じがか�
 listen:rose | kiki happy 1:04で静かになるところ、花が閉じるみたいで美しいでつ
 listen:rose | momosuke excited ROSE大好き！！ 1:27からのサビで、くるっと回りたくなるの♡
 listen:rose | dra happy BPM125で、のんびり歩ける速さだな。ゆったりした冒険だ
-listen:rose | atsu happy 2:13でもう一回強めになって締めるの、いいよね笑
+listen:rose | atsu happy 2:13でもう1回強めになって締めるの、いいよね笑
 listen:rose | kyuko happy 軽い音が11%あって、強い音とまざってるのがおしゃれなんだよねぇ
 listen:rose | sorashido normal BPM125で533ノーツ、Lv.30。ゆっくりでも数はしっかりありますよ
 listen:rose | erubin happy 1:53でふつうに戻る所、やさしい感じで落ち着くね
@@ -139,12 +139,12 @@ listen:sad_song | kyuko normal 静か→強い、を3回くり返して、最後
 listen:sad_song | sorashido happy 3:39で742ノーツ、Lv.29。長いぶん、数もしっかりありますね笑
 listen:sad_song | erubin normal 1:21の静かな所で、いったん落ち着けるね
 
-listen:toward_the_stars_short | mua excited 1:37でいちばん強くなって、1:59でもう一回！ 二度おいしいぢゃんｗ
+listen:toward_the_stars_short | mua excited 1:37でいちばん強くなって、1:59でもう1回！ 2度おいしいぢゃんｗ
 listen:toward_the_stars_short | kiki happy 0:35で静かになるところ、星空を見上げてるみたいでつ
 listen:toward_the_stars_short | momosuke wink 1:59からのサビ！！ 短いけど、キラキラしてるの♡
 listen:toward_the_stars_short | dra happy 少しずつ強くなって、最後に星まで届く冒険だな
 listen:toward_the_stars_short | atsu happy 2:12ですっと静かに終わる締め、余韻がいい笑
-listen:toward_the_stars_short | kyuko happy これ構成がきれいなんだよね〜。1:44で一回引いて、1:59でサビなの笑
+listen:toward_the_stars_short | kyuko happy これ構成がきれいなんだよね〜。1:44で1回引いて、1:59でサビなの笑
 listen:toward_the_stars_short | sorashido normal BPM143で481ノーツ、Lv.37。強い音が48%です
 listen:toward_the_stars_short | erubin happy 0:35からの静かな所、ゆっくり落ち着いて聞けるね
 
@@ -179,8 +179,8 @@ listen:rebellion | mua excited 1:52と3:14、強い所が何回も来るの！ �
 listen:rebellion | kiki normal 2:42の静かな所が、次の盛り上がりの前の深呼吸みたいです
 listen:rebellion | momosuke excited 3:14からのサビ！！ ここでいちばん盛り上がるの！！
 listen:rebellion | dra troubled 4分以上で1299ノーツだぞ。おでの膝との大冒険だな
-listen:rebellion | atsu excited 好きな曲笑 3:49でもう一回いちばん強くなって締めるの、ずるい！
-listen:rebellion | kyuko normal サビが3:14からで、そのあと3:49にもう一回山があるんだよねぇ
+listen:rebellion | atsu excited 好きな曲笑 3:49でもう1回いちばん強くなって締めるの、ずるい！
+listen:rebellion | kyuko normal サビが3:14からで、そのあと3:49にもう1回山があるんだよねぇ
 listen:rebellion | sorashido excited 1299ノーツ、Lv.44。数えがいがありますね・・・！
 listen:rebellion | erubin normal 2:15の静かな所で、少しひと息つけるかな
 
@@ -188,7 +188,7 @@ listen:altar_world_tree | mua surprise 6分以上あるの！？ 3:13のサビ�
 listen:altar_world_tree | kiki happy 最初の48秒、静かに広がっていくところが美しいでつ
 listen:altar_world_tree | momosuke excited 3:13から6秒だけのサビ！！ 一瞬だけど、そこがピーク！！
 listen:altar_world_tree | dra surprise 6分25秒だぞ。これはもう、長い長い冒険だな
-listen:altar_world_tree | atsu happy 5:01でもう一回いちばん強くなって、そこから締めに向かう笑
+listen:altar_world_tree | atsu happy 5:01でもう1回いちばん強くなって、そこから締めに向かう笑
 listen:altar_world_tree | kyuko normal 6分を、静かな所と強い所で細かく区切ってる構成なんだよねぇ
 listen:altar_world_tree | sorashido normal 6:25で1295ノーツ、でもLv.24。長いけど、落ち着いて叩けますよ
 listen:altar_world_tree | erubin happy 好きな曲なんだ。4:00の静かな所、何度聞いても落ち着くね
@@ -198,12 +198,12 @@ listen:evans | kiki normal 0:27で静かになるところ、きれいな間で�
 listen:evans | momosuke excited 1:33からのサビ！！ 短いけど、ぎゅっと詰まってるの！！
 listen:evans | dra surprise 2分もないのにLv.44だぞ。短くて濃い冒険だな
 listen:evans | atsu happy 1:45ですっと静かに締めるとこ、かっこいい笑
-listen:evans | kyuko happy 好きなんだよね〜。0:59で一回山を見せて、1:33で本番なの笑
+listen:evans | kyuko happy 好きなんだよね〜。0:59で1回山を見せて、1:33で本番なの笑
 listen:evans | sorashido normal BPM185で563ノーツ、Lv.44。1:48でこの数は濃いですね
 listen:evans | erubin happy 1:45で静かに終わる所、聞き終わってほっとするね
 
 listen:humanoid | mua excited 0:57から30秒、ずっとサビなの！ ここまぢでアガる♪
-listen:humanoid | kiki normal 0:25で一度静かになるところ、すっとした感じが好きでつ
+listen:humanoid | kiki normal 0:25で1度静かになるところ、すっとした感じが好きでつ
 listen:humanoid | momosuke excited 0:57からのサビで、もう最高潮！！ 一緒に盛り上がろ♡
 listen:humanoid | dra troubled Lv.50だぞ。短いけど、おでには大冒険だな
 listen:humanoid | atsu happy 1:33で静かに締めるとこ、きれいだよね笑
