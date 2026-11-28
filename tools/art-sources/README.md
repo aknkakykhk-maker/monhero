@@ -8,6 +8,7 @@ GitHub Pages では配信されない。
 | `monsters/` | 顔アイコンを切り出すための高解像度な原本と、加工前の立ち絵の原本 | `node tools/image/make-face-icons.js` / `node tools/image/make-plant-dye-mask.js` |
 | `assistants/` | 助手・キャラクターの絵の原本。**キャラごとのフォルダ**(`<キャラ>/<服>/`)と目録 `<キャラ>/CATALOG.md`。旧版は置かない(保管庫 `archive/old-art/`) | [README](assistants/README.md)・`node tools/image/assistant-art-catalog.js` |
 | `dye-masks/` | 染色の部位分けが正しいかを比べるための正解見本 | `node tools/image/undine-dye-mask-check.js` など |
+| `se-library/` | 効果音の素材庫(まだゲームで鳴らしていない効果音の mp3 と合成の部品 `se-synth.js`。r1126-121) | [`docs/progress/SE_LIBRARY.md`](../../docs/progress/SE_LIBRARY.md)・`python3 -I tools/audio/se-library-build.py` |
 
 ## なぜここに置くか
 

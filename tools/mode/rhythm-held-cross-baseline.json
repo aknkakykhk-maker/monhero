@@ -199,7 +199,9 @@
   "glass_crown/MASTER": 0,
   "glass_crown/HELL": 14,
   "glass_crown_short/MASTER": 0,
-  "glass_crown_short/HELL": 0
+  "glass_crown_short/HELL": 0,
+  "three_y_three_s/MASTER": 0,
+  "three_y_three_s/HELL": 0
  },
  "history": [
   {
@@ -256,6 +258,11 @@
    "at": "2026-11-26T14:04",
    "reason": "新曲 Kissからはじまるミステリー・Dear Santa・winter fall(原曲と short ver.)を公開",
    "changed": 12
+  },
+  {
+   "at": "2026-11-28T08:36",
+   "reason": "新曲 3y3s を公開",
+   "changed": 2
   }
  ]
 }

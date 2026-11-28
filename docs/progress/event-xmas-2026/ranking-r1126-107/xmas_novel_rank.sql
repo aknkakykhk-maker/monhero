@@ -264,5 +264,9 @@ on conflict (event_id, end_id) do nothing;
 insert into public.xmas_novel_end_ids (event_id, end_id, kind) values
   ('xmas_novel_2026', 'END-PK1', 'pov'), ('xmas_novel_2026', 'END-PK2', 'ifroute')
 on conflict (event_id, end_id) do nothing;
+-- もしもの話 ② 十三番目の客(r1126-115・3つ)
+insert into public.xmas_novel_end_ids (event_id, end_id, kind) values
+  ('xmas_novel_2026', 'END-H1', 'ifroute'), ('xmas_novel_2026', 'END-H2', 'ifroute'), ('xmas_novel_2026', 'END-H3', 'ifroute')
+on conflict (event_id, end_id) do nothing;
 -- ずるの疑いのある人を隠す(消さない)
 -- update public.xmas_novel_players set hidden = true where event_id = 'xmas_novel_2026' and user_name = '…';
