@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a172cf5e5171beeb
+// source-sha256: d7ff895b9debbef9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -222544,6 +222544,30 @@ const CARD_VS_TUTORIAL_LINE = Object.freeze({
   e: 'happy',
   t: '練習だよ！ ゆっくりいこ♪'
 });
+const CARD_RAID_BOSS_FACE = Object.freeze({
+  size: '200% auto',
+  pos: '50% 24%'
+});
+const CardRaidBossFace = ({
+  className = ''
+}) => {
+  const src = typeof RAID_XMAS_BOSS_IMG !== 'undefined' ? RAID_XMAS_BOSS_IMG : '';
+  if (!src) return React.createElement('span', {
+    'data-card-raid-boss-face': '',
+    className: `flex items-center justify-center text-[26px] ${className}`
+  }, '🎅');
+  return React.createElement('span', {
+    'data-card-raid-boss-face': src,
+    role: 'img',
+    'aria-label': '黒いサンタ',
+    className: `block bg-no-repeat ${className}`,
+    style: {
+      backgroundImage: `url(${src})`,
+      backgroundSize: CARD_RAID_BOSS_FACE.size,
+      backgroundPosition: CARD_RAID_BOSS_FACE.pos
+    }
+  });
+};
 const CARD_VS_MS = Object.freeze({
   assistant: 2600,
   pvp: 2600,
@@ -222914,7 +222938,13 @@ const CardVsIntro = ({
     src: assistantFullImage(who, foe.line && foe.line.e || 'happy'),
     alt: who.name,
     aspect: 3 / 4
-  }) : React.createElement("span", {
+  }) : foe.raidBoss ? React.createElement("span", {
+    "data-card-vs-foe-icon": true,
+    "data-card-vs-raid-boss": true,
+    className: "block aspect-square w-full overflow-hidden rounded-full border-[3px] border-red-500 bg-slate-950 shadow-[0_0_18px_rgba(239,68,68,.45)]"
+  }, React.createElement(CardRaidBossFace, {
+    className: "h-full w-full"
+  })) : React.createElement("span", {
     "data-card-vs-foe-icon": true,
     className: "block aspect-square w-full"
   }, React.createElement(CardPvpAvatar, {
@@ -228125,8 +228155,10 @@ const CardBattleBoard = ({
   }, raid ? React.createElement("span", {
     "data-card-raid-foe": true,
     "aria-hidden": "true",
-    className: `flex ${tiny ? 'h-[34px] w-[34px] text-[20px]' : 'h-[42px] w-[42px] text-[26px]'} shrink-0 items-center justify-center rounded-xl border-2 border-red-500 bg-slate-950`
-  }, "🎅") : pvp || share ? React.createElement("span", {
+    className: `block ${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} shrink-0 overflow-hidden rounded-xl border-2 border-red-500 bg-slate-950`
+  }, React.createElement(CardRaidBossFace, {
+    className: "h-full w-full"
+  })) : pvp || share ? React.createElement("span", {
     "data-card-pvp-foe": true,
     className: `block ${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} shrink-0`
   }, React.createElement(CardPvpAvatar, {
@@ -231411,6 +231443,7 @@ const CardBattleScreen = ({
           name: bossName,
           icon: null,
           frame: null,
+          raidBoss: true,
           line: null,
           deckName: CARD_RAID_BOSS.deckName,
           monsters: vsMons(st, CARD_CPU)
