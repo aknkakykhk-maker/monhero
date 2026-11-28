@@ -4138,8 +4138,9 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       try { ok = typeof rc.onStart === 'function' ? (await rc.onStart()) !== false : true; } catch (_) { ok = false; }
       if (!ok) { setNotice('きょうの挑戦の回数がありません'); setRaid(null); setView('top'); if (typeof rc.onClose === 'function') rc.onClose('noCount'); return; }
       const tier = cardRaidTierOf(rc.tierIndex);
-      const cpuDeck = cardRaidBossDeck(db, rc.tierIndex);
       const seed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
+      // 挑むたびに、ボスの3体(ハム種2体+ほか1体)と山札が少し変わる(台帳 r1126-101 追記1)
+      const cpuDeck = cardRaidBossDeck(db, rc.tierIndex, seed);
       const first = Math.random() < 0.5 ? CARD_ME : CARD_CPU;
       const bossName = rc.bossName || CARD_RAID_BOSS.name;
       const st = cardRaidPrepareGame(cardCreateGame(db, { decks: [{ monsters: deck.monsters, cards: deck.cards }, cpuDeck], names: ['あなた', bossName], seed, first }), rc.tierIndex, CARD_CPU);
