@@ -1034,7 +1034,7 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   'stand-normal': { mua: { top: 0.1592, eye: 0.3668, chin: 0.4305, m: 0.58, cx: 0.5339, above: 0.7 }, momosuke: { top: 0.0635, eye: 0.3248, chin: 0.4296, m: 0.78, cx: 0.5051, above: 0.7 }, kiki: { top: 0.0879, eye: 0.3357, chin: 0.4301, m: 0.904, cx: 0.5388 }, atsu: { top: 0.0726, eye: 0.3274, chin: 0.4296, m: 0.76, cx: 0.4669 }, kyuko: { top: 0.0584, eye: 0.3167, chin: 0.4297, m: 0.949, cx: 0.5084 }, sorashido: { top: 0.0008, eye: 0.2722, chin: 0.4301, m: 1.175, cx: 0.4165 } , erubin: { top: 0.0109, eye: 0.2535, chin: 0.4303, m: 1.316, cx: 0.4834 } },
   'stand-sekiyuou': { erubin: { top: 0.0034, eye: 0.285, chin: 0.43, m: 1.079, cx: 0.5166 } },
   'stand-hosei': { sorashido: { top: 0.0227, eye: 0.2938, chin: 0.4301, m: 1.059, cx: 0.3906 } },
-  'stand-halloween': { mua: { top: 0.1808, eye: 0.3718, chin: 0.4301, m: 0.541, cx: 0.5108, above: 0.95 }, momosuke: { top: 0.061, eye: 0.3118, chin: 0.4301, m: 0.88, cx: 0.5312, above: 0.95 }, kiki: { top: 0.1495, eye: 0.3352, chin: 0.4305, m: 0.709, cx: 0.5304, above: 0.95 } },
+  'stand-halloween': { mua: { top: 0.1808, eye: 0.3718, chin: 0.4301, m: 0.541, cx: 0.5108, above: 0.95 }, momosuke: { top: 0.0614, eye: 0.312, chin: 0.4303, m: 0.88, cx: 0.5274, above: 0.95 }, kiki: { top: 0.1495, eye: 0.3352, chin: 0.4305, m: 0.709, cx: 0.5304, above: 0.95 } },
   'stand-card-master': { mua: { top: 0.116, eye: 0.3209, chin: 0.4298, m: 1.01, cx: 0.4725, above: 0.75 } },
   // 冬の装いの寝顔(winter/kyuko_sleep.PNG・392×1440の全身)。目・顎は絵を目盛りつきで測った(2026-11-19)
   winter: { kyuko: { top: 0.004, eye: 0.132, chin: 0.191, m: 0.441 } },
