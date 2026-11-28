@@ -77,10 +77,6 @@
    "date": "2026-11-05T02:11:35+00:00",
    "subject": "受け取り: 新しい助手えるびんの表情の絵(社長から・未加工・実装はまだ)"
   },
-  "3ec3d725a": {
-   "date": "2026-11-21T03:31:21+09:00",
-   "subject": "Add files via upload"
-  },
   "3f56c113c": {
    "date": "2026-11-25T07:04:36+00:00",
    "subject": "みゅあのサンタきせかえを組み込む(作業途中・r1119-172)"
@@ -1166,15 +1162,15 @@
   "monster-hero/images/assistant/twintail/face/kiki_surprise.PNG": "92b8d9fa4f1f 75cd141c",
   "monster-hero/images/assistant/twintail/face/kiki_troubled.PNG": "5efc930300fc 75cd141c",
   "monster-hero/images/assistant/twintail/face/kiki_wink.PNG": "74397c169f81 75cd141c",
-  "monster-hero/images/assistant/twintail/kiki_angry.PNG": "7da9eb0d925f 3ec3d725a",
-  "monster-hero/images/assistant/twintail/kiki_crying.PNG": "ae05ad5dac24 3ec3d725a",
-  "monster-hero/images/assistant/twintail/kiki_excited.PNG": "34dcaa7656d7 3ec3d725a",
-  "monster-hero/images/assistant/twintail/kiki_happy.PNG": "10b7bcb9fc97 3ec3d725a",
-  "monster-hero/images/assistant/twintail/kiki_normal.PNG": "f20c7ee91239 3ec3d725a",
-  "monster-hero/images/assistant/twintail/kiki_sleep.PNG": "c32a448156c3 3ec3d725a",
-  "monster-hero/images/assistant/twintail/kiki_surprise.PNG": "76da6f1f8000 3ec3d725a",
-  "monster-hero/images/assistant/twintail/kiki_troubled.PNG": "fcc9df1ba39b 3ec3d725a",
-  "monster-hero/images/assistant/twintail/kiki_wink.PNG": "5999785be474 3ec3d725a",
+  "monster-hero/images/assistant/twintail/kiki_angry.PNG": "2c23d372e57a (まだコミットしていない)",
+  "monster-hero/images/assistant/twintail/kiki_crying.PNG": "0760c2fab2d6 (まだコミットしていない)",
+  "monster-hero/images/assistant/twintail/kiki_excited.PNG": "99c7f8b3f561 (まだコミットしていない)",
+  "monster-hero/images/assistant/twintail/kiki_happy.PNG": "3515b9492bb4 (まだコミットしていない)",
+  "monster-hero/images/assistant/twintail/kiki_normal.PNG": "8c775f386e62 (まだコミットしていない)",
+  "monster-hero/images/assistant/twintail/kiki_sleep.PNG": "b1b56b3e0989 (まだコミットしていない)",
+  "monster-hero/images/assistant/twintail/kiki_surprise.PNG": "ecc53e3843cb (まだコミットしていない)",
+  "monster-hero/images/assistant/twintail/kiki_troubled.PNG": "541849c8ddc4 (まだコミットしていない)",
+  "monster-hero/images/assistant/twintail/kiki_wink.PNG": "68f25206fe2c (まだコミットしていない)",
   "monster-hero/images/assistant/winter/face/kyuko_angry.PNG": "115cb6c37874 e770e97c",
   "monster-hero/images/assistant/winter/face/kyuko_crying.PNG": "b48fe085c9a0 e770e97c",
   "monster-hero/images/assistant/winter/face/kyuko_excited.PNG": "504f15ae4b01 e770e97c",
