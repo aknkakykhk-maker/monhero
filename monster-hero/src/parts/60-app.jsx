@@ -25556,7 +25556,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         let storyFrame=null;
         for(let i=step;i>=0;i--){const l=script[i];if(l&&typeof l.frame==='string'){storyFrame=l.frame==='none'?null:l.frame;break;}}
         // 絵は data/breeder.js の STORY_SCENE_IMAGES(名前 → 絵)。表に無い名前は出さない
-        const storySceneImg=storyScene&&typeof STORY_SCENE_IMAGES!=='undefined'?(STORY_SCENE_IMAGES[storyScene]||null):null;
+        //   クリスマスのレイドのお話(bg:'xmas_…@色')は、事件簿と同じ絵の表と色(35-raid-xmas.jsx の raidXmasSceneBgOf・r1126-090)
+        const storyXmasBg=storyScene&&typeof raidXmasSceneBgOf==='function'?raidXmasSceneBgOf(storyScene):null;
+        const storySceneImg=storyXmasBg?storyXmasBg.img:(storyScene&&typeof STORY_SCENE_IMAGES!=='undefined'?(STORY_SCENE_IMAGES[storyScene]||null):null);
         // 一枚絵(台本の行の still:'名前'・2026-11-23 r1119-115)。その行だけ背景の上に絵を出し、上のステージ・真ん中のモンスターを消す(次の行に still が無ければ戻る)。
         //   絵は同じ STORY_SCENE_IMAGES。縦の画面用の絵(名前_tate)があれば、縦では幅いっぱい・上寄せでそれを出す(追記2 社長「縦の絵を使う・幅に合わせる」)。
         //   横は横の絵の全体。出し分けは 70-bootstrap.jsx の [data-story-still]。続けて同じ絵の行は出し直さない(key を絵の名前にする)
@@ -25566,7 +25568,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // このお話で使う背景は、開いたときに先に読んでおく(場面が替わった瞬間に絵が遅れて出ないように)
         if(typeof STORY_SCENE_IMAGES!=='undefined'&&typeof window!=='undefined'){
           const pre=window.__mhStoryScenePreloaded||(window.__mhStoryScenePreloaded=new Set());
-          script.forEach(l=>{[l&&l.bg,l&&l.still,l&&typeof l.still==='string'?`${l.still}_tate`:null].forEach(k=>{const src=typeof k==='string'?STORY_SCENE_IMAGES[k]:null;if(src&&!pre.has(src)){pre.add(src);try{const im=new Image();im.src=src;}catch(e){}}});});
+          script.forEach(l=>{[l&&l.bg,l&&l.still,l&&typeof l.still==='string'?`${l.still}_tate`:null].forEach(k=>{const xb=typeof k==='string'&&typeof raidXmasSceneBgOf==='function'?raidXmasSceneBgOf(k):null;const src=xb?xb.img:(typeof k==='string'?STORY_SCENE_IMAGES[k]:null);if(src&&!pre.has(src)){pre.add(src);try{const im=new Image();im.src=src;}catch(e){}}});
+            const fw=l&&l.who?assistantById(l.who):null;const fs=fw&&fw.storyFigure;if(fs&&!pre.has(fs)){pre.add(fs);try{const im=new Image();im.src=fs;}catch(e){}}});
         }
         // 出てくる全員の顔(その行の表情と、話していないときの normal)も、開いたときに先に読んでおく
         //   (2026-11-14 社長「あつだけ顔の絵の表示が遅い」r1114-080。途中から初めて出る話し手は、出た瞬間に読み始めて遅れて見えていた)
@@ -25614,6 +25617,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         let monstersIdx=-1;
         for(let i=step;i>=0;i--){if(Array.isArray(script[i].monsters)){monstersIdx=i;break;}}
         const storyMonsters=monstersIdx>=0&&!storyStillImg?script[monstersIdx].monsters.filter(m=>m&&m.pose!=='hide'&&STORY_MONSTER_ART[m.id]):[];
+        // 全身の絵を持つ話し手(storyFigure・クリスマスのレイドのハムとサンタ・r1126-090 追記1 社長「真ん中に全身絵とかにして」)は、顔の枠ではなく画面のまん中に全身で出す。
+        //   初めて話した行から、場面の絵が替わるか、去る行(figOut)まで残す。話していないときは暗くする。同じ枠(storyFigureSlot・赤と黒のサンタ)は1人ぶん
+        const storyFigures=[];
+        if(monstersIdx<0&&!storyStillImg){
+          let figBase=null;
+          for(let i=0;i<=step;i++){
+            const l=script[i];if(!l)continue;
+            if(typeof l.bg==='string'){const xb=typeof raidXmasSceneBgOf==='function'?raidXmasSceneBgOf(l.bg):null;const base=xb?xb.base:l.bg;if(base!==figBase){storyFigures.length=0;figBase=base;}}
+            if(l.figOut){storyFigures.length=0;continue;}
+            const fw=l.who&&!l.band?assistantById(l.who):null;
+            if(fw&&fw.storyFigure){const slot=fw.storyFigureSlot||fw.id;const f={slot,id:fw.id,src:fw.storyFigure};const k=storyFigures.findIndex(x=>x.slot===slot);if(k>=0)storyFigures[k]=f;else storyFigures.push(f);}
+          }
+        }
         const fxColors={fall:'255,214,150',split:'233,213,255',merge:'255,250,235',unlock:'253,230,138',transform:'255,237,180',rankup:['251,146,60','251,191,36','192,132,252','248,113,113','250,204,21'][Math.max(0,stageTier-1)],shrink:'186,230,253'};
         const speakText=(l,w)=>{
           // ★呼び方は normalizeAssistantBond には入っていない(別の入れ物 assistantCallStyles)。話している助手ごとのぶんを引く
@@ -25634,6 +25650,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const storyCplBubble=Math.max(6,storyLand?Math.floor((storyBoxW-118)/12)-3:Math.floor((storyBoxW-156)/14)-4);
         // 折り方を決める1行の字数は、ページ分けの控えめな見込みではなく、実際の欄の幅から出す(欄の内側の幅÷字の大きさ。端の1字ぶんは余らせる)
         const storyCapBottom=Math.floor((storyBoxW-64-(storyLand?62:100))/13-0.2);
+        // 全身の絵をまん中に出す話し手(storyFigure)は、下の欄に顔を置かないので、そのぶん1行の字数が増える
+        const storyFaceCols=Math.floor((storyLand?62:100)/13);
+        const storyCapBottomOf=(w)=>storyCapBottom+(w&&w.storyFigure?storyFaceCols:0);
         const storyCapBubble=Math.floor((storyLand?(storyBoxW-118)/12:(storyBoxW-156)/14)-0.2);
         // 台詞を文の切れ目のかたまりごとに並べる(storyChunkLines)。かたまりで折ると行が増えるときは、今までどおり
         //   横の低い画面の吹き出しは高さ 84px で2行しか入らないので、かたまりで並べるのは2行まで(70-bootstrap.jsx)
@@ -25664,7 +25683,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const l=script[i];
           const w=l?assistantById(l.who):null;
           const text=l&&w&&!l.band?speakText(l,w):'';
-          const pages=storyZones&&typeof storySplitPages==='function'?storySplitPages(text,isGuestWho(l&&l.who)?storyCplBubble:storyCplBottom,3):[text];
+          const pages=storyZones&&typeof storySplitPages==='function'?storySplitPages(text,isGuestWho(l&&l.who)?storyCplBubble:storyCplBottom+(w&&w.storyFigure?storyFaceCols:0),3):[text];
           storyPageCache[i]=pages;
           return pages;
         };
@@ -25764,7 +25783,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           {/* 場面の背景(台本の行の bg)。場面が替わると key が替わり、ふわっと切り替わる。fx:'fall' の行では、
               穴へ落ちていくように背景が上へ流れて暗くなる(70-bootstrap.jsx の [data-story-bg]) */}
           {storySceneImg&&<div key={`${storyScene}:${storyFrame||''}`} data-story-bg={storyScene} data-story-bg-frame={storyFrame||undefined} data-story-bg-fx={fx==='fall'?'fall':undefined} aria-hidden="true"
-            style={{'--story-bg':`url("${storySceneImg}")`}}>{storyFrame==='game'&&<span data-story-bg-frame-label>モンヒロ事件簿</span>}</div>}
+            style={{'--story-bg':`url("${storySceneImg}")`}}>{storyXmasBg&&storyXmasBg.tint&&<span data-story-bg-tint style={{position:'absolute',inset:0,zIndex:1,background:storyXmasBg.tint}}/>}{storyFrame==='game'&&<span data-story-bg-frame-label>モンヒロ事件簿</span>}</div>}
           {storyStillImg&&<div key={`still:${storyStill}`} data-story-still={storyStill} data-story-still-has-tate={storyStillTate?'':undefined} aria-hidden="true"
             style={{'--story-still':`url("${storyStillImg}")`,...(storyStillTate?{'--story-still-tate':`url("${storyStillTate}")`}:{})}}><div data-story-still-area><img data-story-still-img src={storyStillImg} alt="" draggable={false}/></div>
             {storyStillTate&&<img data-story-still-tate src={storyStillTate} alt="" draggable={false}/>}</div>}
@@ -25811,6 +25830,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   </span>
                 );
               })}
+            </div>
+          )}
+          {/* 全身の絵の話し手(storyFigures・r1126-090 追記1)。置き場は真ん中のモンスターと同じ層(70-bootstrap.jsx の [data-story-monsters])。赤↔黒に替わると出し直す */}
+          {storyFigures.length>0&&(
+            <div data-story-monsters={storyFigures.length} data-story-figures="" aria-hidden="true" className="pointer-events-none" style={{top:'calc(env(safe-area-inset-top) + 6vh)'}}>
+              {storyFigures.map(f=>{const on=!line.band&&f.id===line.who;return(
+                <span key={`${f.slot}:${f.id}`} data-story-monster={`fig-${f.slot}`} data-story-pose="in" data-story-figure-dim={on?undefined:''}>
+                  <img src={f.src} alt="" draggable={false} className="block h-full w-full object-contain" style={{filter:on?'drop-shadow(0 6px 18px rgba(0,0,0,.65))':'brightness(.55) drop-shadow(0 6px 18px rgba(0,0,0,.65))',transition:'filter .2s'}}/>
+                </span>);})}
             </div>
           )}
           {/* 場面の説明(fxText)は、光る演出(fx)の無い行でも出す(2026-11-05。fx の無い行の説明が、どのお話でも出ていなかった) */}
@@ -25865,7 +25893,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 収まらない台詞は、上の storyPagesOf でページに分ける */}
             <div data-story-speaker-row={storyZones?'':undefined} className={storyZones?'flex items-start gap-2':undefined}>
             {/* 話している助手の顔(上部ゾーンのゲストと同じ大きさ・名前の札は顔の下)。ゲストが話しているあいだは、直前の助手を暗く残す */}
-            {storyZones&&bottomLine&&<div key={`face-${bottomSpeaker.id}`} data-story-speaker={bottomSpeaker.id} className="shrink-0 text-center">
+            {storyZones&&bottomLine&&!bottomSpeaker.storyFigure&&<div key={`face-${bottomSpeaker.id}`} data-story-speaker={bottomSpeaker.id} className="shrink-0 text-center">
               <span style={{display:'block',opacity:dimBottom?.55:1,filter:dimBottom?'brightness(.7)':`drop-shadow(0 0 10px ${bottomSpeaker.accent})`,transition:'opacity .2s, filter .2s'}}><AssistantFace who={bottomSpeaker} size={92} accent={bottomSpeaker.accent} expression={!dimBottom&&bottomLine===line?line.e:'normal'}/></span>
               <span className="mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-black" style={{color:dimBottom?bottomSpeaker.accent:'#0f172a',background:dimBottom?'rgba(15,23,42,.8)':bottomSpeaker.accent}}>{bottomLine.name||bottomSpeaker.name}</span>
             </div>}
@@ -25876,7 +25904,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   ここを素の {line.t} で出していたため、画面に {name} がそのまま出ていた
                   (2026-09-11・ユーザー指摘「名前呼びのとこが変換されてない」)。
                   呼び方も絆Lvも助手ごとに違うので、選んでいる助手ではなく「話している助手」から引く */}
-              <span className="block text-[13px] font-bold leading-relaxed text-white mt-1" style={{...storyLineStyle(storyZones?storyTextAt(bottomLine===line?step:assistIdx,bottomSpeaker):'',storyCapBottom),...(dimBottom?{visibility:'hidden'}:{})}}>{storyZones?storyLineNodes(storyTextAt(bottomLine===line?step:assistIdx,bottomSpeaker),storyCapBottom):bubbleLines(speakText(bottomLine,bottomSpeaker))}</span>
+              <span className="block text-[13px] font-bold leading-relaxed text-white mt-1" style={{...storyLineStyle(storyZones?storyTextAt(bottomLine===line?step:assistIdx,bottomSpeaker):'',storyCapBottomOf(bottomSpeaker)),...(dimBottom?{visibility:'hidden'}:{})}}>{storyZones?storyLineNodes(storyTextAt(bottomLine===line?step:assistIdx,bottomSpeaker),storyCapBottomOf(bottomSpeaker)):bubbleLines(speakText(bottomLine,bottomSpeaker))}</span>
             </div>:<div data-story-line-box className={`flex items-center justify-center rounded-2xl border-2 border-slate-700 bg-slate-900 px-3 py-3 text-center text-[11px] font-bold text-slate-400${storyZones?' min-w-0 flex-1':''}`}>▲ 上のことばを読んでね</div>}
             </div>
             <p className="mt-2 text-center text-[11px] font-bold tabular-nums text-slate-300">
