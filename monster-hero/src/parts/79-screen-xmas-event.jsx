@@ -339,7 +339,7 @@ const XmasEventScreen = ({ tab = 'story', onTab, onBack, forced = false, preOpen
   const head = (
     // 看板・期間の帯・タブの段は、どのタブでも同じ大きさ・同じ位置(台帳 r1126-097 追記1・社長「タブごとに位置が変わるのやだ」)。
     //  高さは前のレイドのタブくらいにそろえ、ボスの一覧を広く見せる(r1126-097)。背の低い横画面では、どのタブでも看板を出さない
-    <div data-xmas-event-head className="mx-auto w-full max-w-2xl shrink-0">
+    <div data-xmas-event-head className="mx-auto w-full shrink-0">
       <ScreenHead title={<span className="flex items-center gap-1"><XmasHolly size={24} /><span className="mh-xmas-title whitespace-nowrap">聖夜の名探偵</span></span>}
         onBack={onBack} compact note={forced ? '(デバッグ表示・開始前でも見えます)' : ''} />
       <div data-xmas-event-poster className="mh-xmas-frame mx-auto mb-1.5 w-fit max-w-full overflow-hidden rounded-xl bg-slate-950 [@media(orientation:landscape)_and_(max-height:520px)]:hidden">
