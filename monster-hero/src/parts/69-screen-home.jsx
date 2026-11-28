@@ -771,7 +771,9 @@ const pageExpression=(typeof assistantNoticePageExpression==='function')
   :(notice.expression||'happy');
 return(
     <div className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:76000,backgroundColor:'rgba(2,6,23,.94)'}} role="dialog" aria-modal="true" aria-label={notice.title} data-home-update-guide>
-      <div className="w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
+      {/* 横の低い画面(高さ 520px 以下)では、絵を左・文と「次へ」を右に並べて1画面に収める(2026-11-28 ミハリの総点検7「本文がはみ出し『次へ』が見えない」) */}
+      <style>{`@media (orientation:landscape) and (max-height:520px){[data-home-update-guide]>[data-update-guide-has-image]{max-width:min(calc(100% - 24px),880px);display:grid;grid-template-columns:minmax(0,38%) minmax(0,1fr);column-gap:14px;align-content:start;border-radius:1.5rem 1.5rem 0 0}[data-home-update-guide]>[data-update-guide-has-image]>*{grid-column:2}[data-home-update-guide]>[data-update-guide-has-image]>[data-update-notice-image]{grid-column:1;grid-row:1 / span 12;align-self:center;margin:0;max-height:calc(var(--mh-vh) - 40px - env(safe-area-inset-top) - env(safe-area-inset-bottom))}[data-home-update-guide]>[data-update-guide-has-image] button{min-height:44px}}`}</style>
+      <div data-update-guide-has-image={notice.image?'':undefined} className="w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
         {notice.debugOnly&&<div className="mb-2 rounded-lg bg-fuchsia-700 px-2 py-1 text-center text-[9px] font-black text-white">DEBUG・通常ログインでは表示されません</div>}
         {/* 告知画像(イベントなど)。あるときだけ、いちばん上に大きく出す。
             画面の高さを食いすぎないよう上限を付ける(正方形の絵でも説明が読める位置に残る)。

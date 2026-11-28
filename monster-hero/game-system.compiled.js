@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b156453e111e604d
+// source-sha256: 832bd6e15d7d791a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -88569,7 +88569,8 @@ function HomeUpdateGuideOverlay({
     "aria-modal": "true",
     "aria-label": notice.title,
     "data-home-update-guide": true
-  }, React.createElement("div", {
+  }, React.createElement("style", null, `@media (orientation:landscape) and (max-height:520px){[data-home-update-guide]>[data-update-guide-has-image]{max-width:min(calc(100% - 24px),880px);display:grid;grid-template-columns:minmax(0,38%) minmax(0,1fr);column-gap:14px;align-content:start;border-radius:1.5rem 1.5rem 0 0}[data-home-update-guide]>[data-update-guide-has-image]>*{grid-column:2}[data-home-update-guide]>[data-update-guide-has-image]>[data-update-notice-image]{grid-column:1;grid-row:1 / span 12;align-self:center;margin:0;max-height:calc(var(--mh-vh) - 40px - env(safe-area-inset-top) - env(safe-area-inset-bottom))}[data-home-update-guide]>[data-update-guide-has-image] button{min-height:44px}}`), React.createElement("div", {
+    "data-update-guide-has-image": notice.image ? '' : undefined,
     className: "w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4",
     style: {
       paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
@@ -288422,10 +288423,11 @@ function MonsterHeroGame() {
         key: `b${bubbleIdx}${bubbleIdx === step ? `-${storyCurSub}` : ''}`,
         "data-story-guest-bubble": true,
         "data-story-pop": speakingGuest ? '1' : undefined,
-        className: "relative min-w-0 flex-1 rounded-2xl border-2 bg-slate-900/95 px-3 py-2",
+        "data-story-idle": speakingGuest ? undefined : '',
+        className: "relative min-w-0 flex-1 rounded-2xl border-2 bg-slate-900 px-3 py-2",
         style: {
-          borderColor: stageGuest.accent,
-          opacity: speakingGuest ? 1 : .4,
+          borderColor: speakingGuest ? stageGuest.accent : `${stageGuest.accent}55`,
+          opacity: 1,
           boxShadow: speakingGuest ? `0 0 0 2px ${stageGuest.accent}55, 0 0 20px ${stageGuest.accent}88` : 'none',
           marginTop: 8,
           animation: speakingGuest ? 'storyPop .3s ease-out both' : undefined
@@ -288446,11 +288448,17 @@ function MonsterHeroGame() {
         className: "inline-block rounded-full px-2 py-0.5 text-[10px] font-black",
         style: {
           color: '#0f172a',
-          background: stageGuest.accent
+          background: stageGuest.accent,
+          visibility: speakingGuest ? undefined : 'hidden'
         }
       }, bubbleLine.name || stageGuest.name), React.createElement("span", {
         className: "mt-1 block text-[14px] font-bold leading-relaxed text-white",
-        style: storyLineStyle(storyZones ? storyTextAt(bubbleIdx, stageGuest) : '', storyCapBubble)
+        style: {
+          ...storyLineStyle(storyZones ? storyTextAt(bubbleIdx, stageGuest) : '', storyCapBubble),
+          ...(speakingGuest ? {} : {
+            visibility: 'hidden'
+          })
+        }
       }, storyZones ? storyLineNodes(storyTextAt(bubbleIdx, stageGuest), storyCapBubble) : bubbleLines(speakText(bubbleLine, stageGuest)))))), storyMonsters.length > 0 && React.createElement("div", {
         "data-story-monsters": storyMonsters.length,
         "aria-hidden": "true",
@@ -288630,9 +288638,10 @@ function MonsterHeroGame() {
         "data-story-pop": dimBottom ? undefined : '1',
         className: `rounded-2xl border-2 bg-slate-900 px-3 py-3${storyZones ? ' min-w-0 flex-1' : ''}`,
         "data-story-line-box": true,
+        "data-story-idle": dimBottom ? '' : undefined,
         style: {
-          borderColor: bottomSpeaker.accent,
-          opacity: dimBottom ? .4 : 1,
+          borderColor: dimBottom ? `${bottomSpeaker.accent}55` : bottomSpeaker.accent,
+          opacity: 1,
           boxShadow: dimBottom ? 'none' : `0 0 16px ${bottomSpeaker.accent}55`,
           transition: 'opacity .18s',
           animation: dimBottom ? undefined : 'storyPop .28s ease-out both'
@@ -288641,11 +288650,17 @@ function MonsterHeroGame() {
         className: "inline-block rounded-full px-2 py-0.5 text-[10px] font-black",
         style: {
           color: '#0f172a',
-          background: bottomSpeaker.accent
+          background: bottomSpeaker.accent,
+          visibility: dimBottom ? 'hidden' : undefined
         }
       }, bottomLine.name || bottomSpeaker.name), React.createElement("span", {
         className: "block text-[13px] font-bold leading-relaxed text-white mt-1",
-        style: storyLineStyle(storyZones ? storyTextAt(bottomLine === line ? step : assistIdx, bottomSpeaker) : '', storyCapBottom)
+        style: {
+          ...storyLineStyle(storyZones ? storyTextAt(bottomLine === line ? step : assistIdx, bottomSpeaker) : '', storyCapBottom),
+          ...(dimBottom ? {
+            visibility: 'hidden'
+          } : {})
+        }
       }, storyZones ? storyLineNodes(storyTextAt(bottomLine === line ? step : assistIdx, bottomSpeaker), storyCapBottom) : bubbleLines(speakText(bottomLine, bottomSpeaker)))) : React.createElement("div", {
         "data-story-line-box": true,
         className: `flex items-center justify-center rounded-2xl border-2 border-slate-700 bg-slate-900 px-3 py-3 text-center text-[11px] font-bold text-slate-400${storyZones ? ' min-w-0 flex-1' : ''}`
