@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 33f5a34b41e27bc8
+// generated-sha256: 31cd15c30217e72d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -67107,7 +67107,7 @@ const RaidJackRewardList = ({ onClose, claimed, initialTab = 'a', ev = RAID_EVEN
     <div data-raid-jack-reward-list className="fixed inset-0 z-[32000] flex flex-col bg-slate-950 p-3" role="dialog" aria-modal="true" aria-label={`${ev.bossWord}の報酬一覧`}
       style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top))', paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
       <div className="mb-2 flex shrink-0 items-center justify-between">
-        <div className="text-[14px] font-black text-orange-200">{ev.icon} {ev.bossWord}の報酬一覧</div>
+        <div className="text-[14px] font-black text-orange-200">{cardIconNode(ev.icon, 16)} {ev.bossWord}の報酬一覧</div>
         <button type="button" data-raid-jack-reward-close onClick={onClose} aria-label="報酬一覧を閉じる" className="min-h-[40px] rounded-xl border border-white/20 bg-white/10 px-4 text-[11px] font-black text-white active:scale-95">閉じる</button>
       </div>
       <ScreenTabs items={[{ id: 'a', label: 'レイドバトル' }, { id: 'b', label: 'グランドスラム' }]} value={tab} onChange={setTab} />
@@ -79999,7 +79999,7 @@ const AluTabBar = ({ tab, onTab, tabs = ALU_TABS }) => (
   <div className="alu-tabs" role="tablist" data-alu-tabs data-assistant-life-icons>
     {tabs.map(t => (
       <button key={t.key} type="button" role="tab" aria-selected={tab === t.key} className={tab === t.key ? 'on' : ''} data-alu-tab={t.key} data-assistant-life-icon={t.key} onClick={() => onTab && onTab(t.key)}>
-        <i>{t.icon}</i>{t.label}
+        <i>{cardIconNode(t.icon, 16)}</i>{t.label}
       </button>))}
   </div>);
 
@@ -80071,7 +80071,7 @@ const AluResult = ({ title = '結果', line, gains = [], finds = [], next, onClo
     {line ? <div className="alu-t" data-alu-result-line>{line}</div> : null}
     <div className="alu-gains" data-alu-result-gains>
       {gains.map((g, i) => (
-        <div key={i}><span className="alu-n">{g.icon} {g.label}</span><b className="alu-num">+{g.v}</b></div>))}
+        <div key={i}><span className="alu-n">{cardIconNode(g.icon, 14)} {g.label}</span><b className="alu-num">+{g.v}</b></div>))}
     </div>
     {finds.length ? <div className="alu-t" data-alu-result-finds>🧺 拾い物: {finds.join('・')}</div> : null}
     {next ? <AluGo onClick={next.onClick} data-alu-result-next>{next.label}</AluGo> : null}
@@ -93217,7 +93217,7 @@ function MsxEvResult({ delta, hasStats, skip = null }) {
         : bufs.length ? null : <span data-msx-ev-none>変わったことはなかった</span>}
       {bufs.map((c) => { const d = typeof msxBuffDef === 'function' ? msxBuffDef(c.buff) : null; return (
         <div key={`bl-${c.buff}`} className="msx-ev-bfl" data-msx-ev-chip={c.k} data-msx-ev-buff={c.buff} style={{ marginTop: row.length ? 4 : 0, fontSize: 12, fontWeight: 800, color: c.good ? '#166534' : '#b91c1c', textAlign: 'left', lineHeight: 1.45 }}>
-          {d ? <><b style={{ fontWeight: 900 }}>{d.icon} {d.name}になった({d.dur})</b><br/>{String(d.text).split('・').map((t, i) => <span key={i} style={{ display: 'inline-block', whiteSpace: 'nowrap' }}>{i ? '・' : ''}{t}</span>)}</> : msxBuffGrantText(c.buff, true)}
+          {d ? <><b style={{ fontWeight: 900 }}>{cardIconNode(d.icon, 14)} {d.name}になった({d.dur})</b><br/>{String(d.text).split('・').map((t, i) => <span key={i} style={{ display: 'inline-block', whiteSpace: 'nowrap' }}>{i ? '・' : ''}{t}</span>)}</> : msxBuffGrantText(c.buff, true)}
         </div>); })}
     </div>
   );
