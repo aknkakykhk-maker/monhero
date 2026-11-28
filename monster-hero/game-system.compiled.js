@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 47ed612249c5107d
+// source-sha256: d7ff895b9debbef9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -87977,7 +87977,24 @@ const homeWalletGrowPx = (goldText, bpText) => {
   const w = t => [...String(t)].reduce((n, c) => n + (c.charCodeAt(0) > 0x7f ? 2.5 : 1), 0);
   return Math.min(24, Math.max(0, Math.ceil(w(goldText) * 6.4 - 50), Math.ceil(w(bpText) * 6.4 - 29)));
 };
+const homeEnsureCss = () => {
+  if (typeof document === 'undefined' || !document.head) return;
+  const put = (id, text) => {
+    if (!text || document.getElementById(id)) return;
+    const tag = document.createElement('style');
+    tag.id = id;
+    tag.textContent = text;
+    document.head.appendChild(tag);
+  };
+  try {
+    put('mh-home-event-badge-css', HOME_EVENT_BADGE_CSS);
+    put('mh-home-v2-css', HOME_V2_CSS);
+    put('mh-home-raid-jack-css', HOME_RAID_JACK_CSS);
+    if (typeof XMAS_HOME_ENTRY_CSS === 'string') put('mh-xmas-home-entry-css', XMAS_HOME_ENTRY_CSS);
+  } catch (_) {}
+};
 function HomeScreen(props) {
+  homeEnsureCss();
   const v2 = useHomeV2();
   return v2 ? React.createElement(HomeScreenV2, props) : React.createElement(HomeScreenV1, props);
 }

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 08b92c2331d6187c
+// generated-sha256: 2f8189a3fefac638
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -52717,7 +52717,23 @@ const homeWalletGrowPx=(goldText,bpText)=>{const w=t=>[...String(t)].reduce((n,c
 // ★HOME の作り直し(r1126-073)は、ゲームの中の時刻で切り替える(2026-11-28 台帳 r1126-086 追記1・社長「いままで2でやってたんだからそれでやればよくない？」)。
 //   2026-11-28 10:00(日本時間)より前は前の HOME(HomeScreenV1)、以後は新しい HOME(HomeScreenV2)。開いたまま 10:00 をまたいでも、15秒ごとに見直して切り替わる。
 //   新しい HOME と一緒に変えた所(吹き出しの既定・入口の印・会話の窓の出し方・小さい知らせの数・バトルを選ぶ画面のサクセスの入口)も homeV2At() で同じ時刻に切り替える
+// HOME の見た目の決まり(<head> へ入れる <style>)を、HOME を描く前にそろえる(2026-11-28 台帳 r1126-103・社長「ホームを開くと一瞬旧ホームが出てから新しいのにかわる」)。
+//   前は各部品の useEffect(描いたあと)で入れていたので、最初の1コマは新しい HOME の決まり(HOME_V2_CSS)もクリスマスの札の決まりも無いまま描かれ、
+//   前の HOME の決まり(70-bootstrap.jsx)だけで「四角い札8枚・左の丸いボタンの列・大きな告知の絵」に見えていた(docs/progress/home-flash-r1126-103/)。
+//   描く関数の中で呼ぶ(同じ id があれば何もしない。部品の useEffect も同じ id を見て入れない)
+const homeEnsureCss=()=>{
+  if(typeof document==='undefined'||!document.head)return;
+  const put=(id,text)=>{if(!text||document.getElementById(id))return;const tag=document.createElement('style');tag.id=id;tag.textContent=text;document.head.appendChild(tag);};
+  try{
+    put('mh-home-event-badge-css',HOME_EVENT_BADGE_CSS);
+    put('mh-home-v2-css',HOME_V2_CSS);
+    put('mh-home-raid-jack-css',HOME_RAID_JACK_CSS);
+    // クリスマスの入口の決まり(79-screen-xmas-event.jsx。読み込み順でこのファイルより後ろなので、描くときに見る)
+    if(typeof XMAS_HOME_ENTRY_CSS==='string')put('mh-xmas-home-entry-css',XMAS_HOME_ENTRY_CSS);
+  }catch(_){/* 入れられなくても、各部品の useEffect が後から入れる */}
+};
 function HomeScreen(props) {
+  homeEnsureCss();
   const v2=useHomeV2();
   return v2?<HomeScreenV2 {...props}/>:<HomeScreenV1 {...props}/>;
 }
