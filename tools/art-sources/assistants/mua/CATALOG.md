@@ -15,7 +15,7 @@
 | --- | --- | ---: | --- | --- | --- |
 | 全身絵 | `monster-hero/images/assistant/fullbody/mua[__<表情>].png` | 9 | 2026-11-22 7ce3fcf07(8枚) / 2026-11-21 b17ac15e2(1枚・うち表情なし1) | 現行のファイルそのもの(完成品を直接入れた・別の原本はリポジトリに無い) | 社長が完成品を直接入れた。道具で作り直さない |
 | 立ち絵 | `monster-hero/images/assistant/stand-normal/myua_<表情>.png` | 8 | 2026-11-23 69cee4cd(8枚) | 現行のファイルそのもの(完成品を直接入れた・別の原本はリポジトリに無い) | 社長が完成品を直接入れた。道具で作り直さない |
-| バスト絵 | `monster-hero/images/assistant/myua_<表情>.PNG` | 9 | 2026-11-21 f0d5f08a9(8枚) / 2026-11-18 d09cb3dcd(1枚・うち寝顔1) | 現行のファイルそのもの(完成品を直接入れた・別の原本はリポジトリに無い) | 社長が完成品を直接入れた。道具で作り直さない |
+| バスト絵 | `monster-hero/images/assistant/myua_<表情>.PNG` | 9 | 未コミット (8枚) / 2026-11-18 d09cb3dcd(1枚・うち寝顔1) | 現行のファイルそのもの(完成品を直接入れた・別の原本はリポジトリに無い) | 社長が完成品を直接入れた。道具で作り直さない |
 | 顔アイコン | `monster-hero/images/assistant/face/myua_<表情>.PNG` | 9 | 2026-11-25 c9c0db6ad(8枚) / 2026-11-12 #5492(1枚・うち寝顔1) | 現行のファイルそのもの(完成品を直接入れた・別の原本はリポジトリに無い) | 社長が完成品を直接入れた。道具で作り直さない |
 
 ## 服「ハロウィン」(halloween)
@@ -24,7 +24,7 @@
 | --- | --- | ---: | --- | --- | --- |
 | 全身絵 | `monster-hero/images/assistant/fullbody/mua_halloween[__<表情>].png` | 9 | 2026-11-22 9ecc9bc30(8枚) / 2026-11-21 0ebaba2e1(1枚・うち表情なし1) | 現行のファイルそのもの(完成品を直接入れた・別の原本はリポジトリに無い) | 社長が完成品を直接入れた。道具で作り直さない |
 | 立ち絵 | `monster-hero/images/assistant/stand-halloween/myua_<表情>.png` | 8 | 2026-11-23 69cee4cd(8枚) | 現行のファイルそのもの(完成品を直接入れた・別の原本はリポジトリに無い) | 社長が完成品を直接入れた。道具で作り直さない |
-| バスト絵 | `monster-hero/images/assistant/halloween/myua_<表情>.PNG` | 9 | 2026-11-21 2ed9ce84c(8枚) / 2026-11-18 492a7160d(1枚・うち寝顔1) | 現行のファイルそのもの(完成品を直接入れた・別の原本はリポジトリに無い) | 社長が完成品を直接入れた。道具で作り直さない |
+| バスト絵 | `monster-hero/images/assistant/halloween/myua_<表情>.PNG` | 9 | 未コミット (8枚) / 2026-11-18 492a7160d(1枚・うち寝顔1) | 現行のファイルそのもの(完成品を直接入れた・別の原本はリポジトリに無い) | 社長が完成品を直接入れた。道具で作り直さない |
 | 顔アイコン | `monster-hero/images/assistant/halloween/face/myua_<表情>.PNG` | 9 | 2026-11-25 cd6ce96c(8枚) / 2026-11-12 #5492(1枚・うち寝顔1) | 現行のファイルそのもの(完成品を直接入れた・別の原本はリポジトリに無い) | 社長が完成品を直接入れた。道具で作り直さない |
 
 ## 服「デュエルマスター」(card-master)
@@ -33,17 +33,17 @@
 | --- | --- | ---: | --- | --- | --- |
 | 全身絵 | `monster-hero/images/assistant/fullbody/mua_card-master[__<表情>].png` | 9 | 2026-11-23 be464a17(9枚・うち表情なし1) | 現行のファイルそのもの(完成品を直接入れた・別の原本はリポジトリに無い) | 社長が完成品を直接入れた。道具で作り直さない |
 | 立ち絵 | `monster-hero/images/assistant/stand-card-master/myua_<表情>.png` | 8 | 2026-11-23 69cee4cd(8枚) | 現行のファイルそのもの(完成品を直接入れた・別の原本はリポジトリに無い) | 社長が完成品を直接入れた。道具で作り直さない |
-| バスト絵 | `monster-hero/images/assistant/card-master/myua_<表情>.PNG` | 9 | 2026-11-21 e6b4874ee(8枚) / 2026-11-18 dac414f04(1枚・うち寝顔1) | 現行のファイルそのもの(完成品を直接入れた・別の原本はリポジトリに無い) | 社長が完成品を直接入れた。道具で作り直さない |
+| バスト絵 | `monster-hero/images/assistant/card-master/myua_<表情>.PNG` | 9 | 未コミット (8枚) / 2026-11-18 dac414f04(1枚・うち寝顔1) | 現行のファイルそのもの(完成品を直接入れた・別の原本はリポジトリに無い) | 社長が完成品を直接入れた。道具で作り直さない |
 | 顔アイコン | `monster-hero/images/assistant/card-master/face/myua_<表情>.PNG` | 9 | 2026-11-25 142113b6(8枚) / 2026-11-12 #5492(1枚・うち寝顔1) | 現行のファイルそのもの(完成品を直接入れた・別の原本はリポジトリに無い) | 社長が完成品を直接入れた。道具で作り直さない |
 
 ## 服「サンタ」(santa)
 
 | 種類 | ゲームで使っているファイル | 枚数 | 最後に作った日・PR | 正本(最新の原本) | 作り方 |
 | --- | --- | ---: | --- | --- | --- |
-| 全身絵 | `monster-hero/images/assistant/fullbody/mua_santa.webp[__<表情>].png` | 10 | 未コミット (10枚・うち表情なし1) | `tools/art-sources/assistants/mua/santa/received/mua_santa_*.png` | 2026-11-28 r1126-095 から: 原本を拡大の道具(tools/image/upscale-anime/upscale.py)で2倍にした物(<キャラ>/santa/upscaled-2026-11-28/received/*_x2.webp)から `tools/assistant/life-xmas-art-remake.py` で作る(全身・半身・立ち絵は WebP 画質90)。 前: `tools/assistant/life-fullbody-art.py`(受け取った全身の10枚。received は加工せずに保管) |
-| 立ち絵 | `monster-hero/images/assistant/stand-santa/myua_angry.webp<表情>.webp` | 8 | 未コミット (8枚) | `tools/art-sources/assistants/mua/santa/received/mua_santa_*.png` | 2026-11-28 r1126-095 から: 原本を拡大の道具(tools/image/upscale-anime/upscale.py)で2倍にした物(<キャラ>/santa/upscaled-2026-11-28/received/*_x2.webp)から `tools/assistant/life-xmas-art-remake.py` で作る(全身・半身・立ち絵は WebP 画質90)。 前: `tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(全身絵から切り出す) |
-| バスト絵 | `monster-hero/images/assistant/santa/myua_angry.webp<表情>.webp` | 9 | 未コミット (9枚・うち寝顔1) | `tools/art-sources/assistants/mua/santa/received/mua_santa_*.png` | 2026-11-28 r1126-095 から: 原本を拡大の道具(tools/image/upscale-anime/upscale.py)で2倍にした物(<キャラ>/santa/upscaled-2026-11-28/received/*_x2.webp)から `tools/assistant/life-xmas-art-remake.py` で作る(全身・半身・立ち絵は WebP 画質90)。 前: `tools/assistant/life-fullbody-art.py` の全身絵をそのまま写す(ききのツインテールと同じく、全身の絵をバスト絵の置き場に置く) |
-| 顔アイコン | `monster-hero/images/assistant/santa/face/myua_<表情>.PNG` | 9 | 未コミット (9枚・うち寝顔1) | `tools/art-sources/assistants/mua/santa/received/mua_santa_*.png` | 2026-11-28 r1126-095 から: 原本を拡大の道具(tools/image/upscale-anime/upscale.py)で2倍にした物(<キャラ>/santa/upscaled-2026-11-28/received/*_x2.webp)から `tools/assistant/life-xmas-art-remake.py` で作る(全身・半身・立ち絵は WebP 画質90)。 前: `tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(寝顔はふつうの顔と同じ枠で切る) |
+| 全身絵 | `monster-hero/images/assistant/fullbody/mua_santa.webp[__<表情>].png` | 10 | 2026-11-28 0019ce41(10枚・うち表情なし1) | `tools/art-sources/assistants/mua/santa/received/mua_santa_*.png` | 2026-11-28 r1126-095 から: 原本を拡大の道具(tools/image/upscale-anime/upscale.py)で2倍にした物(<キャラ>/santa/upscaled-2026-11-28/received/*_x2.webp)から `tools/assistant/life-xmas-art-remake.py` で作る(全身・半身・立ち絵は WebP 画質90)。 前: `tools/assistant/life-fullbody-art.py`(受け取った全身の10枚。received は加工せずに保管) |
+| 立ち絵 | `monster-hero/images/assistant/stand-santa/myua_angry.webp<表情>.webp` | 8 | 2026-11-28 0019ce41(8枚) | `tools/art-sources/assistants/mua/santa/received/mua_santa_*.png` | 2026-11-28 r1126-095 から: 原本を拡大の道具(tools/image/upscale-anime/upscale.py)で2倍にした物(<キャラ>/santa/upscaled-2026-11-28/received/*_x2.webp)から `tools/assistant/life-xmas-art-remake.py` で作る(全身・半身・立ち絵は WebP 画質90)。 前: `tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(全身絵から切り出す) |
+| バスト絵 | `monster-hero/images/assistant/santa/myua_angry.webp<表情>.webp` | 9 | 2026-11-28 0019ce41(9枚・うち寝顔1) | `tools/art-sources/assistants/mua/santa/received/mua_santa_*.png` | 2026-11-28 r1126-095 から: 原本を拡大の道具(tools/image/upscale-anime/upscale.py)で2倍にした物(<キャラ>/santa/upscaled-2026-11-28/received/*_x2.webp)から `tools/assistant/life-xmas-art-remake.py` で作る(全身・半身・立ち絵は WebP 画質90)。 前: `tools/assistant/life-fullbody-art.py` の全身絵をそのまま写す(ききのツインテールと同じく、全身の絵をバスト絵の置き場に置く) |
+| 顔アイコン | `monster-hero/images/assistant/santa/face/myua_<表情>.PNG` | 9 | 2026-11-28 0019ce41(9枚・うち寝顔1) | `tools/art-sources/assistants/mua/santa/received/mua_santa_*.png` | 2026-11-28 r1126-095 から: 原本を拡大の道具(tools/image/upscale-anime/upscale.py)で2倍にした物(<キャラ>/santa/upscaled-2026-11-28/received/*_x2.webp)から `tools/assistant/life-xmas-art-remake.py` で作る(全身・半身・立ち絵は WebP 画質90)。 前: `tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(寝顔はふつうの顔と同じ枠で切る) |
 
 ## 旧版(正本ではない・保管庫)
 
