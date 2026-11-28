@@ -34,7 +34,7 @@ check('ポーズ中songTimeは進まずAudioContext時刻を正本にする',gam
 check('PAUSEとリザルト再プレイは同じbeginRunを使用',game.includes('const restart=()=>')&&game.includes('beginRun(startBest)')&&game.includes('onClick={()=>beginRun(mergeRhythmBestRecord'));
 check('中断は保存せず共通disposeRunで停止',game.includes('const abort=()=>')&&game.includes('disposeRun();onExit()')&&!/const abort=[^;]*onComplete/.test(game));
 check('正常完走だけBEST保存しReact stateを即時更新',game.includes('onComplete(result,merged)')&&game.includes('saveRhythmBestRecord(rhythmBestRecords')&&game.includes('setRhythmBestRecords(records)'));
-check('source/rAF cleanupと再プレイ導線を持つ',game.includes('const disposeRun=useCallback')&&game.includes('runRef.current=null')&&game.includes('もう一度プレイ')&&game.includes('音ゲーデバッグへ戻る'));
+check('source/rAF cleanupと再プレイ導線を持つ',game.includes('const disposeRun=useCallback')&&game.includes('runRef.current=null')&&game.includes('もう1度プレイ') /* r1126-080 */&&game.includes('音ゲーデバッグへ戻る'));
 check('多重開始ロックとgenerationで古いPromiseを無効化',game.includes('if(startLockRef.current)return')&&game.includes('const generation=++generationRef.current')&&game.includes('generation!==generationRef.current')&&game.includes('audio?.stop();return'));
 check('プレオープンで公開されている',game.includes('const RHYTHM_MODE_PUBLIC_RELEASE = true'));
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');process.exit(failed?1:0);

@@ -349,7 +349,7 @@ function MsxTeamEffects({ members, onClose }) {
         <div className="msx-ef-tabs" role="tablist">{[['eff', '効果ごと'], ['mon', 'モンスターごと']].map(([k, n]) => <button type="button" key={k} role="tab" aria-selected={view === k} className={view === k ? 'on' : ''} onClick={() => setView(k)} data-msx-ef-view={k}>{n}</button>)}</div>
         <div className="msx-dt-body">
           {view === 'eff' ? (list.length ? <>
-            <div className="msx-ef-how"><span>数字は編成の合計(上限まで効く)</span><span><b className="one">1体だけ</b> 一番大きい1体の分だけ効く</span><span>行を押すと1体ずつの値</span></div>
+            <div className="msx-ef-how"><span>数字は編成の合計(上限まで効く)</span><span><b className="one">1体だけ</b> 1番大きい1体の分だけ効く</span><span>行を押すと1体ずつの値</span></div>
             {(() => { const seenGrp = {}; return list.map((e) => { const c = capOf(e.id); const grpFirst = !!(c && c.group && !seenGrp[c.group] && (seenGrp[c.group] = true)); const tot = c && c.group ? groupTotal(c.group) : e.total; const pct = c ? Math.min(100, tot / c.v * 100) : null; const u = AT.BY_ID[e.id] && AT.BY_ID[e.id].u === '%' ? '%' : ''; const on = open === e.id; return (
               <div key={e.id} className={`msx-ef-row${on ? ' on' : ''}${c && c.group ? ' grp' : ''}`}>
                 <button type="button" className="msx-ef-hd" onClick={() => setOpen(on ? null : e.id)} aria-expanded={on} data-msx-effect={e.id} data-msx-assist-type={e.d.type || ''}>

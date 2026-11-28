@@ -77,7 +77,7 @@ const RHYTHM_MULTI_PUBLIC_MATCH_WAIT_MS = 15000;
 const RHYTHM_MULTI_CHAT_MAX_LENGTH = 40;
 const RHYTHM_MULTI_CHAT_KEEP = 50;
 const RHYTHM_MULTI_CHAT_INTERVAL_MS = 800;
-const RHYTHM_MULTI_CHAT_STAMPS = Object.freeze(['よろしく!', 'ナイス!', '準備OK!', 'もう一回!', 'ありがとう!']);
+const RHYTHM_MULTI_CHAT_STAMPS = Object.freeze(['よろしく!', 'ナイス!', '準備OK!', 'もう1回!', 'ありがとう!']);
 // 画面ごとに、先頭へ出す定型文(2026-10-03・ユーザー指示「チャット機能もっと使いやすく」
 // 「結果画面でもチャットできるように。もういっかいとかありがとうとか意思疎通したい」)。
 // 残りは共通の定型文を後ろへ並べる(同じ文は2度並べない)
@@ -88,7 +88,7 @@ const RHYTHM_MULTI_CHAT_STAMPS_BY_PHASE = Object.freeze({
   playing: ['おつかれ!', 'ナイス!', '待ってるね!'],
   // 観戦の人の定型文(2026-11-15 r1115-189)
   watch: ['がんばれ!', 'ナイス!', 'すごい!', 'おしい!', '見てるよ!', 'おつかれ!'],
-  result: ['もう一回!', 'ありがとう!', 'おつかれ!', 'ナイス!', 'GG!', '次いこう!', 'ドンマイ!', 'またね!'],
+  result: ['もう1回!', 'ありがとう!', 'おつかれ!', 'ナイス!', 'GG!', '次いこう!', 'ドンマイ!', 'またね!'],
 });
 // 呼んだマスモンに話しかける札(2026-10-08・ユーザー指示「マスモンに聞くボタン」)。押すと「{名前}、{text}」を送る。
 // 何を聞くかはマスモンの会話(33-rhythm-buddy-convo.jsx)が読み取れるものだけ。名前は12文字までなので、40文字に収まる
@@ -98,7 +98,7 @@ const RHYTHM_BUDDY_ASK_CHIPS = Object.freeze([
 ]);
 // マスモンを呼ぶ遊びの定型文(2026-10-07・ユーザー指示「マスモンいれてーとかマスモン出せないとか」)。共通の最後に並べる
 const RHYTHM_MULTI_CHAT_BUDDY_STAMPS = Object.freeze(['マスモン入れて!', 'マスモン入れたよ!', 'マスモンうまい!', 'マスモン出せない…', '無料おわった…', '券がない…', '席ゆずるね!']);
-const RHYTHM_MULTI_CHAT_COMMON_STAMPS = Object.freeze(['よろしく!', 'ありがとう!', 'ナイス!', 'もう一回!', 'おつかれ!', 'すごい!', 'ドンマイ!', 'またね!', ...RHYTHM_MULTI_CHAT_BUDDY_STAMPS]);
+const RHYTHM_MULTI_CHAT_COMMON_STAMPS = Object.freeze(['よろしく!', 'ありがとう!', 'ナイス!', 'もう1回!', 'おつかれ!', 'すごい!', 'ドンマイ!', 'またね!', ...RHYTHM_MULTI_CHAT_BUDDY_STAMPS]);
 const rhythmMultiStampsFor = (phase) => {
   const list = [...(RHYTHM_MULTI_CHAT_STAMPS_BY_PHASE[phase] || []), ...RHYTHM_MULTI_CHAT_COMMON_STAMPS, ...RHYTHM_MULTI_CHAT_STAMPS];
   return list.filter((text, i) => text.length <= RHYTHM_MULTI_CHAT_MAX_LENGTH && list.indexOf(text) === i);
@@ -2479,7 +2479,7 @@ function RhythmMultiMemberSheet({ m, res, resolveIconUrl, friendsOn, friendSelfI
     setBusy(false);
   };
   const text = state && typeof FRIENDS_RESULT_TEXT !== 'undefined' && FRIENDS_RESULT_TEXT[state] ? FRIENDS_RESULT_TEXT[state][0]
-    : state === 'error' ? '申請を送れませんでした。もう一度試してください' : '';
+    : state === 'error' ? '申請を送れませんでした。もう1度試してください' : '';
   return (
     <div className="absolute inset-0 z-[86000] flex items-center justify-center p-4">
       <button type="button" aria-label="閉じる" className="absolute inset-0 bg-slate-950/70" onClick={onClose} />
@@ -4039,7 +4039,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
     if (!view || !friendSelfId) return;
     const result = await sbSendRoomInvite(friendSelfId, friendId, view.code);
     if (result === 'invited') { setInvitedIds((prev) => ({ ...prev, [friendId]: true })); setInviteMessage(''); }
-    else setInviteMessage(result === 'notready' ? 'フレンド機能はただいま準備中です' : '招待を送れませんでした。もう一度試してください');
+    else setInviteMessage(result === 'notready' ? 'フレンド機能はただいま準備中です' : '招待を送れませんでした。もう1度試してください');
   };
 
   // ライブ開始の合図が来たら 3・2・1 を数えて演奏へ入る。数えるのは受け取った時刻から(端末の時計のずれに左右されない)
@@ -4112,7 +4112,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
       setLinkWatch('');
       const v = RHYTHM_MULTI.view();
       if (!v || v.code !== linkWatch || v.full) return;
-      if (v.status !== 'open') { setMessage('部屋へつなげませんでした。電波のよい所で、もう一度リンクを開いてください'); return; }
+      if (v.status !== 'open') { setMessage('部屋へつなげませんでした。電波のよい所で、もう1度リンクを開いてください'); return; }
       if (v.members.filter((m) => !m.cpu).length <= 1) setMessage('この部屋にはだれもいませんでした。もう閉じたか、期限が切れたようです。送ってくれた人に、新しいリンクをもらってください');
     }, 8000);
     return () => clearTimeout(timer);
@@ -4591,7 +4591,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
           <RhythmOrientationButton/>
         </header>
         {beatRankOpen && Number.isFinite(ms.beatRankXp) && <PlayerRankDetail kind="beat" xp={ms.beatRankXp} rewardsOf={beatRankRewardItems}
-          how="曲を遊ぶと経験値がたまります。難しい難易度ほど多く、HELL が一番多くたまります。その日初めてクリアした1曲は +30 です。" onClose={() => setBeatRankOpen(false)}/>}
+          how="曲を遊ぶと経験値がたまります。難しい難易度ほど多く、HELL が1番多くたまります。その日初めてクリアした1曲は +30 です。" onClose={() => setBeatRankOpen(false)}/>}
         {ms.exiting && <div data-quick-run-exit-overlay className="absolute inset-0 z-[90000] flex items-center justify-center bg-slate-950/60 px-6 text-center"><b className="text-sm font-black text-amber-200">周回を終えています…</b></div>}
         {/* 縦画面: 上に助手の立ち絵(余った高さを使って大きく)、下にボタン。
             横画面: 左に立ち絵、右にボタン(2026-10-03・ユーザー指摘「サイズ感悪い」で組み直し) */}

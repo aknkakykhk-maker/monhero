@@ -235,7 +235,7 @@ const CardCupCreate = ({ now, mine, onOpenRegister, onCreated, selfId, profile }
       const st = r && typeof r === 'object' ? r.status : null;
       if (st === 'ok') { onCreated(r.id); return; }
       setMsg({ bad: '内容を確かめてください(時刻がずれたときは選び直してください)', busy: '開いている個人杯がもうあります(1人1つまで)', slot: 'その発表の時刻はいっぱいです。別の時刻を選んでください', crowded: 'いまは開けません。少しあとでお試しください',
-        many: '出ている個人杯が3つあります', nodeck: 'デッキ登録をしてから開いてください', locked: 'デッキを登録した端末でだけ開けます' }[st] || '通信できませんでした。もう一度お試しください');
+        many: '出ている個人杯が3つあります', nodeck: 'デッキ登録をしてから開いてください', locked: 'デッキを登録した端末でだけ開けます' }[st] || '通信できませんでした。もう1度お試しください');
     } finally { setBusy(false); }
   };
   return (
@@ -336,7 +336,7 @@ const CardCupDetail = ({ v, now, mine, selfId, profile, onChanged, onOpenRegiste
       const text = { ok: { card_cup_join: '参加しました', card_cup_leave: '参加を取り消しました', card_cup_cancel: 'この個人杯を取り消しました' }[fn],
         closed: '受付は終わりました', full: '人数がいっぱいです', many: '出ている個人杯が3つあります', nodeck: 'デッキ登録をしてから参加してください',
         locked: 'デッキを登録した端末でだけ参加できます', none: '参加していません', fee: 'この個人杯には、いまは参加できません', host: '主催は抜けられません(取り消しはできます)', bad: '参加できませんでした' }[r];
-      setMsg(text || '通信できませんでした。もう一度お試しください');
+      setMsg(text || '通信できませんでした。もう1度お試しください');
       if (r === 'ok') await onChanged();
     } finally { setBusy(false); }
   };

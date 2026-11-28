@@ -339,7 +339,7 @@ function AssistantLifePlanPlace({ place, ids, cur }) {
       <div className="mt-1 flex flex-col gap-1">{ids.map(id => { const on = assistantLifePlanOf(next, id) === place; return (
         <button key={id} type="button" data-assistant-life-plan-ask={id} onClick={() => assistantLifePlanSet(next, id, on ? null : place)}
           className={`flex min-h-[44px] items-center justify-between rounded-xl px-2 text-[12.5px] font-black ${on ? 'bg-sky-600 text-white' : 'bg-white/10 text-white'} active:scale-95`}>
-          <span>{assistantLifePlanName(id)}</span><span className="text-[11px]">{on ? '📍 お願いした(もう一度押すと取り消し)' : '📍 来てもらう'}</span>
+          <span>{assistantLifePlanName(id)}</span><span className="text-[11px]">{on ? '📍 お願いした(もう1度押すと取り消し)' : '📍 来てもらう'}</span>
         </button>); })}</div>
     </div>);
 }
