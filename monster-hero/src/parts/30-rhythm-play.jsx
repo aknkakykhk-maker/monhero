@@ -1371,7 +1371,7 @@ const rhythmRecordSeDelayOf=(isNewRecord,failed,practice,celebrateSeWhen)=>!isNe
 const rhythmFullComboBandMode=settings=>{const v=rhythmFxPick(settings,'fullComboBig');if(v==='OFF'||v==='NONE')return 'off';
   return 'full';};// ★2026-11-24(r1119-143 追記4): おまかせは軽量モード・演出量「最小」でも全部出す(控えめな形にしない)
 const RHYTHM_FULLCOMBO_CONFETTI=Object.freeze(Array.from({length:22},(_,k)=>Object.freeze({x:((k*37)%100)+.5,h:(k*47)%360,d:((k*13)%9)/20,s:.8+((k*7)%5)/10,r:((k*29)%2)?1:-1})));
-const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntries,onComplete,onExit,raidPlay=false,quickRunAward=null,beatRankAward=null,onRankBarFull=null,onRankBarDone=null,onRankBarStart=null,debugPlay=false,tutorial=false,calibrating=false,onApplyCalibration=null,multi=false,multiRewardScale=1,lineAdjust=null,breederName=''})=>{
+const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntries,onComplete,onExit,raidPlay=false,holdResultCount=false,quickRunAward=null,beatRankAward=null,onRankBarFull=null,onRankBarDone=null,onRankBarStart=null,debugPlay=false,tutorial=false,calibrating=false,onApplyCalibration=null,multi=false,multiRewardScale=1,lineAdjust=null,breederName=''})=>{
   // 判定ラインの位置の合わせ(lineAdjust)は、練習と同じ扱い(ライフを減らさない・記録を送らない)。練習の説明の帯は出さない
   const tutorialProp=tutorial;tutorial=tutorial||!!lineAdjust;
   // 合わせている間の地上の判定ラインの高さ(保存はまだ・親が持つ)。null なら設定のまま
@@ -2633,10 +2633,14 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
   // 数字は要素の文字を直接書き換える(中身は React が止まった形の値で持っている)。タップで止まった形へ飛ぶ
   const resultRootRef=useRef(null);
   const recordSeFireRef=useRef(null);
-  const resultCountId=view.status==='result'&&view.result&&view.result.countAnim?view.result.countAnim.id:null;
+  // holdResultCount(2026-11-28 r1126-098): レイドの「ダメージを与える演出」が上に重なっているあいだは、数え上げを始めない。
+  //   演出(4.3秒)の陰で数え上げ(3.3秒)と音が同時に走り、演出の SCORE・DAMAGE の数え上げのコマが落ちていた(社長「数字の動きがかくかく」)。
+  //   見えないまま終わっていた結果の数え上げは、演出が閉じてから始まる。止めているあいだも「数え上げ中」として、経験値の棒は待たせる
+  const resultCountIdRaw=view.status==='result'&&view.result&&view.result.countAnim?view.result.countAnim.id:null;
+  const resultCountId=holdResultCount?null:resultCountIdRaw;
   // 数え上げが終わった(タップで飛ばしたときも)印。それまで下の経験値の棒は動き出さない(r1119-166。同じ時に動くと数え上げのコマが落ちていた)
   const [resultCountDoneId,setResultCountDoneId]=useState(null);
-  const resultCountRunning=resultCountId!==null&&resultCountDoneId!==resultCountId;
+  const resultCountRunning=resultCountIdRaw!==null&&resultCountDoneId!==resultCountIdRaw;
   React.useLayoutEffect(()=>{
     const root=resultRootRef.current;
     if(!resultCountId||!root)return undefined;
