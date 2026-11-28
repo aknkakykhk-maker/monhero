@@ -41,7 +41,7 @@ const FX_TAGS = { 赤いにじみ: 'bleed', 倒れた影: 'fallen', 赤く光る
 // 音の印(〔音:鐘〕など・r1126-066)→ 画面の xmasNovelSe の種類
 const SOUND_MARKS = { 鐘: 'bell', 時計: 'tick', 柱時計: 'tick', 手紙: 'letter' };
 // (手紙) … 紙の手紙を赤い字で浮かべる(文の「／」で改行・r1126-058)
-const ENDING_KIND = { G: 'good', N: 'normal', B: 'bad', A: 'another', X: 'forced', M: 'accuse', O: 'omake' };
+const ENDING_KIND = { G: 'good', N: 'normal', B: 'bad', A: 'another', X: 'forced', M: 'accuse', K: 'accuse', O: 'omake', L: 'unsolved' }; // K・L は r1126-108(動機ちがいの名指し・迷宮入り)
 const CHAPTER_NO = { 序章: 0, 終章: 9 };
 
 const warn = [];
@@ -430,7 +430,7 @@ const parseScript = (md, srcName) => {
         chapters.push(chapter); scene = null; lastQ = null; seq = 0;
         continue;
       }
-      const cm = t.replace(/^後半\s*/, '').replace(/^(強制バッド|名指しエンド|おまけ).*$/, 'エンディング').match(/^(序章|終章|第\s*(\d+)\s*章|エンディング|カーテンコール)\s*(?:[～〜]\s*([^～〜]+?)\s*[～〜])?/);
+      const cm = t.replace(/^後半\s*/, '').replace(/^(強制バッド|名指しエンド|おまけ|迷宮入り).*$/, 'エンディング').match(/^(序章|終章|第\s*(\d+)\s*章|エンディング|カーテンコール)\s*(?:[～〜]\s*([^～〜]+?)\s*[～〜])?/);
       if (cm) {
         started = true;
         const no = cm[2] ? Number(cm[2]) : CHAPTER_NO[cm[1]];
