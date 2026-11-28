@@ -87,8 +87,10 @@ function judge({ base } = {}) {
   if (rk.length) rank.push(`ランキング・通信の送り方に触れている ${rk.length} 行(${[...new Set(rk.map(r => path.basename(r[0])))].slice(0, 3).join('・')})`);
 
   // ③ 新機能
-  const cl = added.filter(([f]) => f === DATA + 'changelog.js').length;
-  if (cl >= 3) feature.push(`更新履歴に ${cl} 行足している(プレイヤーに見える変更)`);
+  // 更新履歴を足しただけではミハリ不要(社長 2026-11-28「待ち多いよ」→ r1126-079 追記3)。見た目・文言の直しは部が検査を通して公開する
+  // 値段(ビートPの曲の値段・ダイヤの品など)を足す・変えるのは課金に関わるので見る
+  const price = [...added, ...removed].filter(([f, line]) => f.startsWith(PARTS) && !/^\s*(\/\/|\*|\/\*)/.test(line) && /_PRICES?\b|\bprice\s*:/.test(line));
+  if (price.length) feature.push(`値段に触れている ${price.length} 行(${[...new Set(price.map(r => path.basename(r[0])))].slice(0, 3).join('・')})`);
   const fl = added.filter(([f, line]) => (f === FLAG_FILE && FLAG_LINE_RE.test(line)) || /_PUBLIC_RELEASE\w*\s*=\s*true\b/.test(line));
   if (fl.length) { feature.push(`公開の印を真にしている: ${cut(fl[0][1].trim(), 60)}`); final = true; }
 
