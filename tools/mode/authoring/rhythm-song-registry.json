@@ -2286,7 +2286,8 @@
         "beatsPerBar": 4,
         "subdivisionsPerBeat": 4,
         "source": "command"
-      }
+      },
+      "chartIntensity": "strong"
     },
     "glass_crown_short": {
       "flowPlacement": true,
@@ -2306,7 +2307,8 @@
         "beatsPerBar": 4,
         "subdivisionsPerBeat": 4,
         "source": "command"
-      }
+      },
+      "chartIntensity": "strong"
     }
   }
 }

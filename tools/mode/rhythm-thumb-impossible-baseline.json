@@ -390,7 +390,15 @@
   "winter_fall_short/MASTER/landscape": 0,
   "winter_fall_short/MASTER/portrait": 0,
   "winter_fall_short/HELL/landscape": 0,
-  "winter_fall_short/HELL/portrait": 0
+  "winter_fall_short/HELL/portrait": 0,
+  "glass_crown/MASTER/landscape": 0,
+  "glass_crown/MASTER/portrait": 0,
+  "glass_crown/HELL/landscape": 0,
+  "glass_crown/HELL/portrait": 2,
+  "glass_crown_short/MASTER/landscape": 0,
+  "glass_crown_short/MASTER/portrait": 0,
+  "glass_crown_short/HELL/landscape": 0,
+  "glass_crown_short/HELL/portrait": 0
  },
  "history": [
   {

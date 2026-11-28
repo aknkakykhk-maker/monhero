@@ -466,6 +466,16 @@
   "winter_fall_short/hard": "de9ef98c35536f39",
   "winter_fall_short/expert": "0eb4665df3daab89",
   "winter_fall_short/master": "706cd0b4651ab483",
+  "glass_crown/easy": "e619dba79cf47687",
+  "glass_crown/normal": "963c82c8eeb77711",
+  "glass_crown/hard": "80e5e480c057ed2d",
+  "glass_crown/expert": "ef89b42ecc2072a2",
+  "glass_crown/master": "12eb5c6ce8214344",
+  "glass_crown_short/easy": "448fd218858bc8d6",
+  "glass_crown_short/normal": "30eb6a9a0e89898b",
+  "glass_crown_short/hard": "fd9cd0dd85660e4d",
+  "glass_crown_short/expert": "78e2504122496b23",
+  "glass_crown_short/master": "e34275522da70bc9",
   "zenbu_hissatsuwaza/easy": "07f646677627ba53",
   "zenbu_hissatsuwaza/normal": "1d1fcd2a2e216f28",
   "zenbu_hissatsuwaza/hard": "1a984063bd072fb0",
@@ -574,6 +584,8 @@
   "dear_santa_short/hell": "2661bec7c3e38eff",
   "winter_fall/hell": "e9fd6788c3b23fca",
   "winter_fall_short/hell": "9884e50326e14940",
+  "glass_crown/hell": "b1d9995c4468e716",
+  "glass_crown_short/hell": "48a09c134d878697",
   "zenbu_hissatsuwaza/hell": "52af5d2cacf4545f",
   "megalovania_sans/hell": "b54acba215aae1da",
   "megalovania_smash/hell": "2ba3b2a5cd05b394"
@@ -1362,6 +1374,24 @@
     "battle_5_short/master",
     "battle_5/hell",
     "battle_5_short/hell"
+   ]
+  },
+  {
+   "at": "2026-11-28 17:38",
+   "reason": "新曲 Glass Crown を公開",
+   "changed": [
+    "glass_crown/easy",
+    "glass_crown/normal",
+    "glass_crown/hard",
+    "glass_crown/expert",
+    "glass_crown/master",
+    "glass_crown_short/easy",
+    "glass_crown_short/normal",
+    "glass_crown_short/hard",
+    "glass_crown_short/expert",
+    "glass_crown_short/master",
+    "glass_crown/hell",
+    "glass_crown_short/hell"
    ]
   }
  ]
