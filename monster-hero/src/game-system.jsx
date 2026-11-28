@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5b655c7da8eca2e9
+// generated-sha256: df6a8604f15f61ed
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -7610,7 +7610,27 @@ const Audio_ = (() => {
       bell2.triggerAttackRelease(['E6', 'G6', 'C7', 'E7'], '8n', t + 0.68);
       setTimeout(() => { try { sw.dispose(); duo.dispose(); riser.dispose(); bell.dispose(); boom.dispose(); crash.dispose(); bell2.dispose(); } catch (e) {} }, 2200); },
     // 合体演出用: 上昇アルペジオ→(両者が重なるタイミングで)ベルの一撃+きらめき和音の「ピカーン」
-    fusion: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.25, release: 0.5 }, volume: -10 }).connect(reverb); const seq = [[0,'C5','8n'],[0.12,'E5','8n'],[0.24,'G5','8n'],[0.36,'C6','8n'],[0.48,'E6','4n']]; seq.forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt)); const bt = t + 0.6; const bell = new Tone.MetalSynth({ frequency: 800, envelope: { attack: 0.001, decay: 0.6, release: 0.3 }, harmonicity: 8, modulationIndex: 20, resonance: 5000, octaves: 1.5, volume: -14 }).connect(reverb); bell.triggerAttackRelease('16n', bt); const sparkle = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.4, sustain: 0.1, release: 0.5 }, volume: -12 }).connect(reverb); ['C6','E6','G6','C7'].forEach((n, i) => sparkle.triggerAttackRelease(n, '8n', bt + i * 0.03)); setTimeout(() => { try { v.dispose(); bell.dispose(); sparkle.dispose(); } catch (e) {} }, 2200); }
+    fusion: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.25, release: 0.5 }, volume: -10 }).connect(reverb); const seq = [[0,'C5','8n'],[0.12,'E5','8n'],[0.24,'G5','8n'],[0.36,'C6','8n'],[0.48,'E6','4n']]; seq.forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt)); const bt = t + 0.6; const bell = new Tone.MetalSynth({ frequency: 800, envelope: { attack: 0.001, decay: 0.6, release: 0.3 }, harmonicity: 8, modulationIndex: 20, resonance: 5000, octaves: 1.5, volume: -14 }).connect(reverb); bell.triggerAttackRelease('16n', bt); const sparkle = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.4, sustain: 0.1, release: 0.5 }, volume: -12 }).connect(reverb); ['C6','E6','G6','C7'].forEach((n, i) => sparkle.triggerAttackRelease(n, '8n', bt + i * 0.03)); setTimeout(() => { try { v.dispose(); bell.dispose(); sparkle.dispose(); } catch (e) {} }, 2200); },
+    // ===== 事件簿(ミステリーノベル)の効果音(2026-11-28 社長「ところどころのSEをもっと雰囲気出して」・台帳 r1126-093 追記2) =====
+    //   どれも小さく、低く暗い音。その場で合成する(音源ファイルなし・権利の心配なし)。効果音の音量(seBus)を通る
+    //   nvTick … 柱時計のチク(high)/タク。選択肢を待つ間に繰り返す。BGM とぶつからないよう、とても小さく短い
+    nvTick: async (high) => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.MetalSynth({ frequency: high ? 340 : 240, envelope: { attack: 0.001, decay: 0.035, release: 0.02 }, harmonicity: 3.1, modulationIndex: 10, resonance: high ? 2600 : 1800, octaves: 0.6, volume: -32 }).connect(seBus); s.triggerAttackRelease('64n', t); const k = new Tone.MembraneSynth({ pitchDecay: 0.01, octaves: 2, envelope: { attack: 0.001, decay: 0.05, sustain: 0 }, volume: -30 }).connect(seBus); k.triggerAttackRelease(high ? 'G2' : 'D2', '64n', t); setTimeout(() => { try { s.dispose(); k.dispose(); } catch (e) {} }, 300); },
+    //   nvCreak … 扉・床のきしみ「ギィ」(低いのこぎり波が、ゆっくり下がる)
+    nvCreak: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const f = new Tone.Filter(700, 'lowpass').connect(seBus); const s = new Tone.Synth({ oscillator: { type: 'sawtooth' }, envelope: { attack: 0.08, decay: 0.7, sustain: 0, release: 0.2 }, volume: -22 }).connect(f); s.triggerAttackRelease('D3', '4n', t); try { s.frequency.rampTo('G2', 0.7, t); } catch (e) {} setTimeout(() => { try { s.dispose(); f.dispose(); } catch (e) {} }, 1400); },
+    //   nvThud … 重い物の落ちる・ぶつかる「ゴッ」(遠くのこもった低音。enemyAttack より小さく遠い)
+    nvThud: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.MembraneSynth({ pitchDecay: 0.05, octaves: 4, envelope: { attack: 0.002, decay: 0.35, sustain: 0 }, volume: -12 }).connect(seBus); s.triggerAttackRelease('E1', '8n', t); const n = new Tone.NoiseSynth({ noise: { type: 'brown' }, envelope: { attack: 0.002, decay: 0.15, sustain: 0 }, volume: -20 }).connect(seBus); n.triggerAttackRelease('16n', t); setTimeout(() => { try { s.dispose(); n.dispose(); } catch (e) {} }, 800); },
+    //   nvWind … 吹雪の風「ゴォォ……」(こもった雑音がふくらんで消える・2.5秒)
+    nvWind: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const f = new Tone.Filter(520, 'lowpass').connect(seBus); const n = new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: { attack: 0.9, decay: 0.4, sustain: 0.6, release: 1.2 }, volume: -24 }).connect(f); n.triggerAttackRelease(1.2, t); try { f.frequency.rampTo(900, 0.9, t); f.frequency.rampTo(380, 1.4, t + 0.9); } catch (e) {} setTimeout(() => { try { n.dispose(); f.dispose(); } catch (e) {} }, 3200); },
+    //   nvFire … 暖炉の薪がはぜる「パチ……パチ」(小さな粒がまばらに)
+    nvFire: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const f = new Tone.Filter(1800, 'bandpass').connect(seBus); const n = new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.001, decay: 0.025, sustain: 0 }, volume: -24 }).connect(f); [0, 0.21, 0.37, 0.8, 1.05, 1.5].forEach((d) => n.triggerAttackRelease('64n', t + d)); setTimeout(() => { try { n.dispose(); f.dispose(); } catch (e) {} }, 2100); },
+    //   nvRustle … 紙・封・布のこすれる「カサ」
+    nvRustle: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const f = new Tone.Filter(2600, 'highpass').connect(seBus); const n = new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.01, decay: 0.12, sustain: 0 }, volume: -28 }).connect(f); n.triggerAttackRelease('16n', t); n.triggerAttackRelease('32n', t + 0.14); setTimeout(() => { try { n.dispose(); f.dispose(); } catch (e) {} }, 600); },
+    //   nvGlass … 窓ガラス・物の割れる「カシャ」(低めの金属の響き)
+    nvGlass: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.MetalSynth({ frequency: 260, envelope: { attack: 0.001, decay: 0.32, release: 0.1 }, harmonicity: 7.1, modulationIndex: 20, resonance: 3200, octaves: 1, volume: -26 }).connect(reverb); s.triggerAttackRelease('16n', t); setTimeout(() => { try { s.dispose(); } catch (e) {} }, 900); },
+    //   nvDread … 不穏な一音(低い2音の半音のぶつかりが、ゆっくり消える)。声・悲鳴・倒れた人が見つかった所
+    nvDread: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'sine' }, envelope: { attack: 0.35, decay: 0.6, sustain: 0.4, release: 1.6 }, volume: -20 }).connect(reverb); v.triggerAttackRelease(['C2', 'C#2', 'G2'], 1.1, t); setTimeout(() => { try { v.dispose(); } catch (e) {} }, 3600); },
+    //   nvMusicBox … オルゴールの子守歌(高い音を、小さく、ゆっくり下がる短調の4音)
+    nvMusicBox: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.002, decay: 0.9, sustain: 0, release: 0.6 }, volume: -24 }).connect(reverb); [[0, 'E5'], [0.42, 'D5'], [0.84, 'C5'], [1.4, 'A4']].forEach(([d, n]) => s.triggerAttackRelease(n, '4n', t + d)); setTimeout(() => { try { s.dispose(); } catch (e) {} }, 3200); },
   };
   // ボタンのタップ音(音は fgSe.tap と同じ。通る口だけが uiBus)。全体ミュート(enabled)には従う。裏のバトルの音を止める印は見ない
   const uiTap = async () => { if (!enabled) return; await ensure(); if (!Tone || !uiBus) return; const t = Tone.now(); const s = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.001, decay: 0.04, sustain: 0, release: 0.02 }, volume: -16 }).connect(uiBus); s.triggerAttackRelease('C6', '64n', t); setTimeout(() => { try { s.dispose(); } catch (e) {} }, 200); };
@@ -71048,27 +71068,76 @@ const xmasNovelSe = (kind) => {
 //   連打しても重ねない: 次の行へ進んだら残りの回数は鳴らさず、同じ音を前の音のすぐあと(hold の間)には鳴らし直さない
 const XMAS_NOVEL_SE_SEQ = Object.freeze({
   bell: { gap: 1150, hold: 900, play: ['guard', 'trainingFail'] },
-  //   r1126-093 追記1(暗く): 時計 = 高い「チッ」(xpTick)をやめ、低くこもった「コツ」(trainingDice)/ 手紙 = きらめきの入った enemyCharge をやめ、低いうなりと下がる2音(trainingBad・trainingFail)
-  tick: { gap: 520, hold: 300, play: ['trainingDice'] },
-  letter: { gap: 0, hold: 1500, play: ['trainingBad', 'trainingFail'] },
+  //   r1126-093 追記2(雰囲気): 時計 = 柱時計のチク(nvTick)/ 手紙 = 不穏な一音(nvDread)。下は帯の文から選び直した音(xmasNovelSeKindOf)。
+  //   play の1つは '名前' か [名前, 引数, 遅らせるミリ秒]。音そのものは 14-audio.jsx の fgSe.nv*(その場で合成・小さく低い)
+  tick: { gap: 520, hold: 300, play: [['nvTick', true]] },
+  letter: { gap: 0, hold: 1500, play: ['nvDread'] },
+  knock: { gap: 460, hold: 300, play: ['nvThud'] },
+  thud: { gap: 420, hold: 250, play: ['nvThud'] },
+  creak: { gap: 0, hold: 800, play: ['nvCreak'] },
+  creakGlass: { gap: 0, hold: 1200, play: ['nvCreak', ['nvGlass', undefined, 650]] },
+  glass: { gap: 0, hold: 500, play: ['nvGlass'] },
+  windGlass: { gap: 0, hold: 1500, play: ['nvWind', ['nvGlass', undefined, 500], ['nvGlass', undefined, 1100]] },
+  slamLock: { gap: 0, hold: 700, play: ['nvThud', ['nvTick', true, 380], ['nvTick', false, 470]] },
+  lock: { gap: 0, hold: 400, play: [['nvTick', true], ['nvTick', false, 90]] },
+  rustle: { gap: 0, hold: 400, play: ['nvRustle'] },
+  dread: { gap: 0, hold: 1500, play: ['nvDread'] },
+  lightsOut: { gap: 0, hold: 1500, play: ['nvThud', ['nvDread', undefined, 120]] },
+  musicbox: { gap: 0, hold: 1800, play: ['nvMusicBox'] },
+  clap: { gap: 0, hold: 1200, play: ['nvRustle', ['nvRustle', undefined, 650]] },
+  fire: { gap: 0, hold: 1500, play: ['nvFire'] },
+  wind: { gap: 0, hold: 2500, play: ['nvWind'] },
 });
+//  帯の効果音を、文に合わせて選び直す(台本データの印は 物音(tap)・衝撃(impact)・拍手・オルゴールの4つだけで、どれも同じ音だった・r1126-093 追記2)
+const xmasNovelSeKindOf = (kind, row) => {
+  if (kind === 'bell' || kind === 'tick' || kind === 'letter') return kind;
+  if (kind === 'music') return 'musicbox';
+  if (kind === 'clap') return 'clap';
+  const x = String((row && row.x) || '');
+  if (/声|悲鳴|叫び|きゃ|うわ|っ！|ピー/.test(x)) return 'dread';
+  if (/ブツン|停電/.test(x)) return 'lightsOut';
+  if (/(ギィ|ギシ)[\s\S]*(ガシャン|割れ)/.test(x)) return 'creakGlass';
+  if (/吹雪[\s\S]*ガラス|ガラス[\s\S]*吹雪/.test(x)) return 'windGlass';
+  if (/ギィ|ギシ|きしむ|開く音/.test(x)) return 'creak';
+  if (/ガシャン|ガラス|カシャ|割れ/.test(x)) return 'glass';
+  if (/バタン[\s\S]*(カチャリ|鍵)/.test(x)) return 'slamLock';
+  if (/カチリ|カチャリ|留め金|鍵の音/.test(x)) return 'lock';
+  if (/封|カサ|プシュッ/.test(x)) return 'rustle';
+  if (/叩く|打ちつける|ドン、ドン|コン、コン/.test(x)) return 'knock';
+  if (/ドサッ|ゴッ|ゴトン|ガタ|重い|ドン/.test(x)) return 'thud';
+  return kind === 'impact' ? 'impact' : 'thud';
+};
+//  叩く音の回数は、文の「ドン」「コン」の数(3回まで)
+const xmasNovelSeTimesOf = (kind, row, times) => {
+  if (Number.isFinite(times)) return times;
+  if (kind !== 'knock' && kind !== 'thud') return 1;
+  const m = String((row && row.x) || '').match(/ドン|コン/g);
+  return kind === 'knock' && m ? Math.min(3, m.length) : 1;
+};
 let xmasNovelSeTimers = [];
 let xmasNovelSeLast = { kind: '', at: 0 };
 const xmasNovelSeStop = () => { xmasNovelSeTimers.forEach((t) => clearTimeout(t)); xmasNovelSeTimers = []; };
+const xmasNovelSeFn = (name) => { try { const fn = (Audio_.fgSe || Audio_.se)[name]; return typeof fn === 'function' ? fn : null; } catch (e) { return null; } };
 const xmasNovelSeHit = (kind) => {
   try {
     if (typeof Audio_ === 'undefined' || !Audio_ || !Audio_.se) return;
     const seq = XMAS_NOVEL_SE_SEQ[kind];
     xmasNovelSeLast = { kind, at: Date.now() };
     // 表の画面の口(fgSe)から鳴らす(裏クイックの音を止める印を受けない・r1126-072。上の xmasNovelSe と同じ)
-    seq.play.forEach((name) => { const fn = (Audio_.fgSe || Audio_.se)[name]; if (typeof fn === 'function') fn(); });
+    seq.play.forEach((item) => {
+      const [name, arg, delay] = Array.isArray(item) ? item : [item];
+      const fn = xmasNovelSeFn(name);
+      if (!fn) return;
+      if (delay > 0) xmasNovelSeTimers.push(setTimeout(() => fn(arg), delay)); else fn(arg);
+    });
   } catch (e) { /* 音が出せなくても読み進める */ }
 };
-const xmasNovelRowSe = (kind, times) => {
+const xmasNovelRowSe = (kindIn, times, row) => {
   xmasNovelSeStop();
+  const kind = xmasNovelSeKindOf(kindIn, row);
   const seq = XMAS_NOVEL_SE_SEQ[kind];
   if (!seq) { xmasNovelSe(kind); return; }
-  const n = Math.max(1, Math.min(3, Number.isFinite(times) ? times : 1));
+  const n = Math.max(1, Math.min(3, xmasNovelSeTimesOf(kind, row, times)));
   const wait = xmasNovelSeLast.kind === kind ? Math.max(0, seq.hold - (Date.now() - xmasNovelSeLast.at)) : 0;
   for (let i = 0; i < n; i += 1) {
     const at = wait + i * seq.gap;
@@ -71076,6 +71145,16 @@ const xmasNovelRowSe = (kind, times) => {
     else xmasNovelSeTimers.push(setTimeout(() => xmasNovelSeHit(kind), at));
   }
 };
+//  場面に入ったときの、その場所の音(1回だけ・小さく)。背景の名前で決める(r1126-093 追記2)
+const xmasNovelAmbientOf = (scene) => {
+  const bg = String((scene && scene.bg) || '');
+  if (/吹雪/.test(bg)) return 'wind';
+  if (/暖炉/.test(bg)) return 'fire';
+  if (/雪原|雪の山道/.test(bg)) return 'wind';
+  if (/柱時計/.test(bg)) return 'lock';
+  return '';
+};
+const xmasNovelAmbient = (scene) => { const k = xmasNovelAmbientOf(scene); if (k) xmasNovelSeHit(k); };
 //  事件簿の曲(2026-11-28 社長「音楽で声有りはやめて」「ちゃんとばめんにあったやつに」「音無しとかばめんによって」「全体的に暗く」・台帳 r1126-093)。
 //    歌(声)の入った曲は使わない。声の有無は声の分離器で測った(表と測り方: docs/progress/event-xmas-2026/NOVEL-BGM-R1126-093.md)。
 //    'silence' は曲を止める(死の場面・張りつめた所・静かな独白)。台本データ(79-xmas-novel-script.jsx)の曲より、この表が勝つ
@@ -71435,6 +71514,15 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
   const card = cards[0] || null;
   const setCard = (c) => setCards((list) => (c ? [...list, c] : []));
   const [sheet, setSheet] = useState(null); // 'book' / 'log' / 'menu' / { kind:'present'|'person'|'action', q }
+  // 選択肢・推理の問い・名指しを待っている間は、柱時計のチク・タクを小さく繰り返す。選ぶ・窓を閉じると止まる(社長「選択肢の待ち時間はチクタクって時計おとが流れる」・r1126-093 追記2)
+  useEffect(() => {
+    if (!sheet || typeof sheet !== 'object' || !sheet.q) return undefined;
+    let high = true;
+    const tick = () => { const fn = xmasNovelSeFn('nvTick'); if (fn) fn(high); high = !high; };
+    const id = setInterval(tick, 640);
+    const first = setTimeout(tick, 250);
+    return () => { clearInterval(id); clearTimeout(first); };
+  }, [sheet]);
   const [got, setGot] = useState(null); // 手に入れた手がかり { n, d, add }
   const [skip, setSkip] = useState(false);
   const [log, setLog] = useState([]);
@@ -71506,7 +71594,8 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
     let s = base;
     unreadRef.current = !!(r.k && !s.read.includes(r.k));
     if (r.k && !s.read.includes(r.k)) s = { ...s, read: [...s.read, r.k] };
-    if (r.t === 'band' && r.se) xmasNovelRowSe(r.se, r.seN); else xmasNovelSeStop();
+    if (r.t === 'band' && r.se) xmasNovelRowSe(r.se, r.seN, r); else xmasNovelSeStop();
+    if (!opts.quiet && r.t === 'band' && !r.se && Array.isArray(r.fx) && r.fx.includes('fallen')) xmasNovelSeHit('dread'); // 倒れた人が見つかった帯に、不穏な一音(r1126-093 追記2)
     // 章の札の下で着いた行は、札を閉じてから揺らす(札に隠れて見えなかった)
     pendingQuakeRef.current = 0;
     if (XMAS_NOVEL_SHAKE[r.id] && !skip) { if (opts.held) pendingQuakeRef.current = XMAS_NOVEL_SHAKE[r.id]; else xmasNovelQuake(stageRef.current, XMAS_NOVEL_SHAKE[r.id]); }
@@ -71566,6 +71655,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
     let chapterCard = false;
     // 外側(助手たち本人)⇔ゲームの中が切り替わったら、画面に吸い込まれる/画面から引く
     if (lastSceneRef.current !== (scene || null)) { lastBodyRef.current = ''; setTitleOk(xmasNovelSceneDone(scene, s.read)); }
+    if (scene && (!lastSceneRef.current || lastSceneRef.current.id !== scene.id)) xmasNovelAmbient(scene); // 場面に入ったときの場所の音(r1126-093 追記2)
     const transitNow = !!(scene && lastSceneRef.current && !!lastSceneRef.current.outside !== !!scene.outside);
     if (transitNow) { setTransit({ dir: scene.outside ? 'out' : 'in', n: Date.now() }); xmasNovelSe('tap'); }
     // カーテンコールの場面を出たら、下りていた幕を上げる
