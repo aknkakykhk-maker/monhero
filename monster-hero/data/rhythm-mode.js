@@ -4789,12 +4789,15 @@ const RHYTHM_TOUCH_SPAN_RUNTIME=(()=>{
       RHYTHM_PERF.domQuery();
       glowNodes=Array.from(document.querySelectorAll('[data-rhythm-sublane-feedback]'));
     }
-    glowNodes.forEach((el,index)=>{
-      const want=active.has(index);
-      if(want===(el.dataset.rhythmTouchspan==='true'))return;
+    // 書いた状態は要素に覚えておき、dataset を読み直さずに比べる(指が動くたびに呼ばれるため・2026-11-28 r1126-100)。初めの1回だけ DOM を読む
+    for(let index=0;index<glowNodes.length;index++){
+      const el=glowNodes[index],want=active.has(index);
+      const cur=el._mhTouchspan!==undefined?el._mhTouchspan:el.dataset.rhythmTouchspan==='true';
+      if(want===cur)continue;
       if(want)el.dataset.rhythmTouchspan='true';
       else delete el.dataset.rhythmTouchspan;
-    });
+      el._mhTouchspan=want;
+    }
   };
   const clear=()=>{touchStates.clear();physicalTargetTimes.clear();applyTouchSpanGlow();};
   // 1回の物理接触から出す接触幅用の疑似TAPは、中心入力が取ったノーツと同じ時刻だけを補う。
@@ -4909,6 +4912,31 @@ const rhythmInputMatchBounds=(source,now,offset)=>{
   while(lo<hi){const mid=(lo+hi)>>1;if(Number(source[mid]?.timeMs)<=max)lo=mid+1;else hi=mid;}
   return [start,lo];
 };
+// いま押さえられている帯(HOLD/SLIDE)を探すときの範囲(2026-11-28・台帳 r1126-100「ワルキューレの原曲がちょこちょこかくつく」)。
+// 押さえられているノーツは「頭の時刻が いま+判定窓 より前」で「終わりが いま より後」のものだけ。以前は指が触れるたびに
+// 譜面の全ノーツを頭からなめていたので、ノーツの多い長い曲(ワルキューレの原曲 MASTER は3460個)ほど1回の入力が重く、
+// 曲の後ろへ行くほど(済んだノーツが増えるほど)重くなっていた。いちばん長い帯の長さを1回だけ測っておき、二分探索でその範囲へ絞る。
+// 範囲の外のノーツは押さえられようがないので、選ばれるノーツと順番は前と同じ。並びが崩れた譜面は今までどおり全部を見る
+const RHYTHM_HELD_SCAN_MARGIN_MS=10000;
+const rhythmHeldScanBounds=(source,now,offset)=>{
+  rhythmInputMatchBounds(source,now,offset);
+  const meta=RHYTHM_INPUT_MATCH_META.get(source);
+  if(!meta||!meta.ascending)return [0,source.length];
+  if(meta.heldSpanMs===undefined){
+    let span=0;
+    for(let i=0;i<source.length;i++){const n=source[i],t=Number(n?.timeMs);if(!Number.isFinite(t))continue;
+      let e=Number(n.endTimeMs);if(Array.isArray(n.slidePoints)&&n.slidePoints.length){const last=Number(n.slidePoints[n.slidePoints.length-1]?.timeMs);if(Number.isFinite(last)&&!(last<=e))e=last;}
+      if(Number.isFinite(e)&&e-t>span)span=e-t;}
+    meta.heldSpanMs=span;
+  }
+  const center=Number(now)-Number(offset);if(!Number.isFinite(center))return [0,source.length];
+  const min=center-meta.heldSpanMs-RHYTHM_HELD_SCAN_MARGIN_MS,max=center+RHYTHM_INPUT_MATCH_WINDOW_MS+RHYTHM_HELD_SCAN_MARGIN_MS;
+  let lo=0,hi=source.length;
+  while(lo<hi){const mid=(lo+hi)>>1;if(Number(source[mid]?.timeMs)<min)lo=mid+1;else hi=mid;}
+  const start=lo;hi=source.length;
+  while(lo<hi){const mid=(lo+hi)>>1;if(Number(source[mid]?.timeMs)<=max)lo=mid+1;else hi=mid;}
+  return [start,lo];
+};
 const rhythmChooseTapTarget=(passed,upcoming,now)=>{
   if(!passed)return upcoming;
   if(!upcoming)return passed;
@@ -4972,6 +5000,7 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
   const matchOverride=rhythmMatchNowOverride;rhythmMatchNowOverride=null;
   const now=matchOverride!==null&&matchOverride<judgeNow?matchOverride:judgeNow;
   const [matchStart,matchEnd]=rhythmInputMatchBounds(source,now,offset);
+  const [heldStart,heldEnd]=rhythmHeldScanBounds(source,now,offset);
   // 相手を決める前に、選べる先が狭い入力から順に並べ替える(上の説明)。
   // 見るのは位置だけで、時刻の取り合い(switchAt)には一切触れない。
   const insideSomeNote=input=>{
@@ -5045,7 +5074,8 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
     // withTolerance=false なら帯の内側そのもの、true なら受付の広がりぶんまで見る。
     const heldBandNote=withTolerance=>{
       if(tapOnly||!Number.isFinite(subCoordinate))return null;   // 仮の入力では持ち替えを扱わない
-      for(let index=0;index<source.length;index++){
+      // 押さえられうる時刻の範囲だけ見る(rhythmHeldScanBounds・2026-11-28 r1126-100)
+      for(let index=heldStart;index<heldEnd;index++){
         const note=source[index];
         if(!note||note.done||note.activePointerId===null)continue;
         if(!(note.type==='HOLD'||rhythmNoteIsSlide(note)||note._rhythmOriginalType==='SLIDE'))continue;
@@ -87539,8 +87569,13 @@ const rhythmCreateGpuPlate=(gl,host)=>{
   // 送った値の覚え(同じ値は送り直さない)。GL2D に戻ったら(end)、次に結び付けるとき行列と画面の大きさを送り直す
   const sent={};
   const u1f=(name,v)=>{if(sent[name]!==v){gl.uniform1f(U[name],v);sent[name]=v;}};
-  const u2f=(name,a,b)=>{const key=a+','+b;if(sent[name]!==key){gl.uniform2f(U[name],a,b);sent[name]=key;}};
-  const u4f=(name,c)=>{const key=c[0]+','+c[1]+','+c[2]+','+c[3];if(sent[name]!==key){gl.uniform4f(U[name],c[0],c[1],c[2],c[3]);sent[name]=key;}};
+  // 2つ・4つの値は、文字列につながずに数のまま比べる(2026-11-28 r1126-100。以前は送るたびに '1,0.5,…' の文字列を作り、
+  // ノーツの多い所ほど毎コマのごみ(GC)が増えていた)。送る値・送る回数は前と同じ(数が同じなら送らない)
+  const sentV={};
+  const u2f=(name,a,b)=>{let v=sentV[name];if(!v)v=sentV[name]=[NaN,NaN];if(v[0]!==a||v[1]!==b||sent[name]!==true){gl.uniform2f(U[name],a,b);v[0]=a;v[1]=b;sent[name]=true;}};
+  // u4n … 4つの数をそのまま渡す形(呼ぶたびに配列を作らない)。u4f は色(rgba が覚えた配列)を渡すとき
+  const u4n=(name,a,b,d,e)=>{let v=sentV[name];if(!v)v=sentV[name]=[NaN,NaN,NaN,NaN];if(v[0]!==a||v[1]!==b||v[2]!==d||v[3]!==e||sent[name]!==true){gl.uniform4f(U[name],a,b,d,e);v[0]=a;v[1]=b;v[2]=d;v[3]=e;sent[name]=true;}};
+  const u4f=(name,c)=>u4n(name,c[0],c[1],c[2],c[3]);
   const NONE=[0,0,0,0];
   let bound=false,blendAdd=false;
   // 重ね方。光の絵は GL2D の 'lighter' と同じ(色だけ足し、透明さはふつうに重ねる)、板はふつうの重ね方
@@ -87551,8 +87586,9 @@ const rhythmCreateGpuPlate=(gl,host)=>{
     gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,2,gl.FLOAT,false,8,0);for(let i=1;i<5;i++)gl.disableVertexAttribArray(i);
     gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);blendAdd=false;gl.stencilFunc(gl.ALWAYS,0,0xff);bound=true;
     // 位置の変換と画面の大きさ(uniform はシェーダーごとに残るので、変わったときだけ送る)
-    const m=host.matrix(),view=host.view(),key=m.join(',')+'|'+view[0]+','+view[1];
-    if(sent.m!==key){gl.uniform3f(U.uM0,m[0],m[2],m[4]);gl.uniform3f(U.uM1,m[1],m[3],m[5]);gl.uniform2f(U.uView,view[0],view[1]);u1f('uSc',Math.hypot(m[0],m[1])||1);sent.m=key;}
+    // 行列と画面の大きさも数のまま比べる(文字列を作らない・2026-11-28 r1126-100)
+    const m=host.matrix(),view=host.view(),mk=sentV.m||(sentV.m=[NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]);
+    if(mk[0]!==m[0]||mk[1]!==m[1]||mk[2]!==m[2]||mk[3]!==m[3]||mk[4]!==m[4]||mk[5]!==m[5]||mk[6]!==view[0]||mk[7]!==view[1]){gl.uniform3f(U.uM0,m[0],m[2],m[4]);gl.uniform3f(U.uM1,m[1],m[3],m[5]);gl.uniform2f(U.uView,view[0],view[1]);u1f('uSc',Math.hypot(m[0],m[1])||1);for(let i=0;i<6;i++)mk[i]=m[i];mk[6]=view[0];mk[7]=view[1];}
     // GL2D の次の描画の前に、GL2D の描き方へ戻してもらう
     host.claim(api.end);
   };
@@ -87573,8 +87609,8 @@ const rhythmCreateGpuPlate=(gl,host)=>{
           const dpr=o.dpr||1,single=g.gx*2<=g.capW*2;
           // 四角は draw3Slice と同じ計算で出す(left=cx-w/2-glow・top=cy-h/2-marginY・下は top+高さ)
           const top=o.cy-g.h/2-g.my;
-          u4f('uRect',[o.cx-g.w/2-g.glow,top,o.cx+g.w/2+g.glow,top+(g.h+g.my*2)]);u2f('uGX',g.gx,g.gy);u1f('uAlpha',Math.max(0,Math.min(1,g.alpha)));
-          u4f('uGS',[g.capW,single?1:0,g.capW*dpr/entry.w,g.mid*dpr/entry.w]);u2f('uGV',g.sw*dpr/entry.w,g.sh*dpr/entry.h);
+          u4n('uRect',o.cx-g.w/2-g.glow,top,o.cx+g.w/2+g.glow,top+(g.h+g.my*2));u2f('uGX',g.gx,g.gy);u1f('uAlpha',Math.max(0,Math.min(1,g.alpha)));
+          u4n('uGS',g.capW,single?1:0,g.capW*dpr/entry.w,g.mid*dpr/entry.w);u2f('uGV',g.sw*dpr/entry.w,g.sh*dpr/entry.h);
           gl.bindTexture(gl.TEXTURE_2D,entry.tex);gl.drawArrays(gl.TRIANGLES,4,6);
         }
         u1f('uGlow',0);u1f('uGlowV',0);setBlend(false);
@@ -87586,7 +87622,7 @@ const rhythmCreateGpuPlate=(gl,host)=>{
       u1f('uOutW',o.outline||0);u4f('uOutC',o.outline?rgba(o.outlineColor):NONE);u4f('uRingC',o.ring?rgba(o.ring):NONE);
       const g=gradOf(o.gradient);if(sent.uGC!==g){gl.uniform4fv(U.uGC,g.colors);gl.uniform4f(U.uGT,g.times[0],g.times[1],g.times[2],g.times[3]);sent.uGC=g;}
       u4f('uBorderC',rgba(o.border));u4f('uInsetC',rgba(o.inset));
-      u4f('uFlags',[o.failed?1:0,o.wide?1:0,o.hold?1:0,o.pressed?1:0]);u1f('uDark',o.dark>0?o.dark:0);
+      u4n('uFlags',o.failed?1:0,o.wide?1:0,o.hold?1:0,o.pressed?1:0);u1f('uDark',o.dark>0?o.dark:0);
       gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
       return true;
     },
@@ -87628,13 +87664,14 @@ const rhythmCreateGpuSky3d=(gl,host)=>{
   const push=(x,y,nx,ny,nz,c)=>{if((n+1)*STRIDE>data.length){const next=new Float32Array(data.length*2);next.set(data);data=next;}
     const o=n*STRIDE;data[o]=x;data[o+1]=y;data[o+2]=nx;data[o+3]=ny;data[o+4]=nz;data[o+5]=c[0];data[o+6]=c[1];data[o+7]=c[2];data[o+8]=c[3];n++;};
   const tri=(a,b,c,nrm,col)=>{push(a[0],a[1],nrm[0],nrm[1],nrm[2],col);push(b[0],b[1],nrm[0],nrm[1],nrm[2],col);push(c[0],c[1],nrm[0],nrm[1],nrm[2],col);};
-  let bound=false,sentKey='';
+  // sentKey … 送った行列と画面の大きさ(数の並び。空の文字列は「まだ送っていない」。end で空へ戻して、次に結び付けるとき送り直す)
+  let bound=false,sentKey='';const sentKeyBuf=[0,0,0,0,0,0,0,0];
   const bind=()=>{
     if(bound)return;host.flush();gl.useProgram(prog);gl.bindBuffer(gl.ARRAY_BUFFER,buf);
     gl.enableVertexAttribArray(0);gl.enableVertexAttribArray(1);gl.enableVertexAttribArray(2);for(let i=3;i<5;i++)gl.disableVertexAttribArray(i);
     gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);gl.stencilFunc(gl.ALWAYS,0,0xff);bound=true;
-    const m=host.matrix(),view=host.view(),key=m.join(',')+'|'+view[0]+','+view[1];
-    if(sentKey!==key){gl.uniform3f(U.uM0,m[0],m[2],m[4]);gl.uniform3f(U.uM1,m[1],m[3],m[5]);gl.uniform2f(U.uView,view[0],view[1]);sentKey=key;}
+    const m=host.matrix(),view=host.view(),mk=sentKey;
+    if(!mk||mk[0]!==m[0]||mk[1]!==m[1]||mk[2]!==m[2]||mk[3]!==m[3]||mk[4]!==m[4]||mk[5]!==m[5]||mk[6]!==view[0]||mk[7]!==view[1]){gl.uniform3f(U.uM0,m[0],m[2],m[4]);gl.uniform3f(U.uM1,m[1],m[3],m[5]);gl.uniform2f(U.uView,view[0],view[1]);const next=sentKeyBuf;for(let i=0;i<6;i++)next[i]=m[i];next[6]=view[0];next[7]=view[1];sentKey=next;}
     host.claim(api.end);
   };
   const flushMesh=alpha=>{
