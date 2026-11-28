@@ -83,9 +83,22 @@ const seed = () => {
     for (let i = 0; i < 6 && await closePopups(); i++) await page.waitForTimeout(300);
     await page.waitForTimeout(1500);
     const name = `${prefix}-${tk}-${sk}`;
+    // 送る札(追記3)は、撮る前に1枚目へ合わせる(点を押すと20秒は自分で送らない)
+    await page.evaluate(() => { const b = document.querySelector('[data-home-band-dots] button'); if (b) b.click(); });
+    await page.waitForTimeout(700);
     await page.screenshot({ path: path.join(SHOT_DIR, `${name}.jpg`), type: 'jpeg', quality: 84 });
+    // FLICK=1 … 札を指で左へ払った後も撮る(<名前>-flick.jpg)
+    if (process.env.FLICK && await page.locator('[data-home-band-dots]').count()) {
+      const v = await page.locator('.mh-home-band-view').boundingBox();
+      const y = v.y + v.height / 2;
+      await page.evaluate(({ x0, x1, y }) => { const el = document.querySelector('.mh-home-band-view');
+        const ev = (t, x) => el.dispatchEvent(new PointerEvent(t, { bubbles: true, clientX: x, clientY: y, pointerId: 1, pointerType: 'touch', isPrimary: true }));
+        ev('pointerdown', x0); ev('pointerup', x1); }, { x0: v.x + v.width * 0.8, x1: v.x + v.width * 0.2, y });
+      await page.waitForTimeout(900);
+      await page.screenshot({ path: path.join(SHOT_DIR, `${name}-flick.jpg`), type: 'jpeg', quality: 84 });
+    }
     boxes[name] = await page.evaluate(() => {
-      const pick = { xmas: '[data-home-xmas-entry-strip]', event: '[data-home-event-strip]', band: '.mh-home-band', boss: '[data-home-raid-jack]', bossImg: '[data-home-raid-boss]', quick: '[data-quick-anywhere]', dock: '.mh-home-dock', face: '.mh-home-assistant', top: '.mh-home-top, .mh-home-status', scene: '.mh-home-scene', bg: '.mh-home-background' };
+      const pick = { xmas: '[data-home-xmas-entry-strip]', event: '[data-home-event-strip]', band: '.mh-home-band', view: '.mh-home-band-view', shown: '.mh-home-band-slide[aria-hidden="false"]', boss: '[data-home-raid-jack]', bossImg: '[data-home-raid-boss]', quick: '[data-quick-anywhere]', dock: '.mh-home-dock', face: '.mh-home-assistant', top: '.mh-home-top, .mh-home-status', scene: '.mh-home-scene', bg: '.mh-home-background' };
       const out = {};
       for (const [k, q] of Object.entries(pick)) out[k] = [...document.querySelectorAll(q)].filter((e) => e.getClientRects().length).map((e) => { const r = e.getBoundingClientRect(); return [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)]; });
       out.masu = [...document.querySelectorAll('.mh-home-masumon-layer > *')].map((e) => { const r = e.getBoundingClientRect(); return [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)]; });

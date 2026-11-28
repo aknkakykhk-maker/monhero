@@ -52,3 +52,6 @@ const PUMPKIN_ICON_IMG = "images/raid/pumpkin-icon.png?v=f836641ae5ca";
 const RAID_XMAS_BOSS_IMG = "images/enemies/santa-black.png?v=79767188ad99";
 // クリスマスのレイドで最後の段階を倒したあとに出る、正気に戻った普通の「サンタ」(赤・うさぎ耳。社長決定 r1126-024)。元の絵は tools/art-sources/raid-xmas-2026/received/santa_red.png(透明な余白を落としただけ)
 const RAID_XMAS_SANTA_IMG = "images/enemies/santa-red.png?v=4e7a8ced1a5e";
+// レイドのお話の話し手(xmas_santa・xmas_kurosanta)の顔アイコン。上の2枚の全身の絵から顔を切り出しただけ(r1126-090 追記2・tools/battle/raid-xmas-santa-face-icons.py)
+const RAID_XMAS_SANTA_FACE_ICON = "images/monster-icons/face/santa-red.png?v=53584cd9af4b";
+const RAID_XMAS_BOSS_FACE_ICON = "images/monster-icons/face/santa-black.png?v=3ad422e65fff";

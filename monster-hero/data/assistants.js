@@ -11351,14 +11351,14 @@ const STORY_GUEST_SPEAKERS = [
   { id: 'kuroba', name: '黒羽', role: 'ゲスト', speakBottom: true, emoji: '🕰️', accent: '#94a3b8', image: 'images/story-guests/kuroba_face.png', expressions: [], defaultExpression: 'normal' },
   { id: 'shirase', name: '白瀬', role: 'ゲスト', speakBottom: true, emoji: '🧤', accent: '#f87171', image: 'images/story-guests/shirase_face.png', expressions: [], defaultExpression: 'normal' },
   // 赤いサンタはレイドの絵(正気に戻ったサンタ・santa-red.png)。黒いサンタはレイドのボスの絵(行の name で段階の名前に上書きする)。
-  //   どちらも全身の絵なので imageFit: 'contain'。絵が読めないときだけ絵文字(r1126-083 の点検 1番)
-  //   storyFigure: 顔の枠ではなく、画面のまん中に全身の絵で出す(下の窓には名前の札と台詞だけ。60-app.jsx の storyFigures・r1126-090 追記1)。
+  //   顔の枠には全身の絵から切り出した顔アイコン(santa-red.png・santa-black.png・r1126-090 追記2)。全身の絵は storyFigure でまん中に出す。絵が読めないときだけ絵文字(r1126-083 の点検 1番)
+  //   storyFigure: 画面のまん中に全身の絵でも出す(60-app.jsx の storyFigures・r1126-090 追記1)。下の窓には助手と同じく顔アイコン(追記2)。
   //   storyFigureSlot が同じ話し手(赤と黒のサンタ)は同じ人なので、まん中には1人ぶんだけ出す
-  { id: 'xmas_santa', name: 'サンタ', role: 'ゲスト', speakBottom: true, emoji: '🎅', accent: '#ef4444', image: (typeof RAID_XMAS_SANTA_IMG !== 'undefined' ? RAID_XMAS_SANTA_IMG : null), imageFit: 'contain', storyFigure: (typeof RAID_XMAS_SANTA_IMG !== 'undefined' ? RAID_XMAS_SANTA_IMG : null), storyFigureSlot: 'santa', expressions: [], defaultExpression: 'normal' },
+  { id: 'xmas_santa', name: 'サンタ', role: 'ゲスト', speakBottom: true, emoji: '🎅', accent: '#ef4444', image: (typeof RAID_XMAS_SANTA_FACE_ICON !== 'undefined' ? RAID_XMAS_SANTA_FACE_ICON : (typeof RAID_XMAS_SANTA_IMG !== 'undefined' ? RAID_XMAS_SANTA_IMG : null)), storyFigure: (typeof RAID_XMAS_SANTA_IMG !== 'undefined' ? RAID_XMAS_SANTA_IMG : null), storyFigureSlot: 'santa', expressions: [], defaultExpression: 'normal' },
   // ペンションの雪かき係のハム(r1126-055)。サンタに憧れて手作りのサンタ帽をかぶっている。一人称「オイラ」
   //   ハム・黒いサンタも下の欄で話す(上の段に別の枠で出て、後ろの画面と重なっていた・r1126-090 追記1)
   { id: 'ham', name: 'ハム', role: 'ゲスト', speakBottom: true, emoji: '🐰', accent: '#d6a36b', image: (typeof HAM_FACE_ICON !== 'undefined' ? HAM_FACE_ICON : (typeof HAM_IMG !== 'undefined' ? HAM_IMG : null)), storyFigure: (typeof HAM_IMG !== 'undefined' ? HAM_IMG : null), storyFigureSlot: 'ham', expressions: [], defaultExpression: 'normal' },
-  { id: 'xmas_kurosanta', name: '黒いサンタ', role: 'ゲスト', speakBottom: true, emoji: '🎅', accent: '#7f1d1d', image: (typeof RAID_XMAS_BOSS_IMG !== 'undefined' ? RAID_XMAS_BOSS_IMG : null), imageFit: 'contain', storyFigure: (typeof RAID_XMAS_BOSS_IMG !== 'undefined' ? RAID_XMAS_BOSS_IMG : null), storyFigureSlot: 'santa', expressions: [], defaultExpression: 'normal' },
+  { id: 'xmas_kurosanta', name: '黒いサンタ', role: 'ゲスト', speakBottom: true, emoji: '🎅', accent: '#7f1d1d', image: (typeof RAID_XMAS_BOSS_FACE_ICON !== 'undefined' ? RAID_XMAS_BOSS_FACE_ICON : (typeof RAID_XMAS_BOSS_IMG !== 'undefined' ? RAID_XMAS_BOSS_IMG : null)), storyFigure: (typeof RAID_XMAS_BOSS_IMG !== 'undefined' ? RAID_XMAS_BOSS_IMG : null), storyFigureSlot: 'santa', expressions: [], defaultExpression: 'normal' },
 ];
 
 // ===== ぱんぷきん×ジャックのストーリー(第1.5部〜終章) =====

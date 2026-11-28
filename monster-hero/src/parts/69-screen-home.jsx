@@ -121,21 +121,32 @@ const HOME_V2_CSS = `
 .mh-home-v2 .mh-home-menu .mh-home-side-btn em.mh-unread-badge{width:auto!important;height:20px!important;min-width:20px;padding:0 6px!important;border-radius:999px!important;font-size:11px!important;line-height:1!important;white-space:nowrap}
 .mh-home-v2 .mh-home-settings .mh-home-side-ic{border-color:#cbd5e1aa;background:#1e293be8;color:#e2e8f0}
 .mh-home-v2 .mh-home-band{position:relative;z-index:6;margin:6px 8px 0}
-/* イベントの表示(r1126-088 で前の形に戻した): クリスマスの絵の札 → その下に細い帯(前の HOME と同じ作り)。
-   追記1(社長「イベントバナーをもう少し横幅小さくして」): 札は前(312×80)より少し小さく 278×74(縦横の比をほぼ同じにして、絵の切り方を前と同じに)。
-   細い帯も札と同じ幅まで。札の右の空きは裏クイックの札の置き場 */
-.mh-home-v2 .mh-home-band-xmas{width:calc(100% - 96px)}
-.mh-home-v2 .mh-home-band-xmas>button[data-home-xmas-entry]{height:74px!important}
+/* イベントの札(r1126-088)。追記1(社長「横幅もう少し小さく」): 前(312×80)より少し小さく 278×74。札の右の空きは裏クイックの札の置き場。
+   追記3(社長「フリックとかで動かせるように」): 札1枚分の場所を左右に送る。何枚目かの点は札の右下の中に小さく(札の外に段を足さない) */
+.mh-home-v2 .mh-home-band-view{position:relative;width:calc(100% - 96px);height:74px;overflow:hidden;border-radius:12px;touch-action:pan-y}
+.mh-home-v2 .mh-home-band-track{display:flex;height:100%;transition:transform .35s ease}
+@media(prefers-reduced-motion:reduce){.mh-home-v2 .mh-home-band-track{transition:none}}
+.mh-home-v2 .mh-home-band-slide{flex:0 0 100%;min-width:0;height:100%}
+.mh-home-v2 .mh-home-band-slide>button{width:100%;max-width:none;height:100%!important}
+.mh-home-v2 .mh-home-band-slide>.mh-home-event-banner{justify-content:center;border-radius:12px}
+.mh-home-v2 .mh-home-band-slide>.mh-home-tour-banner{border-radius:12px}
+.mh-home-v2 .mh-home-band-dots{position:absolute;right:5px;bottom:4px;z-index:3;display:flex;gap:1px;padding:0 3px;border-radius:999px;background:#0009}
+.mh-home-v2 .mh-home-band-dots button{display:flex;align-items:center;justify-content:center;width:16px;height:16px;padding:0;border:0;background:transparent}
+.mh-home-v2 .mh-home-band-dots i{display:block;width:6px;height:6px;border-radius:50%;background:#ffffff80}
+.mh-home-v2 .mh-home-band-dots button.on i{width:12px;border-radius:3px;background:#fde68a}
 .mh-home-v2 .mh-home-band-quick-slot{position:absolute;top:0;right:-6px;width:96px;height:74px;pointer-events:none}
-.mh-home-v2 .mh-home-band-strip{display:flex;align-items:center;gap:6px;width:fit-content;max-width:100%;margin-top:3px}
-.mh-home-v2 .mh-home-band-strip .mh-home-event-banner{max-width:calc(100cqw - 112px)}
-.mh-home-v2 .mh-home-band-strip .mh-home-tour-banner{max-width:min(72vw,300px)}
-/* ほかのイベントの絵の札(追記2)。クリスマスの札と同じ幅・少し低く(マップを狭くしない) */
-.mh-home-v2 .mh-home-band-strip:has(.mh-home-event-art){width:calc(100% - 96px)}
-.mh-home-v2 .mh-home-event-art{position:relative;display:block;flex:1 1 auto;width:100%;height:62px;overflow:hidden;padding:0;border:2px solid #f9a8d4;border-radius:12px;background:#3b0a2e;box-shadow:0 4px 12px #0009}
-.mh-home-v2 .mh-home-event-art:active{transform:scale(.97);filter:brightness(1.15)}
+/* ほかのイベントの絵の札(追記2) */
+.mh-home-v2 .mh-home-event-art{position:relative;display:block;overflow:hidden;padding:0;border:2px solid #f9a8d4;border-radius:12px;background:#3b0a2e}
+.mh-home-v2 .mh-home-event-art:active{filter:brightness(1.15)}
 .mh-home-v2 .mh-home-event-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 12%;pointer-events:none}
 .mh-home-v2 .mh-home-event-art-sub{position:absolute;left:6px;bottom:4px;padding:1px 7px;border:1px solid #fbcfe8;border-radius:999px;background:#9d174de6;color:#fff;font-size:10px;font-weight:900;line-height:1.3;white-space:nowrap}
+/* クリスマスの札(追記3・社長「聖夜のバナーの文字で絵が半分隠れてる」): 部品(79-screen-xmas-event.jsx)の中身は変えず、HOME の側で見え方だけ変える。
+   絵は人物と館が見える所で切り、左半分を覆っていた濃い地は下の端の細い影だけに。字は「聖夜の名探偵」(13px)と期間の札だけを左下へ小さく寄せる */
+.mh-home-v2 .mh-home-band .mh-xmas-entry img.mh-xmas-entry-art{object-position:50% 52%!important}
+.mh-home-v2 .mh-home-band .mh-xmas-entry>span[style*="linear-gradient"]{background:linear-gradient(0deg,#0b1733e0 0,#0b1733a0 20px,transparent 40px)!important}
+.mh-home-v2 .mh-home-band .mh-xmas-entry [data-xmas-entry-kicker]{display:none}
+.mh-home-v2 .mh-home-band .mh-xmas-entry>span[style*="flex-direction"]{top:auto!important;bottom:4px;left:6px!important;right:auto!important;flex-direction:row!important;align-items:center!important;gap:5px!important}
+.mh-home-v2 .mh-home-band .mh-xmas-entry-title{font-size:13px!important;filter:drop-shadow(0 1px 2px #000)}
 .mh-home-v2 .mh-home-assistant{width:70%;max-width:360px;margin:6px 0 0 8px}
 .mh-home-v2 .mh-home-assistant-fold{margin:6px 0 0 8px}
 .mh-home-v2 .mh-home-assistant-show-mark{right:-8px;bottom:-6px;width:24px;height:24px;font-size:14px;background:#fff!important;box-shadow:0 0 0 2px #e11d48,0 2px 6px #0009;animation:mhHomePeerMark 1.4s ease-in-out infinite}
@@ -163,9 +174,8 @@ body:has(.mh-home-v2){background:linear-gradient(to top,#0b1f1a calc(env(safe-ar
 @media(max-width:350px){.mh-home-v2 .mh-home-dock-top .mh-home-dock-name,.mh-home-v2 .mh-home-dock-top .mh-home-success .nm{font-size:10.5px;letter-spacing:-.06em}}
 @media(orientation:landscape) and (max-height:600px){
   .mh-home-v2 .mh-home-band{position:absolute;left:8px;top:58px;width:min(37%,330px);margin:0}
-  .mh-home-v2 .mh-home-band-xmas{width:100%}
-  .mh-home-v2 .mh-home-band-strip .mh-home-event-banner,.mh-home-v2 .mh-home-band-strip .mh-home-tour-banner{max-width:100%}
-  .mh-home-v2 .mh-home-assistant,.mh-home-v2 .mh-home-assistant-fold{position:absolute;left:8px;top:172px;margin:0}
+  .mh-home-v2 .mh-home-band-view{width:100%;height:56px}
+  .mh-home-v2 .mh-home-assistant,.mh-home-v2 .mh-home-assistant-fold{position:absolute;left:8px;top:128px;margin:0}
   .mh-home-v2 .mh-home-assistant{width:min(37%,330px)}
   .mh-home-v2 .mh-home-dock{flex-direction:row;align-items:flex-end;gap:8px;padding:5px 8px 6px}
   .mh-home-v2 .mh-home-dock-top{flex:1.9 1 0}
@@ -175,8 +185,7 @@ body:has(.mh-home-v2){background:linear-gradient(to top,#0b1f1a calc(env(safe-ar
 }
 @container (min-width:700px) and (min-height:560px){
   .mh-home-v2 .mh-home-band{width:min(600px,calc(100% - 16px));margin:8px auto 0}
-  .mh-home-v2 .mh-home-band-xmas{width:100%}
-  .mh-home-v2 .mh-home-band-xmas>button[data-home-xmas-entry]{height:92px!important}
+  .mh-home-v2 .mh-home-band-view{width:100%;height:92px}
   .mh-home-v2 .mh-home-assistant{width:360px}
   .mh-home-v2 .mh-home-dock{flex-direction:row;align-items:flex-end;gap:14px;padding:10px 14px 12px}
   .mh-home-v2 .mh-home-dock-top{flex:2 1 0;justify-content:center}
@@ -190,10 +199,9 @@ body:has(.mh-home-v2){background:linear-gradient(to top,#0b1f1a calc(env(safe-ar
 /* クリスマスの入口(79-screen-xmas-event.jsx)は、横向きで帯を右の列の横へ動かす決まりを持っている(前の HOME の右の列のため)。
    新しい HOME には右の列が無いので、帯の置き場(.mh-home-band)の中に置いたままにする(部品の中身は変えない。HOME の側で上書きするだけ)。
    背の低い横向きの高さ 54px と字の大きさは、部品の決まり(前の HOME と同じ)のまま */
-.mh-home-v2 .mh-home-band [data-home-xmas-entry-strip]{position:relative!important;left:auto!important;right:auto!important;top:auto!important;margin:0!important}
-.mh-home-v2 .mh-home-band .mh-home-band-xmas{width:calc(100% - 96px)!important}
-@media(orientation:landscape) and (max-height:600px){.mh-home-v2 .mh-home-band-strip:has(.mh-home-event-art){width:100%}.mh-home-v2 .mh-home-event-art{height:50px}.mh-home-v2 .mh-home-event-art img{object-position:50% 3%}.mh-home-v2 .mh-home-band .mh-home-band-xmas{width:100%!important}.mh-home-v2 .mh-home-band-xmas>button[data-home-xmas-entry]{height:54px!important}.mh-home-v2 .mh-home-band-quick-slot{display:none}}
-@container (min-width:700px) and (min-height:560px){.mh-home-v2 .mh-home-band-strip:has(.mh-home-event-art){width:100%}.mh-home-v2 .mh-home-event-art{height:84px}.mh-home-v2 .mh-home-band .mh-home-band-xmas{width:100%!important}.mh-home-v2 .mh-home-band-quick-slot{display:none}}
+.mh-home-v2 .mh-home-band [data-home-xmas-entry-strip]{position:relative!important;left:auto!important;right:auto!important;top:auto!important;width:auto!important;margin:0!important}
+@media(orientation:landscape) and (max-height:600px){.mh-home-v2 .mh-home-event-art img{object-position:50% 4%}.mh-home-v2 .mh-home-band-quick-slot{display:none}}
+@container (min-width:700px) and (min-height:560px){.mh-home-v2 .mh-home-band-quick-slot{display:none}}
 @media (orientation:landscape) and (max-height:520px){.mh-home-v2 .mh-home-band .mh-xmas-entry[data-home-xmas-entry="banner"] .mh-xmas-entry-sub{font-size:11px}}
 /* 横持ちの iPhone の切り欠き(カメラの欠け)に、押す物を入れない。左右の余白に端末の安全な余白(safe-area)を足す */
 .mh-home-v2 .mh-home-top{padding-left:calc(8px + env(safe-area-inset-left));padding-right:calc(8px + env(safe-area-inset-right))}
@@ -850,15 +858,24 @@ function HomeScreenV2({
     if(!homeBandEvent||typeof rhythmLimitedEventAt!=='function')return '';
     try{const ev=rhythmLimitedEventAt(Date.now());return ev&&typeof ev.banner==='string'&&typeof ev.name==='string'&&ev.name.startsWith(homeBandEvent.banner.title)?ev.banner:'';}catch(_){return '';}
   })();
-  const homeBandStripCount=(homeBandEvent?1:0)+(homeBandTour?1:0);
+  // 追記3(社長「別のイベントの表示を同じバナー位置でフリックとかで動かせるようにして」): 縦に2枚並べる形はやめ、札1枚分の場所を左右に送る。
+  //   指で左右に払う(40px 以上)・札の右下の小さな点を押すと替わる。触らなければ7秒ごとに次へ、触ったら20秒は止める。押すとそのイベントのページ(今までどおり)。
+  //   並び: クリスマス → ほかの開催中のイベント → 公式杯。クリスマスがまだ予告のあいだは、開催中のイベントを先にする(API の点検 7)
+  const homeBandSlides=[];
+  if(homeBandEvent&&homeBandXmas&&xmasEntry.preOpen)homeBandSlides.push('event');
+  if(homeBandXmas)homeBandSlides.push('xmas');
+  if(homeBandEvent&&!homeBandSlides.includes('event'))homeBandSlides.push('event');
+  if(homeBandTour)homeBandSlides.push('tour');
+  const homeBandCount=homeBandSlides.length;
   const [homeBandIdx,setHomeBandIdx]=React.useState(0);
+  const homeBandTouchRef=React.useRef({x:null,at:0,swiped:false});
   React.useEffect(()=>{
-    if(homeBandStripCount<2)return undefined;
-    const id=setInterval(()=>setHomeBandIdx(i=>i+1),5000);
+    if(homeBandCount<2)return undefined;
+    const id=setInterval(()=>{if(Date.now()-homeBandTouchRef.current.at>=20000)setHomeBandIdx(i=>i+1);},7000);
     return ()=>clearInterval(id);
-  },[homeBandStripCount]);
-  const homeBandStripShow=homeBandStripCount?homeBandIdx%homeBandStripCount:0;
-  const homeBandCount=(homeBandXmas?1:0)+homeBandStripCount;
+  },[homeBandCount]);
+  const homeBandShow=homeBandCount?((homeBandIdx%homeBandCount)+homeBandCount)%homeBandCount:0;
+  const homeBandGo=(step)=>{homeBandTouchRef.current.at=Date.now();setHomeBandIdx(i=>i+step);};
   // メニュー☰(案A)。右の列(時計・更新履歴・ミッション・ギフト)と設定・ブリーダーP をここへまとめる。赤い数字は合計
   //   ボタンはいつも描いておき(閉じているときは見えないだけ)、案内(チュートリアル)がミッション・ギフト・設定を指すときは開いておく
   const [homeMenuOpen,setHomeMenuOpen]=React.useState(false);
@@ -917,29 +934,35 @@ function HomeScreenV2({
             :<em className="mh-unread-badge" aria-label="未読あり">!</em>)}</button>
           <button onClick={homeMenuGo(onOpenSettings)} className={`mh-home-side-btn mh-home-settings${spotClass('settings')}`} aria-label="設定"><span className="mh-home-side-ic"><Settings size={18}/></span><span className="mh-home-side-lb">設定</span></button>
         </div>
-        {/* イベントの表示(r1126-088 で前の形に戻した): クリスマスの絵の札 → その下に細い帯。並びと切り替えは上の homeBandXmas/homeBandStripShow */}
-        {homeBandCount>0&&<div className="mh-home-band" data-home-band={homeBandXmas?'xmas':'strip'}>
-          {homeBandXmas&&<div className="mh-home-band-xmas" data-home-xmas-entry-strip>
-            <HomeXmasEventEntry onOpen={xmasEntry.onOpen} preOpen={!!xmasEntry.preOpen}/>
-          </div>}
-          {/* クリスマスの札の右の空き(前の HOME の時計の列の所)。裏クイックの札(45-quick-anywhere-float.jsx)はここに置く(r1126-088 ⑤)。押せない・何も描かない枠 */}
-          {homeBandXmas&&<span className="mh-home-band-quick-slot" data-quick-anywhere-slot aria-hidden="true"/>}
-          {homeBandStripCount>0&&<div className="mh-home-band-strip" data-home-event-strip>
-            {/* 押すとモンヒロビートへ直に入る(2026-11-27 台帳 r1126-073 追記2・入口の整理①。前は更新履歴が開いた) */}
-            {homeBandEvent&&homeBandStripShow===0&&homeBandEventArt&&<button type="button" data-home-event-banner="art" className="mh-home-event-art" onClick={homeBandEvent.id==='xmas_2026'&&typeof onOpenXmasEvent==='function'?onOpenXmasEvent:onOpenRhythm} aria-label={`${homeBandEvent.banner.title}${homeBandEvent.banner.title2||''} ${homeBandEvent.banner.sub}`}>
-              {/* 絵の題字(上のまん中)が見えるよう上寄りに切る(更新履歴の告知と同じ 50% 12%)。期間は字で左下に重ねる */}
-              <img src={homeBandEventArt} alt="" draggable={false}/>
-              <span className="mh-home-event-art-sub">{homeBandEvent.banner.sub}</span>
-            </button>}
-            {homeBandEvent&&homeBandStripShow===0&&!homeBandEventArt&&<button type="button" data-home-event-banner className="mh-home-event-banner" onClick={homeBandEvent.id==='xmas_2026'&&typeof onOpenXmasEvent==='function'?onOpenXmasEvent:onOpenRhythm} aria-label={`${homeBandEvent.banner.title}${homeBandEvent.banner.title2||''} ${homeBandEvent.banner.sub}`}>
-              {/* 1行目に題と期間(sub)、2行目に副題(title2)(r1119-131) */}
-              <b className="r1"><span>{homeBandEvent.banner.emoji} {homeBandEvent.banner.title}</span><small>{homeBandEvent.banner.sub}</small></b>{homeBandEvent.banner.title2?<span className="t2">{homeBandEvent.banner.title2}</span>:null}
-            </button>}
-            {homeBandTour&&homeBandStripShow===(homeBandEvent?1:0)&&<button type="button" data-home-card-tour={homeBandTour.id} className="mh-home-tour-banner" onClick={()=>onOpenCardTour(homeBandTour.id)} aria-label={`${homeBandTour.name} ${homeBandTour.sub}`}>
-              <span aria-hidden="true">🏆</span><span><b>{homeBandTour.name}</b><small>{homeBandTour.sub}{homeBandTour.prize&&<em>{homeBandTour.prize}</em>}</small></span>
-            </button>}
-            {homeBandStripCount>1&&<span className="mh-home-event-strip-dots" aria-hidden="true">{Array.from({length:homeBandStripCount},(_,i)=><i key={i} className={i===homeBandStripShow?'on':''}/>)}</span>}
-          </div>}
+        {/* イベントの札(r1126-088・追記3): 札1枚分の場所を左右に送る。並びと送り方は上の homeBandSlides */}
+        {homeBandCount>0&&<div className="mh-home-band" data-home-band={homeBandSlides[homeBandShow]}>
+          <div className="mh-home-band-view"
+            onPointerDown={e=>{homeBandTouchRef.current={...homeBandTouchRef.current,x:e.clientX,swiped:false};}}
+            onPointerUp={e=>{const t=homeBandTouchRef.current;if(t.x===null||homeBandCount<2)return;const dx=e.clientX-t.x;t.x=null;if(Math.abs(dx)>=40){t.swiped=true;homeBandGo(dx<0?1:-1);}}}
+            onPointerCancel={()=>{homeBandTouchRef.current.x=null;}}
+            onClickCapture={e=>{if(homeBandTouchRef.current.swiped){homeBandTouchRef.current.swiped=false;e.stopPropagation();e.preventDefault();}}}>
+            <div className="mh-home-band-track" style={{transform:`translateX(${-homeBandShow*100}%)`}}>
+              {homeBandSlides.map((k,i)=>(
+                <div key={k} className="mh-home-band-slide" aria-hidden={i!==homeBandShow} {...(k==='xmas'?{'data-home-xmas-entry-strip':''}:{'data-home-event-strip':''})}>
+                  {k==='xmas'&&<HomeXmasEventEntry onOpen={xmasEntry.onOpen} preOpen={!!xmasEntry.preOpen}/>}
+                  {/* 絵のあるイベントは絵の札(追記2)。押すとモンヒロビートへ直に入る(r1126-073 追記2) */}
+                  {k==='event'&&homeBandEventArt&&<button type="button" data-home-event-banner="art" className="mh-home-event-art" tabIndex={i===homeBandShow?0:-1} onClick={homeBandEvent.id==='xmas_2026'&&typeof onOpenXmasEvent==='function'?onOpenXmasEvent:onOpenRhythm} aria-label={`${homeBandEvent.banner.title}${homeBandEvent.banner.title2||''} ${homeBandEvent.banner.sub}`}>
+                    <img src={homeBandEventArt} alt="" draggable={false}/>
+                    <span className="mh-home-event-art-sub">{homeBandEvent.banner.sub}</span>
+                  </button>}
+                  {k==='event'&&!homeBandEventArt&&<button type="button" data-home-event-banner className="mh-home-event-banner" tabIndex={i===homeBandShow?0:-1} onClick={homeBandEvent.id==='xmas_2026'&&typeof onOpenXmasEvent==='function'?onOpenXmasEvent:onOpenRhythm} aria-label={`${homeBandEvent.banner.title}${homeBandEvent.banner.title2||''} ${homeBandEvent.banner.sub}`}>
+                    <b className="r1"><span>{homeBandEvent.banner.emoji} {homeBandEvent.banner.title}</span><small>{homeBandEvent.banner.sub}</small></b>{homeBandEvent.banner.title2?<span className="t2">{homeBandEvent.banner.title2}</span>:null}
+                  </button>}
+                  {k==='tour'&&<button type="button" data-home-card-tour={homeBandTour.id} className="mh-home-tour-banner" tabIndex={i===homeBandShow?0:-1} onClick={()=>onOpenCardTour(homeBandTour.id)} aria-label={`${homeBandTour.name} ${homeBandTour.sub}`}>
+                    <span aria-hidden="true">🏆</span><span><b>{homeBandTour.name}</b><small>{homeBandTour.sub}{homeBandTour.prize&&<em>{homeBandTour.prize}</em>}</small></span>
+                  </button>}
+                </div>))}
+            </div>
+            {/* 何枚目か(札の右下の中に小さく。札の外に段を足さない=マップを狭くしない)。押すとその札へ */}
+            {homeBandCount>1&&<span className="mh-home-band-dots" data-home-band-dots>{homeBandSlides.map((k,i)=><button key={k} type="button" className={i===homeBandShow?'on':''} aria-label={`${i+1}枚目を見る`} onClick={e=>{e.stopPropagation();homeBandGo(i-homeBandShow);}}><i/></button>)}</span>}
+          </div>
+          {/* 札の右の空き(前の HOME の時計の列の所)。裏クイックの札(45-quick-anywhere-float.jsx)はここに置く(r1126-088 ⑤)。押せない・何も描かない枠 */}
+          <span className="mh-home-band-quick-slot" data-quick-anywhere-slot aria-hidden="true"/>
         </div>}
         {/* 下部の統一ドック(2026-11-17 ホーム一新): 上から「次にやること」→施設カード×8(ふつうは4列×2段、広い場面と横画面では8枚1列。70-bootstrap.jsx)。
             施設ごとに担当の助手が分かれているので、8つとも同じ大きさ・同じ形の正方形カードにそろえた(2026-11-17 あっくん追加指示)。
