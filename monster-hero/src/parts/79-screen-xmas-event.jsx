@@ -337,26 +337,27 @@ const XmasEventScreen = ({ tab = 'story', onTab, onBack, forced = false, preOpen
     </div>
   ) : null;
   const head = (
-    <div data-xmas-event-head className={`mx-auto w-full shrink-0 ${raidShown ? '' : 'max-w-2xl'}`}>
+    // 看板・期間の帯・タブの段は、どのタブでも同じ大きさ・同じ位置(台帳 r1126-097 追記1・社長「タブごとに位置が変わるのやだ」)。
+    //  高さは前のレイドのタブくらいにそろえ、ボスの一覧を広く見せる(r1126-097)。背の低い横画面では、どのタブでも看板を出さない
+    <div data-xmas-event-head className="mx-auto w-full shrink-0">
       <ScreenHead title={<span className="flex items-center gap-1"><XmasHolly size={24} /><span className="mh-xmas-title whitespace-nowrap">聖夜の名探偵</span></span>}
         onBack={onBack} compact note={forced ? '(デバッグ表示・開始前でも見えます)' : ''} />
-      {/* レイドの中身を出すときは小さく。背の低い横画面では、レイドの一覧が見えるように出さない(題と期間とタブだけ) */}
-      <div data-xmas-event-poster className={`mh-xmas-frame mx-auto mb-2 w-fit max-w-full overflow-hidden rounded-xl bg-slate-950 ${raidShown ? '[@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`}>
+      <div data-xmas-event-poster className="mh-xmas-frame mx-auto mb-1.5 w-fit max-w-full overflow-hidden rounded-xl bg-slate-950 [@media(orientation:landscape)_and_(max-height:520px)]:hidden">
         {posterOpen ? (
           // 開催中: 「開催予告」の文字とボスの影が入った予告の絵は出さず、ペンションの雪景色に題字を重ねた帯にする(本番用の絵が届いたら XMAS_EVENT_POSTER_OPEN_IMG に差し替える)
-          <div data-xmas-event-title-band className="relative overflow-hidden" style={{ width: raidShown ? 'min(100vw - 32px, 26vh)' : 'min(100vw - 32px, 48vh)', aspectRatio: '2 / 1' }}>
+          <div data-xmas-event-title-band className="relative overflow-hidden" style={{ width: 'min(100vw - 32px, 26vh)', aspectRatio: '2 / 1' }}>
             <img src={XMAS_EVENT_POSTER_OPEN_IMG || XMAS_EVENT_TITLE_BAND_BG} alt="" className="absolute inset-0 h-full w-full object-cover" style={{ objectPosition: '50% 40%' }} />
             {!XMAS_EVENT_POSTER_OPEN_IMG && (
               <span className="absolute inset-0 flex flex-col items-center justify-center text-center" style={{ background: 'radial-gradient(80% 70% at 50% 55%, #0b1733cc 0%, #0b173388 55%, transparent 100%)' }}>
-                <span className={`font-black text-amber-100 ${raidShown ? 'text-[8px]' : 'text-[11px]'}`} style={{ letterSpacing: '.2em', textShadow: '0 1px 3px #000' }}>クリスマスイベント</span>
-                <b className={`mh-xmas-title whitespace-nowrap leading-tight ${raidShown ? 'text-[20px]' : 'text-[38px]'}`} style={{ fontFamily: "'Hiragino Mincho ProN', 'Yu Mincho', serif", filter: 'drop-shadow(0 2px 2px #000) drop-shadow(0 0 6px #000a)' }}>聖夜の名探偵</b>
-                <span className={`font-bold text-amber-50 ${raidShown ? 'text-[7px]' : 'text-[11px]'}`} style={{ textShadow: '0 1px 3px #000' }}>～十三番目の鐘が鳴る夜～</span>
+                <span className="text-[8px] font-black text-amber-100" style={{ letterSpacing: '.2em', textShadow: '0 1px 3px #000' }}>クリスマスイベント</span>
+                <b className="mh-xmas-title whitespace-nowrap text-[20px] leading-tight" style={{ fontFamily: "'Hiragino Mincho ProN', 'Yu Mincho', serif", filter: 'drop-shadow(0 2px 2px #000) drop-shadow(0 0 6px #000a)' }}>聖夜の名探偵</b>
+                <span className="text-[7px] font-bold text-amber-50" style={{ textShadow: '0 1px 3px #000' }}>～十三番目の鐘が鳴る夜～</span>
               </span>
             )}
           </div>
-        ) : <img src={XMAS_EVENT_POSTER_IMG} alt="クリスマスイベント 聖夜の名探偵" className={`block h-auto w-auto max-w-full ${raidShown ? 'max-h-[13vh]' : 'max-h-[24vh]'}`} />}
+        ) : <img src={XMAS_EVENT_POSTER_IMG} alt="クリスマスイベント 聖夜の名探偵" className="block h-auto w-auto max-w-full max-h-[13vh]" />}
       </div>
-      <div data-xmas-event-period className="mh-xmas-ribbon mx-auto mb-2 max-w-md px-5 py-1 text-center text-[11px] font-black text-amber-50">
+      <div data-xmas-event-period className="mh-xmas-ribbon mx-auto mb-1.5 max-w-md px-5 py-0.5 text-center text-[10px] font-black text-amber-50">
         開催期間 {xmasEventPeriodText()}
       </div>
       <ScreenTabs items={XMAS_EVENT_TABS} value={tab} onChange={(id) => onTab && onTab(id)} />
