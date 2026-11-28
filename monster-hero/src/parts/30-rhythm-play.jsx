@@ -1435,7 +1435,7 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   const monsterFaceHidden=rhythmMonsterEffectAtMost(monsterNoteEffect,'NONE');
   /* アシストモード・ミラー譜面(バンドリ！アワーノーツから取り入れた遊び方。2026-09-24)。
      練習・タイミング合わせでは使わない(アシストはデバッグから始めたプレイでも使わない)。
-     譜面は演奏の前に一度だけ作り変える。元の譜面(song.difficulties)は書き換えない */
+     譜面は演奏の前に1度だけ作り変える。元の譜面(song.difficulties)は書き換えない */
   const assistOn=!!settings.assistMode&&!tutorial&&!calibrating&&!debugPlay&&!multi,mirrorOn=!!settings.mirrorChart&&!tutorial&&!calibrating;
   const rawChart=song.difficulties[difficulty.id];
   const transformedChart=useMemo(()=>assistOn||mirrorOn?rhythmTransformChart(song.difficulties[difficulty.id],{mirror:mirrorOn,assist:assistOn}):null,[song.songId,difficulty.id,assistOn,mirrorOn]);
@@ -1606,7 +1606,7 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
                 実体のある要素へ切り出し、形はCSS(clip-path)の三角で描く。文字と違って端末のフォントに左右されず、大きさもそろう */}
                 {note.type==='FLICK'&&<i data-rhythm-flick-arrow aria-hidden="true"/>}</span>{/* 設定したマスモンの染色済みの絵をノーツ中央へ出す(§3.5)。
                 奥行きはレーンと同じ --rhythm-note-depth-scale へ乗せるので、毎フレームJSで書き換えない。
-                絵はプレイ開始時に一度だけ組み立て、そのまま使い回す */}
+                絵はプレイ開始時に1度だけ組み立て、そのまま使い回す */}
                 {monster&&!monsterFaceHidden&&<span data-rhythm-monster-face aria-hidden="true" className="absolute left-1/2 top-1/2 flex h-[42px] w-[42px] items-center justify-center" style={{transform:'translate(-50%,-50%) scale(var(--rhythm-note-depth-scale, 1))'}}>{monster.imageUrl&&<DyedMonsterImage baseId={monster.baseId} src={monster.imageUrl} alt="" masuColors={monster.colors} draggable={false} className="h-full w-full object-contain"/>}</span>}</div>;}),[chart.notes,monsterSignature,settings.lightweightMode,settings.effectAmount,monsterFaceHidden]);
   // canvas で描くときも、マスモンの絵(染色済み・透明部分あり)だけは要素のまま canvas の上へ重ねる。
   // 位置と大きさは tick が transform で書く。絵が無いノーツには要素を作らない
@@ -3256,7 +3256,7 @@ scheduleTick();};
     if(!run||run.finished||run.paused)return;RHYTHM_NOTE_SE_RUNTIME.holdStopAll(.03);run.activePointers.clear();run.standbyPointers?.clear();run.activeTouchInputs?.clear();run.outsideStartInputs?.clear();run.inputFeedbackState?.clear();run.activePointerFeedback?.clear();run.activePointerSkyFeedback?.clear();liveTouchSkySubLanesRef.current=[];setPressedLanes([]);run.notes.forEach(note=>{if(note.type==='HOLD'&&note.activePointerId!==null)note.activePointerId=-1;});setPausedSongMs(Math.max(0,Number(run.audio.songTimeMs())||0));run.paused=true;stopFrame();run.audio.pause();setView(v=>({...v,status:'paused'}));};
   /* 再開は 3→2→1 と数えてから(開始のカウントダウンと同じ部品を使い、READYだけ省く)。
      数えているあいだに画面を離れた・リスタートした(generationが変わった)ら鳴らさない。
-     二度押しで数えが2本走らないよう resumingRef で止める */
+     2度押しで数えが2本走らないよう resumingRef で止める */
   const resume=async()=>{const run=runRef.current;if(!run||run.finished||!run.paused||resumingRef.current)return;const generation=generationRef.current;resumingRef.current=true;setResumeCountdown(true);const counted=await runCountdown(generation,RHYTHM_RESUME_COUNTDOWN_STEPS);resumingRef.current=false;if(!mountedRef.current)return;setResumeCountdown(false);if(!counted||generation!==generationRef.current||runRef.current!==run||run.finished||!run.paused)return;const resumed=await run.audio.resume();if(!resumed)return;run.paused=false;setView(v=>({...v,status:'playing'}));scheduleTick();};
   const restart=()=>{const startBest=runRef.current?.startBest;if(startBest)beginRun(startBest);};
   const abort=()=>{++generationRef.current;startLockRef.current=false;disposeRun();onExit();};
@@ -3522,17 +3522,17 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
             {measured.rawMeanMs<0?'ノーツより少し早く叩くくせがあります。':measured.rawMeanMs>0?'ノーツより少し遅れて叩くくせがあります。':'ほとんどずれていません。'}
             この値を入れると、いつもどおり叩いたときにちょうど真ん中で取れるようになります。
           </p>
-          {!measured.stable&&<p data-rhythm-calibration-unstable className="mt-2 text-[11px] font-black text-rose-300">ばらつきが大きめです。もう一度合わせると、より合った値になります。</p>}
+          {!measured.stable&&<p data-rhythm-calibration-unstable className="mt-2 text-[11px] font-black text-rose-300">ばらつきが大きめです。もう1度合わせると、より合った値になります。</p>}
         </div>
         <div className="mx-auto mt-5 grid max-w-sm grid-cols-1 gap-2">
           <button data-rhythm-calibration-apply className="min-h-[52px] rounded-xl bg-amber-400 text-base font-black text-slate-950" onClick={()=>onApplyCalibration&&onApplyCalibration(measured)}>この値（{label}）にして戻る</button>
-          <button data-rhythm-calibration-retry className="min-h-[48px] rounded-xl bg-fuchsia-700 font-black" disabled={startLockRef.current} onClick={()=>beginRun(runRef.current?.startBest)}>もう一度合わせる</button>
+          <button data-rhythm-calibration-retry className="min-h-[48px] rounded-xl bg-fuchsia-700 font-black" disabled={startLockRef.current} onClick={()=>beginRun(runRef.current?.startBest)}>もう1度合わせる</button>
           <button data-rhythm-calibration-cancel className="min-h-[48px] rounded-xl border border-white/20 bg-slate-800 font-black" onClick={abort}>使わずにオプションへ戻る</button>
         </div>
       </>:<>
         <p className="mx-auto mt-5 max-w-sm rounded-2xl border border-rose-300/40 bg-rose-950/30 p-4 text-center text-[12px] font-bold leading-relaxed text-rose-100">うまく測れませんでした。ノーツが判定ラインへ来た瞬間に叩いてください（MISSは数えません）。</p>
         <div className="mx-auto mt-5 grid max-w-sm grid-cols-1 gap-2">
-          <button data-rhythm-calibration-retry className="min-h-[52px] rounded-xl bg-fuchsia-700 text-base font-black" disabled={startLockRef.current} onClick={()=>beginRun(runRef.current?.startBest)}>もう一度合わせる</button>
+          <button data-rhythm-calibration-retry className="min-h-[52px] rounded-xl bg-fuchsia-700 text-base font-black" disabled={startLockRef.current} onClick={()=>beginRun(runRef.current?.startBest)}>もう1度合わせる</button>
           <button data-rhythm-calibration-cancel className="min-h-[48px] rounded-xl border border-white/20 bg-slate-800 font-black" onClick={abort}>オプションへ戻る</button>
         </div>
       </>}
@@ -3709,7 +3709,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
     ALL MARVELOUS > ALL EXCELLENT > FULL COMBO の順に上位。残りは下に小さく並べる。 */}
 {(result.fullCombo||result.allExcellent||result.allMarvelous)&&<div data-rhythm-result-celebrate className="my-3 text-center">
   <b className="block text-3xl font-black leading-tight">{result.allMarvelous?'ALL MARVELOUS!!':result.allExcellent?'ALL EXCELLENT!!':'FULL COMBO!'}</b>
-  <small className="mt-1 block text-[10px] font-black text-amber-200">{result.allMarvelous?'全てMARVELOUS。文句なしの完璧です':result.allExcellent?'全てEXCELLENT以上。ほぼ完璧です':'一度もコンボを切らずに完走しました'}</small>
+  <small className="mt-1 block text-[10px] font-black text-amber-200">{result.allMarvelous?'全てMARVELOUS。文句なしの完璧です':result.allExcellent?'全てEXCELLENT以上。ほぼ完璧です':'1度もコンボを切らずに完走しました'}</small>
 </div>}
 <div className="my-3 flex flex-wrap justify-center gap-2 text-xs font-black text-slate-300">{result.fullCombo&&<span>FULL COMBO</span>}{result.allExcellent&&<span>ALL EXCELLENT</span>}{result.allMarvelous&&<span>ALL MARVELOUS</span>}</div>{/* クイック∞周回を裏で回していたときだけ。曲の長さぶんが周回クリア扱いで入る */}
 {/* ビートランクの経験値の棒は、上のまとめ(スコア・判定)のすぐ下にある(2026-11-22) */}
@@ -3755,7 +3755,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
     {heroArt&&<img src={heroArt} alt="" aria-hidden="true" className="h-12 w-12 shrink-0 object-contain"/>}
     <div className="min-w-0 flex-1"><small className="block truncate text-[10px] font-black text-sky-200">{monsters[index].name}</small><p style={JA_WRAP_STYLE} className="text-[12px] font-bold leading-snug text-white">{jaWrap(line)}</p></div>
   </div>;})()}
-{(()=>{if(tutorial||calibrating||debugPlay||multi||result.assist||result.cleared===false)return null;const before=runRef.current?.startBest;if(before&&before.clear===true)return null;/* 新曲は HARD のクリアで EXPERT と MASTER が一度に開く(2026-10-09・rhythmDifficultyUnlockRequirement)ので、開いたものを全部並べる */const openedIds=RHYTHM_SELECTABLE_DIFFICULTY_IDS.filter(id=>rhythmDifficultyUnlockRequirement(id,song.songId)===difficulty.id&&rhythmChartPlayable(song,id));if(!openedIds.length)return null;const opened=openedIds.join('・');return <div data-rhythm-result-unlock={openedIds.join(',')} className="mx-auto my-3 max-w-xs rounded-2xl border-2 border-amber-300/70 bg-amber-500/15 px-3 py-2 text-center"><b className="block text-base font-black text-amber-100">🔓 {opened} が解放されました！</b><small className="mt-0.5 block text-[10px] font-bold text-amber-200/90">この曲の {openedIds.map(id=>`${id}（Lv.${song.difficulties[id].level}）`).join('・')} を曲選びで選べます</small></div>;})()}
+{(()=>{if(tutorial||calibrating||debugPlay||multi||result.assist||result.cleared===false)return null;const before=runRef.current?.startBest;if(before&&before.clear===true)return null;/* 新曲は HARD のクリアで EXPERT と MASTER が1度に開く(2026-10-09・rhythmDifficultyUnlockRequirement)ので、開いたものを全部並べる */const openedIds=RHYTHM_SELECTABLE_DIFFICULTY_IDS.filter(id=>rhythmDifficultyUnlockRequirement(id,song.songId)===difficulty.id&&rhythmChartPlayable(song,id));if(!openedIds.length)return null;const opened=openedIds.join('・');return <div data-rhythm-result-unlock={openedIds.join(',')} className="mx-auto my-3 max-w-xs rounded-2xl border-2 border-amber-300/70 bg-amber-500/15 px-3 py-2 text-center"><b className="block text-base font-black text-amber-100">🔓 {opened} が解放されました！</b><small className="mt-0.5 block text-[10px] font-bold text-amber-200/90">この曲の {openedIds.map(id=>`${id}（Lv.${song.difficulties[id].level}）`).join('・')} を曲選びで選べます</small></div>;})()}
 {result.luck&&(result.luck.draws>0||result.luck.points>0)&&<div data-rhythm-result-luck className="mx-auto my-2 max-w-xs rounded-2xl border border-lime-300/50 bg-lime-950/30 px-3 py-2 text-center [@container(min-width:680px)]:hidden"><small className="block text-[10px] font-black tracking-wider text-lime-200">🍀 ラッキーラッシュ</small><b className="mt-0.5 block text-lg font-black tabular-nums text-white">{Number(result.luck.points).toLocaleString()}pt</b><span className="mt-0.5 block text-[10px] font-bold text-lime-100">抽選 {result.luck.draws}回・RUSH {result.luck.rush}回{result.luck.bonus>0?`・おまけビートP +${result.luck.bonus}P`:''}</span></div>}
 {result.eventPointAward&&result.eventPointAward.amount>0&&<div data-rhythm-result-beat-points className="mx-auto my-3 max-w-xs rounded-2xl border border-violet-400/50 bg-violet-950/35 px-3 py-2 text-center [@container(min-width:680px)]:hidden"><small className="block text-[10px] font-black tracking-wider text-violet-200">🎟️ ビートP獲得</small><b className="mt-0.5 block text-2xl font-black text-white">+{result.eventPointAward.amount.toLocaleString()}P</b>{result.eventPointAward.multiScale>1&&<span data-rhythm-result-beat-points-multi className="mt-1 block text-[9px] font-black text-cyan-200">👥 みんなで対戦のボーナス(人数・連続) ×{result.eventPointAward.multiScale}</span>}{result.eventPointAward.target&&<span className="mt-1 block text-[9px] font-black text-amber-200">イベント対象曲 {result.eventPointAward.targetBoost>0?`いつもの${result.eventPointAward.targetBoost}倍`:'1.5倍'}</span>}{result.eventPointAward.lengthBonusPercent>0&&<span data-rhythm-result-beat-points-length className="mt-1 block text-[10px] font-black text-sky-200">曲の長さ +{result.eventPointAward.lengthBonusPercent}%</span>}{result.eventPointAward.campaign&&<span data-rhythm-result-beat-points-campaign className="mt-1 block text-[9px] font-black text-amber-200">ビートPアップキャンペーン いつもの{result.eventPointAward.boost}倍</span>}{result.eventPointAward.offEvent&&<span data-rhythm-result-beat-points-off-event className="mt-1 block text-[9px] font-black text-violet-200">イベント開催中はこの5倍もらえます</span>}</div>}{/* ライブログ(バンドリ！アワーノーツの演奏後の振り返り)。曲を8つの区間に分け、区間ごとに
     MARVELOUS・EXCELLENTの割合を棒の高さで、BAD・MISSの数を下の数字で出す。いちばん崩れた区間を一言で言う */}
@@ -3764,7 +3764,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
   <div className="mt-2 grid grid-cols-8 items-end gap-1" style={{height:'44px'}}>{sections.map((section,i)=>{const rate=section.rate==null?0:section.rate;const color=section.total===0?'#334155':rate>=.9?'#fbbf24':rate>=.7?'#e879f9':rate>=.5?'#f87171':'#60a5fa';return <i key={i} data-rhythm-live-log-bar={String(i)} className="block rounded-t" style={{height:`${Math.max(6,Math.round(rate*100))}%`,background:color,opacity:section.total===0?.4:(section===worst?1:.85),outline:section===worst?'2px solid rgba(251,113,133,.9)':'none'}}/>;})}</div>
   <div className="mt-1 grid grid-cols-8 gap-1 text-center text-[9px] font-black tabular-nums">{sections.map((section,i)=><span key={i} className={section.bad+section.miss>0?'text-rose-300':'text-slate-500'}>{section.total===0?'−':section.bad+section.miss}</span>)}</div>
   <div className="mt-0.5 flex justify-between text-[8px] font-bold tabular-nums text-slate-500"><span>0:00</span><span>{rhythmClockLabel(result.liveLogEndMs)}</span></div>
-  <p data-rhythm-live-log-worst className="mt-1 text-[10px] font-bold leading-relaxed text-slate-300">{worst?`一番崩れたのは ${rhythmClockLabel(worst.fromMs)}〜${rhythmClockLabel(worst.toMs)} の区間でした（BAD・MISS ${worst.bad+worst.miss}回）。`:'どの区間も BAD・MISS なしで通せました。'}</p>
+  <p data-rhythm-live-log-worst className="mt-1 text-[10px] font-bold leading-relaxed text-slate-300">{worst?`1番崩れたのは ${rhythmClockLabel(worst.fromMs)}〜${rhythmClockLabel(worst.toMs)} の区間でした（BAD・MISS ${worst.bad+worst.miss}回）。`:'どの区間も BAD・MISS なしで通せました。'}</p>
 </div>;})()}
 {/* 押したのに反応しないことがあった(2026-10-01・ユーザー指示)。押すと、この曲の指の記録に印を付けて送る。
     印の付いた曲と付いていない曲の数字を比べて、指がどこで消えているかを絞る(docs/spec/RHYTHM_TOUCH_DIAG.md)。
@@ -3777,7 +3777,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
 {debugPlay&&!tutorial&&!calibrating&&<RhythmChartNotePanel song={song} difficulty={difficulty} chart={chart}/>}
 </div>
 <div data-rhythm-result-actions className="relative shrink-0 border-t border-white/10 bg-slate-950/90 px-4 pt-2" style={{paddingBottom:'calc(.5rem + var(--mh-sa-bottom))'}}><RhythmResultMoreHint label={[result.eventPointAward&&result.eventPointAward.amount>0?'ビートP':null,Array.isArray(result.liveLog)&&result.liveLog.some(section=>section.total>0)?'ライブログ':null].filter(Boolean).join('・')||'続き'}/>{/* マルチだけ、縦⇄横の切り替えを左に置く(部屋の見出しと同じ部品。2026-10-10・社長「マルチの演奏後の結果画面でも縦横切り替えボタンほしい」)。
-  ソロ・レイドの結果は今のまま。上は曲の札とランクの丸で埋まっているので、指の届く下の列へ置く */}<div className="flex items-center gap-2">{multi&&<div data-rhythm-result-orientation className="shrink-0"><RhythmOrientationButton/></div>}<RhythmResultMoreHint inline label={[result.eventPointAward&&result.eventPointAward.amount>0?'ビートP':null,Array.isArray(result.liveLog)&&result.liveLog.some(section=>section.total>0)?'ライブログ':null].filter(Boolean).join('・')||'続き'}/><div className={multi?"grid min-w-0 flex-1 grid-cols-1 gap-2":(raidPlay?"grid min-w-0 flex-1 grid-cols-1 gap-2":"grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-2")}>{!multi&&!raidPlay&&<button data-rhythm-result-retry className="min-h-[48px] rounded-xl border border-white/15 bg-slate-700 text-sm font-black" disabled={startLockRef.current} onClick={()=>beginRun(mergeRhythmBestRecord(runRef.current?.startBest,result))}>もう一度プレイ</button>}<button data-rhythm-multi-result-back={multi?"":undefined} data-rhythm-raid-result-back={raidPlay?"":undefined} className={`min-h-[48px] rounded-xl bg-indigo-700 font-black ${!multi&&!raidPlay?'text-lg shadow-[0_0_16px_rgba(99,102,241,.6)]':''}`} onClick={abort}>{multi&&'みんなの結果を見る'}{!multi&&raidPlay&&'レイドの結果を見る'}{!multi&&!raidPlay&&<>{debugPlay?'音ゲーデバッグへ戻る':'曲選びへ戻る'}</>}</button></div></div></div></div></div></main>}
+  ソロ・レイドの結果は今のまま。上は曲の札とランクの丸で埋まっているので、指の届く下の列へ置く */}<div className="flex items-center gap-2">{multi&&<div data-rhythm-result-orientation className="shrink-0"><RhythmOrientationButton/></div>}<RhythmResultMoreHint inline label={[result.eventPointAward&&result.eventPointAward.amount>0?'ビートP':null,Array.isArray(result.liveLog)&&result.liveLog.some(section=>section.total>0)?'ライブログ':null].filter(Boolean).join('・')||'続き'}/><div className={multi?"grid min-w-0 flex-1 grid-cols-1 gap-2":(raidPlay?"grid min-w-0 flex-1 grid-cols-1 gap-2":"grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-2")}>{!multi&&!raidPlay&&<button data-rhythm-result-retry className="min-h-[48px] rounded-xl border border-white/15 bg-slate-700 text-sm font-black" disabled={startLockRef.current} onClick={()=>beginRun(mergeRhythmBestRecord(runRef.current?.startBest,result))}>もう1度プレイ</button>}<button data-rhythm-multi-result-back={multi?"":undefined} data-rhythm-raid-result-back={raidPlay?"":undefined} className={`min-h-[48px] rounded-xl bg-indigo-700 font-black ${!multi&&!raidPlay?'text-lg shadow-[0_0_16px_rgba(99,102,241,.6)]':''}`} onClick={abort}>{multi&&'みんなの結果を見る'}{!multi&&raidPlay&&'レイドの結果を見る'}{!multi&&!raidPlay&&<>{debugPlay?'音ゲーデバッグへ戻る':'曲選びへ戻る'}</>}</button></div></div></div></div></div></main>}
   /* ★演奏画面そのものを器(container-type:inline-size)にして、HUDの幅や字の大きさは vw ではなく cqw で決める
      (2026-09-26・ユーザー報告「演奏中の曲名が切れてる / 時間バーが難易度に被ってる」)。
      「🔄 横」で絵を回したとき、vw は端末の縦の幅(390px)のままなので、左上の欄が109pxまで縮んで曲名が「SIX…」になり、
@@ -3858,7 +3858,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
     '--mh-judgment-line-bottom':`${rhythmFiniteStep(settings.judgmentLineHeight,RHYTHM_JUDGMENT_LINE_HEIGHT_MIN,RHYTHM_JUDGMENT_LINE_HEIGHT_MAX,RHYTHM_JUDGMENT_LINE_HEIGHT_STEP,DEFAULT_RHYTHM_SETTINGS.judgmentLineHeight)}%`,filter:settings.effectAmount==='MINIMAL'?'saturate(.78)':settings.effectAmount==='LOW'?'saturate(.92)':'none'}}>{laneElements}{/* ライブ背景。いちばん奥(z-index:-1)。見た目は index.html の [data-rhythm-stage] が持つ */}
 {stageLevel!=='SIMPLE'&&<div ref={stageHostRef} data-rhythm-stage={stageLevel} data-stage-tier={String(stageTierNow)} data-stage-gl={stageGl?'1':undefined} aria-hidden="true" style={rhythmFxStageStyle(settings)}>
   {/* WebGL 版は、ジャケット・暗幕・サーチライト・光の粒をこの canvas 1枚に描く(暗幕の ::after は CSS 側で消す)。
-      描き込み先を作り直すときは canvas も作り直す(一度片付けた canvas からは描き込み先を取り出せない) */}
+      描き込み先を作り直すときは canvas も作り直す(1度片付けた canvas からは描き込み先を取り出せない) */}
   {stageGl&&<canvas key={`stage-gl-${renderQualityStill}`} ref={stageGlRef} data-rhythm-stage-gl/>}
   {!stageGl&&stageArtSrc&&<canvas key={`stage-art-${stageArtSize}`} ref={stageArtRef} data-rhythm-stage-art width={stageArtSize} height={stageArtSize}/>}
   {/* サーチライトと光の粒は、1度だけ焼いた画像を CSS のアニメーション(合成だけで動く)で動かす(2026-09-26)。

@@ -182,7 +182,7 @@ const CardTourEntry = ({ t, view, now, mine, selfId, onChanged, onOpenRegister }
         closed: '受付は終わりました', nodeck: 'デッキ登録で、デッキを登録するとエントリーできます', locked: 'デッキを登録した端末でだけ、エントリーできます',
         none: 'エントリーしていません', bad: 'エントリーできませんでした',
       }[r];
-      setMsg(text || '通信できませんでした。もう一度お試しください');
+      setMsg(text || '通信できませんでした。もう1度お試しください');
       if (r === 'ok') await onChanged();
     } finally { setBusy(false); }
   };
@@ -464,10 +464,10 @@ const CardTournament = ({ onBack, onOpenRegister = null, onOpenReplay = null, on
         if (await onCredit(view.tour, reward)) {
           setClaimed(cardTourNormalizeClaimed(await storeGet(CARD_TOUR_CLAIMED_KEY, null).catch(() => null)) || []);
           setMsg(`ごほうびを受け取りました${reward.point ? `(ビートP +${reward.point.toLocaleString()})` : ''}`);
-        } else setMsg('保存できませんでした。通信のよいところで、もう一度お試しください');
+        } else setMsg('保存できませんでした。通信のよいところで、もう1度お試しください');
         return;
       }
-      setMsg({ claimed: 'もう受け取っています', none: 'この大会のごほうびはありません', locked: 'デッキを登録した端末でだけ、受け取れます', wait: '大会が終わってから受け取れます' }[st] || '通信できませんでした。もう一度お試しください');
+      setMsg({ claimed: 'もう受け取っています', none: 'この大会のごほうびはありません', locked: 'デッキを登録した端末でだけ、受け取れます', wait: '大会が終わってから受け取れます' }[st] || '通信できませんでした。もう1度お試しください');
     } finally { setBusy(false); }
   };
 
