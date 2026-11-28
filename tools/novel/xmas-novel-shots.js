@@ -235,7 +235,7 @@ const SHOTS_115TK = [
   { name: '71-a6y-green', row: 'A6y', side: 1, endings: ['END-G', 'END-O', 'END-O2', 'END-O3', 'END-O4'], label: 'しおりのあと 第6章 A6y の③(✦)' },
   { name: '72-map', row: 'TK-1-13', side: 2, endings: ['END-G', 'END-O', 'END-O2', 'END-O3', 'END-O4'], label: 'TK-1 宝の地図と4つの音符' },
   { name: '73-at1', row: 'AT1', side: 1, endings: ['END-G', 'END-O', 'END-O2', 'END-O3', 'END-O4'], label: 'うたって、のぼっての選択' },
-  { name: '74-tickle', row: 'TK-2b-4', side: 1, endings: ['END-G', 'END-O', 'END-O2', 'END-O3', 'END-O4'], label: 'TK-2b くすぐりの刑(ネタ)' },
+  { name: '74-belongings', row: 'TK-2b-4', side: 1, endings: ['END-G', 'END-O', 'END-O2', 'END-O3', 'END-O4'], label: 'TK-2b 持ち物しらべ(ネタ)' },
   { name: '75-key', row: 'TK-4-6', side: 2, endings: ['END-G', 'END-O', 'END-O2', 'END-O3', 'END-O4'], label: 'TK-4 オーナーの鍵' },
   { name: '76-at2', row: 'AT2', side: 2, endings: ['END-G', 'END-O', 'END-O2', 'END-O3', 'END-O4'], label: 'オルゴールの前の選択' },
   { name: '77-letter', row: 'TK-6a-11', side: 1, endings: ['END-G', 'END-O', 'END-O2', 'END-O3', 'END-O4'], label: 'TK-6a 母のカード(手紙)' },
