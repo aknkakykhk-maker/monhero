@@ -2,7 +2,7 @@ listen:kimimachi_loop | mua excited 1:00でいきなりいちばん強くなる�
 listen:kimimachi_loop | kiki normal 頭の静かなところから、少しずつ近づいてくる感じがかわいいでつ
 listen:kimimachi_loop | momosuke excited 1:00と2:02と2:32、いちばん強いところが3回あるよ♡ 何回でも会いに来てね♡
 listen:kimimachi_loop | dra happy BPM167で弾むように進むな。2分42秒、最後まで走り抜けるぞ
-listen:kimimachi_loop | atsu happy 2:22で一回静かになってから、2:32でもう一回いちばん強くなるのずるいね笑
+listen:kimimachi_loop | atsu happy 2:22で1回静かになってから、2:32でもう1回いちばん強くなるのずるいね笑
 listen:kimimachi_loop | kyuko happy 静か→ふつう→いちばん強いを何度もくり返す構成なんだよね〜 名前どおりループしてる笑
 listen:kimimachi_loop | sorashido normal BPM167です。強い音が32%・・・！ 軽やかなのに芯のある音です
 listen:kimimachi_loop | erubin normal 1:31から強めになって、2:02へつながっていく流れがきれいだね

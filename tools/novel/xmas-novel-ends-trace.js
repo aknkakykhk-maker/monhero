@@ -37,6 +37,15 @@ const ROUTES = [
   // r1126-077 眠りのドラ: ソラシド派の第7章 A7 で②(ワトソンくんの奥の手)。あつ派には A7 が出ない(noQ で確かめる)
   { name: '第7章 A7 で「ワトソンくんの奥の手」', want: 'END-O2', from: 'A7', picks: { A7: 'opt:1' }, only: 'sorashido' },
   { name: '第7章 A7 は出ない(あつ派)', want: 'END-M4', from: 'Q7a', picks: { Q7a: 'P' }, only: 'atsu', noQ: 'A7', short: true },
+  // r1126-108 第1弾: 名指しのあとの「閉じこめる」・動機ちがいの「探しに行く」・後半の迷宮入り2つ。①(もっと考える・任せる・今夜決める)は今の道のまま
+  { name: 'みゅあを名指しして閉じこめる', want: 'END-M6', from: 'Q7a', picks: { Q7a: 'myua', A7c: 'go:C7-R1' }, panel: { momosuke: 'dead' } },
+  { name: 'ききを名指しして閉じこめる', want: 'END-M7', from: 'Q7a', picks: { Q7a: 'kiki', A7d: 'go:C7-R2' }, panel: { erubin: 'dead' } },
+  { name: 'えるびんを名指しして閉じこめる', want: 'END-M8', from: 'Q7a', picks: { Q7a: 'erubin', A7e: 'go:C7-R3' }, panel: { erubin: 'dead' } },
+  { name: 'イチーカを名指しして開かずの部屋へ', want: 'END-M9', from: 'Q7a', picks: { Q7a: 'ichika', A7f: 'go:C7-R4' }, panel: { mochimaru: 'dead' } },
+  { name: 'きゅうこ+動機ちがいで探しに行く', want: 'END-K1', from: 'Q7m', picks: { Q7a: 'kyuko', Q7m: 'opt:0', A7k: 'go:C7-K1' }, panel: { erubin: 'missing', momosuke: 'missing' } },
+  { name: '名指しのあと「もっと考える」で後半へ(みゅあ)', want: 'END-N', from: 'A7c', picks: { Q7a: 'myua', A7c: 'go:C7-B', Q11a: 'kyuko' }, short: true },
+  { name: '後半、もちまるの見回りについていく', want: 'END-L2', from: 'A10b', picks: { Q7a: 'kiki', A10b: 'go:C10-L' }, panel: { mochimaru: undefined } },
+  { name: '後半、山道があくまで誰も選ばない', want: 'END-L1', from: 'A11', picks: { Q7a: 'ichika', A11: 'go:C11-L' } },
 ];
 
 const run = (side, route) => {
@@ -65,6 +74,7 @@ const run = (side, route) => {
       const opts = E.xmasNovelOptionsOf(row, E.xmasNovelCtx(S, st.cur, seen));
       let o;
       if (want && /^opt:\d+$/.test(want)) o = opts.find((x) => x.i === Number(want.slice(4)));
+      else if (want && /^go:/.test(want)) o = opts.find((x) => x.to === want.slice(3)); // 行き先の場面で選ぶ(派ごとに番号の違う選択肢・r1126-108)
       else if (row.id === 'A1') o = opts[side === 'atsu' ? 0 : 1];
       else if (Array.isArray(row.answer) && row.answer.length) o = opts.find((x) => x.i === row.answer[0]);
       else if (want === 'danger') o = opts.find(isDanger);
@@ -87,6 +97,11 @@ const NAME = { atsu: 'あつ派', sorashido: 'ソラシド派' };
 const FACE = { normal: 'ふつう', happy: '笑顔', wink: 'ウインク', surprise: '驚き', troubled: '困り顔', angry: 'むくれ顔', crying: '泣き顔', excited: 'わくわく', sleep: '寝顔' };
 const ng = [];
 const summary = [];
+// どのエンディングも、「次」は無いか・選択の行(やり直し)か・外側(OUT-*)の場面だけ(r1126-108)
+S.scenes.filter((sc) => sc.ending).forEach((sc) => {
+  const nx = sc.next;
+  if (nx && !/^OUT-/.test(nx) && S.scenes.some((x) => x.id === nx)) ng.push(`${sc.ending.id}: エンディングのあとに場面 ${nx} が続く(外側の場面だけのはず)`);
+});
 ['atsu', 'sorashido'].forEach((side) => {
   const md = [`# 事件簿 足したエンドの通し読み(${NAME[side]}・r1126-062)`, '',
     '`node tools/novel/xmas-novel-ends-trace.js --out docs/progress/event-xmas-2026` で作った一覧(手で直さない)。画面と同じ手順で、生成物の台本をたどった順。分かれ目の選択からエンドまで。', ''];
@@ -98,6 +113,9 @@ const summary = [];
     if (res.err) bad.push(res.err);
     if (r.noQ && (res.asked || []).includes(r.noQ)) bad.push(`${r.noQ} が出た(出ないはず)`);
     if (res.end !== r.want) bad.push(`着いたのは ${res.end || '(なし)'}(${r.want} のはず)`);
+    // エンディングの場面に入ったあとに出てよいのは、そのエンディングと外側(OUT-*)の場面の行だけ(r1126-108: END-K1 のあとに C10-L が流れていた)
+    const endAt = res.lines.findIndex((l) => l.scene && /^END-/.test(l.scene));
+    if (endAt >= 0) res.lines.slice(endAt).filter((l) => l.scene && !/^END-/.test(l.scene) && !/^OUT-/.test(l.scene)).slice(0, 1).forEach((l) => bad.push(`エンディングのあとに ${l.scene} の行 ${l.id} が出た(外側の場面だけのはず)`));
     Object.entries(r.panel || {}).forEach(([k, v]) => { const id = pq[k] || k; if ((res.panel || {})[id] !== v) bad.push(`パネル ${id} が ${(res.panel || {})[id] || 'ふつう'}(${v} のはず)`); });
     // 派の行: 相手の派の行(末尾 a / s)が混ざっていないか
     const other = side === 'atsu' ? /\d s$/ : /\d a$/;
