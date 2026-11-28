@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 74997922cf1e7f14
+// source-sha256: c78aa69177312085
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -11441,6 +11441,261 @@ const Audio_ = (() => {
           sparkle.dispose();
         } catch (e) {}
       }, 2200);
+    },
+    nvTick: async high => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const s = new Tone.MetalSynth({
+        frequency: high ? 340 : 240,
+        envelope: {
+          attack: 0.001,
+          decay: 0.035,
+          release: 0.02
+        },
+        harmonicity: 3.1,
+        modulationIndex: 10,
+        resonance: high ? 2600 : 1800,
+        octaves: 0.6,
+        volume: -32
+      }).connect(seBus);
+      s.triggerAttackRelease('64n', t);
+      const k = new Tone.MembraneSynth({
+        pitchDecay: 0.01,
+        octaves: 2,
+        envelope: {
+          attack: 0.001,
+          decay: 0.05,
+          sustain: 0
+        },
+        volume: -30
+      }).connect(seBus);
+      k.triggerAttackRelease(high ? 'G2' : 'D2', '64n', t);
+      setTimeout(() => {
+        try {
+          s.dispose();
+          k.dispose();
+        } catch (e) {}
+      }, 300);
+    },
+    nvCreak: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const f = new Tone.Filter(700, 'lowpass').connect(seBus);
+      const s = new Tone.Synth({
+        oscillator: {
+          type: 'sawtooth'
+        },
+        envelope: {
+          attack: 0.08,
+          decay: 0.7,
+          sustain: 0,
+          release: 0.2
+        },
+        volume: -22
+      }).connect(f);
+      s.triggerAttackRelease('D3', '4n', t);
+      try {
+        s.frequency.rampTo('G2', 0.7, t);
+      } catch (e) {}
+      setTimeout(() => {
+        try {
+          s.dispose();
+          f.dispose();
+        } catch (e) {}
+      }, 1400);
+    },
+    nvThud: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const s = new Tone.MembraneSynth({
+        pitchDecay: 0.05,
+        octaves: 4,
+        envelope: {
+          attack: 0.002,
+          decay: 0.35,
+          sustain: 0
+        },
+        volume: -12
+      }).connect(seBus);
+      s.triggerAttackRelease('E1', '8n', t);
+      const n = new Tone.NoiseSynth({
+        noise: {
+          type: 'brown'
+        },
+        envelope: {
+          attack: 0.002,
+          decay: 0.15,
+          sustain: 0
+        },
+        volume: -20
+      }).connect(seBus);
+      n.triggerAttackRelease('16n', t);
+      setTimeout(() => {
+        try {
+          s.dispose();
+          n.dispose();
+        } catch (e) {}
+      }, 800);
+    },
+    nvWind: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const f = new Tone.Filter(520, 'lowpass').connect(seBus);
+      const n = new Tone.NoiseSynth({
+        noise: {
+          type: 'pink'
+        },
+        envelope: {
+          attack: 0.9,
+          decay: 0.4,
+          sustain: 0.6,
+          release: 1.2
+        },
+        volume: -24
+      }).connect(f);
+      n.triggerAttackRelease(1.2, t);
+      try {
+        f.frequency.rampTo(900, 0.9, t);
+        f.frequency.rampTo(380, 1.4, t + 0.9);
+      } catch (e) {}
+      setTimeout(() => {
+        try {
+          n.dispose();
+          f.dispose();
+        } catch (e) {}
+      }, 3200);
+    },
+    nvFire: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const f = new Tone.Filter(1800, 'bandpass').connect(seBus);
+      const n = new Tone.NoiseSynth({
+        noise: {
+          type: 'white'
+        },
+        envelope: {
+          attack: 0.001,
+          decay: 0.025,
+          sustain: 0
+        },
+        volume: -24
+      }).connect(f);
+      [0, 0.21, 0.37, 0.8, 1.05, 1.5].forEach(d => n.triggerAttackRelease('64n', t + d));
+      setTimeout(() => {
+        try {
+          n.dispose();
+          f.dispose();
+        } catch (e) {}
+      }, 2100);
+    },
+    nvRustle: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const f = new Tone.Filter(2600, 'highpass').connect(seBus);
+      const n = new Tone.NoiseSynth({
+        noise: {
+          type: 'white'
+        },
+        envelope: {
+          attack: 0.01,
+          decay: 0.12,
+          sustain: 0
+        },
+        volume: -28
+      }).connect(f);
+      n.triggerAttackRelease('16n', t);
+      n.triggerAttackRelease('32n', t + 0.14);
+      setTimeout(() => {
+        try {
+          n.dispose();
+          f.dispose();
+        } catch (e) {}
+      }, 600);
+    },
+    nvGlass: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const s = new Tone.MetalSynth({
+        frequency: 260,
+        envelope: {
+          attack: 0.001,
+          decay: 0.32,
+          release: 0.1
+        },
+        harmonicity: 7.1,
+        modulationIndex: 20,
+        resonance: 3200,
+        octaves: 1,
+        volume: -26
+      }).connect(reverb);
+      s.triggerAttackRelease('16n', t);
+      setTimeout(() => {
+        try {
+          s.dispose();
+        } catch (e) {}
+      }, 900);
+    },
+    nvDread: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const v = new Tone.PolySynth(Tone.Synth, {
+        oscillator: {
+          type: 'sine'
+        },
+        envelope: {
+          attack: 0.35,
+          decay: 0.6,
+          sustain: 0.4,
+          release: 1.6
+        },
+        volume: -20
+      }).connect(reverb);
+      v.triggerAttackRelease(['C2', 'C#2', 'G2'], 1.1, t);
+      setTimeout(() => {
+        try {
+          v.dispose();
+        } catch (e) {}
+      }, 3600);
+    },
+    nvMusicBox: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const s = new Tone.PolySynth(Tone.Synth, {
+        oscillator: {
+          type: 'triangle'
+        },
+        envelope: {
+          attack: 0.002,
+          decay: 0.9,
+          sustain: 0,
+          release: 0.6
+        },
+        volume: -24
+      }).connect(reverb);
+      [[0, 'E5'], [0.42, 'D5'], [0.84, 'C5'], [1.4, 'A4']].forEach(([d, n]) => s.triggerAttackRelease(n, '4n', t + d));
+      setTimeout(() => {
+        try {
+          s.dispose();
+        } catch (e) {}
+      }, 3200);
     }
   };
   const uiTap = async () => {
@@ -44874,6 +45129,7 @@ const RhythmTapTest = ({
   onComplete,
   onExit,
   raidPlay = false,
+  holdResultCount = false,
   quickRunAward = null,
   beatRankAward = null,
   onRankBarFull = null,
@@ -47003,9 +47259,10 @@ const RhythmTapTest = ({
   const [touchReportSent, setTouchReportSent] = useState(null);
   const resultRootRef = useRef(null);
   const recordSeFireRef = useRef(null);
-  const resultCountId = view.status === 'result' && view.result && view.result.countAnim ? view.result.countAnim.id : null;
+  const resultCountIdRaw = view.status === 'result' && view.result && view.result.countAnim ? view.result.countAnim.id : null;
+  const resultCountId = holdResultCount ? null : resultCountIdRaw;
   const [resultCountDoneId, setResultCountDoneId] = useState(null);
-  const resultCountRunning = resultCountId !== null && resultCountDoneId !== resultCountId;
+  const resultCountRunning = resultCountIdRaw !== null && resultCountDoneId !== resultCountIdRaw;
   React.useLayoutEffect(() => {
     const root = resultRootRef.current;
     if (!resultCountId || !root) return undefined;
@@ -68422,13 +68679,27 @@ const TrainingCountUp = ({
     setValue(from);
     let raf = 0;
     let startAt = 0;
+    const fmt = v => String(format ? format(v) : v);
     const timer = setTimeout(() => {
       const tick = now => {
         if (!startAt) startAt = now;
         const t = Math.min(1, (now - startAt) / Math.max(1, duration));
         const eased = 1 - Math.pow(1 - t, 3);
-        setValue(Math.round(from + (to - from) * eased));
-        if (t < 1) raf = requestAnimationFrame(tick);
+        const v = Math.round(from + (to - from) * eased);
+        const node = holderRef.current && holderRef.current.firstChild;
+        if (!node || node.nodeType !== 3) {
+          setValue(v);
+          if (t < 1) raf = requestAnimationFrame(tick);
+          return;
+        }
+        if (t >= 1) {
+          node.nodeValue = fmt(to);
+          setValue(to);
+          return;
+        }
+        const text = fmt(v);
+        if (node.nodeValue !== text) node.nodeValue = text;
+        raf = requestAnimationFrame(tick);
       };
       raf = requestAnimationFrame(tick);
     }, Math.max(0, delay));
@@ -127585,7 +127856,35 @@ const XMAS_NOVEL_CSS = `
 /* 血を見せない影(白瀬など)は、真っ黒で見えなかった(社長「白瀬の死亡シーンって出てた？」)。冷たい光を当て、縁を白く光らせて形を見せる */
 .mh-nv-body.noblood .mh-nv-body-dim { background: radial-gradient(42% 30% at var(--fx, 50%) var(--fy, 74%), rgba(150,180,235,.30), rgba(150,180,235,0) 75%), radial-gradient(120% 90% at 50% 40%, rgba(6,10,34,.35), rgba(0,0,4,.88)) !important; }
 .mh-nv-body.noblood .mh-nv-body-lie img { filter: brightness(0) drop-shadow(0 0 1.5px rgba(225,235,255,.95)) drop-shadow(0 0 3px rgba(200,215,250,.6)) drop-shadow(0 0 20px rgba(140,170,230,.55)) !important; }
+/* 人物の並びの置き場(登場人物の行・カーテンコール): 上の帯(ボタンと章の題)と文字の箱のあいだの、まん中(台帳 r1126-094 追記4。上に寄せた枠が章の題の帯にかぶっていた) */
+.mh-nv-panelwrap { position: absolute; left: 0; right: 0; top: calc(max(8px, env(safe-area-inset-top)) + 54px); bottom: 172px; z-index: 5; display: flex; align-items: center; justify-content: center; padding: 0 3vw; pointer-events: none; }
+.mh-nv-panelin { width: min(100%, 640px); max-height: 100%; }
+.mh-nv-panelbox { border-radius: 16px; padding: 12px 12px 14px; background: radial-gradient(120% 90% at 50% 30%, rgba(14,20,44,.92), rgba(3,5,14,.95)); box-shadow: 0 0 0 1px rgba(232,196,106,.75), 0 18px 40px rgba(0,0,0,.6); }
+.mh-nv-panelhead { text-align: center; font-size: 17px; font-weight: 900; letter-spacing: .5em; padding-left: .5em; }
+.mh-nv-panelrule { height: 1px; margin: 8px auto 10px; width: 70%; background: linear-gradient(90deg, transparent, #e8c46a, transparent); }
+.mh-nv-cast.big .mh-nv-person { font-size: 11px; }
+@media (orientation: portrait) {
+  .mh-nv-panelwrap { top: calc(max(8px, env(safe-area-inset-top)) + 80px); }
+  .mh-nv-cast.big { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .mh-nv-cast.big .mh-nv-person { font-size: 12px; padding: 5px 3px 6px; }
+}
+@media (orientation: landscape) and (max-height: 560px) { .mh-nv-panelwrap { bottom: 132px; padding: 0 2vw; } .mh-nv-panelin { width: min(100%, 760px); } .mh-nv-panelbox { padding: 8px 10px 10px; } .mh-nv-panelhead { font-size: 14px; } .mh-nv-panelrule { margin: 5px auto 7px; } }
+/* 紹介の動き: 枠が暗がりから開き → 見出しの字の間が詰まり → 1人ずつ(0.16秒おき)影の姿から色が戻って名前と入る → そろったら全員に金の光が1度走る */
+.mh-nv-panelbox.intro { animation: mh-nv-panel-open .7s ease-out both; }
+.mh-nv-panelbox.intro .mh-nv-panelhead { animation: mh-nv-card-label 1.1s ease-out both; }
+.mh-nv-panelbox.intro .mh-nv-panelrule { animation: mh-nv-card-rule .9s ease-out .25s both; }
+.mh-nv-panelbox.intro .mh-nv-person { animation: mh-nv-cast-in .75s cubic-bezier(.2,.7,.3,1) calc(.55s + var(--i, 0) * .16s) both, mh-nv-cast-glow 1.2s ease-out 2.75s both; }
+.mh-nv-panelbox.intro .mh-nv-person .ph img { animation: mh-nv-cast-face .75s ease-out calc(.55s + var(--i, 0) * .16s) both; }
+.mh-nv-panelbox.intro.fast .mh-nv-person { animation: mh-nv-cast-in .3s ease-out calc(.1s + var(--i, 0) * .04s) both, mh-nv-cast-glow .8s ease-out .7s both; }
+.mh-nv-panelbox.intro.fast .mh-nv-person .ph img { animation: mh-nv-cast-face .3s ease-out calc(.1s + var(--i, 0) * .04s) both; }
+.mh-nv-panelbox.intro.fast, .mh-nv-panelbox.intro.fast .mh-nv-panelhead, .mh-nv-panelbox.intro.fast .mh-nv-panelrule { animation-duration: .3s; animation-delay: 0s; }
+.mh-nv-panelbox.intro.done, .mh-nv-panelbox.intro.done *, .mh-nv-panelbox.intro.done .mh-nv-person .ph img { animation: none !important; }
+@keyframes mh-nv-panel-open { from { opacity: 0; transform: scale(.96); filter: brightness(.3); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes mh-nv-cast-in { 0% { opacity: 0; transform: translateY(12px) scale(.94); } 60% { opacity: 1; } 100% { opacity: 1; transform: none; } }
+@keyframes mh-nv-cast-face { 0% { filter: brightness(0) blur(3px); } 45% { filter: brightness(0) blur(0); } 100% { filter: none; } }
+@keyframes mh-nv-cast-glow { 0% { box-shadow: 0 0 0 1px rgba(232,196,106,.3); } 35% { box-shadow: 0 0 0 1px rgba(232,196,106,.95), 0 0 14px rgba(232,196,106,.35); } 100% { box-shadow: 0 0 0 1px rgba(232,196,106,.3); } }
 @media (prefers-reduced-motion: reduce) {
+  .mh-nv-panelbox.intro, .mh-nv-panelbox.intro * { animation: none !important; }
   .mh-nv-veil { animation-duration: .01s !important; }
   .mh-nv-sw, .mh-nv-sw::after, .mh-nv-bg.in-place, .mh-nv-bg.in-time, .mh-nv-bg.in-open, .mh-nv-bg.in-past, .mh-nv-card.open *, .mh-nv-fig.enter-first img, .mh-nv-fig.enter-swap img, .mh-nv-fig.enter-face img, .mh-nv-intro, .mh-nv-intro * { animation-duration: .01s !important; animation-delay: 0s !important; }
 }
@@ -128852,10 +129151,11 @@ const XmasNovelBloodCross = () => React.createElement("svg", {
 const XmasNovelCast = ({
   states = {},
   changed = [],
-  onPick = null
+  onPick = null,
+  big = false
 }) => React.createElement("div", {
-  className: "mh-nv-cast"
-}, XMAS_NOVEL_CAST.map(c => {
+  className: `mh-nv-cast${big ? ' big' : ''}`
+}, XMAS_NOVEL_CAST.map((c, i) => {
   const st = states[c.id] || '';
   const fresh = changed.includes(c.id);
   const face = xmasNovelFaceOf(c.id);
@@ -128895,7 +129195,10 @@ const XmasNovelCast = ({
     "data-xmas-novel-cast": c.id,
     "data-st": st || undefined,
     "data-fresh": fresh ? '' : undefined,
-    className: "mh-nv-person"
+    className: "mh-nv-person",
+    style: {
+      '--i': i
+    }
   }, inner);
 }));
 const xmasNovelPanelStates = (panel, row) => {
@@ -128966,14 +129269,113 @@ const XMAS_NOVEL_SE_SEQ = Object.freeze({
   tick: {
     gap: 520,
     hold: 300,
-    play: ['trainingDice']
+    play: [['nvTick', true]]
   },
   letter: {
     gap: 0,
     hold: 1500,
-    play: ['trainingBad', 'trainingFail']
+    play: ['nvDread']
+  },
+  knock: {
+    gap: 460,
+    hold: 300,
+    play: ['nvThud']
+  },
+  thud: {
+    gap: 420,
+    hold: 250,
+    play: ['nvThud']
+  },
+  creak: {
+    gap: 0,
+    hold: 800,
+    play: ['nvCreak']
+  },
+  creakGlass: {
+    gap: 0,
+    hold: 1200,
+    play: ['nvCreak', ['nvGlass', undefined, 650]]
+  },
+  glass: {
+    gap: 0,
+    hold: 500,
+    play: ['nvGlass']
+  },
+  windGlass: {
+    gap: 0,
+    hold: 1500,
+    play: ['nvWind', ['nvGlass', undefined, 500], ['nvGlass', undefined, 1100]]
+  },
+  slamLock: {
+    gap: 0,
+    hold: 700,
+    play: ['nvThud', ['nvTick', true, 380], ['nvTick', false, 470]]
+  },
+  lock: {
+    gap: 0,
+    hold: 400,
+    play: [['nvTick', true], ['nvTick', false, 90]]
+  },
+  rustle: {
+    gap: 0,
+    hold: 400,
+    play: ['nvRustle']
+  },
+  dread: {
+    gap: 0,
+    hold: 1500,
+    play: ['nvDread']
+  },
+  lightsOut: {
+    gap: 0,
+    hold: 1500,
+    play: ['nvThud', ['nvDread', undefined, 120]]
+  },
+  musicbox: {
+    gap: 0,
+    hold: 1800,
+    play: ['nvMusicBox']
+  },
+  clap: {
+    gap: 0,
+    hold: 1200,
+    play: ['nvRustle', ['nvRustle', undefined, 650]]
+  },
+  fire: {
+    gap: 0,
+    hold: 1500,
+    play: ['nvFire']
+  },
+  wind: {
+    gap: 0,
+    hold: 2500,
+    play: ['nvWind']
   }
 });
+const xmasNovelSeKindOf = (kind, row) => {
+  if (kind === 'bell' || kind === 'tick' || kind === 'letter') return kind;
+  if (kind === 'music') return 'musicbox';
+  if (kind === 'clap') return 'clap';
+  const x = String(row && row.x || '');
+  if (/声|悲鳴|叫び|きゃ|うわ|っ！|ピー/.test(x)) return 'dread';
+  if (/ブツン|停電/.test(x)) return 'lightsOut';
+  if (/(ギィ|ギシ)[\s\S]*(ガシャン|割れ)/.test(x)) return 'creakGlass';
+  if (/吹雪[\s\S]*ガラス|ガラス[\s\S]*吹雪/.test(x)) return 'windGlass';
+  if (/ギィ|ギシ|きしむ|開く音/.test(x)) return 'creak';
+  if (/ガシャン|ガラス|カシャ|割れ/.test(x)) return 'glass';
+  if (/バタン[\s\S]*(カチャリ|鍵)/.test(x)) return 'slamLock';
+  if (/カチリ|カチャリ|留め金|鍵の音/.test(x)) return 'lock';
+  if (/封|カサ|プシュッ/.test(x)) return 'rustle';
+  if (/叩く|打ちつける|ドン、ドン|コン、コン/.test(x)) return 'knock';
+  if (/ドサッ|ゴッ|ゴトン|ガタ|重い|ドン/.test(x)) return 'thud';
+  return kind === 'impact' ? 'impact' : 'thud';
+};
+const xmasNovelSeTimesOf = (kind, row, times) => {
+  if (Number.isFinite(times)) return times;
+  if (kind !== 'knock' && kind !== 'thud') return 1;
+  const m = String(row && row.x || '').match(/ドン|コン/g);
+  return kind === 'knock' && m ? Math.min(3, m.length) : 1;
+};
 let xmasNovelSeTimers = [];
 let xmasNovelSeLast = {
   kind: '',
@@ -128983,6 +129385,14 @@ const xmasNovelSeStop = () => {
   xmasNovelSeTimers.forEach(t => clearTimeout(t));
   xmasNovelSeTimers = [];
 };
+const xmasNovelSeFn = name => {
+  try {
+    const fn = (Audio_.fgSe || Audio_.se)[name];
+    return typeof fn === 'function' ? fn : null;
+  } catch (e) {
+    return null;
+  }
+};
 const xmasNovelSeHit = kind => {
   try {
     if (typeof Audio_ === 'undefined' || !Audio_ || !Audio_.se) return;
@@ -128991,25 +129401,40 @@ const xmasNovelSeHit = kind => {
       kind,
       at: Date.now()
     };
-    seq.play.forEach(name => {
-      const fn = (Audio_.fgSe || Audio_.se)[name];
-      if (typeof fn === 'function') fn();
+    seq.play.forEach(item => {
+      const [name, arg, delay] = Array.isArray(item) ? item : [item];
+      const fn = xmasNovelSeFn(name);
+      if (!fn) return;
+      if (delay > 0) xmasNovelSeTimers.push(setTimeout(() => fn(arg), delay));else fn(arg);
     });
   } catch (e) {}
 };
-const xmasNovelRowSe = (kind, times) => {
+const xmasNovelRowSe = (kindIn, times, row) => {
   xmasNovelSeStop();
+  const kind = xmasNovelSeKindOf(kindIn, row);
   const seq = XMAS_NOVEL_SE_SEQ[kind];
   if (!seq) {
     xmasNovelSe(kind);
     return;
   }
-  const n = Math.max(1, Math.min(3, Number.isFinite(times) ? times : 1));
+  const n = Math.max(1, Math.min(3, xmasNovelSeTimesOf(kind, row, times)));
   const wait = xmasNovelSeLast.kind === kind ? Math.max(0, seq.hold - (Date.now() - xmasNovelSeLast.at)) : 0;
   for (let i = 0; i < n; i += 1) {
     const at = wait + i * seq.gap;
     if (at <= 0) xmasNovelSeHit(kind);else xmasNovelSeTimers.push(setTimeout(() => xmasNovelSeHit(kind), at));
   }
+};
+const xmasNovelAmbientOf = scene => {
+  const bg = String(scene && scene.bg || '');
+  if (/吹雪/.test(bg)) return 'wind';
+  if (/暖炉/.test(bg)) return 'fire';
+  if (/雪原|雪の山道/.test(bg)) return 'wind';
+  if (/柱時計/.test(bg)) return 'lock';
+  return '';
+};
+const xmasNovelAmbient = scene => {
+  const k = xmasNovelAmbientOf(scene);
+  if (k) xmasNovelSeHit(k);
 };
 const XMAS_NOVEL_BGM_SCENE = Object.freeze({
   'OUT-0-1': 'original_profile',
@@ -129514,6 +129939,21 @@ const XmasNovelScreen = ({
   const card = cards[0] || null;
   const setCard = c => setCards(list => c ? [...list, c] : []);
   const [sheet, setSheet] = useState(null);
+  useEffect(() => {
+    if (!sheet || typeof sheet !== 'object' || !sheet.q) return undefined;
+    let high = true;
+    const tick = () => {
+      const fn = xmasNovelSeFn('nvTick');
+      if (fn) fn(high);
+      high = !high;
+    };
+    const id = setInterval(tick, 640);
+    const first = setTimeout(tick, 250);
+    return () => {
+      clearInterval(id);
+      clearTimeout(first);
+    };
+  }, [sheet]);
   const [got, setGot] = useState(null);
   const [skip, setSkip] = useState(false);
   const [log, setLog] = useState([]);
@@ -129547,6 +129987,7 @@ const XmasNovelScreen = ({
   };
   const stageRef = useRef(null);
   const pendingQuakeRef = useRef(0);
+  const [panelIntro, setPanelIntro] = useState(null);
   const [titleOk, setTitleOk] = useState(false);
   const fxFast = unread => !unread || !!(saveRef.current && saveRef.current.auto);
   const fireSw = v => {
@@ -129622,7 +130063,8 @@ const XmasNovelScreen = ({
       ...s,
       read: [...s.read, r.k]
     };
-    if (r.t === 'band' && r.se) xmasNovelRowSe(r.se, r.seN);else xmasNovelSeStop();
+    if (r.t === 'band' && r.se) xmasNovelRowSe(r.se, r.seN, r);else xmasNovelSeStop();
+    if (!opts.quiet && r.t === 'band' && !r.se && Array.isArray(r.fx) && r.fx.includes('fallen')) xmasNovelSeHit('dread');
     pendingQuakeRef.current = 0;
     if (XMAS_NOVEL_SHAKE[r.id] && !skip) {
       if (opts.held) pendingQuakeRef.current = XMAS_NOVEL_SHAKE[r.id];else xmasNovelQuake(stageRef.current, XMAS_NOVEL_SHAKE[r.id]);
@@ -129673,6 +130115,12 @@ const XmasNovelScreen = ({
       lastBgm.current = XMAS_NOVEL_VOCAL_BGM[r.bgm] || r.bgm;
       xmasNovelBgm(r.bgm);
     }
+    if (r.t === 'panel' && !r.stamp && /登場人物/.test(String(r.x || ''))) setPanelIntro({
+      id: r.id,
+      fast: !unreadRef.current || !!(saveRef.current && saveRef.current.auto),
+      done: !!skip,
+      at: Date.now()
+    });else if (r.t !== 'panel') setPanelIntro(null);
     if (r.t === 'clue') {
       setGot({
         n: r.clue,
@@ -129758,6 +130206,7 @@ const XmasNovelScreen = ({
       lastBodyRef.current = '';
       setTitleOk(xmasNovelSceneDone(scene, s.read));
     }
+    if (scene && (!lastSceneRef.current || lastSceneRef.current.id !== scene.id)) xmasNovelAmbient(scene);
     const transitNow = !!(scene && lastSceneRef.current && !!lastSceneRef.current.outside !== !!scene.outside);
     if (transitNow) {
       setTransit({
@@ -129877,6 +130326,7 @@ const XmasNovelScreen = ({
     setReveal(null);
     pendingFxRef.current = null;
     lastBodyRef.current = '';
+    setPanelIntro(null);
     setMode('read');
     arrive(xmasNovelSettle(S, cur));
   };
@@ -129904,6 +130354,13 @@ const XmasNovelScreen = ({
     if (typing) {
       setShown(text.length);
       if (sw && !sw.fast) setSw(null);
+      return;
+    }
+    if (panelIntro && row && panelIntro.id === row.id && !panelIntro.done && Date.now() - panelIntro.at < (panelIntro.fast ? 900 : 3200)) {
+      setPanelIntro({
+        ...panelIntro,
+        done: true
+      });
       return;
     }
     if (!reply && reveal && row && reveal.id === row.id && reveal.stage === 'dark') {
@@ -130343,23 +130800,29 @@ const XmasNovelScreen = ({
     "data-st": curtain,
     "data-xmas-novel-curtain": curtain
   }), scene && scene.curtain && curtain === 'down' && !(row && row.t === 'panel') && React.createElement("div", {
-    className: "absolute inset-x-0 top-[14%] z-[5] mx-auto w-[min(94vw,640px)]",
+    className: "mh-nv-panelwrap",
     "data-xmas-novel-lineup": true
-  }, React.createElement(XmasNovelCast, {
-    states: {}
-  })), row && row.t === 'panel' && React.createElement("div", {
-    className: "absolute inset-x-0 top-[12%] z-[5] mx-auto w-[min(94vw,640px)] rounded-2xl p-3",
-    "data-xmas-novel-panel": true,
-    style: {
-      background: 'rgba(4,8,22,.88)',
-      boxShadow: '0 0 0 1px #e8c46a'
-    }
   }, React.createElement("div", {
-    className: "mh-nv-serif mh-nv-gold mb-2 text-center text-[15px] font-black"
-  }, "登場人物"), React.createElement(XmasNovelCast, {
+    className: "mh-nv-panelin"
+  }, React.createElement(XmasNovelCast, {
+    states: {},
+    big: true
+  }))), row && row.t === 'panel' && React.createElement("div", {
+    className: "mh-nv-panelwrap"
+  }, React.createElement("div", {
+    key: `panel-${row.id}`,
+    className: `mh-nv-panelin mh-nv-panelbox${panelIntro && panelIntro.id === row.id ? ` intro${panelIntro.fast ? ' fast' : ''}${panelIntro.done ? ' done' : ''}` : ''}`,
+    "data-xmas-novel-panel": true,
+    "data-xmas-novel-intro-panel": panelIntro && panelIntro.id === row.id ? panelIntro.done ? 'done' : 'play' : undefined
+  }, React.createElement("div", {
+    className: "mh-nv-panelhead mh-nv-serif mh-nv-gold"
+  }, "登場人物"), React.createElement("div", {
+    className: "mh-nv-panelrule"
+  }), React.createElement(XmasNovelCast, {
     states: xmasNovelPanelStates(st && st.cur && st.cur.panel, row),
-    changed: st && st.panelChanged || []
-  })), (isLine || isBand || row && (row.t === 'clue' || row.t === 'panel' || row.t === 'q')) && !(card && card.kind !== 'band') && React.createElement("div", {
+    changed: st && st.panelChanged || [],
+    big: true
+  }))), (isLine || isBand || row && (row.t === 'clue' || row.t === 'panel' || row.t === 'q')) && !(card && card.kind !== 'band') && React.createElement("div", {
     className: "mh-nv-box",
     style: {
       zIndex: 5
@@ -220194,7 +220657,12 @@ const CARD_RAID_BOSS = Object.freeze({
   id: 'raid_xmas_2026',
   name: '黒いサンタ',
   deckName: '奪われた贈り物',
-  monsters: Object.freeze(['C-047', 'C-024', 'C-003']),
+  monsters: Object.freeze(['C-008', 'C-055', 'C-003']),
+  hare: Object.freeze(['C-008', 'C-055', 'C-010']),
+  others: Object.freeze(['C-047', 'C-024', 'C-003']),
+  favor: 'hare',
+  favorBonus: 0.6,
+  cardNoise: 0.45,
   habit: Object.freeze({
     attack: 1.2,
     keepGuard: 0.8,
@@ -220204,28 +220672,53 @@ const CARD_RAID_BOSS = Object.freeze({
     area: 1.3,
     finish: 1.3
   }),
-  prefer: Object.freeze(['大鎌'])
+  prefer: Object.freeze(['大声'])
 });
 const CARD_RAID_TIERS = Object.freeze([Object.freeze({
-  level: 'normal',
-  life: 2,
-  rate: 1.0
-}), Object.freeze({
   level: 'hard',
-  life: 2,
-  rate: 1.25
+  life: 1,
+  rate: 1.0,
+  ai: Object.freeze({
+    whim: 0.04,
+    sloppy: 0.08,
+    readHand: true
+  })
 }), Object.freeze({
   level: 'expert',
-  life: 2.5,
-  rate: 1.5
+  life: 1,
+  rate: 1.25,
+  ai: Object.freeze({
+    whim: 0.02,
+    sloppy: 0.03,
+    readHand: true
+  })
 }), Object.freeze({
   level: 'master',
-  life: 3,
-  rate: 1.75
+  life: 1,
+  rate: 1.5,
+  ai: Object.freeze({
+    whim: 0.01,
+    sloppy: 0,
+    readHand: true
+  })
 }), Object.freeze({
   level: 'master',
-  life: 3,
-  rate: 2.0
+  life: 1,
+  rate: 1.75,
+  ai: Object.freeze({
+    whim: 0,
+    sloppy: 0,
+    readHand: true
+  })
+}), Object.freeze({
+  level: 'master',
+  life: 1,
+  rate: 2.0,
+  ai: Object.freeze({
+    whim: 0,
+    sloppy: 0,
+    readHand: true
+  })
 })]);
 const cardRaidTierOf = tierIndex => CARD_RAID_TIERS[Math.min(CARD_RAID_TIERS.length - 1, Math.max(0, Math.floor(Number(tierIndex) || 0)))];
 const CARD_RAID_DAMAGE = Object.freeze({
@@ -220234,20 +220727,36 @@ const CARD_RAID_DAMAGE = Object.freeze({
   win: 150000,
   cap: null
 });
-const cardRaidBossDeck = (db, tierIndex = 0) => {
+const cardRaidBossMonsters = (db, rnd = null) => {
+  const ok = list => list.filter(no => cardMonsterOf(db, no));
+  if (!rnd) return ok(CARD_RAID_BOSS.monsters);
+  const pick = (list, n) => {
+    const a = ok(list).slice();
+    const out = [];
+    while (a.length && out.length < n) out.push(a.splice(Math.floor(rnd() * a.length), 1)[0]);
+    return out;
+  };
+  const out = [...pick(CARD_RAID_BOSS.hare, 2), ...pick(CARD_RAID_BOSS.others, 1)];
+  const sp = out.map(no => cardMonsterOf(db, no).species);
+  return out.length === 3 && new Set(sp).size === 3 ? out : ok(CARD_RAID_BOSS.monsters);
+};
+const cardRaidBossDeck = (db, tierIndex = 0, seed = null) => {
   const tier = cardRaidTierOf(tierIndex);
   const cfg = CARD_AI_BUILD[tier.level] || CARD_AI_BUILD.normal;
   const habit = CARD_RAID_BOSS.habit;
-  const rnd = cardAiSeededRand(`${CARD_RAID_BOSS.id}:${tier.level}`);
-  const monsters = CARD_RAID_BOSS.monsters.filter(no => cardMonsterOf(db, no));
+  const roll = seed !== null && seed !== undefined && Number.isFinite(Number(seed));
+  const rnd = cardAiSeededRand(`${CARD_RAID_BOSS.id}:${tier.level}${roll ? `:${Math.floor(Number(seed))}` : ''}`);
+  const monsters = cardRaidBossMonsters(db, roll ? rnd : null);
   const mons = monsters.map(no => cardMonsterOf(db, no));
+  const noise = cfg.noise + (roll ? CARD_RAID_BOSS.cardNoise : 0);
+  const favor = c => c.user === CARD_RAID_BOSS.favor ? CARD_RAID_BOSS.favorBonus : 0;
   const pool = Object.values(db.cards).filter(c => c.ready && (c.user === 'any' || c.user === 'breeder' || mons.some(m => cardUsableBy(c, {
     ...m,
     ko: false
   }))));
   const byName = {};
   pool.forEach(c => {
-    const v = cardAiCardValue(c, habit) + cfg.noise * (rnd() * 2 - 1);
+    const v = cardAiCardValue(c, habit) + favor(c) + noise * (rnd() * 2 - 1);
     if (!byName[c.name] || byName[c.name].v < v) byName[c.name] = {
       c,
       v
@@ -220319,6 +220828,10 @@ const cardRaidBossPolicy = (tierIndex = 0) => {
   });
   return {
     ...base,
+    level: {
+      ...base.level,
+      ...(tier.ai || {})
+    },
     habit: {
       ...CARD_RAID_BOSS.habit
     }
@@ -231421,8 +231934,8 @@ const CardBattleScreen = ({
         return;
       }
       const tier = cardRaidTierOf(rc.tierIndex);
-      const cpuDeck = cardRaidBossDeck(db, rc.tierIndex);
       const seed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
+      const cpuDeck = cardRaidBossDeck(db, rc.tierIndex, seed);
       const first = Math.random() < 0.5 ? CARD_ME : CARD_CPU;
       const bossName = rc.bossName || CARD_RAID_BOSS.name;
       const st = cardRaidPrepareGame(cardCreateGame(db, {
@@ -260388,6 +260901,8 @@ function MonsterHeroGame() {
     if (RAID_JACK_BGM_STATES.includes(state)) return raidEvRef.current === 'xmas' ? XMAS_EVENT_BGM_TRACK : RAID_JACK_BGM_TRACK;
     const halloweenNightOpen = Date.now() >= Date.parse(HALLOWEEN_NIGHT_START_AT) && Date.now() < Date.parse(HALLOWEEN_NIGHT_END_AT);
     const homeBgm = (RELEASE_FLAGS.raidJack === true && raidJackWindowAt(Date.now()) === 'open' || raidJackDebugForce || halloweenNightOpen) && bgmArrangement.home === DEFAULT_BGM_ARRANGEMENT.home ? RAID_JACK_BGM_TRACK : xmasEventBgmOpenAt(Date.now()) && bgmArrangement.home === DEFAULT_BGM_ARRANGEMENT.home ? XMAS_HOME_BGM_TRACK : bgmArrangement.home;
+    if (state === 'CARD_TOP' || state === 'CARD_BATTLE') return cardBgm || homeBgm;
+    if (state === 'CARD_PACK_OPEN') return homeBgm;
     if (isGameOver) return bgmArrangement.gameOver;
     if (!debugBattleRef.current && currentWave === 10 && (state === 'WAVE_RESULT' || state === 'CHAMPION')) {
       if (allowKeep && autoRepeatRef.current && bgmArrangement.autoRepeatResultBgm !== 'on') return '__keep_battle_bgm__';
@@ -270644,7 +271159,7 @@ function MonsterHeroGame() {
       boss: wave >= 10,
       key: Date.now()
     });
-    if ((!autoBattleRef.current || bgmArrangement.autoVictoryJingle === 'on') && !(runBackgroundAllowedRef.current && isXmasQuietScreen(gameStateNowRef.current))) Audio_.playJingle('victory');
+    if ((!autoBattleRef.current || bgmArrangement.autoVictoryJingle === 'on') && !(runBackgroundAllowedRef.current && (isXmasQuietScreen(gameStateNowRef.current) || isCardRunScreen(gameStateNowRef.current)))) Audio_.playJingle('victory');
     const totalWaveDamage = waveDamageAtDefeat(currentWaveDamageRef.current, currentWaveDamage, damage);
     const waveMult = 1.0 + wave * 0.1;
     const remainingTurns = Math.max(0, 21 - turnCount);
@@ -283402,6 +283917,7 @@ function MonsterHeroGame() {
     }), gameState === 'RHYTHM_PLAY' && rhythmPlay && React.createElement(RhythmTapTest, {
       key: rhythmPlay.from === 'lineAdjust' && rhythmLineAdjust ? `line-adjust-${rhythmLineAdjust.key}` : rhythmPlay.from === 'preview' && rhythmPreview ? `option-preview-${rhythmPreview.key}` : undefined,
       raidPlay: rhythmPlay.from === 'raid',
+      holdResultCount: rhythmPlay.from === 'raid' && !!raidDamageFx,
       song: rhythmPlay.song,
       difficulty: rhythmPlay.difficulty,
       settings: rhythmPlay.from === 'multi' ? rhythmMultiPlaySettings : rhythmPlay.from === 'preview' && rhythmPreview ? rhythmPreview.draft : rhythmSettings,
@@ -298206,7 +298722,10 @@ const createAnimationStyle = () => {
     .mh-rjdmg-life { position: relative; font-size: 10px; font-weight: 900; color: #fca5a5; font-variant-numeric: tabular-nums; animation: mhRjRise .4s ease-out .6s both; }
     .mh-rjdmg-damage { position: relative; text-align: center; opacity: 0; animation: mhRjSlam .55s cubic-bezier(.2,1.4,.4,1) 1s both; }
     .mh-rjdmg-damage small { display: block; font-size: 11px; font-weight: 900; letter-spacing: .4em; color: #fecaca; }
-    .mh-rjdmg-damage b { display: block; padding: 0 .15em; font-size: 52px; font-weight: 900; font-style: italic; line-height: 1; font-variant-numeric: tabular-nums; background: linear-gradient(180deg, #fff, #fde68a 45%, #f59e0b); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 4px 0 rgba(0,0,0,.85)) drop-shadow(0 0 20px rgba(251,191,36,.9)); }
+    .mh-rjdmg-damage b { display: block; padding: 0 .15em; font-size: 52px; font-weight: 900; font-style: italic; line-height: 1; font-variant-numeric: tabular-nums; background: linear-gradient(180deg, #fff, #fde68a 45%, #f59e0b); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 4px 0 rgba(0,0,0,.85)); }
+    /* 数字のまわりの金色の光(2026-11-28 r1126-098)。前は数字そのものに drop-shadow(0 0 20px) を掛けていたが、数え上げで毎コマ数字が変わるたびに
+       ぼかしごと描き直しになり、コマが落ちた(社長「数字の動きがかくかく」)。光は数字の後ろの動かない1枚(ぼかし無しの放射の色)にした */
+    .mh-rjdmg-damage:not(.mh-rjdmg-damage-none)::before { content: ''; position: absolute; z-index: -1; left: 50%; top: 62%; width: calc(100% + 56px); height: 96px; transform: translate(-50%, -50%); background: radial-gradient(closest-side, rgba(251,191,36,.55), rgba(251,191,36,.22) 55%, rgba(251,191,36,0)); pointer-events: none; }
     .mh-rjdmg-damage-none b { font-size: 26px; background: none; color: #cbd5e1; filter: drop-shadow(0 2px 0 #000); }
     .mh-rjdmg-damage-none small { margin-top: 4px; font-size: 10px; letter-spacing: .05em; color: #94a3b8; }
     .mh-rjdmg-down { position: absolute; left: 0; right: 0; top: 40%; text-align: center; font-size: 64px; font-weight: 900; font-style: italic; color: #fde047; text-shadow: 0 5px 0 #7c2d12, 0 0 28px rgba(250,204,21,.95); opacity: 0; animation: mhRjSlam .6s cubic-bezier(.2,1.4,.4,1) 2.3s both; pointer-events: none; z-index: 3; }
