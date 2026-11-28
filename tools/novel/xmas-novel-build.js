@@ -41,7 +41,7 @@ const FX_TAGS = { 赤いにじみ: 'bleed', 倒れた影: 'fallen', 赤く光る
 // 音の印(〔音:鐘〕など・r1126-066)→ 画面の xmasNovelSe の種類
 const SOUND_MARKS = { 鐘: 'bell', 時計: 'tick', 柱時計: 'tick', 手紙: 'letter' };
 // (手紙) … 紙の手紙を赤い字で浮かべる(文の「／」で改行・r1126-058)
-const ENDING_KIND = { G: 'good', N: 'normal', B: 'bad', A: 'another', X: 'forced', M: 'accuse', O: 'omake' };
+const ENDING_KIND = { G: 'good', N: 'normal', B: 'bad', A: 'another', X: 'forced', M: 'accuse', K: 'accuse', O: 'omake', L: 'unsolved' }; // K・L は r1126-108(動機ちがいの名指し・迷宮入り)
 const CHAPTER_NO = { 序章: 0, 終章: 9 };
 
 const warn = [];
@@ -160,6 +160,8 @@ const parseSceneHead = (cells, chapter, seq) => {
   // 過去編(真グッドを見たあと「章から」で読む章)の場面は、並びでは入らない。最後の場面のあとは起動画面へ戻る(r1126-046)
   if (chapter.past) { scene.past = true; scene.jumpOnly = true; }
   if (afterM) scene.after = { scene: afterM[1], row: afterM[2] || null };
+  // 「次: おしまい」のエンディングは、すぐうしろの場面が外側(OUT-*)のときだけ続ける(r1126-108: END-K1 のあとに C10-L が流れていた)
+  if (/^おしまい/.test(nextRaw)) scene.stopHere = true;
   // カーテンコールの場面(題か ID に「カーテンコール」「CC」)。エンディングの場面の「次」でつなぐ
   if (/カーテンコール/.test(title) || /(^|-)CC(-|$)/.test(id)) scene.curtain = true;
   const em = !scene.curtain && id.match(/^END-([A-Z]+)\d*$/);
@@ -430,7 +432,7 @@ const parseScript = (md, srcName) => {
         chapters.push(chapter); scene = null; lastQ = null; seq = 0;
         continue;
       }
-      const cm = t.replace(/^後半\s*/, '').replace(/^(強制バッド|名指しエンド|おまけ).*$/, 'エンディング').match(/^(序章|終章|第\s*(\d+)\s*章|エンディング|カーテンコール)\s*(?:[～〜]\s*([^～〜]+?)\s*[～〜])?/);
+      const cm = t.replace(/^後半\s*/, '').replace(/^(強制バッド|名指しエンド|おまけ|迷宮入り).*$/, 'エンディング').match(/^(序章|終章|第\s*(\d+)\s*章|エンディング|カーテンコール)\s*(?:[～〜]\s*([^～〜]+?)\s*[～〜])?/);
       if (cm) {
         started = true;
         const no = cm[2] ? Number(cm[2]) : CHAPTER_NO[cm[1]];
@@ -505,8 +507,9 @@ const parseScript = (md, srcName) => {
   scenes.forEach((sc, i) => {
     const nx = scenes[i + 1];
     const nextIsRow = sc.next && scenes.some((x) => x.rows.some((r) => r.id.replace(/\[.*$/, '') === sc.next));
-    if (sc.ending && !nextIsRow && (!sc.next || !scenes.some((x) => x.id === sc.next)) && nx && !nx.ending && nx.chapter === sc.chapter && !nx.after && !/-X$/.test(nx.id)) sc.next = nx.id;
+    if (sc.ending && !nextIsRow && (!sc.next || !scenes.some((x) => x.id === sc.next)) && nx && !nx.ending && nx.chapter === sc.chapter && !nx.after && !/-X$/.test(nx.id) && (!sc.stopHere || nx.outside)) sc.next = nx.id;
   });
+  scenes.forEach((sc) => { delete sc.stopHere; });
   const seenCh = new Set();
   const chs = chapters.filter((c) => scenes.some((s) => s.chapter === c.id) && !seenCh.has(c.id) && seenCh.add(c.id));
   return { v: 1, src: srcName, chapters: chs.map(({ id, no, label, disp, title, outside, past }) => ({ id, no, label, disp, title, ...(outside ? { outside: true } : {}), ...(past ? { past: true } : {}) })), scenes };

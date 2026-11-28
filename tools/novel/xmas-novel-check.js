@@ -37,7 +37,7 @@ const endingsAll = S.scenes.filter((s) => s.ending).map((s) => s.ending.id);
 const reached = new Map();
 let paths = 0; let stuck = 0;
 const visited = new Set();
-const MAX_PATHS = 4000;
+const MAX_PATHS = 20000; // r1126-108 で分かれ道が増え、4000 では A1 の③(おまけ)までたどり着けなくなった
 
 // 返しを読んだあと then のとおりに進める(画面の XmasNovelScreen と同じ手順)
 const afterAnswer = (res, q) => {
