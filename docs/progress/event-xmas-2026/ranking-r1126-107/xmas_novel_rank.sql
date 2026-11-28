@@ -276,5 +276,9 @@ on conflict (event_id, end_id) do nothing;
 insert into public.xmas_novel_end_ids (event_id, end_id, kind) values
   ('xmas_novel_2026', 'END-Y1', 'ifroute'), ('xmas_novel_2026', 'END-Y2', 'ifroute'), ('xmas_novel_2026', 'END-Y3', 'ifroute')
 on conflict (event_id, end_id) do nothing;
+-- 外側の短い話 ⑤ 次の頁(r1126-115・1つ。頭文字 W は ifroute)
+insert into public.xmas_novel_end_ids (event_id, end_id, kind) values
+  ('xmas_novel_2026', 'END-W1', 'ifroute')
+on conflict (event_id, end_id) do nothing;
 -- ずるの疑いのある人を隠す(消さない)
 -- update public.xmas_novel_players set hidden = true where event_id = 'xmas_novel_2026' and user_name = '…';
