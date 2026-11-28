@@ -97,6 +97,20 @@ const CHANGELOG = [
     items:[ '11月30日(月) 0:00 から12月31日(木) 3:59 まで、公開曲を最後まで遊ぶと、ビートPがいつもの5倍もらえます(100万点・2分の曲なら200P)。',
             'クイックの∞周回を回しながら演奏すると、入る周回数もどの曲でもいつもの5倍になります。',
             '開催中はHOMEに「🎄 クリスマスイベント」の札が出ます。' ] },
+  // 新曲「Glass Crown」(2026-11-28 社長・台帳 r1126-106。難易度は社長の選択「歯ごたえ強め」)
+  {
+    date: "2026-11-28 17:02", type:'content', group:'rhythm', status:'new',
+    title:'新曲「Glass Crown」を追加しました',
+    image:'images/song-art/glass-crown.jpg?v=39bd7424289e',
+    items:[
+      'モンヒロビートに「Glass Crown」を追加しました。原曲（3分33秒・BPM 138）と short ver.（1分32秒・BPM 138）の、2バージョンの曲組です。',
+      '原曲は EASY Lv.8（339ノーツ）／ NORMAL Lv.11（408ノーツ）／ HARD Lv.16（564ノーツ）／ EXPERT Lv.32（896ノーツ）／ MASTER Lv.42（1105ノーツ）／ HELL Lv.67（1136ノーツ）です。',
+      'short ver. は EASY Lv.9（134ノーツ）／ NORMAL Lv.11（163ノーツ）／ HARD Lv.15（220ノーツ）／ EXPERT Lv.29（350ノーツ）／ MASTER Lv.42（428ノーツ）／ HELL Lv.60（443ノーツ）です。',
+      '歯ごたえのある譜面です。原曲と short ver. は譜面が違い、曲選びの難易度の上のボタンで切り替えて遊べます。',
+      'この曲はビートP500で買って遊びます。買うと原曲と short ver. の両方で遊べます。曲選びの「🔒 500P」か、ビートP交換所の「曲」から買えます。',
+    ],
+    assistantNotice:{ id:'update_notice_glass_crown_v1', type:'content' },
+  },
   {
     // 台帳 r1126-111。結果への反応の台詞を選ぶところで例外が出て、助手が黙っていた
     date: "2026-11-28 16:58", type:'fix', group:'rhythm', title:'みんなで対戦で、呼んだ助手が結果にひとこと言うようになりました', status:'new',

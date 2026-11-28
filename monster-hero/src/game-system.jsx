@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 27b2d6ad265ff1f7
+// generated-sha256: 6b55e74f48222f42
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -4923,6 +4923,9 @@ const BGM_TRACKS = [
   { id:'melo_dear_santa_short', name:'Dear Santa short ver.', creator:'オリジナル', src:'audio/bgm-dear-santa-short.mp3', gain:1, loop:true },
   { id:'melo_winter_fall', name:'winter fall', creator:'オリジナル', src:'audio/bgm-winter-fall.mp3', gain:1, loop:true },
   { id:'melo_winter_fall_short', name:'winter fall short ver.', creator:'オリジナル', src:'audio/bgm-winter-fall-short.mp3', gain:1, loop:true },
+  // 2026-11-28 新曲 Glass Crown(台帳 r1126-106)。頭に2秒の無音を足した版。元の音源は tools/art-sources/song-audio/glass_crown/
+  { id:'melo_glass_crown', name:'Glass Crown', creator:'オリジナル', src:'audio/bgm-glass-crown.mp3', gain:1, loop:true },
+  { id:'melo_glass_crown_short', name:'Glass Crown short ver.', creator:'オリジナル', src:'audio/bgm-glass-crown-short.mp3', gain:1, loop:true },
   { id:'melo_emerald_rush', name:'Emerald Rush', creator:'オリジナル', src:'audio/bgm-emerald-rush.mp3', gain:1, loop:true },
   { id:'melo_wrath_of_the_thorn_king', name:'Wrath of the Thorn King「茨の王の怒り」', creator:'オリジナル', src:'audio/bgm-wrath-of-the-thorn-king.mp3', gain:1, loop:true },
   { id:'melo_monster', name:'Monster', creator:'オリジナル', src:'audio/bgm-monster.mp3', gain:1, loop:true },
@@ -6535,6 +6538,8 @@ const Audio_ = (() => {
     "audio/bgm-freedom-dive.mp3": "34616b2fccd3",
     "audio/bgm-fusion.mp3": "6f0d4675789f",
     "audio/bgm-game-over.mp3": "d9fb75a7c827",
+    "audio/bgm-glass-crown-short.mp3": "b413fcfdf853",
+    "audio/bgm-glass-crown.mp3": "506aa4aa55d9",
     "audio/bgm-gourmet-race-64.mp3": "8d110d3430e4",
     "audio/bgm-gourmet-race-dx.mp3": "cb6d19e5ff52",
     "audio/bgm-grievous-lady.mp3": "28bfeda8d534",
@@ -34802,6 +34807,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:eiyuu_no_akashi_milktea': [['excited', 'BPM192だよ！ 0:31からのサビが速くて楽しいぢゃん♪']],
     'listen:erfolg': [['excited', '0:02からいちばん強い！ 始まった瞬間から全力なの、アガるぢゃん♪']],
     'listen:erfolg_piano': [['excited', '0:19でいちばん強くなる所、気持ちがぐっと上がるぢゃん♪']],
+    'listen:glass_crown': [['excited', '2:56からいちばん強いとこ来るの！ そこまで待つのがアガるぢゃん♪']],
     'listen:gourmet_race_64': [['excited', '2:05からの最後のサビ、いちばん強くてテンション上がるぢゃん♪']],
     'listen:gourmet_race_dx': [['excited', '1:14からのサビ、いちばん強い音が押し寄せるぢゃん！ テンション上がるよ♪']],
     'listen:hopes_and_dreams': [['excited', '1:15と1:55と2:11がいちばん強いの！ ずっとアガるのー♪']],
@@ -34904,6 +34910,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:eiyuu_no_akashi_milktea': [['normal', '1:31から2:09まで、いちばん強いのが長く続くのが見事です♪']],
     'listen:erfolg': [['normal', '2:44からの静かな所、音がすっと引いてとてもきれいです♪']],
     'listen:erfolg_piano': [['normal', '0:03の静かな始まり、音がそっと入ってきてとてもきれいです♪']],
+    'listen:glass_crown': [['normal', '0:00から0:42までの静かな始まり、透きとおるようできれいです♪']],
     'listen:gourmet_race_64': [['normal', '2:13で静かになるところ、音がすっと引いてとてもきれいです♪']],
     'listen:gourmet_race_dx': [['normal', '1:30で音がすっと引くところ、静かでとてもきれいです♪']],
     'listen:hopes_and_dreams': [['normal', '最初の2秒からの静かなところ、星空みたいできれいでつ']],
@@ -35006,6 +35013,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:eiyuu_no_akashi_milktea': [['excited', 'サビが2回来る！！ 0:31と1:31、どっちも強いよ♡']],
     'listen:erfolg': [['excited', '0:24も0:34もいちばん強い！ ももはこの勢いが大好き♡']],
     'listen:erfolg_piano': [['excited', '1:01からもう1度いちばん強い！！ ももはここが大好き♡']],
+    'listen:glass_crown': [['excited', '0:42で強めに入って、2:56でいちばん強い！ ももはこの盛り上がりが大好き♡']],
     'listen:gourmet_race_64': [['excited', '0:38も1:00もいちばん強い！ ももはこの勢いが大好き♡']],
     'listen:gourmet_race_dx': [['excited', '1:14でいちばん強くなるの、ももはここが大好き♡']],
     'listen:hopes_and_dreams': [['excited', 'いちばん強いところが3回もあるよ♡ 最高潮だよ♡']],
@@ -35108,6 +35116,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:eiyuu_no_akashi_milktea': [['happy', '2:19で静かに終わるぞ。速い曲なのに締めは静かなんだな']],
     'listen:erfolg': [['normal', 'BPM213は速いな。0:02から全力で駆け抜けるやつだな']],
     'listen:erfolg_piano': [['normal', 'BPM164か。ピアノの音だけでここまで駆けるのは、いい緊張感だな']],
+    'listen:glass_crown': [['normal', '3分半の冒険だな。BPM138でじっくり進んでいくからな']],
     'listen:gourmet_race_64': [['happy', '0:02から強めで一気に駆け出すぞ。レースのスタートみたいだな']],
     'listen:gourmet_race_dx': [['happy', '0:12から強めの音で駆け出すぞ。レースの始まりみたいだな']],
     'listen:hopes_and_dreams': [['happy', 'BPM171で走るぞ。夜の大冒険みたいでいいな']],
@@ -35210,6 +35219,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:eiyuu_no_akashi_milktea': [['happy', '0:56でいちばん強くなった直後、1:01で静かになる落差がすごいね笑']],
     'listen:erfolg': [['happy', '3:01から静かに締めるの、余韻があっていいよね笑']],
     'listen:erfolg_piano': [['happy', '2:06から静かに終わるの、締めがきれいだね笑']],
+    'listen:glass_crown': [['happy', '2:56からいちばん強いところを越えて、3:29で締めに入るのいいよね笑']],
     'listen:gourmet_race_64': [['happy', '2:13で静かに終わるの、締めがきれいだね笑']],
     'listen:gourmet_race_dx': [['happy', '1:51で静かに終わるの、締めがきれいだね笑']],
     'listen:hopes_and_dreams': [['happy', '2:59で静かに終わるの、余韻があっていいよね笑']],
@@ -35312,6 +35322,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:eiyuu_no_akashi_milktea': [['happy', 'BPM192で2分26秒。サビが2か所あるから、山場の配分が分かりやすいんだよね〜']],
     'listen:erfolg': [['happy', '0:02から1:13まで強い所が続いて、1:18で1度静かになる。構成が効いてるんだよね〜']],
     'listen:erfolg_piano': [['happy', '0:19と1:01、2度サビが来る構成がいいんだよね〜。1:19で1度静かになるのも効いてる']],
+    'listen:glass_crown': [['happy', '1:10でいったん静かに落として、1:36でまた上げる。構成が効いてるんだよね〜']],
     'listen:gourmet_race_64': [['happy', 'いちばん強い所が何度も来て、間にふつうが挟まる。ためが効いてるんだよね〜']],
     'listen:gourmet_race_dx': [['happy', '1:14のサビのあと1:30で1度静かになる。構成が効いてるんだよね〜']],
     'listen:hopes_and_dreams': [['happy', '0:47でいったん落として、1:10からまた上げるのがいいんだよね〜']],
@@ -35414,6 +35425,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:eiyuu_no_akashi_milktea': [['normal', 'BPM192です。強い音48%に軽い音3%、速さで押す配分です']],
     'listen:erfolg': [['normal', 'BPM213で924ノーツ、Lv.40。強い音56%・軽い音0%の、力で押し切る配分です・・・！']],
     'listen:erfolg_piano': [['normal', 'BPM164で441ノーツ、Lv.25。強い音39%・軽い音2%の混ざり具合です・・・！']],
+    'listen:glass_crown': [['normal', 'BPM138、強い音33%・軽い音2%。重さで押していく配分だぜ・・・！']],
     'listen:gourmet_race_64': [['normal', 'BPM187です。強い音27%に軽い音1%、速くて芯のある配分です']],
     'listen:gourmet_race_dx': [['normal', 'BPM160です。強い音67%に軽い音6%、力のこもった配分です']],
     'listen:hopes_and_dreams': [['normal', 'BPM171です。強く打つ音が48%・・・！ ガツンとくる音です']],
@@ -35516,6 +35528,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:eiyuu_no_akashi_milktea': [['normal', '0:02は静かに始まるね。そこから一気に速くなるから、構えておくといいかな']],
     'listen:erfolg': [['normal', '1:23や2:08のふつうな所は落ち着くね。息を整えてから行けるかな']],
     'listen:erfolg_piano': [['normal', '1:13のふつうな所と1:19の静かな所は落ち着くね。息を整えられるかな']],
+    'listen:glass_crown': [['normal', '1:10から1:36の静かな所でひと息。そこで整えてから後半へ行こうかな']],
     'listen:gourmet_race_64': [['normal', '0:14と1:11のふつうな所は落ち着くね。息を整えてから行けるかな']],
     'listen:gourmet_race_dx': [['normal', '0:48のふつうな所と1:30の静かな所は落ち着くね。息を整えられるかな']],
     'listen:hopes_and_dreams': [['normal', '0:47の静かなところ、ひと息つけるね']],
@@ -40349,12 +40362,12 @@ const RHYTHM_SONG_OWNED_KEY = 'mh_rhythm_owned_songs_v1';
 const RHYTHM_SONG_DEFAULT_PRICE = 500;
 // 有料の曲: { 曲の id: ビートP }。2026-11-26 クリスマスの3曲も有料(台帳 r1126-036・ショート版は全編といっしょに開く)。2026-11-14 の新曲3つから(departure!・RPG・Midnight Studio。LAMIA・サウダージ・メガロバニアは無料のまま)
 // Battle #5 は 2026-11-23 から止めていたが、11/28 10:00 に解禁(台帳 r1126-064)。公開曲の一覧と同じ変更で、値段(500)と組(short ver. は原曲と一緒に開く)を戻した
-const RHYTHM_SONG_PRICES = Object.freeze({ departure: 500, rpg: 500, midnight_studio: 500, hopes_and_dreams: 500, sparkling_pink_overture: 500, seasons_of_a_little_plaza: 500, eiyuu_no_akashi: 500, gourmet_race_64: 500, dr_wily_stage_1: 500, erfolg: 500, amakakeru_tsubasa: 500, beyond_the_same_sky: 500, desert_crown: 500, walkure: 500, battle_5: 500, kiss_mystery: 500, dear_santa: 500, winter_fall: 500 });
+const RHYTHM_SONG_PRICES = Object.freeze({ departure: 500, rpg: 500, midnight_studio: 500, hopes_and_dreams: 500, sparkling_pink_overture: 500, seasons_of_a_little_plaza: 500, eiyuu_no_akashi: 500, gourmet_race_64: 500, dr_wily_stage_1: 500, erfolg: 500, amakakeru_tsubasa: 500, beyond_the_same_sky: 500, desert_crown: 500, walkure: 500, battle_5: 500, kiss_mystery: 500, dear_santa: 500, winter_fall: 500, glass_crown: 500 });
 // 1曲の値段で、組の別の版(short ver.)もいっしょに遊べる(2026-11-14 社長「1曲500で両方ついてくる」)。{ 別の版の id: 買う曲の id }。
 // 保存するのは買った曲(全編)の id だけ。別の版は、全編を持っていれば開く(保存の形は変えない)
 // 2026-11-19 英雄の証も同じ形にそろえた(ミラクル☆ミルクティ版 → 戦闘版。交換所で2枚に分かれて出ていたのを1枚・500Pで両版に)
 // 2026-11-19 Dr.WILY STAGE 1 も同じ形(おっくせんまん版 → 原曲。曲組500P・両版開放で、交換所では1枚のカードだけ出す)
-const RHYTHM_SONG_BUNDLE_OWNER = Object.freeze({ departure_short: 'departure', rpg_short: 'rpg', midnight_studio_short: 'midnight_studio', hopes_and_dreams_short: 'hopes_and_dreams', gourmet_race_dx: 'gourmet_race_64', eiyuu_no_akashi_milktea: 'eiyuu_no_akashi', dr_wily_stage_1_okkussenman: 'dr_wily_stage_1', erfolg_piano: 'erfolg', beyond_the_same_sky_short: 'beyond_the_same_sky', walkure_short: 'walkure', battle_5_short: 'battle_5', kiss_mystery_short: 'kiss_mystery', dear_santa_short: 'dear_santa', winter_fall_short: 'winter_fall' });
+const RHYTHM_SONG_BUNDLE_OWNER = Object.freeze({ departure_short: 'departure', rpg_short: 'rpg', midnight_studio_short: 'midnight_studio', hopes_and_dreams_short: 'hopes_and_dreams', gourmet_race_dx: 'gourmet_race_64', eiyuu_no_akashi_milktea: 'eiyuu_no_akashi', dr_wily_stage_1_okkussenman: 'dr_wily_stage_1', erfolg_piano: 'erfolg', beyond_the_same_sky_short: 'beyond_the_same_sky', walkure_short: 'walkure', battle_5_short: 'battle_5', kiss_mystery_short: 'kiss_mystery', dear_santa_short: 'dear_santa', winter_fall_short: 'winter_fall', glass_crown_short: 'glass_crown' });
 const rhythmSongOwnerId = (songId) => { const id = String(songId || ''); return RHYTHM_SONG_BUNDLE_OWNER[id] || id; };
 const rhythmSongHasBundle = (songId) => Object.values(RHYTHM_SONG_BUNDLE_OWNER).includes(rhythmSongOwnerId(songId));
 // 購入で一緒に開く版の songId(持ち主自身は除く)。バンドルの表が正本
