@@ -194,7 +194,25 @@ const SHOTS_108B = [
   { name: '28-x7-shadow', row: '4-X-3', side: 2, label: '開かずの部屋の影' },
   { name: '29-x7-card', row: 'X7-3', side: 1, tap: 3, label: 'END-X7 エンドの札' },
 ];
-const LIST_ALL = process.argv.includes('--r1126-108b') ? SHOTS_108B : process.argv.includes('--r1126-108') ? SHOTS_108 : process.argv.includes('--spoil') ? SHOTS_SPOIL : process.argv.includes('--r1126-091') ? SHOTS_091 : process.argv.includes('--final') ? SHOTS_FINAL : process.argv.includes('--r1126-077') ? SHOTS_077 : process.argv.includes('--r1126-071') ? SHOTS_071 : process.argv.includes('--r1126-076') ? SHOTS_076 : process.argv.includes('--r1126-067') ? SHOTS_067 : process.argv.includes('--r1126-065') ? SHOTS_065 : process.argv.includes('--r1126-062') ? SHOTS_062 : process.argv.includes('--r1126-046') ? SHOTS_046 : process.argv.includes('--r1126-054') ? SHOTS_054 : process.argv.includes('--r1126-058') ? SHOTS_058 : SHOTS;
+// r1126-108 第3弾: 真相のその先・おまけ2つ・寄り道3つ
+const SHOTS_108C = [
+  { name: '31-a9-atsu', row: 'A9', side: 1, label: 'あつ派 終章 きゅうこを呼び戻す選択' },
+  { name: '32-g2-grab', row: '9-X-5', side: 2, label: 'ソラシド派 C9-X 振りほどかれた手' },
+  { name: '33-g2-cliff', row: '9-Y-7', side: 1, label: 'C9-Y 明け方の雪原(背景の切り替え)' },
+  { name: '34-g2-card', row: 'G2-9', side: 1, tap: 3, label: 'END-G2 エンドの札(真相のその先)' },
+  { name: '35-a7b', row: 'A7b', side: 1, label: 'あつ派 第7章 みゅあの助手の勘' },
+  { name: '36-o3-santa', row: '7-V-11', side: 1, label: 'C7-V サンタさん本人' },
+  { name: '37-o3-out', row: 'OUT-O3-1', side: 1, label: 'OUT-O3 画面の前で' },
+  { name: '38-a1-four', row: 'A1', side: 1, endings: ['END-G'], label: '真グッドのあと A1 の④' },
+  { name: '39-o4-save', row: '1-O4-17', side: 1, label: 'C1-O4 セーブデータの名前' },
+  { name: '40-o4-card', row: 'O4-3', side: 1, tap: 3, label: 'END-O4 エンドの札' },
+  { name: '41-a4y', row: 'A4y', side: 1, label: '第4章 寄り道(帳面)' },
+  { name: '42-a6y', row: 'A6y', side: 2, label: '第6章 寄り道(かばん)' },
+  { name: '43-c6z', row: '6-Z-4', side: 2, label: 'C6-Z ドラが入り口に' },
+  { name: '44-a8y', row: 'A8y', side: 2, label: '真ルート第8章 寄り道(屋根裏)' },
+  { name: '45-c8z', row: '8-Z-5', side: 1, label: 'C8-Z ドラの声で開ける' },
+];
+const LIST_ALL = process.argv.includes('--r1126-108c') ? SHOTS_108C : process.argv.includes('--r1126-108b') ? SHOTS_108B : process.argv.includes('--r1126-108') ? SHOTS_108 : process.argv.includes('--spoil') ? SHOTS_SPOIL : process.argv.includes('--r1126-091') ? SHOTS_091 : process.argv.includes('--final') ? SHOTS_FINAL : process.argv.includes('--r1126-077') ? SHOTS_077 : process.argv.includes('--r1126-071') ? SHOTS_071 : process.argv.includes('--r1126-076') ? SHOTS_076 : process.argv.includes('--r1126-067') ? SHOTS_067 : process.argv.includes('--r1126-065') ? SHOTS_065 : process.argv.includes('--r1126-062') ? SHOTS_062 : process.argv.includes('--r1126-046') ? SHOTS_046 : process.argv.includes('--r1126-054') ? SHOTS_054 : process.argv.includes('--r1126-058') ? SHOTS_058 : SHOTS;
 
 //  --only <語>: 名前にその語を含む物だけ撮る(例: --only kuroba)
 const ONLY = process.argv.includes('--only') ? process.argv[process.argv.indexOf('--only') + 1] || '' : '';

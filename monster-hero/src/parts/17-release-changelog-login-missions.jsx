@@ -519,7 +519,7 @@ const changelogSafeLink = (link) => {
 //   イベントの札になっている項目の NEW を、元のタブの一覧にも出すのに使う(2026-11-27 r1126-074 小2)
 const CHANGELOG_TAB_OF_ID = new Map(CHANGELOG_ENTRIES.map(entry => [entry.id, CHANGELOG_ISSUE_TAB_TYPES.includes(entry.type) ? 'issue' : 'update']));
 // 不具合情報タブの中では、種類の札をタブ名と同じ「不具合修正」にせず、様子で書く(2026-11-27 r1126-074 小9)
-const changelogKindLabelInTab = (info, tab) => (tab === 'issue' ? ({ fix:'直しました', issue:'調べています' })[info && info.tone] : null) || (info && info.label) || '';
+const changelogKindLabelInTab = (info, tab) => (tab === 'issue' ? ({ fix:'修正済み', issue:'調べています' })[info && info.tone] : null) || (info && info.label) || '';
 const CHANGELOG_IDS_BY_TYPE = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, changelogEntriesOfTab(type).map(entry => entry.id)]));
 // 一覧の並べかえに使えるキー。画面の選択肢(MONSTER_SORT_OPTIONS)と必ず同じ顔ぶれにする。
 // 片方にだけ足すと、画面では選べるのに保存だけ弾かれて、開き直すと元に戻る

@@ -89,6 +89,8 @@ revoke all on public.xmas_novel_plays   from anon, authenticated;
 revoke all on public.xmas_novel_firsts  from anon, authenticated;
 revoke all on public.xmas_novel_usage   from anon, authenticated;
 grant select on public.xmas_novel_end_ids to anon, authenticated;   -- エンドの総数を画面に出すため(名前は持たない・id と種類だけ)
+-- RLS が掛かっているので、読む決まりも要る(無いと端末から0件に見え、ランキングの総数が「？」になる・2026-11-28 窓口が本番に流した)
+do $$ begin if not exists (select 1 from pg_policies where schemaname='public' and tablename='xmas_novel_end_ids' and policyname='xmas_novel_end_ids_read') then create policy xmas_novel_end_ids_read on public.xmas_novel_end_ids for select to anon, authenticated using (true); end if; end $$;
 
 -- 人ごとの数(一覧に入っているエンドだけ数える)。owner_id は見え方には出さない
 create or replace view public.xmas_novel_stats as
@@ -245,6 +247,10 @@ grant execute on function public.xmas_novel_rank_submit(text, text, jsonb) to an
 -- 弾を出したときに足す行(r1126-108)。第2弾(4つ・合わせて27)
 insert into public.xmas_novel_end_ids (event_id, end_id, kind) values
   ('xmas_novel_2026', 'END-X6', 'forced'), ('xmas_novel_2026', 'END-X7', 'forced'), ('xmas_novel_2026', 'END-X8', 'forced'), ('xmas_novel_2026', 'END-A2', 'another')
+on conflict (event_id, end_id) do nothing;
+-- 第3弾(3つ・合わせて30)
+insert into public.xmas_novel_end_ids (event_id, end_id, kind) values
+  ('xmas_novel_2026', 'END-G2', 'truebad'), ('xmas_novel_2026', 'END-O3', 'omake'), ('xmas_novel_2026', 'END-O4', 'omake')
 on conflict (event_id, end_id) do nothing;
 -- ずるの疑いのある人を隠す(消さない)
 -- update public.xmas_novel_players set hidden = true where event_id = 'xmas_novel_2026' and user_name = '…';
