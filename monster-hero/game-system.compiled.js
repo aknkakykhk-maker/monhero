@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8d21926397255c06
+// source-sha256: 9aafb2a651ba8ce0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -114142,7 +114142,7 @@ const XmasStoryTab = ({
   }, novelEnded ? '遊べる期間は終わりました(記録は残っています)' : typeof XMAS_NOVEL_GAME !== 'undefined' ? `副題「${XMAS_NOVEL_GAME.sub}」` : ''))), React.createElement(XmasCastPanel, {
     no: reached,
     compact: true
-  }), React.createElement("section", null, React.createElement(XmasSectionTitle, null, preMain ? 'ひとりで進める物語' : '序章を読み返す'), React.createElement("p", {
+  }), React.createElement("section", null, React.createElement(XmasSectionTitle, null, preMain ? 'ミステリーノベル『モンヒロ事件簿』' : '序章を読み返す'), React.createElement("p", {
     className: "mb-2 px-0.5 text-[10px] font-bold leading-relaxed text-slate-300",
     style: JA_LABEL_STYLE
   }, jaWrap(storyNote)), React.createElement("ol", {
@@ -117223,6 +117223,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "裏口から少し離れた雪の上に、灰色のコートの影が、うつ伏せに横たわっていた",
       "fx": ["fallen"],
       "body": "kuroba",
+      "noBlood": true,
       "k": "C3-1:3-1-4"
     }, {
       "id": "3-1-5",
@@ -117236,6 +117237,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "band",
       "x": "二人が、雪を踏みしめていく。黒羽の体は、一晩で白く凍りついていた。髪にも、まつげにも、霜がびっしりと貼りついている",
       "body": "kuroba",
+      "noBlood": true,
       "k": "C3-1:3-1-6"
     }, {
       "id": "3-1-7",
@@ -117243,6 +117245,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "見開いたままの目が、裏口のほうを向いていた。両手の指先は皮が剥け、爪が剥がれて、凍った血で黒くこわばっている",
       "fx": ["red"],
       "body": "kuroba",
+      "noBlood": true,
       "k": "C3-1:3-1-7"
     }, {
       "id": "3-1-8",
@@ -118595,12 +118598,14 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "細く冷たい通り道。白いケープの白瀬が、鏡の裏に背中をつけて、座りこんでいた",
       "fx": ["fallen"],
       "body": "shirase",
+      "noBlood": true,
       "k": "C5-4:5-4-5"
     }, {
       "id": "5-4-6",
       "t": "band",
       "x": "顔は青白く、唇は紫に変わっている。手袋のない右手が、鏡の裏の板に、まだ爪を立てたまま凍りついていた",
       "body": "shirase",
+      "noBlood": true,
       "k": "C5-4:5-4-6"
     }, {
       "id": "5-4-7",
@@ -118608,6 +118613,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "鏡の裏には、何十本もの、赤い引っかき傷。爪の間から流れた血が、板の上で細い筋になって固まっている",
       "fx": ["bleed"],
       "body": "shirase",
+      "noBlood": true,
       "k": "C5-4:5-4-7"
     }, {
       "id": "5-4-8",
@@ -123698,6 +123704,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "物音に駆けつけたソラシドが見つけたのは、書斎の机に突っ伏したあつだった",
       "fx": ["fallen"],
       "body": "atsu",
+      "noBlood": true,
       "k": "C5-X:5-X-4a"
     }, {
       "id": "5-X-4s",
@@ -123714,6 +123721,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "物音に駆けつけたあつが見つけたのは、書斎の机に突っ伏したソラシドだった",
       "fx": ["fallen"],
       "body": "sorashido",
+      "noBlood": true,
       "k": "C5-X:5-X-4s"
     }, {
       "id": "5-X-5",
@@ -123721,6 +123729,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "首には、細いひもの跡が、赤黒く食いこんでいる。ひびの入った画面の上に、血のついた指の跡",
       "fx": ["bleed"],
       "body": "lead",
+      "noBlood": true,
       "k": "C5-X:5-X-5"
     }, {
       "id": "5-X-6",
@@ -123969,7 +123978,7 @@ const XMAS_NOVEL_SCRIPT = {
         }]
       },
       "t": "band",
-      "x": "扉の外。雪に埋もれた探偵の帽子の先で、ソラシドが、扉に手を伸ばしたまま凍りついていた。後ろ頭の髪が、血で固まっている",
+      "x": "扉の外。雪に埋もれたノートパソコンの先で、ソラシドが、扉に手を伸ばしたまま凍りついていた。後ろ頭の髪が、血で固まっている",
       "fx": ["bleed"],
       "body": "sorashido",
       "k": "C6-X:6-X-10s"
@@ -125038,6 +125047,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "白瀬が見つかったのと同じ場所で、ソラシドが、壁にもたれて座ったまま、動かなくなっていた。膝の上で、ひびの入った画面が、まだ、かすかに光っている",
       "fx": ["fallen"],
       "body": "sorashido",
+      "noBlood": true,
       "k": "END-M5:M5-5a"
     }, {
       "id": "M5-5s",
@@ -125054,6 +125064,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "白瀬が見つかったのと同じ場所で、あつが、壁にもたれて座ったまま、動かなくなっていた。消えたランタンを、握りしめたまま",
       "fx": ["fallen"],
       "body": "atsu",
+      "noBlood": true,
       "k": "END-M5:M5-5s"
     }, {
       "id": "M5-6",
@@ -125061,6 +125072,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "まつげにも、髪にも、白い霜。外から閉められた鏡の扉の内側に、引っかいた跡が、何本も残っていた",
       "fx": ["bleed"],
       "body": "partner",
+      "noBlood": true,
       "k": "END-M5:M5-6"
     }, {
       "id": "M5-7a",
@@ -127051,6 +127063,12 @@ const XMAS_NOVEL_CSS = `
 @keyframes mh-nv-bob { 50% { transform: translateY(4px); } }
 .mh-nv-top { position: absolute; top: max(8px, env(safe-area-inset-top)); left: 8px; right: 8px; display: flex; align-items: center; gap: 6px; z-index: 6; }
 .mh-nv-where { min-width: 0; flex: 1; font-size: 12px; color: #c9d4f2; text-shadow: 0 1px 3px #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* 縦では、章と場面の題を2行に分ける(1行だと「第七章　ひとつ…」と章の名前まで切れた・2026-11-28 総点検 4番)。それぞれ入らないときだけ「…」 */
+@media (orientation: portrait) {
+  .mh-nv-where { white-space: normal; line-height: 1.3; font-size: 11px; }
+  .mh-nv-where > .ch, .mh-nv-where > .sc { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mh-nv-where > .ch .sep { display: none; }
+}
 .mh-nv-btn { min-height: 38px; min-width: 38px; padding: 0 10px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; font-size: 12px; font-weight: 800;
   color: #f3e3b0; background: rgba(8,16,40,.82); box-shadow: 0 0 0 1px rgba(232,196,106,.55); }
 .mh-nv-btn[data-on] { background: #b8892e; color: #1a1205; }
@@ -127122,6 +127140,9 @@ const XMAS_NOVEL_CSS = `
 @keyframes mh-nv-bleed { 0% { opacity: 0; transform: scale(1.35); filter: blur(6px); } 25% { opacity: 1; transform: scale(1); filter: blur(0); } 70% { opacity: .9; } 100% { opacity: 0; } }
 .mh-nv-fallen { position: absolute; left: 50%; bottom: 24%; width: min(80vw, 520px); transform: translateX(-50%); z-index: 4; filter: drop-shadow(0 0 2px rgba(190,200,230,.35)); pointer-events: none; animation: mh-nv-fade 1.2s ease both; }
 .mh-nv-body { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
+.mh-nv-body.noblood .pool { display: none; }
+.mh-nv-body.noblood .mh-nv-body-lie img { filter: brightness(0) drop-shadow(0 0 1px rgba(190,205,235,.55)) drop-shadow(0 0 14px rgba(120,150,200,.35)) !important; }
+.mh-nv-body.noblood .mh-nv-body-dim { background: radial-gradient(120% 90% at 50% 40%, rgba(6,10,34,.35), rgba(0,0,4,.88)) !important; }
 .mh-nv-body-dim { position: absolute; inset: 0; -webkit-backdrop-filter: grayscale(.9) brightness(.55); backdrop-filter: grayscale(.9) brightness(.55);
   background: radial-gradient(70% 34% at var(--fx, 50%) var(--fy, 74%), rgba(120,0,14,.42), rgba(120,0,14,0) 72%), radial-gradient(120% 90% at 50% 40%, rgba(6,10,34,.35), rgba(0,0,4,.88)); animation: mh-nv-fade 1.4s ease both; }
 .mh-nv-body-lie { position: absolute; }
@@ -127182,6 +127203,10 @@ const XMAS_NOVEL_CSS = `
 @keyframes mh-nv-zoom-out { 0% { transform: translate(-50%, -50%) scale(4); opacity: .2; } 100% { transform: translate(-50%, -50%) scale(.6); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .mh-nv-noise, .mh-nv-boot-logo, .mh-nv-boot-press { animation: none; } .mh-nv-transit { animation-duration: .01s !important; } }
 @media (orientation: landscape) and (max-height: 560px) {
+  /* 選択肢・推理の窓・GAME OVER の札は、上の帯(ボタンの列)の下から出す(上のボタンに重なった・2026-11-28 総点検 9番) */
+  .mh-nv-sheet { padding-top: calc(max(8px, env(safe-area-inset-top)) + 46px); }
+  .mh-nv-sheet .mh-nv-panel { max-height: 100%; }
+  .mh-nv-card { padding-top: calc(max(8px, env(safe-area-inset-top)) + 48px); padding-bottom: 12px; justify-content: safe center; overflow-y: auto; }
   .mh-nv-fig { left: 0; right: auto; width: min(42vw, 460px); }
   .mh-nv-box { left: auto; right: 10px; transform: none; width: min(calc(60vw - 10px), 760px); min-height: 110px; padding-top: 20px; }
   .mh-nv-text { font-size: 15px; line-height: 1.65; }
@@ -128015,7 +128040,8 @@ const XmasNovelBody = ({
   who,
   scene = '',
   at = 0,
-  bg = null
+  bg = null,
+  noBlood = false
 }) => {
   const k = `${scene}:${who}`;
   const [again] = useState(() => xmasNovelBodyLast.k === k && Math.abs(at - xmasNovelBodyLast.at) <= 4);
@@ -128061,7 +128087,7 @@ const XmasNovelBody = ({
   const fy = `${Math.round((vp.H - p.bottom) / vp.H * 100)}%`;
   const fade = sit ? `linear-gradient(180deg, #000 ${Math.round(p.vis * 70)}%, transparent ${Math.round(p.vis * 100)}%)` : '';
   return React.createElement("div", {
-    className: `mh-nv-body${again ? ' again' : ''}`,
+    className: `mh-nv-body${again ? ' again' : ''}${noBlood ? ' noblood' : ''}`,
     "data-xmas-novel-fallen": true,
     "data-xmas-novel-body": who,
     "data-xmas-novel-body-pose": pose,
@@ -129461,7 +129487,8 @@ const XmasNovelScreen = ({
     bg: bg,
     who: xmasNovelBodyWho(row.body, st && st.cur && st.cur.flags),
     scene: scene ? scene.id : '',
-    at: st && st.cur && Number.isFinite(st.cur.idx) ? st.cur.idx : 0
+    at: st && st.cur && Number.isFinite(st.cur.idx) ? st.cur.idx : 0,
+    noBlood: !!row.noBlood
   }), isBand && !row.body && Array.isArray(row.fx) && row.fx.includes('fallen') && React.createElement(XmasNovelFallen, null), isBand && Array.isArray(row.fx) && row.fx.includes('letter') && React.createElement("div", {
     key: `letter-${row.id}`,
     className: "mh-nv-letter mh-nv-serif",
@@ -129536,8 +129563,15 @@ const XmasNovelScreen = ({
   }))), React.createElement("div", {
     className: "mh-nv-top"
   }, React.createElement("span", {
-    className: "mh-nv-where mh-nv-serif"
-  }, chapter && !chapter.outside ? `${xmasNovelChapterLabel(chapter)}　${chapter.title}　/　` : '', scene && scene.title ? scene.title : ''), React.createElement("button", {
+    className: "mh-nv-where mh-nv-serif",
+    "data-xmas-novel-where": true
+  }, chapter && !chapter.outside ? React.createElement("span", {
+    className: "ch"
+  }, `${xmasNovelChapterLabel(chapter)}${chapter.title ? `　${chapter.title}` : ''}`, React.createElement("span", {
+    className: "sep"
+  }, "\u3000/\u3000")) : null, scene && scene.title && !(scene.ending || chapter && chapter.id === 'END' || /^END-/.test(String(scene.next || ''))) ? React.createElement("span", {
+    className: "sc"
+  }, scene.title) : null), React.createElement("button", {
     type: "button",
     className: "mh-nv-btn",
     "data-xmas-novel-open-book": true,
