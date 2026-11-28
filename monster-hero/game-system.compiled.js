@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d3dcfa9ff69e7188
+// source-sha256: 25a6751448cc783c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -44874,6 +44874,7 @@ const RhythmTapTest = ({
   onComplete,
   onExit,
   raidPlay = false,
+  holdResultCount = false,
   quickRunAward = null,
   beatRankAward = null,
   onRankBarFull = null,
@@ -47003,9 +47004,10 @@ const RhythmTapTest = ({
   const [touchReportSent, setTouchReportSent] = useState(null);
   const resultRootRef = useRef(null);
   const recordSeFireRef = useRef(null);
-  const resultCountId = view.status === 'result' && view.result && view.result.countAnim ? view.result.countAnim.id : null;
+  const resultCountIdRaw = view.status === 'result' && view.result && view.result.countAnim ? view.result.countAnim.id : null;
+  const resultCountId = holdResultCount ? null : resultCountIdRaw;
   const [resultCountDoneId, setResultCountDoneId] = useState(null);
-  const resultCountRunning = resultCountId !== null && resultCountDoneId !== resultCountId;
+  const resultCountRunning = resultCountIdRaw !== null && resultCountDoneId !== resultCountIdRaw;
   React.useLayoutEffect(() => {
     const root = resultRootRef.current;
     if (!resultCountId || !root) return undefined;
@@ -68422,13 +68424,27 @@ const TrainingCountUp = ({
     setValue(from);
     let raf = 0;
     let startAt = 0;
+    const fmt = v => String(format ? format(v) : v);
     const timer = setTimeout(() => {
       const tick = now => {
         if (!startAt) startAt = now;
         const t = Math.min(1, (now - startAt) / Math.max(1, duration));
         const eased = 1 - Math.pow(1 - t, 3);
-        setValue(Math.round(from + (to - from) * eased));
-        if (t < 1) raf = requestAnimationFrame(tick);
+        const v = Math.round(from + (to - from) * eased);
+        const node = holderRef.current && holderRef.current.firstChild;
+        if (!node || node.nodeType !== 3) {
+          setValue(v);
+          if (t < 1) raf = requestAnimationFrame(tick);
+          return;
+        }
+        if (t >= 1) {
+          node.nodeValue = fmt(to);
+          setValue(to);
+          return;
+        }
+        const text = fmt(v);
+        if (node.nodeValue !== text) node.nodeValue = text;
+        raf = requestAnimationFrame(tick);
       };
       raf = requestAnimationFrame(tick);
     }, Math.max(0, delay));
@@ -87977,7 +87993,24 @@ const homeWalletGrowPx = (goldText, bpText) => {
   const w = t => [...String(t)].reduce((n, c) => n + (c.charCodeAt(0) > 0x7f ? 2.5 : 1), 0);
   return Math.min(24, Math.max(0, Math.ceil(w(goldText) * 6.4 - 50), Math.ceil(w(bpText) * 6.4 - 29)));
 };
+const homeEnsureCss = () => {
+  if (typeof document === 'undefined' || !document.head) return;
+  const put = (id, text) => {
+    if (!text || document.getElementById(id)) return;
+    const tag = document.createElement('style');
+    tag.id = id;
+    tag.textContent = text;
+    document.head.appendChild(tag);
+  };
+  try {
+    put('mh-home-event-badge-css', HOME_EVENT_BADGE_CSS);
+    put('mh-home-v2-css', HOME_V2_CSS);
+    put('mh-home-raid-jack-css', HOME_RAID_JACK_CSS);
+    if (typeof XMAS_HOME_ENTRY_CSS === 'string') put('mh-xmas-home-entry-css', XMAS_HOME_ENTRY_CSS);
+  } catch (_) {}
+};
 function HomeScreen(props) {
+  homeEnsureCss();
   const v2 = useHomeV2();
   return v2 ? React.createElement(HomeScreenV2, props) : React.createElement(HomeScreenV1, props);
 }
@@ -112946,7 +112979,8 @@ const RaidJackRewardList = ({
   onClose,
   claimed,
   initialTab = 'a',
-  ev = RAID_EVENT_JACK
+  ev = RAID_EVENT_JACK,
+  lockedOf = null
 }) => {
   const [tab, setTab] = useState(initialTab);
   const have = Array.isArray(claimed) ? claimed : [];
@@ -112997,7 +113031,7 @@ const RaidJackRewardList = ({
     className: "rounded-2xl border border-white/10 bg-black/30 p-3"
   }, React.createElement("div", {
     className: "mb-1 text-[12px] font-black text-white"
-  }, i + 1, ". ", t.name), React.createElement(RaidJackTierRewards, {
+  }, i + 1, ". ", raidTierNameOf(ev, tab, i, lockedOf)), React.createElement(RaidJackTierRewards, {
     kind: tab,
     index: i,
     claimed: have,
@@ -113067,7 +113101,8 @@ const RaidJackRankingList = ({
   renderPlace,
   renderIcon,
   cardClass,
-  ev = RAID_EVENT_JACK
+  ev = RAID_EVENT_JACK,
+  lockedOf = null
 }) => {
   const [tab, setTab] = useState(initialTab);
   const [tierIdx, setTierIdx] = useState(Math.min(Math.max(initialTier, 0), ev.aTiers.length - 1));
@@ -113129,8 +113164,8 @@ const RaidJackRankingList = ({
     };
   }, [tab, tierIdx, useAll, maxHit, maxTier, src, eventId]);
   const myTotal = useSrc || maxHit ? Number(myMax) || 0 : self ? useAll ? Object.values(self.a).reduce((sum, n) => sum + (Number(n) || 0), 0) : tab === 'a' ? self.a[tierIdx + 1] || 0 : self.bTotal : 0;
-  const maxTierName = maxTier >= 1 ? ev.tiers(tab)[maxTier - 1].name : '全難易度';
-  const title = useSrc && maxHit ? `${srcName}の最大ダメージ(${srcUnit}あたり・${maxTierName})` : useSrc ? `${srcName}で与えたダメージの合計(${useAll ? '全段階の合計' : `${raidEventTierShort(ev, ev.aTiers[tierIdx])}`})` : maxHit ? `${tab === 'a' ? 'レイドバトル' : 'グランドスラム'}の最大ダメージ(1戦あたり・${maxTierName})` : useAll ? 'レイドバトルの累計ダメージ(全段階の合計)' : tab === 'a' ? `${ev.aTiers[tierIdx].name}への貢献ランキング` : 'グランドスラムの累計ダメージ(5難易度の合計)';
+  const maxTierName = maxTier >= 1 ? raidTierNameOf(ev, tab, maxTier - 1, lockedOf) : '全難易度';
+  const title = useSrc && maxHit ? `${srcName}の最大ダメージ(${srcUnit}あたり・${maxTierName})` : useSrc ? `${srcName}で与えたダメージの合計(${useAll ? '全段階の合計' : `${raidTierShortOf(ev, 'a', tierIdx, lockedOf)}`})` : maxHit ? `${tab === 'a' ? 'レイドバトル' : 'グランドスラム'}の最大ダメージ(1戦あたり・${maxTierName})` : useAll ? 'レイドバトルの累計ダメージ(全段階の合計)' : tab === 'a' ? `${raidTierNameOf(ev, 'a', tierIdx, lockedOf)}への貢献ランキング` : 'グランドスラムの累計ダメージ(5難易度の合計)';
   return React.createElement("div", {
     "data-raid-jack-ranking-list": true,
     className: "fixed inset-0 z-[32000] flex flex-col bg-slate-950 p-3",
@@ -113198,7 +113233,7 @@ const RaidJackRankingList = ({
     n: 0
   }, ...ev.tiers(tab).map((t, i) => ({
     id: t.id,
-    name: raidEventTierShort(ev, t),
+    name: raidTierShortOf(ev, tab, i, lockedOf),
     n: i + 1
   }))].map(t => React.createElement("button", {
     type: "button",
@@ -113218,7 +113253,7 @@ const RaidJackRankingList = ({
       setAllMode(false);
     },
     className: `min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${!useAll && tierIdx === i ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`
-  }, raidEventTierShort(ev, t))), React.createElement("button", {
+  }, raidTierShortOf(ev, 'a', i, lockedOf))), React.createElement("button", {
     type: "button",
     "data-raid-jack-ranking-all": true,
     onClick: () => setAllMode(true),
@@ -113248,6 +113283,9 @@ const RaidJackRankingList = ({
     cardClass: cardClass
   })));
 };
+const RAID_HIDDEN_TIER_NAME = '？？？';
+const raidTierNameOf = (ev, kind, i, lockedOf) => typeof lockedOf === 'function' && lockedOf(kind, i) ? RAID_HIDDEN_TIER_NAME : ev.tiers(kind)[i].name;
+const raidTierShortOf = (ev, kind, i, lockedOf) => typeof lockedOf === 'function' && lockedOf(kind, i) ? RAID_HIDDEN_TIER_NAME : raidEventTierShort(ev, ev.tiers(kind)[i]);
 const RAID_WAY_BUTTONS = Object.freeze({
   battle: {
     label: 'バトルで',
@@ -113306,6 +113344,7 @@ const RaidJackScreen = ({
   const [showRewards, setShowRewards] = useState(false);
   const [showRanking, setShowRanking] = useState(false);
   const [aAll, setAAll] = useState(false);
+  const compact = !!head;
   const nowMs = Date.now();
   const windowState = ev.windowAt(nowMs);
   const open = forced || windowState === 'open';
@@ -113373,6 +113412,14 @@ const RaidJackScreen = ({
   const isOpenTier = unlocked(current);
   const bossDownNow = tab === 'a' && !!totals && aDefeated(tiers.length - 1);
   const showAll = bossDownNow && aAll;
+  const lockedOf = (kind, i) => {
+    if (unlimited || i <= 0) return false;
+    if (kind === 'a') {
+      if (!totals || !totals.a || !totals.a[i]) return true;
+      return totals.a[i].total < ev.tiers('a')[i - 1].hp;
+    }
+    return i >= raidJackUnlockedCount('b', state.b.defeated);
+  };
   const myTotalHere = self ? showAll ? Object.values(self.a).reduce((sum, n) => sum + (Number(n) || 0), 0) : tab === 'a' ? self.a[current + 1] || 0 : self.bTotal : 0;
   const buy = async () => {
     setBusy(true);
@@ -113380,7 +113427,7 @@ const RaidJackScreen = ({
     try {
       const result = await onPurchase(tab);
       if (result && result.ok) {
-        setMessage(`追加の挑戦を1回ぶん買いました(ビートP ${ev.extraCost})`);
+        setMessage(`追加の挑戦を1回ぶん買いました(ビートP ${Number(ev.extraCost).toLocaleString()})`);
         setTick(n => n + 1);
       } else setMessage(result && result.reason === 'short' ? 'ビートPが足りません' : '買えませんでした。もう一度試してください');
     } finally {
@@ -113421,7 +113468,45 @@ const RaidJackScreen = ({
     }],
     value: tab,
     onChange: setTab
-  }), React.createElement("div", {
+  }), compact ? React.createElement("div", {
+    "data-raid-compact-bar": true,
+    className: "mb-1.5 flex shrink-0 items-center gap-1.5 rounded-xl border border-white/10 bg-black/30 py-1 pl-2.5 pr-1 text-[10px] text-slate-100"
+  }, React.createElement("div", {
+    className: "min-w-0 flex-1 leading-tight"
+  }, React.createElement("div", {
+    className: "truncate font-black text-orange-200"
+  }, tab === 'a' ? 'ベースモンで挑戦' : 'マスモンで挑戦'), React.createElement("div", {
+    "data-raid-jack-remaining": true,
+    className: "truncate"
+  }, unlimited ? React.createElement(React.Fragment, null, "残り ", React.createElement("b", {
+    className: "text-white"
+  }, "無制限"), "(デバッグ)") : React.createElement(React.Fragment, null, "今日の残り ", React.createElement("b", {
+    className: "text-[12px] text-white"
+  }, remaining), " 回"))), React.createElement("button", {
+    type: "button",
+    "data-raid-jack-buy": true,
+    disabled: busy || !open || unlimited,
+    onClick: buy,
+    className: "min-h-[40px] shrink-0 rounded-lg border border-amber-400/60 bg-amber-950/40 px-1.5 text-[10px] font-black leading-tight text-amber-100 active:scale-95 disabled:opacity-40"
+  }, "1回追加", React.createElement("br", null), React.createElement("small", {
+    className: "text-[8px] opacity-80"
+  }, Number(ev.extraCost).toLocaleString(), "P(所持 ", (Number(beatPoints) || 0).toLocaleString(), ")")), React.createElement("button", {
+    type: "button",
+    "data-raid-jack-ranking-open": true,
+    onClick: () => setShowRanking(true),
+    "aria-label": "ランキング",
+    className: "min-h-[40px] w-[44px] shrink-0 rounded-lg border border-orange-300/60 bg-orange-950/50 text-[9px] font-black leading-tight text-orange-100 active:scale-95"
+  }, React.createElement("span", {
+    className: "block text-[14px]"
+  }, "🏆"), "順位"), React.createElement("button", {
+    type: "button",
+    "data-raid-jack-reward-list-open-top": true,
+    onClick: () => setShowRewards(true),
+    "aria-label": "報酬一覧",
+    className: "min-h-[40px] w-[44px] shrink-0 rounded-lg border border-orange-300/60 bg-orange-950/50 text-[9px] font-black leading-tight text-orange-100 active:scale-95"
+  }, React.createElement("span", {
+    className: "block text-[14px]"
+  }, "🎁"), "報酬")) : React.createElement(React.Fragment, null, React.createElement("div", {
     className: "mb-2 flex shrink-0 items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[11px] text-slate-100"
   }, React.createElement("div", null, React.createElement("div", {
     className: "font-black text-orange-200"
@@ -113439,7 +113524,7 @@ const RaidJackScreen = ({
     className: "min-h-[40px] shrink-0 rounded-xl border border-amber-400/60 bg-amber-950/40 px-3 text-[11px] font-black leading-tight text-amber-100 active:scale-95 disabled:opacity-40"
   }, "1回追加", React.createElement("br", null), React.createElement("small", {
     className: "text-[9px] opacity-80"
-  }, "ビートP ", ev.extraCost, "(所持 ", beatPoints, ")"))), React.createElement("div", {
+  }, "ビートP ", Number(ev.extraCost).toLocaleString(), "(所持 ", (Number(beatPoints) || 0).toLocaleString(), ")"))), React.createElement("div", {
     className: "mb-2 grid shrink-0 grid-cols-2 gap-2"
   }, React.createElement("button", {
     type: "button",
@@ -113451,13 +113536,13 @@ const RaidJackScreen = ({
     "data-raid-jack-reward-list-open-top": true,
     onClick: () => setShowRewards(true),
     className: "min-h-[40px] rounded-xl border border-orange-300/60 bg-orange-950/50 px-3 text-[12px] font-black text-orange-100 active:scale-95"
-  }, "🎁 報酬一覧")), message && React.createElement("div", {
+  }, "🎁 報酬一覧"))), message && React.createElement("div", {
     className: "mb-2 shrink-0 text-center text-[11px] font-black text-amber-200",
     role: "status"
   }, message), totals === null && React.createElement("div", {
     className: "mb-2 shrink-0 rounded-xl border border-amber-400/40 bg-amber-950/30 p-2 text-center text-[10px] text-amber-100"
   }, "サーバーを準備中です。みんなの記録は少し待ってから見られます(戦った記録はあとで自動で送られます)"), React.createElement("div", {
-    className: `${SCREEN_LIST_CLASS} [@media(orientation:landscape)_and_(max-height:520px)]:flex-none [@media(orientation:landscape)_and_(max-height:520px)]:overflow-visible space-y-2`
+    className: `${SCREEN_LIST_CLASS} [@media(orientation:landscape)_and_(max-height:520px)]:flex-none [@media(orientation:landscape)_and_(max-height:520px)]:overflow-visible ${compact ? 'space-y-1.5' : 'space-y-2'}`
   }, tab === 'a' && totals === undefined && React.createElement("div", {
     "data-raid-jack-loading": true,
     className: "py-6 text-center text-[11px] text-slate-300"
@@ -113475,22 +113560,22 @@ const RaidJackScreen = ({
         ...prev,
         [tab]: i
       })),
-      className: `flex w-full items-center gap-3 rounded-2xl border-2 p-2 text-left active:scale-[0.99] ${on ? 'border-orange-300 bg-orange-950/40' : 'border-white/10 bg-slate-900/60'}`
+      className: `flex w-full items-center rounded-2xl border-2 text-left active:scale-[0.99] ${compact ? 'gap-2 px-2 py-1' : 'gap-3 p-2'} ${on ? 'border-orange-300 bg-orange-950/40' : 'border-white/10 bg-slate-900/60'}`
     }, React.createElement("span", {
       "data-jack-aura": ev.aura && isOpen && !isPumpkin ? i + 1 : undefined,
       "data-raid-pumpkin": isPumpkin ? 'true' : undefined,
-      className: "relative block h-14 w-16 shrink-0"
+      className: `relative block shrink-0 ${compact ? 'h-11 w-12' : 'h-14 w-16'}`
     }, ev.aura && isOpen && !isPumpkin && React.createElement(JackAuraLayer, {
       tier: i + 1,
       limit: 8
     }), isPumpkin ? React.createElement("img", {
       src: ev.afterBossImg(),
       alt: "",
-      className: "relative mx-auto h-14 w-14 object-contain"
+      className: `relative mx-auto object-contain ${compact ? 'h-11 w-11' : 'h-14 w-14'}`
     }) : React.createElement("img", {
       src: ev.bossImg(),
       alt: "",
-      className: "relative h-14 w-16 object-contain",
+      className: `relative object-contain ${compact ? 'h-11 w-12' : 'h-14 w-16'}`,
       style: isOpen ? ev.aura ? {
         filter: raidJackAuraGlowFilter(i + 1, 0.4)
       } : undefined : {
@@ -113503,7 +113588,7 @@ const RaidJackScreen = ({
       className: "flex items-center gap-2"
     }, React.createElement("span", {
       className: "truncate text-[13px] font-black text-white"
-    }, i + 1, ". ", isPumpkin ? ev.afterBoss.name : t.name), React.createElement("span", {
+    }, i + 1, ". ", isPumpkin ? ev.afterBoss.name : raidTierNameOf(ev, tab, i, lockedOf)), React.createElement("span", {
       className: `shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-black ${isPumpkin ? 'bg-amber-500 text-slate-950' : done ? 'bg-emerald-600 text-white' : isOpen ? 'bg-orange-600 text-white' : 'bg-slate-700 text-slate-300'}`
     }, isPumpkin ? ev.afterBossBadge : done ? '討伐済み' : isOpen ? '挑戦できる' : '未解放')), tab === 'a' ? isPumpkin ? React.createElement("div", {
       "data-raid-pumpkin-note": true,
@@ -113526,7 +113611,7 @@ const RaidJackScreen = ({
     className: "mb-1 flex items-center justify-between gap-2"
   }, React.createElement("span", {
     className: "font-black text-orange-200"
-  }, tier.name, "の報酬"), React.createElement("button", {
+  }, raidTierNameOf(ev, tab, current, lockedOf), "の報酬"), React.createElement("button", {
     type: "button",
     "data-raid-jack-reward-list-open": true,
     onClick: () => setShowRewards(true),
@@ -113542,7 +113627,7 @@ const RaidJackScreen = ({
     className: "mb-1 flex items-baseline justify-between text-[11px]"
   }, React.createElement("span", {
     className: "font-black text-orange-200"
-  }, showAll ? 'レイドバトルの累計ダメージ(全段階の合計)' : tab === 'a' ? `${tier.name}への貢献ランキング` : '累計ダメージランキング(5段階の合計)'), myTotalHere > 0 && React.createElement("span", {
+  }, showAll ? 'レイドバトルの累計ダメージ(全段階の合計)' : tab === 'a' ? `${raidTierNameOf(ev, 'a', current, lockedOf)}への貢献ランキング` : '累計ダメージランキング(5段階の合計)'), myTotalHere > 0 && React.createElement("span", {
     "data-raid-jack-mine": true,
     className: "text-[10px] text-slate-200"
   }, "あなた ", myTotalHere.toLocaleString(), ahead !== null ? `(${ahead + 1}位)` : '')), bossDownNow && React.createElement("div", {
@@ -113571,7 +113656,7 @@ const RaidJackScreen = ({
     className: `${SCREEN_FOOTER_CLASS} [@media(orientation:landscape)_and_(max-height:520px)]:sticky [@media(orientation:landscape)_and_(max-height:520px)]:bottom-0 [@media(orientation:landscape)_and_(max-height:520px)]:z-20 [@media(orientation:landscape)_and_(max-height:520px)]:-mx-4 [@media(orientation:landscape)_and_(max-height:520px)]:-mb-4 [@media(orientation:landscape)_and_(max-height:520px)]:px-4 [@media(orientation:landscape)_and_(max-height:520px)]:pb-3 [@media(orientation:landscape)_and_(max-height:520px)]:bg-slate-950 [@media(orientation:landscape)_and_(max-height:520px)]:shadow-[0_32px_0_0_#020617]`
   }, tab === 'a' && open && isOpenTier && !closedTier && remaining > 0 && Array.isArray(ways) && ways.length > 1 ? React.createElement("div", {
     "data-raid-ways": ways.join(' '),
-    className: `grid gap-2 ${ways.length >= 3 ? 'grid-cols-3' : 'grid-cols-2'}`
+    className: `grid ${compact ? 'gap-1.5' : 'gap-2'} ${ways.length >= 3 ? 'grid-cols-3' : 'grid-cols-2'}`
   }, ways.map(way => {
     const w = RAID_WAY_BUTTONS[way];
     return w ? React.createElement("button", {
@@ -113579,10 +113664,12 @@ const RaidJackScreen = ({
       key: way,
       [w.data]: true,
       onClick: () => onChallenge(tab, current, way),
-      className: `min-h-[48px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[36px] rounded-2xl border-2 px-1 text-[12px] font-black leading-tight text-white active:scale-95 ${w.tone}`
+      className: `${compact ? 'min-h-[40px] rounded-xl py-0.5 text-[11px]' : 'min-h-[48px] rounded-2xl text-[12px]'} [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[36px] border-2 px-1 font-black leading-tight text-white active:scale-95 ${w.tone}`
     }, w.label, React.createElement("br", {
       className: "[@media(orientation:landscape)_and_(max-height:520px)]:hidden"
-    }), "挑戦する") : null;
+    }), compact ? React.createElement("small", {
+      className: "text-[9px] opacity-90"
+    }, "挑戦する") : '挑戦する') : null;
   })) : tab === 'a' && open && isOpenTier && !closedTier && remaining > 0 && !Array.isArray(ways) && (RELEASE_FLAGS.raidJackRhythm === true || forced) ? React.createElement("div", {
     className: "grid grid-cols-2 gap-2"
   }, React.createElement("button", {
@@ -113604,9 +113691,10 @@ const RaidJackScreen = ({
     "data-raid-jack-challenge": true,
     disabled: !open || !isOpenTier || closedTier || remaining <= 0,
     onClick: () => onChallenge(tab, current, 'battle'),
-    className: "w-full min-h-[48px] rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400"
+    className: `w-full ${compact ? 'min-h-[40px] rounded-xl' : 'min-h-[48px] rounded-2xl'} border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400`
   }, challengeLabel)), showRanking && React.createElement(RaidJackRankingList, {
     ev: ev,
+    lockedOf: lockedOf,
     eventId: eventId,
     initialTab: tab,
     initialTier: current,
@@ -113616,6 +113704,7 @@ const RaidJackScreen = ({
     onClose: () => setShowRanking(false)
   }), showRewards && React.createElement(RaidJackRewardList, {
     ev: ev,
+    lockedOf: lockedOf,
     claimed: state.claimed,
     initialTab: tab,
     onClose: () => setShowRewards(false)
@@ -114527,7 +114616,7 @@ const XmasEventScreen = ({
   }, "閉じる"))) : null;
   const head = React.createElement("div", {
     "data-xmas-event-head": true,
-    className: `mx-auto w-full shrink-0 ${raidShown ? '' : 'max-w-2xl'}`
+    className: "mx-auto w-full shrink-0"
   }, React.createElement(ScreenHead, {
     title: React.createElement("span", {
       className: "flex items-center gap-1"
@@ -114541,12 +114630,12 @@ const XmasEventScreen = ({
     note: forced ? '(デバッグ表示・開始前でも見えます)' : ''
   }), React.createElement("div", {
     "data-xmas-event-poster": true,
-    className: `mh-xmas-frame mx-auto mb-2 w-fit max-w-full overflow-hidden rounded-xl bg-slate-950 ${raidShown ? '[@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`
+    className: "mh-xmas-frame mx-auto mb-1.5 w-fit max-w-full overflow-hidden rounded-xl bg-slate-950 [@media(orientation:landscape)_and_(max-height:520px)]:hidden"
   }, posterOpen ? React.createElement("div", {
     "data-xmas-event-title-band": true,
     className: "relative overflow-hidden",
     style: {
-      width: raidShown ? 'min(100vw - 32px, 26vh)' : 'min(100vw - 32px, 48vh)',
+      width: 'min(100vw - 32px, 26vh)',
       aspectRatio: '2 / 1'
     }
   }, React.createElement("img", {
@@ -114562,29 +114651,29 @@ const XmasEventScreen = ({
       background: 'radial-gradient(80% 70% at 50% 55%, #0b1733cc 0%, #0b173388 55%, transparent 100%)'
     }
   }, React.createElement("span", {
-    className: `font-black text-amber-100 ${raidShown ? 'text-[8px]' : 'text-[11px]'}`,
+    className: "text-[8px] font-black text-amber-100",
     style: {
       letterSpacing: '.2em',
       textShadow: '0 1px 3px #000'
     }
   }, "クリスマスイベント"), React.createElement("b", {
-    className: `mh-xmas-title whitespace-nowrap leading-tight ${raidShown ? 'text-[20px]' : 'text-[38px]'}`,
+    className: "mh-xmas-title whitespace-nowrap text-[20px] leading-tight",
     style: {
       fontFamily: "'Hiragino Mincho ProN', 'Yu Mincho', serif",
       filter: 'drop-shadow(0 2px 2px #000) drop-shadow(0 0 6px #000a)'
     }
   }, "聖夜の名探偵"), React.createElement("span", {
-    className: `font-bold text-amber-50 ${raidShown ? 'text-[7px]' : 'text-[11px]'}`,
+    className: "text-[7px] font-bold text-amber-50",
     style: {
       textShadow: '0 1px 3px #000'
     }
   }, "～十三番目の鐘が鳴る夜～"))) : React.createElement("img", {
     src: XMAS_EVENT_POSTER_IMG,
     alt: "クリスマスイベント 聖夜の名探偵",
-    className: `block h-auto w-auto max-w-full ${raidShown ? 'max-h-[13vh]' : 'max-h-[24vh]'}`
+    className: "block h-auto w-auto max-w-full max-h-[13vh]"
   })), React.createElement("div", {
     "data-xmas-event-period": true,
-    className: "mh-xmas-ribbon mx-auto mb-2 max-w-md px-5 py-1 text-center text-[11px] font-black text-amber-50"
+    className: "mh-xmas-ribbon mx-auto mb-1.5 max-w-md px-5 py-0.5 text-center text-[10px] font-black text-amber-50"
   }, "開催期間 ", xmasEventPeriodText()), React.createElement(ScreenTabs, {
     items: XMAS_EVENT_TABS,
     value: tab,
@@ -115213,6 +115302,41 @@ const xmasNovelAnswer = (script, cur, q, pick, endings) => {
       } : 'next'
     };
   }
+  if (q.pass && q.kind === 'present') {
+    const okRows = xmasNovelPickReplies(q, 'ok');
+    const why = Array.isArray(q.near) && q.near.includes(pick) && xmasNovelPickReplies(q, 'near').length ? xmasNovelPickReplies(q, 'near') : xmasNovelPickReplies(q, 'x1');
+    const by = okRows[0] && okRows[0].w ? xmasNovelCastOf(okRows[0].w) : null;
+    const clue = answers[0] || '';
+    const band = clue ? [{
+      id: `${q.id}-pass`,
+      t: 'band',
+      x: `${by && by.name ? by.name : '探偵'}が、手がかり帳から【${clue}】を突きつけた`
+    }] : [];
+    const okSelf = okRows.map((r, i) => i === 0 && r && typeof r.x === 'string' && /^はい。\s*/.test(r.x) ? {
+      ...r,
+      x: r.x.replace(/^はい。\s*/, '')
+    } : r);
+    const replies = [...why, ...band, ...okSelf];
+    const passed = {
+      ...next,
+      ans: {
+        ...next.ans,
+        [q.id]: {
+          ...next.ans[q.id],
+          done: true
+        }
+      }
+    };
+    const to = xmasNovelRepliesTo(replies);
+    return {
+      cur: passed,
+      ok: false,
+      replies,
+      then: to ? {
+        to
+      } : 'next'
+    };
+  }
   const personal = q.kind === 'person' ? xmasNovelPickReplies(q, String(pick)) : [];
   const near = q.kind === 'present' && Array.isArray(q.near) && q.near.includes(pick) ? xmasNovelPickReplies(q, 'near') : [];
   const n = Math.min(3, Math.max(1, wrongs));
@@ -115232,6 +115356,21 @@ const xmasNovelAnswer = (script, cur, q, pick, endings) => {
 const xmasNovelRepliesTo = replies => {
   for (let i = (replies || []).length - 1; i >= 0; i -= 1) if (replies[i] && replies[i].to) return replies[i].to;
   return null;
+};
+const xmasNovelEndingAhead = (script, to) => {
+  let s = to ? xmasNovelSceneById(script, to) : null;
+  for (let k = 0; s && k < 12; k += 1) {
+    if (s.ending && s.ending.id) return s.ending.id;
+    s = typeof s.next === 'string' ? xmasNovelSceneById(script, s.next) : null;
+  }
+  return null;
+};
+const xmasNovelPresentable = (q, clues) => {
+  const list = Array.isArray(clues) ? clues : [];
+  if (!q || !Array.isArray(q.narrow) || !q.narrow.length) return list;
+  const picked = list.filter(c => q.narrow.includes(c.n));
+  const ans = Array.isArray(q.answer) ? q.answer : [];
+  return picked.some(c => ans.includes(c.n)) ? picked : list;
 };
 const xmasNovelOptionsOf = (q, ctx) => (Array.isArray(q && q.options) ? q.options : []).map((o, i) => ({
   ...o,
@@ -117273,6 +117412,7 @@ const XMAS_NOVEL_SCRIPT = {
       },
       "label": "推理の問い①",
       "score": true,
+      "pass": true,
       "answer": ["閉まった裏口"],
       "k": "C2-4:Q2a",
       "near": ["早く鳴った鐘"]
@@ -117560,6 +117700,7 @@ const XMAS_NOVEL_SCRIPT = {
       },
       "label": "推理の問い②",
       "score": true,
+      "pass": true,
       "answer": ["深い足跡"],
       "k": "C3-2:Q3a",
       "near": ["閉まった裏口"]
@@ -118112,6 +118253,7 @@ const XMAS_NOVEL_SCRIPT = {
       },
       "label": "推理の問い③",
       "score": true,
+      "pass": true,
       "answer": ["12年前の帳面"],
       "k": "C4-3:Q4a",
       "near": ["早く鳴った鐘"]
@@ -118703,6 +118845,7 @@ const XMAS_NOVEL_SCRIPT = {
       },
       "label": "推理の問い④",
       "score": true,
+      "pass": true,
       "answer": ["ほこりのない鏡のふち"],
       "k": "C5-3:Q5a",
       "near": ["えるびんの写真"]
@@ -119194,6 +119337,8 @@ const XMAS_NOVEL_SCRIPT = {
       },
       "label": "推理の問い⑤",
       "score": true,
+      "pass": true,
+      "narrow": ["早く鳴った鐘", "止まった懐中時計", "12年前の帳面", "白瀬の手紙"],
       "answer": ["止まった懐中時計"],
       "k": "C6-3:Q6a",
       "near": ["早く鳴った鐘"]
@@ -119353,6 +119498,8 @@ const XMAS_NOVEL_SCRIPT = {
       },
       "label": "推理の問い⑥",
       "score": true,
+      "pass": true,
+      "narrow": ["えるびんの写真", "ほこりのない鏡のふち", "赤い手袋", "かばんの黒い服"],
       "answer": ["えるびんの写真"],
       "k": "C6-5:Q6b",
       "near": ["ほこりのない鏡のふち"]
@@ -123035,6 +123182,8 @@ const XMAS_NOVEL_SCRIPT = {
         }]
       },
       "label": "推理の問い⑦",
+      "pass": true,
+      "narrow": ["消えた箱", "帳面の最後の行", "箱のない犠牲者", "鳴りやまないオルゴール"],
       "answer": ["箱のない犠牲者"],
       "k": "C10-4:Q10a",
       "near": ["消えた箱"]
@@ -130180,6 +130329,7 @@ const XmasNovelScreen = ({
   const darkNow = fx && fx.kind === 'dark';
   const name = isLine ? xmasNovelNameOf(row) : '';
   const q = sheet && typeof sheet === 'object' ? sheet.q : null;
+  const presentList = q && q.kind === 'present' ? xmasNovelPresentable(q, clues) : clues;
   return React.createElement("div", {
     className: "mh-nv",
     "data-xmas-novel": "read",
@@ -130511,7 +130661,7 @@ const XmasNovelScreen = ({
     className: "mh-nv-serif mh-nv-gold text-[18px] font-black"
   }, "手がかり帳 ", React.createElement("span", {
     className: "text-[12px] text-slate-300"
-  }, clues.length, "個")), q && React.createElement("div", {
+  }, presentList.length, "個")), q && React.createElement("div", {
     "data-xmas-novel-question": q.id,
     className: "mt-2 rounded-lg p-2 text-[13px] font-bold leading-relaxed",
     style: {
@@ -130522,9 +130672,12 @@ const XmasNovelScreen = ({
     className: "mh-nv-serif text-[11px] font-black text-rose-200"
   }, q.label), xmasNovelWrap(xmasNovelFill(q.x, playerName)), React.createElement("div", {
     className: "mt-1 text-[11px] text-rose-100"
-  }, "突きつける手がかりを1つ選ぼう")), React.createElement("div", {
+  }, presentList.length < clues.length ? `候補を${presentList.length}つに絞った。突きつける手がかりを1つ選ぼう` : '突きつける手がかりを1つ選ぼう'), q.pass && React.createElement("div", {
+    "data-xmas-novel-pass": true,
+    className: "mh-nv-plain mt-1 text-[11px] text-rose-200"
+  }, "外しても、仲間が拾って話は進む。一発で当てると成績に残る")), React.createElement("div", {
     className: "mh-nv-scroll mt-2 flex-1 space-y-2 pr-1"
-  }, clues.length ? clues.map(c => React.createElement("div", {
+  }, presentList.length ? presentList.map(c => React.createElement("div", {
     key: c.n,
     className: "mh-nv-clue",
     "data-xmas-novel-clue": c.n
@@ -130579,13 +130732,20 @@ const XmasNovelScreen = ({
     className: "mh-nv-plain mh-nv-serif mh-nv-gold mb-3 text-[17px] font-black"
   }, xmasNovelWrap(xmasNovelFill(q.x, playerName))), React.createElement("div", {
     className: "space-y-2.5"
-  }, xmasNovelOptionsOf(q, xmasNovelCtx(S, st.cur, save.endings)).map(o => React.createElement("button", {
-    type: "button",
-    key: o.i,
-    className: "mh-nv-choice mh-nv-serif",
-    "data-xmas-novel-option": o.i,
-    onClick: () => answer(q, o.i)
-  }, xmasNovelWrap(xmasNovelFill(o.x, playerName))))), q.once && React.createElement("div", {
+  }, xmasNovelOptionsOf(q, xmasNovelCtx(S, st.cur, save.endings)).map(o => {
+    const endAhead = !q.once && o.to ? xmasNovelEndingAhead(S, o.to) : null;
+    const seenEnd = endAhead && Array.isArray(save.endings) && save.endings.includes(endAhead) ? xmasNovelSceneById(S, endAhead) : null;
+    return React.createElement("button", {
+      type: "button",
+      key: o.i,
+      className: "mh-nv-choice mh-nv-serif",
+      "data-xmas-novel-option": o.i,
+      onClick: () => answer(q, o.i)
+    }, xmasNovelWrap(xmasNovelFill(o.x, playerName)), seenEnd && React.createElement("span", {
+      "data-xmas-novel-seen-end": endAhead,
+      className: "mh-nv-plain mt-1 block text-[11px] font-bold text-rose-200"
+    }, "見たエンド: ", seenEnd.ending && seenEnd.ending.name ? `「${seenEnd.ending.name}」` : 'バッドエンド'));
+  })), q.once && React.createElement("div", {
     className: "mh-nv-plain mt-2 text-[11px] font-bold text-rose-200"
   }, "選んだら、やり直しはできません")), sheet === 'menu' && React.createElement(React.Fragment, null, React.createElement("div", {
     className: "mh-nv-serif mh-nv-gold mb-3 text-center text-[18px] font-black"
@@ -222453,6 +222613,30 @@ const CARD_VS_TUTORIAL_LINE = Object.freeze({
   e: 'happy',
   t: '練習だよ！ ゆっくりいこ♪'
 });
+const CARD_RAID_BOSS_FACE = Object.freeze({
+  size: '200% auto',
+  pos: '50% 24%'
+});
+const CardRaidBossFace = ({
+  className = ''
+}) => {
+  const src = typeof RAID_XMAS_BOSS_IMG !== 'undefined' ? RAID_XMAS_BOSS_IMG : '';
+  if (!src) return React.createElement('span', {
+    'data-card-raid-boss-face': '',
+    className: `flex items-center justify-center text-[26px] ${className}`
+  }, '🎅');
+  return React.createElement('span', {
+    'data-card-raid-boss-face': src,
+    role: 'img',
+    'aria-label': '黒いサンタ',
+    className: `block bg-no-repeat ${className}`,
+    style: {
+      backgroundImage: `url(${src})`,
+      backgroundSize: CARD_RAID_BOSS_FACE.size,
+      backgroundPosition: CARD_RAID_BOSS_FACE.pos
+    }
+  });
+};
 const CARD_VS_MS = Object.freeze({
   assistant: 2600,
   pvp: 2600,
@@ -222823,7 +223007,13 @@ const CardVsIntro = ({
     src: assistantFullImage(who, foe.line && foe.line.e || 'happy'),
     alt: who.name,
     aspect: 3 / 4
-  }) : React.createElement("span", {
+  }) : foe.raidBoss ? React.createElement("span", {
+    "data-card-vs-foe-icon": true,
+    "data-card-vs-raid-boss": true,
+    className: "block aspect-square w-full overflow-hidden rounded-full border-[3px] border-red-500 bg-slate-950 shadow-[0_0_18px_rgba(239,68,68,.45)]"
+  }, React.createElement(CardRaidBossFace, {
+    className: "h-full w-full"
+  })) : React.createElement("span", {
     "data-card-vs-foe-icon": true,
     className: "block aspect-square w-full"
   }, React.createElement(CardPvpAvatar, {
@@ -228034,8 +228224,10 @@ const CardBattleBoard = ({
   }, raid ? React.createElement("span", {
     "data-card-raid-foe": true,
     "aria-hidden": "true",
-    className: `flex ${tiny ? 'h-[34px] w-[34px] text-[20px]' : 'h-[42px] w-[42px] text-[26px]'} shrink-0 items-center justify-center rounded-xl border-2 border-red-500 bg-slate-950`
-  }, "🎅") : pvp || share ? React.createElement("span", {
+    className: `block ${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} shrink-0 overflow-hidden rounded-xl border-2 border-red-500 bg-slate-950`
+  }, React.createElement(CardRaidBossFace, {
+    className: "h-full w-full"
+  })) : pvp || share ? React.createElement("span", {
     "data-card-pvp-foe": true,
     className: `block ${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} shrink-0`
   }, React.createElement(CardPvpAvatar, {
@@ -231320,6 +231512,7 @@ const CardBattleScreen = ({
           name: bossName,
           icon: null,
           frame: null,
+          raidBoss: true,
           line: null,
           deckName: CARD_RAID_BOSS.deckName,
           monsters: vsMons(st, CARD_CPU)
@@ -260264,6 +260457,8 @@ function MonsterHeroGame() {
     if (RAID_JACK_BGM_STATES.includes(state)) return raidEvRef.current === 'xmas' ? XMAS_EVENT_BGM_TRACK : RAID_JACK_BGM_TRACK;
     const halloweenNightOpen = Date.now() >= Date.parse(HALLOWEEN_NIGHT_START_AT) && Date.now() < Date.parse(HALLOWEEN_NIGHT_END_AT);
     const homeBgm = (RELEASE_FLAGS.raidJack === true && raidJackWindowAt(Date.now()) === 'open' || raidJackDebugForce || halloweenNightOpen) && bgmArrangement.home === DEFAULT_BGM_ARRANGEMENT.home ? RAID_JACK_BGM_TRACK : xmasEventBgmOpenAt(Date.now()) && bgmArrangement.home === DEFAULT_BGM_ARRANGEMENT.home ? XMAS_HOME_BGM_TRACK : bgmArrangement.home;
+    if (state === 'CARD_TOP' || state === 'CARD_BATTLE') return cardBgm || homeBgm;
+    if (state === 'CARD_PACK_OPEN') return homeBgm;
     if (isGameOver) return bgmArrangement.gameOver;
     if (!debugBattleRef.current && currentWave === 10 && (state === 'WAVE_RESULT' || state === 'CHAMPION')) {
       if (allowKeep && autoRepeatRef.current && bgmArrangement.autoRepeatResultBgm !== 'on') return '__keep_battle_bgm__';
@@ -270520,7 +270715,7 @@ function MonsterHeroGame() {
       boss: wave >= 10,
       key: Date.now()
     });
-    if ((!autoBattleRef.current || bgmArrangement.autoVictoryJingle === 'on') && !(runBackgroundAllowedRef.current && isXmasQuietScreen(gameStateNowRef.current))) Audio_.playJingle('victory');
+    if ((!autoBattleRef.current || bgmArrangement.autoVictoryJingle === 'on') && !(runBackgroundAllowedRef.current && (isXmasQuietScreen(gameStateNowRef.current) || isCardRunScreen(gameStateNowRef.current)))) Audio_.playJingle('victory');
     const totalWaveDamage = waveDamageAtDefeat(currentWaveDamageRef.current, currentWaveDamage, damage);
     const waveMult = 1.0 + wave * 0.1;
     const remainingTurns = Math.max(0, 21 - turnCount);
@@ -283278,6 +283473,7 @@ function MonsterHeroGame() {
     }), gameState === 'RHYTHM_PLAY' && rhythmPlay && React.createElement(RhythmTapTest, {
       key: rhythmPlay.from === 'lineAdjust' && rhythmLineAdjust ? `line-adjust-${rhythmLineAdjust.key}` : rhythmPlay.from === 'preview' && rhythmPreview ? `option-preview-${rhythmPreview.key}` : undefined,
       raidPlay: rhythmPlay.from === 'raid',
+      holdResultCount: rhythmPlay.from === 'raid' && !!raidDamageFx,
       song: rhythmPlay.song,
       difficulty: rhythmPlay.difficulty,
       settings: rhythmPlay.from === 'multi' ? rhythmMultiPlaySettings : rhythmPlay.from === 'preview' && rhythmPreview ? rhythmPreview.draft : rhythmSettings,
@@ -290056,7 +290252,15 @@ function MonsterHeroGame() {
         }
         return who;
       };
-      const cast = storyCastOf(script).filter(who => who.role !== 'ゲスト').filter(who => !hiddenUntil.includes(who.id) || script.slice(0, step + 1).some(l => l && storyBase(l.who) === who.id));
+      const cast = storyCastOf(script).filter(who => who.role !== 'ゲスト' || who.speakBottom && !who.noFace && !!who.image).filter(who => !hiddenUntil.includes(who.id) || script.slice(0, step + 1).some(l => l && storyBase(l.who) === who.id)).filter((who, _, all) => {
+        if (!who.storyFigureSlot) return true;
+        let lastId = null;
+        for (let i = Math.min(step, script.length - 1); i >= 0 && !lastId; i--) {
+          const w = script[i] && script[i].who && assistantById(script[i].who);
+          if (w && w.storyFigureSlot === who.storyFigureSlot) lastId = w.id;
+        }
+        return lastId ? lastId === who.id : all.find(x => x.storyFigureSlot === who.storyFigureSlot) === who;
+      });
       let stageIdx = -1;
       for (let i = step; i >= 0; i--) {
         const l = script[i];
@@ -290155,8 +290359,7 @@ function MonsterHeroGame() {
       const storyCplBottom = Math.max(8, Math.floor((storyBoxW - 64 - (storyZones ? storyLand ? 62 : 100 : 0)) / 13) - (storyZones ? 4 : 2));
       const storyCplBubble = Math.max(6, storyLand ? Math.floor((storyBoxW - 118) / 12) - 3 : Math.floor((storyBoxW - 156) / 14) - 4);
       const storyCapBottom = Math.floor((storyBoxW - 64 - (storyLand ? 62 : 100)) / 13 - 0.2);
-      const storyFaceCols = Math.floor((storyLand ? 62 : 100) / 13);
-      const storyCapBottomOf = w => storyCapBottom + (w && w.storyFigure ? storyFaceCols : 0);
+      const storyCapBottomOf = () => storyCapBottom;
       const storyCapBubble = Math.floor((storyLand ? (storyBoxW - 118) / 12 : (storyBoxW - 156) / 14) - 0.2);
       const storyChunkMax = cap => storyLand && cap === storyCapBubble ? 2 : 3;
       const storyLineNodes = (text, cap) => {
@@ -290214,7 +290417,7 @@ function MonsterHeroGame() {
         const l = script[i];
         const w = l ? assistantById(l.who) : null;
         const text = l && w && !l.band ? speakText(l, w) : '';
-        const pages = storyZones && typeof storySplitPages === 'function' ? storySplitPages(text, isGuestWho(l && l.who) ? storyCplBubble : storyCplBottom + (w && w.storyFigure ? storyFaceCols : 0), 3) : [text];
+        const pages = storyZones && typeof storySplitPages === 'function' ? storySplitPages(text, isGuestWho(l && l.who) ? storyCplBubble : storyCplBottom, 3) : [text];
         storyPageCache[i] = pages;
         return pages;
       };
@@ -290658,7 +290861,7 @@ function MonsterHeroGame() {
       })(), React.createElement("div", {
         "data-story-speaker-row": storyZones ? '' : undefined,
         className: storyZones ? 'flex items-start gap-2' : undefined
-      }, storyZones && bottomLine && !bottomSpeaker.storyFigure && React.createElement("div", {
+      }, storyZones && bottomLine && React.createElement("div", {
         key: `face-${bottomSpeaker.id}`,
         "data-story-speaker": bottomSpeaker.id,
         className: "shrink-0 text-center"
@@ -298075,7 +298278,10 @@ const createAnimationStyle = () => {
     .mh-rjdmg-life { position: relative; font-size: 10px; font-weight: 900; color: #fca5a5; font-variant-numeric: tabular-nums; animation: mhRjRise .4s ease-out .6s both; }
     .mh-rjdmg-damage { position: relative; text-align: center; opacity: 0; animation: mhRjSlam .55s cubic-bezier(.2,1.4,.4,1) 1s both; }
     .mh-rjdmg-damage small { display: block; font-size: 11px; font-weight: 900; letter-spacing: .4em; color: #fecaca; }
-    .mh-rjdmg-damage b { display: block; padding: 0 .15em; font-size: 52px; font-weight: 900; font-style: italic; line-height: 1; font-variant-numeric: tabular-nums; background: linear-gradient(180deg, #fff, #fde68a 45%, #f59e0b); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 4px 0 rgba(0,0,0,.85)) drop-shadow(0 0 20px rgba(251,191,36,.9)); }
+    .mh-rjdmg-damage b { display: block; padding: 0 .15em; font-size: 52px; font-weight: 900; font-style: italic; line-height: 1; font-variant-numeric: tabular-nums; background: linear-gradient(180deg, #fff, #fde68a 45%, #f59e0b); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 4px 0 rgba(0,0,0,.85)); }
+    /* 数字のまわりの金色の光(2026-11-28 r1126-098)。前は数字そのものに drop-shadow(0 0 20px) を掛けていたが、数え上げで毎コマ数字が変わるたびに
+       ぼかしごと描き直しになり、コマが落ちた(社長「数字の動きがかくかく」)。光は数字の後ろの動かない1枚(ぼかし無しの放射の色)にした */
+    .mh-rjdmg-damage:not(.mh-rjdmg-damage-none)::before { content: ''; position: absolute; z-index: -1; left: 50%; top: 62%; width: calc(100% + 56px); height: 96px; transform: translate(-50%, -50%); background: radial-gradient(closest-side, rgba(251,191,36,.55), rgba(251,191,36,.22) 55%, rgba(251,191,36,0)); pointer-events: none; }
     .mh-rjdmg-damage-none b { font-size: 26px; background: none; color: #cbd5e1; filter: drop-shadow(0 2px 0 #000); }
     .mh-rjdmg-damage-none small { margin-top: 4px; font-size: 10px; letter-spacing: .05em; color: #94a3b8; }
     .mh-rjdmg-down { position: absolute; left: 0; right: 0; top: 40%; text-align: center; font-size: 64px; font-weight: 900; font-style: italic; color: #fde047; text-shadow: 0 5px 0 #7c2d12, 0 0 28px rgba(250,204,21,.95); opacity: 0; animation: mhRjSlam .6s cubic-bezier(.2,1.4,.4,1) 2.3s both; pointer-events: none; z-index: 3; }

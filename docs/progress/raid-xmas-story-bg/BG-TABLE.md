@@ -59,3 +59,17 @@
 | 追記1 ハム・サンタは画面のまん中に全身の絵、窓は今のまま下 | `phone-r0-ham.jpg`・`phone-r0-santa.jpg`(話していないハムは暗く残る)・`phone-r0-kurosanta-storm.jpg`・`tablet-r0-santa.jpg`・`land-r0-santa.jpg` |
 | 追記1 ハムの上にもう1つの枠が出ない | 全部の止め絵で上の段(`data-story-stage`)が無いことを道具が確かめた |
 | 追記1 顔の絵がある話し手をそろえるかは部の案 | 顔の枠のまま(上の「全身の絵」の節)。`phone-r0-hall.jpg`(ももすけ)・`phone-r4-hall.jpg`(ソラシド)・`phone-r0-candle.jpg`(イチーカ) |
+
+## 顔アイコン(追記2・社長「ハムとかさんたの顔アイコンがない」)
+
+- 赤いサンタ・黒いサンタの顔アイコンを、今ある全身の絵から切り出した(`monster-hero/images/monster-icons/face/santa-red.png`・`santa-black.png`・256×256。新しくは描いていない・色や線は変えていない)。
+  切り出し直し: `python3 tools/battle/raid-xmas-santa-face-icons.py`。ハムは前からある顔アイコン(`face/ham.png`)を使う
+- ハム・サンタが話す行は、まん中の全身の絵に加えて、**下の窓の顔の枠にも顔アイコン**を出す(助手と同じ)
+- 窓の上の顔の列にも、下の窓で話すお客さん(ハム・サンタ・黒羽・白瀬・イチーカ・もちまる)を並べる。赤と黒のサンタは同じ人なので、最後に話したほう1人だけ
+- 止め絵は上の `shots/` を撮り直した物(縦 `phone-r0-ham.jpg`・`phone-r0-santa.jpg`・`phone-r0-kurosanta-storm.jpg`、横 `land-r0-santa.jpg`、タブレット `tablet-r0-santa.jpg`)。道具が「下の窓に顔アイコン」「顔の列にハム・サンタ(サンタは1人ぶん)」を確かめる
+
+| 決めごと | どの止め絵のどこで満たすか |
+| --- | --- |
+| 追記2 ハム・サンタの顔アイコンを会話の窓に出す | `phone-r0-ham.jpg`・`phone-r0-santa.jpg`・`phone-r0-kurosanta-storm.jpg` の下の窓の左の顔の枠と、窓の上の顔の列のいちばん右 |
+| 追記2 ほかのモンスター・謎の客も | イチーカ・もちまる・黒羽・白瀬は前から顔の絵があり、顔の列にも並ぶようにした(`phone-r0-candle.jpg` の顔の列) |
+| 追記2 今ある全身の絵から切り出す・新しく描かない | `tools/battle/raid-xmas-santa-face-icons.py`(切って縮めるだけ)。image-asset-check 通過 |

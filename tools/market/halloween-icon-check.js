@@ -35,6 +35,8 @@ const load = (clock) => {
     rhythm.slice(pStart, pEnd),
     'globalThis.__x={BREEDER_MARKET_ITEMS,BREEDER_ICON_GROUPS,breederIconGroupOf,expandOwnedMarketIcons,HALLOWEEN_ICON_SETS,halloweenIconSale,RHYTHM_EVENT_POINT_SHOP_ICON_OFFERS,rhythmEventPointExchangePreview};',
   ].join('\n'), ctx);
+  // クリスマスのアイコン(xmas-icon-check.js が見る)も同じ一覧に並ぶので、ここではハロウィンの分だけを見る
+  ctx.__x.RHYTHM_EVENT_POINT_SHOP_ICON_OFFERS = ctx.__x.RHYTHM_EVENT_POINT_SHOP_ICON_OFFERS.filter(o => /_halloween$/.test(o.groupId));
   return ctx.__x;
 };
 
