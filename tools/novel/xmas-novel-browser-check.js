@@ -133,7 +133,7 @@ const CASES = CASES_ALL.filter((c) => !ONLY || c.shot === ONLY);
       const keysAfter = await page.evaluate(() => Object.keys(localStorage).sort());
       // 裏で動くゲーム本体が書くキー(ノベルと関係ない)は数えない。クリスマス・ノベルの名前のキーだけ見る
       const added = keysAfter.filter((k) => !keysBefore.includes(k) && /^mh_.*(xmas|novel)/.test(k));
-      check(`③ ${vp.label}: 新しく書いたクリスマスのキーは mh_xmas_novel_v1 だけ`, added.every((k) => k === 'mh_xmas_novel_v1'), added.join(','));
+      check(`③ ${vp.label}: 新しく書いたクリスマスのキーは mh_xmas_novel_v1 と分岐の地図の mh_xmas_novel_route_v1(r1126-102)だけ`, added.every((k) => k === 'mh_xmas_novel_v1' || k === 'mh_xmas_novel_route_v1'), added.join(','));
       await page.locator('[data-xmas-novel-to-title]').click();
       await page.locator('[data-xmas-novel-endings]').click();
       const seenList = await page.locator('[data-xmas-novel-ending][data-seen]').count();

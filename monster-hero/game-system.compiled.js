@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c78aa69177312085
+// source-sha256: f3a49541357db136
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -115616,6 +115616,7 @@ const xmasNovelEndingAhead = (script, to) => {
   let s = to ? xmasNovelSceneById(script, to) : null;
   for (let k = 0; s && k < 12; k += 1) {
     if (s.ending && s.ending.id) return s.ending.id;
+    if ((s.rows || []).some(r => r && r.t === 'q')) return null;
     s = typeof s.next === 'string' ? xmasNovelSceneById(script, s.next) : null;
   }
   return null;
@@ -115786,6 +115787,112 @@ const XMAS_NOVEL_ENDING_KINDS = Object.freeze({
     tone: '#7fd6a8'
   }
 });
+const XMAS_NOVEL_ROUTE_KEY = 'mh_xmas_novel_route_v1';
+const xmasNovelRouteKeyOf = (qid, cur) => {
+  const side = cur && cur.flags && Number.isFinite(cur.flags.f_A1) ? Math.max(0, Math.min(2, Math.floor(cur.flags.f_A1))) : 0;
+  return `${qid}|${side}`;
+};
+const xmasNovelRowAt = (script, cur) => {
+  const scene = cur ? xmasNovelSceneById(script, cur.scene) : null;
+  const row = scene && Array.isArray(scene.rows) ? scene.rows[Number(cur.idx) || 0] : null;
+  return row || null;
+};
+const xmasNovelRouteNormalize = (raw, script = null) => {
+  const r = raw && typeof raw === 'object' ? raw : {};
+  const at = {};
+  if (r.at && typeof r.at === 'object') Object.keys(r.at).slice(0, 120).forEach(k => {
+    const m = /^([AQ]\d+[a-z]?)\|([0-2])$/.exec(k);
+    if (!m) return;
+    const c = xmasNovelNormalizeCur(r.at[k], script);
+    if (!c) return;
+    if (script) {
+      const row = xmasNovelRowAt(script, c);
+      if (!row || row.t !== 'q' || row.id !== m[1]) return;
+    }
+    at[k] = c;
+  });
+  return {
+    v: 1,
+    at,
+    back: xmasNovelNormalizeCur(r.back, script),
+    seeded: r.seeded === 1 ? 1 : 0
+  };
+};
+const xmasNovelRouteRecord = (route, script, cur) => {
+  const row = xmasNovelRowAt(script, cur);
+  if (!route || !row || row.t !== 'q') return route;
+  const c = xmasNovelNormalizeCur(cur, script);
+  if (!c) return route;
+  return {
+    ...route,
+    at: {
+      ...route.at,
+      [xmasNovelRouteKeyOf(row.id, c)]: c
+    }
+  };
+};
+const xmasNovelRouteSeed = (script, save, route) => {
+  const base = route || xmasNovelRouteNormalize(null, script);
+  if (base.seeded === 1) return base;
+  const read = new Set(save && Array.isArray(save.read) ? save.read : []);
+  let at = {
+    ...base.at
+  };
+  const keep = (cur, row) => {
+    const k = xmasNovelRouteKeyOf(row.id, cur);
+    if (!at[k] && read.has(row.k)) {
+      const c = xmasNovelNormalizeCur(cur, script);
+      if (c) at = {
+        ...at,
+        [k]: c
+      };
+    }
+  };
+  const sideOfSave = save && save.cur && save.cur.flags && Number.isFinite(save.cur.flags.f_A1) ? save.cur.flags.f_A1 : 0;
+  const snaps = save && save.snaps && typeof save.snaps === 'object' ? save.snaps : {};
+  Object.keys(snaps).filter(k => /^C\d+$/.test(k)).forEach(chId => {
+    let st = xmasNovelSettle(script, snaps[chId]);
+    for (let guard = 0; st && st.row && guard < 3000; guard += 1) {
+      if (!st.scene || st.scene.chapter !== chId) break;
+      const r = st.row;
+      if (r.t !== 'q') {
+        st = xmasNovelStep(script, xmasNovelApplyRow(st.cur, r));
+        continue;
+      }
+      keep(st.cur, r);
+      if (r.once) break;
+      let pick = null;
+      if (r.kind === 'present') pick = (r.answer || [])[0];else if (r.kind === 'action') {
+        const opts = xmasNovelOptionsOf(r, xmasNovelCtx(script, st.cur, save && save.endings || []));
+        if (r.id === 'A1') {
+          const o = opts.find(x => x.i === sideOfSave - 1);
+          if (!o) break;
+          pick = o.i;
+        } else {
+          const safe = opts.find(o => !(o.to && xmasNovelEndingAhead(script, o.to)));
+          if (!safe) break;
+          pick = safe.i;
+        }
+      }
+      if (pick === null || pick === undefined) break;
+      const a = xmasNovelAnswer(script, st.cur, r, pick, save && save.endings || []);
+      let c = a.cur;
+      (a.replies || []).forEach(x => {
+        c = xmasNovelApplyRow(c, x);
+      });
+      st = a.then === 'next' ? xmasNovelStep(script, c) : a.then === 'retry' ? null : xmasNovelSettle(script, xmasNovelJump(script, c, a.then.to));
+    }
+  });
+  if (save && save.cur) {
+    const row = xmasNovelRowAt(script, save.cur);
+    if (row && row.t === 'q') keep(save.cur, row);
+  }
+  return {
+    ...base,
+    at,
+    seeded: 1
+  };
+};
 const XMAS_NOVEL_SCRIPT = {
   "v": 1,
   "src": "docs/progress/event-xmas-2026/SCRIPT.md",
@@ -129873,6 +129980,7 @@ const XMAS_NOVEL_ICONS = {
   skip: '<polygon points="4 5 12 12 4 19 4 5"/><polygon points="12 5 20 12 12 19 12 5"/>',
   log: '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>',
   book: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><circle cx="12" cy="10" r="3"/><line x1="14.2" y1="12.2" x2="16.5" y2="14.5"/>',
+  map: '<polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21 3 6"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/>',
   menu: '<line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/>'
 };
 const xmasNovelLoad = async (script = XMAS_NOVEL_SCRIPT) => {
@@ -129885,6 +129993,21 @@ const xmasNovelLoad = async (script = XMAS_NOVEL_SCRIPT) => {
 const xmasNovelStore = async (save, script = XMAS_NOVEL_SCRIPT) => {
   try {
     await storeSet(XMAS_NOVEL_STORAGE_KEY, xmasNovelNormalize(save, script), false);
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
+const xmasNovelRouteLoad = async (script = XMAS_NOVEL_SCRIPT) => {
+  try {
+    return xmasNovelRouteNormalize(await storeGet(XMAS_NOVEL_ROUTE_KEY, null, false), script);
+  } catch (e) {
+    return xmasNovelRouteNormalize(null, script);
+  }
+};
+const xmasNovelRouteStore = async (route, script = XMAS_NOVEL_SCRIPT) => {
+  try {
+    await storeSet(XMAS_NOVEL_ROUTE_KEY, xmasNovelRouteNormalize(route, script), false);
     return true;
   } catch (e) {
     return false;
@@ -129959,6 +130082,8 @@ const XmasNovelScreen = ({
   const [log, setLog] = useState([]);
   const [confirmNew, setConfirmNew] = useState(false);
   const saveRef = useRef(null);
+  const [route, setRoute] = useState(null);
+  const routeRef = useRef(null);
   const lastBgm = useRef(null);
   const lastChapter = useRef(null);
   const prevBgm = useRef(null);
@@ -130010,10 +130135,16 @@ const XmasNovelScreen = ({
       prevBgm.current = null;
     }
     xmasNovelLoad(S).then(s => {
-      if (alive) {
-        saveRef.current = s;
-        setSave(s);
-      }
+      if (!alive) return;
+      saveRef.current = s;
+      setSave(s);
+      xmasNovelRouteLoad(S).then(r => {
+        if (!alive) return;
+        const seeded = r.seeded === 1 ? r : xmasNovelRouteSeed(S, s, r);
+        routeRef.current = seeded;
+        setRoute(seeded);
+        if (seeded !== r) void xmasNovelRouteStore(seeded, S);
+      });
     });
     xmasNovelBgm('melo_dullahan_clockwork');
     return () => {
@@ -130022,6 +130153,33 @@ const XmasNovelScreen = ({
       if (storeTimer.current) clearTimeout(storeTimer.current);
     };
   }, []);
+  const putRoute = next => {
+    if (!next) return;
+    routeRef.current = next;
+    setRoute(next);
+    void xmasNovelRouteStore(next, S);
+  };
+  const redoFrom = cur => {
+    const r = routeRef.current || xmasNovelRouteNormalize(null, S);
+    const now = saveRef.current && saveRef.current.cur;
+    putRoute({
+      ...r,
+      back: r.back || now || null
+    });
+    setSheet(null);
+    start(cur);
+  };
+  const backFromRedo = () => {
+    const r = routeRef.current;
+    if (!r || !r.back) return;
+    const b = r.back;
+    putRoute({
+      ...r,
+      back: null
+    });
+    setSheet(null);
+    start(b);
+  };
   const persist = (next, now = false) => {
     saveRef.current = next;
     setSave(next);
@@ -130295,6 +130453,7 @@ const XmasNovelScreen = ({
       cur,
       panelChanged
     };
+    if (next.row.t === 'q' && !replayRef.current && routeRef.current) putRoute(xmasNovelRouteRecord(routeRef.current, S, cur));
     s = arriveRow(next.row, {
       ...s,
       cur
@@ -130913,6 +131072,14 @@ const XmasNovelScreen = ({
   }, "スキップ")), React.createElement("button", {
     type: "button",
     className: "mh-nv-btn",
+    "data-xmas-novel-open-map": true,
+    onClick: () => setSheet('map'),
+    "aria-label": "地図"
+  }, React.createElement(XmasNovelIcon, {
+    d: XMAS_NOVEL_ICONS.map
+  }), React.createElement("span", null, "地図")), React.createElement("button", {
+    type: "button",
+    className: "mh-nv-btn",
     "data-xmas-novel-menu": true,
     onClick: () => setSheet('menu'),
     "aria-label": "メニュー"
@@ -131022,7 +131189,15 @@ const XmasNovelScreen = ({
         setMode('title');
       }
     }, "タイトルへ")));
-  })()), sheet && React.createElement("div", {
+  })()), sheet === 'map' && save && React.createElement(XmasNovelMap, {
+    script: S,
+    save: save,
+    route: route,
+    playerName: playerName,
+    onRedo: redoFrom,
+    onBack: backFromRedo,
+    onClose: () => setSheet(null)
+  }), sheet && sheet !== 'map' && React.createElement("div", {
     className: "mh-nv-sheet",
     "data-xmas-novel-sheet": typeof sheet === 'string' ? sheet : sheet.kind,
     onClick: () => {
@@ -131234,6 +131409,344 @@ const openXmasNovel = (opts = {}) => {
     script: opts.script || null
   }));
   return true;
+};
+const XMAS_NOVEL_MAP_CSS = `
+.mh-nvm { position: absolute; inset: 0; z-index: 12; display: flex; flex-direction: column; color: #eef3ff; font-family: inherit; animation: mh-nv-fade .2s ease both;
+  background: radial-gradient(ellipse at 50% -10%, rgba(232,200,115,.18), transparent 55%),
+    linear-gradient(rgba(120,150,220,.07) 1px, transparent 1px) 0 0/22px 22px,
+    linear-gradient(90deg, rgba(120,150,220,.07) 1px, transparent 1px) 0 0/22px 22px,
+    linear-gradient(#0b1430, #101b3d 60%, #0b1430); }
+.mh-nvm-head { flex: none; padding: calc(max(10px, env(safe-area-inset-top)) + 2px) 16px 8px; background: linear-gradient(#0b1430 75%, rgba(11,20,48,0)); }
+.mh-nvm-ttl { display: flex; align-items: center; gap: 8px; }
+.mh-nvm-ttl h2 { font-size: 19px; font-weight: 900; color: #e8c873; letter-spacing: .06em; }
+.mh-nvm-x { margin-left: auto; width: 32px; height: 32px; border-radius: 50%; border: 1px solid #b8913a; color: #e8c873; display: grid; place-items: center; font-weight: 900; }
+.mh-nvm-row { display: flex; gap: 8px; margin-top: 8px; align-items: center; }
+.mh-nvm-tab { flex: 1; min-width: 0; text-align: center; padding: 6px 0; border-radius: 999px; font-size: 13px; font-weight: 900; border: 1px solid #b8913a; color: #e8c873; }
+.mh-nvm-tab[data-on] { background: linear-gradient(#e8c873, #b8913a); color: #2a1a05; }
+.mh-nvm-ends { flex: none; font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 999px; background: rgba(200,50,60,.25); border: 1px solid rgba(232,120,120,.6); white-space: nowrap; }
+.mh-nvm-back { display: block; width: 100%; margin-top: 8px; padding: 7px 0; border-radius: 10px; font-size: 13px; font-weight: 900; color: #fff; background: rgba(200,50,60,.55); border: 1px solid #f0a0a0; }
+.mh-nvm-legend { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 8px; font-size: 10px; color: #9fb0d8; }
+.mh-nvm-body { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 0 16px calc(max(16px, env(safe-area-inset-bottom)) + 12px); }
+.mh-nvm-it { position: relative; display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 4px 0 4px 52px; }
+.mh-nvm-it::before { content: ""; position: absolute; left: 30px; top: 0; bottom: 0; width: 4px; border-radius: 2px; background: linear-gradient(#e8c873, #b8913a); box-shadow: 0 0 8px rgba(232,200,115,.45); }
+.mh-nvm-it[data-dark]::before { background: repeating-linear-gradient(#2b3658 0 8px, transparent 8px 14px); box-shadow: none; }
+.mh-nvm-door { position: absolute; left: 0; width: 64px; height: 38px; border-radius: 19px 19px 4px 4px; background: linear-gradient(#6b4423, #3e2612); border: 2px solid #e8c873; display: grid; place-items: center; font-size: 11px; font-weight: 900; color: #e8c873; box-shadow: 0 0 12px rgba(232,200,115,.4); z-index: 1; }
+.mh-nvm-it[data-dark] .mh-nvm-door { background: #1a2342; border-color: #3a4670; color: #5d6a90; box-shadow: none; }
+.mh-nvm-chap { padding-left: 76px; min-height: 50px; margin-top: 6px; }
+.mh-nvm-cname { font-size: 15px; font-weight: 900; line-height: 1.3; }
+.mh-nvm-it[data-dark] .mh-nvm-cname { color: #5d6a90; }
+.mh-nvm-mk { position: absolute; left: 18px; width: 28px; height: 28px; display: grid; place-items: center; font-size: 12px; font-weight: 900; z-index: 1; }
+.mh-nvm-mk[data-k="action"] { transform: rotate(45deg) scale(.86); background: #7a1f28; border: 2px solid #f0a0a0; border-radius: 4px; }
+.mh-nvm-mk[data-k="action"] > span { transform: rotate(-45deg); }
+.mh-nvm-mk[data-k="present"] { border-radius: 50%; background: #173a2a; border: 2px solid #8fd6a8; }
+.mh-nvm-mk[data-k="person"] { border-radius: 6px; background: #3a2a5a; border: 2px solid #c7b2ff; }
+.mh-nvm-it[data-dark] .mh-nvm-mk { background: #1a2342; border-color: #3a4670; color: #5d6a90; }
+.mh-nvm-it[data-now] .mh-nvm-mk { box-shadow: 0 0 0 3px #fff, 0 0 16px 4px rgba(255,90,90,.9); }
+.mh-nvm-lab { min-width: 0; flex: 1; font-size: 12.5px; font-weight: 800; line-height: 1.35; }
+.mh-nvm-lab small { display: block; font-size: 10.5px; font-weight: 600; color: #9fb0d8; }
+.mh-nvm-it[data-dark] .mh-nvm-lab { color: #5d6a90; }
+.mh-nvm-it[data-dark] .mh-nvm-lab small { color: #3f4b70; }
+.mh-nvm-redo { flex: none; width: 32px; height: 32px; border-radius: 50%; border: 1px solid #b8913a; color: #e8c873; background: rgba(232,200,115,.08); display: grid; place-items: center; font-size: 15px; font-weight: 900; }
+.mh-nvm-now { flex: none; padding: 3px 8px; font-size: 10px; font-weight: 900; color: #fff; background: #c8323c; border-radius: 3px; box-shadow: 0 0 0 2px #fff, 0 0 14px rgba(255,80,80,.9); white-space: nowrap; }
+.mh-nvm-ends-list { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; flex: none; max-width: 52%; }
+.mh-nvm-orn { position: relative; min-width: 96px; max-width: 150px; padding: 5px 8px 5px 24px; border-radius: 13px; font-size: 10.5px; font-weight: 800; line-height: 1.3; background: linear-gradient(135deg, #8a1c26, #4a0f15); border: 1px solid #f0a0a0; color: #ffe9e9; }
+.mh-nvm-orn::before { content: ""; position: absolute; left: 7px; top: 50%; width: 12px; height: 12px; margin-top: -6px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ffd2d2, #c8323c 60%, #6a1018); box-shadow: 0 0 6px rgba(255,120,120,.8); }
+.mh-nvm-orn small { display: block; font-size: 9.5px; font-weight: 600; color: #f7c2c2; }
+.mh-nvm-orn[data-good] { background: linear-gradient(135deg, #7a5a14, #3d2c08); border-color: #e8c873; }
+.mh-nvm-orn[data-good]::before { background: radial-gradient(circle at 35% 30%, #fff3c0, #e8c873 60%, #7a5a14); }
+.mh-nvm-orn[data-unseen] { background: #151d38; border-color: #3a4670; color: #5d6a90; }
+.mh-nvm-orn[data-unseen]::before { background: #2a3456; box-shadow: none; }
+.mh-nvm-orn[data-unseen] small { color: #3f4b70; }
+.mh-nvm-lane { margin: 14px 0 0; padding: 4px 10px; border-left: 3px solid #b8913a; font-size: 11px; font-weight: 900; color: #e8c873; letter-spacing: .08em; }
+.mh-nvm-lane[data-dark] { border-left-color: #3a4670; color: #5d6a90; }
+.mh-nvm-foot { margin-top: 16px; padding: 10px 12px; border-radius: 12px; border: 1px solid #3a4670; font-size: 11px; color: #9fb0d8; line-height: 1.6; background: rgba(20,33,74,.6); }
+.mh-nvm-sheet { position: absolute; inset: 0; z-index: 2; display: flex; align-items: flex-end; background: rgba(5,8,20,.55); }
+.mh-nvm-panel { width: 100%; padding: 16px 16px calc(max(16px, env(safe-area-inset-bottom)) + 6px); border-radius: 18px 18px 0 0; background: linear-gradient(#18244d, #0d1634); border-top: 2px solid #e8c873; box-shadow: 0 -10px 30px rgba(0,0,0,.5); }
+.mh-nvm-panel h3 { font-size: 15px; font-weight: 900; color: #e8c873; }
+.mh-nvm-q { margin-top: 8px; padding: 8px 10px; border-radius: 10px; background: rgba(120,20,30,.35); box-shadow: 0 0 0 1px rgba(232,120,120,.6); font-size: 13px; font-weight: 800; line-height: 1.5; }
+.mh-nvm-panel ul { margin-top: 10px; font-size: 12px; line-height: 1.7; color: #d9e2ff; }
+.mh-nvm-btn { display: block; width: 100%; margin-top: 10px; padding: 12px 0; text-align: center; border-radius: 12px; font-weight: 900; font-size: 15px; }
+.mh-nvm-btn[data-main] { background: linear-gradient(#e8c873, #b8913a); color: #2a1a05; }
+.mh-nvm-btn[data-sub] { border: 1px solid #b8913a; color: #e8c873; }
+@media (orientation: landscape) and (max-height: 500px) { .mh-nvm-body, .mh-nvm-head { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); } .mh-nvm-panel { max-width: 560px; margin: 0 auto; border-radius: 18px 18px 0 0; } }
+`;
+const XMAS_NOVEL_MAP_SIDES = [{
+  v: 1,
+  label: 'あつ派'
+}, {
+  v: 2,
+  label: 'ソラシド派'
+}];
+const XMAS_NOVEL_MAP_LANES = [{
+  id: 'main',
+  chapters: ['C0', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7']
+}, {
+  id: 'late',
+  name: '当てられなかった道',
+  chapters: ['C10', 'C11']
+}, {
+  id: 'true',
+  name: '真相への道',
+  chapters: ['C8', 'C9']
+}];
+let xmasNovelMapModelCache = null;
+const xmasNovelMapModel = script => {
+  if (xmasNovelMapModelCache && xmasNovelMapModelCache.script === script) return xmasNovelMapModelCache.model;
+  const scenes = xmasNovelScenes(script);
+  const order = {};
+  scenes.forEach((s, i) => {
+    order[s.id] = i;
+  });
+  const laneChapters = new Set(XMAS_NOVEL_MAP_LANES.flatMap(l => l.chapters));
+  const endInfo = {};
+  scenes.forEach(s => {
+    if (s.ending && s.ending.id && !endInfo[s.ending.id]) endInfo[s.ending.id] = s.ending;
+  });
+  const endsOf = (q, chId) => {
+    const tos = [];
+    (q.options || []).forEach(o => {
+      if (o && o.to) tos.push(o.to);
+    });
+    Object.values(q.route || {}).forEach(t => {
+      if (typeof t === 'string') tos.push(t);
+    });
+    const out = [];
+    tos.forEach(to => {
+      const sc = xmasNovelSceneById(script, to);
+      if (!sc || sc.chapter !== chId && laneChapters.has(sc.chapter)) return;
+      const e = xmasNovelEndingAhead(script, to);
+      if (e && !out.includes(e)) out.push(e);
+    });
+    return out;
+  };
+  const chapters = {};
+  xmasNovelChapters(script).forEach(ch => {
+    const scs = scenes.filter(s => s.chapter === ch.id && !(s.ending && s.ending.id));
+    const nodes = [];
+    scs.forEach(s => (s.rows || []).forEach((r, idx) => {
+      if (r && r.t === 'q') nodes.push({
+        id: r.id,
+        q: r,
+        scene: s.id,
+        idx,
+        pos: order[s.id] * 10000 + idx,
+        ends: endsOf(r, ch.id)
+      });
+    }));
+    chapters[ch.id] = {
+      ch,
+      scenes: scs.map(s => s.id),
+      keys: new Set(scs.flatMap(s => (s.rows || []).filter(r => r && r.k).map(r => r.k))),
+      nodes
+    };
+  });
+  const model = {
+    chapters,
+    order,
+    endInfo,
+    endTotal: Object.keys(endInfo).length
+  };
+  xmasNovelMapModelCache = {
+    script,
+    model
+  };
+  return model;
+};
+const xmasNovelMapNum = label => {
+  const m = String(label || '').match(/[①-⑨]/);
+  return m ? m[0] : '';
+};
+const XmasNovelMap = ({
+  script,
+  save,
+  route,
+  playerName,
+  onRedo,
+  onBack,
+  onClose
+}) => {
+  const model = xmasNovelMapModel(script);
+  const curSide = save && save.cur && save.cur.flags && Number.isFinite(save.cur.flags.f_A1) ? save.cur.flags.f_A1 : 0;
+  const [side, setSide] = useState(curSide === 2 ? 2 : 1);
+  const [pick, setPick] = useState(null);
+  const read = useMemo(() => new Set(save && save.read || []), [save]);
+  const endings = save && save.endings || [];
+  const at = route && route.at || {};
+  const keyOf = id => `${id}|${id === 'A1' ? 0 : side}`;
+  const nodeLit = n => !!at[keyOf(n.id)] || !!n.q.k && read.has(n.q.k) && (n.id === 'A1' || curSide === side);
+  const chEntered = c => [...c.keys].some(k => read.has(k));
+  const chLit = c => {
+    if (!c || !chEntered(c)) return false;
+    if (c.ch.id === 'C0' || c.ch.id === 'C1' || curSide === side) return true;
+    return c.nodes.some(nodeLit) || Object.keys(at).some(k => k.endsWith(`|${side}`) && c.scenes.includes(at[k].scene));
+  };
+  const now = (() => {
+    const cur = save && save.cur;
+    if (!cur || curSide && curSide !== side) return null;
+    const sc = xmasNovelSceneById(script, cur.scene);
+    if (!sc || !model.chapters[sc.chapter]) return null;
+    const p = (model.order[sc.id] || 0) * 10000 + (Number(cur.idx) || 0);
+    const n = model.chapters[sc.chapter].nodes.find(x => x.pos >= p);
+    return n ? {
+      node: n.id
+    } : {
+      chapter: sc.chapter
+    };
+  })();
+  const seenCount = Object.keys(model.endInfo).filter(e => endings.includes(e)).length;
+  const pickedSnap = pick ? at[keyOf(pick.id)] : null;
+  const pickedCh = pick ? model.chapters[xmasNovelSceneById(script, pick.scene) ? xmasNovelSceneById(script, pick.scene).chapter : ''] : null;
+  const endCard = e => {
+    const info = model.endInfo[e] || {};
+    const seen = endings.includes(e);
+    const good = info.kind === 'good' || info.kind === 'normal' || info.kind === 'extra';
+    return React.createElement("div", {
+      key: e,
+      className: "mh-nvm-orn",
+      "data-xmas-novel-map-end": e,
+      "data-unseen": seen ? undefined : '',
+      "data-good": seen && good ? '' : undefined
+    }, seen ? xmasNovelWrap(info.name || '') : '？？？', React.createElement("small", null, seen ? info.label || 'エンド' : '未見のエンド'));
+  };
+  const chapterItem = c => {
+    const lit = chLit(c);
+    const label = xmasNovelChapterLabel(c.ch) || c.ch.label || '';
+    const title = lit ? xmasNovelChapterTitle(script, c.ch, save.read) : '？？？';
+    const isNow = now && now.chapter === c.ch.id;
+    return React.createElement("div", {
+      key: `ch-${c.ch.id}`,
+      className: "mh-nvm-it mh-nvm-chap",
+      "data-xmas-novel-map-chapter": c.ch.id,
+      "data-dark": lit ? undefined : ''
+    }, React.createElement("div", {
+      className: "mh-nvm-door"
+    }, lit ? label : c.ch.past ? '🔒' : c.ch.no === 0 ? '序章' : '第？章'), React.createElement("div", {
+      className: "mh-nvm-cname"
+    }, xmasNovelWrap(title)), isNow && React.createElement("span", {
+      className: "mh-nvm-now",
+      "data-xmas-novel-map-now": true
+    }, "いまここ"));
+  };
+  const nodeItem = n => {
+    const lit = nodeLit(n);
+    const isNow = now && now.node === n.id;
+    const canRedo = !!at[keyOf(n.id)];
+    const q = n.q;
+    const first = save && save.first && save.first[n.id];
+    const sub = !lit ? 'まだ読んでいない' : isNow ? '考え中' : q.kind === 'present' && first ? first.f ? '一発で正解' : '外して仲間が拾った' : n.id === 'A1' ? side === 2 ? 'ソラシド派' : 'あつ派' : '';
+    const kind = n.id === 'A1' ? 'person' : q.kind;
+    const mark = kind === 'action' ? '◆' : kind === 'present' ? xmasNovelMapNum(q.label) || '？' : '✦';
+    return React.createElement("div", {
+      key: `q-${n.id}`,
+      className: "mh-nvm-it",
+      "data-xmas-novel-map-node": n.id,
+      "data-dark": lit ? undefined : '',
+      "data-now": isNow ? '' : undefined
+    }, React.createElement("div", {
+      className: "mh-nvm-mk",
+      "data-k": kind
+    }, React.createElement("span", null, lit ? mark : '？')), React.createElement("div", {
+      className: "mh-nvm-lab"
+    }, lit ? xmasNovelWrap(q.label || '分かれ道') : '？？？', sub ? React.createElement("small", null, sub) : null), isNow && React.createElement("span", {
+      className: "mh-nvm-now",
+      "data-xmas-novel-map-now": true
+    }, "いまここ"), canRedo && !isNow && React.createElement("button", {
+      type: "button",
+      className: "mh-nvm-redo",
+      "data-xmas-novel-map-redo": n.id,
+      "aria-label": "ここから読み直す",
+      onClick: () => setPick(n)
+    }, "↺"), n.ends.length > 0 && React.createElement("div", {
+      className: "mh-nvm-ends-list"
+    }, n.ends.map(endCard)));
+  };
+  const laneLit = lane => lane.chapters.some(id => model.chapters[id] && chLit(model.chapters[id]));
+  const past = xmasNovelChapters(script).find(c => c.past);
+  const pastOpen = endings.includes('END-G');
+  return React.createElement("div", {
+    className: "mh-nvm",
+    "data-xmas-novel-map": true,
+    onClick: e => e.stopPropagation()
+  }, React.createElement("style", null, XMAS_NOVEL_MAP_CSS), React.createElement("div", {
+    className: "mh-nvm-head"
+  }, React.createElement("div", {
+    className: "mh-nvm-ttl"
+  }, React.createElement("h2", {
+    className: "mh-nv-serif"
+  }, "聖夜の見取り図"), React.createElement("span", {
+    className: "text-[11px] text-slate-400"
+  }, "分岐の地図"), React.createElement("button", {
+    type: "button",
+    className: "mh-nvm-x",
+    "data-xmas-novel-map-close": true,
+    "aria-label": "閉じる",
+    onClick: onClose
+  }, "✕")), React.createElement("div", {
+    className: "mh-nvm-row"
+  }, XMAS_NOVEL_MAP_SIDES.map(s => React.createElement("button", {
+    type: "button",
+    key: s.v,
+    className: "mh-nvm-tab",
+    "data-xmas-novel-map-side": s.v,
+    "data-on": side === s.v ? '' : undefined,
+    onClick: () => setSide(s.v)
+  }, s.label)), React.createElement("div", {
+    className: "mh-nvm-ends",
+    "data-xmas-novel-map-count": true
+  }, "エンド ", seenCount, "/", model.endTotal)), route && route.back && React.createElement("button", {
+    type: "button",
+    className: "mh-nvm-back",
+    "data-xmas-novel-map-back": true,
+    onClick: onBack
+  }, "読み直す前の続きへ戻る"), React.createElement("div", {
+    className: "mh-nvm-legend"
+  }, React.createElement("span", null, "◆ 行動の選択"), React.createElement("span", null, "① 推理の問い"), React.createElement("span", null, "✦ 名指し"), React.createElement("span", null, "● エンド"), React.createElement("span", null, "↺ ここから読み直す"))), React.createElement("div", {
+    className: "mh-nvm-body"
+  }, XMAS_NOVEL_MAP_LANES.map(lane => React.createElement("div", {
+    key: lane.id,
+    "data-xmas-novel-map-lane": lane.id
+  }, lane.name && React.createElement("div", {
+    className: "mh-nvm-lane",
+    "data-dark": laneLit(lane) ? undefined : ''
+  }, laneLit(lane) ? lane.name : '？？？へ続く道'), lane.chapters.map(id => model.chapters[id]).filter(Boolean).map(c => [chapterItem(c), ...c.nodes.map(nodeItem)]))), past && React.createElement("div", {
+    className: "mh-nvm-it mh-nvm-chap",
+    "data-xmas-novel-map-chapter": past.id,
+    "data-dark": pastOpen ? undefined : ''
+  }, React.createElement("div", {
+    className: "mh-nvm-door"
+  }, pastOpen ? xmasNovelChapterLabel(past) : '🔒'), React.createElement("div", {
+    className: "mh-nvm-cname"
+  }, pastOpen ? past.title : '？？？')), React.createElement("div", {
+    className: "mh-nvm-foot"
+  }, "明るい所は読んだ所。↺ を押すと、その分かれ道の直前から読み直せます(手がかり帳・登場人物パネル・選んだ派も、その時のまま)。一発で当てた記録と見たエンドは消えません。")), pick && pickedSnap && React.createElement("div", {
+    className: "mh-nvm-sheet",
+    onClick: () => setPick(null)
+  }, React.createElement("div", {
+    className: "mh-nvm-panel",
+    "data-xmas-novel-map-sheet": pick.id,
+    onClick: e => e.stopPropagation()
+  }, React.createElement("h3", {
+    className: "mh-nv-serif"
+  }, pickedCh ? `${xmasNovelChapterLabel(pickedCh.ch)}　${xmasNovelChapterTitle(script, pickedCh.ch, save.read)}` : '', " ― ", pick.q.label || '分かれ道'), React.createElement("div", {
+    className: "mh-nvm-q"
+  }, xmasNovelWrap(xmasNovelFill(pick.q.x, playerName))), React.createElement("ul", null, React.createElement("li", null, "・手がかり帳: ", (pickedSnap.clues || []).length, "個(その時のまま)"), React.createElement("li", null, "・登場人物パネル・選んだ派も、その時のまま"), React.createElement("li", null, "・一発で当てた記録・見たエンドは消えません")), React.createElement("button", {
+    type: "button",
+    className: "mh-nvm-btn",
+    "data-main": "",
+    "data-xmas-novel-map-go": true,
+    onClick: () => {
+      const c = pickedSnap;
+      setPick(null);
+      onRedo && onRedo(c);
+    }
+  }, "ここから読み直す"), React.createElement("button", {
+    type: "button",
+    className: "mh-nvm-btn",
+    "data-sub": "",
+    onClick: () => setPick(null)
+  }, "やめる"), React.createElement("div", {
+    className: "mt-2 text-[10.5px] leading-relaxed text-slate-400"
+  }, "いまの続きは残ります。地図の「読み直す前の続きへ戻る」で、いつでも戻れます。"))));
 };
 const ASSISTANT_CHAT_URL = `${SUPABASE_URL}/functions/v1/assistant-chat`;
 const ASSISTANT_CHAT_LOG_KEY = 'mh_assistant_chat_log_v1';
