@@ -91,6 +91,9 @@ const ROUTES = [
   { name: 'もしも 宝の地図、オルゴールを最後まで聞く', want: 'END-T1', from: 'A6y', picks: { A6y: 'go:TK-1', AT1: 'opt:0', AT2: 'opt:0' }, seen: ['END-G', 'END-O', 'END-O2', 'END-O3', 'END-O4'] },
   { name: 'もしも 宝の地図、くすぐってから台所へ', want: 'END-T2', from: 'AT1', picks: { A6y: 'go:TK-1', AT1: 'opt:1', AT2: 'opt:1' }, seen: ['END-G', 'END-O', 'END-O2', 'END-O3', 'END-O4'], short: true },
   { name: '緑のしおりが無いと A6y に③は出ない', want: 'END-G', from: 'A6y', picks: { A6y: 'opt:0', Q7a: 'kyuko' }, seen: ['END-G'], noOpt: { A6y: 'TK-1' }, short: true },
+  // r1126-115 外側の短い話 ⑤ 次の頁(白紙のしおり=4枚そろう)
+  { name: '外側 次の頁、4本のリボンで本を閉じる', want: 'END-W1', from: 'A1', picks: { A1: 'go:WP-1' }, seen: ['END-G', 'END-M1', 'END-M2', 'END-M3', 'END-M4', 'END-M5', 'END-X1', 'END-X2', 'END-X3', 'END-X4', 'END-X5', 'END-X6', 'END-X7', 'END-X8', 'END-O', 'END-O2', 'END-O3', 'END-O4', 'END-G2', 'END-L1', 'END-L2'] },
+  { name: '白紙のしおりが無いと A1 に⑤は出ない', want: 'END-O4', from: 'A1', picks: { A1: 'go:C1-O4' }, seen: ['END-G', 'END-G2', 'END-L1', 'END-L2'], noOpt: { A1: 'WP-1' }, short: true },
   // r1126-115 もしもの話 ④ 鳴りやまない鐘(銀のしおり)
   { name: 'もしも 鳴りやまない鐘、振り子を止める', want: 'END-Y1', from: 'A2b', picks: { A2b: 'go:YL-1', AY1: 'opt:0' }, seen: ['END-G', 'END-G2', 'END-L1', 'END-L2'] },
   { name: 'もしも 鳴りやまない鐘、もう一度やり直す', want: 'END-Y2', from: 'AY1', picks: { A2b: 'go:YL-1', AY1: 'opt:1' }, seen: ['END-G', 'END-G2', 'END-L1', 'END-L2'], short: true },
