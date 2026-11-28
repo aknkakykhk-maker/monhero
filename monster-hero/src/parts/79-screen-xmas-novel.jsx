@@ -2151,6 +2151,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
                     { key: 'new', label: 'はじめから', attr: { 'data-xmas-novel-new': '' }, on: () => (save.cur ? setConfirmNew(true) : start(xmasNovelFreshCur(S))) },
                     { key: 'chapters', label: '章から', attr: { 'data-xmas-novel-chapters': '' }, off: !Object.keys(save.snaps).length, on: () => setMode('chapters') },
                     { key: 'endings', label: 'エンドヒストリー', cnt: `${seenCount} / ${endingsAll.length}`, attr: { 'data-xmas-novel-endings': '' }, on: () => setMode('endings') },
+                    typeof XmasNovelProfile === 'function' ? { key: 'profile', label: '人物調書', attr: { 'data-xmas-novel-profile-open': '' }, on: () => setMode('profile') } : null,
                     typeof XmasNovelRank === 'function' ? { key: 'ranking', label: 'ランキング', attr: { 'data-xmas-novel-ranking': '' }, on: () => setMode('ranking') } : null,
                   ].filter(Boolean);
                   return items.map((it, i) => (
@@ -2182,6 +2183,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
               )}
             </div>
           )}
+          {mode === 'profile' && typeof XmasNovelProfile === 'function' && <XmasNovelProfile save={save} onBack={() => setMode('title')} />}
           {mode === 'ranking' && typeof XmasNovelRank === 'function' && <XmasNovelRank script={S} off={rankOff} onBack={() => setMode('title')} />}
           {mode === 'endings' && (
             <div className="my-auto w-full max-w-md" data-xmas-novel-ending-list>
