@@ -59,6 +59,14 @@ const XMAS_NOVEL_CSS = `
 @keyframes mh-nv-bob { 50% { transform: translateY(4px); } }
 .mh-nv-top { position: absolute; top: max(8px, env(safe-area-inset-top)); left: 8px; right: 8px; display: flex; align-items: center; gap: 6px; z-index: 6; }
 .mh-nv-where { min-width: 0; flex: 1; font-size: 12px; color: #c9d4f2; text-shadow: 0 1px 3px #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* 縦では、章と場面の題を2行に分ける(1行だと「第七章　ひとつ…」と章の名前まで切れた・2026-11-28 総点検 4番)。それぞれ入らないときだけ「…」 */
+/* 縦では、題をボタンの段の下に1段で出し、画面の幅いっぱいを使う(右のボタン5つに押されて「第一章 ペンシ…」と切れた・台帳 r1126-091)。
+   いちばん長い題(「第一章　ペンション・シュプール　/　ホールのもみの木」26字)も 12px で1行に入る。入らない端末だけ「…」 */
+@media (orientation: portrait) {
+  .mh-nv-top { flex-wrap: wrap; row-gap: 4px; }
+  .mh-nv-top > .mh-nv-where { order: 2; flex: 0 0 100%; font-size: 12px; padding: 0 2px; }
+  .mh-nv-top > .mh-nv-where + .mh-nv-btn { margin-left: auto; }
+}
 .mh-nv-btn { min-height: 38px; min-width: 38px; padding: 0 10px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; font-size: 12px; font-weight: 800;
   color: #f3e3b0; background: rgba(8,16,40,.82); box-shadow: 0 0 0 1px rgba(232,196,106,.55); }
 .mh-nv-btn[data-on] { background: #b8892e; color: #1a1205; }
@@ -130,6 +138,9 @@ const XMAS_NOVEL_CSS = `
 @keyframes mh-nv-bleed { 0% { opacity: 0; transform: scale(1.35); filter: blur(6px); } 25% { opacity: 1; transform: scale(1); filter: blur(0); } 70% { opacity: .9; } 100% { opacity: 0; } }
 .mh-nv-fallen { position: absolute; left: 50%; bottom: 24%; width: min(80vw, 520px); transform: translateX(-50%); z-index: 4; filter: drop-shadow(0 0 2px rgba(190,200,230,.35)); pointer-events: none; animation: mh-nv-fade 1.2s ease both; }
 .mh-nv-body { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
+.mh-nv-body.noblood .pool { display: none; }
+.mh-nv-body.noblood .mh-nv-body-lie img { filter: brightness(0) drop-shadow(0 0 1px rgba(190,205,235,.55)) drop-shadow(0 0 14px rgba(120,150,200,.35)) !important; }
+.mh-nv-body.noblood .mh-nv-body-dim { background: radial-gradient(120% 90% at 50% 40%, rgba(6,10,34,.35), rgba(0,0,4,.88)) !important; }
 .mh-nv-body-dim { position: absolute; inset: 0; -webkit-backdrop-filter: grayscale(.9) brightness(.55); backdrop-filter: grayscale(.9) brightness(.55);
   background: radial-gradient(70% 34% at var(--fx, 50%) var(--fy, 74%), rgba(120,0,14,.42), rgba(120,0,14,0) 72%), radial-gradient(120% 90% at 50% 40%, rgba(6,10,34,.35), rgba(0,0,4,.88)); animation: mh-nv-fade 1.4s ease both; }
 .mh-nv-body-lie { position: absolute; }
@@ -190,6 +201,10 @@ const XMAS_NOVEL_CSS = `
 @keyframes mh-nv-zoom-out { 0% { transform: translate(-50%, -50%) scale(4); opacity: .2; } 100% { transform: translate(-50%, -50%) scale(.6); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .mh-nv-noise, .mh-nv-boot-logo, .mh-nv-boot-press { animation: none; } .mh-nv-transit { animation-duration: .01s !important; } }
 @media (orientation: landscape) and (max-height: 560px) {
+  /* 選択肢・推理の窓・GAME OVER の札は、上の帯(ボタンの列)の下から出す(上のボタンに重なった・2026-11-28 総点検 9番) */
+  .mh-nv-sheet { padding-top: calc(max(8px, env(safe-area-inset-top)) + 46px); }
+  .mh-nv-sheet .mh-nv-panel { max-height: 100%; }
+  .mh-nv-card { padding-top: calc(max(8px, env(safe-area-inset-top)) + 48px); padding-bottom: 12px; justify-content: safe center; overflow-y: auto; }
   .mh-nv-fig { left: 0; right: auto; width: min(42vw, 460px); }
   .mh-nv-box { left: auto; right: 10px; transform: none; width: min(calc(60vw - 10px), 760px); min-height: 110px; padding-top: 20px; }
   .mh-nv-text { font-size: 15px; line-height: 1.65; }
@@ -572,7 +587,8 @@ const xmasNovelBodyClamp = ({ X, Y, w, hv, W, H, land, lift }) => {
   y = Math.max(hv + 50, y);
   return { left: x - w / 2, bottom: H - y };
 };
-const XmasNovelBody = ({ who, scene = '', at = 0, bg = null }) => {
+// noBlood: 血だまりと床の赤みを出さない(台本の〔血なし〕。凍えて・首を絞められて亡くなった場面・2026-11-28 総点検 5番)
+const XmasNovelBody = ({ who, scene = '', at = 0, bg = null, noBlood = false }) => {
   const k = `${scene}:${who}`;
   // 同じ場面で同じ人の影がすぐまた出るとき(間に台詞が1〜2行)は、血が広がり直さないようにする
   const [again] = useState(() => xmasNovelBodyLast.k === k && Math.abs(at - xmasNovelBodyLast.at) <= 4);
@@ -601,7 +617,7 @@ const XmasNovelBody = ({ who, scene = '', at = 0, bg = null }) => {
   const fy = `${Math.round(((vp.H - p.bottom) / vp.H) * 100)}%`;
   const fade = sit ? `linear-gradient(180deg, #000 ${Math.round(p.vis * 70)}%, transparent ${Math.round(p.vis * 100)}%)` : '';
   return (
-    <div className={`mh-nv-body${again ? ' again' : ''}`} data-xmas-novel-fallen data-xmas-novel-body={who} data-xmas-novel-body-pose={pose} aria-label={c ? `${c.name}の倒れた影` : '倒れた影'} style={{ '--fx': fx, '--fy': fy }}>
+    <div className={`mh-nv-body${again ? ' again' : ''}${noBlood ? ' noblood' : ''}`} data-xmas-novel-fallen data-xmas-novel-body={who} data-xmas-novel-body-pose={pose} aria-label={c ? `${c.name}の倒れた影` : '倒れた影'} style={{ '--fx': fx, '--fy': fy }}>
       <div className="mh-nv-body-dim" />
       <div className={`mh-nv-body-lie${sit ? ' sit' : prone ? ' sit prone' : ''}`} style={{ left: p.left, bottom: p.bottom, width: p.w, height: boxH }}>
         <div className="ground" />
@@ -1399,7 +1415,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
         {(bg.snow || !bg.img) && <><div className="mh-nv-snow" />{bg.snow && <div className="mh-nv-snow b" />}</>}
         {!darkNow && (isLine || (isBand && xmasNovelIsSilhouette(row))) && <XmasNovelFigure row={row} scene={scene} />}
         {fx && <div key={fx.n} className={`mh-nv-fx ${fx.kind}`} />}
-        {isBand && row.body && <XmasNovelBody key={`body-${row.body}`} bg={bg} who={xmasNovelBodyWho(row.body, st && st.cur && st.cur.flags)} scene={scene ? scene.id : ''} at={st && st.cur && Number.isFinite(st.cur.idx) ? st.cur.idx : 0} />}
+        {isBand && row.body && <XmasNovelBody key={`body-${row.body}`} bg={bg} who={xmasNovelBodyWho(row.body, st && st.cur && st.cur.flags)} scene={scene ? scene.id : ''} at={st && st.cur && Number.isFinite(st.cur.idx) ? st.cur.idx : 0} noBlood={!!row.noBlood} />}
         {isBand && !row.body && Array.isArray(row.fx) && row.fx.includes('fallen') && <XmasNovelFallen />}
         {isBand && Array.isArray(row.fx) && row.fx.includes('letter') && <div key={`letter-${row.id}`} className="mh-nv-letter mh-nv-serif" data-xmas-novel-letter>{String(text).replace(/／/g, '\n')}</div>}
         {inside && <div className="mh-nv-crt" data-xmas-novel-inside />}
@@ -1434,7 +1450,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
         )}
       </div>
       <div className="mh-nv-top">
-        <span className="mh-nv-where mh-nv-serif">{chapter && !chapter.outside ? `${xmasNovelChapterLabel(chapter)}　${chapter.title}　/　` : ''}{scene && scene.title ? scene.title : ''}</span>
+        <span className="mh-nv-where mh-nv-serif" data-xmas-novel-where>{/* エンドの場面のあいだは章名だけ(場面名がエンド名を先に明かす・台帳 r1126-087「結末まで伏せる」) */}{chapter && !chapter.outside ? <span className="ch">{`${xmasNovelChapterLabel(chapter)}${chapter.title ? `　${chapter.title}` : ''}`}<span className="sep">　/　</span></span> : null}{scene && scene.title && !(scene.ending || (chapter && chapter.id === 'END') || /^END-/.test(String(scene.next || ''))) ? <span className="sc">{scene.title}</span> : null}</span>
         <button type="button" className="mh-nv-btn" data-xmas-novel-open-book onClick={() => setSheet('book')} aria-label="手がかり帳"><XmasNovelIcon d={XMAS_NOVEL_ICONS.book} /><span className="hidden sm:inline">手がかり帳</span><b className="text-[11px]">{clues.length}</b></button>
         <button type="button" className="mh-nv-btn" data-xmas-novel-log onClick={() => setSheet('log')} aria-label="ログ"><XmasNovelIcon d={XMAS_NOVEL_ICONS.log} /><span className="hidden sm:inline">ログ</span></button>
         <button type="button" className="mh-nv-btn" data-xmas-novel-auto data-on={autoLevel ? '' : undefined} onClick={() => persist({ ...saveRef.current, auto: (autoLevel + 1) % 3 }, true)} aria-label="オート">

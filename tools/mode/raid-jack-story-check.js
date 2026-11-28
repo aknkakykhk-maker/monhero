@@ -171,9 +171,10 @@ check('終章の最後のお礼の {name} は、ブリーダーの名前に替�
   const sp = render('raid_jack_story_1b', firstPumpkin);
   check('ぱんぷきんが初めて話す行から、画面の上部のステージに出て、台詞は上の吹き出しに出る', sp.includes('data-story-stage') && sp.includes('data-story-guest="pumpkin"') && /data-story-guest-bubble[^>]*>[^]*?だ、だれ/.test(sp));
   check('ぱんぷきんが話している行でも、下の助手の列にぱんぷきんは並ばない(助手の顔だけ)', !/data-face="pumpkin"[^]*data-face="pumpkin"/.test(sp) && ['mua', 'kiki', 'momosuke', 'dra'].every((id) => sp.includes(`data-face="${id}"`)));
-  check('ぱんぷきんが話している行の下の箱は、直前の助手の台詞を薄く残す', /opacity:0\.4[,;"]/.test(sp) && !/data-story-pop="1" class="rounded-2xl border-2 bg-slate-900 px-3 py-3"/.test(sp));
+  // 2026-11-28 ミハリの総点検8: 話していない欄は、前の台詞を残さない(箱の大きさは保ち、文と名前は隠す)・地は不透明(薄くすると後ろの HOME の字が透けた)
+  check('ぱんぷきんが話している行の下の箱は、前の台詞を残さず(隠す)、地は不透明', /data-story-line-box="[^"]*" data-story-idle=""/.test(sp) && /visibility:hidden/.test(sp) && !/data-story-line-box[^>]*opacity:0\.4/.test(sp) && !/data-story-pop="1" class="rounded-2xl border-2 bg-slate-900 px-3 py-3"/.test(sp));
   const sAfter = render('raid_jack_story_1b', firstPumpkin + 1);
-  check('助手が話す行では、ステージのぱんぷきんは残り(吹き出しは薄くなる)', sAfter.includes('data-story-guest="pumpkin"') && /data-story-guest-bubble[^>]*opacity:0\.4[,;"]/.test(sAfter) && !/data-story-guest-bubble="[^"]*"\s+data-story-pop="1"/.test(sAfter));
+  check('助手が話す行では、ステージのぱんぷきんは残り(上の吹き出しは前の台詞を隠し、地は不透明)', sAfter.includes('data-story-guest="pumpkin"') && /data-story-guest-bubble="[^"]*"\s+data-story-idle=""/.test(sAfter) && !/data-story-guest-bubble[^>]*opacity:0\.4/.test(sAfter) && !/data-story-guest-bubble="[^"]*"\s+data-story-pop="1"/.test(sAfter));
   const talkingOf = (html) => (html.match(/drop-shadow\(0 0 10px [^)]*\)/g) || []).length;
   check('ぱんぷきんが話しているときは、下の助手は誰も「話している(光る)」にならない', talkingOf(sp) === 1 && /data-story-guest-bubble="[^"]*"\s+data-story-pop="1"/.test(sp));
   check('助手が話しているときは、下の箱がぽんと出て、ステージの顔は暗くなる(話している人が一目で分かる)', /data-story-pop="1" class="rounded-2xl border-2 bg-slate-900/.test(sAfter) && /brightness\(\.7\)/.test(sAfter) && talkingOf(sAfter) === 1);

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b756601003f87961
+// source-sha256: d5bc9d4c64c3418c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -87994,7 +87994,7 @@ function HomeScreenV1({
     className: "mh-home-scene",
     "aria-label": "村の広場"
   }, React.createElement("picture", {
-    className: `mh-home-background ${homeBackgroundReady ? 'is-ready' : ''} ${homeBackgroundWide ? 'is-wide' : ''} ${homeBackgroundSquare ? 'is-square' : ''}`,
+    className: `mh-home-background ${homeBackgroundReady ? 'is-ready' : ''} ${homeBackgroundWide ? 'is-wide' : ''} ${homeBackgroundSquare ? 'is-square' : ''} ${homeSceneShape === 'portrait' ? 'is-tall' : ''}`,
     "aria-hidden": "true"
   }, React.createElement("img", {
     className: "mh-home-backdrop",
@@ -88511,7 +88511,7 @@ function HomeScreenV2({
     className: "mh-home-scene mh-home-v2",
     "aria-label": "村の広場"
   }, React.createElement("picture", {
-    className: `mh-home-background ${homeBackgroundReady ? 'is-ready' : ''} ${homeBackgroundWide ? 'is-wide' : ''} ${homeBackgroundSquare ? 'is-square' : ''}`,
+    className: `mh-home-background ${homeBackgroundReady ? 'is-ready' : ''} ${homeBackgroundWide ? 'is-wide' : ''} ${homeBackgroundSquare ? 'is-square' : ''} ${homeSceneShape === 'portrait' ? 'is-tall' : ''}`,
     "aria-hidden": "true"
   }, React.createElement("img", {
     className: "mh-home-backdrop",
@@ -89364,7 +89364,8 @@ function HomeUpdateGuideOverlay({
     "aria-modal": "true",
     "aria-label": notice.title,
     "data-home-update-guide": true
-  }, React.createElement("div", {
+  }, React.createElement("style", null, `@media (orientation:landscape) and (max-height:520px){[data-home-update-guide]>[data-update-guide-has-image]{max-width:min(calc(100% - 24px),880px);display:grid;grid-template-columns:minmax(0,38%) minmax(0,1fr);column-gap:14px;align-content:start;border-radius:1.5rem 1.5rem 0 0}[data-home-update-guide]>[data-update-guide-has-image]>*{grid-column:2}[data-home-update-guide]>[data-update-guide-has-image]>[data-update-notice-image]{grid-column:1;grid-row:1 / span 12;align-self:center;margin:0;max-height:calc(var(--mh-vh) - 40px - env(safe-area-inset-top) - env(safe-area-inset-bottom))}[data-home-update-guide]>[data-update-guide-has-image] button{min-height:44px}}`), React.createElement("div", {
+    "data-update-guide-has-image": notice.image ? '' : undefined,
     className: "w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4",
     style: {
       paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
@@ -114142,7 +114143,7 @@ const XmasStoryTab = ({
   }, novelEnded ? '遊べる期間は終わりました(記録は残っています)' : typeof XMAS_NOVEL_GAME !== 'undefined' ? `副題「${XMAS_NOVEL_GAME.sub}」` : ''))), React.createElement(XmasCastPanel, {
     no: reached,
     compact: true
-  }), React.createElement("section", null, React.createElement(XmasSectionTitle, null, preMain ? 'ひとりで進める物語' : '序章を読み返す'), React.createElement("p", {
+  }), React.createElement("section", null, React.createElement(XmasSectionTitle, null, preMain ? 'ミステリーノベル『モンヒロ事件簿』' : '序章を読み返す'), React.createElement("p", {
     className: "mb-2 px-0.5 text-[10px] font-bold leading-relaxed text-slate-300",
     style: JA_LABEL_STYLE
   }, jaWrap(storyNote)), React.createElement("ol", {
@@ -117223,6 +117224,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "裏口から少し離れた雪の上に、灰色のコートの影が、うつ伏せに横たわっていた",
       "fx": ["fallen"],
       "body": "kuroba",
+      "noBlood": true,
       "k": "C3-1:3-1-4"
     }, {
       "id": "3-1-5",
@@ -117236,6 +117238,7 @@ const XMAS_NOVEL_SCRIPT = {
       "t": "band",
       "x": "二人が、雪を踏みしめていく。黒羽の体は、一晩で白く凍りついていた。髪にも、まつげにも、霜がびっしりと貼りついている",
       "body": "kuroba",
+      "noBlood": true,
       "k": "C3-1:3-1-6"
     }, {
       "id": "3-1-7",
@@ -117243,6 +117246,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "見開いたままの目が、裏口のほうを向いていた。両手の指先は皮が剥け、爪が剥がれて、凍った血で黒くこわばっている",
       "fx": ["red"],
       "body": "kuroba",
+      "noBlood": true,
       "k": "C3-1:3-1-7"
     }, {
       "id": "3-1-8",
@@ -118595,12 +118599,14 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "細く冷たい通り道。白いケープの白瀬が、鏡の裏に背中をつけて、座りこんでいた",
       "fx": ["fallen"],
       "body": "shirase",
+      "noBlood": true,
       "k": "C5-4:5-4-5"
     }, {
       "id": "5-4-6",
       "t": "band",
       "x": "顔は青白く、唇は紫に変わっている。手袋のない右手が、鏡の裏の板に、まだ爪を立てたまま凍りついていた",
       "body": "shirase",
+      "noBlood": true,
       "k": "C5-4:5-4-6"
     }, {
       "id": "5-4-7",
@@ -118608,6 +118614,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "鏡の裏には、何十本もの、赤い引っかき傷。爪の間から流れた血が、板の上で細い筋になって固まっている",
       "fx": ["bleed"],
       "body": "shirase",
+      "noBlood": true,
       "k": "C5-4:5-4-7"
     }, {
       "id": "5-4-8",
@@ -123698,6 +123705,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "物音に駆けつけたソラシドが見つけたのは、書斎の机に突っ伏したあつだった",
       "fx": ["fallen"],
       "body": "atsu",
+      "noBlood": true,
       "k": "C5-X:5-X-4a"
     }, {
       "id": "5-X-4s",
@@ -123714,6 +123722,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "物音に駆けつけたあつが見つけたのは、書斎の机に突っ伏したソラシドだった",
       "fx": ["fallen"],
       "body": "sorashido",
+      "noBlood": true,
       "k": "C5-X:5-X-4s"
     }, {
       "id": "5-X-5",
@@ -123721,6 +123730,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "首には、細いひもの跡が、赤黒く食いこんでいる。ひびの入った画面の上に、血のついた指の跡",
       "fx": ["bleed"],
       "body": "lead",
+      "noBlood": true,
       "k": "C5-X:5-X-5"
     }, {
       "id": "5-X-6",
@@ -123969,7 +123979,7 @@ const XMAS_NOVEL_SCRIPT = {
         }]
       },
       "t": "band",
-      "x": "扉の外。雪に埋もれた探偵の帽子の先で、ソラシドが、扉に手を伸ばしたまま凍りついていた。後ろ頭の髪が、血で固まっている",
+      "x": "扉の外。雪に埋もれたノートパソコンの先で、ソラシドが、扉に手を伸ばしたまま凍りついていた。後ろ頭の髪が、血で固まっている",
       "fx": ["bleed"],
       "body": "sorashido",
       "k": "C6-X:6-X-10s"
@@ -125038,6 +125048,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "白瀬が見つかったのと同じ場所で、ソラシドが、壁にもたれて座ったまま、動かなくなっていた。膝の上で、ひびの入った画面が、まだ、かすかに光っている",
       "fx": ["fallen"],
       "body": "sorashido",
+      "noBlood": true,
       "k": "END-M5:M5-5a"
     }, {
       "id": "M5-5s",
@@ -125054,6 +125065,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "白瀬が見つかったのと同じ場所で、あつが、壁にもたれて座ったまま、動かなくなっていた。消えたランタンを、握りしめたまま",
       "fx": ["fallen"],
       "body": "atsu",
+      "noBlood": true,
       "k": "END-M5:M5-5s"
     }, {
       "id": "M5-6",
@@ -125061,6 +125073,7 @@ const XMAS_NOVEL_SCRIPT = {
       "x": "まつげにも、髪にも、白い霜。外から閉められた鏡の扉の内側に、引っかいた跡が、何本も残っていた",
       "fx": ["bleed"],
       "body": "partner",
+      "noBlood": true,
       "k": "END-M5:M5-6"
     }, {
       "id": "M5-7a",
@@ -127051,6 +127064,14 @@ const XMAS_NOVEL_CSS = `
 @keyframes mh-nv-bob { 50% { transform: translateY(4px); } }
 .mh-nv-top { position: absolute; top: max(8px, env(safe-area-inset-top)); left: 8px; right: 8px; display: flex; align-items: center; gap: 6px; z-index: 6; }
 .mh-nv-where { min-width: 0; flex: 1; font-size: 12px; color: #c9d4f2; text-shadow: 0 1px 3px #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* 縦では、章と場面の題を2行に分ける(1行だと「第七章　ひとつ…」と章の名前まで切れた・2026-11-28 総点検 4番)。それぞれ入らないときだけ「…」 */
+/* 縦では、題をボタンの段の下に1段で出し、画面の幅いっぱいを使う(右のボタン5つに押されて「第一章 ペンシ…」と切れた・台帳 r1126-091)。
+   いちばん長い題(「第一章　ペンション・シュプール　/　ホールのもみの木」26字)も 12px で1行に入る。入らない端末だけ「…」 */
+@media (orientation: portrait) {
+  .mh-nv-top { flex-wrap: wrap; row-gap: 4px; }
+  .mh-nv-top > .mh-nv-where { order: 2; flex: 0 0 100%; font-size: 12px; padding: 0 2px; }
+  .mh-nv-top > .mh-nv-where + .mh-nv-btn { margin-left: auto; }
+}
 .mh-nv-btn { min-height: 38px; min-width: 38px; padding: 0 10px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; font-size: 12px; font-weight: 800;
   color: #f3e3b0; background: rgba(8,16,40,.82); box-shadow: 0 0 0 1px rgba(232,196,106,.55); }
 .mh-nv-btn[data-on] { background: #b8892e; color: #1a1205; }
@@ -127122,6 +127143,9 @@ const XMAS_NOVEL_CSS = `
 @keyframes mh-nv-bleed { 0% { opacity: 0; transform: scale(1.35); filter: blur(6px); } 25% { opacity: 1; transform: scale(1); filter: blur(0); } 70% { opacity: .9; } 100% { opacity: 0; } }
 .mh-nv-fallen { position: absolute; left: 50%; bottom: 24%; width: min(80vw, 520px); transform: translateX(-50%); z-index: 4; filter: drop-shadow(0 0 2px rgba(190,200,230,.35)); pointer-events: none; animation: mh-nv-fade 1.2s ease both; }
 .mh-nv-body { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
+.mh-nv-body.noblood .pool { display: none; }
+.mh-nv-body.noblood .mh-nv-body-lie img { filter: brightness(0) drop-shadow(0 0 1px rgba(190,205,235,.55)) drop-shadow(0 0 14px rgba(120,150,200,.35)) !important; }
+.mh-nv-body.noblood .mh-nv-body-dim { background: radial-gradient(120% 90% at 50% 40%, rgba(6,10,34,.35), rgba(0,0,4,.88)) !important; }
 .mh-nv-body-dim { position: absolute; inset: 0; -webkit-backdrop-filter: grayscale(.9) brightness(.55); backdrop-filter: grayscale(.9) brightness(.55);
   background: radial-gradient(70% 34% at var(--fx, 50%) var(--fy, 74%), rgba(120,0,14,.42), rgba(120,0,14,0) 72%), radial-gradient(120% 90% at 50% 40%, rgba(6,10,34,.35), rgba(0,0,4,.88)); animation: mh-nv-fade 1.4s ease both; }
 .mh-nv-body-lie { position: absolute; }
@@ -127182,6 +127206,10 @@ const XMAS_NOVEL_CSS = `
 @keyframes mh-nv-zoom-out { 0% { transform: translate(-50%, -50%) scale(4); opacity: .2; } 100% { transform: translate(-50%, -50%) scale(.6); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .mh-nv-noise, .mh-nv-boot-logo, .mh-nv-boot-press { animation: none; } .mh-nv-transit { animation-duration: .01s !important; } }
 @media (orientation: landscape) and (max-height: 560px) {
+  /* 選択肢・推理の窓・GAME OVER の札は、上の帯(ボタンの列)の下から出す(上のボタンに重なった・2026-11-28 総点検 9番) */
+  .mh-nv-sheet { padding-top: calc(max(8px, env(safe-area-inset-top)) + 46px); }
+  .mh-nv-sheet .mh-nv-panel { max-height: 100%; }
+  .mh-nv-card { padding-top: calc(max(8px, env(safe-area-inset-top)) + 48px); padding-bottom: 12px; justify-content: safe center; overflow-y: auto; }
   .mh-nv-fig { left: 0; right: auto; width: min(42vw, 460px); }
   .mh-nv-box { left: auto; right: 10px; transform: none; width: min(calc(60vw - 10px), 760px); min-height: 110px; padding-top: 20px; }
   .mh-nv-text { font-size: 15px; line-height: 1.65; }
@@ -128015,7 +128043,8 @@ const XmasNovelBody = ({
   who,
   scene = '',
   at = 0,
-  bg = null
+  bg = null,
+  noBlood = false
 }) => {
   const k = `${scene}:${who}`;
   const [again] = useState(() => xmasNovelBodyLast.k === k && Math.abs(at - xmasNovelBodyLast.at) <= 4);
@@ -128061,7 +128090,7 @@ const XmasNovelBody = ({
   const fy = `${Math.round((vp.H - p.bottom) / vp.H * 100)}%`;
   const fade = sit ? `linear-gradient(180deg, #000 ${Math.round(p.vis * 70)}%, transparent ${Math.round(p.vis * 100)}%)` : '';
   return React.createElement("div", {
-    className: `mh-nv-body${again ? ' again' : ''}`,
+    className: `mh-nv-body${again ? ' again' : ''}${noBlood ? ' noblood' : ''}`,
     "data-xmas-novel-fallen": true,
     "data-xmas-novel-body": who,
     "data-xmas-novel-body-pose": pose,
@@ -129461,7 +129490,8 @@ const XmasNovelScreen = ({
     bg: bg,
     who: xmasNovelBodyWho(row.body, st && st.cur && st.cur.flags),
     scene: scene ? scene.id : '',
-    at: st && st.cur && Number.isFinite(st.cur.idx) ? st.cur.idx : 0
+    at: st && st.cur && Number.isFinite(st.cur.idx) ? st.cur.idx : 0,
+    noBlood: !!row.noBlood
   }), isBand && !row.body && Array.isArray(row.fx) && row.fx.includes('fallen') && React.createElement(XmasNovelFallen, null), isBand && Array.isArray(row.fx) && row.fx.includes('letter') && React.createElement("div", {
     key: `letter-${row.id}`,
     className: "mh-nv-letter mh-nv-serif",
@@ -129536,8 +129566,15 @@ const XmasNovelScreen = ({
   }))), React.createElement("div", {
     className: "mh-nv-top"
   }, React.createElement("span", {
-    className: "mh-nv-where mh-nv-serif"
-  }, chapter && !chapter.outside ? `${xmasNovelChapterLabel(chapter)}　${chapter.title}　/　` : '', scene && scene.title ? scene.title : ''), React.createElement("button", {
+    className: "mh-nv-where mh-nv-serif",
+    "data-xmas-novel-where": true
+  }, chapter && !chapter.outside ? React.createElement("span", {
+    className: "ch"
+  }, `${xmasNovelChapterLabel(chapter)}${chapter.title ? `　${chapter.title}` : ''}`, React.createElement("span", {
+    className: "sep"
+  }, "\u3000/\u3000")) : null, scene && scene.title && !(scene.ending || chapter && chapter.id === 'END' || /^END-/.test(String(scene.next || ''))) ? React.createElement("span", {
+    className: "sc"
+  }, scene.title) : null), React.createElement("button", {
     type: "button",
     className: "mh-nv-btn",
     "data-xmas-novel-open-book": true,
@@ -289601,10 +289638,11 @@ function MonsterHeroGame() {
         key: `b${bubbleIdx}${bubbleIdx === step ? `-${storyCurSub}` : ''}`,
         "data-story-guest-bubble": true,
         "data-story-pop": speakingGuest ? '1' : undefined,
-        className: "relative min-w-0 flex-1 rounded-2xl border-2 bg-slate-900/95 px-3 py-2",
+        "data-story-idle": speakingGuest ? undefined : '',
+        className: "relative min-w-0 flex-1 rounded-2xl border-2 bg-slate-900 px-3 py-2",
         style: {
-          borderColor: stageGuest.accent,
-          opacity: speakingGuest ? 1 : .4,
+          borderColor: speakingGuest ? stageGuest.accent : `${stageGuest.accent}55`,
+          opacity: 1,
           boxShadow: speakingGuest ? `0 0 0 2px ${stageGuest.accent}55, 0 0 20px ${stageGuest.accent}88` : 'none',
           marginTop: 8,
           animation: speakingGuest ? 'storyPop .3s ease-out both' : undefined
@@ -289625,11 +289663,17 @@ function MonsterHeroGame() {
         className: "inline-block rounded-full px-2 py-0.5 text-[10px] font-black",
         style: {
           color: '#0f172a',
-          background: stageGuest.accent
+          background: stageGuest.accent,
+          visibility: speakingGuest ? undefined : 'hidden'
         }
       }, bubbleLine.name || stageGuest.name), React.createElement("span", {
         className: "mt-1 block text-[14px] font-bold leading-relaxed text-white",
-        style: storyLineStyle(storyZones ? storyTextAt(bubbleIdx, stageGuest) : '', storyCapBubble)
+        style: {
+          ...storyLineStyle(storyZones ? storyTextAt(bubbleIdx, stageGuest) : '', storyCapBubble),
+          ...(speakingGuest ? {} : {
+            visibility: 'hidden'
+          })
+        }
       }, storyZones ? storyLineNodes(storyTextAt(bubbleIdx, stageGuest), storyCapBubble) : bubbleLines(speakText(bubbleLine, stageGuest)))))), storyMonsters.length > 0 && React.createElement("div", {
         "data-story-monsters": storyMonsters.length,
         "aria-hidden": "true",
@@ -289809,9 +289853,10 @@ function MonsterHeroGame() {
         "data-story-pop": dimBottom ? undefined : '1',
         className: `rounded-2xl border-2 bg-slate-900 px-3 py-3${storyZones ? ' min-w-0 flex-1' : ''}`,
         "data-story-line-box": true,
+        "data-story-idle": dimBottom ? '' : undefined,
         style: {
-          borderColor: bottomSpeaker.accent,
-          opacity: dimBottom ? .4 : 1,
+          borderColor: dimBottom ? `${bottomSpeaker.accent}55` : bottomSpeaker.accent,
+          opacity: 1,
           boxShadow: dimBottom ? 'none' : `0 0 16px ${bottomSpeaker.accent}55`,
           transition: 'opacity .18s',
           animation: dimBottom ? undefined : 'storyPop .28s ease-out both'
@@ -289820,11 +289865,17 @@ function MonsterHeroGame() {
         className: "inline-block rounded-full px-2 py-0.5 text-[10px] font-black",
         style: {
           color: '#0f172a',
-          background: bottomSpeaker.accent
+          background: bottomSpeaker.accent,
+          visibility: dimBottom ? 'hidden' : undefined
         }
       }, bottomLine.name || bottomSpeaker.name), React.createElement("span", {
         className: "block text-[13px] font-bold leading-relaxed text-white mt-1",
-        style: storyLineStyle(storyZones ? storyTextAt(bottomLine === line ? step : assistIdx, bottomSpeaker) : '', storyCapBottom)
+        style: {
+          ...storyLineStyle(storyZones ? storyTextAt(bottomLine === line ? step : assistIdx, bottomSpeaker) : '', storyCapBottom),
+          ...(dimBottom ? {
+            visibility: 'hidden'
+          } : {})
+        }
       }, storyZones ? storyLineNodes(storyTextAt(bottomLine === line ? step : assistIdx, bottomSpeaker), storyCapBottom) : bubbleLines(speakText(bottomLine, bottomSpeaker)))) : React.createElement("div", {
         "data-story-line-box": true,
         className: `flex items-center justify-center rounded-2xl border-2 border-slate-700 bg-slate-900 px-3 py-3 text-center text-[11px] font-bold text-slate-400${storyZones ? ' min-w-0 flex-1' : ''}`
@@ -297853,7 +297904,7 @@ const createAnimationStyle = () => {
     @keyframes mhDiscBorn{0%{opacity:0;transform:scale(.35)}60%{opacity:1;filter:drop-shadow(0 0 30px #fde68a) brightness(1.6)}100%{opacity:1;transform:scale(1);filter:drop-shadow(0 0 18px rgba(253,230,138,.55)) brightness(1)}}
     @keyframes mhDiscUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
     @media (prefers-reduced-motion: reduce){.mh-disc-rebirth-disc,.mh-disc-rebirth-flash,.mh-disc-rebirth-sparks i{animation:none;opacity:0}.mh-disc-rebirth-rays{animation:none;opacity:1}.mh-disc-rebirth-plate,.mh-disc-rebirth-art,.mh-disc-rebirth-name,.mh-disc-rebirth-note,.mh-disc-rebirth-close{animation:none;opacity:1;transform:none;pointer-events:auto}}
-    .mh-home-scene{position:relative;isolation:isolate;container-type:size;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-background img.mh-home-backdrop{position:absolute;z-index:0;inset:0;object-fit:cover;filter:blur(14px) brightness(.55);transform:scale(1.08)}.mh-home-background.is-wide img,.mh-home-background.is-square img{object-fit:cover}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:30%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(5px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:1.2}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:9px;line-height:1.2;font-weight:900}/* XP の字は 8px の等幅で読めなかった(2026-11-22 点検 #7059・r1119-080)。棒の右に 10px で並べ、札の高さは変えない */.mh-home-xp-row{display:flex;align-items:center;gap:4px;margin-top:2px}.mh-home-player-copy small{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#d7e3dc;font-size:10px;line-height:12px;font-weight:700;font-variant-numeric:tabular-nums}.mh-home-xp{flex:1 1 auto;min-width:18px;height:4px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:minmax(0,1fr) 44px;grid-template-rows:1fr 1fr;box-sizing:border-box;width:calc(153px + var(--wal-grow,0px));padding:3px 4px;border-radius:14px;--wal-col:calc(99px + var(--wal-grow,0px));--wal-max:10px}.mh-home-wallet>div{display:grid;grid-template-columns:14px minmax(0,1fr) auto;align-items:center;gap:2px;min-width:0;padding:1px 3px;color:#ffe08a;--wal-room:calc(var(--wal-col) - 50px)}.mh-home-wallet>div+div{--wal-room:calc(var(--wal-col) - 71px)}.mh-home-wallet>div b{font-size:min(var(--wal-max),calc(var(--wal-room) / (var(--len,1) * .64)));text-align:right;white-space:nowrap;min-width:0}.mh-home-wallet>div small{font-size:8px;color:#f4e7c3;white-space:nowrap}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:9px;font-weight:900;min-width:44px;min-height:44px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;padding:0;border:0;background:transparent;color:#fff;touch-action:manipulation}/* 押せる範囲は見えている札と、そのまわり8pxだけ(2026-10-11・社長の指摘)。以前は建物ぶんの透明な箱が押し場所で、札の外の何もない所でも施設が開き、ジャックの吹き出しを押せなかった。札の位置は、箱の位置と箱の中の札の位置を足し合わせた値にしてある(見た目の位置は前と同じ) */.mh-home-facility::after{content:'';position:absolute;inset:-8px}.mh-home-facility>span{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility-label{display:flex;flex-direction:column;align-items:flex-start;line-height:1.05;font-weight:inherit}.mh-home-facility-label small{margin-top:2px;font-size:8px;font-weight:800;letter-spacing:0;color:#ffe6a7;opacity:.9}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}[data-assistant-life-map] .mh-home-facility.management{left:2.52%;top:26.58%}.mh-home-facility.management>span{border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}[data-assistant-life-map] .mh-home-facility.temple{right:2.94%;top:25.9%}.mh-home-facility.temple>span{border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}[data-assistant-life-map] .mh-home-facility.market{right:1.95%;top:57%}.mh-home-facility.market>span{border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}[data-assistant-life-map] .mh-home-facility.battle{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%)}[data-assistant-life-map] .mh-home-facility.battle>span{min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}[data-assistant-life-map] .mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}[data-assistant-life-map] .mh-home-facility.battle:active>span{transform:scale(.94)}/* 背の低い画面(縦 700px 前後まで)では、イベントの札とMFバトルカードの札を、モンヒロビートの札(top:55.25%)の下まで下げる。重なっていた(2026-10-26) */.mh-home-event-banner{display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:6px 11px;border:1px solid #fdba74;border-radius:13px;background:linear-gradient(135deg,#7c2d12ee,#4c1d95ee);color:#ffedd5;font-size:11px;font-weight:900;line-height:1.2;box-shadow:0 3px 10px #0008;text-align:left}.mh-home-event-banner small{font-size:9px;font-weight:800;color:#fed7aa}[data-assistant-life-map] .mh-home-card-battle{position:absolute;z-index:5;left:9px;bottom:min(calc(33% - 40px),calc(44.75% - 126px));padding:0}[data-assistant-life-map] .mh-home-card-battle.raised{bottom:min(calc(33% + 4px),calc(44.75% - 82px))}/* 公式杯の札(2026-10-31 社長・案A)。イベントの札の下・MFバトルカードの札の上(MFバトルカードの札のいつもの段)。イベントの札が無いときは1段上がる。公式杯の札があるときは、MFバトルカードの札は1段下(below-tour) */.mh-home-tour-banner{display:flex;align-items:center;gap:6px;max-width:min(calc(100% - 150px),240px);padding:3px 10px 3px 7px;border:1.5px solid #fde68a;border-radius:13px;background:linear-gradient(135deg,#78350fee,#b45309ee 45%,#1e1b4bee);color:#fffbeb;text-align:left;box-shadow:0 0 0 2px #f59e0b55,0 3px 10px #0008}.mh-home-tour-banner>span:first-child{font-size:19px;line-height:1}.mh-home-tour-banner>span:last-child{display:flex;min-width:0;flex-direction:column;gap:1px;line-height:1.2}.mh-home-tour-banner b{overflow:hidden;font-size:11.5px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}.mh-home-tour-banner small{display:block;overflow:hidden;font-size:9.5px;font-weight:800;color:#fde68a;text-overflow:ellipsis;white-space:nowrap}.mh-home-tour-banner em{margin-left:5px;padding:0 5px;border-radius:999px;background:#fbbf24;color:#3d2305;font-style:normal;font-size:9px;font-weight:900;line-height:1.5}.mh-home-tour-banner:active{transform:scale(.96);filter:brightness(1.15)}[data-assistant-life-map] .mh-home-card-battle.below-tour{bottom:min(calc(33% - 84px),calc(44.75% - 170px))}[data-assistant-life-map] .mh-home-card-battle.soon>span{background:linear-gradient(135deg,#334155ee,#3b0764ee);border-color:#fcd34dcc}[data-assistant-life-map] .mh-home-card-battle.soon small{margin-left:4px;padding:1px 6px;border-radius:999px;background:#fbbf24;color:#3d2305;font-size:10px;font-weight:900;line-height:1.4}[data-assistant-life-map] .mh-home-card-battle>span{display:flex;align-items:center;gap:4px;padding:8px 12px;border:1.5px solid #7dd3fcdd;border-radius:13px;background:linear-gradient(135deg,#1e3a8aee,#4c1d95ee);color:#fff;font-size:12px;font-weight:900;line-height:1.2;box-shadow:0 3px 12px #0009,0 0 15px #38bdf866}@media(orientation:landscape) and (max-height:600px){[data-assistant-life-map] .mh-home-card-battle{bottom:12px}/* 横向きでもイベントの札を出す。MFバトルカードの札(下から12px)のすぐ上(2026-10-26 ダメダシくん「横では見当たらない」) *//* 横向きの公式杯の札は MFバトルカードの札のすぐ上、イベントの札はその上 */}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-temple-menu-card{position:relative;border:1px solid #a78bfa80;background:linear-gradient(135deg,#2e1065d9 0%,#1e1b4bcc 58%,#312e81b3 100%);box-shadow:inset 0 1px 0 #ddd6fe18,0 5px 16px #0006,0 0 18px #7c3aed12}.mh-temple-menu-card:active{filter:brightness(1.16);transform:scale(.98)}.mh-temple-menu-icon{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c4b5fd38;border-radius:10px;background:#4c1d9566;box-shadow:inset 0 1px 0 #ede9fe18}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
+    .mh-home-scene{position:relative;isolation:isolate;container-type:size;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-background img.mh-home-backdrop{position:absolute;z-index:0;inset:0;object-fit:cover;filter:blur(14px) brightness(.55);transform:scale(1.08)}.mh-home-background.is-wide img,.mh-home-background.is-square img{object-fit:cover}.mh-home-background.is-tall img.mh-home-main{object-fit:cover}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:30%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(5px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:1.2}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:9px;line-height:1.2;font-weight:900}/* XP の字は 8px の等幅で読めなかった(2026-11-22 点検 #7059・r1119-080)。棒の右に 10px で並べ、札の高さは変えない */.mh-home-xp-row{display:flex;align-items:center;gap:4px;margin-top:2px}.mh-home-player-copy small{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#d7e3dc;font-size:10px;line-height:12px;font-weight:700;font-variant-numeric:tabular-nums}.mh-home-xp{flex:1 1 auto;min-width:18px;height:4px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:minmax(0,1fr) 44px;grid-template-rows:1fr 1fr;box-sizing:border-box;width:calc(153px + var(--wal-grow,0px));padding:3px 4px;border-radius:14px;--wal-col:calc(99px + var(--wal-grow,0px));--wal-max:10px}.mh-home-wallet>div{display:grid;grid-template-columns:14px minmax(0,1fr) auto;align-items:center;gap:2px;min-width:0;padding:1px 3px;color:#ffe08a;--wal-room:calc(var(--wal-col) - 50px)}.mh-home-wallet>div+div{--wal-room:calc(var(--wal-col) - 71px)}.mh-home-wallet>div b{font-size:min(var(--wal-max),calc(var(--wal-room) / (var(--len,1) * .64)));text-align:right;white-space:nowrap;min-width:0}.mh-home-wallet>div small{font-size:8px;color:#f4e7c3;white-space:nowrap}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:9px;font-weight:900;min-width:44px;min-height:44px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;padding:0;border:0;background:transparent;color:#fff;touch-action:manipulation}/* 押せる範囲は見えている札と、そのまわり8pxだけ(2026-10-11・社長の指摘)。以前は建物ぶんの透明な箱が押し場所で、札の外の何もない所でも施設が開き、ジャックの吹き出しを押せなかった。札の位置は、箱の位置と箱の中の札の位置を足し合わせた値にしてある(見た目の位置は前と同じ) */.mh-home-facility::after{content:'';position:absolute;inset:-8px}.mh-home-facility>span{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility-label{display:flex;flex-direction:column;align-items:flex-start;line-height:1.05;font-weight:inherit}.mh-home-facility-label small{margin-top:2px;font-size:8px;font-weight:800;letter-spacing:0;color:#ffe6a7;opacity:.9}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}[data-assistant-life-map] .mh-home-facility.management{left:2.52%;top:26.58%}.mh-home-facility.management>span{border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}[data-assistant-life-map] .mh-home-facility.temple{right:2.94%;top:25.9%}.mh-home-facility.temple>span{border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}[data-assistant-life-map] .mh-home-facility.market{right:1.95%;top:57%}.mh-home-facility.market>span{border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}[data-assistant-life-map] .mh-home-facility.battle{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%)}[data-assistant-life-map] .mh-home-facility.battle>span{min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}[data-assistant-life-map] .mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}[data-assistant-life-map] .mh-home-facility.battle:active>span{transform:scale(.94)}/* 背の低い画面(縦 700px 前後まで)では、イベントの札とMFバトルカードの札を、モンヒロビートの札(top:55.25%)の下まで下げる。重なっていた(2026-10-26) */.mh-home-event-banner{display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:6px 11px;border:1px solid #fdba74;border-radius:13px;background:linear-gradient(135deg,#7c2d12ee,#4c1d95ee);color:#ffedd5;font-size:11px;font-weight:900;line-height:1.2;box-shadow:0 3px 10px #0008;text-align:left}.mh-home-event-banner small{font-size:9px;font-weight:800;color:#fed7aa}[data-assistant-life-map] .mh-home-card-battle{position:absolute;z-index:5;left:9px;bottom:min(calc(33% - 40px),calc(44.75% - 126px));padding:0}[data-assistant-life-map] .mh-home-card-battle.raised{bottom:min(calc(33% + 4px),calc(44.75% - 82px))}/* 公式杯の札(2026-10-31 社長・案A)。イベントの札の下・MFバトルカードの札の上(MFバトルカードの札のいつもの段)。イベントの札が無いときは1段上がる。公式杯の札があるときは、MFバトルカードの札は1段下(below-tour) */.mh-home-tour-banner{display:flex;align-items:center;gap:6px;max-width:min(calc(100% - 150px),240px);padding:3px 10px 3px 7px;border:1.5px solid #fde68a;border-radius:13px;background:linear-gradient(135deg,#78350fee,#b45309ee 45%,#1e1b4bee);color:#fffbeb;text-align:left;box-shadow:0 0 0 2px #f59e0b55,0 3px 10px #0008}.mh-home-tour-banner>span:first-child{font-size:19px;line-height:1}.mh-home-tour-banner>span:last-child{display:flex;min-width:0;flex-direction:column;gap:1px;line-height:1.2}.mh-home-tour-banner b{overflow:hidden;font-size:11.5px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}.mh-home-tour-banner small{display:block;overflow:hidden;font-size:9.5px;font-weight:800;color:#fde68a;text-overflow:ellipsis;white-space:nowrap}.mh-home-tour-banner em{margin-left:5px;padding:0 5px;border-radius:999px;background:#fbbf24;color:#3d2305;font-style:normal;font-size:9px;font-weight:900;line-height:1.5}.mh-home-tour-banner:active{transform:scale(.96);filter:brightness(1.15)}[data-assistant-life-map] .mh-home-card-battle.below-tour{bottom:min(calc(33% - 84px),calc(44.75% - 170px))}[data-assistant-life-map] .mh-home-card-battle.soon>span{background:linear-gradient(135deg,#334155ee,#3b0764ee);border-color:#fcd34dcc}[data-assistant-life-map] .mh-home-card-battle.soon small{margin-left:4px;padding:1px 6px;border-radius:999px;background:#fbbf24;color:#3d2305;font-size:10px;font-weight:900;line-height:1.4}[data-assistant-life-map] .mh-home-card-battle>span{display:flex;align-items:center;gap:4px;padding:8px 12px;border:1.5px solid #7dd3fcdd;border-radius:13px;background:linear-gradient(135deg,#1e3a8aee,#4c1d95ee);color:#fff;font-size:12px;font-weight:900;line-height:1.2;box-shadow:0 3px 12px #0009,0 0 15px #38bdf866}@media(orientation:landscape) and (max-height:600px){[data-assistant-life-map] .mh-home-card-battle{bottom:12px}/* 横向きでもイベントの札を出す。MFバトルカードの札(下から12px)のすぐ上(2026-10-26 ダメダシくん「横では見当たらない」) *//* 横向きの公式杯の札は MFバトルカードの札のすぐ上、イベントの札はその上 */}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-temple-menu-card{position:relative;border:1px solid #a78bfa80;background:linear-gradient(135deg,#2e1065d9 0%,#1e1b4bcc 58%,#312e81b3 100%);box-shadow:inset 0 1px 0 #ddd6fe18,0 5px 16px #0006,0 0 18px #7c3aed12}.mh-temple-menu-card:active{filter:brightness(1.16);transform:scale(.98)}.mh-temple-menu-icon{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c4b5fd38;border-radius:10px;background:#4c1d9566;box-shadow:inset 0 1px 0 #ede9fe18}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
     /* ==================== プロフィールフレーム(2026-09-15) ====================
        ブリーダーアイコンの外側へ重ねる飾り枠。アイコン画像そのものには触らない。
        ★太さを px で書かない。inset と mask を割合で書いてあるので、ランキングの 32px でも
