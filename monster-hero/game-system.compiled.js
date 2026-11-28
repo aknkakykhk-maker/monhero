@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e60d36f637ccb888
+// source-sha256: b790aef6e07bf8aa
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -10268,6 +10268,7 @@ const Audio_ = (() => {
       stopPreview(false);
       stopOthers();
       stopJingles();
+      void nvAmbient('none');
     } else if (currentKey) playBGM(currentKey);
     await ensure();
   };
@@ -11696,6 +11697,365 @@ const Audio_ = (() => {
           s.dispose();
         } catch (e) {}
       }, 3200);
+    },
+    nvStep: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const s = new Tone.MembraneSynth({
+        pitchDecay: 0.02,
+        octaves: 2,
+        envelope: {
+          attack: 0.002,
+          decay: 0.09,
+          sustain: 0
+        },
+        volume: -22
+      }).connect(seBus);
+      [0, 0.55, 1.1].forEach((d, i) => s.triggerAttackRelease(i % 2 ? 'A1' : 'G1', '32n', t + d));
+      setTimeout(() => {
+        try {
+          s.dispose();
+        } catch (e) {}
+      }, 1700);
+    },
+    nvRun: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const s = new Tone.MembraneSynth({
+        pitchDecay: 0.02,
+        octaves: 2,
+        envelope: {
+          attack: 0.002,
+          decay: 0.07,
+          sustain: 0
+        },
+        volume: -20
+      }).connect(seBus);
+      [0, 0.2, 0.4, 0.6, 0.8, 1.0].forEach((d, i) => s.triggerAttackRelease(i % 2 ? 'A1' : 'G1', '32n', t + d));
+      setTimeout(() => {
+        try {
+          s.dispose();
+        } catch (e) {}
+      }, 1500);
+    },
+    nvHit: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const s = new Tone.MembraneSynth({
+        pitchDecay: 0.015,
+        octaves: 3,
+        envelope: {
+          attack: 0.001,
+          decay: 0.16,
+          sustain: 0
+        },
+        volume: -8
+      }).connect(seBus);
+      s.triggerAttackRelease('C2', '16n', t);
+      const n = new Tone.NoiseSynth({
+        noise: {
+          type: 'pink'
+        },
+        envelope: {
+          attack: 0.001,
+          decay: 0.06,
+          sustain: 0
+        },
+        volume: -16
+      }).connect(seBus);
+      n.triggerAttackRelease('64n', t);
+      setTimeout(() => {
+        try {
+          s.dispose();
+          n.dispose();
+        } catch (e) {}
+      }, 600);
+    },
+    nvFall: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const s = new Tone.MembraneSynth({
+        pitchDecay: 0.06,
+        octaves: 4,
+        envelope: {
+          attack: 0.003,
+          decay: 0.5,
+          sustain: 0
+        },
+        volume: -11
+      }).connect(seBus);
+      s.triggerAttackRelease('D1', '4n', t);
+      s.triggerAttackRelease('C1', '8n', t + 0.18);
+      const n = new Tone.NoiseSynth({
+        noise: {
+          type: 'brown'
+        },
+        envelope: {
+          attack: 0.01,
+          decay: 0.4,
+          sustain: 0
+        },
+        volume: -22
+      }).connect(seBus);
+      n.triggerAttackRelease('8n', t + 0.05);
+      setTimeout(() => {
+        try {
+          s.dispose();
+          n.dispose();
+        } catch (e) {}
+      }, 1200);
+    },
+    nvGasp: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const f = new Tone.Filter(1400, 'bandpass').connect(seBus);
+      const n = new Tone.NoiseSynth({
+        noise: {
+          type: 'pink'
+        },
+        envelope: {
+          attack: 0.12,
+          decay: 0.18,
+          sustain: 0,
+          release: 0.08
+        },
+        volume: -22
+      }).connect(f);
+      n.triggerAttackRelease(0.16, t);
+      try {
+        f.frequency.rampTo(2200, 0.25, t);
+      } catch (e) {}
+      setTimeout(() => {
+        try {
+          n.dispose();
+          f.dispose();
+        } catch (e) {}
+      }, 800);
+    },
+    nvDoor: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const m = new Tone.MetalSynth({
+        frequency: 180,
+        envelope: {
+          attack: 0.001,
+          decay: 0.05,
+          release: 0.02
+        },
+        harmonicity: 3.1,
+        modulationIndex: 8,
+        resonance: 1500,
+        octaves: 0.5,
+        volume: -28
+      }).connect(seBus);
+      m.triggerAttackRelease('64n', t);
+      const f = new Tone.Filter(600, 'lowpass').connect(seBus);
+      const s = new Tone.Synth({
+        oscillator: {
+          type: 'sawtooth'
+        },
+        envelope: {
+          attack: 0.05,
+          decay: 0.45,
+          sustain: 0,
+          release: 0.15
+        },
+        volume: -25
+      }).connect(f);
+      s.triggerAttackRelease('A2', '8n', t + 0.08);
+      try {
+        s.frequency.rampTo('E2', 0.45, t + 0.08);
+      } catch (e) {}
+      setTimeout(() => {
+        try {
+          m.dispose();
+          s.dispose();
+          f.dispose();
+        } catch (e) {}
+      }, 1200);
+    },
+    nvGust: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const f = new Tone.Filter(600, 'lowpass').connect(seBus);
+      const n = new Tone.NoiseSynth({
+        noise: {
+          type: 'pink'
+        },
+        envelope: {
+          attack: 0.25,
+          decay: 0.5,
+          sustain: 0.2,
+          release: 0.6
+        },
+        volume: -18
+      }).connect(f);
+      n.triggerAttackRelease(0.6, t);
+      try {
+        f.frequency.rampTo(1500, 0.3, t);
+        f.frequency.rampTo(400, 0.9, t + 0.3);
+      } catch (e) {}
+      setTimeout(() => {
+        try {
+          n.dispose();
+          f.dispose();
+        } catch (e) {}
+      }, 2000);
+    }
+  };
+  let nvAmb = {
+    kind: 'none',
+    stop: null
+  };
+  const nvAmbient = async kindIn => {
+    const kind = kindIn || 'none';
+    if (kind === nvAmb.kind) return;
+    const prev = nvAmb;
+    const me = {
+      kind,
+      stop: null
+    };
+    nvAmb = me;
+    if (prev.stop) {
+      try {
+        prev.stop();
+      } catch (e) {}
+    }
+    if (kind === 'none' || !enabled) return;
+    await ensure();
+    if (!Tone || nvAmb !== me || !enabled) return;
+    const nodes = [];
+    const timers = [];
+    try {
+      const g = new Tone.Gain(0).connect(seBus);
+      nodes.push(g);
+      if (kind === 'wind' || kind === 'blizzard' || kind === 'room') {
+        const n = new Tone.Noise(kind === 'room' ? 'brown' : 'pink');
+        n.volume.value = kind === 'blizzard' ? -27 : kind === 'wind' ? -31 : -36;
+        const f = new Tone.Filter(kind === 'blizzard' ? 650 : kind === 'wind' ? 420 : 200, 'lowpass');
+        const lfo = new Tone.LFO(kind === 'blizzard' ? 0.21 : 0.09, kind === 'room' ? 120 : 260, kind === 'blizzard' ? 1250 : kind === 'wind' ? 780 : 320);
+        n.connect(f);
+        f.connect(g);
+        lfo.connect(f.frequency);
+        n.start();
+        lfo.start();
+        nodes.push(n, f, lfo);
+      }
+      if (kind === 'fire') {
+        const n = new Tone.Noise('brown');
+        n.volume.value = -36;
+        const f = new Tone.Filter(170, 'lowpass');
+        n.connect(f);
+        f.connect(g);
+        n.start();
+        nodes.push(n, f);
+        const bp = new Tone.Filter(1700, 'bandpass').connect(g);
+        const c = new Tone.NoiseSynth({
+          noise: {
+            type: 'white'
+          },
+          envelope: {
+            attack: 0.001,
+            decay: 0.02,
+            sustain: 0
+          },
+          volume: -31
+        }).connect(bp);
+        nodes.push(bp, c);
+        const pop = () => {
+          if (nvAmb !== me) return;
+          if (enabled) {
+            try {
+              c.triggerAttackRelease('64n');
+            } catch (e) {}
+          }
+          timers.push(setTimeout(pop, 140 + Math.random() * 620));
+        };
+        timers.push(setTimeout(pop, 300));
+      }
+      if (kind === 'clock') {
+        const m = new Tone.MetalSynth({
+          frequency: 300,
+          envelope: {
+            attack: 0.001,
+            decay: 0.03,
+            release: 0.02
+          },
+          harmonicity: 3.1,
+          modulationIndex: 10,
+          resonance: 2200,
+          octaves: 0.6,
+          volume: -37
+        }).connect(g);
+        const k = new Tone.MembraneSynth({
+          pitchDecay: 0.01,
+          octaves: 2,
+          envelope: {
+            attack: 0.001,
+            decay: 0.04,
+            sustain: 0
+          },
+          volume: -36
+        }).connect(g);
+        nodes.push(m, k);
+        let high = true;
+        const tick = () => {
+          if (nvAmb !== me || !enabled) return;
+          try {
+            m.frequency.value = high ? 330 : 230;
+            m.triggerAttackRelease('64n');
+            k.triggerAttackRelease(high ? 'G2' : 'D2', '64n');
+          } catch (e) {}
+          high = !high;
+        };
+        timers.push(setInterval(tick, 1000));
+      }
+      try {
+        g.gain.rampTo(1, 1.5);
+      } catch (e) {
+        g.gain.value = 1;
+      }
+      me.stop = () => {
+        timers.forEach(id => {
+          clearTimeout(id);
+          clearInterval(id);
+        });
+        try {
+          g.gain.rampTo(0, 1.2);
+        } catch (e) {
+          g.gain.value = 0;
+        }
+        setTimeout(() => {
+          nodes.forEach(x => {
+            try {
+              if (x.stop) x.stop();
+            } catch (e) {}
+            try {
+              x.dispose();
+            } catch (e) {}
+          });
+        }, 1400);
+      };
+    } catch (e) {
+      nodes.forEach(x => {
+        try {
+          x.dispose();
+        } catch (e2) {}
+      });
     }
   };
   const uiTap = async () => {
@@ -11759,6 +12119,7 @@ const Audio_ = (() => {
   };
   const videoGain = () => enabled && bgmVolumePct > 0 ? _gainFromPct(bgmVolumePct) : 0;
   return {
+    nvAmbient,
     currentBgmKey: () => currentKey,
     isBackgroundSeQuiet,
     setVideoHold,
@@ -129457,14 +129818,100 @@ const XMAS_NOVEL_SE_SEQ = Object.freeze({
     gap: 0,
     hold: 2500,
     play: ['nvWind']
+  },
+  steps: {
+    gap: 0,
+    hold: 1500,
+    play: ['nvStep']
+  },
+  run: {
+    gap: 0,
+    hold: 1300,
+    play: ['nvRun']
+  },
+  hit: {
+    gap: 0,
+    hold: 500,
+    play: ['nvHit']
+  },
+  hitFall: {
+    gap: 0,
+    hold: 1200,
+    play: ['nvHit', ['nvFall', undefined, 420]]
+  },
+  fall: {
+    gap: 0,
+    hold: 1000,
+    play: ['nvFall']
+  },
+  scream: {
+    gap: 0,
+    hold: 1500,
+    play: ['nvGasp', ['nvDread', undefined, 260]]
+  },
+  door: {
+    gap: 0,
+    hold: 900,
+    play: ['nvDoor']
+  },
+  doorGust: {
+    gap: 0,
+    hold: 1500,
+    play: ['nvDoor', ['nvGust', undefined, 200]]
+  },
+  gust: {
+    gap: 0,
+    hold: 1500,
+    play: ['nvGust']
+  },
+  glassKnock: {
+    gap: 380,
+    hold: 300,
+    play: ['nvGlass']
+  },
+  winding: {
+    gap: 330,
+    hold: 250,
+    play: [['nvTick', true], ['nvTick', false, 120]]
   }
+});
+const XMAS_NOVEL_SE_ROW = Object.freeze({
+  '2-L-12': ['knock', 2],
+  '2-M-15': ['windGlass'],
+  '2-5-2': ['doorGust'],
+  '2-5-6b': ['gust'],
+  '4-4-1': ['winding', 3],
+  '4-M-16': ['steps'],
+  '5-4-1': ['knock', 2],
+  '5-X-4a': ['run'],
+  '5-X-4s': ['run'],
+  '6-X-6': ['run'],
+  '2-Y-7': ['steps'],
+  '2-Y-10': ['hitFall'],
+  '2-Y-11': ['fall'],
+  '6-7-4': ['doorGust'],
+  '7-P1-8': ['doorGust'],
+  '9-1-2': ['winding', 2],
+  '9-1-5': ['doorGust'],
+  '6-X-1a': ['doorGust'],
+  '6-X-1s': ['doorGust'],
+  '10-3-9': ['fall'],
+  'M5-2': ['steps'],
+  'B-13': ['fall'],
+  'G-3': ['winding', 3],
+  'N-3': ['winding', 2],
+  '1-O-19': ['winding', 2],
+  '12-2-9': ['lock'],
+  '12-3-6': ['knock', 3],
+  '12-5-3': ['glassKnock', 3]
 });
 const xmasNovelSeKindOf = (kind, row) => {
   if (kind === 'bell' || kind === 'tick' || kind === 'letter') return kind;
   if (kind === 'music') return 'musicbox';
   if (kind === 'clap') return 'clap';
   const x = String(row && row.x || '');
-  if (/声|悲鳴|叫び|きゃ|うわ|っ！|ピー/.test(x)) return 'dread';
+  if (/声|悲鳴|叫び|きゃ|うわ|っ！/.test(x)) return 'scream';
+  if (/ピー/.test(x)) return 'dread';
   if (/ブツン|停電/.test(x)) return 'lightsOut';
   if (/(ギィ|ギシ)[\s\S]*(ガシャン|割れ)/.test(x)) return 'creakGlass';
   if (/吹雪[\s\S]*ガラス|ガラス[\s\S]*吹雪/.test(x)) return 'windGlass';
@@ -129474,6 +129921,9 @@ const xmasNovelSeKindOf = (kind, row) => {
   if (/カチリ|カチャリ|留め金|鍵の音/.test(x)) return 'lock';
   if (/封|カサ|プシュッ/.test(x)) return 'rustle';
   if (/叩く|打ちつける|ドン、ドン|コン、コン/.test(x)) return 'knock';
+  if (/ガタッ[\s\S]*ゴッ/.test(x)) return 'hitFall';
+  if (/ドサッ/.test(x)) return 'fall';
+  if (/^ゴッ|ゴッ[(（]|鈍い音/.test(x)) return 'hit';
   if (/ドサッ|ゴッ|ゴトン|ガタ|重い|ドン/.test(x)) return 'thud';
   return kind === 'impact' ? 'impact' : 'thud';
 };
@@ -129516,8 +129966,10 @@ const xmasNovelSeHit = kind => {
     });
   } catch (e) {}
 };
+let xmasNovelSeQuiet = false;
 const xmasNovelRowSe = (kindIn, times, row) => {
   xmasNovelSeStop();
+  if (xmasNovelSeQuiet) return;
   const kind = xmasNovelSeKindOf(kindIn, row);
   const seq = XMAS_NOVEL_SE_SEQ[kind];
   if (!seq) {
@@ -129531,114 +129983,124 @@ const xmasNovelRowSe = (kindIn, times, row) => {
     if (at <= 0) xmasNovelSeHit(kind);else xmasNovelSeTimers.push(setTimeout(() => xmasNovelSeHit(kind), at));
   }
 };
-const xmasNovelAmbientOf = scene => {
-  const bg = String(scene && scene.bg || '');
-  if (/吹雪/.test(bg)) return 'wind';
+const XMAS_NOVEL_AMBIENT_SCENE = Object.freeze({
+  'C2-M': 'wind',
+  'C12-2': 'wind',
+  'C2-L': 'clock',
+  'C1-6': 'clock'
+});
+const xmasNovelAmbientOf = (scene, bgName) => {
+  if (!scene || scene.outside) return 'none';
+  if (Object.prototype.hasOwnProperty.call(XMAS_NOVEL_AMBIENT_SCENE, scene.id)) return XMAS_NOVEL_AMBIENT_SCENE[scene.id];
+  const bg = String(bgName || scene.bg || '');
+  if (!bg || /助手たち|monhero_/.test(bg)) return 'none';
+  if (/吹雪/.test(bg)) return 'blizzard';
+  if (/雪原|雪の山道|崖/.test(bg)) return 'wind';
   if (/暖炉/.test(bg)) return 'fire';
-  if (/雪原|雪の山道/.test(bg)) return 'wind';
-  if (/柱時計/.test(bg)) return 'lock';
-  return '';
+  if (/柱時計|ホール/.test(bg)) return 'clock';
+  return 'room';
 };
-const xmasNovelAmbient = scene => {
-  const k = xmasNovelAmbientOf(scene);
-  if (k) xmasNovelSeHit(k);
+const xmasNovelSetAmbient = kind => {
+  try {
+    if (typeof Audio_ !== 'undefined' && Audio_ && typeof Audio_.nvAmbient === 'function') void Audio_.nvAmbient(kind || 'none');
+  } catch (e) {}
 };
 const XMAS_NOVEL_BGM_SCENE = Object.freeze({
   'OUT-0-1': 'original_profile',
-  'OUT-0-2': 'melo_dullahan_clockwork',
+  'OUT-0-2': 'silence',
   'C0-1': 'original_profile',
   'C0-2': 'original_profile',
-  'OUT-1': 'melo_dullahan_clockwork',
+  'OUT-1': 'silence',
   'C1-1': 'original_profile',
   'C1-2': 'original_profile',
-  'C1-3': 'melo_dullahan_clockwork',
-  'C1-4': 'melo_dullahan_clockwork',
+  'C1-3': 'silence',
+  'C1-4': 'silence',
   'C1-5': 'close_to_your_heart_alt',
-  'C1-6': 'melo_dullahan_steel_ghost',
+  'C1-6': 'silence',
   'C1-M': 'silence',
-  'C2-1': 'melo_dullahan_clockwork',
+  'C2-1': 'silence',
   'C2-L': 'silence',
-  'C2-M': 'makutsu_no_senritsu',
+  'C2-M': 'silence',
   'C2-2': 'original_profile',
-  'C2-3': 'melo_dullahan_steel_ghost',
-  'C2-4': 'melo_dullahan_steel_ghost_alt',
-  'C2-5': 'original_dullahan',
+  'C2-3': 'silence',
+  'C2-4': 'silence',
+  'C2-5': 'silence',
   'C3-1': 'silence',
-  'C3-2': 'melo_dullahan_clockwork_alt',
-  'C3-3': 'melo_dullahan_clockwork',
-  'C3-4': 'melo_dullahan_clockwork_alt',
+  'C3-2': 'silence',
+  'C3-3': 'silence',
+  'C3-4': 'silence',
   'C3-5': 'melo_erfolg_piano',
   'C3-M': 'melo_erfolg_piano',
-  'C4-1': 'makutsu_no_senritsu',
+  'C4-1': 'silence',
   'C4-2': 'silence',
-  'C4-3': 'melo_dullahan_clockwork_alt',
-  'C4-4': 'melo_dullahan_clockwork',
-  'C4-5': 'melo_dullahan_steel_ghost',
+  'C4-3': 'silence',
+  'C4-4': 'silence',
+  'C4-5': 'silence',
   'C4-M': 'silence',
   'C5-1': 'melo_erfolg_piano',
-  'C5-2': 'melo_dullahan_steel_ghost_alt',
-  'C5-3': 'melo_dullahan_steel_ghost',
-  'C5-4': 'melo_dullahan_steel_ghost',
-  'C5-5': 'makutsu_no_senritsu',
-  'C5-M': 'melo_dullahan_clockwork',
-  'C6-1': 'melo_dullahan_clockwork_alt',
-  'C6-2': 'melo_dullahan_steel_ghost',
-  'C6-3': 'melo_dullahan_clockwork_alt',
-  'C6-4': 'melo_dullahan_steel_ghost_alt',
-  'C6-5': 'melo_dullahan_steel_ghost',
-  'C6-6': 'melo_dullahan_clockwork_alt',
-  'C6-7': 'original_dullahan',
+  'C5-2': 'silence',
+  'C5-3': 'silence',
+  'C5-4': 'silence',
+  'C5-5': 'silence',
+  'C5-M': 'silence',
+  'C6-1': 'silence',
+  'C6-2': 'silence',
+  'C6-3': 'silence',
+  'C6-4': 'silence',
+  'C6-5': 'silence',
+  'C6-6': 'silence',
+  'C6-7': 'silence',
   'C6-8': 'melo_erfolg_piano',
-  'C6-9': 'melo_dullahan_steel_ghost',
+  'C6-9': 'silence',
   'C6-M': 'melo_erfolg_piano',
-  'C7-1': 'melo_dullahan_clockwork_alt',
-  'C7-2': 'melo_dullahan_steel_ghost_alt',
+  'C7-1': 'silence',
+  'C7-2': 'silence',
   'C7-A': 'melo_erfolg_piano',
-  'C7-B': 'melo_dullahan_clockwork',
-  'C7-P1': 'original_dullahan',
+  'C7-B': 'silence',
+  'C7-P1': 'silence',
   'C7-P2': 'melo_erfolg_piano',
-  'C7-P3': 'melo_dullahan_clockwork',
+  'C7-P3': 'silence',
   'C7-4a': 'melo_erfolg_piano',
-  'C7-4b': 'melo_dullahan_steel_ghost',
+  'C7-4b': 'silence',
   'C7-5a': 'melo_erfolg_piano',
-  'C7-5b': 'melo_dullahan_steel_ghost',
-  'C7-W': 'melo_dullahan_clockwork_alt',
-  'C8-1': 'melo_dullahan_steel_ghost_alt',
-  'C8-2': 'makutsu_no_senritsu',
+  'C7-5b': 'silence',
+  'C7-W': 'silence',
+  'C8-1': 'silence',
+  'C8-2': 'silence',
   'C8-3': 'melo_erfolg_piano',
   'C9-1': 'silence',
   'C9-2': 'close_to_your_heart_alt',
-  'C10-1': 'melo_dullahan_steel_ghost',
-  'C10-2': 'makutsu_no_senritsu',
-  'C10-3': 'melo_dullahan_steel_ghost',
-  'C10-4': 'melo_dullahan_steel_ghost_alt',
-  'C11-1': 'melo_dullahan_steel_ghost_alt',
+  'C10-1': 'silence',
+  'C10-2': 'silence',
+  'C10-3': 'silence',
+  'C10-4': 'silence',
+  'C11-1': 'silence',
   'C11-N': 'melo_erfolg_piano',
   'C11-A': 'melo_erfolg_piano',
-  'C11-B': 'melo_dullahan_clockwork',
-  'C2-X': 'melo_dullahan_steel_ghost',
+  'C11-B': 'silence',
+  'C2-X': 'silence',
   'END-X1': 'original_game_over',
-  'C5-X': 'melo_dullahan_steel_ghost',
+  'C5-X': 'silence',
   'END-X2': 'original_game_over',
-  'C6-X': 'melo_dullahan_steel_ghost',
+  'C6-X': 'silence',
   'END-X3': 'original_game_over',
-  'C2-Y': 'melo_dullahan_steel_ghost',
+  'C2-Y': 'silence',
   'END-X4': 'original_game_over',
-  'C10-X': 'melo_dullahan_steel_ghost',
+  'C10-X': 'silence',
   'END-X5': 'original_game_over',
   'END-M1': 'original_game_over',
-  'END-M2': 'melo_dullahan_steel_ghost',
-  'END-M3': 'melo_dullahan_steel_ghost',
+  'END-M2': 'silence',
+  'END-M3': 'silence',
   'END-M4': 'original_game_over',
-  'END-M5': 'melo_dullahan_steel_ghost',
+  'END-M5': 'silence',
   'END-G': 'melo_erfolg_piano',
   'OUT-G': 'close_to_your_heart_alt',
   'END-N': 'melo_erfolg_piano',
   'OUT-N': 'melo_erfolg_piano',
-  'END-A': 'melo_dullahan_clockwork',
-  'OUT-A': 'melo_dullahan_clockwork',
-  'END-B': 'melo_dullahan_steel_ghost',
-  'OUT-B': 'melo_dullahan_steel_ghost',
+  'END-A': 'silence',
+  'OUT-A': 'silence',
+  'END-B': 'silence',
+  'OUT-B': 'silence',
   'C1-O': 'original_profile',
   'END-O': 'original_profile',
   'OUT-O': 'original_profile',
@@ -129646,9 +130108,9 @@ const XMAS_NOVEL_BGM_SCENE = Object.freeze({
   'OUT-O2': 'close_to_your_heart_alt',
   'C12-1': 'close_to_your_heart_alt',
   'C12-2': 'melo_erfolg_piano',
-  'C12-3': 'original_dullahan',
-  'C12-4': 'melo_dullahan_clockwork',
-  'C12-5': 'melo_dullahan_steel_ghost',
+  'C12-3': 'silence',
+  'C12-4': 'silence',
+  'C12-5': 'silence',
   'C12-6': 'silence',
   'C12-7': 'melo_erfolg_piano'
 });
@@ -129656,8 +130118,8 @@ const XMAS_NOVEL_BGM_SHIFT = Object.freeze({
   'C2-3': [['2-3-7', 'silence']],
   'C5-4': [['5-4-5', 'silence']],
   'C6-5': [['6-5-3', 'silence']],
-  'C7-1': [['7-1-3a', 'melo_dullahan_steel_ghost_alt']],
-  'C7-W': [['7-W-14', 'melo_dullahan_steel_ghost_alt']],
+  'C7-1': [['7-1-3a', 'silence']],
+  'C7-W': [['7-W-14', 'silence']],
   'C10-1': [['10-1-5', 'silence']],
   'C10-2': [['10-2-7', 'silence']],
   'C10-3': [['10-3-7', 'silence']],
@@ -130146,7 +130608,7 @@ const XmasNovelScreen = ({
         if (seeded !== r) void xmasNovelRouteStore(seeded, S);
       });
     });
-    xmasNovelBgm('melo_dullahan_clockwork');
+    xmasNovelBgm('silence');
     return () => {
       alive = false;
       xmasNovelSeStop();
@@ -130180,6 +130642,23 @@ const XmasNovelScreen = ({
     setSheet(null);
     start(b);
   };
+  useEffect(() => {
+    xmasNovelSeQuiet = !!skip;
+    if (skip) xmasNovelSeStop();
+  }, [skip]);
+  const ambSceneId = st && st.scene ? st.scene.id : '';
+  const ambBg = st && st.scene ? xmasNovelSceneBgName(st.scene, st.cur ? st.cur.idx : 0) : '';
+  const ambWait = !!(sheet && typeof sheet === 'object' && sheet.q);
+  useEffect(() => {
+    let kind = mode === 'read' ? xmasNovelAmbientOf(st && st.scene, ambBg) : mode === 'title' ? 'clock' : 'none';
+    if (ambWait && kind === 'clock') kind = 'none';
+    const id = setTimeout(() => xmasNovelSetAmbient(kind), 350);
+    return () => clearTimeout(id);
+  }, [mode, ambSceneId, ambBg, ambWait]);
+  useEffect(() => () => {
+    xmasNovelSeQuiet = false;
+    xmasNovelSetAmbient('none');
+  }, []);
   const persist = (next, now = false) => {
     saveRef.current = next;
     setSave(next);
@@ -130222,7 +130701,7 @@ const XmasNovelScreen = ({
       read: [...s.read, r.k]
     };
     if (r.t === 'band' && r.se) xmasNovelRowSe(r.se, r.seN, r);else xmasNovelSeStop();
-    if (!opts.quiet && r.t === 'band' && !r.se && Array.isArray(r.fx) && r.fx.includes('fallen')) xmasNovelSeHit('dread');
+    if (!opts.quiet && r.t === 'band' && !r.se && XMAS_NOVEL_SE_ROW[r.id]) xmasNovelRowSe(XMAS_NOVEL_SE_ROW[r.id][0], XMAS_NOVEL_SE_ROW[r.id][1], r);else if (!opts.quiet && !xmasNovelSeQuiet && r.t === 'band' && !r.se && Array.isArray(r.fx) && r.fx.includes('fallen')) xmasNovelSeHit('dread');
     pendingQuakeRef.current = 0;
     if (XMAS_NOVEL_SHAKE[r.id] && !skip) {
       if (opts.held) pendingQuakeRef.current = XMAS_NOVEL_SHAKE[r.id];else xmasNovelQuake(stageRef.current, XMAS_NOVEL_SHAKE[r.id]);
@@ -130364,7 +130843,6 @@ const XmasNovelScreen = ({
       lastBodyRef.current = '';
       setTitleOk(xmasNovelSceneDone(scene, s.read));
     }
-    if (scene && (!lastSceneRef.current || lastSceneRef.current.id !== scene.id)) xmasNovelAmbient(scene);
     const transitNow = !!(scene && lastSceneRef.current && !!lastSceneRef.current.outside !== !!scene.outside);
     if (transitNow) {
       setTransit({
