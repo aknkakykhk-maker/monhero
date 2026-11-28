@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fb91ac34fb9c125f
+// generated-sha256: 86b61e6c7b214ef1
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -52239,6 +52239,8 @@ const HOME_V2_CSS = `
 .mh-home-v2 .mh-home-menu .mh-home-side-ic{flex:0 0 34px;width:34px;height:34px}
 .mh-home-v2 .mh-home-menu .mh-home-side-lb{flex:1;font-size:14px;font-weight:900;text-shadow:none}
 .mh-home-v2 .mh-home-menu .mh-home-side-btn em{position:static;margin-left:auto}
+/* 更新履歴の未読の数(r1126-074)は「99+」まで出るので、丸を字の幅に合わせて伸ばす */
+.mh-home-v2 .mh-home-menu .mh-home-side-btn em.mh-unread-badge{width:auto!important;height:20px!important;min-width:20px;padding:0 6px!important;border-radius:999px!important;font-size:11px!important;line-height:1!important;white-space:nowrap}
 .mh-home-v2 .mh-home-settings .mh-home-side-ic{border-color:#cbd5e1aa;background:#1e293be8;color:#e2e8f0}
 .mh-home-v2 .mh-home-band{position:relative;z-index:6;margin:6px 8px 0}
 .mh-home-v2 .mh-home-band-view{overflow:hidden;border-radius:14px}
