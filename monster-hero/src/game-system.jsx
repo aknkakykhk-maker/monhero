@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 938ae70bb3db3a9b
+// generated-sha256: a3cabf8441f769d7
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -10393,6 +10393,36 @@ const SoulRankAura = ({ soulRankStage = 0, className = '' }) => {
     <span className="mh-reincarnate-sparks"/>
   </span>;
 };
+// 次に歩いて行く所(歩く層の中の %)。レイドのボス(HP の札ごと)が出ているときは、ボスと重ならない所を選ぶ
+//   (2026-11-28 台帳 r1126-088 ①「まん中で黒いサンタ・歩くモンスター・HP の札が重なる」)。
+//   マスモンの絵は置き場所から左右へ幅の半分・上へ 72%・下へ 28% に描かれる(.mh-home-masumon の translate(-50%,-72%))ので、その分ボスの四角を広げて避ける。
+//   16回試して空いた所が無ければ、ボスの下へ。下に入らなければボスの左右の外へ行く
+const homeWalkingMasumonTarget = (el, laneCenter, laneWidth) => {
+  const pick = () => ({ x: Math.max(6, Math.min(94, laneCenter + (Math.random() - 0.5) * laneWidth)), y: 10 + Math.random() * 80 });
+  let avoid = null;
+  try {
+    const layer = el && el.parentElement;
+    const boss = typeof document !== 'undefined' ? document.querySelector('[data-home-raid-jack]') : null;
+    if (layer && boss && boss.getClientRects().length) {
+      const L = layer.getBoundingClientRect();
+      const rs = [boss, ...boss.querySelectorAll('img')].map((e) => e.getBoundingClientRect()).filter((r) => r.width > 1 && r.height > 1);
+      if (L.width > 0 && L.height > 0 && rs.length) {
+        const B = { left: Math.min(...rs.map((r) => r.left)), right: Math.max(...rs.map((r) => r.right)), top: Math.min(...rs.map((r) => r.top)), bottom: Math.max(...rs.map((r) => r.bottom)) };
+        const mw = el.offsetWidth || 56;
+        avoid = { x1: (B.left - mw / 2 - L.left) / L.width * 100, x2: (B.right + mw / 2 - L.left) / L.width * 100,
+          y1: (B.top - mw * 0.28 - L.top) / L.height * 100, y2: (B.bottom + mw * 0.72 - L.top) / L.height * 100 };
+      }
+    }
+  } catch (_) { avoid = null; }
+  if (!avoid) return pick();
+  const inside = (p) => p.x > avoid.x1 && p.x < avoid.x2 && p.y > avoid.y1 && p.y < avoid.y2;
+  for (let i = 0; i < 16; i++) { const p = pick(); if (!inside(p)) return p; }
+  const p = pick();
+  // ボスの下に入る余地があれば下へ。無ければ(背の低い横向きなど、ボスが歩く層より大きいとき)ボスの左右の外へ(層の外へ少し出てよい)
+  if (avoid.y2 <= 96) return { x: p.x, y: avoid.y2 + Math.random() * Math.max(0, 96 - avoid.y2) };
+  const left = p.x < 50 ? avoid.x1 - 2 - Math.random() * 12 : null, right = p.x >= 50 ? avoid.x2 + 2 + Math.random() * 12 : null;
+  return { x: Math.max(-30, Math.min(130, left !== null ? left : right)), y: p.y };
+};
 // HOME中央の安全領域だけを歩くマスモン。HOMEから外れるとコンポーネントごと破棄され、
 // visibilitychangeでもタイマーを止めるため、画面遷移やバックグラウンド復帰で処理が重複しない。
 const HomeWalkingMasumon = ({ masu, base, masuColors, index = 0, count = 1 }) => {
@@ -10403,6 +10433,7 @@ const HomeWalkingMasumon = ({ masu, base, masuColors, index = 0, count = 1 }) =>
   const timerRef = useRef(null);
   const mountedRef = useRef(true);
   const motionRef = useRef(motion);
+  const selfRef = useRef(null);
   useEffect(() => {
     mountedRef.current = true;
     const clearMotionTimer = () => { if (timerRef.current !== null) { clearTimeout(timerRef.current); timerRef.current = null; } };
@@ -10413,8 +10444,7 @@ const HomeWalkingMasumon = ({ masu, base, masuColors, index = 0, count = 1 }) =>
         const current = motionRef.current;
         // 横方向は個体ごとの緩いレーンを持たせ、5体が同じ場所に居続けるのを避ける。
         const laneWidth = count <= 1 ? 84 : 30;
-        const x = Math.max(6, Math.min(94, laneCenter + (Math.random() - 0.5) * laneWidth));
-        const y = 10 + Math.random() * 80;
+        const { x, y } = homeWalkingMasumonTarget(selfRef.current, laneCenter, laneWidth);
         const distance = Math.hypot(x - current.x, y - current.y);
         const duration = Math.max(2100, Math.min(4800, (1850 + distance * 32) * speedFactor));
         const next = { x, y, facing: x < current.x ? -1 : 1, walking: true, duration };
@@ -10441,7 +10471,7 @@ const HomeWalkingMasumon = ({ masu, base, masuColors, index = 0, count = 1 }) =>
     if (document.visibilityState !== 'hidden') scheduleWalk();
     return () => { mountedRef.current = false; clearMotionTimer(); document.removeEventListener('visibilitychange', onVisibilityChange); };
   }, [masu.id, index, count]);
-  return <div className={`mh-home-masumon ${motion.walking ? 'is-walking' : ''}`} style={{left:`${motion.x}%`,top:`${motion.y}%`,zIndex:Math.round(motion.y),transitionDuration:`${motion.duration}ms`}}>
+  return <div ref={selfRef} className={`mh-home-masumon ${motion.walking ? 'is-walking' : ''}`} style={{left:`${motion.x}%`,top:`${motion.y}%`,zIndex:Math.round(motion.y),transitionDuration:`${motion.duration}ms`}}>
     <div className="mh-home-masumon-bob" style={{transform:`scaleX(${motion.facing})`,isolation:'isolate'}}>
       <DyedMonsterImage baseId={masu.baseId} src={base.imgUrl || base.iconUrl} alt="" masuColors={masuColors} draggable={false}/>
       <SoulRankAura soulRankStage={masu.soulRankStage} className="is-home"/>
@@ -44473,8 +44503,20 @@ const QUICK_ANYWHERE_FLOAT_STEP = 6;
 const QUICK_ANYWHERE_FLOAT_MAX_LIFT = 0.6;
 // 画面ごとの最初の候補の隅(書いていない画面は右下)。神殿は横向きで右半分がスクロールする一覧なので左下
 const QUICK_ANYWHERE_FLOAT_SIDES = Object.freeze({ TEMPLE: 'left' });
+// 置き場所の指定(2026-11-28 台帳 r1126-088 ⑤「右の『1周目 W3/10』の札が1つだけ浮く」): 画面が [data-quick-anywhere-slot] の空き枠を出していれば、
+//   まずその枠のまん中に置く(新しい HOME はクリスマスの札の右の空き。前の HOME で時計の列があった所)。枠が無い・見えない・ほかのボタンにかかるときは、今までどおり隅から探す
+const quickAnywhereFloatSlot = (el) => {
+  if (typeof document === 'undefined' || !el) return null;
+  const slot = document.querySelector('[data-quick-anywhere-slot]');
+  if (!slot || !slot.getClientRects().length) return null;
+  const r = slot.getBoundingClientRect();
+  const w = el.offsetWidth || 70, h = el.offsetHeight || 34;
+  if (r.width < w || r.height < h) return null;
+  return { side: 'right', lift: 0, slot: true, top: Math.round(r.top + (r.height - h) / 2), left: Math.round(r.left + (r.width - w) / 2) };
+};
 const quickAnywhereFloatStyle = (spot) => {
   const s = spot.hidden ? { visibility: 'hidden', pointerEvents: 'none' } : { opacity: 0.86 };
+  if (spot.slot) return Object.assign(s, { position: 'fixed', top: `${spot.top}px`, left: `${spot.left}px` });
   Object.assign(s, { position: 'fixed', bottom: `max(${8 + spot.lift}px, calc(var(--mh-sa-bottom, 0px) + ${6 + spot.lift}px))` });
   if (spot.side === 'right') s.right = 'max(8px, calc(var(--mh-sa-right, 0px) + 6px))';
   else s.left = 'max(8px, calc(var(--mh-sa-left, 0px) + 6px))';
@@ -44483,6 +44525,7 @@ const quickAnywhereFloatStyle = (spot) => {
 // そこに置いたときの帯の四角(画面の座標)
 const quickAnywhereFloatRect = (el, spot) => {
   const w = el.offsetWidth || 70, h = el.offsetHeight || 34;
+  if (spot.slot) return { left: spot.left, top: spot.top, right: spot.left + w, bottom: spot.top + h };
   const css = getComputedStyle(document.documentElement);
   const num = (v) => { const n = parseFloat(v); return Number.isFinite(n) ? n : 0; };
   const saB = num(css.getPropertyValue('--mh-sa-bottom')), saL = num(css.getPropertyValue('--mh-sa-left')), saR = num(css.getPropertyValue('--mh-sa-right'));
@@ -44499,6 +44542,8 @@ const quickAnywhereFloatHits = (el, spot, known = null) => {
   let hits = 0;
   for (const o of document.querySelectorAll('button,a,[role=button],[data-quick-avoid]')) {
     if (o === el || el.contains(o) || o.contains(el) || o.closest('[data-quick-anywhere-detail]') || !o.getClientRects().length) continue;
+    // 見えないことにしてある物(HOME の送る札の、外へ送ってある札など。aria-hidden)は数えない(2026-11-28 r1126-088 追記3)
+    if (o.closest('[aria-hidden="true"]')) continue;
     if (known && known.has(o) && !o.hasAttribute('data-quick-avoid')) continue; // 隠したくない欄は、置いたときからあっても数える(スクロールで下に来たら札を隠す)
     const cs = getComputedStyle(o);
     if (cs.visibility === 'hidden' || cs.pointerEvents === 'none' || Number(cs.opacity) === 0) continue;
@@ -44511,6 +44556,8 @@ const quickAnywhereFloatHits = (el, spot, known = null) => {
 const quickAnywhereFloatPick = (el, screen) => {
   const first = QUICK_ANYWHERE_FLOAT_SIDES[screen] === 'left' ? 'left' : 'right';
   const sides = first === 'left' ? ['left', 'right'] : ['right', 'left'];
+  const slot = quickAnywhereFloatSlot(el);
+  if (slot && quickAnywhereFloatHits(el, slot) === 0) return slot;
   // まず隅そのもの(持ち上げない)を、最初の候補→反対の順に見る
   for (const side of sides) { const spot = { side, lift: 0 }; if (quickAnywhereFloatHits(el, spot) === 0) return spot; }
   const maxLift = Math.max(0, Math.floor(((typeof window !== 'undefined' ? window.innerHeight : 0) * QUICK_ANYWHERE_FLOAT_MAX_LIFT) / QUICK_ANYWHERE_FLOAT_STEP)) * QUICK_ANYWHERE_FLOAT_STEP;
@@ -44534,18 +44581,18 @@ const QuickAnywhereFloat = ({ screen, children, style, ...rest }) => {
     // 決めた場所にかかっているもの(画面を覆うシートなど)は入れない。かかっている間は隠し、どいたら出す
     const remember = (base) => { const set = new WeakSet(); const el = ref.current; if (typeof document !== 'undefined' && el) { const R = quickAnywhereFloatRect(el, base); for (const o of document.querySelectorAll('button,a,[role=button],[data-quick-avoid]')) { const r = o.getBoundingClientRect(); if (!(Math.min(R.right, r.right) - Math.max(R.left, r.left) > 1 && Math.min(R.bottom, r.bottom) - Math.max(R.top, r.top) > 1)) set.add(o); } } knownRef.current = set; };
     // 決める(画面が変わったとき・向きや大きさが変わったときだけ)
-    const decide = () => { if (!ref.current) return; const next = quickAnywhereFloatPick(ref.current, screen); const base = { side: next.side, lift: next.lift }; placedRef.current = { ...base, fromHidden: !!next.hidden }; remember(base); setSpot(next.hidden ? { ...base, hidden: true } : base); };
+    const decide = () => { if (!ref.current) return; const next = quickAnywhereFloatPick(ref.current, screen); const base = { side: next.side, lift: next.lift, ...(next.slot ? { slot: true, top: next.top, left: next.left } : {}) }; placedRef.current = { ...base, fromHidden: !!next.hidden }; remember(base); setSpot(next.hidden ? { ...base, hidden: true } : base); };
     // シート・確認の窓がかぶったかだけを見る。置いたときに無かったボタンにかかったら隠し、外れたら同じ場所に戻す(場所は変えない)
     // どこも空いていなくて隠れたとき(覆うシートが出ている最中に決めたとき)だけは、隠れたまま決め直す(見えている帯は動かさない)
-    const watch = () => { const el = ref.current, placed = placedRef.current; if (!el || !placed) return; if (placed.fromHidden) { decide(); return; } const base = { side: placed.side, lift: placed.lift }; const covered = quickAnywhereFloatHits(el, base, knownRef.current) > 0;
-      setSpot(prev => (!!prev.hidden === covered && prev.side === base.side && prev.lift === base.lift ? prev : covered ? { ...base, hidden: true } : base)); };
+    const watch = () => { const el = ref.current, placed = placedRef.current; if (!el || !placed) return; if (placed.fromHidden) { decide(); return; } const base = { side: placed.side, lift: placed.lift, ...(placed.slot ? { slot: true, top: placed.top, left: placed.left } : {}) }; const covered = quickAnywhereFloatHits(el, base, knownRef.current) > 0;
+      setSpot(prev => (!!prev.hidden === covered && prev.side === base.side && prev.lift === base.lift && prev.top === base.top && prev.left === base.left ? prev : covered ? { ...base, hidden: true } : base)); };
     decide();
     const t1 = setTimeout(decide, 300), t2 = setTimeout(decide, 1200), iv = setInterval(watch, 800);
     let rt = null; const onResize = () => { clearTimeout(rt); rt = setTimeout(decide, 250); };
     if (typeof window !== 'undefined') window.addEventListener('resize', onResize);
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(rt); clearInterval(iv); if (typeof window !== 'undefined') window.removeEventListener('resize', onResize); };
   }, [screen]);
-  return <button ref={ref} type="button" data-quick-anywhere-spot={spot.hidden ? 'hidden' : `${spot.side}-${spot.lift}`} {...rest} style={{ ...(style || {}), ...quickAnywhereFloatStyle(spot) }}>{children}</button>;
+  return <button ref={ref} type="button" data-quick-anywhere-spot={spot.hidden ? 'hidden' : spot.slot ? 'slot' : `${spot.side}-${spot.lift}`} {...rest} style={{ ...(style || {}), ...quickAnywhereFloatStyle(spot) }}>{children}</button>;
 };
 
 // ---- part: 50-error-boundary.jsx ----
@@ -52244,7 +52291,10 @@ const HOME_EVENT_BADGE_CSS = `
 //   字はいちばん小さくても 11px(すぐできる直し7)。横向き・タブレットは README の目安(帯の幅は最大 600px・入口は1列で遊ぶ4つを幅広に)
 const HOME_V2_CSS = `
 .mh-home-v2{--v2-panel:#102522eb;--v2-line:#f7df9a88}
-.mh-home-v2 .mh-home-top{display:flex;align-items:center;gap:6px;padding:calc(6px + env(safe-area-inset-top)) 8px 0;z-index:20}
+/* 上の1段の上は 6px だけ(2026-11-28 台帳 r1126-088 追記1・社長「上部空いてるのってなんだっけ？」)。
+   前は切り欠きの高さ env(safe-area-inset-top) も足していたが、body が同じ分をもう空けている(index.html)ので二重になり、時刻の段の下に空の絵だけの空きが出ていた。
+   body の空けで時刻の段にはかからない(Safari で開いたときは env が 0) */
+.mh-home-v2 .mh-home-top{display:flex;align-items:center;gap:6px;padding:6px 8px 0;z-index:20}
 .mh-home-v2 .mh-home-top .mh-home-player{flex:1 1 auto;min-width:0;height:46px;padding:3px 10px 3px 4px;gap:7px}
 .mh-home-v2 .mh-home-top .mh-home-avatar{flex:0 0 36px;width:36px;height:36px}
 .mh-home-v2 .mh-home-top .mh-home-player-copy strong{max-width:none;font-size:13px;line-height:1.25}
@@ -52261,7 +52311,7 @@ const HOME_V2_CSS = `
 .mh-home-v2 .mh-home-menu-btn em,.mh-home-v2 .mh-home-menu .mh-home-side-btn em{display:flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:999px;border:2px solid #fff;background:#e11d48;color:#fff;font-size:11px;font-style:normal;font-weight:900;line-height:1;box-shadow:0 2px 6px #0008}
 .mh-home-v2 .mh-home-menu-btn em{position:absolute;top:-7px;right:-6px}
 .mh-home-v2 .mh-home-menu-shade{position:absolute;inset:0;z-index:28;border:0;background:#0006;cursor:default}
-.mh-home-v2 .mh-home-menu{position:absolute;z-index:29;right:8px;top:calc(58px + env(safe-area-inset-top));display:flex;flex-direction:column;gap:6px;width:min(240px,calc(100% - 16px));padding:8px;border:1px solid var(--v2-line);border-radius:16px;background:#0d1f1cf7;box-shadow:0 10px 30px #000c}
+.mh-home-v2 .mh-home-menu{position:absolute;z-index:29;right:8px;top:58px;display:flex;flex-direction:column;gap:6px;width:min(240px,calc(100% - 16px));padding:8px;border:1px solid var(--v2-line);border-radius:16px;background:#0d1f1cf7;box-shadow:0 10px 30px #000c}
 /* 閉じているときは目に見えない形(読み上げには残す)。メニューの中の「設定」「ミッション」などを、読み上げの利用者と検査がいつでも見つけられるように */
 .mh-home-v2 .mh-home-menu:not(.is-open){width:1px;height:1px;padding:0;margin:0;border:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap;pointer-events:none;box-shadow:none}
 .mh-home-v2 .mh-home-menu.is-open{display:flex;animation:mhHomeMenuIn .15s ease-out}
@@ -52280,23 +52330,32 @@ const HOME_V2_CSS = `
 .mh-home-v2 .mh-home-menu .mh-home-side-btn em.mh-unread-badge{width:auto!important;height:20px!important;min-width:20px;padding:0 6px!important;border-radius:999px!important;font-size:11px!important;line-height:1!important;white-space:nowrap}
 .mh-home-v2 .mh-home-settings .mh-home-side-ic{border-color:#cbd5e1aa;background:#1e293be8;color:#e2e8f0}
 .mh-home-v2 .mh-home-band{position:relative;z-index:6;margin:6px 8px 0}
-.mh-home-v2 .mh-home-band-view{overflow:hidden;border-radius:14px}
-.mh-home-v2 .mh-home-band-track{display:flex;transition:transform .35s ease}
-.mh-home-v2 .mh-home-band-slide{flex:0 0 100%;min-width:0;height:80px}
-.mh-home-v2 .mh-home-band-slide>button{width:100%;height:80px}
-.mh-home-v2 .mh-home-band .mh-home-event-banner{max-width:none;justify-content:center;gap:4px;padding:8px 14px;border-radius:14px;font-size:15px}
-.mh-home-v2 .mh-home-band .mh-home-event-banner .r1{column-gap:8px}
-.mh-home-v2 .mh-home-band .mh-home-event-banner small{font-size:11px}
-.mh-home-v2 .mh-home-band .mh-home-event-banner .t2{font-size:12px}
-.mh-home-v2 .mh-home-band .mh-home-tour-banner{max-width:none;gap:10px;padding:8px 14px;border-radius:14px}
-.mh-home-v2 .mh-home-band .mh-home-tour-banner>span:first-child{font-size:30px}
-.mh-home-v2 .mh-home-band .mh-home-tour-banner b{font-size:15px}
-.mh-home-v2 .mh-home-band .mh-home-tour-banner small,.mh-home-v2 .mh-home-band .mh-home-tour-banner em{font-size:11px}
-.mh-home-v2 .mh-home-band-nav{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:2px}
-.mh-home-v2 .mh-home-band-nav .mh-home-event-strip-dots button{display:flex;align-items:center;justify-content:center;width:22px;height:22px;padding:0;border:0;background:transparent}
-.mh-home-v2 .mh-home-band-nav .mh-home-event-strip-dots i{width:8px;height:8px;box-shadow:0 0 0 1px #0008}
-.mh-home-v2 .mh-home-band-nav .mh-home-event-strip-dots button.on i{width:18px;border-radius:4px;background:#fde68a}
-.mh-home-v2 .mh-home-band-next{min-width:0;max-width:72%;min-height:22px;overflow:hidden;padding:2px 9px;border-radius:999px;background:#000a;color:#fffbeb;font-size:11px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}
+/* イベントの札(r1126-088)。追記1(社長「横幅もう少し小さく」): 前(312×80)より少し小さく 278×74。札の右の空きは裏クイックの札の置き場。
+   追記3(社長「フリックとかで動かせるように」): 札1枚分の場所を左右に送る。何枚目かの点は札の右下の中に小さく(札の外に段を足さない) */
+.mh-home-v2 .mh-home-band-view{position:relative;width:calc(100% - 96px);height:74px;overflow:hidden;border-radius:12px;touch-action:pan-y}
+.mh-home-v2 .mh-home-band-track{display:flex;height:100%;transition:transform .35s ease}
+@media(prefers-reduced-motion:reduce){.mh-home-v2 .mh-home-band-track{transition:none}}
+.mh-home-v2 .mh-home-band-slide{flex:0 0 100%;min-width:0;height:100%}
+.mh-home-v2 .mh-home-band-slide>button{width:100%;max-width:none;height:100%!important}
+.mh-home-v2 .mh-home-band-slide>.mh-home-event-banner{justify-content:center;border-radius:12px}
+.mh-home-v2 .mh-home-band-slide>.mh-home-tour-banner{border-radius:12px}
+.mh-home-v2 .mh-home-band-dots{position:absolute;right:5px;bottom:4px;z-index:3;display:flex;gap:1px;padding:0 3px;border-radius:999px;background:#0009}
+.mh-home-v2 .mh-home-band-dots button{display:flex;align-items:center;justify-content:center;width:16px;height:16px;padding:0;border:0;background:transparent}
+.mh-home-v2 .mh-home-band-dots i{display:block;width:6px;height:6px;border-radius:50%;background:#ffffff80}
+.mh-home-v2 .mh-home-band-dots button.on i{width:12px;border-radius:3px;background:#fde68a}
+.mh-home-v2 .mh-home-band-quick-slot{position:absolute;top:0;right:-6px;width:96px;height:74px;pointer-events:none}
+/* ほかのイベントの絵の札(追記2) */
+.mh-home-v2 .mh-home-event-art{position:relative;display:block;overflow:hidden;padding:0;border:2px solid #f9a8d4;border-radius:12px;background:#3b0a2e}
+.mh-home-v2 .mh-home-event-art:active{filter:brightness(1.15)}
+.mh-home-v2 .mh-home-event-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 12%;pointer-events:none}
+.mh-home-v2 .mh-home-event-art-sub{position:absolute;left:6px;bottom:4px;padding:1px 7px;border:1px solid #fbcfe8;border-radius:999px;background:#9d174de6;color:#fff;font-size:10px;font-weight:900;line-height:1.3;white-space:nowrap}
+/* クリスマスの札(追記3・社長「聖夜のバナーの文字で絵が半分隠れてる」): 部品(79-screen-xmas-event.jsx)の中身は変えず、HOME の側で見え方だけ変える。
+   絵は人物と館が見える所で切り、左半分を覆っていた濃い地は下の端の細い影だけに。字は「聖夜の名探偵」(13px)と期間の札だけを左下へ小さく寄せる */
+.mh-home-v2 .mh-home-band .mh-xmas-entry img.mh-xmas-entry-art{object-position:50% 52%!important}
+.mh-home-v2 .mh-home-band .mh-xmas-entry>span[style*="linear-gradient"]{background:linear-gradient(0deg,#0b1733e0 0,#0b1733a0 20px,transparent 40px)!important}
+.mh-home-v2 .mh-home-band .mh-xmas-entry [data-xmas-entry-kicker]{display:none}
+.mh-home-v2 .mh-home-band .mh-xmas-entry>span[style*="flex-direction"]{top:auto!important;bottom:4px;left:6px!important;right:auto!important;flex-direction:row!important;align-items:center!important;gap:5px!important}
+.mh-home-v2 .mh-home-band .mh-xmas-entry-title{font-size:13px!important;filter:drop-shadow(0 1px 2px #000)}
 .mh-home-v2 .mh-home-assistant{width:70%;max-width:360px;margin:6px 0 0 8px}
 .mh-home-v2 .mh-home-assistant-fold{margin:6px 0 0 8px}
 .mh-home-v2 .mh-home-assistant-show-mark{right:-8px;bottom:-6px;width:24px;height:24px;font-size:14px;background:#fff!important;box-shadow:0 0 0 2px #e11d48,0 2px 6px #0009;animation:mhHomePeerMark 1.4s ease-in-out infinite}
@@ -52304,7 +52363,11 @@ const HOME_V2_CSS = `
 @media(prefers-reduced-motion:reduce){.mh-home-v2 .mh-home-assistant-show-mark{animation:none}}
 .mh-home-v2 .mh-home-assistant-news-dot{position:absolute;top:1px;right:1px;width:13px;height:13px;border-radius:50%;border:2px solid #fff;background:#e11d48;box-shadow:0 1px 4px #0009}
 .mh-home-v2 .mh-home-peer-mark{position:absolute;left:52px;top:calc(100% + 4px);width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:50%;border:1.5px solid #f9a8d4;background:#1e0b24ee;font-size:16px;box-shadow:0 2px 8px #0009}
-.mh-home-v2 .mh-home-dock{gap:6px;padding:8px 8px calc(8px + env(safe-area-inset-bottom))}
+.mh-home-v2 .mh-home-dock{gap:6px;padding:8px}
+/* iPhone の下の安全域(ホームの棒の所)(2026-11-28 台帳 r1126-088 ③「入口の段の下に暗い余白、その下が黒い帯」)。
+   body が安全域の分だけ下を空けている(index.html)のに、ドックの下でも安全域の分をもう1回空けていた(暗い余白)。ドックの下は前の HOME と同じ 8px に戻し、
+   安全域(画面の外の親 .mh-app が切り取るので HOME を伸ばせない)は、HOME を出している間だけドックの下の端と同じ色で塗る(黒い帯にしない) */
+body:has(.mh-home-v2){background:linear-gradient(to top,#0b1f1a calc(env(safe-area-inset-bottom) + 1px),#000 0)}
 .mh-home-v2 .mh-home-dock-row{gap:6px}
 .mh-home-v2 .mh-home-dock-top>.mh-home-dock-card,.mh-home-v2 .mh-home-dock-top>.mh-home-success{height:clamp(112px,18cqh,150px);padding:0;gap:0;overflow:hidden;border-radius:14px}
 .mh-home-v2 .mh-home-dock-top .mh-home-dock-pic,.mh-home-v2 .mh-home-dock-top .mh-home-success .pic{flex:1 1 auto;width:100%;max-width:none;height:auto;min-height:0;aspect-ratio:auto;border-radius:0}
@@ -52319,12 +52382,11 @@ const HOME_V2_CSS = `
 .mh-home-v2 .mh-home-dock-bottom .mh-home-dock-name{font-size:11px;line-height:1.2}
 @media(max-width:350px){.mh-home-v2 .mh-home-dock-top .mh-home-dock-name,.mh-home-v2 .mh-home-dock-top .mh-home-success .nm{font-size:10.5px;letter-spacing:-.06em}}
 @media(orientation:landscape) and (max-height:600px){
-  .mh-home-v2 .mh-home-band{position:absolute;left:8px;top:calc(58px + env(safe-area-inset-top));width:min(37%,330px);margin:0}
-  .mh-home-v2 .mh-home-band-slide,.mh-home-v2 .mh-home-band-slide>button{height:68px}
-  .mh-home-v2 .mh-home-band-slide>button[data-home-xmas-entry]{height:68px!important}
-  .mh-home-v2 .mh-home-assistant,.mh-home-v2 .mh-home-assistant-fold{position:absolute;left:8px;top:calc(160px + env(safe-area-inset-top));margin:0}
+  .mh-home-v2 .mh-home-band{position:absolute;left:8px;top:58px;width:min(37%,330px);margin:0}
+  .mh-home-v2 .mh-home-band-view{width:100%;height:56px}
+  .mh-home-v2 .mh-home-assistant,.mh-home-v2 .mh-home-assistant-fold{position:absolute;left:8px;top:128px;margin:0}
   .mh-home-v2 .mh-home-assistant{width:min(37%,330px)}
-  .mh-home-v2 .mh-home-dock{flex-direction:row;align-items:flex-end;gap:8px;padding:5px 8px calc(6px + env(safe-area-inset-bottom))}
+  .mh-home-v2 .mh-home-dock{flex-direction:row;align-items:flex-end;gap:8px;padding:5px 8px 6px}
   .mh-home-v2 .mh-home-dock-top{flex:1.9 1 0}
   .mh-home-v2 .mh-home-dock-bottom{flex:1 1 0}
   .mh-home-v2 .mh-home-dock-top>.mh-home-dock-card,.mh-home-v2 .mh-home-dock-top>.mh-home-success{height:clamp(84px,25cqh,104px);max-width:none}
@@ -52332,10 +52394,9 @@ const HOME_V2_CSS = `
 }
 @container (min-width:700px) and (min-height:560px){
   .mh-home-v2 .mh-home-band{width:min(600px,calc(100% - 16px));margin:8px auto 0}
-  .mh-home-v2 .mh-home-band-slide,.mh-home-v2 .mh-home-band-slide>button{height:92px}
-  .mh-home-v2 .mh-home-band-slide>button[data-home-xmas-entry]{height:92px!important}
+  .mh-home-v2 .mh-home-band-view{width:100%;height:92px}
   .mh-home-v2 .mh-home-assistant{width:360px}
-  .mh-home-v2 .mh-home-dock{flex-direction:row;align-items:flex-end;gap:14px;padding:10px 14px calc(12px + env(safe-area-inset-bottom))}
+  .mh-home-v2 .mh-home-dock{flex-direction:row;align-items:flex-end;gap:14px;padding:10px 14px 12px}
   .mh-home-v2 .mh-home-dock-top{flex:2 1 0;justify-content:center}
   .mh-home-v2 .mh-home-dock-bottom{flex:1 1 0}
   .mh-home-v2 .mh-home-dock-top>.mh-home-dock-card,.mh-home-v2 .mh-home-dock-top>.mh-home-success{height:min(170px,19cqh);max-width:180px;border-radius:16px}
@@ -52344,9 +52405,12 @@ const HOME_V2_CSS = `
   .mh-home-v2 .mh-home-dock-bottom .mh-home-dock-pic{width:62px;height:62px}
   .mh-home-v2 .mh-home-dock-bottom .mh-home-dock-name{font-size:12px}
 }
-/* クリスマスの入口(79-screen-xmas-event.jsx)は、横向きで帯を右の列の横へ動かす決まりを持っている(前の HOME の形のため)。
-   新しい帯の中では、ほかの1枚と同じ位置・大きさのままにする(部品の中身は変えない。HOME の側で上書きするだけ) */
-.mh-home-v2 .mh-home-band-slide[data-home-xmas-entry-strip]{position:relative!important;left:auto!important;right:auto!important;top:auto!important;width:auto!important;margin:0!important}
+/* クリスマスの入口(79-screen-xmas-event.jsx)は、横向きで帯を右の列の横へ動かす決まりを持っている(前の HOME の右の列のため)。
+   新しい HOME には右の列が無いので、帯の置き場(.mh-home-band)の中に置いたままにする(部品の中身は変えない。HOME の側で上書きするだけ)。
+   背の低い横向きの高さ 54px と字の大きさは、部品の決まり(前の HOME と同じ)のまま */
+.mh-home-v2 .mh-home-band [data-home-xmas-entry-strip]{position:relative!important;left:auto!important;right:auto!important;top:auto!important;width:auto!important;margin:0!important}
+@media(orientation:landscape) and (max-height:600px){.mh-home-v2 .mh-home-event-art img{object-position:50% 4%}.mh-home-v2 .mh-home-band-quick-slot{display:none}}
+@container (min-width:700px) and (min-height:560px){.mh-home-v2 .mh-home-band-quick-slot{display:none}}
 @media (orientation:landscape) and (max-height:520px){.mh-home-v2 .mh-home-band .mh-xmas-entry[data-home-xmas-entry="banner"] .mh-xmas-entry-sub{font-size:11px}}
 /* 横持ちの iPhone の切り欠き(カメラの欠け)に、押す物を入れない。左右の余白に端末の安全な余白(safe-area)を足す */
 .mh-home-v2 .mh-home-top{padding-left:calc(8px + env(safe-area-inset-left));padding-right:calc(8px + env(safe-area-inset-right))}
@@ -52378,8 +52442,10 @@ const HOME_RAID_JACK_CSS = `
   82%{transform:translateY(0) scale(1.05,.94) rotate(1deg)}}
 @keyframes mhRaidJackShadow{0%,100%{transform:scaleX(1.05);opacity:.5}50%{transform:scaleX(.7);opacity:.3}}
 @media(prefers-reduced-motion:reduce){.mh-home-raid-jack-img,.mh-home-raid-jack-shadow{animation:none}}
+/* クリスマスのボス(背の高い絵)は、まん中に置く。前は translateX(-50%) で寄せていたが、跳ねる動き(transform)がそれを上書きして、
+   絵の幅の半分だけ右へずれていた(2026-11-28 台帳 r1126-088 ②「サンタが右寄りで大きすぎる」)。いまは left/right:0 と margin:auto で寄せ、高さも 135% → 110% に */
 /* 背の低い横画面: クリスマスのボスは枠より上へはみ出して描くので、耳が上の欄の裏に隠れた(#7857 点検の8)。絵を少し縮めて上を空ける。足もとの位置は変えない */
-@media(orientation:landscape) and (max-height:430px){.mh-home-raid-boss-tall{height:112% !important}}
+@media(orientation:landscape) and (max-height:430px){.mh-home-raid-boss-tall{height:100% !important}}
 `;
 // ★重なり順は 4(2026-10-11・社長の実機の指摘で、旧・施設の並び(z-index:3)より前にした)。
 //   枠そのものは押せなくして(pointerEvents:none)、吹き出しとジャック本体だけを押せるようにする
@@ -52579,9 +52645,9 @@ const HomeRaidJack = ({ eventId, onOpen, ev = RAID_EVENT_JACK }) => {
         <span style={{ display:'block', height:'7px', marginTop:'3px', borderRadius:'999px', overflow:'hidden', background:'#000a', border:'1px solid #fff3' }} role="progressbar" aria-valuemin={0} aria-valuemax={tier.hp} aria-valuenow={left}>
           <span style={{ display:'block', height:'100%', width:`${rate * 100}%`, background:'#f97316' }} />
         </span>
-        {totals === null ? <span style={{ display:'block', fontSize:'8px', opacity:.8 }}>準備中</span>
-          : totals === undefined ? <span style={{ display:'block', fontSize:'8px', opacity:.8 }}>…</span>
-          : <span style={{ display:'block', fontSize:'8px', opacity:.85 }}>共有HP {left.toLocaleString()}</span>}
+        {totals === null ? <span style={{ display:'block', fontSize:'11px', opacity:.8 }}>準備中</span>
+          : totals === undefined ? <span style={{ display:'block', fontSize:'11px', opacity:.8 }}>…</span>
+          : <span data-home-raid-hp-text style={{ display:'block', fontSize:'11px', opacity:.9 }}>共有HP {left.toLocaleString()}</span>}
         </>}
       </span>
   );
@@ -52625,8 +52691,10 @@ const HomeRaidJack = ({ eventId, onOpen, ev = RAID_EVENT_JACK }) => {
         {/* 大王を倒したあとは、小さなぱんぷきんが遊びに来る(オーラ・ポーズ絵なし。跳ねる動きは同じ) */}
         {allDone && isJack ? <img className="mh-home-raid-jack-img" src={PUMPKIN_ICON_IMG} alt="" draggable={false}
           style={{ position:'absolute', left:`${(1 - RAID_JACK_PUMPKIN_ART_SCALE) * 50}%`, bottom:0, width:`${RAID_JACK_PUMPKIN_ART_SCALE * 100}%`, height:'auto', filter:'drop-shadow(0 6px 10px #000a)', pointerEvents:'none' }} />
+        // ★真ん中へは left/right 0 と margin auto で寄せる。transform で寄せると、跳ねる動き(mhRaidJackHop の transform)に上書きされて
+        //   絵の幅の半分だけ右へずれる(2026-11-28 HOME の作り直しの点検: ボスの絵が共有HPの札より右にずれていた)
         : !isJack ? <img className="mh-home-raid-jack-img mh-home-raid-boss-tall" data-home-raid-boss={ev.key} src={allDone ? ev.afterBossImg() : ev.bossImg()} alt="" draggable={false}
-          style={{ position:'absolute', left:'50%', bottom:0, height:'135%', width:'auto', transform:'translateX(-50%)', filter:'drop-shadow(0 6px 10px #000a)', pointerEvents:'none' }} /> : <>
+          style={{ position:'absolute', left:0, right:0, margin:'0 auto', bottom:0, height:'110%', width:'auto', filter:'drop-shadow(0 6px 10px #000a)', pointerEvents:'none' }} /> : <>
         <img className="mh-home-raid-jack-img" src={JACK_IMG} alt="" draggable={false}
           style={{ position:'absolute', left:`${(1 - RAID_JACK_NORMAL_ART_SCALE) * 50}%`, bottom:0, width:`${RAID_JACK_NORMAL_ART_SCALE * 100}%`, height:'auto', opacity:pose ? 0 : 1, filter:`drop-shadow(0 6px 10px #000a) ${raidJackAuraGlowFilter(Number(String(tier.id).slice(1)) || 0, 0.8)}`, pointerEvents:'none' }} />
         <img className="mh-home-raid-jack-img" src={JACK_POSE_IMG} alt="" draggable={false} aria-hidden="true"
@@ -52986,12 +53054,27 @@ function HomeScreenV2({
   //   帯の下の「次:」を押す)。手で触らなければ7秒ごとに次へ進み、触ったら20秒は止める。
   //   並び: クリスマスの入口(r1126-014 の大きな帯)→ ほかの開催中のイベント → 公式杯。クリスマスの入口があるときは、同じ中身の「クリスマスイベント」の帯は出さない
   //   ただしクリスマスがまだ予告(序章だけ)のあいだは、いま遊べるイベントを1枚目にする(API の点検 7・予告より開催中を先に)
+  // 【2026-11-28 台帳 r1126-088・社長「ホームのイベント表示の画像まえのほうがよくない？」→「前の形に戻す」】
+  //   帯1枚を左右に送る形(点・「次:〜」の札)はやめ、前の HOME(HomeScreenV1)と同じ並びにした:
+  //   上にクリスマスの絵の札(前と同じ大きさ・切り方)、その下にほかのイベントの細い帯(公式杯とは5秒ごとに切り替わる。手で送る操作は付けない)。
+  //   クリスマスの入口があるときは、同じ中身の「クリスマスイベント」の細い帯は出さない(前と同じ)。行き先は新しい HOME のまま(細い帯はモンヒロビートへ)
+  const homeBandXmas=!!xmasEntry;
+  const homeBandEvent=homeEventCampaign&&!(xmasEntry&&homeEventCampaign.id==='xmas_2026')?homeEventCampaign:null;
+  const homeBandTour=homeCardTour&&typeof onOpenCardTour==='function'?homeCardTour:null;
+  // 追記2(社長「咲かせてはなうたのーとのバナー作ってある画像出せない？」): ほかのイベントも、絵があれば絵の札で出す。
+  //   絵はいま開いているモンヒロビートのイベント(rhythmLimitedEventAt の banner・告知の絵)。題が同じときだけ使い、無ければ今までどおり字の帯
+  const homeBandEventArt=(()=>{
+    if(!homeBandEvent||typeof rhythmLimitedEventAt!=='function')return '';
+    try{const ev=rhythmLimitedEventAt(Date.now());return ev&&typeof ev.banner==='string'&&typeof ev.name==='string'&&ev.name.startsWith(homeBandEvent.banner.title)?ev.banner:'';}catch(_){return '';}
+  })();
+  // 追記3(社長「別のイベントの表示を同じバナー位置でフリックとかで動かせるようにして」): 縦に2枚並べる形はやめ、札1枚分の場所を左右に送る。
+  //   指で左右に払う(40px 以上)・札の右下の小さな点を押すと替わる。触らなければ7秒ごとに次へ、触ったら20秒は止める。押すとそのイベントのページ(今までどおり)。
+  //   並び: クリスマス → ほかの開催中のイベント → 公式杯。クリスマスがまだ予告のあいだは、開催中のイベントを先にする(API の点検 7)
   const homeBandSlides=[];
-  const homeBandEvent=homeEventCampaign&&!(xmasEntry&&homeEventCampaign.id==='xmas_2026');
-  if(homeBandEvent&&xmasEntry&&xmasEntry.preOpen)homeBandSlides.push('event');
-  if(xmasEntry)homeBandSlides.push('xmas');
+  if(homeBandEvent&&homeBandXmas&&xmasEntry.preOpen)homeBandSlides.push('event');
+  if(homeBandXmas)homeBandSlides.push('xmas');
   if(homeBandEvent&&!homeBandSlides.includes('event'))homeBandSlides.push('event');
-  if(homeCardTour&&typeof onOpenCardTour==='function')homeBandSlides.push('tour');
+  if(homeBandTour)homeBandSlides.push('tour');
   const homeBandCount=homeBandSlides.length;
   const [homeBandIdx,setHomeBandIdx]=React.useState(0);
   const homeBandTouchRef=React.useRef({x:null,at:0,swiped:false});
@@ -53002,7 +53085,6 @@ function HomeScreenV2({
   },[homeBandCount]);
   const homeBandShow=homeBandCount?((homeBandIdx%homeBandCount)+homeBandCount)%homeBandCount:0;
   const homeBandGo=(step)=>{homeBandTouchRef.current.at=Date.now();setHomeBandIdx(i=>i+step);};
-  const homeBandTitle=(k)=>k==='xmas'?'聖夜の名探偵':k==='event'&&homeEventCampaign?homeEventCampaign.banner.title:k==='tour'&&homeCardTour?homeCardTour.name:'';
   // メニュー☰(案A)。右の列(時計・更新履歴・ミッション・ギフト)と設定・ブリーダーP をここへまとめる。赤い数字は合計
   //   ボタンはいつも描いておき(閉じているときは見えないだけ)、案内(チュートリアル)がミッション・ギフト・設定を指すときは開いておく
   const [homeMenuOpen,setHomeMenuOpen]=React.useState(false);
@@ -53061,31 +53143,35 @@ function HomeScreenV2({
             :<em className="mh-unread-badge" aria-label="未読あり">!</em>)}</button>
           <button onClick={homeMenuGo(onOpenSettings)} className={`mh-home-side-btn mh-home-settings${spotClass('settings')}`} aria-label="設定"><span className="mh-home-side-ic"><Settings size={18}/></span><span className="mh-home-side-lb">設定</span></button>
         </div>
-        {/* イベントの帯1枚(案A)。2つ目からは横に送る。並びと送り方は上の homeBandSlides */}
-        {homeBandCount>0&&<div className="mh-home-band" data-home-band={homeBandSlides[homeBandShow]}
-          onPointerDown={e=>{homeBandTouchRef.current={...homeBandTouchRef.current,x:e.clientX,swiped:false};}}
-          onPointerUp={e=>{const t=homeBandTouchRef.current;if(t.x===null||homeBandCount<2)return;const dx=e.clientX-t.x;t.x=null;if(Math.abs(dx)>=40){t.swiped=true;homeBandGo(dx<0?1:-1);}}}
-          onClickCapture={e=>{if(homeBandTouchRef.current.swiped){homeBandTouchRef.current.swiped=false;e.stopPropagation();e.preventDefault();}}}>
-          <div className="mh-home-band-view">
+        {/* イベントの札(r1126-088・追記3): 札1枚分の場所を左右に送る。並びと送り方は上の homeBandSlides */}
+        {homeBandCount>0&&<div className="mh-home-band" data-home-band={homeBandSlides[homeBandShow]}>
+          <div className="mh-home-band-view"
+            onPointerDown={e=>{homeBandTouchRef.current={...homeBandTouchRef.current,x:e.clientX,swiped:false};}}
+            onPointerUp={e=>{const t=homeBandTouchRef.current;if(t.x===null||homeBandCount<2)return;const dx=e.clientX-t.x;t.x=null;if(Math.abs(dx)>=40){t.swiped=true;homeBandGo(dx<0?1:-1);}}}
+            onPointerCancel={()=>{homeBandTouchRef.current.x=null;}}
+            onClickCapture={e=>{if(homeBandTouchRef.current.swiped){homeBandTouchRef.current.swiped=false;e.stopPropagation();e.preventDefault();}}}>
             <div className="mh-home-band-track" style={{transform:`translateX(${-homeBandShow*100}%)`}}>
               {homeBandSlides.map((k,i)=>(
                 <div key={k} className="mh-home-band-slide" aria-hidden={i!==homeBandShow} {...(k==='xmas'?{'data-home-xmas-entry-strip':''}:{'data-home-event-strip':''})}>
                   {k==='xmas'&&<HomeXmasEventEntry onOpen={xmasEntry.onOpen} preOpen={!!xmasEntry.preOpen}/>}
-                  {/* 押すとモンヒロビートへ直に入る(2026-11-27 台帳 r1126-073 追記2・入口の整理①。前は更新履歴が開いた) */}
-                  {k==='event'&&<button type="button" data-home-event-banner className="mh-home-event-banner" tabIndex={i===homeBandShow?0:-1} onClick={homeEventCampaign.id==='xmas_2026'&&typeof onOpenXmasEvent==='function'?onOpenXmasEvent:onOpenRhythm} aria-label={`${homeEventCampaign.banner.title}${homeEventCampaign.banner.title2||''} ${homeEventCampaign.banner.sub}`}>
-                    {/* 1行目に題と期間(sub)、2行目に副題(title2)(r1119-131) */}
-                    <b className="r1"><span>{homeEventCampaign.banner.emoji} {homeEventCampaign.banner.title}</span><small>{homeEventCampaign.banner.sub}</small></b>{homeEventCampaign.banner.title2?<span className="t2">{homeEventCampaign.banner.title2}</span>:null}
+                  {/* 絵のあるイベントは絵の札(追記2)。押すとモンヒロビートへ直に入る(r1126-073 追記2) */}
+                  {k==='event'&&homeBandEventArt&&<button type="button" data-home-event-banner="art" className="mh-home-event-art" tabIndex={i===homeBandShow?0:-1} onClick={homeBandEvent.id==='xmas_2026'&&typeof onOpenXmasEvent==='function'?onOpenXmasEvent:onOpenRhythm} aria-label={`${homeBandEvent.banner.title}${homeBandEvent.banner.title2||''} ${homeBandEvent.banner.sub}`}>
+                    <img src={homeBandEventArt} alt="" draggable={false}/>
+                    <span className="mh-home-event-art-sub">{homeBandEvent.banner.sub}</span>
                   </button>}
-                  {k==='tour'&&<button type="button" data-home-card-tour={homeCardTour.id} className="mh-home-tour-banner" tabIndex={i===homeBandShow?0:-1} onClick={()=>onOpenCardTour(homeCardTour.id)} aria-label={`${homeCardTour.name} ${homeCardTour.sub}`}>
-                    <span aria-hidden="true">🏆</span><span><b>{homeCardTour.name}</b><small>{homeCardTour.sub}{homeCardTour.prize&&<em>{homeCardTour.prize}</em>}</small></span>
+                  {k==='event'&&!homeBandEventArt&&<button type="button" data-home-event-banner className="mh-home-event-banner" tabIndex={i===homeBandShow?0:-1} onClick={homeBandEvent.id==='xmas_2026'&&typeof onOpenXmasEvent==='function'?onOpenXmasEvent:onOpenRhythm} aria-label={`${homeBandEvent.banner.title}${homeBandEvent.banner.title2||''} ${homeBandEvent.banner.sub}`}>
+                    <b className="r1"><span>{homeBandEvent.banner.emoji} {homeBandEvent.banner.title}</span><small>{homeBandEvent.banner.sub}</small></b>{homeBandEvent.banner.title2?<span className="t2">{homeBandEvent.banner.title2}</span>:null}
+                  </button>}
+                  {k==='tour'&&<button type="button" data-home-card-tour={homeBandTour.id} className="mh-home-tour-banner" tabIndex={i===homeBandShow?0:-1} onClick={()=>onOpenCardTour(homeBandTour.id)} aria-label={`${homeBandTour.name} ${homeBandTour.sub}`}>
+                    <span aria-hidden="true">🏆</span><span><b>{homeBandTour.name}</b><small>{homeBandTour.sub}{homeBandTour.prize&&<em>{homeBandTour.prize}</em>}</small></span>
                   </button>}
                 </div>))}
             </div>
+            {/* 何枚目か(札の右下の中に小さく。札の外に段を足さない=マップを狭くしない)。押すとその札へ */}
+            {homeBandCount>1&&<span className="mh-home-band-dots" data-home-band-dots>{homeBandSlides.map((k,i)=><button key={k} type="button" className={i===homeBandShow?'on':''} aria-label={`${i+1}枚目を見る`} onClick={e=>{e.stopPropagation();homeBandGo(i-homeBandShow);}}><i/></button>)}</span>}
           </div>
-          {homeBandCount>1&&<div className="mh-home-band-nav">
-            <span className="mh-home-event-strip-dots">{homeBandSlides.map((k,i)=><button key={k} type="button" className={i===homeBandShow?'on':''} aria-label={`${i+1}枚目を見る`} onClick={()=>homeBandGo(i-homeBandShow)}><i/></button>)}</span>
-            <button type="button" className="mh-home-band-next" data-home-band-next onClick={()=>homeBandGo(1)}>次:{homeBandTitle(homeBandSlides[(homeBandShow+1)%homeBandCount])} ›</button>
-          </div>}
+          {/* 札の右の空き(前の HOME の時計の列の所)。裏クイックの札(45-quick-anywhere-float.jsx)はここに置く(r1126-088 ⑤)。押せない・何も描かない枠 */}
+          <span className="mh-home-band-quick-slot" data-quick-anywhere-slot aria-hidden="true"/>
         </div>}
         {/* 下部の統一ドック(2026-11-17 ホーム一新): 上から「次にやること」→施設カード×8(ふつうは4列×2段、広い場面と横画面では8枚1列。70-bootstrap.jsx)。
             施設ごとに担当の助手が分かれているので、8つとも同じ大きさ・同じ形の正方形カードにそろえた(2026-11-17 あっくん追加指示)。
@@ -70854,19 +70940,23 @@ const xmasNovelSe = (kind) => {
     //   se・playSeFile だと事件簿の音まで消える(r1126-072)。口が無い古い作りなら今までの口へ
     const playFile = typeof Audio_.fgPlaySeFile === 'function' ? Audio_.fgPlaySeFile : Audio_.playSeFile;
     if (kind === 'laugh' && typeof playFile === 'function') { void playFile(XMAS_NOVEL_LAUGH_SE); return; }
-    const map = { clap: 'join', laugh: 'enemySpecial', impact: 'enemyAttack', music: 'heal', tap: 'tap', clue: 'card', ok: 'victory', ng: 'guard' };
-    const fn = (Audio_.fgSe || Audio_.se)[map[kind] || 'tap'];
+    // 2026-11-28 社長「SEとかも明るすぎる」(台帳 r1126-093 追記1): 明るい・軽い音をやめ、手持ちの低く重い・静かな音へ。
+    //   物音(tap・clap)= 低いこもった「コトッ」(trainingDice)/ オルゴール(music)= 下がっていく2音(trainingFail)/ 手がかり = 低い2音(enemyMove)/
+    //   正解 = 重い「ドン」(attack。前の victory はファンファーレで、曲まで止めていた)/ はずれ = 低いうなり(trainingBad)/ 衝撃 = 今のまま(enemyAttack)
+    const map = { clap: 'trainingDice', laugh: 'enemySpecial', impact: 'enemyAttack', music: 'trainingFail', tap: 'trainingDice', clue: 'enemyMove', ok: 'attack', ng: 'trainingBad' };
+    const fn = (Audio_.fgSe || Audio_.se)[map[kind] || 'trainingDice'];
     if (typeof fn === 'function') fn();
   } catch (e) { /* 音が出せなくても読み進める */ }
 };
 // 台本の〔音:鐘〕〔音:時計〕〔音:手紙〕の行の音(r1126-066)。手持ちの効果音だけを使う(新しい音は作らない)。
-//   鐘 = 金属の音(guard)に、低く下がる余韻(trainingFail)を重ねた「ボーン」/ 時計 = 短い針の音(xpTick)/ 手紙 = 不穏にふくらむ音(enemyCharge)。
+//   鐘 = 金属の音(guard)に、低く下がる余韻(trainingFail)を重ねた「ボーン」/ 時計・手紙は下の表(r1126-093 追記1 で暗い音へ替えた)。
 //   効果音の音量(seBus)を通るので設定どおりの大きさ。BGM は止めない。
 //   連打しても重ねない: 次の行へ進んだら残りの回数は鳴らさず、同じ音を前の音のすぐあと(hold の間)には鳴らし直さない
 const XMAS_NOVEL_SE_SEQ = Object.freeze({
   bell: { gap: 1150, hold: 900, play: ['guard', 'trainingFail'] },
-  tick: { gap: 520, hold: 300, play: ['xpTick'] },
-  letter: { gap: 0, hold: 1500, play: ['enemyCharge'] },
+  //   r1126-093 追記1(暗く): 時計 = 高い「チッ」(xpTick)をやめ、低くこもった「コツ」(trainingDice)/ 手紙 = きらめきの入った enemyCharge をやめ、低いうなりと下がる2音(trainingBad・trainingFail)
+  tick: { gap: 520, hold: 300, play: ['trainingDice'] },
+  letter: { gap: 0, hold: 1500, play: ['trainingBad', 'trainingFail'] },
 });
 let xmasNovelSeTimers = [];
 let xmasNovelSeLast = { kind: '', at: 0 };
@@ -70892,29 +70982,88 @@ const xmasNovelRowSe = (kind, times) => {
     else xmasNovelSeTimers.push(setTimeout(() => xmasNovelSeHit(kind), at));
   }
 };
-//  場面の途中で曲を変える所(台本の「切→温」のうち、新曲を当てた所・台帳 r1126-039)。場面ID → [その行から先, 曲の鍵]
-//  END-G: 屋根裏の会場のやり直しのクリスマス会と本物のサンタのそり(「温 ★」)から Dear Santa。それより前のせつない所は今の曲のまま
-const XMAS_NOVEL_BGM_SHIFT = Object.freeze({
-  'END-G': [['G-10', 'melo_dear_santa']],
+//  事件簿の曲(2026-11-28 社長「音楽で声有りはやめて」「ちゃんとばめんにあったやつに」「音無しとかばめんによって」「全体的に暗く」・台帳 r1126-093)。
+//    歌(声)の入った曲は使わない。声の有無は声の分離器で測った(表と測り方: docs/progress/event-xmas-2026/NOVEL-BGM-R1126-093.md)。
+//    'silence' は曲を止める(死の場面・張りつめた所・静かな独白)。台本データ(79-xmas-novel-script.jsx)の曲より、この表が勝つ
+const XMAS_NOVEL_BGM_SCENE = Object.freeze({
+  'OUT-0-1': 'original_profile', 'OUT-0-2': 'melo_dullahan_clockwork', 'C0-1': 'original_profile', 'C0-2': 'original_profile',
+  'OUT-1': 'melo_dullahan_clockwork', 'C1-1': 'original_profile', 'C1-2': 'original_profile', 'C1-3': 'melo_dullahan_clockwork',
+  'C1-4': 'melo_dullahan_clockwork', 'C1-5': 'close_to_your_heart_alt', 'C1-6': 'melo_dullahan_steel_ghost', 'C1-M': 'silence',
+  'C2-1': 'melo_dullahan_clockwork', 'C2-L': 'silence', 'C2-M': 'makutsu_no_senritsu', 'C2-2': 'original_profile',
+  'C2-3': 'melo_dullahan_steel_ghost', 'C2-4': 'melo_dullahan_steel_ghost_alt', 'C2-5': 'original_dullahan', 'C3-1': 'silence',
+  'C3-2': 'melo_dullahan_clockwork_alt', 'C3-3': 'melo_dullahan_clockwork', 'C3-4': 'melo_dullahan_clockwork_alt', 'C3-5': 'melo_erfolg_piano',
+  'C3-M': 'melo_erfolg_piano', 'C4-1': 'makutsu_no_senritsu', 'C4-2': 'silence', 'C4-3': 'melo_dullahan_clockwork_alt',
+  'C4-4': 'melo_dullahan_clockwork', 'C4-5': 'melo_dullahan_steel_ghost', 'C4-M': 'silence', 'C5-1': 'melo_erfolg_piano',
+  'C5-2': 'melo_dullahan_steel_ghost_alt', 'C5-3': 'melo_dullahan_steel_ghost', 'C5-4': 'melo_dullahan_steel_ghost', 'C5-5': 'makutsu_no_senritsu',
+  'C5-M': 'melo_dullahan_clockwork', 'C6-1': 'melo_dullahan_clockwork_alt', 'C6-2': 'melo_dullahan_steel_ghost',
+  'C6-3': 'melo_dullahan_clockwork_alt', 'C6-4': 'melo_dullahan_steel_ghost_alt', 'C6-5': 'melo_dullahan_steel_ghost',
+  'C6-6': 'melo_dullahan_clockwork_alt', 'C6-7': 'original_dullahan', 'C6-8': 'melo_erfolg_piano', 'C6-9': 'melo_dullahan_steel_ghost',
+  'C6-M': 'melo_erfolg_piano', 'C7-1': 'melo_dullahan_clockwork_alt', 'C7-2': 'melo_dullahan_steel_ghost_alt', 'C7-A': 'melo_erfolg_piano',
+  'C7-B': 'melo_dullahan_clockwork', 'C7-P1': 'original_dullahan', 'C7-P2': 'melo_erfolg_piano', 'C7-P3': 'melo_dullahan_clockwork',
+  'C7-4a': 'melo_erfolg_piano', 'C7-4b': 'melo_dullahan_steel_ghost', 'C7-5a': 'melo_erfolg_piano', 'C7-5b': 'melo_dullahan_steel_ghost',
+  'C7-W': 'melo_dullahan_clockwork_alt', 'C8-1': 'melo_dullahan_steel_ghost_alt', 'C8-2': 'makutsu_no_senritsu', 'C8-3': 'melo_erfolg_piano',
+  'C9-1': 'silence', 'C9-2': 'close_to_your_heart_alt', 'C10-1': 'melo_dullahan_steel_ghost', 'C10-2': 'makutsu_no_senritsu',
+  'C10-3': 'melo_dullahan_steel_ghost', 'C10-4': 'melo_dullahan_steel_ghost_alt', 'C11-1': 'melo_dullahan_steel_ghost_alt',
+  'C11-N': 'melo_erfolg_piano', 'C11-A': 'melo_erfolg_piano', 'C11-B': 'melo_dullahan_clockwork', 'C2-X': 'melo_dullahan_steel_ghost',
+  'END-X1': 'original_game_over', 'C5-X': 'melo_dullahan_steel_ghost', 'END-X2': 'original_game_over', 'C6-X': 'melo_dullahan_steel_ghost',
+  'END-X3': 'original_game_over', 'C2-Y': 'melo_dullahan_steel_ghost', 'END-X4': 'original_game_over', 'C10-X': 'melo_dullahan_steel_ghost',
+  'END-X5': 'original_game_over', 'END-M1': 'original_game_over', 'END-M2': 'melo_dullahan_steel_ghost', 'END-M3': 'melo_dullahan_steel_ghost',
+  'END-M4': 'original_game_over', 'END-M5': 'melo_dullahan_steel_ghost', 'END-G': 'melo_erfolg_piano', 'OUT-G': 'close_to_your_heart_alt',
+  'END-N': 'melo_erfolg_piano', 'OUT-N': 'melo_erfolg_piano', 'END-A': 'melo_dullahan_clockwork', 'OUT-A': 'melo_dullahan_clockwork',
+  'END-B': 'melo_dullahan_steel_ghost', 'OUT-B': 'melo_dullahan_steel_ghost', 'C1-O': 'original_profile', 'END-O': 'original_profile',
+  'OUT-O': 'original_profile', 'END-O2': 'close_to_your_heart_alt', 'OUT-O2': 'close_to_your_heart_alt', 'C12-1': 'close_to_your_heart_alt',
+  'C12-2': 'melo_erfolg_piano', 'C12-3': 'original_dullahan', 'C12-4': 'melo_dullahan_clockwork', 'C12-5': 'melo_dullahan_steel_ghost',
+  'C12-6': 'silence', 'C12-7': 'melo_erfolg_piano',
 });
-//  いまの行で鳴らす曲: 場面の曲 → その場面のいまの行までに出てきた行の曲・上の表の曲(あとのものが勝つ)
+//  場面の途中で曲を変える・止める所。場面ID → [その行から先, 曲の鍵](a/s の2つある行は、前の方の行に付ける)
+const XMAS_NOVEL_BGM_SHIFT = Object.freeze({
+  'C2-3': [['2-3-7', 'silence']],
+  'C5-4': [['5-4-5', 'silence']],
+  'C6-5': [['6-5-3', 'silence']],
+  'C7-1': [['7-1-3a', 'melo_dullahan_steel_ghost_alt']],
+  'C7-W': [['7-W-14', 'melo_dullahan_steel_ghost_alt']],
+  'C10-1': [['10-1-5', 'silence']],
+  'C10-2': [['10-2-7', 'silence']],
+  'C10-3': [['10-3-7', 'silence']],
+  'C2-X': [['2-X-6a', 'silence']],
+  'C5-X': [['5-X-4a', 'silence']],
+  'C6-X': [['6-X-8', 'silence']],
+  'C2-Y': [['2-Y-10', 'silence']],
+  'C10-X': [['10-X-8', 'silence']],
+  'END-M2': [['M2-4', 'silence']],
+  'END-M5': [['M5-5a', 'silence']],
+  'END-B': [['B-3', 'silence']],
+  'END-G': [['G-10', 'close_to_your_heart_alt']],
+  'C12-4': [['12-4-5', 'silence']],
+});
+//  歌の入った曲を、まちがって鳴らさないための網(台本データの古い曲の鍵が残っていても、声の無い曲へ替える)
+const XMAS_NOVEL_VOCAL_BGM = Object.freeze({
+  kaze_ga_soyogu: 'original_profile', melo_kiss_mystery: 'melo_dullahan_steel_ghost_alt', melo_kiss_mystery_short: 'melo_dullahan_steel_ghost_alt',
+  melo_sad_song: 'melo_erfolg_piano', melo_sad_song_short: 'melo_erfolg_piano', melo_dear_santa: 'close_to_your_heart_alt', melo_dear_santa_short: 'close_to_your_heart_alt',
+  melo_winter_fall: 'close_to_your_heart_alt', melo_winter_fall_short: 'close_to_your_heart_alt', close_to_your_heart: 'close_to_your_heart_alt',
+});
+//  いまの行で鳴らす曲: 場面の曲(上の表 → 台本データ)→ その場面のいまの行までの切り替え(あとのものが勝つ)。
+//    上の表にある場面は、台本データの行の曲(歌の入った新曲を指していた)を使わない
 const xmasNovelBgmAt = (scene, idx) => {
   if (!scene) return '';
-  let key = scene.bgm || '';
+  const fixed = Object.prototype.hasOwnProperty.call(XMAS_NOVEL_BGM_SCENE, scene.id);
+  let key = fixed ? XMAS_NOVEL_BGM_SCENE[scene.id] : (scene.bgm || '');
   const rows = Array.isArray(scene.rows) ? scene.rows : [];
   const at = Number.isFinite(idx) ? idx : 0;
   const shifts = XMAS_NOVEL_BGM_SHIFT[scene.id] || [];
   for (let i = 0; i <= at && i < rows.length; i += 1) {
     const r = rows[i];
-    if (r && r.bgm) key = r.bgm;
+    if (!fixed && r && r.bgm) key = r.bgm;
     shifts.forEach(([rowId, k]) => { if (r && r.id === rowId) key = k; });
   }
-  return key;
+  return XMAS_NOVEL_VOCAL_BGM[key] || key;
 };
-const xmasNovelBgm = (key) => {
+const xmasNovelBgm = (keyIn) => {
+  let key = keyIn;
   try {
     if (typeof Audio_ === 'undefined' || !Audio_) return;
     if (!key) return;
+    key = XMAS_NOVEL_VOCAL_BGM[key] || key; // 歌の入った曲は鳴らさない(r1126-093)
     if (key === 'silence') { Audio_.stopBGM(); return; }
     if (typeof Audio_.fadeToBGM === 'function') Audio_.fadeToBGM(key, 700); else Audio_.playBGM(key);
   } catch (e) { /* 曲が鳴らせなくても読み進める */ }
@@ -71234,7 +71383,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
     let alive = true;
     try { prevBgm.current = typeof Audio_ !== 'undefined' && Audio_.currentBgmKey ? Audio_.currentBgmKey() : null; } catch (e) { prevBgm.current = null; }
     xmasNovelLoad(S).then((s) => { if (alive) { saveRef.current = s; setSave(s); } });
-    xmasNovelBgm('melo_kiss_mystery');
+    xmasNovelBgm('melo_dullahan_clockwork'); // 開いた所(題の画面)。歌の入った Kiss からはじまるミステリーをやめ、柱時計の不穏な曲に(r1126-093)
     return () => { alive = false; xmasNovelSeStop(); if (storeTimer.current) clearTimeout(storeTimer.current); };
   }, []);
   const persist = (next, now = false) => {
@@ -71283,7 +71432,8 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
       else setReveal(null);
       if (bodyKey) lastBodyRef.current = bodyKey; // 台詞をはさんで同じ人の影に戻るときは、暗転させない(場面が替わったら忘れる)
     }
-    if (r.bgm && r.bgm !== lastBgm.current) { lastBgm.current = r.bgm; xmasNovelBgm(r.bgm); }
+    // 行の曲(台本データ)は、返しの行のときだけここで鳴らす。本筋の行は下の xmasNovelBgmAt(場面の曲の表)が決める(r1126-093)
+    if (opts.quiet && r.bgm && (XMAS_NOVEL_VOCAL_BGM[r.bgm] || r.bgm) !== lastBgm.current) { lastBgm.current = XMAS_NOVEL_VOCAL_BGM[r.bgm] || r.bgm; xmasNovelBgm(r.bgm); }
     if (r.t === 'clue') { setGot({ n: r.clue, d: r.x, add: !!r.add }); xmasNovelSe('clue'); }
     if (r.t === 'line' && r.n === '？？？' && xmasNovelIsLaugh(r)) xmasNovelSe('laugh');
     if (r.t === 'line') {
@@ -139610,6 +139760,8 @@ function MonsterHeroGame() {
       if (!btn) return;
       // モンヒロビートの演奏エリアの中は鳴らさない(ノーツの音と重ねない。今までもここは鳴っていなかった)
       if (btn.closest('[data-rhythm-play-area]')) return;
+      // 事件簿(ミステリーノベル)の中は、明るい「ピッ」ではなく低く小さい「コトッ」(手持ちの trainingDice)。表の口(fgSe)から鳴らす(r1126-093 追記1)
+      if (btn.closest('[data-xmas-novel]') && Audio_.fgSe && typeof Audio_.fgSe.trainingDice === 'function') { Audio_.fgSe.trainingDice(); return; }
       // ボタンの音は、裏のバトルの音と別の口(uiTap)で鳴らす。モンヒロビートの画面・助手ライフの裏クイック中は
       // 効果音の口(seBus)を0にしているので、se/fgSe では鳴らなかった(2026-11-24 r1119-164)
       if (Audio_.uiTap) { Audio_.uiTap(); return; }
