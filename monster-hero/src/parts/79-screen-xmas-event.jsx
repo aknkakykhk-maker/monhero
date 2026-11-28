@@ -197,7 +197,7 @@ const XmasStoryTab = ({ version = 0, allOpen = false, fightWays = [], onRead, on
       )}
       <XmasCastPanel no={reached} compact />
       <section>
-        <XmasSectionTitle>{preMain ? 'ひとりで進める物語' : '序章を読み返す'}</XmasSectionTitle>
+        <XmasSectionTitle>{preMain ? 'ミステリーノベル『モンヒロ事件簿』' : '序章を読み返す'}</XmasSectionTitle>
         <p className="mb-2 px-0.5 text-[10px] font-bold leading-relaxed text-slate-300" style={JA_LABEL_STYLE}>{jaWrap(storyNote)}</p>
         <ol data-xmas-story-list className="space-y-1.5">
           {shownChapters.map((c) => {

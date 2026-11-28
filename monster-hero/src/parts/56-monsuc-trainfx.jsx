@@ -208,7 +208,7 @@ function MsxTrainFinish({ run, o }) {
       <span className="speed" style={{ '--d': '1.2s' }}/>
       <span className="aura mix" style={{ '--d': '1.25s' }}/>
       {orbs(1.2, true)}
-      <b className="word mn" style={{ '--d': '1.2s', '--wd': '.35s' }}>みんなの力が 一つに…!</b>
+      <b className="word mn" style={{ '--d': '1.2s', '--wd': '.35s' }}>みんなの力が 1つに…!</b>
       <span className="flash mix" style={{ '--d': '1.55s' }}/>
       <span className="ring rainbow" style={{ '--d': '1.55s' }}/>{lite ? null : <span className="ring shock" style={{ '--d': '1.6s' }}/>}
       {msxTfxBits(lite ? 5 : 10, 1.55, ['💗', '✨', '💥', '💞'])}

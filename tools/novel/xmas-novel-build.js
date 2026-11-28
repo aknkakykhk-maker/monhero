@@ -313,6 +313,9 @@ const parseRow = (cells, where) => {
       if (w) body = w; else note(where, `遺体の印の人が分からない「${k}」`);
       return '';
     }).trim();
+    // 〔血なし〕… 遺体の行で、血だまりと床の赤みを出さない(凍えて・首を絞められて亡くなった場面。2026-11-28 ミハリの総点検 5番)
+    let noBlood = false;
+    s = s.replace(/〔血なし〕/g, () => { noBlood = true; return ''; }).trim();
     // 〔音:鐘〕〔音:時計〕〔音:手紙〕… その行で鳴らす効果音(r1126-066)。鐘は「ボーン」、時計は「カチ」の数だけ鳴らす(3回まで)。
     //   〔音:鐘×2〕のように回数も書ける。行のどこに書いてもよい(画面には出さない)
     let snd = ''; let sndN = 0;
@@ -343,6 +346,7 @@ const parseRow = (cells, where) => {
     const uniq = [...new Set(fx.filter((f) => f !== 'band'))];
     if (uniq.length) row.fx = uniq;
     if (body) row.body = body;
+    if (body && noBlood) row.noBlood = true;
     if (frame) row.f = frame;
     if (snd) { row.se = snd; const c = Math.max(1, Math.min(3, sndN || 1)); if (c > 1) row.seN = c; }
     else if (fx.includes('se')) row.se = /パチパチ|拍手/.test(s) ? 'clap' : /悲鳴|ドン|バタン|ガタン|ブツン|ザザッ/.test(s) ? 'impact' : /オルゴール|♪/.test(s) ? 'music' : 'tap';
