@@ -33,7 +33,7 @@ function MsxEvResult({ delta, hasStats, skip = null }) {
         : bufs.length ? null : <span data-msx-ev-none>変わったことはなかった</span>}
       {bufs.map((c) => { const d = typeof msxBuffDef === 'function' ? msxBuffDef(c.buff) : null; return (
         <div key={`bl-${c.buff}`} className="msx-ev-bfl" data-msx-ev-chip={c.k} data-msx-ev-buff={c.buff} style={{ marginTop: row.length ? 4 : 0, fontSize: 12, fontWeight: 800, color: c.good ? '#166534' : '#b91c1c', textAlign: 'left', lineHeight: 1.45 }}>
-          {d ? <><b style={{ fontWeight: 900 }}>{d.icon} {d.name}になった({d.dur})</b><br/>{String(d.text).split('・').map((t, i) => <span key={i} style={{ display: 'inline-block', whiteSpace: 'nowrap' }}>{i ? '・' : ''}{t}</span>)}</> : msxBuffGrantText(c.buff, true)}
+          {d ? <><b style={{ fontWeight: 900 }}>{cardIconNode(d.icon, 14)} {d.name}になった({d.dur})</b><br/>{String(d.text).split('・').map((t, i) => <span key={i} style={{ display: 'inline-block', whiteSpace: 'nowrap' }}>{i ? '・' : ''}{t}</span>)}</> : msxBuffGrantText(c.buff, true)}
         </div>); })}
     </div>
   );
