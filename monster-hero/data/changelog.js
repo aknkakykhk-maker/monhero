@@ -113,6 +113,14 @@ const CHANGELOG = [
     assistantNotice:{ id:'update_notice_glass_crown_v1', type:'content' },
   },
   {
+    // HOME の札の光り方を、見た目はそのままで軽い動かし方にした(台帳 r1126-104 追記4・追跡表 r1128-072・開発部)
+    date: "2026-11-28 18:43", type:'update', group:'ui', title:'HOME が軽くなりました', status:'new',
+    items:[
+      'HOME にいるあいだの動きを軽くしました。見た目や並びは今までと同じです。',
+      'HOME を開いたままにしていても、スマホが熱くなりにくくなります。',
+    ],
+  },
+  {
     // 台帳 r1126-111。結果への反応の台詞を選ぶところで例外が出て、助手が黙っていた
     date: "2026-11-28 16:58", type:'fix', group:'rhythm', title:'みんなで対戦で、呼んだ助手が結果にひとこと言うようになりました', status:'new',
     items:[
