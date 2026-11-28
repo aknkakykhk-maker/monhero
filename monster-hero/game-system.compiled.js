@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 798026663155565a
+// source-sha256: e845daac16d5acf0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -10274,9 +10274,14 @@ const Audio_ = (() => {
       stopPreview(false);
       stopOthers();
       stopJingles();
-      void nvAmbient('none');
+      {
+        const want = nvAmbWant;
+        void nvAmbient('none');
+        nvAmbWant = want;
+      }
     } else if (currentKey) playBGM(currentKey);
     await ensure();
+    if (enabled) nvAmbientResume();
   };
   const isEnabled = () => enabled;
   const debugPlayingTracks = () => {
@@ -10409,6 +10414,7 @@ const Audio_ = (() => {
       } catch (e) {}
     }
     if (enabled && currentKey && !bgmSource) playBGM(currentKey);
+    if (enabled) nvAmbientResume();
   };
   const unlock = async (playTestTone = false) => {
     if (!enabled) {
@@ -10451,6 +10457,7 @@ const Audio_ = (() => {
     await Promise.all([ensureAudioCtxRunning(), toneStart || Promise.resolve(), load()]);
     started = !!Tone;
     if (currentKey) playBGM(currentKey);
+    nvAmbientResume();
     return !ctx || ctx.state === 'running';
   };
   const ensurePlaying = key => {
@@ -11455,7 +11462,7 @@ const Audio_ = (() => {
       if (!Tone) return;
       const t = Tone.now();
       const s = new Tone.MetalSynth({
-        frequency: high ? 340 : 240,
+        frequency: high ? 640 : 470,
         envelope: {
           attack: 0.001,
           decay: 0.035,
@@ -11463,22 +11470,22 @@ const Audio_ = (() => {
         },
         harmonicity: 3.1,
         modulationIndex: 10,
-        resonance: high ? 2600 : 1800,
-        octaves: 0.6,
-        volume: -32
+        resonance: high ? 3800 : 3000,
+        octaves: 0.8,
+        volume: -12
       }).connect(seBus);
       s.triggerAttackRelease('64n', t);
       const k = new Tone.MembraneSynth({
-        pitchDecay: 0.01,
+        pitchDecay: 0.008,
         octaves: 2,
         envelope: {
           attack: 0.001,
           decay: 0.05,
           sustain: 0
         },
-        volume: -30
+        volume: -20
       }).connect(seBus);
-      k.triggerAttackRelease(high ? 'G2' : 'D2', '64n', t);
+      k.triggerAttackRelease(high ? 'C4' : 'G3', '64n', t);
       setTimeout(() => {
         try {
           s.dispose();
@@ -11491,7 +11498,7 @@ const Audio_ = (() => {
       await ensure();
       if (!Tone) return;
       const t = Tone.now();
-      const f = new Tone.Filter(700, 'lowpass').connect(seBus);
+      const f = new Tone.Filter(1800, 'lowpass').connect(seBus);
       const s = new Tone.Synth({
         oscillator: {
           type: 'sawtooth'
@@ -11502,11 +11509,11 @@ const Audio_ = (() => {
           sustain: 0,
           release: 0.2
         },
-        volume: -22
+        volume: -8
       }).connect(f);
-      s.triggerAttackRelease('D3', '4n', t);
+      s.triggerAttackRelease('D4', '4n', t);
       try {
-        s.frequency.rampTo('G2', 0.7, t);
+        s.frequency.rampTo('G3', 0.7, t);
       } catch (e) {}
       setTimeout(() => {
         try {
@@ -11528,19 +11535,19 @@ const Audio_ = (() => {
           decay: 0.35,
           sustain: 0
         },
-        volume: -12
+        volume: -6
       }).connect(seBus);
-      s.triggerAttackRelease('E1', '8n', t);
+      s.triggerAttackRelease('E2', '8n', t);
       const n = new Tone.NoiseSynth({
         noise: {
-          type: 'brown'
+          type: 'pink'
         },
         envelope: {
           attack: 0.002,
           decay: 0.15,
           sustain: 0
         },
-        volume: -20
+        volume: -8
       }).connect(seBus);
       n.triggerAttackRelease('16n', t);
       setTimeout(() => {
@@ -11555,7 +11562,11 @@ const Audio_ = (() => {
       await ensure();
       if (!Tone) return;
       const t = Tone.now();
-      const f = new Tone.Filter(520, 'lowpass').connect(seBus);
+      const f = new Tone.Filter({
+        frequency: 700,
+        type: 'bandpass',
+        Q: 0.7
+      }).connect(seBus);
       const n = new Tone.NoiseSynth({
         noise: {
           type: 'pink'
@@ -11566,12 +11577,12 @@ const Audio_ = (() => {
           sustain: 0.6,
           release: 1.2
         },
-        volume: -24
+        volume: 0
       }).connect(f);
       n.triggerAttackRelease(1.2, t);
       try {
-        f.frequency.rampTo(900, 0.9, t);
-        f.frequency.rampTo(380, 1.4, t + 0.9);
+        f.frequency.rampTo(1500, 0.9, t);
+        f.frequency.rampTo(600, 1.4, t + 0.9);
       } catch (e) {}
       setTimeout(() => {
         try {
@@ -11595,7 +11606,7 @@ const Audio_ = (() => {
           decay: 0.025,
           sustain: 0
         },
-        volume: -24
+        volume: -8
       }).connect(f);
       [0, 0.21, 0.37, 0.8, 1.05, 1.5].forEach(d => n.triggerAttackRelease('64n', t + d));
       setTimeout(() => {
@@ -11620,7 +11631,7 @@ const Audio_ = (() => {
           decay: 0.12,
           sustain: 0
         },
-        volume: -28
+        volume: -14
       }).connect(f);
       n.triggerAttackRelease('16n', t);
       n.triggerAttackRelease('32n', t + 0.14);
@@ -11647,7 +11658,7 @@ const Audio_ = (() => {
         modulationIndex: 20,
         resonance: 3200,
         octaves: 1,
-        volume: -26
+        volume: -12
       }).connect(reverb);
       s.triggerAttackRelease('16n', t);
       setTimeout(() => {
@@ -11671,9 +11682,9 @@ const Audio_ = (() => {
           sustain: 0.4,
           release: 1.6
         },
-        volume: -20
+        volume: -10
       }).connect(reverb);
-      v.triggerAttackRelease(['C2', 'C#2', 'G2'], 1.1, t);
+      v.triggerAttackRelease(['C3', 'C#3', 'G3'], 1.1, t);
       setTimeout(() => {
         try {
           v.dispose();
@@ -11695,7 +11706,7 @@ const Audio_ = (() => {
           sustain: 0,
           release: 0.6
         },
-        volume: -24
+        volume: -14
       }).connect(reverb);
       [[0, 'E5'], [0.42, 'D5'], [0.84, 'C5'], [1.4, 'A4']].forEach(([d, n]) => s.triggerAttackRelease(n, '4n', t + d));
       setTimeout(() => {
@@ -11717,12 +11728,33 @@ const Audio_ = (() => {
           decay: 0.09,
           sustain: 0
         },
-        volume: -22
+        volume: -6
       }).connect(seBus);
-      [0, 0.55, 1.1].forEach((d, i) => s.triggerAttackRelease(i % 2 ? 'A1' : 'G1', '32n', t + d));
+      const sf = new Tone.Filter({
+        frequency: 1500,
+        type: 'bandpass',
+        Q: 1.2
+      }).connect(seBus);
+      const sc = new Tone.NoiseSynth({
+        noise: {
+          type: 'pink'
+        },
+        envelope: {
+          attack: 0.002,
+          decay: 0.05,
+          sustain: 0
+        },
+        volume: -4
+      }).connect(sf);
+      [0, 0.55, 1.1].forEach((d, i) => {
+        s.triggerAttackRelease(i % 2 ? 'A2' : 'G2', '32n', t + d);
+        sc.triggerAttackRelease('64n', t + d);
+      });
       setTimeout(() => {
         try {
           s.dispose();
+          sc.dispose();
+          sf.dispose();
         } catch (e) {}
       }, 1700);
     },
@@ -11739,12 +11771,33 @@ const Audio_ = (() => {
           decay: 0.07,
           sustain: 0
         },
-        volume: -20
+        volume: -6
       }).connect(seBus);
-      [0, 0.2, 0.4, 0.6, 0.8, 1.0].forEach((d, i) => s.triggerAttackRelease(i % 2 ? 'A1' : 'G1', '32n', t + d));
+      const sf = new Tone.Filter({
+        frequency: 1500,
+        type: 'bandpass',
+        Q: 1.2
+      }).connect(seBus);
+      const sc = new Tone.NoiseSynth({
+        noise: {
+          type: 'pink'
+        },
+        envelope: {
+          attack: 0.002,
+          decay: 0.05,
+          sustain: 0
+        },
+        volume: -4
+      }).connect(sf);
+      [0, 0.2, 0.4, 0.6, 0.8, 1.0].forEach((d, i) => {
+        s.triggerAttackRelease(i % 2 ? 'A2' : 'G2', '32n', t + d);
+        sc.triggerAttackRelease('64n', t + d);
+      });
       setTimeout(() => {
         try {
           s.dispose();
+          sc.dispose();
+          sf.dispose();
         } catch (e) {}
       }, 1500);
     },
@@ -11761,19 +11814,19 @@ const Audio_ = (() => {
           decay: 0.16,
           sustain: 0
         },
-        volume: -8
+        volume: -2
       }).connect(seBus);
-      s.triggerAttackRelease('C2', '16n', t);
+      s.triggerAttackRelease('C3', '16n', t);
       const n = new Tone.NoiseSynth({
         noise: {
           type: 'pink'
         },
         envelope: {
           attack: 0.001,
-          decay: 0.06,
+          decay: 0.08,
           sustain: 0
         },
-        volume: -16
+        volume: 2
       }).connect(seBus);
       n.triggerAttackRelease('64n', t);
       setTimeout(() => {
@@ -11796,20 +11849,20 @@ const Audio_ = (() => {
           decay: 0.5,
           sustain: 0
         },
-        volume: -11
+        volume: -4
       }).connect(seBus);
-      s.triggerAttackRelease('D1', '4n', t);
-      s.triggerAttackRelease('C1', '8n', t + 0.18);
+      s.triggerAttackRelease('D2', '4n', t);
+      s.triggerAttackRelease('C2', '8n', t + 0.18);
       const n = new Tone.NoiseSynth({
         noise: {
-          type: 'brown'
+          type: 'pink'
         },
         envelope: {
           attack: 0.01,
           decay: 0.4,
           sustain: 0
         },
-        volume: -22
+        volume: -2
       }).connect(seBus);
       n.triggerAttackRelease('8n', t + 0.05);
       setTimeout(() => {
@@ -11835,7 +11888,7 @@ const Audio_ = (() => {
           sustain: 0,
           release: 0.08
         },
-        volume: -22
+        volume: 4
       }).connect(f);
       n.triggerAttackRelease(0.16, t);
       try {
@@ -11862,12 +11915,12 @@ const Audio_ = (() => {
         },
         harmonicity: 3.1,
         modulationIndex: 8,
-        resonance: 1500,
+        resonance: 2500,
         octaves: 0.5,
-        volume: -28
+        volume: -14
       }).connect(seBus);
       m.triggerAttackRelease('64n', t);
-      const f = new Tone.Filter(600, 'lowpass').connect(seBus);
+      const f = new Tone.Filter(1800, 'lowpass').connect(seBus);
       const s = new Tone.Synth({
         oscillator: {
           type: 'sawtooth'
@@ -11878,11 +11931,11 @@ const Audio_ = (() => {
           sustain: 0,
           release: 0.15
         },
-        volume: -25
+        volume: -10
       }).connect(f);
-      s.triggerAttackRelease('A2', '8n', t + 0.08);
+      s.triggerAttackRelease('A3', '8n', t + 0.08);
       try {
-        s.frequency.rampTo('E2', 0.45, t + 0.08);
+        s.frequency.rampTo('E3', 0.45, t + 0.08);
       } catch (e) {}
       setTimeout(() => {
         try {
@@ -11897,7 +11950,11 @@ const Audio_ = (() => {
       await ensure();
       if (!Tone) return;
       const t = Tone.now();
-      const f = new Tone.Filter(600, 'lowpass').connect(seBus);
+      const f = new Tone.Filter({
+        frequency: 800,
+        type: 'bandpass',
+        Q: 0.7
+      }).connect(seBus);
       const n = new Tone.NoiseSynth({
         noise: {
           type: 'pink'
@@ -11908,12 +11965,12 @@ const Audio_ = (() => {
           sustain: 0.2,
           release: 0.6
         },
-        volume: -18
+        volume: 2
       }).connect(f);
       n.triggerAttackRelease(0.6, t);
       try {
-        f.frequency.rampTo(1500, 0.3, t);
-        f.frequency.rampTo(400, 0.9, t + 0.3);
+        f.frequency.rampTo(2000, 0.3, t);
+        f.frequency.rampTo(700, 0.9, t + 0.3);
       } catch (e) {}
       setTimeout(() => {
         try {
@@ -11927,8 +11984,10 @@ const Audio_ = (() => {
     kind: 'none',
     stop: null
   };
+  let nvAmbWant = 'none';
   const nvAmbient = async kindIn => {
     const kind = kindIn || 'none';
+    nvAmbWant = kind;
     if (kind === nvAmb.kind) return;
     const prev = nvAmb;
     const me = {
@@ -11941,9 +12000,23 @@ const Audio_ = (() => {
         prev.stop();
       } catch (e) {}
     }
-    if (kind === 'none' || !enabled) return;
+    if (kind === 'none') return;
+    if (!enabled) {
+      nvAmb = {
+        kind: 'none',
+        stop: null
+      };
+      return;
+    }
     await ensure();
-    if (!Tone || nvAmb !== me || !enabled) return;
+    if (nvAmb !== me) return;
+    if (!Tone || !enabled) {
+      nvAmb = {
+        kind: 'none',
+        stop: null
+      };
+      return;
+    }
     const nodes = [];
     const timers = [];
     try {
@@ -11951,9 +12024,13 @@ const Audio_ = (() => {
       nodes.push(g);
       if (kind === 'wind' || kind === 'blizzard' || kind === 'room') {
         const n = new Tone.Noise(kind === 'room' ? 'brown' : 'pink');
-        n.volume.value = kind === 'blizzard' ? -27 : kind === 'wind' ? -31 : -36;
-        const f = new Tone.Filter(kind === 'blizzard' ? 650 : kind === 'wind' ? 420 : 200, 'lowpass');
-        const lfo = new Tone.LFO(kind === 'blizzard' ? 0.21 : 0.09, kind === 'room' ? 120 : 260, kind === 'blizzard' ? 1250 : kind === 'wind' ? 780 : 320);
+        n.volume.value = kind === 'blizzard' ? 4 : kind === 'wind' ? 1 : 2;
+        const f = new Tone.Filter({
+          frequency: kind === 'blizzard' ? 900 : kind === 'wind' ? 650 : 450,
+          type: 'bandpass',
+          Q: 0.7
+        });
+        const lfo = new Tone.LFO(kind === 'blizzard' ? 0.21 : kind === 'wind' ? 0.09 : 0.05, kind === 'blizzard' ? 450 : kind === 'wind' ? 380 : 320, kind === 'blizzard' ? 2000 : kind === 'wind' ? 1300 : 650);
         n.connect(f);
         f.connect(g);
         lfo.connect(f.frequency);
@@ -11963,23 +12040,27 @@ const Audio_ = (() => {
       }
       if (kind === 'fire') {
         const n = new Tone.Noise('brown');
-        n.volume.value = -36;
-        const f = new Tone.Filter(170, 'lowpass');
+        n.volume.value = -2;
+        const f = new Tone.Filter({
+          frequency: 420,
+          type: 'bandpass',
+          Q: 0.8
+        });
         n.connect(f);
         f.connect(g);
         n.start();
         nodes.push(n, f);
-        const bp = new Tone.Filter(1700, 'bandpass').connect(g);
+        const bp = new Tone.Filter(2400, 'bandpass').connect(g);
         const c = new Tone.NoiseSynth({
           noise: {
             type: 'white'
           },
           envelope: {
             attack: 0.001,
-            decay: 0.02,
+            decay: 0.025,
             sustain: 0
           },
-          volume: -31
+          volume: -6
         }).connect(bp);
         nodes.push(bp, c);
         const pop = () => {
@@ -11995,36 +12076,36 @@ const Audio_ = (() => {
       }
       if (kind === 'clock') {
         const m = new Tone.MetalSynth({
-          frequency: 300,
+          frequency: 600,
           envelope: {
             attack: 0.001,
-            decay: 0.03,
-            release: 0.02
+            decay: 0.05,
+            release: 0.03
           },
           harmonicity: 3.1,
-          modulationIndex: 10,
-          resonance: 2200,
-          octaves: 0.6,
-          volume: -37
+          modulationIndex: 12,
+          resonance: 3600,
+          octaves: 0.8,
+          volume: -12
         }).connect(g);
         const k = new Tone.MembraneSynth({
-          pitchDecay: 0.01,
+          pitchDecay: 0.008,
           octaves: 2,
           envelope: {
             attack: 0.001,
-            decay: 0.04,
+            decay: 0.05,
             sustain: 0
           },
-          volume: -36
+          volume: -20
         }).connect(g);
         nodes.push(m, k);
         let high = true;
         const tick = () => {
           if (nvAmb !== me || !enabled) return;
           try {
-            m.frequency.value = high ? 330 : 230;
+            m.frequency.value = high ? 640 : 470;
             m.triggerAttackRelease('64n');
-            k.triggerAttackRelease(high ? 'G2' : 'D2', '64n');
+            k.triggerAttackRelease(high ? 'C4' : 'G3', '64n');
           } catch (e) {}
           high = !high;
         };
@@ -12062,7 +12143,14 @@ const Audio_ = (() => {
           x.dispose();
         } catch (e2) {}
       });
+      if (nvAmb === me) nvAmb = {
+        kind: 'none',
+        stop: null
+      };
     }
+  };
+  const nvAmbientResume = () => {
+    if (nvAmbWant !== 'none' && nvAmb.kind !== nvAmbWant) void nvAmbient(nvAmbWant);
   };
   const uiTap = async () => {
     if (!enabled) return;
