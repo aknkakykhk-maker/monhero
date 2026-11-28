@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cc14af0b85aeeeb0
+// source-sha256: 9ddef6c8ea6254c8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -23457,7 +23457,8 @@ const storyAssistantArtOf = (id, outfit) => {
   if (!who || !who.imageDir || !who.imagePrefix) return null;
   const dirs = typeof STORY_OUTFIT_DIRS !== 'undefined' && STORY_OUTFIT_DIRS || {};
   const dir = outfit ? dirs[outfit] : who.imageDir;
-  return dir ? `${dir}/${who.imagePrefix}_normal.PNG` : null;
+  const file = dir ? `${dir}/${who.imagePrefix}_normal.PNG` : null;
+  return file && typeof assistantArtFile === 'function' ? assistantArtFile(file) : file;
 };
 const STORY_MONSTER_ART = Object.freeze({
   Kyubi: typeof KYUBI_IMG !== 'undefined' ? KYUBI_IMG : null,
@@ -47066,6 +47067,14 @@ const RhythmTapTest = ({
     if (!run || !run.tickRules || !Array.isArray(ticks) || !ticks.length) return 0;
     const okNow = () => Number(note._rhythmComboOk) || 0,
       dropNow = () => Number(note._rhythmComboDrop) || 0;
+    if (lineAdjustRef.current && lineAdjustRef.current.listen) {
+      const d = dropNow();
+      if (d > 0) {
+        note._rhythmComboOk = okNow() + d;
+        note._rhythmComboDrop = 0;
+      }
+      if (judgment) judgment = 'MARVELOUS';
+    }
     if (judgment) {
       const rest = ticks.length - okNow() - dropNow();
       if (rest > 0) {
@@ -47111,6 +47120,10 @@ const RhythmTapTest = ({
     const _judgeT0 = RHYTHM_PERF.enabled && typeof performance !== 'undefined' ? performance.now() : 0;
     const run = runRef.current;
     if (!run || run.finished || run.paused || note.done) return;
+    if (lineAdjustRef.current && lineAdjustRef.current.listen) {
+      deltaMs = 0;
+      judgment = 'MARVELOUS';
+    }
     comboTicksRef.current(note, judgment);
     if (rhythmHisshiUpgrades(run.abilities, judgment, run.audio?.songTimeMs?.() ?? 0)) judgment = 'MARVELOUS';
     {
@@ -106003,7 +106016,7 @@ function ModeSelectAssistantPanel({
     }
   }) : RHYTHM_MODE_ASSISTANT_FRAMES[assistant.id] ? (() => {
     const fr = RHYTHM_MODE_ASSISTANT_FRAMES[assistant.id];
-    const ex = (/_([a-z]+)\.png$/i.exec(assistant.image || '') || [])[1];
+    const ex = (/_([a-z]+)\.(?:png|webp)$/i.exec(assistant.image || '') || [])[1];
     const cx = fr.cxBy && fr.cxBy[ex] || fr.cx;
     const masks = [Number.isFinite(fr.fadeBottom) ? `linear-gradient(to bottom, #000 ${fr.fadeBottom * 100}%, transparent 100%)` : null, Number.isFinite(fr.fadeSides) ? `linear-gradient(to right, transparent 0%, #000 ${fr.fadeSides * 100}%, #000 ${100 - fr.fadeSides * 100}%, transparent 100%)` : null].filter(Boolean);
     const mask = masks.length ? {
@@ -112189,8 +112202,8 @@ const rhythmAssistSessionTalk = ({
     const sp = mode === 'few' ? '' : special();
     if (sp) return sp;
     const sid = songId || roomSong();
-    const special = rhythmAssistSessionSongScene(assistantId, sid);
-    if (special && rand() < 0.5) return say(special);
+    const songScene = rhythmAssistSessionSongScene(assistantId, sid);
+    if (songScene && rand() < 0.5) return say(songScene);
     if (rhythmAssistSessionTaste(assistantId, sid) === 'dislike' && rand() < 0.5) return say('overcome');
     if (Number(fc) > 0) return say('fc');
     const ratio = rhythmAssistSessionRatio(score, diffId);
@@ -130229,12 +130242,13 @@ const xmasNovelFigureSrc = (who, e) => {
     const dir = typeof STORY_OUTFIT_DIRS !== 'undefined' && STORY_OUTFIT_DIRS && STORY_OUTFIT_DIRS.santa ? STORY_OUTFIT_DIRS.santa : '';
     if (!dir) return null;
     if (who === 'dra') return {
-      src: `${dir}/dra_${face}.PNG`,
+      src: typeof assistantArtFile === 'function' ? assistantArtFile(`${dir}/dra_${face}.PNG`) : `${dir}/dra_${face}.PNG`,
       face: true
     };
+    const art = p => typeof assistantArtFile === 'function' ? assistantArtFile(p) : p;
     return {
-      src: `${dir.replace(/\/santa$/, '/stand-santa')}/${who}_${face}.png`,
-      fallback: `${dir}/${who}_${face}.PNG`
+      src: art(`${dir.replace(/\/santa$/, '/stand-santa')}/${who}_${face}.png`),
+      fallback: art(`${dir}/${who}_${face}.PNG`)
     };
   }
   if (c.kind === 'monster' || c.kind === 'guest') return {
@@ -130697,7 +130711,7 @@ const xmasNovelBodySrc = who => {
   if (!c) return '';
   if (c.kind === 'assistant') {
     const dir = typeof STORY_OUTFIT_DIRS !== 'undefined' && STORY_OUTFIT_DIRS && STORY_OUTFIT_DIRS.santa ? STORY_OUTFIT_DIRS.santa : '';
-    return dir ? `${dir}/${who}_normal.PNG` : '';
+    return dir ? typeof assistantArtFile === 'function' ? assistantArtFile(`${dir}/${who}_normal.PNG`) : `${dir}/${who}_normal.PNG` : '';
   }
   return c.art || '';
 };
@@ -143636,9 +143650,9 @@ function AssistantLifeRoomSheet({
 const ASSISTANT_LIFE_STAND_BOX = new Map();
 const assistantLifeStandFrameSrc = src => {
   const s = String(src || '');
-  const m = /\/assistant\/(stand-[a-z0-9-]+)\/([a-z]+)_([a-z]+)\.png/i.exec(s);
+  const m = /\/assistant\/(stand-[a-z0-9-]+)\/([a-z]+)_([a-z]+)\.(png|webp)/i.exec(s);
   if (!m || m[3] === 'normal') return src;
-  return s.replace(`/${m[1]}/${m[2]}_${m[3]}.png`, `/${m[1]}/${m[2]}_normal.png`);
+  return s.replace(`/${m[1]}/${m[2]}_${m[3]}.${m[4]}`, `/${m[1]}/${m[2]}_normal.${m[4]}`);
 };
 const assistantLifeStandBox = src => new Promise(res => {
   if (ASSISTANT_LIFE_STAND_BOX.has(src)) {
@@ -143928,11 +143942,11 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   },
   'stand-winter': {
     kyuko: {
-      top: 0.0146,
-      eye: 0.3312,
-      chin: 0.4299,
-      m: 0.734,
-      cx: 0.5313
+      top: 0.0134,
+      eye: 0.3307,
+      chin: 0.4296,
+      m: 0.736,
+      cx: 0.5293
     }
   },
   twintail: {
@@ -144008,64 +144022,64 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   'stand-santa': {
     mua: {
       top: 0.1614,
-      eye: 0.342,
-      chin: 0.4296,
-      m: 0.652,
-      cx: 0.4783,
+      eye: 0.3425,
+      chin: 0.4303,
+      m: 0.653,
+      cx: 0.4595,
       above: 0.95
     },
     kiki: {
-      top: 0.1746,
-      eye: 0.3328,
-      chin: 0.4303,
-      m: 0.725,
-      cx: 0.551,
+      top: 0.1741,
+      eye: 0.3324,
+      chin: 0.43,
+      m: 0.726,
+      cx: 0.5647,
       above: 0.95
     },
     momosuke: {
-      top: 0.1333,
-      eye: 0.338,
-      chin: 0.4302,
+      top: 0.1331,
+      eye: 0.3379,
+      chin: 0.43,
       m: 0.686,
-      cx: 0.4985,
+      cx: 0.4919,
       above: 0.95
     },
     sorashido: {
-      top: 0.0065,
+      top: 0.0066,
       eye: 0.2884,
-      chin: 0.4301,
-      m: 1.054,
-      cx: 0.577,
+      chin: 0.4299,
+      m: 1.053,
+      cx: 0.5794,
       above: 0.95
     },
     atsu: {
       top: 0.0562,
-      eye: 0.305,
-      chin: 0.4302,
-      m: 0.932,
-      cx: 0.4455,
+      eye: 0.3048,
+      chin: 0.4299,
+      m: 0.931,
+      cx: 0.4538,
       above: 0.95
     },
     erubin: {
-      top: 0.1725,
+      top: 0.1728,
       eye: 0.2944,
-      chin: 0.4303,
-      m: 1.011,
-      cx: 0.5528,
+      chin: 0.43,
+      m: 1.008,
+      cx: 0.5503,
       above: 0.95
     },
     kyuko: {
-      top: 0.143,
+      top: 0.1427,
       eye: 0.3059,
-      chin: 0.4298,
-      m: 0.922,
-      cx: 0.4314,
+      chin: 0.4299,
+      m: 0.923,
+      cx: 0.4351,
       above: 0.95
     }
   }
 });
 const assistantLifeStandOutfitOf = src => {
-  const m = /\/assistant\/([a-z0-9-]+)\/[a-z]+_[a-z]+\.png/i.exec(String(src || ''));
+  const m = /\/assistant\/([a-z0-9-]+)\/[a-z]+_[a-z]+\.(?:png|webp)/i.exec(String(src || ''));
   return m && m[1] !== 'face' && m[1] !== 'temp' ? m[1] : null;
 };
 const assistantLifeStandFace = (pid, src) => {
@@ -148066,7 +148080,7 @@ function AssistantLifeMapFig({
     ar: 0.6
   };
   const face0 = typeof assistantLifeStandFace === 'function' ? assistantLifeStandFace(who && who.id, src) : null;
-  const headKey = String(src || '').replace(/[?#].*$/, '').replace(/^.*assistant\//, '').replace(/\.png$/i, '').replace(/_(?!sleep$)[a-z]+$/i, '');
+  const headKey = String(src || '').replace(/[?#].*$/, '').replace(/^.*assistant\//, '').replace(/\.(?:png|webp)$/i, '').replace(/_(?!sleep$)[a-z]+$/i, '');
   const head = ASSISTANT_LIFE_MAP_HEAD[headKey] || null;
   const topChin = head ? {
     top: head[0],
@@ -150032,8 +150046,9 @@ function assistantLifeSleepArt(pid, src) {
   const who = typeof assistantById === 'function' ? assistantById(pid) : null;
   const s0 = String(src || '').replace(/[?#].*$/, ''),
     dir = who && who.imageDir ? `${who.imageDir}/` : null;
-  const rel = dir && s0.includes(dir) ? s0.slice(s0.indexOf(dir) + dir.length) : null;
-  return rel && ASSISTANT_LIFE_SLEEP_ART.has(rel) ? `${dir}${rel.replace(/_normal\.PNG$/, '_sleep.PNG')}` : null;
+  const rel = dir && s0.includes(dir) ? s0.slice(s0.indexOf(dir) + dir.length).replace(/\.webp$/, '.PNG') : null;
+  const out = rel && ASSISTANT_LIFE_SLEEP_ART.has(rel) ? `${dir}${rel.replace(/_normal\.PNG$/, '_sleep.PNG')}` : null;
+  return out && typeof assistantArtFile === 'function' ? assistantArtFile(out) : out;
 }
 const assistantLifeSleepSrc = (pid, src) => {
   const a = assistantLifeSleepArt(pid, src);
@@ -154019,7 +154034,7 @@ const ASSISTANT_LIFE_PROFILE_FULL_MAX_H = Object.freeze({
 });
 const ASSISTANT_LIFE_PROFILE_FULL_NH = new Map();
 const assistantLifeProfileFullMaxH = src => {
-  const m = /\/fullbody\/(.+?)__[a-z]+\.png/.exec(String(src || ''));
+  const m = /\/fullbody\/(.+?)__[a-z]+\.(?:png|webp)/.exec(String(src || ''));
   return m && ASSISTANT_LIFE_PROFILE_FULL_MAX_H[m[1]] || 0;
 };
 function AssistantLifeProfileStand({

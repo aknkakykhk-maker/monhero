@@ -28,6 +28,8 @@ const purchase = read('monster-hero/src/parts/11-masu-progression.jsx');
 const saveSpec = read('docs/spec/SAVE_DATA.md');
 
 let failed = 0;
+// 重い絵は WebP の服あり(2026-11-28 r1126-095)。ゲームと同じ決まり(data/assistants.js の ASSISTANT_WEBP_ART_RE)で配信の道筋へ直してから確かめる
+const servedArt = (rel) => { const m = /const ASSISTANT_WEBP_ART_RE = (\/.+\/);\n/.exec(fs.readFileSync(path.join(ROOT, 'monster-hero/data/assistants.js'), 'utf8')); return m ? rel.replace(eval(m[1]), '$1.webp') : rel; };
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
 
 // 着替えの定義(画像の定数に頼らない範囲)を取り出して動かす
@@ -130,7 +132,7 @@ check('ドラのサンタ: 開始の前は見えず、開始から見える・�
   // ドラは顔だけ(立ち絵・全身画は無い)。顔の絵と顔アイコンが8表情+寝顔そろっていること
   const miss = [];
   for (const e of [...EXPRESSIONS, 'sleep']) for (const sub of ['', 'face/']) {
-    const rel = `images/assistant/santa/${sub}dra_${e}.PNG`;
+    const rel = servedArt(`images/assistant/santa/${sub}dra_${e}.PNG`);
     if (!fs.existsSync(path.join(ROOT, 'monster-hero', rel))) miss.push(rel);
   }
   check('ドラのサンタ: 顔の絵と顔アイコン(8表情+寝顔)が全部ある', miss.length === 0, miss.slice(0, 4).join(' / '));
@@ -152,11 +154,11 @@ check('サンタ: 期間が breeder.js と公開フラグ(17-release…jsx の X
   const c = xDuring.assistantCostumeById(cid);
   if (!c || !fs.existsSync(path.join(ROOT, 'monster-hero', String(c.icon).split('?')[0]))) miss.push(cid + ' icon');
   for (const e of [...EXPRESSIONS, 'sleep']) for (const sub of ['', 'face/']) {
-    const rel = `images/assistant/santa/${sub}${pre}_${e}.PNG`;
+    const rel = servedArt(`images/assistant/santa/${sub}${pre}_${e}.PNG`);
     if (!fs.existsSync(path.join(ROOT, 'monster-hero', rel))) miss.push(rel);
   }
   for (const e of EXPRESSIONS) {
-    for (const rel of [`images/assistant/stand-santa/${pre}_${e}.png`, `images/assistant/fullbody/${fb}__${e}.png`]) if (!fs.existsSync(path.join(ROOT, 'monster-hero', rel))) miss.push(rel);
+    for (const rel of [`images/assistant/stand-santa/${pre}_${e}.png`, `images/assistant/fullbody/${fb}__${e}.png`].map(servedArt)) if (!fs.existsSync(path.join(ROOT, 'monster-hero', rel))) miss.push(rel);
   }
   }
   check('クリスマスの衣装(みゅあ・きき・ももすけ・ソラシド・あつ・えるびん・きゅうこ): 絵(バスト・顔アイコン・寝顔・立ち絵・全身画)が全部ある', miss.length === 0, miss.slice(0, 4).join(' / '));
