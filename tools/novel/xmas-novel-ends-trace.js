@@ -46,6 +46,11 @@ const ROUTES = [
   { name: '名指しのあと「もっと考える」で後半へ(みゅあ)', want: 'END-N', from: 'A7c', picks: { Q7a: 'myua', A7c: 'go:C7-B', Q11a: 'kyuko' }, short: true },
   { name: '後半、もちまるの見回りについていく', want: 'END-L2', from: 'A10b', picks: { Q7a: 'kiki', A10b: 'go:C10-L' }, panel: { mochimaru: undefined } },
   { name: '後半、山道があくまで誰も選ばない', want: 'END-L1', from: 'A11', picks: { Q7a: 'ichika', A11: 'go:C11-L' } },
+  // r1126-108 第2弾: 前半の行動の選択(①は今までの道のまま)
+  { name: '第1章の夜、一人で廊下の影を追う', want: 'END-X6', from: 'A1b', picks: { A1b: 'danger' } },
+  { name: '第3章、一人で切れた電話の線をたどる', want: 'END-X8', from: 'A3', picks: { A3: 'danger' } },
+  { name: '第3章、ドラを部屋に閉じこめる', want: 'END-A2', from: 'A3b', picks: { A3b: 'go:C3-D' }, panel: { shirase: 'missing' } },
+  { name: '第4章の夜、一人で子守歌を確かめに行く', want: 'END-X7', from: 'A4', picks: { A4: 'danger' } },
 ];
 
 const run = (side, route) => {
