@@ -743,7 +743,14 @@ const RHYTHM_EVENT_POINT_SHOP_ICON_OFFERS = Object.freeze(
     ? HALLOWEEN_ICON_SETS.map(set => Object.freeze({ id:`icon_${set.groupId}`, name:`${set.name}のアイコン`, kind:'icon', groupId:set.groupId, assistantId:set.assistantId,
         memberIds:set.memberIds, grantAmount:1, unit:'セット', cost:1000,
         get available() { return halloweenIconSale() === 'beatPoint'; } }))
+    : []).concat(
+  // クリスマスのサンタ服の助手の顔アイコン(2026-11-28・台帳 r1126-096)。ハロウィンと同じ形で、売る期間は data/breeder.js の xmasIconSale が決める
+  (typeof XMAS_ICON_SETS !== 'undefined' && typeof xmasIconSale === 'function')
+    ? XMAS_ICON_SETS.map(set => Object.freeze({ id:`icon_${set.groupId}`, name:`${set.name}のアイコン`, kind:'icon', groupId:set.groupId, assistantId:set.assistantId,
+        memberIds:set.memberIds, grantAmount:1, unit:'セット', cost:1000,
+        get available() { return xmasIconSale() === 'beatPoint'; } }))
     : []);
+Object.freeze(RHYTHM_EVENT_POINT_SHOP_ICON_OFFERS);
 // 近日公開予定の商品(交換ボタンは出さず「先行公開予定」と出す)。いまは無い。
 // 次に新しいモンスターを先に予告するときは、ここへ available:false で並べ、本体が入ったら上の一覧へ移す
 const RHYTHM_EVENT_POINT_SHOP_COMING_SOON = Object.freeze([]);
