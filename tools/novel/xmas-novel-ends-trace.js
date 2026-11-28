@@ -66,6 +66,10 @@ const ROUTES = [
   { name: '視点の編 ドラ、名前を呼ぶ(もしも)', want: 'END-PD2', from: 'APD1', picks: { A2: 'go:PD-1', APD1: 'go:PD-Y' }, seen: ['END-G'], short: true },
   { name: '真グッドの前は A2 にドラの編は出ない', want: 'END-X1', from: 'A2', picks: { A2: 'danger' }, noOpt: { A2: 'PD-1' }, short: true },
   { name: 'しおりが無いと A1b に③は出ない', want: 'END-X6', from: 'A1b', picks: { A1b: 'danger' }, seen: ['END-G'], noOpt: { A1b: 'RW-1' }, short: true },
+  // r1126-115 もしもの話 ③ 壁の中の宝の地図: 緑のしおり(おまけのエンドを全部)を持っている人だけ、第6章 A6y に③が出る
+  { name: 'もしも 宝の地図、オルゴールを最後まで聞く', want: 'END-T1', from: 'A6y', picks: { A6y: 'go:TK-1', AT1: 'opt:0', AT2: 'opt:0' }, seen: ['END-G', 'END-O', 'END-O2', 'END-O3', 'END-O4'] },
+  { name: 'もしも 宝の地図、くすぐってから台所へ', want: 'END-T2', from: 'AT1', picks: { A6y: 'go:TK-1', AT1: 'opt:1', AT2: 'opt:1' }, seen: ['END-G', 'END-O', 'END-O2', 'END-O3', 'END-O4'], short: true },
+  { name: '緑のしおりが無いと A6y に③は出ない', want: 'END-G', from: 'A6y', picks: { A6y: 'opt:0', Q7a: 'kyuko' }, seen: ['END-G'], noOpt: { A6y: 'TK-1' }, short: true },
   { name: '寄り道の2つめ(イチーカ・こっそり・ドラの声)を通って真グッドへ', want: 'END-G', from: 'A4y', picks: { A4y: 'opt:1', A6y: 'opt:1', A8y: 'go:C8-Z', Q7a: 'kyuko' }, short: true },
 ];
 
