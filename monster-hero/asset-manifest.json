@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "2c545bd41c0e",
-  "packs": {"beat":{"bytes":331569515,"count":175},"battle":{"bytes":632082537,"count":1870},"card":{"bytes":38085297,"count":1046},"all":{"bytes":1001737349,"count":3091},"core":{"bytes":27370262,"count":25}},
+  "id": "a74c6f7a7979",
+  "packs": {"beat":{"bytes":331569515,"count":175},"battle":{"bytes":640877886,"count":1870},"card":{"bytes":38085297,"count":1046},"all":{"bytes":1010532698,"count":3091},"core":{"bytes":27370262,"count":25}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"b43d691d4773","size":2833344,"pack":"beat"},
@@ -392,7 +392,7 @@
     "images/assistant/fullbody/momosuke_halloween__crying.png": {"v":"38144251acc2","size":2320368,"pack":"battle"},
     "images/assistant/fullbody/momosuke_halloween__excited.png": {"v":"9971fa539fa7","size":2593917,"pack":"battle"},
     "images/assistant/fullbody/momosuke_halloween__happy.png": {"v":"bc498a872069","size":2219822,"pack":"battle"},
-    "images/assistant/fullbody/momosuke_halloween__normal.png": {"v":"0c18108584e2","size":613558,"pack":"battle"},
+    "images/assistant/fullbody/momosuke_halloween__normal.png": {"v":"b21e08f13b8a","size":2235200,"pack":"battle"},
     "images/assistant/fullbody/momosuke_halloween__surprise.png": {"v":"3f669f02ac4e","size":2272922,"pack":"battle"},
     "images/assistant/fullbody/momosuke_halloween__troubled.png": {"v":"53a9054b0161","size":2229419,"pack":"battle"},
     "images/assistant/fullbody/momosuke_halloween__wink.png": {"v":"7a0f68ec5370","size":2371566,"pack":"battle"},
@@ -762,14 +762,14 @@
     "images/assistant/stand-halloween/kiki_surprise.png": {"v":"077ed4aba0f6","size":943119,"pack":"battle"},
     "images/assistant/stand-halloween/kiki_troubled.png": {"v":"8e22b684ae6b","size":1057057,"pack":"battle"},
     "images/assistant/stand-halloween/kiki_wink.png": {"v":"dde8cf27e445","size":1092735,"pack":"battle"},
-    "images/assistant/stand-halloween/momosuke_angry.png": {"v":"b047384c9643","size":401847,"pack":"battle"},
-    "images/assistant/stand-halloween/momosuke_crying.png": {"v":"383538f5da47","size":421139,"pack":"battle"},
-    "images/assistant/stand-halloween/momosuke_excited.png": {"v":"1d952706f28c","size":428856,"pack":"battle"},
-    "images/assistant/stand-halloween/momosuke_happy.png": {"v":"5ad14f2f8040","size":393603,"pack":"battle"},
-    "images/assistant/stand-halloween/momosuke_normal.png": {"v":"c9a204db41b7","size":359945,"pack":"battle"},
-    "images/assistant/stand-halloween/momosuke_surprise.png": {"v":"087010e21d0b","size":334257,"pack":"battle"},
-    "images/assistant/stand-halloween/momosuke_troubled.png": {"v":"2fad348e06bd","size":345864,"pack":"battle"},
-    "images/assistant/stand-halloween/momosuke_wink.png": {"v":"5a1a0f0924f3","size":371652,"pack":"battle"},
+    "images/assistant/stand-halloween/momosuke_angry.png": {"v":"77483fbc75d2","size":1251872,"pack":"battle"},
+    "images/assistant/stand-halloween/momosuke_crying.png": {"v":"4d500ab63c1b","size":1208141,"pack":"battle"},
+    "images/assistant/stand-halloween/momosuke_excited.png": {"v":"838940b7fc78","size":1462714,"pack":"battle"},
+    "images/assistant/stand-halloween/momosuke_happy.png": {"v":"22553f13efb6","size":1349329,"pack":"battle"},
+    "images/assistant/stand-halloween/momosuke_normal.png": {"v":"12e7e450bcba","size":1251535,"pack":"battle"},
+    "images/assistant/stand-halloween/momosuke_surprise.png": {"v":"2211bbf16ce0","size":1226364,"pack":"battle"},
+    "images/assistant/stand-halloween/momosuke_troubled.png": {"v":"44e1caf7c015","size":1195243,"pack":"battle"},
+    "images/assistant/stand-halloween/momosuke_wink.png": {"v":"fe72d00509bf","size":1285672,"pack":"battle"},
     "images/assistant/stand-halloween/myua_angry.png": {"v":"6d467be07fc0","size":1399838,"pack":"battle"},
     "images/assistant/stand-halloween/myua_crying.png": {"v":"51362f2bf22c","size":1376736,"pack":"battle"},
     "images/assistant/stand-halloween/myua_excited.png": {"v":"aefe143df679","size":1414873,"pack":"battle"},
@@ -3096,7 +3096,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"033bce2082a5","size":322141,"pack":"core"},
+    "tailwind.css": {"v":"db610c6e3d7a","size":322141,"pack":"core"},
     "data/images/images-ally.js": {"v":"7fcc9331d4b6","size":92225,"pack":"core"},
     "data/images/images-enemy.js": {"v":"fc6148828d29","size":4003,"pack":"core"},
     "data/ally-monsters.js": {"v":"6737b7dced48","size":60894,"pack":"core"},
@@ -3118,6 +3118,6 @@
     "data/assistant-masmon-techs.js": {"v":"353cf73676a6","size":113841,"pack":"core"},
     "data/assistant-life-rel-talks.js": {"v":"cde51ded5428","size":225977,"pack":"core"},
     "data/success-sounds.js": {"v":"9692dd51493a","size":19367,"pack":"core"},
-    "game-system.compiled.js": {"v":"bb4824afe706","size":13343202,"pack":"core"}
+    "game-system.compiled.js": {"v":"96ecb9672a8e","size":13343202,"pack":"core"}
   }
 }
