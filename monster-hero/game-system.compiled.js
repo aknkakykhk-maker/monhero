@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9281b8203f40b3c5
+// source-sha256: 91b30b4f4c2089ed
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -44821,6 +44821,7 @@ const RhythmTapTest = ({
   onComplete,
   onExit,
   raidPlay = false,
+  holdResultCount = false,
   quickRunAward = null,
   beatRankAward = null,
   onRankBarFull = null,
@@ -46950,9 +46951,10 @@ const RhythmTapTest = ({
   const [touchReportSent, setTouchReportSent] = useState(null);
   const resultRootRef = useRef(null);
   const recordSeFireRef = useRef(null);
-  const resultCountId = view.status === 'result' && view.result && view.result.countAnim ? view.result.countAnim.id : null;
+  const resultCountIdRaw = view.status === 'result' && view.result && view.result.countAnim ? view.result.countAnim.id : null;
+  const resultCountId = holdResultCount ? null : resultCountIdRaw;
   const [resultCountDoneId, setResultCountDoneId] = useState(null);
-  const resultCountRunning = resultCountId !== null && resultCountDoneId !== resultCountId;
+  const resultCountRunning = resultCountIdRaw !== null && resultCountDoneId !== resultCountIdRaw;
   React.useLayoutEffect(() => {
     const root = resultRootRef.current;
     if (!resultCountId || !root) return undefined;
@@ -68369,13 +68371,27 @@ const TrainingCountUp = ({
     setValue(from);
     let raf = 0;
     let startAt = 0;
+    const fmt = v => String(format ? format(v) : v);
     const timer = setTimeout(() => {
       const tick = now => {
         if (!startAt) startAt = now;
         const t = Math.min(1, (now - startAt) / Math.max(1, duration));
         const eased = 1 - Math.pow(1 - t, 3);
-        setValue(Math.round(from + (to - from) * eased));
-        if (t < 1) raf = requestAnimationFrame(tick);
+        const v = Math.round(from + (to - from) * eased);
+        const node = holderRef.current && holderRef.current.firstChild;
+        if (!node || node.nodeType !== 3) {
+          setValue(v);
+          if (t < 1) raf = requestAnimationFrame(tick);
+          return;
+        }
+        if (t >= 1) {
+          node.nodeValue = fmt(to);
+          setValue(to);
+          return;
+        }
+        const text = fmt(v);
+        if (node.nodeValue !== text) node.nodeValue = text;
+        raf = requestAnimationFrame(tick);
       };
       raf = requestAnimationFrame(tick);
     }, Math.max(0, delay));
@@ -282534,6 +282550,7 @@ function MonsterHeroGame() {
     }), gameState === 'RHYTHM_PLAY' && rhythmPlay && React.createElement(RhythmTapTest, {
       key: rhythmPlay.from === 'lineAdjust' && rhythmLineAdjust ? `line-adjust-${rhythmLineAdjust.key}` : rhythmPlay.from === 'preview' && rhythmPreview ? `option-preview-${rhythmPreview.key}` : undefined,
       raidPlay: rhythmPlay.from === 'raid',
+      holdResultCount: rhythmPlay.from === 'raid' && !!raidDamageFx,
       song: rhythmPlay.song,
       difficulty: rhythmPlay.difficulty,
       settings: rhythmPlay.from === 'multi' ? rhythmMultiPlaySettings : rhythmPlay.from === 'preview' && rhythmPreview ? rhythmPreview.draft : rhythmSettings,
@@ -297331,7 +297348,10 @@ const createAnimationStyle = () => {
     .mh-rjdmg-life { position: relative; font-size: 10px; font-weight: 900; color: #fca5a5; font-variant-numeric: tabular-nums; animation: mhRjRise .4s ease-out .6s both; }
     .mh-rjdmg-damage { position: relative; text-align: center; opacity: 0; animation: mhRjSlam .55s cubic-bezier(.2,1.4,.4,1) 1s both; }
     .mh-rjdmg-damage small { display: block; font-size: 11px; font-weight: 900; letter-spacing: .4em; color: #fecaca; }
-    .mh-rjdmg-damage b { display: block; padding: 0 .15em; font-size: 52px; font-weight: 900; font-style: italic; line-height: 1; font-variant-numeric: tabular-nums; background: linear-gradient(180deg, #fff, #fde68a 45%, #f59e0b); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 4px 0 rgba(0,0,0,.85)) drop-shadow(0 0 20px rgba(251,191,36,.9)); }
+    .mh-rjdmg-damage b { display: block; padding: 0 .15em; font-size: 52px; font-weight: 900; font-style: italic; line-height: 1; font-variant-numeric: tabular-nums; background: linear-gradient(180deg, #fff, #fde68a 45%, #f59e0b); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 4px 0 rgba(0,0,0,.85)); }
+    /* 数字のまわりの金色の光(2026-11-28 r1126-098)。前は数字そのものに drop-shadow(0 0 20px) を掛けていたが、数え上げで毎コマ数字が変わるたびに
+       ぼかしごと描き直しになり、コマが落ちた(社長「数字の動きがかくかく」)。光は数字の後ろの動かない1枚(ぼかし無しの放射の色)にした */
+    .mh-rjdmg-damage:not(.mh-rjdmg-damage-none)::before { content: ''; position: absolute; z-index: -1; left: 50%; top: 62%; width: calc(100% + 56px); height: 96px; transform: translate(-50%, -50%); background: radial-gradient(closest-side, rgba(251,191,36,.55), rgba(251,191,36,.22) 55%, rgba(251,191,36,0)); pointer-events: none; }
     .mh-rjdmg-damage-none b { font-size: 26px; background: none; color: #cbd5e1; filter: drop-shadow(0 2px 0 #000); }
     .mh-rjdmg-damage-none small { margin-top: 4px; font-size: 10px; letter-spacing: .05em; color: #94a3b8; }
     .mh-rjdmg-down { position: absolute; left: 0; right: 0; top: 40%; text-align: center; font-size: 64px; font-weight: 900; font-style: italic; color: #fde047; text-shadow: 0 5px 0 #7c2d12, 0 0 28px rgba(250,204,21,.95); opacity: 0; animation: mhRjSlam .6s cubic-bezier(.2,1.4,.4,1) 2.3s both; pointer-events: none; z-index: 3; }
