@@ -239,7 +239,40 @@ const SHOTS_115PD = [
   { name: '63-apd1', row: 'APD1', side: 2, endings: ['END-G'], label: '時刻つきの選択' },
   { name: '64-ribbon', row: 'PD-3-4', side: 2, endings: ['END-G'], label: 'PD-3 崖の上のリボン' },
 ];
-const LIST_ALL = process.argv.includes('--r1126-117') ? SHOTS_117 : process.argv.includes('--r1126-115pd') ? SHOTS_115PD : process.argv.includes('--r1126-115') ? SHOTS_115 : process.argv.includes('--r1126-108c') ? SHOTS_108C : process.argv.includes('--r1126-108b') ? SHOTS_108B : process.argv.includes('--r1126-108') ? SHOTS_108 : process.argv.includes('--spoil') ? SHOTS_SPOIL : process.argv.includes('--r1126-091') ? SHOTS_091 : process.argv.includes('--final') ? SHOTS_FINAL : process.argv.includes('--r1126-077') ? SHOTS_077 : process.argv.includes('--r1126-071') ? SHOTS_071 : process.argv.includes('--r1126-076') ? SHOTS_076 : process.argv.includes('--r1126-067') ? SHOTS_067 : process.argv.includes('--r1126-065') ? SHOTS_065 : process.argv.includes('--r1126-062') ? SHOTS_062 : process.argv.includes('--r1126-046') ? SHOTS_046 : process.argv.includes('--r1126-054') ? SHOTS_054 : process.argv.includes('--r1126-058') ? SHOTS_058 : SHOTS;
+// r1126-115 もしもの話 ② 十三番目の客(灰のしおりを持っている人だけ)
+const SHOTS_115H = [
+  { name: '71-a4-ash', row: 'A4', side: 1, endings: ['END-G', 'END-X1', 'END-X2', 'END-X3', 'END-X4', 'END-X5', 'END-X6', 'END-X7', 'END-X8'], label: 'しおりのあと 第4章 A4 の③' },
+  { name: '72-count', row: 'HJ-1-13', side: 2, endings: ['END-G', 'END-X1', 'END-X2', 'END-X3', 'END-X4', 'END-X5', 'END-X6', 'END-X7', 'END-X8'], label: 'HJ-1 壁の影が1つ多い' },
+  { name: '73-ledger', row: 'HJ-2-6', side: 1, endings: ['END-G', 'END-X1', 'END-X2', 'END-X3', 'END-X4', 'END-X5', 'END-X6', 'END-X7', 'END-X8'], label: 'HJ-2 宿帳の13行目' },
+  { name: '74-bowl', row: 'HJ-3-10a', side: 1, endings: ['END-G', 'END-X1', 'END-X2', 'END-X3', 'END-X4', 'END-X5', 'END-X6', 'END-X7', 'END-X8'], label: 'HJ-3 自分の字(あつ派)' },
+  { name: '75-ah1', row: 'AH1', side: 2, endings: ['END-G', 'END-X1', 'END-X2', 'END-X3', 'END-X4', 'END-X5', 'END-X6', 'END-X7', 'END-X8'], label: '13行目の前の選択' },
+  { name: '76-close', row: 'HJ-6-3', side: 1, endings: ['END-G', 'END-X1', 'END-X2', 'END-X3', 'END-X4', 'END-X5', 'END-X6', 'END-X7', 'END-X8'], label: 'HJ-6 世話役の決まり' },
+  { name: '77-h2-card', row: 'H2-5', side: 2, endings: ['END-G', 'END-X1', 'END-X2', 'END-X3', 'END-X4', 'END-X5', 'END-X6', 'END-X7', 'END-X8'], label: 'END-H2 結びの帯(もしも)' },
+  { name: '78-out', row: 'OUT-HJ-1', side: 1, endings: ['END-G', 'END-X1', 'END-X2', 'END-X3', 'END-X4', 'END-X5', 'END-X6', 'END-X7', 'END-X8'], label: 'OUT-HJ 画面の前で' },
+];
+// r1126-115 もしもの話 ③ 壁の中の宝の地図(緑のしおりを持っている人だけ)
+const SHOTS_115TK = [
+  { name: '71-a6y-green', row: 'A6y', side: 1, endings: ['END-G', 'END-O', 'END-O2', 'END-O3', 'END-O4'], label: 'しおりのあと 第6章 A6y の③(✦)' },
+  { name: '72-map', row: 'TK-1-13', side: 2, endings: ['END-G', 'END-O', 'END-O2', 'END-O3', 'END-O4'], label: 'TK-1 宝の地図と4つの音符' },
+  { name: '73-at1', row: 'AT1', side: 1, endings: ['END-G', 'END-O', 'END-O2', 'END-O3', 'END-O4'], label: 'うたって、のぼっての選択' },
+  { name: '74-belongings', row: 'TK-2b-4', side: 1, endings: ['END-G', 'END-O', 'END-O2', 'END-O3', 'END-O4'], label: 'TK-2b 持ち物しらべ(ネタ)' },
+  { name: '75-key', row: 'TK-4-6', side: 2, endings: ['END-G', 'END-O', 'END-O2', 'END-O3', 'END-O4'], label: 'TK-4 オーナーの鍵' },
+  { name: '76-at2', row: 'AT2', side: 2, endings: ['END-G', 'END-O', 'END-O2', 'END-O3', 'END-O4'], label: 'オルゴールの前の選択' },
+  { name: '77-letter', row: 'TK-6a-11', side: 1, endings: ['END-G', 'END-O', 'END-O2', 'END-O3', 'END-O4'], label: 'TK-6a 母のカード(手紙)' },
+  { name: '78-t1-title', row: 'T1-2', side: 1, endings: ['END-G', 'END-O', 'END-O2', 'END-O3', 'END-O4'], label: 'END-T1 最後の一音(ツリーの星)' },
+  { name: '79-t2', row: 'TK-6b-5', side: 2, endings: ['END-G', 'END-O', 'END-O2', 'END-O3', 'END-O4'], label: 'TK-6b 宝の缶(END-T2 へ)' },
+  { name: '80-out', row: 'OUT-TK-1', side: 1, endings: ['END-G', 'END-O', 'END-O2', 'END-O3', 'END-O4'], label: 'OUT-TK 画面の前で' },
+];
+// r1126-115 視点の編 みゅあの編
+const SHOTS_115PM = [
+  { name: '65-c22-pm', row: 'APM0', side: 1, endings: ['END-G'], label: '真グッドのあと 第2章 C2-2 の最後の新しい選択(✦)' },
+  { name: '66-knit', row: 'PM-2-11', side: 1, endings: ['END-G'], label: 'PM-2 窓を叩く音の外し' },
+  { name: '67-apm1', row: 'APM1', side: 2, endings: ['END-G'], label: 'PM-2 隠す・見せるの選択' },
+  { name: '68-blackout', row: 'PM-4-17', side: 1, endings: ['END-G'], label: 'PM-4 部屋で鐘と停電' },
+  { name: '69-sleeve', row: 'PM-5-6', side: 2, endings: ['END-G'], label: 'PM-5 袖の黒い毛糸' },
+  { name: '70-out-pm', row: 'OUT-PM-4', side: 1, endings: ['END-G'], label: 'OUT-PM 画面の前で' },
+];
+const LIST_ALL = process.argv.includes('--r1126-115pm') ? SHOTS_115PM : process.argv.includes('--r1126-115h') ? SHOTS_115H : process.argv.includes('--r1126-115tk') ? SHOTS_115TK : process.argv.includes('--r1126-117') ? SHOTS_117 : process.argv.includes('--r1126-115pd') ? SHOTS_115PD : process.argv.includes('--r1126-115') ? SHOTS_115 : process.argv.includes('--r1126-108c') ? SHOTS_108C : process.argv.includes('--r1126-108b') ? SHOTS_108B : process.argv.includes('--r1126-108') ? SHOTS_108 : process.argv.includes('--spoil') ? SHOTS_SPOIL : process.argv.includes('--r1126-091') ? SHOTS_091 : process.argv.includes('--final') ? SHOTS_FINAL : process.argv.includes('--r1126-077') ? SHOTS_077 : process.argv.includes('--r1126-071') ? SHOTS_071 : process.argv.includes('--r1126-076') ? SHOTS_076 : process.argv.includes('--r1126-067') ? SHOTS_067 : process.argv.includes('--r1126-065') ? SHOTS_065 : process.argv.includes('--r1126-062') ? SHOTS_062 : process.argv.includes('--r1126-046') ? SHOTS_046 : process.argv.includes('--r1126-054') ? SHOTS_054 : process.argv.includes('--r1126-058') ? SHOTS_058 : SHOTS;
 
 //  --only <語>: 名前にその語を含む物だけ撮る(例: --only kuroba)
 const ONLY = process.argv.includes('--only') ? process.argv[process.argv.indexOf('--only') + 1] || '' : '';

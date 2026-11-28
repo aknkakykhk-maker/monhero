@@ -64,8 +64,19 @@ const ROUTES = [
   // r1126-115 視点の編 ドラの編(真グッドのあと、第2章 A2 に③)
   { name: '視点の編 ドラ、黙って見送る', want: 'END-PD1', from: 'A2', picks: { A2: 'go:PD-1', APD1: 'opt:0' }, seen: ['END-G'] },
   { name: '視点の編 ドラ、名前を呼ぶ(もしも)', want: 'END-PD2', from: 'APD1', picks: { A2: 'go:PD-1', APD1: 'go:PD-Y' }, seen: ['END-G'], short: true },
+  { name: '視点の編 みゅあ、毛糸を隠す', want: 'END-PM1', from: 'APM0', picks: { APM0: 'go:PM-1', APM1: 'opt:0' }, seen: ['END-G'] },
+  { name: '視点の編 みゅあ、ドラに見せる(もしも)', want: 'END-PM2', from: 'APM1', picks: { APM0: 'go:PM-1', APM1: 'go:PM-Y' }, seen: ['END-G'], short: true },
   { name: '真グッドの前は A2 にドラの編は出ない', want: 'END-X1', from: 'A2', picks: { A2: 'danger' }, noOpt: { A2: 'PD-1' }, short: true },
   { name: 'しおりが無いと A1b に③は出ない', want: 'END-X6', from: 'A1b', picks: { A1b: 'danger' }, seen: ['END-G'], noOpt: { A1b: 'RW-1' }, short: true },
+  // r1126-115 もしもの話 ② 十三番目の客: 灰のしおり(真グッド+強制バッド X1〜X8 を全部)を持っている人だけ、A4 に③が出る
+  { name: 'もしも 十三番目の客、朝まで数え続ける', want: 'END-H1', from: 'A4', picks: { A4: 'go:HJ-1', AH1: 'opt:0' }, seen: ['END-G', 'END-X1', 'END-X2', 'END-X3', 'END-X4', 'END-X5', 'END-X6', 'END-X7', 'END-X8'] },
+  { name: 'もしも 十三番目の客、13行目を読む', want: 'END-H2', from: 'AH1', picks: { A4: 'go:HJ-1', AH1: 'opt:1' }, seen: ['END-G', 'END-X1', 'END-X2', 'END-X3', 'END-X4', 'END-X5', 'END-X6', 'END-X7', 'END-X8'], short: true },
+  { name: 'もしも 十三番目の客、宿帳を閉じる', want: 'END-H3', from: 'AH1', picks: { A4: 'go:HJ-1', AH1: 'opt:2' }, seen: ['END-G', 'END-X1', 'END-X2', 'END-X3', 'END-X4', 'END-X5', 'END-X6', 'END-X7', 'END-X8'], short: true },
+  { name: '灰のしおりが無いと A4 に③は出ない', want: 'END-X7', from: 'A4', picks: { A4: 'danger' }, seen: ['END-G'], noOpt: { A4: 'HJ-1' }, short: true },
+  // r1126-115 もしもの話 ③ 壁の中の宝の地図: 緑のしおり(おまけのエンドを全部)を持っている人だけ、第6章 A6y に③が出る
+  { name: 'もしも 宝の地図、オルゴールを最後まで聞く', want: 'END-T1', from: 'A6y', picks: { A6y: 'go:TK-1', AT1: 'opt:0', AT2: 'opt:0' }, seen: ['END-G', 'END-O', 'END-O2', 'END-O3', 'END-O4'] },
+  { name: 'もしも 宝の地図、くすぐってから台所へ', want: 'END-T2', from: 'AT1', picks: { A6y: 'go:TK-1', AT1: 'opt:1', AT2: 'opt:1' }, seen: ['END-G', 'END-O', 'END-O2', 'END-O3', 'END-O4'], short: true },
+  { name: '緑のしおりが無いと A6y に③は出ない', want: 'END-G', from: 'A6y', picks: { A6y: 'opt:0', Q7a: 'kyuko' }, seen: ['END-G'], noOpt: { A6y: 'TK-1' }, short: true },
   { name: '寄り道の2つめ(イチーカ・こっそり・ドラの声)を通って真グッドへ', want: 'END-G', from: 'A4y', picks: { A4y: 'opt:1', A6y: 'opt:1', A8y: 'go:C8-Z', Q7a: 'kyuko' }, short: true },
 ];
 
@@ -111,7 +122,7 @@ const run = (side, route) => {
     const res = E.xmasNovelAnswer(S, st.cur, row, pick, seen);
     let c = res.cur; (res.replies || []).forEach((r) => { push(r, st.cur.scene); c = E.xmasNovelApplyRow(c, r); });
     if (res.then === 'retry') { st = E.xmasNovelSettle(S, c, SEEN); continue; }
-    if (res.then && res.then.to) st = E.xmasNovelSettle(S, E.xmasNovelJump(S, c, res.then.to), SEEN);
+    if (res.then && res.then.to) st = E.xmasNovelSettle(S, E.xmasNovelJump(S, c, res.then.to, SEEN), SEEN);
     else st = E.xmasNovelStep(S, { ...c }, SEEN);
   }
   return { lines, end: null, err: '長すぎて止めた' };
@@ -132,6 +143,14 @@ const rowCondCheck = () => {
   if (!a.row || a.row.id !== 'AZZ0') bad.push('真グッドのあとなのに、C1-1 の最後に足した選択が出ない');
   if (b.row && b.row.id === 'AZZ0') bad.push('真グッドの前なのに、C1-1 の最後に足した選択が出た');
   if (c.row && c.row.id === 'AZZ0') bad.push('見たエンドを渡さないのに、足した選択が出た(今までどおりの動きのはず)');
+  // 選択肢の行き先(to)に、場面の条件つきの場面を置いたとき(xmasNovelJump)。条件を満たしていれば、その場面へ飛ぶ
+  //   分かれた兄弟(C98-1a は真グッドのあと・C98-1b はそれ以外)へ飛ぶとき、条件を満たせば C98-1a、満たさなければ C98-1b
+  T.scenes.push({ id: 'C98-1a', chapter: 'END', title: 'ためし', cond: { any: [{ all: [{ k: 'end_G', op: '=', v: 1 }] }] }, bg: null, next: null, rows: [{ id: 'C98-1a-1', t: 'band', x: 'ためし' }] });
+  T.scenes.push({ id: 'C98-1b', chapter: 'END', title: 'ためし', cond: { any: [{ all: [{ k: 'end_G', op: '=', v: 0 }] }] }, bg: null, next: null, rows: [{ id: 'C98-1b-1', t: 'band', x: 'ためし' }] });
+  const j1 = E.xmasNovelJump(T, at, 'C98-1a', { endings: ['END-G'], read: [] });
+  const j2 = E.xmasNovelJump(T, at, 'C98-1a');
+  if (j1.scene !== 'C98-1a') bad.push(`真グッドのあとなのに、条件つきの飛び先の場面 C98-1a へ飛ばない(${j1.scene})`);
+  if (j2.scene !== 'C98-1b') bad.push(`見たエンドを渡さないときは、今までどおり C98-1b のはず(${j2.scene})`);
   return bad;
 };
 const NAME = { atsu: 'あつ派', sorashido: 'ソラシド派' };

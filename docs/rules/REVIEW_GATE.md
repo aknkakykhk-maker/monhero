@@ -24,7 +24,7 @@ node tools/ctx.js gate --base <版>  その版との差で判定(ミハリが見
 | 保存データ | `25-storage.jsx`・`mhsave-backup.js` を変えた / 新しい保存キー(`mh_…`)が増えた / 保存キーを使う行がすべて消えた / 保存を消す・移す行(`localStorage.removeItem`・`_migrated_v…`)に触れた / **既存のキーの値に項目を足す・形を変えた**(名前に store・storage・backup・save・record を含む本体・データのファイルの増えた行、または `raw.〜` を読む・`restore`・`normalize〜`・`msxNorm〜`・`〜Norm(`・`storeSet(` の増えた行。2026-11-13 ミハリ6: #5866 の `aptUp` を見落とした穴。誤報が少し出てもよい) |
 | ランキング・Supabase | `supabase/migrations/`・`docs/sql/`(SQL)を変えた / 本体で `.rpc(`・`.insert(`・`.upsert(`・`submit…Score` などの送り方の行に触れた |
 | Edge Function | `supabase/functions/` を変えた(★下の「Edge Function だけのとき」) |
-| 新機能 | 新しい部品(`src/parts/*.jsx`)を足した / 公開の印を真にした / 更新履歴に3行以上足した |
+| 新機能 | 新しい部品(`src/parts/*.jsx`)を足した / 公開の印を真にした / 値段(`*_PRICES`・`price:`)に触れた |(更新履歴を足しただけでは要らない・2026-11-28 社長「待ち多いよ」)
 
 迷う変更は「要る」に倒してある(壊すと戻せないため)。道具が「要らない」と出しても、部が不安なら窓口へ頼んでよい。
 
@@ -32,7 +32,7 @@ node tools/ctx.js gate --base <版>  その版との差で判定(ミハリが見
 
 1. 部: マージの**前**に窓口へ知らせる(PR の番号と、gate の出力)
 2. 窓口: ミハリへ渡す。確認のモデルは gate の出力のとおり
-   (新しい画面・公開の印 → `claude-fable-5-2` で最終確認1回 / 保存データ・ランキング → `claude-opus-5-5` / 更新履歴だけ → `claude-sonnet-5-5`。[`MODEL_ROUTING.md`](MODEL_ROUTING.md))
+   (新しい画面・公開の印 → `claude-fable-5-2` で最終確認1回 / 保存データ・ランキング → `claude-opus-5-5` / 値段だけ → `claude-sonnet-5-5`。[`MODEL_ROUTING.md`](MODEL_ROUTING.md))
 3. ミハリ: 見るだけ(直さない)。見る所は [`docs/depts/kensa.md`](../depts/kensa.md)。OK なら部がマージする
 
 ### Edge Function だけのとき

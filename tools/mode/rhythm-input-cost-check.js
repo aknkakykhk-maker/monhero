@@ -131,9 +131,11 @@ check('サブレーン発光の要素を覚えて使い回す',
   /let glowNodes=null;/.test(source)
   &&/if\(!glowNodes\|\|!glowNodes\.length\|\|!glowNodes\[0\]\.isConnected\)\{/.test(source));
 // 2026-11-28 r1126-100: 書いた状態を要素に覚えて比べる形にした(dataset を毎回読み直さない)。変わったサブレーンだけ書くのは同じ
+// 2026-11-28 r1128-071: 指の位置の光と1か所(rhythmLaneGlowApply)で書く形にした。触れている幅の印も、値が変わるときだけ書く
 check('発光は変わったサブレーンだけ書き換える',
-  /const cur=el\._mhTouchspan!==undefined\?el\._mhTouchspan:el\.dataset\.rhythmTouchspan==='true';\s*if\(want===cur\)continue;/.test(source)
-  &&/el\._mhTouchspan=want;/.test(source));
+  /if\(el\._mhGlowWantTouch===want&&el\._mhTouchspan!==undefined\)continue;/.test(source)
+  &&/const curTouch=el\._mhTouchspan!==undefined\?el\._mhTouchspan:el\.dataset\.rhythmTouchspan==='true';/.test(source)
+  &&/if\(!attrP&&!attrT\)\{if\(pressed\)setP\(true\);else setT\(true\);\}/.test(source));
 
 // ── DOMの変化のたびに全ノーツを引き直していないか ──────────────────────
 // decorate() は area 配下の全ノーツを引き直すので、無関係な変化でも走ると重い。
