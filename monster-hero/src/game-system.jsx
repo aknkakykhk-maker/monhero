@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6ab10a74428dde3e
+// generated-sha256: 8b3c53cda7fa2bbe
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -70039,8 +70039,6 @@ const XMAS_NOVEL_CSS = `
 .mh-nv-fallen { position: absolute; left: 50%; bottom: 24%; width: min(80vw, 520px); transform: translateX(-50%); z-index: 4; filter: drop-shadow(0 0 2px rgba(190,200,230,.35)); pointer-events: none; animation: mh-nv-fade 1.2s ease both; }
 .mh-nv-body { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
 .mh-nv-body.noblood .pool { display: none; }
-.mh-nv-body.noblood .mh-nv-body-lie img { filter: brightness(0) drop-shadow(0 0 1px rgba(190,205,235,.55)) drop-shadow(0 0 14px rgba(120,150,200,.35)) !important; }
-.mh-nv-body.noblood .mh-nv-body-dim { background: radial-gradient(120% 90% at 50% 40%, rgba(6,10,34,.35), rgba(0,0,4,.88)) !important; }
 .mh-nv-body-dim { position: absolute; inset: 0; -webkit-backdrop-filter: grayscale(.9) brightness(.55); backdrop-filter: grayscale(.9) brightness(.55);
   background: radial-gradient(70% 34% at var(--fx, 50%) var(--fy, 74%), rgba(120,0,14,.42), rgba(120,0,14,0) 72%), radial-gradient(120% 90% at 50% 40%, rgba(6,10,34,.35), rgba(0,0,4,.88)); animation: mh-nv-fade 1.4s ease both; }
 .mh-nv-body-lie { position: absolute; }
@@ -70188,7 +70186,17 @@ const XMAS_NOVEL_CSS = `
 @keyframes mh-nv-intro-bar { from { transform: scaleX(0); } to { transform: none; } }
 @keyframes mh-nv-intro-nm { from { opacity: 0; filter: blur(6px); transform: translateX(-10px); } to { opacity: 1; filter: none; transform: none; } }
 @media (orientation: landscape) and (max-height: 560px) { .mh-nv-intro { left: 4%; top: 22%; } .mh-nv-intro .nm { font-size: 24px; } }
+/* 遺体・倒れた影を見つける行(台帳 r1126-094 追記1): 文のあいだは暗転(dark)、文が出きって一拍おいてから、ゆっくり明ける(show)。影はその下から浮かぶ */
+.mh-nv-veil { position: absolute; inset: 0; z-index: 4; pointer-events: none; background: #000; }
+.mh-nv-veil.dark { animation: mh-nv-fade .35s ease both; }
+.mh-nv-veil.show { animation: mh-nv-veil-lift 1.8s ease-in both; }
+.mh-nv-veil.fast.show { animation-duration: .5s; }
+@keyframes mh-nv-veil-lift { 0%, 15% { opacity: 1; } 100% { opacity: 0; } }
+/* 血を見せない影(白瀬など)は、真っ黒で見えなかった(社長「白瀬の死亡シーンって出てた？」)。冷たい光を当て、縁を白く光らせて形を見せる */
+.mh-nv-body.noblood .mh-nv-body-dim { background: radial-gradient(42% 30% at var(--fx, 50%) var(--fy, 74%), rgba(150,180,235,.30), rgba(150,180,235,0) 75%), radial-gradient(120% 90% at 50% 40%, rgba(6,10,34,.35), rgba(0,0,4,.88)) !important; }
+.mh-nv-body.noblood .mh-nv-body-lie img { filter: brightness(0) drop-shadow(0 0 1.5px rgba(225,235,255,.95)) drop-shadow(0 0 3px rgba(200,215,250,.6)) drop-shadow(0 0 20px rgba(140,170,230,.55)) !important; }
 @media (prefers-reduced-motion: reduce) {
+  .mh-nv-veil { animation-duration: .01s !important; }
   .mh-nv-sw, .mh-nv-sw::after, .mh-nv-bg.in-place, .mh-nv-bg.in-time, .mh-nv-bg.in-open, .mh-nv-bg.in-past, .mh-nv-card.open *, .mh-nv-fig.enter-first img, .mh-nv-fig.enter-swap img, .mh-nv-fig.enter-face img, .mh-nv-intro, .mh-nv-intro * { animation-duration: .01s !important; animation-delay: 0s !important; }
 }
 @media (prefers-reduced-motion: reduce) { .mh-nv-snow, .mh-nv-next, .mh-nv-shake, .mh-nv-get, .mh-nv-fig img { animation: none !important; } }
@@ -70322,6 +70330,19 @@ const xmasNovelPlaceLabel = (name) => {
   const base = m[1].trim();
   const inner = (m[2] || '').trim();
   return inner ? `${base}　${inner}` : base;
+};
+
+//  人ごとに、台本でいちばん初めに話す行(名札と「影から浮かぶ」はこの行だけ。つづきから読んでも、もう出た人には出さない)
+const XMAS_NOVEL_FIRST_LINE_CACHE = new WeakMap();
+const xmasNovelFirstLines = (script) => {
+  if (!script || typeof script !== 'object') return {};
+  if (XMAS_NOVEL_FIRST_LINE_CACHE.has(script)) return XMAS_NOVEL_FIRST_LINE_CACHE.get(script);
+  const out = {};
+  (Array.isArray(script.scenes) ? script.scenes : []).forEach((s) => (Array.isArray(s.rows) ? s.rows : []).forEach((r) => {
+    if (r && r.t === 'line' && r.w && r.n !== '？？？' && !out[r.w]) out[r.w] = r.id;
+  }));
+  XMAS_NOVEL_FIRST_LINE_CACHE.set(script, out);
+  return out;
 };
 
 // ---- 立ち絵 ----
@@ -70463,7 +70484,7 @@ const useXmasNovelPlace = (who, frame, artKey) => {
 };
 const XmasNovelFigure = (props) => {
   const { row } = props;
-  const who = !row ? '' : (row.t === 'band' ? 'boss' : (row.n === '？？？' ? (xmasNovelIsLaugh(row) ? 'boss' : 'shadow') : (row.w || '')));
+  const who = !row ? '' : (row.t === 'band' ? 'boss' : (row.n === '？？？' ? 'boss' : (row.w || '')));
   return <XmasNovelFigureArt {...props} who={who} frame={xmasNovelFrameOf(row, props.scene)} key={`${who}-${(row && row.e) || ''}`} />;
 };
 //  初めて出る人の名札。肩書きは台本で本人や周りが名乗る物だけ(助手たちは名前だけ)。名前は名札と同じ呼び名(フルネームは本人が名乗るまで出さない)
@@ -70483,7 +70504,7 @@ const XmasNovelFigureArt = ({ row, dim = false, who = '', frame = 'normal', ente
   if (!row || row.t !== 'line') return null;
   const key = `${row.w || row.n}-${row.e || ''}`;
   const laugh = row.n === '？？？' && xmasNovelIsLaugh(row);
-  if (row.n === '？？？' || !row.w) return row.n === '？？？' ? <div ref={ref} className={`mh-nv-fig${dim ? ' dim' : ''}${laugh ? ' laugh' : ''}`} key={key}>{laugh ? <XmasNovelBossShadow /> : <XmasNovelShadow tone="#1c2240" label="？？？" />}</div> : null;
+  if (row.n === '？？？' || !row.w) return row.n === '？？？' ? <div ref={ref} className={`mh-nv-fig${dim ? ' dim' : ''}${laugh ? ' laugh' : ''}`} key={key}><XmasNovelBossShadow />{/* 名前を伏せた話し手は、いつも黒いサンタの影(丸い頭の影はやめた・台帳 r1126-094 追記2) */}</div> : null;
   if (row.w === 'watson') return <div ref={ref} className="mh-nv-fig" key={key}><XmasNovelLaptop /></div>;
   const c = xmasNovelCastOf(row.w);
   const fig = xmasNovelFigureSrc(row.w, row.e);
@@ -71128,6 +71149,16 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
   const pendingSwRef = useRef(null); // 章の札を閉じたあとに出す切り替え
   const seenWhoRef = useRef(new Set()); // この読み始めから立ち絵が出た人
   const lastWhoRef = useRef('');
+  // 出すタイミング(台帳 r1126-094 追記1): 「文が出る → 一拍 → 演出」。遺体の影は、見つける文のあいだ暗転させ、文が出きってから明けて出す
+  const [reveal, setReveal] = useState(null); // { id, stage:'dark'|'show' } 遺体・倒れた影を見つける行
+  const pendingFxRef = useRef(null); // 文が出きってから出す演出 { id, vis, bleedAfter, shake }
+  const lastBodyRef = useRef('');
+  const fireFx = (p) => {
+    if (!p) return;
+    if (p.bleedAfter) setTimeout(() => setFx({ kind: 'bleed', n: Date.now() }), 380); // 赤く光ってから、にじむ
+    setFx(p.vis ? { kind: p.vis, n: Date.now() } : null);
+    if (p.shake) setShake((n) => n + 1);
+  };
   const fxFast = (unread) => !unread || !!(saveRef.current && saveRef.current.auto);
   const fireSw = (v) => {
     if (!v) { setSw(null); return; }
@@ -71172,20 +71203,27 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
     if (r.t === 'band' && r.se) xmasNovelRowSe(r.se, r.seN); else xmasNovelSeStop();
     if (r.t === 'band' && Array.isArray(r.fx)) {
       const vis = r.fx.find((f) => ['dark', 'white', 'red', 'light', 'bleed'].includes(f));
-      if (r.fx.includes('bleed') && r.fx.includes('red')) setTimeout(() => setFx({ kind: 'bleed', n: Date.now() }), 380); // 赤く光ってから、にじむ
-      setFx(vis ? { kind: vis, n: Date.now() } : null);
-      if (r.fx.includes('shake')) setShake((n) => n + 1);
+      const p = { id: r.id, vis, bleedAfter: r.fx.includes('bleed') && r.fx.includes('red'), shake: r.fx.includes('shake') };
+      // 音の行(ドン・ギィ など)と暗転は文と同時。様子を書いた行の赤・にじみ・揺れは、文が出きって一拍おいてから
+      if (xmasNovelIsSeRow(r) || vis === 'dark' || skip || (!vis && !p.shake)) { pendingFxRef.current = null; fireFx(p); } else { pendingFxRef.current = p; setFx(null); }
       if (r.fx.includes('curtainDown')) setCurtain('down');
       if (r.fx.includes('curtainUp')) { setCurtain('up'); setTimeout(() => setCurtain((c) => (c === 'up' ? null : c)), 1700); }
       if (r.fx.includes('title') || r.fx.includes('chapter')) { setCard({ kind: r.fx.includes('title') ? 'title' : 'band', text: r.x }); setShown(99999); return s; }
-    } else setFx((f) => (f && f.kind === 'dark' ? null : f));
+    } else { pendingFxRef.current = null; setFx((f) => (f && f.kind === 'dark' ? null : f)); }
+    // 遺体・倒れた影が初めて出る行: 文のあいだは暗転、出きってから明けて出す(同じ人が続く行はそのまま)
+    {
+      const bodyKey = r.t === 'band' ? (r.body || (Array.isArray(r.fx) && r.fx.includes('fallen') ? `fallen-${r.id}` : '')) : '';
+      if (bodyKey && bodyKey !== lastBodyRef.current) setReveal({ id: r.id, stage: skip ? 'show' : 'dark', fast: !unreadRef.current, n: Date.now() });
+      else setReveal(null);
+      if (bodyKey) lastBodyRef.current = bodyKey; // 台詞をはさんで同じ人の影に戻るときは、暗転させない(場面が替わったら忘れる)
+    }
     if (r.bgm && r.bgm !== lastBgm.current) { lastBgm.current = r.bgm; xmasNovelBgm(r.bgm); }
     if (r.t === 'clue') { setGot({ n: r.clue, d: r.x, add: !!r.add }); xmasNovelSe('clue'); }
     if (r.t === 'line' && r.n === '？？？' && xmasNovelIsLaugh(r)) xmasNovelSe('laugh');
     if (r.t === 'line') {
       // 立ち絵の出かた: その人が初めて出る / 話し手が替わる / 表情だけ替わる。スキップ中は演出なし
       const who = r.n === '？？？' ? '？？？' : (r.w || '');
-      const first = !!(who && who !== '？？？' && who !== 'watson' && !seenWhoRef.current.has(who));
+      const first = !!(who && who !== '？？？' && who !== 'watson' && !seenWhoRef.current.has(who) && xmasNovelFirstLines(S)[who] === r.id);
       if (who) seenWhoRef.current.add(who);
       const kind = first ? 'first' : who !== lastWhoRef.current ? 'swap' : 'face';
       lastWhoRef.current = who;
@@ -71217,6 +71255,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
     const scene = next.scene;
     let chapterCard = false;
     // 外側(助手たち本人)⇔ゲームの中が切り替わったら、画面に吸い込まれる/画面から引く
+    if (lastSceneRef.current !== (scene || null)) lastBodyRef.current = '';
     const transitNow = !!(scene && lastSceneRef.current && !!lastSceneRef.current.outside !== !!scene.outside);
     if (transitNow) { setTransit({ dir: scene.outside ? 'out' : 'in', n: Date.now() }); xmasNovelSe('tap'); }
     // カーテンコールの場面を出たら、下りていた幕を上げる
@@ -71239,7 +71278,8 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
       const kind = xmasNovelSwitchKind(lastBgRef.current, bgNow);
       lastBgRef.current = bgNow;
       const unread = !!(next.row && next.row.k && !s.read.includes(next.row.k));
-      const v = kind && !skip ? { kind, fast: fxFast(unread), place: scene && !scene.outside ? xmasNovelPlaceLabel(bgNow) : '' } : null;
+      const bodyRow = !!(next.row && next.row.t === 'band' && (next.row.body || (Array.isArray(next.row.fx) && next.row.fx.includes('fallen'))));
+      const v = kind && !skip && !bodyRow ? { kind, fast: fxFast(unread), place: scene && !scene.outside ? xmasNovelPlaceLabel(bgNow) : '' } : null;
       if (chapterCard) { pendingSwRef.current = v ? { ...v, kind: v.kind === 'place' ? 'open' : v.kind } : { kind: 'open', fast: false, place: '' }; fireSw(null); } else if (v && !transitNow) fireSw(v);
     }
     let cur = next.cur;
@@ -71261,6 +71301,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
     lastBgm.current = null; lastChapter.current = null;
     setLog([]); setCard(null); setSheet(null); setGot(null); setFx(null); setSkip(false);
     lastBgRef.current = null; pendingSwRef.current = null; seenWhoRef.current = new Set(); lastWhoRef.current = ''; setSw(null); setFigEnter(null);
+    setReveal(null); pendingFxRef.current = null; lastBodyRef.current = '';
     setMode('read');
     arrive(xmasNovelSettle(S, cur));
   };
@@ -71281,6 +71322,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
   const goNext = () => {
     if (sheet || !row) return;
     if (typing) { setShown(text.length); if (sw && !sw.fast) setSw(null); return; }
+    if (!reply && reveal && row && reveal.id === row.id && reveal.stage === 'dark') { setReveal({ ...reveal, stage: 'show' }); return; } // 暗いままで進めない(見つける所を必ず見せる)
     if (got) setGot(null);
     if (reply) {
       if (reply.i + 1 < reply.list.length) {
@@ -71324,11 +71366,28 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
     const id = setTimeout(() => setShown((n) => Math.min(text.length, n + (skip ? 99999 : 2))), skip ? 0 : 38);
     return () => clearTimeout(id);
   }, [typing, shown, text, skip]);
+  // 文が出きったら: 一拍おいて遺体の影を明ける / 様子の演出を出す
+  const rowKey = row ? row.id : '';
+  const revealDark = !!(reveal && reveal.id === rowKey && reveal.stage === 'dark');
+  useEffect(() => {
+    if (mode !== 'read' || !rowKey || typing) return undefined;
+    if (revealDark) {
+      const id = setTimeout(() => setReveal((v) => (v && v.id === rowKey && v.stage === 'dark' ? { ...v, stage: 'show' } : v)), reveal.fast || skip ? 150 : 700);
+      return () => clearTimeout(id);
+    }
+    const p = pendingFxRef.current;
+    if (p && p.id === rowKey) {
+      const id = setTimeout(() => { if (pendingFxRef.current === p) { pendingFxRef.current = null; fireFx(p); } }, reveal && reveal.id === rowKey ? 1300 : 300);
+      return () => clearTimeout(id);
+    }
+    return undefined;
+  }, [mode, rowKey, typing, revealDark]);
   // オート・スキップ(スキップは読んだ行だけ。まだ読んでいない行・問い・札で止まる)
   const autoLevel = save ? save.auto : 0;
   useEffect(() => {
     if (mode !== 'read' || !row || sheet || typing) return undefined;
     if (card && card.kind === 'ending') return undefined;
+    if (revealDark && !skip) return undefined; // 明けるのを待つ
     if (card && !skip) return undefined;
     if (skip) {
       if ((row.t === 'q' && !reply) || (unreadRef.current && !reply)) { setSkip(false); return undefined; }
@@ -71463,9 +71522,10 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
         {!darkNow && (isLine || (isBand && xmasNovelIsSilhouette(row))) && <XmasNovelFigure row={row} scene={scene} enter={isLine ? figEnter : null} />}
         {sw && <div key={`sw-${sw.n}`} className={`mh-nv-sw ${sw.kind}${sw.fast ? ' fast' : ''}`} data-xmas-novel-switch={sw.kind} />}
         {sw && sw.place && <div key={`place-${sw.n}`} className={`mh-nv-place mh-nv-serif${sw.kind === 'past' ? ' past' : ''}${sw.fast ? ' fast' : ''}`} data-xmas-novel-place>{sw.place}</div>}
+        {isBand && row.body && !revealDark && <XmasNovelBody key={`body-${row.body}`} bg={bg} who={xmasNovelBodyWho(row.body, st && st.cur && st.cur.flags)} scene={scene ? scene.id : ''} at={st && st.cur && Number.isFinite(st.cur.idx) ? st.cur.idx : 0} noBlood={!!row.noBlood} />}
+        {isBand && !row.body && !revealDark && Array.isArray(row.fx) && row.fx.includes('fallen') && <XmasNovelFallen />}
+        {reveal && reveal.id === rowKey && <div key={`veil-${reveal.n}`} className={`mh-nv-veil ${reveal.stage}${reveal.fast ? ' fast' : ''}`} data-xmas-novel-veil={reveal.stage} />}
         {fx && <div key={fx.n} className={`mh-nv-fx ${fx.kind}`} />}
-        {isBand && row.body && <XmasNovelBody key={`body-${row.body}`} bg={bg} who={xmasNovelBodyWho(row.body, st && st.cur && st.cur.flags)} scene={scene ? scene.id : ''} at={st && st.cur && Number.isFinite(st.cur.idx) ? st.cur.idx : 0} noBlood={!!row.noBlood} />}
-        {isBand && !row.body && Array.isArray(row.fx) && row.fx.includes('fallen') && <XmasNovelFallen />}
         {isBand && Array.isArray(row.fx) && row.fx.includes('letter') && <div key={`letter-${row.id}`} className="mh-nv-letter mh-nv-serif" data-xmas-novel-letter>{String(text).replace(/／/g, '\n')}</div>}
         {inside && <div className="mh-nv-crt" data-xmas-novel-inside />}
         {transit && <div key={transit.n} className="mh-nv-transit" data-dir={transit.dir} data-xmas-novel-transit={transit.dir} onAnimationEnd={(e) => { if (e.target === e.currentTarget) setTransit(null); }}><div className="scr" /><div className="mh-nv-noise" /><div className="mh-nv-scan" /></div>}

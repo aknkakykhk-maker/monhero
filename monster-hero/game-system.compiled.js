@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d2d7b6e642f8e53f
+// source-sha256: 100d3f8b88ec611f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -127143,8 +127143,6 @@ const XMAS_NOVEL_CSS = `
 .mh-nv-fallen { position: absolute; left: 50%; bottom: 24%; width: min(80vw, 520px); transform: translateX(-50%); z-index: 4; filter: drop-shadow(0 0 2px rgba(190,200,230,.35)); pointer-events: none; animation: mh-nv-fade 1.2s ease both; }
 .mh-nv-body { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
 .mh-nv-body.noblood .pool { display: none; }
-.mh-nv-body.noblood .mh-nv-body-lie img { filter: brightness(0) drop-shadow(0 0 1px rgba(190,205,235,.55)) drop-shadow(0 0 14px rgba(120,150,200,.35)) !important; }
-.mh-nv-body.noblood .mh-nv-body-dim { background: radial-gradient(120% 90% at 50% 40%, rgba(6,10,34,.35), rgba(0,0,4,.88)) !important; }
 .mh-nv-body-dim { position: absolute; inset: 0; -webkit-backdrop-filter: grayscale(.9) brightness(.55); backdrop-filter: grayscale(.9) brightness(.55);
   background: radial-gradient(70% 34% at var(--fx, 50%) var(--fy, 74%), rgba(120,0,14,.42), rgba(120,0,14,0) 72%), radial-gradient(120% 90% at 50% 40%, rgba(6,10,34,.35), rgba(0,0,4,.88)); animation: mh-nv-fade 1.4s ease both; }
 .mh-nv-body-lie { position: absolute; }
@@ -127292,7 +127290,17 @@ const XMAS_NOVEL_CSS = `
 @keyframes mh-nv-intro-bar { from { transform: scaleX(0); } to { transform: none; } }
 @keyframes mh-nv-intro-nm { from { opacity: 0; filter: blur(6px); transform: translateX(-10px); } to { opacity: 1; filter: none; transform: none; } }
 @media (orientation: landscape) and (max-height: 560px) { .mh-nv-intro { left: 4%; top: 22%; } .mh-nv-intro .nm { font-size: 24px; } }
+/* 遺体・倒れた影を見つける行(台帳 r1126-094 追記1): 文のあいだは暗転(dark)、文が出きって一拍おいてから、ゆっくり明ける(show)。影はその下から浮かぶ */
+.mh-nv-veil { position: absolute; inset: 0; z-index: 4; pointer-events: none; background: #000; }
+.mh-nv-veil.dark { animation: mh-nv-fade .35s ease both; }
+.mh-nv-veil.show { animation: mh-nv-veil-lift 1.8s ease-in both; }
+.mh-nv-veil.fast.show { animation-duration: .5s; }
+@keyframes mh-nv-veil-lift { 0%, 15% { opacity: 1; } 100% { opacity: 0; } }
+/* 血を見せない影(白瀬など)は、真っ黒で見えなかった(社長「白瀬の死亡シーンって出てた？」)。冷たい光を当て、縁を白く光らせて形を見せる */
+.mh-nv-body.noblood .mh-nv-body-dim { background: radial-gradient(42% 30% at var(--fx, 50%) var(--fy, 74%), rgba(150,180,235,.30), rgba(150,180,235,0) 75%), radial-gradient(120% 90% at 50% 40%, rgba(6,10,34,.35), rgba(0,0,4,.88)) !important; }
+.mh-nv-body.noblood .mh-nv-body-lie img { filter: brightness(0) drop-shadow(0 0 1.5px rgba(225,235,255,.95)) drop-shadow(0 0 3px rgba(200,215,250,.6)) drop-shadow(0 0 20px rgba(140,170,230,.55)) !important; }
 @media (prefers-reduced-motion: reduce) {
+  .mh-nv-veil { animation-duration: .01s !important; }
   .mh-nv-sw, .mh-nv-sw::after, .mh-nv-bg.in-place, .mh-nv-bg.in-time, .mh-nv-bg.in-open, .mh-nv-bg.in-past, .mh-nv-card.open *, .mh-nv-fig.enter-first img, .mh-nv-fig.enter-swap img, .mh-nv-fig.enter-face img, .mh-nv-intro, .mh-nv-intro * { animation-duration: .01s !important; animation-delay: 0s !important; }
 }
 @media (prefers-reduced-motion: reduce) { .mh-nv-snow, .mh-nv-next, .mh-nv-shake, .mh-nv-get, .mh-nv-fig img { animation: none !important; } }
@@ -127472,6 +127480,17 @@ const xmasNovelPlaceLabel = name => {
   const base = m[1].trim();
   const inner = (m[2] || '').trim();
   return inner ? `${base}　${inner}` : base;
+};
+const XMAS_NOVEL_FIRST_LINE_CACHE = new WeakMap();
+const xmasNovelFirstLines = script => {
+  if (!script || typeof script !== 'object') return {};
+  if (XMAS_NOVEL_FIRST_LINE_CACHE.has(script)) return XMAS_NOVEL_FIRST_LINE_CACHE.get(script);
+  const out = {};
+  (Array.isArray(script.scenes) ? script.scenes : []).forEach(s => (Array.isArray(s.rows) ? s.rows : []).forEach(r => {
+    if (r && r.t === 'line' && r.w && r.n !== '？？？' && !out[r.w]) out[r.w] = r.id;
+  }));
+  XMAS_NOVEL_FIRST_LINE_CACHE.set(script, out);
+  return out;
 };
 const XMAS_NOVEL_FACES = Object.freeze(['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited']);
 const xmasNovelFigureSrc = (who, e) => {
@@ -127808,7 +127827,7 @@ const XmasNovelFigure = props => {
   const {
     row
   } = props;
-  const who = !row ? '' : row.t === 'band' ? 'boss' : row.n === '？？？' ? xmasNovelIsLaugh(row) ? 'boss' : 'shadow' : row.w || '';
+  const who = !row ? '' : row.t === 'band' ? 'boss' : row.n === '？？？' ? 'boss' : row.w || '';
   return React.createElement(XmasNovelFigureArt, _extends({}, props, {
     who: who,
     frame: xmasNovelFrameOf(row, props.scene),
@@ -127856,10 +127875,7 @@ const XmasNovelFigureArt = ({
     ref: ref,
     className: `mh-nv-fig${dim ? ' dim' : ''}${laugh ? ' laugh' : ''}`,
     key: key
-  }, laugh ? React.createElement(XmasNovelBossShadow, null) : React.createElement(XmasNovelShadow, {
-    tone: "#1c2240",
-    label: "？？？"
-  })) : null;
+  }, React.createElement(XmasNovelBossShadow, null)) : null;
   if (row.w === 'watson') return React.createElement("div", {
     ref: ref,
     className: "mh-nv-fig",
@@ -128993,6 +129009,21 @@ const XmasNovelScreen = ({
   const pendingSwRef = useRef(null);
   const seenWhoRef = useRef(new Set());
   const lastWhoRef = useRef('');
+  const [reveal, setReveal] = useState(null);
+  const pendingFxRef = useRef(null);
+  const lastBodyRef = useRef('');
+  const fireFx = p => {
+    if (!p) return;
+    if (p.bleedAfter) setTimeout(() => setFx({
+      kind: 'bleed',
+      n: Date.now()
+    }), 380);
+    setFx(p.vis ? {
+      kind: p.vis,
+      n: Date.now()
+    } : null);
+    if (p.shake) setShake(n => n + 1);
+  };
   const fxFast = unread => !unread || !!(saveRef.current && saveRef.current.auto);
   const fireSw = v => {
     if (!v) {
@@ -129070,15 +129101,19 @@ const XmasNovelScreen = ({
     if (r.t === 'band' && r.se) xmasNovelRowSe(r.se, r.seN);else xmasNovelSeStop();
     if (r.t === 'band' && Array.isArray(r.fx)) {
       const vis = r.fx.find(f => ['dark', 'white', 'red', 'light', 'bleed'].includes(f));
-      if (r.fx.includes('bleed') && r.fx.includes('red')) setTimeout(() => setFx({
-        kind: 'bleed',
-        n: Date.now()
-      }), 380);
-      setFx(vis ? {
-        kind: vis,
-        n: Date.now()
-      } : null);
-      if (r.fx.includes('shake')) setShake(n => n + 1);
+      const p = {
+        id: r.id,
+        vis,
+        bleedAfter: r.fx.includes('bleed') && r.fx.includes('red'),
+        shake: r.fx.includes('shake')
+      };
+      if (xmasNovelIsSeRow(r) || vis === 'dark' || skip || !vis && !p.shake) {
+        pendingFxRef.current = null;
+        fireFx(p);
+      } else {
+        pendingFxRef.current = p;
+        setFx(null);
+      }
       if (r.fx.includes('curtainDown')) setCurtain('down');
       if (r.fx.includes('curtainUp')) {
         setCurtain('up');
@@ -129092,7 +129127,20 @@ const XmasNovelScreen = ({
         setShown(99999);
         return s;
       }
-    } else setFx(f => f && f.kind === 'dark' ? null : f);
+    } else {
+      pendingFxRef.current = null;
+      setFx(f => f && f.kind === 'dark' ? null : f);
+    }
+    {
+      const bodyKey = r.t === 'band' ? r.body || (Array.isArray(r.fx) && r.fx.includes('fallen') ? `fallen-${r.id}` : '') : '';
+      if (bodyKey && bodyKey !== lastBodyRef.current) setReveal({
+        id: r.id,
+        stage: skip ? 'show' : 'dark',
+        fast: !unreadRef.current,
+        n: Date.now()
+      });else setReveal(null);
+      if (bodyKey) lastBodyRef.current = bodyKey;
+    }
     if (r.bgm && r.bgm !== lastBgm.current) {
       lastBgm.current = r.bgm;
       xmasNovelBgm(r.bgm);
@@ -129108,7 +129156,7 @@ const XmasNovelScreen = ({
     if (r.t === 'line' && r.n === '？？？' && xmasNovelIsLaugh(r)) xmasNovelSe('laugh');
     if (r.t === 'line') {
       const who = r.n === '？？？' ? '？？？' : r.w || '';
-      const first = !!(who && who !== '？？？' && who !== 'watson' && !seenWhoRef.current.has(who));
+      const first = !!(who && who !== '？？？' && who !== 'watson' && !seenWhoRef.current.has(who) && xmasNovelFirstLines(S)[who] === r.id);
       if (who) seenWhoRef.current.add(who);
       const kind = first ? 'first' : who !== lastWhoRef.current ? 'swap' : 'face';
       lastWhoRef.current = who;
@@ -129178,6 +129226,7 @@ const XmasNovelScreen = ({
     }
     const scene = next.scene;
     let chapterCard = false;
+    if (lastSceneRef.current !== (scene || null)) lastBodyRef.current = '';
     const transitNow = !!(scene && lastSceneRef.current && !!lastSceneRef.current.outside !== !!scene.outside);
     if (transitNow) {
       setTransit({
@@ -129234,7 +129283,8 @@ const XmasNovelScreen = ({
       const kind = xmasNovelSwitchKind(lastBgRef.current, bgNow);
       lastBgRef.current = bgNow;
       const unread = !!(next.row && next.row.k && !s.read.includes(next.row.k));
-      const v = kind && !skip ? {
+      const bodyRow = !!(next.row && next.row.t === 'band' && (next.row.body || Array.isArray(next.row.fx) && next.row.fx.includes('fallen')));
+      const v = kind && !skip && !bodyRow ? {
         kind,
         fast: fxFast(unread),
         place: scene && !scene.outside ? xmasNovelPlaceLabel(bgNow) : ''
@@ -129293,6 +129343,9 @@ const XmasNovelScreen = ({
     lastWhoRef.current = '';
     setSw(null);
     setFigEnter(null);
+    setReveal(null);
+    pendingFxRef.current = null;
+    lastBodyRef.current = '';
     setMode('read');
     arrive(xmasNovelSettle(S, cur));
   };
@@ -129315,6 +129368,13 @@ const XmasNovelScreen = ({
     if (typing) {
       setShown(text.length);
       if (sw && !sw.fast) setSw(null);
+      return;
+    }
+    if (!reply && reveal && row && reveal.id === row.id && reveal.stage === 'dark') {
+      setReveal({
+        ...reveal,
+        stage: 'show'
+      });
       return;
     }
     if (got) setGot(null);
@@ -129404,10 +129464,34 @@ const XmasNovelScreen = ({
     const id = setTimeout(() => setShown(n => Math.min(text.length, n + (skip ? 99999 : 2))), skip ? 0 : 38);
     return () => clearTimeout(id);
   }, [typing, shown, text, skip]);
+  const rowKey = row ? row.id : '';
+  const revealDark = !!(reveal && reveal.id === rowKey && reveal.stage === 'dark');
+  useEffect(() => {
+    if (mode !== 'read' || !rowKey || typing) return undefined;
+    if (revealDark) {
+      const id = setTimeout(() => setReveal(v => v && v.id === rowKey && v.stage === 'dark' ? {
+        ...v,
+        stage: 'show'
+      } : v), reveal.fast || skip ? 150 : 700);
+      return () => clearTimeout(id);
+    }
+    const p = pendingFxRef.current;
+    if (p && p.id === rowKey) {
+      const id = setTimeout(() => {
+        if (pendingFxRef.current === p) {
+          pendingFxRef.current = null;
+          fireFx(p);
+        }
+      }, reveal && reveal.id === rowKey ? 1300 : 300);
+      return () => clearTimeout(id);
+    }
+    return undefined;
+  }, [mode, rowKey, typing, revealDark]);
   const autoLevel = save ? save.auto : 0;
   useEffect(() => {
     if (mode !== 'read' || !row || sheet || typing) return undefined;
     if (card && card.kind === 'ending') return undefined;
+    if (revealDark && !skip) return undefined;
     if (card && !skip) return undefined;
     if (skip) {
       if (row.t === 'q' && !reply || unreadRef.current && !reply) {
@@ -129677,17 +129761,21 @@ const XmasNovelScreen = ({
     key: `place-${sw.n}`,
     className: `mh-nv-place mh-nv-serif${sw.kind === 'past' ? ' past' : ''}${sw.fast ? ' fast' : ''}`,
     "data-xmas-novel-place": true
-  }, sw.place), fx && React.createElement("div", {
-    key: fx.n,
-    className: `mh-nv-fx ${fx.kind}`
-  }), isBand && row.body && React.createElement(XmasNovelBody, {
+  }, sw.place), isBand && row.body && !revealDark && React.createElement(XmasNovelBody, {
     key: `body-${row.body}`,
     bg: bg,
     who: xmasNovelBodyWho(row.body, st && st.cur && st.cur.flags),
     scene: scene ? scene.id : '',
     at: st && st.cur && Number.isFinite(st.cur.idx) ? st.cur.idx : 0,
     noBlood: !!row.noBlood
-  }), isBand && !row.body && Array.isArray(row.fx) && row.fx.includes('fallen') && React.createElement(XmasNovelFallen, null), isBand && Array.isArray(row.fx) && row.fx.includes('letter') && React.createElement("div", {
+  }), isBand && !row.body && !revealDark && Array.isArray(row.fx) && row.fx.includes('fallen') && React.createElement(XmasNovelFallen, null), reveal && reveal.id === rowKey && React.createElement("div", {
+    key: `veil-${reveal.n}`,
+    className: `mh-nv-veil ${reveal.stage}${reveal.fast ? ' fast' : ''}`,
+    "data-xmas-novel-veil": reveal.stage
+  }), fx && React.createElement("div", {
+    key: fx.n,
+    className: `mh-nv-fx ${fx.kind}`
+  }), isBand && Array.isArray(row.fx) && row.fx.includes('letter') && React.createElement("div", {
     key: `letter-${row.id}`,
     className: "mh-nv-letter mh-nv-serif",
     "data-xmas-novel-letter": true
