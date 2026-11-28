@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 55a9d076d3501144
+// source-sha256: 018a426918ad77c2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -15421,6 +15421,55 @@ const SoulRankAura = ({
     className: "mh-reincarnate-sparks"
   }));
 };
+const homeWalkingMasumonTarget = (el, laneCenter, laneWidth) => {
+  const pick = () => ({
+    x: Math.max(6, Math.min(94, laneCenter + (Math.random() - 0.5) * laneWidth)),
+    y: 10 + Math.random() * 80
+  });
+  let avoid = null;
+  try {
+    const layer = el && el.parentElement;
+    const boss = typeof document !== 'undefined' ? document.querySelector('[data-home-raid-jack]') : null;
+    if (layer && boss && boss.getClientRects().length) {
+      const L = layer.getBoundingClientRect();
+      const rs = [boss, ...boss.querySelectorAll('img')].map(e => e.getBoundingClientRect()).filter(r => r.width > 1 && r.height > 1);
+      if (L.width > 0 && L.height > 0 && rs.length) {
+        const B = {
+          left: Math.min(...rs.map(r => r.left)),
+          right: Math.max(...rs.map(r => r.right)),
+          top: Math.min(...rs.map(r => r.top)),
+          bottom: Math.max(...rs.map(r => r.bottom))
+        };
+        const mw = el.offsetWidth || 56;
+        avoid = {
+          x1: (B.left - mw / 2 - L.left) / L.width * 100,
+          x2: (B.right + mw / 2 - L.left) / L.width * 100,
+          y1: (B.top - mw * 0.28 - L.top) / L.height * 100,
+          y2: (B.bottom + mw * 0.72 - L.top) / L.height * 100
+        };
+      }
+    }
+  } catch (_) {
+    avoid = null;
+  }
+  if (!avoid) return pick();
+  const inside = p => p.x > avoid.x1 && p.x < avoid.x2 && p.y > avoid.y1 && p.y < avoid.y2;
+  for (let i = 0; i < 16; i++) {
+    const p = pick();
+    if (!inside(p)) return p;
+  }
+  const p = pick();
+  if (avoid.y2 <= 96) return {
+    x: p.x,
+    y: avoid.y2 + Math.random() * Math.max(0, 96 - avoid.y2)
+  };
+  const left = p.x < 50 ? avoid.x1 - 2 - Math.random() * 12 : null,
+    right = p.x >= 50 ? avoid.x2 + 2 + Math.random() * 12 : null;
+  return {
+    x: Math.max(-30, Math.min(130, left !== null ? left : right)),
+    y: p.y
+  };
+};
 const HomeWalkingMasumon = ({
   masu,
   base,
@@ -15440,6 +15489,7 @@ const HomeWalkingMasumon = ({
   const timerRef = useRef(null);
   const mountedRef = useRef(true);
   const motionRef = useRef(motion);
+  const selfRef = useRef(null);
   useEffect(() => {
     mountedRef.current = true;
     const clearMotionTimer = () => {
@@ -15454,8 +15504,10 @@ const HomeWalkingMasumon = ({
         if (!mountedRef.current || document.visibilityState === 'hidden') return;
         const current = motionRef.current;
         const laneWidth = count <= 1 ? 84 : 30;
-        const x = Math.max(6, Math.min(94, laneCenter + (Math.random() - 0.5) * laneWidth));
-        const y = 10 + Math.random() * 80;
+        const {
+          x,
+          y
+        } = homeWalkingMasumonTarget(selfRef.current, laneCenter, laneWidth);
         const distance = Math.hypot(x - current.x, y - current.y);
         const duration = Math.max(2100, Math.min(4800, (1850 + distance * 32) * speedFactor));
         const next = {
@@ -15499,6 +15551,7 @@ const HomeWalkingMasumon = ({
     };
   }, [masu.id, index, count]);
   return React.createElement("div", {
+    ref: selfRef,
     className: `mh-home-masumon ${motion.walking ? 'is-walking' : ''}`,
     style: {
       left: `${motion.x}%`,
@@ -64233,6 +64286,18 @@ const RAID_XMAS_STORY_AFTER_TIER = Object.freeze({
 const RAID_XMAS_ENDING_CLEARED_ID = 'raid_xmas_ending_cleared';
 const RAID_XMAS_ENDING_NOTCLEARED_ID = 'raid_xmas_ending_notcleared';
 const RAID_XMAS_STORY_IDS = Object.freeze([RAID_XMAS_STORY_START_ID, ...Object.values(RAID_XMAS_STORY_AFTER_TIER), RAID_XMAS_ENDING_CLEARED_ID, RAID_XMAS_ENDING_NOTCLEARED_ID]);
+const raidXmasSceneBgOf = name => {
+  const m = typeof name === 'string' ? name.match(/^xmas_([a-z0-9_]+?)(?:@([a-z]+))?$/) : null;
+  if (!m || typeof XMAS_NOVEL_BG_IMG === 'undefined') return null;
+  const img = XMAS_NOVEL_BG_IMG[m[1]];
+  if (!img) return null;
+  const tint = m[2] && typeof XMAS_NOVEL_TINT !== 'undefined' ? XMAS_NOVEL_TINT[m[2]] || '' : '';
+  return {
+    img,
+    base: m[1],
+    tint
+  };
+};
 const raidXmasStoryCandidates = (totals, nowMs) => {
   const out = [];
   const a = totals && totals.a ? totals.a : null;
@@ -72182,6 +72247,22 @@ const QUICK_ANYWHERE_FLOAT_MAX_LIFT = 0.6;
 const QUICK_ANYWHERE_FLOAT_SIDES = Object.freeze({
   TEMPLE: 'left'
 });
+const quickAnywhereFloatSlot = el => {
+  if (typeof document === 'undefined' || !el) return null;
+  const slot = document.querySelector('[data-quick-anywhere-slot]');
+  if (!slot || !slot.getClientRects().length) return null;
+  const r = slot.getBoundingClientRect();
+  const w = el.offsetWidth || 70,
+    h = el.offsetHeight || 34;
+  if (r.width < w || r.height < h) return null;
+  return {
+    side: 'right',
+    lift: 0,
+    slot: true,
+    top: Math.round(r.top + (r.height - h) / 2),
+    left: Math.round(r.left + (r.width - w) / 2)
+  };
+};
 const quickAnywhereFloatStyle = spot => {
   const s = spot.hidden ? {
     visibility: 'hidden',
@@ -72189,6 +72270,11 @@ const quickAnywhereFloatStyle = spot => {
   } : {
     opacity: 0.86
   };
+  if (spot.slot) return Object.assign(s, {
+    position: 'fixed',
+    top: `${spot.top}px`,
+    left: `${spot.left}px`
+  });
   Object.assign(s, {
     position: 'fixed',
     bottom: `max(${8 + spot.lift}px, calc(var(--mh-sa-bottom, 0px) + ${6 + spot.lift}px))`
@@ -72199,6 +72285,12 @@ const quickAnywhereFloatStyle = spot => {
 const quickAnywhereFloatRect = (el, spot) => {
   const w = el.offsetWidth || 70,
     h = el.offsetHeight || 34;
+  if (spot.slot) return {
+    left: spot.left,
+    top: spot.top,
+    right: spot.left + w,
+    bottom: spot.top + h
+  };
   const css = getComputedStyle(document.documentElement);
   const num = v => {
     const n = parseFloat(v);
@@ -72236,6 +72328,8 @@ const quickAnywhereFloatHits = (el, spot, known = null) => {
 const quickAnywhereFloatPick = (el, screen) => {
   const first = QUICK_ANYWHERE_FLOAT_SIDES[screen] === 'left' ? 'left' : 'right';
   const sides = first === 'left' ? ['left', 'right'] : ['right', 'left'];
+  const slot = quickAnywhereFloatSlot(el);
+  if (slot && quickAnywhereFloatHits(el, slot) === 0) return slot;
   for (const side of sides) {
     const spot = {
       side,
@@ -72290,7 +72384,12 @@ const QuickAnywhereFloat = ({
       const next = quickAnywhereFloatPick(ref.current, screen);
       const base = {
         side: next.side,
-        lift: next.lift
+        lift: next.lift,
+        ...(next.slot ? {
+          slot: true,
+          top: next.top,
+          left: next.left
+        } : {})
       };
       placedRef.current = {
         ...base,
@@ -72312,10 +72411,15 @@ const QuickAnywhereFloat = ({
       }
       const base = {
         side: placed.side,
-        lift: placed.lift
+        lift: placed.lift,
+        ...(placed.slot ? {
+          slot: true,
+          top: placed.top,
+          left: placed.left
+        } : {})
       };
       const covered = quickAnywhereFloatHits(el, base, knownRef.current) > 0;
-      setSpot(prev => !!prev.hidden === covered && prev.side === base.side && prev.lift === base.lift ? prev : covered ? {
+      setSpot(prev => !!prev.hidden === covered && prev.side === base.side && prev.lift === base.lift && prev.top === base.top && prev.left === base.left ? prev : covered ? {
         ...base,
         hidden: true
       } : base);
@@ -72341,7 +72445,7 @@ const QuickAnywhereFloat = ({
   return React.createElement("button", _extends({
     ref: ref,
     type: "button",
-    "data-quick-anywhere-spot": spot.hidden ? 'hidden' : `${spot.side}-${spot.lift}`
+    "data-quick-anywhere-spot": spot.hidden ? 'hidden' : spot.slot ? 'slot' : `${spot.side}-${spot.lift}`
   }, rest, {
     style: {
       ...(style || {}),
@@ -87144,7 +87248,10 @@ const HOME_EVENT_BADGE_CSS = `
 `;
 const HOME_V2_CSS = `
 .mh-home-v2{--v2-panel:#102522eb;--v2-line:#f7df9a88}
-.mh-home-v2 .mh-home-top{display:flex;align-items:center;gap:6px;padding:calc(6px + env(safe-area-inset-top)) 8px 0;z-index:20}
+/* 上の1段の上は 6px だけ(2026-11-28 台帳 r1126-088 追記1・社長「上部空いてるのってなんだっけ？」)。
+   前は切り欠きの高さ env(safe-area-inset-top) も足していたが、body が同じ分をもう空けている(index.html)ので二重になり、時刻の段の下に空の絵だけの空きが出ていた。
+   body の空けで時刻の段にはかからない(Safari で開いたときは env が 0) */
+.mh-home-v2 .mh-home-top{display:flex;align-items:center;gap:6px;padding:6px 8px 0;z-index:20}
 .mh-home-v2 .mh-home-top .mh-home-player{flex:1 1 auto;min-width:0;height:46px;padding:3px 10px 3px 4px;gap:7px}
 .mh-home-v2 .mh-home-top .mh-home-avatar{flex:0 0 36px;width:36px;height:36px}
 .mh-home-v2 .mh-home-top .mh-home-player-copy strong{max-width:none;font-size:13px;line-height:1.25}
@@ -87161,7 +87268,7 @@ const HOME_V2_CSS = `
 .mh-home-v2 .mh-home-menu-btn em,.mh-home-v2 .mh-home-menu .mh-home-side-btn em{display:flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:999px;border:2px solid #fff;background:#e11d48;color:#fff;font-size:11px;font-style:normal;font-weight:900;line-height:1;box-shadow:0 2px 6px #0008}
 .mh-home-v2 .mh-home-menu-btn em{position:absolute;top:-7px;right:-6px}
 .mh-home-v2 .mh-home-menu-shade{position:absolute;inset:0;z-index:28;border:0;background:#0006;cursor:default}
-.mh-home-v2 .mh-home-menu{position:absolute;z-index:29;right:8px;top:calc(58px + env(safe-area-inset-top));display:flex;flex-direction:column;gap:6px;width:min(240px,calc(100% - 16px));padding:8px;border:1px solid var(--v2-line);border-radius:16px;background:#0d1f1cf7;box-shadow:0 10px 30px #000c}
+.mh-home-v2 .mh-home-menu{position:absolute;z-index:29;right:8px;top:58px;display:flex;flex-direction:column;gap:6px;width:min(240px,calc(100% - 16px));padding:8px;border:1px solid var(--v2-line);border-radius:16px;background:#0d1f1cf7;box-shadow:0 10px 30px #000c}
 /* 閉じているときは目に見えない形(読み上げには残す)。メニューの中の「設定」「ミッション」などを、読み上げの利用者と検査がいつでも見つけられるように */
 .mh-home-v2 .mh-home-menu:not(.is-open){width:1px;height:1px;padding:0;margin:0;border:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap;pointer-events:none;box-shadow:none}
 .mh-home-v2 .mh-home-menu.is-open{display:flex;animation:mhHomeMenuIn .15s ease-out}
@@ -87180,23 +87287,21 @@ const HOME_V2_CSS = `
 .mh-home-v2 .mh-home-menu .mh-home-side-btn em.mh-unread-badge{width:auto!important;height:20px!important;min-width:20px;padding:0 6px!important;border-radius:999px!important;font-size:11px!important;line-height:1!important;white-space:nowrap}
 .mh-home-v2 .mh-home-settings .mh-home-side-ic{border-color:#cbd5e1aa;background:#1e293be8;color:#e2e8f0}
 .mh-home-v2 .mh-home-band{position:relative;z-index:6;margin:6px 8px 0}
-.mh-home-v2 .mh-home-band-view{overflow:hidden;border-radius:14px}
-.mh-home-v2 .mh-home-band-track{display:flex;transition:transform .35s ease}
-.mh-home-v2 .mh-home-band-slide{flex:0 0 100%;min-width:0;height:80px}
-.mh-home-v2 .mh-home-band-slide>button{width:100%;height:80px}
-.mh-home-v2 .mh-home-band .mh-home-event-banner{max-width:none;justify-content:center;gap:4px;padding:8px 14px;border-radius:14px;font-size:15px}
-.mh-home-v2 .mh-home-band .mh-home-event-banner .r1{column-gap:8px}
-.mh-home-v2 .mh-home-band .mh-home-event-banner small{font-size:11px}
-.mh-home-v2 .mh-home-band .mh-home-event-banner .t2{font-size:12px}
-.mh-home-v2 .mh-home-band .mh-home-tour-banner{max-width:none;gap:10px;padding:8px 14px;border-radius:14px}
-.mh-home-v2 .mh-home-band .mh-home-tour-banner>span:first-child{font-size:30px}
-.mh-home-v2 .mh-home-band .mh-home-tour-banner b{font-size:15px}
-.mh-home-v2 .mh-home-band .mh-home-tour-banner small,.mh-home-v2 .mh-home-band .mh-home-tour-banner em{font-size:11px}
-.mh-home-v2 .mh-home-band-nav{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:2px}
-.mh-home-v2 .mh-home-band-nav .mh-home-event-strip-dots button{display:flex;align-items:center;justify-content:center;width:22px;height:22px;padding:0;border:0;background:transparent}
-.mh-home-v2 .mh-home-band-nav .mh-home-event-strip-dots i{width:8px;height:8px;box-shadow:0 0 0 1px #0008}
-.mh-home-v2 .mh-home-band-nav .mh-home-event-strip-dots button.on i{width:18px;border-radius:4px;background:#fde68a}
-.mh-home-v2 .mh-home-band-next{min-width:0;max-width:72%;min-height:22px;overflow:hidden;padding:2px 9px;border-radius:999px;background:#000a;color:#fffbeb;font-size:11px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}
+/* イベントの表示(r1126-088 で前の形に戻した): クリスマスの絵の札 → その下に細い帯(前の HOME と同じ作り)。
+   追記1(社長「イベントバナーをもう少し横幅小さくして」): 札は前(312×80)より少し小さく 278×74(縦横の比をほぼ同じにして、絵の切り方を前と同じに)。
+   細い帯も札と同じ幅まで。札の右の空きは裏クイックの札の置き場 */
+.mh-home-v2 .mh-home-band-xmas{width:calc(100% - 96px)}
+.mh-home-v2 .mh-home-band-xmas>button[data-home-xmas-entry]{height:74px!important}
+.mh-home-v2 .mh-home-band-quick-slot{position:absolute;top:0;right:-6px;width:96px;height:74px;pointer-events:none}
+.mh-home-v2 .mh-home-band-strip{display:flex;align-items:center;gap:6px;width:fit-content;max-width:100%;margin-top:3px}
+.mh-home-v2 .mh-home-band-strip .mh-home-event-banner{max-width:calc(100cqw - 112px)}
+.mh-home-v2 .mh-home-band-strip .mh-home-tour-banner{max-width:min(72vw,300px)}
+/* ほかのイベントの絵の札(追記2)。クリスマスの札と同じ幅・少し低く(マップを狭くしない) */
+.mh-home-v2 .mh-home-band-strip:has(.mh-home-event-art){width:calc(100% - 96px)}
+.mh-home-v2 .mh-home-event-art{position:relative;display:block;flex:1 1 auto;width:100%;height:62px;overflow:hidden;padding:0;border:2px solid #f9a8d4;border-radius:12px;background:#3b0a2e;box-shadow:0 4px 12px #0009}
+.mh-home-v2 .mh-home-event-art:active{transform:scale(.97);filter:brightness(1.15)}
+.mh-home-v2 .mh-home-event-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 12%;pointer-events:none}
+.mh-home-v2 .mh-home-event-art-sub{position:absolute;left:6px;bottom:4px;padding:1px 7px;border:1px solid #fbcfe8;border-radius:999px;background:#9d174de6;color:#fff;font-size:10px;font-weight:900;line-height:1.3;white-space:nowrap}
 .mh-home-v2 .mh-home-assistant{width:70%;max-width:360px;margin:6px 0 0 8px}
 .mh-home-v2 .mh-home-assistant-fold{margin:6px 0 0 8px}
 .mh-home-v2 .mh-home-assistant-show-mark{right:-8px;bottom:-6px;width:24px;height:24px;font-size:14px;background:#fff!important;box-shadow:0 0 0 2px #e11d48,0 2px 6px #0009;animation:mhHomePeerMark 1.4s ease-in-out infinite}
@@ -87204,7 +87309,11 @@ const HOME_V2_CSS = `
 @media(prefers-reduced-motion:reduce){.mh-home-v2 .mh-home-assistant-show-mark{animation:none}}
 .mh-home-v2 .mh-home-assistant-news-dot{position:absolute;top:1px;right:1px;width:13px;height:13px;border-radius:50%;border:2px solid #fff;background:#e11d48;box-shadow:0 1px 4px #0009}
 .mh-home-v2 .mh-home-peer-mark{position:absolute;left:52px;top:calc(100% + 4px);width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:50%;border:1.5px solid #f9a8d4;background:#1e0b24ee;font-size:16px;box-shadow:0 2px 8px #0009}
-.mh-home-v2 .mh-home-dock{gap:6px;padding:8px 8px calc(8px + env(safe-area-inset-bottom))}
+.mh-home-v2 .mh-home-dock{gap:6px;padding:8px}
+/* iPhone の下の安全域(ホームの棒の所)(2026-11-28 台帳 r1126-088 ③「入口の段の下に暗い余白、その下が黒い帯」)。
+   body が安全域の分だけ下を空けている(index.html)のに、ドックの下でも安全域の分をもう1回空けていた(暗い余白)。ドックの下は前の HOME と同じ 8px に戻し、
+   安全域(画面の外の親 .mh-app が切り取るので HOME を伸ばせない)は、HOME を出している間だけドックの下の端と同じ色で塗る(黒い帯にしない) */
+body:has(.mh-home-v2){background:linear-gradient(to top,#0b1f1a calc(env(safe-area-inset-bottom) + 1px),#000 0)}
 .mh-home-v2 .mh-home-dock-row{gap:6px}
 .mh-home-v2 .mh-home-dock-top>.mh-home-dock-card,.mh-home-v2 .mh-home-dock-top>.mh-home-success{height:clamp(112px,18cqh,150px);padding:0;gap:0;overflow:hidden;border-radius:14px}
 .mh-home-v2 .mh-home-dock-top .mh-home-dock-pic,.mh-home-v2 .mh-home-dock-top .mh-home-success .pic{flex:1 1 auto;width:100%;max-width:none;height:auto;min-height:0;aspect-ratio:auto;border-radius:0}
@@ -87219,12 +87328,12 @@ const HOME_V2_CSS = `
 .mh-home-v2 .mh-home-dock-bottom .mh-home-dock-name{font-size:11px;line-height:1.2}
 @media(max-width:350px){.mh-home-v2 .mh-home-dock-top .mh-home-dock-name,.mh-home-v2 .mh-home-dock-top .mh-home-success .nm{font-size:10.5px;letter-spacing:-.06em}}
 @media(orientation:landscape) and (max-height:600px){
-  .mh-home-v2 .mh-home-band{position:absolute;left:8px;top:calc(58px + env(safe-area-inset-top));width:min(37%,330px);margin:0}
-  .mh-home-v2 .mh-home-band-slide,.mh-home-v2 .mh-home-band-slide>button{height:68px}
-  .mh-home-v2 .mh-home-band-slide>button[data-home-xmas-entry]{height:68px!important}
-  .mh-home-v2 .mh-home-assistant,.mh-home-v2 .mh-home-assistant-fold{position:absolute;left:8px;top:calc(160px + env(safe-area-inset-top));margin:0}
+  .mh-home-v2 .mh-home-band{position:absolute;left:8px;top:58px;width:min(37%,330px);margin:0}
+  .mh-home-v2 .mh-home-band-xmas{width:100%}
+  .mh-home-v2 .mh-home-band-strip .mh-home-event-banner,.mh-home-v2 .mh-home-band-strip .mh-home-tour-banner{max-width:100%}
+  .mh-home-v2 .mh-home-assistant,.mh-home-v2 .mh-home-assistant-fold{position:absolute;left:8px;top:172px;margin:0}
   .mh-home-v2 .mh-home-assistant{width:min(37%,330px)}
-  .mh-home-v2 .mh-home-dock{flex-direction:row;align-items:flex-end;gap:8px;padding:5px 8px calc(6px + env(safe-area-inset-bottom))}
+  .mh-home-v2 .mh-home-dock{flex-direction:row;align-items:flex-end;gap:8px;padding:5px 8px 6px}
   .mh-home-v2 .mh-home-dock-top{flex:1.9 1 0}
   .mh-home-v2 .mh-home-dock-bottom{flex:1 1 0}
   .mh-home-v2 .mh-home-dock-top>.mh-home-dock-card,.mh-home-v2 .mh-home-dock-top>.mh-home-success{height:clamp(84px,25cqh,104px);max-width:none}
@@ -87232,10 +87341,10 @@ const HOME_V2_CSS = `
 }
 @container (min-width:700px) and (min-height:560px){
   .mh-home-v2 .mh-home-band{width:min(600px,calc(100% - 16px));margin:8px auto 0}
-  .mh-home-v2 .mh-home-band-slide,.mh-home-v2 .mh-home-band-slide>button{height:92px}
-  .mh-home-v2 .mh-home-band-slide>button[data-home-xmas-entry]{height:92px!important}
+  .mh-home-v2 .mh-home-band-xmas{width:100%}
+  .mh-home-v2 .mh-home-band-xmas>button[data-home-xmas-entry]{height:92px!important}
   .mh-home-v2 .mh-home-assistant{width:360px}
-  .mh-home-v2 .mh-home-dock{flex-direction:row;align-items:flex-end;gap:14px;padding:10px 14px calc(12px + env(safe-area-inset-bottom))}
+  .mh-home-v2 .mh-home-dock{flex-direction:row;align-items:flex-end;gap:14px;padding:10px 14px 12px}
   .mh-home-v2 .mh-home-dock-top{flex:2 1 0;justify-content:center}
   .mh-home-v2 .mh-home-dock-bottom{flex:1 1 0}
   .mh-home-v2 .mh-home-dock-top>.mh-home-dock-card,.mh-home-v2 .mh-home-dock-top>.mh-home-success{height:min(170px,19cqh);max-width:180px;border-radius:16px}
@@ -87244,9 +87353,13 @@ const HOME_V2_CSS = `
   .mh-home-v2 .mh-home-dock-bottom .mh-home-dock-pic{width:62px;height:62px}
   .mh-home-v2 .mh-home-dock-bottom .mh-home-dock-name{font-size:12px}
 }
-/* クリスマスの入口(79-screen-xmas-event.jsx)は、横向きで帯を右の列の横へ動かす決まりを持っている(前の HOME の形のため)。
-   新しい帯の中では、ほかの1枚と同じ位置・大きさのままにする(部品の中身は変えない。HOME の側で上書きするだけ) */
-.mh-home-v2 .mh-home-band-slide[data-home-xmas-entry-strip]{position:relative!important;left:auto!important;right:auto!important;top:auto!important;width:auto!important;margin:0!important}
+/* クリスマスの入口(79-screen-xmas-event.jsx)は、横向きで帯を右の列の横へ動かす決まりを持っている(前の HOME の右の列のため)。
+   新しい HOME には右の列が無いので、帯の置き場(.mh-home-band)の中に置いたままにする(部品の中身は変えない。HOME の側で上書きするだけ)。
+   背の低い横向きの高さ 54px と字の大きさは、部品の決まり(前の HOME と同じ)のまま */
+.mh-home-v2 .mh-home-band [data-home-xmas-entry-strip]{position:relative!important;left:auto!important;right:auto!important;top:auto!important;margin:0!important}
+.mh-home-v2 .mh-home-band .mh-home-band-xmas{width:calc(100% - 96px)!important}
+@media(orientation:landscape) and (max-height:600px){.mh-home-v2 .mh-home-band-strip:has(.mh-home-event-art){width:100%}.mh-home-v2 .mh-home-event-art{height:50px}.mh-home-v2 .mh-home-event-art img{object-position:50% 3%}.mh-home-v2 .mh-home-band .mh-home-band-xmas{width:100%!important}.mh-home-v2 .mh-home-band-xmas>button[data-home-xmas-entry]{height:54px!important}.mh-home-v2 .mh-home-band-quick-slot{display:none}}
+@container (min-width:700px) and (min-height:560px){.mh-home-v2 .mh-home-band-strip:has(.mh-home-event-art){width:100%}.mh-home-v2 .mh-home-event-art{height:84px}.mh-home-v2 .mh-home-band .mh-home-band-xmas{width:100%!important}.mh-home-v2 .mh-home-band-quick-slot{display:none}}
 @media (orientation:landscape) and (max-height:520px){.mh-home-v2 .mh-home-band .mh-xmas-entry[data-home-xmas-entry="banner"] .mh-xmas-entry-sub{font-size:11px}}
 /* 横持ちの iPhone の切り欠き(カメラの欠け)に、押す物を入れない。左右の余白に端末の安全な余白(safe-area)を足す */
 .mh-home-v2 .mh-home-top{padding-left:calc(8px + env(safe-area-inset-left));padding-right:calc(8px + env(safe-area-inset-right))}
@@ -87273,8 +87386,10 @@ const HOME_RAID_JACK_CSS = `
   82%{transform:translateY(0) scale(1.05,.94) rotate(1deg)}}
 @keyframes mhRaidJackShadow{0%,100%{transform:scaleX(1.05);opacity:.5}50%{transform:scaleX(.7);opacity:.3}}
 @media(prefers-reduced-motion:reduce){.mh-home-raid-jack-img,.mh-home-raid-jack-shadow{animation:none}}
+/* クリスマスのボス(背の高い絵)は、まん中に置く。前は translateX(-50%) で寄せていたが、跳ねる動き(transform)がそれを上書きして、
+   絵の幅の半分だけ右へずれていた(2026-11-28 台帳 r1126-088 ②「サンタが右寄りで大きすぎる」)。いまは left/right:0 と margin:auto で寄せ、高さも 135% → 110% に */
 /* 背の低い横画面: クリスマスのボスは枠より上へはみ出して描くので、耳が上の欄の裏に隠れた(#7857 点検の8)。絵を少し縮めて上を空ける。足もとの位置は変えない */
-@media(orientation:landscape) and (max-height:430px){.mh-home-raid-boss-tall{height:112% !important}}
+@media(orientation:landscape) and (max-height:430px){.mh-home-raid-boss-tall{height:100% !important}}
 `;
 const HOME_RAID_JACK_WRAP_STYLE = Object.freeze({
   position: 'absolute',
@@ -87639,20 +87754,21 @@ const HomeRaidJack = ({
   })), totals === null ? React.createElement("span", {
     style: {
       display: 'block',
-      fontSize: '8px',
+      fontSize: '11px',
       opacity: .8
     }
   }, "準備中") : totals === undefined ? React.createElement("span", {
     style: {
       display: 'block',
-      fontSize: '8px',
+      fontSize: '11px',
       opacity: .8
     }
   }, "…") : React.createElement("span", {
+    "data-home-raid-hp-text": true,
     style: {
       display: 'block',
-      fontSize: '8px',
-      opacity: .85
+      fontSize: '11px',
+      opacity: .9
     }
   }, "共有HP ", left.toLocaleString())));
   return React.createElement(React.Fragment, null, !allDone && ev.aura && React.createElement("div", {
@@ -87806,11 +87922,12 @@ const HomeRaidJack = ({
     draggable: false,
     style: {
       position: 'absolute',
-      left: '50%',
+      left: 0,
+      right: 0,
+      margin: '0 auto',
       bottom: 0,
-      height: '135%',
+      height: '110%',
       width: 'auto',
-      transform: 'translateX(-50%)',
       filter: 'drop-shadow(0 6px 10px #000a)',
       pointerEvents: 'none'
     }
@@ -88466,32 +88583,27 @@ function HomeScreenV2({
     if (!released || typeof rhythmLimitedEventAt !== 'function') return false;
     return !!rhythmLimitedEventAt(Date.now());
   })();
-  const homeBandSlides = [];
-  const homeBandEvent = homeEventCampaign && !(xmasEntry && homeEventCampaign.id === 'xmas_2026');
-  if (homeBandEvent && xmasEntry && xmasEntry.preOpen) homeBandSlides.push('event');
-  if (xmasEntry) homeBandSlides.push('xmas');
-  if (homeBandEvent && !homeBandSlides.includes('event')) homeBandSlides.push('event');
-  if (homeCardTour && typeof onOpenCardTour === 'function') homeBandSlides.push('tour');
-  const homeBandCount = homeBandSlides.length;
+  const homeBandXmas = !!xmasEntry;
+  const homeBandEvent = homeEventCampaign && !(xmasEntry && homeEventCampaign.id === 'xmas_2026') ? homeEventCampaign : null;
+  const homeBandTour = homeCardTour && typeof onOpenCardTour === 'function' ? homeCardTour : null;
+  const homeBandEventArt = (() => {
+    if (!homeBandEvent || typeof rhythmLimitedEventAt !== 'function') return '';
+    try {
+      const ev = rhythmLimitedEventAt(Date.now());
+      return ev && typeof ev.banner === 'string' && typeof ev.name === 'string' && ev.name.startsWith(homeBandEvent.banner.title) ? ev.banner : '';
+    } catch (_) {
+      return '';
+    }
+  })();
+  const homeBandStripCount = (homeBandEvent ? 1 : 0) + (homeBandTour ? 1 : 0);
   const [homeBandIdx, setHomeBandIdx] = React.useState(0);
-  const homeBandTouchRef = React.useRef({
-    x: null,
-    at: 0,
-    swiped: false
-  });
   React.useEffect(() => {
-    if (homeBandCount < 2) return undefined;
-    const id = setInterval(() => {
-      if (Date.now() - homeBandTouchRef.current.at >= 20000) setHomeBandIdx(i => i + 1);
-    }, 7000);
+    if (homeBandStripCount < 2) return undefined;
+    const id = setInterval(() => setHomeBandIdx(i => i + 1), 5000);
     return () => clearInterval(id);
-  }, [homeBandCount]);
-  const homeBandShow = homeBandCount ? (homeBandIdx % homeBandCount + homeBandCount) % homeBandCount : 0;
-  const homeBandGo = step => {
-    homeBandTouchRef.current.at = Date.now();
-    setHomeBandIdx(i => i + step);
-  };
-  const homeBandTitle = k => k === 'xmas' ? '聖夜の名探偵' : k === 'event' && homeEventCampaign ? homeEventCampaign.banner.title : k === 'tour' && homeCardTour ? homeCardTour.name : '';
+  }, [homeBandStripCount]);
+  const homeBandStripShow = homeBandStripCount ? homeBandIdx % homeBandStripCount : 0;
+  const homeBandCount = (homeBandXmas ? 1 : 0) + homeBandStripCount;
   const [homeMenuOpen, setHomeMenuOpen] = React.useState(false);
   const homeMissionCount = missionClaimableCount(normalizeMissions(missions));
   const homeGiftCount = giftClaimableCount(gifts);
@@ -88648,85 +88760,59 @@ function HomeScreenV2({
     className: "mh-home-side-lb"
   }, "設定"))), homeBandCount > 0 && React.createElement("div", {
     className: "mh-home-band",
-    "data-home-band": homeBandSlides[homeBandShow],
-    onPointerDown: e => {
-      homeBandTouchRef.current = {
-        ...homeBandTouchRef.current,
-        x: e.clientX,
-        swiped: false
-      };
-    },
-    onPointerUp: e => {
-      const t = homeBandTouchRef.current;
-      if (t.x === null || homeBandCount < 2) return;
-      const dx = e.clientX - t.x;
-      t.x = null;
-      if (Math.abs(dx) >= 40) {
-        t.swiped = true;
-        homeBandGo(dx < 0 ? 1 : -1);
-      }
-    },
-    onClickCapture: e => {
-      if (homeBandTouchRef.current.swiped) {
-        homeBandTouchRef.current.swiped = false;
-        e.stopPropagation();
-        e.preventDefault();
-      }
-    }
-  }, React.createElement("div", {
-    className: "mh-home-band-view"
-  }, React.createElement("div", {
-    className: "mh-home-band-track",
-    style: {
-      transform: `translateX(${-homeBandShow * 100}%)`
-    }
-  }, homeBandSlides.map((k, i) => React.createElement("div", _extends({
-    key: k,
-    className: "mh-home-band-slide",
-    "aria-hidden": i !== homeBandShow
-  }, k === 'xmas' ? {
-    'data-home-xmas-entry-strip': ''
-  } : {
-    'data-home-event-strip': ''
-  }), k === 'xmas' && React.createElement(HomeXmasEventEntry, {
+    "data-home-band": homeBandXmas ? 'xmas' : 'strip'
+  }, homeBandXmas && React.createElement("div", {
+    className: "mh-home-band-xmas",
+    "data-home-xmas-entry-strip": true
+  }, React.createElement(HomeXmasEventEntry, {
     onOpen: xmasEntry.onOpen,
     preOpen: !!xmasEntry.preOpen
-  }), k === 'event' && React.createElement("button", {
+  })), homeBandXmas && React.createElement("span", {
+    className: "mh-home-band-quick-slot",
+    "data-quick-anywhere-slot": true,
+    "aria-hidden": "true"
+  }), homeBandStripCount > 0 && React.createElement("div", {
+    className: "mh-home-band-strip",
+    "data-home-event-strip": true
+  }, homeBandEvent && homeBandStripShow === 0 && homeBandEventArt && React.createElement("button", {
+    type: "button",
+    "data-home-event-banner": "art",
+    className: "mh-home-event-art",
+    onClick: homeBandEvent.id === 'xmas_2026' && typeof onOpenXmasEvent === 'function' ? onOpenXmasEvent : onOpenRhythm,
+    "aria-label": `${homeBandEvent.banner.title}${homeBandEvent.banner.title2 || ''} ${homeBandEvent.banner.sub}`
+  }, React.createElement("img", {
+    src: homeBandEventArt,
+    alt: "",
+    draggable: false
+  }), React.createElement("span", {
+    className: "mh-home-event-art-sub"
+  }, homeBandEvent.banner.sub)), homeBandEvent && homeBandStripShow === 0 && !homeBandEventArt && React.createElement("button", {
     type: "button",
     "data-home-event-banner": true,
     className: "mh-home-event-banner",
-    tabIndex: i === homeBandShow ? 0 : -1,
-    onClick: homeEventCampaign.id === 'xmas_2026' && typeof onOpenXmasEvent === 'function' ? onOpenXmasEvent : onOpenRhythm,
-    "aria-label": `${homeEventCampaign.banner.title}${homeEventCampaign.banner.title2 || ''} ${homeEventCampaign.banner.sub}`
+    onClick: homeBandEvent.id === 'xmas_2026' && typeof onOpenXmasEvent === 'function' ? onOpenXmasEvent : onOpenRhythm,
+    "aria-label": `${homeBandEvent.banner.title}${homeBandEvent.banner.title2 || ''} ${homeBandEvent.banner.sub}`
   }, React.createElement("b", {
     className: "r1"
-  }, React.createElement("span", null, homeEventCampaign.banner.emoji, " ", homeEventCampaign.banner.title), React.createElement("small", null, homeEventCampaign.banner.sub)), homeEventCampaign.banner.title2 ? React.createElement("span", {
+  }, React.createElement("span", null, homeBandEvent.banner.emoji, " ", homeBandEvent.banner.title), React.createElement("small", null, homeBandEvent.banner.sub)), homeBandEvent.banner.title2 ? React.createElement("span", {
     className: "t2"
-  }, homeEventCampaign.banner.title2) : null), k === 'tour' && React.createElement("button", {
+  }, homeBandEvent.banner.title2) : null), homeBandTour && homeBandStripShow === (homeBandEvent ? 1 : 0) && React.createElement("button", {
     type: "button",
-    "data-home-card-tour": homeCardTour.id,
+    "data-home-card-tour": homeBandTour.id,
     className: "mh-home-tour-banner",
-    tabIndex: i === homeBandShow ? 0 : -1,
-    onClick: () => onOpenCardTour(homeCardTour.id),
-    "aria-label": `${homeCardTour.name} ${homeCardTour.sub}`
+    onClick: () => onOpenCardTour(homeBandTour.id),
+    "aria-label": `${homeBandTour.name} ${homeBandTour.sub}`
   }, React.createElement("span", {
     "aria-hidden": "true"
-  }, "🏆"), React.createElement("span", null, React.createElement("b", null, homeCardTour.name), React.createElement("small", null, homeCardTour.sub, homeCardTour.prize && React.createElement("em", null, homeCardTour.prize)))))))), homeBandCount > 1 && React.createElement("div", {
-    className: "mh-home-band-nav"
-  }, React.createElement("span", {
-    className: "mh-home-event-strip-dots"
-  }, homeBandSlides.map((k, i) => React.createElement("button", {
-    key: k,
-    type: "button",
-    className: i === homeBandShow ? 'on' : '',
-    "aria-label": `${i + 1}枚目を見る`,
-    onClick: () => homeBandGo(i - homeBandShow)
-  }, React.createElement("i", null)))), React.createElement("button", {
-    type: "button",
-    className: "mh-home-band-next",
-    "data-home-band-next": true,
-    onClick: () => homeBandGo(1)
-  }, "次:", homeBandTitle(homeBandSlides[(homeBandShow + 1) % homeBandCount]), " ›"))), React.createElement("div", {
+  }, "🏆"), React.createElement("span", null, React.createElement("b", null, homeBandTour.name), React.createElement("small", null, homeBandTour.sub, homeBandTour.prize && React.createElement("em", null, homeBandTour.prize)))), homeBandStripCount > 1 && React.createElement("span", {
+    className: "mh-home-event-strip-dots",
+    "aria-hidden": "true"
+  }, Array.from({
+    length: homeBandStripCount
+  }, (_, i) => React.createElement("i", {
+    key: i,
+    className: i === homeBandStripShow ? 'on' : ''
+  }))))), React.createElement("div", {
     className: "mh-home-dock"
   }, nextStep && React.createElement("button", {
     type: "button",
@@ -128468,16 +128554,16 @@ const xmasNovelSe = kind => {
       return;
     }
     const map = {
-      clap: 'join',
+      clap: 'trainingDice',
       laugh: 'enemySpecial',
       impact: 'enemyAttack',
-      music: 'heal',
-      tap: 'tap',
-      clue: 'card',
-      ok: 'victory',
-      ng: 'guard'
+      music: 'trainingFail',
+      tap: 'trainingDice',
+      clue: 'enemyMove',
+      ok: 'attack',
+      ng: 'trainingBad'
     };
-    const fn = (Audio_.fgSe || Audio_.se)[map[kind] || 'tap'];
+    const fn = (Audio_.fgSe || Audio_.se)[map[kind] || 'trainingDice'];
     if (typeof fn === 'function') fn();
   } catch (e) {}
 };
@@ -128490,12 +128576,12 @@ const XMAS_NOVEL_SE_SEQ = Object.freeze({
   tick: {
     gap: 520,
     hold: 300,
-    play: ['xpTick']
+    play: ['trainingDice']
   },
   letter: {
     gap: 0,
     hold: 1500,
-    play: ['enemyCharge']
+    play: ['trainingBad', 'trainingFail']
   }
 });
 let xmasNovelSeTimers = [];
@@ -128535,28 +128621,169 @@ const xmasNovelRowSe = (kind, times) => {
     if (at <= 0) xmasNovelSeHit(kind);else xmasNovelSeTimers.push(setTimeout(() => xmasNovelSeHit(kind), at));
   }
 };
+const XMAS_NOVEL_BGM_SCENE = Object.freeze({
+  'OUT-0-1': 'original_profile',
+  'OUT-0-2': 'melo_dullahan_clockwork',
+  'C0-1': 'original_profile',
+  'C0-2': 'original_profile',
+  'OUT-1': 'melo_dullahan_clockwork',
+  'C1-1': 'original_profile',
+  'C1-2': 'original_profile',
+  'C1-3': 'melo_dullahan_clockwork',
+  'C1-4': 'melo_dullahan_clockwork',
+  'C1-5': 'close_to_your_heart_alt',
+  'C1-6': 'melo_dullahan_steel_ghost',
+  'C1-M': 'silence',
+  'C2-1': 'melo_dullahan_clockwork',
+  'C2-L': 'silence',
+  'C2-M': 'makutsu_no_senritsu',
+  'C2-2': 'original_profile',
+  'C2-3': 'melo_dullahan_steel_ghost',
+  'C2-4': 'melo_dullahan_steel_ghost_alt',
+  'C2-5': 'original_dullahan',
+  'C3-1': 'silence',
+  'C3-2': 'melo_dullahan_clockwork_alt',
+  'C3-3': 'melo_dullahan_clockwork',
+  'C3-4': 'melo_dullahan_clockwork_alt',
+  'C3-5': 'melo_erfolg_piano',
+  'C3-M': 'melo_erfolg_piano',
+  'C4-1': 'makutsu_no_senritsu',
+  'C4-2': 'silence',
+  'C4-3': 'melo_dullahan_clockwork_alt',
+  'C4-4': 'melo_dullahan_clockwork',
+  'C4-5': 'melo_dullahan_steel_ghost',
+  'C4-M': 'silence',
+  'C5-1': 'melo_erfolg_piano',
+  'C5-2': 'melo_dullahan_steel_ghost_alt',
+  'C5-3': 'melo_dullahan_steel_ghost',
+  'C5-4': 'melo_dullahan_steel_ghost',
+  'C5-5': 'makutsu_no_senritsu',
+  'C5-M': 'melo_dullahan_clockwork',
+  'C6-1': 'melo_dullahan_clockwork_alt',
+  'C6-2': 'melo_dullahan_steel_ghost',
+  'C6-3': 'melo_dullahan_clockwork_alt',
+  'C6-4': 'melo_dullahan_steel_ghost_alt',
+  'C6-5': 'melo_dullahan_steel_ghost',
+  'C6-6': 'melo_dullahan_clockwork_alt',
+  'C6-7': 'original_dullahan',
+  'C6-8': 'melo_erfolg_piano',
+  'C6-9': 'melo_dullahan_steel_ghost',
+  'C6-M': 'melo_erfolg_piano',
+  'C7-1': 'melo_dullahan_clockwork_alt',
+  'C7-2': 'melo_dullahan_steel_ghost_alt',
+  'C7-A': 'melo_erfolg_piano',
+  'C7-B': 'melo_dullahan_clockwork',
+  'C7-P1': 'original_dullahan',
+  'C7-P2': 'melo_erfolg_piano',
+  'C7-P3': 'melo_dullahan_clockwork',
+  'C7-4a': 'melo_erfolg_piano',
+  'C7-4b': 'melo_dullahan_steel_ghost',
+  'C7-5a': 'melo_erfolg_piano',
+  'C7-5b': 'melo_dullahan_steel_ghost',
+  'C7-W': 'melo_dullahan_clockwork_alt',
+  'C8-1': 'melo_dullahan_steel_ghost_alt',
+  'C8-2': 'makutsu_no_senritsu',
+  'C8-3': 'melo_erfolg_piano',
+  'C9-1': 'silence',
+  'C9-2': 'close_to_your_heart_alt',
+  'C10-1': 'melo_dullahan_steel_ghost',
+  'C10-2': 'makutsu_no_senritsu',
+  'C10-3': 'melo_dullahan_steel_ghost',
+  'C10-4': 'melo_dullahan_steel_ghost_alt',
+  'C11-1': 'melo_dullahan_steel_ghost_alt',
+  'C11-N': 'melo_erfolg_piano',
+  'C11-A': 'melo_erfolg_piano',
+  'C11-B': 'melo_dullahan_clockwork',
+  'C2-X': 'melo_dullahan_steel_ghost',
+  'END-X1': 'original_game_over',
+  'C5-X': 'melo_dullahan_steel_ghost',
+  'END-X2': 'original_game_over',
+  'C6-X': 'melo_dullahan_steel_ghost',
+  'END-X3': 'original_game_over',
+  'C2-Y': 'melo_dullahan_steel_ghost',
+  'END-X4': 'original_game_over',
+  'C10-X': 'melo_dullahan_steel_ghost',
+  'END-X5': 'original_game_over',
+  'END-M1': 'original_game_over',
+  'END-M2': 'melo_dullahan_steel_ghost',
+  'END-M3': 'melo_dullahan_steel_ghost',
+  'END-M4': 'original_game_over',
+  'END-M5': 'melo_dullahan_steel_ghost',
+  'END-G': 'melo_erfolg_piano',
+  'OUT-G': 'close_to_your_heart_alt',
+  'END-N': 'melo_erfolg_piano',
+  'OUT-N': 'melo_erfolg_piano',
+  'END-A': 'melo_dullahan_clockwork',
+  'OUT-A': 'melo_dullahan_clockwork',
+  'END-B': 'melo_dullahan_steel_ghost',
+  'OUT-B': 'melo_dullahan_steel_ghost',
+  'C1-O': 'original_profile',
+  'END-O': 'original_profile',
+  'OUT-O': 'original_profile',
+  'END-O2': 'close_to_your_heart_alt',
+  'OUT-O2': 'close_to_your_heart_alt',
+  'C12-1': 'close_to_your_heart_alt',
+  'C12-2': 'melo_erfolg_piano',
+  'C12-3': 'original_dullahan',
+  'C12-4': 'melo_dullahan_clockwork',
+  'C12-5': 'melo_dullahan_steel_ghost',
+  'C12-6': 'silence',
+  'C12-7': 'melo_erfolg_piano'
+});
 const XMAS_NOVEL_BGM_SHIFT = Object.freeze({
-  'END-G': [['G-10', 'melo_dear_santa']]
+  'C2-3': [['2-3-7', 'silence']],
+  'C5-4': [['5-4-5', 'silence']],
+  'C6-5': [['6-5-3', 'silence']],
+  'C7-1': [['7-1-3a', 'melo_dullahan_steel_ghost_alt']],
+  'C7-W': [['7-W-14', 'melo_dullahan_steel_ghost_alt']],
+  'C10-1': [['10-1-5', 'silence']],
+  'C10-2': [['10-2-7', 'silence']],
+  'C10-3': [['10-3-7', 'silence']],
+  'C2-X': [['2-X-6a', 'silence']],
+  'C5-X': [['5-X-4a', 'silence']],
+  'C6-X': [['6-X-8', 'silence']],
+  'C2-Y': [['2-Y-10', 'silence']],
+  'C10-X': [['10-X-8', 'silence']],
+  'END-M2': [['M2-4', 'silence']],
+  'END-M5': [['M5-5a', 'silence']],
+  'END-B': [['B-3', 'silence']],
+  'END-G': [['G-10', 'close_to_your_heart_alt']],
+  'C12-4': [['12-4-5', 'silence']]
+});
+const XMAS_NOVEL_VOCAL_BGM = Object.freeze({
+  kaze_ga_soyogu: 'original_profile',
+  melo_kiss_mystery: 'melo_dullahan_steel_ghost_alt',
+  melo_kiss_mystery_short: 'melo_dullahan_steel_ghost_alt',
+  melo_sad_song: 'melo_erfolg_piano',
+  melo_sad_song_short: 'melo_erfolg_piano',
+  melo_dear_santa: 'close_to_your_heart_alt',
+  melo_dear_santa_short: 'close_to_your_heart_alt',
+  melo_winter_fall: 'close_to_your_heart_alt',
+  melo_winter_fall_short: 'close_to_your_heart_alt',
+  close_to_your_heart: 'close_to_your_heart_alt'
 });
 const xmasNovelBgmAt = (scene, idx) => {
   if (!scene) return '';
-  let key = scene.bgm || '';
+  const fixed = Object.prototype.hasOwnProperty.call(XMAS_NOVEL_BGM_SCENE, scene.id);
+  let key = fixed ? XMAS_NOVEL_BGM_SCENE[scene.id] : scene.bgm || '';
   const rows = Array.isArray(scene.rows) ? scene.rows : [];
   const at = Number.isFinite(idx) ? idx : 0;
   const shifts = XMAS_NOVEL_BGM_SHIFT[scene.id] || [];
   for (let i = 0; i <= at && i < rows.length; i += 1) {
     const r = rows[i];
-    if (r && r.bgm) key = r.bgm;
+    if (!fixed && r && r.bgm) key = r.bgm;
     shifts.forEach(([rowId, k]) => {
       if (r && r.id === rowId) key = k;
     });
   }
-  return key;
+  return XMAS_NOVEL_VOCAL_BGM[key] || key;
 };
-const xmasNovelBgm = key => {
+const xmasNovelBgm = keyIn => {
+  let key = keyIn;
   try {
     if (typeof Audio_ === 'undefined' || !Audio_) return;
     if (!key) return;
+    key = XMAS_NOVEL_VOCAL_BGM[key] || key;
     if (key === 'silence') {
       Audio_.stopBGM();
       return;
@@ -128921,7 +129148,7 @@ const XmasNovelScreen = ({
         setSave(s);
       }
     });
-    xmasNovelBgm('melo_kiss_mystery');
+    xmasNovelBgm('melo_dullahan_clockwork');
     return () => {
       alive = false;
       xmasNovelSeStop();
@@ -128995,8 +129222,8 @@ const XmasNovelScreen = ({
         return s;
       }
     } else setFx(f => f && f.kind === 'dark' ? null : f);
-    if (r.bgm && r.bgm !== lastBgm.current) {
-      lastBgm.current = r.bgm;
+    if (opts.quiet && r.bgm && (XMAS_NOVEL_VOCAL_BGM[r.bgm] || r.bgm) !== lastBgm.current) {
+      lastBgm.current = XMAS_NOVEL_VOCAL_BGM[r.bgm] || r.bgm;
       xmasNovelBgm(r.bgm);
     }
     if (r.t === 'clue') {
@@ -260070,6 +260297,10 @@ function MonsterHeroGame() {
       const btn = e.target.closest && e.target.closest('button');
       if (!btn) return;
       if (btn.closest('[data-rhythm-play-area]')) return;
+      if (btn.closest('[data-xmas-novel]') && Audio_.fgSe && typeof Audio_.fgSe.trainingDice === 'function') {
+        Audio_.fgSe.trainingDice();
+        return;
+      }
       if (Audio_.uiTap) {
         Audio_.uiTap();
         return;
@@ -289275,7 +289506,8 @@ function MonsterHeroGame() {
           break;
         }
       }
-      const storySceneImg = storyScene && typeof STORY_SCENE_IMAGES !== 'undefined' ? STORY_SCENE_IMAGES[storyScene] || null : null;
+      const storyXmasBg = storyScene && typeof raidXmasSceneBgOf === 'function' ? raidXmasSceneBgOf(storyScene) : null;
+      const storySceneImg = storyXmasBg ? storyXmasBg.img : storyScene && typeof STORY_SCENE_IMAGES !== 'undefined' ? STORY_SCENE_IMAGES[storyScene] || null : null;
       const storyStill = typeof line.still === 'string' && typeof STORY_SCENE_IMAGES !== 'undefined' ? line.still : null;
       const storyStillImg = storyStill ? STORY_SCENE_IMAGES[storyStill] || null : null;
       const storyStillTate = storyStillImg ? STORY_SCENE_IMAGES[`${storyStill}_tate`] || null : null;
@@ -289283,7 +289515,8 @@ function MonsterHeroGame() {
         const pre = window.__mhStoryScenePreloaded || (window.__mhStoryScenePreloaded = new Set());
         script.forEach(l => {
           [l && l.bg, l && l.still, l && typeof l.still === 'string' ? `${l.still}_tate` : null].forEach(k => {
-            const src = typeof k === 'string' ? STORY_SCENE_IMAGES[k] : null;
+            const xb = typeof k === 'string' && typeof raidXmasSceneBgOf === 'function' ? raidXmasSceneBgOf(k) : null;
+            const src = xb ? xb.img : typeof k === 'string' ? STORY_SCENE_IMAGES[k] : null;
             if (src && !pre.has(src)) {
               pre.add(src);
               try {
@@ -289292,6 +289525,15 @@ function MonsterHeroGame() {
               } catch (e) {}
             }
           });
+          const fw = l && l.who ? assistantById(l.who) : null;
+          const fs = fw && fw.storyFigure;
+          if (fs && !pre.has(fs)) {
+            pre.add(fs);
+            try {
+              const im = new Image();
+              im.src = fs;
+            } catch (e) {}
+          }
         });
       }
       if (typeof window !== 'undefined' && typeof assistantFaceSrc === 'function') {
@@ -289376,6 +289618,37 @@ function MonsterHeroGame() {
         }
       }
       const storyMonsters = monstersIdx >= 0 && !storyStillImg ? script[monstersIdx].monsters.filter(m => m && m.pose !== 'hide' && STORY_MONSTER_ART[m.id]) : [];
+      const storyFigures = [];
+      if (monstersIdx < 0 && !storyStillImg) {
+        let figBase = null;
+        for (let i = 0; i <= step; i++) {
+          const l = script[i];
+          if (!l) continue;
+          if (typeof l.bg === 'string') {
+            const xb = typeof raidXmasSceneBgOf === 'function' ? raidXmasSceneBgOf(l.bg) : null;
+            const base = xb ? xb.base : l.bg;
+            if (base !== figBase) {
+              storyFigures.length = 0;
+              figBase = base;
+            }
+          }
+          if (l.figOut) {
+            storyFigures.length = 0;
+            continue;
+          }
+          const fw = l.who && !l.band ? assistantById(l.who) : null;
+          if (fw && fw.storyFigure) {
+            const slot = fw.storyFigureSlot || fw.id;
+            const f = {
+              slot,
+              id: fw.id,
+              src: fw.storyFigure
+            };
+            const k = storyFigures.findIndex(x => x.slot === slot);
+            if (k >= 0) storyFigures[k] = f;else storyFigures.push(f);
+          }
+        }
+      }
       const fxColors = {
         fall: '255,214,150',
         split: '233,213,255',
@@ -289398,6 +289671,8 @@ function MonsterHeroGame() {
       const storyCplBottom = Math.max(8, Math.floor((storyBoxW - 64 - (storyZones ? storyLand ? 62 : 100 : 0)) / 13) - (storyZones ? 4 : 2));
       const storyCplBubble = Math.max(6, storyLand ? Math.floor((storyBoxW - 118) / 12) - 3 : Math.floor((storyBoxW - 156) / 14) - 4);
       const storyCapBottom = Math.floor((storyBoxW - 64 - (storyLand ? 62 : 100)) / 13 - 0.2);
+      const storyFaceCols = Math.floor((storyLand ? 62 : 100) / 13);
+      const storyCapBottomOf = w => storyCapBottom + (w && w.storyFigure ? storyFaceCols : 0);
       const storyCapBubble = Math.floor((storyLand ? (storyBoxW - 118) / 12 : (storyBoxW - 156) / 14) - 0.2);
       const storyChunkMax = cap => storyLand && cap === storyCapBubble ? 2 : 3;
       const storyLineNodes = (text, cap) => {
@@ -289455,7 +289730,7 @@ function MonsterHeroGame() {
         const l = script[i];
         const w = l ? assistantById(l.who) : null;
         const text = l && w && !l.band ? speakText(l, w) : '';
-        const pages = storyZones && typeof storySplitPages === 'function' ? storySplitPages(text, isGuestWho(l && l.who) ? storyCplBubble : storyCplBottom, 3) : [text];
+        const pages = storyZones && typeof storySplitPages === 'function' ? storySplitPages(text, isGuestWho(l && l.who) ? storyCplBubble : storyCplBottom + (w && w.storyFigure ? storyFaceCols : 0), 3) : [text];
         storyPageCache[i] = pages;
         return pages;
       };
@@ -289586,7 +289861,15 @@ function MonsterHeroGame() {
         style: {
           '--story-bg': `url("${storySceneImg}")`
         }
-      }, storyFrame === 'game' && React.createElement("span", {
+      }, storyXmasBg && storyXmasBg.tint && React.createElement("span", {
+        "data-story-bg-tint": true,
+        style: {
+          position: 'absolute',
+          inset: 0,
+          zIndex: 1,
+          background: storyXmasBg.tint
+        }
+      }), storyFrame === 'game' && React.createElement("span", {
         "data-story-bg-frame-label": true
       }, "モンヒロ事件簿")), storyStillImg && React.createElement("div", {
         key: `still:${storyStill}`,
@@ -289737,6 +290020,31 @@ function MonsterHeroGame() {
           fill: true,
           own: true
         }) : art);
+      })), storyFigures.length > 0 && React.createElement("div", {
+        "data-story-monsters": storyFigures.length,
+        "data-story-figures": "",
+        "aria-hidden": "true",
+        className: "pointer-events-none",
+        style: {
+          top: 'calc(env(safe-area-inset-top) + 6vh)'
+        }
+      }, storyFigures.map(f => {
+        const on = !line.band && f.id === line.who;
+        return React.createElement("span", {
+          key: `${f.slot}:${f.id}`,
+          "data-story-monster": `fig-${f.slot}`,
+          "data-story-pose": "in",
+          "data-story-figure-dim": on ? undefined : ''
+        }, React.createElement("img", {
+          src: f.src,
+          alt: "",
+          draggable: false,
+          className: "block h-full w-full object-contain",
+          style: {
+            filter: on ? 'drop-shadow(0 6px 18px rgba(0,0,0,.65))' : 'brightness(.55) drop-shadow(0 6px 18px rgba(0,0,0,.65))',
+            transition: 'filter .2s'
+          }
+        }));
       })), (fx || line.fxText && !(storyZones && storySub > 0)) && React.createElement("div", {
         key: `fx${step}`,
         "aria-hidden": "true",
@@ -289866,7 +290174,7 @@ function MonsterHeroGame() {
       })(), React.createElement("div", {
         "data-story-speaker-row": storyZones ? '' : undefined,
         className: storyZones ? 'flex items-start gap-2' : undefined
-      }, storyZones && bottomLine && React.createElement("div", {
+      }, storyZones && bottomLine && !bottomSpeaker.storyFigure && React.createElement("div", {
         key: `face-${bottomSpeaker.id}`,
         "data-story-speaker": bottomSpeaker.id,
         className: "shrink-0 text-center"
@@ -289911,12 +290219,12 @@ function MonsterHeroGame() {
       }, bottomLine.name || bottomSpeaker.name), React.createElement("span", {
         className: "block text-[13px] font-bold leading-relaxed text-white mt-1",
         style: {
-          ...storyLineStyle(storyZones ? storyTextAt(bottomLine === line ? step : assistIdx, bottomSpeaker) : '', storyCapBottom),
+          ...storyLineStyle(storyZones ? storyTextAt(bottomLine === line ? step : assistIdx, bottomSpeaker) : '', storyCapBottomOf(bottomSpeaker)),
           ...(dimBottom ? {
             visibility: 'hidden'
           } : {})
         }
-      }, storyZones ? storyLineNodes(storyTextAt(bottomLine === line ? step : assistIdx, bottomSpeaker), storyCapBottom) : bubbleLines(speakText(bottomLine, bottomSpeaker)))) : React.createElement("div", {
+      }, storyZones ? storyLineNodes(storyTextAt(bottomLine === line ? step : assistIdx, bottomSpeaker), storyCapBottomOf(bottomSpeaker)) : bubbleLines(speakText(bottomLine, bottomSpeaker)))) : React.createElement("div", {
         "data-story-line-box": true,
         className: `flex items-center justify-center rounded-2xl border-2 border-slate-700 bg-slate-900 px-3 py-3 text-center text-[11px] font-bold text-slate-400${storyZones ? ' min-w-0 flex-1' : ''}`
       }, "▲ 上のことばを読んでね")), React.createElement("p", {

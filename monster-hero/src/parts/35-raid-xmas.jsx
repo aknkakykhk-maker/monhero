@@ -109,6 +109,17 @@ const RAID_XMAS_ENDING_NOTCLEARED_ID = 'raid_xmas_ending_notcleared';
 const RAID_XMAS_STORY_IDS = Object.freeze([
   RAID_XMAS_STORY_START_ID, ...Object.values(RAID_XMAS_STORY_AFTER_TIER), RAID_XMAS_ENDING_CLEARED_ID, RAID_XMAS_ENDING_NOTCLEARED_ID,
 ]);
+// お話の場面の背景(r1126-090・社長「背景とかなんもないの？」)。台本の行の bg:'xmas_<絵の名前>@<かぶせる色>'(色は無くてよい)。
+//   絵は事件簿と同じ表(79-screen-xmas-novel.jsx の XMAS_NOVEL_BG_IMG)、色も事件簿の XMAS_NOVEL_TINT(night・storm・candle・morning)。
+//   どの話のどの行でどの絵かは docs/progress/raid-xmas-story-bg/BG-TABLE.md。xmas_ で始まらない名前は null(ほかのお話の背景はいつもの STORY_SCENE_IMAGES)
+const raidXmasSceneBgOf = (name) => {
+  const m = typeof name === 'string' ? name.match(/^xmas_([a-z0-9_]+?)(?:@([a-z]+))?$/) : null;
+  if (!m || typeof XMAS_NOVEL_BG_IMG === 'undefined') return null;
+  const img = XMAS_NOVEL_BG_IMG[m[1]];
+  if (!img) return null;
+  const tint = m[2] && typeof XMAS_NOVEL_TINT !== 'undefined' ? (XMAS_NOVEL_TINT[m[2]] || '') : '';
+  return { img, base: m[1], tint };
+};
 // 段階を倒したあと・期間が終わったあとに流すお話の候補(古い順)。totals が取れていないときは段階の話を出さない
 const raidXmasStoryCandidates = (totals, nowMs) => {
   const out = [];
