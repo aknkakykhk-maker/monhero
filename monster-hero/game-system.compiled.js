@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 123d534327108fda
+// source-sha256: 5e64857ba6c31e9c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -6367,6 +6367,13 @@ const BGM_TRACKS = [{
   gain: 1,
   loop: true
 }, {
+  id: 'melo_three_y_three_s',
+  name: '3y3s',
+  creator: 'オリジナル',
+  src: 'audio/bgm-three-y-three-s.mp3',
+  gain: 1,
+  loop: true
+}, {
   id: 'melo_emerald_rush',
   name: 'Emerald Rush',
   creator: 'オリジナル',
@@ -8784,6 +8791,7 @@ const Audio_ = (() => {
     "audio/bgm-sparkling-pink-overture.mp3": "6e474b21b5d9",
     "audio/bgm-stay-with-me-short.mp3": "d836a069998d",
     "audio/bgm-the-city-beneath-the-comets.mp3": "900fda0dc05e",
+    "audio/bgm-three-y-three-s.mp3": "904d75645164",
     "audio/bgm-title-theme.mp3": "8af0684e79e7",
     "audio/bgm-title.mp3": "b7bdc68bb0c0",
     "audio/bgm-toriko.mp3": "3870d26f6322",
@@ -44987,10 +44995,29 @@ const RhythmHudCombo = ({
   comboRef,
   comboRingRef
 }) => {
-  const combo = useRhythmHudPick(hud, h => h.combo),
+  const comboOn = useRhythmHudPick(hud, h => h.combo > 0),
+    comboTier = useRhythmHudPick(hud, h => h.combo > 0 ? rhythmComboTier(h.combo) : 0),
     countsState = useRhythmHudPick(hud, h => rhythmHudCountsState(h.counts));
-  if (settings.comboDisplay === false || !(combo > 0)) return null;
-  const comboTier = rhythmComboTier(combo);
+  const numRef = useRef(null);
+  const writeNum = useCallback(() => {
+    const el = numRef.current;
+    if (!el) return;
+    const text = String(hud.get().combo);
+    if (el._mhText !== text) {
+      rhythmHudSetText(el, text);
+      el._mhText = text;
+    }
+  }, [hud]);
+  const setNumRef = useCallback(el => {
+    numRef.current = el;
+    if (typeof comboRef === 'function') comboRef(el);else if (comboRef) comboRef.current = el;
+    if (el) writeNum();
+  }, [comboRef, writeNum]);
+  React.useLayoutEffect(() => hud.subscribe(writeNum), [hud, writeNum]);
+  React.useLayoutEffect(() => {
+    writeNum();
+  });
+  if (settings.comboDisplay === false || !comboOn) return null;
   const comboStatus = settings.comboStatusDisplay === false || assistOn || !countsState || countsState === 'broken' ? '' : countsState;
   return React.createElement("div", {
     "data-rhythm-combo-box": true,
@@ -45004,7 +45031,7 @@ const RhythmHudCombo = ({
     },
     className: "pointer-events-none absolute z-[2] text-center"
   }, React.createElement("b", {
-    ref: comboRef,
+    ref: setNumRef,
     "data-rhythm-combo": true,
     "data-combo-tier": String(comboTier),
     className: "block font-black leading-none tabular-nums text-white",
@@ -45012,7 +45039,7 @@ const RhythmHudCombo = ({
       '--mh-combo-scale': rhythmComboTierScale(comboTier),
       '--mh-combo-size': rhythmFiniteInRange(settings.comboSize, RHYTHM_COMBO_SIZE_MIN, RHYTHM_COMBO_SIZE_MAX, 100) / 100
     }
-  }, combo), settings.comboMilestoneFx === true && React.createElement("i", {
+  }), settings.comboMilestoneFx === true && React.createElement("i", {
     ref: comboRingRef,
     "data-rhythm-combo-ring": true,
     "aria-hidden": "true"
@@ -45078,6 +45105,20 @@ const RhythmHudLife = ({
     className: "pointer-events-none absolute right-0 top-full mt-0.5 text-[11px] font-black leading-none tabular-nums"
   }));
 };
+const rhythmHudSetText = (el, text) => {
+  const t = String(text ?? '');
+  const n = el.firstChild;
+  if (!t) {
+    if (n) el.textContent = '';
+    return;
+  }
+  if (n && n.nodeType === 3 && !n.nextSibling) {
+    if (n.data !== t) n.data = t;
+    return;
+  }
+  el.textContent = t;
+};
+const rhythmHudJudgmentFastSlowClass = (settings, fastSlow) => `mt-1 block min-h-[16px] text-xs font-black tracking-[0.24em] ${!settings.fastSlowDisplay ? 'text-transparent' : fastSlow === 'FAST' ? 'text-cyan-300' : fastSlow === 'SLOW' ? 'text-fuchsia-300' : 'text-transparent'}`;
 const RhythmHudJudgment = ({
   hud,
   settings,
@@ -45087,20 +45128,78 @@ const RhythmHudJudgment = ({
   judgmentTextRef,
   sky = false
 }) => {
-  const last = useRhythmHudPick(hud, h => sky ? h.skyLast : h.last),
-    lastPrecise = useRhythmHudPick(hud, h => sky ? h.skyLastPrecise : h.lastPrecise),
-    fastSlow = useRhythmHudPick(hud, h => sky ? h.skyFastSlow : h.fastSlow),
-    lastDeltaMs = useRhythmHudPick(hud, h => sky ? h.skyDeltaMs : h.lastDeltaMs);
+  const textRef = useRef(null),
+    smallRef = useRef(null),
+    propsRef = useRef(null);
+  propsRef.current = {
+    settings,
+    status,
+    haloKeys,
+    timingDisplay,
+    sky
+  };
+  const write = useCallback(() => {
+    const el = textRef.current,
+      sm = smallRef.current,
+      p = propsRef.current;
+    if (!el || !sm || !p) return;
+    const h = hud.get(),
+      {
+        settings,
+        status,
+        haloKeys,
+        timingDisplay
+      } = p;
+    const last = p.sky ? h.skyLast : h.last,
+      lastPrecise = p.sky ? h.skyLastPrecise : h.lastPrecise,
+      fastSlow = p.sky ? h.skyFastSlow : h.fastSlow,
+      lastDeltaMs = p.sky ? h.skyDeltaMs : h.lastDeltaMs;
+    const judgment = last || '',
+      precise = lastPrecise ? '1' : '',
+      halo = haloKeys && settings.judgmentTextDisplay && last && status !== 'error' && status !== 'loading' && haloKeys.has(`${last}|${lastPrecise ? '1' : ''}`) ? '1' : null;
+    const text = status === 'error' ? '音源を再生できません' : status === 'loading' ? 'LOADING…' : settings.judgmentTextDisplay ? last : '';
+    const smallClass = rhythmHudJudgmentFastSlowClass(settings, fastSlow),
+      smallText = settings.fastSlowDisplay ? fastSlow ? timingDisplay !== 'STANDARD' && typeof lastDeltaMs === 'number' ? `${fastSlow} ${Math.round(Math.abs(lastDeltaMs))}ms` : fastSlow : '—' : '—';
+    if (el._mhJudgment !== judgment) {
+      el.setAttribute('data-judgment', judgment);
+      el._mhJudgment = judgment;
+    }
+    if (el._mhPrecise !== precise) {
+      el.setAttribute('data-judgment-precise', precise);
+      el._mhPrecise = precise;
+    }
+    if (el._mhHalo !== halo) {
+      if (halo) el.setAttribute('data-halo', halo);else el.removeAttribute('data-halo');
+      el._mhHalo = halo;
+    }
+    if (el._mhText !== text) {
+      rhythmHudSetText(el, text);
+      el._mhText = text;
+    }
+    if (sm._mhClass !== smallClass) {
+      sm.className = smallClass;
+      sm._mhClass = smallClass;
+    }
+    if (sm._mhText !== smallText) {
+      rhythmHudSetText(sm, smallText);
+      sm._mhText = smallText;
+    }
+  }, [hud]);
+  const setTextRef = useCallback(el => {
+    textRef.current = el;
+    if (typeof judgmentTextRef === 'function') judgmentTextRef(el);else if (judgmentTextRef) judgmentTextRef.current = el;
+  }, [judgmentTextRef]);
+  React.useLayoutEffect(() => hud.subscribe(write), [hud, write]);
+  React.useLayoutEffect(() => {
+    write();
+  });
   return React.createElement(React.Fragment, null, React.createElement("b", {
-    ref: judgmentTextRef,
+    ref: setTextRef,
     "data-rhythm-judgment-text": true,
-    "data-judgment": last || '',
-    "data-judgment-precise": lastPrecise ? '1' : '',
-    "data-halo": haloKeys && settings.judgmentTextDisplay && last && status !== 'error' && status !== 'loading' && haloKeys.has(`${last}|${lastPrecise ? '1' : ''}`) ? '1' : undefined,
     className: "block text-[26px] font-black leading-none tracking-wide text-white"
-  }, status === 'error' ? '音源を再生できません' : status === 'loading' ? 'LOADING…' : settings.judgmentTextDisplay ? last : ''), React.createElement("small", {
-    className: `mt-1 block min-h-[16px] text-xs font-black tracking-[0.24em] ${!settings.fastSlowDisplay ? 'text-transparent' : fastSlow === 'FAST' ? 'text-cyan-300' : fastSlow === 'SLOW' ? 'text-fuchsia-300' : 'text-transparent'}`
-  }, settings.fastSlowDisplay ? fastSlow ? timingDisplay !== 'STANDARD' && typeof lastDeltaMs === 'number' ? `${fastSlow} ${Math.round(Math.abs(lastDeltaMs))}ms` : fastSlow : '—' : '—'));
+  }), React.createElement("small", {
+    ref: smallRef
+  }));
 };
 const rhythmAutoEffectMemory = {
   level: 0
@@ -49575,17 +49674,10 @@ const RhythmTapTest = ({
     if (glowNodesRef.lastKey !== glowKey) {
       glowNodesRef.lastKey = glowKey;
       for (let index = 0; index < nodes.length; index++) {
-        const el = nodes[index],
-          pressed = (mask >> index & 1) === 1;
-        const want = pressed ? 'true' : 'false';
-        const curPressed = el._mhGlowPressed !== undefined ? el._mhGlowPressed : el.dataset.pressed,
-          curOpacity = el._mhGlowOpacity !== undefined ? el._mhGlowOpacity : el.style.opacity;
-        if (curPressed === want && (!pressed || curOpacity === glowOpacity)) continue;
-        const nextOpacity = pressed ? glowOpacity : '0';
-        if (curPressed !== want) el.dataset.pressed = want;
-        if (curOpacity !== nextOpacity) el.style.opacity = nextOpacity;
-        el._mhGlowPressed = want;
-        el._mhGlowOpacity = nextOpacity;
+        const el = nodes[index];
+        el._mhGlowWantPressed = (mask >> index & 1) === 1;
+        el._mhGlowWantOpacity = glowOpacity;
+        rhythmLaneGlowApply(el);
       }
     }
     if (typeof RHYTHM_CANVAS_RENDERER !== 'undefined' && typeof RHYTHM_CANVAS_RENDERER.setSkyPressed === 'function') {
@@ -57897,6 +57989,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:saudade': [['excited', '2:44からいちばん強いところが続くの！ ずっとアガるよ♪']],
     'listen:seasons_of_a_little_plaza': [['excited', '1:47からのサビ、いちばん強いのが長く続くぢゃん！ テンション上がるよ♪']],
     'listen:sparkling_pink_overture': [['excited', '0:07からいちばん盛り上がるの！ ずっとキラキラなのー♪']],
+    'listen:three_y_three_s': [['excited', '0:36でいちばん強いとこ来る！ 0:46までずっとアガりっぱなしぢゃん♪']],
     'listen:only_my_railgun': [['excited', '0:52からずっとサビで盛り上がるの、テンション上がるぢゃん♪']],
     'listen:big_bridge_no_shitou': [['excited', '0:08でいきなりサビ！？ 始まってすぐ上がるの、まぢ好き♪']],
     'listen:rising_hope': [['excited', '0:31でいきなり上がるの！ 一気にテンションMAXぢゃんｗ']],
@@ -58000,6 +58093,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:saudade': [['normal', '0:46の静かなところ、すーっと入ってきてすてきでつ']],
     'listen:seasons_of_a_little_plaza': [['normal', '0:24の静かなところ、音がすっと引いて、とてもきれいです♪']],
     'listen:sparkling_pink_overture': [['normal', '1:12の静かなところ、ひと息ついてまた走り出す感じでつ']],
+    'listen:three_y_three_s': [['normal', '1:08からの静かな所、張りつめた空気がきれいです']],
     'listen:only_my_railgun': [['normal', '0:25のところで1度静かになるのが、きれいでつね']],
     'listen:big_bridge_no_shitou': [['normal', '最後の2:15で静かに終わるところ、余韻がありますね']],
     'listen:rising_hope': [['normal', '0:13の静かな一瞬が、次の盛り上がりを引き立ててますね']],
@@ -58103,6 +58197,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:saudade': [['excited', '1:00で強めに入って、2:44でいちばん強くなるよ♡']],
     'listen:seasons_of_a_little_plaza': [['excited', '1:31でいちばん強くなって、1:47からまたサビ！！ ももはここが大好き♡']],
     'listen:sparkling_pink_overture': [['excited', '0:11と0:33がいちばん強いよ♡ ずっと最高潮だよ♡']],
+    'listen:three_y_three_s': [['excited', '0:36も0:46もいちばん強い！ ももはここで一気にいくよ♡']],
     'listen:only_my_railgun': [['excited', 'サビは0:52から最後まで！！ ももが1番かわいく踊れるとこw']],
     'listen:big_bridge_no_shitou': [['excited', '0:08からもう盛り上がりMAX！！ 最初から全力だよw']],
     'listen:rising_hope': [['wink', 'サビは0:31から！！ 短いけど、そこがいちばんアガるの♡']],
@@ -58206,6 +58301,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:saudade': [['happy', 'BPM120でちょうどいいぞ。強く打つ音が多くて元気が出るな']],
     'listen:seasons_of_a_little_plaza': [['happy', '0:00は静かでも0:47から強めになるぞ。旅立ちの合図みたいだな']],
     'listen:sparkling_pink_overture': [['happy', 'BPM212の全力ダッシュだな。2分ちょっとで駆け抜けるぞ']],
+    'listen:three_y_three_s': [['normal', '2分ちょっとの短い戦いだな。BPM191で一気に駆け抜けるからな']],
     'listen:only_my_railgun': [['happy', '出だしからいきなり強めでくるからな。最初から冒険が始まってる感じだ']],
     'listen:big_bridge_no_shitou': [['excited', 'おでの好きな曲だ。0:08からずっと戦ってる感じで、冒険そのものだな']],
     'listen:rising_hope': [['normal', 'テンポが190もあるからな。最初から最後まで走りっぱなしの冒険だ']],
@@ -58309,6 +58405,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:saudade': [['happy', '4:10で静かに終わるの、余韻があっていいよね笑']],
     'listen:seasons_of_a_little_plaza': [['happy', '2:26で静かに終わるの、締めがきれいだね笑']],
     'listen:sparkling_pink_overture': [['happy', '2分ちょっとなのに強い音が多いね笑 あっという間だよ']],
+    'listen:three_y_three_s': [['happy', '1:39から強めで押し切って、1:59で静かに締めるのいいよね笑']],
     'listen:only_my_railgun': [['happy', '1:22からもう1回いちばん強くなって、そのまま締めるのが最高笑']],
     'listen:big_bridge_no_shitou': [['happy', '1:24でもう1回いちばん強くなるとこ、ここが勝負所だよね笑']],
     'listen:rising_hope': [['excited', '0:56からの2回目の山、ここで決めにいきたい笑']],
@@ -58412,6 +58509,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:saudade': [['happy', '1:40で1回落として、2:04からまた上げるのがいいんだよね〜']],
     'listen:seasons_of_a_little_plaza': [['happy', '1:37で1度静かにしてから1:47のサビ、ためが効いてるんだよね〜']],
     'listen:sparkling_pink_overture': [['happy', '0:07〜1:02の長いサビが続くのがいいんだよね〜']],
+    'listen:three_y_three_s': [['happy', '1:08でいったん静かに落として、1:39でまた上げる。構成が効いてるんだよね〜']],
     'listen:only_my_railgun': [['normal', '強め→静か→サビ、の3段なんだよねぇ。短いのに組み立てがきれい']],
     'listen:big_bridge_no_shitou': [['normal', 'サビが最初に来て、1:24でもう1回山がある構成なんだよねぇ']],
     'listen:rising_hope': [['normal', '強め→静か→ふつう→最強、って細かく波があるんだよねぇ']],
@@ -58515,6 +58613,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:saudade': [['normal', 'BPM120です。強く打つ音が48%・・・！ 力強いです']],
     'listen:seasons_of_a_little_plaza': [['normal', 'BPM170です。強い音36%に軽い音1%、芯のある音の配分です']],
     'listen:sparkling_pink_overture': [['normal', 'BPM212です。強く打つ音が51%・・・！ ぎっしり詰まった音です']],
+    'listen:three_y_three_s': [['normal', 'BPM191、強い音29%・軽い音3%。速さで押す配分だぜ・・・！']],
     'listen:only_my_railgun': [['excited', 'BPM143で325ノーツ。1:30しかないのに、Lv.29は手ごわいですね・・・！']],
     'listen:big_bridge_no_shitou': [['surprise', '768ノーツでLv.34です。2分25秒でこの数は、でーじ多いです笑']],
     'listen:rising_hope': [['happy', 'BPM190で393ノーツ。強い音が53%もありますね笑']],
@@ -58618,6 +58717,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:saudade': [['normal', '1:40で少し静かになるから、ひと息つけるね']],
     'listen:seasons_of_a_little_plaza': [['normal', '0:00と0:24の静かな所は落ち着くね。息を整えてから行けるかな']],
     'listen:sparkling_pink_overture': [['normal', '1:12のところは静かだから、ちょっと息が整うね']],
+    'listen:three_y_three_s': [['normal', '1:08から1:34の静かな所でひと息。そこで指を整えようかな']],
     'listen:only_my_railgun': [['happy', '0:25からの静かな所で、ひと息つけるのがいいね']],
     'listen:big_bridge_no_shitou': [['normal', '1:08のふつうになる所で、少し落ち着けるかな']],
     'listen:rising_hope': [['happy', '1:20でふつうに戻る所で、最後に少しほっとできるね']],
@@ -66296,7 +66396,8 @@ const RHYTHM_SONG_PRICES = Object.freeze({
   kiss_mystery: 500,
   dear_santa: 500,
   winter_fall: 500,
-  glass_crown: 500
+  glass_crown: 500,
+  three_y_three_s: 500
 });
 const RHYTHM_SONG_BUNDLE_OWNER = Object.freeze({
   departure_short: 'departure',
@@ -88171,6 +88272,12 @@ const HOME_V2_CSS = `
 @media(prefers-reduced-motion:reduce){.mh-home-v2 .mh-home-menu.is-open{animation:none}}
 .mh-home-v2 .mh-home-menu-info{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:0 2px 4px;border-bottom:1px solid #fff2}
 .mh-home-v2 .mh-home-menu .mh-tod-clock{position:static!important}
+/* 上の段の時計(r1126-118)。ダイヤの枠の2行目。枠の幅はダイヤの行で決まり、時計で広がらない */
+.mh-home-v2 .mh-home-top .mh-home-top-wallet:has(.mh-tod-clock){flex-direction:column;justify-content:center;align-items:flex-end;gap:2px}
+.mh-home-v2 .mh-home-top-clock{display:flex;line-height:1}
+.mh-home-v2 .mh-home-top-clock:empty{display:none}
+.mh-home-v2 .mh-home-top .mh-tod-clock{position:static!important;pointer-events:none;padding:0;border:0;background:none;color:#fce6ab;font-size:12px;line-height:1.1;white-space:nowrap}
+.mh-home-v2 .mh-home-top .mh-tod-clock i{font-size:12px}
 .mh-home-v2 .mh-home-menu-bp{display:flex;align-items:center;gap:4px;margin-left:auto;color:#ffe08a;font-size:13px;font-weight:900}
 .mh-home-v2 .mh-home-menu-bp small{font-size:11px;color:#f4e7c3}
 .mh-home-v2 .mh-home-menu .mh-home-side-btn{display:flex;flex-direction:row;align-items:center;gap:10px;width:100%;min-height:46px;padding:5px 10px 5px 6px;border-radius:12px;background:#ffffff10;color:#fff;text-align:left}
@@ -89616,7 +89723,10 @@ function HomeScreenV2({
     style: {
       '--len': String(compactCount(gold)).length
     }
-  }), React.createElement("small", null, "ダイヤ"))), React.createElement("button", {
+  }), React.createElement("small", null, "ダイヤ")), typeof TimeOfDayClock === 'function' && React.createElement("span", {
+    className: "mh-home-top-clock",
+    "data-home-top-clock": true
+  }, React.createElement(TimeOfDayClock, null))), React.createElement("button", {
     type: "button",
     className: `mh-home-menu-btn${homeMenuOpen ? ' is-open' : ''}`,
     "data-home-menu-btn": true,
@@ -115968,8 +116078,8 @@ const xmasNovelFreshCur = script => {
     panel: {}
   };
 };
-const xmasNovelJump = (script, cur, to) => {
-  const ctx = xmasNovelCtx(script, cur);
+const xmasNovelJump = (script, cur, to, seen) => {
+  const ctx = xmasNovelCtx(script, cur, seen && seen.endings, seen && seen.read);
   if (to === 'END') {
     const s = xmasNovelNextScene(script, {
       id: '__',
@@ -138560,7 +138670,7 @@ const XmasNovelScreen = ({
     if (!next.row && next.ending) {
       const scene = next.scene;
       const ending = next.ending;
-      const after = !replayRef.current && scene && scene.next && !xmasNovelSceneById(S, scene.next) && xmasNovelFindRow(S, scene.next) ? xmasNovelJump(S, next.cur, scene.next) : null;
+      const after = !replayRef.current && scene && scene.next && !xmasNovelSceneById(S, scene.next) && xmasNovelFindRow(S, scene.next) ? xmasNovelJump(S, next.cur, scene.next, xmasNovelSeenOf(saveRef.current)) : null;
       if (replayRef.current) {
         setSt(next);
         setSkip(false);
@@ -138826,7 +138936,8 @@ const XmasNovelScreen = ({
       return;
     }
     if (then && then.to) {
-      arrive(xmasNovelSettle(S, xmasNovelJump(S, cur, then.to), xmasNovelSeenOf(saveRef.current)));
+      const seen = xmasNovelSeenOf(saveRef.current);
+      arrive(xmasNovelSettle(S, xmasNovelJump(S, cur, then.to, seen), seen));
       return;
     }
     arrive(xmasNovelStep(S, cur, xmasNovelSeenOf(saveRef.current)));

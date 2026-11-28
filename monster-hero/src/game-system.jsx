@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3e112e5f0f397194
+// generated-sha256: d6d8c8c9e3a7ccef
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -4926,6 +4926,8 @@ const BGM_TRACKS = [
   // 2026-11-28 新曲 Glass Crown(台帳 r1126-106)。頭に2秒の無音を足した版。元の音源は tools/art-sources/song-audio/glass_crown/
   { id:'melo_glass_crown', name:'Glass Crown', creator:'オリジナル', src:'audio/bgm-glass-crown.mp3', gain:1, loop:true },
   { id:'melo_glass_crown_short', name:'Glass Crown short ver.', creator:'オリジナル', src:'audio/bgm-glass-crown-short.mp3', gain:1, loop:true },
+  // 3y3s(2026-11-28 社長・台帳 r1126-110・ボス曲)。頭に2秒の無音を足した版。元の音源(WAV)は tools/art-sources/song-audio/three_y_three_s/
+  { id:'melo_three_y_three_s', name:'3y3s', creator:'オリジナル', src:'audio/bgm-three-y-three-s.mp3', gain:1, loop:true },
   { id:'melo_emerald_rush', name:'Emerald Rush', creator:'オリジナル', src:'audio/bgm-emerald-rush.mp3', gain:1, loop:true },
   { id:'melo_wrath_of_the_thorn_king', name:'Wrath of the Thorn King「茨の王の怒り」', creator:'オリジナル', src:'audio/bgm-wrath-of-the-thorn-king.mp3', gain:1, loop:true },
   { id:'melo_monster', name:'Monster', creator:'オリジナル', src:'audio/bgm-monster.mp3', gain:1, loop:true },
@@ -6614,6 +6616,7 @@ const Audio_ = (() => {
     "audio/bgm-sparkling-pink-overture.mp3": "6e474b21b5d9",
     "audio/bgm-stay-with-me-short.mp3": "d836a069998d",
     "audio/bgm-the-city-beneath-the-comets.mp3": "900fda0dc05e",
+    "audio/bgm-three-y-three-s.mp3": "904d75645164",
     "audio/bgm-title-theme.mp3": "8af0684e79e7",
     "audio/bgm-title.mp3": "b7bdc68bb0c0",
     "audio/bgm-toriko.mp3": "3870d26f6322",
@@ -27337,11 +27340,17 @@ const RhythmHudScore=({hud,maxScore,bestScore,rankFx=true})=>{const score=useRhy
     }catch(_){}},[rank,rankFx]);
   return <div className="flex items-center gap-1.5"><div ref={rankBadgeRef} className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-current bg-slate-950/85 landscape:h-7 landscape:w-7 ${RHYTHM_RANK_COLORS[rank]}`} style={{boxShadow:'0 0 8px rgba(103,232,249,.35)'}}><b data-rhythm-rank className="text-sm font-black leading-none" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{rank}</b>{rankFx&&<><i ref={rankRingRef} data-rhythm-rank-ring aria-hidden="true" style={{position:'absolute',inset:-3,borderRadius:'9999px',border:'2px solid currentColor',boxShadow:'0 0 12px currentColor',opacity:0,pointerEvents:'none'}}/><b ref={rankPopRef} data-rhythm-rank-pop aria-hidden="true" style={{position:'absolute',left:-2,top:'100%',marginTop:2,zIndex:2,whiteSpace:'nowrap',fontSize:11,fontWeight:900,fontStyle:'italic',lineHeight:1,padding:'2px 6px',borderRadius:9999,background:'rgba(2,6,23,.88)',boxShadow:'0 0 10px currentColor',textShadow:'0 0 6px currentColor',opacity:0,pointerEvents:'none'}}/></>}</div><div className="min-w-0 landscape:min-w-0"><div className="flex items-center gap-0.5 landscape:hidden"><div data-rhythm-rank-gauge className="relative h-1.5 w-14 overflow-hidden rounded-full border border-white/25 bg-slate-950/80"><i aria-hidden="true" className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-cyan-300 to-fuchsia-300" style={{width:`${rhythmRankProgress(score)}%`}}/></div><b data-rhythm-rank-next className="shrink-0 text-[9px] font-black leading-none text-slate-300">{rankNextLabel}</b></div>{/* スコアは100万点を超えると、320幅の左上(約74px)に「1,050,000」がぎりぎりなので少し小さく(2026-10-29)。このコメントを style の中に書くと、横向きHUDの検査が読み取れなくなる */}<b data-rhythm-score className="mt-0.5 block font-black leading-none tabular-nums landscape:mt-0" style={{fontSize:score>=1000000?'min(18px,4cqw)':'min(18px,4.6cqw)',textShadow:'0 1px 6px rgba(2,6,23,.96)'}}>{score.toLocaleString()}</b><small className="mt-0.5 block text-[9px] font-bold leading-none text-slate-300 landscape:hidden" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>BEST {Number(bestScore||0).toLocaleString()}</small></div></div>;};
 // フルコンボ・オールマーベラスが続いているか(comboStatus)。AM=ここまで全部MARVELOUS / FC=ここまでBAD・MISSなし / 空=切れた。アシストモードでは出さない
-const RhythmHudCombo=({hud,settings,assistOn,comboPosition,isLandscape,comboRef,comboRingRef})=>{const combo=useRhythmHudPick(hud,h=>h.combo),countsState=useRhythmHudPick(hud,h=>rhythmHudCountsState(h.counts));
-  if(settings.comboDisplay===false||!(combo>0))return null;
-  const comboTier=rhythmComboTier(combo);
+// 2026-11-28 台帳 r1128-071(社長「質を下げずに軽く」): コンボの数は押すたびに変わるので、部品を描き直さずに文字だけ直接書く。
+// React が描き直すのは、出す・出さない(0 になった)・段(tier)・FC/AM の印が変わったときだけ。出来上がる画面の中身は前と同じ
+const RhythmHudCombo=({hud,settings,assistOn,comboPosition,isLandscape,comboRef,comboRingRef})=>{const comboOn=useRhythmHudPick(hud,h=>h.combo>0),comboTier=useRhythmHudPick(hud,h=>h.combo>0?rhythmComboTier(h.combo):0),countsState=useRhythmHudPick(hud,h=>rhythmHudCountsState(h.counts));
+  const numRef=useRef(null);
+  const writeNum=useCallback(()=>{const el=numRef.current;if(!el)return;const text=String(hud.get().combo);if(el._mhText!==text){rhythmHudSetText(el,text);el._mhText=text;}},[hud]);
+  const setNumRef=useCallback(el=>{numRef.current=el;if(typeof comboRef==='function')comboRef(el);else if(comboRef)comboRef.current=el;if(el)writeNum();},[comboRef,writeNum]);
+  React.useLayoutEffect(()=>hud.subscribe(writeNum),[hud,writeNum]);
+  React.useLayoutEffect(()=>{writeNum();});
+  if(settings.comboDisplay===false||!comboOn)return null;
   const comboStatus=settings.comboStatusDisplay===false||assistOn||!countsState||countsState==='broken'?'':countsState;
-  return <div data-rhythm-combo-box data-combo-status={comboStatus} data-combo-tier={String(comboTier)} data-combo-pos={comboPosition} data-combo-wide={isLandscape?'1':''} aria-hidden="true" style={{'--mh-combo-opacity':rhythmFiniteInRange(settings.comboOpacity,RHYTHM_COMBO_OPACITY_MIN,RHYTHM_COMBO_OPACITY_MAX,100)/100}} className="pointer-events-none absolute z-[2] text-center"><b ref={comboRef} data-rhythm-combo data-combo-tier={String(comboTier)} className="block font-black leading-none tabular-nums text-white" style={{'--mh-combo-scale':rhythmComboTierScale(comboTier),'--mh-combo-size':rhythmFiniteInRange(settings.comboSize,RHYTHM_COMBO_SIZE_MIN,RHYTHM_COMBO_SIZE_MAX,100)/100}}>{combo}</b>{settings.comboMilestoneFx===true&&<i ref={comboRingRef} data-rhythm-combo-ring aria-hidden="true"/>}<span data-rhythm-combo-label className="mt-1 block font-black leading-none tracking-[0.36em]">COMBO</span>{comboStatus&&<span data-rhythm-combo-status-mark={comboStatus} className="block font-black leading-none">{comboStatus==='AM'?'ALL MARVELOUS':'FULL COMBO'}</span>}</div>;};
+  return <div data-rhythm-combo-box data-combo-status={comboStatus} data-combo-tier={String(comboTier)} data-combo-pos={comboPosition} data-combo-wide={isLandscape?'1':''} aria-hidden="true" style={{'--mh-combo-opacity':rhythmFiniteInRange(settings.comboOpacity,RHYTHM_COMBO_OPACITY_MIN,RHYTHM_COMBO_OPACITY_MAX,100)/100}} className="pointer-events-none absolute z-[2] text-center"><b ref={setNumRef} data-rhythm-combo data-combo-tier={String(comboTier)} className="block font-black leading-none tabular-nums text-white" style={{'--mh-combo-scale':rhythmComboTierScale(comboTier),'--mh-combo-size':rhythmFiniteInRange(settings.comboSize,RHYTHM_COMBO_SIZE_MIN,RHYTHM_COMBO_SIZE_MAX,100)/100}}/>{settings.comboMilestoneFx===true&&<i ref={comboRingRef} data-rhythm-combo-ring aria-hidden="true"/>}<span data-rhythm-combo-label className="mt-1 block font-black leading-none tracking-[0.36em]">COMBO</span>{comboStatus&&<span data-rhythm-combo-status-mark={comboStatus} className="block font-black leading-none">{comboStatus==='AM'?'ALL MARVELOUS':'FULL COMBO'}</span>}</div>;};
 // ライフの数字とバー。演奏画面全体が知る必要があるのはライフの状態(rhythmLifeState)だけなので、数字はここだけが作り直す
 // 帯の長さは幅(width)ではなく、幅いっぱいの帯を右から切り抜いて(clip-path)出す(2026-10-13 社長報告「モンスターノーツのかくつき」・「元気」でライフが増えるとき)。
 // 幅を140msかけて動かすと、そのあいだ毎コマ画面の並べ直し(レイアウト)が起きる。切り抜きなら塗り直しだけで済む。
@@ -27351,8 +27360,30 @@ const RhythmHudLife=({hud,settings,isLandscape,lifeBoxRef,lifeDamageRef})=>{cons
   return <div ref={lifeBoxRef} data-rhythm-life data-life-state={lifeState} data-life-wide={isLandscape?'1':''} style={{'--mh-life-scale':rhythmFiniteInRange(settings.lifeDisplaySize,RHYTHM_LIFE_SIZE_MIN,RHYTHM_LIFE_SIZE_MAX,150)/100}} className="relative flex flex-nowrap items-center justify-end gap-x-1"><span aria-hidden="true" data-rhythm-life-heart className="leading-none text-rose-400" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{lifeState==='down'?'💔':'♥'}</span>{/* ★太さ・幅は「小さい端末(320px)でも台形の外の空きへ収まる」ところで止めてある。
         これ以上太く・広くすると tools/mode/rhythm-hud-wedge-check.js が落ちる。
         気づきやすさは大きさではなく、色・点滅・ひび割れ・減った量の数字で出す */}<div data-rhythm-life-track className="relative rounded-full border bg-slate-950/80"><i data-rhythm-life-bar aria-hidden="true" className="absolute inset-y-0 left-0 rounded-full" style={{width:'100%',backgroundImage:lifeRatio>.5?'linear-gradient(90deg,#34d399,#22d3ee)':lifeRatio>.25?'linear-gradient(90deg,#fbbf24,#fb923c)':'linear-gradient(90deg,#fb7185,#ef4444)',backgroundSize:`${(lifeRatio*100).toFixed(1)}% 100%`,backgroundRepeat:'no-repeat',clipPath:`inset(0 ${(100-lifeRatio*100).toFixed(1)}% 0 0 round 999px)`,transition:settings.lightweightMode?'none':'clip-path 140ms linear,background-size 140ms linear'}}/></div><b data-rhythm-life-value className="font-black leading-none tabular-nums text-slate-200" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{lifeState==='down'?'DOWN':life}</b>{/* 減った量(「-50」)を、減ったその場に一瞬だけ出す。中身はapplyJudgmentが直接書く */}<b ref={lifeDamageRef} data-rhythm-life-damage aria-hidden="true" className="pointer-events-none absolute right-0 top-full mt-0.5 text-[11px] font-black leading-none tabular-nums"/></div>;};
-const RhythmHudJudgment=({hud,settings,status,haloKeys,timingDisplay,judgmentTextRef,sky=false})=>{const last=useRhythmHudPick(hud,h=>sky?h.skyLast:h.last),lastPrecise=useRhythmHudPick(hud,h=>sky?h.skyLastPrecise:h.lastPrecise),fastSlow=useRhythmHudPick(hud,h=>sky?h.skyFastSlow:h.fastSlow),lastDeltaMs=useRhythmHudPick(hud,h=>sky?h.skyDeltaMs:h.lastDeltaMs);
-  return <><b ref={judgmentTextRef} data-rhythm-judgment-text data-judgment={last||''} data-judgment-precise={lastPrecise?'1':''} data-halo={haloKeys&&settings.judgmentTextDisplay&&last&&status!=='error'&&status!=='loading'&&haloKeys.has(`${last}|${lastPrecise?'1':''}`)?'1':undefined} className="block text-[26px] font-black leading-none tracking-wide text-white">{status==='error'?'音源を再生できません':status==='loading'?'LOADING…':settings.judgmentTextDisplay?last:''}</b><small className={`mt-1 block min-h-[16px] text-xs font-black tracking-[0.24em] ${!settings.fastSlowDisplay?'text-transparent':fastSlow==='FAST'?'text-cyan-300':fastSlow==='SLOW'?'text-fuchsia-300':'text-transparent'}`}>{settings.fastSlowDisplay?(fastSlow?(timingDisplay!=='STANDARD'&&typeof lastDeltaMs==='number'?`${fastSlow} ${Math.round(Math.abs(lastDeltaMs))}ms`:fastSlow):'—'):'—'}</small></>;};
+// 判定の文字と FAST/SLOW(2026-11-28 台帳 r1128-071・社長「質を下げずに軽く」)。押すたびに変わるので、部品を描き直さずに直接書く。
+// React は要素を1回作るだけで、文字・印(data-judgment など)・FAST/SLOW の色の名前には触らない(触る所を分けて、食い違いを起こさない)。
+// 書く中身は前と同じ式(出来上がる画面の中身は同じ)。設定や状態(読み込み中など)が変わって React が描き直したあとも、同じ式で書き直す
+// 文字は、中の文字の要素(テキストノード)を作り直さずに中身だけ書き換える(作り直すと、要素の出入りとして CSS の :has() まで見直しになる)。
+// 空のときは React と同じく文字の要素を置かない
+const rhythmHudSetText=(el,text)=>{const t=String(text??'');const n=el.firstChild;if(!t){if(n)el.textContent='';return;}if(n&&n.nodeType===3&&!n.nextSibling){if(n.data!==t)n.data=t;return;}el.textContent=t;};
+const rhythmHudJudgmentFastSlowClass=(settings,fastSlow)=>`mt-1 block min-h-[16px] text-xs font-black tracking-[0.24em] ${!settings.fastSlowDisplay?'text-transparent':fastSlow==='FAST'?'text-cyan-300':fastSlow==='SLOW'?'text-fuchsia-300':'text-transparent'}`;
+const RhythmHudJudgment=({hud,settings,status,haloKeys,timingDisplay,judgmentTextRef,sky=false})=>{
+  const textRef=useRef(null),smallRef=useRef(null),propsRef=useRef(null);propsRef.current={settings,status,haloKeys,timingDisplay,sky};
+  const write=useCallback(()=>{const el=textRef.current,sm=smallRef.current,p=propsRef.current;if(!el||!sm||!p)return;const h=hud.get(),{settings,status,haloKeys,timingDisplay}=p;
+    const last=p.sky?h.skyLast:h.last,lastPrecise=p.sky?h.skyLastPrecise:h.lastPrecise,fastSlow=p.sky?h.skyFastSlow:h.fastSlow,lastDeltaMs=p.sky?h.skyDeltaMs:h.lastDeltaMs;
+    const judgment=last||'',precise=lastPrecise?'1':'',halo=haloKeys&&settings.judgmentTextDisplay&&last&&status!=='error'&&status!=='loading'&&haloKeys.has(`${last}|${lastPrecise?'1':''}`)?'1':null;
+    const text=status==='error'?'音源を再生できません':status==='loading'?'LOADING…':settings.judgmentTextDisplay?last:'';
+    const smallClass=rhythmHudJudgmentFastSlowClass(settings,fastSlow),smallText=settings.fastSlowDisplay?(fastSlow?(timingDisplay!=='STANDARD'&&typeof lastDeltaMs==='number'?`${fastSlow} ${Math.round(Math.abs(lastDeltaMs))}ms`:fastSlow):'—'):'—';
+    if(el._mhJudgment!==judgment){el.setAttribute('data-judgment',judgment);el._mhJudgment=judgment;}
+    if(el._mhPrecise!==precise){el.setAttribute('data-judgment-precise',precise);el._mhPrecise=precise;}
+    if(el._mhHalo!==halo){if(halo)el.setAttribute('data-halo',halo);else el.removeAttribute('data-halo');el._mhHalo=halo;}
+    if(el._mhText!==text){rhythmHudSetText(el,text);el._mhText=text;}
+    if(sm._mhClass!==smallClass){sm.className=smallClass;sm._mhClass=smallClass;}
+    if(sm._mhText!==smallText){rhythmHudSetText(sm,smallText);sm._mhText=smallText;}},[hud]);
+  const setTextRef=useCallback(el=>{textRef.current=el;if(typeof judgmentTextRef==='function')judgmentTextRef(el);else if(judgmentTextRef)judgmentTextRef.current=el;},[judgmentTextRef]);
+  React.useLayoutEffect(()=>hud.subscribe(write),[hud,write]);
+  React.useLayoutEffect(()=>{write();});
+  return <><b ref={setTextRef} data-rhythm-judgment-text className="block text-[26px] font-black leading-none tracking-wide text-white"/><small ref={smallRef}/></>;};
 // 演出の自動調整で下げた段。アプリを開いているあいだだけ覚えておき、次の曲もこの段から始める(保存はしない)
 // ★オプションで見た目の設定を保存し直したら0へ戻す(rhythmResetAutoEffect)。戻さないと、「全部のせ」を選び直しても
 //   アプリを開き直すまで下げたまま、しかも知らせも出なかった(2026-09-27 の点検で見つけた)
@@ -29623,7 +29654,7 @@ const inputEnds=inputs=>{const run=runRef.current;if(!run||run.finished||run.pau
     let mask=0;if(coordinates){for(const value of coordinates){const n=Math.max(0,Math.min(RHYTHM_SUB_LANE_COUNT-1,Math.floor(Number(value))));if(Number.isFinite(n))mask|=1<<n;}}
     let nodes=glowNodesRef.current;if(!nodes||!nodes.length||!nodes[0].isConnected){nodes=glowNodesRef.current=Array.from(area.querySelectorAll('[data-rhythm-sublane-feedback]'));glowNodesRef.lastKey=null;}
     const glowKey=`${mask}|${glowOpacity}`;
-    if(glowNodesRef.lastKey!==glowKey){glowNodesRef.lastKey=glowKey;for(let index=0;index<nodes.length;index++){const el=nodes[index],pressed=((mask>>index)&1)===1;const want=pressed?'true':'false';/* 書いた値は要素に覚えておき、DOM を読み直さずに比べる(初めの1回だけ DOM を読む) */const curPressed=el._mhGlowPressed!==undefined?el._mhGlowPressed:el.dataset.pressed,curOpacity=el._mhGlowOpacity!==undefined?el._mhGlowOpacity:el.style.opacity;if(curPressed===want&&(!pressed||curOpacity===glowOpacity))continue;const nextOpacity=pressed?glowOpacity:'0';if(curPressed!==want)el.dataset.pressed=want;if(curOpacity!==nextOpacity)el.style.opacity=nextOpacity;el._mhGlowPressed=want;el._mhGlowOpacity=nextOpacity;}}if(typeof RHYTHM_CANVAS_RENDERER!=='undefined'&&typeof RHYTHM_CANVAS_RENDERER.setSkyPressed==='function'){{const skyMask=settings.holdTrace!==false?holdTraceRef.current.s:0;RHYTHM_CANVAS_RENDERER.setSkyPressed(skyMask?pressedSkyLanesNow().filter(v=>!(skyMask>>Math.floor(Number(v))&1)):pressedSkyLanesNow(),Number(glowOpacity));}paintIdleSkyPress();}};
+    if(glowNodesRef.lastKey!==glowKey){glowNodesRef.lastKey=glowKey;for(let index=0;index<nodes.length;index++){const el=nodes[index];/* 書くのは rhythmLaneGlowApply(触れている幅の光と1か所にまとめた・2026-11-28 r1128-071) */el._mhGlowWantPressed=((mask>>index)&1)===1;el._mhGlowWantOpacity=glowOpacity;rhythmLaneGlowApply(el);}}if(typeof RHYTHM_CANVAS_RENDERER!=='undefined'&&typeof RHYTHM_CANVAS_RENDERER.setSkyPressed==='function'){{const skyMask=settings.holdTrace!==false?holdTraceRef.current.s:0;RHYTHM_CANVAS_RENDERER.setSkyPressed(skyMask?pressedSkyLanesNow().filter(v=>!(skyMask>>Math.floor(Number(v))&1)):pressedSkyLanesNow(),Number(glowOpacity));}paintIdleSkyPress();}};
   // 曲が始まる前の待機中(幕・READY→3→2→1)は、毎フレームの描画(tick)がまだ動いていない。地上のレーンの光は画面の要素なので光るが、
   // 空中のレーンの光は canvas に描くので、そのままだと光らなかった(2026-10-13 社長「待機中、地上は光るのに空中は光らない」)。
   // 指の出入りのたびに、空中の押した光だけをここで1回描く(叩いた光・ノーツはまだ無い)。止めている間(ポーズ)はノーツの絵を残すので描かない
@@ -34876,6 +34907,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:saudade': [['excited', '2:44からいちばん強いところが続くの！ ずっとアガるよ♪']],
     'listen:seasons_of_a_little_plaza': [['excited', '1:47からのサビ、いちばん強いのが長く続くぢゃん！ テンション上がるよ♪']],
     'listen:sparkling_pink_overture': [['excited', '0:07からいちばん盛り上がるの！ ずっとキラキラなのー♪']],
+    'listen:three_y_three_s': [['excited', '0:36でいちばん強いとこ来る！ 0:46までずっとアガりっぱなしぢゃん♪']],
     'listen:only_my_railgun': [['excited', '0:52からずっとサビで盛り上がるの、テンション上がるぢゃん♪']],
     'listen:big_bridge_no_shitou': [['excited', '0:08でいきなりサビ！？ 始まってすぐ上がるの、まぢ好き♪']],
     'listen:rising_hope': [['excited', '0:31でいきなり上がるの！ 一気にテンションMAXぢゃんｗ']],
@@ -34979,6 +35011,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:saudade': [['normal', '0:46の静かなところ、すーっと入ってきてすてきでつ']],
     'listen:seasons_of_a_little_plaza': [['normal', '0:24の静かなところ、音がすっと引いて、とてもきれいです♪']],
     'listen:sparkling_pink_overture': [['normal', '1:12の静かなところ、ひと息ついてまた走り出す感じでつ']],
+    'listen:three_y_three_s': [['normal', '1:08からの静かな所、張りつめた空気がきれいです']],
     'listen:only_my_railgun': [['normal', '0:25のところで1度静かになるのが、きれいでつね']],
     'listen:big_bridge_no_shitou': [['normal', '最後の2:15で静かに終わるところ、余韻がありますね']],
     'listen:rising_hope': [['normal', '0:13の静かな一瞬が、次の盛り上がりを引き立ててますね']],
@@ -35082,6 +35115,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:saudade': [['excited', '1:00で強めに入って、2:44でいちばん強くなるよ♡']],
     'listen:seasons_of_a_little_plaza': [['excited', '1:31でいちばん強くなって、1:47からまたサビ！！ ももはここが大好き♡']],
     'listen:sparkling_pink_overture': [['excited', '0:11と0:33がいちばん強いよ♡ ずっと最高潮だよ♡']],
+    'listen:three_y_three_s': [['excited', '0:36も0:46もいちばん強い！ ももはここで一気にいくよ♡']],
     'listen:only_my_railgun': [['excited', 'サビは0:52から最後まで！！ ももが1番かわいく踊れるとこw']],
     'listen:big_bridge_no_shitou': [['excited', '0:08からもう盛り上がりMAX！！ 最初から全力だよw']],
     'listen:rising_hope': [['wink', 'サビは0:31から！！ 短いけど、そこがいちばんアガるの♡']],
@@ -35185,6 +35219,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:saudade': [['happy', 'BPM120でちょうどいいぞ。強く打つ音が多くて元気が出るな']],
     'listen:seasons_of_a_little_plaza': [['happy', '0:00は静かでも0:47から強めになるぞ。旅立ちの合図みたいだな']],
     'listen:sparkling_pink_overture': [['happy', 'BPM212の全力ダッシュだな。2分ちょっとで駆け抜けるぞ']],
+    'listen:three_y_three_s': [['normal', '2分ちょっとの短い戦いだな。BPM191で一気に駆け抜けるからな']],
     'listen:only_my_railgun': [['happy', '出だしからいきなり強めでくるからな。最初から冒険が始まってる感じだ']],
     'listen:big_bridge_no_shitou': [['excited', 'おでの好きな曲だ。0:08からずっと戦ってる感じで、冒険そのものだな']],
     'listen:rising_hope': [['normal', 'テンポが190もあるからな。最初から最後まで走りっぱなしの冒険だ']],
@@ -35288,6 +35323,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:saudade': [['happy', '4:10で静かに終わるの、余韻があっていいよね笑']],
     'listen:seasons_of_a_little_plaza': [['happy', '2:26で静かに終わるの、締めがきれいだね笑']],
     'listen:sparkling_pink_overture': [['happy', '2分ちょっとなのに強い音が多いね笑 あっという間だよ']],
+    'listen:three_y_three_s': [['happy', '1:39から強めで押し切って、1:59で静かに締めるのいいよね笑']],
     'listen:only_my_railgun': [['happy', '1:22からもう1回いちばん強くなって、そのまま締めるのが最高笑']],
     'listen:big_bridge_no_shitou': [['happy', '1:24でもう1回いちばん強くなるとこ、ここが勝負所だよね笑']],
     'listen:rising_hope': [['excited', '0:56からの2回目の山、ここで決めにいきたい笑']],
@@ -35391,6 +35427,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:saudade': [['happy', '1:40で1回落として、2:04からまた上げるのがいいんだよね〜']],
     'listen:seasons_of_a_little_plaza': [['happy', '1:37で1度静かにしてから1:47のサビ、ためが効いてるんだよね〜']],
     'listen:sparkling_pink_overture': [['happy', '0:07〜1:02の長いサビが続くのがいいんだよね〜']],
+    'listen:three_y_three_s': [['happy', '1:08でいったん静かに落として、1:39でまた上げる。構成が効いてるんだよね〜']],
     'listen:only_my_railgun': [['normal', '強め→静か→サビ、の3段なんだよねぇ。短いのに組み立てがきれい']],
     'listen:big_bridge_no_shitou': [['normal', 'サビが最初に来て、1:24でもう1回山がある構成なんだよねぇ']],
     'listen:rising_hope': [['normal', '強め→静か→ふつう→最強、って細かく波があるんだよねぇ']],
@@ -35494,6 +35531,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:saudade': [['normal', 'BPM120です。強く打つ音が48%・・・！ 力強いです']],
     'listen:seasons_of_a_little_plaza': [['normal', 'BPM170です。強い音36%に軽い音1%、芯のある音の配分です']],
     'listen:sparkling_pink_overture': [['normal', 'BPM212です。強く打つ音が51%・・・！ ぎっしり詰まった音です']],
+    'listen:three_y_three_s': [['normal', 'BPM191、強い音29%・軽い音3%。速さで押す配分だぜ・・・！']],
     'listen:only_my_railgun': [['excited', 'BPM143で325ノーツ。1:30しかないのに、Lv.29は手ごわいですね・・・！']],
     'listen:big_bridge_no_shitou': [['surprise', '768ノーツでLv.34です。2分25秒でこの数は、でーじ多いです笑']],
     'listen:rising_hope': [['happy', 'BPM190で393ノーツ。強い音が53%もありますね笑']],
@@ -35597,6 +35635,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:saudade': [['normal', '1:40で少し静かになるから、ひと息つけるね']],
     'listen:seasons_of_a_little_plaza': [['normal', '0:00と0:24の静かな所は落ち着くね。息を整えてから行けるかな']],
     'listen:sparkling_pink_overture': [['normal', '1:12のところは静かだから、ちょっと息が整うね']],
+    'listen:three_y_three_s': [['normal', '1:08から1:34の静かな所でひと息。そこで指を整えようかな']],
     'listen:only_my_railgun': [['happy', '0:25からの静かな所で、ひと息つけるのがいいね']],
     'listen:big_bridge_no_shitou': [['normal', '1:08のふつうになる所で、少し落ち着けるかな']],
     'listen:rising_hope': [['happy', '1:20でふつうに戻る所で、最後に少しほっとできるね']],
@@ -40394,7 +40433,7 @@ const RHYTHM_SONG_OWNED_KEY = 'mh_rhythm_owned_songs_v1';
 const RHYTHM_SONG_DEFAULT_PRICE = 500;
 // 有料の曲: { 曲の id: ビートP }。2026-11-26 クリスマスの3曲も有料(台帳 r1126-036・ショート版は全編といっしょに開く)。2026-11-14 の新曲3つから(departure!・RPG・Midnight Studio。LAMIA・サウダージ・メガロバニアは無料のまま)
 // Battle #5 は 2026-11-23 から止めていたが、11/28 10:00 に解禁(台帳 r1126-064)。公開曲の一覧と同じ変更で、値段(500)と組(short ver. は原曲と一緒に開く)を戻した
-const RHYTHM_SONG_PRICES = Object.freeze({ departure: 500, rpg: 500, midnight_studio: 500, hopes_and_dreams: 500, sparkling_pink_overture: 500, seasons_of_a_little_plaza: 500, eiyuu_no_akashi: 500, gourmet_race_64: 500, dr_wily_stage_1: 500, erfolg: 500, amakakeru_tsubasa: 500, beyond_the_same_sky: 500, desert_crown: 500, walkure: 500, battle_5: 500, kiss_mystery: 500, dear_santa: 500, winter_fall: 500, glass_crown: 500 });
+const RHYTHM_SONG_PRICES = Object.freeze({ departure: 500, rpg: 500, midnight_studio: 500, hopes_and_dreams: 500, sparkling_pink_overture: 500, seasons_of_a_little_plaza: 500, eiyuu_no_akashi: 500, gourmet_race_64: 500, dr_wily_stage_1: 500, erfolg: 500, amakakeru_tsubasa: 500, beyond_the_same_sky: 500, desert_crown: 500, walkure: 500, battle_5: 500, kiss_mystery: 500, dear_santa: 500, winter_fall: 500, glass_crown: 500, three_y_three_s: 500 });
 // 1曲の値段で、組の別の版(short ver.)もいっしょに遊べる(2026-11-14 社長「1曲500で両方ついてくる」)。{ 別の版の id: 買う曲の id }。
 // 保存するのは買った曲(全編)の id だけ。別の版は、全編を持っていれば開く(保存の形は変えない)
 // 2026-11-19 英雄の証も同じ形にそろえた(ミラクル☆ミルクティ版 → 戦闘版。交換所で2枚に分かれて出ていたのを1枚・500Pで両版に)
@@ -52506,6 +52545,12 @@ const HOME_V2_CSS = `
 @media(prefers-reduced-motion:reduce){.mh-home-v2 .mh-home-menu.is-open{animation:none}}
 .mh-home-v2 .mh-home-menu-info{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:0 2px 4px;border-bottom:1px solid #fff2}
 .mh-home-v2 .mh-home-menu .mh-tod-clock{position:static!important}
+/* 上の段の時計(r1126-118)。ダイヤの枠の2行目。枠の幅はダイヤの行で決まり、時計で広がらない */
+.mh-home-v2 .mh-home-top .mh-home-top-wallet:has(.mh-tod-clock){flex-direction:column;justify-content:center;align-items:flex-end;gap:2px}
+.mh-home-v2 .mh-home-top-clock{display:flex;line-height:1}
+.mh-home-v2 .mh-home-top-clock:empty{display:none}
+.mh-home-v2 .mh-home-top .mh-tod-clock{position:static!important;pointer-events:none;padding:0;border:0;background:none;color:#fce6ab;font-size:12px;line-height:1.1;white-space:nowrap}
+.mh-home-v2 .mh-home-top .mh-tod-clock i{font-size:12px}
 .mh-home-v2 .mh-home-menu-bp{display:flex;align-items:center;gap:4px;margin-left:auto;color:#ffe08a;font-size:13px;font-weight:900}
 .mh-home-v2 .mh-home-menu-bp small{font-size:11px;color:#f4e7c3}
 .mh-home-v2 .mh-home-menu .mh-home-side-btn{display:flex;flex-direction:row;align-items:center;gap:10px;width:100%;min-height:46px;padding:5px 10px 5px 6px;border-radius:12px;background:#ffffff10;color:#fff;text-align:left}
@@ -53321,6 +53366,10 @@ function HomeScreenV2({
           {/* ダイヤは桁が増えても1行のまま。9桁(1億)からは「67.3億」のように縮めて出し、押すと細かい数が出る(CompactCount・N5) */}
           <section className="mh-home-wallet mh-home-top-wallet" aria-label="ダイヤ">
             <div><Gem size={15}/><CompactCount value={gold} style={{'--len':String(compactCount(gold)).length}}/><small>ダイヤ</small></div>
+            {/* 時計は HOME にいつも出す(2026-11-28 台帳 r1126-118 社長「時計表示はホームに出てるほうがいい」)。メニューの中の時計も残す。
+                ダイヤの枠の2行目に置く(上の段に枠を足すと、ダイヤが8桁のとき名前の欄がつぶれた)。
+                ここは見せるだけ(押せない)。押せる所が 44px に届かないため(ミハリの指摘・社長の選択)。24時間/AM・PM の切り替えはメニューの中の時計から */}
+            {typeof TimeOfDayClock==='function'&&<span className="mh-home-top-clock" data-home-top-clock><TimeOfDayClock/></span>}
           </section>
           <button type="button" className={`mh-home-menu-btn${homeMenuOpen?' is-open':''}`} data-home-menu-btn onClick={()=>setHomeMenuOpen(o=>!o)} aria-label={homeMenuBadge>0?`メニュー(${homeMenuBadge}件)`:'メニュー'} aria-expanded={homeMenuOpen}>
             <span className="mh-home-menu-bars" aria-hidden="true"><i/><i/><i/></span><span className="mh-home-menu-lb">メニュー</span>
@@ -68749,8 +68798,9 @@ const xmasNovelFreshCur = (script) => {
   return { scene: first ? first.id : null, idx: 0, flags: {}, clues: [], ans: {}, panel: {} };
 };
 // 行き先(場面ID・行ID・END)へ飛ぶ。返り値は新しい cur(場所だけ変わる)
-const xmasNovelJump = (script, cur, to) => {
-  const ctx = xmasNovelCtx(script, cur);
+// seen … { endings, read }(省略可)。飛び先の場面の条件(end_G / bm_red / rd_*)に使う(保存は読むだけ・r1126-115。省略すると今までどおり)
+const xmasNovelJump = (script, cur, to, seen) => {
+  const ctx = xmasNovelCtx(script, cur, seen && seen.endings, seen && seen.read);
   if (to === 'END') {
     const s = xmasNovelNextScene(script, { id: '__', next: 'END' }, ctx);
     return s ? { ...cur, scene: s.id, idx: 0 } : cur;
@@ -73084,7 +73134,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
       const scene = next.scene;
       const ending = next.ending;
       // 「選び直す」はエンディングの「次」が問いの行(Q7a)のときだけ。場面(カーテンコール)へは settle が続けて入る
-      const after = !replayRef.current && scene && scene.next && !xmasNovelSceneById(S, scene.next) && xmasNovelFindRow(S, scene.next) ? xmasNovelJump(S, next.cur, scene.next) : null;
+      const after = !replayRef.current && scene && scene.next && !xmasNovelSceneById(S, scene.next) && xmasNovelFindRow(S, scene.next) ? xmasNovelJump(S, next.cur, scene.next, xmasNovelSeenOf(saveRef.current)) : null;
       if (replayRef.current) { setSt(next); setSkip(false); setSheet(null); setCard({ kind: 'ending', ending, replay: true }); return; }
       const firstTime = !s.endings.includes(ending.id); const marksBefore = xmasNovelBookmarks(s.endings); // 特別なしおり(r1126-115)は見たエンドから数えるだけ(保存は増やさない)
       s = { ...xmasNovelRecordEnding(s, ending.id, new Date().toISOString()), cur: after };
@@ -73189,7 +73239,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
   const finishReply = (then, q, cur) => {
     setReply(null);
     if (then === 'retry') { setSheet({ kind: q.kind, q }); setShown(99999); return; }
-    if (then && then.to) { arrive(xmasNovelSettle(S, xmasNovelJump(S, cur, then.to), xmasNovelSeenOf(saveRef.current))); return; }
+    if (then && then.to) { const seen = xmasNovelSeenOf(saveRef.current); arrive(xmasNovelSettle(S, xmasNovelJump(S, cur, then.to, seen), seen)); return; }
     arrive(xmasNovelStep(S, cur, xmasNovelSeenOf(saveRef.current)));
   };
   // 答える

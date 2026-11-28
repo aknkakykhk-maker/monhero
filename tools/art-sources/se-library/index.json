@@ -1,0 +1,92 @@
+{
+ "bell-toll-omen": {
+  "sec": 6.47,
+  "lufs": -18.0,
+  "tp": -3.2,
+  "bytes": 156778
+ },
+ "bell-toll-omen-x3": {
+  "sec": 11.61,
+  "lufs": -18.0,
+  "tp": -2.8,
+  "bytes": 280285
+ },
+ "clock-strike": {
+  "sec": 3.41,
+  "lufs": -18.0,
+  "tp": -3.3,
+  "bytes": 83426
+ },
+ "scream-distant": {
+  "sec": 5.96,
+  "lufs": -18.0,
+  "tp": -6.3,
+  "bytes": 144240
+ },
+ "wail-ghost": {
+  "sec": 9.67,
+  "lufs": -18.0,
+  "tp": -6.8,
+  "bytes": 233892
+ },
+ "laugh-echo": {
+  "sec": 6.41,
+  "lufs": -17.9,
+  "tp": -6.0,
+  "bytes": 155524
+ },
+ "laugh-reverse-swell": {
+  "sec": 6.04,
+  "lufs": -18.0,
+  "tp": -4.7,
+  "bytes": 146747
+ },
+ "swell-reverse": {
+  "sec": 3.35,
+  "lufs": -18.0,
+  "tp": -6.2,
+  "bytes": 82173
+ },
+ "glass-shatter": {
+  "sec": 1.25,
+  "lufs": -18.0,
+  "tp": -7.3,
+  "bytes": 32017
+ },
+ "fall-heavy": {
+  "sec": 1.79,
+  "lufs": -18.0,
+  "tp": -2.3,
+  "bytes": 44556
+ },
+ "door-slam-far": {
+  "sec": 2.72,
+  "lufs": -18.0,
+  "tp": -4.2,
+  "bytes": 67126
+ },
+ "rumble-low": {
+  "sec": 16.22,
+  "lufs": -22.0,
+  "tp": -9.6,
+  "bytes": 391253
+ },
+ "love-shimmer": {
+  "sec": 4.4,
+  "lufs": -18.0,
+  "tp": -4.7,
+  "bytes": 107250
+ },
+ "love-afterglow": {
+  "sec": 8.67,
+  "lufs": -20.0,
+  "tp": -8.0,
+  "bytes": 209441
+ },
+ "memory-in": {
+  "sec": 7.48,
+  "lufs": -18.0,
+  "tp": -4.2,
+  "bytes": 181229
+ }
+}
