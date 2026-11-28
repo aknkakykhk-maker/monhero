@@ -1,2292 +1,2292 @@
 {
-  "schemaVersion": 1,
-  "songs": {
-    "monster_hero_theme": {
-      "chartRevision": 38,
-      "audio": "monster-hero/audio/bgm-monster-hero-theme.mp3",
-      "audioSha256": "083a1d9db2810a4a77a304e8d53fc862b16db71553af7d97040da78fea577fda",
-      "durationMs": 152761,
-      "analyzedTiming": {
-        "bpm": 173.153,
-        "beatZeroMs": 206,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "registered"
-      },
-      "flowPlacement": true,
-      "handFinish": {
-        "EASY": "smooth",
-        "NORMAL": "smooth",
-        "HARD": "smooth"
-      }
-    },
-    "atsu_cup_theme": {
-      "chartRevision": 38,
-      "audio": "monster-hero/audio/bgm-atsu-cup-theme.mp3",
-      "audioSha256": "e93502c4df763a80afae82dc3fcc95cd69670028a4f24566305d74a394e19184",
-      "durationMs": 144640,
-      "analyzedTiming": {
-        "bpm": 169,
-        "beatZeroMs": 40,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "registered"
-      },
-      "flowPlacement": true,
-      "handFinish": {
-        "EASY": "smooth",
-        "NORMAL": "smooth",
-        "HARD": "smooth"
-      }
-    },
-    "six_eternel_beat": {
-      "chartRevision": 38,
-      "audio": "monster-hero/audio/bgm-six-eternel-beat.mp3",
-      "audioSha256": "151f94091a341f19dffb41049bf55d4f2296503e6bc6c73f5eb0032015e36e86",
-      "durationMs": 157968,
-      "analyzedTiming": {
-        "bpm": 275.99,
-        "beatZeroMs": 562.4,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      },
-      "challengeFactor": 1.15,
-      "flowPlacement": true,
-      "handFinish": {
-        "EASY": "smooth",
-        "NORMAL": "smooth",
-        "HARD": "smooth"
-      }
-    },
-    "six_eternel_remix_beat": {
-      "chartRevision": 38,
-      "audio": "monster-hero/audio/bgm-six-eternel-remix-beat.mp3",
-      "audioSha256": "b1a024d5b16f6e50c93dfc56f1eebd11e6743bd228df5c0c5bd0b97ab0b4d5a5",
-      "durationMs": 150408,
-      "analyzedTiming": {
-        "bpm": 162.641,
-        "beatZeroMs": 1452.6,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "detected"
-      },
-      "flowPlacement": true,
-      "handFinish": {
-        "EASY": "smooth",
-        "NORMAL": "smooth",
-        "HARD": "smooth"
-      }
-    },
-    "pandora_boss_beat": {
-      "audio": "monster-hero/audio/bgm-pandora-boss-beat.mp3",
-      "audioSha256": "b70636c619b2d9811607db97e11257a6e3f9b1d33bc8db35e6c9592ed263a71a",
-      "durationMs": 171072,
-      "analyzedTiming": {
-        "bpm": 169.99,
-        "beatZeroMs": 440,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      }
-    },
-    "eiki_boss_beat": {
-      "audio": "monster-hero/audio/bgm-eiki-boss-beat.mp3",
-      "audioSha256": "1c3e0cb8b29f2785acc10acd481e40ee37116d51ec77e8a820d6619423b5786d",
-      "durationMs": 153072,
-      "analyzedTiming": {
-        "bpm": 153.153,
-        "beatZeroMs": 830.4,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "detected"
-      }
-    },
-    "pandora_boss": {
-      "chartRevision": 38,
-      "audio": "monster-hero/audio/bgm-pandora-boss.mp3",
-      "audioSha256": "b6683818f250cb8777113961ddc522b02a60687f9a3f6830184a3924ec956fd2",
-      "durationMs": 274400,
-      "analyzedTiming": {
-        "bpm": 169.99,
-        "beatZeroMs": 440,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      },
-      "flowPlacement": true,
-      "handFinish": {
-        "EASY": "smooth",
-        "NORMAL": "smooth",
-        "HARD": "smooth"
-      }
-    },
-    "eiki_boss": {
-      "chartRevision": 38,
-      "audio": "monster-hero/audio/綺季一閃_～花雪に舞う詠姫～.mp3",
-      "audioSha256": "099d201c53b1b635a4e00a1f3fe35c8ce3153f0e3c2c4dafa704088ffc47fecb",
-      "durationMs": 261841,
-      "analyzedTiming": {
-        "bpm": 155.011,
-        "beatZeroMs": 188.4,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "detected"
-      },
-      "flowPlacement": true,
-      "handFinish": {
-        "EASY": "smooth",
-        "NORMAL": "smooth",
-        "HARD": "smooth"
-      }
-    },
-    "six_eternel_remix": {
-      "audio": "monster-hero/audio/bgm-six-eternel-remix.mp3",
-      "audioSha256": "5f56c89739f8053d7c46202bed96eb80579070fda17cb6fa6cd9f9172feb4d2c",
-      "durationMs": 298620,
-      "analyzedTiming": {
-        "bpm": 160.077,
-        "beatZeroMs": 791.9,
-        "beatsPerBar": 3,
-        "subdivisionsPerBeat": 4,
-        "source": "detected"
-      }
-    },
-    "kaze_ga_soyogu": {
-      "chartRevision": 21,
-      "audio": "monster-hero/audio/bgm-kaze-ga-soyogu-basho.mp3",
-      "audioSha256": "9cc789151e7ec4c96c74a653cd0f96938c478f4636f11a3a850537aefaaf30dd",
-      "durationMs": 99250,
-      "analyzedTiming": {
-        "bpm": 118.88,
-        "beatZeroMs": 209,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "detected"
-      }
-    },
-    "close_to_your_heart": {
-      "chartRevision": 21,
-      "audio": "monster-hero/audio/bgm-close-to-your-heart.mp3",
-      "audioSha256": "990493074a9113bf32f70cfd43c8a65114aefaf2d8904a4d4253c5df726f9659",
-      "durationMs": 120204,
-      "analyzedTiming": {
-        "bpm": 129.967,
-        "beatZeroMs": 570.5,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "detected"
-      }
-    },
-    "eiki_boss_remix": {
-      "chartRevision": 38,
-      "audio": "monster-hero/audio/bgm-eiki-boss-remix.mp3",
-      "audioSha256": "83093750c9ec8fb66195d6bb1ed290bdf72ba3ce5b289faa032f9b211fd9fde6",
-      "durationMs": 218014,
-      "analyzedTiming": {
-        "bpm": 154.164,
-        "beatZeroMs": 992.5,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "detected"
-      },
-      "flowPlacement": true,
-      "handFinish": {
-        "EASY": "smooth",
-        "NORMAL": "smooth",
-        "HARD": "smooth"
-      }
-    },
-    "pandora_boss_remix": {
-      "chartRevision": 38,
-      "audio": "monster-hero/audio/bgm-pandora-boss-remix.mp3",
-      "audioSha256": "0faa4d713fdccd01e4a3924e95600bcf4fd011f4973dcbff7858a3694e87a825",
-      "durationMs": 199414,
-      "analyzedTiming": {
-        "bpm": 161.718,
-        "beatZeroMs": 452.7,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "detected"
-      },
-      "flowPlacement": true,
-      "handFinish": {
-        "EASY": "smooth",
-        "NORMAL": "smooth",
-        "HARD": "smooth"
-      }
-    },
-    "dullahan": {
-      "chartRevision": 21,
-      "audio": "monster-hero/audio/bgm-dullahan.mp3",
-      "audioSha256": "c66388ff6c1422fe1f59f49344e85dc31641d165cc63628850e118e8797ad202",
-      "durationMs": 214600,
-      "playEndMs": 128603,
-      "analyzedTiming": {
-        "bpm": 149.999,
-        "beatZeroMs": 602.7,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "detected"
-      }
-    },
-    "dullahan_clockwork": {
-      "chartRevision": 21,
-      "audio": "monster-hero/audio/bgm-dullahan-clockwork.mp3",
-      "audioSha256": "b51e196625c44c2df3ebe449f37e12a10e356b5422d5688bcc4218af3700eb3f",
-      "durationMs": 292214,
-      "playEndMs": 121675,
-      "analyzedTiming": {
-        "bpm": 152.002,
-        "beatZeroMs": 99.8,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "detected"
-      }
-    },
-    "toriko": {
-      "chartRevision": 38,
-      "audio": "monster-hero/audio/bgm-toriko.mp3",
-      "audioSha256": "3870d26f6322d8dae8f18f19c6b70008511046ad20863b9921b4bf08c2384e4d",
-      "durationMs": 79341,
-      "analyzedTiming": {
-        "bpm": 134.992,
-        "beatZeroMs": 32.2,
-        "beatsPerBar": 3,
-        "subdivisionsPerBeat": 4,
-        "source": "detected"
-      },
-      "flowPlacement": true,
-      "handFinish": {
-        "EASY": "smooth",
-        "NORMAL": "smooth",
-        "HARD": "smooth"
-      }
-    },
-    "4u_hitasura": {
-      "chartRevision": 38,
-      "audio": "monster-hero/audio/bgm-4u-hitasura.mp3",
-      "audioSha256": "f4fb42472438eb97fb61512fb295479a637707623c958960f2d5df8447711015",
-      "durationMs": 120440,
-      "analyzedTiming": {
-        "bpm": 144.993,
-        "beatZeroMs": 1442.8,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "detected"
-      },
-      "flowPlacement": true,
-      "handFinish": {
-        "EASY": "smooth",
-        "NORMAL": "smooth",
-        "HARD": "smooth"
-      }
-    },
-    "kindan_no_resistance": {
-      "chartRevision": 21,
-      "audio": "monster-hero/audio/bgm-kindan-no-resistance.mp3",
-      "audioSha256": "efca5c01d0b738b44317dafd6504f9b7a4212a638878cc085a9703635f2df65d",
-      "durationMs": 163440,
-      "analyzedTiming": {
-        "bpm": 179.997,
-        "beatZeroMs": 76.1,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "detected"
-      }
-    },
-    "monster_hero_theme_alt": {
-      "chartRevision": 38,
-      "audio": "monster-hero/audio/bgm-monster-hero-theme-alt.mp3",
-      "audioSha256": "6b4eb065c2e238d68225deb33d4340c2a8491eb4a8edef3cd7e351e56e50b0f9",
-      "durationMs": 154720,
-      "analyzedTiming": {
-        "bpm": 171.097,
-        "beatZeroMs": 1268.3,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "detected"
-      },
-      "challengeProfile": {
-        "audioSha256": "6b4eb065c2e238d68225deb33d4340c2a8491eb4a8edef3cd7e351e56e50b0f9",
-        "onsetCount": 1108,
-        "beatClarityRatio": 1.193
-      },
-      "flowPlacement": true,
-      "handFinish": {
-        "EASY": "smooth",
-        "NORMAL": "smooth",
-        "HARD": "smooth"
-      }
-    },
-    "crossing_field": {
-      "chartRevision": 38,
-      "audio": "monster-hero/audio/bgm-crossing-field.mp3",
-      "audioSha256": "1e2e7cc1d3d53d1ac999bc5c03e1534e635de515b297daf65c00bcab21ce294f",
-      "durationMs": 89208,
-      "analyzedTiming": {
-        "bpm": 178.97,
-        "beatZeroMs": 792.7,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      },
-      "challengeFactor": 1.16,
-      "flowPlacement": true,
-      "handFinish": {
-        "EASY": "smooth",
-        "NORMAL": "smooth",
-        "HARD": "smooth"
-      }
-    },
-    "nothing_without_you": {
-      "chartRevision": 21,
-      "audio": "monster-hero/audio/bgm-nothing-without-you.mp3",
-      "audioSha256": "4cb261cf1cd9fcbb3592d0854503bf40db54bb99ef357efed598f074959d0884",
-      "durationMs": 189504,
-      "analyzedTiming": {
-        "bpm": 194.005,
-        "beatZeroMs": 83.1,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "detected"
-      },
-      "challengeFactor": 0.9
-    },
-    "freedom_dive": {
-      "chartRevision": 38,
-      "audio": "monster-hero/audio/bgm-freedom-dive.mp3",
-      "audioSha256": "34616b2fccd33a1201305344b615f2441b1a9219045c8c2629676ad6cfc8c42c",
-      "durationMs": 145404,
-      "analyzedTiming": {
-        "bpm": 222.22,
-        "beatZeroMs": 117,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      },
-      "chartIntensity": "extreme",
-      "flowPlacement": true,
-      "handFinish": {
-        "EASY": "smooth",
-        "NORMAL": "smooth",
-        "HARD": "smooth"
-      }
-    },
-    "the_city_beneath_the_comets": {
-      "chartRevision": 38,
-      "audio": "monster-hero/audio/bgm-the-city-beneath-the-comets.mp3",
-      "audioSha256": "900fda0dc05ef4d85259f3467c3b662934ea25ec4789807d2f31e750272a24eb",
-      "durationMs": 160020,
-      "analyzedTiming": {
-        "bpm": 170.466,
-        "beatZeroMs": 1054.3,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "detected"
-      },
-      "flowPlacement": true,
-      "handFinish": {
-        "EASY": "smooth",
-        "NORMAL": "smooth",
-        "HARD": "smooth"
-      }
-    },
-    "mou_hitotsu_no_sekai_e": {
-      "chartRevision": 38,
-      "audio": "monster-hero/audio/bgm-mou-hitotsu-no-sekai-e.mp3",
-      "audioSha256": "633ed0ee2501b3b6bcf36daf4328c95dbd01fe1e5a4d06b489cc4de51afd054f",
-      "durationMs": 226980,
-      "analyzedTiming": {
-        "bpm": 187.5,
-        "beatZeroMs": 384.1,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "detected"
-      },
-      "flowPlacement": true,
-      "handFinish": {
-        "EASY": "smooth",
-        "NORMAL": "smooth",
-        "HARD": "smooth"
-      }
-    },
-    "senjou_no_shippuu": {
-      "audio": "monster-hero/audio/bgm-senjou-no-shippuu.mp3",
-      "chartRevision": 38,
-      "audioSha256": "dfcd5d833fec961569e2d8c82ad79f4db89c6c8fb58331817027c266c07639fe",
-      "durationMs": 193593,
-      "analyzedTiming": {
-        "bpm": 139.966,
-        "beatZeroMs": 321.3,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "detected"
-      },
-      "challengeFactor": 1.3,
-      "flowPlacement": true,
-      "handFinish": {
-        "EASY": "smooth",
-        "NORMAL": "smooth",
-        "HARD": "smooth"
-      }
-    },
-    "makutsu_no_senritsu": {
-      "audio": "monster-hero/audio/bgm-makutsu-no-senritsu.mp3",
-      "chartRevision": 38,
-      "audioSha256": "8db199451f0b9a9d1d6bd3a3f0c249601e49f403c464dae16d7dbe6362adb998",
-      "durationMs": 148584,
-      "analyzedTiming": {
-        "bpm": 143.903,
-        "beatZeroMs": 38,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      },
-      "challengeFactor": 1.6,
-      "flowPlacement": true,
-      "handFinish": {
-        "EASY": "smooth",
-        "NORMAL": "smooth",
-        "HARD": "smooth"
-      },
-      "sustainScale": {
-        "MASTER": 0.2
-      }
-    },
-    "only_my_railgun": {
-      "audio": "monster-hero/audio/bgm-only-my-railgun.mp3",
-      "chartRevision": 21,
-      "audioSha256": "62fb741fe3f16fdc67ae2a1c609a57de0a3f8112510c814d2a4473cdf1a5e7d1",
-      "durationMs": 90000,
-      "analyzedTiming": {
-        "bpm": 143,
-        "beatZeroMs": 152.9,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      },
-      "challengeFactor": 1.3
-    },
-    "big_bridge_no_shitou": {
-      "audio": "monster-hero/audio/bgm-big-bridge-no-shitou.mp3",
-      "chartRevision": 23,
-      "audioSha256": "a36d408f338927538fb6ac535086a63c11cd8d3f2d9709c058ddff31fbaa65c1",
-      "durationMs": 144612,
-      "analyzedTiming": {
-        "bpm": 177.72,
-        "beatZeroMs": 349.6,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      },
-      "shortFadeEnding": true
-    },
-    "rising_hope": {
-      "audio": "monster-hero/audio/bgm-rising-hope.mp3",
-      "chartRevision": 25,
-      "audioSha256": "5b56b8f9d099c52114a1907c116ed9739f776191e8012eeb947327ecea4a911a",
-      "durationMs": 90252,
-      "analyzedTiming": {
-        "bpm": 190,
-        "beatZeroMs": 551.7,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      }
-    },
-    "haruka": {
-      "audio": "monster-hero/audio/bgm-haruka.mp3",
-      "chartRevision": 38,
-      "audioSha256": "7a7164dbf152b4672d4c5c14ee277e999df1268861b95e9f4b10e56f6c14e144",
-      "durationMs": 97632,
-      "analyzedTiming": {
-        "bpm": 199.96,
-        "beatZeroMs": 104,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      },
-      "flowPlacement": true,
-      "handFinish": {
-        "EASY": "smooth",
-        "NORMAL": "smooth",
-        "HARD": "smooth"
-      }
-    },
-    "stay_with_me_short": {
-      "audio": "monster-hero/audio/bgm-stay-with-me-short.mp3",
-      "chartRevision": 38,
-      "audioSha256": "54a59963e97936b3e09e5897fe1802a6510ae69df76f9c0332eb401a20557bfa",
-      "durationMs": 176580,
-      "analyzedTiming": {
-        "bpm": 169.99,
-        "beatZeroMs": 474,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      },
-      "splices": [
-        {
-          "atMs": 89000,
-          "shiftMs": -278.7
-        }
-      ],
-      "chartIntensity": "strong",
-      "chartIntensityByDifficulty": {
-        "EXPERT": "mild",
-        "MASTER": "extreme"
-      },
-      "flowPlacement": true,
-      "handFinish": {
-        "EASY": "smooth",
-        "NORMAL": "smooth",
-        "HARD": "smooth"
-      }
-    },
-    "kiki_issen_short": {
-      "audio": "monster-hero/audio/bgm-kiki-issen-short.mp3",
-      "chartRevision": 38,
-      "audioSha256": "1dc188dbb7a796d3cf5f496ffcfb5afcc8aa84c92d3005cfc441708bac0816c8",
-      "durationMs": 194580,
-      "analyzedTiming": {
-        "bpm": 155.011,
-        "beatZeroMs": 234.4,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      },
-      "splices": [
-        {
-          "atMs": 101000,
-          "shiftMs": -225.6
-        }
-      ],
-      "challengeFactor": 1.2,
-      "flowPlacement": true,
-      "handFinish": {
-        "EASY": "smooth",
-        "NORMAL": "smooth",
-        "HARD": "smooth"
-      }
-    },
-    "crazy_party_night": {
-      "audio": "monster-hero/audio/bgm-crazy-party-night.mp3",
-      "chartRevision": 38,
-      "audioSha256": "45e7252c400eb169e18c74d6ed57d594686ae80361ffe4cd4a91e47732232741",
-      "durationMs": 94032,
-      "analyzedTiming": {
-        "bpm": 127.992,
-        "beatZeroMs": 434.1,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "detected"
-      },
-      "challengeFactor": 1.3,
-      "flowPlacement": true,
-      "handFinish": {
-        "EASY": "smooth",
-        "NORMAL": "smooth",
-        "HARD": "smooth"
-      }
-    },
-    "crazy_party_night_full": {
-      "audio": "monster-hero/audio/bgm-crazy-party-night-full.mp3",
-      "chartRevision": 38,
-      "audioSha256": "88a00b2a4fa000223604c19c7d7be7ece525b83d49961bda28cd7ae72866757e",
-      "durationMs": 245160,
-      "analyzedTiming": {
-        "bpm": 127.992,
-        "beatZeroMs": 456,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      },
-      "challengeFactor": 1.3,
-      "flowPlacement": true,
-      "handFinish": {
-        "EASY": "smooth",
-        "NORMAL": "smooth",
-        "HARD": "smooth"
-      }
-    },
-    "emerald_rush": {
-      "audio": "monster-hero/audio/bgm-emerald-rush.mp3",
-      "chartRevision": 38,
-      "audioSha256": "7782e3520275c316557513a15b605d691ca42ef76f9faf2628a21fb3a25efcc3",
-      "durationMs": 146052,
-      "analyzedTiming": {
-        "bpm": 151.507,
-        "beatZeroMs": 487.8,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "detected"
-      },
-      "warpPoints": [
-        [
-          4500,
-          61
-        ],
-        [
-          9500,
-          106
-        ],
-        [
-          14500,
-          165
-        ],
-        [
-          19500,
-          223
-        ],
-        [
-          24500,
-          262
-        ],
-        [
-          29500,
-          289
-        ],
-        [
-          34500,
-          318
-        ],
-        [
-          39500,
-          343
-        ],
-        [
-          44500,
-          370
-        ],
-        [
-          49500,
-          381
-        ],
-        [
-          54500,
-          383
-        ],
-        [
-          59500,
-          385
-        ],
-        [
-          64500,
-          384
-        ],
-        [
-          69500,
-          390
-        ],
-        [
-          74500,
-          391
-        ],
-        [
-          79500,
-          389
-        ],
-        [
-          84500,
-          388
-        ],
-        [
-          89500,
-          375
-        ],
-        [
-          94500,
-          360
-        ],
-        [
-          99500,
-          338
-        ],
-        [
-          104500,
-          323
-        ],
-        [
-          109500,
-          303
-        ],
-        [
-          114500,
-          281
-        ],
-        [
-          119500,
-          261
-        ],
-        [
-          124500,
-          234
-        ],
-        [
-          129500,
-          205
-        ],
-        [
-          134500,
-          163
-        ],
-        [
-          139500,
-          139
-        ]
-      ],
-      "flowPlacement": true,
-      "handFinish": {
-        "EASY": "smooth",
-        "NORMAL": "smooth",
-        "HARD": "smooth"
-      }
-    },
-    "wrath_of_the_thorn_king": {
-      "audio": "monster-hero/audio/bgm-wrath-of-the-thorn-king.mp3",
-      "chartRevision": 28,
-      "audioSha256": "d1ea326a4ee27057c26a19f9e8e94ba29eca75464470641a982062f064728311",
-      "durationMs": 96444,
-      "analyzedTiming": {
-        "bpm": 141.507,
-        "beatZeroMs": 234,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      },
-      "warpPoints": [
-        [
-          2839,
-          61
-        ],
-        [
-          7615,
-          172
-        ],
-        [
-          12824,
-          294
-        ],
-        [
-          17577,
-          383
-        ],
-        [
-          22722,
-          440
-        ],
-        [
-          27844,
-          473
-        ],
-        [
-          32529,
-          494
-        ],
-        [
-          37630,
-          507
-        ],
-        [
-          42722,
-          511
-        ],
-        [
-          47798,
-          499
-        ],
-        [
-          52855,
-          468
-        ],
-        [
-          57904,
-          429
-        ],
-        [
-          62532,
-          393
-        ],
-        [
-          67576,
-          349
-        ],
-        [
-          72611,
-          296
-        ],
-        [
-          77641,
-          237
-        ],
-        [
-          82667,
-          175
-        ],
-        [
-          87691,
-          111
-        ],
-        [
-          92715,
-          48
-        ]
-      ]
-    },
-    "monster": {
-      "audio": "monster-hero/audio/bgm-monster.mp3",
-      "chartRevision": 38,
-      "audioSha256": "6b190639c3faa0f20837ef7972df4ba72143efedf54e2735c0eab6ca2d0392c7",
-      "durationMs": 265068,
-      "analyzedTiming": {
-        "bpm": 135.01,
-        "beatZeroMs": 494,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      },
-      "warpPoints": [
-        [
-          54500,
-          0
-        ],
-        [
-          56500,
-          -18
-        ],
-        [
-          157500,
-          -18
-        ],
-        [
-          162500,
-          0
-        ]
-      ],
-      "flowPlacement": true,
-      "handFinish": {
-        "EASY": "smooth",
-        "NORMAL": "smooth",
-        "HARD": "smooth"
-      }
-    },
-    "monster_short": {
-      "audio": "monster-hero/audio/bgm-monster-short.mp3",
-      "chartRevision": 28,
-      "audioSha256": "415b771e9bbfc4064caec2dff6b2956f27832a9137cc779f4a817d255f239143",
-      "durationMs": 110808,
-      "analyzedTiming": {
-        "bpm": 135.01,
-        "beatZeroMs": 494,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      }
-    },
-    "anima": {
-      "audio": "monster-hero/audio/bgm-anima.mp3",
-      "chartRevision": 38,
-      "audioSha256": "c81adf3d2fffcd0c7adacc9374ad18ebb6663f6ae589b8c3b7d189dad938d4dc",
-      "durationMs": 115344,
-      "analyzedTiming": {
-        "bpm": 183.5,
-        "beatZeroMs": 200,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      },
-      "chartIntensity": "strong",
-      "chartIntensityByDifficulty": {
-        "EXPERT": "mild",
-        "MASTER": "extreme"
-      },
-      "flowPlacement": true,
-      "handFinish": {
-        "EASY": "smooth",
-        "NORMAL": "smooth",
-        "HARD": "smooth"
-      }
-    },
-    "journey": {
-      "audio": "monster-hero/audio/bgm-journey.mp3",
-      "chartIntensity": "strong",
-      "chartRevision": 28,
-      "audioSha256": "bd51dcc8ef2104c18c6f1c92d45e11d88c7485a9b6f037326f95abee8a23f104",
-      "durationMs": 164196,
-      "analyzedTiming": {
-        "bpm": 128,
-        "beatZeroMs": 272.3,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "detected"
-      }
-    },
-    "sheriruth": {
-      "audio": "monster-hero/audio/bgm-sheriruth.mp3",
-      "chartIntensity": "extreme",
-      "chartRevision": 28,
-      "audioSha256": "ab30c8b641fb18277e3239aa021c1d74361f681e6ba4fc818ce863223b467835",
-      "durationMs": 135000,
-      "analyzedTiming": {
-        "bpm": 184.99,
-        "beatZeroMs": 711.6,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      }
-    },
-    "grievous_lady": {
-      "audio": "monster-hero/audio/bgm-grievous-lady.mp3",
-      "chartIntensity": "extreme",
-      "chartRevision": 28,
-      "audioSha256": "dac4aa4d3b724c03e0c7a38878f05eb0889f76512b5821f1fdc8ea62459a3ee0",
-      "durationMs": 141912,
-      "analyzedTiming": {
-        "bpm": 210,
-        "beatZeroMs": 2240,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      },
-      "chartIntensityByDifficulty": {
-        "EASY": "strong",
-        "NORMAL": "strong"
-      }
-    },
-    "against_my_own_shadow": {
-      "audio": "monster-hero/audio/bgm-against-my-own-shadow.mp3",
-      "chartIntensity": "strong",
-      "chartRevision": 28,
-      "audioSha256": "b43d691d477368685fbd608f5630ee214f38b79db756cf782efd6fac81aeb107",
-      "durationMs": 118044,
-      "analyzedTiming": {
-        "bpm": 143.137,
-        "beatZeroMs": 2022.9,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      }
-    },
-    "rose": {
-      "audio": "monster-hero/audio/bgm-rose.mp3",
-      "chartIntensity": "strong",
-      "chartRevision": 38,
-      "audioSha256": "acc0ceccc810854e8c4517778aad6b31a52758fe9b13c9204f74a89ccf27d434",
-      "durationMs": 165204,
-      "analyzedTiming": {
-        "bpm": 125,
-        "beatZeroMs": 2116,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      },
-      "flowPlacement": true,
-      "handFinish": {
-        "EASY": "smooth",
-        "NORMAL": "smooth",
-        "HARD": "smooth"
-      }
-    },
-    "rose_short": {
-      "audio": "monster-hero/audio/bgm-rose-short.mp3",
-      "chartIntensity": "strong",
-      "chartRevision": 31,
-      "audioSha256": "57888379506b2a6ba9efe9c0eb120465aab702a13dfbcad2acfe12f85d67fb28",
-      "durationMs": 115452,
-      "analyzedTiming": {
-        "bpm": 125,
-        "beatZeroMs": 2116,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      }
-    },
-    "toward_the_stars_short": {
-      "audio": "monster-hero/audio/bgm-toward-the-stars-short.mp3",
-      "chartRevision": 38,
-      "audioSha256": "88907da29e0914cbd5463c6a5c9ac1de967cdd95dc28973ce137dac8837a4a52",
-      "durationMs": 136800,
-      "analyzedTiming": {
-        "bpm": 143.268,
-        "beatZeroMs": 1390.5,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "detected"
-      },
-      "chartIntensityByDifficulty": {
-        "MASTER": "extreme",
-        "HELL": "extreme"
-      },
-      "hellDensity": 1.3,
-      "flowPlacement": true,
-      "handFinish": {
-        "EASY": "smooth",
-        "NORMAL": "smooth",
-        "HARD": "smooth"
-      }
-    },
-    "sad_song": {
-      "audio": "monster-hero/audio/bgm-sad-song.mp3",
-      "chartRevision": 38,
-      "audioSha256": "47d16979bb906bf2f047377e9a4cc871f9c152e0623ef91f8b5a3f1c817a3021",
-      "durationMs": 218556,
-      "analyzedTiming": {
-        "bpm": 172.009,
-        "beatZeroMs": 99.5,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "detected"
-      },
-      "flowPlacement": true,
-      "handFinish": {
-        "EASY": "smooth",
-        "NORMAL": "smooth",
-        "HARD": "smooth"
-      }
-    },
-    "sad_song_short": {
-      "audio": "monster-hero/audio/bgm-sad-song-short.mp3",
-      "chartRevision": 38,
-      "audioSha256": "2ff39f50eddd7d2ec20a1aaca188d0d34b3b9c211ee182f68d01a1e4d488216c",
-      "durationMs": 82440,
-      "analyzedTiming": {
-        "bpm": 172.009,
-        "beatZeroMs": 99.5,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      },
-      "flowPlacement": true,
-      "handFinish": {
-        "EASY": "smooth",
-        "NORMAL": "smooth",
-        "HARD": "smooth"
-      }
-    },
-    "black_shout": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-black-shout.mp3",
-      "chartRevision": 38,
-      "audioSha256": "03a627c682deaebcb6e23dc196b3882fc0f89190abdfc36de50295b420b7a5aa",
-      "durationMs": 109188,
-      "analyzedTiming": {
-        "bpm": 185.07,
-        "beatZeroMs": 2285.8,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      },
-      "handFinish": {
-        "EASY": "smooth",
-        "NORMAL": "smooth",
-        "HARD": "smooth"
-      }
-    },
-    "light_player": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-light-player.mp3",
-      "chartRevision": 38,
-      "audioSha256": "6656f3a71344757fef4950696b5b9f5a43e83004520520d5c4229a9c9906de98",
-      "durationMs": 268776,
-      "analyzedTiming": {
-        "bpm": 187.995,
-        "beatZeroMs": 1116.6,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "detected"
-      },
-      "handFinish": {
-        "EASY": "smooth",
-        "NORMAL": "smooth",
-        "HARD": "smooth"
-      }
-    },
-    "tsuki_ga_michiru_mae_ni": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-tsuki-ga-michiru-mae-ni.mp3",
-      "chartRevision": 38,
-      "audioSha256": "2ee86e1947fd04cbe837c2824c2a87aaad96b4fc0e1804d807f122a5ed26b151",
-      "durationMs": 276660,
-      "analyzedTiming": {
-        "bpm": 188,
-        "beatZeroMs": 799.9,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      },
-      "handFinish": {
-        "EASY": "smooth",
-        "NORMAL": "smooth",
-        "HARD": "smooth"
-      }
-    },
-    "light_player_short": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-light-player-short.mp3",
-      "chartRevision": 38,
-      "audioSha256": "785e78c69005b82ca9e0c87004b0a3b31c27644ba1319db56ec93fd87dd02c4c",
-      "durationMs": 150552,
-      "analyzedTiming": {
-        "bpm": 187.995,
-        "beatZeroMs": 1116.6,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      },
-      "handFinish": {
-        "EASY": "smooth",
-        "NORMAL": "smooth",
-        "HARD": "smooth"
-      }
-    },
-    "tsuki_ga_michiru_mae_ni_short": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-tsuki-ga-michiru-mae-ni-short.mp3",
-      "chartRevision": 38,
-      "audioSha256": "f2e9585907f20e833d7b50ce2cd8b3453f8d772c0376eabae31fb9e8bfe8aa7e",
-      "durationMs": 111960,
-      "analyzedTiming": {
-        "bpm": 188,
-        "beatZeroMs": 849.9,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      },
-      "handFinish": {
-        "EASY": "smooth",
-        "NORMAL": "smooth",
-        "HARD": "smooth"
-      }
-    },
-    "rebellion": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-rebellion.mp3",
-      "chartRevision": 38,
-      "audioSha256": "c16005aa72de7d5665555d5b8b07a5d309c6f142ab347e65dfabab4efb4465f7",
-      "durationMs": 254052,
-      "analyzedTiming": {
-        "bpm": 193.5,
-        "beatZeroMs": 2010.5,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      },
-      "warpPoints": [
-        [
-          4500,
-          0
-        ],
-        [
-          9500,
-          -2
-        ],
-        [
-          14500,
-          -4
-        ],
-        [
-          19500,
-          -10.7
-        ],
-        [
-          24500,
-          -16.7
-        ],
-        [
-          29500,
-          -23.3
-        ],
-        [
-          34500,
-          -26
-        ],
-        [
-          39500,
-          -21.3
-        ],
-        [
-          44500,
-          -14.7
-        ],
-        [
-          49500,
-          -18.7
-        ],
-        [
-          54500,
-          -33.3
-        ],
-        [
-          59500,
-          -50
-        ],
-        [
-          64500,
-          -68.7
-        ],
-        [
-          69500,
-          -87.3
-        ],
-        [
-          74500,
-          -102.7
-        ],
-        [
-          79500,
-          -99.3
-        ],
-        [
-          84500,
-          -87.3
-        ],
-        [
-          89500,
-          -74
-        ],
-        [
-          94500,
-          -66
-        ],
-        [
-          99500,
-          -56.7
-        ],
-        [
-          104500,
-          -50.7
-        ],
-        [
-          109500,
-          -40
-        ],
-        [
-          114500,
-          -23.3
-        ],
-        [
-          119500,
-          -2.7
-        ],
-        [
-          124500,
-          24
-        ],
-        [
-          129500,
-          45.3
-        ],
-        [
-          134500,
-          65.3
-        ],
-        [
-          139500,
-          72.7
-        ],
-        [
-          144500,
-          72.7
-        ],
-        [
-          149500,
-          64
-        ],
-        [
-          154500,
-          44.7
-        ],
-        [
-          159500,
-          13.3
-        ],
-        [
-          164500,
-          -25.3
-        ],
-        [
-          169500,
-          -49.3
-        ],
-        [
-          174500,
-          -73.3
-        ],
-        [
-          179500,
-          -98
-        ],
-        [
-          184500,
-          -136.7
-        ],
-        [
-          189500,
-          -170
-        ],
-        [
-          194500,
-          -198.7
-        ],
-        [
-          199500,
-          -222
-        ],
-        [
-          204500,
-          -241.3
-        ],
-        [
-          209500,
-          -259.3
-        ],
-        [
-          214500,
-          -272
-        ],
-        [
-          219500,
-          -292.7
-        ],
-        [
-          224500,
-          -305.3
-        ],
-        [
-          229500,
-          -319.3
-        ],
-        [
-          234500,
-          -330
-        ],
-        [
-          239500,
-          -347.3
-        ],
-        [
-          244500,
-          -370
-        ],
-        [
-          249500,
-          -380
-        ]
-      ],
-      "chartIntensityByDifficulty": {
-        "MASTER": "strong"
-      },
-      "hellDensity": 1.6,
-      "masterDensity": 1.3,
-      "handFinish": {
-        "EASY": "smooth",
-        "NORMAL": "smooth",
-        "HARD": "smooth"
-      }
-    },
-    "rebellion_short": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-rebellion-short.mp3",
-      "chartIntensityByDifficulty": {
-        "MASTER": "strong"
-      },
-      "hellDensity": 1.6,
-      "warpPoints": [
-        [
-          4500,
-          0
-        ],
-        [
-          9500,
-          -2
-        ],
-        [
-          14500,
-          -4
-        ],
-        [
-          19500,
-          -10.7
-        ],
-        [
-          24500,
-          -16.7
-        ],
-        [
-          29500,
-          -23.3
-        ],
-        [
-          34500,
-          -26
-        ],
-        [
-          39500,
-          -21.3
-        ],
-        [
-          44500,
-          -14.7
-        ],
-        [
-          49500,
-          -18.7
-        ],
-        [
-          54500,
-          -33.3
-        ],
-        [
-          59500,
-          -50
-        ],
-        [
-          64500,
-          -68.7
-        ],
-        [
-          69500,
-          -87.3
-        ],
-        [
-          74500,
-          -102.7
-        ],
-        [
-          79500,
-          -99.3
-        ],
-        [
-          84500,
-          -87.3
-        ],
-        [
-          89500,
-          -74
-        ],
-        [
-          94500,
-          -66
-        ],
-        [
-          99500,
-          -56.7
-        ],
-        [
-          104500,
-          -50.7
-        ],
-        [
-          109500,
-          -40
-        ],
-        [
-          114500,
-          -23.3
-        ],
-        [
-          119500,
-          -2.7
-        ],
-        [
-          124500,
-          24
-        ],
-        [
-          129500,
-          45.3
-        ],
-        [
-          134500,
-          65.3
-        ],
-        [
-          139500,
-          72.7
-        ],
-        [
-          144500,
-          72.7
-        ],
-        [
-          149500,
-          64
-        ]
-      ],
-      "chartRevision": 38,
-      "audioSha256": "04678c77a7e1331af1ba94de55da74f165f142b5914cf1f50959696f2f4da965",
-      "durationMs": 152352,
-      "analyzedTiming": {
-        "bpm": 193.5,
-        "beatZeroMs": 2010.5,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      },
-      "handFinish": {
-        "EASY": "smooth",
-        "NORMAL": "smooth",
-        "HARD": "smooth"
-      },
-      "challengeFactor": 1.08,
-      "masterDensity": 1.2
-    },
-    "altar_world_tree": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-altar-world-tree.mp3",
-      "chartRevision": 38,
-      "audioSha256": "eeeeada93d954fb1c79f2a0fd58a87788d97aafd149978f2ef64b4f9018bbcce",
-      "durationMs": 385164,
-      "analyzedTiming": {
-        "bpm": 163.97,
-        "beatZeroMs": 2895,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      },
-      "handFinish": {
-        "EASY": "smooth",
-        "NORMAL": "smooth",
-        "HARD": "smooth"
-      }
-    },
-    "altar_world_tree_short": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-altar-world-tree-short.mp3",
-      "chartRevision": 38,
-      "audioSha256": "016a720f2287be3d8ad5b270adee43f5e2fcb71592d5b8752a7d89a5f91dfee1",
-      "durationMs": 138024,
-      "analyzedTiming": {
-        "bpm": 163.97,
-        "beatZeroMs": 2895,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      },
-      "handFinish": {
-        "EASY": "smooth",
-        "NORMAL": "smooth",
-        "HARD": "smooth"
-      }
-    },
-    "evans": {
-      "flowPlacement": true,
-      "masterDensity": 1.2,
-      "audio": "monster-hero/audio/bgm-evans.mp3",
-      "chartRevision": 38,
-      "audioSha256": "37c5c9e21113e18f732c166f82098820cf6edc3fb3416aad8c26e2c5b3ec80f5",
-      "durationMs": 107598,
-      "analyzedTiming": {
-        "bpm": 184.975,
-        "beatZeroMs": 2135,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      },
-      "handFinish": {
-        "EASY": "smooth",
-        "NORMAL": "smooth",
-        "HARD": "smooth"
-      }
-    },
-    "humanoid": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-humanoid.mp3",
-      "chartRevision": 35,
-      "audioSha256": "763466fbbf97a7ab31edcf79b9a8b1fd5e145868b2a263455f8783f396afcc09",
-      "durationMs": 98847,
-      "analyzedTiming": {
-        "bpm": 159.005,
-        "beatZeroMs": 1267.2,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "detected"
-      },
-      "chartIntensity": "extreme",
-      "chartIntensityByDifficulty": {
-        "EXPERT": "mild"
-      },
-      "masterDensity": 1.6,
-      "hellDensity": 1.6,
-      "sustainScale": {
-        "EXPERT": 0.8,
-        "MASTER": 0.3,
-        "HELL": 0.3
-      }
-    },
-    "lamia": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-lamia.mp3",
-      "chartRevision": 39,
-      "audioSha256": "faaab8302652fb054e43a22b916680c454732bcd432e18fd6d574e1162b8e9a5",
-      "durationMs": 143491,
-      "analyzedTiming": {
-        "bpm": 199.03,
-        "beatZeroMs": 155.9,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      },
-      "chartIntensity": "extreme",
-      "chartIntensityByDifficulty": {
-        "HARD": "strong",
-        "EXPERT": "mild"
-      },
-      "sustainScale": {
-        "MASTER": 0.3,
-        "EASY": 0.2
-      },
-      "hellDensity": 1.6
-    },
-    "saudade": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-saudade.mp3",
-      "chartRevision": 39,
-      "audioSha256": "5364f7be63a541ca8df51dd46a9b1940262b5766ee60bf5f1a76b9599ec8d7b1",
-      "durationMs": 263236,
-      "analyzedTiming": {
-        "bpm": 120.091,
-        "beatZeroMs": 119.2,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "detected"
-      },
-      "challengeFactor": 1.18,
-      "masterDensity": 1.2
-    },
-    "saudade_short": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-saudade-short.mp3",
-      "chartRevision": 39,
-      "audioSha256": "e7a88d84c06a6cf086c37ca513215a1c3bd0cf8bcab6a11eb311be8e3c7839a2",
-      "durationMs": 95556,
-      "analyzedTiming": {
-        "bpm": 120.091,
-        "beatZeroMs": 149.6,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "detected"
-      },
-      "challengeFactor": 1.18,
-      "masterDensity": 1.2
-    },
-    "megalovania_sans": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-megalovania-sans.mp3",
-      "chartRevision": 39,
-      "audioSha256": "8317d65943b60182636dd3b2b1c938962a7f1c6a91fc5a5b371799c86fc4d4bf",
-      "durationMs": 158616,
-      "analyzedTiming": {
-        "bpm": 240,
-        "beatZeroMs": 200.5,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      }
-    },
-    "megalovania_smash": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-megalovania-smash.mp3",
-      "chartRevision": 39,
-      "audioSha256": "038da79dd59ecc0d846bd4390abc6c43a0a664801c80f7f3a90dd3658517943d",
-      "durationMs": 147331,
-      "analyzedTiming": {
-        "bpm": 160,
-        "beatZeroMs": 761,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 3,
-        "source": "command"
-      }
-    },
-    "departure": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-departure.mp3",
-      "chartRevision": 39,
-      "audioSha256": "ad4d5a6838c8d5513da5b74924e8b382b55288b068473fbb935853c0659b4150",
-      "durationMs": 297352,
-      "analyzedTiming": {
-        "bpm": 156.25,
-        "beatZeroMs": 621,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "detected"
-      }
-    },
-    "departure_short": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-departure-short.mp3",
-      "chartRevision": 39,
-      "audioSha256": "d2dcbe5c72a879fb1e476627377793d1aec6579a1a25efe6263347514017fdf1",
-      "durationMs": 105378,
-      "analyzedTiming": {
-        "bpm": 156.25,
-        "beatZeroMs": 641,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      }
-    },
-    "rpg": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-rpg.mp3",
-      "chartRevision": 39,
-      "audioSha256": "36abe34289f90845123504e4840ffafc8d65dce2b76d37615d0c2b5a796c64c3",
-      "durationMs": 245211,
-      "analyzedTiming": {
-        "bpm": 174.998,
-        "beatZeroMs": 575.6,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "detected"
-      }
-    },
-    "rpg_short": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-rpg-short.mp3",
-      "chartRevision": 39,
-      "audioSha256": "7d4428d73d94d91d0385bac302a57c42d327703fe7b01aac0e56cc17cf7f35e2",
-      "durationMs": 87615,
-      "analyzedTiming": {
-        "bpm": 174.998,
-        "beatZeroMs": 575.6,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      }
-    },
-    "midnight_studio": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-midnight-studio.mp3",
-      "chartRevision": 39,
-      "audioSha256": "51c39ff9dbbbbbf880452f1cb95f3ee3d1b77f4ee168cd694600e09b5a570169",
-      "durationMs": 217051,
-      "analyzedTiming": {
-        "bpm": 147.969,
-        "beatZeroMs": 1490,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "detected"
-      }
-    },
-    "midnight_studio_short": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-midnight-studio-short.mp3",
-      "chartRevision": 39,
-      "audioSha256": "936b28949b4a330a5ead20347808bb9629bc52e6185d380fc6fac5e5da59d95a",
-      "durationMs": 74475,
-      "analyzedTiming": {
-        "bpm": 147.969,
-        "beatZeroMs": 1730,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      }
-    },
-    "hopes_and_dreams": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-hopes-and-dreams.mp3",
-      "chartRevision": 39,
-      "audioSha256": "e6202f9f83560d1d3c46c83a2856de2cf0cb3be57105a6294e5918b9e1035b7f",
-      "durationMs": 183380,
-      "analyzedTiming": {
-        "bpm": 170.68,
-        "beatZeroMs": 2057.8,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      }
-    },
-    "hopes_and_dreams_short": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-hopes-and-dreams-short.mp3",
-      "chartRevision": 39,
-      "audioSha256": "a88b77ee4973647c15956614c2fcfd22b6820186e0a812b9d04b6e1b6aa6b8c7",
-      "durationMs": 139598,
-      "analyzedTiming": {
-        "bpm": 171.8,
-        "beatZeroMs": 1082.2,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      }
-    },
-    "sparkling_pink_overture": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-sparkling-pink-overture.mp3",
-      "chartRevision": 39,
-      "audioSha256": "6e474b21b5d91f49d2c8ba9a6e92a6afb57a3856a3bc557c21b1428052fe964c",
-      "durationMs": 124447,
-      "analyzedTiming": {
-        "bpm": 212,
-        "beatZeroMs": 1148.9,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 6,
-        "source": "command"
-      },
-      "chartIntensity": "strong",
-      "chartIntensityByDifficulty": {
-        "EXPERT": "mild"
-      }
-    },
-    "seasons_of_a_little_plaza": {
-      "flowPlacement": true,
-      "challengeFactor": 1.15,
-      "audio": "monster-hero/audio/bgm-seasons-of-a-little-plaza.mp3",
-      "chartRevision": 40,
-      "audioSha256": "b75ae2e2592de434d621d4efecc006e3fce6fd2c167cc3ee9fa5111da9131a2b",
-      "durationMs": 149304,
-      "analyzedTiming": {
-        "bpm": 169.505,
-        "beatZeroMs": 417.8,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "detected"
-      }
-    },
-    "eiyuu_no_akashi": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-eiyuu-no-akashi.mp3",
-      "chartRevision": 40,
-      "audioSha256": "38f68104d0310ed32a06f84fd111598cd652948368a9cb0210f2d588d5abdbfd",
-      "durationMs": 122854,
-      "analyzedTiming": {
-        "bpm": 161.541,
-        "beatZeroMs": 1476.3,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      }
-    },
-    "eiyuu_no_akashi_milktea": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-eiyuu-no-akashi-milktea.mp3",
-      "chartRevision": 40,
-      "audioSha256": "af00bdf4ef248258a37e35c4d98fec1b217b5157e1bfc6dfbcd04f5e4860dc9b",
-      "durationMs": 146416,
-      "analyzedTiming": {
-        "bpm": 192.11,
-        "beatZeroMs": 2391.9,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      }
-    },
-    "gourmet_race_64": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-gourmet-race-64.mp3",
-      "chartRevision": 40,
-      "audioSha256": "8d110d3430e46e6f2bfbe1eaf68db9ac559bf198cb7df498a516770ee4ade6af",
-      "durationMs": 143472,
-      "analyzedTiming": {
-        "bpm": 186.768,
-        "beatZeroMs": 2031.1,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      }
-    },
-    "gourmet_race_dx": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-gourmet-race-dx.mp3",
-      "chartRevision": 40,
-      "audioSha256": "cb6d19e5ff52fa3408359e01033d130b4d243e585bb3a4d1828d11e7e6bdac84",
-      "durationMs": 116184,
-      "analyzedTiming": {
-        "bpm": 160.304,
-        "beatZeroMs": 424,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "detected"
-      }
-    },
-    "dr_wily_stage_1": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-dr-wily-stage-1.mp3",
-      "chartRevision": 40,
-      "audioSha256": "80f1ad0c564ca9803a33a6fb0832d07d022f8010412a419f8518060ebdbb14b5",
-      "durationMs": 165725,
-      "analyzedTiming": {
-        "bpm": 179.989,
-        "beatZeroMs": 2377.8,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      }
-    },
-    "dr_wily_stage_1_okkussenman": {
-      "flowPlacement": true,
-      "chartIntensity": "extreme",
-      "masterDensity": 1.2,
-      "audio": "monster-hero/audio/bgm-dr-wily-stage-1-okkussenman.mp3",
-      "chartRevision": 40,
-      "audioSha256": "1653c82ce75ef0621565d5af3d09456a8da1a20244d726ccd6d786398b14431b",
-      "durationMs": 177082,
-      "analyzedTiming": {
-        "bpm": 179.893,
-        "beatZeroMs": 2731.7,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      }
-    },
-    "erfolg": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-erfolg.mp3",
-      "chartRevision": 40,
-      "audioSha256": "c5a0d9fddca45ca884afba95ab42576126c4b99bc47641df836dadbbf0cd91b3",
-      "durationMs": 201770,
-      "analyzedTiming": {
-        "bpm": 213.37,
-        "beatZeroMs": 2453,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      }
-    },
-    "erfolg_piano": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-erfolg-piano.mp3",
-      "chartRevision": 40,
-      "audioSha256": "44aff91727e26d85cbeca0b429660b77eb05c669314dfb035b5dfb82a73da794",
-      "durationMs": 154802,
-      "analyzedTiming": {
-        "bpm": 164.02,
-        "beatZeroMs": 2927,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      }
-    },
-    "amakakeru_tsubasa": {
-      "flowPlacement": true,
-      "chartIntensityByDifficulty": {
-        "EXPERT": "mild",
-        "MASTER": "extreme"
-      },
-      "audio": "monster-hero/audio/bgm-amakakeru-tsubasa.mp3",
-      "chartRevision": 40,
-      "audioSha256": "2b283f9e6aea890ceacdbc12c7fc11b138bd6a37d7895f5cee08f3f5f05d1fc2",
-      "durationMs": 109296,
-      "analyzedTiming": {
-        "bpm": 207.76,
-        "beatZeroMs": 2021,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      },
-      "chartIntensity": "strong",
-      "sustainScale": {
-        "MASTER": 0.2
-      }
-    },
-    "beyond_the_same_sky": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-beyond-the-same-sky.mp3",
-      "chartRevision": 40,
-      "audioSha256": "4719843e73e2a77a6f8d98648feb5b9530ccaa59a4d86515ea4d8d0f77c6761a",
-      "durationMs": 260160,
-      "analyzedTiming": {
-        "bpm": 178,
-        "beatZeroMs": 2058,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      },
-      "chartIntensity": "mild",
-      "chartIntensityByDifficulty": {
-        "HELL": "extreme"
-      }
-    },
-    "beyond_the_same_sky_short": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-beyond-the-same-sky-short.mp3",
-      "chartRevision": 40,
-      "audioSha256": "fc0c43a8775570978221f735b2bd415ed18af627377504df79ca6d5071543c76",
-      "durationMs": 153432,
-      "analyzedTiming": {
-        "bpm": 178,
-        "beatZeroMs": 2058,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      },
-      "masterDensity": 1.2,
-      "chartIntensityByDifficulty": {
-        "HELL": "extreme"
-      }
-    },
-    "desert_crown": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-desert-crown.mp3",
-      "chartRevision": 40,
-      "audioSha256": "1a440c813bbb8adb634a3c645e562a3c02e57a97a83151cd4d59440dd233048d",
-      "durationMs": 153624,
-      "analyzedTiming": {
-        "bpm": 99.98,
-        "beatZeroMs": 2392,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      },
-      "chartIntensity": "strong",
-      "sustainScale": {
-        "MASTER": 0.7
-      },
-      "chartIntensityByDifficulty": {
-        "HELL": "extreme"
-      }
-    },
-    "walkure": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-walkure.mp3",
-      "chartRevision": 40,
-      "audioSha256": "c0643f725dff7f3495722cd92320beeb7e0c03a73cd733e77e28c59b0fe1a173",
-      "durationMs": 691931,
-      "analyzedTiming": {
-        "bpm": 216.03,
-        "beatZeroMs": 70,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      },
-      "chartIntensityByDifficulty": {
-        "EXPERT": "mild",
-        "MASTER": "extreme"
-      },
-      "sustainScale": {
-        "MASTER": 0.2
-      },
-      "handFinish": {
-        "EXPERT": "smooth",
-        "MASTER": "smooth"
-      }
-    },
-    "walkure_short": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-walkure-short.mp3",
-      "chartRevision": 40,
-      "audioSha256": "4ac3e2f2af3e4ccf29c9f83eb9295a21357befd38663b182838c13c4a46313f8",
-      "durationMs": 180428,
-      "analyzedTiming": {
-        "bpm": 216.03,
-        "beatZeroMs": 23,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      },
-      "chartIntensityByDifficulty": {
-        "EXPERT": "mild",
-        "MASTER": "extreme"
-      },
-      "sustainScale": {
-        "MASTER": 0.2
-      },
-      "handFinish": {
-        "EXPERT": "smooth",
-        "MASTER": "smooth"
-      }
-    },
-    "battle_5": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-battle-5.mp3",
-      "chartRevision": 40,
-      "audioSha256": "a911ffe142ba9f4a1eaa28f357ebccac0ee00213a9837c78ef2f63b2450a1924",
-      "durationMs": 251904,
-      "analyzedTiming": {
-        "bpm": 170.001,
-        "beatZeroMs": 423.9,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "detected"
-      }
-    },
-    "battle_5_short": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-battle-5-short.mp3",
-      "chartRevision": 40,
-      "audioSha256": "7fc06521006765125ad1c5986f200218c73d93715da9fe99c0ac05ba3e557db9",
-      "durationMs": 147360,
-      "analyzedTiming": {
-        "bpm": 169.999,
-        "beatZeroMs": 423.6,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "detected"
-      }
-    },
-    "zenbu_hissatsuwaza": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-zenbu-hissatsuwaza.mp3",
-      "chartRevision": 40,
-      "audioSha256": "5b91503c17430b97e9689efa49e290b88bdf3c9736fe5484013bfc537996e852",
-      "durationMs": 118032,
-      "analyzedTiming": {
-        "bpm": 193.367,
-        "beatZeroMs": 1236.1,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "detected"
-      },
-      "chartIntensity": "mild",
-      "sustainScale": {
-        "EXPERT": 0.2,
-        "HELL": 0.6
-      },
-      "chartIntensityByDifficulty": {
-        "HELL": "extreme"
-      }
-    },
-    "kimimachi_loop": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-kimimachi-loop.mp3",
-      "chartRevision": 40,
-      "audioSha256": "1be296a6cdb3e39c29dab23cf2b4f974be446ec21cd8bfa70909714d7b62c7d4",
-      "durationMs": 161952,
-      "analyzedTiming": {
-        "bpm": 166.649,
-        "beatZeroMs": 764.8,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      },
-      "sustainScale": {
-        "MASTER": 0.7
-      },
-      "chartIntensityByDifficulty": {
-        "HARD": "mild",
-        "EXPERT": "mild",
-        "MASTER": "strong",
-        "HELL": "extreme"
-      }
-    },
-    "brand_new_sky": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-brand-new-sky.mp3",
-      "chartIntensity": "strong",
-      "handFinish": {
-        "EXPERT": "smooth",
-        "MASTER": "smooth"
-      },
-      "chartIntensityByDifficulty": {
-        "EXPERT": "mild"
-      },
-      "chartRevision": 40,
-      "audioSha256": "b93b1a67de51752680cf010fd542a57512f07f9943180debc103b4718e56150f",
-      "durationMs": 150024,
-      "analyzedTiming": {
-        "bpm": 146.143,
-        "beatZeroMs": 438.1,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "detected"
-      }
-    },
-    "kiss_mystery": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-kiss-mystery.mp3",
-      "chartRevision": 42,
-      "audioSha256": "4decd41ac6c2a53329733202f3aa46f3d60acc0e5f2b0a9f498ebc53a00475b8",
-      "durationMs": 305816,
-      "analyzedTiming": {
-        "bpm": 112.01,
-        "beatZeroMs": 2245,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      },
-      "chartIntensity": "strong"
-    },
-    "kiss_mystery_short": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-kiss-mystery-short.mp3",
-      "chartRevision": 42,
-      "audioSha256": "104ce98f9f901d9c98380a7773a9747ff9da093f8161f7a145679a7685897fe7",
-      "durationMs": 163474,
-      "analyzedTiming": {
-        "bpm": 112.01,
-        "beatZeroMs": 2245,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      },
-      "chartIntensity": "strong"
-    },
-    "dear_santa": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-dear-santa.mp3",
-      "chartRevision": 42,
-      "audioSha256": "1d5245547349348b902b8b6edcca8c34fe795f8e7afa25e0d103e5a9a0985139",
-      "durationMs": 218906,
-      "analyzedTiming": {
-        "bpm": 200.01,
-        "beatZeroMs": 2799,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      }
-    },
-    "dear_santa_short": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-dear-santa-short.mp3",
-      "chartRevision": 42,
-      "audioSha256": "5cc7bd38da681f0e292e480bab9423a965be07d7c117feef87f18ec41474ccae",
-      "durationMs": 88973,
-      "analyzedTiming": {
-        "bpm": 200.01,
-        "beatZeroMs": 2799,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      },
-      "sustainScale": {
-        "EXPERT": 0.7,
-        "MASTER": 0.7
-      }
-    },
-    "winter_fall": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-winter-fall.mp3",
-      "chartRevision": 42,
-      "audioSha256": "7ba38a0b28566ca56740b3b28f2dd37ed869c2afabbc883f0aeef18f3ed7e482",
-      "durationMs": 291866,
-      "analyzedTiming": {
-        "bpm": 166.09,
-        "beatZeroMs": 2010,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      },
-      "chartIntensity": "strong"
-    },
-    "winter_fall_short": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-winter-fall-short.mp3",
-      "chartRevision": 42,
-      "audioSha256": "619d095a922aaa58a890f43b0afc17cd68c624692e3a835a237d8177f9a32d22",
-      "durationMs": 106449,
-      "analyzedTiming": {
-        "bpm": 166.09,
-        "beatZeroMs": 2010,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "command"
-      },
-      "chartIntensity": "strong"
-    },
-    "three_y_three_s": {
-      "flowPlacement": true,
-      "audio": "monster-hero/audio/bgm-three-y-three-s.mp3",
-      "chartRevision": 42,
-      "audioSha256": "904d756451648ed32f907d5b4ef3b05ced2dbdd6e8205c3035802069e612bc75",
-      "durationMs": 125016,
-      "analyzedTiming": {
-        "bpm": 190.981,
-        "beatZeroMs": 1010.4,
-        "beatsPerBar": 4,
-        "subdivisionsPerBeat": 4,
-        "source": "detected"
-      }
+ "schemaVersion": 1,
+ "songs": {
+  "monster_hero_theme": {
+   "chartRevision": 38,
+   "audio": "monster-hero/audio/bgm-monster-hero-theme.mp3",
+   "audioSha256": "083a1d9db2810a4a77a304e8d53fc862b16db71553af7d97040da78fea577fda",
+   "durationMs": 152761,
+   "analyzedTiming": {
+    "bpm": 173.153,
+    "beatZeroMs": 206,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "registered"
+   },
+   "flowPlacement": true,
+   "handFinish": {
+    "EASY": "smooth",
+    "NORMAL": "smooth",
+    "HARD": "smooth"
+   }
+  },
+  "atsu_cup_theme": {
+   "chartRevision": 38,
+   "audio": "monster-hero/audio/bgm-atsu-cup-theme.mp3",
+   "audioSha256": "e93502c4df763a80afae82dc3fcc95cd69670028a4f24566305d74a394e19184",
+   "durationMs": 144640,
+   "analyzedTiming": {
+    "bpm": 169,
+    "beatZeroMs": 40,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "registered"
+   },
+   "flowPlacement": true,
+   "handFinish": {
+    "EASY": "smooth",
+    "NORMAL": "smooth",
+    "HARD": "smooth"
+   }
+  },
+  "six_eternel_beat": {
+   "chartRevision": 38,
+   "audio": "monster-hero/audio/bgm-six-eternel-beat.mp3",
+   "audioSha256": "151f94091a341f19dffb41049bf55d4f2296503e6bc6c73f5eb0032015e36e86",
+   "durationMs": 157968,
+   "analyzedTiming": {
+    "bpm": 275.99,
+    "beatZeroMs": 562.4,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "challengeFactor": 1.15,
+   "flowPlacement": true,
+   "handFinish": {
+    "EASY": "smooth",
+    "NORMAL": "smooth",
+    "HARD": "smooth"
+   }
+  },
+  "six_eternel_remix_beat": {
+   "chartRevision": 38,
+   "audio": "monster-hero/audio/bgm-six-eternel-remix-beat.mp3",
+   "audioSha256": "b1a024d5b16f6e50c93dfc56f1eebd11e6743bd228df5c0c5bd0b97ab0b4d5a5",
+   "durationMs": 150408,
+   "analyzedTiming": {
+    "bpm": 162.641,
+    "beatZeroMs": 1452.6,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   },
+   "flowPlacement": true,
+   "handFinish": {
+    "EASY": "smooth",
+    "NORMAL": "smooth",
+    "HARD": "smooth"
+   }
+  },
+  "pandora_boss_beat": {
+   "audio": "monster-hero/audio/bgm-pandora-boss-beat.mp3",
+   "audioSha256": "b70636c619b2d9811607db97e11257a6e3f9b1d33bc8db35e6c9592ed263a71a",
+   "durationMs": 171072,
+   "analyzedTiming": {
+    "bpm": 169.99,
+    "beatZeroMs": 440,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
+  },
+  "eiki_boss_beat": {
+   "audio": "monster-hero/audio/bgm-eiki-boss-beat.mp3",
+   "audioSha256": "1c3e0cb8b29f2785acc10acd481e40ee37116d51ec77e8a820d6619423b5786d",
+   "durationMs": 153072,
+   "analyzedTiming": {
+    "bpm": 153.153,
+    "beatZeroMs": 830.4,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
+  },
+  "pandora_boss": {
+   "chartRevision": 38,
+   "audio": "monster-hero/audio/bgm-pandora-boss.mp3",
+   "audioSha256": "b6683818f250cb8777113961ddc522b02a60687f9a3f6830184a3924ec956fd2",
+   "durationMs": 274400,
+   "analyzedTiming": {
+    "bpm": 169.99,
+    "beatZeroMs": 440,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "flowPlacement": true,
+   "handFinish": {
+    "EASY": "smooth",
+    "NORMAL": "smooth",
+    "HARD": "smooth"
+   }
+  },
+  "eiki_boss": {
+   "chartRevision": 38,
+   "audio": "monster-hero/audio/綺季一閃_～花雪に舞う詠姫～.mp3",
+   "audioSha256": "099d201c53b1b635a4e00a1f3fe35c8ce3153f0e3c2c4dafa704088ffc47fecb",
+   "durationMs": 261841,
+   "analyzedTiming": {
+    "bpm": 155.011,
+    "beatZeroMs": 188.4,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   },
+   "flowPlacement": true,
+   "handFinish": {
+    "EASY": "smooth",
+    "NORMAL": "smooth",
+    "HARD": "smooth"
+   }
+  },
+  "six_eternel_remix": {
+   "audio": "monster-hero/audio/bgm-six-eternel-remix.mp3",
+   "audioSha256": "5f56c89739f8053d7c46202bed96eb80579070fda17cb6fa6cd9f9172feb4d2c",
+   "durationMs": 298620,
+   "analyzedTiming": {
+    "bpm": 160.077,
+    "beatZeroMs": 791.9,
+    "beatsPerBar": 3,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
+  },
+  "kaze_ga_soyogu": {
+   "chartRevision": 21,
+   "audio": "monster-hero/audio/bgm-kaze-ga-soyogu-basho.mp3",
+   "audioSha256": "9cc789151e7ec4c96c74a653cd0f96938c478f4636f11a3a850537aefaaf30dd",
+   "durationMs": 99250,
+   "analyzedTiming": {
+    "bpm": 118.88,
+    "beatZeroMs": 209,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
+  },
+  "close_to_your_heart": {
+   "chartRevision": 21,
+   "audio": "monster-hero/audio/bgm-close-to-your-heart.mp3",
+   "audioSha256": "990493074a9113bf32f70cfd43c8a65114aefaf2d8904a4d4253c5df726f9659",
+   "durationMs": 120204,
+   "analyzedTiming": {
+    "bpm": 129.967,
+    "beatZeroMs": 570.5,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
+  },
+  "eiki_boss_remix": {
+   "chartRevision": 38,
+   "audio": "monster-hero/audio/bgm-eiki-boss-remix.mp3",
+   "audioSha256": "83093750c9ec8fb66195d6bb1ed290bdf72ba3ce5b289faa032f9b211fd9fde6",
+   "durationMs": 218014,
+   "analyzedTiming": {
+    "bpm": 154.164,
+    "beatZeroMs": 992.5,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   },
+   "flowPlacement": true,
+   "handFinish": {
+    "EASY": "smooth",
+    "NORMAL": "smooth",
+    "HARD": "smooth"
+   }
+  },
+  "pandora_boss_remix": {
+   "chartRevision": 38,
+   "audio": "monster-hero/audio/bgm-pandora-boss-remix.mp3",
+   "audioSha256": "0faa4d713fdccd01e4a3924e95600bcf4fd011f4973dcbff7858a3694e87a825",
+   "durationMs": 199414,
+   "analyzedTiming": {
+    "bpm": 161.718,
+    "beatZeroMs": 452.7,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   },
+   "flowPlacement": true,
+   "handFinish": {
+    "EASY": "smooth",
+    "NORMAL": "smooth",
+    "HARD": "smooth"
+   }
+  },
+  "dullahan": {
+   "chartRevision": 21,
+   "audio": "monster-hero/audio/bgm-dullahan.mp3",
+   "audioSha256": "c66388ff6c1422fe1f59f49344e85dc31641d165cc63628850e118e8797ad202",
+   "durationMs": 214600,
+   "playEndMs": 128603,
+   "analyzedTiming": {
+    "bpm": 149.999,
+    "beatZeroMs": 602.7,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
+  },
+  "dullahan_clockwork": {
+   "chartRevision": 21,
+   "audio": "monster-hero/audio/bgm-dullahan-clockwork.mp3",
+   "audioSha256": "b51e196625c44c2df3ebe449f37e12a10e356b5422d5688bcc4218af3700eb3f",
+   "durationMs": 292214,
+   "playEndMs": 121675,
+   "analyzedTiming": {
+    "bpm": 152.002,
+    "beatZeroMs": 99.8,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
+  },
+  "toriko": {
+   "chartRevision": 38,
+   "audio": "monster-hero/audio/bgm-toriko.mp3",
+   "audioSha256": "3870d26f6322d8dae8f18f19c6b70008511046ad20863b9921b4bf08c2384e4d",
+   "durationMs": 79341,
+   "analyzedTiming": {
+    "bpm": 134.992,
+    "beatZeroMs": 32.2,
+    "beatsPerBar": 3,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   },
+   "flowPlacement": true,
+   "handFinish": {
+    "EASY": "smooth",
+    "NORMAL": "smooth",
+    "HARD": "smooth"
+   }
+  },
+  "4u_hitasura": {
+   "chartRevision": 38,
+   "audio": "monster-hero/audio/bgm-4u-hitasura.mp3",
+   "audioSha256": "f4fb42472438eb97fb61512fb295479a637707623c958960f2d5df8447711015",
+   "durationMs": 120440,
+   "analyzedTiming": {
+    "bpm": 144.993,
+    "beatZeroMs": 1442.8,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   },
+   "flowPlacement": true,
+   "handFinish": {
+    "EASY": "smooth",
+    "NORMAL": "smooth",
+    "HARD": "smooth"
+   }
+  },
+  "kindan_no_resistance": {
+   "chartRevision": 21,
+   "audio": "monster-hero/audio/bgm-kindan-no-resistance.mp3",
+   "audioSha256": "efca5c01d0b738b44317dafd6504f9b7a4212a638878cc085a9703635f2df65d",
+   "durationMs": 163440,
+   "analyzedTiming": {
+    "bpm": 179.997,
+    "beatZeroMs": 76.1,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
+  },
+  "monster_hero_theme_alt": {
+   "chartRevision": 38,
+   "audio": "monster-hero/audio/bgm-monster-hero-theme-alt.mp3",
+   "audioSha256": "6b4eb065c2e238d68225deb33d4340c2a8491eb4a8edef3cd7e351e56e50b0f9",
+   "durationMs": 154720,
+   "analyzedTiming": {
+    "bpm": 171.097,
+    "beatZeroMs": 1268.3,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   },
+   "challengeProfile": {
+    "audioSha256": "6b4eb065c2e238d68225deb33d4340c2a8491eb4a8edef3cd7e351e56e50b0f9",
+    "onsetCount": 1108,
+    "beatClarityRatio": 1.193
+   },
+   "flowPlacement": true,
+   "handFinish": {
+    "EASY": "smooth",
+    "NORMAL": "smooth",
+    "HARD": "smooth"
+   }
+  },
+  "crossing_field": {
+   "chartRevision": 38,
+   "audio": "monster-hero/audio/bgm-crossing-field.mp3",
+   "audioSha256": "1e2e7cc1d3d53d1ac999bc5c03e1534e635de515b297daf65c00bcab21ce294f",
+   "durationMs": 89208,
+   "analyzedTiming": {
+    "bpm": 178.97,
+    "beatZeroMs": 792.7,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "challengeFactor": 1.16,
+   "flowPlacement": true,
+   "handFinish": {
+    "EASY": "smooth",
+    "NORMAL": "smooth",
+    "HARD": "smooth"
+   }
+  },
+  "nothing_without_you": {
+   "chartRevision": 21,
+   "audio": "monster-hero/audio/bgm-nothing-without-you.mp3",
+   "audioSha256": "4cb261cf1cd9fcbb3592d0854503bf40db54bb99ef357efed598f074959d0884",
+   "durationMs": 189504,
+   "analyzedTiming": {
+    "bpm": 194.005,
+    "beatZeroMs": 83.1,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   },
+   "challengeFactor": 0.9
+  },
+  "freedom_dive": {
+   "chartRevision": 38,
+   "audio": "monster-hero/audio/bgm-freedom-dive.mp3",
+   "audioSha256": "34616b2fccd33a1201305344b615f2441b1a9219045c8c2629676ad6cfc8c42c",
+   "durationMs": 145404,
+   "analyzedTiming": {
+    "bpm": 222.22,
+    "beatZeroMs": 117,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "chartIntensity": "extreme",
+   "flowPlacement": true,
+   "handFinish": {
+    "EASY": "smooth",
+    "NORMAL": "smooth",
+    "HARD": "smooth"
+   }
+  },
+  "the_city_beneath_the_comets": {
+   "chartRevision": 38,
+   "audio": "monster-hero/audio/bgm-the-city-beneath-the-comets.mp3",
+   "audioSha256": "900fda0dc05ef4d85259f3467c3b662934ea25ec4789807d2f31e750272a24eb",
+   "durationMs": 160020,
+   "analyzedTiming": {
+    "bpm": 170.466,
+    "beatZeroMs": 1054.3,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   },
+   "flowPlacement": true,
+   "handFinish": {
+    "EASY": "smooth",
+    "NORMAL": "smooth",
+    "HARD": "smooth"
+   }
+  },
+  "mou_hitotsu_no_sekai_e": {
+   "chartRevision": 38,
+   "audio": "monster-hero/audio/bgm-mou-hitotsu-no-sekai-e.mp3",
+   "audioSha256": "633ed0ee2501b3b6bcf36daf4328c95dbd01fe1e5a4d06b489cc4de51afd054f",
+   "durationMs": 226980,
+   "analyzedTiming": {
+    "bpm": 187.5,
+    "beatZeroMs": 384.1,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   },
+   "flowPlacement": true,
+   "handFinish": {
+    "EASY": "smooth",
+    "NORMAL": "smooth",
+    "HARD": "smooth"
+   }
+  },
+  "senjou_no_shippuu": {
+   "audio": "monster-hero/audio/bgm-senjou-no-shippuu.mp3",
+   "chartRevision": 38,
+   "audioSha256": "dfcd5d833fec961569e2d8c82ad79f4db89c6c8fb58331817027c266c07639fe",
+   "durationMs": 193593,
+   "analyzedTiming": {
+    "bpm": 139.966,
+    "beatZeroMs": 321.3,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   },
+   "challengeFactor": 1.3,
+   "flowPlacement": true,
+   "handFinish": {
+    "EASY": "smooth",
+    "NORMAL": "smooth",
+    "HARD": "smooth"
+   }
+  },
+  "makutsu_no_senritsu": {
+   "audio": "monster-hero/audio/bgm-makutsu-no-senritsu.mp3",
+   "chartRevision": 38,
+   "audioSha256": "8db199451f0b9a9d1d6bd3a3f0c249601e49f403c464dae16d7dbe6362adb998",
+   "durationMs": 148584,
+   "analyzedTiming": {
+    "bpm": 143.903,
+    "beatZeroMs": 38,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "challengeFactor": 1.6,
+   "flowPlacement": true,
+   "handFinish": {
+    "EASY": "smooth",
+    "NORMAL": "smooth",
+    "HARD": "smooth"
+   },
+   "sustainScale": {
+    "MASTER": 0.2
+   }
+  },
+  "only_my_railgun": {
+   "audio": "monster-hero/audio/bgm-only-my-railgun.mp3",
+   "chartRevision": 21,
+   "audioSha256": "62fb741fe3f16fdc67ae2a1c609a57de0a3f8112510c814d2a4473cdf1a5e7d1",
+   "durationMs": 90000,
+   "analyzedTiming": {
+    "bpm": 143,
+    "beatZeroMs": 152.9,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "challengeFactor": 1.3
+  },
+  "big_bridge_no_shitou": {
+   "audio": "monster-hero/audio/bgm-big-bridge-no-shitou.mp3",
+   "chartRevision": 23,
+   "audioSha256": "a36d408f338927538fb6ac535086a63c11cd8d3f2d9709c058ddff31fbaa65c1",
+   "durationMs": 144612,
+   "analyzedTiming": {
+    "bpm": 177.72,
+    "beatZeroMs": 349.6,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "shortFadeEnding": true
+  },
+  "rising_hope": {
+   "audio": "monster-hero/audio/bgm-rising-hope.mp3",
+   "chartRevision": 25,
+   "audioSha256": "5b56b8f9d099c52114a1907c116ed9739f776191e8012eeb947327ecea4a911a",
+   "durationMs": 90252,
+   "analyzedTiming": {
+    "bpm": 190,
+    "beatZeroMs": 551.7,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
+  },
+  "haruka": {
+   "audio": "monster-hero/audio/bgm-haruka.mp3",
+   "chartRevision": 38,
+   "audioSha256": "7a7164dbf152b4672d4c5c14ee277e999df1268861b95e9f4b10e56f6c14e144",
+   "durationMs": 97632,
+   "analyzedTiming": {
+    "bpm": 199.96,
+    "beatZeroMs": 104,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "flowPlacement": true,
+   "handFinish": {
+    "EASY": "smooth",
+    "NORMAL": "smooth",
+    "HARD": "smooth"
+   }
+  },
+  "stay_with_me_short": {
+   "audio": "monster-hero/audio/bgm-stay-with-me-short.mp3",
+   "chartRevision": 38,
+   "audioSha256": "54a59963e97936b3e09e5897fe1802a6510ae69df76f9c0332eb401a20557bfa",
+   "durationMs": 176580,
+   "analyzedTiming": {
+    "bpm": 169.99,
+    "beatZeroMs": 474,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "splices": [
+    {
+     "atMs": 89000,
+     "shiftMs": -278.7
     }
+   ],
+   "chartIntensity": "strong",
+   "chartIntensityByDifficulty": {
+    "EXPERT": "mild",
+    "MASTER": "extreme"
+   },
+   "flowPlacement": true,
+   "handFinish": {
+    "EASY": "smooth",
+    "NORMAL": "smooth",
+    "HARD": "smooth"
+   }
+  },
+  "kiki_issen_short": {
+   "audio": "monster-hero/audio/bgm-kiki-issen-short.mp3",
+   "chartRevision": 38,
+   "audioSha256": "1dc188dbb7a796d3cf5f496ffcfb5afcc8aa84c92d3005cfc441708bac0816c8",
+   "durationMs": 194580,
+   "analyzedTiming": {
+    "bpm": 155.011,
+    "beatZeroMs": 234.4,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "splices": [
+    {
+     "atMs": 101000,
+     "shiftMs": -225.6
+    }
+   ],
+   "challengeFactor": 1.2,
+   "flowPlacement": true,
+   "handFinish": {
+    "EASY": "smooth",
+    "NORMAL": "smooth",
+    "HARD": "smooth"
+   }
+  },
+  "crazy_party_night": {
+   "audio": "monster-hero/audio/bgm-crazy-party-night.mp3",
+   "chartRevision": 38,
+   "audioSha256": "45e7252c400eb169e18c74d6ed57d594686ae80361ffe4cd4a91e47732232741",
+   "durationMs": 94032,
+   "analyzedTiming": {
+    "bpm": 127.992,
+    "beatZeroMs": 434.1,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   },
+   "challengeFactor": 1.3,
+   "flowPlacement": true,
+   "handFinish": {
+    "EASY": "smooth",
+    "NORMAL": "smooth",
+    "HARD": "smooth"
+   }
+  },
+  "crazy_party_night_full": {
+   "audio": "monster-hero/audio/bgm-crazy-party-night-full.mp3",
+   "chartRevision": 38,
+   "audioSha256": "88a00b2a4fa000223604c19c7d7be7ece525b83d49961bda28cd7ae72866757e",
+   "durationMs": 245160,
+   "analyzedTiming": {
+    "bpm": 127.992,
+    "beatZeroMs": 456,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "challengeFactor": 1.3,
+   "flowPlacement": true,
+   "handFinish": {
+    "EASY": "smooth",
+    "NORMAL": "smooth",
+    "HARD": "smooth"
+   }
+  },
+  "emerald_rush": {
+   "audio": "monster-hero/audio/bgm-emerald-rush.mp3",
+   "chartRevision": 38,
+   "audioSha256": "7782e3520275c316557513a15b605d691ca42ef76f9faf2628a21fb3a25efcc3",
+   "durationMs": 146052,
+   "analyzedTiming": {
+    "bpm": 151.507,
+    "beatZeroMs": 487.8,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   },
+   "warpPoints": [
+    [
+     4500,
+     61
+    ],
+    [
+     9500,
+     106
+    ],
+    [
+     14500,
+     165
+    ],
+    [
+     19500,
+     223
+    ],
+    [
+     24500,
+     262
+    ],
+    [
+     29500,
+     289
+    ],
+    [
+     34500,
+     318
+    ],
+    [
+     39500,
+     343
+    ],
+    [
+     44500,
+     370
+    ],
+    [
+     49500,
+     381
+    ],
+    [
+     54500,
+     383
+    ],
+    [
+     59500,
+     385
+    ],
+    [
+     64500,
+     384
+    ],
+    [
+     69500,
+     390
+    ],
+    [
+     74500,
+     391
+    ],
+    [
+     79500,
+     389
+    ],
+    [
+     84500,
+     388
+    ],
+    [
+     89500,
+     375
+    ],
+    [
+     94500,
+     360
+    ],
+    [
+     99500,
+     338
+    ],
+    [
+     104500,
+     323
+    ],
+    [
+     109500,
+     303
+    ],
+    [
+     114500,
+     281
+    ],
+    [
+     119500,
+     261
+    ],
+    [
+     124500,
+     234
+    ],
+    [
+     129500,
+     205
+    ],
+    [
+     134500,
+     163
+    ],
+    [
+     139500,
+     139
+    ]
+   ],
+   "flowPlacement": true,
+   "handFinish": {
+    "EASY": "smooth",
+    "NORMAL": "smooth",
+    "HARD": "smooth"
+   }
+  },
+  "wrath_of_the_thorn_king": {
+   "audio": "monster-hero/audio/bgm-wrath-of-the-thorn-king.mp3",
+   "chartRevision": 28,
+   "audioSha256": "d1ea326a4ee27057c26a19f9e8e94ba29eca75464470641a982062f064728311",
+   "durationMs": 96444,
+   "analyzedTiming": {
+    "bpm": 141.507,
+    "beatZeroMs": 234,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "warpPoints": [
+    [
+     2839,
+     61
+    ],
+    [
+     7615,
+     172
+    ],
+    [
+     12824,
+     294
+    ],
+    [
+     17577,
+     383
+    ],
+    [
+     22722,
+     440
+    ],
+    [
+     27844,
+     473
+    ],
+    [
+     32529,
+     494
+    ],
+    [
+     37630,
+     507
+    ],
+    [
+     42722,
+     511
+    ],
+    [
+     47798,
+     499
+    ],
+    [
+     52855,
+     468
+    ],
+    [
+     57904,
+     429
+    ],
+    [
+     62532,
+     393
+    ],
+    [
+     67576,
+     349
+    ],
+    [
+     72611,
+     296
+    ],
+    [
+     77641,
+     237
+    ],
+    [
+     82667,
+     175
+    ],
+    [
+     87691,
+     111
+    ],
+    [
+     92715,
+     48
+    ]
+   ]
+  },
+  "monster": {
+   "audio": "monster-hero/audio/bgm-monster.mp3",
+   "chartRevision": 38,
+   "audioSha256": "6b190639c3faa0f20837ef7972df4ba72143efedf54e2735c0eab6ca2d0392c7",
+   "durationMs": 265068,
+   "analyzedTiming": {
+    "bpm": 135.01,
+    "beatZeroMs": 494,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "warpPoints": [
+    [
+     54500,
+     0
+    ],
+    [
+     56500,
+     -18
+    ],
+    [
+     157500,
+     -18
+    ],
+    [
+     162500,
+     0
+    ]
+   ],
+   "flowPlacement": true,
+   "handFinish": {
+    "EASY": "smooth",
+    "NORMAL": "smooth",
+    "HARD": "smooth"
+   }
+  },
+  "monster_short": {
+   "audio": "monster-hero/audio/bgm-monster-short.mp3",
+   "chartRevision": 28,
+   "audioSha256": "415b771e9bbfc4064caec2dff6b2956f27832a9137cc779f4a817d255f239143",
+   "durationMs": 110808,
+   "analyzedTiming": {
+    "bpm": 135.01,
+    "beatZeroMs": 494,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
+  },
+  "anima": {
+   "audio": "monster-hero/audio/bgm-anima.mp3",
+   "chartRevision": 38,
+   "audioSha256": "c81adf3d2fffcd0c7adacc9374ad18ebb6663f6ae589b8c3b7d189dad938d4dc",
+   "durationMs": 115344,
+   "analyzedTiming": {
+    "bpm": 183.5,
+    "beatZeroMs": 200,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "chartIntensity": "strong",
+   "chartIntensityByDifficulty": {
+    "EXPERT": "mild",
+    "MASTER": "extreme"
+   },
+   "flowPlacement": true,
+   "handFinish": {
+    "EASY": "smooth",
+    "NORMAL": "smooth",
+    "HARD": "smooth"
+   }
+  },
+  "journey": {
+   "audio": "monster-hero/audio/bgm-journey.mp3",
+   "chartIntensity": "strong",
+   "chartRevision": 28,
+   "audioSha256": "bd51dcc8ef2104c18c6f1c92d45e11d88c7485a9b6f037326f95abee8a23f104",
+   "durationMs": 164196,
+   "analyzedTiming": {
+    "bpm": 128,
+    "beatZeroMs": 272.3,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
+  },
+  "sheriruth": {
+   "audio": "monster-hero/audio/bgm-sheriruth.mp3",
+   "chartIntensity": "extreme",
+   "chartRevision": 28,
+   "audioSha256": "ab30c8b641fb18277e3239aa021c1d74361f681e6ba4fc818ce863223b467835",
+   "durationMs": 135000,
+   "analyzedTiming": {
+    "bpm": 184.99,
+    "beatZeroMs": 711.6,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
+  },
+  "grievous_lady": {
+   "audio": "monster-hero/audio/bgm-grievous-lady.mp3",
+   "chartIntensity": "extreme",
+   "chartRevision": 28,
+   "audioSha256": "dac4aa4d3b724c03e0c7a38878f05eb0889f76512b5821f1fdc8ea62459a3ee0",
+   "durationMs": 141912,
+   "analyzedTiming": {
+    "bpm": 210,
+    "beatZeroMs": 2240,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "chartIntensityByDifficulty": {
+    "EASY": "strong",
+    "NORMAL": "strong"
+   }
+  },
+  "against_my_own_shadow": {
+   "audio": "monster-hero/audio/bgm-against-my-own-shadow.mp3",
+   "chartIntensity": "strong",
+   "chartRevision": 28,
+   "audioSha256": "b43d691d477368685fbd608f5630ee214f38b79db756cf782efd6fac81aeb107",
+   "durationMs": 118044,
+   "analyzedTiming": {
+    "bpm": 143.137,
+    "beatZeroMs": 2022.9,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
+  },
+  "rose": {
+   "audio": "monster-hero/audio/bgm-rose.mp3",
+   "chartIntensity": "strong",
+   "chartRevision": 38,
+   "audioSha256": "acc0ceccc810854e8c4517778aad6b31a52758fe9b13c9204f74a89ccf27d434",
+   "durationMs": 165204,
+   "analyzedTiming": {
+    "bpm": 125,
+    "beatZeroMs": 2116,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "flowPlacement": true,
+   "handFinish": {
+    "EASY": "smooth",
+    "NORMAL": "smooth",
+    "HARD": "smooth"
+   }
+  },
+  "rose_short": {
+   "audio": "monster-hero/audio/bgm-rose-short.mp3",
+   "chartIntensity": "strong",
+   "chartRevision": 31,
+   "audioSha256": "57888379506b2a6ba9efe9c0eb120465aab702a13dfbcad2acfe12f85d67fb28",
+   "durationMs": 115452,
+   "analyzedTiming": {
+    "bpm": 125,
+    "beatZeroMs": 2116,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
+  },
+  "toward_the_stars_short": {
+   "audio": "monster-hero/audio/bgm-toward-the-stars-short.mp3",
+   "chartRevision": 38,
+   "audioSha256": "88907da29e0914cbd5463c6a5c9ac1de967cdd95dc28973ce137dac8837a4a52",
+   "durationMs": 136800,
+   "analyzedTiming": {
+    "bpm": 143.268,
+    "beatZeroMs": 1390.5,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   },
+   "chartIntensityByDifficulty": {
+    "MASTER": "extreme",
+    "HELL": "extreme"
+   },
+   "hellDensity": 1.3,
+   "flowPlacement": true,
+   "handFinish": {
+    "EASY": "smooth",
+    "NORMAL": "smooth",
+    "HARD": "smooth"
+   }
+  },
+  "sad_song": {
+   "audio": "monster-hero/audio/bgm-sad-song.mp3",
+   "chartRevision": 38,
+   "audioSha256": "47d16979bb906bf2f047377e9a4cc871f9c152e0623ef91f8b5a3f1c817a3021",
+   "durationMs": 218556,
+   "analyzedTiming": {
+    "bpm": 172.009,
+    "beatZeroMs": 99.5,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   },
+   "flowPlacement": true,
+   "handFinish": {
+    "EASY": "smooth",
+    "NORMAL": "smooth",
+    "HARD": "smooth"
+   }
+  },
+  "sad_song_short": {
+   "audio": "monster-hero/audio/bgm-sad-song-short.mp3",
+   "chartRevision": 38,
+   "audioSha256": "2ff39f50eddd7d2ec20a1aaca188d0d34b3b9c211ee182f68d01a1e4d488216c",
+   "durationMs": 82440,
+   "analyzedTiming": {
+    "bpm": 172.009,
+    "beatZeroMs": 99.5,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "flowPlacement": true,
+   "handFinish": {
+    "EASY": "smooth",
+    "NORMAL": "smooth",
+    "HARD": "smooth"
+   }
+  },
+  "black_shout": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-black-shout.mp3",
+   "chartRevision": 38,
+   "audioSha256": "03a627c682deaebcb6e23dc196b3882fc0f89190abdfc36de50295b420b7a5aa",
+   "durationMs": 109188,
+   "analyzedTiming": {
+    "bpm": 185.07,
+    "beatZeroMs": 2285.8,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "handFinish": {
+    "EASY": "smooth",
+    "NORMAL": "smooth",
+    "HARD": "smooth"
+   }
+  },
+  "light_player": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-light-player.mp3",
+   "chartRevision": 38,
+   "audioSha256": "6656f3a71344757fef4950696b5b9f5a43e83004520520d5c4229a9c9906de98",
+   "durationMs": 268776,
+   "analyzedTiming": {
+    "bpm": 187.995,
+    "beatZeroMs": 1116.6,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   },
+   "handFinish": {
+    "EASY": "smooth",
+    "NORMAL": "smooth",
+    "HARD": "smooth"
+   }
+  },
+  "tsuki_ga_michiru_mae_ni": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-tsuki-ga-michiru-mae-ni.mp3",
+   "chartRevision": 38,
+   "audioSha256": "2ee86e1947fd04cbe837c2824c2a87aaad96b4fc0e1804d807f122a5ed26b151",
+   "durationMs": 276660,
+   "analyzedTiming": {
+    "bpm": 188,
+    "beatZeroMs": 799.9,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "handFinish": {
+    "EASY": "smooth",
+    "NORMAL": "smooth",
+    "HARD": "smooth"
+   }
+  },
+  "light_player_short": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-light-player-short.mp3",
+   "chartRevision": 38,
+   "audioSha256": "785e78c69005b82ca9e0c87004b0a3b31c27644ba1319db56ec93fd87dd02c4c",
+   "durationMs": 150552,
+   "analyzedTiming": {
+    "bpm": 187.995,
+    "beatZeroMs": 1116.6,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "handFinish": {
+    "EASY": "smooth",
+    "NORMAL": "smooth",
+    "HARD": "smooth"
+   }
+  },
+  "tsuki_ga_michiru_mae_ni_short": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-tsuki-ga-michiru-mae-ni-short.mp3",
+   "chartRevision": 38,
+   "audioSha256": "f2e9585907f20e833d7b50ce2cd8b3453f8d772c0376eabae31fb9e8bfe8aa7e",
+   "durationMs": 111960,
+   "analyzedTiming": {
+    "bpm": 188,
+    "beatZeroMs": 849.9,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "handFinish": {
+    "EASY": "smooth",
+    "NORMAL": "smooth",
+    "HARD": "smooth"
+   }
+  },
+  "rebellion": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-rebellion.mp3",
+   "chartRevision": 38,
+   "audioSha256": "c16005aa72de7d5665555d5b8b07a5d309c6f142ab347e65dfabab4efb4465f7",
+   "durationMs": 254052,
+   "analyzedTiming": {
+    "bpm": 193.5,
+    "beatZeroMs": 2010.5,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "warpPoints": [
+    [
+     4500,
+     0
+    ],
+    [
+     9500,
+     -2
+    ],
+    [
+     14500,
+     -4
+    ],
+    [
+     19500,
+     -10.7
+    ],
+    [
+     24500,
+     -16.7
+    ],
+    [
+     29500,
+     -23.3
+    ],
+    [
+     34500,
+     -26
+    ],
+    [
+     39500,
+     -21.3
+    ],
+    [
+     44500,
+     -14.7
+    ],
+    [
+     49500,
+     -18.7
+    ],
+    [
+     54500,
+     -33.3
+    ],
+    [
+     59500,
+     -50
+    ],
+    [
+     64500,
+     -68.7
+    ],
+    [
+     69500,
+     -87.3
+    ],
+    [
+     74500,
+     -102.7
+    ],
+    [
+     79500,
+     -99.3
+    ],
+    [
+     84500,
+     -87.3
+    ],
+    [
+     89500,
+     -74
+    ],
+    [
+     94500,
+     -66
+    ],
+    [
+     99500,
+     -56.7
+    ],
+    [
+     104500,
+     -50.7
+    ],
+    [
+     109500,
+     -40
+    ],
+    [
+     114500,
+     -23.3
+    ],
+    [
+     119500,
+     -2.7
+    ],
+    [
+     124500,
+     24
+    ],
+    [
+     129500,
+     45.3
+    ],
+    [
+     134500,
+     65.3
+    ],
+    [
+     139500,
+     72.7
+    ],
+    [
+     144500,
+     72.7
+    ],
+    [
+     149500,
+     64
+    ],
+    [
+     154500,
+     44.7
+    ],
+    [
+     159500,
+     13.3
+    ],
+    [
+     164500,
+     -25.3
+    ],
+    [
+     169500,
+     -49.3
+    ],
+    [
+     174500,
+     -73.3
+    ],
+    [
+     179500,
+     -98
+    ],
+    [
+     184500,
+     -136.7
+    ],
+    [
+     189500,
+     -170
+    ],
+    [
+     194500,
+     -198.7
+    ],
+    [
+     199500,
+     -222
+    ],
+    [
+     204500,
+     -241.3
+    ],
+    [
+     209500,
+     -259.3
+    ],
+    [
+     214500,
+     -272
+    ],
+    [
+     219500,
+     -292.7
+    ],
+    [
+     224500,
+     -305.3
+    ],
+    [
+     229500,
+     -319.3
+    ],
+    [
+     234500,
+     -330
+    ],
+    [
+     239500,
+     -347.3
+    ],
+    [
+     244500,
+     -370
+    ],
+    [
+     249500,
+     -380
+    ]
+   ],
+   "chartIntensityByDifficulty": {
+    "MASTER": "strong"
+   },
+   "hellDensity": 1.6,
+   "masterDensity": 1.3,
+   "handFinish": {
+    "EASY": "smooth",
+    "NORMAL": "smooth",
+    "HARD": "smooth"
+   }
+  },
+  "rebellion_short": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-rebellion-short.mp3",
+   "chartIntensityByDifficulty": {
+    "MASTER": "strong"
+   },
+   "hellDensity": 1.6,
+   "warpPoints": [
+    [
+     4500,
+     0
+    ],
+    [
+     9500,
+     -2
+    ],
+    [
+     14500,
+     -4
+    ],
+    [
+     19500,
+     -10.7
+    ],
+    [
+     24500,
+     -16.7
+    ],
+    [
+     29500,
+     -23.3
+    ],
+    [
+     34500,
+     -26
+    ],
+    [
+     39500,
+     -21.3
+    ],
+    [
+     44500,
+     -14.7
+    ],
+    [
+     49500,
+     -18.7
+    ],
+    [
+     54500,
+     -33.3
+    ],
+    [
+     59500,
+     -50
+    ],
+    [
+     64500,
+     -68.7
+    ],
+    [
+     69500,
+     -87.3
+    ],
+    [
+     74500,
+     -102.7
+    ],
+    [
+     79500,
+     -99.3
+    ],
+    [
+     84500,
+     -87.3
+    ],
+    [
+     89500,
+     -74
+    ],
+    [
+     94500,
+     -66
+    ],
+    [
+     99500,
+     -56.7
+    ],
+    [
+     104500,
+     -50.7
+    ],
+    [
+     109500,
+     -40
+    ],
+    [
+     114500,
+     -23.3
+    ],
+    [
+     119500,
+     -2.7
+    ],
+    [
+     124500,
+     24
+    ],
+    [
+     129500,
+     45.3
+    ],
+    [
+     134500,
+     65.3
+    ],
+    [
+     139500,
+     72.7
+    ],
+    [
+     144500,
+     72.7
+    ],
+    [
+     149500,
+     64
+    ]
+   ],
+   "chartRevision": 38,
+   "audioSha256": "04678c77a7e1331af1ba94de55da74f165f142b5914cf1f50959696f2f4da965",
+   "durationMs": 152352,
+   "analyzedTiming": {
+    "bpm": 193.5,
+    "beatZeroMs": 2010.5,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "handFinish": {
+    "EASY": "smooth",
+    "NORMAL": "smooth",
+    "HARD": "smooth"
+   },
+   "challengeFactor": 1.08,
+   "masterDensity": 1.2
+  },
+  "altar_world_tree": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-altar-world-tree.mp3",
+   "chartRevision": 38,
+   "audioSha256": "eeeeada93d954fb1c79f2a0fd58a87788d97aafd149978f2ef64b4f9018bbcce",
+   "durationMs": 385164,
+   "analyzedTiming": {
+    "bpm": 163.97,
+    "beatZeroMs": 2895,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "handFinish": {
+    "EASY": "smooth",
+    "NORMAL": "smooth",
+    "HARD": "smooth"
+   }
+  },
+  "altar_world_tree_short": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-altar-world-tree-short.mp3",
+   "chartRevision": 38,
+   "audioSha256": "016a720f2287be3d8ad5b270adee43f5e2fcb71592d5b8752a7d89a5f91dfee1",
+   "durationMs": 138024,
+   "analyzedTiming": {
+    "bpm": 163.97,
+    "beatZeroMs": 2895,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "handFinish": {
+    "EASY": "smooth",
+    "NORMAL": "smooth",
+    "HARD": "smooth"
+   }
+  },
+  "evans": {
+   "flowPlacement": true,
+   "masterDensity": 1.2,
+   "audio": "monster-hero/audio/bgm-evans.mp3",
+   "chartRevision": 38,
+   "audioSha256": "37c5c9e21113e18f732c166f82098820cf6edc3fb3416aad8c26e2c5b3ec80f5",
+   "durationMs": 107598,
+   "analyzedTiming": {
+    "bpm": 184.975,
+    "beatZeroMs": 2135,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "handFinish": {
+    "EASY": "smooth",
+    "NORMAL": "smooth",
+    "HARD": "smooth"
+   }
+  },
+  "humanoid": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-humanoid.mp3",
+   "chartRevision": 35,
+   "audioSha256": "763466fbbf97a7ab31edcf79b9a8b1fd5e145868b2a263455f8783f396afcc09",
+   "durationMs": 98847,
+   "analyzedTiming": {
+    "bpm": 159.005,
+    "beatZeroMs": 1267.2,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   },
+   "chartIntensity": "extreme",
+   "chartIntensityByDifficulty": {
+    "EXPERT": "mild"
+   },
+   "masterDensity": 1.6,
+   "hellDensity": 1.6,
+   "sustainScale": {
+    "EXPERT": 0.8,
+    "MASTER": 0.3,
+    "HELL": 0.3
+   }
+  },
+  "lamia": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-lamia.mp3",
+   "chartRevision": 39,
+   "audioSha256": "faaab8302652fb054e43a22b916680c454732bcd432e18fd6d574e1162b8e9a5",
+   "durationMs": 143491,
+   "analyzedTiming": {
+    "bpm": 199.03,
+    "beatZeroMs": 155.9,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "chartIntensity": "extreme",
+   "chartIntensityByDifficulty": {
+    "HARD": "strong",
+    "EXPERT": "mild"
+   },
+   "sustainScale": {
+    "MASTER": 0.3,
+    "EASY": 0.2
+   },
+   "hellDensity": 1.6
+  },
+  "saudade": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-saudade.mp3",
+   "chartRevision": 39,
+   "audioSha256": "5364f7be63a541ca8df51dd46a9b1940262b5766ee60bf5f1a76b9599ec8d7b1",
+   "durationMs": 263236,
+   "analyzedTiming": {
+    "bpm": 120.091,
+    "beatZeroMs": 119.2,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   },
+   "challengeFactor": 1.18,
+   "masterDensity": 1.2
+  },
+  "saudade_short": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-saudade-short.mp3",
+   "chartRevision": 39,
+   "audioSha256": "e7a88d84c06a6cf086c37ca513215a1c3bd0cf8bcab6a11eb311be8e3c7839a2",
+   "durationMs": 95556,
+   "analyzedTiming": {
+    "bpm": 120.091,
+    "beatZeroMs": 149.6,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   },
+   "challengeFactor": 1.18,
+   "masterDensity": 1.2
+  },
+  "megalovania_sans": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-megalovania-sans.mp3",
+   "chartRevision": 39,
+   "audioSha256": "8317d65943b60182636dd3b2b1c938962a7f1c6a91fc5a5b371799c86fc4d4bf",
+   "durationMs": 158616,
+   "analyzedTiming": {
+    "bpm": 240,
+    "beatZeroMs": 200.5,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
+  },
+  "megalovania_smash": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-megalovania-smash.mp3",
+   "chartRevision": 39,
+   "audioSha256": "038da79dd59ecc0d846bd4390abc6c43a0a664801c80f7f3a90dd3658517943d",
+   "durationMs": 147331,
+   "analyzedTiming": {
+    "bpm": 160,
+    "beatZeroMs": 761,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 3,
+    "source": "command"
+   }
+  },
+  "departure": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-departure.mp3",
+   "chartRevision": 39,
+   "audioSha256": "ad4d5a6838c8d5513da5b74924e8b382b55288b068473fbb935853c0659b4150",
+   "durationMs": 297352,
+   "analyzedTiming": {
+    "bpm": 156.25,
+    "beatZeroMs": 621,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
+  },
+  "departure_short": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-departure-short.mp3",
+   "chartRevision": 39,
+   "audioSha256": "d2dcbe5c72a879fb1e476627377793d1aec6579a1a25efe6263347514017fdf1",
+   "durationMs": 105378,
+   "analyzedTiming": {
+    "bpm": 156.25,
+    "beatZeroMs": 641,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
+  },
+  "rpg": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-rpg.mp3",
+   "chartRevision": 39,
+   "audioSha256": "36abe34289f90845123504e4840ffafc8d65dce2b76d37615d0c2b5a796c64c3",
+   "durationMs": 245211,
+   "analyzedTiming": {
+    "bpm": 174.998,
+    "beatZeroMs": 575.6,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
+  },
+  "rpg_short": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-rpg-short.mp3",
+   "chartRevision": 39,
+   "audioSha256": "7d4428d73d94d91d0385bac302a57c42d327703fe7b01aac0e56cc17cf7f35e2",
+   "durationMs": 87615,
+   "analyzedTiming": {
+    "bpm": 174.998,
+    "beatZeroMs": 575.6,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
+  },
+  "midnight_studio": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-midnight-studio.mp3",
+   "chartRevision": 39,
+   "audioSha256": "51c39ff9dbbbbbf880452f1cb95f3ee3d1b77f4ee168cd694600e09b5a570169",
+   "durationMs": 217051,
+   "analyzedTiming": {
+    "bpm": 147.969,
+    "beatZeroMs": 1490,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
+  },
+  "midnight_studio_short": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-midnight-studio-short.mp3",
+   "chartRevision": 39,
+   "audioSha256": "936b28949b4a330a5ead20347808bb9629bc52e6185d380fc6fac5e5da59d95a",
+   "durationMs": 74475,
+   "analyzedTiming": {
+    "bpm": 147.969,
+    "beatZeroMs": 1730,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
+  },
+  "hopes_and_dreams": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-hopes-and-dreams.mp3",
+   "chartRevision": 39,
+   "audioSha256": "e6202f9f83560d1d3c46c83a2856de2cf0cb3be57105a6294e5918b9e1035b7f",
+   "durationMs": 183380,
+   "analyzedTiming": {
+    "bpm": 170.68,
+    "beatZeroMs": 2057.8,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
+  },
+  "hopes_and_dreams_short": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-hopes-and-dreams-short.mp3",
+   "chartRevision": 39,
+   "audioSha256": "a88b77ee4973647c15956614c2fcfd22b6820186e0a812b9d04b6e1b6aa6b8c7",
+   "durationMs": 139598,
+   "analyzedTiming": {
+    "bpm": 171.8,
+    "beatZeroMs": 1082.2,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
+  },
+  "sparkling_pink_overture": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-sparkling-pink-overture.mp3",
+   "chartRevision": 39,
+   "audioSha256": "6e474b21b5d91f49d2c8ba9a6e92a6afb57a3856a3bc557c21b1428052fe964c",
+   "durationMs": 124447,
+   "analyzedTiming": {
+    "bpm": 212,
+    "beatZeroMs": 1148.9,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 6,
+    "source": "command"
+   },
+   "chartIntensity": "strong",
+   "chartIntensityByDifficulty": {
+    "EXPERT": "mild"
+   }
+  },
+  "seasons_of_a_little_plaza": {
+   "flowPlacement": true,
+   "challengeFactor": 1.15,
+   "audio": "monster-hero/audio/bgm-seasons-of-a-little-plaza.mp3",
+   "chartRevision": 40,
+   "audioSha256": "b75ae2e2592de434d621d4efecc006e3fce6fd2c167cc3ee9fa5111da9131a2b",
+   "durationMs": 149304,
+   "analyzedTiming": {
+    "bpm": 169.505,
+    "beatZeroMs": 417.8,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
+  },
+  "eiyuu_no_akashi": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-eiyuu-no-akashi.mp3",
+   "chartRevision": 40,
+   "audioSha256": "38f68104d0310ed32a06f84fd111598cd652948368a9cb0210f2d588d5abdbfd",
+   "durationMs": 122854,
+   "analyzedTiming": {
+    "bpm": 161.541,
+    "beatZeroMs": 1476.3,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
+  },
+  "eiyuu_no_akashi_milktea": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-eiyuu-no-akashi-milktea.mp3",
+   "chartRevision": 40,
+   "audioSha256": "af00bdf4ef248258a37e35c4d98fec1b217b5157e1bfc6dfbcd04f5e4860dc9b",
+   "durationMs": 146416,
+   "analyzedTiming": {
+    "bpm": 192.11,
+    "beatZeroMs": 2391.9,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
+  },
+  "gourmet_race_64": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-gourmet-race-64.mp3",
+   "chartRevision": 40,
+   "audioSha256": "8d110d3430e46e6f2bfbe1eaf68db9ac559bf198cb7df498a516770ee4ade6af",
+   "durationMs": 143472,
+   "analyzedTiming": {
+    "bpm": 186.768,
+    "beatZeroMs": 2031.1,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
+  },
+  "gourmet_race_dx": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-gourmet-race-dx.mp3",
+   "chartRevision": 40,
+   "audioSha256": "cb6d19e5ff52fa3408359e01033d130b4d243e585bb3a4d1828d11e7e6bdac84",
+   "durationMs": 116184,
+   "analyzedTiming": {
+    "bpm": 160.304,
+    "beatZeroMs": 424,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
+  },
+  "dr_wily_stage_1": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-dr-wily-stage-1.mp3",
+   "chartRevision": 40,
+   "audioSha256": "80f1ad0c564ca9803a33a6fb0832d07d022f8010412a419f8518060ebdbb14b5",
+   "durationMs": 165725,
+   "analyzedTiming": {
+    "bpm": 179.989,
+    "beatZeroMs": 2377.8,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
+  },
+  "dr_wily_stage_1_okkussenman": {
+   "flowPlacement": true,
+   "chartIntensity": "extreme",
+   "masterDensity": 1.2,
+   "audio": "monster-hero/audio/bgm-dr-wily-stage-1-okkussenman.mp3",
+   "chartRevision": 40,
+   "audioSha256": "1653c82ce75ef0621565d5af3d09456a8da1a20244d726ccd6d786398b14431b",
+   "durationMs": 177082,
+   "analyzedTiming": {
+    "bpm": 179.893,
+    "beatZeroMs": 2731.7,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
+  },
+  "erfolg": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-erfolg.mp3",
+   "chartRevision": 40,
+   "audioSha256": "c5a0d9fddca45ca884afba95ab42576126c4b99bc47641df836dadbbf0cd91b3",
+   "durationMs": 201770,
+   "analyzedTiming": {
+    "bpm": 213.37,
+    "beatZeroMs": 2453,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
+  },
+  "erfolg_piano": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-erfolg-piano.mp3",
+   "chartRevision": 40,
+   "audioSha256": "44aff91727e26d85cbeca0b429660b77eb05c669314dfb035b5dfb82a73da794",
+   "durationMs": 154802,
+   "analyzedTiming": {
+    "bpm": 164.02,
+    "beatZeroMs": 2927,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
+  },
+  "amakakeru_tsubasa": {
+   "flowPlacement": true,
+   "chartIntensityByDifficulty": {
+    "EXPERT": "mild",
+    "MASTER": "extreme"
+   },
+   "audio": "monster-hero/audio/bgm-amakakeru-tsubasa.mp3",
+   "chartRevision": 40,
+   "audioSha256": "2b283f9e6aea890ceacdbc12c7fc11b138bd6a37d7895f5cee08f3f5f05d1fc2",
+   "durationMs": 109296,
+   "analyzedTiming": {
+    "bpm": 207.76,
+    "beatZeroMs": 2021,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "chartIntensity": "strong",
+   "sustainScale": {
+    "MASTER": 0.2
+   }
+  },
+  "beyond_the_same_sky": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-beyond-the-same-sky.mp3",
+   "chartRevision": 40,
+   "audioSha256": "4719843e73e2a77a6f8d98648feb5b9530ccaa59a4d86515ea4d8d0f77c6761a",
+   "durationMs": 260160,
+   "analyzedTiming": {
+    "bpm": 178,
+    "beatZeroMs": 2058,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "chartIntensity": "mild",
+   "chartIntensityByDifficulty": {
+    "HELL": "extreme"
+   }
+  },
+  "beyond_the_same_sky_short": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-beyond-the-same-sky-short.mp3",
+   "chartRevision": 40,
+   "audioSha256": "fc0c43a8775570978221f735b2bd415ed18af627377504df79ca6d5071543c76",
+   "durationMs": 153432,
+   "analyzedTiming": {
+    "bpm": 178,
+    "beatZeroMs": 2058,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "masterDensity": 1.2,
+   "chartIntensityByDifficulty": {
+    "HELL": "extreme"
+   }
+  },
+  "desert_crown": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-desert-crown.mp3",
+   "chartRevision": 40,
+   "audioSha256": "1a440c813bbb8adb634a3c645e562a3c02e57a97a83151cd4d59440dd233048d",
+   "durationMs": 153624,
+   "analyzedTiming": {
+    "bpm": 99.98,
+    "beatZeroMs": 2392,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "chartIntensity": "strong",
+   "sustainScale": {
+    "MASTER": 0.7
+   },
+   "chartIntensityByDifficulty": {
+    "HELL": "extreme"
+   }
+  },
+  "walkure": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-walkure.mp3",
+   "chartRevision": 40,
+   "audioSha256": "c0643f725dff7f3495722cd92320beeb7e0c03a73cd733e77e28c59b0fe1a173",
+   "durationMs": 691931,
+   "analyzedTiming": {
+    "bpm": 216.03,
+    "beatZeroMs": 70,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "chartIntensityByDifficulty": {
+    "EXPERT": "mild",
+    "MASTER": "extreme"
+   },
+   "sustainScale": {
+    "MASTER": 0.2
+   },
+   "handFinish": {
+    "EXPERT": "smooth",
+    "MASTER": "smooth"
+   }
+  },
+  "walkure_short": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-walkure-short.mp3",
+   "chartRevision": 40,
+   "audioSha256": "4ac3e2f2af3e4ccf29c9f83eb9295a21357befd38663b182838c13c4a46313f8",
+   "durationMs": 180428,
+   "analyzedTiming": {
+    "bpm": 216.03,
+    "beatZeroMs": 23,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "chartIntensityByDifficulty": {
+    "EXPERT": "mild",
+    "MASTER": "extreme"
+   },
+   "sustainScale": {
+    "MASTER": 0.2
+   },
+   "handFinish": {
+    "EXPERT": "smooth",
+    "MASTER": "smooth"
+   }
+  },
+  "battle_5": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-battle-5.mp3",
+   "chartRevision": 40,
+   "audioSha256": "a911ffe142ba9f4a1eaa28f357ebccac0ee00213a9837c78ef2f63b2450a1924",
+   "durationMs": 251904,
+   "analyzedTiming": {
+    "bpm": 170.001,
+    "beatZeroMs": 423.9,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
+  },
+  "battle_5_short": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-battle-5-short.mp3",
+   "chartRevision": 40,
+   "audioSha256": "7fc06521006765125ad1c5986f200218c73d93715da9fe99c0ac05ba3e557db9",
+   "durationMs": 147360,
+   "analyzedTiming": {
+    "bpm": 169.999,
+    "beatZeroMs": 423.6,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
+  },
+  "zenbu_hissatsuwaza": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-zenbu-hissatsuwaza.mp3",
+   "chartRevision": 40,
+   "audioSha256": "5b91503c17430b97e9689efa49e290b88bdf3c9736fe5484013bfc537996e852",
+   "durationMs": 118032,
+   "analyzedTiming": {
+    "bpm": 193.367,
+    "beatZeroMs": 1236.1,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   },
+   "chartIntensity": "mild",
+   "sustainScale": {
+    "EXPERT": 0.2,
+    "HELL": 0.6
+   },
+   "chartIntensityByDifficulty": {
+    "HELL": "extreme"
+   }
+  },
+  "kimimachi_loop": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-kimimachi-loop.mp3",
+   "chartRevision": 40,
+   "audioSha256": "1be296a6cdb3e39c29dab23cf2b4f974be446ec21cd8bfa70909714d7b62c7d4",
+   "durationMs": 161952,
+   "analyzedTiming": {
+    "bpm": 166.649,
+    "beatZeroMs": 764.8,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "sustainScale": {
+    "MASTER": 0.7
+   },
+   "chartIntensityByDifficulty": {
+    "HARD": "mild",
+    "EXPERT": "mild",
+    "MASTER": "strong",
+    "HELL": "extreme"
+   }
+  },
+  "brand_new_sky": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-brand-new-sky.mp3",
+   "chartIntensity": "strong",
+   "handFinish": {
+    "EXPERT": "smooth",
+    "MASTER": "smooth"
+   },
+   "chartIntensityByDifficulty": {
+    "EXPERT": "mild"
+   },
+   "chartRevision": 40,
+   "audioSha256": "b93b1a67de51752680cf010fd542a57512f07f9943180debc103b4718e56150f",
+   "durationMs": 150024,
+   "analyzedTiming": {
+    "bpm": 146.143,
+    "beatZeroMs": 438.1,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
+  },
+  "kiss_mystery": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-kiss-mystery.mp3",
+   "chartRevision": 42,
+   "audioSha256": "4decd41ac6c2a53329733202f3aa46f3d60acc0e5f2b0a9f498ebc53a00475b8",
+   "durationMs": 305816,
+   "analyzedTiming": {
+    "bpm": 112.01,
+    "beatZeroMs": 2245,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "chartIntensity": "strong"
+  },
+  "kiss_mystery_short": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-kiss-mystery-short.mp3",
+   "chartRevision": 42,
+   "audioSha256": "104ce98f9f901d9c98380a7773a9747ff9da093f8161f7a145679a7685897fe7",
+   "durationMs": 163474,
+   "analyzedTiming": {
+    "bpm": 112.01,
+    "beatZeroMs": 2245,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "chartIntensity": "strong"
+  },
+  "dear_santa": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-dear-santa.mp3",
+   "chartRevision": 42,
+   "audioSha256": "1d5245547349348b902b8b6edcca8c34fe795f8e7afa25e0d103e5a9a0985139",
+   "durationMs": 218906,
+   "analyzedTiming": {
+    "bpm": 200.01,
+    "beatZeroMs": 2799,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
+  },
+  "dear_santa_short": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-dear-santa-short.mp3",
+   "chartRevision": 42,
+   "audioSha256": "5cc7bd38da681f0e292e480bab9423a965be07d7c117feef87f18ec41474ccae",
+   "durationMs": 88973,
+   "analyzedTiming": {
+    "bpm": 200.01,
+    "beatZeroMs": 2799,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "sustainScale": {
+    "EXPERT": 0.7,
+    "MASTER": 0.7
+   }
+  },
+  "winter_fall": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-winter-fall.mp3",
+   "chartRevision": 42,
+   "audioSha256": "7ba38a0b28566ca56740b3b28f2dd37ed869c2afabbc883f0aeef18f3ed7e482",
+   "durationMs": 291866,
+   "analyzedTiming": {
+    "bpm": 166.09,
+    "beatZeroMs": 2010,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "chartIntensity": "strong"
+  },
+  "winter_fall_short": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-winter-fall-short.mp3",
+   "chartRevision": 42,
+   "audioSha256": "619d095a922aaa58a890f43b0afc17cd68c624692e3a835a237d8177f9a32d22",
+   "durationMs": 106449,
+   "analyzedTiming": {
+    "bpm": 166.09,
+    "beatZeroMs": 2010,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "chartIntensity": "strong"
+  },
+  "three_y_three_s": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-three-y-three-s.mp3",
+   "chartRevision": 42,
+   "audioSha256": "904d756451648ed32f907d5b4ef3b05ced2dbdd6e8205c3035802069e612bc75",
+   "durationMs": 125016,
+   "analyzedTiming": {
+    "bpm": 190.981,
+    "beatZeroMs": 1010.4,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
   }
+ }
 }

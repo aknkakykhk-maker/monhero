@@ -470,7 +470,7 @@
   "three_y_three_s/normal": "0f3d5fada20bfdc2",
   "three_y_three_s/hard": "5a02742762061eab",
   "three_y_three_s/expert": "309575961f509963",
-  "three_y_three_s/master": "212692f414353593",
+  "three_y_three_s/master": "8aa209659f7b1b6c",
   "zenbu_hissatsuwaza/easy": "07f646677627ba53",
   "zenbu_hissatsuwaza/normal": "1d1fcd2a2e216f28",
   "zenbu_hissatsuwaza/hard": "1a984063bd072fb0",
@@ -1380,6 +1380,13 @@
     "three_y_three_s/expert",
     "three_y_three_s/master",
     "three_y_three_s/hell"
+   ]
+  },
+  {
+   "at": "2026-11-28 18:41",
+   "reason": "新曲 3y3s を公開(MASTER の見分けられない終点フリックを外した)",
+   "changed": [
+    "three_y_three_s/master"
    ]
   }
  ]
