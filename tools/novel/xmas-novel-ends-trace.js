@@ -111,7 +111,7 @@ const run = (side, route) => {
     const res = E.xmasNovelAnswer(S, st.cur, row, pick, seen);
     let c = res.cur; (res.replies || []).forEach((r) => { push(r, st.cur.scene); c = E.xmasNovelApplyRow(c, r); });
     if (res.then === 'retry') { st = E.xmasNovelSettle(S, c, SEEN); continue; }
-    if (res.then && res.then.to) st = E.xmasNovelSettle(S, E.xmasNovelJump(S, c, res.then.to), SEEN);
+    if (res.then && res.then.to) st = E.xmasNovelSettle(S, E.xmasNovelJump(S, c, res.then.to, SEEN), SEEN);
     else st = E.xmasNovelStep(S, { ...c }, SEEN);
   }
   return { lines, end: null, err: '長すぎて止めた' };
@@ -132,6 +132,14 @@ const rowCondCheck = () => {
   if (!a.row || a.row.id !== 'AZZ0') bad.push('真グッドのあとなのに、C1-1 の最後に足した選択が出ない');
   if (b.row && b.row.id === 'AZZ0') bad.push('真グッドの前なのに、C1-1 の最後に足した選択が出た');
   if (c.row && c.row.id === 'AZZ0') bad.push('見たエンドを渡さないのに、足した選択が出た(今までどおりの動きのはず)');
+  // 選択肢の行き先(to)に、場面の条件つきの場面を置いたとき(xmasNovelJump)。条件を満たしていれば、その場面へ飛ぶ
+  //   分かれた兄弟(C98-1a は真グッドのあと・C98-1b はそれ以外)へ飛ぶとき、条件を満たせば C98-1a、満たさなければ C98-1b
+  T.scenes.push({ id: 'C98-1a', chapter: 'END', title: 'ためし', cond: { any: [{ all: [{ k: 'end_G', op: '=', v: 1 }] }] }, bg: null, next: null, rows: [{ id: 'C98-1a-1', t: 'band', x: 'ためし' }] });
+  T.scenes.push({ id: 'C98-1b', chapter: 'END', title: 'ためし', cond: { any: [{ all: [{ k: 'end_G', op: '=', v: 0 }] }] }, bg: null, next: null, rows: [{ id: 'C98-1b-1', t: 'band', x: 'ためし' }] });
+  const j1 = E.xmasNovelJump(T, at, 'C98-1a', { endings: ['END-G'], read: [] });
+  const j2 = E.xmasNovelJump(T, at, 'C98-1a');
+  if (j1.scene !== 'C98-1a') bad.push(`真グッドのあとなのに、条件つきの飛び先の場面 C98-1a へ飛ばない(${j1.scene})`);
+  if (j2.scene !== 'C98-1b') bad.push(`見たエンドを渡さないときは、今までどおり C98-1b のはず(${j2.scene})`);
   return bad;
 };
 const NAME = { atsu: 'あつ派', sorashido: 'ソラシド派' };
