@@ -25,7 +25,7 @@ const RHYTHM_BUDDY_CONVO_RULES = Object.freeze([
   { kind: 'hardTalk', re: /(難しい|むずかしい|むずい|ムズ|きつい|キツ|無理|むり)/ },
   { kind: 'easyTalk', re: /(簡単|かんたん|楽勝|らくしょう|余裕|よゆう|ちょろい)/ },
   { kind: 'replyDrop', re: /(ドンマイ|どんまい|惜しい|おしい|残念|ざんねん)/ },
-  { kind: 'replyAgain', re: /(もう一回|もういっかい|もう1回|もう一度|次いこう|つぎいこう|もっかい)/ },
+  { kind: 'replyAgain', re: /(もう一回|もう1回|もういっかい|もう一度|もう1度|次いこう|つぎいこう|もっかい)/ }, // 人が打つ言葉は漢数字も算用数字も拾う(r1126-080 で判定の語まで数字になっていた)
   { kind: 'replyWait', re: /(待って|まって|ちょっと待|ちょっとまっ|少々|準備中)/ },
   { kind: 'cheer', re: /(がんばれ|頑張れ|がんばろ|頑張ろ|ファイト|いくぞ|行くぞ|やるぞ|気合|きあい|任せた|まかせた)/ },
   { kind: 'challenge', re: /(勝負|対決|負けない|勝つ|勝てる|ライバル)/ },
@@ -172,7 +172,7 @@ const RHYTHM_BUDDY_CONVO_BASE = ({
       clingy: ['{who}さんがいるから元気〜!', 'ねぇ、気にかけてくれてうれしい…'], smart: ['体調は{mood}と分析しています', '良好です。{who}さんは?'],
       serious: ['はい、{mood}です!', '万全に整えてきました'], proud: ['{mood}に決まってるでしょ', '私に不調なんてないわ'],
       worrier: ['{mood}…だと思う、たぶん…', '心配してくれてありがとう…'], stubborn: ['{mood}だが、問題ない', '調子など関係ない'],
-      easygoing: ['{mood}〜、のんびり〜', 'ぼちぼちだよ〜'], fiery: ['{mood}!でも燃えてるぞ!', 'いつでも熱いぞ!'], cool: ['{mood}。問題ない', '…いつもどおりだよ'], fickle: ['{mood}…いや、どうかな', '今日の気分は{mood}かも'], mellow: ['{mood}ですよ、ふふ', 'おかげさまで、元気です'], hasty: ['{mood}!はやく遊ぼ!', '元気!だから次!'], competitive: ['{mood}!勝てる気がする!', '今日は負ける気がしない!'], showoff: ['天才的に{mood}〜!', '調子の波、いま上のほう〜!'], shy: ['…{mood}、だよ', '…うん、まあまあ'], hardworker: ['{mood}!今日も練習する!', '毎日続けてるから元気!'], romantic: ['{mood}…素敵な一日だから', '月がきれいで、心も軽いよ'],
+      easygoing: ['{mood}〜、のんびり〜', 'ぼちぼちだよ〜'], fiery: ['{mood}!でも燃えてるぞ!', 'いつでも熱いぞ!'], cool: ['{mood}。問題ない', '…いつもどおりだよ'], fickle: ['{mood}…いや、どうかな', '今日の気分は{mood}かも'], mellow: ['{mood}ですよ、ふふ', 'おかげさまで、元気です'], hasty: ['{mood}!はやく遊ぼ!', '元気!だから次!'], competitive: ['{mood}!勝てる気がする!', '今日は負ける気がしない!'], showoff: ['天才的に{mood}〜!', '調子の波、いま上のほう〜!'], shy: ['…{mood}、だよ', '…うん、まあまあ'], hardworker: ['{mood}!今日も練習する!', '毎日続けてるから元気!'], romantic: ['{mood}…素敵な1日だから', '月がきれいで、心も軽いよ'],
     },
     mood: { great: ['最高にいい!!{who}さんは?'], good: ['いい感じ!'], normal: ['ふつうだよ'], bad: ['ちょっと不機嫌…'], awful: ['…聞かないで'] },
   },
@@ -218,7 +218,7 @@ const RHYTHM_BUDDY_CONVO_BASE = ({
     common: ['{fav}が得意!', '得意なのは{fav}かな', '{fav}はいっぱい遊んだよ!', 'まだ得意な曲はないかも', 'いろんな曲を遊びたいな!'],
     trait: {
       jester: ['{fav}で笑いを取れるよ!'], brave: ['{fav}なら負けない!'], clingy: ['{fav}がすき〜、いっしょにやろ?'], smart: ['統計では{fav}が最良です'],
-      serious: ['{fav}を練習しています'], proud: ['{fav}は完璧よ'], worrier: ['{fav}ならなんとか…'], stubborn: ['{fav}以外は認めん'], easygoing: ['{fav}がおちつく〜'], fiery: ['{fav}なら一番燃える!'], cool: ['{fav}なら問題ない'], fickle: ['{fav}が好き…今日はね'], mellow: ['{fav}が、落ち着きますね'], hasty: ['{fav}がいい!サクッといける!'], competitive: ['{fav}なら誰にも負けたくない!'], showoff: ['{fav}なら天才だよ〜!'], shy: ['…{fav}、好き'], hardworker: ['{fav}、たくさん練習した!'], romantic: ['{fav}は夢みたいに素敵なの'],
+      serious: ['{fav}を練習しています'], proud: ['{fav}は完璧よ'], worrier: ['{fav}ならなんとか…'], stubborn: ['{fav}以外は認めん'], easygoing: ['{fav}がおちつく〜'], fiery: ['{fav}なら1番燃える!'], cool: ['{fav}なら問題ない'], fickle: ['{fav}が好き…今日はね'], mellow: ['{fav}が、落ち着きますね'], hasty: ['{fav}がいい!サクッといける!'], competitive: ['{fav}なら誰にも負けたくない!'], showoff: ['{fav}なら天才だよ〜!'], shy: ['…{fav}、好き'], hardworker: ['{fav}、たくさん練習した!'], romantic: ['{fav}は夢みたいに素敵なの'],
     },
     mood: { great: ['{fav}!!なんど叩いても楽しい!!'], good: ['{fav}がいい感じ!'], normal: [], bad: ['{fav}ならできる…'], awful: [] },
   },
@@ -227,7 +227,7 @@ const RHYTHM_BUDDY_CONVO_BASE = ({
     common: ['{who}さんの好きな曲は?', '{who}さんの得意な曲、教えて!', '{who}さんはどの曲が好き?', '{who}さんのおすすめは?'],
     trait: {
       jester: ['{who}さんの十八番は?'], brave: ['{who}さんの勝負曲は?'], clingy: ['{who}さんの好きな曲、知りたいな〜'], smart: ['{who}さんの得意曲を伺っても?'],
-      serious: ['{who}さんの得意な曲は?'], proud: ['{who}さんの自慢の曲は?'], worrier: ['{who}さんの得意な曲…あるかな?'], stubborn: ['{who}さんの曲選びの基準は?'], easygoing: ['{who}さんは何がすき〜?'], fiery: ['{who}さんの一番燃える曲は?'], cool: ['{who}さんは、何が得意?'], fickle: ['{who}さんの好きな曲、今日はどれ?'], mellow: ['{who}さんのお好きな曲は?'], hasty: ['{who}さんの好きな曲!はやく!'], competitive: ['{who}さんの得意曲は?勝負しよう!'], showoff: ['{who}さんのノれる曲は〜?'], shy: ['…{who}さんは、どの曲が好き…?'], hardworker: ['{who}さんの得意曲、教えて!'], romantic: ['{who}さんの好きな旋律は?'],
+      serious: ['{who}さんの得意な曲は?'], proud: ['{who}さんの自慢の曲は?'], worrier: ['{who}さんの得意な曲…あるかな?'], stubborn: ['{who}さんの曲選びの基準は?'], easygoing: ['{who}さんは何がすき〜?'], fiery: ['{who}さんの1番燃える曲は?'], cool: ['{who}さんは、何が得意?'], fickle: ['{who}さんの好きな曲、今日はどれ?'], mellow: ['{who}さんのお好きな曲は?'], hasty: ['{who}さんの好きな曲!はやく!'], competitive: ['{who}さんの得意曲は?勝負しよう!'], showoff: ['{who}さんのノれる曲は〜?'], shy: ['…{who}さんは、どの曲が好き…?'], hardworker: ['{who}さんの得意曲、教えて!'], romantic: ['{who}さんの好きな旋律は?'],
     },
     mood: { great: [], good: [], normal: [], bad: [], awful: [] },
   },
@@ -272,7 +272,7 @@ const RHYTHM_BUDDY_CONVO_BASE = ({
     common: ['{me}だよ!', '{me}っていうんだ!', '{me}です、よろしくね!', 'ぼくは{me}!', '{me}!おぼえてね!'],
     trait: {
       jester: ['{me}!覚えてね、テストに出るよ!'], brave: ['{me}だ!おぼえとけ!'], clingy: ['{me}だよ〜、呼んで呼んで!'], smart: ['{me}と申します'],
-      serious: ['{me}と申します。よろしくお願いします'], proud: ['{me}よ。覚えておきなさい'], worrier: ['{me}…だよ。おぼえにくい…?'], stubborn: ['{me}だ。二度は言わん'], easygoing: ['{me}〜、よろしく〜'], fiery: ['{me}だ!熱いのが取りえ!'], cool: ['{me}。よろしく'], fickle: ['{me}だよ。今日の気分は上々'], mellow: ['{me}です。よろしくお願いしますね'], hasty: ['{me}!はい、覚えた?次!'], competitive: ['{me}だ!覚えとけよ!'], showoff: ['{me}だよ〜!覚えてね〜!'], shy: ['…{me}、です'], hardworker: ['{me}!練習大好き、よろしく!'], romantic: ['{me}。星の名前みたいでしょ'],
+      serious: ['{me}と申します。よろしくお願いします'], proud: ['{me}よ。覚えておきなさい'], worrier: ['{me}…だよ。おぼえにくい…?'], stubborn: ['{me}だ。2度は言わん'], easygoing: ['{me}〜、よろしく〜'], fiery: ['{me}だ!熱いのが取りえ!'], cool: ['{me}。よろしく'], fickle: ['{me}だよ。今日の気分は上々'], mellow: ['{me}です。よろしくお願いしますね'], hasty: ['{me}!はい、覚えた?次!'], competitive: ['{me}だ!覚えとけよ!'], showoff: ['{me}だよ〜!覚えてね〜!'], shy: ['…{me}、です'], hardworker: ['{me}!練習大好き、よろしく!'], romantic: ['{me}。星の名前みたいでしょ'],
     },
     mood: { great: [], good: [], normal: [], bad: [], awful: [] },
   },
@@ -326,7 +326,7 @@ const RHYTHM_BUDDY_CONVO_BASE = ({
     common: ['だいじょうぶ?そばにいるよ', 'つらいときは休んでいいよ', 'ぼくがついてるよ', 'はなしてくれてありがとう', 'きっとよくなるよ'],
     trait: {
       jester: ['元気出して。変な顔するから!'], brave: ['ついてこい!いっしょに立ちあがろう!'], clingy: ['ぎゅってするね…ぎゅっ'], smart: ['お話を伺います。無理せずどうぞ'],
-      serious: ['お力になれれば幸いです'], proud: ['私がついてるのよ。大丈夫'], worrier: ['わ、わたしまで悲しくなる…'], stubborn: ['乗りこえられる。俺が保証する'], easygoing: ['ゆっくりいこ〜、ここにいるよ〜'], fiery: ['元気を分けるぞ!全力で!'], cool: ['…話、聞くよ'], fickle: ['気分は変わるものだよ'], mellow: ['大丈夫ですよ、ここにいますからね'], hasty: ['いっしょに一曲やろ!すぐ!'], competitive: ['悔しいなら、いっしょに巻き返そう!'], showoff: ['元気出して〜!ノリでなんとかなる〜!'], shy: ['…そばに、いるね'], hardworker: ['話してくれたら、力になる!'], romantic: ['夜が明けるまで、そばにいるよ'],
+      serious: ['お力になれれば幸いです'], proud: ['私がついてるのよ。大丈夫'], worrier: ['わ、わたしまで悲しくなる…'], stubborn: ['乗りこえられる。俺が保証する'], easygoing: ['ゆっくりいこ〜、ここにいるよ〜'], fiery: ['元気を分けるぞ!全力で!'], cool: ['…話、聞くよ'], fickle: ['気分は変わるものだよ'], mellow: ['大丈夫ですよ、ここにいますからね'], hasty: ['いっしょに1曲やろ!すぐ!'], competitive: ['悔しいなら、いっしょに巻き返そう!'], showoff: ['元気出して〜!ノリでなんとかなる〜!'], shy: ['…そばに、いるね'], hardworker: ['話してくれたら、力になる!'], romantic: ['夜が明けるまで、そばにいるよ'],
     },
     mood: { great: [], good: [], normal: [], bad: [], awful: [] },
   },
@@ -380,7 +380,7 @@ const RHYTHM_BUDDY_CONVO_BASE = ({
     common: ['よゆうだね!', 'すごい自信!', 'いいね、そのいきおい!', 'ぼくも負けない!', '次は難しい曲もやろう!'],
     trait: {
       jester: ['よゆうなら笑いも取れるね!'], brave: ['ならもっと上の難易度に挑め!'], clingy: ['すごーい!ほめて〜'], smart: ['余裕があるなら上を目指しましょう'],
-      serious: ['油断は禁物です'], proud: ['ふふ、私もよ'], worrier: ['すごい…うらやましい…'], stubborn: ['ならばもう一段上へだ'], easygoing: ['よゆうだね〜'], fiery: ['なら次は全力で上へ!'], cool: ['なら上の難易度だね'], fickle: ['よゆうの日もあるよね'], mellow: ['あら、たのもしいですね'], hasty: ['じゃあ次!もっと上!'], competitive: ['なら、もっと上で勝負だ!'], showoff: ['さっすが〜!こっちもノッてく〜!'], shy: ['…すごいね'], hardworker: ['なら一つ上の難易度で練習だ!'], romantic: ['軽やかで、素敵だね'],
+      serious: ['油断は禁物です'], proud: ['ふふ、私もよ'], worrier: ['すごい…うらやましい…'], stubborn: ['ならばもう一段上へだ'], easygoing: ['よゆうだね〜'], fiery: ['なら次は全力で上へ!'], cool: ['なら上の難易度だね'], fickle: ['よゆうの日もあるよね'], mellow: ['あら、たのもしいですね'], hasty: ['じゃあ次!もっと上!'], competitive: ['なら、もっと上で勝負だ!'], showoff: ['さっすが〜!こっちもノッてく〜!'], shy: ['…すごいね'], hardworker: ['なら1つ上の難易度で練習だ!'], romantic: ['軽やかで、素敵だね'],
     },
     mood: { great: ['ぼくも余裕!!'], good: ['いいね!'], normal: [], bad: ['…そうなんだ'], awful: ['…ふーん'] },
   },
@@ -463,7 +463,7 @@ const RHYTHM_BUDDY_CONVO_BASE = ({
     common: ['{who}さんはおまかせなんだ!', '{who}さん、おまかせか〜', '{who}さんのおまかせ、たのしみ!', '何がくるかな、{who}さん!', 'おまかせもいいね、{who}さん!'],
     trait: {
       jester: ['{who}さん、おまかせとはお目が高い!'], brave: ['{who}さん、運まかせか!嫌いじゃない!'], clingy: ['{who}さんといっしょならなんでもいい〜'], smart: ['{who}さん、確率に任せるのも一手です'],
-      serious: ['{who}さん、おまかせですね。了解です'], proud: ['{who}さん、私が選んであげてもいいわよ'], worrier: ['{who}さん、むずかしい曲がきたらどうしよう…'], stubborn: ['{who}さん、決めきれんのか'], easygoing: ['{who}さん、おまかせでいいよね〜'], fiery: ['{who}さん、おまかせか!なんでも全力だ!'], cool: ['{who}さん、おまかせか。いいよ'], fickle: ['{who}さん、おまかせ大好きかも'], mellow: ['{who}さん、おまかせ、楽しみですね'], hasty: ['{who}さん、おまかせ!はやい!いいね!'], competitive: ['{who}さん、おまかせ?何が来ても勝つ!'], showoff: ['{who}さん、おまかせ〜!何でもノれる〜!'], shy: ['…{who}さん、おまかせ…どきどき'], hardworker: ['{who}さん、おまかせ!どの曲も練習だ!'], romantic: ['{who}さん、運命の一曲だね'],
+      serious: ['{who}さん、おまかせですね。了解です'], proud: ['{who}さん、私が選んであげてもいいわよ'], worrier: ['{who}さん、むずかしい曲がきたらどうしよう…'], stubborn: ['{who}さん、決めきれんのか'], easygoing: ['{who}さん、おまかせでいいよね〜'], fiery: ['{who}さん、おまかせか!なんでも全力だ!'], cool: ['{who}さん、おまかせか。いいよ'], fickle: ['{who}さん、おまかせ大好きかも'], mellow: ['{who}さん、おまかせ、楽しみですね'], hasty: ['{who}さん、おまかせ!はやい!いいね!'], competitive: ['{who}さん、おまかせ?何が来ても勝つ!'], showoff: ['{who}さん、おまかせ〜!何でもノれる〜!'], shy: ['…{who}さん、おまかせ…どきどき'], hardworker: ['{who}さん、おまかせ!どの曲も練習だ!'], romantic: ['{who}さん、運命の1曲だね'],
     },
     mood: { great: [], good: [], normal: [], bad: [], awful: [] },
   },
@@ -550,13 +550,13 @@ const RHYTHM_BUDDY_CONVO_BASE = ({
   // 何度も来てくれた人へのあいさつ({plays}=遊んだ回数)
   bondHello: {
     common: ['もう{plays}回も遊んだね!', '{plays}回目のライブ、いっしょに楽しもう!', 'いつも呼んでくれてありがとう!', '何度もいっしょでうれしいな!'],
-    trait: { jester: ['{plays}回も呼ばれるなんて、人気者だね!'], brave: ['{plays}回、戦ってきた戦友だな!'], clingy: ['{plays}回もいっしょ!うれしい〜!'], smart: ['累計{plays}回の演奏ですね'], serious: ['{plays}回もお声がけいただき光栄です'], proud: ['{plays}回も私を選ぶなんて、見る目があるわ'], worrier: ['{plays}回もいっしょ…ありがとう…'], stubborn: ['{plays}回目か。悪くない'], easygoing: ['{plays}回目〜、もう慣れっこだね〜'], fiery: ['{plays}回も!まだまだ燃えるぞ!'], cool: ['{plays}回。長い付き合いだね'], fickle: ['{plays}回?気づいたらそんなに'], mellow: ['{plays}回も、ありがとうございます'], hasty: ['{plays}回!あっという間!'], competitive: ['{plays}回か!まだまだ上をめざす!'], showoff: ['{plays}回も!ご指名ありがと〜!'], shy: ['…{plays}回も…うれしい'], hardworker: ['{plays}回!一回一回が積み重ね!'], romantic: ['{plays}回…夢みたいな日々だね'] },
+    trait: { jester: ['{plays}回も呼ばれるなんて、人気者だね!'], brave: ['{plays}回、戦ってきた戦友だな!'], clingy: ['{plays}回もいっしょ!うれしい〜!'], smart: ['累計{plays}回の演奏ですね'], serious: ['{plays}回もお声がけいただき光栄です'], proud: ['{plays}回も私を選ぶなんて、見る目があるわ'], worrier: ['{plays}回もいっしょ…ありがとう…'], stubborn: ['{plays}回目か。悪くない'], easygoing: ['{plays}回目〜、もう慣れっこだね〜'], fiery: ['{plays}回も!まだまだ燃えるぞ!'], cool: ['{plays}回。長い付き合いだね'], fickle: ['{plays}回?気づいたらそんなに'], mellow: ['{plays}回も、ありがとうございます'], hasty: ['{plays}回!あっという間!'], competitive: ['{plays}回か!まだまだ上をめざす!'], showoff: ['{plays}回も!ご指名ありがと〜!'], shy: ['…{plays}回も…うれしい'], hardworker: ['{plays}回!1回1回が積み重ね!'], romantic: ['{plays}回…夢みたいな日々だね'] },
     mood: { great: ['{plays}回目!!最高の仲間だね!!'], good: [], normal: [], bad: [], awful: [] },
   },
   // 部屋に入ったとき、遊んだ回数に触れる
   bondJoin: {
     common: ['また呼んでくれてありがとう!', '{plays}回目の登場だよ!', 'おなじみのメンバーだね!', '今日もよろしくね!{plays}回目!'],
-    trait: { jester: ['{plays}回目のご来場!盛り上げるよ!'], brave: ['{plays}回目、今日も前線は任せろ!'], clingy: ['また呼んでくれた〜!{plays}回目!うれしい〜!'], smart: ['{plays}回目の演奏準備、完了です'], serious: ['{plays}回目、本日もよろしくお願いします'], proud: ['{plays}回目の私に、期待しなさい'], worrier: ['{plays}回目なのに、まだ緊張する…'], stubborn: ['{plays}回目か。今日もやるぞ'], easygoing: ['{plays}回目〜、今日ものんびり〜'], fiery: ['{plays}回目も全力だ!'], cool: ['{plays}回目。いつもどおりいく'], fickle: ['{plays}回目、今日の気分は上々'], mellow: ['{plays}回目ですね、うれしいです'], hasty: ['{plays}回目!はやく始めよ!'], competitive: ['{plays}回目!今日こそ一番だ!'], showoff: ['{plays}回目!今日もノッてくよ〜!'], shy: ['…{plays}回目。少し慣れた'], hardworker: ['{plays}回目!今日も練習あるのみ!'], romantic: ['{plays}回目の、素敵な時間'] },
+    trait: { jester: ['{plays}回目のご来場!盛り上げるよ!'], brave: ['{plays}回目、今日も前線は任せろ!'], clingy: ['また呼んでくれた〜!{plays}回目!うれしい〜!'], smart: ['{plays}回目の演奏準備、完了です'], serious: ['{plays}回目、本日もよろしくお願いします'], proud: ['{plays}回目の私に、期待しなさい'], worrier: ['{plays}回目なのに、まだ緊張する…'], stubborn: ['{plays}回目か。今日もやるぞ'], easygoing: ['{plays}回目〜、今日ものんびり〜'], fiery: ['{plays}回目も全力だ!'], cool: ['{plays}回目。いつもどおりいく'], fickle: ['{plays}回目、今日の気分は上々'], mellow: ['{plays}回目ですね、うれしいです'], hasty: ['{plays}回目!はやく始めよ!'], competitive: ['{plays}回目!今日こそ1番だ!'], showoff: ['{plays}回目!今日もノッてくよ〜!'], shy: ['…{plays}回目。少し慣れた'], hardworker: ['{plays}回目!今日も練習あるのみ!'], romantic: ['{plays}回目の、素敵な時間'] },
     mood: { great: ['{plays}回目!!張り切っていくよ!!'], good: [], normal: [], bad: [], awful: [] },
   },
   // 朝(5〜10時)のあいさつ
@@ -567,7 +567,7 @@ const RHYTHM_BUDDY_CONVO_BASE = ({
   },
   // 昼(11〜16時)のあいさつ
   timeNoon: {
-    common: ['こんにちは!お昼のライブだね!', '昼間のライブ、いいね!', 'こんにちは!ひと休みに一曲どう?', '昼でも夜でも、リズムはいっしょ!'],
+    common: ['こんにちは!お昼のライブだね!', '昼間のライブ、いいね!', 'こんにちは!ひと休みに1曲どう?', '昼でも夜でも、リズムはいっしょ!'],
     trait: { jester: ['こんにちは!昼から笑いをとるぞ!'], brave: ['こんにちは!昼間も全開だ!'], clingy: ['こんにちは〜!お昼もいっしょでうれしい〜!'], smart: ['こんにちは。昼の集中力は高めです'], serious: ['こんにちは、本日もよろしくお願いします'], proud: ['こんにちは。昼の私も輝いてるわよ'], worrier: ['こ、こんにちは…昼でも緊張する…'], stubborn: ['こんにちは。昼でもやるときはやる'], easygoing: ['こんにちは〜、お昼ごはんのあとは眠いね〜'], fiery: ['こんにちは!昼も熱いぞ!'], cool: ['こんにちは。調子は問題ない'], fickle: ['こんにちは。お昼はなんとなく好き'], mellow: ['こんにちは、ごはんは食べましたか?'], hasty: ['こんにちは!昼休み短いし、はやく!'], competitive: ['こんにちは!昼も負けないぞ!'], showoff: ['こんにちは〜!昼もノッてるよ〜!'], shy: ['…こ、こんにちは'], hardworker: ['こんにちは!昼も練習がんばろう!'], romantic: ['こんにちは。空がすみきってるね'] },
     mood: { great: ['こんにちは!!元気いっぱいだよ!!'], good: [], normal: [], bad: [], awful: [] },
   },
@@ -580,7 +580,7 @@ const RHYTHM_BUDDY_CONVO_BASE = ({
   // 深夜(22〜4時)のあいさつ
   timeNight: {
     common: ['こんな夜ふかしに、ありがとう!', '夜ふかしライブ、ひみつっぽいね!', '夜ふかしだね。ほどほどにね!', '静かな夜のライブも、いいね!'],
-    trait: { jester: ['夜ふかしライブ、深夜テンションでいくよ!'], brave: ['夜ふかしか!つき合うぞ!'], clingy: ['こんな時間に呼んでくれてうれしい〜!でも寝てね〜'], smart: ['深夜帯です。睡眠も大切ですよ'], serious: ['夜遅くまでおつかれさまです。無理なさらず'], proud: ['こんな時間まで起きてるなんて、やるじゃない'], worrier: ['こんな時間…明日だいじょうぶ…?'], stubborn: ['夜ふかしか。ほどほどにな'], easygoing: ['ふぁ…もう夜おそいね〜'], fiery: ['こんな時間でも燃えてるぞ!'], cool: ['遅いね。ほどほどに'], fickle: ['夜ふかしの気分かも'], mellow: ['あらあら、夜ふかしさんですね'], hasty: ['夜おそい!はやく一曲やって寝よ!'], competitive: ['こんな時間でも負けないぞ!'], showoff: ['夜ふかし〜!テンション上がる〜!'], shy: ['…夜おそいと、人が少なくて落ち着く'], hardworker: ['夜おそいね!練習はほどほどに!'], romantic: ['月が高いね。夢の時間だ'] },
+    trait: { jester: ['夜ふかしライブ、深夜テンションでいくよ!'], brave: ['夜ふかしか!つき合うぞ!'], clingy: ['こんな時間に呼んでくれてうれしい〜!でも寝てね〜'], smart: ['深夜帯です。睡眠も大切ですよ'], serious: ['夜遅くまでおつかれさまです。無理なさらず'], proud: ['こんな時間まで起きてるなんて、やるじゃない'], worrier: ['こんな時間…明日だいじょうぶ…?'], stubborn: ['夜ふかしか。ほどほどにな'], easygoing: ['ふぁ…もう夜おそいね〜'], fiery: ['こんな時間でも燃えてるぞ!'], cool: ['遅いね。ほどほどに'], fickle: ['夜ふかしの気分かも'], mellow: ['あらあら、夜ふかしさんですね'], hasty: ['夜おそい!はやく1曲やって寝よ!'], competitive: ['こんな時間でも負けないぞ!'], showoff: ['夜ふかし〜!テンション上がる〜!'], shy: ['…夜おそいと、人が少なくて落ち着く'], hardworker: ['夜おそいね!練習はほどほどに!'], romantic: ['月が高いね。夢の時間だ'] },
     mood: { great: ['夜ふかしライブ!!テンション上がる!!'], good: [], normal: [], bad: [], awful: [] },
   },
   // 結果で、自分のビートLvが上がった({lv}=新しいLv)
@@ -616,7 +616,7 @@ const RHYTHM_BUDDY_CONVO_BASE = ({
   // マスモンどうしの和やかなやりとり({mate}=いっしょのマスモン)
   banterFriend: {
     common: ['{mate}といると落ち着くな〜', '{mate}、いっしょでうれしい!', '{mate}、仲良くしようね!', '{mate}とならうまくいきそう!'],
-    trait: { jester: ['{mate}、二人で笑いをとろう!'], brave: ['{mate}、いい仲間だな!'], clingy: ['{mate}〜、ずっとなかよしでいてね〜'], smart: ['{mate}との連携は良好です'], serious: ['{mate}さんとご一緒できて光栄です'], proud: ['{mate}、あなたとなら悪くないわ'], worrier: ['{mate}がいてくれて、ほっとする…'], stubborn: ['{mate}か。頼りにしてるぞ'], easygoing: ['{mate}〜、いっしょにのんびりしよ〜'], fiery: ['{mate}といると力がわく!'], cool: ['{mate}となら問題ない'], fickle: ['{mate}といると気分がいい'], mellow: ['{mate}さんと一緒で、うれしいです'], hasty: ['{mate}、いっしょにサクッといこ!'], competitive: ['{mate}、組んでも負けないぞ!'], showoff: ['{mate}、二人でノリノリいこ〜!'], shy: ['…{mate}といると、落ち着く'], hardworker: ['{mate}、二人でコツコツいこう!'], romantic: ['{mate}と奏でる、二人の旋律'] },
+    trait: { jester: ['{mate}、2人で笑いをとろう!'], brave: ['{mate}、いい仲間だな!'], clingy: ['{mate}〜、ずっとなかよしでいてね〜'], smart: ['{mate}との連携は良好です'], serious: ['{mate}さんとご一緒できて光栄です'], proud: ['{mate}、あなたとなら悪くないわ'], worrier: ['{mate}がいてくれて、ほっとする…'], stubborn: ['{mate}か。頼りにしてるぞ'], easygoing: ['{mate}〜、いっしょにのんびりしよ〜'], fiery: ['{mate}といると力がわく!'], cool: ['{mate}となら問題ない'], fickle: ['{mate}といると気分がいい'], mellow: ['{mate}さんと一緒で、うれしいです'], hasty: ['{mate}、いっしょにサクッといこ!'], competitive: ['{mate}、組んでも負けないぞ!'], showoff: ['{mate}、2人でノリノリいこ〜!'], shy: ['…{mate}といると、落ち着く'], hardworker: ['{mate}、2人でコツコツいこう!'], romantic: ['{mate}と奏でる、2人の旋律'] },
     mood: { great: ['{mate}!!大好き!!いっしょに叩こう!!'], good: [], normal: [], bad: [], awful: [] },
   },
   // ほかの人の結果で、ミスが多め({who}=その人)

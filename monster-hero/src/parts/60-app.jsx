@@ -5993,7 +5993,7 @@ function MonsterHeroGame() {
     if (link.kind === 'beat') { mhBeatRoomLinkRequest(link.code); void openRhythmDemo({ to: 'RHYTHM_MULTI' }); }
     else if (link.kind === 'card') {
       if (cardBattleEntryVisible && cardPvpOpen()) { CARD_PVP_JOIN.request(link.code); setCardOrigin('home'); setGameState('CARD_TOP'); }
-      else setRoomLinkNotice('MFバトルカードのマルチは、まだ開いていません。遊べるようになったら、もう一度リンクを開いてください');
+      else setRoomLinkNotice('MFバトルカードのマルチは、まだ開いていません。遊べるようになったら、もう1度リンクを開いてください');
     }
   }, [pendingRoomLink, pendingFriendCode, bootPhase, gameState, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, rhythmEventStoryPending, updateGuideQueue]);
   // この起動で一度でも流し始めた会話。二度目を並べないための歯止め(下の useEffect の説明を参照)。
@@ -7343,6 +7343,8 @@ function MonsterHeroGame() {
       if (!btn) return;
       // モンヒロビートの演奏エリアの中は鳴らさない(ノーツの音と重ねない。今までもここは鳴っていなかった)
       if (btn.closest('[data-rhythm-play-area]')) return;
+      // 事件簿(ミステリーノベル)の中は、明るい「ピッ」ではなく低く小さい「コトッ」(手持ちの trainingDice)。表の口(fgSe)から鳴らす(r1126-093 追記1)
+      if (btn.closest('[data-xmas-novel]') && Audio_.fgSe && typeof Audio_.fgSe.trainingDice === 'function') { Audio_.fgSe.trainingDice(); return; }
       // ボタンの音は、裏のバトルの音と別の口(uiTap)で鳴らす。モンヒロビートの画面・助手ライフの裏クイック中は
       // 効果音の口(seBus)を0にしているので、se/fgSe では鳴らなかった(2026-11-24 r1119-164)
       if (Audio_.uiTap) { Audio_.uiTap(); return; }
@@ -8823,7 +8825,7 @@ function MonsterHeroGame() {
       { key:'mh_masu_mons', before:currentMons, next },
     ], storeGet, storeSet);
     if (!saved) {
-      window.alert('一括設定を保存できませんでした。もう一度お試しください。');
+      window.alert('一括設定を保存できませんでした。もう1度お試しください。');
       return false;
     }
     masuMonsRef.current = next;
@@ -8841,7 +8843,7 @@ function MonsterHeroGame() {
       { key:AUTO_SETTINGS_KEY, before:autoSettings, next:normalized },
     ], storeGet, storeSet);
     if (!saved) {
-      window.alert('AUTO設定を保存できませんでした。もう一度お試しください。');
+      window.alert('AUTO設定を保存できませんでした。もう1度お試しください。');
       return false;
     }
     setAutoSettings(normalized);
@@ -10535,7 +10537,7 @@ function MonsterHeroGame() {
       { key:'mh_masu_mons', before, next },
     ], storeGet, storeSet);
     if (!saved) {
-      window.alert('自動限界突破の設定を保存できませんでした。もう一度お試しください。');
+      window.alert('自動限界突破の設定を保存できませんでした。もう1度お試しください。');
       return null;
     }
     masuMonsRef.current = next;
@@ -10606,7 +10608,7 @@ function MonsterHeroGame() {
       Audio_.se.tap();
       return reset;
     } catch {
-      setTranscendResetError('リセットを保存できませんでした。もう一度お試しください。');
+      setTranscendResetError('リセットを保存できませんでした。もう1度お試しください。');
       return null;
     } finally {
       transcendResetProcessingRef.current = false;
@@ -10913,7 +10915,7 @@ function MonsterHeroGame() {
       setTimeout(()=>{ setRebirthAnimation(null); setRebirthSelectedId(null); setRebirthSkillKey(null); rebirthProcessingRef.current=false; }, 4100);
     } catch {
       rebirthProcessingRef.current=false;
-      setRebirthError('限界突破のデータを保存できませんでした。もう一度お試しください。');
+      setRebirthError('限界突破のデータを保存できませんでした。もう1度お試しください。');
     }
   };
   // 超越: レベルはそのままで、Lv上限だけ400→500へ伸ばす。
@@ -10944,7 +10946,7 @@ function MonsterHeroGame() {
       setTimeout(()=>{ setTranscendAnimation(null); setTranscendSelectedId(null); transcendProcessingRef.current=false; }, prefersReducedMotion()?900:4400);
     } catch {
       transcendProcessingRef.current=false;
-      setTranscendError('超越のデータを保存できませんでした。もう一度お試しください。');
+      setTranscendError('超越のデータを保存できませんでした。もう1度お試しください。');
     }
   };
   // 魂格進化: 現Lvはそのまま、次の魂格段階とLv上限だけを1段階進める。
@@ -11039,7 +11041,7 @@ function MonsterHeroGame() {
       setTranscendExchangeError('');
       return applied;
     } catch {
-      setTranscendExchangeError('交換を保存できませんでした。もう一度お試しください。');
+      setTranscendExchangeError('交換を保存できませんでした。もう1度お試しください。');
       return null;
     } finally {
       transcendProcessingRef.current = false;
@@ -11061,7 +11063,7 @@ function MonsterHeroGame() {
         beforeMasuMons, beforeOwnedItems, nextMasuMons, result.nextOwnedItems, storeGet, storeSet
       );
       if (!saved) {
-        setTranscendFruitError('超越の実を保存できませんでした。所持数を確認して、もう一度お試しください。');
+        setTranscendFruitError('超越の実を保存できませんでした。所持数を確認して、もう1度お試しください。');
         return null;
       }
       masuMonsRef.current = nextMasuMons; ownedItemsRef.current = result.nextOwnedItems;
@@ -11071,7 +11073,7 @@ function MonsterHeroGame() {
       await saveMissionProgress('itemUse',Math.max(1,Math.floor(Number(amount)||1)));
       return result;
     } catch {
-      setTranscendFruitError('超越の実を保存できませんでした。所持数を確認して、もう一度お試しください。');
+      setTranscendFruitError('超越の実を保存できませんでした。所持数を確認して、もう1度お試しください。');
       return null;
     } finally {
       transcendFruitProcessingRef.current = false;
@@ -11229,7 +11231,7 @@ function MonsterHeroGame() {
   // 見積もりと同じ buildMasuOffering を、実行の瞬間の最新の所持数で計算し直して確定する
   // (画面の見積もりが古くても、足りない状態で成立させない)。保存に失敗したら何も減らさない。
   const executeMasuOffering = async ({ masuId, mode, amount, autoBreakthrough }) => {
-    if (offeringProcessingRef.current) return { ok:false, error:'いま手続き中です。少し待ってからもう一度押してください。' };
+    if (offeringProcessingRef.current) return { ok:false, error:'いま手続き中です。少し待ってからもう1度押してください。' };
     const masu = masuMonsRef.current.find(m=>String(m.id)===String(masuId));
     const plan = buildMasuOffering({ masu, gold, ownedItems:ownedItemsRef.current, lockedIds:rebirthLockedMasuIds, mode, amount, autoBreakthrough });
     if (!plan.ok) return { ok:false, error:plan.reason || 'お布施の条件を満たしていません。' };
@@ -11249,7 +11251,7 @@ function MonsterHeroGame() {
       Audio_.se.levelUp();
       return { ok:true, plan };
     } catch {
-      return { ok:false, error:'お布施のデータを保存できませんでした。もう一度お試しください。' };
+      return { ok:false, error:'お布施のデータを保存できませんでした。もう1度お試しください。' };
     } finally {
       offeringProcessingRef.current = false;
     }
@@ -11277,7 +11279,7 @@ function MonsterHeroGame() {
       setTimeout(()=>{ setReincarnateAnimation(null); setReincarnateSelectedId(null); setReincarnateSkillKey(null); reincarnateProcessingRef.current=false; }, 4100);
     } catch {
       reincarnateProcessingRef.current=false;
-      setReincarnateError('転生データを保存できませんでした。もう一度お試しください。');
+      setReincarnateError('転生データを保存できませんでした。もう1度お試しください。');
     }
   };
   // まとめて転生(2026-10-17)。選んだ子を1回ずつ、1体ずつと同じ計算(buildMasuReincarnationMulti)で順に転生し、
@@ -11307,7 +11309,7 @@ function MonsterHeroGame() {
       return { ok:true, count:result.count, stopReason:result.stopReason };
     } catch {
       reincarnateProcessingRef.current=false;
-      setReincarnateError('転生データを保存できませんでした。どのモンスターも転生していません。もう一度お試しください。');
+      setReincarnateError('転生データを保存できませんでした。どのモンスターも転生していません。もう1度お試しください。');
       return { ok:false };
     }
   };
@@ -11377,7 +11379,7 @@ function MonsterHeroGame() {
       setDonationAnimation(null);
       setDonationResult({ count:result.donated.length, name:result.donated[0]?.name, diamonds: result.diamonds, psyche:result.psyche, gold: result.nextGold });
     } catch (error) {
-      setDonationError('寄付データを保存できませんでした。もう一度お試しください。');
+      setDonationError('寄付データを保存できませんでした。もう1度お試しください。');
     } finally {
       donationProcessingRef.current = false;
       setDonationProcessing(false);
@@ -13024,7 +13026,7 @@ function MonsterHeroGame() {
     await storeSet(RHYTHM_EVENT_STORY_KEY, [], false);
     const seen = normalizeSeenUpdateNoticeIds(await storeGet(UPDATE_NOTICE_SEEN_KEY, [], false));
     await storeSet(UPDATE_NOTICE_SEEN_KEY, seen.filter(id => id !== 'update_notice_rhythm_weekend_cup_v1'), false);
-    window.alert('イベントの会話と告知を未読へ戻しました。開催中に起動すると、もう一度出ます。');
+    window.alert('イベントの会話と告知を未読へ戻しました。開催中に起動すると、もう1度出ます。');
   };
   const debugResetUpdateGuide = async () => {
     const debugIds = new Set(availableUpdateNotices({debug:true}).map(n=>n.id));
@@ -20417,8 +20419,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 画面が増えても表示の作りが枝分かれしないよう、一覧はここにしか書かない
   const rankingRetryButton = (onRetry) => (
     // 「取得に失敗しました」だけでは次にどうすればよいか分からなかったので、ほかの画面の0件表示(ScreenEmpty)と同じ形にする
-    <ScreenEmpty emoji="📡" lines={['ランキングを読み込めませんでした','通信を確かめて、もう一度読み込んでください']}
-      action={<button type="button" onClick={onRetry} className="mh-button mh-button-secondary w-full min-h-[44px] rounded-xl font-black text-[12px] active:scale-[.98]">もう一度読み込む</button>}/>
+    <ScreenEmpty emoji="📡" lines={['ランキングを読み込めませんでした','通信を確かめて、もう1度読み込んでください']}
+      action={<button type="button" onClick={onRetry} className="mh-button mh-button-secondary w-full min-h-[44px] rounded-xl font-black text-[12px] active:scale-[.98]">もう1度読み込む</button>}/>
   );
   const rankingEmptyText = <ScreenEmpty emoji="🏆" lines={['記録はまだありません','このモードを遊ぶと、ここに記録が並びます']}/>;
   // スコアランキング。モードごとに別枠なので、どのモードのぶんを見るかを受け取る。
@@ -20731,7 +20733,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
         {gameState==='TRAINING_BOARD'&&trainingSession&&(()=>{const m=masuMons.find(x=>String(x.id)===String(trainingSession.masuId));const current=TRAINING_NODE_BY_ID[trainingSession.position];const highlighted=new Set([current.id,...trainingSession.routePreview,...trainingSession.branchOptions]);return <main className="mh-training-board">{trainingEffect&&<div className={`mh-training-effect ${trainingEffect.kind}`} aria-live="polite"><span>{trainingEffect.emoji}</span><b>{trainingEffect.text}</b><i/><i/><i/><i/><i/><i/></div>}{trainingDiceStage!=='idle'&&<div className={`mh-dice-overlay ${trainingDiceStage}`} aria-live="assertive"><div className="mh-dice-cube">{trainingDiceFace}</div><b>{trainingDiceStage==='rolling'?'サイコロを振っています…':`${trainingDiceFace} が出た！`}</b></div>}<header><div><b>{m?.name||'マスモン'} <small>BEGINNER・DEBUG保存なし</small></b><span>残り {trainingSession.remainingTurns}ターン　・　ゴールまであと {trainingDistanceToGoal(current.id)}マス</span></div><button className="mh-debug-toggle" onClick={()=>setTrainingDebugOpen(v=>!v)}>DEBUG</button></header><section className="mh-training-hud"><span>💗 仮XP <b>{trainingSession.rewards.bondXp}</b></span><span>💎 仮ダイヤ <b>{trainingSession.rewards.diamonds}</b></span><span>🎁 仮アイテム <b>{trainingSession.rewards.items.length}</b></span></section><div ref={trainingMapRef} className={`mh-tile-viewport ${trainingMapOverview?'overview':''}`} onPointerDown={trainingPointerDown} onPointerMove={trainingPointerMove} onPointerUp={trainingPointerUp} onPointerCancel={trainingPointerUp} onWheel={trainingWheel}><div className="mh-map-legend"><b>🚩 START</b><b>📍 現在地</b><b>⚡ 安全ルート</b><b>🎁 報酬ルート</b><b>🏁 GOAL</b></div><div className="mh-goal-guide">GOAL <span>➜</span></div><div className="mh-tile-board" style={{width:`${720*trainingMapScale}px`,height:`${520*trainingMapScale}px`,'--map-scale':trainingMapScale}}>{TRAINING_BEGINNER_NODES.map(n=><React.Fragment key={n.id}>{n.next.filter(id=>TRAINING_BEGINNER_NODES.findIndex(x=>x.id===id)>TRAINING_BEGINNER_NODES.findIndex(x=>x.id===n.id)).map(id=>{const to=TRAINING_NODE_BY_ID[id],dx=to.x-n.x,dy=to.y-n.y,isRoute=highlighted.has(n.id)&&highlighted.has(id);return <i className={isRoute?'route':''} key={id} style={{left:`${n.x}%`,top:`${n.y}%`,width:`${Math.hypot(dx,dy)}%`,transform:`rotate(${Math.atan2(dy,dx)*180/Math.PI}deg)`}}/>})}<button ref={n.id===current.id?trainingPieceRef:null} style={{left:`${n.x}%`,top:`${n.y}%`,'--tile-color':TRAINING_SPACE_TYPES[n.type].color}} className={`mh-training-tile ${n.id===current.id?'current':''} ${trainingSession.routePreview.includes(n.id)?'route-preview':''} ${trainingSession.stopPreview===n.id?'stop-preview':''} ${trainingSession.branchOptions.includes(n.id)?'branch-choice':''} ${trainingForwardOptions(n.id).length>1?'branch':''} ${n.type==='goal'?'goal':''} ${n.type==='start'?'start':''}`} onClick={()=>{if(Date.now()<trainingSuppressTapRef.current)return;trainingSession.branchOptions.includes(n.id)?chooseTrainingBranch(n.id):setTrainingModal({type:'space',space:TRAINING_SPACE_TYPES[n.type]});}}>{trainingSession.branchOptions.includes(n.id)&&<em className="mh-branch-arrow">➜ 選ぶ</em>}<small>{n.type==='start'?'START':n.type==='goal'?'GOAL':TRAINING_SPACE_TYPES[n.type].label}</small><span>{TRAINING_SPACE_TYPES[n.type].emoji}</span>{n.id===current.id&&m&&<div className="mh-training-piece"><DyedMonsterImage baseId={m.baseId} src={ALL_PLAYER_MONSTERS[m.baseId]?.iconUrl} alt={m.name} masuColors={getMasuColors(m)}/><b>{m.name}</b></div>}</button></React.Fragment>)}</div></div><div className="mh-board-buttons"><button onClick={()=>{setTrainingMapOverview(true);setTrainingMapScale(.48);trainingMapRef.current?.scrollTo({left:0,top:0,behavior:'smooth'});}}>🗺️ 全体</button><button onClick={focusTrainingCurrent}>📍 現在地</button><span>{Math.round(trainingMapScale*100)}%</span><button onClick={()=>setTrainingModal({type:'rules'})}>マス詳細・ルール</button></div><p className="mh-training-message">{trainingSession.lastRoll&&<strong>出目 {trainingSession.lastRoll}</strong>}{trainingSession.movementRemaining>0&&<strong>あと {trainingSession.movementRemaining} マス</strong>}{trainingSession.message}{trainingSession.previousRoll&&<small>前回の出目 {trainingSession.previousRoll}</small>}</p><section className="mh-training-tools"><strong>修行道具</strong>{trainingSession.tools.length?trainingSession.tools.map((id,i)=><button key={`${id}-${i}`} className={trainingSession.effects[id]?'waiting':''} onClick={()=>setTrainingModal({type:'tool',id})}><span>{TRAINING_TOOLS[id].emoji}</span><small>{TRAINING_TOOLS[id].name}<br/>{trainingSession.effects[id]?'待機中':TRAINING_TOOLS[id].timing}</small></button>):<p>所持なし（最大3個）</p>}</section><footer>{trainingSession.rollPending?<div className="mh-roll-decision"><b>🎲 出目 {trainingSession.lastRoll}</b><button onClick={acceptTrainingRoll}>この出目で進む</button></div>:trainingSession.effects.fixed?<div className="mh-fixed-dice"><span>確定サイコロ</span>{[1,2,3].map(n=><button key={n} onClick={()=>rollTrainingDice(n)}>{n}</button>)}</div>:<button disabled={trainingSession.movementRemaining>0||trainingSession.branchOptions.length>0||trainingMovingRef.current} onClick={()=>rollTrainingDice()} className="mh-roll-button">🎲 サイコロを振る<small>{trainingSession.branchOptions.length?'分岐方向を選んでください':'出目ぶん自動で進みます'}</small></button>}</footer>{trainingDebugOpen&&<aside className="mh-training-debug"><b>DEBUG PANEL</b><button className="mh-debug-close" onClick={()=>setTrainingDebugOpen(false)}>閉じる</button><div>次の出目 {[1,2,3].map(n=><button key={n} onClick={()=>setTrainingDebugRoll(n)} className={trainingDebugRoll===n?'active':''}>{n}</button>)}<button onClick={()=>setTrainingDebugRoll(null)}>解除</button></div><div><button onClick={()=>patchTraining({remainingTurns:trainingSession.remainingTurns+1})}>ターン＋1</button><button onClick={()=>patchTraining({remainingTurns:Math.max(0,trainingSession.remainingTurns-1)})}>－1</button></div><select onChange={e=>{if(e.target.value)addTrainingTool(e.target.value)}} defaultValue=""><option value="">道具を追加</option>{Object.entries(TRAINING_TOOLS).map(([id,t])=><option key={id} value={id}>{t.name}</option>)}</select><button onClick={()=>setTrainingModal({type:'rewards'})}>仮報酬確認</button><button onClick={()=>finishTraining(true)}>強制成功</button><button onClick={()=>finishTraining(false)}>強制失敗</button><button onClick={restartTraining}>最初から</button><pre>map: {trainingSession.mapId}{'\n'}seed: {trainingSession.seed}{'\n'}{trainingSession.eventLog.join('\n')}</pre></aside>}</main>})()}
 
-        {gameState==='TRAINING_RESULT'&&trainingSession&&(()=>{const r=trainingSession.finalRewards;return <main className={`mh-training-result ${trainingSession.success?'success':'failure'}`}><div><div className="mh-debug-banner">DEBUG・報酬や進行状況は保存されません</div><span className="mh-result-mark">{trainingSession.success?'🏁':'🌧️'}</span><h2>{trainingSession.success?'修行成功！':'修行失敗…'}</h2><section><div><span>仮獲得XP（{trainingSession.success?'100':'50'}%）</span><b>{r.bondXp} XP</b></div><div><span>仮獲得ダイヤ（{trainingSession.success?'100':'50'}%）</span><b>{r.diamonds}</b></div><div><span>通常アイテム</span><b>{r.items.length?`${r.items.length}個`:'没収'}</b></div><div><span>ゴール報酬</span><b>{r.goalReward}</b></div></section><p className="mh-result-note">計算表示のみです。所持データには反映されません。</p><button onClick={restartTraining}>もう一度</button><button onClick={leaveTrainingResult}>設定へ戻る</button><button onClick={()=>{setTrainingSession(null);returnToHome();}}>HOMEへ戻る</button></div></main>})()}
+        {gameState==='TRAINING_RESULT'&&trainingSession&&(()=>{const r=trainingSession.finalRewards;return <main className={`mh-training-result ${trainingSession.success?'success':'failure'}`}><div><div className="mh-debug-banner">DEBUG・報酬や進行状況は保存されません</div><span className="mh-result-mark">{trainingSession.success?'🏁':'🌧️'}</span><h2>{trainingSession.success?'修行成功！':'修行失敗…'}</h2><section><div><span>仮獲得XP（{trainingSession.success?'100':'50'}%）</span><b>{r.bondXp} XP</b></div><div><span>仮獲得ダイヤ（{trainingSession.success?'100':'50'}%）</span><b>{r.diamonds}</b></div><div><span>通常アイテム</span><b>{r.items.length?`${r.items.length}個`:'没収'}</b></div><div><span>ゴール報酬</span><b>{r.goalReward}</b></div></section><p className="mh-result-note">計算表示のみです。所持データには反映されません。</p><button onClick={restartTraining}>もう1度</button><button onClick={leaveTrainingResult}>設定へ戻る</button><button onClick={()=>{setTrainingSession(null);returnToHome();}}>HOMEへ戻る</button></div></main>})()}
 
         {trainingModal&&<div className="mh-training-modal" onClick={()=>setTrainingModal(null)}><div onClick={e=>e.stopPropagation()}>{trainingModal.type==='rules'?<><h3>マス一覧／ルール</h3><div className="mh-rules-list">{Object.values(TRAINING_SPACE_TYPES).map(s=><p><b>{s.emoji} {s.label}</b><span>{s.desc}</span></p>)}</div><h3>修行道具</h3><div className="mh-rules-list">{Object.entries(TRAINING_TOOLS).map(([id,t])=><p><b>{t.emoji} {t.name}</b><span>使用：{t.timing}<br/>効果：{t.desc}</span></p>)}</div></>:trainingModal.type==='tool'?<><h3>{TRAINING_TOOLS[trainingModal.id].emoji} {TRAINING_TOOLS[trainingModal.id].name}</h3><p>種類：{TRAINING_TOOLS[trainingModal.id].mode}<br/>使用可能なタイミング：{TRAINING_TOOLS[trainingModal.id].timing}</p><p>正確な効果：{TRAINING_TOOLS[trainingModal.id].desc}</p>{trainingToolAvailability(trainingModal.id).ok?<button className="mh-route-choice" onClick={()=>{useTrainingTool(trainingModal.id);setTrainingModal(null)}}>使用する</button>:<p className="mh-tool-unavailable">今は使えません：{trainingToolAvailability(trainingModal.id).reason}</p>}</>:trainingModal.type==='discard'?<><h3>道具の所持上限（3個）</h3><p>捨てる道具を選ぶか、新しい道具を諦めてください。</p>{trainingSession.tools.map((id,i)=><button className="mh-route-choice" onClick={()=>{const tools=[...trainingSession.tools];tools.splice(i,1,trainingModal.newTool);patchTraining({tools});setTrainingModal(null)}}>{TRAINING_TOOLS[id].name}を捨てる</button>)}<button className="mh-route-choice" onClick={()=>setTrainingModal(null)}>新しい道具を諦める</button></>:trainingModal.type==='rewards'?<><h3>仮報酬</h3><p>絆経験値：{trainingSession?.rewards.bondXp||0}<br/>ダイヤ：{trainingSession?.rewards.diamonds||0}<br/>通常アイテム：{trainingSession?.rewards.items.length||0}個</p></>:<><h3>{trainingModal.space?.emoji} {trainingModal.space?.label}</h3><dl className="mh-space-detail"><div><dt>効果内容</dt><dd>{trainingModal.space?.desc}</dd></div><div><dt>数値</dt><dd>{trainingSpaceValue(trainingModal.space)}</dd></div><div><dt>発動タイミング</dt><dd>{trainingSpaceTiming(trainingModal.space)}</dd></div><div><dt>補足</dt><dd>仮報酬・効果はデバッグ修行中だけ有効で、通常データには保存されません。</dd></div></dl></>}<button className="mh-modal-close" onClick={()=>setTrainingModal(null)}>閉じる</button></div></div>}
 
@@ -21178,7 +21180,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           />
         )}
         {/* 超越の演出。限界突破・転生より明確に格上に見えるよう、虹と金の光が集まって
-            一度強く白く弾け、衝撃波が広がってから「超　越」と超越マークが出る。
+            1度強く白く弾け、衝撃波が広がってから「超　越」と超越マークが出る。
             新しい画像・音声・ライブラリは足さず、CSSのグラデーションとアニメーションだけで作る。
             モーション軽減設定では @media(prefers-reduced-motion:reduce) 側で止め、JSの表示時間も短くする */}
         {transcendAnimation&&(
@@ -21257,7 +21259,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='BATTLE_MENU'&&(
           <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 px-4" style={{paddingTop:'.35rem',paddingBottom:'.35rem'}}>
             {/* 戻るボタン。ランキングを見ているときは、いきなりホームへ帰らず
-                まず難易度の画面(バトル)へ戻す。ホームへはもう一度押せば戻れる */}
+                まず難易度の画面(バトル)へ戻す。ホームへはもう1度押せば戻れる */}
             <ScreenHead compact title="バトル" accent="text-indigo-400" disabled={!!battleTutorial} onBack={()=>{if(battleMenuTab!=='difficulty'){setBattleMenuTab('difficulty');return;}returnToHome();}}/>
             <div className="w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1">
             {/* モードのタブ。各モード名の横の「？」で説明を開く。
@@ -22355,7 +22357,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <section className="mh-rpg-section"><h3>敵</h3>{renderRows(battle.enemies)}</section>
             </div>
             <footer className="mh-rpg-footer">
-              <button onClick={rpgStartBattle}>同じ条件でもう一度</button>
+              <button onClick={rpgStartBattle}>同じ条件でもう1度</button>
               <button className="sub" onClick={()=>setGameState('RPG_DEBUG_SETUP')}>編成・Lv・ステータスを変更</button>
               <button className="sub" onClick={()=>{setRpgBattle(null);setGameState('DEBUG_SETTINGS');}}>デバッグ設定へ戻る</button>
             </footer>
@@ -22747,12 +22749,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div data-rhythm-debug-calibration className="mb-3"/>
             {/* 性能計測(デバッグ限定)。既定OFF・OFFのあいだは計測処理が一切動かない。
                 プレイヤーの通常プレイには出ないので、更新履歴・ヘルプには載せない */}
-            <section data-rhythm-perf-panel className="mb-3 rounded-2xl border border-amber-400/40 bg-amber-950/20 p-3"><div className="flex items-center justify-between gap-2"><h3 className="text-xs font-black text-amber-200">性能計測（デバッグ）</h3><button type="button" data-rhythm-perf-toggle aria-pressed={rhythmPerfOn} onClick={()=>{setRhythmPerfOn(RHYTHM_PERF.setEnabled(!rhythmPerfOn));setRhythmPerfStats(null);}} className={`min-h-[44px] rounded-xl px-3 text-[11px] font-black ${rhythmPerfOn?'bg-amber-500 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{rhythmPerfOn?'計測ON':'計測OFF'}</button></div><p className="mt-1 text-[9px] font-bold leading-relaxed text-amber-100/80">ONにしてからプレイすると、フレーム時間と1フレームあたりの負荷（レイアウト測定・DOM検索・SLIDE帯の更新数）を記録します。OFFのあいだは記録処理そのものが動きません（指の記録の行だけは、OFFでもいつも数えています）。「モンスターノーツ」の行が「ノーツを取る処理」よりはっきり大きければ、踏んだときに固まる原因はそこです。ノーツの動きが滑らかかどうかは「曲の時刻」の3つを見ます。ノーツの位置は曲の再生位置だけで決まるので、これが進まないフレームが多いと、フレームレートが60のままでもノーツは止まって飛ぶ動きになります。</p><div className="mt-2 flex gap-2"><button type="button" className="min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>setRhythmPerfStats(RHYTHM_PERF.snapshot())}>いまの記録を見る</button><button type="button" className="min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>{RHYTHM_PERF.reset();setRhythmPerfStats(null);}}>記録をクリア</button></div>{rhythmPerfStats&&<dl data-rhythm-perf-stats className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]">{[['フレーム数',rhythmPerfStats.frames],['平均fps',rhythmPerfStats.fps.toFixed(1)],['平均フレーム',`${rhythmPerfStats.avgMs.toFixed(1)}ms`],['最悪フレーム',`${rhythmPerfStats.maxMs.toFixed(1)}ms`],...[['GPU(ノーツ)',rhythmPerfStats.gpuNotes],['GPU(背景)',rhythmPerfStats.gpuStage]].map(([label,g])=>[label,!g||g.supported===null?'—':g.supported===false?'この端末は測れない':g.count?`平均${g.avgMs.toFixed(2)}ms 最大${g.maxMs.toFixed(1)}ms`:'まだ届いていない']),['16.7ms超',rhythmPerfStats.over16],['25ms超',rhythmPerfStats.over25],['33ms超',rhythmPerfStats.over33],['50ms以上（自動調整が重いと数える）',rhythmPerfStats.over50??0],['レイアウト測定/frame',rhythmPerfStats.layoutReadsPerFrame.toFixed(2)],['DOM検索/frame',rhythmPerfStats.domQueriesPerFrame.toFixed(2)],['SLIDE帯更新/frame',rhythmPerfStats.slidePolygonsPerFrame.toFixed(2)],['ジェスチャーrAF',rhythmPerfStats.gestureFrames],['ノーツ再検索',rhythmPerfStats.noteRescans],['走査ノーツ/frame',rhythmPerfStats.notesScannedPerFrame.toFixed(1)],['実描画ノーツ/frame',rhythmPerfStats.notesDrawnPerFrame.toFixed(1)],['最悪frameの走査/実描画',`${rhythmPerfStats.worstFrameScanned} / ${rhythmPerfStats.worstFrameDrawn}`],['先頭スキップ/frame',rhythmPerfStats.headSkippedPerFrame.toFixed(1)],['走査の絞り込み',rhythmPerfStats.narrowed===null?'未計測':(rhythmPerfStats.narrowed?'有効':'無効(昇順でない譜面)')],['tick処理/frame',`${rhythmPerfStats.tickMsPerFrame.toFixed(2)}ms`],['最悪frameのtick処理',`${rhythmPerfStats.worstFrameTickMs.toFixed(1)}ms`],['tick処理の最大',`${rhythmPerfStats.maxTickMs.toFixed(1)}ms`],['frame開始→tick開始の遅れ',`${rhythmPerfStats.tickDelayMsPerFrame.toFixed(2)}ms`],['最悪frameの遅れ',`${rhythmPerfStats.worstFrameDelayMs.toFixed(1)}ms`],['遅れの最大',`${rhythmPerfStats.maxDelayMs.toFixed(1)}ms`],['曲の時刻の進み/frame',`${(rhythmPerfStats.songStepMsPerFrame??0).toFixed(2)}ms`],['曲の時刻が進まないframe',`${((rhythmPerfStats.songStallRate??0)*100).toFixed(1)}%`],['曲の時刻の最大の飛び',`${(rhythmPerfStats.songStepMaxMs??0).toFixed(1)}ms`],['ノーツを取る処理/回',`${(rhythmPerfStats.judgeMsAvg??0).toFixed(2)}ms（${rhythmPerfStats.judgeCount??0}回）`],['取る処理の最大',`${(rhythmPerfStats.judgeMsMax??0).toFixed(1)}ms`],['モンスターノーツ/回',`${(rhythmPerfStats.monsterJudgeMsAvg??0).toFixed(2)}ms（${rhythmPerfStats.monsterJudgeCount??0}回）`],['モンスターノーツの最大',`${(rhythmPerfStats.monsterJudgeMsMax??0).toFixed(1)}ms`],['指が触れた数（同時の最大）',`${rhythmPerfStats.touch?.starts??0}回（${rhythmPerfStats.touch?.maxTouches??0}本）`],['端末に指を取り消された',`${rhythmPerfStats.touch?.cancels??0}回（${rhythmPerfStats.touch?.cancelledTouches??0}本）`],['演奏エリアの外に触れた',`${rhythmPerfStats.touch?.outside??0}回`],['道の外で無視した指（押しても音も光も出ない）',`${rhythmPerfStats.touch?.ignored??0}回`],...(()=>{const b=typeof RHYTHM_TOUCH_BRIDGE!=='undefined'?RHYTHM_TOUCH_BRIDGE.snapshot():null;return b?[['ポインタだけ届いた指（取り戻した）',`${b.pointerOnly}回（${b.recovered}回）`],['ポインタとタッチが組になった',`${b.matched}回`],['50ms以上遅れて届いたタッチ',`${b.lateDelivery}回（最大${Math.round(b.maxDelayMs)}ms）`],['別の指のイベントで初めて見えた指',`${b.lateStart}回`]]:[];})(),['二本指ジェスチャー',`${rhythmPerfStats.touch?.gestures??0}回`],['空打ち',`${rhythmPerfStats.touch?.emptyTaps??0}回`],['指の飛び（3サブレーン以上）',`${rhythmPerfStats.touch?.jumps??0}回`]].map(([label,value])=><React.Fragment key={label}><dt className="text-slate-400">{label}</dt><dd className="text-right font-black text-amber-100">{value}</dd></React.Fragment>)}</dl>}{rhythmPerfStats&&Array.isArray(rhythmPerfStats.spikes)&&rhythmPerfStats.spikes.length>0&&<div data-rhythm-perf-spikes className="mt-2 rounded-xl border border-amber-400/30 bg-slate-950/60 p-2"><h4 className="text-[10px] font-black text-amber-200">飛んだフレーム（33ms超）を起きた順に{rhythmPerfStats.spikes.length}件</h4><p className="mt-1 text-[9px] font-bold leading-relaxed text-amber-100/70">「モンスター後」が小さい行が並ぶなら、踏んだあとの演出が原因です。「tick」が0msなら、その飛びはJSではなく描画側です。</p><ol className="mt-1 space-y-0.5 text-[9px] font-mono text-slate-300">{rhythmPerfStats.spikes.map((sp,i)=><li key={i}>{`${(sp.at/1000).toFixed(1)}s  ${sp.dt}ms  tick ${sp.tick}ms  遅れ ${sp.delay}ms  走査${sp.scan}/描画${sp.draw}  モンスター後 ${sp.mon<0?'—':`${sp.mon}ms`}`}</li>)}</ol></div>}{rhythmPerfStats&&Array.isArray(rhythmPerfStats.autoSteps)&&<div data-rhythm-perf-auto-steps className="mt-2 rounded-xl border border-cyan-400/30 bg-slate-950/60 p-2"><h4 className="text-[10px] font-black text-cyan-200">自動で下げた記録（{rhythmPerfStats.autoSteps.length}件）</h4><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/70">画質「自動」と「重いときは演出を自動で控えめに」が働いた時刻です。3秒のうち重いフレームが8%を超えると一段下げます。「重い」は、一番短い間隔の1.8倍か50ms以上のフレームです。下がりすぎる・下がらないと感じたら、この数字を教えてください。</p>{rhythmPerfStats.autoSteps.length?<ol className="mt-1 space-y-0.5 text-[9px] font-mono text-slate-300">{rhythmPerfStats.autoSteps.map((st,i)=><li key={i}>{`${(st.at/1000).toFixed(1)}s  ${st.kind}→${st.label}  重い ${st.slow}/${st.frames}フレーム（約${st.fps}fps）`}</li>)}</ol>:<p className="mt-1 text-[9px] font-bold text-slate-400">まだ一度も下げていません。</p>}</div>}</section><section data-rhythm-strip-panel className="mb-3 rounded-2xl border border-rose-400/40 bg-rose-950/20 p-3"><h3 className="text-xs font-black text-rose-200">装飾を切って切り分ける（デバッグ）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-rose-100/80">演奏画面の重そうな装飾を個別に消します。<b>次の演奏から効きます。</b>ONにして1曲プレイし、性能計測の「33ms超」が減るかを見てください。減ったものが原因です。判定・スコア・譜面には一切関わりません。</p><div className="mt-2 grid grid-cols-2 gap-2">{RHYTHM_STRIP_ITEMS.map(item=><button key={item.id} type="button" data-rhythm-strip-toggle={item.id} aria-pressed={rhythmStrip.split(/\s+/).includes(item.id)} onClick={()=>setRhythmStrip(RHYTHM_STRIP.toggle(item.id))} className={`min-h-[44px] rounded-xl px-2 text-[10px] font-black ${rhythmStrip.split(/\s+/).includes(item.id)?'bg-rose-500 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{item.label}</button>)}</div><button type="button" className="mt-2 min-h-[40px] w-full rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>setRhythmStrip(RHYTHM_STRIP.set(''))}>全部元に戻す</button></section>{/* ノーツの描き方(検証用・デバッグ限定)。canvas 1枚に描く方式(発熱対策)と要素で描く方式を、次の演奏から切り替える。
+            <section data-rhythm-perf-panel className="mb-3 rounded-2xl border border-amber-400/40 bg-amber-950/20 p-3"><div className="flex items-center justify-between gap-2"><h3 className="text-xs font-black text-amber-200">性能計測（デバッグ）</h3><button type="button" data-rhythm-perf-toggle aria-pressed={rhythmPerfOn} onClick={()=>{setRhythmPerfOn(RHYTHM_PERF.setEnabled(!rhythmPerfOn));setRhythmPerfStats(null);}} className={`min-h-[44px] rounded-xl px-3 text-[11px] font-black ${rhythmPerfOn?'bg-amber-500 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{rhythmPerfOn?'計測ON':'計測OFF'}</button></div><p className="mt-1 text-[9px] font-bold leading-relaxed text-amber-100/80">ONにしてからプレイすると、フレーム時間と1フレームあたりの負荷（レイアウト測定・DOM検索・SLIDE帯の更新数）を記録します。OFFのあいだは記録処理そのものが動きません（指の記録の行だけは、OFFでもいつも数えています）。「モンスターノーツ」の行が「ノーツを取る処理」よりはっきり大きければ、踏んだときに固まる原因はそこです。ノーツの動きが滑らかかどうかは「曲の時刻」の3つを見ます。ノーツの位置は曲の再生位置だけで決まるので、これが進まないフレームが多いと、フレームレートが60のままでもノーツは止まって飛ぶ動きになります。</p><div className="mt-2 flex gap-2"><button type="button" className="min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>setRhythmPerfStats(RHYTHM_PERF.snapshot())}>いまの記録を見る</button><button type="button" className="min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>{RHYTHM_PERF.reset();setRhythmPerfStats(null);}}>記録をクリア</button></div>{rhythmPerfStats&&<dl data-rhythm-perf-stats className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]">{[['フレーム数',rhythmPerfStats.frames],['平均fps',rhythmPerfStats.fps.toFixed(1)],['平均フレーム',`${rhythmPerfStats.avgMs.toFixed(1)}ms`],['最悪フレーム',`${rhythmPerfStats.maxMs.toFixed(1)}ms`],...[['GPU(ノーツ)',rhythmPerfStats.gpuNotes],['GPU(背景)',rhythmPerfStats.gpuStage]].map(([label,g])=>[label,!g||g.supported===null?'—':g.supported===false?'この端末は測れない':g.count?`平均${g.avgMs.toFixed(2)}ms 最大${g.maxMs.toFixed(1)}ms`:'まだ届いていない']),['16.7ms超',rhythmPerfStats.over16],['25ms超',rhythmPerfStats.over25],['33ms超',rhythmPerfStats.over33],['50ms以上（自動調整が重いと数える）',rhythmPerfStats.over50??0],['レイアウト測定/frame',rhythmPerfStats.layoutReadsPerFrame.toFixed(2)],['DOM検索/frame',rhythmPerfStats.domQueriesPerFrame.toFixed(2)],['SLIDE帯更新/frame',rhythmPerfStats.slidePolygonsPerFrame.toFixed(2)],['ジェスチャーrAF',rhythmPerfStats.gestureFrames],['ノーツ再検索',rhythmPerfStats.noteRescans],['走査ノーツ/frame',rhythmPerfStats.notesScannedPerFrame.toFixed(1)],['実描画ノーツ/frame',rhythmPerfStats.notesDrawnPerFrame.toFixed(1)],['最悪frameの走査/実描画',`${rhythmPerfStats.worstFrameScanned} / ${rhythmPerfStats.worstFrameDrawn}`],['先頭スキップ/frame',rhythmPerfStats.headSkippedPerFrame.toFixed(1)],['走査の絞り込み',rhythmPerfStats.narrowed===null?'未計測':(rhythmPerfStats.narrowed?'有効':'無効(昇順でない譜面)')],['tick処理/frame',`${rhythmPerfStats.tickMsPerFrame.toFixed(2)}ms`],['最悪frameのtick処理',`${rhythmPerfStats.worstFrameTickMs.toFixed(1)}ms`],['tick処理の最大',`${rhythmPerfStats.maxTickMs.toFixed(1)}ms`],['frame開始→tick開始の遅れ',`${rhythmPerfStats.tickDelayMsPerFrame.toFixed(2)}ms`],['最悪frameの遅れ',`${rhythmPerfStats.worstFrameDelayMs.toFixed(1)}ms`],['遅れの最大',`${rhythmPerfStats.maxDelayMs.toFixed(1)}ms`],['曲の時刻の進み/frame',`${(rhythmPerfStats.songStepMsPerFrame??0).toFixed(2)}ms`],['曲の時刻が進まないframe',`${((rhythmPerfStats.songStallRate??0)*100).toFixed(1)}%`],['曲の時刻の最大の飛び',`${(rhythmPerfStats.songStepMaxMs??0).toFixed(1)}ms`],['ノーツを取る処理/回',`${(rhythmPerfStats.judgeMsAvg??0).toFixed(2)}ms（${rhythmPerfStats.judgeCount??0}回）`],['取る処理の最大',`${(rhythmPerfStats.judgeMsMax??0).toFixed(1)}ms`],['モンスターノーツ/回',`${(rhythmPerfStats.monsterJudgeMsAvg??0).toFixed(2)}ms（${rhythmPerfStats.monsterJudgeCount??0}回）`],['モンスターノーツの最大',`${(rhythmPerfStats.monsterJudgeMsMax??0).toFixed(1)}ms`],['指が触れた数（同時の最大）',`${rhythmPerfStats.touch?.starts??0}回（${rhythmPerfStats.touch?.maxTouches??0}本）`],['端末に指を取り消された',`${rhythmPerfStats.touch?.cancels??0}回（${rhythmPerfStats.touch?.cancelledTouches??0}本）`],['演奏エリアの外に触れた',`${rhythmPerfStats.touch?.outside??0}回`],['道の外で無視した指（押しても音も光も出ない）',`${rhythmPerfStats.touch?.ignored??0}回`],...(()=>{const b=typeof RHYTHM_TOUCH_BRIDGE!=='undefined'?RHYTHM_TOUCH_BRIDGE.snapshot():null;return b?[['ポインタだけ届いた指（取り戻した）',`${b.pointerOnly}回（${b.recovered}回）`],['ポインタとタッチが組になった',`${b.matched}回`],['50ms以上遅れて届いたタッチ',`${b.lateDelivery}回（最大${Math.round(b.maxDelayMs)}ms）`],['別の指のイベントで初めて見えた指',`${b.lateStart}回`]]:[];})(),['二本指ジェスチャー',`${rhythmPerfStats.touch?.gestures??0}回`],['空打ち',`${rhythmPerfStats.touch?.emptyTaps??0}回`],['指の飛び（3サブレーン以上）',`${rhythmPerfStats.touch?.jumps??0}回`]].map(([label,value])=><React.Fragment key={label}><dt className="text-slate-400">{label}</dt><dd className="text-right font-black text-amber-100">{value}</dd></React.Fragment>)}</dl>}{rhythmPerfStats&&Array.isArray(rhythmPerfStats.spikes)&&rhythmPerfStats.spikes.length>0&&<div data-rhythm-perf-spikes className="mt-2 rounded-xl border border-amber-400/30 bg-slate-950/60 p-2"><h4 className="text-[10px] font-black text-amber-200">飛んだフレーム（33ms超）を起きた順に{rhythmPerfStats.spikes.length}件</h4><p className="mt-1 text-[9px] font-bold leading-relaxed text-amber-100/70">「モンスター後」が小さい行が並ぶなら、踏んだあとの演出が原因です。「tick」が0msなら、その飛びはJSではなく描画側です。</p><ol className="mt-1 space-y-0.5 text-[9px] font-mono text-slate-300">{rhythmPerfStats.spikes.map((sp,i)=><li key={i}>{`${(sp.at/1000).toFixed(1)}s  ${sp.dt}ms  tick ${sp.tick}ms  遅れ ${sp.delay}ms  走査${sp.scan}/描画${sp.draw}  モンスター後 ${sp.mon<0?'—':`${sp.mon}ms`}`}</li>)}</ol></div>}{rhythmPerfStats&&Array.isArray(rhythmPerfStats.autoSteps)&&<div data-rhythm-perf-auto-steps className="mt-2 rounded-xl border border-cyan-400/30 bg-slate-950/60 p-2"><h4 className="text-[10px] font-black text-cyan-200">自動で下げた記録（{rhythmPerfStats.autoSteps.length}件）</h4><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/70">画質「自動」と「重いときは演出を自動で控えめに」が働いた時刻です。3秒のうち重いフレームが8%を超えると一段下げます。「重い」は、1番短い間隔の1.8倍か50ms以上のフレームです。下がりすぎる・下がらないと感じたら、この数字を教えてください。</p>{rhythmPerfStats.autoSteps.length?<ol className="mt-1 space-y-0.5 text-[9px] font-mono text-slate-300">{rhythmPerfStats.autoSteps.map((st,i)=><li key={i}>{`${(st.at/1000).toFixed(1)}s  ${st.kind}→${st.label}  重い ${st.slow}/${st.frames}フレーム（約${st.fps}fps）`}</li>)}</ol>:<p className="mt-1 text-[9px] font-bold text-slate-400">まだ1度も下げていません。</p>}</div>}</section><section data-rhythm-strip-panel className="mb-3 rounded-2xl border border-rose-400/40 bg-rose-950/20 p-3"><h3 className="text-xs font-black text-rose-200">装飾を切って切り分ける（デバッグ）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-rose-100/80">演奏画面の重そうな装飾を個別に消します。<b>次の演奏から効きます。</b>ONにして1曲プレイし、性能計測の「33ms超」が減るかを見てください。減ったものが原因です。判定・スコア・譜面には一切関わりません。</p><div className="mt-2 grid grid-cols-2 gap-2">{RHYTHM_STRIP_ITEMS.map(item=><button key={item.id} type="button" data-rhythm-strip-toggle={item.id} aria-pressed={rhythmStrip.split(/\s+/).includes(item.id)} onClick={()=>setRhythmStrip(RHYTHM_STRIP.toggle(item.id))} className={`min-h-[44px] rounded-xl px-2 text-[10px] font-black ${rhythmStrip.split(/\s+/).includes(item.id)?'bg-rose-500 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{item.label}</button>)}</div><button type="button" className="mt-2 min-h-[40px] w-full rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>setRhythmStrip(RHYTHM_STRIP.set(''))}>全部元に戻す</button></section>{/* ノーツの描き方(検証用・デバッグ限定)。canvas 1枚に描く方式(発熱対策)と要素で描く方式を、次の演奏から切り替える。
                 プレイヤーの通常プレイには出ないので更新履歴・ヘルプには載せない */}
             <section data-rhythm-canvas-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">ノーツの描き方（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">canvas 1枚に描く方式（発熱対策）と、これまでの要素ごとに描く方式を切り替えます。次の演奏から効きます。「自動」は公開設定（いまは{RELEASE_FLAGS.rhythmCanvasNotes?'canvas':'要素'}）に従います。「WebGL」は canvas と同じ描き方を GPU で描く試作です（重さ・発熱を「性能計測」で canvas と比べるためのもの）。</p><div className="mt-2 flex gap-2">{[['','自動'],['dom','要素'],['canvas','canvas'],['webgl','WebGL']].map(([value,label])=><button key={value||'auto'} type="button" data-rhythm-canvas-pref={value||'auto'} aria-pressed={rhythmCanvasPref===value} onClick={()=>setRhythmCanvasPref(rhythmCanvasNotesSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmCanvasPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
             {/* スライドの帯を GPU に一度だけ置いて描くかの切り替え(2026-10-11・作り替え B の S1)。社長の iPhone で今の描き方と比べてから既定にする(S3)。
                 プレイヤーの通常プレイには出ないので更新履歴・ヘルプには載せない */}
-            <section data-rhythm-gpu-band-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">スライドの帯の描き方（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">「GPU」はスライドの帯（地上・空中・影）の形を譜面を読んだときに一度だけ GPU に置き、毎コマは曲の位置だけ渡して描きます（帯が長い・多い曲で軽くするための試作）。既定（GPU）は、ノーツを WebGL で描いているとき（描画方式が自動で GPU がある端末など）に使います。「GPU（WebGL も）」は描画方式に関係なくノーツを WebGL で描きます（「ノーツの描き方」で canvas・要素を選んでいるときはそちらが勝ちます）。「今の描き方」は使いません。WebGL が使えないときは今の描き方に戻ります。次の演奏から効きます。</p><div className="mt-2 flex gap-2">{[['','既定（GPU）'],['gpu','GPU（WebGL も）'],['off','今の描き方']].map(([value,label])=><button key={value||'default'} type="button" data-rhythm-gpu-band-pref={value||'default'} aria-pressed={rhythmGpuBandPref===value} onClick={()=>setRhythmGpuBandPref(rhythmGpuBandSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmGpuBandPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
+            <section data-rhythm-gpu-band-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">スライドの帯の描き方（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">「GPU」はスライドの帯（地上・空中・影）の形を譜面を読んだときに1度だけ GPU に置き、毎コマは曲の位置だけ渡して描きます（帯が長い・多い曲で軽くするための試作）。既定（GPU）は、ノーツを WebGL で描いているとき（描画方式が自動で GPU がある端末など）に使います。「GPU（WebGL も）」は描画方式に関係なくノーツを WebGL で描きます（「ノーツの描き方」で canvas・要素を選んでいるときはそちらが勝ちます）。「今の描き方」は使いません。WebGL が使えないときは今の描き方に戻ります。次の演奏から効きます。</p><div className="mt-2 flex gap-2">{[['','既定（GPU）'],['gpu','GPU（WebGL も）'],['off','今の描き方']].map(([value,label])=><button key={value||'default'} type="button" data-rhythm-gpu-band-pref={value||'default'} aria-pressed={rhythmGpuBandPref===value} onClick={()=>setRhythmGpuBandPref(rhythmGpuBandSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmGpuBandPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
             {/* 床と空中の見た目の試作(2026-10-16 社長「地上は床にべったり、空中は立体感ある表示」)。見た目だけ・判定と入力は変えない。
                 プレイヤーの通常プレイには出ないので更新履歴・ヘルプには載せない */}
             <section data-rhythm-floor3d-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">床と空中の見た目（試作）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">「試作」は、地上のノーツを道の床に平たく貼り付けた形（奥ほど細く薄い台形）にし、空中のノーツを側面と厚みのある箱にして、床に影を落とします。判定の位置・時刻・指の扱いは変わりません。空中スライドの厚みは「スライドの帯の描き方」が「今の描き方」のときだけ出ます。「試作2」は、色を抜いても高さで見分けられるように、空中のノーツの真下の床に濃い影と白い導線を出し、箱を宙に立てます。空中スライドは床の影と帯の下の薄い幕で浮いたリボンにします(帯の描き方の設定に関係なく効きます)。「試作3」は、空中の層を道と同じ遠近のガラスの床として描き、道の両端に床と空中をつなぐ柱を立て、空中のノーツを厚い立方体、空中スライドを厚みのある管にします。「3D(段階A)」は、空中のタップを光の当たる本物の立体の箱、空中スライドを丸い管として WebGL で描きます(ノーツを WebGL で描いているときだけ・地上と道は今のまま)。「案3」は、空中のタップを明るく薄い板と光る縁、空中スライドを白い芯から手の色がにじむ半透明の光の帯にします(参考動画の見やすさに寄せた見た目)。「案3+カメラ」は、それに加えてカメラを寝かせ、道を奥へ深くします(押す場所も同じ計算でそろって変わります)。次の演奏から効きます。</p><div className="mt-2 flex gap-2">{[['','今の見た目'],['on','試作'],['on2','試作2'],['on3','試作3'],['a3d','3D(段階A)'],['c3','案3'],['c3b','案3+カメラ']].map(([value,label])=><button key={value||'off'} type="button" data-rhythm-floor3d-pref={value||'off'} aria-pressed={rhythmFloor3dPref===value} onClick={()=>setRhythmFloor3dPref(rhythmFloor3dSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmFloor3dPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
@@ -22761,9 +22763,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             {/* 叩いたときの光の描き方の切り替え(2026-10-11・修理部・発熱の調べ)。DOM の光の部品は CSS のアニメーションが毎コマ スタイルの再計算をさせていた。
                 canvas 版は WebGL のときに使っている同じ絵。2026-10-11 社長の判断で既定を canvas にした。「画面の要素」で今までの描き方に戻せる */}
             {/* 叩いたときの光の粒の描き方(2026-10-12・修理部・発熱の手当て ④)。焼いた丸を貼ると光の重さが約2割減る。差は 1画素未満のふちだけ。社長が静止画を見て既定を決める */}
-            <section data-rhythm-hit-spark-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">叩いたときの光の粒（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">ノーツを叩いたときにはじける小さな粒を、canvas で描くときの描き方です。「焼いた丸」は一度作った丸の絵を貼るので軽くなります（見た目の差は粒のふちのわずかな違いだけ）。次の演奏から効きます。</p><div className="mt-2 flex gap-2">{[['','既定（焼いた丸）'],['on','焼いた丸'],['off','今までの形']].map(([value,label])=><button key={value||'default'} type="button" data-rhythm-hit-spark-pref={value||'default'} aria-pressed={rhythmHitSparkPref===value} onClick={()=>setRhythmHitSparkPref(rhythmHitSparkSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmHitSparkPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
+            <section data-rhythm-hit-spark-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">叩いたときの光の粒（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">ノーツを叩いたときにはじける小さな粒を、canvas で描くときの描き方です。「焼いた丸」は1度作った丸の絵を貼るので軽くなります（見た目の差は粒のふちのわずかな違いだけ）。次の演奏から効きます。</p><div className="mt-2 flex gap-2">{[['','既定（焼いた丸）'],['on','焼いた丸'],['off','今までの形']].map(([value,label])=><button key={value||'default'} type="button" data-rhythm-hit-spark-pref={value||'default'} aria-pressed={rhythmHitSparkPref===value} onClick={()=>setRhythmHitSparkPref(rhythmHitSparkSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmHitSparkPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
             <section data-rhythm-input-rec-panel className="mb-3 rounded-2xl border border-amber-400/40 bg-amber-950/20 p-3"><h3 className="text-xs font-black text-amber-200">入力の記録（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-amber-100/80">「入」にすると、モンヒロビートの演奏中の指の動き（時刻・位置・接触の幅）と判定の出来事を端末の中だけに記録します。名前などは入りません。ランキングには影響しません。演奏が終わったら下のボタンで最後の1曲分をコピーして送ってください。</p><div className="mt-2 flex gap-2">{[[true,'入'],[false,'切']].map(([value,label])=><button key={label} type="button" data-rhythm-input-rec-pref={value?'on':'off'} aria-pressed={rhythmInputRecOn===value} onClick={()=>{try{RHYTHM_INPUT_REC.setEnabled(value);setRhythmInputRecOn(RHYTHM_INPUT_REC.enabled());}catch{}}} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmInputRecOn===value?'bg-amber-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div><button type="button" data-rhythm-input-rec-copy onClick={async()=>{let text='';let sum=null;try{RHYTHM_INPUT_REC.close();text=RHYTHM_INPUT_REC.text();sum=RHYTHM_INPUT_REC.summary();}catch{}if(!text){setRhythmInputRecMsg('まだ記録がありません（「入」にしてから1曲演奏してください）');return;}const info=sum?`（指の動き ${sum.touches||0}件・判定 ${sum.judges||0}件）`:'';try{await navigator.clipboard.writeText(text);setRhythmInputRecMsg(`コピーしました${info}`);}catch{setRhythmInputRecMsg('コピーできませんでした');}}} className="mt-2 min-h-[40px] w-full rounded-xl border border-amber-300/50 bg-slate-900 text-[11px] font-black text-amber-100">最後の演奏の記録をコピー</button>{rhythmInputRecMsg&&<p data-rhythm-input-rec-msg className="mt-1 text-[10px] font-bold text-amber-100">{rhythmInputRecMsg}</p>}</section>
-            <section data-rhythm-judgment-snap-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">判定の文字の大きさの変わり方（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">判定の文字（PERFECT など）は判定ごとに大きさが違い、今は 0.12秒かけてなめらかに大きさを変えています（そのあいだ毎コマ画面の組み直しが起きます）。「一度で」は大きさをすぐに変えます。弾む動き・色・光は変わりません。次の演奏から効きます。</p><div className="mt-2 flex gap-2">{[['','既定（一度で）'],['on','一度で'],['off','なめらかに']].map(([value,label])=><button key={value||'default'} type="button" data-rhythm-judgment-snap-pref={value||'default'} aria-pressed={rhythmJudgmentSnapPref===value} onClick={()=>setRhythmJudgmentSnapPref(rhythmJudgmentSnapSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmJudgmentSnapPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
+            <section data-rhythm-judgment-snap-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">判定の文字の大きさの変わり方（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">判定の文字（PERFECT など）は判定ごとに大きさが違い、今は 0.12秒かけてなめらかに大きさを変えています（そのあいだ毎コマ画面の組み直しが起きます）。「1度で」は大きさをすぐに変えます。弾む動き・色・光は変わりません。次の演奏から効きます。</p><div className="mt-2 flex gap-2">{[['','既定（1度で）'],['on','1度で'],['off','なめらかに']].map(([value,label])=><button key={value||'default'} type="button" data-rhythm-judgment-snap-pref={value||'default'} aria-pressed={rhythmJudgmentSnapPref===value} onClick={()=>setRhythmJudgmentSnapPref(rhythmJudgmentSnapSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmJudgmentSnapPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
             <section data-rhythm-canvas-hits-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">叩いたときの光の描き方（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">「canvas」は、ノーツを叩いたときに判定ラインで弾ける光を、ノーツと同じ canvas へ描きます（WebGL の描き方で使っている絵と同じ）。既定は canvas です。「画面の要素」は今までの描き方（光の部品を画面の要素として動かす。発熱の元になっていた）です。次の演奏から効きます。</p><div className="mt-2 flex gap-2">{[['','既定（canvas）'],['canvas','canvas'],['dom','画面の要素']].map(([value,label])=><button key={value||'default'} type="button" data-rhythm-canvas-hits-pref={value||'default'} aria-pressed={rhythmCanvasHitsPref===value} onClick={()=>setRhythmCanvasHitsPref(rhythmCanvasHitsSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmCanvasHitsPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
             <section data-rhythm-prepare-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">演奏前の準備（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">「する」は、曲の最初のコマで初めて起きていた重い仕事（道の大きさを測る・ノーツの絵を描く準備）を、曲の前の幕のあいだに済ませます。準備が済むまで幕は閉じません（最長6秒）。次の演奏から効きます。</p><div className="mt-2 flex gap-2">{[['','既定（する）'],['on','する'],['off','しない']].map(([value,label])=><button key={value||'default'} type="button" data-rhythm-prepare-pref={value||'default'} aria-pressed={rhythmPreparePref===value} onClick={()=>setRhythmPreparePref(rhythmPrepareSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmPreparePref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
             {/* ホールド・スライドを離した合図が遅れて届いたときに、離した時刻をどこまで戻すかの切り替え(2026-10-11 社長「たまに、ちゃんと押しているのに MISS」)。
@@ -22886,7 +22888,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='DEBUG_SETTINGS'&&(
           <div className="flex-1 flex flex-col h-full p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             <div className="flex items-center gap-2 mb-2 shrink-0"><button onClick={()=>{setGameState('SETTINGS');openHelp();}} className="p-3 text-slate-500"><ArrowLeft size={20}/></button><h2 className="text-base font-black text-slate-400 tracking-widest">DEBUG MENU</h2></div>
-            <p className="mb-2 shrink-0 text-[9px] leading-relaxed text-slate-500">用途ごとに畳んであります。よく使うものは一番上、名前でも探せます。開いた見出しはこの端末に覚えます。</p>
+            <p className="mb-2 shrink-0 text-[9px] leading-relaxed text-slate-500">用途ごとに畳んであります。よく使うものは1番上、名前でも探せます。開いた見出しはこの端末に覚えます。</p>
             {/* 名前で絞り込む欄(2026-10-27)。打った字を含む項目だけ残す。中の道具の動きには触らない */}
             <DebugMenuSearch rootRef={debugMenuRootRef}/>
             <div ref={debugMenuRootRef} className="flex-1 overflow-y-auto mh-scroll space-y-2">
@@ -22907,7 +22909,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <button data-debug-rhythm-mode onClick={openRhythmDebug} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🎵 モンヒロビート デバッグ<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">曲・難易度・設定・BEST保存基盤を確認</small></button>
                   {/* 条件が揃わないと始まらないもの(ログインボーナス・ミッション・購入・アイテム・育成)を用意する。
                       セーブデータを書き換えるので赤にしてある */}
-                  <button data-debug-data-setup onClick={()=>setGameState('DEBUG_DATA_SETUP')} className="w-full min-h-[58px] rounded-2xl border-2 border-rose-400/60 bg-rose-950/50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🧰 データを用意する<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">ダイヤ・アイテム・テストのマスモンを配る／ログインボーナスとミッションをもう一度出す</small></button>
+                  <button data-debug-data-setup onClick={()=>setGameState('DEBUG_DATA_SETUP')} className="w-full min-h-[58px] rounded-2xl border-2 border-rose-400/60 bg-rose-950/50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🧰 データを用意する<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">ダイヤ・アイテム・テストのマスモンを配る／ログインボーナスとミッションをもう1度出す</small></button>
                   {/* デバッグ戦の「難易度9個 → 敵10個 → 勇者モン → 開始」は、以前このメニューの中へ
                       そのまま埋まっていた。1500pxほど縦に伸びていて、次の欄へ行くのにそこを全部
                       スクロールする必要があった(2026-09-17・ユーザー指摘)。専用の画面へ移した。
@@ -23485,7 +23487,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <span className="text-[10px] font-black text-indigo-300 shrink-0 leading-tight">編成中<br/>{draftMonsterRoster.length}/{STARTER_MONSTER_IDS.length}</span>
                   {/* ★4体ずつ2段に並べる(2026-09-18・ユーザー指示)。
                       横スクロールだった頃は8体のうち7体しか見えず、いま誰を入れているのかを
-                      確かめるのに横へ送る必要があった。2段にすれば8体が一度に見える。 */}
+                      確かめるのに横へ送る必要があった。2段にすれば8体が1度に見える。 */}
                   {/* 縦向きで背の低い画面(高さ700以下)では8体を1段に並べる(2026-10-27・375×667で札が1.5段しか見えなかった)。
                       幅360未満は顔を26pxにして1段に収める。
                       横向きは一覧が右の列に分かれるので2段のまま(左の列が狭くはみ出す) */}
@@ -24367,7 +24369,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {/* プロフィールからの助手変更。仲良し度も呼び方も助手ごとに分けてあるので、
             切り替えても、もう片方のぶんは何も失われない */}
         {/* 助手の解放の演出(2026-11-11・59-assistant-partner-fx.jsx)。解放した戦いのあと、HOME に戻ったときに1人ずつ。
-            ほかのお話・小窓が出ているあいだは待つ。閉じたら見た印(noticed)を書き、二度出さない */}
+            ほかのお話・小窓が出ているあいだは待つ。閉じたら見た印(noticed)を書き、2度出さない */}
         {(()=>{
           if(onboardingPreview||!dataLoaded||bootPhase!=='GAME'||gameState!=='HOME'||eventReplay||rhythmEventStoryPending||rhythmHellGuide||showAssistantPicker) return null;
           const id=assistantPartnerPendingNotice(assistantPartner,(x)=>assistantPartnerOkWith(assistantPartner,rhythmEventStorySeen,x));
@@ -25512,7 +25514,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       {EVENT_REPLAY_RELEASE_FLAGS.monsucStoryEp2&&monsucStorySkip&&monsucStorySkip.skippedAt>0&&!monsucStorySkip.shownAt&&bootPhase==='GAME'&&gameState==='HOME'&&!eventReplay&&!rhythmEventStoryPending&&!rhythmHellGuide&&!dailyMasuAdvice&&!successScreenOpen&&updateGuideQueue.length===0&&(()=>{
         const who=assistantById('mua');if(!who)return null;
         const lv=assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current.mua).points);
-        const text=lv<=2?'{name}、HOMEに新しいボタンが出ています！ 一番乗りで、いっしょに行けたらうれしいです♪':'{name}、HOMEに新しいボタンが出てるよ！ 一番乗りで、いっしょに行こ♪';
+        const text=lv<=2?'{name}、HOMEに新しいボタンが出ています！ 1番乗りで、いっしょに行けたらうれしいです♪':'{name}、HOMEに新しいボタンが出てるよ！ 1番乗りで、いっしょに行こ♪';
         return(
         <div data-monsuc-story-skip-notice className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:75000,backgroundColor:'rgba(2,6,23,.9)'}} role="dialog" aria-modal="true" aria-label="みゅあからのお知らせ">
           <div className="w-full max-w-md rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
@@ -25556,7 +25558,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         let storyFrame=null;
         for(let i=step;i>=0;i--){const l=script[i];if(l&&typeof l.frame==='string'){storyFrame=l.frame==='none'?null:l.frame;break;}}
         // 絵は data/breeder.js の STORY_SCENE_IMAGES(名前 → 絵)。表に無い名前は出さない
-        const storySceneImg=storyScene&&typeof STORY_SCENE_IMAGES!=='undefined'?(STORY_SCENE_IMAGES[storyScene]||null):null;
+        //   クリスマスのレイドのお話(bg:'xmas_…@色')は、事件簿と同じ絵の表と色(35-raid-xmas.jsx の raidXmasSceneBgOf・r1126-090)
+        const storyXmasBg=storyScene&&typeof raidXmasSceneBgOf==='function'?raidXmasSceneBgOf(storyScene):null;
+        const storySceneImg=storyXmasBg?storyXmasBg.img:(storyScene&&typeof STORY_SCENE_IMAGES!=='undefined'?(STORY_SCENE_IMAGES[storyScene]||null):null);
         // 一枚絵(台本の行の still:'名前'・2026-11-23 r1119-115)。その行だけ背景の上に絵を出し、上のステージ・真ん中のモンスターを消す(次の行に still が無ければ戻る)。
         //   絵は同じ STORY_SCENE_IMAGES。縦の画面用の絵(名前_tate)があれば、縦では幅いっぱい・上寄せでそれを出す(追記2 社長「縦の絵を使う・幅に合わせる」)。
         //   横は横の絵の全体。出し分けは 70-bootstrap.jsx の [data-story-still]。続けて同じ絵の行は出し直さない(key を絵の名前にする)
@@ -25566,7 +25570,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // このお話で使う背景は、開いたときに先に読んでおく(場面が替わった瞬間に絵が遅れて出ないように)
         if(typeof STORY_SCENE_IMAGES!=='undefined'&&typeof window!=='undefined'){
           const pre=window.__mhStoryScenePreloaded||(window.__mhStoryScenePreloaded=new Set());
-          script.forEach(l=>{[l&&l.bg,l&&l.still,l&&typeof l.still==='string'?`${l.still}_tate`:null].forEach(k=>{const src=typeof k==='string'?STORY_SCENE_IMAGES[k]:null;if(src&&!pre.has(src)){pre.add(src);try{const im=new Image();im.src=src;}catch(e){}}});});
+          script.forEach(l=>{[l&&l.bg,l&&l.still,l&&typeof l.still==='string'?`${l.still}_tate`:null].forEach(k=>{const xb=typeof k==='string'&&typeof raidXmasSceneBgOf==='function'?raidXmasSceneBgOf(k):null;const src=xb?xb.img:(typeof k==='string'?STORY_SCENE_IMAGES[k]:null);if(src&&!pre.has(src)){pre.add(src);try{const im=new Image();im.src=src;}catch(e){}}});
+            const fw=l&&l.who?assistantById(l.who):null;const fs=fw&&fw.storyFigure;if(fs&&!pre.has(fs)){pre.add(fs);try{const im=new Image();im.src=fs;}catch(e){}}});
         }
         // 出てくる全員の顔(その行の表情と、話していないときの normal)も、開いたときに先に読んでおく
         //   (2026-11-14 社長「あつだけ顔の絵の表示が遅い」r1114-080。途中から初めて出る話し手は、出た瞬間に読み始めて遅れて見えていた)
@@ -25614,6 +25619,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         let monstersIdx=-1;
         for(let i=step;i>=0;i--){if(Array.isArray(script[i].monsters)){monstersIdx=i;break;}}
         const storyMonsters=monstersIdx>=0&&!storyStillImg?script[monstersIdx].monsters.filter(m=>m&&m.pose!=='hide'&&STORY_MONSTER_ART[m.id]):[];
+        // 全身の絵を持つ話し手(storyFigure・クリスマスのレイドのハムとサンタ・r1126-090 追記1 社長「真ん中に全身絵とかにして」)は、顔の枠ではなく画面のまん中に全身で出す。
+        //   初めて話した行から、場面の絵が替わるか、去る行(figOut)まで残す。話していないときは暗くする。同じ枠(storyFigureSlot・赤と黒のサンタ)は1人ぶん
+        const storyFigures=[];
+        if(monstersIdx<0&&!storyStillImg){
+          let figBase=null;
+          for(let i=0;i<=step;i++){
+            const l=script[i];if(!l)continue;
+            if(typeof l.bg==='string'){const xb=typeof raidXmasSceneBgOf==='function'?raidXmasSceneBgOf(l.bg):null;const base=xb?xb.base:l.bg;if(base!==figBase){storyFigures.length=0;figBase=base;}}
+            if(l.figOut){storyFigures.length=0;continue;}
+            const fw=l.who&&!l.band?assistantById(l.who):null;
+            if(fw&&fw.storyFigure){const slot=fw.storyFigureSlot||fw.id;const f={slot,id:fw.id,src:fw.storyFigure};const k=storyFigures.findIndex(x=>x.slot===slot);if(k>=0)storyFigures[k]=f;else storyFigures.push(f);}
+          }
+        }
         const fxColors={fall:'255,214,150',split:'233,213,255',merge:'255,250,235',unlock:'253,230,138',transform:'255,237,180',rankup:['251,146,60','251,191,36','192,132,252','248,113,113','250,204,21'][Math.max(0,stageTier-1)],shrink:'186,230,253'};
         const speakText=(l,w)=>{
           // ★呼び方は normalizeAssistantBond には入っていない(別の入れ物 assistantCallStyles)。話している助手ごとのぶんを引く
@@ -25634,6 +25652,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const storyCplBubble=Math.max(6,storyLand?Math.floor((storyBoxW-118)/12)-3:Math.floor((storyBoxW-156)/14)-4);
         // 折り方を決める1行の字数は、ページ分けの控えめな見込みではなく、実際の欄の幅から出す(欄の内側の幅÷字の大きさ。端の1字ぶんは余らせる)
         const storyCapBottom=Math.floor((storyBoxW-64-(storyLand?62:100))/13-0.2);
+        // 全身の絵をまん中に出す話し手(storyFigure)は、下の欄に顔を置かないので、そのぶん1行の字数が増える
+        const storyFaceCols=Math.floor((storyLand?62:100)/13);
+        const storyCapBottomOf=(w)=>storyCapBottom+(w&&w.storyFigure?storyFaceCols:0);
         const storyCapBubble=Math.floor((storyLand?(storyBoxW-118)/12:(storyBoxW-156)/14)-0.2);
         // 台詞を文の切れ目のかたまりごとに並べる(storyChunkLines)。かたまりで折ると行が増えるときは、今までどおり
         //   横の低い画面の吹き出しは高さ 84px で2行しか入らないので、かたまりで並べるのは2行まで(70-bootstrap.jsx)
@@ -25664,7 +25685,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const l=script[i];
           const w=l?assistantById(l.who):null;
           const text=l&&w&&!l.band?speakText(l,w):'';
-          const pages=storyZones&&typeof storySplitPages==='function'?storySplitPages(text,isGuestWho(l&&l.who)?storyCplBubble:storyCplBottom,3):[text];
+          const pages=storyZones&&typeof storySplitPages==='function'?storySplitPages(text,isGuestWho(l&&l.who)?storyCplBubble:storyCplBottom+(w&&w.storyFigure?storyFaceCols:0),3):[text];
           storyPageCache[i]=pages;
           return pages;
         };
@@ -25764,7 +25785,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           {/* 場面の背景(台本の行の bg)。場面が替わると key が替わり、ふわっと切り替わる。fx:'fall' の行では、
               穴へ落ちていくように背景が上へ流れて暗くなる(70-bootstrap.jsx の [data-story-bg]) */}
           {storySceneImg&&<div key={`${storyScene}:${storyFrame||''}`} data-story-bg={storyScene} data-story-bg-frame={storyFrame||undefined} data-story-bg-fx={fx==='fall'?'fall':undefined} aria-hidden="true"
-            style={{'--story-bg':`url("${storySceneImg}")`}}>{storyFrame==='game'&&<span data-story-bg-frame-label>モンヒロ事件簿</span>}</div>}
+            style={{'--story-bg':`url("${storySceneImg}")`}}>{storyXmasBg&&storyXmasBg.tint&&<span data-story-bg-tint style={{position:'absolute',inset:0,zIndex:1,background:storyXmasBg.tint}}/>}{storyFrame==='game'&&<span data-story-bg-frame-label>モンヒロ事件簿</span>}</div>}
           {storyStillImg&&<div key={`still:${storyStill}`} data-story-still={storyStill} data-story-still-has-tate={storyStillTate?'':undefined} aria-hidden="true"
             style={{'--story-still':`url("${storyStillImg}")`,...(storyStillTate?{'--story-still-tate':`url("${storyStillTate}")`}:{})}}><div data-story-still-area><img data-story-still-img src={storyStillImg} alt="" draggable={false}/></div>
             {storyStillTate&&<img data-story-still-tate src={storyStillTate} alt="" draggable={false}/>}</div>}
@@ -25790,11 +25811,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <span className="mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-black" style={{color:speakingGuest?'#0f172a':stageGuest.accent,background:speakingGuest?stageGuest.accent:'rgba(15,23,42,.8)',transition:'background .2s, color .2s'}}>{stageName}</span>
                 </div>}
                 {bubbleLine&&(
-                  <div key={`b${bubbleIdx}${bubbleIdx===step?`-${storyCurSub}`:''}`} data-story-guest-bubble data-story-pop={speakingGuest?'1':undefined} className="relative min-w-0 flex-1 rounded-2xl border-2 bg-slate-900/95 px-3 py-2" style={{borderColor:stageGuest.accent,opacity:speakingGuest?1:.4,boxShadow:speakingGuest?`0 0 0 2px ${stageGuest.accent}55, 0 0 20px ${stageGuest.accent}88`:'none',marginTop:8,animation:speakingGuest?'storyPop .3s ease-out both':undefined}}>
+                  <div key={`b${bubbleIdx}${bubbleIdx===step?`-${storyCurSub}`:''}`} data-story-guest-bubble data-story-pop={speakingGuest?'1':undefined} data-story-idle={speakingGuest?undefined:''} className="relative min-w-0 flex-1 rounded-2xl border-2 bg-slate-900 px-3 py-2" style={{borderColor:speakingGuest?stageGuest.accent:`${stageGuest.accent}55`,opacity:1,boxShadow:speakingGuest?`0 0 0 2px ${stageGuest.accent}55, 0 0 20px ${stageGuest.accent}88`:'none',marginTop:8,animation:speakingGuest?'storyPop .3s ease-out both':undefined}}>
                     {/* 話している人の顔を指すしっぽ */}
                     {!stageGuest.noFace&&<span aria-hidden="true" style={{position:'absolute',left:-9,top:22,width:0,height:0,borderTop:'8px solid transparent',borderBottom:'8px solid transparent',borderRight:`9px solid ${stageGuest.accent}`}}/>}
-                    <span className="inline-block rounded-full px-2 py-0.5 text-[10px] font-black" style={{color:'#0f172a',background:stageGuest.accent}}>{bubbleLine.name||stageGuest.name}</span>
-                    <span className="mt-1 block text-[14px] font-bold leading-relaxed text-white" style={storyLineStyle(storyZones?storyTextAt(bubbleIdx,stageGuest):'',storyCapBubble)}>{storyZones?storyLineNodes(storyTextAt(bubbleIdx,stageGuest),storyCapBubble):bubbleLines(speakText(bubbleLine,stageGuest))}</span>
+                    {/* 話していないあいだは前の台詞を出さない(箱の大きさは保つ)。地は不透明(後ろの HOME の字が透けていた・2026-11-28 ミハリの総点検8) */}
+                    <span className="inline-block rounded-full px-2 py-0.5 text-[10px] font-black" style={{color:'#0f172a',background:stageGuest.accent,visibility:speakingGuest?undefined:'hidden'}}>{bubbleLine.name||stageGuest.name}</span>
+                    <span className="mt-1 block text-[14px] font-bold leading-relaxed text-white" style={{...storyLineStyle(storyZones?storyTextAt(bubbleIdx,stageGuest):'',storyCapBubble),...(speakingGuest?{}:{visibility:'hidden'})}}>{storyZones?storyLineNodes(storyTextAt(bubbleIdx,stageGuest),storyCapBubble):bubbleLines(speakText(bubbleLine,stageGuest))}</span>
                   </div>
                 )}
               </div>
@@ -25810,6 +25832,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   </span>
                 );
               })}
+            </div>
+          )}
+          {/* 全身の絵の話し手(storyFigures・r1126-090 追記1)。置き場は真ん中のモンスターと同じ層(70-bootstrap.jsx の [data-story-monsters])。赤↔黒に替わると出し直す */}
+          {storyFigures.length>0&&(
+            <div data-story-monsters={storyFigures.length} data-story-figures="" aria-hidden="true" className="pointer-events-none" style={{top:'calc(env(safe-area-inset-top) + 6vh)'}}>
+              {storyFigures.map(f=>{const on=!line.band&&f.id===line.who;return(
+                <span key={`${f.slot}:${f.id}`} data-story-monster={`fig-${f.slot}`} data-story-pose="in" data-story-figure-dim={on?undefined:''}>
+                  <img src={f.src} alt="" draggable={false} className="block h-full w-full object-contain" style={{filter:on?'drop-shadow(0 6px 18px rgba(0,0,0,.65))':'brightness(.55) drop-shadow(0 6px 18px rgba(0,0,0,.65))',transition:'filter .2s'}}/>
+                </span>);})}
             </div>
           )}
           {/* 場面の説明(fxText)は、光る演出(fx)の無い行でも出す(2026-11-05。fx の無い行の説明が、どのお話でも出ていなかった) */}
@@ -25864,17 +25895,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 収まらない台詞は、上の storyPagesOf でページに分ける */}
             <div data-story-speaker-row={storyZones?'':undefined} className={storyZones?'flex items-start gap-2':undefined}>
             {/* 話している助手の顔(上部ゾーンのゲストと同じ大きさ・名前の札は顔の下)。ゲストが話しているあいだは、直前の助手を暗く残す */}
-            {storyZones&&bottomLine&&<div key={`face-${bottomSpeaker.id}`} data-story-speaker={bottomSpeaker.id} className="shrink-0 text-center">
+            {storyZones&&bottomLine&&!bottomSpeaker.storyFigure&&<div key={`face-${bottomSpeaker.id}`} data-story-speaker={bottomSpeaker.id} className="shrink-0 text-center">
               <span style={{display:'block',opacity:dimBottom?.55:1,filter:dimBottom?'brightness(.7)':`drop-shadow(0 0 10px ${bottomSpeaker.accent})`,transition:'opacity .2s, filter .2s'}}><AssistantFace who={bottomSpeaker} size={92} accent={bottomSpeaker.accent} expression={!dimBottom&&bottomLine===line?line.e:'normal'}/></span>
               <span className="mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-black" style={{color:dimBottom?bottomSpeaker.accent:'#0f172a',background:dimBottom?'rgba(15,23,42,.8)':bottomSpeaker.accent}}>{bottomLine.name||bottomSpeaker.name}</span>
             </div>}
-            {bottomLine?<div key={dimBottom?'keep':`x${step}-${storyCurSub}`} data-story-pop={dimBottom?undefined:'1'} className={`rounded-2xl border-2 bg-slate-900 px-3 py-3${storyZones?' min-w-0 flex-1':''}`} data-story-line-box style={{borderColor:bottomSpeaker.accent,opacity:dimBottom?.4:1,boxShadow:dimBottom?'none':`0 0 16px ${bottomSpeaker.accent}55`,transition:'opacity .18s',animation:dimBottom?undefined:'storyPop .28s ease-out both'}}>
-              <span className="inline-block rounded-full px-2 py-0.5 text-[10px] font-black" style={{color:'#0f172a',background:bottomSpeaker.accent}}>{bottomLine.name||bottomSpeaker.name}</span>
+            {bottomLine?<div key={dimBottom?'keep':`x${step}-${storyCurSub}`} data-story-pop={dimBottom?undefined:'1'} className={`rounded-2xl border-2 bg-slate-900 px-3 py-3${storyZones?' min-w-0 flex-1':''}`} data-story-line-box data-story-idle={dimBottom?'':undefined} style={{borderColor:dimBottom?`${bottomSpeaker.accent}55`:bottomSpeaker.accent,opacity:1,boxShadow:dimBottom?'none':`0 0 16px ${bottomSpeaker.accent}55`,transition:'opacity .18s',animation:dimBottom?undefined:'storyPop .28s ease-out both'}}>
+              {/* 上の人・帯が話しているあいだは、前の台詞を残さない(箱の大きさは保つ・地は不透明。2026-11-28 ミハリの総点検8) */}
+              <span className="inline-block rounded-full px-2 py-0.5 text-[10px] font-black" style={{color:'#0f172a',background:bottomSpeaker.accent,visibility:dimBottom?'hidden':undefined}}>{bottomLine.name||bottomSpeaker.name}</span>
               {/* ★{name} は、そのとき話している助手の呼び方へ置き換える。
                   ここを素の {line.t} で出していたため、画面に {name} がそのまま出ていた
                   (2026-09-11・ユーザー指摘「名前呼びのとこが変換されてない」)。
                   呼び方も絆Lvも助手ごとに違うので、選んでいる助手ではなく「話している助手」から引く */}
-              <span className="block text-[13px] font-bold leading-relaxed text-white mt-1" style={storyLineStyle(storyZones?storyTextAt(bottomLine===line?step:assistIdx,bottomSpeaker):'',storyCapBottom)}>{storyZones?storyLineNodes(storyTextAt(bottomLine===line?step:assistIdx,bottomSpeaker),storyCapBottom):bubbleLines(speakText(bottomLine,bottomSpeaker))}</span>
+              <span className="block text-[13px] font-bold leading-relaxed text-white mt-1" style={{...storyLineStyle(storyZones?storyTextAt(bottomLine===line?step:assistIdx,bottomSpeaker):'',storyCapBottomOf(bottomSpeaker)),...(dimBottom?{visibility:'hidden'}:{})}}>{storyZones?storyLineNodes(storyTextAt(bottomLine===line?step:assistIdx,bottomSpeaker),storyCapBottomOf(bottomSpeaker)):bubbleLines(speakText(bottomLine,bottomSpeaker))}</span>
             </div>:<div data-story-line-box className={`flex items-center justify-center rounded-2xl border-2 border-slate-700 bg-slate-900 px-3 py-3 text-center text-[11px] font-bold text-slate-400${storyZones?' min-w-0 flex-1':''}`}>▲ 上のことばを読んでね</div>}
             </div>
             <p className="mt-2 text-center text-[11px] font-bold tabular-nums text-slate-300">
@@ -26091,7 +26123,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <div className="rounded-2xl border border-pink-500/40 bg-slate-900 p-3">
                   <div className="text-[10px] font-black text-pink-300 mb-1">いまの仲良し度</div>
                   <div className="text-[12px] text-white font-black">{points} ポイント ／ Lv{assistantBondLevelNow}（{(typeof assistantBondStageByLevel==='function'?assistantBondStageByLevel(assistantBondLevelNow,selectedAssistantId):{}).title||''}）</div>
-                  <div className="text-[9px] text-slate-400 mt-1">{next?`次のLv${next.level}まで あと${next.remain}`:'一番上まで来ています'}</div>
+                  <div className="text-[9px] text-slate-400 mt-1">{next?`次のLv${next.level}まで あと${next.remain}`:'1番上まで来ています'}</div>
                   <div className="text-[9px] text-slate-400">今日ぶん: {assistantBond.dailyTotal} / {(typeof ASSISTANT_BOND_DAILY_MAX!=='undefined'&&ASSISTANT_BOND_DAILY_MAX)||0}（{assistantBond.day||'未記録'}）</div>
                 </div>
                 <div>
@@ -26492,7 +26524,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 {/* クイック・AUTO設定・裏周回の案内を見返す(56-quick-guide.jsx)。光らせる所は無しで、ページだけ流す。見た印は動かさない */}
                 {topic.launch==='quickGuides'&&typeof QUICK_GUIDE_REPLAYS==='object'&&(
                   <div data-quick-guide-replays className="grid gap-2">
-                    {[['g1','🎓 クイックの案内をもう一度見る'],['g2','🎓 AUTO設定の案内をもう一度見る'],['g3','🎓 裏周回の案内をもう一度見る']].map(([id,label])=>(
+                    {[['g1','🎓 クイックの案内をもう1度見る'],['g2','🎓 AUTO設定の案内をもう1度見る'],['g3','🎓 裏周回の案内をもう1度見る']].map(([id,label])=>(
                       <button key={id} type="button" data-quick-guide-replay={id} onClick={()=>setQuickGuideReplay(id)} className="w-full rounded-2xl py-3 text-[12px] font-black text-black active:scale-95" style={{backgroundColor:cat.color}}>{label}</button>
                     ))}
                   </div>
@@ -26706,7 +26738,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
           <header className="flex shrink-0 items-center justify-between gap-2 border-b border-white/10 bg-slate-950/95 px-5 py-3">
             <div className="min-w-0">
               <h3 className="text-lg font-black italic uppercase text-amber-300">Battle Log</h3>
-              <small className="block font-black text-slate-400" style={JA_LABEL_STYLE}>{jaWrap(`古い順・一番下が最新（最大${BATTLE_LOG_LIMIT}件）`)}</small>
+              <small className="block font-black text-slate-400" style={JA_LABEL_STYLE}>{jaWrap(`古い順・1番下が最新（最大${BATTLE_LOG_LIMIT}件）`)}</small>
             </div>
             <button onClick={()=>setShowBattleLog(false)} className="min-h-[44px] shrink-0 whitespace-nowrap rounded-full bg-white/10 px-5 text-[11px] text-white active:scale-90">閉じる</button>
           </header>
@@ -27033,7 +27065,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
           {speciesChallengeClearCardNode()}
           <div className="w-full max-w-xs space-y-3">
             {speciesChallengeBattleRun?<button onClick={()=>{const keepSaving=speciesChallengeSaveRunRef.current;const keepDebug=speciesChallengeFromDebugRef.current;const keepMode=speciesChallengeRunMode(speciesChallengeBattleRunRef.current);runResultActionOnce(()=>{returnToHome();openSpeciesChallengeSelection({saveProgress:keepSaving,fromDebug:keepDebug,mode:keepMode});});}} disabled={resultActionPending} className="w-full bg-cyan-700 text-white py-3.5 rounded-2xl font-black disabled:opacity-50">種族チャレンジ選択へ戻る</button>:<>
-              <button onClick={()=>runResultActionOnce(()=>startDebugBattle(extremeRun))} disabled={resultActionPending} className="w-full bg-fuchsia-700 text-white py-3.5 rounded-2xl font-black disabled:opacity-50">同じ条件でもう一度</button>
+              <button onClick={()=>runResultActionOnce(()=>startDebugBattle(extremeRun))} disabled={resultActionPending} className="w-full bg-fuchsia-700 text-white py-3.5 rounded-2xl font-black disabled:opacity-50">同じ条件でもう1度</button>
               <button onClick={()=>runResultActionOnce(()=>{returnToHome();setGameState('DEBUG_SETTINGS');})} disabled={resultActionPending} className="w-full bg-slate-800 text-slate-200 py-3.5 rounded-2xl font-black disabled:opacity-50">デバッグ設定へ戻る</button>
               <button onClick={()=>runResultActionOnce(()=>{returnToHome();setGameState('SETTINGS');openHelp();})} disabled={resultActionPending} className="w-full bg-slate-900 border border-white/10 text-slate-400 py-3.5 rounded-2xl font-black disabled:opacity-50">ヘルプへ戻る</button>
             </>}
