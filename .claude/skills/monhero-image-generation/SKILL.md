@@ -24,3 +24,11 @@
 - 画像の `?v=` はファイルの sha256 先頭12桁（data 側に直書きされているものだけ更新）。
 - asset-manifest.json は data ファイルのハッシュも含むので、画像差し替えと data 編集の後に再生成する。
 - 生成物（compiled.js 等）は手で直さず build-and-check で作り直す。イラスト差し替えの前例は changelog のみ更新・告知なし。
+
+## 縁を原本のままにする(2026-11-28 r1126-095 追記2・社長「新着替えでまた同じ現象。実装の仕方が悪い」)
+
+- 透け方は原本の物を Lanczos で広げて使い、AI 拡大(`tools/image/upscale-anime/upscale.py`)は色だけ。
+  原本の縁を削る・ぼかす・内側の色で塗り直す掃除はしない(「なめらかにする」「ぼかして馴染ませる」加工は縁にも中身にも入れない)。
+  全身は `tools/assistant/life-fullbody-art.py` が `tools/assistant/art_edge.py` を通して作る(新しい服は `LEGACY_CLEAN` に足さない)。
+  入れたら `node tools/assistant/art-edge-check.js`(原本と比べて白い縁取り・外の線の消え・ギザギザ・ぼやけが悪ければ落ちる。`run-checks.js --changed` が選ぶ)
+- 道具の掃除が外の黒い線を肌色で塗って白い縁取りを作った前例: #8044(止め絵 `docs/progress/assistant-art/edge-fix-2026-11-28/`)

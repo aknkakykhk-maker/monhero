@@ -21,6 +21,7 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import art_webp
 import art_source  # 原本の場所を引く・正本が「現行そのもの」の組(旧版が元の組)は作らない(台帳 r1119-128)
+import art_edge  # 原本の縁を削らずに作る口(2026-11-28 r1126-095 追記2)
 OUT = os.path.join(ROOT, 'monster-hero/images/assistant/fullbody')
 # キー → 受け取った絵。キーは「助手id」か「助手id:服の名前」。
 #   表情の絵(8表情: angry・crying・excited・happy・normal・surprise・troubled・wink)が届いたら、キーの後ろに @表情 を付けて足す
@@ -69,6 +70,27 @@ ART = {
     'erubin': 'msg7-curly-man-casual.png',
     'erubin:sekiyuou': 'msg8-curly-man-robe.png',
 }
+# 下の clean()(縁の掃除: 白マット取り・透けのぼかし・縁の色の塗り直し)で作るのは、2026-11-28 より前に作って社長が見た絵だけ。
+#   2026-11-28 r1126-095 追記2(社長「新着替えでまた同じ現象だから実装の仕方が悪い」): この掃除が外の黒い線を肌色で塗り、
+#   頬〜あごの白い縁取り・外の線の消え・髪先のガタガタを作っていた。ここに無いキー(これから足す服も全部)は
+#   art_edge.compose(透けは原本を Lanczos で広げる・色だけ AI 拡大・縁は削らない)で作る。ここへキーを足さない
+LEGACY_CLEAN = {'atsu', 'kiki', 'kiki:halloween', 'kyuko', 'momosuke', 'momosuke:halloween', 'mua', 'mua:halloween', 'mua:card-master',
+                'sorashido:hosei', 'erubin', 'erubin:sekiyuou'} | {'kiki@%s' % e for e in ('angry', 'crying', 'excited', 'happy', 'normal', 'surprise', 'troubled', 'wink')}
+UPSCALED = '_x2.webp'  # AI 拡大した色の絵の名前の終わり(原本の名前 + _x2.webp。tools/image/upscale-anime/upscale.py で作る)
+
+
+def edge_source(key):
+    """そのキーの (原本の道筋, AI 拡大した色の絵の道筋か None)"""
+    name = ART[key]
+    if name.endswith(UPSCALED):
+        return art_source.src(name[:-len(UPSCALED)] + '.png'), art_source.src(name)
+    return art_source.src(name), None
+
+
+def out_name(key):
+    return key.replace('@', '__').replace(':', '_')
+
+
 # 2×2 に4表情ずつ描かれたシート(2026-11-12 社長から。枝 hq/incoming-kiki-halloween-fullbody8)。表情なしの絵のキー → [(シート, [左上, 右上, 左下, 右下])]
 #   切る位置は、体と体のあいだの空いた行・列(元のシートで調べた。上の段の体は 706〜738 で終わり、下の段の帽子は 730〜755 から始まる)
 SPLIT_SHEETS = {
@@ -154,6 +176,10 @@ def seam_path(al, x0, x1, bias=0.02):
 # 表情の絵を、元の絵のふちと色のまま作る子(clean の raw)。2026-11-15 r1115-203 社長「あつだけおかしい」でまずあつだけ。
 #   ほかの子は今までの作り方のまま(社長「ほかの助手はいい」)
 RAW_SHEETS = {'atsu'}
+# 表情シートのうち、art_edge.compose(縁を削らない口)で作る子。2026-11-28 r1126-095 追記2: ももすけ(ふだん)の8表情は clean() の掃除で
+#   髪の外の線が消えて白っぽい縁取りが出ている(tools/assistant/art-edge-check.py で白い縁取り +30〜54)。こちらで作ると縁は直るが、
+#   立ち絵の重ね合わせが変わって困り顔の顔アイコンが横に寄った(assistant-face-check.js)ので、顔の位置合わせを決めるまで入れない(窓口の判断待ち)
+EDGE_SHEETS = set()
 SELF_BASE = {'sorashido'}  # 表情なしの元絵が無く、ふつうの体を大きさの基準にするシート
 
 
@@ -753,6 +779,9 @@ def main():
     made = {}
 
     def make_art(key):
+        if key not in made and key.split('@')[0] not in LEGACY_CLEAN and key not in LEGACY_CLEAN:
+            orig, color = edge_source(key)
+            made[key] = art_edge.compose(orig, color, min_frac=0.004 if '@' in key else 0.03)
         if key not in made:
             # 表情の絵は、記号(うずまき・びっくりマーク)が体から離れているので、小さな塊も残す(ごみは別に消える量で)
             #   表情の絵の元絵はふちが硬め(半透明が少ない)なので、書き出しで約 0.6 画素になる量でぼかす
@@ -787,7 +816,8 @@ def main():
                 if key in HAIR_DEHAZE:
                     arr[...] = dehaze_hair(arr)
                 jobs.append(('%s__%s' % (key.replace(':', '_'), e),
-                             lambda arr=arr, key=key: clean(None, min_frac=0.004, arr=arr, raw=True) if key in RAW_SHEETS else clean(None, min_frac=0.004, arr=arr, glow_cut=True, soft=1.0),
+                             lambda arr=arr, key=key: (art_edge.compose(Image.fromarray(arr), min_frac=0.004) if key in EDGE_SHEETS else
+                                                       clean(None, min_frac=0.004, arr=arr, raw=True) if key in RAW_SHEETS else clean(None, min_frac=0.004, arr=arr, glow_cut=True, soft=1.0)),
                              ((lambda arr0=cells[0][1]: fit_scale(arr_to_im(arr0))) if key in SELF_BASE else (lambda key=key, ratio=ratio: fit_scale(make_art(key)) * ratio))))
     for key, sheets in GRID_SHEETS.items():
         if art_source.refuse(art_source.group_of(key, 'fullbody')):

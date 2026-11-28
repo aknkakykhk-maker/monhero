@@ -138,8 +138,13 @@ def remeasure(key, mk, cur):
     fp = fingerprint(cur)
     if mk['fp'] == fp:
         return mk, None
-    rel = os.path.relpath(os.path.join(FB, '%s__normal.png' % HEADS[key]['name']), ROOT)
-    old = git_old_normal(rel, mk['fp'])
+    # 2026-11-28: サンタ服・冬服の全身は WebP(art_webp.py)。履歴は WebP の名前で探し、無ければ PNG の名前で探す
+    old = None
+    for ext in ('webp', 'png'):
+        rel = os.path.relpath(os.path.join(FB, '%s__normal.%s' % (HEADS[key]['name'], ext)), ROOT)
+        old = git_old_normal(rel, mk['fp'])
+        if old is not None:
+            break
     if old is None:
         sys.exit('%s: 全身画が替わったが、測ったときの絵(目印 %s)が git の履歴に無い。--marks の確かめ絵を見て life-stand-marks.json の top・eye・chin・fp を手で直す' % (key, mk['fp']))
     bo, bn = bbox(old), bbox(cur)

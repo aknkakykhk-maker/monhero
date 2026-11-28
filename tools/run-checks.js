@@ -180,6 +180,10 @@ const FORCE_CHECKS = [
   // 絵の余白が変わるだけで、別の画面の寄せ方が合わなくなる(ももすけの絵の差し替えで、モードえらびが顔だけの大写しになっていた)。10分あまりかかるので名指しの所だけ
   { re: /^(monster-hero\/images\/assistant\/fullbody\/.+\.png|tools\/assistant\/(life-fullbody-art\.py|life-expression-sheets\.py|life-fullbody-(edge|pocket)-check\.js))$/,
     checks: ['assistant/life-fullbody-edge-check.js', 'assistant/life-fullbody-pocket-check.js'], why: '助手の全身画のふちの透過が2値(ギザギザ)に戻っていないか・囲まれた背景の残り' },
+  // 助手の絵の縁を原本と比べる(2026-11-28 r1126-095 追記2 社長「新着替えでまた同じ現象だから実装の仕方が悪い」)。
+  // 白い縁取り・外の線の消え・ギザギザ・ぼやけが原本より悪ければ落ちる。絵(全身・半身・立ち絵)・原本・絵を作る道具のどれを触っても回す
+  { re: /^(monster-hero\/images\/assistant\/(fullbody|santa|stand-[a-z0-9-]+|winter)\/.+\.(png|PNG|webp)|tools\/art-sources\/assistants\/.+|tools\/image\/upscale-anime\/.+|tools\/assistant\/(art_edge|art_edge_metrics|art_webp|art_source|art-edge-check|life-fullbody-art|life-xmas-art-remake|life-dra-santa-art|life-expression-sheets|life-stand-from-fullbody)\.(py|js)|tools\/assistant\/art-edge-pending\.json)$/,
+    checks: ['assistant/art-edge-check.js'], why: '助手の絵の縁が原本より悪くなっていないか(白い縁取り・外の線の消え・ギザギザ・ぼやけ。r1126-095 追記2)' },
   { re: /^monster-hero\/(images\/assistant\/(?!face\/).+\.(png|PNG)|src\/parts\/(56-assistant-life-map|56-assistant-peer)\.jsx)$/,
     checks: ['assistant/assistant-art-scenes-check.js'], why: '助手の絵が使う場面の全部でうまく出ているか' },
   { re: /^(monster-hero\/images\/assistant\/stand-[a-z0-9-]+\/.+\.png|monster-hero\/images\/assistant\/fullbody\/.+\.png|monster-hero\/data\/assistants\.js|tools\/assistant\/life-stand-[a-z-]+\.(py|js|json))$/,

@@ -4,8 +4,11 @@
 #   tools/image/upscale-anime/.venv/bin/pip install ncnn pillow numpy realesrgan-ncnn-py
 #     realesrgan-ncnn-py は模型の置き場所としてだけ使う(本体は libomp/vulkan が要って読めない)。模型は site-packages/realesrgan_ncnn_py/models/
 #   .venv/bin/python tools/image/upscale-anime/upscale.py <模型の置き場所> <元.png> <出す.png か .webp> <元に対する倍率(例 2)>
-# 4倍にしてから倍率へ縮める。透明は元の透明をなめらかに拡大(Lanczos)。192px ずつ・のりしろ 12px で区切って回す(メモリ節約)
+# 4倍にしてから倍率へ縮める。192px ずつ・のりしろ 12px で区切って回す(メモリ節約)
 # 2026-11-28 きゅうこのサンタ服(#7949)で使った物
+# 2026-11-28 r1126-095 追記2: この道具が拡大するのは「色」だけ。出した絵の透けは目安で、助手の絵を作るときは使わない
+#   (tools/assistant/art_edge.py が原本の透けを Lanczos で広げて付け直す)。透明な所の色は、模型に通す前に縁の色で埋める
+#   (原本は透明な所が黒なので、そのまま通すと縁の外側へ黒がにじむ)
 import sys, numpy as np, ncnn
 from PIL import Image
 
@@ -20,11 +23,30 @@ net.load_model(f"{MD}/realesrgan-x4plus-anime.bin")
 
 im = Image.open(src).convert("RGBA")
 W, H = im.size
-rgb = np.asarray(im.convert("RGB")).astype(np.float32) / 255.0
 A8 = np.asarray(im.getchannel("A"))
+
+
+def fill_hidden(rgb, alpha, steps=24):
+    """透明(アルファ 0)な所の色を、見えている所の色で外へ広げて埋める(見える画素の色は変えない)"""
+    rgb = rgb.copy()
+    known = alpha > 0
+    for _ in range(steps):
+        w = known.astype(np.float32)
+        pc = np.pad(rgb * w[..., None], ((1, 1), (1, 1), (0, 0)))
+        pw = np.pad(w, 1)
+        sm = sum(pc[1 + dy:pc.shape[0] - 1 + dy, 1 + dx:pc.shape[1] - 1 + dx] for dy in (-1, 0, 1) for dx in (-1, 0, 1))
+        cn = sum(pw[1 + dy:pw.shape[0] - 1 + dy, 1 + dx:pw.shape[1] - 1 + dx] for dy in (-1, 0, 1) for dx in (-1, 0, 1))
+        new = ~known & (cn > 0)
+        if not new.any():
+            break
+        rgb[new] = sm[new] / cn[new][:, None]
+        known |= new
+    return rgb
+
+
+rgb = fill_hidden(np.asarray(im.convert("RGB")).astype(np.float32) / 255.0, A8)
 # 2026-11-28 助手部(r1126-095): ほぼ透明だけの区画(アルファ 40 未満・あとの掃除で消える薄いもや)は模型に通さず、ふつうの拡大で埋める(時間を半分ほどに)
-plain = np.asarray(im.convert("RGB").resize((W * 4, H * 4), Image.BICUBIC)).astype(np.float32) / 255.0
-# 透明部分は白で埋めると縁に白がにじむので、近い色を残すため黒でなくそのまま使う
+plain = np.asarray(Image.fromarray((rgb * 255 + 0.5).astype(np.uint8)).resize((W * 4, H * 4), Image.BICUBIC)).astype(np.float32) / 255.0
 T, P, S = 192, 12, 4
 out = np.zeros((H * S, W * S, 3), np.float32)
 for y in range(0, H, T):
