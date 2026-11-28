@@ -11,6 +11,7 @@
 //         node tools/novel/xmas-novel-shots.js <出力ディレクトリ> --r1126-062   足した選択肢とエンド(r1126-062)の組を撮る
 //         node tools/novel/xmas-novel-shots.js <出力ディレクトリ> --r1126-077   眠りのドラ(r1126-077)のルートを縦と横で撮る
 //         node tools/novel/xmas-novel-shots.js <出力ディレクトリ> --r1126-108   分かれ道とエンド 第1弾(r1126-108)の組を撮る
+//         node tools/novel/xmas-novel-shots.js <出力ディレクトリ> --r1126-117   ふりがな(r1126-117)の組を縦・横・横小で撮る
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -212,7 +213,57 @@ const SHOTS_108C = [
   { name: '44-a8y', row: 'A8y', side: 2, label: '真ルート第8章 寄り道(屋根裏)' },
   { name: '45-c8z', row: '8-Z-5', side: 1, label: 'C8-Z ドラの声で開ける' },
 ];
-const LIST_ALL = process.argv.includes('--r1126-108c') ? SHOTS_108C : process.argv.includes('--r1126-108b') ? SHOTS_108B : process.argv.includes('--r1126-108') ? SHOTS_108 : process.argv.includes('--spoil') ? SHOTS_SPOIL : process.argv.includes('--r1126-091') ? SHOTS_091 : process.argv.includes('--final') ? SHOTS_FINAL : process.argv.includes('--r1126-077') ? SHOTS_077 : process.argv.includes('--r1126-071') ? SHOTS_071 : process.argv.includes('--r1126-076') ? SHOTS_076 : process.argv.includes('--r1126-067') ? SHOTS_067 : process.argv.includes('--r1126-065') ? SHOTS_065 : process.argv.includes('--r1126-062') ? SHOTS_062 : process.argv.includes('--r1126-046') ? SHOTS_046 : process.argv.includes('--r1126-054') ? SHOTS_054 : process.argv.includes('--r1126-058') ? SHOTS_058 : SHOTS;
+// ふりがな(r1126-117)。黒羽・白瀬が初めて出る行を、縦・横・横小(667×375)で撮る。wait: 名札(影から浮かぶ)が消える前に撮る
+const SHOTS_117 = [];
+[['01-kuroba-intro', '1-3-2', 1, '黒羽の初登場の名札', 1700], ['02-kuroba', '1-3-5', 1, '黒羽の初登場(名札が消えたあと)', 0],
+  ['03-shirase', '1-3-6', 2, '白瀬の台詞から読み始め(名前の帯)', 0], ['04-band', '1-5-6', 1, '地の文の白瀬から読み始め', 0], ['05-ch3', '3-5-3', 2, '第3章から(白瀬)', 0]].forEach(([name, row, side, label, wait]) => {
+  SHOTS_117.push({ name: `${name}-tate`, row, side, wait, label: `${label}(縦)` });
+  SHOTS_117.push({ name: `${name}-yoko`, row, side, wait, land: true, label: `${label}(横)` });
+  SHOTS_117.push({ name: `${name}-yokosmall`, row, side, wait, vp: { width: 667, height: 375 }, label: `${label}(横小)` });
+});
+// r1126-115 もしもの話 ① 仮面のワルツ(紅のしおりを持っている人だけ)
+const SHOTS_115 = [
+  { name: '51-a1b-red', row: 'A1b', side: 1, endings: ['END-G', 'END-M1', 'END-M2', 'END-M3', 'END-M4', 'END-M5'], label: 'しおりのあと 第1章 A1b の③' },
+  { name: '52-piano', row: 'RW-1-5', side: 1, endings: ['END-G', 'END-M1', 'END-M2', 'END-M3', 'END-M4', 'END-M5'], label: 'RW-1 真夜中のピアノ(灰谷)' },
+  { name: '53-stairs', row: 'RW-2-11', side: 2, endings: ['END-G', 'END-M1', 'END-M2', 'END-M3', 'END-M4', 'END-M5'], label: 'RW-2 12年ぶり' },
+  { name: '54-waltz', row: 'RW-4-10', side: 1, endings: ['END-G', 'END-M1', 'END-M2', 'END-M3', 'END-M4', 'END-M5'], label: 'RW-4 ワルツ' },
+  { name: '55-ar1', row: 'AR1', side: 1, endings: ['END-G', 'END-M1', 'END-M2', 'END-M3', 'END-M4', 'END-M5'], label: 'ワルツのあとの選択' },
+  { name: '56-r3', row: 'RW-5c-6', side: 2, endings: ['END-G', 'END-M1', 'END-M2', 'END-M3', 'END-M4', 'END-M5'], label: 'RW-5c 釣りはいらない' },
+  { name: '57-r1-card', row: 'R1-4', side: 1, tap: 3, endings: ['END-G', 'END-M1', 'END-M2', 'END-M3', 'END-M4', 'END-M5'], label: 'END-R1 エンドの札(もしも)' },
+  { name: '58-out', row: 'OUT-RW-1', side: 1, endings: ['END-G', 'END-M1', 'END-M2', 'END-M3', 'END-M4', 'END-M5'], label: 'OUT-RW 画面の前で' },
+];
+// r1126-115 視点の編 ドラの編
+const SHOTS_115PD = [
+  { name: '61-a2-pd', row: 'A2', side: 1, endings: ['END-G'], label: '真グッドのあと 第2章 A2 の③(✦)' },
+  { name: '62-pantry', row: 'PD-1-11', side: 1, endings: ['END-G'], label: 'PD-1 すれ違う一瞬' },
+  { name: '63-apd1', row: 'APD1', side: 2, endings: ['END-G'], label: '時刻つきの選択' },
+  { name: '64-ribbon', row: 'PD-3-4', side: 2, endings: ['END-G'], label: 'PD-3 崖の上のリボン' },
+];
+// r1126-115 もしもの話 ② 十三番目の客(灰のしおりを持っている人だけ)
+const SHOTS_115H = [
+  { name: '71-a4-ash', row: 'A4', side: 1, endings: ['END-G', 'END-X1', 'END-X2', 'END-X3', 'END-X4', 'END-X5', 'END-X6', 'END-X7', 'END-X8'], label: 'しおりのあと 第4章 A4 の③' },
+  { name: '72-count', row: 'HJ-1-13', side: 2, endings: ['END-G', 'END-X1', 'END-X2', 'END-X3', 'END-X4', 'END-X5', 'END-X6', 'END-X7', 'END-X8'], label: 'HJ-1 壁の影が1つ多い' },
+  { name: '73-ledger', row: 'HJ-2-6', side: 1, endings: ['END-G', 'END-X1', 'END-X2', 'END-X3', 'END-X4', 'END-X5', 'END-X6', 'END-X7', 'END-X8'], label: 'HJ-2 宿帳の13行目' },
+  { name: '74-bowl', row: 'HJ-3-10a', side: 1, endings: ['END-G', 'END-X1', 'END-X2', 'END-X3', 'END-X4', 'END-X5', 'END-X6', 'END-X7', 'END-X8'], label: 'HJ-3 自分の字(あつ派)' },
+  { name: '75-ah1', row: 'AH1', side: 2, endings: ['END-G', 'END-X1', 'END-X2', 'END-X3', 'END-X4', 'END-X5', 'END-X6', 'END-X7', 'END-X8'], label: '13行目の前の選択' },
+  { name: '76-close', row: 'HJ-6-3', side: 1, endings: ['END-G', 'END-X1', 'END-X2', 'END-X3', 'END-X4', 'END-X5', 'END-X6', 'END-X7', 'END-X8'], label: 'HJ-6 世話役の決まり' },
+  { name: '77-h2-card', row: 'H2-5', side: 2, endings: ['END-G', 'END-X1', 'END-X2', 'END-X3', 'END-X4', 'END-X5', 'END-X6', 'END-X7', 'END-X8'], label: 'END-H2 結びの帯(もしも)' },
+  { name: '78-out', row: 'OUT-HJ-1', side: 1, endings: ['END-G', 'END-X1', 'END-X2', 'END-X3', 'END-X4', 'END-X5', 'END-X6', 'END-X7', 'END-X8'], label: 'OUT-HJ 画面の前で' },
+];
+// r1126-115 もしもの話 ③ 壁の中の宝の地図(緑のしおりを持っている人だけ)
+const SHOTS_115TK = [
+  { name: '71-a6y-green', row: 'A6y', side: 1, endings: ['END-G', 'END-O', 'END-O2', 'END-O3', 'END-O4'], label: 'しおりのあと 第6章 A6y の③(✦)' },
+  { name: '72-map', row: 'TK-1-13', side: 2, endings: ['END-G', 'END-O', 'END-O2', 'END-O3', 'END-O4'], label: 'TK-1 宝の地図と4つの音符' },
+  { name: '73-at1', row: 'AT1', side: 1, endings: ['END-G', 'END-O', 'END-O2', 'END-O3', 'END-O4'], label: 'うたって、のぼっての選択' },
+  { name: '74-belongings', row: 'TK-2b-4', side: 1, endings: ['END-G', 'END-O', 'END-O2', 'END-O3', 'END-O4'], label: 'TK-2b 持ち物しらべ(ネタ)' },
+  { name: '75-key', row: 'TK-4-6', side: 2, endings: ['END-G', 'END-O', 'END-O2', 'END-O3', 'END-O4'], label: 'TK-4 オーナーの鍵' },
+  { name: '76-at2', row: 'AT2', side: 2, endings: ['END-G', 'END-O', 'END-O2', 'END-O3', 'END-O4'], label: 'オルゴールの前の選択' },
+  { name: '77-letter', row: 'TK-6a-11', side: 1, endings: ['END-G', 'END-O', 'END-O2', 'END-O3', 'END-O4'], label: 'TK-6a 母のカード(手紙)' },
+  { name: '78-t1-title', row: 'T1-2', side: 1, endings: ['END-G', 'END-O', 'END-O2', 'END-O3', 'END-O4'], label: 'END-T1 最後の一音(ツリーの星)' },
+  { name: '79-t2', row: 'TK-6b-5', side: 2, endings: ['END-G', 'END-O', 'END-O2', 'END-O3', 'END-O4'], label: 'TK-6b 宝の缶(END-T2 へ)' },
+  { name: '80-out', row: 'OUT-TK-1', side: 1, endings: ['END-G', 'END-O', 'END-O2', 'END-O3', 'END-O4'], label: 'OUT-TK 画面の前で' },
+];
+const LIST_ALL = process.argv.includes('--r1126-115h') ? SHOTS_115H : process.argv.includes('--r1126-115tk') ? SHOTS_115TK : process.argv.includes('--r1126-117') ? SHOTS_117 : process.argv.includes('--r1126-115pd') ? SHOTS_115PD : process.argv.includes('--r1126-115') ? SHOTS_115 : process.argv.includes('--r1126-108c') ? SHOTS_108C : process.argv.includes('--r1126-108b') ? SHOTS_108B : process.argv.includes('--r1126-108') ? SHOTS_108 : process.argv.includes('--spoil') ? SHOTS_SPOIL : process.argv.includes('--r1126-091') ? SHOTS_091 : process.argv.includes('--final') ? SHOTS_FINAL : process.argv.includes('--r1126-077') ? SHOTS_077 : process.argv.includes('--r1126-071') ? SHOTS_071 : process.argv.includes('--r1126-076') ? SHOTS_076 : process.argv.includes('--r1126-067') ? SHOTS_067 : process.argv.includes('--r1126-065') ? SHOTS_065 : process.argv.includes('--r1126-062') ? SHOTS_062 : process.argv.includes('--r1126-046') ? SHOTS_046 : process.argv.includes('--r1126-054') ? SHOTS_054 : process.argv.includes('--r1126-058') ? SHOTS_058 : SHOTS;
 
 //  --only <語>: 名前にその語を含む物だけ撮る(例: --only kuroba)
 const ONLY = process.argv.includes('--only') ? process.argv[process.argv.indexOf('--only') + 1] || '' : '';
@@ -259,10 +310,10 @@ const serve = () => new Promise((r) => { const s = http.createServer((req, res) 
       await page.getByRole('button', { name: 'モンヒロバトル', exact: true }).waitFor({ timeout: 30000 });
       await page.evaluate(() => openXmasNovel({ force: true, playerName: 'テスト' }));
       await page.locator(sh.list ? '[data-xmas-novel-chapters]' : sh.history ? '[data-xmas-novel-endings]' : '[data-xmas-novel-continue]').click({ timeout: 8000 });
-      await page.waitForTimeout(2600);
+      await page.waitForTimeout(sh.wait || 2600);
       // 文字送りを最後まで(1回だけ叩く。問いの行はそのまま)
       const row = await page.evaluate(() => { const r = document.querySelector('[data-xmas-novel]'); return r ? r.getAttribute('data-row') : null; });
-      await page.waitForTimeout(1200);
+      if (!sh.wait) await page.waitForTimeout(1200);
       for (let t = 0; t < (sh.tap || 0); t += 1) { await page.mouse.click(195, 640); await page.waitForTimeout(1600); }
       await page.screenshot({ path: path.join(OUT, `${sh.name}.jpg`), type: 'jpeg', quality: 82 });
       console.log(`${errors.length ? 'NG' : 'OK'}: ${sh.name} ${sh.label} — 画面の行 ${row}${errors.length ? ` エラー ${errors[0]}` : ''}`);

@@ -57,6 +57,24 @@ const ROUTES = [
   { name: '第7章 A7b で「みゅあの助手の勘」', want: 'END-O3', from: 'A7b', picks: { A7b: 'opt:1' }, only: 'atsu' },
   { name: '第7章 A7b は出ない(ソラシド派)', want: 'END-M4', from: 'Q7a', picks: { Q7a: 'P' }, only: 'sorashido', noQ: 'A7b', short: true },
   { name: '真グッドのあと、A1 で「今日はゲームをやめて」', want: 'END-O4', from: 'A1', picks: { A1: 'opt:3' }, seen: ['END-G'] },
+  // r1126-115 もしもの話 ① 仮面のワルツ: 紅のしおり(真グッド+名指しエンド5つ)を持っている人だけ、A1b に③が出る
+  { name: 'もしも 仮面のワルツ、灰谷に耳打ちする', want: 'END-R1', from: 'A1b', picks: { A1b: 'go:RW-1', AR1: 'opt:0' }, seen: ['END-G', 'END-M1', 'END-M2', 'END-M3', 'END-M4', 'END-M5'] },
+  { name: 'もしも 仮面のワルツ、黒羽を引き止める', want: 'END-R2', from: 'AR1', picks: { A1b: 'go:RW-1', AR1: 'opt:1' }, seen: ['END-G', 'END-M1', 'END-M2', 'END-M3', 'END-M4', 'END-M5'], short: true },
+  { name: 'もしも 仮面のワルツ、見守る', want: 'END-R3', from: 'AR1', picks: { A1b: 'go:RW-1', AR1: 'opt:2' }, seen: ['END-G', 'END-M1', 'END-M2', 'END-M3', 'END-M4', 'END-M5'], short: true },
+  // r1126-115 視点の編 ドラの編(真グッドのあと、第2章 A2 に③)
+  { name: '視点の編 ドラ、黙って見送る', want: 'END-PD1', from: 'A2', picks: { A2: 'go:PD-1', APD1: 'opt:0' }, seen: ['END-G'] },
+  { name: '視点の編 ドラ、名前を呼ぶ(もしも)', want: 'END-PD2', from: 'APD1', picks: { A2: 'go:PD-1', APD1: 'go:PD-Y' }, seen: ['END-G'], short: true },
+  { name: '真グッドの前は A2 にドラの編は出ない', want: 'END-X1', from: 'A2', picks: { A2: 'danger' }, noOpt: { A2: 'PD-1' }, short: true },
+  { name: 'しおりが無いと A1b に③は出ない', want: 'END-X6', from: 'A1b', picks: { A1b: 'danger' }, seen: ['END-G'], noOpt: { A1b: 'RW-1' }, short: true },
+  // r1126-115 もしもの話 ② 十三番目の客: 灰のしおり(真グッド+強制バッド X1〜X8 を全部)を持っている人だけ、A4 に③が出る
+  { name: 'もしも 十三番目の客、朝まで数え続ける', want: 'END-H1', from: 'A4', picks: { A4: 'go:HJ-1', AH1: 'opt:0' }, seen: ['END-G', 'END-X1', 'END-X2', 'END-X3', 'END-X4', 'END-X5', 'END-X6', 'END-X7', 'END-X8'] },
+  { name: 'もしも 十三番目の客、13行目を読む', want: 'END-H2', from: 'AH1', picks: { A4: 'go:HJ-1', AH1: 'opt:1' }, seen: ['END-G', 'END-X1', 'END-X2', 'END-X3', 'END-X4', 'END-X5', 'END-X6', 'END-X7', 'END-X8'], short: true },
+  { name: 'もしも 十三番目の客、宿帳を閉じる', want: 'END-H3', from: 'AH1', picks: { A4: 'go:HJ-1', AH1: 'opt:2' }, seen: ['END-G', 'END-X1', 'END-X2', 'END-X3', 'END-X4', 'END-X5', 'END-X6', 'END-X7', 'END-X8'], short: true },
+  { name: '灰のしおりが無いと A4 に③は出ない', want: 'END-X7', from: 'A4', picks: { A4: 'danger' }, seen: ['END-G'], noOpt: { A4: 'HJ-1' }, short: true },
+  // r1126-115 もしもの話 ③ 壁の中の宝の地図: 緑のしおり(おまけのエンドを全部)を持っている人だけ、第6章 A6y に③が出る
+  { name: 'もしも 宝の地図、オルゴールを最後まで聞く', want: 'END-T1', from: 'A6y', picks: { A6y: 'go:TK-1', AT1: 'opt:0', AT2: 'opt:0' }, seen: ['END-G', 'END-O', 'END-O2', 'END-O3', 'END-O4'] },
+  { name: 'もしも 宝の地図、くすぐってから台所へ', want: 'END-T2', from: 'AT1', picks: { A6y: 'go:TK-1', AT1: 'opt:1', AT2: 'opt:1' }, seen: ['END-G', 'END-O', 'END-O2', 'END-O3', 'END-O4'], short: true },
+  { name: '緑のしおりが無いと A6y に③は出ない', want: 'END-G', from: 'A6y', picks: { A6y: 'opt:0', Q7a: 'kyuko' }, seen: ['END-G'], noOpt: { A6y: 'TK-1' }, short: true },
   { name: '寄り道の2つめ(イチーカ・こっそり・ドラの声)を通って真グッドへ', want: 'END-G', from: 'A4y', picks: { A4y: 'opt:1', A6y: 'opt:1', A8y: 'go:C8-Z', Q7a: 'kyuko' }, short: true },
 ];
 
@@ -67,16 +85,18 @@ const run = (side, route) => {
   const seen = route.seen || [];
   const lines = [];
   const asked = [];
+  const offered = {};
   let rec = false;
-  let st = E.xmasNovelSettle(S, E.xmasNovelFreshCur(S));
+  const SEEN = { endings: seen, read: [] }; // 行・場面の条件(end_G など)にも、見たエンドを渡す(画面と同じ・r1126-115)
+  let st = E.xmasNovelSettle(S, E.xmasNovelFreshCur(S), SEEN);
   const push = (r, scene) => { if (rec) lines.push({ id: r.id, scene, t: r.t, w: r.w || null, n: r.n || null, e: r.e || null, x: r.x || '' }); };
   for (let steps = 0; steps < 8000; steps += 1) {
     if (!st.row) {
       if (st.ending) lines.push({ t: 'ending', id: st.ending.id, x: st.ending.name || st.ending.id });
-      return { lines, asked, end: st.ending ? st.ending.id : null, panel: (st.cur && st.cur.panel) || {} };
+      return { lines, asked, offered, end: st.ending ? st.ending.id : null, panel: (st.cur && st.cur.panel) || {} };
     }
     const row = st.row;
-    if (row.t !== 'q') { push(row, st.cur.scene); st = E.xmasNovelStep(S, E.xmasNovelApplyRow(st.cur, row)); continue; }
+    if (row.t !== 'q') { push(row, st.cur.scene); st = E.xmasNovelStep(S, E.xmasNovelApplyRow(st.cur, row), SEEN); continue; }
     asked.push(row.id);
     if (row.id === route.from) rec = true;
     const want = route.picks[row.id];
@@ -84,6 +104,7 @@ const run = (side, route) => {
     let label = '';
     if (row.kind === 'action') {
       const opts = E.xmasNovelOptionsOf(row, E.xmasNovelCtx(S, st.cur, seen));
+      offered[row.id] = opts.map((x) => x.to);
       let o;
       if (want && /^opt:\d+$/.test(want)) o = opts.find((x) => x.i === Number(want.slice(4)));
       else if (want && /^go:/.test(want)) o = opts.find((x) => x.to === want.slice(3)); // 行き先の場面で選ぶ(派ごとに番号の違う選択肢・r1126-108)
@@ -98,18 +119,37 @@ const run = (side, route) => {
     if (rec) lines.push({ t: 'choice', id: row.id, x: `${row.x} → 「${label}」` });
     const res = E.xmasNovelAnswer(S, st.cur, row, pick, seen);
     let c = res.cur; (res.replies || []).forEach((r) => { push(r, st.cur.scene); c = E.xmasNovelApplyRow(c, r); });
-    if (res.then === 'retry') { st = E.xmasNovelSettle(S, c); continue; }
-    if (res.then && res.then.to) st = E.xmasNovelSettle(S, E.xmasNovelJump(S, c, res.then.to));
-    else st = E.xmasNovelStep(S, { ...c });
+    if (res.then === 'retry') { st = E.xmasNovelSettle(S, c, SEEN); continue; }
+    if (res.then && res.then.to) st = E.xmasNovelSettle(S, E.xmasNovelJump(S, c, res.then.to), SEEN);
+    else st = E.xmasNovelStep(S, { ...c }, SEEN);
   }
   return { lines, end: null, err: '長すぎて止めた' };
 };
 
+// 「選択を足す」(場面の最後に足した、行の条件つきの選択)が、真グッドのあとだけ出るか(r1126-115: 行の条件に見たエンドが渡っていなかった)
+//   台本の写しの第1章 C1-1 の最後に [end_G=1] の選択を足して、見たエンドあり・なしで C1-1 の終わりから進める
+const rowCondCheck = () => {
+  const bad = [];
+  const T = JSON.parse(JSON.stringify(S));
+  const sc = T.scenes.find((x) => x.id === 'C1-1');
+  if (!sc) return ['C1-1 が無い'];
+  sc.rows.push({ t: 'q', id: 'AZZ0', kind: 'action', x: 'ためし', c: { any: [{ all: [{ k: 'end_G', op: '=', v: 1 }] }] }, options: [{ x: '今までどおり', to: sc.next }] });
+  const at = { ...E.xmasNovelFreshCur(T), scene: 'C1-1', idx: sc.rows.length - 2 };
+  const a = E.xmasNovelStep(T, at, { endings: ['END-G'], read: [] });
+  const b = E.xmasNovelStep(T, at, { endings: [], read: [] });
+  const c = E.xmasNovelStep(T, at);
+  if (!a.row || a.row.id !== 'AZZ0') bad.push('真グッドのあとなのに、C1-1 の最後に足した選択が出ない');
+  if (b.row && b.row.id === 'AZZ0') bad.push('真グッドの前なのに、C1-1 の最後に足した選択が出た');
+  if (c.row && c.row.id === 'AZZ0') bad.push('見たエンドを渡さないのに、足した選択が出た(今までどおりの動きのはず)');
+  return bad;
+};
 const NAME = { atsu: 'あつ派', sorashido: 'ソラシド派' };
 const FACE = { normal: 'ふつう', happy: '笑顔', wink: 'ウインク', surprise: '驚き', troubled: '困り顔', angry: 'むくれ顔', crying: '泣き顔', excited: 'わくわく', sleep: '寝顔' };
 const ng = [];
 const summary = [];
 // どのエンディングも、「次」は無いか・選択の行(やり直し)か・外側(OUT-*)の場面だけ(r1126-108)
+rowCondCheck().forEach((m) => ng.push(`選択を足す(行の条件): ${m}`));
+summary.push(`選択を足す(行の条件つき)が真グッドのあとだけ出る → ${rowCondCheck().length ? 'NG' : 'OK'}`);
 S.scenes.filter((sc) => sc.ending).forEach((sc) => {
   const nx = sc.next;
   if (nx && !/^OUT-/.test(nx) && S.scenes.some((x) => x.id === nx)) ng.push(`${sc.ending.id}: エンディングのあとに場面 ${nx} が続く(外側の場面だけのはず)`);
@@ -124,6 +164,7 @@ S.scenes.filter((sc) => sc.ending).forEach((sc) => {
     const bad = [];
     if (res.err) bad.push(res.err);
     if (r.noQ && (res.asked || []).includes(r.noQ)) bad.push(`${r.noQ} が出た(出ないはず)`);
+    Object.entries(r.noOpt || {}).forEach(([q, to]) => { if ((res.offered || {})[q] && res.offered[q].includes(to)) bad.push(`${q} に ${to} への選択肢が出た(出ないはず)`); });
     if (res.end !== r.want) bad.push(`着いたのは ${res.end || '(なし)'}(${r.want} のはず)`);
     // エンディングの場面に入ったあとに出てよいのは、そのエンディングと外側(OUT-*)の場面の行だけ(r1126-108: END-K1 のあとに C10-L が流れていた)
     const endAt = res.lines.findIndex((l) => l.scene && /^END-/.test(l.scene));
