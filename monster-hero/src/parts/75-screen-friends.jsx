@@ -50,7 +50,7 @@ const FRIENDS_RESULT_TEXT = Object.freeze({
   cancelled: ['申請を取り消しました', 'info'],
   removed: ['フレンドを解除しました', 'info'],
   notready: ['フレンド機能はただいま準備中です', 'warn'],
-  error: ['通信がうまくいきませんでした。少し待ってからもう1度試してください', 'warn'],
+  error: ['通信がうまくいきませんでした。少し待ってからもう一度試してください', 'warn'],
 });
 const FRIENDS_TONE_CLASS = Object.freeze({
   ok: 'border-emerald-400/60 bg-emerald-950/50 text-emerald-100',
@@ -306,14 +306,14 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
   // ---- 状態が整っていないとき ----
   if (phase !== 'ready') {
     const lines = phase === 'loading' ? ['フレンドを読み込んでいます…']
-      : phase === 'notready' ? ['フレンド機能はただいま準備中です', 'しばらくしてからもう1度開いてください']
+      : phase === 'notready' ? ['フレンド機能はただいま準備中です', 'しばらくしてからもう一度開いてください']
       : phase === 'noid' ? ['この端末ではフレンドを使えません', 'セーブデータを保存できる状態で開いてください']
-      : ['フレンドを読み込めませんでした', '通信を確かめて、もう1度開いてください'];
+      : ['フレンドを読み込めませんでした', '通信を確かめて、もう一度開いてください'];
     return (
       <div data-mh-screen data-friends-phase={phase} className={SCREEN_SHELL_CLASS}>
         <ScreenHead title="フレンド" accent="text-pink-300" onBack={onBack} backLabel="プロフィールへ戻る"/>
         <ScreenEmpty emoji={phase === 'loading' ? '⏳' : '🤝'} lines={lines}
-          action={phase === 'error' ? <button type="button" onClick={() => { setPhase('loading'); reload(); }} className={`${btn} w-full border-white/20 bg-slate-800 text-slate-200`}>もう1度読み込む</button> : null}/>
+          action={phase === 'error' ? <button type="button" onClick={() => { setPhase('loading'); reload(); }} className={`${btn} w-full border-white/20 bg-slate-800 text-slate-200`}>もう一度読み込む</button> : null}/>
       </div>
     );
   }
@@ -435,7 +435,7 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
                         <b className="min-w-0 flex-1 truncate text-[12px] font-black text-white">{labels[e.id].label}</b>
                         <strong className="shrink-0 text-[13px] font-black text-amber-200">{e.k === 'w' ? `WAVE ${e.v.toLocaleString()}` : `${e.v.toLocaleString()} pt`}</strong>
                       </div>))}
-                    <p className="px-1 text-[10px] font-bold text-slate-500">モード別の、1番良い記録です。</p>
+                    <p className="px-1 text-[10px] font-bold text-slate-500">モード別の、一番良い記録です。</p>
                   </div>);
               })()}
               {fold('songs', '曲のベスト')}
@@ -501,7 +501,7 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
         {confirm && (
           <ConfirmSheet
             title={confirm.kind === 'remove' ? `${look.userName}さんとのフレンドを解除しますか?` : `${look.userName}さんをブロックしますか?`}
-            message={confirm.kind === 'remove' ? '解除しても、あとからもう1度申請できます。' : 'ブロックすると、フレンドが解除され、相手からの申請も届かなくなります。申請の画面からいつでも解除できます。'}
+            message={confirm.kind === 'remove' ? '解除しても、あとからもう一度申請できます。' : 'ブロックすると、フレンドが解除され、相手からの申請も届かなくなります。申請の画面からいつでも解除できます。'}
             confirmLabel={confirm.kind === 'remove' ? '解除する' : 'ブロックする'} danger
             onConfirm={doConfirmed} onCancel={() => setConfirm(null)}/>
         )}

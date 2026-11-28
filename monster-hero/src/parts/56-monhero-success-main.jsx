@@ -238,7 +238,7 @@ function MsxStRow({ stats, ups, main, preview = false, who = null }) {
   return (
     <div {...tgProps} className={`v-st${tgId ? ' tg' : ''}${aptOn ? ' apton' : ''}${grow ? ' grow' : ''}${grow && on ? ' on' : ''}${grow && !calm ? ' gs-a' : ''}${zoomA ? ' zin' : ''}${zoomS ? ' zs' : ''}${zoomA && MSX_STATS.filter((k) => ups[k]).length > 3 ? ' many' : ''}`} data-msx-st-grow={grow ? (on ? 'on' : 'pre') : undefined}>
       {/* 見出しの行: 左に四角の意味(F〜S はランク)、右に素質の切り替え。前は丈夫さの札の角に小さな札がのっていて、何か・押せるのかが分からなかった(育-210・214・220・204・163・166) */}
-      {tgId ? <p className="v-sthd" aria-hidden="true">{aptOn ? <span className="lg">素質は能力の伸びやすさ(A が1番)</span> : <span className="lg">能力 <i className="msx-srk rF">F</i>〜<i className="msx-srk rS">S</i> はランク</span>}<span className="v-sttg">⇄ {aptOn ? '数に戻す' : '素質を見る'}</span></p> : null}
+      {tgId ? <p className="v-sthd" aria-hidden="true">{aptOn ? <span className="lg">素質は能力の伸びやすさ(A が一番)</span> : <span className="lg">能力 <i className="msx-srk rF">F</i>〜<i className="msx-srk rS">S</i> はランク</span>}<span className="v-sttg">⇄ {aptOn ? '数に戻す' : '素質を見る'}</span></p> : null}
       {MSX_STATS.map((k) => {
         const u = ups ? (ups[k] || 0) : 0;
         const after = stats[k]; const before = Math.max(0, after - (grow ? u : 0));
@@ -435,7 +435,7 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false, st
     const r1 = typeof msxBeatMark === 'function' ? { ...msxBeatMark(r), rev: 1 } : { ...r, rev: 1 };
     let saved = false;
     try { saved = await (typeof msxStartRunSave === 'function' ? msxStartRunSave(r1, meta) : Promise.all([msxSaveMeta(meta), msxSaveRun(r1, !!debug)]).then((a) => a.every((x) => x === true))); } catch (e) { saved = false; }
-    if (saved !== true) { setAsk({ text: '保存できませんでした。アイテムと前の育成はそのままです。もう1度「育成を始める」を押してください', yes: 'OK', onYes: () => {} }); return false; }
+    if (saved !== true) { setAsk({ text: '保存できませんでした。アイテムと前の育成はそのままです。もう一度「育成を始める」を押してください', yes: 'OK', onYes: () => {} }); return false; }
     lendRef.current = {};
     setData((d) => ({ ...d, meta })); revRef.current = 1; setRunState(r1); setView('play');
     return true;
@@ -443,7 +443,7 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false, st
   // やめる(r1115-200 3a・3c): 画面の育成の id が保存と同じときだけ消す。別の育成なら消さずに読み直す・書けなければもう一度
   const quit = () => setAsk({ text: 'この育成をやめますか? 育てた中身はなくなります(マスモンボックスには入りません)', yes: '育成をやめる', onYes: async () => {
     let res = false; try { res = await (typeof msxClearRun === 'function' ? msxClearRun(run && run.id) : storeSet(MSX_KEYS.run, null)); } catch (e) { res = false; }
-    if (res === false) { setAsk({ text: '保存できませんでした。育成は消えていません。もう1度「育成をやめる」を押してください', yes: 'OK', onYes: () => {} }); return; }
+    if (res === false) { setAsk({ text: '保存できませんでした。育成は消えていません。もう一度「育成をやめる」を押してください', yes: 'OK', onYes: () => {} }); return; }
     if (res === 'other') { toHome(); return; } // ほかの画面で新しい育成が始まっていた → 消さずに読み直す
     setRunLoaded(null); setView('home');
   } });
@@ -459,8 +459,8 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false, st
         <div className="v-hm-logo"><img src={MSX_LOGO_ART} alt="モンヒロサクセス"/>{typeof MsxBetaMark === 'function' ? <MsxBetaMark/> : null}</div>
       </div>
       {view === 'loading' ? <div className="msx-note" style={{ textAlign: 'center' }}>読み込んでいます…</div>
-        : <div className="v-card" style={{ textAlign: 'center' }}>読み込めませんでした。通信のよいところで、もう1度読み込んでください
-          <button type="button" className="msx-btn go" style={{ marginTop: 10 }} onClick={() => { setView('loading'); setLoadTry((t) => t + 1); }}>もう1度読み込む</button></div>}
+        : <div className="v-card" style={{ textAlign: 'center' }}>読み込めませんでした。通信のよいところで、もう一度読み込んでください
+          <button type="button" className="msx-btn go" style={{ marginTop: 10 }} onClick={() => { setView('loading'); setLoadTry((t) => t + 1); }}>もう一度読み込む</button></div>}
     </div>
   </>);
   else if (view === 'home') content = <MsxHome data={data} run={run} debug={debug} onClose={onClose} onBase={typeof MsxBaseMons === 'function' ? () => setView('basemon') : null} onBox={typeof MsxR3Box === 'function' ? () => setView('box') : null} onContinue={() => setView('play')} onNew={() => (run && !run.s.over ? setAsk({ text: '途中の育成があります。新しく始めると、いまの育成はなくなります', yes: '新しく始める', onYes: () => setView('start') }) : setView('start'))} setMeta={setMeta} onWipe={quit} onRank={() => setView('rank')}/>;
@@ -797,7 +797,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
     const tLast = tAt < 0 || tAt >= tSteps.length - 1;
     body = <>{typeof MsxTevMini === 'function' ? <MsxTevMini s={s} v={v}/> : <MsxBand s={s} v={v} ev={ev}/>}<MsxTrainEvent key={`${s.turn}-tev`} run={run} o={run.out} ctx={ctx} at={tAt} go={tGo} onNext={() => toReact(run)}/></>;
     foot = tAt < 0
-      ? <div className="v-ft"><button type="button" onClick={() => tGo(0)} data-msx-tev-replay>もう1度見る</button><button type="button" className="go" onClick={() => afterAct({ ...run, phase: 'main' })} data-msx-tev-next>次へ ▶</button></div>
+      ? <div className="v-ft"><button type="button" onClick={() => tGo(0)} data-msx-tev-replay>もう一度見る</button><button type="button" className="go" onClick={() => afterAct({ ...run, phase: 'main' })} data-msx-tev-next>次へ ▶</button></div>
       : <div className="v-ft"><button type="button" onClick={() => tGo(-1)} data-msx-tev-skip>スキップ ⏭</button><button type="button" className="go" onClick={() => (tLast ? toReact(run) : tGo(tAt + 1))} data-msx-tev-next>次へ ▶</button></div>;
   }
   // ---- 覚醒・超覚醒(56-monsuc-awake.jsx の演出)。終わったら、ターンのはじめならメインへ・ターンの終わりなら閉じる ----
@@ -954,7 +954,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
           {/* 計算の途中(基本▶編成▶タッグ)は見せず、「上がる量が何倍か」と内訳を1行で(2026-11-20 r1119-033 育-22・育-105) */}
           <div className="t">{tags.length ? <span className="big">🤝 友情タッグ ×{tags.length}</span> : <span>タッグなし</span>}<span data-msx-train-mult>上がる量 <b className="mx">×{card.mult}</b></span></div>
           {/* Lv は下の丸に出ているので、ここは次の Lv までだけ(観点8) */}
-          {trainLv ? <div className="v-lvx"><b>{trainLv >= 5 ? 'トレーニングLv が 1番上' : card.next ? `あと${card.next}回で Lv.${trainLv + 1}` : ''}</b><i><u style={{ width: `${card.next ? Math.max(0, 100 - card.next * 20) : 100}%` }}/></i></div> : null}
+          {trainLv ? <div className="v-lvx"><b>{trainLv >= 5 ? 'トレーニングLv が 一番上' : card.next ? `あと${card.next}回で Lv.${trainLv + 1}` : ''}</b><i><u style={{ width: `${card.next ? Math.max(0, 100 - card.next * 20) : 100}%` }}/></i></div> : null}
         </div>}
       </div>
       <MsxStRow who={s} stats={s.stats} ups={pv ? pv.gain : null} main={stat} preview/>
@@ -1033,7 +1033,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
           {/* ヒーローズファイナルの間・期末の大会の当日は、上の帯と大会のボタン・吹き出しに出るので、場面の札は出さない(r1119-033 育-49・再点検 バ-01) */}
           {v.period.key === 'final' || preOn ? null : v.period.left <= 1 ? <span className="v-chip hot" data-msx-cup-soon>🏆 このあと期末の大会</span> : null}
           {/* ピークが何に効くかを札の中に書く(2026-11-20 r1119-033 育-108) */}
-          {pkI.state === 'in' ? <span className="v-chip hot" data-msx-peak-chip>🔥 ピーク中 あと{pkI.left}ターン<small className="v-chip-sub">トレーニングの伸びが1番大きい</small></span> : pkI.state === 'soon' ? <span className="v-chip ylw" data-msx-peak-chip>🔥 もうすぐ伸びどき<small className="v-chip-sub">あと{pkI.in}ターンで ピーク</small></span> : null}
+          {pkI.state === 'in' ? <span className="v-chip hot" data-msx-peak-chip>🔥 ピーク中 あと{pkI.left}ターン<small className="v-chip-sub">トレーニングの伸びが一番大きい</small></span> : pkI.state === 'soon' ? <span className="v-chip ylw" data-msx-peak-chip>🔥 もうすぐ伸びどき<small className="v-chip-sub">あと{pkI.in}ターンで ピーク</small></span> : null}
           <MsxYosuChips s={s}/>
           {s.cond ? <span className="v-chip bad">🤕 {MSX_COND[s.cond.kind]}(あと{s.cond.left})</span> : null}
           {typeof MsxBuffChips === 'function' ? <MsxBuffChips s={s}/> : null}</div>

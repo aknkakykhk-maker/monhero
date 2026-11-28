@@ -103,7 +103,7 @@ function DebugDataScreen({
         ))}
 
         {/* ④ もう一度出す。ここだけは進行が消えるので、文面で言い切ってから確認を取る */}
-        {section('④ もう1度出す（進行が消えます）', '待たずに出すための操作です。いまの進み具合は失われます。押すと確認が出ます。', (
+        {section('④ もう一度出す（進行が消えます）', '待たずに出すための操作です。いまの進み具合は失われます。押すと確認が出ます。', (
           <div className="grid grid-cols-1 gap-2">
             {btn('ログインボーナスを未受け取りへ戻す', onResetLoginBonus, 'danger', { 'data-debug-reset-login': '1' })}
             {btn('ミッションを未達成へ戻す', onResetMissions, 'danger', { 'data-debug-reset-missions': '1' })}

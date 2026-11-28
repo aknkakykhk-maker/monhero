@@ -58,7 +58,7 @@ const CARD_VS_LINES = Object.freeze({
     easy: { e: 'happy', t: '気楽にいこうな。おでは守ってるだけだよ' },
     normal: { e: 'happy', t: 'まずは守りを固めるとこからだな' },
     hard: { e: 'excited', t: '打ってこい。全部《はね返して》やるよ' },
-    expert: { e: 'excited', t: '全部の弾から1番かたい守りを持ってきた' },
+    expert: { e: 'excited', t: '全部の弾から一番かたい守りを持ってきた' },
     master: { e: 'wink', t: '本気の要塞だ。崩せるもんなら崩してみな' },
   },
   atsu: {
@@ -76,7 +76,7 @@ const CARD_VS_LINES = Object.freeze({
     master: { e: 'angry', t: 'うぉぉぉ！ 自分の全力、受けてみてください・・・！' },
   },
   erubin: {   // 2026-11-05 社長「この文で」(ルールくんの案)。公開の印が立つまで画面には出ない
-    easy: { e: 'happy', t: 'のんびりいこうか。楽しむのが1番だよね☺️' },
+    easy: { e: 'happy', t: 'のんびりいこうか。楽しむのが一番だよね☺️' },
     normal: { e: 'wink', t: 'おけ！ 今日の組み方、ちょっと自信あるんだよね笑' },
     hard: { e: 'normal', t: 'ここからはしっかりいくね。それでもよいかな？' },
     expert: { e: 'excited', t: '全部の弾から選んできたよ。いい勝負にしようね' },

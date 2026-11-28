@@ -13,7 +13,7 @@ const CARD_TALK_MOMENT_PER_GAME = 5;
 // ゲームが待つ長さ。間に合わなければ決まった台詞のまま(山場は待たせない)
 const CARD_TALK_WAIT_MS = Object.freeze({ moment: 2500, after: 6000, deck: 12000 });
 // デッキ相談が届かなかったときの一言(助手を選ばない言い方)
-const CARD_TALK_DECK_SORRY = 'いまはうまく相談にのれないみたい…。少しあとで、もう1度聞いてね';
+const CARD_TALK_DECK_SORRY = 'いまはうまく相談にのれないみたい…。少しあとで、もう一度聞いてね';
 const CARD_TALK_FACES = ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited'];
 
 // 呼んでよい端末か(公開の印か、デバッグの合言葉が合った端末)

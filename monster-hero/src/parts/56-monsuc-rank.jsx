@@ -28,7 +28,7 @@ const MONSUC_RANK_STAT_LABEL = { life: '❤️ライフ', pow: '🏋️ちから
 const MONSUC_RANK_GRADE_COLOR = { M: '#f472b6', SSS: '#f472b6', SS: '#fb923c', S: '#fbbf24', A: '#f472b6', B: '#a78bfa', C: '#38bdf8', D: '#94a3b8', E: '#94a3b8', F: '#94a3b8', G: '#94a3b8' };
 const MONSUC_RANK_REASON_TEXT = Object.freeze({
   off: 'ランキングは準備中です',
-  network: 'つながりませんでした。次に開いたときにもう1度送ります',
+  network: 'つながりませんでした。次に開いたときにもう一度送ります',
   busy: '少し待ってから送り直します',
   bad: 'この記録はランキングに載せられませんでした',
   locked: 'この端末ではランキングに送れません',
@@ -617,10 +617,10 @@ function MonsucRankScreen({ onBack }) {
     <div ref={listRef} className="flex-1 overflow-y-auto px-3 py-2 space-y-1.5">
       {!on && <div className="text-center text-slate-300 text-[13px] py-8">{monsucRankReasonText('off')}</div>}
       {on && loading && <div className="text-center text-slate-300 text-[13px] py-8">読みこみ中…</div>}
-      {on && !loading && failed && !data && <div className="text-center text-slate-300 text-[13px] py-8"><span className="block">つながりませんでした。</span><span className="block">少し待ってからもう1度開いてね</span><button type="button" onClick={() => setRetryN(n => n + 1)} className="mt-3 rounded-full bg-yellow-300 text-slate-900 px-4 py-2 text-[13px] font-black">もう1度読む</button></div>}
+      {on && !loading && failed && !data && <div className="text-center text-slate-300 text-[13px] py-8"><span className="block">つながりませんでした。</span><span className="block">少し待ってからもう一度開いてね</span><button type="button" onClick={() => setRetryN(n => n + 1)} className="mt-3 rounded-full bg-yellow-300 text-slate-900 px-4 py-2 text-[13px] font-black">もう一度読む</button></div>}
       {on && !loading && data && rows.length === 0 && <div className="text-center text-slate-300 text-[13px] py-8"><span className="block">まだだれも載っていません。</span><span className="block">育て終えたモンスターが最初に載ります</span></div>}
       {/* 取得済みの一覧は再取得中も出し続け、失敗したらその場で読み直せる(2026-11-16 UI改修) */}
-      {on && !loading && failed && data && <div className="flex items-center justify-center gap-2 rounded-xl border border-amber-400/50 bg-amber-900/30 px-3 py-2 text-[12px] font-bold text-amber-200">新しい順位を読めませんでした<button type="button" onClick={() => setRetryN(n => n + 1)} className="rounded-full bg-yellow-300 text-slate-900 px-3 py-1 text-[12px] font-black">もう1度読む</button></div>}
+      {on && !loading && failed && data && <div className="flex items-center justify-center gap-2 rounded-xl border border-amber-400/50 bg-amber-900/30 px-3 py-2 text-[12px] font-bold text-amber-200">新しい順位を読めませんでした<button type="button" onClick={() => setRetryN(n => n + 1)} className="rounded-full bg-yellow-300 text-slate-900 px-3 py-1 text-[12px] font-black">もう一度読む</button></div>}
       {rows.map(r => <MonsucRankRow key={r.run_id} row={r} mine={sent.includes(r.run_id)} onOpen={() => openDetail(r, false)} />)}
     </div>
     {mine && <div className="px-3 pb-1">

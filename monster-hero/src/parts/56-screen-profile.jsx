@@ -160,7 +160,7 @@ function ProfileHighlights({ highScores, rhythmAchRows, assistantBonds, assistan
     <div className="mb-3 grid grid-cols-3 gap-2" data-profile-highlights>
       {cell('challenge', 'チャレンジ最高', best > 0 ? <span className="font-mono">{best.toLocaleString()}</span> : '記録なし', 'border-amber-400/40 bg-amber-950/40 text-amber-300')}
       {cell('beat', 'フルコンボ', fc > 0 ? `${fc}譜面` : '記録なし', 'border-violet-400/40 bg-violet-950/40 text-violet-300')}
-      {cell('bond', '1番の仲良し', top ? <><span className="inline-block">{top.who.name}</span> <span className="inline-block whitespace-nowrap">Lv.{top.lv}</span></> : '―', 'border-pink-400/40 bg-pink-950/40 text-pink-300')}
+      {cell('bond', '一番の仲良し', top ? <><span className="inline-block">{top.who.name}</span> <span className="inline-block whitespace-nowrap">Lv.{top.lv}</span></> : '―', 'border-pink-400/40 bg-pink-950/40 text-pink-300')}
     </div>
   );
 }
@@ -412,7 +412,7 @@ function ProfileScreen({
               <span>遊んだ日 <span className="text-white font-mono">{playtimeView.days}</span>日</span>
             </div>
             {playtimeView.longest.day&&(
-              <div className="text-[10px] text-slate-400 font-bold">1番長かった日 {formatPlaytime(playtimeView.longest.ms)}（{playtimeView.longest.day}）</div>
+              <div className="text-[10px] text-slate-400 font-bold">一番長かった日 {formatPlaytime(playtimeView.longest.ms)}（{playtimeView.longest.day}）</div>
             )}
             <div className="text-[10px] text-slate-400 font-bold">{playtimeView.since?`${playtimeView.since} から数えています`:'いま数え始めたところです'}</div>
             {(Number(playtimeAllDevicesMs) || 0) > playtimeView.totalMs&&(
@@ -446,7 +446,7 @@ function ProfileScreen({
                 )}
               </div>
               <div className="mt-2 h-2 rounded-full border border-white/5 bg-black/40 overflow-hidden"><i className="block h-full rounded-full" style={{width:`${width}%`,background:`linear-gradient(90deg,${accent},#fbbf24)`}}/></div>
-              <div className="text-[10px] text-slate-400 font-bold mt-1 text-right">{next?`次のLv.${next.level}まで あと${next.remain}`:'1番仲良し！'}</div>
+              <div className="text-[10px] text-slate-400 font-bold mt-1 text-right">{next?`次のLv.${next.level}まで あと${next.remain}`:'一番仲良し！'}</div>
               {/* ごほうび一覧(2026-10-21)。Lvごとにもらえるもの(ギフト・飾り枠・呼び方)を見る */}
               <button type="button" data-assistant-bond-reward-open onClick={()=>setBondRewardListOpen(true)}
                 className="mt-2 flex w-full min-h-[44px] items-center justify-center gap-1.5 rounded-xl border border-pink-400/50 bg-pink-950/40 px-3 text-[12px] font-black text-pink-100 active:scale-[.98]">

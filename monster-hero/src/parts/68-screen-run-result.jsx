@@ -336,7 +336,7 @@ function RewardPickScreen({
         </div>
       </div>}
       {/* 4項目。1画面に収めるため2列2行。空きがあればカードが伸びて画面を埋める。
-          同じ項目をもう1度タップすると2回目として積める */}
+          同じ項目をもう一度タップすると2回目として積める */}
       <div className={`mh-phase-cards w-full max-w-sm mt-2 grid grid-cols-2 grid-rows-2 gap-2 flex-1 min-h-0 overflow-y-auto mh-scroll${battleTutorialSpotClass('rewards')}`}>
         {trainingOptions.map((option,optionIndex)=>{
           const count=activePicks.filter(id=>id===option.id).length;
@@ -427,7 +427,7 @@ function RankingFailedNote() {
     <div className="w-full max-w-xs mx-auto mt-3 rounded-2xl border border-amber-300/60 bg-amber-950/40 px-3 py-2 text-left">
       <div className="text-[11px] font-black text-amber-200">全国ランキングへ送れませんでした</div>
       <div className="mt-0.5 text-[10px] leading-relaxed text-amber-100/80">
-        記録は端末に残してあります。次にトップ画面へ戻ったとき、自動でもう1度送ります。
+        記録は端末に残してあります。次にトップ画面へ戻ったとき、自動でもう一度送ります。
         自己ベストや報酬はいつもどおり反映されています。
       </div>
     </div>

@@ -43,7 +43,7 @@ const CardCupLivePanel = ({ v, now, selfId, onChanged, onPlay = null }) => {
     setBusy(true); setMsg('');
     try {
       const r = await call(fn);
-      setMsg(cardCupLiveMsg[kind][r] || '通信できませんでした。もう1度お試しください');
+      setMsg(cardCupLiveMsg[kind][r] || '通信できませんでした。もう一度お試しください');
       await onChanged();
     } finally { setBusy(false); }
   };
