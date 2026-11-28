@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 38d8ad517a89d612
+// source-sha256: 11c7c26d0d724628
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -72316,6 +72316,7 @@ const quickAnywhereFloatHits = (el, spot, known = null) => {
   let hits = 0;
   for (const o of document.querySelectorAll('button,a,[role=button],[data-quick-avoid]')) {
     if (o === el || el.contains(o) || o.contains(el) || o.closest('[data-quick-anywhere-detail]') || !o.getClientRects().length) continue;
+    if (o.closest('[aria-hidden="true"]')) continue;
     if (known && known.has(o) && !o.hasAttribute('data-quick-avoid')) continue;
     const cs = getComputedStyle(o);
     if (cs.visibility === 'hidden' || cs.pointerEvents === 'none' || Number(cs.opacity) === 0) continue;
@@ -87287,21 +87288,32 @@ const HOME_V2_CSS = `
 .mh-home-v2 .mh-home-menu .mh-home-side-btn em.mh-unread-badge{width:auto!important;height:20px!important;min-width:20px;padding:0 6px!important;border-radius:999px!important;font-size:11px!important;line-height:1!important;white-space:nowrap}
 .mh-home-v2 .mh-home-settings .mh-home-side-ic{border-color:#cbd5e1aa;background:#1e293be8;color:#e2e8f0}
 .mh-home-v2 .mh-home-band{position:relative;z-index:6;margin:6px 8px 0}
-/* イベントの表示(r1126-088 で前の形に戻した): クリスマスの絵の札 → その下に細い帯(前の HOME と同じ作り)。
-   追記1(社長「イベントバナーをもう少し横幅小さくして」): 札は前(312×80)より少し小さく 278×74(縦横の比をほぼ同じにして、絵の切り方を前と同じに)。
-   細い帯も札と同じ幅まで。札の右の空きは裏クイックの札の置き場 */
-.mh-home-v2 .mh-home-band-xmas{width:calc(100% - 96px)}
-.mh-home-v2 .mh-home-band-xmas>button[data-home-xmas-entry]{height:74px!important}
+/* イベントの札(r1126-088)。追記1(社長「横幅もう少し小さく」): 前(312×80)より少し小さく 278×74。札の右の空きは裏クイックの札の置き場。
+   追記3(社長「フリックとかで動かせるように」): 札1枚分の場所を左右に送る。何枚目かの点は札の右下の中に小さく(札の外に段を足さない) */
+.mh-home-v2 .mh-home-band-view{position:relative;width:calc(100% - 96px);height:74px;overflow:hidden;border-radius:12px;touch-action:pan-y}
+.mh-home-v2 .mh-home-band-track{display:flex;height:100%;transition:transform .35s ease}
+@media(prefers-reduced-motion:reduce){.mh-home-v2 .mh-home-band-track{transition:none}}
+.mh-home-v2 .mh-home-band-slide{flex:0 0 100%;min-width:0;height:100%}
+.mh-home-v2 .mh-home-band-slide>button{width:100%;max-width:none;height:100%!important}
+.mh-home-v2 .mh-home-band-slide>.mh-home-event-banner{justify-content:center;border-radius:12px}
+.mh-home-v2 .mh-home-band-slide>.mh-home-tour-banner{border-radius:12px}
+.mh-home-v2 .mh-home-band-dots{position:absolute;right:5px;bottom:4px;z-index:3;display:flex;gap:1px;padding:0 3px;border-radius:999px;background:#0009}
+.mh-home-v2 .mh-home-band-dots button{display:flex;align-items:center;justify-content:center;width:16px;height:16px;padding:0;border:0;background:transparent}
+.mh-home-v2 .mh-home-band-dots i{display:block;width:6px;height:6px;border-radius:50%;background:#ffffff80}
+.mh-home-v2 .mh-home-band-dots button.on i{width:12px;border-radius:3px;background:#fde68a}
 .mh-home-v2 .mh-home-band-quick-slot{position:absolute;top:0;right:-6px;width:96px;height:74px;pointer-events:none}
-.mh-home-v2 .mh-home-band-strip{display:flex;align-items:center;gap:6px;width:fit-content;max-width:100%;margin-top:3px}
-.mh-home-v2 .mh-home-band-strip .mh-home-event-banner{max-width:calc(100cqw - 112px)}
-.mh-home-v2 .mh-home-band-strip .mh-home-tour-banner{max-width:min(72vw,300px)}
-/* ほかのイベントの絵の札(追記2)。クリスマスの札と同じ幅・少し低く(マップを狭くしない) */
-.mh-home-v2 .mh-home-band-strip:has(.mh-home-event-art){width:calc(100% - 96px)}
-.mh-home-v2 .mh-home-event-art{position:relative;display:block;flex:1 1 auto;width:100%;height:62px;overflow:hidden;padding:0;border:2px solid #f9a8d4;border-radius:12px;background:#3b0a2e;box-shadow:0 4px 12px #0009}
-.mh-home-v2 .mh-home-event-art:active{transform:scale(.97);filter:brightness(1.15)}
+/* ほかのイベントの絵の札(追記2) */
+.mh-home-v2 .mh-home-event-art{position:relative;display:block;overflow:hidden;padding:0;border:2px solid #f9a8d4;border-radius:12px;background:#3b0a2e}
+.mh-home-v2 .mh-home-event-art:active{filter:brightness(1.15)}
 .mh-home-v2 .mh-home-event-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 12%;pointer-events:none}
 .mh-home-v2 .mh-home-event-art-sub{position:absolute;left:6px;bottom:4px;padding:1px 7px;border:1px solid #fbcfe8;border-radius:999px;background:#9d174de6;color:#fff;font-size:10px;font-weight:900;line-height:1.3;white-space:nowrap}
+/* クリスマスの札(追記3・社長「聖夜のバナーの文字で絵が半分隠れてる」): 部品(79-screen-xmas-event.jsx)の中身は変えず、HOME の側で見え方だけ変える。
+   絵は人物と館が見える所で切り、左半分を覆っていた濃い地は下の端の細い影だけに。字は「聖夜の名探偵」(13px)と期間の札だけを左下へ小さく寄せる */
+.mh-home-v2 .mh-home-band .mh-xmas-entry img.mh-xmas-entry-art{object-position:50% 52%!important}
+.mh-home-v2 .mh-home-band .mh-xmas-entry>span[style*="linear-gradient"]{background:linear-gradient(0deg,#0b1733e0 0,#0b1733a0 20px,transparent 40px)!important}
+.mh-home-v2 .mh-home-band .mh-xmas-entry [data-xmas-entry-kicker]{display:none}
+.mh-home-v2 .mh-home-band .mh-xmas-entry>span[style*="flex-direction"]{top:auto!important;bottom:4px;left:6px!important;right:auto!important;flex-direction:row!important;align-items:center!important;gap:5px!important}
+.mh-home-v2 .mh-home-band .mh-xmas-entry-title{font-size:13px!important;filter:drop-shadow(0 1px 2px #000)}
 .mh-home-v2 .mh-home-assistant{width:70%;max-width:360px;margin:6px 0 0 8px}
 .mh-home-v2 .mh-home-assistant-fold{margin:6px 0 0 8px}
 .mh-home-v2 .mh-home-assistant-show-mark{right:-8px;bottom:-6px;width:24px;height:24px;font-size:14px;background:#fff!important;box-shadow:0 0 0 2px #e11d48,0 2px 6px #0009;animation:mhHomePeerMark 1.4s ease-in-out infinite}
@@ -87329,9 +87341,8 @@ body:has(.mh-home-v2){background:linear-gradient(to top,#0b1f1a calc(env(safe-ar
 @media(max-width:350px){.mh-home-v2 .mh-home-dock-top .mh-home-dock-name,.mh-home-v2 .mh-home-dock-top .mh-home-success .nm{font-size:10.5px;letter-spacing:-.06em}}
 @media(orientation:landscape) and (max-height:600px){
   .mh-home-v2 .mh-home-band{position:absolute;left:8px;top:58px;width:min(37%,330px);margin:0}
-  .mh-home-v2 .mh-home-band-xmas{width:100%}
-  .mh-home-v2 .mh-home-band-strip .mh-home-event-banner,.mh-home-v2 .mh-home-band-strip .mh-home-tour-banner{max-width:100%}
-  .mh-home-v2 .mh-home-assistant,.mh-home-v2 .mh-home-assistant-fold{position:absolute;left:8px;top:172px;margin:0}
+  .mh-home-v2 .mh-home-band-view{width:100%;height:56px}
+  .mh-home-v2 .mh-home-assistant,.mh-home-v2 .mh-home-assistant-fold{position:absolute;left:8px;top:128px;margin:0}
   .mh-home-v2 .mh-home-assistant{width:min(37%,330px)}
   .mh-home-v2 .mh-home-dock{flex-direction:row;align-items:flex-end;gap:8px;padding:5px 8px 6px}
   .mh-home-v2 .mh-home-dock-top{flex:1.9 1 0}
@@ -87341,8 +87352,7 @@ body:has(.mh-home-v2){background:linear-gradient(to top,#0b1f1a calc(env(safe-ar
 }
 @container (min-width:700px) and (min-height:560px){
   .mh-home-v2 .mh-home-band{width:min(600px,calc(100% - 16px));margin:8px auto 0}
-  .mh-home-v2 .mh-home-band-xmas{width:100%}
-  .mh-home-v2 .mh-home-band-xmas>button[data-home-xmas-entry]{height:92px!important}
+  .mh-home-v2 .mh-home-band-view{width:100%;height:92px}
   .mh-home-v2 .mh-home-assistant{width:360px}
   .mh-home-v2 .mh-home-dock{flex-direction:row;align-items:flex-end;gap:14px;padding:10px 14px 12px}
   .mh-home-v2 .mh-home-dock-top{flex:2 1 0;justify-content:center}
@@ -87356,10 +87366,9 @@ body:has(.mh-home-v2){background:linear-gradient(to top,#0b1f1a calc(env(safe-ar
 /* クリスマスの入口(79-screen-xmas-event.jsx)は、横向きで帯を右の列の横へ動かす決まりを持っている(前の HOME の右の列のため)。
    新しい HOME には右の列が無いので、帯の置き場(.mh-home-band)の中に置いたままにする(部品の中身は変えない。HOME の側で上書きするだけ)。
    背の低い横向きの高さ 54px と字の大きさは、部品の決まり(前の HOME と同じ)のまま */
-.mh-home-v2 .mh-home-band [data-home-xmas-entry-strip]{position:relative!important;left:auto!important;right:auto!important;top:auto!important;margin:0!important}
-.mh-home-v2 .mh-home-band .mh-home-band-xmas{width:calc(100% - 96px)!important}
-@media(orientation:landscape) and (max-height:600px){.mh-home-v2 .mh-home-band-strip:has(.mh-home-event-art){width:100%}.mh-home-v2 .mh-home-event-art{height:50px}.mh-home-v2 .mh-home-event-art img{object-position:50% 3%}.mh-home-v2 .mh-home-band .mh-home-band-xmas{width:100%!important}.mh-home-v2 .mh-home-band-xmas>button[data-home-xmas-entry]{height:54px!important}.mh-home-v2 .mh-home-band-quick-slot{display:none}}
-@container (min-width:700px) and (min-height:560px){.mh-home-v2 .mh-home-band-strip:has(.mh-home-event-art){width:100%}.mh-home-v2 .mh-home-event-art{height:84px}.mh-home-v2 .mh-home-band .mh-home-band-xmas{width:100%!important}.mh-home-v2 .mh-home-band-quick-slot{display:none}}
+.mh-home-v2 .mh-home-band [data-home-xmas-entry-strip]{position:relative!important;left:auto!important;right:auto!important;top:auto!important;width:auto!important;margin:0!important}
+@media(orientation:landscape) and (max-height:600px){.mh-home-v2 .mh-home-event-art img{object-position:50% 4%}.mh-home-v2 .mh-home-band-quick-slot{display:none}}
+@container (min-width:700px) and (min-height:560px){.mh-home-v2 .mh-home-band-quick-slot{display:none}}
 @media (orientation:landscape) and (max-height:520px){.mh-home-v2 .mh-home-band .mh-xmas-entry[data-home-xmas-entry="banner"] .mh-xmas-entry-sub{font-size:11px}}
 /* 横持ちの iPhone の切り欠き(カメラの欠け)に、押す物を入れない。左右の余白に端末の安全な余白(safe-area)を足す */
 .mh-home-v2 .mh-home-top{padding-left:calc(8px + env(safe-area-inset-left));padding-right:calc(8px + env(safe-area-inset-right))}
@@ -88595,15 +88604,30 @@ function HomeScreenV2({
       return '';
     }
   })();
-  const homeBandStripCount = (homeBandEvent ? 1 : 0) + (homeBandTour ? 1 : 0);
+  const homeBandSlides = [];
+  if (homeBandEvent && homeBandXmas && xmasEntry.preOpen) homeBandSlides.push('event');
+  if (homeBandXmas) homeBandSlides.push('xmas');
+  if (homeBandEvent && !homeBandSlides.includes('event')) homeBandSlides.push('event');
+  if (homeBandTour) homeBandSlides.push('tour');
+  const homeBandCount = homeBandSlides.length;
   const [homeBandIdx, setHomeBandIdx] = React.useState(0);
+  const homeBandTouchRef = React.useRef({
+    x: null,
+    at: 0,
+    swiped: false
+  });
   React.useEffect(() => {
-    if (homeBandStripCount < 2) return undefined;
-    const id = setInterval(() => setHomeBandIdx(i => i + 1), 5000);
+    if (homeBandCount < 2) return undefined;
+    const id = setInterval(() => {
+      if (Date.now() - homeBandTouchRef.current.at >= 20000) setHomeBandIdx(i => i + 1);
+    }, 7000);
     return () => clearInterval(id);
-  }, [homeBandStripCount]);
-  const homeBandStripShow = homeBandStripCount ? homeBandIdx % homeBandStripCount : 0;
-  const homeBandCount = (homeBandXmas ? 1 : 0) + homeBandStripCount;
+  }, [homeBandCount]);
+  const homeBandShow = homeBandCount ? (homeBandIdx % homeBandCount + homeBandCount) % homeBandCount : 0;
+  const homeBandGo = step => {
+    homeBandTouchRef.current.at = Date.now();
+    setHomeBandIdx(i => i + step);
+  };
   const [homeMenuOpen, setHomeMenuOpen] = React.useState(false);
   const homeMissionCount = missionClaimableCount(normalizeMissions(missions));
   const homeGiftCount = giftClaimableCount(gifts);
@@ -88760,24 +88784,57 @@ function HomeScreenV2({
     className: "mh-home-side-lb"
   }, "設定"))), homeBandCount > 0 && React.createElement("div", {
     className: "mh-home-band",
-    "data-home-band": homeBandXmas ? 'xmas' : 'strip'
-  }, homeBandXmas && React.createElement("div", {
-    className: "mh-home-band-xmas",
-    "data-home-xmas-entry-strip": true
-  }, React.createElement(HomeXmasEventEntry, {
+    "data-home-band": homeBandSlides[homeBandShow]
+  }, React.createElement("div", {
+    className: "mh-home-band-view",
+    onPointerDown: e => {
+      homeBandTouchRef.current = {
+        ...homeBandTouchRef.current,
+        x: e.clientX,
+        swiped: false
+      };
+    },
+    onPointerUp: e => {
+      const t = homeBandTouchRef.current;
+      if (t.x === null || homeBandCount < 2) return;
+      const dx = e.clientX - t.x;
+      t.x = null;
+      if (Math.abs(dx) >= 40) {
+        t.swiped = true;
+        homeBandGo(dx < 0 ? 1 : -1);
+      }
+    },
+    onPointerCancel: () => {
+      homeBandTouchRef.current.x = null;
+    },
+    onClickCapture: e => {
+      if (homeBandTouchRef.current.swiped) {
+        homeBandTouchRef.current.swiped = false;
+        e.stopPropagation();
+        e.preventDefault();
+      }
+    }
+  }, React.createElement("div", {
+    className: "mh-home-band-track",
+    style: {
+      transform: `translateX(${-homeBandShow * 100}%)`
+    }
+  }, homeBandSlides.map((k, i) => React.createElement("div", _extends({
+    key: k,
+    className: "mh-home-band-slide",
+    "aria-hidden": i !== homeBandShow
+  }, k === 'xmas' ? {
+    'data-home-xmas-entry-strip': ''
+  } : {
+    'data-home-event-strip': ''
+  }), k === 'xmas' && React.createElement(HomeXmasEventEntry, {
     onOpen: xmasEntry.onOpen,
     preOpen: !!xmasEntry.preOpen
-  })), homeBandXmas && React.createElement("span", {
-    className: "mh-home-band-quick-slot",
-    "data-quick-anywhere-slot": true,
-    "aria-hidden": "true"
-  }), homeBandStripCount > 0 && React.createElement("div", {
-    className: "mh-home-band-strip",
-    "data-home-event-strip": true
-  }, homeBandEvent && homeBandStripShow === 0 && homeBandEventArt && React.createElement("button", {
+  }), k === 'event' && homeBandEventArt && React.createElement("button", {
     type: "button",
     "data-home-event-banner": "art",
     className: "mh-home-event-art",
+    tabIndex: i === homeBandShow ? 0 : -1,
     onClick: homeBandEvent.id === 'xmas_2026' && typeof onOpenXmasEvent === 'function' ? onOpenXmasEvent : onOpenRhythm,
     "aria-label": `${homeBandEvent.banner.title}${homeBandEvent.banner.title2 || ''} ${homeBandEvent.banner.sub}`
   }, React.createElement("img", {
@@ -88786,33 +88843,43 @@ function HomeScreenV2({
     draggable: false
   }), React.createElement("span", {
     className: "mh-home-event-art-sub"
-  }, homeBandEvent.banner.sub)), homeBandEvent && homeBandStripShow === 0 && !homeBandEventArt && React.createElement("button", {
+  }, homeBandEvent.banner.sub)), k === 'event' && !homeBandEventArt && React.createElement("button", {
     type: "button",
     "data-home-event-banner": true,
     className: "mh-home-event-banner",
+    tabIndex: i === homeBandShow ? 0 : -1,
     onClick: homeBandEvent.id === 'xmas_2026' && typeof onOpenXmasEvent === 'function' ? onOpenXmasEvent : onOpenRhythm,
     "aria-label": `${homeBandEvent.banner.title}${homeBandEvent.banner.title2 || ''} ${homeBandEvent.banner.sub}`
   }, React.createElement("b", {
     className: "r1"
   }, React.createElement("span", null, homeBandEvent.banner.emoji, " ", homeBandEvent.banner.title), React.createElement("small", null, homeBandEvent.banner.sub)), homeBandEvent.banner.title2 ? React.createElement("span", {
     className: "t2"
-  }, homeBandEvent.banner.title2) : null), homeBandTour && homeBandStripShow === (homeBandEvent ? 1 : 0) && React.createElement("button", {
+  }, homeBandEvent.banner.title2) : null), k === 'tour' && React.createElement("button", {
     type: "button",
     "data-home-card-tour": homeBandTour.id,
     className: "mh-home-tour-banner",
+    tabIndex: i === homeBandShow ? 0 : -1,
     onClick: () => onOpenCardTour(homeBandTour.id),
     "aria-label": `${homeBandTour.name} ${homeBandTour.sub}`
   }, React.createElement("span", {
     "aria-hidden": "true"
-  }, "🏆"), React.createElement("span", null, React.createElement("b", null, homeBandTour.name), React.createElement("small", null, homeBandTour.sub, homeBandTour.prize && React.createElement("em", null, homeBandTour.prize)))), homeBandStripCount > 1 && React.createElement("span", {
-    className: "mh-home-event-strip-dots",
+  }, "🏆"), React.createElement("span", null, React.createElement("b", null, homeBandTour.name), React.createElement("small", null, homeBandTour.sub, homeBandTour.prize && React.createElement("em", null, homeBandTour.prize))))))), homeBandCount > 1 && React.createElement("span", {
+    className: "mh-home-band-dots",
+    "data-home-band-dots": true
+  }, homeBandSlides.map((k, i) => React.createElement("button", {
+    key: k,
+    type: "button",
+    className: i === homeBandShow ? 'on' : '',
+    "aria-label": `${i + 1}枚目を見る`,
+    onClick: e => {
+      e.stopPropagation();
+      homeBandGo(i - homeBandShow);
+    }
+  }, React.createElement("i", null))))), React.createElement("span", {
+    className: "mh-home-band-quick-slot",
+    "data-quick-anywhere-slot": true,
     "aria-hidden": "true"
-  }, Array.from({
-    length: homeBandStripCount
-  }, (_, i) => React.createElement("i", {
-    key: i,
-    className: i === homeBandStripShow ? 'on' : ''
-  }))))), React.createElement("div", {
+  })), React.createElement("div", {
     className: "mh-home-dock"
   }, nextStep && React.createElement("button", {
     type: "button",
@@ -127285,8 +127352,6 @@ const XMAS_NOVEL_CSS = `
 .mh-nv-fallen { position: absolute; left: 50%; bottom: 24%; width: min(80vw, 520px); transform: translateX(-50%); z-index: 4; filter: drop-shadow(0 0 2px rgba(190,200,230,.35)); pointer-events: none; animation: mh-nv-fade 1.2s ease both; }
 .mh-nv-body { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
 .mh-nv-body.noblood .pool { display: none; }
-.mh-nv-body.noblood .mh-nv-body-lie img { filter: brightness(0) drop-shadow(0 0 1px rgba(190,205,235,.55)) drop-shadow(0 0 14px rgba(120,150,200,.35)) !important; }
-.mh-nv-body.noblood .mh-nv-body-dim { background: radial-gradient(120% 90% at 50% 40%, rgba(6,10,34,.35), rgba(0,0,4,.88)) !important; }
 .mh-nv-body-dim { position: absolute; inset: 0; -webkit-backdrop-filter: grayscale(.9) brightness(.55); backdrop-filter: grayscale(.9) brightness(.55);
   background: radial-gradient(70% 34% at var(--fx, 50%) var(--fy, 74%), rgba(120,0,14,.42), rgba(120,0,14,0) 72%), radial-gradient(120% 90% at 50% 40%, rgba(6,10,34,.35), rgba(0,0,4,.88)); animation: mh-nv-fade 1.4s ease both; }
 .mh-nv-body-lie { position: absolute; }
@@ -127367,6 +127432,86 @@ const XMAS_NOVEL_CSS = `
   .mh-nv-boot [data-xmas-novel-perfect] { margin-top: 8px; }
 }
 @media (min-width: 900px) and (min-height: 700px) { .mh-nv-text { font-size: 19px; } .mh-nv-box { min-height: 150px; } }
+/* ---- 場面の切り替えと人物の登場の演出(台帳 r1126-094)。暗い側に合わせ、光らせない・跳ねさせない ----
+   切り替え(.mh-nv-sw): place=場所が替わる(暗い幕が横に流れて明ける) / time=時間が飛ぶ(暗転して、ゆっくり明ける) /
+   past=過去編へ入る(色あせた光がにじんで、古い写真の色になる) / open=章の札のあと・読み始め(黒から明ける)。
+   既読・オートは .fast で短く、スキップ中は出さない。札(.mh-nv-place)は場所の名前 */
+.mh-nv-sw { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
+.mh-nv-sw.place { background: linear-gradient(90deg, transparent 0%, rgba(0,0,0,.85) 14%, #000 26%, #000 100%); animation: mh-nv-sw-wipe 1.15s cubic-bezier(.55,.05,.35,1) both; }
+@keyframes mh-nv-sw-wipe { 0% { transform: translateX(-26%); opacity: 1; } 100% { transform: translateX(105%); opacity: 1; } }
+.mh-nv-sw.time { background: #000; animation: mh-nv-sw-time 2.1s ease-in both; }
+@keyframes mh-nv-sw-time { 0%, 30% { opacity: 1; } 100% { opacity: 0; } }
+.mh-nv-sw.open { background: #000; animation: mh-nv-sw-time 1.5s ease-in both; }
+.mh-nv-sw.past { background: radial-gradient(80% 70% at 50% 45%, rgba(214,182,128,.55) 0%, rgba(90,60,24,.8) 60%, rgba(12,7,2,1) 100%); animation: mh-nv-sw-past 2.6s ease-out both; }
+.mh-nv-sw.past::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, rgba(0,0,0,.18) 0 1px, transparent 1px 7px); animation: mh-nv-sw-film .18s steps(2) 8; }
+@keyframes mh-nv-sw-past { 0% { opacity: 1; filter: blur(10px); } 35% { opacity: .92; filter: blur(4px); } 100% { opacity: 0; filter: none; } }
+@keyframes mh-nv-sw-film { 50% { transform: translateX(3px); opacity: .5; } }
+.mh-nv-sw.fast { animation-duration: .45s; }
+.mh-nv-sw.fast.place { animation-duration: .5s; }
+.mh-nv-sw.fast::after { animation: none; }
+/* 背景の絵は、替わったときにゆっくり寄る(押し込みすぎない) */
+.mh-nv-bg.in-place { animation: mh-nv-bg-push 2.2s ease-out both; }
+.mh-nv-bg.in-time, .mh-nv-bg.in-open { animation: mh-nv-bg-push 3s ease-out both; }
+.mh-nv-bg.in-past { animation: mh-nv-bg-push 3.4s ease-out both; }
+.mh-nv-bg.fast { animation-duration: .5s; }
+@keyframes mh-nv-bg-push { from { transform: scale(1.06); } to { transform: none; } }
+.mh-nv-place { position: absolute; left: 14px; top: calc(max(8px, env(safe-area-inset-top)) + 50px); z-index: 5; pointer-events: none; max-width: calc(100% - 28px);
+  padding: 6px 14px 6px 12px; border-left: 2px solid rgba(232,196,106,.8); background: linear-gradient(90deg, rgba(0,0,0,.72), rgba(0,0,0,0));
+  color: #e6dcc0; font-size: 14px; font-weight: 800; letter-spacing: .14em; text-shadow: 0 1px 3px #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  animation: mh-nv-place 3.2s ease both; }
+.mh-nv-place.past { border-left-color: rgba(196,150,90,.85); color: #e2cfa6; }
+.mh-nv-place.fast { animation-duration: 1.4s; }
+@keyframes mh-nv-place { 0% { opacity: 0; transform: translateX(-12px); } 18% { opacity: 1; transform: none; } 78% { opacity: 1; } 100% { opacity: 0; } }
+@media (orientation: portrait) { .mh-nv-place { top: calc(max(8px, env(safe-area-inset-top)) + 72px); } }
+/* 章の札: 黒から明けて、章の名前が字の間を詰めながら浮かび、線が中から伸び、題がにじみから浮かぶ */
+.mh-nv-card.open { animation: mh-nv-fade 1s ease both; background: radial-gradient(110% 70% at 50% 45%, rgba(26,22,40,.92), rgba(1,2,6,.99)); }
+.mh-nv-card.open .mh-nv-card-label { animation: mh-nv-card-label 1.6s ease-out both; }
+.mh-nv-card.open .mh-nv-rule { animation: mh-nv-card-rule 1.1s ease-out .35s both; }
+.mh-nv-card.open .mh-nv-card-title { animation: mh-nv-card-title 1.5s ease-out .6s both; }
+.mh-nv-card.open .mh-nv-card-hint { animation: mh-nv-fade .8s ease 1.9s both; }
+.mh-nv-card.open .mh-nv-card-ghost { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; overflow: hidden;
+  font-size: min(26vw, 220px); font-weight: 900; color: rgba(160,20,30,.08); letter-spacing: -.02em; white-space: nowrap; animation: mh-nv-card-ghost 4s ease-out both; }
+.mh-nv-cardtext { position: relative; }
+@keyframes mh-nv-card-label { from { opacity: 0; letter-spacing: 1.2em; } to { opacity: 1; letter-spacing: .5em; } }
+@keyframes mh-nv-card-rule { from { transform: scaleX(0); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes mh-nv-card-title { 0% { opacity: 0; filter: blur(8px); transform: translateY(8px); } 100% { opacity: 1; filter: none; transform: none; } }
+@keyframes mh-nv-card-ghost { from { opacity: 0; transform: scale(1.08); } to { opacity: 1; transform: none; } }
+/* 人物の登場: first=その人が初めて出る(影の姿から浮かぶ) / swap=話し手が替わる(少し寄って出る) / face=表情だけ替わる(すっと替わる)。fast は短く */
+.mh-nv-fig.enter-first img { animation: mh-nv-enter-first 1.5s ease-out both; }
+.mh-nv-fig.enter-swap img { animation: mh-nv-enter-swap .5s cubic-bezier(.2,.7,.3,1) both; }
+.mh-nv-fig.enter-face img { animation: mh-nv-enter-face .22s ease both; }
+.mh-nv-fig.fast img { animation-duration: .3s; }
+@keyframes mh-nv-enter-first {
+  0% { opacity: 0; transform: translateY(10px) scale(.985); filter: brightness(0) blur(4px) drop-shadow(0 6px 18px rgba(0,0,0,.6)); }
+  40% { opacity: 1; transform: none; filter: brightness(0) blur(1px) drop-shadow(0 0 6px rgba(180,190,220,.35)); }
+  100% { opacity: 1; transform: none; filter: brightness(1) blur(0) drop-shadow(0 6px 18px rgba(0,0,0,.6)); } }
+@keyframes mh-nv-enter-swap { from { opacity: 0; transform: translateX(-16px) scale(.97); filter: brightness(.7) drop-shadow(0 6px 18px rgba(0,0,0,.6)); } to { opacity: 1; transform: none; filter: brightness(1) drop-shadow(0 6px 18px rgba(0,0,0,.6)); } }
+@keyframes mh-nv-enter-face { from { opacity: .55; } to { opacity: 1; } }
+/* 初めて出る人の名札: 立ち絵の左上に、金の線が左から伸びてから肩書きと名前が浮かぶ。しばらくして消える */
+.mh-nv-intro { position: absolute !important; left: 6%; top: 18%; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 0 18px 8px 2px; pointer-events: none; z-index: 2;
+  animation: mh-nv-intro 3.6s ease both; }
+.mh-nv-intro .bar { position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: linear-gradient(90deg, #e8c46a, rgba(232,196,106,.6) 70%, transparent); transform-origin: left; animation: mh-nv-intro-bar .7s ease-out both; }
+.mh-nv-intro .nm { font-size: clamp(24px, 6.4vw, 32px); font-weight: 900; letter-spacing: .16em; line-height: 1.2; color: #f1e6c8; white-space: nowrap; text-shadow: 0 0 12px rgba(0,0,0,.95), 0 2px 3px #000; animation: mh-nv-intro-nm 1.1s ease-out .3s both; }
+.mh-nv-intro .role { font-size: 12px; font-weight: 800; letter-spacing: .3em; color: #d2b272; white-space: nowrap; text-shadow: 0 0 8px #000, 0 1px 3px #000; animation: mh-nv-intro-nm .9s ease-out .15s both; }
+.mh-nv-intro.fast { animation-duration: 1.6s; }
+.mh-nv-intro.fast .bar, .mh-nv-intro.fast .nm, .mh-nv-intro.fast .role { animation-duration: .3s; animation-delay: 0s; }
+@keyframes mh-nv-intro { 0% { opacity: 1; } 82% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes mh-nv-intro-bar { from { transform: scaleX(0); } to { transform: none; } }
+@keyframes mh-nv-intro-nm { from { opacity: 0; filter: blur(6px); transform: translateX(-10px); } to { opacity: 1; filter: none; transform: none; } }
+@media (orientation: landscape) and (max-height: 560px) { .mh-nv-intro { left: 4%; top: 22%; } .mh-nv-intro .nm { font-size: 24px; } }
+/* 遺体・倒れた影を見つける行(台帳 r1126-094 追記1): 文のあいだは暗転(dark)、文が出きって一拍おいてから、ゆっくり明ける(show)。影はその下から浮かぶ */
+.mh-nv-veil { position: absolute; inset: 0; z-index: 4; pointer-events: none; background: #000; }
+.mh-nv-veil.dark { animation: mh-nv-fade .35s ease both; }
+.mh-nv-veil.show { animation: mh-nv-veil-lift 1.8s ease-in both; }
+.mh-nv-veil.fast.show { animation-duration: .5s; }
+@keyframes mh-nv-veil-lift { 0%, 15% { opacity: 1; } 100% { opacity: 0; } }
+/* 血を見せない影(白瀬など)は、真っ黒で見えなかった(社長「白瀬の死亡シーンって出てた？」)。冷たい光を当て、縁を白く光らせて形を見せる */
+.mh-nv-body.noblood .mh-nv-body-dim { background: radial-gradient(42% 30% at var(--fx, 50%) var(--fy, 74%), rgba(150,180,235,.30), rgba(150,180,235,0) 75%), radial-gradient(120% 90% at 50% 40%, rgba(6,10,34,.35), rgba(0,0,4,.88)) !important; }
+.mh-nv-body.noblood .mh-nv-body-lie img { filter: brightness(0) drop-shadow(0 0 1.5px rgba(225,235,255,.95)) drop-shadow(0 0 3px rgba(200,215,250,.6)) drop-shadow(0 0 20px rgba(140,170,230,.55)) !important; }
+@media (prefers-reduced-motion: reduce) {
+  .mh-nv-veil { animation-duration: .01s !important; }
+  .mh-nv-sw, .mh-nv-sw::after, .mh-nv-bg.in-place, .mh-nv-bg.in-time, .mh-nv-bg.in-open, .mh-nv-bg.in-past, .mh-nv-card.open *, .mh-nv-fig.enter-first img, .mh-nv-fig.enter-swap img, .mh-nv-fig.enter-face img, .mh-nv-intro, .mh-nv-intro * { animation-duration: .01s !important; animation-delay: 0s !important; }
+}
 @media (prefers-reduced-motion: reduce) { .mh-nv-snow, .mh-nv-next, .mh-nv-shake, .mh-nv-get, .mh-nv-fig img { animation: none !important; } }
 `;
 const useXmasNovelCss = () => {
@@ -127520,6 +127665,136 @@ const xmasNovelSceneBgName = (scene, idx) => {
     if (i >= 0 && at >= i) name = bg;
   });
   return name;
+};
+const xmasNovelTimeOf = n => /12年前/.test(n) ? 'past' : /明け方|朝/.test(n) ? 'morning' : /夜|ろうそく|停電|暗転/.test(n) ? 'night' : 'day';
+const xmasNovelSwitchKind = (prevName, nextName) => {
+  const a = String(prevName || '').split('→')[0];
+  const b = String(nextName || '').split('→')[0];
+  const tb = xmasNovelTimeOf(b);
+  if (prevName == null) return tb === 'past' ? 'past' : 'open';
+  if (a === b) return '';
+  const ta = xmasNovelTimeOf(a);
+  if (tb === 'past' && ta !== 'past') return 'past';
+  if (ta !== tb) return 'time';
+  const ia = xmasNovelBgOf(a);
+  const ib = xmasNovelBgOf(b);
+  if ((ia.img || ia.grad) === (ib.img || ib.grad) && (ia.tint || '') === (ib.tint || '')) return '';
+  return 'place';
+};
+const xmasNovelPlaceLabel = name => {
+  const n = String(name || '').split('→')[0].trim();
+  if (!n || /^[a-z0-9_]+(?=$|[(（])/.test(n) || /ゲーム機をかこむ/.test(n)) return '';
+  const m = n.match(/^([^(（]+)(?:[(（]([^)）]*)[)）]?)?/);
+  if (!m) return n;
+  const base = m[1].trim();
+  const inner = (m[2] || '').trim();
+  return inner ? `${base}　${inner}` : base;
+};
+const XMAS_NOVEL_FIRST_LINE_CACHE = new WeakMap();
+const xmasNovelFirstLines = script => {
+  if (!script || typeof script !== 'object') return {};
+  if (XMAS_NOVEL_FIRST_LINE_CACHE.has(script)) return XMAS_NOVEL_FIRST_LINE_CACHE.get(script);
+  const out = {};
+  (Array.isArray(script.scenes) ? script.scenes : []).forEach(s => (Array.isArray(s.rows) ? s.rows : []).forEach(r => {
+    if (r && r.t === 'line' && r.w && r.n !== '？？？' && !out[r.w]) out[r.w] = r.id;
+  }));
+  XMAS_NOVEL_FIRST_LINE_CACHE.set(script, out);
+  return out;
+};
+const XMAS_NOVEL_CHAPTER_VEIL = Object.freeze({
+  C3: '白い朝',
+  C8: 'ひとつずつ',
+  C10: '長い夜'
+});
+const XMAS_NOVEL_CH_KEYS_CACHE = new WeakMap();
+const xmasNovelChapterDone = (script, ch, read) => {
+  if (!script || !ch) return false;
+  let keys = XMAS_NOVEL_CH_KEYS_CACHE.get(script);
+  if (!keys) {
+    keys = {};
+    (Array.isArray(script.scenes) ? script.scenes : []).forEach(s => {
+      (keys[s.chapter] = keys[s.chapter] || []).push(...(Array.isArray(s.rows) ? s.rows : []).map(r => r && r.k).filter(Boolean));
+    });
+    XMAS_NOVEL_CH_KEYS_CACHE.set(script, keys);
+  }
+  const set = read instanceof Set ? read : new Set(Array.isArray(read) ? read : []);
+  return (Array.isArray(script.chapters) ? script.chapters : []).some(c => c && !c.past && !c.outside && c.no > ch.no && c.no < 90 && (keys[c.id] || []).some(k => set.has(k)));
+};
+const xmasNovelChapterTitle = (script, ch, read) => {
+  if (!ch) return '';
+  const veil = XMAS_NOVEL_CHAPTER_VEIL[ch.id];
+  return veil && !xmasNovelChapterDone(script, ch, read) ? veil : ch.title || '';
+};
+const xmasNovelSceneDone = (scene, read) => {
+  const rows = scene && Array.isArray(scene.rows) ? scene.rows : [];
+  const last = [...rows].reverse().find(r => r && r.k);
+  return !!(last && Array.isArray(read) && read.includes(last.k));
+};
+const XMAS_NOVEL_SHAKE = Object.freeze({
+  '1-3-1': 2,
+  '2-1-10': 1,
+  '2-3-4': 1,
+  '2-3-7': 1,
+  '2-3-9b': 1,
+  '2-3-9c': 2,
+  '2-5-1': 2,
+  '5-4-4': 1,
+  '6-5-1': 3,
+  '6-7-4b': 2,
+  '7-P1-13': 1,
+  '7-P3-11': 1,
+  '7-P3-12': 1,
+  '7-W-8': 1,
+  '9-1-4': 1,
+  '10-2-6': 2,
+  '2-X-2': 3,
+  '5-X-3': 3,
+  '6-X-4': 3,
+  '6-X-5': 2,
+  '6-X-8': 2,
+  '2-Y-9': 3,
+  '2-Y-17': 1,
+  '10-X-8': 3,
+  'B-2': 1,
+  'B-3': 1,
+  'B-4': 2,
+  'B-13': 2,
+  '1-O-22': 1,
+  '12-3-2': 1,
+  '12-4-2': 1,
+  '12-4-5': 1
+});
+const XMAS_NOVEL_SHAKE_PX = [0, 2.5, 5, 9];
+const XMAS_NOVEL_BUZZ = [0, 20, 45, [70, 40, 90]];
+const xmasNovelQuake = (el, lv) => {
+  const a = XMAS_NOVEL_SHAKE_PX[lv] || 0;
+  if (!a) return;
+  try {
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  } catch (e) {}
+  if (el && typeof el.animate === 'function') {
+    try {
+      el.animate([{
+        transform: 'none'
+      }, {
+        transform: `translate(${-a}px, ${a / 2}px)`
+      }, {
+        transform: `translate(${a}px, ${-a / 3}px)`
+      }, {
+        transform: `translate(${-a * 0.6}px, ${a / 3}px)`
+      }, {
+        transform: `translate(${a * 0.35}px, 0)`
+      }, {
+        transform: 'none'
+      }], {
+        duration: 240 + lv * 100,
+        easing: 'ease-out'
+      });
+    } catch (e) {}
+  }
+  try {
+    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(XMAS_NOVEL_BUZZ[lv]);
+  } catch (e) {}
 };
 const XMAS_NOVEL_FACES = Object.freeze(['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited']);
 const xmasNovelFigureSrc = (who, e) => {
@@ -127856,20 +128131,41 @@ const XmasNovelFigure = props => {
   const {
     row
   } = props;
-  const who = !row ? '' : row.t === 'band' ? 'boss' : row.n === '？？？' ? xmasNovelIsLaugh(row) ? 'boss' : 'shadow' : row.w || '';
+  const who = !row ? '' : row.t === 'band' ? 'boss' : row.n === '？？？' ? 'boss' : row.w || '';
   return React.createElement(XmasNovelFigureArt, _extends({}, props, {
     who: who,
     frame: xmasNovelFrameOf(row, props.scene),
     key: `${who}-${row && row.e || ''}`
   }));
 };
+const XMAS_NOVEL_INTRO_ROLE = Object.freeze({
+  ichika: 'ペンションのオーナー',
+  mochimaru: 'ペンションの世話役',
+  kuroba: '招かれざる客',
+  shirase: '招かれざる客'
+});
+const XmasNovelIntro = ({
+  c,
+  fast
+}) => c ? React.createElement("div", {
+  className: `mh-nv-intro mh-nv-serif${fast ? ' fast' : ''}`,
+  "data-xmas-novel-intro": c.id
+}, XMAS_NOVEL_INTRO_ROLE[c.id] && React.createElement("span", {
+  className: "role"
+}, XMAS_NOVEL_INTRO_ROLE[c.id]), React.createElement("span", {
+  className: "nm"
+}, c.name), React.createElement("span", {
+  className: "bar"
+})) : null;
 const XmasNovelFigureArt = ({
   row,
   dim = false,
   who = '',
-  frame = 'normal'
+  frame = 'normal',
+  enter = null
 }) => {
   const [broken, setBroken] = useState(0);
+  const ek = enter && enter.kind ? ` enter-${enter.kind}${enter.fast ? ' fast' : ''}` : '';
   const ref = useXmasNovelPlace(who, frame, `${row ? row.id : ''}-${broken}`);
   if (row && row.t === 'band' && xmasNovelIsSilhouette(row)) return React.createElement("div", {
     ref: ref,
@@ -127883,10 +128179,7 @@ const XmasNovelFigureArt = ({
     ref: ref,
     className: `mh-nv-fig${dim ? ' dim' : ''}${laugh ? ' laugh' : ''}`,
     key: key
-  }, laugh ? React.createElement(XmasNovelBossShadow, null) : React.createElement(XmasNovelShadow, {
-    tone: "#1c2240",
-    label: "？？？"
-  })) : null;
+  }, React.createElement(XmasNovelBossShadow, null)) : null;
   if (row.w === 'watson') return React.createElement("div", {
     ref: ref,
     className: "mh-nv-fig",
@@ -127894,6 +128187,10 @@ const XmasNovelFigureArt = ({
   }, React.createElement(XmasNovelLaptop, null));
   const c = xmasNovelCastOf(row.w);
   const fig = xmasNovelFigureSrc(row.w, row.e);
+  const intro = enter && enter.kind === 'first' && enter.intro ? React.createElement(XmasNovelIntro, {
+    c: c,
+    fast: enter.fast
+  }) : null;
   if (!fig || broken >= 2) return React.createElement("div", {
     ref: ref,
     className: `mh-nv-fig${dim ? ' dim' : ''}`,
@@ -127901,18 +128198,19 @@ const XmasNovelFigureArt = ({
   }, React.createElement(XmasNovelShadow, {
     tone: c && c.tone || '#2a3350',
     label: c ? c.name : ''
-  }));
+  }), intro);
   const src = broken === 1 && fig.fallback ? fig.fallback : fig.src;
   return React.createElement("div", {
     ref: ref,
-    className: `mh-nv-fig${fig.face ? ' face' : ''}${dim ? ' dim' : ''}`,
-    key: key
+    className: `mh-nv-fig${fig.face ? ' face' : ''}${dim ? ' dim' : ''}${ek}`,
+    key: key,
+    "data-xmas-novel-enter": enter && enter.kind ? enter.kind : undefined
   }, React.createElement("img", {
     src: src,
     alt: c ? c.name : '',
     draggable: false,
     onError: () => setBroken(b => b === 0 && fig.fallback ? 1 : 2)
-  }));
+  }), intro);
 };
 const xmasNovelFaceOf = id => {
   const c = xmasNovelCastOf(id);
@@ -129131,7 +129429,6 @@ const XmasNovelScreen = ({
   const [reply, setReply] = useState(null);
   const [shown, setShown] = useState(0);
   const [fx, setFx] = useState(null);
-  const [shake, setShake] = useState(0);
   const [curtain, setCurtain] = useState(null);
   const [transit, setTransit] = useState(null);
   const replayRef = useRef(false);
@@ -129150,6 +129447,43 @@ const XmasNovelScreen = ({
   const prevBgm = useRef(null);
   const storeTimer = useRef(null);
   const unreadRef = useRef(false);
+  const [sw, setSw] = useState(null);
+  const [figEnter, setFigEnter] = useState(null);
+  const lastBgRef = useRef(null);
+  const pendingSwRef = useRef(null);
+  const seenWhoRef = useRef(new Set());
+  const lastWhoRef = useRef('');
+  const [reveal, setReveal] = useState(null);
+  const pendingFxRef = useRef(null);
+  const lastBodyRef = useRef('');
+  const fireFx = p => {
+    if (!p) return;
+    if (p.bleedAfter) setTimeout(() => setFx({
+      kind: 'bleed',
+      n: Date.now()
+    }), 380);
+    setFx(p.vis ? {
+      kind: p.vis,
+      n: Date.now()
+    } : null);
+    if (p.shake) xmasNovelQuake(stageRef.current, 2);
+  };
+  const stageRef = useRef(null);
+  const pendingQuakeRef = useRef(0);
+  const [titleOk, setTitleOk] = useState(false);
+  const fxFast = unread => !unread || !!(saveRef.current && saveRef.current.auto);
+  const fireSw = v => {
+    if (!v) {
+      setSw(null);
+      return;
+    }
+    const n = Date.now();
+    setSw({
+      ...v,
+      n
+    });
+    setTimeout(() => setSw(x => x && x.n === n ? null : x), v.fast ? 1500 : 3400);
+  };
   useEffect(() => {
     let alive = true;
     try {
@@ -129212,17 +129546,25 @@ const XmasNovelScreen = ({
       read: [...s.read, r.k]
     };
     if (r.t === 'band' && r.se) xmasNovelRowSe(r.se, r.seN);else xmasNovelSeStop();
+    pendingQuakeRef.current = 0;
+    if (XMAS_NOVEL_SHAKE[r.id] && !skip) {
+      if (opts.held) pendingQuakeRef.current = XMAS_NOVEL_SHAKE[r.id];else xmasNovelQuake(stageRef.current, XMAS_NOVEL_SHAKE[r.id]);
+    }
     if (r.t === 'band' && Array.isArray(r.fx)) {
       const vis = r.fx.find(f => ['dark', 'white', 'red', 'light', 'bleed'].includes(f));
-      if (r.fx.includes('bleed') && r.fx.includes('red')) setTimeout(() => setFx({
-        kind: 'bleed',
-        n: Date.now()
-      }), 380);
-      setFx(vis ? {
-        kind: vis,
-        n: Date.now()
-      } : null);
-      if (r.fx.includes('shake')) setShake(n => n + 1);
+      const p = {
+        id: r.id,
+        vis,
+        bleedAfter: r.fx.includes('bleed') && r.fx.includes('red'),
+        shake: r.fx.includes('shake')
+      };
+      if (xmasNovelIsSeRow(r) || vis === 'dark' || skip || !vis && !p.shake) {
+        pendingFxRef.current = null;
+        fireFx(p);
+      } else {
+        pendingFxRef.current = p;
+        setFx(null);
+      }
       if (r.fx.includes('curtainDown')) setCurtain('down');
       if (r.fx.includes('curtainUp')) {
         setCurtain('up');
@@ -129236,7 +129578,20 @@ const XmasNovelScreen = ({
         setShown(99999);
         return s;
       }
-    } else setFx(f => f && f.kind === 'dark' ? null : f);
+    } else {
+      pendingFxRef.current = null;
+      setFx(f => f && f.kind === 'dark' ? null : f);
+    }
+    {
+      const bodyKey = r.t === 'band' ? r.body || (Array.isArray(r.fx) && r.fx.includes('fallen') ? `fallen-${r.id}` : '') : '';
+      if (bodyKey && bodyKey !== lastBodyRef.current) setReveal({
+        id: r.id,
+        stage: skip ? 'show' : 'dark',
+        fast: !unreadRef.current,
+        n: Date.now()
+      });else setReveal(null);
+      if (bodyKey) lastBodyRef.current = bodyKey;
+    }
     if (opts.quiet && r.bgm && (XMAS_NOVEL_VOCAL_BGM[r.bgm] || r.bgm) !== lastBgm.current) {
       lastBgm.current = XMAS_NOVEL_VOCAL_BGM[r.bgm] || r.bgm;
       xmasNovelBgm(r.bgm);
@@ -129250,6 +129605,19 @@ const XmasNovelScreen = ({
       xmasNovelSe('clue');
     }
     if (r.t === 'line' && r.n === '？？？' && xmasNovelIsLaugh(r)) xmasNovelSe('laugh');
+    if (r.t === 'line') {
+      const who = r.n === '？？？' ? '？？？' : r.w || '';
+      const first = !!(who && who !== '？？？' && who !== 'watson' && !seenWhoRef.current.has(who) && xmasNovelFirstLines(S)[who] === r.id);
+      if (who) seenWhoRef.current.add(who);
+      const kind = first ? 'first' : who !== lastWhoRef.current ? 'swap' : 'face';
+      lastWhoRef.current = who;
+      setFigEnter(skip ? null : {
+        kind,
+        fast: fxFast(unreadRef.current),
+        intro: first,
+        n: Date.now()
+      });
+    } else if (r.t === 'band') lastWhoRef.current = '';
     if (r.t === 'line' || r.t === 'band') setLog(l => [...l.slice(-299), {
       who: r.t === 'line' ? xmasNovelNameOf(r) : '',
       text: xmasNovelFill(r.x, playerName)
@@ -129309,7 +129677,12 @@ const XmasNovelScreen = ({
     }
     const scene = next.scene;
     let chapterCard = false;
-    if (scene && lastSceneRef.current && !!lastSceneRef.current.outside !== !!scene.outside) {
+    if (lastSceneRef.current !== (scene || null)) {
+      lastBodyRef.current = '';
+      setTitleOk(xmasNovelSceneDone(scene, s.read));
+    }
+    const transitNow = !!(scene && lastSceneRef.current && !!lastSceneRef.current.outside !== !!scene.outside);
+    if (transitNow) {
       setTransit({
         dir: scene.outside ? 'out' : 'in',
         n: Date.now()
@@ -129352,12 +129725,35 @@ const XmasNovelScreen = ({
           setCard({
             kind: 'chapter',
             label: xmasNovelChapterLabel(ch),
-            title: ch.title
+            title: xmasNovelChapterTitle(S, ch, s.read)
           });
           setSkip(false);
           chapterCard = true;
         }
       }
+    }
+    {
+      const bgNow = xmasNovelSceneBgName(scene, next.cur ? next.cur.idx : 0);
+      const kind = xmasNovelSwitchKind(lastBgRef.current, bgNow);
+      lastBgRef.current = bgNow;
+      const unread = !!(next.row && next.row.k && !s.read.includes(next.row.k));
+      const bodyRow = !!(next.row && next.row.t === 'band' && (next.row.body || Array.isArray(next.row.fx) && next.row.fx.includes('fallen')));
+      const v = kind && !skip && !bodyRow ? {
+        kind,
+        fast: fxFast(unread),
+        place: scene && !scene.outside ? xmasNovelPlaceLabel(bgNow) : ''
+      } : null;
+      if (chapterCard) {
+        pendingSwRef.current = v ? {
+          ...v,
+          kind: v.kind === 'place' ? 'open' : v.kind
+        } : {
+          kind: 'open',
+          fast: false,
+          place: ''
+        };
+        fireSw(null);
+      } else if (v && !transitNow) fireSw(v);
     }
     let cur = next.cur;
     let panelChanged = [];
@@ -129395,6 +129791,15 @@ const XmasNovelScreen = ({
     setGot(null);
     setFx(null);
     setSkip(false);
+    lastBgRef.current = null;
+    pendingSwRef.current = null;
+    seenWhoRef.current = new Set();
+    lastWhoRef.current = '';
+    setSw(null);
+    setFigEnter(null);
+    setReveal(null);
+    pendingFxRef.current = null;
+    lastBodyRef.current = '';
     setMode('read');
     arrive(xmasNovelSettle(S, cur));
   };
@@ -129402,6 +129807,16 @@ const XmasNovelScreen = ({
     if (card) {
       if (card.kind === 'ending') return;
       setCards(list => list.slice(1));
+      if (card.kind === 'chapter' && cards.length === 1 && pendingSwRef.current) {
+        const v = pendingSwRef.current;
+        pendingSwRef.current = null;
+        if (!skip) fireSw(v);
+      }
+      if (cards.length === 1 && pendingQuakeRef.current) {
+        const lv = pendingQuakeRef.current;
+        pendingQuakeRef.current = 0;
+        if (!skip) setTimeout(() => xmasNovelQuake(stageRef.current, lv), 250);
+      }
       if ((card.kind === 'title' || card.kind === 'band') && cards.length === 1) goNext();
       return;
     }
@@ -129411,6 +129826,15 @@ const XmasNovelScreen = ({
     if (sheet || !row) return;
     if (typing) {
       setShown(text.length);
+      if (sw && !sw.fast) setSw(null);
+      return;
+    }
+    if (!reply && reveal && row && reveal.id === row.id && reveal.stage === 'dark') {
+      setReveal({
+        ...reveal,
+        stage: 'show'
+      });
+      xmasNovelQuake(stageRef.current, 1);
       return;
     }
     if (got) setGot(null);
@@ -129500,10 +129924,37 @@ const XmasNovelScreen = ({
     const id = setTimeout(() => setShown(n => Math.min(text.length, n + (skip ? 99999 : 2))), skip ? 0 : 38);
     return () => clearTimeout(id);
   }, [typing, shown, text, skip]);
+  const rowKey = row ? row.id : '';
+  const revealDark = !!(reveal && reveal.id === rowKey && reveal.stage === 'dark');
+  useEffect(() => {
+    if (mode !== 'read' || !rowKey || typing) return undefined;
+    if (revealDark) {
+      const id = setTimeout(() => {
+        setReveal(v => v && v.id === rowKey && v.stage === 'dark' ? {
+          ...v,
+          stage: 'show'
+        } : v);
+        if (!skip) xmasNovelQuake(stageRef.current, 1);
+      }, reveal.fast || skip ? 150 : 700);
+      return () => clearTimeout(id);
+    }
+    const p = pendingFxRef.current;
+    if (p && p.id === rowKey) {
+      const id = setTimeout(() => {
+        if (pendingFxRef.current === p) {
+          pendingFxRef.current = null;
+          fireFx(p);
+        }
+      }, reveal && reveal.id === rowKey ? 1300 : 300);
+      return () => clearTimeout(id);
+    }
+    return undefined;
+  }, [mode, rowKey, typing, revealDark]);
   const autoLevel = save ? save.auto : 0;
   useEffect(() => {
     if (mode !== 'read' || !row || sheet || typing) return undefined;
     if (card && card.kind === 'ending') return undefined;
+    if (revealDark && !skip) return undefined;
     if (card && !skip) return undefined;
     if (skip) {
       if (row.t === 'q' && !reply || unreadRef.current && !reply) {
@@ -129721,7 +130172,7 @@ const XmasNovelScreen = ({
         className: "mh-nv-serif mh-nv-gold w-14 shrink-0 text-[14px] font-black"
       }, xmasNovelChapterLabel(c)), React.createElement("span", {
         className: "mh-nv-serif min-w-0 flex-1 truncate text-[15px] font-black"
-      }, snap ? c.title : '？？？'), snap ? React.createElement(ChevronRight, {
+      }, snap ? xmasNovelChapterTitle(S, c, save.read) : '？？？'), snap ? React.createElement(ChevronRight, {
         size: 16,
         className: "text-amber-200"
       }) : React.createElement(Lock, {
@@ -129744,11 +130195,11 @@ const XmasNovelScreen = ({
     "data-scene": scene ? scene.id : '',
     "data-row": row ? row.id : ''
   }, React.createElement("div", {
-    key: `stage-${shake}`,
-    className: `mh-nv-stage${shake ? ' mh-nv-shake' : ''}`,
+    ref: stageRef,
+    className: "mh-nv-stage",
     onClick: advance
   }, React.createElement("div", {
-    className: "mh-nv-bg",
+    className: `mh-nv-bg${sw ? ` in-${sw.kind}${sw.fast ? ' fast' : ''}` : ''}`,
     key: bgName || (scene ? scene.id : 'bg'),
     "data-xmas-novel-bg": bg.tintKind || '',
     style: bg.img ? {
@@ -129763,18 +130214,31 @@ const XmasNovelScreen = ({
     className: "mh-nv-snow b"
   })), !darkNow && (isLine || isBand && xmasNovelIsSilhouette(row)) && React.createElement(XmasNovelFigure, {
     row: row,
-    scene: scene
-  }), fx && React.createElement("div", {
-    key: fx.n,
-    className: `mh-nv-fx ${fx.kind}`
-  }), isBand && row.body && React.createElement(XmasNovelBody, {
+    scene: scene,
+    enter: isLine ? figEnter : null
+  }), sw && React.createElement("div", {
+    key: `sw-${sw.n}`,
+    className: `mh-nv-sw ${sw.kind}${sw.fast ? ' fast' : ''}`,
+    "data-xmas-novel-switch": sw.kind
+  }), sw && sw.place && React.createElement("div", {
+    key: `place-${sw.n}`,
+    className: `mh-nv-place mh-nv-serif${sw.kind === 'past' ? ' past' : ''}${sw.fast ? ' fast' : ''}`,
+    "data-xmas-novel-place": true
+  }, sw.place), isBand && row.body && !revealDark && React.createElement(XmasNovelBody, {
     key: `body-${row.body}`,
     bg: bg,
     who: xmasNovelBodyWho(row.body, st && st.cur && st.cur.flags),
     scene: scene ? scene.id : '',
     at: st && st.cur && Number.isFinite(st.cur.idx) ? st.cur.idx : 0,
     noBlood: !!row.noBlood
-  }), isBand && !row.body && Array.isArray(row.fx) && row.fx.includes('fallen') && React.createElement(XmasNovelFallen, null), isBand && Array.isArray(row.fx) && row.fx.includes('letter') && React.createElement("div", {
+  }), isBand && !row.body && !revealDark && Array.isArray(row.fx) && row.fx.includes('fallen') && React.createElement(XmasNovelFallen, null), reveal && reveal.id === rowKey && React.createElement("div", {
+    key: `veil-${reveal.n}`,
+    className: `mh-nv-veil ${reveal.stage}${reveal.fast ? ' fast' : ''}`,
+    "data-xmas-novel-veil": reveal.stage
+  }), fx && React.createElement("div", {
+    key: fx.n,
+    className: `mh-nv-fx ${fx.kind}`
+  }), isBand && Array.isArray(row.fx) && row.fx.includes('letter') && React.createElement("div", {
     key: `letter-${row.id}`,
     className: "mh-nv-letter mh-nv-serif",
     "data-xmas-novel-letter": true
@@ -129850,13 +130314,17 @@ const XmasNovelScreen = ({
   }, React.createElement("span", {
     className: "mh-nv-where mh-nv-serif",
     "data-xmas-novel-where": true
-  }, chapter && !chapter.outside ? React.createElement("span", {
-    className: "ch"
-  }, `${xmasNovelChapterLabel(chapter)}${chapter.title ? `　${chapter.title}` : ''}`, React.createElement("span", {
-    className: "sep"
-  }, "\u3000/\u3000")) : null, scene && scene.title && !(scene.ending || chapter && chapter.id === 'END' || /^END-/.test(String(scene.next || ''))) ? React.createElement("span", {
-    className: "sc"
-  }, scene.title) : null), React.createElement("button", {
+  }, (() => {
+    const chTitle = chapter && !chapter.outside ? xmasNovelChapterTitle(S, chapter, save.read) : '';
+    const showScene = !!(titleOk && scene && scene.title && !(scene.ending || chapter && chapter.id === 'END' || /^END-/.test(String(scene.next || ''))));
+    return React.createElement(React.Fragment, null, chapter && !chapter.outside ? React.createElement("span", {
+      className: "ch"
+    }, `${xmasNovelChapterLabel(chapter)}${chTitle ? `　${chTitle}` : ''}`, showScene ? React.createElement("span", {
+      className: "sep"
+    }, "\u3000/\u3000") : null) : null, showScene ? React.createElement("span", {
+      className: "sc"
+    }, scene.title) : null);
+  })()), React.createElement("button", {
     type: "button",
     className: "mh-nv-btn",
     "data-xmas-novel-open-book": true,
@@ -129920,27 +130388,31 @@ const XmasNovelScreen = ({
   }, "【", got.n, "】"), React.createElement("p", {
     className: "mh-nv-plain mt-1 whitespace-pre-wrap text-[12px] leading-relaxed text-slate-100"
   }, xmasNovelWrap(got.d))), card && React.createElement("div", {
-    className: "mh-nv-card",
+    key: `card-${card.kind}-${card.label || card.text || ''}`,
+    className: `mh-nv-card${card.kind !== 'ending' ? ' open' : ''}`,
     "data-xmas-novel-card": card.kind,
     onClick: advance
-  }, card.kind === 'chapter' && React.createElement("div", {
+  }, card.kind === 'chapter' && card.label && React.createElement("div", {
+    className: "mh-nv-card-ghost mh-nv-serif",
+    "aria-hidden": "true"
+  }, card.label), card.kind === 'chapter' && React.createElement("div", {
     className: "mh-nv-plain mh-nv-cardtext"
   }, React.createElement("div", {
-    className: "mh-nv-serif text-[15px] tracking-[0.5em] text-slate-200"
+    className: "mh-nv-card-label mh-nv-serif text-[15px] tracking-[0.5em] text-slate-200"
   }, card.label), React.createElement("div", {
     className: "mh-nv-rule"
   }), React.createElement("div", {
-    className: "mh-nv-serif mh-nv-gold text-[30px] font-black leading-tight sm:text-[38px]"
+    className: "mh-nv-card-title mh-nv-serif mh-nv-gold text-[30px] font-black leading-tight sm:text-[38px]"
   }, xmasNovelWrap(card.title, 10)), React.createElement("div", {
     className: "mh-nv-rule"
   }), React.createElement("div", {
-    className: "mt-6 text-[11px] text-slate-400"
+    className: "mh-nv-card-hint mt-6 text-[11px] text-slate-400"
   }, "タップで進む")), (card.kind === 'title' || card.kind === 'band') && React.createElement("div", {
     className: "mh-nv-plain mh-nv-cardtext"
   }, React.createElement("div", {
     className: "mh-nv-rule"
   }), React.createElement("div", {
-    className: "mh-nv-serif mh-nv-gold text-[30px] font-black leading-tight sm:text-[40px]"
+    className: "mh-nv-card-title mh-nv-serif mh-nv-gold text-[30px] font-black leading-tight sm:text-[40px]"
   }, xmasNovelWrap(card.text, 10)), React.createElement("div", {
     className: "mh-nv-rule"
   })), card.kind === 'ending' && (() => {
