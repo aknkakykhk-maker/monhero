@@ -26,7 +26,10 @@ const { chromium } = (() => { try { return require(path.join(ROOT, 'tools/node_m
 const { createFakeSupabase } = require(path.join(ROOT, 'tools/playbot/lib/fake-supabase.js'));
 const { eventStorySeed } = require(path.join(ROOT, 'tools/boot/quiet-boot-seed.js'));
 const mime = f => ({ '.js': 'application/javascript', '.html': 'text/html', '.css': 'text/css', '.json': 'application/json', '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml' })[path.extname(f)] || 'application/octet-stream';
+// --hud-on … 鑑賞の「判定」「コンボ」を入にして始める(判定の文字・コンボの数の見た目を撮り比べるとき用・2026-11-28 r1128-071)
+const HUD_ON = argv.includes('--hud-on');
 const seed = (songId) => `(() => {
+  ${HUD_ON ? "localStorage.setItem('mh_rhythm_listen_judge_v1','1'); localStorage.setItem('mh_rhythm_listen_combo_v1','1');" : ''}
   const put = (k, v) => { if (localStorage.getItem(k) === null) localStorage.setItem(k, JSON.stringify(v)); };
   put('mh_breeder_name', 'テスト'); put('mh_breeder_icon', 'Mocchi'); put('mh_onboarded', true);
   put('mh_tutorial_seen_v1', true); put('mh_battle_tutorial_seen_v1', true); put('mh_battle_tutorial_guide_shown_v1', true);

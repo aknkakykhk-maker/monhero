@@ -3797,6 +3797,35 @@ const RHYTHM_TOUCH_BRIDGE_MATCH_PX=28;    // 同じ指とみなす位置の差
 const RHYTHM_TOUCH_BRIDGE_KEEP_MS=600;    // 突き合わせのために覚えておく長さ(遅れて届くほうを待つ)
 const RHYTHM_TOUCH_BRIDGE_LATE_MS=50;
 const RHYTHM_TOUCH_BRIDGE_UP_SLACK_MS=8;  // 離した時刻より、これ以上あとの時刻のタッチは新しい接触(2026-11-17)     // これより遅れて届いたタッチを「遅れた」と数える
+// 押したサブレーンの光(data-rhythm-sublane-feedback の12本)を書く所を1つにする(2026-11-28 台帳 r1128-071・社長「質を下げずに軽く」)。
+// 光らせたい理由は2つある: 指の位置(演奏画面の setPressedLanes → data-pressed と不透明度)と、指の触れている幅(タッチの処理 → data-rhythm-touchspan)。
+// CSS ではどちらの印でも同じ光り方(同じアニメーション)なので、見えるのは2つの重ね合わせ。以前は2か所が別々に書いていて、1回押すと同じ要素を
+// 2回書き換え、そのたびにスタイルを計算し直させていた(密な所の5秒で約300件。いちばん多かった)。
+// ここでは両方の「光らせたい」を要素に覚えておき、どちらかの印がもう付いていれば、もう一方は書き足さない(同じ光り方なので見た目は同じ)。
+// 書くのは光り始め・光り終わり・理由の入れ替わりのときだけ(初めの1回だけ DOM を読む)
+const rhythmLaneGlowApply=el=>{
+  if(!el)return;
+  const pressed=el._mhGlowWantPressed===true,touch=el._mhGlowWantTouch===true;
+  const curPressed=el._mhGlowPressed!==undefined?el._mhGlowPressed:el.dataset.pressed,curOpacity=el._mhGlowOpacity!==undefined?el._mhGlowOpacity:el.style.opacity;
+  const curTouch=el._mhTouchspan!==undefined?el._mhTouchspan:el.dataset.rhythmTouchspan==='true';
+  const op=String(el._mhGlowWantOpacity??'1');
+  let attrP=curPressed==='true',attrT=curTouch,opNow=curOpacity;
+  const setP=v=>{el.dataset.pressed=v?'true':'false';attrP=v;const o=v?op:'0';if(opNow!==o){el.style.opacity=o;opNow=o;}};
+  const setT=v=>{if(v)el.dataset.rhythmTouchspan='true';else delete el.dataset.rhythmTouchspan;attrT=v;};
+  // どちらの印が付いていても同じ光り方なので、光らせたいあいだは「どちらかの印が付いている」状態を保ち、付いている印は書き直さない。
+  // 光らせたい理由が入れ替わるとき(指の位置 → 触れている幅など)は、新しい印を先に付けてから古い印を外す(同じ回の計算で見るので、光は途切れない)
+  if(pressed||touch){
+    if(!attrP&&!attrT){if(pressed)setP(true);else setT(true);}
+    else if(attrP&&!pressed){if(!attrT)setT(true);setP(false);}
+    else if(attrT&&!touch&&!attrP){setP(true);setT(false);}
+    else if(attrT&&!touch&&attrP){setT(false);}
+    if(attrP&&opNow!==op){el.style.opacity=op;opNow=op;}   // 押しているあいだに光の濃さの設定が変わったとき(前と同じく書き直す)
+  }else{
+    if(attrP)setP(false);
+    if(attrT)setT(false);
+  }
+  el._mhGlowPressed=attrP?'true':'false';el._mhGlowOpacity=opNow;el._mhTouchspan=attrT;
+};
 const RHYTHM_TOUCH_BRIDGE=(()=>{
   const zero=()=>({pointerDowns:0,touchStarts:0,matched:0,pointerOnly:0,touchOnly:0,recovered:0,ignoredLateTouches:0,
     lateStart:0,lateDelivery:0,maxDelayMs:0,cancels:0,cancelledTouches:0,maxTouches:0,
@@ -4792,11 +4821,8 @@ const RHYTHM_TOUCH_SPAN_RUNTIME=(()=>{
     // 書いた状態は要素に覚えておき、dataset を読み直さずに比べる(指が動くたびに呼ばれるため・2026-11-28 r1126-100)。初めの1回だけ DOM を読む
     for(let index=0;index<glowNodes.length;index++){
       const el=glowNodes[index],want=active.has(index);
-      const cur=el._mhTouchspan!==undefined?el._mhTouchspan:el.dataset.rhythmTouchspan==='true';
-      if(want===cur)continue;
-      if(want)el.dataset.rhythmTouchspan='true';
-      else delete el.dataset.rhythmTouchspan;
-      el._mhTouchspan=want;
+      if(el._mhGlowWantTouch===want&&el._mhTouchspan!==undefined)continue;
+      el._mhGlowWantTouch=want;rhythmLaneGlowApply(el);   // 書くのは rhythmLaneGlowApply(指の位置の光と1か所にまとめた)
     }
   };
   const clear=()=>{touchStates.clear();physicalTargetTimes.clear();applyTouchSpanGlow();};

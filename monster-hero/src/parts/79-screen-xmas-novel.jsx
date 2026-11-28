@@ -35,6 +35,8 @@ const XMAS_NOVEL_CSS = `
   box-shadow: 0 0 0 1px rgba(232,196,106,.75), 0 0 0 4px rgba(10,20,48,.9), 0 0 0 5px rgba(232,196,106,.35), 0 12px 30px rgba(0,0,0,.55); }
 .mh-nv-name { position: absolute; top: -15px; left: 16px; padding: 3px 16px; border-radius: 6px; font-size: 15px; font-weight: 800; letter-spacing: .08em;
   background: linear-gradient(180deg, #1b2c5c, #0c1636); color: #f8e3a4; box-shadow: 0 0 0 1px rgba(232,196,106,.85); }
+.mh-nv-rb { position: relative; display: inline; }
+.mh-nv-rt { position: absolute; left: 50%; bottom: calc(100% + .04em); transform: translateX(-50%); font-size: .5em; line-height: 1; font-weight: 700; letter-spacing: .02em; text-indent: 0; white-space: nowrap; pointer-events: none; opacity: .92; }
 .mh-nv-text { font-size: 17px; line-height: 1.75; font-weight: 600; white-space: pre-wrap; min-height: 3.5em; text-align: left; word-break: normal; line-break: normal; overflow-wrap: anywhere; text-wrap: wrap; }
 .mh-nv-plain { text-align: left; word-break: normal; line-break: normal; overflow-wrap: anywhere; text-wrap: wrap; }
 /* 章の札・題の札の文も左寄せ(事件簿の中の文は左寄せ・r1126-048。折るのは文節の切れ目だけ・XmasNovelWrap・r1126-071。飾りの見出しは起動画面の題字とエンドの札だけ) */
@@ -282,6 +284,8 @@ const XMAS_NOVEL_CSS = `
 .mh-nv-intro .bar { position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: linear-gradient(90deg, #e8c46a, rgba(232,196,106,.6) 70%, transparent); transform-origin: left; animation: mh-nv-intro-bar .7s ease-out both; }
 .mh-nv-intro .nm { font-size: clamp(24px, 6.4vw, 32px); font-weight: 900; letter-spacing: .16em; line-height: 1.2; color: #f1e6c8; white-space: nowrap; text-shadow: 0 0 12px rgba(0,0,0,.95), 0 2px 3px #000; animation: mh-nv-intro-nm 1.1s ease-out .3s both; }
 .mh-nv-intro .role { font-size: 12px; font-weight: 800; letter-spacing: .3em; color: #d2b272; white-space: nowrap; text-shadow: 0 0 8px #000, 0 1px 3px #000; animation: mh-nv-intro-nm .9s ease-out .15s both; }
+.mh-nv-intro .nm:has(.mh-nv-rb) { padding-top: .5em; }
+.mh-nv-intro .nm .mh-nv-rt { font-size: .42em; letter-spacing: .12em; color: #d2b272; }
 .mh-nv-intro.fast { animation-duration: 1.6s; }
 .mh-nv-intro.fast .bar, .mh-nv-intro.fast .nm, .mh-nv-intro.fast .role { animation-duration: .3s; animation-delay: 0s; }
 @keyframes mh-nv-intro { 0% { opacity: 1; } 82% { opacity: 1; } 100% { opacity: 0; } }
@@ -812,10 +816,10 @@ const XmasNovelFigure = (props) => {
 };
 //  初めて出る人の名札。肩書きは台本で本人や周りが名乗る物だけ(助手たちは名前だけ)。名前は名札と同じ呼び名(フルネームは本人が名乗るまで出さない)
 const XMAS_NOVEL_INTRO_ROLE = Object.freeze({ ichika: 'ペンションのオーナー', mochimaru: 'ペンションの世話役', kuroba: '招かれざる客', shirase: '招かれざる客' });
-const XmasNovelIntro = ({ c, fast }) => (c ? (
+const XmasNovelIntro = ({ c, fast, ruby }) => (c ? (
   <div className={`mh-nv-intro mh-nv-serif${fast ? ' fast' : ''}`} data-xmas-novel-intro={c.id}>
     {XMAS_NOVEL_INTRO_ROLE[c.id] && <span className="role">{XMAS_NOVEL_INTRO_ROLE[c.id]}</span>}
-    <span className="nm">{c.name}</span>
+    <span className="nm">{xmasNovelRubyText(c.name, ruby)}</span>
     <span className="bar" />
   </div>
 ) : null);
@@ -831,7 +835,7 @@ const XmasNovelFigureArt = ({ row, dim = false, who = '', frame = 'normal', ente
   if (row.w === 'watson') return <div ref={ref} className="mh-nv-fig" key={key}><XmasNovelLaptop /></div>;
   const c = xmasNovelCastOf(row.w);
   const fig = xmasNovelFigureSrc(row.w, row.e);
-  const intro = enter && enter.kind === 'first' && enter.intro ? <XmasNovelIntro c={c} fast={enter.fast} /> : null;
+  const intro = enter && enter.kind === 'first' && enter.intro ? <XmasNovelIntro c={c} fast={enter.fast} ruby={enter.ruby} /> : null;
   if (!fig || broken >= 2) return <div ref={ref} className={`mh-nv-fig${dim ? ' dim' : ''}`} key={key}><XmasNovelShadow tone={(c && c.tone) || '#2a3350'} label={c ? c.name : ''} />{intro}</div>;
   const src = broken === 1 && fig.fallback ? fig.fallback : fig.src;
   return (
@@ -1380,6 +1384,7 @@ const xmasNovelKeepWords = () => {
       });
     }
     if (typeof XMAS_NOVEL_CAST !== 'undefined') XMAS_NOVEL_CAST.forEach((c) => { if (c.name) set.add(c.name); if (c.full) set.add(c.full); });
+    if (S && Array.isArray(S.ruby)) S.ruby.forEach((x) => { if (x && x.b) set.add(x.b); }); // ふりがなを付ける字は割らない(r1126-117)
   } catch (e) { /* 一覧が作れなくても、決まりの分だけで折る */ }
   _xmasNovelKeepWords = [...set].filter((w) => typeof w === 'string' && [...w].length >= 2 && [...w].length <= XMAS_NOVEL_KEEP_MAX).sort((a, b) => b.length - a.length);
   return _xmasNovelKeepWords;
@@ -1515,14 +1520,51 @@ const xmasNovelWrapPlan = (text, max = XMAS_NOVEL_KEEP_MAX) => {
 const XMAS_NOVEL_NOWRAP = Object.freeze({ whiteSpace: 'nowrap' });
 const XMAS_NOVEL_HIDE = Object.freeze({ visibility: 'hidden' });
 //  shown: 見せる字の数(文字送り)。省くと全部
-const XmasNovelWrap = ({ text, shown, max }) => {
+// ---- ふりがな(台帳 r1126-117): 台本の ruby の表の字に、その読み始めで初めて出た所だけ付ける ----
+//  読みは字の上に重ねて置く(行の高さ・文字の箱の大きさは変えない)。字が出きるまで読みも見せない
+const XmasNovelRuby = ({ b, r, vis = Infinity }) => {
+  const n = Math.max(0, Math.min(b.length, vis));
+  return (
+    <span className="mh-nv-rb" data-xmas-novel-ruby={b}>{n >= b.length ? b : (<>{b.slice(0, n)}<span style={XMAS_NOVEL_HIDE}>{b.slice(n)}</span></>)}<span className="mh-nv-rt" aria-hidden="true" style={n >= b.length ? undefined : XMAS_NOVEL_HIDE}>{r}</span></span>
+  );
+};
+//  文の中で、ふりがなを付ける所 [{ at, b, r }](表の字ごとに、文の最初の1か所)
+const xmasNovelRubyAt = (s, ruby) => {
+  const out = [];
+  (Array.isArray(ruby) ? ruby : []).forEach((x) => {
+    const at = x && x.b ? s.indexOf(x.b) : -1;
+    if (at >= 0 && !out.some((o) => at < o.at + o.b.length && o.at < at + x.b.length)) out.push({ at, b: x.b, r: x.r });
+  });
+  return out.sort((a, b) => a.at - b.at);
+};
+//  名札・名前の帯のような短い字(折り返さない)にふりがなを付ける
+const xmasNovelRubyText = (t, ruby) => {
+  const s = String(t || ''); const marks = xmasNovelRubyAt(s, ruby);
+  if (!marks.length) return s;
+  const out = []; let p = 0;
+  marks.forEach((m, i) => { if (m.at > p) out.push(s.slice(p, m.at)); out.push(<XmasNovelRuby key={i} b={m.b} r={m.r} />); p = m.at + m.b.length; });
+  if (p < s.length) out.push(s.slice(p));
+  return out;
+};
+//  ひとつの枠(折らない字のかたまり)の中身。a: 文の中の枠の始まり / vis: 枠の中で見せる字の数
+const xmasNovelPieceBody = (t, a, vis, marks) => {
+  const inside = marks.filter((m) => m.at >= a && m.at + m.b.length <= a + t.length);
+  if (!inside.length) return vis >= t.length ? t : (<>{t.slice(0, vis)}<span style={XMAS_NOVEL_HIDE}>{t.slice(vis)}</span></>);
+  const out = []; let p = 0;
+  const plain = (x, y) => { if (y <= x) return; const v = Math.max(0, Math.min(y - x, vis - x)); out.push(v >= y - x ? t.slice(x, y) : <React.Fragment key={`h${x}`}>{t.slice(x, x + v)}<span style={XMAS_NOVEL_HIDE}>{t.slice(x + v, y)}</span></React.Fragment>); };
+  inside.forEach((m) => { const x = m.at - a; plain(p, x); out.push(<XmasNovelRuby key={`r${x}`} b={m.b} r={m.r} vis={vis - x} />); p = x + m.b.length; });
+  plain(p, t.length);
+  return <>{out}</>;
+};
+const XmasNovelWrap = ({ text, shown, max, ruby }) => {
   const plan = xmasNovelWrapPlan(text, max);
   const lim = typeof shown === 'number' && Number.isFinite(shown) ? shown : Infinity;
+  const marks = ruby && ruby.length ? xmasNovelRubyAt(String(text ?? ''), ruby) : [];
   let pos = 0;
   return plan.map((p, i) => {
     const a = pos; pos += p.t.length;
     const vis = Math.max(0, Math.min(p.t.length, lim - a));
-    const body = vis >= p.t.length ? p.t : (<>{p.t.slice(0, vis)}<span style={XMAS_NOVEL_HIDE}>{p.t.slice(vis)}</span></>);
+    const body = marks.length ? xmasNovelPieceBody(p.t, a, vis, marks) : vis >= p.t.length ? p.t : (<>{p.t.slice(0, vis)}<span style={XMAS_NOVEL_HIDE}>{p.t.slice(vis)}</span></>);
     const prev = plan[i - 1];
     return (<React.Fragment key={i}>{i > 0 && !p.space && !(prev && prev.space) && <wbr />}{p.keep ? <span data-nv-keep="" style={XMAS_NOVEL_NOWRAP}>{body}</span> : body}</React.Fragment>);
   });
@@ -1537,12 +1579,13 @@ const xmasNovelSplitSe = (s) => {
   if (i < 0) return [String(s || ''), ''];
   return [s.slice(0, i), s.slice(i + 1).replace(/[)）]\s*$/, '')];
 };
-const XmasNovelSeText = ({ text, shown }) => {
+const XmasNovelSeText = ({ text, shown, ruby }) => {
   const [sound, note] = xmasNovelSplitSe(text);
   const vis = Math.max(0, shown);
+  const rbS = (ruby || []).filter((x) => sound.includes(x.b)), rbN = (ruby || []).filter((x) => !sound.includes(x.b));
   return (<>
-    {sound && <span className="mh-nv-se-sound"><XmasNovelWrap text={sound} shown={vis} /></span>}
-    {note && vis > sound.length && <span className="mh-nv-se-note"><XmasNovelWrap text={note} shown={vis - sound.length - 1} /></span>}
+    {sound && <span className="mh-nv-se-sound"><XmasNovelWrap text={sound} shown={vis} ruby={rbS} /></span>}
+    {note && vis > sound.length && <span className="mh-nv-se-note"><XmasNovelWrap text={note} shown={vis - sound.length - 1} ruby={rbN} /></span>}
   </>);
 };
 //  台詞: 「」の中身として出し、2行目からは「の分だけ下げてそろえる(ぶら下げ)。頭の(しぐさ)は小さい前置きの行に。全部が(しぐさ)なら「」を付けない
@@ -1550,15 +1593,16 @@ const xmasNovelSplitLead = (s) => {
   const m = String(s || '').match(/^[(（][^)）]*[)）]/);
   return m ? [m[0], s.slice(m[0].length)] : ['', String(s || '')];
 };
-const XmasNovelSayText = ({ text, shown }) => {
+const XmasNovelSayText = ({ text, shown, ruby }) => {
   const [lead, body] = xmasNovelSplitLead(text);
   const vis = Math.max(0, shown);
-  if (!body.trim()) return <span className="mh-nv-say-lead only"><XmasNovelWrap text={text} shown={vis} /></span>;
+  if (!body.trim()) return <span className="mh-nv-say-lead only"><XmasNovelWrap text={text} shown={vis} ruby={ruby} /></span>;
+  const rbL = (ruby || []).filter((x) => lead.includes(x.b)), rbB = (ruby || []).filter((x) => !lead.includes(x.b));
   const bodyVis = body.slice(0, Math.max(0, vis - lead.length));
   // 「」も文といっしょに置き、まだの字と閉じかっこは見えなくしておく(改行の位置が字送りの途中で動かない・r1126-071)
   return (<>
-    {lead && <span className="mh-nv-say-lead"><XmasNovelWrap text={lead} shown={vis} /></span>}
-    {(bodyVis || !lead || vis > lead.length) && <span className="mh-nv-say-body"><XmasNovelWrap text={`「${body}」`} shown={vis >= text.length ? Infinity : 1 + bodyVis.length} /></span>}
+    {lead && <span className="mh-nv-say-lead"><XmasNovelWrap text={lead} shown={vis} ruby={rbL} /></span>}
+    {(bodyVis || !lead || vis > lead.length) && <span className="mh-nv-say-body"><XmasNovelWrap text={`「${body}」`} shown={vis >= text.length ? Infinity : 1 + bodyVis.length} ruby={rbB} /></span>}
   </>);
 };
 const XmasNovelIcon = ({ d, size = 18 }) => (
@@ -1734,6 +1778,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
   const lastBgRef = useRef(null); // 前の行の背景の名前(null = 読み始め)
   const pendingSwRef = useRef(null); // 章の札を閉じたあとに出す切り替え
   const seenWhoRef = useRef(new Set()); // この読み始めから立ち絵が出た人
+  const rubyRef = useRef({ seen: new Set(), at: new WeakMap() }); // ふりがな(r1126-117): この読み始めで出た字 / 行ごとの付け方 { name:[], text:[] }
   const lastWhoRef = useRef('');
   // 出すタイミング(台帳 r1126-094 追記1): 「文が出る → 一拍 → 演出」。遺体の影は、見つける文のあいだ暗転させ、文が出きってから明けて出す
   const [reveal, setReveal] = useState(null); // { id, stage:'dark'|'show' } 遺体・倒れた影を見つける行
@@ -1866,6 +1911,13 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
     else if (r.t !== 'panel') setPanelIntro(null);
     if (r.t === 'clue') { setGot({ n: r.clue, d: r.x, add: !!r.add }); xmasNovelSe('clue'); }
     if (r.t === 'line' && r.n === '？？？' && xmasNovelIsLaugh(r)) xmasNovelSe('laugh');
+    // ふりがな: この読み始めで初めて出た字だけ。名札と本文の両方にあれば名札に(同じ行は何度来ても同じ付け方)
+    if ((r.t === 'line' || r.t === 'band') && !rubyRef.current.at.has(r)) {
+      const R = rubyRef.current, nm = r.t === 'line' ? xmasNovelNameOf(r) : '', tx = xmasNovelFill(r.x, playerName);
+      const pick = (str) => (Array.isArray(S.ruby) ? S.ruby : []).filter((x) => x && x.b && !R.seen.has(x.b) && str.includes(x.b) && (R.seen.add(x.b), true));
+      const name = pick(nm), body = pick(tx);
+      R.at.set(r, { name, text: body });
+    }
     if (r.t === 'line') {
       // 立ち絵の出かた: その人が初めて出る / 話し手が替わる / 表情だけ替わる。スキップ中は演出なし
       const who = r.n === '？？？' ? '？？？' : (r.w || '');
@@ -1873,7 +1925,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
       if (who) seenWhoRef.current.add(who);
       const kind = first ? 'first' : who !== lastWhoRef.current ? 'swap' : 'face';
       lastWhoRef.current = who;
-      setFigEnter(skip ? null : { kind, fast: fxFast(unreadRef.current), intro: first, n: Date.now() });
+      setFigEnter(skip ? null : { kind, fast: fxFast(unreadRef.current), intro: first, ruby: (rubyRef.current.at.get(r) || {}).name, n: Date.now() });
     } else if (r.t === 'band') lastWhoRef.current = '';
     if (r.t === 'line' || r.t === 'band') setLog((l) => [...l.slice(-299), { who: r.t === 'line' ? xmasNovelNameOf(r) : '', text: xmasNovelFill(r.x, playerName) }]);
     if (r.t === 'q' && !opts.quiet && !opts.held) setSheet({ kind: r.kind, q: r });
@@ -1942,17 +1994,17 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
     setSt(settled);
     persist(s);
     // フラグの行は見せずに次へ
-    if (next.row.t === 'flag') setTimeout(() => arrive(xmasNovelStep(S, cur)), 0);
+    if (next.row.t === 'flag') setTimeout(() => arrive(xmasNovelStep(S, cur, xmasNovelSeenOf(saveRef.current))), 0);
   };
   const start = (cur, replay = false) => {
     replayRef.current = replay;
     setCurtain(null); setTransit(null);
     lastBgm.current = null; lastChapter.current = null;
     setLog([]); setCard(null); setSheet(null); setGot(null); setFx(null); setSkip(false);
-    lastBgRef.current = null; pendingSwRef.current = null; seenWhoRef.current = new Set(); lastWhoRef.current = ''; setSw(null); setFigEnter(null);
+    lastBgRef.current = null; pendingSwRef.current = null; seenWhoRef.current = new Set(); rubyRef.current = { seen: new Set(), at: new WeakMap() }; lastWhoRef.current = ''; setSw(null); setFigEnter(null);
     setReveal(null); pendingFxRef.current = null; lastBodyRef.current = ''; setPanelIntro(null);
     setMode('read');
-    arrive(xmasNovelSettle(S, cur));
+    arrive(xmasNovelSettle(S, cur, xmasNovelSeenOf(saveRef.current)));
   };
 
   // すすめる(タップ・オート・スキップ)
@@ -1988,13 +2040,13 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
       return;
     }
     if (row.t === 'q') { setSheet({ kind: row.kind, q: row }); return; }
-    arrive(xmasNovelStep(S, st.cur));
+    arrive(xmasNovelStep(S, st.cur, xmasNovelSeenOf(saveRef.current)));
   };
   const finishReply = (then, q, cur) => {
     setReply(null);
     if (then === 'retry') { setSheet({ kind: q.kind, q }); setShown(99999); return; }
-    if (then && then.to) { arrive(xmasNovelSettle(S, xmasNovelJump(S, cur, then.to))); return; }
-    arrive(xmasNovelStep(S, cur));
+    if (then && then.to) { arrive(xmasNovelSettle(S, xmasNovelJump(S, cur, then.to), xmasNovelSeenOf(saveRef.current))); return; }
+    arrive(xmasNovelStep(S, cur, xmasNovelSeenOf(saveRef.current)));
   };
   // 答える
   const answer = (q, pick) => {
@@ -2192,6 +2244,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
   const isLine = row && row.t === 'line';
   const darkNow = fx && fx.kind === 'dark';
   const name = isLine ? xmasNovelNameOf(row) : '';
+  const rowRuby = (row && rubyRef.current.at.get(row)) || null; // ふりがな(r1126-117)
   const q = sheet && typeof sheet === 'object' ? sheet.q : null;
   // 大事な選択(人を名指し・手がかりを突きつける・一発で当てる/やり直せない行動)は、押すと選んだ状態になり、下の「決定」で確かめる(台帳 r1126-113)
   const picked = pick && q && pick.qid === q.id ? pick : null;
@@ -2236,15 +2289,15 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
         )}
         {(isLine || isBand || (row && (row.t === 'clue' || row.t === 'panel' || row.t === 'q'))) && !(card && card.kind !== 'band') && (
           <div className="mh-nv-box" style={{ zIndex: 5 }} data-xmas-novel-box>
-            {name && <div className="mh-nv-name mh-nv-serif">{name}</div>}
+            {name && <div className="mh-nv-name mh-nv-serif">{rowRuby && rowRuby.name.length ? xmasNovelRubyText(name, rowRuby.name) : name}</div>}
             <div className={`mh-nv-text${isBand ? (xmasNovelIsSeRow(row) ? ' se mh-nv-serif' : ` band mh-nv-serif${Array.isArray(row.fx) && row.fx.includes('letter') ? ' letter' : ''}`) : ''}${isLine ? ' say' : ''}`} data-xmas-novel-text data-xmas-novel-kind={isBand ? (xmasNovelIsSeRow(row) ? 'se' : 'band') : isLine ? 'line' : row.t}>
               {row.t === 'clue' ? xmasNovelWrap(`手がかり帳に「${row.clue}」を書きとめた`)
                 : row.t === 'panel' ? xmasNovelWrap(row.x || (row.stamp ? '……' : '登場人物'))
                 : row.t === 'q' ? xmasNovelWrap(xmasNovelFill(row.x, playerName))
-                : isBand && xmasNovelIsSeRow(row) ? <XmasNovelSeText text={text} shown={shown} />
-                : isLine ? <XmasNovelSayText text={text} shown={shown} />
-                : isBand && Array.isArray(row.fx) && row.fx.includes('letter') ? <XmasNovelWrap text={text.replace(/／/g, '　')} shown={shown} />
-                : <XmasNovelWrap text={text} shown={shown} />}
+                : isBand && xmasNovelIsSeRow(row) ? <XmasNovelSeText text={text} shown={shown} ruby={rowRuby && rowRuby.text} />
+                : isLine ? <XmasNovelSayText text={text} shown={shown} ruby={rowRuby && rowRuby.text} />
+                : isBand && Array.isArray(row.fx) && row.fx.includes('letter') ? <XmasNovelWrap text={text.replace(/／/g, '　')} shown={shown} ruby={rowRuby && rowRuby.text} />
+                : <XmasNovelWrap text={text} shown={shown} ruby={rowRuby && rowRuby.text} />}
             </div>
             {isLine && row.note && !typing && <div className="mh-nv-note">({row.note})</div>}
             {!typing && row.t !== 'q' && <span className="mh-nv-next" />}
