@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0cde8cf0e5dbab1f
+// source-sha256: a5222fdcf56feb0b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -9488,24 +9488,30 @@ const Audio_ = (() => {
     if (!res.ok) throw new Error(`audio fetch failed: ${res.status}`);
     return longEntryOf(url, new Uint8Array(await res.arrayBuffer()));
   };
-  const monoRange = (buf, from, len) => {
-    const out = new Float32Array(len),
+  const longScratch = [];
+  const scratchOf = (slot, len) => {
+    let a = longScratch[slot];
+    if (!a || a.length < len) a = longScratch[slot] = new Float32Array(Math.max(len, a ? a.length : 0));
+    return a.length === len ? a : a.subarray(0, len);
+  };
+  const monoRange = (buf, from, len, slot = -1) => {
+    const out = slot >= 0 ? scratchOf(slot, len) : new Float32Array(len),
       c0 = buf.getChannelData(0),
       c1 = buf.numberOfChannels > 1 ? buf.getChannelData(1) : null;
     for (let i = 0; i < len; i++) {
       const k = from + i;
-      if (k >= 0 && k < buf.length) out[i] = c1 ? (c0[k] + c1[k]) * 0.5 : c0[k];
+      out[i] = k >= 0 && k < buf.length ? c1 ? (c0[k] + c1[k]) * 0.5 : c0[k] : 0;
     }
     return out;
   };
   const longAlignLag = (aBuf, bBuf, j0, len, L0, R = 3200) => {
     const D = 8;
     len -= len % D;
-    const A = monoRange(aBuf, j0 + L0 - R - D, len + 2 * R + 2 * D),
-      B = monoRange(bBuf, j0, len);
-    const dec = x => {
+    const A = monoRange(aBuf, j0 + L0 - R - D, len + 2 * R + 2 * D, 0),
+      B = monoRange(bBuf, j0, len, 1);
+    const dec = (x, slot) => {
       const m = Math.floor(x.length / D),
-        o = new Float32Array(m);
+        o = scratchOf(slot, m);
       for (let i = 0; i < m; i++) {
         let t = 0;
         for (let k = 0; k < D; k++) t += x[i * D + k];
@@ -9513,8 +9519,8 @@ const Audio_ = (() => {
       }
       return o;
     };
-    const Ad = dec(A),
-      Bd = dec(B),
+    const Ad = dec(A, 2),
+      Bd = dec(B, 3),
       RD = R / D;
     let best = -Infinity,
       bestD = 0;
@@ -9531,8 +9537,8 @@ const Audio_ = (() => {
       W = 12,
       len2 = Math.min(len, 8192),
       j1 = j0 + Math.floor((len - len2) / 2);
-    const A2 = monoRange(aBuf, j1 + Lc - W, len2 + 2 * W),
-      B2 = monoRange(bBuf, j1, len2);
+    const A2 = monoRange(aBuf, j1 + Lc - W, len2 + 2 * W, 4),
+      B2 = monoRange(bBuf, j1, len2, 5);
     const sc = [];
     for (let L = -W; L <= W; L++) {
       let t = 0;
@@ -9641,7 +9647,7 @@ const Audio_ = (() => {
         bestE = 0;
       for (let p = lo; p <= hi; p += Math.max(1, Math.round(1 / fsec))) {
         const from = Math.round(p * fsec * rate),
-          seg = monoRange(head, from, Math.round(0.5 * rate));
+          seg = monoRange(head, from, Math.round(0.5 * rate), 6);
         let e = 0;
         for (let i = 0; i < seg.length; i += 4) e += seg[i] * seg[i];
         if (e > bestE) {
@@ -10268,6 +10274,7 @@ const Audio_ = (() => {
       stopPreview(false);
       stopOthers();
       stopJingles();
+      void nvAmbient('none');
     } else if (currentKey) playBGM(currentKey);
     await ensure();
   };
@@ -11696,6 +11703,365 @@ const Audio_ = (() => {
           s.dispose();
         } catch (e) {}
       }, 3200);
+    },
+    nvStep: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const s = new Tone.MembraneSynth({
+        pitchDecay: 0.02,
+        octaves: 2,
+        envelope: {
+          attack: 0.002,
+          decay: 0.09,
+          sustain: 0
+        },
+        volume: -22
+      }).connect(seBus);
+      [0, 0.55, 1.1].forEach((d, i) => s.triggerAttackRelease(i % 2 ? 'A1' : 'G1', '32n', t + d));
+      setTimeout(() => {
+        try {
+          s.dispose();
+        } catch (e) {}
+      }, 1700);
+    },
+    nvRun: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const s = new Tone.MembraneSynth({
+        pitchDecay: 0.02,
+        octaves: 2,
+        envelope: {
+          attack: 0.002,
+          decay: 0.07,
+          sustain: 0
+        },
+        volume: -20
+      }).connect(seBus);
+      [0, 0.2, 0.4, 0.6, 0.8, 1.0].forEach((d, i) => s.triggerAttackRelease(i % 2 ? 'A1' : 'G1', '32n', t + d));
+      setTimeout(() => {
+        try {
+          s.dispose();
+        } catch (e) {}
+      }, 1500);
+    },
+    nvHit: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const s = new Tone.MembraneSynth({
+        pitchDecay: 0.015,
+        octaves: 3,
+        envelope: {
+          attack: 0.001,
+          decay: 0.16,
+          sustain: 0
+        },
+        volume: -8
+      }).connect(seBus);
+      s.triggerAttackRelease('C2', '16n', t);
+      const n = new Tone.NoiseSynth({
+        noise: {
+          type: 'pink'
+        },
+        envelope: {
+          attack: 0.001,
+          decay: 0.06,
+          sustain: 0
+        },
+        volume: -16
+      }).connect(seBus);
+      n.triggerAttackRelease('64n', t);
+      setTimeout(() => {
+        try {
+          s.dispose();
+          n.dispose();
+        } catch (e) {}
+      }, 600);
+    },
+    nvFall: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const s = new Tone.MembraneSynth({
+        pitchDecay: 0.06,
+        octaves: 4,
+        envelope: {
+          attack: 0.003,
+          decay: 0.5,
+          sustain: 0
+        },
+        volume: -11
+      }).connect(seBus);
+      s.triggerAttackRelease('D1', '4n', t);
+      s.triggerAttackRelease('C1', '8n', t + 0.18);
+      const n = new Tone.NoiseSynth({
+        noise: {
+          type: 'brown'
+        },
+        envelope: {
+          attack: 0.01,
+          decay: 0.4,
+          sustain: 0
+        },
+        volume: -22
+      }).connect(seBus);
+      n.triggerAttackRelease('8n', t + 0.05);
+      setTimeout(() => {
+        try {
+          s.dispose();
+          n.dispose();
+        } catch (e) {}
+      }, 1200);
+    },
+    nvGasp: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const f = new Tone.Filter(1400, 'bandpass').connect(seBus);
+      const n = new Tone.NoiseSynth({
+        noise: {
+          type: 'pink'
+        },
+        envelope: {
+          attack: 0.12,
+          decay: 0.18,
+          sustain: 0,
+          release: 0.08
+        },
+        volume: -22
+      }).connect(f);
+      n.triggerAttackRelease(0.16, t);
+      try {
+        f.frequency.rampTo(2200, 0.25, t);
+      } catch (e) {}
+      setTimeout(() => {
+        try {
+          n.dispose();
+          f.dispose();
+        } catch (e) {}
+      }, 800);
+    },
+    nvDoor: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const m = new Tone.MetalSynth({
+        frequency: 180,
+        envelope: {
+          attack: 0.001,
+          decay: 0.05,
+          release: 0.02
+        },
+        harmonicity: 3.1,
+        modulationIndex: 8,
+        resonance: 1500,
+        octaves: 0.5,
+        volume: -28
+      }).connect(seBus);
+      m.triggerAttackRelease('64n', t);
+      const f = new Tone.Filter(600, 'lowpass').connect(seBus);
+      const s = new Tone.Synth({
+        oscillator: {
+          type: 'sawtooth'
+        },
+        envelope: {
+          attack: 0.05,
+          decay: 0.45,
+          sustain: 0,
+          release: 0.15
+        },
+        volume: -25
+      }).connect(f);
+      s.triggerAttackRelease('A2', '8n', t + 0.08);
+      try {
+        s.frequency.rampTo('E2', 0.45, t + 0.08);
+      } catch (e) {}
+      setTimeout(() => {
+        try {
+          m.dispose();
+          s.dispose();
+          f.dispose();
+        } catch (e) {}
+      }, 1200);
+    },
+    nvGust: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const f = new Tone.Filter(600, 'lowpass').connect(seBus);
+      const n = new Tone.NoiseSynth({
+        noise: {
+          type: 'pink'
+        },
+        envelope: {
+          attack: 0.25,
+          decay: 0.5,
+          sustain: 0.2,
+          release: 0.6
+        },
+        volume: -18
+      }).connect(f);
+      n.triggerAttackRelease(0.6, t);
+      try {
+        f.frequency.rampTo(1500, 0.3, t);
+        f.frequency.rampTo(400, 0.9, t + 0.3);
+      } catch (e) {}
+      setTimeout(() => {
+        try {
+          n.dispose();
+          f.dispose();
+        } catch (e) {}
+      }, 2000);
+    }
+  };
+  let nvAmb = {
+    kind: 'none',
+    stop: null
+  };
+  const nvAmbient = async kindIn => {
+    const kind = kindIn || 'none';
+    if (kind === nvAmb.kind) return;
+    const prev = nvAmb;
+    const me = {
+      kind,
+      stop: null
+    };
+    nvAmb = me;
+    if (prev.stop) {
+      try {
+        prev.stop();
+      } catch (e) {}
+    }
+    if (kind === 'none' || !enabled) return;
+    await ensure();
+    if (!Tone || nvAmb !== me || !enabled) return;
+    const nodes = [];
+    const timers = [];
+    try {
+      const g = new Tone.Gain(0).connect(seBus);
+      nodes.push(g);
+      if (kind === 'wind' || kind === 'blizzard' || kind === 'room') {
+        const n = new Tone.Noise(kind === 'room' ? 'brown' : 'pink');
+        n.volume.value = kind === 'blizzard' ? -27 : kind === 'wind' ? -31 : -36;
+        const f = new Tone.Filter(kind === 'blizzard' ? 650 : kind === 'wind' ? 420 : 200, 'lowpass');
+        const lfo = new Tone.LFO(kind === 'blizzard' ? 0.21 : 0.09, kind === 'room' ? 120 : 260, kind === 'blizzard' ? 1250 : kind === 'wind' ? 780 : 320);
+        n.connect(f);
+        f.connect(g);
+        lfo.connect(f.frequency);
+        n.start();
+        lfo.start();
+        nodes.push(n, f, lfo);
+      }
+      if (kind === 'fire') {
+        const n = new Tone.Noise('brown');
+        n.volume.value = -36;
+        const f = new Tone.Filter(170, 'lowpass');
+        n.connect(f);
+        f.connect(g);
+        n.start();
+        nodes.push(n, f);
+        const bp = new Tone.Filter(1700, 'bandpass').connect(g);
+        const c = new Tone.NoiseSynth({
+          noise: {
+            type: 'white'
+          },
+          envelope: {
+            attack: 0.001,
+            decay: 0.02,
+            sustain: 0
+          },
+          volume: -31
+        }).connect(bp);
+        nodes.push(bp, c);
+        const pop = () => {
+          if (nvAmb !== me) return;
+          if (enabled) {
+            try {
+              c.triggerAttackRelease('64n');
+            } catch (e) {}
+          }
+          timers.push(setTimeout(pop, 140 + Math.random() * 620));
+        };
+        timers.push(setTimeout(pop, 300));
+      }
+      if (kind === 'clock') {
+        const m = new Tone.MetalSynth({
+          frequency: 300,
+          envelope: {
+            attack: 0.001,
+            decay: 0.03,
+            release: 0.02
+          },
+          harmonicity: 3.1,
+          modulationIndex: 10,
+          resonance: 2200,
+          octaves: 0.6,
+          volume: -37
+        }).connect(g);
+        const k = new Tone.MembraneSynth({
+          pitchDecay: 0.01,
+          octaves: 2,
+          envelope: {
+            attack: 0.001,
+            decay: 0.04,
+            sustain: 0
+          },
+          volume: -36
+        }).connect(g);
+        nodes.push(m, k);
+        let high = true;
+        const tick = () => {
+          if (nvAmb !== me || !enabled) return;
+          try {
+            m.frequency.value = high ? 330 : 230;
+            m.triggerAttackRelease('64n');
+            k.triggerAttackRelease(high ? 'G2' : 'D2', '64n');
+          } catch (e) {}
+          high = !high;
+        };
+        timers.push(setInterval(tick, 1000));
+      }
+      try {
+        g.gain.rampTo(1, 1.5);
+      } catch (e) {
+        g.gain.value = 1;
+      }
+      me.stop = () => {
+        timers.forEach(id => {
+          clearTimeout(id);
+          clearInterval(id);
+        });
+        try {
+          g.gain.rampTo(0, 1.2);
+        } catch (e) {
+          g.gain.value = 0;
+        }
+        setTimeout(() => {
+          nodes.forEach(x => {
+            try {
+              if (x.stop) x.stop();
+            } catch (e) {}
+            try {
+              x.dispose();
+            } catch (e) {}
+          });
+        }, 1400);
+      };
+    } catch (e) {
+      nodes.forEach(x => {
+        try {
+          x.dispose();
+        } catch (e2) {}
+      });
     }
   };
   const uiTap = async () => {
@@ -11759,6 +12125,7 @@ const Audio_ = (() => {
   };
   const videoGain = () => enabled && bgmVolumePct > 0 ? _gainFromPct(bgmVolumePct) : 0;
   return {
+    nvAmbient,
     currentBgmKey: () => currentKey,
     isBackgroundSeQuiet,
     setVideoHold,
@@ -48986,17 +49353,36 @@ const RhythmTapTest = ({
   const setPressedLanes = coordinates => {
     const area = playAreaRef.current;
     if (!area) return;
-    const active = new Set(Array.from(coordinates || []).map(value => Math.max(0, Math.min(RHYTHM_SUB_LANE_COUNT - 1, Math.floor(Number(value))))).filter(Number.isFinite)),
-      glowOpacity = settings.laneGlow === 'NONE' ? '0' : settings.laneGlow === 'LOW' ? '.35' : '1';
+    const glowOpacity = settings.laneGlow === 'NONE' ? '0' : settings.laneGlow === 'LOW' ? '.35' : '1';
+    let mask = 0;
+    if (coordinates) {
+      for (const value of coordinates) {
+        const n = Math.max(0, Math.min(RHYTHM_SUB_LANE_COUNT - 1, Math.floor(Number(value))));
+        if (Number.isFinite(n)) mask |= 1 << n;
+      }
+    }
     let nodes = glowNodesRef.current;
-    if (!nodes || !nodes.length || !nodes[0].isConnected) nodes = glowNodesRef.current = Array.from(area.querySelectorAll('[data-rhythm-sublane-feedback]'));
-    nodes.forEach((el, index) => {
-      const pressed = active.has(index);
-      const want = pressed ? 'true' : 'false';
-      if (el.dataset.pressed === want && (!pressed || el.style.opacity === glowOpacity)) return;
-      el.dataset.pressed = want;
-      el.style.opacity = pressed ? glowOpacity : '0';
-    });
+    if (!nodes || !nodes.length || !nodes[0].isConnected) {
+      nodes = glowNodesRef.current = Array.from(area.querySelectorAll('[data-rhythm-sublane-feedback]'));
+      glowNodesRef.lastKey = null;
+    }
+    const glowKey = `${mask}|${glowOpacity}`;
+    if (glowNodesRef.lastKey !== glowKey) {
+      glowNodesRef.lastKey = glowKey;
+      for (let index = 0; index < nodes.length; index++) {
+        const el = nodes[index],
+          pressed = (mask >> index & 1) === 1;
+        const want = pressed ? 'true' : 'false';
+        const curPressed = el._mhGlowPressed !== undefined ? el._mhGlowPressed : el.dataset.pressed,
+          curOpacity = el._mhGlowOpacity !== undefined ? el._mhGlowOpacity : el.style.opacity;
+        if (curPressed === want && (!pressed || curOpacity === glowOpacity)) continue;
+        const nextOpacity = pressed ? glowOpacity : '0';
+        if (curPressed !== want) el.dataset.pressed = want;
+        if (curOpacity !== nextOpacity) el.style.opacity = nextOpacity;
+        el._mhGlowPressed = want;
+        el._mhGlowOpacity = nextOpacity;
+      }
+    }
     if (typeof RHYTHM_CANVAS_RENDERER !== 'undefined' && typeof RHYTHM_CANVAS_RENDERER.setSkyPressed === 'function') {
       {
         const skyMask = settings.holdTrace !== false ? holdTraceRef.current.s : 0;
@@ -115625,6 +116011,7 @@ const xmasNovelEndingAhead = (script, to) => {
   let s = to ? xmasNovelSceneById(script, to) : null;
   for (let k = 0; s && k < 12; k += 1) {
     if (s.ending && s.ending.id) return s.ending.id;
+    if ((s.rows || []).some(r => r && r.t === 'q')) return null;
     s = typeof s.next === 'string' ? xmasNovelSceneById(script, s.next) : null;
   }
   return null;
@@ -115795,6 +116182,112 @@ const XMAS_NOVEL_ENDING_KINDS = Object.freeze({
     tone: '#7fd6a8'
   }
 });
+const XMAS_NOVEL_ROUTE_KEY = 'mh_xmas_novel_route_v1';
+const xmasNovelRouteKeyOf = (qid, cur) => {
+  const side = cur && cur.flags && Number.isFinite(cur.flags.f_A1) ? Math.max(0, Math.min(2, Math.floor(cur.flags.f_A1))) : 0;
+  return `${qid}|${side}`;
+};
+const xmasNovelRowAt = (script, cur) => {
+  const scene = cur ? xmasNovelSceneById(script, cur.scene) : null;
+  const row = scene && Array.isArray(scene.rows) ? scene.rows[Number(cur.idx) || 0] : null;
+  return row || null;
+};
+const xmasNovelRouteNormalize = (raw, script = null) => {
+  const r = raw && typeof raw === 'object' ? raw : {};
+  const at = {};
+  if (r.at && typeof r.at === 'object') Object.keys(r.at).slice(0, 120).forEach(k => {
+    const m = /^([AQ]\d+[a-z]?)\|([0-2])$/.exec(k);
+    if (!m) return;
+    const c = xmasNovelNormalizeCur(r.at[k], script);
+    if (!c) return;
+    if (script) {
+      const row = xmasNovelRowAt(script, c);
+      if (!row || row.t !== 'q' || row.id !== m[1]) return;
+    }
+    at[k] = c;
+  });
+  return {
+    v: 1,
+    at,
+    back: xmasNovelNormalizeCur(r.back, script),
+    seeded: r.seeded === 1 ? 1 : 0
+  };
+};
+const xmasNovelRouteRecord = (route, script, cur) => {
+  const row = xmasNovelRowAt(script, cur);
+  if (!route || !row || row.t !== 'q') return route;
+  const c = xmasNovelNormalizeCur(cur, script);
+  if (!c) return route;
+  return {
+    ...route,
+    at: {
+      ...route.at,
+      [xmasNovelRouteKeyOf(row.id, c)]: c
+    }
+  };
+};
+const xmasNovelRouteSeed = (script, save, route) => {
+  const base = route || xmasNovelRouteNormalize(null, script);
+  if (base.seeded === 1) return base;
+  const read = new Set(save && Array.isArray(save.read) ? save.read : []);
+  let at = {
+    ...base.at
+  };
+  const keep = (cur, row) => {
+    const k = xmasNovelRouteKeyOf(row.id, cur);
+    if (!at[k] && read.has(row.k)) {
+      const c = xmasNovelNormalizeCur(cur, script);
+      if (c) at = {
+        ...at,
+        [k]: c
+      };
+    }
+  };
+  const sideOfSave = save && save.cur && save.cur.flags && Number.isFinite(save.cur.flags.f_A1) ? save.cur.flags.f_A1 : 0;
+  const snaps = save && save.snaps && typeof save.snaps === 'object' ? save.snaps : {};
+  Object.keys(snaps).filter(k => /^C\d+$/.test(k)).forEach(chId => {
+    let st = xmasNovelSettle(script, snaps[chId]);
+    for (let guard = 0; st && st.row && guard < 3000; guard += 1) {
+      if (!st.scene || st.scene.chapter !== chId) break;
+      const r = st.row;
+      if (r.t !== 'q') {
+        st = xmasNovelStep(script, xmasNovelApplyRow(st.cur, r));
+        continue;
+      }
+      keep(st.cur, r);
+      if (r.once) break;
+      let pick = null;
+      if (r.kind === 'present') pick = (r.answer || [])[0];else if (r.kind === 'action') {
+        const opts = xmasNovelOptionsOf(r, xmasNovelCtx(script, st.cur, save && save.endings || []));
+        if (r.id === 'A1') {
+          const o = opts.find(x => x.i === sideOfSave - 1);
+          if (!o) break;
+          pick = o.i;
+        } else {
+          const safe = opts.find(o => !(o.to && xmasNovelEndingAhead(script, o.to)));
+          if (!safe) break;
+          pick = safe.i;
+        }
+      }
+      if (pick === null || pick === undefined) break;
+      const a = xmasNovelAnswer(script, st.cur, r, pick, save && save.endings || []);
+      let c = a.cur;
+      (a.replies || []).forEach(x => {
+        c = xmasNovelApplyRow(c, x);
+      });
+      st = a.then === 'next' ? xmasNovelStep(script, c) : a.then === 'retry' ? null : xmasNovelSettle(script, xmasNovelJump(script, c, a.then.to));
+    }
+  });
+  if (save && save.cur) {
+    const row = xmasNovelRowAt(script, save.cur);
+    if (row && row.t === 'q') keep(save.cur, row);
+  }
+  return {
+    ...base,
+    at,
+    seeded: 1
+  };
+};
 const XMAS_NOVEL_SCRIPT = {
   "v": 1,
   "src": "docs/progress/event-xmas-2026/SCRIPT.md",
@@ -127865,6 +128358,21 @@ const XMAS_NOVEL_CSS = `
 /* 血を見せない影(白瀬など)は、真っ黒で見えなかった(社長「白瀬の死亡シーンって出てた？」)。冷たい光を当て、縁を白く光らせて形を見せる */
 .mh-nv-body.noblood .mh-nv-body-dim { background: radial-gradient(42% 30% at var(--fx, 50%) var(--fy, 74%), rgba(150,180,235,.30), rgba(150,180,235,0) 75%), radial-gradient(120% 90% at 50% 40%, rgba(6,10,34,.35), rgba(0,0,4,.88)) !important; }
 .mh-nv-body.noblood .mh-nv-body-lie img { filter: brightness(0) drop-shadow(0 0 1.5px rgba(225,235,255,.95)) drop-shadow(0 0 3px rgba(200,215,250,.6)) drop-shadow(0 0 20px rgba(140,170,230,.55)) !important; }
+/* 大事な選択の「選んだ状態」と決定の札(台帳 r1126-113)。光らせすぎず、真鍮の縁と赤い印で示す */
+.mh-nv-person[data-pick] { box-shadow: 0 0 0 2px #e8c46a, 0 0 16px rgba(232,196,106,.35); background: rgba(40,30,10,.8); }
+.mh-nv-person[data-pick]::after { content: '✓'; position: absolute; top: 2px; left: 4px; width: 18px; height: 18px; border-radius: 50%; background: #b0101a; color: #fff; font-size: 11px; line-height: 18px; text-align: center; }
+.mh-nv-clue[data-pick] { box-shadow: 0 0 0 2px #e8c46a, 0 0 16px rgba(232,196,106,.25); }
+.mh-nv-choice[data-pick] { box-shadow: 0 0 0 2px #e8c46a, 0 0 18px rgba(232,196,106,.3); background: linear-gradient(180deg, rgba(60,44,14,.95), rgba(24,18,8,.95)); }
+.mh-nv-decide { margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(232,196,106,.35); }
+.mh-nv-decide-what { margin-bottom: 6px; font-size: 13px; font-weight: 800; color: #f3e3b0; text-align: left; word-break: normal; overflow-wrap: anywhere; }
+/* 背の低い横では、窓の全体を1つに流し(人の並び・手がかりが0の高さにつぶれた)、決定の札は下に貼りつける */
+@media (orientation: landscape) and (max-height: 560px) {
+  .mh-nv-sheet .mh-nv-panel { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .mh-nv-sheet .mh-nv-panel > .mh-nv-scroll { flex: none; overflow: visible; }
+  .mh-nv-decide { position: sticky; bottom: calc(-1 * max(14px, env(safe-area-inset-bottom))); z-index: 2; margin-left: -14px; margin-right: -14px; padding: 8px 14px 10px; background: #0b1430; }
+  .mh-nv-decide .mh-nv-btn.wide { min-height: 42px; }
+}
+.mh-nv-decide .mh-nv-btn:not(:disabled) { background: #8f1d24; color: #fff3e0; box-shadow: 0 0 0 1px #e8c46a; }
 /* 人物の並びの置き場(登場人物の行・カーテンコール): 上の帯(ボタンと章の題)と文字の箱のあいだの、まん中(台帳 r1126-094 追記4。上に寄せた枠が章の題の帯にかぶっていた) */
 .mh-nv-panelwrap { position: absolute; left: 0; right: 0; top: calc(max(8px, env(safe-area-inset-top)) + 54px); bottom: 172px; z-index: 5; display: flex; align-items: center; justify-content: center; padding: 0 3vw; pointer-events: none; }
 .mh-nv-panelin { width: min(100%, 640px); max-height: 100%; }
@@ -129161,7 +129669,8 @@ const XmasNovelCast = ({
   states = {},
   changed = [],
   onPick = null,
-  big = false
+  big = false,
+  picked = ''
 }) => React.createElement("div", {
   className: `mh-nv-cast${big ? ' big' : ''}`
 }, XMAS_NOVEL_CAST.map((c, i) => {
@@ -129197,6 +129706,8 @@ const XmasNovelCast = ({
     key: c.id,
     "data-xmas-novel-person": c.id,
     "data-st": st || undefined,
+    "data-pick": picked === c.id ? '' : undefined,
+    "aria-pressed": picked === c.id,
     className: "mh-nv-person active:scale-95",
     onClick: () => onPick(c.id)
   }, inner) : React.createElement("div", {
@@ -129359,14 +129870,100 @@ const XMAS_NOVEL_SE_SEQ = Object.freeze({
     gap: 0,
     hold: 2500,
     play: ['nvWind']
+  },
+  steps: {
+    gap: 0,
+    hold: 1500,
+    play: ['nvStep']
+  },
+  run: {
+    gap: 0,
+    hold: 1300,
+    play: ['nvRun']
+  },
+  hit: {
+    gap: 0,
+    hold: 500,
+    play: ['nvHit']
+  },
+  hitFall: {
+    gap: 0,
+    hold: 1200,
+    play: ['nvHit', ['nvFall', undefined, 420]]
+  },
+  fall: {
+    gap: 0,
+    hold: 1000,
+    play: ['nvFall']
+  },
+  scream: {
+    gap: 0,
+    hold: 1500,
+    play: ['nvGasp', ['nvDread', undefined, 260]]
+  },
+  door: {
+    gap: 0,
+    hold: 900,
+    play: ['nvDoor']
+  },
+  doorGust: {
+    gap: 0,
+    hold: 1500,
+    play: ['nvDoor', ['nvGust', undefined, 200]]
+  },
+  gust: {
+    gap: 0,
+    hold: 1500,
+    play: ['nvGust']
+  },
+  glassKnock: {
+    gap: 380,
+    hold: 300,
+    play: ['nvGlass']
+  },
+  winding: {
+    gap: 330,
+    hold: 250,
+    play: [['nvTick', true], ['nvTick', false, 120]]
   }
+});
+const XMAS_NOVEL_SE_ROW = Object.freeze({
+  '2-L-12': ['knock', 2],
+  '2-M-15': ['windGlass'],
+  '2-5-2': ['doorGust'],
+  '2-5-6b': ['gust'],
+  '4-4-1': ['winding', 3],
+  '4-M-16': ['steps'],
+  '5-4-1': ['knock', 2],
+  '5-X-4a': ['run'],
+  '5-X-4s': ['run'],
+  '6-X-6': ['run'],
+  '2-Y-7': ['steps'],
+  '2-Y-10': ['hitFall'],
+  '2-Y-11': ['fall'],
+  '6-7-4': ['doorGust'],
+  '7-P1-8': ['doorGust'],
+  '9-1-2': ['winding', 2],
+  '9-1-5': ['doorGust'],
+  '6-X-1a': ['doorGust'],
+  '6-X-1s': ['doorGust'],
+  '10-3-9': ['fall'],
+  'M5-2': ['steps'],
+  'B-13': ['fall'],
+  'G-3': ['winding', 3],
+  'N-3': ['winding', 2],
+  '1-O-19': ['winding', 2],
+  '12-2-9': ['lock'],
+  '12-3-6': ['knock', 3],
+  '12-5-3': ['glassKnock', 3]
 });
 const xmasNovelSeKindOf = (kind, row) => {
   if (kind === 'bell' || kind === 'tick' || kind === 'letter') return kind;
   if (kind === 'music') return 'musicbox';
   if (kind === 'clap') return 'clap';
   const x = String(row && row.x || '');
-  if (/声|悲鳴|叫び|きゃ|うわ|っ！|ピー/.test(x)) return 'dread';
+  if (/声|悲鳴|叫び|きゃ|うわ|っ！/.test(x)) return 'scream';
+  if (/ピー/.test(x)) return 'dread';
   if (/ブツン|停電/.test(x)) return 'lightsOut';
   if (/(ギィ|ギシ)[\s\S]*(ガシャン|割れ)/.test(x)) return 'creakGlass';
   if (/吹雪[\s\S]*ガラス|ガラス[\s\S]*吹雪/.test(x)) return 'windGlass';
@@ -129376,6 +129973,9 @@ const xmasNovelSeKindOf = (kind, row) => {
   if (/カチリ|カチャリ|留め金|鍵の音/.test(x)) return 'lock';
   if (/封|カサ|プシュッ/.test(x)) return 'rustle';
   if (/叩く|打ちつける|ドン、ドン|コン、コン/.test(x)) return 'knock';
+  if (/ガタッ[\s\S]*ゴッ/.test(x)) return 'hitFall';
+  if (/ドサッ/.test(x)) return 'fall';
+  if (/^ゴッ|ゴッ[(（]|鈍い音/.test(x)) return 'hit';
   if (/ドサッ|ゴッ|ゴトン|ガタ|重い|ドン/.test(x)) return 'thud';
   return kind === 'impact' ? 'impact' : 'thud';
 };
@@ -129418,8 +130018,10 @@ const xmasNovelSeHit = kind => {
     });
   } catch (e) {}
 };
+let xmasNovelSeQuiet = false;
 const xmasNovelRowSe = (kindIn, times, row) => {
   xmasNovelSeStop();
+  if (xmasNovelSeQuiet) return;
   const kind = xmasNovelSeKindOf(kindIn, row);
   const seq = XMAS_NOVEL_SE_SEQ[kind];
   if (!seq) {
@@ -129433,114 +130035,124 @@ const xmasNovelRowSe = (kindIn, times, row) => {
     if (at <= 0) xmasNovelSeHit(kind);else xmasNovelSeTimers.push(setTimeout(() => xmasNovelSeHit(kind), at));
   }
 };
-const xmasNovelAmbientOf = scene => {
-  const bg = String(scene && scene.bg || '');
-  if (/吹雪/.test(bg)) return 'wind';
+const XMAS_NOVEL_AMBIENT_SCENE = Object.freeze({
+  'C2-M': 'wind',
+  'C12-2': 'wind',
+  'C2-L': 'clock',
+  'C1-6': 'clock'
+});
+const xmasNovelAmbientOf = (scene, bgName) => {
+  if (!scene || scene.outside) return 'none';
+  if (Object.prototype.hasOwnProperty.call(XMAS_NOVEL_AMBIENT_SCENE, scene.id)) return XMAS_NOVEL_AMBIENT_SCENE[scene.id];
+  const bg = String(bgName || scene.bg || '');
+  if (!bg || /助手たち|monhero_/.test(bg)) return 'none';
+  if (/吹雪/.test(bg)) return 'blizzard';
+  if (/雪原|雪の山道|崖/.test(bg)) return 'wind';
   if (/暖炉/.test(bg)) return 'fire';
-  if (/雪原|雪の山道/.test(bg)) return 'wind';
-  if (/柱時計/.test(bg)) return 'lock';
-  return '';
+  if (/柱時計|ホール/.test(bg)) return 'clock';
+  return 'room';
 };
-const xmasNovelAmbient = scene => {
-  const k = xmasNovelAmbientOf(scene);
-  if (k) xmasNovelSeHit(k);
+const xmasNovelSetAmbient = kind => {
+  try {
+    if (typeof Audio_ !== 'undefined' && Audio_ && typeof Audio_.nvAmbient === 'function') void Audio_.nvAmbient(kind || 'none');
+  } catch (e) {}
 };
 const XMAS_NOVEL_BGM_SCENE = Object.freeze({
   'OUT-0-1': 'original_profile',
-  'OUT-0-2': 'melo_dullahan_clockwork',
+  'OUT-0-2': 'silence',
   'C0-1': 'original_profile',
   'C0-2': 'original_profile',
-  'OUT-1': 'melo_dullahan_clockwork',
+  'OUT-1': 'silence',
   'C1-1': 'original_profile',
   'C1-2': 'original_profile',
-  'C1-3': 'melo_dullahan_clockwork',
-  'C1-4': 'melo_dullahan_clockwork',
+  'C1-3': 'silence',
+  'C1-4': 'silence',
   'C1-5': 'close_to_your_heart_alt',
-  'C1-6': 'melo_dullahan_steel_ghost',
+  'C1-6': 'silence',
   'C1-M': 'silence',
-  'C2-1': 'melo_dullahan_clockwork',
+  'C2-1': 'silence',
   'C2-L': 'silence',
-  'C2-M': 'makutsu_no_senritsu',
+  'C2-M': 'silence',
   'C2-2': 'original_profile',
-  'C2-3': 'melo_dullahan_steel_ghost',
-  'C2-4': 'melo_dullahan_steel_ghost_alt',
-  'C2-5': 'original_dullahan',
+  'C2-3': 'silence',
+  'C2-4': 'silence',
+  'C2-5': 'silence',
   'C3-1': 'silence',
-  'C3-2': 'melo_dullahan_clockwork_alt',
-  'C3-3': 'melo_dullahan_clockwork',
-  'C3-4': 'melo_dullahan_clockwork_alt',
+  'C3-2': 'silence',
+  'C3-3': 'silence',
+  'C3-4': 'silence',
   'C3-5': 'melo_erfolg_piano',
   'C3-M': 'melo_erfolg_piano',
-  'C4-1': 'makutsu_no_senritsu',
+  'C4-1': 'silence',
   'C4-2': 'silence',
-  'C4-3': 'melo_dullahan_clockwork_alt',
-  'C4-4': 'melo_dullahan_clockwork',
-  'C4-5': 'melo_dullahan_steel_ghost',
+  'C4-3': 'silence',
+  'C4-4': 'silence',
+  'C4-5': 'silence',
   'C4-M': 'silence',
   'C5-1': 'melo_erfolg_piano',
-  'C5-2': 'melo_dullahan_steel_ghost_alt',
-  'C5-3': 'melo_dullahan_steel_ghost',
-  'C5-4': 'melo_dullahan_steel_ghost',
-  'C5-5': 'makutsu_no_senritsu',
-  'C5-M': 'melo_dullahan_clockwork',
-  'C6-1': 'melo_dullahan_clockwork_alt',
-  'C6-2': 'melo_dullahan_steel_ghost',
-  'C6-3': 'melo_dullahan_clockwork_alt',
-  'C6-4': 'melo_dullahan_steel_ghost_alt',
-  'C6-5': 'melo_dullahan_steel_ghost',
-  'C6-6': 'melo_dullahan_clockwork_alt',
-  'C6-7': 'original_dullahan',
+  'C5-2': 'silence',
+  'C5-3': 'silence',
+  'C5-4': 'silence',
+  'C5-5': 'silence',
+  'C5-M': 'silence',
+  'C6-1': 'silence',
+  'C6-2': 'silence',
+  'C6-3': 'silence',
+  'C6-4': 'silence',
+  'C6-5': 'silence',
+  'C6-6': 'silence',
+  'C6-7': 'silence',
   'C6-8': 'melo_erfolg_piano',
-  'C6-9': 'melo_dullahan_steel_ghost',
+  'C6-9': 'silence',
   'C6-M': 'melo_erfolg_piano',
-  'C7-1': 'melo_dullahan_clockwork_alt',
-  'C7-2': 'melo_dullahan_steel_ghost_alt',
+  'C7-1': 'silence',
+  'C7-2': 'silence',
   'C7-A': 'melo_erfolg_piano',
-  'C7-B': 'melo_dullahan_clockwork',
-  'C7-P1': 'original_dullahan',
+  'C7-B': 'silence',
+  'C7-P1': 'silence',
   'C7-P2': 'melo_erfolg_piano',
-  'C7-P3': 'melo_dullahan_clockwork',
+  'C7-P3': 'silence',
   'C7-4a': 'melo_erfolg_piano',
-  'C7-4b': 'melo_dullahan_steel_ghost',
+  'C7-4b': 'silence',
   'C7-5a': 'melo_erfolg_piano',
-  'C7-5b': 'melo_dullahan_steel_ghost',
-  'C7-W': 'melo_dullahan_clockwork_alt',
-  'C8-1': 'melo_dullahan_steel_ghost_alt',
-  'C8-2': 'makutsu_no_senritsu',
+  'C7-5b': 'silence',
+  'C7-W': 'silence',
+  'C8-1': 'silence',
+  'C8-2': 'silence',
   'C8-3': 'melo_erfolg_piano',
   'C9-1': 'silence',
   'C9-2': 'close_to_your_heart_alt',
-  'C10-1': 'melo_dullahan_steel_ghost',
-  'C10-2': 'makutsu_no_senritsu',
-  'C10-3': 'melo_dullahan_steel_ghost',
-  'C10-4': 'melo_dullahan_steel_ghost_alt',
-  'C11-1': 'melo_dullahan_steel_ghost_alt',
+  'C10-1': 'silence',
+  'C10-2': 'silence',
+  'C10-3': 'silence',
+  'C10-4': 'silence',
+  'C11-1': 'silence',
   'C11-N': 'melo_erfolg_piano',
   'C11-A': 'melo_erfolg_piano',
-  'C11-B': 'melo_dullahan_clockwork',
-  'C2-X': 'melo_dullahan_steel_ghost',
+  'C11-B': 'silence',
+  'C2-X': 'silence',
   'END-X1': 'original_game_over',
-  'C5-X': 'melo_dullahan_steel_ghost',
+  'C5-X': 'silence',
   'END-X2': 'original_game_over',
-  'C6-X': 'melo_dullahan_steel_ghost',
+  'C6-X': 'silence',
   'END-X3': 'original_game_over',
-  'C2-Y': 'melo_dullahan_steel_ghost',
+  'C2-Y': 'silence',
   'END-X4': 'original_game_over',
-  'C10-X': 'melo_dullahan_steel_ghost',
+  'C10-X': 'silence',
   'END-X5': 'original_game_over',
   'END-M1': 'original_game_over',
-  'END-M2': 'melo_dullahan_steel_ghost',
-  'END-M3': 'melo_dullahan_steel_ghost',
+  'END-M2': 'silence',
+  'END-M3': 'silence',
   'END-M4': 'original_game_over',
-  'END-M5': 'melo_dullahan_steel_ghost',
+  'END-M5': 'silence',
   'END-G': 'melo_erfolg_piano',
   'OUT-G': 'close_to_your_heart_alt',
   'END-N': 'melo_erfolg_piano',
   'OUT-N': 'melo_erfolg_piano',
-  'END-A': 'melo_dullahan_clockwork',
-  'OUT-A': 'melo_dullahan_clockwork',
-  'END-B': 'melo_dullahan_steel_ghost',
-  'OUT-B': 'melo_dullahan_steel_ghost',
+  'END-A': 'silence',
+  'OUT-A': 'silence',
+  'END-B': 'silence',
+  'OUT-B': 'silence',
   'C1-O': 'original_profile',
   'END-O': 'original_profile',
   'OUT-O': 'original_profile',
@@ -129548,9 +130160,9 @@ const XMAS_NOVEL_BGM_SCENE = Object.freeze({
   'OUT-O2': 'close_to_your_heart_alt',
   'C12-1': 'close_to_your_heart_alt',
   'C12-2': 'melo_erfolg_piano',
-  'C12-3': 'original_dullahan',
-  'C12-4': 'melo_dullahan_clockwork',
-  'C12-5': 'melo_dullahan_steel_ghost',
+  'C12-3': 'silence',
+  'C12-4': 'silence',
+  'C12-5': 'silence',
   'C12-6': 'silence',
   'C12-7': 'melo_erfolg_piano'
 });
@@ -129558,8 +130170,8 @@ const XMAS_NOVEL_BGM_SHIFT = Object.freeze({
   'C2-3': [['2-3-7', 'silence']],
   'C5-4': [['5-4-5', 'silence']],
   'C6-5': [['6-5-3', 'silence']],
-  'C7-1': [['7-1-3a', 'melo_dullahan_steel_ghost_alt']],
-  'C7-W': [['7-W-14', 'melo_dullahan_steel_ghost_alt']],
+  'C7-1': [['7-1-3a', 'silence']],
+  'C7-W': [['7-W-14', 'silence']],
   'C10-1': [['10-1-5', 'silence']],
   'C10-2': [['10-2-7', 'silence']],
   'C10-3': [['10-3-7', 'silence']],
@@ -129882,6 +130494,7 @@ const XMAS_NOVEL_ICONS = {
   skip: '<polygon points="4 5 12 12 4 19 4 5"/><polygon points="12 5 20 12 12 19 12 5"/>',
   log: '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>',
   book: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><circle cx="12" cy="10" r="3"/><line x1="14.2" y1="12.2" x2="16.5" y2="14.5"/>',
+  map: '<polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21 3 6"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/>',
   menu: '<line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/>'
 };
 const xmasNovelLoad = async (script = XMAS_NOVEL_SCRIPT) => {
@@ -129894,6 +130507,21 @@ const xmasNovelLoad = async (script = XMAS_NOVEL_SCRIPT) => {
 const xmasNovelStore = async (save, script = XMAS_NOVEL_SCRIPT) => {
   try {
     await storeSet(XMAS_NOVEL_STORAGE_KEY, xmasNovelNormalize(save, script), false);
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
+const xmasNovelRouteLoad = async (script = XMAS_NOVEL_SCRIPT) => {
+  try {
+    return xmasNovelRouteNormalize(await storeGet(XMAS_NOVEL_ROUTE_KEY, null, false), script);
+  } catch (e) {
+    return xmasNovelRouteNormalize(null, script);
+  }
+};
+const xmasNovelRouteStore = async (route, script = XMAS_NOVEL_SCRIPT) => {
+  try {
+    await storeSet(XMAS_NOVEL_ROUTE_KEY, xmasNovelRouteNormalize(route, script), false);
     return true;
   } catch (e) {
     return false;
@@ -129968,6 +130596,8 @@ const XmasNovelScreen = ({
   const [log, setLog] = useState([]);
   const [confirmNew, setConfirmNew] = useState(false);
   const saveRef = useRef(null);
+  const [route, setRoute] = useState(null);
+  const routeRef = useRef(null);
   const lastBgm = useRef(null);
   const lastChapter = useRef(null);
   const prevBgm = useRef(null);
@@ -129996,6 +130626,7 @@ const XmasNovelScreen = ({
   };
   const stageRef = useRef(null);
   const pendingQuakeRef = useRef(0);
+  const [pick, setPick] = useState(null);
   const [panelIntro, setPanelIntro] = useState(null);
   const [titleOk, setTitleOk] = useState(false);
   const fxFast = unread => !unread || !!(saveRef.current && saveRef.current.auto);
@@ -130019,17 +130650,67 @@ const XmasNovelScreen = ({
       prevBgm.current = null;
     }
     xmasNovelLoad(S).then(s => {
-      if (alive) {
-        saveRef.current = s;
-        setSave(s);
-      }
+      if (!alive) return;
+      saveRef.current = s;
+      setSave(s);
+      xmasNovelRouteLoad(S).then(r => {
+        if (!alive) return;
+        const seeded = r.seeded === 1 ? r : xmasNovelRouteSeed(S, s, r);
+        routeRef.current = seeded;
+        setRoute(seeded);
+        if (seeded !== r) void xmasNovelRouteStore(seeded, S);
+      });
     });
-    xmasNovelBgm('melo_dullahan_clockwork');
+    xmasNovelBgm('silence');
     return () => {
       alive = false;
       xmasNovelSeStop();
       if (storeTimer.current) clearTimeout(storeTimer.current);
     };
+  }, []);
+  const putRoute = next => {
+    if (!next) return;
+    routeRef.current = next;
+    setRoute(next);
+    void xmasNovelRouteStore(next, S);
+  };
+  const redoFrom = cur => {
+    const r = routeRef.current || xmasNovelRouteNormalize(null, S);
+    const now = saveRef.current && saveRef.current.cur;
+    putRoute({
+      ...r,
+      back: r.back || now || null
+    });
+    setSheet(null);
+    start(cur);
+  };
+  const backFromRedo = () => {
+    const r = routeRef.current;
+    if (!r || !r.back) return;
+    const b = r.back;
+    putRoute({
+      ...r,
+      back: null
+    });
+    setSheet(null);
+    start(b);
+  };
+  useEffect(() => {
+    xmasNovelSeQuiet = !!skip;
+    if (skip) xmasNovelSeStop();
+  }, [skip]);
+  const ambSceneId = st && st.scene ? st.scene.id : '';
+  const ambBg = st && st.scene ? xmasNovelSceneBgName(st.scene, st.cur ? st.cur.idx : 0) : '';
+  const ambWait = !!(sheet && typeof sheet === 'object' && sheet.q);
+  useEffect(() => {
+    let kind = mode === 'read' ? xmasNovelAmbientOf(st && st.scene, ambBg) : mode === 'title' ? 'clock' : 'none';
+    if (ambWait && kind === 'clock') kind = 'none';
+    const id = setTimeout(() => xmasNovelSetAmbient(kind), 350);
+    return () => clearTimeout(id);
+  }, [mode, ambSceneId, ambBg, ambWait]);
+  useEffect(() => () => {
+    xmasNovelSeQuiet = false;
+    xmasNovelSetAmbient('none');
   }, []);
   const persist = (next, now = false) => {
     saveRef.current = next;
@@ -130073,7 +130754,7 @@ const XmasNovelScreen = ({
       read: [...s.read, r.k]
     };
     if (r.t === 'band' && r.se) xmasNovelRowSe(r.se, r.seN, r);else xmasNovelSeStop();
-    if (!opts.quiet && r.t === 'band' && !r.se && Array.isArray(r.fx) && r.fx.includes('fallen')) xmasNovelSeHit('dread');
+    if (!opts.quiet && r.t === 'band' && !r.se && XMAS_NOVEL_SE_ROW[r.id]) xmasNovelRowSe(XMAS_NOVEL_SE_ROW[r.id][0], XMAS_NOVEL_SE_ROW[r.id][1], r);else if (!opts.quiet && !xmasNovelSeQuiet && r.t === 'band' && !r.se && Array.isArray(r.fx) && r.fx.includes('fallen')) xmasNovelSeHit('dread');
     pendingQuakeRef.current = 0;
     if (XMAS_NOVEL_SHAKE[r.id] && !skip) {
       if (opts.held) pendingQuakeRef.current = XMAS_NOVEL_SHAKE[r.id];else xmasNovelQuake(stageRef.current, XMAS_NOVEL_SHAKE[r.id]);
@@ -130215,7 +130896,6 @@ const XmasNovelScreen = ({
       lastBodyRef.current = '';
       setTitleOk(xmasNovelSceneDone(scene, s.read));
     }
-    if (scene && (!lastSceneRef.current || lastSceneRef.current.id !== scene.id)) xmasNovelAmbient(scene);
     const transitNow = !!(scene && lastSceneRef.current && !!lastSceneRef.current.outside !== !!scene.outside);
     if (transitNow) {
       setTransit({
@@ -130304,6 +130984,7 @@ const XmasNovelScreen = ({
       cur,
       panelChanged
     };
+    if (next.row.t === 'q' && !replayRef.current && routeRef.current) putRoute(xmasNovelRouteRecord(routeRef.current, S, cur));
     s = arriveRow(next.row, {
       ...s,
       cur
@@ -130427,6 +131108,7 @@ const XmasNovelScreen = ({
     arrive(xmasNovelStep(S, cur));
   };
   const answer = (q, pick) => {
+    setPick(null);
     const res = xmasNovelAnswer(S, st.cur, q, pick, saveRef.current && saveRef.current.endings || []);
     let s = saveRef.current;
     if (q.score) {
@@ -130732,6 +131414,26 @@ const XmasNovelScreen = ({
   const darkNow = fx && fx.kind === 'dark';
   const name = isLine ? xmasNovelNameOf(row) : '';
   const q = sheet && typeof sheet === 'object' ? sheet.q : null;
+  const picked = pick && q && pick.qid === q.id ? pick : null;
+  const choose = (key, label) => setPick({
+    qid: q.id,
+    key,
+    label
+  });
+  const decideBar = verb => React.createElement("div", {
+    className: "mh-nv-decide",
+    "data-xmas-novel-decide-bar": true
+  }, React.createElement("div", {
+    className: "mh-nv-decide-what mh-nv-serif"
+  }, picked ? `「${picked.label}」${verb}` : '選んでから、決定を押そう'), React.createElement("button", {
+    type: "button",
+    className: "mh-nv-btn wide mh-nv-serif",
+    "data-xmas-novel-decide": true,
+    disabled: !picked,
+    onClick: () => {
+      if (picked) answer(q, picked.key);
+    }
+  }, "決定"));
   const presentList = q && q.kind === 'present' ? xmasNovelPresentable(q, clues) : clues;
   return React.createElement("div", {
     className: "mh-nv",
@@ -130922,6 +131624,14 @@ const XmasNovelScreen = ({
   }, "スキップ")), React.createElement("button", {
     type: "button",
     className: "mh-nv-btn",
+    "data-xmas-novel-open-map": true,
+    onClick: () => setSheet('map'),
+    "aria-label": "地図"
+  }, React.createElement(XmasNovelIcon, {
+    d: XMAS_NOVEL_ICONS.map
+  }), React.createElement("span", null, "地図")), React.createElement("button", {
+    type: "button",
+    className: "mh-nv-btn",
     "data-xmas-novel-menu": true,
     onClick: () => setSheet('menu'),
     "aria-label": "メニュー"
@@ -131031,7 +131741,15 @@ const XmasNovelScreen = ({
         setMode('title');
       }
     }, "タイトルへ")));
-  })()), sheet && React.createElement("div", {
+  })()), sheet === 'map' && save && React.createElement(XmasNovelMap, {
+    script: S,
+    save: save,
+    route: route,
+    playerName: playerName,
+    onRedo: redoFrom,
+    onBack: backFromRedo,
+    onClose: () => setSheet(null)
+  }), sheet && sheet !== 'map' && React.createElement("div", {
     className: "mh-nv-sheet",
     "data-xmas-novel-sheet": typeof sheet === 'string' ? sheet : sheet.kind,
     onClick: () => {
@@ -131083,7 +131801,8 @@ const XmasNovelScreen = ({
   }, presentList.length ? presentList.map(c => React.createElement("div", {
     key: c.n,
     className: "mh-nv-clue",
-    "data-xmas-novel-clue": c.n
+    "data-xmas-novel-clue": c.n,
+    "data-pick": picked && picked.key === c.n ? '' : undefined
   }, React.createElement("div", {
     className: "flex items-center gap-2"
   }, React.createElement("div", {
@@ -131092,8 +131811,10 @@ const XmasNovelScreen = ({
     type: "button",
     className: "mh-nv-btn shrink-0",
     "data-xmas-novel-present": c.n,
-    onClick: () => answer(q, c.n)
-  }, "突きつける")), React.createElement("p", {
+    "data-on": picked && picked.key === c.n ? '' : undefined,
+    "aria-pressed": !!(picked && picked.key === c.n),
+    onClick: () => choose(c.n, c.n)
+  }, picked && picked.key === c.n ? '選んだ' : 'これを選ぶ')), React.createElement("p", {
     className: "mh-nv-plain mt-1 whitespace-pre-wrap text-[12px] leading-relaxed text-slate-200"
   }, xmasNovelWrap(c.d)))) : React.createElement("div", {
     className: "text-[12px] text-slate-400"
@@ -131101,10 +131822,13 @@ const XmasNovelScreen = ({
     type: "button",
     className: "mh-nv-btn wide mt-3",
     onClick: () => setSheet(null)
-  }, "閉じる"), q && React.createElement("button", {
+  }, "閉じる"), q && decideBar('を突きつける'), q && React.createElement("button", {
     type: "button",
-    className: "mh-nv-btn wide mt-3",
-    onClick: () => setSheet(null)
+    className: "mh-nv-btn wide mt-2",
+    onClick: () => {
+      setPick(null);
+      setSheet(null);
+    }
   }, "話をもう一度見る")), q && q.kind === 'person' && React.createElement(React.Fragment, null, React.createElement("div", {
     "data-xmas-novel-question": q.id,
     className: "mb-3 rounded-lg p-2 text-[13px] font-bold leading-relaxed",
@@ -131117,19 +131841,28 @@ const XmasNovelScreen = ({
   }, q.label), xmasNovelWrap(xmasNovelFill(q.x, playerName))), React.createElement("div", {
     className: "mh-nv-scroll"
   }, React.createElement(XmasNovelCast, {
-    onPick: id => answer(q, id)
+    picked: picked ? picked.key : '',
+    onPick: id => {
+      const c = xmasNovelCastOf(id);
+      choose(id, c ? c.name : id);
+    }
   })), (q.extra || []).map(x => React.createElement("button", {
     type: "button",
     key: x.key,
     className: "mh-nv-choice mh-nv-serif mt-2",
     "data-xmas-novel-extra": x.key,
-    onClick: () => answer(q, x.key)
+    "data-pick": picked && picked.key === x.key ? '' : undefined,
+    "aria-pressed": !!(picked && picked.key === x.key),
+    onClick: () => choose(x.key, String(x.x || '').replace(/[「」]/g, ''))
   }, xmasNovelWrap(x.x))), q.once && React.createElement("div", {
     className: "mh-nv-plain mt-2 text-[11px] font-bold text-rose-200"
-  }, "選んだら、やり直しはできません"), React.createElement("button", {
+  }, "決定したら、やり直しはできません"), decideBar(q.extra && q.extra.some(x => picked && picked.key === x.key) ? 'に決める' : 'を名指しする'), React.createElement("button", {
     type: "button",
-    className: "mh-nv-btn wide mt-3",
-    onClick: () => setSheet(null)
+    className: "mh-nv-btn wide mt-2",
+    onClick: () => {
+      setPick(null);
+      setSheet(null);
+    }
   }, "話をもう一度見る")), q && q.kind === 'action' && React.createElement(React.Fragment, null, React.createElement("div", {
     "data-xmas-novel-question": q.id,
     className: "mh-nv-plain mh-nv-serif mh-nv-gold mb-3 text-[17px] font-black"
@@ -131143,14 +131876,16 @@ const XmasNovelScreen = ({
       key: o.i,
       className: "mh-nv-choice mh-nv-serif",
       "data-xmas-novel-option": o.i,
-      onClick: () => answer(q, o.i)
+      "data-pick": picked && picked.key === o.i ? '' : undefined,
+      "aria-pressed": !!(picked && picked.key === o.i),
+      onClick: () => q.score || q.once ? choose(o.i, xmasNovelFill(o.x, playerName)) : answer(q, o.i)
     }, xmasNovelWrap(xmasNovelFill(o.x, playerName)), seenEnd && React.createElement("span", {
       "data-xmas-novel-seen-end": endAhead,
       className: "mh-nv-plain mt-1 block text-[11px] font-bold text-rose-200"
     }, "見たエンド: ", seenEnd.ending && seenEnd.ending.name ? `「${seenEnd.ending.name}」` : 'バッドエンド'));
   })), q.once && React.createElement("div", {
     className: "mh-nv-plain mt-2 text-[11px] font-bold text-rose-200"
-  }, "選んだら、やり直しはできません")), sheet === 'menu' && React.createElement(React.Fragment, null, React.createElement("div", {
+  }, "決定したら、やり直しはできません"), (q.score || q.once) && decideBar('に決める')), sheet === 'menu' && React.createElement(React.Fragment, null, React.createElement("div", {
     className: "mh-nv-serif mh-nv-gold mb-3 text-center text-[18px] font-black"
   }, "メニュー"), React.createElement("div", {
     className: "space-y-2"
@@ -131243,6 +131978,344 @@ const openXmasNovel = (opts = {}) => {
     script: opts.script || null
   }));
   return true;
+};
+const XMAS_NOVEL_MAP_CSS = `
+.mh-nvm { position: absolute; inset: 0; z-index: 12; display: flex; flex-direction: column; color: #eef3ff; font-family: inherit; animation: mh-nv-fade .2s ease both;
+  background: radial-gradient(ellipse at 50% -10%, rgba(232,200,115,.18), transparent 55%),
+    linear-gradient(rgba(120,150,220,.07) 1px, transparent 1px) 0 0/22px 22px,
+    linear-gradient(90deg, rgba(120,150,220,.07) 1px, transparent 1px) 0 0/22px 22px,
+    linear-gradient(#0b1430, #101b3d 60%, #0b1430); }
+.mh-nvm-head { flex: none; padding: calc(max(10px, env(safe-area-inset-top)) + 2px) 16px 8px; background: linear-gradient(#0b1430 75%, rgba(11,20,48,0)); }
+.mh-nvm-ttl { display: flex; align-items: center; gap: 8px; }
+.mh-nvm-ttl h2 { font-size: 19px; font-weight: 900; color: #e8c873; letter-spacing: .06em; }
+.mh-nvm-x { margin-left: auto; width: 32px; height: 32px; border-radius: 50%; border: 1px solid #b8913a; color: #e8c873; display: grid; place-items: center; font-weight: 900; }
+.mh-nvm-row { display: flex; gap: 8px; margin-top: 8px; align-items: center; }
+.mh-nvm-tab { flex: 1; min-width: 0; text-align: center; padding: 6px 0; border-radius: 999px; font-size: 13px; font-weight: 900; border: 1px solid #b8913a; color: #e8c873; }
+.mh-nvm-tab[data-on] { background: linear-gradient(#e8c873, #b8913a); color: #2a1a05; }
+.mh-nvm-ends { flex: none; font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 999px; background: rgba(200,50,60,.25); border: 1px solid rgba(232,120,120,.6); white-space: nowrap; }
+.mh-nvm-back { display: block; width: 100%; margin-top: 8px; padding: 7px 0; border-radius: 10px; font-size: 13px; font-weight: 900; color: #fff; background: rgba(200,50,60,.55); border: 1px solid #f0a0a0; }
+.mh-nvm-legend { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 8px; font-size: 10px; color: #9fb0d8; }
+.mh-nvm-body { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 0 16px calc(max(16px, env(safe-area-inset-bottom)) + 12px); }
+.mh-nvm-it { position: relative; display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 4px 0 4px 52px; }
+.mh-nvm-it::before { content: ""; position: absolute; left: 30px; top: 0; bottom: 0; width: 4px; border-radius: 2px; background: linear-gradient(#e8c873, #b8913a); box-shadow: 0 0 8px rgba(232,200,115,.45); }
+.mh-nvm-it[data-dark]::before { background: repeating-linear-gradient(#2b3658 0 8px, transparent 8px 14px); box-shadow: none; }
+.mh-nvm-door { position: absolute; left: 0; width: 64px; height: 38px; border-radius: 19px 19px 4px 4px; background: linear-gradient(#6b4423, #3e2612); border: 2px solid #e8c873; display: grid; place-items: center; font-size: 11px; font-weight: 900; color: #e8c873; box-shadow: 0 0 12px rgba(232,200,115,.4); z-index: 1; }
+.mh-nvm-it[data-dark] .mh-nvm-door { background: #1a2342; border-color: #3a4670; color: #5d6a90; box-shadow: none; }
+.mh-nvm-chap { padding-left: 76px; min-height: 50px; margin-top: 6px; }
+.mh-nvm-cname { font-size: 15px; font-weight: 900; line-height: 1.3; }
+.mh-nvm-it[data-dark] .mh-nvm-cname { color: #5d6a90; }
+.mh-nvm-mk { position: absolute; left: 18px; width: 28px; height: 28px; display: grid; place-items: center; font-size: 12px; font-weight: 900; z-index: 1; }
+.mh-nvm-mk[data-k="action"] { transform: rotate(45deg) scale(.86); background: #7a1f28; border: 2px solid #f0a0a0; border-radius: 4px; }
+.mh-nvm-mk[data-k="action"] > span { transform: rotate(-45deg); }
+.mh-nvm-mk[data-k="present"] { border-radius: 50%; background: #173a2a; border: 2px solid #8fd6a8; }
+.mh-nvm-mk[data-k="person"] { border-radius: 6px; background: #3a2a5a; border: 2px solid #c7b2ff; }
+.mh-nvm-it[data-dark] .mh-nvm-mk { background: #1a2342; border-color: #3a4670; color: #5d6a90; }
+.mh-nvm-it[data-now] .mh-nvm-mk { box-shadow: 0 0 0 3px #fff, 0 0 16px 4px rgba(255,90,90,.9); }
+.mh-nvm-lab { min-width: 0; flex: 1; font-size: 12.5px; font-weight: 800; line-height: 1.35; }
+.mh-nvm-lab small { display: block; font-size: 10.5px; font-weight: 600; color: #9fb0d8; }
+.mh-nvm-it[data-dark] .mh-nvm-lab { color: #5d6a90; }
+.mh-nvm-it[data-dark] .mh-nvm-lab small { color: #3f4b70; }
+.mh-nvm-redo { flex: none; width: 32px; height: 32px; border-radius: 50%; border: 1px solid #b8913a; color: #e8c873; background: rgba(232,200,115,.08); display: grid; place-items: center; font-size: 15px; font-weight: 900; }
+.mh-nvm-now { flex: none; padding: 3px 8px; font-size: 10px; font-weight: 900; color: #fff; background: #c8323c; border-radius: 3px; box-shadow: 0 0 0 2px #fff, 0 0 14px rgba(255,80,80,.9); white-space: nowrap; }
+.mh-nvm-ends-list { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; flex: none; max-width: 52%; }
+.mh-nvm-orn { position: relative; min-width: 96px; max-width: 150px; padding: 5px 8px 5px 24px; border-radius: 13px; font-size: 10.5px; font-weight: 800; line-height: 1.3; background: linear-gradient(135deg, #8a1c26, #4a0f15); border: 1px solid #f0a0a0; color: #ffe9e9; }
+.mh-nvm-orn::before { content: ""; position: absolute; left: 7px; top: 50%; width: 12px; height: 12px; margin-top: -6px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ffd2d2, #c8323c 60%, #6a1018); box-shadow: 0 0 6px rgba(255,120,120,.8); }
+.mh-nvm-orn small { display: block; font-size: 9.5px; font-weight: 600; color: #f7c2c2; }
+.mh-nvm-orn[data-good] { background: linear-gradient(135deg, #7a5a14, #3d2c08); border-color: #e8c873; }
+.mh-nvm-orn[data-good]::before { background: radial-gradient(circle at 35% 30%, #fff3c0, #e8c873 60%, #7a5a14); }
+.mh-nvm-orn[data-unseen] { background: #151d38; border-color: #3a4670; color: #5d6a90; }
+.mh-nvm-orn[data-unseen]::before { background: #2a3456; box-shadow: none; }
+.mh-nvm-orn[data-unseen] small { color: #3f4b70; }
+.mh-nvm-lane { margin: 14px 0 0; padding: 4px 10px; border-left: 3px solid #b8913a; font-size: 11px; font-weight: 900; color: #e8c873; letter-spacing: .08em; }
+.mh-nvm-lane[data-dark] { border-left-color: #3a4670; color: #5d6a90; }
+.mh-nvm-foot { margin-top: 16px; padding: 10px 12px; border-radius: 12px; border: 1px solid #3a4670; font-size: 11px; color: #9fb0d8; line-height: 1.6; background: rgba(20,33,74,.6); }
+.mh-nvm-sheet { position: absolute; inset: 0; z-index: 2; display: flex; align-items: flex-end; background: rgba(5,8,20,.55); }
+.mh-nvm-panel { width: 100%; padding: 16px 16px calc(max(16px, env(safe-area-inset-bottom)) + 6px); border-radius: 18px 18px 0 0; background: linear-gradient(#18244d, #0d1634); border-top: 2px solid #e8c873; box-shadow: 0 -10px 30px rgba(0,0,0,.5); }
+.mh-nvm-panel h3 { font-size: 15px; font-weight: 900; color: #e8c873; }
+.mh-nvm-q { margin-top: 8px; padding: 8px 10px; border-radius: 10px; background: rgba(120,20,30,.35); box-shadow: 0 0 0 1px rgba(232,120,120,.6); font-size: 13px; font-weight: 800; line-height: 1.5; }
+.mh-nvm-panel ul { margin-top: 10px; font-size: 12px; line-height: 1.7; color: #d9e2ff; }
+.mh-nvm-btn { display: block; width: 100%; margin-top: 10px; padding: 12px 0; text-align: center; border-radius: 12px; font-weight: 900; font-size: 15px; }
+.mh-nvm-btn[data-main] { background: linear-gradient(#e8c873, #b8913a); color: #2a1a05; }
+.mh-nvm-btn[data-sub] { border: 1px solid #b8913a; color: #e8c873; }
+@media (orientation: landscape) and (max-height: 500px) { .mh-nvm-body, .mh-nvm-head { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); } .mh-nvm-panel { max-width: 560px; margin: 0 auto; border-radius: 18px 18px 0 0; } }
+`;
+const XMAS_NOVEL_MAP_SIDES = [{
+  v: 1,
+  label: 'あつ派'
+}, {
+  v: 2,
+  label: 'ソラシド派'
+}];
+const XMAS_NOVEL_MAP_LANES = [{
+  id: 'main',
+  chapters: ['C0', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7']
+}, {
+  id: 'late',
+  name: '当てられなかった道',
+  chapters: ['C10', 'C11']
+}, {
+  id: 'true',
+  name: '真相への道',
+  chapters: ['C8', 'C9']
+}];
+let xmasNovelMapModelCache = null;
+const xmasNovelMapModel = script => {
+  if (xmasNovelMapModelCache && xmasNovelMapModelCache.script === script) return xmasNovelMapModelCache.model;
+  const scenes = xmasNovelScenes(script);
+  const order = {};
+  scenes.forEach((s, i) => {
+    order[s.id] = i;
+  });
+  const laneChapters = new Set(XMAS_NOVEL_MAP_LANES.flatMap(l => l.chapters));
+  const endInfo = {};
+  scenes.forEach(s => {
+    if (s.ending && s.ending.id && !endInfo[s.ending.id]) endInfo[s.ending.id] = s.ending;
+  });
+  const endsOf = (q, chId) => {
+    const tos = [];
+    (q.options || []).forEach(o => {
+      if (o && o.to) tos.push(o.to);
+    });
+    Object.values(q.route || {}).forEach(t => {
+      if (typeof t === 'string') tos.push(t);
+    });
+    const out = [];
+    tos.forEach(to => {
+      const sc = xmasNovelSceneById(script, to);
+      if (!sc || sc.chapter !== chId && laneChapters.has(sc.chapter)) return;
+      const e = xmasNovelEndingAhead(script, to);
+      if (e && !out.includes(e)) out.push(e);
+    });
+    return out;
+  };
+  const chapters = {};
+  xmasNovelChapters(script).forEach(ch => {
+    const scs = scenes.filter(s => s.chapter === ch.id && !(s.ending && s.ending.id));
+    const nodes = [];
+    scs.forEach(s => (s.rows || []).forEach((r, idx) => {
+      if (r && r.t === 'q') nodes.push({
+        id: r.id,
+        q: r,
+        scene: s.id,
+        idx,
+        pos: order[s.id] * 10000 + idx,
+        ends: endsOf(r, ch.id)
+      });
+    }));
+    chapters[ch.id] = {
+      ch,
+      scenes: scs.map(s => s.id),
+      keys: new Set(scs.flatMap(s => (s.rows || []).filter(r => r && r.k).map(r => r.k))),
+      nodes
+    };
+  });
+  const model = {
+    chapters,
+    order,
+    endInfo,
+    endTotal: Object.keys(endInfo).length
+  };
+  xmasNovelMapModelCache = {
+    script,
+    model
+  };
+  return model;
+};
+const xmasNovelMapNum = label => {
+  const m = String(label || '').match(/[①-⑨]/);
+  return m ? m[0] : '';
+};
+const XmasNovelMap = ({
+  script,
+  save,
+  route,
+  playerName,
+  onRedo,
+  onBack,
+  onClose
+}) => {
+  const model = xmasNovelMapModel(script);
+  const curSide = save && save.cur && save.cur.flags && Number.isFinite(save.cur.flags.f_A1) ? save.cur.flags.f_A1 : 0;
+  const [side, setSide] = useState(curSide === 2 ? 2 : 1);
+  const [pick, setPick] = useState(null);
+  const read = useMemo(() => new Set(save && save.read || []), [save]);
+  const endings = save && save.endings || [];
+  const at = route && route.at || {};
+  const keyOf = id => `${id}|${id === 'A1' ? 0 : side}`;
+  const nodeLit = n => !!at[keyOf(n.id)] || !!n.q.k && read.has(n.q.k) && (n.id === 'A1' || curSide === side);
+  const chEntered = c => [...c.keys].some(k => read.has(k));
+  const chLit = c => {
+    if (!c || !chEntered(c)) return false;
+    if (c.ch.id === 'C0' || c.ch.id === 'C1' || curSide === side) return true;
+    return c.nodes.some(nodeLit) || Object.keys(at).some(k => k.endsWith(`|${side}`) && c.scenes.includes(at[k].scene));
+  };
+  const now = (() => {
+    const cur = save && save.cur;
+    if (!cur || curSide && curSide !== side) return null;
+    const sc = xmasNovelSceneById(script, cur.scene);
+    if (!sc || !model.chapters[sc.chapter]) return null;
+    const p = (model.order[sc.id] || 0) * 10000 + (Number(cur.idx) || 0);
+    const n = model.chapters[sc.chapter].nodes.find(x => x.pos >= p);
+    return n ? {
+      node: n.id
+    } : {
+      chapter: sc.chapter
+    };
+  })();
+  const seenCount = Object.keys(model.endInfo).filter(e => endings.includes(e)).length;
+  const pickedSnap = pick ? at[keyOf(pick.id)] : null;
+  const pickedCh = pick ? model.chapters[xmasNovelSceneById(script, pick.scene) ? xmasNovelSceneById(script, pick.scene).chapter : ''] : null;
+  const endCard = e => {
+    const info = model.endInfo[e] || {};
+    const seen = endings.includes(e);
+    const good = info.kind === 'good' || info.kind === 'normal' || info.kind === 'extra';
+    return React.createElement("div", {
+      key: e,
+      className: "mh-nvm-orn",
+      "data-xmas-novel-map-end": e,
+      "data-unseen": seen ? undefined : '',
+      "data-good": seen && good ? '' : undefined
+    }, seen ? xmasNovelWrap(info.name || '') : '？？？', React.createElement("small", null, seen ? info.label || 'エンド' : '未見のエンド'));
+  };
+  const chapterItem = c => {
+    const lit = chLit(c);
+    const label = xmasNovelChapterLabel(c.ch) || c.ch.label || '';
+    const title = lit ? xmasNovelChapterTitle(script, c.ch, save.read) : '？？？';
+    const isNow = now && now.chapter === c.ch.id;
+    return React.createElement("div", {
+      key: `ch-${c.ch.id}`,
+      className: "mh-nvm-it mh-nvm-chap",
+      "data-xmas-novel-map-chapter": c.ch.id,
+      "data-dark": lit ? undefined : ''
+    }, React.createElement("div", {
+      className: "mh-nvm-door"
+    }, lit ? label : c.ch.past ? '🔒' : c.ch.no === 0 ? '序章' : '第？章'), React.createElement("div", {
+      className: "mh-nvm-cname"
+    }, xmasNovelWrap(title)), isNow && React.createElement("span", {
+      className: "mh-nvm-now",
+      "data-xmas-novel-map-now": true
+    }, "いまここ"));
+  };
+  const nodeItem = n => {
+    const lit = nodeLit(n);
+    const isNow = now && now.node === n.id;
+    const canRedo = !!at[keyOf(n.id)];
+    const q = n.q;
+    const first = save && save.first && save.first[n.id];
+    const sub = !lit ? 'まだ読んでいない' : isNow ? '考え中' : q.kind === 'present' && first ? first.f ? '一発で正解' : '外して仲間が拾った' : n.id === 'A1' ? side === 2 ? 'ソラシド派' : 'あつ派' : '';
+    const kind = n.id === 'A1' ? 'person' : q.kind;
+    const mark = kind === 'action' ? '◆' : kind === 'present' ? xmasNovelMapNum(q.label) || '？' : '✦';
+    return React.createElement("div", {
+      key: `q-${n.id}`,
+      className: "mh-nvm-it",
+      "data-xmas-novel-map-node": n.id,
+      "data-dark": lit ? undefined : '',
+      "data-now": isNow ? '' : undefined
+    }, React.createElement("div", {
+      className: "mh-nvm-mk",
+      "data-k": kind
+    }, React.createElement("span", null, lit ? mark : '？')), React.createElement("div", {
+      className: "mh-nvm-lab"
+    }, lit ? xmasNovelWrap(q.label || '分かれ道') : '？？？', sub ? React.createElement("small", null, sub) : null), isNow && React.createElement("span", {
+      className: "mh-nvm-now",
+      "data-xmas-novel-map-now": true
+    }, "いまここ"), canRedo && !isNow && React.createElement("button", {
+      type: "button",
+      className: "mh-nvm-redo",
+      "data-xmas-novel-map-redo": n.id,
+      "aria-label": "ここから読み直す",
+      onClick: () => setPick(n)
+    }, "↺"), n.ends.length > 0 && React.createElement("div", {
+      className: "mh-nvm-ends-list"
+    }, n.ends.map(endCard)));
+  };
+  const laneLit = lane => lane.chapters.some(id => model.chapters[id] && chLit(model.chapters[id]));
+  const past = xmasNovelChapters(script).find(c => c.past);
+  const pastOpen = endings.includes('END-G');
+  return React.createElement("div", {
+    className: "mh-nvm",
+    "data-xmas-novel-map": true,
+    onClick: e => e.stopPropagation()
+  }, React.createElement("style", null, XMAS_NOVEL_MAP_CSS), React.createElement("div", {
+    className: "mh-nvm-head"
+  }, React.createElement("div", {
+    className: "mh-nvm-ttl"
+  }, React.createElement("h2", {
+    className: "mh-nv-serif"
+  }, "聖夜の見取り図"), React.createElement("span", {
+    className: "text-[11px] text-slate-400"
+  }, "分岐の地図"), React.createElement("button", {
+    type: "button",
+    className: "mh-nvm-x",
+    "data-xmas-novel-map-close": true,
+    "aria-label": "閉じる",
+    onClick: onClose
+  }, "✕")), React.createElement("div", {
+    className: "mh-nvm-row"
+  }, XMAS_NOVEL_MAP_SIDES.map(s => React.createElement("button", {
+    type: "button",
+    key: s.v,
+    className: "mh-nvm-tab",
+    "data-xmas-novel-map-side": s.v,
+    "data-on": side === s.v ? '' : undefined,
+    onClick: () => setSide(s.v)
+  }, s.label)), React.createElement("div", {
+    className: "mh-nvm-ends",
+    "data-xmas-novel-map-count": true
+  }, "エンド ", seenCount, "/", model.endTotal)), route && route.back && React.createElement("button", {
+    type: "button",
+    className: "mh-nvm-back",
+    "data-xmas-novel-map-back": true,
+    onClick: onBack
+  }, "読み直す前の続きへ戻る"), React.createElement("div", {
+    className: "mh-nvm-legend"
+  }, React.createElement("span", null, "◆ 行動の選択"), React.createElement("span", null, "① 推理の問い"), React.createElement("span", null, "✦ 名指し"), React.createElement("span", null, "● エンド"), React.createElement("span", null, "↺ ここから読み直す"))), React.createElement("div", {
+    className: "mh-nvm-body"
+  }, XMAS_NOVEL_MAP_LANES.map(lane => React.createElement("div", {
+    key: lane.id,
+    "data-xmas-novel-map-lane": lane.id
+  }, lane.name && React.createElement("div", {
+    className: "mh-nvm-lane",
+    "data-dark": laneLit(lane) ? undefined : ''
+  }, laneLit(lane) ? lane.name : '？？？へ続く道'), lane.chapters.map(id => model.chapters[id]).filter(Boolean).map(c => [chapterItem(c), ...c.nodes.map(nodeItem)]))), past && React.createElement("div", {
+    className: "mh-nvm-it mh-nvm-chap",
+    "data-xmas-novel-map-chapter": past.id,
+    "data-dark": pastOpen ? undefined : ''
+  }, React.createElement("div", {
+    className: "mh-nvm-door"
+  }, pastOpen ? xmasNovelChapterLabel(past) : '🔒'), React.createElement("div", {
+    className: "mh-nvm-cname"
+  }, pastOpen ? past.title : '？？？')), React.createElement("div", {
+    className: "mh-nvm-foot"
+  }, "明るい所は読んだ所。↺ を押すと、その分かれ道の直前から読み直せます(手がかり帳・登場人物パネル・選んだ派も、その時のまま)。一発で当てた記録と見たエンドは消えません。")), pick && pickedSnap && React.createElement("div", {
+    className: "mh-nvm-sheet",
+    onClick: () => setPick(null)
+  }, React.createElement("div", {
+    className: "mh-nvm-panel",
+    "data-xmas-novel-map-sheet": pick.id,
+    onClick: e => e.stopPropagation()
+  }, React.createElement("h3", {
+    className: "mh-nv-serif"
+  }, pickedCh ? `${xmasNovelChapterLabel(pickedCh.ch)}　${xmasNovelChapterTitle(script, pickedCh.ch, save.read)}` : '', " ― ", pick.q.label || '分かれ道'), React.createElement("div", {
+    className: "mh-nvm-q"
+  }, xmasNovelWrap(xmasNovelFill(pick.q.x, playerName))), React.createElement("ul", null, React.createElement("li", null, "・手がかり帳: ", (pickedSnap.clues || []).length, "個(その時のまま)"), React.createElement("li", null, "・登場人物パネル・選んだ派も、その時のまま"), React.createElement("li", null, "・一発で当てた記録・見たエンドは消えません")), React.createElement("button", {
+    type: "button",
+    className: "mh-nvm-btn",
+    "data-main": "",
+    "data-xmas-novel-map-go": true,
+    onClick: () => {
+      const c = pickedSnap;
+      setPick(null);
+      onRedo && onRedo(c);
+    }
+  }, "ここから読み直す"), React.createElement("button", {
+    type: "button",
+    className: "mh-nvm-btn",
+    "data-sub": "",
+    onClick: () => setPick(null)
+  }, "やめる"), React.createElement("div", {
+    className: "mt-2 text-[10.5px] leading-relaxed text-slate-400"
+  }, "いまの続きは残ります。地図の「読み直す前の続きへ戻る」で、いつでも戻れます。"))));
 };
 const ASSISTANT_CHAT_URL = `${SUPABASE_URL}/functions/v1/assistant-chat`;
 const ASSISTANT_CHAT_LOG_KEY = 'mh_assistant_chat_log_v1';
@@ -141262,11 +142335,11 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   },
   'stand-sekiyuou': {
     erubin: {
-      top: -0.0059,
-      eye: 0.2449,
-      chin: 0.4297,
-      m: 1.376,
-      cx: 0.5112
+      top: 0.0034,
+      eye: 0.285,
+      chin: 0.43,
+      m: 1.079,
+      cx: 0.5166
     }
   },
   'stand-hosei': {
@@ -141342,11 +142415,11 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   },
   'stand-twintail': {
     kiki: {
-      top: 0.1807,
-      eye: 0.3402,
-      chin: 0.4301,
-      m: 1.014,
-      cx: 0.5119,
+      top: 0.1823,
+      eye: 0.3406,
+      chin: 0.4299,
+      m: 0.664,
+      cx: 0.5227,
       above: 0.95
     }
   },

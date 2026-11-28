@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8">
+<title>事件簿ランキング 見本</title>
+<style>
+:root{--gold:#e8c873;--gold2:#b8913a;--ink:#0b1430;--snow:#eef3ff;--dim:#8592b5;--red:#c8323c}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#05080f;width:1218px;display:flex;gap:24px;padding:12px;font-family:"Noto Serif JP","Hiragino Mincho ProN",serif;color:var(--snow)}
+.ph{position:relative;width:390px;height:844px;overflow:hidden;border-radius:22px;background:radial-gradient(ellipse at 50% 0%,rgba(232,200,115,.16),transparent 60%),linear-gradient(#0b1430,#101b3d 60%,#0b1430)}
+.cap{position:absolute;left:0;right:0;bottom:0;padding:8px 12px;background:rgba(0,0,0,.72);font:700 12px/1.5 "Noto Sans JP",sans-serif;color:#ffe9a8;z-index:9}
+.x{position:absolute;right:14px;top:14px;width:34px;height:34px;border-radius:10px;border:1px solid #3a4a7a;display:grid;place-items:center;color:#cfd8f5}
+/* 起動画面 */
+.boot{padding:120px 28px 0;text-align:center}
+.series{font-size:15px;color:#c9d3f0;letter-spacing:.2em}.ttl{font-size:25px;font-weight:900;color:var(--gold);margin-top:6px}
+.rule{height:1px;margin:12px 40px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}.sub{font-size:13px;color:#c9d3f0}
+.sel{margin-top:22px;font:11px sans-serif;letter-spacing:.3em;color:#8fa0cc}
+.btn{display:block;margin:10px auto 0;width:100%;padding:12px 0;border-radius:12px;border:1px solid #4a5a8a;background:rgba(20,33,74,.8);font-size:16px;font-weight:800;color:var(--snow)}
+.btn.new{border:2px solid var(--gold);background:linear-gradient(rgba(232,200,115,.25),rgba(184,145,58,.15));color:var(--gold);position:relative}
+.btn.new b{position:absolute;right:10px;top:-9px;font:900 10px sans-serif;background:var(--red);color:#fff;padding:2px 7px;border-radius:999px}
+.small{margin-top:14px;font:10px sans-serif;color:#8a96b8}
+/* ランキング */
+.head{padding:16px 16px 8px}
+.head h1{font-size:21px;color:var(--gold);letter-spacing:.08em}.head small{font:11px sans-serif;color:#9fb0d8}
+.tabs{display:flex;gap:6px;margin-top:10px}
+.tab{flex:1;text-align:center;padding:8px 0;border-radius:999px;border:1px solid var(--gold2);color:var(--gold);font-size:13px;font-weight:900}
+.tab.on{background:linear-gradient(#e8c873,#b8913a);color:#2a1a05}
+.rule2{font:10.5px/1.6 "Noto Sans JP",sans-serif;color:#aab6d8;margin:8px 16px 4px;padding:6px 10px;border-radius:8px;background:rgba(255,255,255,.05)}
+.list{padding:0 12px}
+.r{display:flex;align-items:center;gap:10px;padding:9px 10px;margin-top:6px;border-radius:12px;background:rgba(20,33,74,.75);border:1px solid #26335e}
+.pl{width:34px;text-align:center;font:900 18px "Noto Serif JP",serif;color:#cfd8f5}
+.r.g1 .pl{color:#f5d27a}.r.g2 .pl{color:#d9e2f0}.r.g3 .pl{color:#e0a46a}
+.r.g1{border-color:#b8913a;background:linear-gradient(90deg,rgba(232,200,115,.18),rgba(20,33,74,.75))}
+.av{width:34px;height:34px;border-radius:50%;background:linear-gradient(#3a4d86,#1d2a55);border:1px solid #5868a0;display:grid;place-items:center;font-size:15px}
+.nm{flex:1;min-width:0}.nm b{display:block;font:800 14px "Noto Sans JP",sans-serif}
+.dots{display:flex;gap:2px;margin-top:3px}.dots i{width:7px;height:7px;border-radius:2px;background:#2c375c}
+.v{text-align:right;font:900 17px "Noto Serif JP",serif;color:var(--gold)}.v small{display:block;font:10px sans-serif;color:#8592b5}
+.me{position:absolute;left:12px;right:12px;bottom:58px;padding:10px;border-radius:14px;border:2px solid var(--gold);background:linear-gradient(90deg,rgba(232,200,115,.28),rgba(15,25,60,.96));display:flex;align-items:center;gap:10px}
+.me .pl{color:var(--gold)}
+.me .tag{font:900 10px sans-serif;background:var(--gold);color:#2a1a05;padding:1px 6px;border-radius:999px;margin-right:4px}
+.k-good{background:#f5d27a!important}.k-normal{background:#b9c7e6!important}.k-bad{background:#e07a7a!important}.k-another{background:#e8a95b!important}.k-forced{background:#b0303a!important}.k-accuse{background:#a78bd8!important}.k-omake{background:#7fd6a8!important}
+</style></head><body>
+
+<div class="ph">
+  <div class="x">✕</div>
+  <div class="boot">
+    <div class="series">モンヒロ事件簿</div>
+    <div class="ttl">―呪いのセーブデータ―</div>
+    <div class="rule"></div>
+    <div class="sub">十三番目の鐘</div>
+    <div class="sel">SELECT</div>
+    <div class="btn">つづきから</div>
+    <div class="btn">はじめから</div>
+    <div class="btn">章から</div>
+    <div class="btn">エンドヒストリー 9 / 16</div>
+    <div class="btn new">ランキング<b>NEW</b></div>
+    <div class="small">推理の問い 一発で当てた数 5 / 7</div>
+  </div>
+  <div class="cap">① 開く所: 事件簿の起動画面の<br>「エンドヒストリー」の下に1つ足す<br>(イベントページの物語タブにも小さな入口・聞きたい事3)</div>
+</div>
+
+<div class="ph">
+  <div class="x">✕</div>
+  <div class="head"><h1>事件簿ランキング</h1><small>全国 ・ 12/31 3:59 まで(そのあとも見られる)</small>
+    <div class="tabs"><div class="tab on">見たエンド</div><div class="tab">一発正解</div><div class="tab">読んだ回数</div></div>
+  </div>
+  <div class="rule2">見たエンドの種類の数(全部で16)。<br>同じ数なら、先にその数に届いた人が上</div>
+  <div class="list">
+    <div class="r g1"><div class="pl">1</div><div class="av">🎅</div><div class="nm"><b>ゆきんこ探偵</b><div class="dots" id="d1"></div></div><div class="v">16<small>/16</small></div></div>
+    <div class="r g2"><div class="pl">2</div><div class="av">🎄</div><div class="nm"><b>ねじまき係</b><div class="dots" id="d2"></div></div><div class="v">16<small>/16</small></div></div>
+    <div class="r g3"><div class="pl">3</div><div class="av">⛄</div><div class="nm"><b>13分の男</b><div class="dots" id="d3"></div></div><div class="v">15<small>/16</small></div></div>
+    <div class="r"><div class="pl">4</div><div class="av">🔔</div><div class="nm"><b>モッチー推し</b><div class="dots" id="d4"></div></div><div class="v">14<small>/16</small></div></div>
+    <div class="r"><div class="pl">5</div><div class="av">🕯</div><div class="nm"><b>あつ派一筋</b><div class="dots" id="d5"></div></div><div class="v">13<small>/16</small></div></div>
+    <div class="r"><div class="pl">6</div><div class="av">📓</div><div class="nm"><b>ききの見張り番</b><div class="dots" id="d6"></div></div><div class="v">12<small>/16</small></div></div>
+    <div class="r"><div class="pl">7</div><div class="av">❄</div><div class="nm"><b>ペンション常連</b><div class="dots" id="d7"></div></div><div class="v">12<small>/16</small></div></div>
+  </div>
+  <div class="me"><div class="pl">128</div><div class="av">🎁</div><div class="nm"><b><span class="tag">あなた</span>プレイヤー</b><div class="dots" id="dm"></div></div><div class="v">9<small>/16</small></div></div>
+  <div class="cap">② タブは並べる物ごと。上位100人と、<br>下に自分の順位(いつも出る)。<br>点は見たエンドの種類の色(数の内訳)</div>
+</div>
+
+<div class="ph">
+  <div class="x">✕</div>
+  <div class="head"><h1>事件簿ランキング</h1><small>全国 ・ 12/31 3:59 まで(そのあとも見られる)</small>
+    <div class="tabs"><div class="tab">見たエンド</div><div class="tab">一発正解</div><div class="tab on">読んだ回数</div></div>
+  </div>
+  <div class="rule2">エンドに着いた回数。同じエンドは<br>1日(朝4:00区切り)に1回まで数える。<br>見取り図の↺から着いた分も数える</div>
+  <div class="list">
+    <div class="r g1"><div class="pl">1</div><div class="av">⛄</div><div class="nm"><b>13分の男</b></div><div class="v">142<small>回</small></div></div>
+    <div class="r g2"><div class="pl">2</div><div class="av">🎅</div><div class="nm"><b>ゆきんこ探偵</b></div><div class="v">118<small>回</small></div></div>
+    <div class="r g3"><div class="pl">3</div><div class="av">🔔</div><div class="nm"><b>モッチー推し</b></div><div class="v">97<small>回</small></div></div>
+    <div class="r"><div class="pl">4</div><div class="av">🎄</div><div class="nm"><b>ねじまき係</b></div><div class="v">88<small>回</small></div></div>
+    <div class="r"><div class="pl">5</div><div class="av">📓</div><div class="nm"><b>ききの見張り番</b></div><div class="v">61<small>回</small></div></div>
+    <div class="r"><div class="pl">6</div><div class="av">🕯</div><div class="nm"><b>あつ派一筋</b></div><div class="v">57<small>回</small></div></div>
+    <div class="r"><div class="pl">7</div><div class="av">❄</div><div class="nm"><b>ペンション常連</b></div><div class="v">40<small>回</small></div></div>
+  </div>
+  <div class="me"><div class="pl">211</div><div class="av">🎁</div><div class="nm"><b><span class="tag">あなた</span>プレイヤー</b></div><div class="v">14<small>回</small></div></div>
+  <div class="cap">③ 読んだ回数のタブ。数え方はタブの下に出す<br>(一発正解のタブも同じ形で 0〜7)</div>
+</div>
+<script>
+const kinds=['good','normal','another','bad','forced','forced','forced','forced','forced','accuse','accuse','accuse','accuse','accuse','omake','omake'];
+const fill=(id,n)=>{const el=document.getElementById(id);if(!el)return;kinds.forEach((k,i)=>{const s=document.createElement('i');if(i<n)s.className='k-'+k;el.appendChild(s)})};
+[['d1',16],['d2',16],['d3',15],['d4',14],['d5',13],['d6',12],['d7',12],['dm',9]].forEach(a=>fill(...a));
+</script>
+</body></html>
