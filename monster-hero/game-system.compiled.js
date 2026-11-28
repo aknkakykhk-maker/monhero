@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b3e2fdb79fe64c5d
+// source-sha256: 9281b8203f40b3c5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -64233,6 +64233,18 @@ const RAID_XMAS_STORY_AFTER_TIER = Object.freeze({
 const RAID_XMAS_ENDING_CLEARED_ID = 'raid_xmas_ending_cleared';
 const RAID_XMAS_ENDING_NOTCLEARED_ID = 'raid_xmas_ending_notcleared';
 const RAID_XMAS_STORY_IDS = Object.freeze([RAID_XMAS_STORY_START_ID, ...Object.values(RAID_XMAS_STORY_AFTER_TIER), RAID_XMAS_ENDING_CLEARED_ID, RAID_XMAS_ENDING_NOTCLEARED_ID]);
+const raidXmasSceneBgOf = name => {
+  const m = typeof name === 'string' ? name.match(/^xmas_([a-z0-9_]+?)(?:@([a-z]+))?$/) : null;
+  if (!m || typeof XMAS_NOVEL_BG_IMG === 'undefined') return null;
+  const img = XMAS_NOVEL_BG_IMG[m[1]];
+  if (!img) return null;
+  const tint = m[2] && typeof XMAS_NOVEL_TINT !== 'undefined' ? XMAS_NOVEL_TINT[m[2]] || '' : '';
+  return {
+    img,
+    base: m[1],
+    tint
+  };
+};
 const raidXmasStoryCandidates = (totals, nowMs) => {
   const out = [];
   const a = totals && totals.a ? totals.a : null;
@@ -289234,7 +289246,8 @@ function MonsterHeroGame() {
           break;
         }
       }
-      const storySceneImg = storyScene && typeof STORY_SCENE_IMAGES !== 'undefined' ? STORY_SCENE_IMAGES[storyScene] || null : null;
+      const storyXmasBg = storyScene && typeof raidXmasSceneBgOf === 'function' ? raidXmasSceneBgOf(storyScene) : null;
+      const storySceneImg = storyXmasBg ? storyXmasBg.img : storyScene && typeof STORY_SCENE_IMAGES !== 'undefined' ? STORY_SCENE_IMAGES[storyScene] || null : null;
       const storyStill = typeof line.still === 'string' && typeof STORY_SCENE_IMAGES !== 'undefined' ? line.still : null;
       const storyStillImg = storyStill ? STORY_SCENE_IMAGES[storyStill] || null : null;
       const storyStillTate = storyStillImg ? STORY_SCENE_IMAGES[`${storyStill}_tate`] || null : null;
@@ -289242,7 +289255,8 @@ function MonsterHeroGame() {
         const pre = window.__mhStoryScenePreloaded || (window.__mhStoryScenePreloaded = new Set());
         script.forEach(l => {
           [l && l.bg, l && l.still, l && typeof l.still === 'string' ? `${l.still}_tate` : null].forEach(k => {
-            const src = typeof k === 'string' ? STORY_SCENE_IMAGES[k] : null;
+            const xb = typeof k === 'string' && typeof raidXmasSceneBgOf === 'function' ? raidXmasSceneBgOf(k) : null;
+            const src = xb ? xb.img : typeof k === 'string' ? STORY_SCENE_IMAGES[k] : null;
             if (src && !pre.has(src)) {
               pre.add(src);
               try {
@@ -289251,6 +289265,15 @@ function MonsterHeroGame() {
               } catch (e) {}
             }
           });
+          const fw = l && l.who ? assistantById(l.who) : null;
+          const fs = fw && fw.storyFigure;
+          if (fs && !pre.has(fs)) {
+            pre.add(fs);
+            try {
+              const im = new Image();
+              im.src = fs;
+            } catch (e) {}
+          }
         });
       }
       if (typeof window !== 'undefined' && typeof assistantFaceSrc === 'function') {
@@ -289335,6 +289358,37 @@ function MonsterHeroGame() {
         }
       }
       const storyMonsters = monstersIdx >= 0 && !storyStillImg ? script[monstersIdx].monsters.filter(m => m && m.pose !== 'hide' && STORY_MONSTER_ART[m.id]) : [];
+      const storyFigures = [];
+      if (monstersIdx < 0 && !storyStillImg) {
+        let figBase = null;
+        for (let i = 0; i <= step; i++) {
+          const l = script[i];
+          if (!l) continue;
+          if (typeof l.bg === 'string') {
+            const xb = typeof raidXmasSceneBgOf === 'function' ? raidXmasSceneBgOf(l.bg) : null;
+            const base = xb ? xb.base : l.bg;
+            if (base !== figBase) {
+              storyFigures.length = 0;
+              figBase = base;
+            }
+          }
+          if (l.figOut) {
+            storyFigures.length = 0;
+            continue;
+          }
+          const fw = l.who && !l.band ? assistantById(l.who) : null;
+          if (fw && fw.storyFigure) {
+            const slot = fw.storyFigureSlot || fw.id;
+            const f = {
+              slot,
+              id: fw.id,
+              src: fw.storyFigure
+            };
+            const k = storyFigures.findIndex(x => x.slot === slot);
+            if (k >= 0) storyFigures[k] = f;else storyFigures.push(f);
+          }
+        }
+      }
       const fxColors = {
         fall: '255,214,150',
         split: '233,213,255',
@@ -289357,6 +289411,8 @@ function MonsterHeroGame() {
       const storyCplBottom = Math.max(8, Math.floor((storyBoxW - 64 - (storyZones ? storyLand ? 62 : 100 : 0)) / 13) - (storyZones ? 4 : 2));
       const storyCplBubble = Math.max(6, storyLand ? Math.floor((storyBoxW - 118) / 12) - 3 : Math.floor((storyBoxW - 156) / 14) - 4);
       const storyCapBottom = Math.floor((storyBoxW - 64 - (storyLand ? 62 : 100)) / 13 - 0.2);
+      const storyFaceCols = Math.floor((storyLand ? 62 : 100) / 13);
+      const storyCapBottomOf = w => storyCapBottom + (w && w.storyFigure ? storyFaceCols : 0);
       const storyCapBubble = Math.floor((storyLand ? (storyBoxW - 118) / 12 : (storyBoxW - 156) / 14) - 0.2);
       const storyChunkMax = cap => storyLand && cap === storyCapBubble ? 2 : 3;
       const storyLineNodes = (text, cap) => {
@@ -289414,7 +289470,7 @@ function MonsterHeroGame() {
         const l = script[i];
         const w = l ? assistantById(l.who) : null;
         const text = l && w && !l.band ? speakText(l, w) : '';
-        const pages = storyZones && typeof storySplitPages === 'function' ? storySplitPages(text, isGuestWho(l && l.who) ? storyCplBubble : storyCplBottom, 3) : [text];
+        const pages = storyZones && typeof storySplitPages === 'function' ? storySplitPages(text, isGuestWho(l && l.who) ? storyCplBubble : storyCplBottom + (w && w.storyFigure ? storyFaceCols : 0), 3) : [text];
         storyPageCache[i] = pages;
         return pages;
       };
@@ -289545,7 +289601,15 @@ function MonsterHeroGame() {
         style: {
           '--story-bg': `url("${storySceneImg}")`
         }
-      }, storyFrame === 'game' && React.createElement("span", {
+      }, storyXmasBg && storyXmasBg.tint && React.createElement("span", {
+        "data-story-bg-tint": true,
+        style: {
+          position: 'absolute',
+          inset: 0,
+          zIndex: 1,
+          background: storyXmasBg.tint
+        }
+      }), storyFrame === 'game' && React.createElement("span", {
         "data-story-bg-frame-label": true
       }, "モンヒロ事件簿")), storyStillImg && React.createElement("div", {
         key: `still:${storyStill}`,
@@ -289696,6 +289760,31 @@ function MonsterHeroGame() {
           fill: true,
           own: true
         }) : art);
+      })), storyFigures.length > 0 && React.createElement("div", {
+        "data-story-monsters": storyFigures.length,
+        "data-story-figures": "",
+        "aria-hidden": "true",
+        className: "pointer-events-none",
+        style: {
+          top: 'calc(env(safe-area-inset-top) + 6vh)'
+        }
+      }, storyFigures.map(f => {
+        const on = !line.band && f.id === line.who;
+        return React.createElement("span", {
+          key: `${f.slot}:${f.id}`,
+          "data-story-monster": `fig-${f.slot}`,
+          "data-story-pose": "in",
+          "data-story-figure-dim": on ? undefined : ''
+        }, React.createElement("img", {
+          src: f.src,
+          alt: "",
+          draggable: false,
+          className: "block h-full w-full object-contain",
+          style: {
+            filter: on ? 'drop-shadow(0 6px 18px rgba(0,0,0,.65))' : 'brightness(.55) drop-shadow(0 6px 18px rgba(0,0,0,.65))',
+            transition: 'filter .2s'
+          }
+        }));
       })), (fx || line.fxText && !(storyZones && storySub > 0)) && React.createElement("div", {
         key: `fx${step}`,
         "aria-hidden": "true",
@@ -289825,7 +289914,7 @@ function MonsterHeroGame() {
       })(), React.createElement("div", {
         "data-story-speaker-row": storyZones ? '' : undefined,
         className: storyZones ? 'flex items-start gap-2' : undefined
-      }, storyZones && bottomLine && React.createElement("div", {
+      }, storyZones && bottomLine && !bottomSpeaker.storyFigure && React.createElement("div", {
         key: `face-${bottomSpeaker.id}`,
         "data-story-speaker": bottomSpeaker.id,
         className: "shrink-0 text-center"
@@ -289870,12 +289959,12 @@ function MonsterHeroGame() {
       }, bottomLine.name || bottomSpeaker.name), React.createElement("span", {
         className: "block text-[13px] font-bold leading-relaxed text-white mt-1",
         style: {
-          ...storyLineStyle(storyZones ? storyTextAt(bottomLine === line ? step : assistIdx, bottomSpeaker) : '', storyCapBottom),
+          ...storyLineStyle(storyZones ? storyTextAt(bottomLine === line ? step : assistIdx, bottomSpeaker) : '', storyCapBottomOf(bottomSpeaker)),
           ...(dimBottom ? {
             visibility: 'hidden'
           } : {})
         }
-      }, storyZones ? storyLineNodes(storyTextAt(bottomLine === line ? step : assistIdx, bottomSpeaker), storyCapBottom) : bubbleLines(speakText(bottomLine, bottomSpeaker)))) : React.createElement("div", {
+      }, storyZones ? storyLineNodes(storyTextAt(bottomLine === line ? step : assistIdx, bottomSpeaker), storyCapBottomOf(bottomSpeaker)) : bubbleLines(speakText(bottomLine, bottomSpeaker)))) : React.createElement("div", {
         "data-story-line-box": true,
         className: `flex items-center justify-center rounded-2xl border-2 border-slate-700 bg-slate-900 px-3 py-3 text-center text-[11px] font-bold text-slate-400${storyZones ? ' min-w-0 flex-1' : ''}`
       }, "▲ 上のことばを読んでね")), React.createElement("p", {
