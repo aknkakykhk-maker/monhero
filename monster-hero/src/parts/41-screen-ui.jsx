@@ -737,11 +737,13 @@ const JA_LABEL_STYLE = Object.freeze({ ...JA_WRAP_STYLE, textWrap: 'balance' });
 // 大きな所持数を縮めて出す(2026-10-21 改善部の見直し N5「ダイヤが10桁になると HOME(320)の数が約6px まで縮む」)。
 // 8桁まではそのまま(1,234,567 のように)。9桁(1億)からは「1.23億」「67.3億」「6,736億」、13桁からは「兆」で、上から3桁ぶん。
 // 切り上げると持っていない数に見えるので、端は切り捨てる。保存値は変えない(出し方だけ)
+// 1億未満の書式は、呼ぶたびに作らず1つを使い回す(toLocaleString() と同じ既定の書式。裏クイック中の HOME で毎秒十数回呼ばれる・2026-11-28 台帳 r1126-104 追記4)
+let compactCountFmt = null;
 const compactCount = (value) => {
   const n = Math.floor(Number(value));
   if (!Number.isFinite(n)) return '0';
   const a = Math.abs(n);
-  if (a < 1e8) return n.toLocaleString();
+  if (a < 1e8) { try { if (!compactCountFmt) compactCountFmt = new Intl.NumberFormat(); return compactCountFmt.format(n); } catch (_) { return n.toLocaleString(); } }
   const [unit, div] = a >= 1e12 ? ['兆', 1e12] : ['億', 1e8];
   const v = a / div, digits = v >= 100 ? 0 : v >= 10 ? 1 : 2, f = Math.pow(10, digits);
   return `${n < 0 ? '-' : ''}${(Math.floor(v * f) / f).toLocaleString(undefined, { maximumFractionDigits: digits })}${unit}`;
