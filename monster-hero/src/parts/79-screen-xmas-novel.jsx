@@ -1942,7 +1942,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
     setSt(settled);
     persist(s);
     // フラグの行は見せずに次へ
-    if (next.row.t === 'flag') setTimeout(() => arrive(xmasNovelStep(S, cur)), 0);
+    if (next.row.t === 'flag') setTimeout(() => arrive(xmasNovelStep(S, cur, xmasNovelSeenOf(saveRef.current))), 0);
   };
   const start = (cur, replay = false) => {
     replayRef.current = replay;
@@ -1952,7 +1952,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
     lastBgRef.current = null; pendingSwRef.current = null; seenWhoRef.current = new Set(); lastWhoRef.current = ''; setSw(null); setFigEnter(null);
     setReveal(null); pendingFxRef.current = null; lastBodyRef.current = ''; setPanelIntro(null);
     setMode('read');
-    arrive(xmasNovelSettle(S, cur));
+    arrive(xmasNovelSettle(S, cur, xmasNovelSeenOf(saveRef.current)));
   };
 
   // すすめる(タップ・オート・スキップ)
@@ -1988,13 +1988,13 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
       return;
     }
     if (row.t === 'q') { setSheet({ kind: row.kind, q: row }); return; }
-    arrive(xmasNovelStep(S, st.cur));
+    arrive(xmasNovelStep(S, st.cur, xmasNovelSeenOf(saveRef.current)));
   };
   const finishReply = (then, q, cur) => {
     setReply(null);
     if (then === 'retry') { setSheet({ kind: q.kind, q }); setShown(99999); return; }
-    if (then && then.to) { arrive(xmasNovelSettle(S, xmasNovelJump(S, cur, then.to))); return; }
-    arrive(xmasNovelStep(S, cur));
+    if (then && then.to) { arrive(xmasNovelSettle(S, xmasNovelJump(S, cur, then.to), xmasNovelSeenOf(saveRef.current))); return; }
+    arrive(xmasNovelStep(S, cur, xmasNovelSeenOf(saveRef.current)));
   };
   // 答える
   const answer = (q, pick) => {
