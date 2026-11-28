@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ac2e9274930fd213
+// generated-sha256: cb2c00a48d765c95
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -42238,11 +42238,13 @@ const JA_LABEL_STYLE = Object.freeze({ ...JA_WRAP_STYLE, textWrap: 'balance' });
 // 大きな所持数を縮めて出す(2026-10-21 改善部の見直し N5「ダイヤが10桁になると HOME(320)の数が約6px まで縮む」)。
 // 8桁まではそのまま(1,234,567 のように)。9桁(1億)からは「1.23億」「67.3億」「6,736億」、13桁からは「兆」で、上から3桁ぶん。
 // 切り上げると持っていない数に見えるので、端は切り捨てる。保存値は変えない(出し方だけ)
+// 1億未満の書式は、呼ぶたびに作らず1つを使い回す(toLocaleString() と同じ既定の書式。裏クイック中の HOME で毎秒十数回呼ばれる・2026-11-28 台帳 r1126-104 追記4)
+let compactCountFmt = null;
 const compactCount = (value) => {
   const n = Math.floor(Number(value));
   if (!Number.isFinite(n)) return '0';
   const a = Math.abs(n);
-  if (a < 1e8) return n.toLocaleString();
+  if (a < 1e8) { try { if (!compactCountFmt) compactCountFmt = new Intl.NumberFormat(); return compactCountFmt.format(n); } catch (_) { return n.toLocaleString(); } }
   const [unit, div] = a >= 1e12 ? ['兆', 1e12] : ['億', 1e8];
   const v = a / div, digits = v >= 100 ? 0 : v >= 10 ? 1 : 2, f = Math.pow(10, digits);
   return `${n < 0 ? '-' : ''}${(Math.floor(v * f) / f).toLocaleString(undefined, { maximumFractionDigits: digits })}${unit}`;
@@ -52366,18 +52368,29 @@ const HOME_EVENT_BADGE_STYLE = Object.freeze({
   lineHeight:1.35, whiteSpace:'nowrap', textShadow:'0 1px 0 #fff8', pointerEvents:'none',
   boxShadow:'0 0 0 1px #0006,0 2px 8px #000a,0 0 10px #fbbf24cc,0 0 18px #f59e0b80',
 });
+// 2026-11-28 台帳 r1126-104 追記4(HOME を軽く・見た目はそのまま): 前は脈を box-shadow、光を left で動かしていて、
+//   札が出ているあいだ毎コマ描き直しと配置の計算が走っていた(CPU 4倍遅くで HOME 464ms/秒のうち約370ms/秒)。
+//   いまは合成だけで動く形にした。脈 … 大きさ(transform)はそのまま。光の輪は前の2つの形(ふだん・いちばん光る時)を
+//   ::before / ::after に1枚ずつ描いて、透明度で入れ替える。光の帯 … 中の空の部品(.mh-home-event-badge-shine)で札の形に切り抜き、
+//   left のかわりに transform で同じ道のりを動かす(帯の幅45%に対して -60%→120% は 400% ぶん)。
+//   黒い縁取り・下の影は光の帯の部品に移し、前と同じく光の輪より上に重ねる。札の本体の影は消す(二重にしない)
 const HOME_EVENT_BADGE_CSS = `
-.mh-home-event-badge{animation:mhHomeEventBadgePulse 1.6s ease-in-out infinite}
-.mh-home-event-badge::after{content:'';position:absolute;top:0;bottom:0;left:-60%;width:45%;
+.mh-home-event-badge{overflow:visible!important;box-shadow:none!important;animation:mhHomeEventBadgePulse 1.6s ease-in-out infinite}
+.mh-home-event-badge::before,.mh-home-event-badge::after{content:'';position:absolute;inset:-1px;z-index:-1;border-radius:inherit;pointer-events:none}
+.mh-home-event-badge::before{box-shadow:0 0 10px #fbbf24cc,0 0 18px #f59e0b80;animation:mhHomeEventBadgeGlowA 1.6s ease-in-out infinite}
+.mh-home-event-badge::after{box-shadow:0 0 16px #fde047,0 0 30px #f59e0bcc;opacity:0;animation:mhHomeEventBadgeGlowB 1.6s ease-in-out infinite}
+.mh-home-event-badge-shine{position:absolute;inset:-1px;border-radius:inherit;overflow:hidden;pointer-events:none;box-shadow:0 0 0 1px #0006,0 2px 8px #000a}
+.mh-home-event-badge-shine::after{content:'';position:absolute;top:0;bottom:0;left:-60%;width:45%;
   background:linear-gradient(100deg,#fff0,#ffffffcc,#fff0);
   animation:mhHomeEventBadgeShine 2.4s ease-in-out infinite}
-@keyframes mhHomeEventBadgePulse{
-  0%,100%{box-shadow:0 0 0 1px #0006,0 2px 8px #000a,0 0 10px #fbbf24cc,0 0 18px #f59e0b80;transform:scale(1)}
-  50%{box-shadow:0 0 0 1px #0006,0 2px 8px #000a,0 0 16px #fde047,0 0 30px #f59e0bcc;transform:scale(1.06)}}
-@keyframes mhHomeEventBadgeShine{0%{left:-60%}55%{left:120%}100%{left:120%}}
+@keyframes mhHomeEventBadgePulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+@keyframes mhHomeEventBadgeGlowA{0%,100%{opacity:1}50%{opacity:0}}
+@keyframes mhHomeEventBadgeGlowB{0%,100%{opacity:0}50%{opacity:1}}
+@keyframes mhHomeEventBadgeShine{0%{transform:translateX(0)}55%{transform:translateX(400%)}100%{transform:translateX(400%)}}
 @media(prefers-reduced-motion:reduce){
   .mh-home-event-badge{animation:none;transform:none}
-  .mh-home-event-badge::after{display:none}}
+  .mh-home-event-badge::before,.mh-home-event-badge::after{animation:none}
+  .mh-home-event-badge-shine::after{display:none}}
 /* イベントの札の題の2行目(title2)。背の低い横画面では、2行のまま字と余白を詰めて札の高さを1行の題のときと同じくらいにする
    (2026-11-14 横 568×320 の長い台詞で、背が伸びた札が M/B管理 にかかった。1行に並べると横に伸びてモンヒロビートの顔の列にかかる) */
 .mh-home-event-banner .t2{display:block}
@@ -53033,7 +53046,7 @@ function HomeScreenV1({
             <button type="button" data-home-fac="rhythm" className="mh-home-dock-card rhythm" onClick={onOpenRhythm} aria-label={RHYTHM_MODE_PUBLIC_RELEASE?"モンヒロビート":"モンヒロビート（準備中）"}>
               <span className="mh-home-dock-pic"><img src="images/home/facility-beat.webp" alt="" draggable={false}/></span>
               <span className="mh-home-dock-txt"><span className="mh-home-dock-name">モンヒロビート{!RHYTHM_MODE_PUBLIC_RELEASE&&<small className="mh-home-dock-soon">準備中</small>}</span><span className="mh-home-dock-sub">音ゲー</span></span>
-              {homeRhythmEventOpen&&<em data-home-event-badge className="mh-home-event-badge" style={HOME_EVENT_BADGE_STYLE_V1}>✨開催中✨</em>}
+              {homeRhythmEventOpen&&<em data-home-event-badge className="mh-home-event-badge" style={HOME_EVENT_BADGE_STYLE_V1}><i className="mh-home-event-badge-shine" aria-hidden="true"/>✨開催中✨</em>}
             </button>
             {/* MFバトルカード(公開の印 cardBattle が立ち、公開のお話を見た人だけ。60-app.jsx が決める) */}
             {cardBattleVisible&&typeof onOpenCardBattle==='function'&&<button type="button" data-home-fac="card" data-home-card-battle className="mh-home-dock-card card" onClick={onOpenCardBattle} aria-label="MFバトルカード">
@@ -53329,7 +53342,7 @@ function HomeScreenV2({
             <button type="button" data-home-fac="rhythm" className="mh-home-dock-card rhythm" onClick={onOpenRhythm} aria-label={RHYTHM_MODE_PUBLIC_RELEASE?"モンヒロビート":"モンヒロビート（準備中）"}>
               <span className="mh-home-dock-pic"><img src="images/home/facility-beat.webp" alt="" draggable={false}/></span>
               <span className="mh-home-dock-txt"><span className="mh-home-dock-name">モンヒロビート{!RHYTHM_MODE_PUBLIC_RELEASE&&<small className="mh-home-dock-soon">準備中</small>}</span><span className="mh-home-dock-sub">音ゲー</span></span>
-              {homeRhythmEventOpen&&<em data-home-event-badge className="mh-home-event-badge" style={HOME_EVENT_BADGE_STYLE}>開催中</em>}
+              {homeRhythmEventOpen&&<em data-home-event-badge className="mh-home-event-badge" style={HOME_EVENT_BADGE_STYLE}><i className="mh-home-event-badge-shine" aria-hidden="true"/>開催中</em>}
             </button>
             {/* MFバトルカード(公開の印 cardBattle が立ち、公開のお話を見た人だけ。60-app.jsx が決める) */}
             {cardBattleVisible&&typeof onOpenCardBattle==='function'&&<button type="button" data-home-fac="card" data-home-card-battle className="mh-home-dock-card card" onClick={onOpenCardBattle} aria-label="MFバトルカード">
@@ -101112,7 +101125,7 @@ function MonheroSuccessHomeEntry({ callNameOf, bondLvOf, onOpenChange }) {
             (ホーム略称「サクセス」は 2026-11-17 の一新で一時使ったが、同日のあっくん追加指示でフルネームへ戻した) */}
         {/* 2026-11-23 r1119-130 社長「モンビーのイベント開催中と同じ作りにすればいい」: 傾けた10pxの字がにじんでいたので、
             モンヒロビートの入口の「開催中」の札と同じ部品(HOME_EVENT_BADGE_STYLE・光り方の mh-home-event-badge)にそろえる。文と黄色はそのまま */}
-        <em className="rb mh-home-event-badge" aria-hidden="true" style={typeof homeV2At === 'function' && !homeV2At() && typeof HOME_EVENT_BADGE_STYLE_V1 !== 'undefined' ? HOME_EVENT_BADGE_STYLE_V1 : HOME_EVENT_BADGE_STYLE}>β版 開幕！</em>
+        <em className="rb mh-home-event-badge" aria-hidden="true" style={typeof homeV2At === 'function' && !homeV2At() && typeof HOME_EVENT_BADGE_STYLE_V1 !== 'undefined' ? HOME_EVENT_BADGE_STYLE_V1 : HOME_EVENT_BADGE_STYLE}><i className="mh-home-event-badge-shine" aria-hidden="true"/>β版 開幕！</em>
         <span className="pic"><img src="images/home/facility-success.webp" alt="" draggable={false}/></span>
         <span className="txt"><span className="nm">モンヒロサクセス</span><span className="sb">育成</span></span>
       </button>

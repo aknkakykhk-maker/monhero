@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5fca261d3a0077c3
+// source-sha256: 74193edd97236a18
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -68836,11 +68836,19 @@ const JA_LABEL_STYLE = Object.freeze({
   ...JA_WRAP_STYLE,
   textWrap: 'balance'
 });
+let compactCountFmt = null;
 const compactCount = value => {
   const n = Math.floor(Number(value));
   if (!Number.isFinite(n)) return '0';
   const a = Math.abs(n);
-  if (a < 1e8) return n.toLocaleString();
+  if (a < 1e8) {
+    try {
+      if (!compactCountFmt) compactCountFmt = new Intl.NumberFormat();
+      return compactCountFmt.format(n);
+    } catch (_) {
+      return n.toLocaleString();
+    }
+  }
   const [unit, div] = a >= 1e12 ? ['兆', 1e12] : ['億', 1e8];
   const v = a / div,
     digits = v >= 100 ? 0 : v >= 10 ? 1 : 2,
@@ -87977,17 +87985,22 @@ const HOME_EVENT_BADGE_STYLE = Object.freeze({
   boxShadow: '0 0 0 1px #0006,0 2px 8px #000a,0 0 10px #fbbf24cc,0 0 18px #f59e0b80'
 });
 const HOME_EVENT_BADGE_CSS = `
-.mh-home-event-badge{animation:mhHomeEventBadgePulse 1.6s ease-in-out infinite}
-.mh-home-event-badge::after{content:'';position:absolute;top:0;bottom:0;left:-60%;width:45%;
+.mh-home-event-badge{overflow:visible!important;box-shadow:none!important;animation:mhHomeEventBadgePulse 1.6s ease-in-out infinite}
+.mh-home-event-badge::before,.mh-home-event-badge::after{content:'';position:absolute;inset:-1px;z-index:-1;border-radius:inherit;pointer-events:none}
+.mh-home-event-badge::before{box-shadow:0 0 10px #fbbf24cc,0 0 18px #f59e0b80;animation:mhHomeEventBadgeGlowA 1.6s ease-in-out infinite}
+.mh-home-event-badge::after{box-shadow:0 0 16px #fde047,0 0 30px #f59e0bcc;opacity:0;animation:mhHomeEventBadgeGlowB 1.6s ease-in-out infinite}
+.mh-home-event-badge-shine{position:absolute;inset:-1px;border-radius:inherit;overflow:hidden;pointer-events:none;box-shadow:0 0 0 1px #0006,0 2px 8px #000a}
+.mh-home-event-badge-shine::after{content:'';position:absolute;top:0;bottom:0;left:-60%;width:45%;
   background:linear-gradient(100deg,#fff0,#ffffffcc,#fff0);
   animation:mhHomeEventBadgeShine 2.4s ease-in-out infinite}
-@keyframes mhHomeEventBadgePulse{
-  0%,100%{box-shadow:0 0 0 1px #0006,0 2px 8px #000a,0 0 10px #fbbf24cc,0 0 18px #f59e0b80;transform:scale(1)}
-  50%{box-shadow:0 0 0 1px #0006,0 2px 8px #000a,0 0 16px #fde047,0 0 30px #f59e0bcc;transform:scale(1.06)}}
-@keyframes mhHomeEventBadgeShine{0%{left:-60%}55%{left:120%}100%{left:120%}}
+@keyframes mhHomeEventBadgePulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+@keyframes mhHomeEventBadgeGlowA{0%,100%{opacity:1}50%{opacity:0}}
+@keyframes mhHomeEventBadgeGlowB{0%,100%{opacity:0}50%{opacity:1}}
+@keyframes mhHomeEventBadgeShine{0%{transform:translateX(0)}55%{transform:translateX(400%)}100%{transform:translateX(400%)}}
 @media(prefers-reduced-motion:reduce){
   .mh-home-event-badge{animation:none;transform:none}
-  .mh-home-event-badge::after{display:none}}
+  .mh-home-event-badge::before,.mh-home-event-badge::after{animation:none}
+  .mh-home-event-badge-shine::after{display:none}}
 /* イベントの札の題の2行目(title2)。背の低い横画面では、2行のまま字と余白を詰めて札の高さを1行の題のときと同じくらいにする
    (2026-11-14 横 568×320 の長い台詞で、背が伸びた札が M/B管理 にかかった。1行に並べると横に伸びてモンヒロビートの顔の列にかかる) */
 .mh-home-event-banner .t2{display:block}
@@ -89109,7 +89122,10 @@ function HomeScreenV1({
     "data-home-event-badge": true,
     className: "mh-home-event-badge",
     style: HOME_EVENT_BADGE_STYLE_V1
-  }, "✨開催中✨")), cardBattleVisible && typeof onOpenCardBattle === 'function' && React.createElement("button", {
+  }, React.createElement("i", {
+    className: "mh-home-event-badge-shine",
+    "aria-hidden": "true"
+  }), "✨開催中✨")), cardBattleVisible && typeof onOpenCardBattle === 'function' && React.createElement("button", {
     type: "button",
     "data-home-fac": "card",
     "data-home-card-battle": true,
@@ -89713,7 +89729,10 @@ function HomeScreenV2({
     "data-home-event-badge": true,
     className: "mh-home-event-badge",
     style: HOME_EVENT_BADGE_STYLE
-  }, "開催中")), cardBattleVisible && typeof onOpenCardBattle === 'function' && React.createElement("button", {
+  }, React.createElement("i", {
+    className: "mh-home-event-badge-shine",
+    "aria-hidden": "true"
+  }), "開催中")), cardBattleVisible && typeof onOpenCardBattle === 'function' && React.createElement("button", {
     type: "button",
     "data-home-fac": "card",
     "data-home-card-battle": true,
@@ -191976,7 +191995,10 @@ function MonheroSuccessHomeEntry({
     className: "rb mh-home-event-badge",
     "aria-hidden": "true",
     style: typeof homeV2At === 'function' && !homeV2At() && typeof HOME_EVENT_BADGE_STYLE_V1 !== 'undefined' ? HOME_EVENT_BADGE_STYLE_V1 : HOME_EVENT_BADGE_STYLE
-  }, "β版 開幕！"), React.createElement("span", {
+  }, React.createElement("i", {
+    className: "mh-home-event-badge-shine",
+    "aria-hidden": "true"
+  }), "β版 開幕！"), React.createElement("span", {
     className: "pic"
   }, React.createElement("img", {
     src: "images/home/facility-success.webp",
