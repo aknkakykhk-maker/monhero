@@ -1,0 +1,148 @@
+{
+  "_": "効果音の素材庫の作り方(r1126-121)。1件 = 1つの音。src の曲の at 秒から dur 秒を切り出し、steps を上から順にかける。layer は別の切り出しを at 秒の所へ gain dB で重ねる。作り直し: python3 -I tools/audio/se-library-build.py。資料: docs/progress/SE_LIBRARY.md",
+  "sounds": [
+    {
+      "id": "bell-toll-omen", "name": "不吉な鐘(一打)", "scene": "事件簿: 夜の訪れ・死の知らせ・章の終わり",
+      "src": "monster-hero/audio/bgm-erfolg-piano.mp3", "at": 1.97, "dur": 1.3,
+      "steps": [
+        {"fade": [0, 0.3]}, {"pitch": -24},
+        {"layer": {"from": {"src": "monster-hero/audio/bgm-erfolg-piano.mp3", "at": 1.97, "dur": 1.3, "steps": [{"fade": [0, 0.3]}, {"pitch": -17}]}, "at": 0, "gain": -9}},
+        {"layer": {"from": {"src": "monster-hero/audio/bgm-erfolg-piano.mp3", "at": 1.97, "dur": 1.3, "steps": [{"fade": [0, 0.3]}, {"pitch": -13.3}]}, "at": 0.004, "gain": -14}},
+        {"lp": 2600}, {"stretch": 1.6}, {"pad": 0.5}, {"reverb": {"sec": 5.5, "wet": 0.55, "tone": 2200, "pre": 0.03}}
+      ]
+    },
+    {
+      "id": "bell-toll-omen-x3", "name": "不吉な鐘(三打)", "scene": "事件簿: 真夜中を告げる・犠牲者が見つかる前",
+      "src": "monster-hero/audio/bgm-erfolg-piano.mp3", "at": 1.97, "dur": 1.3,
+      "steps": [
+        {"fade": [0, 0.3]}, {"pitch": -24},
+        {"layer": {"from": {"src": "monster-hero/audio/bgm-erfolg-piano.mp3", "at": 1.97, "dur": 1.3, "steps": [{"fade": [0, 0.3]}, {"pitch": -17}]}, "at": 0, "gain": -9}},
+        {"layer": {"from": {"src": "monster-hero/audio/bgm-erfolg-piano.mp3", "at": 1.97, "dur": 1.3, "steps": [{"fade": [0, 0.3]}, {"pitch": -13.3}]}, "at": 0.004, "gain": -14}},
+        {"lp": 2600}, {"stretch": 1.6}, {"pad": 0.6},
+        {"repeat": {"times": 3, "every": 2.6, "decay": -1.5}},
+        {"reverb": {"sec": 5.5, "wet": 0.55, "tone": 2200, "pre": 0.03}}
+      ]
+    },
+    {
+      "id": "clock-strike", "name": "柱時計が時を打つ「ボーン」", "scene": "事件簿: 時刻が進む・屋敷の広間。ほかのモード: 夜になる",
+      "src": "monster-hero/audio/bgm-erfolg-piano.mp3", "at": 1.97, "dur": 1.3,
+      "steps": [
+        {"fade": [0, 0.3]}, {"pitch": -12},
+        {"layer": {"from": {"src": "monster-hero/audio/bgm-erfolg-piano.mp3", "at": 1.97, "dur": 1.3, "steps": [{"fade": [0, 0.3]}, {"pitch": -24}]}, "at": 0, "gain": -6}},
+        {"eq": [1800, 1.5, 4]}, {"pad": 0.3}, {"reverb": {"sec": 2.8, "wet": 0.4, "tone": 4000}}
+      ]
+    },
+    {
+      "id": "scream-distant", "name": "遠い叫び", "scene": "事件簿: 屋敷のどこかで悲鳴・事件の始まり",
+      "src": "tools/art-sources/song-audio/battle_5_short/audio-battle5-vocal-short.mp3", "at": 70.42, "dur": 1.85,
+      "steps": [
+        {"fade": [0.04, 0.6]}, {"pitch": -2}, {"bp": [450, 3200]}, {"lp": 2000}, {"mono": true}, {"gain": -4},
+        {"echo": {"delay": 0.42, "decay": 0.45, "taps": 3, "tone": 1500}},
+        {"reverb": {"sec": 4.0, "wet": 0.75, "tone": 1800, "pre": 0.06}}
+      ]
+    },
+    {
+      "id": "wail-ghost", "name": "すすり泣くような声(霊の気配)", "scene": "事件簿: 誰もいない部屋・幻・回想の悪夢",
+      "src": "tools/art-sources/song-audio/battle_5_short/audio-battle5-vocal-short.mp3", "at": 70.42, "dur": 1.85,
+      "steps": [
+        {"fade": [0.3, 0.6]}, {"stretch": 3.0}, {"pitch": -7}, {"bp": [250, 2200]}, {"mono": true},
+        {"layer": {"from": {"src": "tools/art-sources/song-audio/battle_5_short/audio-battle5-vocal-short.mp3", "at": 70.42, "dur": 1.85, "steps": [{"fade": [0.3, 0.6]}, {"stretch": 3.0}, {"pitch": -6.7}, {"bp": [250, 2200]}, {"reverse": true}]}, "at": 0.35, "gain": -8}},
+        {"fade": [0.6, 1.5]}, {"reverb": {"sec": 5.0, "wet": 0.7, "tone": 1500, "pre": 0.05}}
+      ]
+    },
+    {
+      "id": "laugh-echo", "name": "笑い声の残響", "scene": "事件簿: 犯人の影・闇の奥から笑う声",
+      "src": "monster-hero/audio/se-xmas-novel-laugh.mp3", "at": 0, "dur": 3.45,
+      "steps": [
+        {"pitch": -3}, {"lp": 3200}, {"hp": 180},
+        {"echo": {"delay": 0.36, "decay": 0.5, "taps": 4, "tone": 1800}},
+        {"reverb": {"sec": 3.2, "wet": 0.5, "tone": 2400, "pre": 0.04}}
+      ]
+    },
+    {
+      "id": "laugh-reverse-swell", "name": "逆さに吸いこまれる笑い", "scene": "事件簿: 正体が明かされる直前・悪夢から覚める",
+      "src": "monster-hero/audio/se-xmas-novel-laugh.mp3", "at": 0, "dur": 3.45,
+      "steps": [
+        {"pitch": -5}, {"lp": 2600}, {"pad": 0.2}, {"reverse": true},
+        {"reverb": {"sec": 3.0, "wet": 0.7, "tone": 2400}}, {"reverse": true}, {"fade": [0.4, 0.3]}
+      ]
+    },
+    {
+      "id": "swell-reverse", "name": "迫る気配(逆再生のふくらみ)", "scene": "事件簿: 何かが近づく・扉が開く直前。ほかのモード: 必殺技の溜め・画面の切り替わり",
+      "src": "monster-hero/audio/bgm-winter-fall.mp3", "at": 2.88, "dur": 1.6,
+      "steps": [
+        {"hp": 4200}, {"fade": [0, 0.5]}, {"pad": 0.3}, {"reverb": {"sec": 2.2, "wet": 0.55, "tone": 9000}},
+        {"reverse": true}, {"stretch": 1.4}, {"fade": [0.6, 0.02]}
+      ]
+    },
+    {
+      "id": "glass-shatter", "name": "ガラスが割れる", "scene": "事件簿: 窓が割れる・グラスが床に落ちる",
+      "src": "monster-hero/audio/bgm-winter-fall.mp3", "at": 2.9, "dur": 0.7,
+      "steps": [
+        {"hp": 3800}, {"fade": [0, 0.35]},
+        {"layer": {"from": {"src": "monster-hero/audio/bgm-winter-fall.mp3", "at": 2.9, "dur": 0.5, "steps": [{"hp": 5000}, {"tape": 7}, {"fade": [0, 0.25]}]}, "at": 0.025, "gain": -3}},
+        {"layer": {"from": {"src": "monster-hero/audio/bgm-erfolg-piano.mp3", "at": 1.97, "dur": 0.35, "steps": [{"pitch": 19}, {"hp": 2500}, {"fade": [0, 0.2]}]}, "at": 0.09, "gain": -6}},
+        {"layer": {"from": {"src": "monster-hero/audio/bgm-erfolg-piano.mp3", "at": 1.97, "dur": 0.3, "steps": [{"pitch": 23}, {"hp": 2500}, {"fade": [0, 0.2]}]}, "at": 0.21, "gain": -9}},
+        {"layer": {"from": {"src": "monster-hero/audio/bgm-erfolg-piano.mp3", "at": 1.97, "dur": 0.25, "steps": [{"pitch": 26}, {"hp": 2500}, {"fade": [0, 0.15]}]}, "at": 0.38, "gain": -12}},
+        {"reverb": {"sec": 1.0, "wet": 0.3, "tone": 8000}}
+      ]
+    },
+    {
+      "id": "fall-heavy", "name": "何かが倒れる「ドサッ」", "scene": "事件簿: 人が倒れる・家具が倒れる",
+      "src": "monster-hero/audio/bgm-sad-song.mp3", "at": 12.18, "dur": 0.5,
+      "steps": [
+        {"fade": [0, 0.25]}, {"tape": -5}, {"lp": 900},
+        {"layer": {"from": {"src": "monster-hero/audio/bgm-sad-song.mp3", "at": 13.93, "dur": 0.4, "steps": [{"fade": [0, 0.25]}, {"tape": -8}, {"lp": 700}]}, "at": 0.2, "gain": -7}},
+        {"layer": {"from": {"src": "monster-hero/audio/bgm-winter-fall.mp3", "at": 2.9, "dur": 0.4, "steps": [{"bp": [900, 3000]}, {"fade": [0, 0.3]}]}, "at": 0.01, "gain": -16}},
+        {"mono": true}, {"reverb": {"sec": 1.3, "wet": 0.3, "tone": 2500}}
+      ]
+    },
+    {
+      "id": "door-slam-far", "name": "遠くで扉が閉まる", "scene": "事件簿: 廊下の向こう・誰かが出ていった",
+      "src": "monster-hero/audio/bgm-sad-song.mp3", "at": 12.18, "dur": 0.45,
+      "steps": [
+        {"fade": [0, 0.2]}, {"tape": -3}, {"lp": 1300}, {"mono": true}, {"gain": -3}, {"pad": 0.2},
+        {"reverb": {"sec": 2.4, "wet": 0.55, "tone": 1800, "pre": 0.04}}
+      ]
+    },
+    {
+      "id": "rumble-low", "name": "地の底のうなり", "scene": "事件簿: 地下室・ただならぬ気配が続く間の下敷き。ほかのモード: ボスの登場前",
+      "src": "monster-hero/audio/bgm-game-over.mp3", "at": 2.1, "dur": 3.6,
+      "steps": [
+        {"fade": [0.3, 0.5]}, {"stretch": 4.0}, {"pitch": -12}, {"lp": 420}, {"fade": [2.0, 3.0]},
+        {"reverb": {"sec": 4.0, "wet": 0.5, "tone": 600}}
+      ],
+      "lufs": -22
+    },
+    {
+      "id": "love-shimmer", "name": "恋の場面のきらめき", "scene": "事件簿: ときめく一言・手が触れる。ほかのモード: 好感度が上がる",
+      "src": "monster-hero/audio/bgm-erfolg-piano.mp3", "at": 1.97, "dur": 1.2,
+      "steps": [
+        {"fade": [0, 0.4]},
+        {"layer": {"from": {"src": "monster-hero/audio/bgm-erfolg-piano.mp3", "at": 1.97, "dur": 1.2, "steps": [{"pitch": 4}, {"fade": [0, 0.4]}]}, "at": 0.16, "gain": -3}},
+        {"layer": {"from": {"src": "monster-hero/audio/bgm-erfolg-piano.mp3", "at": 1.97, "dur": 1.2, "steps": [{"pitch": 7}, {"fade": [0, 0.4]}]}, "at": 0.32, "gain": -5}},
+        {"layer": {"from": {"src": "monster-hero/audio/bgm-erfolg-piano.mp3", "at": 1.97, "dur": 1.4, "steps": [{"pitch": 12}, {"fade": [0, 0.6]}]}, "at": 0.48, "gain": -7}},
+        {"hp": 220}, {"pad": 0.4}, {"reverb": {"sec": 3.6, "wet": 0.5, "tone": 7000, "pre": 0.03}}
+      ]
+    },
+    {
+      "id": "love-afterglow", "name": "恋の場面のやわらかな余韻", "scene": "事件簿: 二人きりの静かな会話の終わり。ほかのモード: ほっとする場面",
+      "src": "monster-hero/audio/bgm-erfolg-piano.mp3", "at": 78.0, "dur": 3.0,
+      "steps": [
+        {"fade": [0.5, 0.8]}, {"stretch": 2.0}, {"lp": 5000}, {"fade": [1.0, 2.0]},
+        {"reverb": {"sec": 4.5, "wet": 0.6, "tone": 5000, "pre": 0.03}}
+      ],
+      "lufs": -20
+    },
+    {
+      "id": "memory-in", "name": "回想に入る(ピアノの逆さの響き)", "scene": "事件簿: 過去の回想・夢へ入る。ほかのモード: 思い出の場面",
+      "src": "monster-hero/audio/bgm-erfolg-piano.mp3", "at": 1.97, "dur": 1.3,
+      "steps": [
+        {"fade": [0, 0.3]},
+        {"layer": {"from": {"src": "monster-hero/audio/bgm-erfolg-piano.mp3", "at": 1.97, "dur": 1.3, "steps": [{"pitch": 7}, {"fade": [0, 0.3]}]}, "at": 0, "gain": -5}},
+        {"pad": 0.3}, {"reverb": {"sec": 3.5, "wet": 0.7, "tone": 6000}}, {"reverse": true},
+        {"layer": {"from": {"src": "monster-hero/audio/bgm-erfolg-piano.mp3", "at": 1.97, "dur": 1.3, "steps": [{"fade": [0, 0.3]}, {"pad": 0.3}, {"reverb": {"sec": 3.0, "wet": 0.45, "tone": 6000}}]}, "at": 5.08, "gain": -4}}
+      ]
+    }
+  ]
+}

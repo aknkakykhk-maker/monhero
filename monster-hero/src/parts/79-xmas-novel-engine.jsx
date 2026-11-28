@@ -181,8 +181,9 @@ const xmasNovelFreshCur = (script) => {
   return { scene: first ? first.id : null, idx: 0, flags: {}, clues: [], ans: {}, panel: {} };
 };
 // 行き先(場面ID・行ID・END)へ飛ぶ。返り値は新しい cur(場所だけ変わる)
-const xmasNovelJump = (script, cur, to) => {
-  const ctx = xmasNovelCtx(script, cur);
+// seen … { endings, read }(省略可)。飛び先の場面の条件(end_G / bm_red / rd_*)に使う(保存は読むだけ・r1126-115。省略すると今までどおり)
+const xmasNovelJump = (script, cur, to, seen) => {
+  const ctx = xmasNovelCtx(script, cur, seen && seen.endings, seen && seen.read);
   if (to === 'END') {
     const s = xmasNovelNextScene(script, { id: '__', next: 'END' }, ctx);
     return s ? { ...cur, scene: s.id, idx: 0 } : cur;
