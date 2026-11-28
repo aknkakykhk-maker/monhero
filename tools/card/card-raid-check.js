@@ -6,6 +6,7 @@
 //
 // 見るもの(検査)
 //   ① ボスのデッキが5段階とも決まりどおり(3体・50枚・同じ札3枚まで)で、仮の3体で組めている(代わりのきゅうこの組み方になっていない)
+//   ①-2 種を渡すと(画面は対戦の種)、ハム種2体+ほか1体・ハムの札が多い・挑むたびに3体と山札が変わる(--decks で数を出す)
 //   ② ライフの倍率が始まりの場に入る(max と life が倍率どおり・こちらの側は変わらない)
 //   ③ 与ダメージは「減ったライフの合計」で、削りすぎを数えない・回復で減る
 //   ④ 換算の式(1点・倒した数・勝ちの上乗せ・段階の補正)と、投了・負けで勝ちの上乗せが付かないこと
@@ -34,6 +35,30 @@ E.CARD_RAID_TIERS.forEach((t, i) => {
   check(`① 段階${i + 1}のデッキは毎回同じ`, JSON.stringify(E.cardRaidBossDeck(db, i)) === JSON.stringify(d));
 });
 
+// ①-2 挑むたびに変わるデッキ(種あり・台帳 r1126-101 追記1): ハム種2体+ほか1体・決まりどおり・ハムの札が多い・組み合わせが変わる
+{
+  const B = E.CARD_RAID_BOSS;
+  const combos = new Set(), decks = new Set();
+  let hareCards = 0, allCards = 0, minHare = 99;
+  E.CARD_RAID_TIERS.forEach((t, i) => {
+    for (let s = 1; s <= 40; s++) {
+      const d = E.cardRaidBossDeck(db, i, s * 7919 + i);
+      const probs = E.cardDeckProblems(db, d);
+      check(`①-2 段階${i + 1}・種${s}のデッキが決まりどおり`, probs.length === 0, probs.join('・'));
+      const nh = d.monsters.filter((no) => B.hare.includes(no)).length;
+      check(`①-2 段階${i + 1}・種${s}はハム種2体+ほか1体`, nh === 2 && d.monsters.filter((no) => B.others.includes(no)).length === 1, d.monsters.join(','));
+      check(`①-2 段階${i + 1}・種${s}は同じ種なら同じデッキ`, JSON.stringify(E.cardRaidBossDeck(db, i, s * 7919 + i)) === JSON.stringify(d));
+      combos.add(d.monsters.slice().sort().join(',')); decks.add(d.cards.slice().sort().join(','));
+      const nHare = d.cards.filter((no) => db.cards[no] && db.cards[no].user === 'hare').length;
+      hareCards += nHare; allCards += d.cards.length; minHare = Math.min(minHare, nHare);
+    }
+  });
+  check('①-2 3体の組み合わせが挑むたびに変わる(5通り以上)', combos.size >= 5, `${combos.size}通り`);
+  check('①-2 山札の中身が挑むたびに変わる', decks.size >= 150, `${decks.size}通り / 200`);
+  check('①-2 ハムの札が多い(どのデッキも12枚以上)', minHare >= 12, `いちばん少ないデッキ ${minHare} 枚・平均 ${(hareCards / 200).toFixed(1)} 枚`);
+  if (process.argv.includes('--decks')) console.log(`3体の組み合わせ ${combos.size} 通り・山札 ${decks.size} 通り / 200・ハムの札 平均 ${(hareCards / 200).toFixed(1)} 枚(いちばん少ない ${minHare})`);
+}
+
 // ②③ 始まりの場とライフ
 {
   const me = E.cardAiBuildDeck(db, 'speed');
@@ -42,7 +67,7 @@ E.CARD_RAID_TIERS.forEach((t, i) => {
   const mine = st.players[0].mons.map((m) => m.max);
   E.cardRaidPrepareGame(st, 3, 1);
   const mul = E.CARD_RAID_TIERS[3].life;
-  check('② ボスのライフに倍率が入る', st.players[1].mons.every((m, k) => m.max === Math.round(base[k] * mul) && m.life === m.max), st.players[1].mons.map((m) => m.max).join(','));
+  check('② ボスのライフはふだんのカードと同じ(倍率 1・台帳 r1126-101 追記2)', E.CARD_RAID_TIERS.every((t) => t.life === 1) && st.players[1].mons.every((m, k) => m.max === Math.max(1, Math.round(base[k] * mul)) && m.life === m.max), st.players[1].mons.map((m) => m.max).join(','));
   check('② こちらのライフは変わらない', st.players[0].mons.every((m, k) => m.max === mine[k]));
   check('② 場にレイドの印', st.raid && st.raid.tier === 3 && st.raid.side === 1);
   check('③ はじめは与ダメージ 0', E.cardRaidDealt(st, 1).dealt === 0);
@@ -74,7 +99,7 @@ const PLAYERS = [
   { id: 'strong', name: '組んだデッキ(上手)', deck: () => E.cardAiBuildDeck(db, 'kyuko', 'master'), level: 'master' },
 ];
 const play = (mine, myLevel, tierIndex, seed, first) => {
-  let st = E.cardCreateGame(db, { decks: [mine, E.cardRaidBossDeck(db, tierIndex)], seed, first });
+  let st = E.cardCreateGame(db, { decks: [mine, E.cardRaidBossDeck(db, tierIndex, seed)], seed, first });
   E.cardRaidPrepareGame(st, tierIndex, 1);
   const pol = [E.cardAiPolicy('kyuko', myLevel, { playerRole: true }), E.cardRaidBossPolicy(tierIndex)];
   let s = (seed * 7919) >>> 0;

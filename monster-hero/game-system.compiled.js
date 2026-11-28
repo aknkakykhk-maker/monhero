@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 591a5daf4aa53a90
+// source-sha256: e60d36f637ccb888
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -11441,6 +11441,261 @@ const Audio_ = (() => {
           sparkle.dispose();
         } catch (e) {}
       }, 2200);
+    },
+    nvTick: async high => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const s = new Tone.MetalSynth({
+        frequency: high ? 340 : 240,
+        envelope: {
+          attack: 0.001,
+          decay: 0.035,
+          release: 0.02
+        },
+        harmonicity: 3.1,
+        modulationIndex: 10,
+        resonance: high ? 2600 : 1800,
+        octaves: 0.6,
+        volume: -32
+      }).connect(seBus);
+      s.triggerAttackRelease('64n', t);
+      const k = new Tone.MembraneSynth({
+        pitchDecay: 0.01,
+        octaves: 2,
+        envelope: {
+          attack: 0.001,
+          decay: 0.05,
+          sustain: 0
+        },
+        volume: -30
+      }).connect(seBus);
+      k.triggerAttackRelease(high ? 'G2' : 'D2', '64n', t);
+      setTimeout(() => {
+        try {
+          s.dispose();
+          k.dispose();
+        } catch (e) {}
+      }, 300);
+    },
+    nvCreak: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const f = new Tone.Filter(700, 'lowpass').connect(seBus);
+      const s = new Tone.Synth({
+        oscillator: {
+          type: 'sawtooth'
+        },
+        envelope: {
+          attack: 0.08,
+          decay: 0.7,
+          sustain: 0,
+          release: 0.2
+        },
+        volume: -22
+      }).connect(f);
+      s.triggerAttackRelease('D3', '4n', t);
+      try {
+        s.frequency.rampTo('G2', 0.7, t);
+      } catch (e) {}
+      setTimeout(() => {
+        try {
+          s.dispose();
+          f.dispose();
+        } catch (e) {}
+      }, 1400);
+    },
+    nvThud: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const s = new Tone.MembraneSynth({
+        pitchDecay: 0.05,
+        octaves: 4,
+        envelope: {
+          attack: 0.002,
+          decay: 0.35,
+          sustain: 0
+        },
+        volume: -12
+      }).connect(seBus);
+      s.triggerAttackRelease('E1', '8n', t);
+      const n = new Tone.NoiseSynth({
+        noise: {
+          type: 'brown'
+        },
+        envelope: {
+          attack: 0.002,
+          decay: 0.15,
+          sustain: 0
+        },
+        volume: -20
+      }).connect(seBus);
+      n.triggerAttackRelease('16n', t);
+      setTimeout(() => {
+        try {
+          s.dispose();
+          n.dispose();
+        } catch (e) {}
+      }, 800);
+    },
+    nvWind: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const f = new Tone.Filter(520, 'lowpass').connect(seBus);
+      const n = new Tone.NoiseSynth({
+        noise: {
+          type: 'pink'
+        },
+        envelope: {
+          attack: 0.9,
+          decay: 0.4,
+          sustain: 0.6,
+          release: 1.2
+        },
+        volume: -24
+      }).connect(f);
+      n.triggerAttackRelease(1.2, t);
+      try {
+        f.frequency.rampTo(900, 0.9, t);
+        f.frequency.rampTo(380, 1.4, t + 0.9);
+      } catch (e) {}
+      setTimeout(() => {
+        try {
+          n.dispose();
+          f.dispose();
+        } catch (e) {}
+      }, 3200);
+    },
+    nvFire: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const f = new Tone.Filter(1800, 'bandpass').connect(seBus);
+      const n = new Tone.NoiseSynth({
+        noise: {
+          type: 'white'
+        },
+        envelope: {
+          attack: 0.001,
+          decay: 0.025,
+          sustain: 0
+        },
+        volume: -24
+      }).connect(f);
+      [0, 0.21, 0.37, 0.8, 1.05, 1.5].forEach(d => n.triggerAttackRelease('64n', t + d));
+      setTimeout(() => {
+        try {
+          n.dispose();
+          f.dispose();
+        } catch (e) {}
+      }, 2100);
+    },
+    nvRustle: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const f = new Tone.Filter(2600, 'highpass').connect(seBus);
+      const n = new Tone.NoiseSynth({
+        noise: {
+          type: 'white'
+        },
+        envelope: {
+          attack: 0.01,
+          decay: 0.12,
+          sustain: 0
+        },
+        volume: -28
+      }).connect(f);
+      n.triggerAttackRelease('16n', t);
+      n.triggerAttackRelease('32n', t + 0.14);
+      setTimeout(() => {
+        try {
+          n.dispose();
+          f.dispose();
+        } catch (e) {}
+      }, 600);
+    },
+    nvGlass: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const s = new Tone.MetalSynth({
+        frequency: 260,
+        envelope: {
+          attack: 0.001,
+          decay: 0.32,
+          release: 0.1
+        },
+        harmonicity: 7.1,
+        modulationIndex: 20,
+        resonance: 3200,
+        octaves: 1,
+        volume: -26
+      }).connect(reverb);
+      s.triggerAttackRelease('16n', t);
+      setTimeout(() => {
+        try {
+          s.dispose();
+        } catch (e) {}
+      }, 900);
+    },
+    nvDread: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const v = new Tone.PolySynth(Tone.Synth, {
+        oscillator: {
+          type: 'sine'
+        },
+        envelope: {
+          attack: 0.35,
+          decay: 0.6,
+          sustain: 0.4,
+          release: 1.6
+        },
+        volume: -20
+      }).connect(reverb);
+      v.triggerAttackRelease(['C2', 'C#2', 'G2'], 1.1, t);
+      setTimeout(() => {
+        try {
+          v.dispose();
+        } catch (e) {}
+      }, 3600);
+    },
+    nvMusicBox: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const s = new Tone.PolySynth(Tone.Synth, {
+        oscillator: {
+          type: 'triangle'
+        },
+        envelope: {
+          attack: 0.002,
+          decay: 0.9,
+          sustain: 0,
+          release: 0.6
+        },
+        volume: -24
+      }).connect(reverb);
+      [[0, 'E5'], [0.42, 'D5'], [0.84, 'C5'], [1.4, 'A4']].forEach(([d, n]) => s.triggerAttackRelease(n, '4n', t + d));
+      setTimeout(() => {
+        try {
+          s.dispose();
+        } catch (e) {}
+      }, 3200);
     }
   };
   const uiTap = async () => {
@@ -129121,14 +129376,113 @@ const XMAS_NOVEL_SE_SEQ = Object.freeze({
   tick: {
     gap: 520,
     hold: 300,
-    play: ['trainingDice']
+    play: [['nvTick', true]]
   },
   letter: {
     gap: 0,
     hold: 1500,
-    play: ['trainingBad', 'trainingFail']
+    play: ['nvDread']
+  },
+  knock: {
+    gap: 460,
+    hold: 300,
+    play: ['nvThud']
+  },
+  thud: {
+    gap: 420,
+    hold: 250,
+    play: ['nvThud']
+  },
+  creak: {
+    gap: 0,
+    hold: 800,
+    play: ['nvCreak']
+  },
+  creakGlass: {
+    gap: 0,
+    hold: 1200,
+    play: ['nvCreak', ['nvGlass', undefined, 650]]
+  },
+  glass: {
+    gap: 0,
+    hold: 500,
+    play: ['nvGlass']
+  },
+  windGlass: {
+    gap: 0,
+    hold: 1500,
+    play: ['nvWind', ['nvGlass', undefined, 500], ['nvGlass', undefined, 1100]]
+  },
+  slamLock: {
+    gap: 0,
+    hold: 700,
+    play: ['nvThud', ['nvTick', true, 380], ['nvTick', false, 470]]
+  },
+  lock: {
+    gap: 0,
+    hold: 400,
+    play: [['nvTick', true], ['nvTick', false, 90]]
+  },
+  rustle: {
+    gap: 0,
+    hold: 400,
+    play: ['nvRustle']
+  },
+  dread: {
+    gap: 0,
+    hold: 1500,
+    play: ['nvDread']
+  },
+  lightsOut: {
+    gap: 0,
+    hold: 1500,
+    play: ['nvThud', ['nvDread', undefined, 120]]
+  },
+  musicbox: {
+    gap: 0,
+    hold: 1800,
+    play: ['nvMusicBox']
+  },
+  clap: {
+    gap: 0,
+    hold: 1200,
+    play: ['nvRustle', ['nvRustle', undefined, 650]]
+  },
+  fire: {
+    gap: 0,
+    hold: 1500,
+    play: ['nvFire']
+  },
+  wind: {
+    gap: 0,
+    hold: 2500,
+    play: ['nvWind']
   }
 });
+const xmasNovelSeKindOf = (kind, row) => {
+  if (kind === 'bell' || kind === 'tick' || kind === 'letter') return kind;
+  if (kind === 'music') return 'musicbox';
+  if (kind === 'clap') return 'clap';
+  const x = String(row && row.x || '');
+  if (/声|悲鳴|叫び|きゃ|うわ|っ！|ピー/.test(x)) return 'dread';
+  if (/ブツン|停電/.test(x)) return 'lightsOut';
+  if (/(ギィ|ギシ)[\s\S]*(ガシャン|割れ)/.test(x)) return 'creakGlass';
+  if (/吹雪[\s\S]*ガラス|ガラス[\s\S]*吹雪/.test(x)) return 'windGlass';
+  if (/ギィ|ギシ|きしむ|開く音/.test(x)) return 'creak';
+  if (/ガシャン|ガラス|カシャ|割れ/.test(x)) return 'glass';
+  if (/バタン[\s\S]*(カチャリ|鍵)/.test(x)) return 'slamLock';
+  if (/カチリ|カチャリ|留め金|鍵の音/.test(x)) return 'lock';
+  if (/封|カサ|プシュッ/.test(x)) return 'rustle';
+  if (/叩く|打ちつける|ドン、ドン|コン、コン/.test(x)) return 'knock';
+  if (/ドサッ|ゴッ|ゴトン|ガタ|重い|ドン/.test(x)) return 'thud';
+  return kind === 'impact' ? 'impact' : 'thud';
+};
+const xmasNovelSeTimesOf = (kind, row, times) => {
+  if (Number.isFinite(times)) return times;
+  if (kind !== 'knock' && kind !== 'thud') return 1;
+  const m = String(row && row.x || '').match(/ドン|コン/g);
+  return kind === 'knock' && m ? Math.min(3, m.length) : 1;
+};
 let xmasNovelSeTimers = [];
 let xmasNovelSeLast = {
   kind: '',
@@ -129138,6 +129492,14 @@ const xmasNovelSeStop = () => {
   xmasNovelSeTimers.forEach(t => clearTimeout(t));
   xmasNovelSeTimers = [];
 };
+const xmasNovelSeFn = name => {
+  try {
+    const fn = (Audio_.fgSe || Audio_.se)[name];
+    return typeof fn === 'function' ? fn : null;
+  } catch (e) {
+    return null;
+  }
+};
 const xmasNovelSeHit = kind => {
   try {
     if (typeof Audio_ === 'undefined' || !Audio_ || !Audio_.se) return;
@@ -129146,25 +129508,40 @@ const xmasNovelSeHit = kind => {
       kind,
       at: Date.now()
     };
-    seq.play.forEach(name => {
-      const fn = (Audio_.fgSe || Audio_.se)[name];
-      if (typeof fn === 'function') fn();
+    seq.play.forEach(item => {
+      const [name, arg, delay] = Array.isArray(item) ? item : [item];
+      const fn = xmasNovelSeFn(name);
+      if (!fn) return;
+      if (delay > 0) xmasNovelSeTimers.push(setTimeout(() => fn(arg), delay));else fn(arg);
     });
   } catch (e) {}
 };
-const xmasNovelRowSe = (kind, times) => {
+const xmasNovelRowSe = (kindIn, times, row) => {
   xmasNovelSeStop();
+  const kind = xmasNovelSeKindOf(kindIn, row);
   const seq = XMAS_NOVEL_SE_SEQ[kind];
   if (!seq) {
     xmasNovelSe(kind);
     return;
   }
-  const n = Math.max(1, Math.min(3, Number.isFinite(times) ? times : 1));
+  const n = Math.max(1, Math.min(3, xmasNovelSeTimesOf(kind, row, times)));
   const wait = xmasNovelSeLast.kind === kind ? Math.max(0, seq.hold - (Date.now() - xmasNovelSeLast.at)) : 0;
   for (let i = 0; i < n; i += 1) {
     const at = wait + i * seq.gap;
     if (at <= 0) xmasNovelSeHit(kind);else xmasNovelSeTimers.push(setTimeout(() => xmasNovelSeHit(kind), at));
   }
+};
+const xmasNovelAmbientOf = scene => {
+  const bg = String(scene && scene.bg || '');
+  if (/吹雪/.test(bg)) return 'wind';
+  if (/暖炉/.test(bg)) return 'fire';
+  if (/雪原|雪の山道/.test(bg)) return 'wind';
+  if (/柱時計/.test(bg)) return 'lock';
+  return '';
+};
+const xmasNovelAmbient = scene => {
+  const k = xmasNovelAmbientOf(scene);
+  if (k) xmasNovelSeHit(k);
 };
 const XMAS_NOVEL_BGM_SCENE = Object.freeze({
   'OUT-0-1': 'original_profile',
@@ -129685,6 +130062,21 @@ const XmasNovelScreen = ({
   const card = cards[0] || null;
   const setCard = c => setCards(list => c ? [...list, c] : []);
   const [sheet, setSheet] = useState(null);
+  useEffect(() => {
+    if (!sheet || typeof sheet !== 'object' || !sheet.q) return undefined;
+    let high = true;
+    const tick = () => {
+      const fn = xmasNovelSeFn('nvTick');
+      if (fn) fn(high);
+      high = !high;
+    };
+    const id = setInterval(tick, 640);
+    const first = setTimeout(tick, 250);
+    return () => {
+      clearInterval(id);
+      clearTimeout(first);
+    };
+  }, [sheet]);
   const [got, setGot] = useState(null);
   const [skip, setSkip] = useState(false);
   const [log, setLog] = useState([]);
@@ -129829,7 +130221,8 @@ const XmasNovelScreen = ({
       ...s,
       read: [...s.read, r.k]
     };
-    if (r.t === 'band' && r.se) xmasNovelRowSe(r.se, r.seN);else xmasNovelSeStop();
+    if (r.t === 'band' && r.se) xmasNovelRowSe(r.se, r.seN, r);else xmasNovelSeStop();
+    if (!opts.quiet && r.t === 'band' && !r.se && Array.isArray(r.fx) && r.fx.includes('fallen')) xmasNovelSeHit('dread');
     pendingQuakeRef.current = 0;
     if (XMAS_NOVEL_SHAKE[r.id] && !skip) {
       if (opts.held) pendingQuakeRef.current = XMAS_NOVEL_SHAKE[r.id];else xmasNovelQuake(stageRef.current, XMAS_NOVEL_SHAKE[r.id]);
@@ -129971,6 +130364,7 @@ const XmasNovelScreen = ({
       lastBodyRef.current = '';
       setTitleOk(xmasNovelSceneDone(scene, s.read));
     }
+    if (scene && (!lastSceneRef.current || lastSceneRef.current.id !== scene.id)) xmasNovelAmbient(scene);
     const transitNow = !!(scene && lastSceneRef.current && !!lastSceneRef.current.outside !== !!scene.outside);
     if (transitNow) {
       setTransit({
@@ -220776,7 +221170,12 @@ const CARD_RAID_BOSS = Object.freeze({
   id: 'raid_xmas_2026',
   name: '黒いサンタ',
   deckName: '奪われた贈り物',
-  monsters: Object.freeze(['C-047', 'C-024', 'C-003']),
+  monsters: Object.freeze(['C-008', 'C-055', 'C-003']),
+  hare: Object.freeze(['C-008', 'C-055', 'C-010']),
+  others: Object.freeze(['C-047', 'C-024', 'C-003']),
+  favor: 'hare',
+  favorBonus: 0.6,
+  cardNoise: 0.45,
   habit: Object.freeze({
     attack: 1.2,
     keepGuard: 0.8,
@@ -220786,28 +221185,53 @@ const CARD_RAID_BOSS = Object.freeze({
     area: 1.3,
     finish: 1.3
   }),
-  prefer: Object.freeze(['大鎌'])
+  prefer: Object.freeze(['大声'])
 });
 const CARD_RAID_TIERS = Object.freeze([Object.freeze({
-  level: 'normal',
-  life: 2,
-  rate: 1.0
-}), Object.freeze({
   level: 'hard',
-  life: 2,
-  rate: 1.25
+  life: 1,
+  rate: 1.0,
+  ai: Object.freeze({
+    whim: 0.04,
+    sloppy: 0.08,
+    readHand: true
+  })
 }), Object.freeze({
   level: 'expert',
-  life: 2.5,
-  rate: 1.5
+  life: 1,
+  rate: 1.25,
+  ai: Object.freeze({
+    whim: 0.02,
+    sloppy: 0.03,
+    readHand: true
+  })
 }), Object.freeze({
   level: 'master',
-  life: 3,
-  rate: 1.75
+  life: 1,
+  rate: 1.5,
+  ai: Object.freeze({
+    whim: 0.01,
+    sloppy: 0,
+    readHand: true
+  })
 }), Object.freeze({
   level: 'master',
-  life: 3,
-  rate: 2.0
+  life: 1,
+  rate: 1.75,
+  ai: Object.freeze({
+    whim: 0,
+    sloppy: 0,
+    readHand: true
+  })
+}), Object.freeze({
+  level: 'master',
+  life: 1,
+  rate: 2.0,
+  ai: Object.freeze({
+    whim: 0,
+    sloppy: 0,
+    readHand: true
+  })
 })]);
 const cardRaidTierOf = tierIndex => CARD_RAID_TIERS[Math.min(CARD_RAID_TIERS.length - 1, Math.max(0, Math.floor(Number(tierIndex) || 0)))];
 const CARD_RAID_DAMAGE = Object.freeze({
@@ -220816,20 +221240,36 @@ const CARD_RAID_DAMAGE = Object.freeze({
   win: 150000,
   cap: null
 });
-const cardRaidBossDeck = (db, tierIndex = 0) => {
+const cardRaidBossMonsters = (db, rnd = null) => {
+  const ok = list => list.filter(no => cardMonsterOf(db, no));
+  if (!rnd) return ok(CARD_RAID_BOSS.monsters);
+  const pick = (list, n) => {
+    const a = ok(list).slice();
+    const out = [];
+    while (a.length && out.length < n) out.push(a.splice(Math.floor(rnd() * a.length), 1)[0]);
+    return out;
+  };
+  const out = [...pick(CARD_RAID_BOSS.hare, 2), ...pick(CARD_RAID_BOSS.others, 1)];
+  const sp = out.map(no => cardMonsterOf(db, no).species);
+  return out.length === 3 && new Set(sp).size === 3 ? out : ok(CARD_RAID_BOSS.monsters);
+};
+const cardRaidBossDeck = (db, tierIndex = 0, seed = null) => {
   const tier = cardRaidTierOf(tierIndex);
   const cfg = CARD_AI_BUILD[tier.level] || CARD_AI_BUILD.normal;
   const habit = CARD_RAID_BOSS.habit;
-  const rnd = cardAiSeededRand(`${CARD_RAID_BOSS.id}:${tier.level}`);
-  const monsters = CARD_RAID_BOSS.monsters.filter(no => cardMonsterOf(db, no));
+  const roll = seed !== null && seed !== undefined && Number.isFinite(Number(seed));
+  const rnd = cardAiSeededRand(`${CARD_RAID_BOSS.id}:${tier.level}${roll ? `:${Math.floor(Number(seed))}` : ''}`);
+  const monsters = cardRaidBossMonsters(db, roll ? rnd : null);
   const mons = monsters.map(no => cardMonsterOf(db, no));
+  const noise = cfg.noise + (roll ? CARD_RAID_BOSS.cardNoise : 0);
+  const favor = c => c.user === CARD_RAID_BOSS.favor ? CARD_RAID_BOSS.favorBonus : 0;
   const pool = Object.values(db.cards).filter(c => c.ready && (c.user === 'any' || c.user === 'breeder' || mons.some(m => cardUsableBy(c, {
     ...m,
     ko: false
   }))));
   const byName = {};
   pool.forEach(c => {
-    const v = cardAiCardValue(c, habit) + cfg.noise * (rnd() * 2 - 1);
+    const v = cardAiCardValue(c, habit) + favor(c) + noise * (rnd() * 2 - 1);
     if (!byName[c.name] || byName[c.name].v < v) byName[c.name] = {
       c,
       v
@@ -220901,6 +221341,10 @@ const cardRaidBossPolicy = (tierIndex = 0) => {
   });
   return {
     ...base,
+    level: {
+      ...base.level,
+      ...(tier.ai || {})
+    },
     habit: {
       ...CARD_RAID_BOSS.habit
     }
@@ -232003,8 +232447,8 @@ const CardBattleScreen = ({
         return;
       }
       const tier = cardRaidTierOf(rc.tierIndex);
-      const cpuDeck = cardRaidBossDeck(db, rc.tierIndex);
       const seed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
+      const cpuDeck = cardRaidBossDeck(db, rc.tierIndex, seed);
       const first = Math.random() < 0.5 ? CARD_ME : CARD_CPU;
       const bossName = rc.bossName || CARD_RAID_BOSS.name;
       const st = cardRaidPrepareGame(cardCreateGame(db, {
