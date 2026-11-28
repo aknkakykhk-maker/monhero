@@ -143,7 +143,7 @@ function MasuEnhanceScreen({
             )}
 
             {/* まとめて強化: 1ポイントずつタップするのが手間なので、
-                振り分けを下書きしてから一度に確定できるようにしている */}
+                振り分けを下書きしてから1度に確定できるようにしている */}
             {points>0&&(
               <div className="bg-slate-900 border border-amber-500/40 rounded-2xl p-3 shadow-xl">
                 <div className="flex items-center justify-between gap-2 mb-2">
