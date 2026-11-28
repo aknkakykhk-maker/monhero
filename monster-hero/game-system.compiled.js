@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c025444cee14d677
+// source-sha256: da8067495d307598
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -115269,6 +115269,41 @@ const xmasNovelAnswer = (script, cur, q, pick, endings) => {
       } : 'next'
     };
   }
+  if (q.pass && q.kind === 'present') {
+    const okRows = xmasNovelPickReplies(q, 'ok');
+    const why = Array.isArray(q.near) && q.near.includes(pick) && xmasNovelPickReplies(q, 'near').length ? xmasNovelPickReplies(q, 'near') : xmasNovelPickReplies(q, 'x1');
+    const by = okRows[0] && okRows[0].w ? xmasNovelCastOf(okRows[0].w) : null;
+    const clue = answers[0] || '';
+    const band = clue ? [{
+      id: `${q.id}-pass`,
+      t: 'band',
+      x: `${by && by.name ? by.name : '探偵'}が、手がかり帳から【${clue}】を突きつけた`
+    }] : [];
+    const okSelf = okRows.map((r, i) => i === 0 && r && typeof r.x === 'string' && /^はい。\s*/.test(r.x) ? {
+      ...r,
+      x: r.x.replace(/^はい。\s*/, '')
+    } : r);
+    const replies = [...why, ...band, ...okSelf];
+    const passed = {
+      ...next,
+      ans: {
+        ...next.ans,
+        [q.id]: {
+          ...next.ans[q.id],
+          done: true
+        }
+      }
+    };
+    const to = xmasNovelRepliesTo(replies);
+    return {
+      cur: passed,
+      ok: false,
+      replies,
+      then: to ? {
+        to
+      } : 'next'
+    };
+  }
   const personal = q.kind === 'person' ? xmasNovelPickReplies(q, String(pick)) : [];
   const near = q.kind === 'present' && Array.isArray(q.near) && q.near.includes(pick) ? xmasNovelPickReplies(q, 'near') : [];
   const n = Math.min(3, Math.max(1, wrongs));
@@ -115288,6 +115323,21 @@ const xmasNovelAnswer = (script, cur, q, pick, endings) => {
 const xmasNovelRepliesTo = replies => {
   for (let i = (replies || []).length - 1; i >= 0; i -= 1) if (replies[i] && replies[i].to) return replies[i].to;
   return null;
+};
+const xmasNovelEndingAhead = (script, to) => {
+  let s = to ? xmasNovelSceneById(script, to) : null;
+  for (let k = 0; s && k < 12; k += 1) {
+    if (s.ending && s.ending.id) return s.ending.id;
+    s = typeof s.next === 'string' ? xmasNovelSceneById(script, s.next) : null;
+  }
+  return null;
+};
+const xmasNovelPresentable = (q, clues) => {
+  const list = Array.isArray(clues) ? clues : [];
+  if (!q || !Array.isArray(q.narrow) || !q.narrow.length) return list;
+  const picked = list.filter(c => q.narrow.includes(c.n));
+  const ans = Array.isArray(q.answer) ? q.answer : [];
+  return picked.some(c => ans.includes(c.n)) ? picked : list;
 };
 const xmasNovelOptionsOf = (q, ctx) => (Array.isArray(q && q.options) ? q.options : []).map((o, i) => ({
   ...o,
@@ -117329,6 +117379,7 @@ const XMAS_NOVEL_SCRIPT = {
       },
       "label": "推理の問い①",
       "score": true,
+      "pass": true,
       "answer": ["閉まった裏口"],
       "k": "C2-4:Q2a",
       "near": ["早く鳴った鐘"]
@@ -117616,6 +117667,7 @@ const XMAS_NOVEL_SCRIPT = {
       },
       "label": "推理の問い②",
       "score": true,
+      "pass": true,
       "answer": ["深い足跡"],
       "k": "C3-2:Q3a",
       "near": ["閉まった裏口"]
@@ -118168,6 +118220,7 @@ const XMAS_NOVEL_SCRIPT = {
       },
       "label": "推理の問い③",
       "score": true,
+      "pass": true,
       "answer": ["12年前の帳面"],
       "k": "C4-3:Q4a",
       "near": ["早く鳴った鐘"]
@@ -118759,6 +118812,7 @@ const XMAS_NOVEL_SCRIPT = {
       },
       "label": "推理の問い④",
       "score": true,
+      "pass": true,
       "answer": ["ほこりのない鏡のふち"],
       "k": "C5-3:Q5a",
       "near": ["えるびんの写真"]
@@ -119250,6 +119304,8 @@ const XMAS_NOVEL_SCRIPT = {
       },
       "label": "推理の問い⑤",
       "score": true,
+      "pass": true,
+      "narrow": ["早く鳴った鐘", "止まった懐中時計", "12年前の帳面", "白瀬の手紙"],
       "answer": ["止まった懐中時計"],
       "k": "C6-3:Q6a",
       "near": ["早く鳴った鐘"]
@@ -119409,6 +119465,8 @@ const XMAS_NOVEL_SCRIPT = {
       },
       "label": "推理の問い⑥",
       "score": true,
+      "pass": true,
+      "narrow": ["えるびんの写真", "ほこりのない鏡のふち", "赤い手袋", "かばんの黒い服"],
       "answer": ["えるびんの写真"],
       "k": "C6-5:Q6b",
       "near": ["ほこりのない鏡のふち"]
@@ -123091,6 +123149,8 @@ const XMAS_NOVEL_SCRIPT = {
         }]
       },
       "label": "推理の問い⑦",
+      "pass": true,
+      "narrow": ["消えた箱", "帳面の最後の行", "箱のない犠牲者", "鳴りやまないオルゴール"],
       "answer": ["箱のない犠牲者"],
       "k": "C10-4:Q10a",
       "near": ["消えた箱"]
@@ -130189,6 +130249,7 @@ const XmasNovelScreen = ({
   const darkNow = fx && fx.kind === 'dark';
   const name = isLine ? xmasNovelNameOf(row) : '';
   const q = sheet && typeof sheet === 'object' ? sheet.q : null;
+  const presentList = q && q.kind === 'present' ? xmasNovelPresentable(q, clues) : clues;
   return React.createElement("div", {
     className: "mh-nv",
     "data-xmas-novel": "read",
@@ -130514,7 +130575,7 @@ const XmasNovelScreen = ({
     className: "mh-nv-serif mh-nv-gold text-[18px] font-black"
   }, "手がかり帳 ", React.createElement("span", {
     className: "text-[12px] text-slate-300"
-  }, clues.length, "個")), q && React.createElement("div", {
+  }, presentList.length, "個")), q && React.createElement("div", {
     "data-xmas-novel-question": q.id,
     className: "mt-2 rounded-lg p-2 text-[13px] font-bold leading-relaxed",
     style: {
@@ -130525,9 +130586,12 @@ const XmasNovelScreen = ({
     className: "mh-nv-serif text-[11px] font-black text-rose-200"
   }, q.label), xmasNovelWrap(xmasNovelFill(q.x, playerName)), React.createElement("div", {
     className: "mt-1 text-[11px] text-rose-100"
-  }, "突きつける手がかりを1つ選ぼう")), React.createElement("div", {
+  }, presentList.length < clues.length ? `候補を${presentList.length}つに絞った。突きつける手がかりを1つ選ぼう` : '突きつける手がかりを1つ選ぼう'), q.pass && React.createElement("div", {
+    "data-xmas-novel-pass": true,
+    className: "mh-nv-plain mt-1 text-[11px] text-rose-200"
+  }, "外しても、仲間が拾って話は進む。一発で当てると成績に残る")), React.createElement("div", {
     className: "mh-nv-scroll mt-2 flex-1 space-y-2 pr-1"
-  }, clues.length ? clues.map(c => React.createElement("div", {
+  }, presentList.length ? presentList.map(c => React.createElement("div", {
     key: c.n,
     className: "mh-nv-clue",
     "data-xmas-novel-clue": c.n
@@ -130582,13 +130646,20 @@ const XmasNovelScreen = ({
     className: "mh-nv-plain mh-nv-serif mh-nv-gold mb-3 text-[17px] font-black"
   }, xmasNovelWrap(xmasNovelFill(q.x, playerName))), React.createElement("div", {
     className: "space-y-2.5"
-  }, xmasNovelOptionsOf(q, xmasNovelCtx(S, st.cur, save.endings)).map(o => React.createElement("button", {
-    type: "button",
-    key: o.i,
-    className: "mh-nv-choice mh-nv-serif",
-    "data-xmas-novel-option": o.i,
-    onClick: () => answer(q, o.i)
-  }, xmasNovelWrap(xmasNovelFill(o.x, playerName))))), q.once && React.createElement("div", {
+  }, xmasNovelOptionsOf(q, xmasNovelCtx(S, st.cur, save.endings)).map(o => {
+    const endAhead = !q.once && o.to ? xmasNovelEndingAhead(S, o.to) : null;
+    const seenEnd = endAhead && Array.isArray(save.endings) && save.endings.includes(endAhead) ? xmasNovelSceneById(S, endAhead) : null;
+    return React.createElement("button", {
+      type: "button",
+      key: o.i,
+      className: "mh-nv-choice mh-nv-serif",
+      "data-xmas-novel-option": o.i,
+      onClick: () => answer(q, o.i)
+    }, xmasNovelWrap(xmasNovelFill(o.x, playerName)), seenEnd && React.createElement("span", {
+      "data-xmas-novel-seen-end": endAhead,
+      className: "mh-nv-plain mt-1 block text-[11px] font-bold text-rose-200"
+    }, "見たエンド: ", seenEnd.ending && seenEnd.ending.name ? `「${seenEnd.ending.name}」` : 'バッドエンド'));
+  })), q.once && React.createElement("div", {
     className: "mh-nv-plain mt-2 text-[11px] font-bold text-rose-200"
   }, "選んだら、やり直しはできません")), sheet === 'menu' && React.createElement(React.Fragment, null, React.createElement("div", {
     className: "mh-nv-serif mh-nv-gold mb-3 text-center text-[18px] font-black"
