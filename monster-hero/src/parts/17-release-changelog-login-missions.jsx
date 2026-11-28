@@ -335,6 +335,9 @@ const CHANGELOG_GROUPS = Object.freeze([
   { id:'ranking',   label:'ランキング',     emoji:'🏆', match:/ランキング/ },
   { id:'assistant', label:'助手',           emoji:'🎀', match:/助手|みゅあ|きき|ももすけ/ },
   { id:'ui',        label:'画面・操作',     emoji:'🖥', match:/画面|表示|ボタン|レイアウト|ヘルプ|設定|HOME|更新情報|お知らせ|バナー|図鑑/ },
+  // 期間限定イベントのお知らせ(2026-11-27 r1126-074 小6)。クリスマスは「その他」、ハナウタは「モンヒロビート」とばらばらだった。
+  //   type:'event' の項目は書いた group に関係なくここへ入れる(changelogGroupIdOf)。言葉では拾わない
+  { id:'event',     label:'イベント',       emoji:'🎉', match:null },
   { id:'other',     label:'その他',         emoji:'✦', match:null },
 ]);
 const CHANGELOG_GROUP_BY_ID = Object.freeze(Object.fromEntries(CHANGELOG_GROUPS.map(group => [group.id, group])));
@@ -350,6 +353,7 @@ const changelogGroupMatch = (text) => {
   return hit ? hit.id : null;
 };
 const changelogGroupIdOf = (entry) => {
+  if (entry && entry.type === 'event') return 'event';
   const written = typeof entry?.group === 'string' ? entry.group.trim() : '';
   if (written && CHANGELOG_GROUP_BY_ID[written]) return written;
   const byTitle = changelogGroupMatch(String(entry?.title || ''));
@@ -511,6 +515,11 @@ const changelogSafeLink = (link) => {
     return parsed.protocol === 'https:' ? parsed.href : '';
   } catch { return ''; }
 };
+// 項目のIDが、どちらのタブの既読へ入るか(更新情報 'update' / 不具合情報 'issue')。
+//   イベントの札になっている項目の NEW を、元のタブの一覧にも出すのに使う(2026-11-27 r1126-074 小2)
+const CHANGELOG_TAB_OF_ID = new Map(CHANGELOG_ENTRIES.map(entry => [entry.id, CHANGELOG_ISSUE_TAB_TYPES.includes(entry.type) ? 'issue' : 'update']));
+// 不具合情報タブの中では、種類の札をタブ名と同じ「不具合修正」にせず、様子で書く(2026-11-27 r1126-074 小9)
+const changelogKindLabelInTab = (info, tab) => (tab === 'issue' ? ({ fix:'直しました', issue:'調べています' })[info && info.tone] : null) || (info && info.label) || '';
 const CHANGELOG_IDS_BY_TYPE = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, changelogEntriesOfTab(type).map(entry => entry.id)]));
 // 一覧の並べかえに使えるキー。画面の選択肢(MONSTER_SORT_OPTIONS)と必ず同じ顔ぶれにする。
 // 片方にだけ足すと、画面では選べるのに保存だけ弾かれて、開き直すと元に戻る

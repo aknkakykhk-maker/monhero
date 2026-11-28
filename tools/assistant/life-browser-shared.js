@@ -93,15 +93,18 @@ const homeDockProblems = (page) => page.evaluate(() => {
     if (cy < r.top - 14 || cy > r.top + r.height * 0.6) ng.push(`${k}: バッジがボタンの上の方にない`);
     if (f.left < -10 || f.right > W + 10 || f.top < -10 || f.bottom > H + 1) ng.push(`${k}: バッジが画面の外`);
     for (const o of btns) { if (o.k === k) continue; const cx = (o.r.left + o.r.right) / 2, cyy = (o.r.top + o.r.bottom) / 2; if (cx > f.left && cx < f.right && cyy > f.top && cyy < f.bottom) ng.push(`${k}のバッジ×${o.k}のボタンの真ん中`); }
-    for (const face of box.querySelectorAll('[data-assistant-life-home-face]')) {
-      const fr = R(face);
-      if (fr.left < f.left - 2 || fr.right > f.right + 2 || fr.top < f.top - 2 || fr.bottom > f.bottom + 2) ng.push(`${k}の顔: バッジからはみ出す`);
-      if (fr.width < 18 || fr.width > 30) ng.push(`${k}の顔: 大きさがおかしい(${Math.round(fr.width)})`);
-    }
+    // 2026-11-27 r1126-073(HOME の作り直し): 顔は並べず、赤い点1つ(data-assistant-life-home-dot)。点がバッジの中にあり、見える大きさか
+    const dot = box.querySelector('[data-assistant-life-home-dot]');
+    if (!dot) ng.push(`${k}: 赤い点が無い`);
+    else { const fr = R(dot); if (fr.left < f.left - 2 || fr.right > f.right + 2 || fr.top < f.top - 2 || fr.bottom > f.bottom + 2) ng.push(`${k}の点: バッジからはみ出す`); if (fr.width < 10 || fr.width > 24) ng.push(`${k}の点: 大きさがおかしい(${Math.round(fr.width)})`); }
   }
   const parts = [];
   const strip = document.querySelector('.mh-home-event-strip'); if (vis(strip)) parts.push({ c: '細バナー', r: R(strip) });
-  for (const e of document.querySelectorAll('.mh-home-side-btn')) if (vis(e)) parts.push({ c: '右端ボタン', r: R(e) });
+  // 2026-11-27 r1126-073: ミッション・ギフトなどはメニュー☰の中。閉じているメニューの中(目に見えない・読み上げだけに残す)は数えない
+  for (const e of document.querySelectorAll('.mh-home-side-btn')) if (vis(e) && !e.closest('.mh-home-menu:not(.is-open)')) parts.push({ c: 'メニューの中のボタン', r: R(e) });
+  const band = document.querySelector('.mh-home-band'); if (vis(band)) parts.push({ c: 'イベントの帯', r: R(band) });
+  const menuBtn = document.querySelector('.mh-home-menu-btn'); if (vis(menuBtn)) parts.push({ c: 'メニュー', r: R(menuBtn) });
+  const fold = document.querySelector('.mh-home-assistant-fold'); if (vis(fold)) parts.push({ c: '助手の顔', r: R(fold) });
   const bubble = document.querySelector('.mh-home-assistant'); if (vis(bubble)) parts.push({ c: '吹き出し', r: R(bubble) });
   const player = document.querySelector('.mh-home-player'); if (vis(player)) parts.push({ c: '上の帯', r: R(player) });
   for (const p of parts) {
@@ -118,6 +121,6 @@ const homeDockProblems = (page) => page.evaluate(() => {
   return ng;
 });
 const homeFacesProblems = homeDockProblems;
-const waitFaces = async (page) => { for (let i = 0; i < 60 && !(await page.locator('[data-assistant-life-home-face]').count()); i++) { await finishTalk(page); await page.waitForTimeout(500); } };
+const waitFaces = async (page) => { for (let i = 0; i < 60 && !(await page.locator('[data-assistant-life-home-dot]').count()); i++) { await finishTalk(page); await page.waitForTimeout(500); } };
 
 module.exports = { MIME, STORY_IDS, INTRO_KEYS, seed, toHome, finishTalk, homeFacesProblems, homeDockProblems, waitFaces };

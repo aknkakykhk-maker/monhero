@@ -123,7 +123,7 @@ const AluTabBar = ({ tab, onTab, tabs = ALU_TABS }) => (
   <div className="alu-tabs" role="tablist" data-alu-tabs data-assistant-life-icons>
     {tabs.map(t => (
       <button key={t.key} type="button" role="tab" aria-selected={tab === t.key} className={tab === t.key ? 'on' : ''} data-alu-tab={t.key} data-assistant-life-icon={t.key} onClick={() => onTab && onTab(t.key)}>
-        <i>{t.icon}</i>{t.label}
+        <i>{cardIconNode(t.icon, 16)}</i>{t.label}
       </button>))}
   </div>);
 
@@ -195,7 +195,7 @@ const AluResult = ({ title = '結果', line, gains = [], finds = [], next, onClo
     {line ? <div className="alu-t" data-alu-result-line>{line}</div> : null}
     <div className="alu-gains" data-alu-result-gains>
       {gains.map((g, i) => (
-        <div key={i}><span className="alu-n">{g.icon} {g.label}</span><b className="alu-num">+{g.v}</b></div>))}
+        <div key={i}><span className="alu-n">{cardIconNode(g.icon, 14)} {g.label}</span><b className="alu-num">+{g.v}</b></div>))}
     </div>
     {finds.length ? <div className="alu-t" data-alu-result-finds>🧺 拾い物: {finds.join('・')}</div> : null}
     {next ? <AluGo onClick={next.onClick} data-alu-result-next>{next.label}</AluGo> : null}

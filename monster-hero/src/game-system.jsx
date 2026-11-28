@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 937f77fa810450d4
+// generated-sha256: 4f77989d5bf5eeec
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -11043,6 +11043,9 @@ const CHANGELOG_GROUPS = Object.freeze([
   { id:'ranking',   label:'ランキング',     emoji:'🏆', match:/ランキング/ },
   { id:'assistant', label:'助手',           emoji:'🎀', match:/助手|みゅあ|きき|ももすけ/ },
   { id:'ui',        label:'画面・操作',     emoji:'🖥', match:/画面|表示|ボタン|レイアウト|ヘルプ|設定|HOME|更新情報|お知らせ|バナー|図鑑/ },
+  // 期間限定イベントのお知らせ(2026-11-27 r1126-074 小6)。クリスマスは「その他」、ハナウタは「モンヒロビート」とばらばらだった。
+  //   type:'event' の項目は書いた group に関係なくここへ入れる(changelogGroupIdOf)。言葉では拾わない
+  { id:'event',     label:'イベント',       emoji:'🎉', match:null },
   { id:'other',     label:'その他',         emoji:'✦', match:null },
 ]);
 const CHANGELOG_GROUP_BY_ID = Object.freeze(Object.fromEntries(CHANGELOG_GROUPS.map(group => [group.id, group])));
@@ -11058,6 +11061,7 @@ const changelogGroupMatch = (text) => {
   return hit ? hit.id : null;
 };
 const changelogGroupIdOf = (entry) => {
+  if (entry && entry.type === 'event') return 'event';
   const written = typeof entry?.group === 'string' ? entry.group.trim() : '';
   if (written && CHANGELOG_GROUP_BY_ID[written]) return written;
   const byTitle = changelogGroupMatch(String(entry?.title || ''));
@@ -11219,6 +11223,11 @@ const changelogSafeLink = (link) => {
     return parsed.protocol === 'https:' ? parsed.href : '';
   } catch { return ''; }
 };
+// 項目のIDが、どちらのタブの既読へ入るか(更新情報 'update' / 不具合情報 'issue')。
+//   イベントの札になっている項目の NEW を、元のタブの一覧にも出すのに使う(2026-11-27 r1126-074 小2)
+const CHANGELOG_TAB_OF_ID = new Map(CHANGELOG_ENTRIES.map(entry => [entry.id, CHANGELOG_ISSUE_TAB_TYPES.includes(entry.type) ? 'issue' : 'update']));
+// 不具合情報タブの中では、種類の札をタブ名と同じ「不具合修正」にせず、様子で書く(2026-11-27 r1126-074 小9)
+const changelogKindLabelInTab = (info, tab) => (tab === 'issue' ? ({ fix:'直しました', issue:'調べています' })[info && info.tone] : null) || (info && info.label) || '';
 const CHANGELOG_IDS_BY_TYPE = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, changelogEntriesOfTab(type).map(entry => entry.id)]));
 // 一覧の並べかえに使えるキー。画面の選択肢(MONSTER_SORT_OPTIONS)と必ず同じ顔ぶれにする。
 // 片方にだけ足すと、画面では選べるのに保存だけ弾かれて、開き直すと元に戻る
@@ -15884,11 +15893,26 @@ const useAssistantBubbleState = () => {
 // ── HOMEの助手コメント(吹き出し)を出すか(2026-11-17 あっくん「ファーム(ホーム)が狭く感じる。助手のコメントのオンオフがほしい」) ──
 //   上の「助手のひとこと」の3択は HOME を対象外にしている(HOMEの助手はお知らせや話しかけの入口のため)。
 //   こちらは HOME 専用の入/切で、切ると HOME の吹き出しと「💬 おしゃべり」のボタンが消えて、そのぶん広場が広くなる。
-//   保存は新しいキーだけ(既存の mh_* は触らない・CLAUDE.md ⑦)。保存が無い・壊れているときは「入」(今の見た目が既定)
+//   保存は新しいキーだけ(既存の mh_* は触らない・CLAUDE.md ⑦)。値の意味(true=入・false=切)は変えない。
+//   保存が無い・壊れているときは「切」(顔の丸だけの畳んだ形)にした(2026-11-27 台帳 r1126-073・HOME の作り直しの直し2。前の既定は「入」)。
+//   自分で「入」を選んだ人(true を保存している人)は今までどおり吹き出しが出る
 //   助手の告知(アップデートのお知らせ)はこの部品を使っていないので、この設定の影響を受けない
+// HOME の作り直し(r1126-073)を出す時刻(2026-11-28 10:00 日本時間・台帳 r1126-086 追記1)。これより前は前の HOME と前の出し方
+const HOME_V2_FROM = Date.parse('2026-11-28T10:00:00+09:00');
+const homeV2At = (t = Date.now()) => t >= HOME_V2_FROM;
+// 描いている間に 10:00 をまたいでも切り替わるよう、15秒ごとに見直す
+const useHomeV2 = () => {
+  const [v2, setV2] = useState(() => homeV2At());
+  useEffect(() => {
+    if (v2) return undefined;
+    const id = setInterval(() => { if (homeV2At()) setV2(true); }, 15000);
+    return () => clearInterval(id);
+  }, [v2]);
+  return v2;
+};
 const HOME_ASSISTANT_COMMENT_KEY = 'mh_home_assistant_comment_v1';
 const HOME_ASSISTANT_COMMENT_STORE = (() => {
-  let state = { on: true, loaded: false };
+  let state = { on: false, loaded: false };
   let loading = null;
   const listeners = new Set();
   const emit = () => listeners.forEach((fn) => { try { fn(state); } catch (_) { /* 画面側の失敗で止めない */ } });
@@ -15897,16 +15921,17 @@ const HOME_ASSISTANT_COMMENT_STORE = (() => {
     load() {
       if (loading) return loading;
       loading = (async () => {
-        let on = true;
-        try { on = (await storeGet(HOME_ASSISTANT_COMMENT_KEY, true, false)) !== false; } catch (_) { /* 読めなければ「入」 */ }
-        state = { on, loaded: true };
+        let on = false, explicit = false;
+        try { const v = await storeGet(HOME_ASSISTANT_COMMENT_KEY, null, false); explicit = v === true || v === false; on = v === true; } catch (_) { /* 読めなければ「切」(畳んだ形) */ }
+        // explicit … 自分で入/切を選んで保存してあるか。10:00 より前の HOME は、選んでいない人を前の既定「入」で出す(r1126-086 追記1)
+        state = { on, explicit, loaded: true };
         emit();
       })();
       return loading;
     },
     subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
     setOn(next) {
-      state = { ...state, on: next === true, loaded: true };
+      state = { ...state, on: next === true, explicit: true, loaded: true };
       emit();
       try { void Promise.resolve(storeSet(HOME_ASSISTANT_COMMENT_KEY, state.on)).catch(() => {}); } catch (_) { /* 保存できなくてもこの回は効く */ }
     },
@@ -44405,11 +44430,13 @@ const GrowthFxLayer = ({ screen, load }) => {
   const atHome = screen === 'HOME' && !domHold.monsuc;
   // Lvアップを貯めているあいだも、ほかの全面(アイテムのカードなど)は先に出す
   const sheet = sheets.find(s => growthFxSheetReady(s, vis, atHome)) || null;
+  // HOME では小さい札は1枚だけ(2026-11-27 台帳 r1126-073・すぐできる直し8)。左右の下に2〜3枚並ぶと端が散らかった。残りは前の札が消えたあとに出る
+  const smallMax = atHome && (typeof homeV2At !== 'function' || homeV2At()) ? 1 : GROWTH_FX_SMALL_MAX;
   return (
     <>
-      {!holdAll && !sheet && small.length > 0 && <GrowthFxChipsBox level={level} count={Math.min(small.length, GROWTH_FX_SMALL_MAX)}>
+      {!holdAll && !sheet && small.length > 0 && <GrowthFxChipsBox level={level} count={Math.min(small.length, smallMax)}>
         {/* 文の一行の札(裏クイックの結果)を先頭に。狭い画面で1枚だけ出す形(one)でも、結果が後ろに隠れない */}
-        {[...small].sort((a, b) => (b.text ? 1 : 0) - (a.text ? 1 : 0)).slice(0, GROWTH_FX_SMALL_MAX).map(c => <GrowthFxChip key={c.id} chip={c} level={level} held={false}/>)}
+        {[...small].sort((a, b) => (b.text ? 1 : 0) - (a.text ? 1 : 0)).slice(0, smallMax).map(c => <GrowthFxChip key={c.id} chip={c} level={level} held={false}/>)}
       </GrowthFxChipsBox>}
       {sheet && (sheet.tier === 'level'
         ? <GrowthFxLevelUp key={sheet.id} sheet={sheet} level={level} onClose={() => growthFxDropSheet(sheet.id)}/>
@@ -44785,8 +44812,10 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
   const assistantBubble = useAssistantBubbleState();
   // 助手どうしの会話を自動で進めるか(56-assistant-peer.jsx の ASSISTANT_PEER_AUTO_STORE。既定は切)
   const peerAuto = typeof useAssistantPeerAuto === 'function' ? useAssistantPeerAuto() : null;
-  // HOMEの助手コメントを出すか(21-assistant.jsx の HOME_ASSISTANT_COMMENT_STORE。既定は入)
-  const homeComment = useHomeAssistantComment();
+  // HOMEの助手コメントを出すか(21-assistant.jsx の HOME_ASSISTANT_COMMENT_STORE。既定は切=顔だけ・r1126-073)
+  const homeComment0 = useHomeAssistantComment();
+  // 10:00 より前は、選んでいない人の既定を前のまま「入」で見せる(r1126-086 追記1)
+  const homeComment = homeComment0.explicit || homeV2At() ? homeComment0 : { ...homeComment0, on: true };
   // 行動カードの見た目(71-screen-battle.jsx の BATTLE_CARD_LOOK。端末に保存する。バトル画面は開くたびに読む)
   const [battleCardLook, setBattleCardLook] = useState(() => BATTLE_CARD_LOOK.value);
   if (assetDownloadOpen) return <AssetDownloadPage onBack={() => setAssetDownloadOpen(false)}/>;
@@ -44930,9 +44959,9 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
             「切」にすると HOME の吹き出しと「おしゃべり」のボタンが消えて、広場が広くなる */}
         <div data-home-assistant-comment-setting className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
           <b className="block text-[13px] font-black text-slate-200">ホームの助手コメント</b>
-          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('ホーム画面の上に出る助手の吹き出しです。「切」にすると吹き出しと「おしゃべり」のボタンが消えて、広場が広くなります。新しい機能のお知らせは、これまでどおり出ます。')}</p>
+          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('ホーム画面の上に出る助手の吹き出しです。はじめは「切」で、助手の顔だけが出ます(顔を押すと吹き出しが開きます)。「入」にすると、いつも吹き出しが出ます。新しい機能のお知らせは、これまでどおり出ます。')}</p>
           <div className="mt-2 grid grid-cols-2 gap-2">
-            {[{ on: false, label: '切', note: '吹き出しを隠す' }, { on: true, label: '入', note: 'これまでどおり' }].map(option => (
+            {[{ on: false, label: '切', note: '顔だけ(初めの形)' }, { on: true, label: '入', note: '吹き出しを出す' }].map(option => (
               <button key={option.label} type="button" data-home-assistant-comment={option.on ? 'on' : 'off'}
                 aria-pressed={homeComment.on === option.on}
                 onClick={() => HOME_ASSISTANT_COMMENT_STORE.setOn(option.on)}
@@ -52147,13 +52176,25 @@ function MasuRegisterModal({
 //   このCSSを読み込まないので、クラスだけに頼ると検査の中で「ただの文字」になり、
 //   ボタンが横に広がって施設の位置がずれてしまう(実際に落ちた)。
 //   クラスのほうは「光り方・動き」だけを足す係にする。
-const HOME_EVENT_BADGE_STYLE = Object.freeze({
+// 2026-11-27 r1126-073(すぐできる直し3): 入口の札(β版 開幕！・開催中・近日公開)は「左上・同じ高さ・同じ形」の1種類にそろえる。
+//   前は右上の角へはみ出す置き方で、助手の顔の丸の下に7割ほど隠れていた。字は小さい字の決まり(11px)に合わせる
+// 10:00 より前の HOME(HomeScreenV1)で使う、前の置き方(右上の角へはみ出す・8px)
+const HOME_EVENT_BADGE_STYLE_V1 = Object.freeze({
   position:'absolute', top:'-10px', right:'-9px', zIndex:8,
   display:'block', overflow:'hidden', padding:'2px 7px',
   border:'1px solid #fff3c4', borderRadius:'999px',
   background:'linear-gradient(135deg,#f59e0b,#fde047 45%,#f97316)',
   color:'#4a1d00', fontSize:'8px', fontWeight:1000, fontStyle:'normal',
   lineHeight:1.6, whiteSpace:'nowrap', textShadow:'0 1px 0 #fff8', pointerEvents:'none',
+  boxShadow:'0 0 0 1px #0006,0 2px 8px #000a,0 0 10px #fbbf24cc,0 0 18px #f59e0b80',
+});
+const HOME_EVENT_BADGE_STYLE = Object.freeze({
+  position:'absolute', top:'4px', left:'4px', zIndex:8,
+  display:'block', overflow:'hidden', padding:'2px 7px',
+  border:'1px solid #fff3c4', borderRadius:'999px',
+  background:'linear-gradient(135deg,#f59e0b,#fde047 45%,#f97316)',
+  color:'#4a1d00', fontSize:'11px', fontWeight:1000, fontStyle:'normal',
+  lineHeight:1.35, whiteSpace:'nowrap', textShadow:'0 1px 0 #fff8', pointerEvents:'none',
   boxShadow:'0 0 0 1px #0006,0 2px 8px #000a,0 0 10px #fbbf24cc,0 0 18px #f59e0b80',
 });
 const HOME_EVENT_BADGE_CSS = `
@@ -52184,6 +52225,132 @@ const HOME_EVENT_BADGE_CSS = `
   .mh-home-scene .mh-home-event-banner{padding:3px 10px;gap:0}
   .mh-home-scene .mh-home-event-banner b,.mh-home-scene .mh-home-event-banner .t2{font-size:10px;line-height:1.1}
   .mh-home-scene .mh-home-event-banner small{line-height:1.1}}
+`;
+// ★HOME の作り直し(2026-11-27 台帳 r1126-073・社長の選択「A＋Bの入口」・点検と見本は docs/progress/home-review-2026-11/)。
+//   上は「名前・ダイヤ・メニュー☰」の1段とイベントの帯1枚(案A)。入口は遊ぶ4つを大きく、たまに行く4つを小さな丸に(案B)。
+//   70-bootstrap.jsx の元の HOME の決め方の上に重ねる。どれも .mh-home-scene.mh-home-v2 の中だけに効かせる(ほかの画面は変わらない)。
+//   <head> へ1回だけ入れる(HOMEのDOMへ <style> を混ぜると配置の検査の数がずれる・上の★と同じ)
+//   字はいちばん小さくても 11px(すぐできる直し7)。横向き・タブレットは README の目安(帯の幅は最大 600px・入口は1列で遊ぶ4つを幅広に)
+const HOME_V2_CSS = `
+.mh-home-v2{--v2-panel:#102522eb;--v2-line:#f7df9a88}
+.mh-home-v2 .mh-home-top{display:flex;align-items:center;gap:6px;padding:calc(6px + env(safe-area-inset-top)) 8px 0;z-index:20}
+.mh-home-v2 .mh-home-top .mh-home-player{flex:1 1 auto;min-width:0;height:46px;padding:3px 10px 3px 4px;gap:7px}
+.mh-home-v2 .mh-home-top .mh-home-avatar{flex:0 0 36px;width:36px;height:36px}
+.mh-home-v2 .mh-home-top .mh-home-player-copy strong{max-width:none;font-size:13px;line-height:1.25}
+.mh-home-v2 .mh-home-top .mh-home-player-copy span{font-size:11px;line-height:1.25}
+.mh-home-v2 .mh-home-top .mh-home-top-wallet{display:flex;align-items:center;width:auto;height:46px;padding:0 10px;grid-template-columns:none}
+.mh-home-v2 .mh-home-top .mh-home-top-wallet>div{display:flex;align-items:center;gap:4px;padding:0}
+.mh-home-v2 .mh-home-top .mh-home-top-wallet>div b{font-size:14px;line-height:1.1}
+.mh-home-v2 .mh-home-top .mh-home-top-wallet>div small{font-size:11px}
+.mh-home-v2 .mh-home-menu-btn{position:relative;flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:56px;height:46px;border:1px solid var(--v2-line);border-radius:14px;background:var(--v2-panel);color:#fce6ab;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;pointer-events:auto;touch-action:manipulation}
+.mh-home-v2 .mh-home-menu-btn:active,.mh-home-v2 .mh-home-menu-btn.is-open{filter:brightness(1.3)}
+.mh-home-v2 .mh-home-menu-bars{display:flex;flex-direction:column;gap:3px}
+.mh-home-v2 .mh-home-menu-bars i{display:block;width:20px;height:2.5px;border-radius:2px;background:#fce6ab}
+.mh-home-v2 .mh-home-menu-lb{font-size:11px;font-weight:900;line-height:1}
+.mh-home-v2 .mh-home-menu-btn em,.mh-home-v2 .mh-home-menu .mh-home-side-btn em{display:flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:999px;border:2px solid #fff;background:#e11d48;color:#fff;font-size:11px;font-style:normal;font-weight:900;line-height:1;box-shadow:0 2px 6px #0008}
+.mh-home-v2 .mh-home-menu-btn em{position:absolute;top:-7px;right:-6px}
+.mh-home-v2 .mh-home-menu-shade{position:absolute;inset:0;z-index:28;border:0;background:#0006;cursor:default}
+.mh-home-v2 .mh-home-menu{position:absolute;z-index:29;right:8px;top:calc(58px + env(safe-area-inset-top));display:flex;flex-direction:column;gap:6px;width:min(240px,calc(100% - 16px));padding:8px;border:1px solid var(--v2-line);border-radius:16px;background:#0d1f1cf7;box-shadow:0 10px 30px #000c}
+/* 閉じているときは目に見えない形(読み上げには残す)。メニューの中の「設定」「ミッション」などを、読み上げの利用者と検査がいつでも見つけられるように */
+.mh-home-v2 .mh-home-menu:not(.is-open){width:1px;height:1px;padding:0;margin:0;border:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap;pointer-events:none;box-shadow:none}
+.mh-home-v2 .mh-home-menu.is-open{display:flex;animation:mhHomeMenuIn .15s ease-out}
+@keyframes mhHomeMenuIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.mh-home-v2 .mh-home-menu.is-open{animation:none}}
+.mh-home-v2 .mh-home-menu-info{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:0 2px 4px;border-bottom:1px solid #fff2}
+.mh-home-v2 .mh-home-menu .mh-tod-clock{position:static!important}
+.mh-home-v2 .mh-home-menu-bp{display:flex;align-items:center;gap:4px;margin-left:auto;color:#ffe08a;font-size:13px;font-weight:900}
+.mh-home-v2 .mh-home-menu-bp small{font-size:11px;color:#f4e7c3}
+.mh-home-v2 .mh-home-menu .mh-home-side-btn{display:flex;flex-direction:row;align-items:center;gap:10px;width:100%;min-height:46px;padding:5px 10px 5px 6px;border-radius:12px;background:#ffffff10;color:#fff;text-align:left}
+.mh-home-v2 .mh-home-menu .mh-home-side-btn:active{background:#ffffff26;transform:none}
+.mh-home-v2 .mh-home-menu .mh-home-side-ic{flex:0 0 34px;width:34px;height:34px}
+.mh-home-v2 .mh-home-menu .mh-home-side-lb{flex:1;font-size:14px;font-weight:900;text-shadow:none}
+.mh-home-v2 .mh-home-menu .mh-home-side-btn em{position:static;margin-left:auto}
+/* 更新履歴の未読の数(r1126-074)は「99+」まで出るので、丸を字の幅に合わせて伸ばす */
+.mh-home-v2 .mh-home-menu .mh-home-side-btn em.mh-unread-badge{width:auto!important;height:20px!important;min-width:20px;padding:0 6px!important;border-radius:999px!important;font-size:11px!important;line-height:1!important;white-space:nowrap}
+.mh-home-v2 .mh-home-settings .mh-home-side-ic{border-color:#cbd5e1aa;background:#1e293be8;color:#e2e8f0}
+.mh-home-v2 .mh-home-band{position:relative;z-index:6;margin:6px 8px 0}
+.mh-home-v2 .mh-home-band-view{overflow:hidden;border-radius:14px}
+.mh-home-v2 .mh-home-band-track{display:flex;transition:transform .35s ease}
+.mh-home-v2 .mh-home-band-slide{flex:0 0 100%;min-width:0;height:80px}
+.mh-home-v2 .mh-home-band-slide>button{width:100%;height:80px}
+.mh-home-v2 .mh-home-band .mh-home-event-banner{max-width:none;justify-content:center;gap:4px;padding:8px 14px;border-radius:14px;font-size:15px}
+.mh-home-v2 .mh-home-band .mh-home-event-banner .r1{column-gap:8px}
+.mh-home-v2 .mh-home-band .mh-home-event-banner small{font-size:11px}
+.mh-home-v2 .mh-home-band .mh-home-event-banner .t2{font-size:12px}
+.mh-home-v2 .mh-home-band .mh-home-tour-banner{max-width:none;gap:10px;padding:8px 14px;border-radius:14px}
+.mh-home-v2 .mh-home-band .mh-home-tour-banner>span:first-child{font-size:30px}
+.mh-home-v2 .mh-home-band .mh-home-tour-banner b{font-size:15px}
+.mh-home-v2 .mh-home-band .mh-home-tour-banner small,.mh-home-v2 .mh-home-band .mh-home-tour-banner em{font-size:11px}
+.mh-home-v2 .mh-home-band-nav{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:2px}
+.mh-home-v2 .mh-home-band-nav .mh-home-event-strip-dots button{display:flex;align-items:center;justify-content:center;width:22px;height:22px;padding:0;border:0;background:transparent}
+.mh-home-v2 .mh-home-band-nav .mh-home-event-strip-dots i{width:8px;height:8px;box-shadow:0 0 0 1px #0008}
+.mh-home-v2 .mh-home-band-nav .mh-home-event-strip-dots button.on i{width:18px;border-radius:4px;background:#fde68a}
+.mh-home-v2 .mh-home-band-next{min-width:0;max-width:72%;min-height:22px;overflow:hidden;padding:2px 9px;border-radius:999px;background:#000a;color:#fffbeb;font-size:11px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}
+.mh-home-v2 .mh-home-assistant{width:70%;max-width:360px;margin:6px 0 0 8px}
+.mh-home-v2 .mh-home-assistant-fold{margin:6px 0 0 8px}
+.mh-home-v2 .mh-home-assistant-show-mark{right:-8px;bottom:-6px;width:24px;height:24px;font-size:14px;background:#fff!important;box-shadow:0 0 0 2px #e11d48,0 2px 6px #0009;animation:mhHomePeerMark 1.4s ease-in-out infinite}
+@keyframes mhHomePeerMark{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+@media(prefers-reduced-motion:reduce){.mh-home-v2 .mh-home-assistant-show-mark{animation:none}}
+.mh-home-v2 .mh-home-assistant-news-dot{position:absolute;top:1px;right:1px;width:13px;height:13px;border-radius:50%;border:2px solid #fff;background:#e11d48;box-shadow:0 1px 4px #0009}
+.mh-home-v2 .mh-home-peer-mark{position:absolute;left:52px;top:calc(100% + 4px);width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:50%;border:1.5px solid #f9a8d4;background:#1e0b24ee;font-size:16px;box-shadow:0 2px 8px #0009}
+.mh-home-v2 .mh-home-dock{gap:6px;padding:8px 8px calc(8px + env(safe-area-inset-bottom))}
+.mh-home-v2 .mh-home-dock-row{gap:6px}
+.mh-home-v2 .mh-home-dock-top>.mh-home-dock-card,.mh-home-v2 .mh-home-dock-top>.mh-home-success{height:clamp(112px,18cqh,150px);padding:0;gap:0;overflow:hidden;border-radius:14px}
+.mh-home-v2 .mh-home-dock-top .mh-home-dock-pic,.mh-home-v2 .mh-home-dock-top .mh-home-success .pic{flex:1 1 auto;width:100%;max-width:none;height:auto;min-height:0;aspect-ratio:auto;border-radius:0}
+.mh-home-v2 .mh-home-dock-top .mh-home-dock-pic img,.mh-home-v2 .mh-home-dock-top .mh-home-success .pic img{object-position:50% 30%}
+.mh-home-v2 .mh-home-dock-top .mh-home-dock-txt,.mh-home-v2 .mh-home-dock-top .mh-home-success .txt{position:absolute;left:0;right:0;bottom:0;height:auto;gap:0;padding:14px 1px 4px;background:linear-gradient(#0000,#000000c8 45%)}
+.mh-home-v2 .mh-home-dock-top .mh-home-dock-name,.mh-home-v2 .mh-home-dock-top .mh-home-success .nm{font-size:11.5px;letter-spacing:-.04em;line-height:1.2}
+.mh-home-v2 .mh-home-dock-top .mh-home-dock-sub,.mh-home-v2 .mh-home-dock-top .mh-home-success .sb{font-size:11px;line-height:1.2}
+.mh-home-v2 .mh-home-dock-bottom{justify-content:space-around}
+.mh-home-v2 .mh-home-dock-bottom>.mh-home-dock-card{flex:1 1 0;max-width:96px;gap:3px;padding:0;border:0;background:transparent;box-shadow:none}
+.mh-home-v2 .mh-home-dock-bottom .mh-home-dock-pic{width:50px;height:50px;max-width:none;aspect-ratio:1;border-radius:50%;border:2px solid #ffe6a7c0;box-shadow:0 3px 10px #0009}
+.mh-home-v2 .mh-home-dock-bottom .mh-home-dock-txt{height:auto}
+.mh-home-v2 .mh-home-dock-bottom .mh-home-dock-name{font-size:11px;line-height:1.2}
+@media(max-width:350px){.mh-home-v2 .mh-home-dock-top .mh-home-dock-name,.mh-home-v2 .mh-home-dock-top .mh-home-success .nm{font-size:10.5px;letter-spacing:-.06em}}
+@media(orientation:landscape) and (max-height:600px){
+  .mh-home-v2 .mh-home-band{position:absolute;left:8px;top:calc(58px + env(safe-area-inset-top));width:min(37%,330px);margin:0}
+  .mh-home-v2 .mh-home-band-slide,.mh-home-v2 .mh-home-band-slide>button{height:68px}
+  .mh-home-v2 .mh-home-band-slide>button[data-home-xmas-entry]{height:68px!important}
+  .mh-home-v2 .mh-home-assistant,.mh-home-v2 .mh-home-assistant-fold{position:absolute;left:8px;top:calc(160px + env(safe-area-inset-top));margin:0}
+  .mh-home-v2 .mh-home-assistant{width:min(37%,330px)}
+  .mh-home-v2 .mh-home-dock{flex-direction:row;align-items:flex-end;gap:8px;padding:5px 8px calc(6px + env(safe-area-inset-bottom))}
+  .mh-home-v2 .mh-home-dock-top{flex:1.9 1 0}
+  .mh-home-v2 .mh-home-dock-bottom{flex:1 1 0}
+  .mh-home-v2 .mh-home-dock-top>.mh-home-dock-card,.mh-home-v2 .mh-home-dock-top>.mh-home-success{height:clamp(84px,25cqh,104px);max-width:none}
+  .mh-home-v2 .mh-home-dock-bottom .mh-home-dock-pic{width:44px;height:44px}
+}
+@container (min-width:700px) and (min-height:560px){
+  .mh-home-v2 .mh-home-band{width:min(600px,calc(100% - 16px));margin:8px auto 0}
+  .mh-home-v2 .mh-home-band-slide,.mh-home-v2 .mh-home-band-slide>button{height:92px}
+  .mh-home-v2 .mh-home-band-slide>button[data-home-xmas-entry]{height:92px!important}
+  .mh-home-v2 .mh-home-assistant{width:360px}
+  .mh-home-v2 .mh-home-dock{flex-direction:row;align-items:flex-end;gap:14px;padding:10px 14px calc(12px + env(safe-area-inset-bottom))}
+  .mh-home-v2 .mh-home-dock-top{flex:2 1 0;justify-content:center}
+  .mh-home-v2 .mh-home-dock-bottom{flex:1 1 0}
+  .mh-home-v2 .mh-home-dock-top>.mh-home-dock-card,.mh-home-v2 .mh-home-dock-top>.mh-home-success{height:min(170px,19cqh);max-width:180px;border-radius:16px}
+  .mh-home-v2 .mh-home-dock-top .mh-home-dock-name,.mh-home-v2 .mh-home-dock-top .mh-home-success .nm{font-size:13px}
+  .mh-home-v2 .mh-home-dock-top .mh-home-dock-sub,.mh-home-v2 .mh-home-dock-top .mh-home-success .sb{font-size:12px}
+  .mh-home-v2 .mh-home-dock-bottom .mh-home-dock-pic{width:62px;height:62px}
+  .mh-home-v2 .mh-home-dock-bottom .mh-home-dock-name{font-size:12px}
+}
+/* クリスマスの入口(79-screen-xmas-event.jsx)は、横向きで帯を右の列の横へ動かす決まりを持っている(前の HOME の形のため)。
+   新しい帯の中では、ほかの1枚と同じ位置・大きさのままにする(部品の中身は変えない。HOME の側で上書きするだけ) */
+.mh-home-v2 .mh-home-band-slide[data-home-xmas-entry-strip]{position:relative!important;left:auto!important;right:auto!important;top:auto!important;width:auto!important;margin:0!important}
+@media (orientation:landscape) and (max-height:520px){.mh-home-v2 .mh-home-band .mh-xmas-entry[data-home-xmas-entry="banner"] .mh-xmas-entry-sub{font-size:11px}}
+/* 横持ちの iPhone の切り欠き(カメラの欠け)に、押す物を入れない。左右の余白に端末の安全な余白(safe-area)を足す */
+.mh-home-v2 .mh-home-top{padding-left:calc(8px + env(safe-area-inset-left));padding-right:calc(8px + env(safe-area-inset-right))}
+.mh-home-v2 .mh-home-menu{right:calc(8px + env(safe-area-inset-right))}
+.mh-home-v2 .mh-home-band{margin-left:calc(8px + env(safe-area-inset-left));margin-right:calc(8px + env(safe-area-inset-right))}
+.mh-home-v2 .mh-home-assistant,.mh-home-v2 .mh-home-assistant-fold{margin-left:calc(8px + env(safe-area-inset-left))}
+.mh-home-v2 .mh-home-dock{padding-left:calc(8px + env(safe-area-inset-left));padding-right:calc(8px + env(safe-area-inset-right))}
+@media(orientation:landscape) and (max-height:600px){
+  .mh-home-v2 .mh-home-band{left:calc(8px + env(safe-area-inset-left));margin:0}
+  .mh-home-v2 .mh-home-assistant,.mh-home-v2 .mh-home-assistant-fold{left:calc(8px + env(safe-area-inset-left));margin:0}
+}
+@container (min-width:700px) and (min-height:560px){
+  .mh-home-v2 .mh-home-band{margin-left:auto;margin-right:auto}
+  .mh-home-v2 .mh-home-dock{padding-left:calc(14px + env(safe-area-inset-left));padding-right:calc(14px + env(safe-area-inset-right))}
+}
 `;
 // ★イベント・レイドボス「ジャック」(docs/spec/RAID_BOSS_JACK.md)。開催中だけ、HOMEの真ん中でぴょこぴょこ跳ねる。
 //   タップでレイド画面を開く。近くに、いま挑める段階の共有HPバーを出す。ときどき両腕を上げたポーズに変わる(HPとは連動しない)。
@@ -52468,7 +52635,15 @@ const HomeRaidJack = ({ eventId, onOpen, ev = RAID_EVENT_JACK }) => {
 // tools/home-layout-check.js がこの1行を取り出して同じ計算で測る
 // 「億」「兆」のような全角の字は数字より広いので、2.5字ぶんとして数える(N5・2026-10-21)。数字とカンマだけのときは今までと同じ
 const homeWalletGrowPx=(goldText,bpText)=>{const w=t=>[...String(t)].reduce((n,c)=>n+(c.charCodeAt(0)>0x7f?2.5:1),0);return Math.min(24,Math.max(0,Math.ceil(w(goldText)*6.4-50),Math.ceil(w(bpText)*6.4-29)));};
-function HomeScreen({
+// ★HOME の作り直し(r1126-073)は、ゲームの中の時刻で切り替える(2026-11-28 台帳 r1126-086 追記1・社長「いままで2でやってたんだからそれでやればよくない？」)。
+//   2026-11-28 10:00(日本時間)より前は前の HOME(HomeScreenV1)、以後は新しい HOME(HomeScreenV2)。開いたまま 10:00 をまたいでも、15秒ごとに見直して切り替わる。
+//   新しい HOME と一緒に変えた所(吹き出しの既定・入口の印・会話の窓の出し方・小さい知らせの数・バトルを選ぶ画面のサクセスの入口)も homeV2At() で同じ時刻に切り替える
+function HomeScreen(props) {
+  const v2=useHomeV2();
+  return v2?<HomeScreenV2 {...props}/>:<HomeScreenV1 {...props}/>;
+}
+
+function HomeScreenV1({
   assistantBondUp, friendRequestCount = 0, breederIcon, breederLevel, breederName, breederPoints, gifts, gold,
   hasUnreadChangelog, homeBackgroundReady, homeArt, homePastureMasumons, masuMons, missions,
   onOpenBattle, onOpenManagement, onOpenMarket, onOpenProfile, onOpenRhythm, onOpenSettings,
@@ -52566,7 +52741,9 @@ function HomeScreen({
   const xmasEntryInStrip=!!xmasEntry;
   // HOMEの助手コメントを出すか(2026-11-17 あっくん「助手のコメントのオンオフ」)。設定は 21-assistant.jsx の
   // HOME_ASSISTANT_COMMENT_STORE(既定は入)。「切」のときは吹き出しの枠ごと描かず、そのぶん広場が広くなる
-  const homeComment=useHomeAssistantComment();
+  const homeComment0=useHomeAssistantComment();
+  // 10:00 より前の HOME は、保存が無いときの既定を前のまま「入」にする(r1126-086 追記1)
+  const homeComment=homeComment0.explicit?homeComment0:{...homeComment0,on:true};
   return (
 
       <main ref={homeSceneRef} className="mh-home-scene" aria-label="村の広場">
@@ -52650,7 +52827,7 @@ function HomeScreen({
             <button type="button" data-home-fac="rhythm" className="mh-home-dock-card rhythm" onClick={onOpenRhythm} aria-label={RHYTHM_MODE_PUBLIC_RELEASE?"モンヒロビート":"モンヒロビート（準備中）"}>
               <span className="mh-home-dock-pic"><img src="images/home/facility-beat.webp" alt="" draggable={false}/></span>
               <span className="mh-home-dock-txt"><span className="mh-home-dock-name">モンヒロビート{!RHYTHM_MODE_PUBLIC_RELEASE&&<small className="mh-home-dock-soon">準備中</small>}</span><span className="mh-home-dock-sub">音ゲー</span></span>
-              {homeRhythmEventOpen&&<em data-home-event-badge className="mh-home-event-badge" style={HOME_EVENT_BADGE_STYLE}>✨開催中✨</em>}
+              {homeRhythmEventOpen&&<em data-home-event-badge className="mh-home-event-badge" style={HOME_EVENT_BADGE_STYLE_V1}>✨開催中✨</em>}
             </button>
             {/* MFバトルカード(公開の印 cardBattle が立ち、公開のお話を見た人だけ。60-app.jsx が決める) */}
             {cardBattleVisible&&typeof onOpenCardBattle==='function'&&<button type="button" data-home-fac="card" data-home-card-battle className="mh-home-dock-card card" onClick={onOpenCardBattle} aria-label="MFバトルカード">
@@ -52699,11 +52876,306 @@ function HomeScreen({
   );
 }
 
+
+function HomeScreenV2({
+  assistantBondUp, friendRequestCount = 0, breederIcon, breederLevel, breederName, breederPoints, gifts, gold,
+  hasUnreadChangelog, changelogUnreadCount, homeBackgroundReady, homeArt, homePastureMasumons, masuMons, missions,
+  onOpenBattle, onOpenManagement, onOpenMarket, onOpenProfile, onOpenRhythm, onOpenSettings,
+  onOpenTemple, openChangelog, openGiftBox, openMissions, profileFrameId, resolveIconUrl, spotClass,
+  raidJackVisible = false, raidJackEventId, onOpenRaidJack,
+  // クリスマスのイベントページを開く(台帳 r1126-006)。開始時刻までは null(札は今までどおり更新履歴を開く)
+  onOpenXmasEvent = null,
+  // クリスマスのレイドのボス(ジャックと同じ置き方・押すとイベントページの「レイド」タブ)。出すかどうかは 60-app.jsx が決める
+  raidXmasVisible = false, raidXmasEventId = '', onOpenRaidXmas = null,
+  // クリスマスのイベントページの入口(台帳 r1126-014)。{ onOpen, preOpen }。null なら出さない(11/28 10:00〜12/31 4:00 に 60-app.jsx が渡す)
+  xmasEntry = null,
+  // 助手とおしゃべり(2026-10-14)。公開の印 assistantChat が立つまでは null(ボタンを出さない)
+  onOpenAssistantChat = null,
+  // MFバトルカードの入口(案A・左の列のいちばん下)。公開の印 cardBattle が立ち、公開のお話を見た人だけ(60-app.jsx が決める)
+  cardBattleVisible = false, onOpenCardBattle = null, cardBattleTeaser = false, onOpenCardTeaser = null,
+  cardTourVisible = false, onOpenCardTour = null,
+  // はじめての人の「つぎにやること」(2026-11-11 案4)。{ n:1〜3, title, sub, onTap }。null なら出さない
+  nextStep = null,
+  // モンヒロサクセス β の札(2026-11-13 社長「HOMEにβの札」)。中身は 56-monhero-success-store.jsx の MonheroSuccessHomeEntry(公開の印が偽なら何も出さない)
+  successEntry = null,
+}) {
+  // 背景の絵は「HOMEの枠の縦横比」で選ぶ。画面の向きでは決めない。
+  // パソコンは画面が横長でも、HOMEは幅600の縦長の列に収まるので、横長の絵を出すと村の真ん中だけが大きく写り、
+  // 施設ボタンが建物と合わなくなる。枠の大きさは自前で回しているとき(横持ちの描き方)も回す前の値なので、そのまま使える
+  // 形の境目(2026-11-17・正方形の絵を追加して3方向に): 比が 3/4 未満は縦長、3/4〜1.2 はほぼ正方形、1.2 を超えたら横長。
+  // 下の境目 3/4 は、タイトル絵の「ほぼ正方形」の帯(3:4〜。70-bootstrap.jsx)の下端と、ホームの3枚の比
+  // (縦 941/1672・正方形 1600/1600・横 2048/1152)の相乗平均 0.75 に一致する。タブレット縦(768x1024=0.75)は正方形になる。
+  // 上の境目は、横長の判定として使ってきた 1.2 をそのまま使う(タブレット横 1024x768=1.33 は横長になる)
+  // 助手ライフの「いま行くと得なこと」から施設へ行く口(HOME の札と同じ動き。助手ライフ側が呼ぶ)
+  React.useEffect(()=>{ if(typeof ASSISTANT_LIFE_LINKS!=='undefined'&&ASSISTANT_LIFE_LINKS) ASSISTANT_LIFE_LINKS.goPlace={ranch:onOpenManagement,temple:onOpenTemple,market:onOpenMarket,battle:onOpenBattle}; });
+  const homeSceneRef=React.useRef(null);
+  const [homeSceneShape,setHomeSceneShape]=React.useState('portrait');
+  React.useEffect(()=>{
+    const el=homeSceneRef.current;
+    if(!el)return undefined;
+    const measure=()=>{const w=el.clientWidth,h=el.clientHeight;if(w>0&&h>0){const r=w/h;setHomeSceneShape(r>1.2?'wide':r>=0.75?'square':'portrait');}};
+    measure();
+    if(typeof ResizeObserver==='undefined'){window.addEventListener('resize',measure);return()=>window.removeEventListener('resize',measure);}
+    const ro=new ResizeObserver(measure);ro.observe(el);return()=>ro.disconnect();
+  },[]);
+  // 【2026-11-17 ホーム一新で撤去】吹き出しが伸びたら施設の札を押し下げる測定機構(--mh-home-* の CSS変数6つ)。
+  //   施設は下のドックに集約され、吹き出しは上の帯・細バナーの下に流れで置くようになったので、押し下げ合いは起きない。
+  //   ジャックの吹き出しの測り直しは HomeRaidJack 自身の ResizeObserver(吹き出しを見る)+1.5秒間隔が受け持つ
+  const homeBackgroundSrc=homeArtSrc(homeArt,homeSceneShape);
+  const homeBackgroundWide=homeArtIsWide(homeArt,homeSceneShape);
+  const homeBackgroundSquare=homeArtIsSquare(homeArt,homeSceneShape);
+  // ★バッジのCSSは <head> へ1回だけ入れる。HOMEのDOMへ <style> を混ぜると、
+  //   配置の検査(home-layout-check.js)が施設の位置を測るときに数がずれる。
+  //   head なら画面の中身に影響しない。
+  React.useEffect(()=>{
+    if(typeof document==='undefined')return;
+    if(document.getElementById('mh-home-event-badge-css'))return;
+    const tag=document.createElement('style');
+    tag.id='mh-home-event-badge-css';
+    tag.textContent=HOME_EVENT_BADGE_CSS;
+    document.head.appendChild(tag);
+  },[]);
+  // 作り直した HOME の見た目(HOME_V2_CSS)も同じく <head> へ1回だけ
+  React.useEffect(()=>{
+    if(typeof document==='undefined'||document.getElementById('mh-home-v2-css'))return;
+    const tag=document.createElement('style');
+    tag.id='mh-home-v2-css';
+    tag.textContent=HOME_V2_CSS;
+    document.head.appendChild(tag);
+  },[]);
+  // 開催中のキャンペーンのうち、HOMEの札・バナー(banner)を持つもの(ハロウィン・ナイト)。描くたびに数え直す
+  const homeEventCampaign=(()=>{
+    if(typeof RELEASE_FLAGS==='undefined'||!RELEASE_FLAGS||RELEASE_FLAGS.rhythmEventPoints!==true||typeof rhythmEventPointCampaignAt!=='function')return null;
+    const campaign=rhythmEventPointCampaignAt(Date.now());
+    return campaign&&campaign.banner?campaign:null;
+  })();
+  // 公式杯の札(2026-10-31 社長・案A。中身は 99-card-tournament の cardTourHomeBanner)。
+  //   一覧は HOME を開いたときと10分ごとに読む。残り時間は1分ごとに数え直す。読めない・大会が無いときは出さない
+  const [cardTourList,setCardTourList]=React.useState(null);
+  const [cardTourNow,setCardTourNow]=React.useState(()=>Date.now());
+  React.useEffect(()=>{
+    if(!cardTourVisible||typeof cardTourFetchList!=='function')return undefined;
+    let alive=true;
+    const load=()=>{cardTourFetchList().then(l=>{if(alive)setCardTourList(Array.isArray(l)?l:null);}).catch(()=>{});};
+    load();
+    let ticks=0;
+    const id=setInterval(()=>{ticks+=1;setCardTourNow(Date.now());if(ticks%10===0)load();},60000);
+    return ()=>{alive=false;clearInterval(id);};
+  },[cardTourVisible]);
+  const homeCardTour=cardTourVisible&&typeof cardTourHomeBanner==='function'?cardTourHomeBanner(cardTourList,cardTourNow):null;
+  // モンヒロビートのイベントを開催しているか。描くたびに数え直す(上の★のとおり)
+  const homeRhythmEventOpen=(()=>{
+    const released=(typeof RELEASE_FLAGS!=='undefined'&&RELEASE_FLAGS&&RELEASE_FLAGS.rhythmWeeklyRanking===true);
+    if(!released||typeof rhythmLimitedEventAt!=='function')return false;
+    return !!rhythmLimitedEventAt(Date.now());
+  })();
+  // 期間ものの細バナー(2026-11-17 ホーム一新): イベントと公式杯を上の帯の下の1本に集約する。
+  // 両方あるときはカルーセル(5秒ごとに切替・手で切り替える操作は付けない。バナー自体が行き先ボタンのため)
+  // 【2026-11-27 HOME の作り直し(台帳 r1126-073・案A＋Bの入口)】上はイベントの帯1枚だけ。2つ目からは帯を横に送る(指で送る・点を押す・
+  //   帯の下の「次:」を押す)。手で触らなければ7秒ごとに次へ進み、触ったら20秒は止める。
+  //   並び: クリスマスの入口(r1126-014 の大きな帯)→ ほかの開催中のイベント → 公式杯。クリスマスの入口があるときは、同じ中身の「クリスマスイベント」の帯は出さない
+  //   ただしクリスマスがまだ予告(序章だけ)のあいだは、いま遊べるイベントを1枚目にする(API の点検 7・予告より開催中を先に)
+  const homeBandSlides=[];
+  const homeBandEvent=homeEventCampaign&&!(xmasEntry&&homeEventCampaign.id==='xmas_2026');
+  if(homeBandEvent&&xmasEntry&&xmasEntry.preOpen)homeBandSlides.push('event');
+  if(xmasEntry)homeBandSlides.push('xmas');
+  if(homeBandEvent&&!homeBandSlides.includes('event'))homeBandSlides.push('event');
+  if(homeCardTour&&typeof onOpenCardTour==='function')homeBandSlides.push('tour');
+  const homeBandCount=homeBandSlides.length;
+  const [homeBandIdx,setHomeBandIdx]=React.useState(0);
+  const homeBandTouchRef=React.useRef({x:null,at:0,swiped:false});
+  React.useEffect(()=>{
+    if(homeBandCount<2)return undefined;
+    const id=setInterval(()=>{if(Date.now()-homeBandTouchRef.current.at>=20000)setHomeBandIdx(i=>i+1);},7000);
+    return ()=>clearInterval(id);
+  },[homeBandCount]);
+  const homeBandShow=homeBandCount?((homeBandIdx%homeBandCount)+homeBandCount)%homeBandCount:0;
+  const homeBandGo=(step)=>{homeBandTouchRef.current.at=Date.now();setHomeBandIdx(i=>i+step);};
+  const homeBandTitle=(k)=>k==='xmas'?'聖夜の名探偵':k==='event'&&homeEventCampaign?homeEventCampaign.banner.title:k==='tour'&&homeCardTour?homeCardTour.name:'';
+  // メニュー☰(案A)。右の列(時計・更新履歴・ミッション・ギフト)と設定・ブリーダーP をここへまとめる。赤い数字は合計
+  //   ボタンはいつも描いておき(閉じているときは見えないだけ)、案内(チュートリアル)がミッション・ギフト・設定を指すときは開いておく
+  const [homeMenuOpen,setHomeMenuOpen]=React.useState(false);
+  const homeMissionCount=missionClaimableCount(normalizeMissions(missions));
+  const homeGiftCount=giftClaimableCount(gifts);
+  // 更新履歴は未読の数(r1126-074 小5)。数が分からないときだけ1と数える
+  const homeChangelogCount=Number(changelogUnreadCount)||0;
+  const homeMenuBadge=homeMissionCount+homeGiftCount+(hasUnreadChangelog?Math.max(1,homeChangelogCount):0);
+  const homeMenuSpot=`${spotClass('reward')||''}${spotClass('settings')||''}`.trim();
+  React.useEffect(()=>{if(homeMenuSpot)setHomeMenuOpen(true);},[homeMenuSpot]);
+  const homeMenuGo=(fn)=>()=>{setHomeMenuOpen(false);if(typeof fn==='function')fn();};
+  // HOMEの助手コメントを出すか(2026-11-17 あっくん「助手のコメントのオンオフ」)。設定は 21-assistant.jsx の
+  // HOME_ASSISTANT_COMMENT_STORE(既定は入)。「切」のときは吹き出しの枠ごと描かず、そのぶん広場が広くなる
+  const homeComment=useHomeAssistantComment();
+  return (
+
+      <main ref={homeSceneRef} className="mh-home-scene mh-home-v2" aria-label="村の広場">
+        {/* 背景は設定の「ホーム画面アレンジ」で選んだ絵。HOMEの枠の形に合った絵を画面いっぱいに出す(横長は is-wide、正方形は is-square) */}
+        <picture className={`mh-home-background ${homeBackgroundReady?'is-ready':''} ${homeBackgroundWide?'is-wide':''} ${homeBackgroundSquare?'is-square':''}`} aria-hidden="true"><img className="mh-home-backdrop" src={homeBackgroundSrc} alt=""/><img className="mh-home-main" src={homeBackgroundSrc} alt=""/></picture>
+        <div className="mh-home-masumon-layer" aria-hidden="true">{homePastureMasumons.map((masu,index)=><HomeWalkingMasumon key={masu.id} masu={masu} base={ALL_PLAYER_MONSTERS[masu.baseId]} masuColors={getMasuColors(masu)} index={index} count={homePastureMasumons.length}/>)}</div>
+        {/* 設定を光らせるときは、上の帯ごと暗幕より前に出す(帯が z-index を持っていて中だけ前に出せないため) */}
+        {raidXmasVisible&&typeof onOpenRaidXmas==='function'?<HomeRaidJack key="raid-xmas" ev={RAID_EVENT_XMAS} eventId={raidXmasEventId} onOpen={onOpenRaidXmas}/>
+          :raidJackVisible&&<HomeRaidJack eventId={raidJackEventId} onOpen={onOpenRaidJack}/>}
+        {/* 上の1段(2026-11-27 r1126-073 案A): 名前と Lv・ダイヤ・メニュー☰ だけ。XP の棒はプロフィールで、ブリーダーP はメニューの中で見せる */}
+        <header className={`mh-home-status mh-home-top${spotClass('settings')}`}>
+          <button type="button" className="mh-home-player relative" onClick={onOpenProfile} aria-label="プロフィールを開く">
+            <HomeProfileIcon src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={profileFrameId}/>
+            <div className="mh-home-player-copy"><strong>{breederName}</strong><span>Lv.{breederLevel.level}</span></div>
+            {Number(friendRequestCount)>0&&<span data-home-friend-badge aria-label={`フレンド申請が${Number(friendRequestCount)}件届いています`} className="absolute -right-1 -top-2 flex h-6 min-w-[24px] items-center justify-center rounded-full bg-rose-500 px-1.5 text-[12px] font-black text-white shadow-lg">{Math.min(99,Number(friendRequestCount))}</span>}
+          </button>
+          {/* ダイヤは桁が増えても1行のまま。9桁(1億)からは「67.3億」のように縮めて出し、押すと細かい数が出る(CompactCount・N5) */}
+          <section className="mh-home-wallet mh-home-top-wallet" aria-label="ダイヤ">
+            <div><Gem size={15}/><CompactCount value={gold} style={{'--len':String(compactCount(gold)).length}}/><small>ダイヤ</small></div>
+          </section>
+          <button type="button" className={`mh-home-menu-btn${homeMenuOpen?' is-open':''}`} data-home-menu-btn onClick={()=>setHomeMenuOpen(o=>!o)} aria-label={homeMenuBadge>0?`メニュー(${homeMenuBadge}件)`:'メニュー'} aria-expanded={homeMenuOpen}>
+            <span className="mh-home-menu-bars" aria-hidden="true"><i/><i/><i/></span><span className="mh-home-menu-lb">メニュー</span>
+            {homeMenuBadge>0&&<em data-home-menu-badge>{Math.min(99,homeMenuBadge)}</em>}
+          </button>
+        </header>
+        {/* メニューの中身。閉じているときも描いておく(見えないだけ)。外を押すと閉じる */}
+        {homeMenuOpen&&<button type="button" className="mh-home-menu-shade" data-home-menu-shade aria-label="メニューを閉じる" onClick={()=>setHomeMenuOpen(false)}/>}
+        <div className={`mh-home-menu${homeMenuOpen?' is-open':''}`} data-home-menu={homeMenuOpen?'open':'closed'}>
+          <div className="mh-home-menu-info">
+            {typeof TimeOfDayClock==='function'&&<TimeOfDayClock home/>}
+            <span className="mh-home-menu-bp"><Coins size={14}/><small>ブリーダーP</small><CompactCount value={breederPoints}/></span>
+          </div>
+          <button onClick={homeMenuGo(openMissions)} className={`mh-home-side-btn mh-home-mission${spotClass('reward')}`} aria-label="ミッション"><span className="mh-home-side-ic"><List size={18}/></span><span className="mh-home-side-lb">ミッション</span>
+            {homeMissionCount>0&&<em>{homeMissionCount}</em>}
+          </button>
+          <button onClick={homeMenuGo(openGiftBox)} className={`mh-home-side-btn mh-home-gift${spotClass('reward')}`} aria-label="ギフト"><span className="mh-home-side-ic"><Package size={18}/></span><span className="mh-home-side-lb">ギフト</span>
+            {homeGiftCount>0&&<em>{homeGiftCount}</em>}
+          </button>
+          <button onClick={homeMenuGo(openChangelog)} className="mh-home-side-btn mh-home-update" aria-label="更新履歴"><span className="mh-home-side-ic"><RefreshCcw size={17}/></span><span className="mh-home-side-lb">更新履歴</span>{hasUnreadChangelog&&(homeChangelogCount>0
+            // 「!」ではなく未読の数(2026-11-27 r1126-074 小5)。メニューの行は横に長いので、2桁でもそのまま出せる
+            ?<em className="mh-unread-badge" data-changelog-entry-count={homeChangelogCount} aria-label={`未読${homeChangelogCount}件`}>{homeChangelogCount>99?'99+':homeChangelogCount}</em>
+            :<em className="mh-unread-badge" aria-label="未読あり">!</em>)}</button>
+          <button onClick={homeMenuGo(onOpenSettings)} className={`mh-home-side-btn mh-home-settings${spotClass('settings')}`} aria-label="設定"><span className="mh-home-side-ic"><Settings size={18}/></span><span className="mh-home-side-lb">設定</span></button>
+        </div>
+        {/* イベントの帯1枚(案A)。2つ目からは横に送る。並びと送り方は上の homeBandSlides */}
+        {homeBandCount>0&&<div className="mh-home-band" data-home-band={homeBandSlides[homeBandShow]}
+          onPointerDown={e=>{homeBandTouchRef.current={...homeBandTouchRef.current,x:e.clientX,swiped:false};}}
+          onPointerUp={e=>{const t=homeBandTouchRef.current;if(t.x===null||homeBandCount<2)return;const dx=e.clientX-t.x;t.x=null;if(Math.abs(dx)>=40){t.swiped=true;homeBandGo(dx<0?1:-1);}}}
+          onClickCapture={e=>{if(homeBandTouchRef.current.swiped){homeBandTouchRef.current.swiped=false;e.stopPropagation();e.preventDefault();}}}>
+          <div className="mh-home-band-view">
+            <div className="mh-home-band-track" style={{transform:`translateX(${-homeBandShow*100}%)`}}>
+              {homeBandSlides.map((k,i)=>(
+                <div key={k} className="mh-home-band-slide" aria-hidden={i!==homeBandShow} {...(k==='xmas'?{'data-home-xmas-entry-strip':''}:{'data-home-event-strip':''})}>
+                  {k==='xmas'&&<HomeXmasEventEntry onOpen={xmasEntry.onOpen} preOpen={!!xmasEntry.preOpen}/>}
+                  {/* 押すとモンヒロビートへ直に入る(2026-11-27 台帳 r1126-073 追記2・入口の整理①。前は更新履歴が開いた) */}
+                  {k==='event'&&<button type="button" data-home-event-banner className="mh-home-event-banner" tabIndex={i===homeBandShow?0:-1} onClick={homeEventCampaign.id==='xmas_2026'&&typeof onOpenXmasEvent==='function'?onOpenXmasEvent:onOpenRhythm} aria-label={`${homeEventCampaign.banner.title}${homeEventCampaign.banner.title2||''} ${homeEventCampaign.banner.sub}`}>
+                    {/* 1行目に題と期間(sub)、2行目に副題(title2)(r1119-131) */}
+                    <b className="r1"><span>{homeEventCampaign.banner.emoji} {homeEventCampaign.banner.title}</span><small>{homeEventCampaign.banner.sub}</small></b>{homeEventCampaign.banner.title2?<span className="t2">{homeEventCampaign.banner.title2}</span>:null}
+                  </button>}
+                  {k==='tour'&&<button type="button" data-home-card-tour={homeCardTour.id} className="mh-home-tour-banner" tabIndex={i===homeBandShow?0:-1} onClick={()=>onOpenCardTour(homeCardTour.id)} aria-label={`${homeCardTour.name} ${homeCardTour.sub}`}>
+                    <span aria-hidden="true">🏆</span><span><b>{homeCardTour.name}</b><small>{homeCardTour.sub}{homeCardTour.prize&&<em>{homeCardTour.prize}</em>}</small></span>
+                  </button>}
+                </div>))}
+            </div>
+          </div>
+          {homeBandCount>1&&<div className="mh-home-band-nav">
+            <span className="mh-home-event-strip-dots">{homeBandSlides.map((k,i)=><button key={k} type="button" className={i===homeBandShow?'on':''} aria-label={`${i+1}枚目を見る`} onClick={()=>homeBandGo(i-homeBandShow)}><i/></button>)}</span>
+            <button type="button" className="mh-home-band-next" data-home-band-next onClick={()=>homeBandGo(1)}>次:{homeBandTitle(homeBandSlides[(homeBandShow+1)%homeBandCount])} ›</button>
+          </div>}
+        </div>}
+        {/* 下部の統一ドック(2026-11-17 ホーム一新): 上から「次にやること」→施設カード×8(ふつうは4列×2段、広い場面と横画面では8枚1列。70-bootstrap.jsx)。
+            施設ごとに担当の助手が分かれているので、8つとも同じ大きさ・同じ形の正方形カードにそろえた(2026-11-17 あっくん追加指示)。
+            施設名は当初ホームだけ略称にしたが、統一カードの実画面を見て「フルネームでもおかしくない」とあっくんが判断し、
+            ホームでもフルネームに戻した(2026-11-17 あっくん追加指示)。名前の字の大きさは最長の「モンヒロサクセス」が
+            1行に収まるよう全施設一律に決めてある(70-bootstrap.jsx の .mh-home-dock-name)。助手の顔バッジは AssistantLifeHomeFaces が
+            data-home-fac のボタンの右上へ重ねる(56-assistant-life-house.jsx) */}
+        <div className="mh-home-dock">
+          {nextStep&&<button type="button" className="mh-home-nextstep" data-home-next-step={nextStep.n} onClick={nextStep.onTap} aria-label={`次にやること ${nextStep.n}/3 ${nextStep.title}`}>
+            <span className="mh-home-nextstep-lab">次に<br/>やること<b>{nextStep.n}/3</b></span>
+            <span className="mh-home-nextstep-body"><b>{['①','②','③'][nextStep.n-1]} {nextStep.title}</b><small>{nextStep.sub}</small></span>
+            <i aria-hidden="true">›</i>
+          </button>}
+          <div className="mh-home-dock-row mh-home-dock-top" aria-label="遊ぶ">
+            {/* モンヒロサクセス β の入口(2026-11-13 社長)。中身は 56-monhero-success-store.jsx の MonheroSuccessHomeEntry で、
+                ドック上段の先頭のセルとして流れる(公開の印が偽なら何も出さず、残りのカードで割り直す) */}
+            {successEntry}
+            {/* 2026-09-20 ユーザー指示で正式名称を「モンヒロバトル」にした。下の言葉は「挑戦」(2026-11-17 あっくん決定)。
+                ホームの名前も正式名称のまま(略称「モンバト」は 2026-11-17 の一新で一時使ったが、同日のあっくん追加指示でフルネームへ戻した) */}
+            <button type="button" data-home-fac="battle" className={`mh-home-dock-card battle${spotClass('battle')}`} onClick={onOpenBattle} aria-label="モンヒロバトル">
+              <span className="mh-home-dock-pic"><img src="images/home/facility-battle.webp" alt="" draggable={false}/></span>
+              <span className="mh-home-dock-txt"><span className="mh-home-dock-name">モンヒロバトル</span><span className="mh-home-dock-sub">挑戦</span></span>
+            </button>
+            {/* モンヒロビート(2026-09-03に修行の場所を譲った。2026-09-04に正式名称を「モンスタービート」から「モンヒロビート」へ変更)。
+                公開フラグが立つまでは「準備中」の案内だけを出し、本編からは遊べない */}
+            {/* ★イベント開催中は、その遊びのボタンに札を出す(2026-09-11・ユーザー指示)。いまのイベントはモンヒロビートの曲だけを対象にするので、札もここだけ。
+                ★期間の判定は描くたびに行う(読み込み時に1回だけ決めると、開きっぱなしの端末で古いままになる・CLAUDE.md ⑥-4) */}
+            <button type="button" data-home-fac="rhythm" className="mh-home-dock-card rhythm" onClick={onOpenRhythm} aria-label={RHYTHM_MODE_PUBLIC_RELEASE?"モンヒロビート":"モンヒロビート（準備中）"}>
+              <span className="mh-home-dock-pic"><img src="images/home/facility-beat.webp" alt="" draggable={false}/></span>
+              <span className="mh-home-dock-txt"><span className="mh-home-dock-name">モンヒロビート{!RHYTHM_MODE_PUBLIC_RELEASE&&<small className="mh-home-dock-soon">準備中</small>}</span><span className="mh-home-dock-sub">音ゲー</span></span>
+              {homeRhythmEventOpen&&<em data-home-event-badge className="mh-home-event-badge" style={HOME_EVENT_BADGE_STYLE}>開催中</em>}
+            </button>
+            {/* MFバトルカード(公開の印 cardBattle が立ち、公開のお話を見た人だけ。60-app.jsx が決める) */}
+            {cardBattleVisible&&typeof onOpenCardBattle==='function'&&<button type="button" data-home-fac="card" data-home-card-battle className="mh-home-dock-card card" onClick={onOpenCardBattle} aria-label="MFバトルカード">
+              <span className="mh-home-dock-pic"><img src="images/home/facility-card.webp" alt="" draggable={false}/></span>
+              <span className="mh-home-dock-txt"><span className="mh-home-dock-name">MFバトルカード</span><span className="mh-home-dock-sub">カード対戦</span></span>
+            </button>}
+            {/* 公開前の予告(社長 2026-10-25)。カード自体に「近日公開」を付け、押すと予告の小窓。中には入れない。
+                公開の印(RELEASE_FLAGS.cardBattle)を立てると、60-app がこちらを下ろして上のふつうの入口に切り替える */}
+            {!cardBattleVisible&&cardBattleTeaser&&typeof onOpenCardTeaser==='function'&&<button type="button" data-home-fac="card" data-home-card-battle-teaser className="mh-home-dock-card card soon" onClick={onOpenCardTeaser} aria-label="MFバトルカード 近日公開">
+              <span className="mh-home-dock-pic"><img src="images/home/facility-card.webp" alt="" draggable={false}/></span>
+              <span className="mh-home-dock-txt"><span className="mh-home-dock-name">MFバトルカード</span><span className="mh-home-dock-sub">カード対戦</span></span>
+              <em data-home-soon-badge style={HOME_EVENT_BADGE_STYLE}>近日公開</em>
+            </button>}
+          </div>
+          {/* 下段の4施設は「下の言葉」が無い。縦位置の受け方は全カード共通で、絵は上端そろえ、
+              名前は文字の枠(.mh-home-dock-txt。「名前1行+間+下の言葉1行」ぶんの固定の高さ)の中で
+              縦に中央寄せする(70-bootstrap.jsx)。下の言葉が無い施設は名前1行だけが枠の縦中央に来る
+              (2026-11-17 あっくん追加指示。センター合わせの対象はカード全体ではなく文字の枠部分) */}
+          <nav className="mh-home-dock-row mh-home-dock-bottom" aria-label="拠点施設">
+            <button type="button" data-home-fac="management" className={`mh-home-dock-card management${spotClass('management')}`} onClick={onOpenManagement} aria-label="M/B管理">
+              <span className="mh-home-dock-pic"><img src="images/home/facility-management.webp" alt="" draggable={false}/></span><span className="mh-home-dock-txt"><span className="mh-home-dock-name">M/B管理</span></span>
+            </button>
+            <button type="button" data-home-fac="temple" className={`mh-home-dock-card temple${spotClass('temple')}`} onClick={onOpenTemple} aria-label="神殿">
+              <span className="mh-home-dock-pic"><img src="images/home/facility-temple.webp" alt="" draggable={false}/></span><span className="mh-home-dock-txt"><span className="mh-home-dock-name">神殿</span></span>
+            </button>
+            <button type="button" data-home-fac="market" className={`mh-home-dock-card market${spotClass('market')}`} onClick={onOpenMarket} aria-label="マーケット">
+              <span className="mh-home-dock-pic"><img src="images/home/facility-market.webp" alt="" draggable={false}/></span><span className="mh-home-dock-txt"><span className="mh-home-dock-name">マーケット</span></span>
+            </button>
+            {/* 助手ライフ(2026-11-07 社長)。家と町にいる助手の顔は、このボタンの右上のバッジに集まる(56-assistant-life-house.jsx の AssistantLifeHomeFaces) */}
+            {typeof assistantLifeEnabled==='function'&&assistantLifeEnabled()&&<button type="button" data-home-fac="life" data-home-assistant-life className="mh-home-dock-card life" onClick={()=>assistantLifeOpenScreen()} aria-label="助手ライフ">
+              <span className="mh-home-dock-pic"><img src="images/home/facility-life.webp" alt="" draggable={false}/></span><span className="mh-home-dock-txt"><span className="mh-home-dock-name">助手ライフ</span></span>
+            </button>}
+          </nav>
+        </div>
+
+        {/* 仲良し度が上がった直後だけ、みゅあがそのことに触れる(HOMEを離れると元に戻る)。
+            設定「ホームの助手コメント」が「切」のときは、この枠ごと出さない(2026-11-17 あっくん) */}
+        {homeComment.on&&<div className={`mh-home-assistant${spotClass('assistant')}`}><AssistantBubble scene="home" condition={assistantBondUp?'bondUp':(masuMons.length===0?'firstRun':null)} compact menu={typeof onOpenAssistantChat==='function'?[{ key:'chat', label:'💬 おしゃべりする', onClick:onOpenAssistantChat, attr:{ 'data-home-assistant-chat':'' } }]:null}/>
+          {/* 「💬 おしゃべり」は吹き出しの中に重ねず、吹き出しを押したときのメニューに入れた(押し所が2つで違いが分からなかった。r1119-050 窓-36) */}
+          <HomeAssistantCommentToggle on/>
+          <HomePeerTalkMark/>
+        </div>}
+        {/* 「切」のときも、HOME から1押しで吹き出しを戻せる小さな顔のボタンを残す(r1119-081 社長「ホームの助手のオンオフはホーム上で出し入れできるようにして」) */}
+        {!homeComment.on&&<div className={`mh-home-assistant-fold${spotClass('assistant')}`}><HomeAssistantCommentToggle on={false} news={!!assistantBondUp||masuMons.length===0}/></div>}
+      </main>
+    
+  );
+}
+
 // HOMEの助手コメント(吹き出し)を HOME の上で出し入れする押し所(r1119-081)。
 //   値は設定「ホームの助手コメント」と同じ HOME_ASSISTANT_COMMENT_STORE(保存キー mh_home_assistant_comment_v1)。
 //   どちらで変えても同じになる。新しい保存キーは作らない(CLAUDE.md ⑦)
 //   入 … 顔の下に小さな「隠す」 / 切 … 助手の顔の丸いボタン(押す所 44px)。押すと吹き出しが戻る
-function HomeAssistantCommentToggle({ on }) {
+// 助手どうしの掛け合いが HOME で待っているか(56-assistant-peer.jsx の ASSISTANT_PEER_STORE.state.homeWaiting)。押したら窓を開く口も返す
+const useHomePeerWaiting = () => {
+  const has = typeof ASSISTANT_PEER_STORE !== 'undefined' && typeof useAssistantPeerState === 'function';
+  const st = has ? useAssistantPeerState() : null;
+  return { waiting: !!(st && st.homeWaiting), open: () => { if (has) ASSISTANT_PEER_STORE.set({ homeOpenAt: Date.now() }); } };
+};
+// 吹き出しを出しているときの、掛け合いの印(顔の丸の下の「隠す」の横)。待っている掛け合いが無ければ出さない
+function HomePeerTalkMark() {
+  const peer = useHomePeerWaiting();
+  if (!peer.waiting) return null;
+  return (
+    <button type="button" data-home-peer-talk-mark onClick={peer.open} aria-label="助手どうしの会話を見る" className="mh-home-peer-mark active:scale-95">💬</button>
+  );
+}
+// news … 新しい一言があるとき(仲良し度が上がった直後・はじめて)だけ、顔の丸に赤い点を付ける(すぐできる直し2)
+function HomeAssistantCommentToggle({ on, news = false }) {
+  const peer = useHomePeerWaiting();
   const bond = useAssistantBond();
   const who = assistantById(assistantSceneById('home')?.assistantId || bond.assistantId || null);
   const color = who.accent || ASSISTANT_FALLBACK.accent;
@@ -52716,10 +53188,12 @@ function HomeAssistantCommentToggle({ on }) {
     );
   }
   return (
-    <button type="button" data-home-assistant-toggle="show" onClick={() => HOME_ASSISTANT_COMMENT_STORE.setOn(true)}
-      aria-label={`${who.name}のコメントを出す`} className="mh-home-assistant-show active:scale-95">
+    // 掛け合いが待っているときは、押すと掛け合いの窓を開く(吹き出しは畳んだまま)。待っていなければ吹き出しを出す
+    <button type="button" data-home-assistant-toggle="show" data-home-peer-waiting={peer.waiting ? '1' : undefined} onClick={() => (peer.waiting ? peer.open() : HOME_ASSISTANT_COMMENT_STORE.setOn(true))}
+      aria-label={peer.waiting ? '助手どうしの会話を見る' : `${who.name}のコメントを出す`} className="mh-home-assistant-show active:scale-95">
       <AssistantFace who={who} size={40} accent={color}/>
-      <span className="mh-home-assistant-show-mark" style={{ borderColor: color }} aria-hidden="true">💬</span>
+      {peer.waiting ? <span className="mh-home-assistant-show-mark" data-home-peer-talk-mark style={{ borderColor: color }} aria-hidden="true">💬</span>
+        : news ? <span className="mh-home-assistant-news-dot" data-home-assistant-news aria-hidden="true"/> : null}
     </button>
   );
 }
@@ -66633,7 +67107,7 @@ const RaidJackRewardList = ({ onClose, claimed, initialTab = 'a', ev = RAID_EVEN
     <div data-raid-jack-reward-list className="fixed inset-0 z-[32000] flex flex-col bg-slate-950 p-3" role="dialog" aria-modal="true" aria-label={`${ev.bossWord}の報酬一覧`}
       style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top))', paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
       <div className="mb-2 flex shrink-0 items-center justify-between">
-        <div className="text-[14px] font-black text-orange-200">{ev.icon} {ev.bossWord}の報酬一覧</div>
+        <div className="text-[14px] font-black text-orange-200">{cardIconNode(ev.icon, 16)} {ev.bossWord}の報酬一覧</div>
         <button type="button" data-raid-jack-reward-close onClick={onClose} aria-label="報酬一覧を閉じる" className="min-h-[40px] rounded-xl border border-white/20 bg-white/10 px-4 text-[11px] font-black text-white active:scale-95">閉じる</button>
       </div>
       <ScreenTabs items={[{ id: 'a', label: 'レイドバトル' }, { id: 'b', label: 'グランドスラム' }]} value={tab} onChange={setTab} />
@@ -72494,8 +72968,51 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
   const st = useAssistantPeerState();
   const auto = useAssistantPeerAuto();
   const [cur, setCur] = React.useState(null); // { talk, special, step, phase:'lines'|'choice'|'reply', pick, replay }
-  // 掛け合いが流れているあいだは、助手たちの今の帯(56-assistant-life.jsx)を隠す
-  React.useEffect(() => { if (ASSISTANT_PEER_STORE.state.talking !== !!cur) ASSISTANT_PEER_STORE.set({ talking: !!cur }); }, [!!cur]);
+  // HOME では窓を勝手に開かない(2026-11-27 台帳 r1126-073・HOME の作り直しの直し1)。掛け合いが始まっても、HOME の助手の顔の丸に💬の印だけを出し
+  //   (ASSISTANT_PEER_STORE.state.homeWaiting)、押されたら(homeOpenAt)その掛け合いの窓を開く。開いた掛け合いの id を覚え、次の掛け合いはまた印から。
+  //   窓が入口・イベントの帯・ボスを隠していた(点検 r1126-070 で 24枚中10枚)。見返し(replay)はこれまでどおりすぐ開く
+  const [homeOpenedId, setHomeOpenedId] = React.useState(null);
+  // 10:00 より前(前の HOME)は今までどおりすぐ開く(r1126-086 追記1)
+  const homeV2Now = typeof homeV2At === 'function' ? homeV2At() : true;
+  const homeWaiting = homeV2Now && scene === 'home' && !!cur && !cur.replay && homeOpenedId !== cur.talk.id;
+  React.useEffect(() => { if (!!ASSISTANT_PEER_STORE.state.homeWaiting !== homeWaiting) ASSISTANT_PEER_STORE.set({ homeWaiting }); }, [homeWaiting]);
+  React.useEffect(() => () => { if (ASSISTANT_PEER_STORE.state.homeWaiting) ASSISTANT_PEER_STORE.set({ homeWaiting: false }); }, []);
+  const homeOpenRef = React.useRef(st.homeOpenAt || 0);
+  React.useEffect(() => {
+    const at = st.homeOpenAt || 0;
+    if (at === homeOpenRef.current) return;
+    homeOpenRef.current = at;
+    if (cur && !cur.replay) { setHomeOpenedId(cur.talk.id); setPeerFolded(false); }
+  }, [st.homeOpenAt]);
+  // HOME で窓を開いたら、押した顔の近くに出す(2026-11-28 台帳 r1126-073 追記3。前は画面の下のまん中に出て、入口の札にかぶった)。
+  //   出す位置だけを HOME の部品の位置から測って決める(中身は変えない)。縦とタブレットは顔の下、背の低い横は帯の右。
+  //   下の入口(ドック)の上端までに収め、収まらない分は窓の中で送る。測れないときは今までどおり画面の下
+  const [homeBox, setHomeBox] = React.useState(null);
+  const homeShown = homeV2Now && scene === 'home' && !!cur && !homeWaiting && !(peerFolded && !cur.replay);
+  React.useEffect(() => {
+    if (!homeShown || typeof document === 'undefined') { setHomeBox(null); return undefined; }
+    const measure = () => {
+      const face = document.querySelector('main.mh-home-scene .mh-home-assistant-fold, main.mh-home-scene .mh-home-assistant');
+      const dock = document.querySelector('main.mh-home-scene .mh-home-dock');
+      const band = document.querySelector('main.mh-home-scene .mh-home-band');
+      if (!face || !dock) { setHomeBox(null); return; }
+      const f = face.getBoundingClientRect(), d = dock.getBoundingClientRect(), b = band ? band.getBoundingClientRect() : null;
+      const W = window.innerWidth, low = W > window.innerHeight && window.innerHeight < 600;
+      const left = Math.round(low ? Math.max(f.right, b ? b.right : 0) + 8 : Math.max(8, f.left));
+      const top = Math.round(low ? (b ? b.top : f.top) : f.bottom + 6);
+      const width = Math.round(Math.min(448, W - left - 8));
+      const maxH = Math.round(d.top - top - 6);
+      if (width < 240 || maxH < 120) { setHomeBox(null); return; }
+      setHomeBox((p) => (p && p.left === left && p.top === top && p.width === width && p.maxH === maxH ? p : { left, top, width, maxH }));
+    };
+    measure();
+    const t = setInterval(measure, 800);
+    window.addEventListener('resize', measure);
+    return () => { clearInterval(t); window.removeEventListener('resize', measure); };
+  }, [homeShown]);
+  // 掛け合いが流れているあいだは、助手たちの今の帯(56-assistant-life.jsx)を隠す(HOME で印だけのあいだは隠さない)
+  const talkingNow = !!cur && !homeWaiting;
+  React.useEffect(() => { if (ASSISTANT_PEER_STORE.state.talking !== talkingNow) ASSISTANT_PEER_STORE.set({ talking: talkingNow }); }, [talkingNow]);
   const decidedRef = React.useRef('');
   const metKey = (metIds || []).join(',');
   React.useEffect(() => {
@@ -72599,12 +73116,17 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
   }, [cur, advance, auto.on]);
   React.useEffect(() => { if (!toast) return undefined; const t = setTimeout(() => setToast(null), 3200); return () => clearTimeout(t); }, [toast]);
 
-  const wrap = (children, attrs = {}) => (
+  const wrap = (children, attrs = {}) => (homeBox && homeShown ? (
+    // HOME: 顔の近く(上の homeBox)
+    <div data-assistant-peer-home-box className="fixed pointer-events-none" style={{ zIndex: 8500, left: homeBox.left, top: homeBox.top, width: homeBox.width }} {...attrs}>
+      <div className="pointer-events-auto w-full" style={{ maxHeight: homeBox.maxH, overflowY: 'auto', overscrollBehavior: 'contain' }}>{children}</div>
+    </div>
+  ) : (
     // 助手ライフの画面(z 9000)を開いているときは、その上の場面で流す
     <div className="fixed inset-x-0 flex justify-center px-2 pointer-events-none" style={{ zIndex: (typeof ASSISTANT_LIFE_STORE !== 'undefined' && ASSISTANT_LIFE_STORE.state.open) ? 9150 : 8500, bottom: 'calc(5.5rem + env(safe-area-inset-bottom))' }} {...attrs}>
       <div className="pointer-events-auto w-full max-w-md">{children}</div>
     </div>
-  );
+  ));
   if (!cur) {
     if (!toast) return null;
     const [a, b] = toast.pair.map(id => assistantById(id));
@@ -72617,6 +73139,7 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
           : `${a.name}と${b.name}の仲良し度が Lv${toast.level}${stage ? `「${stage.name}」` : ''}になりました`}
       </div>);
   }
+  if (homeWaiting) return null;
   if (peerFolded && !cur.replay) {
     return wrap(
       <div data-assistant-peer-folded className="flex justify-end">
@@ -76739,7 +77262,12 @@ function AssistantLifeSpentMark({ size = 20 }) {
 // 対応表(ASSISTANT_LIFE_SPOT_FAC)はそのまま。家と町にいる助手は「ライフ」のバッジに集まる
 const ASSISTANT_LIFE_FACILITY_SEL = Object.freeze({ rhythm: 'main.mh-home-scene [data-home-fac="rhythm"]', card: 'main.mh-home-scene [data-home-fac="card"]', management: 'main.mh-home-scene [data-home-fac="management"]', temple: 'main.mh-home-scene [data-home-fac="temple"]', market: 'main.mh-home-scene [data-home-fac="market"]', battle: 'main.mh-home-scene [data-home-fac="battle"]', life: 'main.mh-home-scene [data-home-fac="life"]' });
 const ASSISTANT_LIFE_BADGE_FACE = 24; // 顔バッジの顔の大きさ(px・固定)
-function AssistantLifeHomeFaces({ metIds }) {
+// HOME の作り直し(r1126-073)と同じ時刻(2026-11-28 10:00)で、前の顔の束(押すと助手ライフ)から、押せない小さい顔1つへ切り替える(台帳 r1126-086 追記1)
+function AssistantLifeHomeFaces(props) {
+  const v2 = typeof useHomeV2 === 'function' ? useHomeV2() : true;
+  return v2 ? <AssistantLifeHomeFacesV2 {...props}/> : <AssistantLifeHomeFacesV1 {...props}/>;
+}
+function AssistantLifeHomeFacesV1({ metIds }) {
   const st = useAssistantLifeNow(metIds);
   const [rects, setRects] = React.useState({});
   React.useEffect(() => {
@@ -76811,6 +77339,88 @@ function AssistantLifeHomeFaces({ metIds }) {
           </button>
         </div>); })}
     {rects.card && cardUp && <span data-assistant-life-home-card-up className="pointer-events-none fixed rounded-full bg-amber-300 font-black text-slate-950 shadow" style={{ zIndex: 40, left: Math.max(2, rects.card.x - 4), top: rects.card.y - 8, fontSize: 9, lineHeight: '15px', padding: '0 5px' }}>UP</span>}
+    {rects.life && typeof AssistantLifeFriendHomeBadge === 'function' && <AssistantLifeFriendHomeBadge rect={rects.life} dockTop={rects.__dockTop}/>}
+  </>);
+}
+function AssistantLifeHomeFacesV2({ metIds }) {
+  const st = useAssistantLifeNow(metIds);
+  const [rects, setRects] = React.useState({});
+  React.useEffect(() => {
+    if (!assistantLifeEnabled()) return undefined;
+    const measure = () => {
+      const o = {};
+      // 🔄横(端末は縦のまま、器を90度回して描く)では、画面の座標ではなく器の中の座標で測る。バッジも器の中に置かれるため
+      //   (2026-11-07 本番で、🔄横の顔が札と関係ない所に出ていた)
+      const rot = typeof RHYTHM_VIEW_ROTATION !== 'undefined' && RHYTHM_VIEW_ROTATION.active();
+      const rectOf = (el) => (rot ? RHYTHM_VIEW_ROTATION.rectOf(el) : el.getBoundingClientRect());
+      const vw = rot ? window.innerHeight : window.innerWidth;
+      for (const [k, sel] of Object.entries(ASSISTANT_LIFE_FACILITY_SEL)) {
+        const el = document.querySelector(sel);
+        if (!el || !el.offsetParent) continue;
+        const r = rectOf(el);
+        o[k] = { x: r.left, y: r.top, w: r.width, h: r.height, right: r.left + r.width / 2 > vw / 2 };
+      }
+      // フレンドの帯の置き場所用に、ドック全体の上端も測る(帯はドックの上に出す)
+      const dk = document.querySelector('.mh-home-dock');
+      if (dk && dk.offsetParent) o.__dockTop = rectOf(dk).top;
+      setRects(prev => (JSON.stringify(prev) === JSON.stringify(o) ? prev : o));
+    };
+    measure();
+    const t = setInterval(measure, 700);
+    window.addEventListener('resize', measure);
+    return () => { clearInterval(t); window.removeEventListener('resize', measure); };
+  }, []);
+  if (!assistantLifeEnabled() || !st.loaded || st.open) return null;
+  const life = st.life;
+  if (!life || life.abs !== assistantLifeSlotAt().abs) return null;
+  const ids = (metIds || []).filter(id => ASSISTANT_LIFE_PREFS[id]);
+  const by = {};
+  for (const id of ASSISTANT_LIFE_HOUSE_ORDER) {
+    if (!ids.includes(id)) continue;
+    let f = assistantLifeFacilityOf(assistantLifeWhereOf(life, id));
+    // カード部屋の 1.5倍を使い切った助手も顔は出し、「済」の印を付ける(2026-11-08 社長「HOMEも地図も出す」)。押すと部屋で次の時間帯が分かる
+    if (!rects[f]) f = 'life';
+    if (!rects[f]) continue;
+    (by[f] = by[f] || []).push(id);
+  }
+  // カード部屋にいる助手と対戦するとごほうびアップ(カード部の口があるときだけ)。バトルカードのボタンの左上に小さく「UP」
+  const cardUp = typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && assistantLifeHouseCardIds().some(id => (by.card || []).includes(id) && !assistantLifeCardSpent(id)); // 「UP」は、まだごほうびが上がる助手がいるときだけ
+  const peer = typeof ASSISTANT_PEER_STORE !== 'undefined' ? ASSISTANT_PEER_STORE.state : null;
+  const q = peer && peer.quarrel && peer.quarrel.pending;
+  const after = new Set(q && q.pair ? String(q.pair).split('-') : []);
+  const size = ASSISTANT_LIFE_BADGE_FACE;
+  const step = size - 8; // 少し重ねる(顔の約1/3)
+  return (<>
+    {Object.entries(by).map(([f, list]) => {
+      const r = rects[f];
+      const shown = list.slice(0, 3);
+      const extra = list.length - shown.length;
+      // 2026-11-27 台帳 r1126-073(HOME の作り直し・すぐできる直し3): HOME では顔を並べず、入口の右上の内側に赤い点1つだけを出す
+      //   (顔は助手ライフの中で見せる)。押すと今までどおり助手ライフを開く。顔の印(data-assistant-life-home-face)は見えない形で残す
+      void step;
+      const rowW = 24;
+      const left = r.x + r.w - rowW - 1;
+      const top = r.y + 1;
+      const names = list.map(id => { const who = assistantById(id); return who ? who.name : id; }).join('・');
+      return (
+        <div key={f} data-assistant-life-home-faces={f} data-assistant-life-home-faces-ids={list.join(',')} className="pointer-events-none fixed" style={{ zIndex: 40, left, top, width: rowW, height: rowW }}>
+          {/* 2026-11-27 台帳 r1126-073 追記2(入口の整理③): 点は押せない印にした。点のあたりを押しても、下の入口(ビート・バトルなど)が開く。
+              助手ライフへは HOME の小さな丸「助手ライフ」1つから入る。開発部が窓口の判断で出し方だけ変えた */}
+          <span role="img" data-assistant-life-home-badge={f} aria-label={`${names}がいます`}
+            className="pointer-events-none relative flex items-center justify-center rounded-full" style={{ width: rowW, height: rowW }}>
+            {/* 2026-11-28 台帳 r1126-073 追記3: 赤い点は ☰ の赤い数字(お知らせ)と見分けがつかなかったので、そこにいる助手1人の小さい顔の丸を1つにした(何人いても1つ・押せない) */}
+            {(() => { const who = assistantById(shown[0]); return <span data-assistant-life-home-dot data-assistant-life-home-dot-who={shown[0]} aria-hidden="true" className="block overflow-hidden rounded-full border-2 border-white bg-slate-900 shadow" style={{ width: rowW, height: rowW }}>{who && <AssistantFace who={who} size={rowW - 4} accent={who.accent}/>}</span>; })()}
+            <span className="sr-only">{shown.map((id, i) => { const who = assistantById(id); if (!who) return null; const w = assistantLifeWhereOf(life, id); const lonely = w && w.reason === 'lonely';
+              const spent = f === 'card' && !!assistantLifeCardSpent(id);
+              return (
+                <span key={id} data-assistant-life-home-face={id} data-assistant-life-home-face-spent={spent ? '1' : undefined} className="relative shrink-0 rounded-full" style={{ marginLeft: i ? -8 : 0, boxShadow: lonely ? '0 0 0 1.5px #fbbf24,0 0 6px #fbbf24' : after.has(id) ? '0 0 0 1.5px #7dd3fc' : '0 0 0 1.5px #fff' }}>
+                  <span className="block" style={spent ? { filter: 'grayscale(.6) brightness(.8)' } : undefined}><AssistantFace who={who} size={size} accent={who.accent}/></span>
+                  {spent && <AssistantLifeSpentMark size={size}/>}
+                </span>); })}
+            {extra > 0 && <span data-assistant-life-home-faces-extra={extra} className="shrink-0 rounded-full bg-slate-100 px-1 font-black text-slate-900 shadow" style={{ marginLeft: 2, fontSize: 9, lineHeight: '14px' }}>+{extra}</span>}</span>
+          </span>
+        </div>); })}
+    {rects.card && cardUp && <span data-assistant-life-home-card-up className="pointer-events-none fixed rounded-full bg-amber-300 font-black text-slate-950 shadow" style={{ zIndex: 40, left: rects.card.x + 4, top: rects.card.y + 4, fontSize: 11, lineHeight: 1.35, padding: '2px 7px', border: '1px solid #fff3c4' }}>UP</span>}
     {rects.life && typeof AssistantLifeFriendHomeBadge === 'function' && <AssistantLifeFriendHomeBadge rect={rects.life} dockTop={rects.__dockTop}/>}
   </>);
 }
@@ -77387,7 +77997,9 @@ const ASSISTANT_LIFE_MAP_HEAD = Object.freeze({
 });
 // 町の地図の大きさの倍率(上の表に行が無い絵だけ。2026-11-15 全身画3人の公開 #6357 で、地図の絵が stand-normal/ の新しい絵に替わり、
 //   みゅあ・ソラシド・えるびんの顔(目から顎)がほかの人の 1.2〜1.5倍に出ていた。ほかの人の 7〜8px にそろえる。assistant-art-scenes-check の map のばらつき)
-const ASSISTANT_LIFE_MAP_FIT = Object.freeze({ 'stand-normal/myua': 0.74, 'stand-normal/sorashido': 0.83, 'stand-normal/erubin': 0.7, sorashido_sleep: 0.82 });
+//   2026-11-28 r1124-006 追記(社長「それもこっちでなおして」): みゅあの 0.74 を外した。11/24 に全身絵から切り出し直した絵(#7449)では顔が大きく出なくなり、0.74 のままだと
+//   みゅあだけ顔がほかの人の 0.7倍ほど(縦 5.7px・ほか 7.3〜9.2px)に縮んでいた。外すと 7.7px でそろう。地図だけの倍率なので、助手ライフの場面の大きさ・重なりは変わらない
+const ASSISTANT_LIFE_MAP_FIT = Object.freeze({ 'stand-normal/sorashido': 0.83, 'stand-normal/erubin': 0.7, sorashido_sleep: 0.82 });
 // 小さな全身(絵の描かれている範囲を測って、見た目の高さを h にそろえる。胸から上の絵は下をぼかす)
 function AssistantLifeMapFig({ who, h, sleep, spent = false }) {
   // 寝ている助手は、社長の寝顔の絵があればそれ(assistantLifeSleepSrc・2026-11-11 社長「絵をそのまま使う」)
@@ -77446,7 +78058,7 @@ function AssistantLifeMapViewRow({ id, place, town = false, w = null }) {
       </div>
     </div>);
 }
-function AssistantLifeMapRow({ id, place, town = false, life, selected = false, cheerMsg = null, setCheerMsg = () => {}, close = () => {}, onRoom = null, onBeat = null, onCard = null }) {
+function AssistantLifeMapRow({ id, place, town = false, life, selected = false, cheerMsg = null, setCheerMsg = () => {}, close = () => {}, onRoom = null, onBeat = null, onCard = null, noSuccess = false }) {
     const a = assistantById(id); if (!a) return null;
     const w = assistantLifeWhereOf(life, id); const d = w && ASSISTANT_LIFE_DOINGS[w.doing];
     const withNames = w && w.with && w.with.length ? `${w.with.map(assistantLifeName).join('・')}と` : 'ひとりで';
@@ -77456,7 +78068,9 @@ function AssistantLifeMapRow({ id, place, town = false, life, selected = false, 
     let bi = null; if (place === 'battle') { try { bi = typeof assistantMasmonBattleRowInfo === 'function' && typeof assistantMasmonBattleOpen === 'function' ? assistantMasmonBattleRowInfo(id) : null; } catch (_) { bi = null; } }
     const battleBtn = bi && <button type="button" disabled={!!bi.disabled} title={bi.disabled ? (bi.why || '') : (bi.sub || '')} data-assistant-life-map-act="masmon-battle" onClick={() => { close(); try { assistantMasmonBattleOpen({ assistantId: id, from: 'place' }); } catch (_) {} }} className="rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 min-h-[44px] px-2 py-1 text-[12px] font-black text-white active:scale-95 disabled:opacity-50" style={JA_LABEL_STYLE}>{jaWrap(String(bi.label || '⚔ マスモンで対戦(β)').replace('で対戦', 'で\u200B対戦'))}</button>;
     // モンヒロサクセス(β)の入口(2026-11-14 社長・印 monheroSuccess が偽なら null)。モンヒロバトルにいる助手の札にだけ
-    let si = null; if (place === 'battle') { try { si = typeof assistantLifeSuccessRowInfo === 'function' ? assistantLifeSuccessRowInfo(id) : null; } catch (_) { si = null; } }
+    // noSuccess … バトルを選ぶ画面の「いまモンヒロバトルにいる助手」では出さない(2026-11-27 台帳 r1126-073 追記2・入口の整理②。
+    //   サクセスの入口は HOME の大きな札と助手ライフの部屋・地図に残す。開発部が窓口の判断で出し方だけ変えた)
+    let si = null; if (place === 'battle' && !noSuccess) { try { si = typeof assistantLifeSuccessRowInfo === 'function' ? assistantLifeSuccessRowInfo(id) : null; } catch (_) { si = null; } }
     const successBtn = si && <button type="button" title={si.sub} data-assistant-life-map-act="monhero-success" onClick={() => { close(); try { assistantLifeSuccessOpen({ assistantId: id, from: 'place' }); } catch (_) {} }} className="w-full rounded-xl bg-gradient-to-r from-emerald-600 to-lime-600 min-h-[44px] px-2 py-1 text-[12px] font-black text-white active:scale-95"><span style={JA_LABEL_STYLE}>{jaWrap(si.label)}</span><span className="block text-[10px] font-bold text-emerald-50" style={JA_LABEL_STYLE}>{jaWrap(si.sub)}</span></button>;
     const tiLine = ti && (ti.today ? `🥋 今日の修行: ${ti.today.nick} ― ${ti.today.kindText || ti.today.kind}${ti.today.learned ? ` NEW 新しい技「${ti.today.learned}」を覚えた` : ''}${ti.today.main ? ` 技の熟練度 ${ti.today.main} +${ti.today.gain}` : ''}` : '🥋 今日はまだ修行していません');
     return (
@@ -77521,7 +78135,7 @@ function AssistantLifeBattleHall({ metIds }) {
       {typeof AssistantMasmonTrainWatchHost === 'function' && <AssistantMasmonTrainWatchHost/>}
       <p className="text-[12px] font-black text-amber-200" style={JA_WRAP_STYLE}>{jaWrap('🏡 いまモンヒロバトルにいる助手')}</p>
       {ids.map(id => (
-        <AssistantLifeMapRow key={id} id={id} place="battle" life={life} cheerMsg={cheerMsg} setCheerMsg={setCheerMsg}
+        <AssistantLifeMapRow key={id} id={id} place="battle" life={life} cheerMsg={cheerMsg} setCheerMsg={setCheerMsg} noSuccess={typeof homeV2At !== 'function' || homeV2At()}
           onRoom={(rid) => { try { ASSISTANT_LIFE_STORE.set({ open: true, focus: rid }); } catch (_) {} }}/>))}
     </section>);
 }
@@ -79399,7 +80013,7 @@ const AluTabBar = ({ tab, onTab, tabs = ALU_TABS }) => (
   <div className="alu-tabs" role="tablist" data-alu-tabs data-assistant-life-icons>
     {tabs.map(t => (
       <button key={t.key} type="button" role="tab" aria-selected={tab === t.key} className={tab === t.key ? 'on' : ''} data-alu-tab={t.key} data-assistant-life-icon={t.key} onClick={() => onTab && onTab(t.key)}>
-        <i>{t.icon}</i>{t.label}
+        <i>{cardIconNode(t.icon, 16)}</i>{t.label}
       </button>))}
   </div>);
 
@@ -79471,7 +80085,7 @@ const AluResult = ({ title = '結果', line, gains = [], finds = [], next, onClo
     {line ? <div className="alu-t" data-alu-result-line>{line}</div> : null}
     <div className="alu-gains" data-alu-result-gains>
       {gains.map((g, i) => (
-        <div key={i}><span className="alu-n">{g.icon} {g.label}</span><b className="alu-num">+{g.v}</b></div>))}
+        <div key={i}><span className="alu-n">{cardIconNode(g.icon, 14)} {g.label}</span><b className="alu-num">+{g.v}</b></div>))}
     </div>
     {finds.length ? <div className="alu-t" data-alu-result-finds>🧺 拾い物: {finds.join('・')}</div> : null}
     {next ? <AluGo onClick={next.onClick} data-alu-result-next>{next.label}</AluGo> : null}
@@ -92617,7 +93231,7 @@ function MsxEvResult({ delta, hasStats, skip = null }) {
         : bufs.length ? null : <span data-msx-ev-none>変わったことはなかった</span>}
       {bufs.map((c) => { const d = typeof msxBuffDef === 'function' ? msxBuffDef(c.buff) : null; return (
         <div key={`bl-${c.buff}`} className="msx-ev-bfl" data-msx-ev-chip={c.k} data-msx-ev-buff={c.buff} style={{ marginTop: row.length ? 4 : 0, fontSize: 12, fontWeight: 800, color: c.good ? '#166534' : '#b91c1c', textAlign: 'left', lineHeight: 1.45 }}>
-          {d ? <><b style={{ fontWeight: 900 }}>{d.icon} {d.name}になった({d.dur})</b><br/>{String(d.text).split('・').map((t, i) => <span key={i} style={{ display: 'inline-block', whiteSpace: 'nowrap' }}>{i ? '・' : ''}{t}</span>)}</> : msxBuffGrantText(c.buff, true)}
+          {d ? <><b style={{ fontWeight: 900 }}>{cardIconNode(d.icon, 14)} {d.name}になった({d.dur})</b><br/>{String(d.text).split('・').map((t, i) => <span key={i} style={{ display: 'inline-block', whiteSpace: 'nowrap' }}>{i ? '・' : ''}{t}</span>)}</> : msxBuffGrantText(c.buff, true)}
         </div>); })}
     </div>
   );
@@ -99317,7 +99931,7 @@ function MonheroSuccessHomeEntry({ callNameOf, bondLvOf, onOpenChange }) {
             (ホーム略称「サクセス」は 2026-11-17 の一新で一時使ったが、同日のあっくん追加指示でフルネームへ戻した) */}
         {/* 2026-11-23 r1119-130 社長「モンビーのイベント開催中と同じ作りにすればいい」: 傾けた10pxの字がにじんでいたので、
             モンヒロビートの入口の「開催中」の札と同じ部品(HOME_EVENT_BADGE_STYLE・光り方の mh-home-event-badge)にそろえる。文と黄色はそのまま */}
-        <em className="rb mh-home-event-badge" aria-hidden="true" style={HOME_EVENT_BADGE_STYLE}>β版 開幕！</em>
+        <em className="rb mh-home-event-badge" aria-hidden="true" style={typeof homeV2At === 'function' && !homeV2At() && typeof HOME_EVENT_BADGE_STYLE_V1 !== 'undefined' ? HOME_EVENT_BADGE_STYLE_V1 : HOME_EVENT_BADGE_STYLE}>β版 開幕！</em>
         <span className="pic"><img src="images/home/facility-success.webp" alt="" draggable={false}/></span>
         <span className="txt"><span className="nm">モンヒロサクセス</span><span className="sb">育成</span></span>
       </button>
@@ -134556,6 +135170,9 @@ function MonsterHeroGame() {
   const [changelogOpenId, setChangelogOpenId] = useState(null);
   const [changelogTab, setChangelogTab] = useState('update'); // 'update'=更新情報 / 'event'=イベント(r1119-113) / 'issue'=不具合情報
   const [changelogSeen, setChangelogSeen] = useState({ update: [], issue: [] }); // タブごとの既読ID一覧(端末に保存)
+  const changelogListRef = useRef(null); // 一覧(送る所)。「↑ 上へ」で使う(2026-11-27 r1126-074 小8)
+  const [changelogScrolled, setChangelogScrolled] = useState(false);
+  const [changelogZoomImage, setChangelogZoomImage] = useState(null); // 押して大きく出している絵(r1126-074 小3)
   const displayedChangelogTabRef = useRef(null); // 表示中のタブは、そこから離れるまで未読のまま保つ
   const [seVolume, setSeVolumeState] = useState(DEFAULT_VOLUME); // SE音量 0〜100(端末に保存、初期値は読み込み後に上書き)
   const [bgmVolume, setBgmVolumeState] = useState(DEFAULT_VOLUME); // BGM音量 0〜100(同上)
@@ -134861,6 +135478,8 @@ function MonsterHeroGame() {
     return { changelogUnreadIds: unreadIds, changelogUnread: unread, changelogPinnedIds: pinnedSet, changelogEventCards: eventCards };
   }, [changelogSeen, showChangelog]);
   const hasUnreadChangelog = changelogUnread.update || changelogUnread.issue || changelogUnread.event;
+  // 入口(タイトル・HOME)の印は「!」「NEW」ではなく未読の数(2026-11-27 r1126-074 小5。隣のミッション・ギフトと同じく数で出す)
+  const changelogUnreadCount = (changelogUnreadIds.update||[]).length + (changelogUnreadIds.issue||[]).length + (changelogUnreadIds.event||[]).length;
   // イベントタブの札を1枚開いたら、その項目だけ既読にする(2026-11-27 r1126-068)。
   //   その項目が属するタブの既読(mh_changelog_seen_ids_update / _issue)へ足す。保存のしかた・キーは前と同じ
   const markChangelogEventSeen = (id) => {
@@ -134898,6 +135517,8 @@ function MonsterHeroGame() {
     if (displayedChangelogTabRef.current === type) return;
     if (displayedChangelogTabRef.current) markChangelogTabSeen(displayedChangelogTabRef.current);
     displayedChangelogTabRef.current = type;
+    setChangelogScrolled(false);
+    try { changelogListRef.current && changelogListRef.current.scrollTo({ top:0 }); } catch {}
     setChangelogTab(type);
   };
   const openChangelog = () => {
@@ -134910,6 +135531,8 @@ function MonsterHeroGame() {
     if (displayedChangelogTabRef.current) markChangelogTabSeen(displayedChangelogTabRef.current);
     displayedChangelogTabRef.current = null;
     setChangelogOpenId(null);
+    setChangelogScrolled(false);
+    setChangelogZoomImage(null);
     setShowChangelog(false);
   };
   // ヘルプは「カテゴリ一覧 → 項目一覧 → 本文」の3階層。中身は data/help.js に置いている。
@@ -151445,7 +152068,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           :<em className="mh-unread-badge" aria-label="未読あり">!</em>)}</button>)}</div>
         {/* data/changelog.js の読み込みに失敗すると中身が0件になる。黙って空にすると
             「更新履歴が壊れた」としか分からないので、読み込み直せることをここで伝える */}
-        <div className="mh-changelog-list" data-changelog-list>{CHANGELOG_ENTRIES.length===0
+        <div className="mh-changelog-list" data-changelog-list ref={changelogListRef} onScroll={e=>{const far=e.currentTarget.scrollTop>600;if(far!==changelogScrolled)setChangelogScrolled(far);}}>{CHANGELOG_ENTRIES.length===0
           ? <p className="mh-changelog-empty" data-changelog-empty>更新履歴を読み込めませんでした。通信状況を確かめてから、設定の「ゲームを更新」で読み込み直してください。</p>
           : (()=>{
             // 同じ日の同じ話題を1行にまとめる(2026-09-13・ユーザー指摘
@@ -151455,7 +152078,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             // 日付は行の上に1度だけ出す(同じ日が続くあいだは繰り返さない)。
             // 「イベント」タブ(r1119-113)は札だけを並べる。更新情報・不具合情報は一番上から日付ごとの項目
             const rows = changelogTab==='event' ? [] : changelogRowsOfTab(changelogTab);
-            const unreadHere = new Set(changelogUnreadIds[changelogTab]||[]);
+            // イベントの札になっている項目も、元のタブの一覧で NEW と橙の縁を出す(2026-11-27 r1126-074 小2)。
+            //   既読にするのは今どおりイベントタブで札を開いたとき(この一覧を見ただけでは消さない)
+            const unreadHere = new Set([...(changelogUnreadIds[changelogTab]||[]), ...(changelogTab==='event'?[]:(changelogUnreadIds.event||[]).filter(id=>CHANGELOG_TAB_OF_ID.get(id)===changelogTab))]);
             let shownDay = null;
             // 開催中の期間限定イベントは、いつも一覧のいちばん上に固定して出す(2026-10-04・ユーザー指示
             // 「イベント期間中はこれを常に1番上に出しといて」)。日付やまとめの並びとは別。終わったら自然に消えて、あとは普通の行として残る。
@@ -151503,7 +152128,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   </span>
                 </summary>
                 <div style={{padding:banner?'0 10px 8px':0}}>
-                {c.image&&<img data-changelog-pinned-image src={c.image} alt={`${c.title}のお知らせ`} onError={e=>{e.currentTarget.style.display='none';}} loading="lazy" decoding="async" style={{width:'100%',borderRadius:12,margin:'8px 0 4px'}}/>}
+                {c.image&&<img data-changelog-pinned-image src={c.image} alt={`${c.title}のお知らせ`} onError={e=>{e.currentTarget.style.display='none';}} onClick={()=>setChangelogZoomImage(c.image)} loading="lazy" decoding="async" style={{display:'block',width:'100%',maxHeight:'min(34vh, 320px)',objectFit:'contain',background:'#0008',borderRadius:12,margin:'8px 0 4px',cursor:'zoom-in'}}/>}
                 {/* 予告動画も、固定の札の中で見られるようにする(下の一覧の行と同じ) */}
                 {typeof c.video==='string'&&c.video&&<figure data-changelog-pinned-video style={{margin:'6px 0'}}>
                   <figcaption style={{fontWeight:900,fontSize:12,color:'#ffedd5',margin:'0 0 4px'}}>▶ 予告動画</figcaption>
@@ -151522,7 +152147,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               const kinds=[];
               row.entries.forEach(entry=>{const info=changelogTypeOf(entry);
                 const found=kinds.find(kind=>kind.tone===info.tone);
-                if(found)found.count+=1;else kinds.push({tone:info.tone,label:info.label,count:1});});
+                if(found)found.count+=1;else kinds.push({tone:info.tone,label:changelogKindLabelInTab(info,changelogTab),count:1});});
               const dayHead=row.day!==shownDay?row.day:null;
               shownDay=row.day;
               return (<React.Fragment key={row.key}>
@@ -151532,7 +152157,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <span className="mh-changelog-group-emoji" aria-hidden="true">{row.emoji}</span>
                     <b>{row.label}</b>
                     <span className="mh-changelog-count">{row.entries.length}件{unreadCount>0&&<em>NEW</em>}</span>
-                    <small>{open?'閉じる ▲':'詳細 ▼'}</small>
+                    {/* 窓の「閉じる」と同じ言葉にしない(2026-11-27 r1126-074 小7) */}
+                    <small>{open?'たたむ ▲':'詳細 ▼'}</small>
                   </button>
                   <span className="mh-changelog-kinds">{kinds.map(kind=><span key={kind.tone} className="mh-changelog-kind" data-kind={kind.tone}>{kind.label}{kind.count>1&&<i>{kind.count}</i>}</span>)}</span>
                   {/* 閉じているあいだも、何があった日なのかが分かるように見出しだけ並べる */}
@@ -151541,13 +152167,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   {open&&<div className="mh-changelog-detail" data-changelog-detail>
                     {row.entries.map(c=>(<section key={c.id} className="mh-changelog-item" data-changelog-type={c.type||'update'}>
                       <time>{(c.date||'').slice(11)||c.date}{unreadHere.has(c.id)&&<em>NEW</em>}</time>
-                      <span className="mh-changelog-kind" data-kind={changelogTypeOf(c).tone}>{changelogTypeOf(c).label}</span>{changelogEventLive(c)&&<span data-changelog-event-live className="mh-changelog-kind" style={{background:'#f97316',color:'#1c1917',borderColor:'#fdba74',marginLeft:4}}>🎃 開催中</span>}
+                      <span className="mh-changelog-kind" data-kind={changelogTypeOf(c).tone}>{changelogKindLabelInTab(changelogTypeOf(c),changelogTab)}</span>{/* 札と同じ決め方にする(2026-11-27 r1126-074 小1)。開始前は「📅 開催予定」、絵文字はイベントごと(pinEmoji)。ハロウィンの 🎃 のままだった */}
+                      {changelogEventLive(c)&&<span data-changelog-event-live className="mh-changelog-kind" style={{background:changelogEventUpcoming(c)?'#38bdf8':'#f97316',color:'#1c1917',borderColor:'#fdba74',marginLeft:4}}>{changelogEventUpcoming(c)?'📅 開催予定':`${typeof c.pinEmoji==='string'&&c.pinEmoji?c.pinEmoji:'🎉'} 開催中`}</span>}
                       <b>{typeof c.title==='string'&&typeof XmasNovelWrap==='function'?<XmasNovelWrap text={c.title}/>:c.title}</b>
                       {/* 告知画像があれば本文の上に出す
                           (期間中いつでもここから見返せるように・2026-09-11・ユーザー指示) */}
+                      {/* 絵の高さに上限(縦は一覧の約1/3・横は高さの半分ほど)。押すと大きく出す(2026-11-27 r1126-074 小3) */}
                       {c.image&&<img data-changelog-image src={c.image} alt={`${c.title}のお知らせ`}
-                        onError={e=>{e.currentTarget.style.display='none';}} loading="lazy" decoding="async"
-                        style={{width:'100%',borderRadius:'12px',margin:'6px 0'}}/>}
+                        onError={e=>{e.currentTarget.style.display='none';}} loading="lazy" decoding="async" onClick={()=>setChangelogZoomImage(c.image)}
+                        style={{display:'block',width:'100%',maxHeight:'min(34vh, 320px)',objectFit:'contain',background:'#0008',borderRadius:'12px',margin:'6px 0',cursor:'zoom-in'}}/>}
                       {/* 予告動画(2026-11-02 社長「告知にストーリーの一部の予告動画もほしい」)。video:'movies/…mp4' と書いたときだけ出す。
                           押すまで読み込まない(preload none)。videoPoster は押す前に見せる絵。読めなかったら黙って消す */}
                       {typeof c.video==='string'&&c.video&&<figure data-changelog-video style={{margin:'6px 0'}}>
@@ -151560,8 +152188,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                           読めなかった絵は黙って消す(上の image と同じ)。助手の告知には出さない(告知は image の1枚だけ) */}
                       {(Array.isArray(c.gallery)?c.gallery:[]).filter(g=>g&&typeof g.image==='string'&&g.image).map((g,j)=><figure key={`g${j}`} data-changelog-gallery style={{margin:'10px 0 0'}}>
                         {g.caption&&<figcaption style={{fontWeight:900,margin:'0 0 4px'}}>■ {g.caption}</figcaption>}
-                        <img src={g.image} alt={g.caption||`${c.title}の見本`} onError={e=>{e.currentTarget.style.display='none';}}
-                          loading="lazy" decoding="async" style={{width:'100%',borderRadius:'12px'}}/>
+                        <img src={g.image} alt={g.caption||`${c.title}の見本`} onError={e=>{e.currentTarget.style.display='none';}} onClick={()=>setChangelogZoomImage(g.image)}
+                          loading="lazy" decoding="async" style={{display:'block',width:'100%',maxHeight:'min(34vh, 320px)',objectFit:'contain',background:'#0008',borderRadius:'12px',cursor:'zoom-in'}}/>
                       </figure>)}
                       {/* 外に出るリンク(2026-09-14・よそのゲームの曲を入れたときの案内用)。
                           https だけ通し、target="_blank" と rel="noopener noreferrer" を必ず付ける
@@ -151572,11 +152200,27 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         {(c.link&&c.link.label)||'詳しく見る'} ↗
                       </a>}
                     </section>))}
+                    {/* 長い中身を読んだあと、上まで戻らずにたためるように(2026-11-27 r1126-074 小7) */}
+                    <button type="button" data-changelog-fold-bottom onClick={e=>{const art=e.currentTarget.closest('article');setChangelogOpenId(null);
+                        // たたんだ行が見える所へ、一覧(送る所)だけを送る。scrollIntoView は外側の画面まで動かすので使わない(ミハリの指摘)
+                        requestAnimationFrame(()=>{try{const list=changelogListRef.current;if(art&&list){const top=art.getBoundingClientRect().top-list.getBoundingClientRect().top;if(top<0)list.scrollTop+=top-8;}}catch{}});}}
+                      style={{display:'block',width:'100%',minHeight:40,marginTop:8,borderRadius:10,border:'1px solid #ffffff26',background:'#ffffff0d',color:'#c7d2fe',fontSize:12,fontWeight:900}}>▲ たたむ</button>
                   </div>}
                 </article>
               </React.Fragment>);
-            })];
+            }),
+            // 一覧の終わりと「↑ 上へ」(2026-11-27 r1126-074 小8)。100画面ぶん続くので、終わりと戻り方が分かるようにする
+            rows.length>0&&<p key="changelog-end" data-changelog-end style={{textAlign:'center',fontSize:11,color:'#94a3b8',margin:'14px 0 6px'}}>― ここまでです ―</p>,
+            changelogScrolled&&<div key="changelog-to-top" style={{position:'sticky',bottom:8,height:0,display:'flex',justifyContent:'flex-end',pointerEvents:'none'}}>
+              <button type="button" data-changelog-to-top onClick={()=>{try{changelogListRef.current&&changelogListRef.current.scrollTo({top:0,behavior:'smooth'});}catch{}}}
+                style={{pointerEvents:'auto',transform:'translateY(-100%)',minHeight:44,padding:'0 14px',borderRadius:999,border:'1px solid #c4b5fd88',background:'#312e81f0',color:'#fff',fontSize:12,fontWeight:900,boxShadow:'0 4px 12px #000a'}}>↑ 上へ</button>
+            </div>];
           })()}</div>
+        {/* 絵を押したら大きく出す(2026-11-27 r1126-074 小3)。もう一度押すと戻る */}
+        {changelogZoomImage&&<div data-changelog-zoom role="button" aria-label="絵を閉じる" onClick={e=>{e.stopPropagation();setChangelogZoomImage(null);}}
+          style={{position:'fixed',inset:0,zIndex:100001,background:'#000000e6',display:'flex',alignItems:'center',justifyContent:'center',padding:'calc(12px + env(safe-area-inset-top)) 12px calc(12px + env(safe-area-inset-bottom))'}}>
+          <img src={changelogZoomImage} alt="" style={{maxWidth:'100%',maxHeight:'100%',objectFit:'contain',borderRadius:12}}/>
+        </div>}
         <button type="button" className="mh-dialog-close" data-mh-back onClick={closeChangelog}>閉じる</button>
       </div>
     </div>
@@ -151895,7 +152539,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   if (bootPhase === 'TITLE') return (
     <><main className="mh-title-gate" aria-label="Monster Hero タイトル画面">
       <img className="mh-title-backdrop" src={titleArtSrc(titleArt, titleShape)} alt="" aria-hidden="true"/><img className="mh-title-visual" src={titleArtSrc(titleArt, titleShape)} alt="モンスターヒーロー タイトル画面"/>
-      <header className="mh-title-header"><div className="mh-title-build"><b>VERSION</b><span>{BUILD_DATE}</span><b>PLAYER ID</b><span>{titlePlayerId}</span></div><div className="mh-title-actions"><button onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();openChangelog()}}><Sparkles size={19}/><span>お知らせ</span>{hasUnreadChangelog&&<em>NEW</em>}</button><button onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();setShowTitleSettings(true)}}><Settings size={19}/><span>設定</span></button></div></header>
+      <header className="mh-title-header"><div className="mh-title-build"><b>VERSION</b><span>{BUILD_DATE}</span><b>PLAYER ID</b><span>{titlePlayerId}</span></div><div className="mh-title-actions"><button onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();openChangelog()}}><Sparkles size={19}/><span>更新履歴</span>{hasUnreadChangelog&&<em data-changelog-entry-count={changelogUnreadCount} aria-label={`未読${changelogUnreadCount}件`}>{changelogUnreadCount>99?'99+':changelogUnreadCount}</em>}</button><button onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();setShowTitleSettings(true)}}><Settings size={19}/><span>設定</span></button></div></header>
       <button type="button" className="mh-title-start" disabled={!!titleModal || titleStarting} onPointerDown={startGame} aria-label="トップ画面へ進む"></button>{titleModal}
     </main>{updateNotice}{storageTroubleNotice}</>
   );
@@ -151938,7 +152582,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             friendRequestCount={friendRequestInfo.count}
             assistantBondUp={assistantBondUp} breederIcon={breederIcon} breederLevel={breederLevel}
             breederName={breederName} breederPoints={breederPoints} gifts={gifts} gold={gold}
-            hasUnreadChangelog={hasUnreadChangelog} homeBackgroundReady={homeBackgroundReady}
+            hasUnreadChangelog={hasUnreadChangelog} changelogUnreadCount={changelogUnreadCount} homeBackgroundReady={homeBackgroundReady}
             homeArt={homeArt}
             homePastureMasumons={homePastureMasumons} masuMons={masuMons} missions={missions}
             onOpenBattle={openBattleSystemSelect}
@@ -163997,7 +164641,7 @@ const createAnimationStyle = () => {
     .mh-boot-screen.is-ready .mh-mocchi-wrap img{animation:mhReadyHop .75s ease-out 1,mhMocchiHop 1.8s ease-in-out .75s infinite}.mh-boot-screen.is-ready .mh-boot-copy{animation:titleReveal .55s ease-out both}.mh-boot-screen.is-ready .mh-mocchi-wrap i{display:block;animation:mhSparkle 1.5s infinite}.mh-boot-screen.is-ready .mh-mocchi-wrap i:nth-of-type(1){top:10%;left:4%}.mh-boot-screen.is-ready .mh-mocchi-wrap i:nth-of-type(2){top:24%;right:0;animation-delay:.55s}.mh-boot-screen.is-entering .mh-mocchi-wrap img{animation:mhBigHop .75s ease-in-out both}.mh-entry-flash{position:absolute;z-index:9;inset:0;pointer-events:none;background:radial-gradient(circle,#fff 0,#d8b4fe 18%,transparent 58%);opacity:0}.mh-boot-screen.is-entering .mh-entry-flash{animation:mhEntryFlash .76s ease-in both}
     .mh-title-gate,.mh-entering{position:fixed;inset:0;overflow:hidden;color:#fff;background:#05020e;isolation:isolate}.mh-title-gate{animation:titleReveal .65s ease-out both}.mh-title-visual,.mh-entering>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%}
     .mh-title-header{position:absolute;z-index:22;top:0;left:0;right:0;padding:calc(11px + env(safe-area-inset-top)) 12px 0;display:flex;justify-content:space-between;align-items:flex-start;text-shadow:0 2px 5px #000;pointer-events:none}.mh-title-build{display:grid;padding:6px 8px;text-align:left;font-family:monospace;line-height:1.15;border:1px solid #ffffff30;border-radius:10px;background:#160d2588;backdrop-filter:blur(3px)}.mh-title-build b{font-size:7px;letter-spacing:.18em;color:#eadcff}.mh-title-build span{font-size:8px;margin-bottom:5px;color:#fff;max-width:130px;overflow:hidden;text-overflow:ellipsis}.mh-title-actions{display:flex;gap:7px;pointer-events:auto}.mh-title-actions button{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:50px;height:50px;border-radius:50%;background:#26152ecc;border:1px solid #ffd87a;color:#fff;font-size:8px;font-weight:800;box-shadow:0 2px 8px #000}.mh-title-actions em{position:absolute;right:-3px;top:-6px;background:#e33;padding:2px 4px;border-radius:8px;font-size:6px;font-style:normal}.mh-title-start{position:absolute;z-index:21;inset:0;width:100%;height:100%;border:0;background:transparent;touch-action:manipulation}.mh-title-start:disabled{pointer-events:none}
-    .mh-title-modal{position:fixed;z-index:100;inset:0;display:flex;align-items:center;justify-content:center;padding:calc(20px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));background:#03020eef}.mh-title-dialog{display:flex;flex-direction:column;gap:12px;width:min(100%,380px);max-height:86vh;padding:18px;border:1px solid #a78bfa77;border-radius:22px;background:#0f172a;color:#fff;overflow:auto}.mh-dialog-head{display:flex;align-items:center;justify-content:space-between}.mh-dialog-head h3{font-weight:900}.mh-dialog-head button{padding:13px;margin:-6px -8px -6px 0}.mh-dialog-choice{display:flex;justify-content:space-between;align-items:center;padding:14px;border:1px solid #ffffff22;border-radius:14px;background:#ffffff0c;font-weight:800}/* 窓の閉じる(2026-11-19 r1119-013 ⑥ B-1・B-2)。メニューの行(.mh-dialog-choice)の形だと項目の1つに見えたので、参考の窓と同じ「下の中央の丸いボタン」にし、窓の中を送っても下に貼り付けて画面の外へ出さない */.mh-dialog-close{position:sticky;bottom:0;z-index:2;flex:none;align-self:center;min-width:168px;min-height:46px;margin-top:auto;padding:0 28px;border:1px solid #ffffff38;border-radius:999px;background:#334155;color:#f1f5f9;font-weight:900;box-shadow:0 3px 0 #0009,0 -14px 14px 2px #0f172a}.mh-dialog-close:active{transform:translateY(1px) scale(.98)}.mh-dialog-head:has(>h3:only-child){justify-content:center}/* 更新履歴の窓(2026-11-19 r1119-010・U-14)。参考の窓(見出しの帯/中身/下の中央のとじる)にそろえ、窓の中で送るのは一覧だけにする。送った札は日付の見出しと上のふちの下へもぐり、切れた枠に見えない。字は 10px より小さくしない */.mh-title-dialog--changelog{width:min(100%,440px);height:min(calc(var(--mh-vh) - 40px - env(safe-area-inset-top) - env(safe-area-inset-bottom)),760px);max-height:none;padding:0;gap:0;overflow:hidden;border:2px solid #a78bfa88}.mh-title-dialog--changelog>.mh-dialog-head{flex:none;justify-content:center;min-height:44px;padding:8px 16px;background:linear-gradient(180deg,#2b3150,#1b2036);border-bottom:1px solid #ffffff1f}.mh-title-dialog--changelog>.mh-dialog-head h3{font-size:15px;letter-spacing:.04em}.mh-title-dialog--changelog>.mh-changelog-tabs{flex:none;margin:10px 12px 0;padding:3px;gap:3px;border-radius:12px;background:#0b1222;border:1px solid #ffffff14}.mh-title-dialog--changelog>.mh-changelog-tabs button{display:flex;align-items:center;justify-content:center;gap:4px;min-height:44px;padding:0 4px;white-space:nowrap;border-radius:9px;background:transparent;color:#94a3b8;font-size:12px;font-weight:900}.mh-title-dialog--changelog>.mh-changelog-tabs button.active{background:linear-gradient(180deg,#d97706,#b45309);color:#fff;box-shadow:0 2px 0 #0006}.mh-title-dialog--changelog .mh-changelog-tabs .mh-unread-badge{position:static;width:16px;height:16px;border-width:1.5px;font-size:10px;box-shadow:none}.mh-title-dialog--changelog>.mh-changelog-list{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;margin-top:10px;padding:0 12px 12px;border-top:1px solid #ffffff1a;box-shadow:inset 0 8px 8px -8px #000c}.mh-title-dialog--changelog .mh-changelog-day{margin:0 -12px 8px;padding:6px 12px;background:#0f172af2;border-bottom:1px solid #ffffff12;box-shadow:0 6px 8px -6px #000c;font-size:11px;color:#c7d2fe}.mh-title-dialog--changelog .mh-changelog-day:first-child{margin-top:0}.mh-title-dialog--changelog .mh-changelog-list>details:first-child{margin-top:10px!important}.mh-title-dialog--changelog .mh-changelog-list article{padding:10px 12px;margin-bottom:8px;border-radius:14px;background:#111a2e}.mh-title-dialog--changelog .mh-changelog-list article.unread{border-color:#f59e0bb0;box-shadow:inset 3px 0 0 #f59e0b}.mh-title-dialog--changelog .mh-changelog-head{min-height:40px}.mh-title-dialog--changelog .mh-changelog-head b{font-size:13px;line-height:1.4}.mh-title-dialog--changelog .mh-changelog-head small{font-size:10px}.mh-title-dialog--changelog .mh-changelog-count{font-size:10px}.mh-title-dialog--changelog .mh-changelog-count em,.mh-title-dialog--changelog .mh-changelog-item time em{font-size:9px}.mh-title-dialog--changelog .mh-changelog-kind{font-size:10px}.mh-title-dialog--changelog .mh-changelog-peek{font-size:11px;color:#a8b3c7}.mh-title-dialog--changelog .mh-changelog-list p{font-size:12px;line-height:1.65}.mh-title-dialog--changelog .mh-changelog-item time{font-size:10px}.mh-title-dialog--changelog .mh-changelog-item b{font-size:12.5px}.mh-title-dialog--changelog>.mh-dialog-close{position:static;margin:10px auto 12px;box-shadow:0 3px 0 #0009}@media(orientation:landscape) and (max-height:500px){.mh-title-dialog--changelog{display:grid;grid-template-columns:minmax(170px,30%) 1fr;grid-template-rows:auto auto 1fr auto;width:min(100%,860px);height:calc(var(--mh-vh) - 16px);padding:0}.mh-title-dialog--changelog>.mh-dialog-head{grid-column:1;grid-row:1;border-right:1px solid #ffffff14}.mh-title-dialog--changelog>.mh-changelog-tabs{grid-column:1;grid-row:2;grid-template-columns:1fr;margin:10px}.mh-title-dialog--changelog>.mh-dialog-close{grid-column:1;grid-row:4;align-self:end;justify-self:center;min-width:0;width:calc(100% - 20px);margin:0 10px 10px}.mh-title-dialog--changelog>.mh-changelog-list{grid-column:2;grid-row:1/-1;margin:0;padding-top:0;border-top:0;border-left:1px solid #ffffff1a;box-shadow:none}}@media(orientation:landscape) and (max-height:500px){.mh-title-dialog--menu{display:grid;grid-template-columns:1fr 1fr;align-content:start}.mh-title-dialog--menu>.mh-dialog-head,.mh-title-dialog--menu>.mh-dialog-close{grid-column:1/-1;justify-self:center}.mh-title-dialog--menu>.mh-dialog-choice{padding:10px 12px}}.mh-changelog-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.mh-changelog-tabs button{position:relative;padding:9px;border-radius:10px;background:#1e293b;font-size:11px;font-weight:800}.mh-changelog-tabs button.active{background:#b45309}.mh-unread-badge{position:absolute;right:-5px;top:-6px;display:flex;align-items:center;justify-content:center;width:17px;height:17px;border:2px solid #fff;border-radius:50%;background:#dc2626;color:#fff;font:900 11px/1 sans-serif;font-style:normal;box-shadow:0 2px 5px #0008;pointer-events:none}.mh-changelog-list{overflow:auto}.mh-changelog-list article{padding:11px;margin-bottom:8px;border:1px solid #ffffff18;border-radius:13px;background:#0005}.mh-changelog-list time,.mh-changelog-list b{display:block}.mh-changelog-list time{font:9px monospace;color:#94a3b8}.mh-changelog-list b{font-size:12px;margin:4px 0}.mh-changelog-kind{display:inline-block;margin-top:5px;padding:2px 7px;border-radius:999px;border:1px solid currentColor;font:900 9px/1.5 sans-serif}.mh-changelog-kind[data-kind="fix"]{color:#fca5a5;background:#7f1d1d55}.mh-changelog-kind[data-kind="feature"]{color:#86efac;background:#14532d55}.mh-changelog-kind[data-kind="update"]{color:#93c5fd;background:#1e3a8a55}.mh-changelog-kind[data-kind="market"]{color:#fcd34d;background:#78350f55}.mh-changelog-kind[data-kind="issue"]{color:#d8b4fe;background:#4c1d9555}.mh-changelog-kind[data-kind="mode"]{color:#67e8f9;background:#164e6355}.mh-changelog-kind[data-kind="content"]{color:#f9a8d4;background:#83184355}.mh-changelog-kind[data-kind="event"]{color:#fdba74;background:#7c2d1255}.mh-changelog-list p{font-size:10px;color:#cbd5e1}.mh-changelog-head{display:flex;align-items:center;gap:8px;width:100%;min-height:36px;padding:0;border:0;background:transparent;color:inherit;text-align:left}.mh-changelog-head b{flex:1;min-width:0;margin:4px 0}.mh-changelog-head small{flex:none;font-size:8px;font-weight:900;color:#94a3b8;white-space:nowrap}.mh-changelog-detail{margin-top:2px;padding-top:6px;border-top:1px solid #ffffff14}.mh-changelog-empty{padding:18px 12px;text-align:center;line-height:1.7;color:#fbbf24}.mh-changelog-day{position:sticky;top:0;z-index:1;margin:10px 0 6px;padding:3px 0;background:#0f172a;color:#a5b4fc;font:900 10px/1.4 monospace;letter-spacing:.04em}.mh-changelog-day:first-child{margin-top:0}.mh-changelog-group-emoji{flex:none;font-size:13px;line-height:1}.mh-changelog-count{flex:none;position:relative;padding:2px 7px;border-radius:999px;background:#ffffff14;color:#cbd5e1;font:900 9px/1.5 sans-serif;white-space:nowrap}.mh-changelog-count em{margin-left:5px;padding:1px 4px;border-radius:5px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-changelog-peek{margin-top:4px;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;font-size:9px;line-height:1.5;color:#94a3b8}.mh-changelog-kinds{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}.mh-changelog-kinds .mh-changelog-kind{margin-top:0}.mh-changelog-kind i{margin-left:3px;font-style:normal;opacity:.85}.mh-changelog-item{padding:9px 0;border-top:1px solid #ffffff14}.mh-changelog-item:first-child{padding-top:2px;border-top:0}.mh-changelog-item time{display:inline-block;margin-right:6px;font:9px monospace;color:#94a3b8}.mh-changelog-item time em{margin-left:4px;padding:1px 4px;border-radius:5px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-changelog-item b{display:block;margin:4px 0;font-size:11px;line-height:1.5}.mh-changelog-item .mh-changelog-kind{margin-top:0}[data-changelog-link]{display:inline-flex;align-items:center;gap:4px;margin-top:8px;padding:8px 13px;border:1px solid #7dd3fc55;border-radius:11px;background:#0ea5e922;color:#7dd3fc;font:900 10px/1.4 sans-serif;text-decoration:none}.mh-title-dialog textarea{min-height:90px;padding:8px;border-radius:10px;background:#0008;font:9px monospace}
+    .mh-title-modal{position:fixed;z-index:100;inset:0;display:flex;align-items:center;justify-content:center;padding:calc(20px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));background:#03020eef}.mh-title-dialog{display:flex;flex-direction:column;gap:12px;width:min(100%,380px);max-height:86vh;padding:18px;border:1px solid #a78bfa77;border-radius:22px;background:#0f172a;color:#fff;overflow:auto}.mh-dialog-head{display:flex;align-items:center;justify-content:space-between}.mh-dialog-head h3{font-weight:900}.mh-dialog-head button{padding:13px;margin:-6px -8px -6px 0}.mh-dialog-choice{display:flex;justify-content:space-between;align-items:center;padding:14px;border:1px solid #ffffff22;border-radius:14px;background:#ffffff0c;font-weight:800}/* 窓の閉じる(2026-11-19 r1119-013 ⑥ B-1・B-2)。メニューの行(.mh-dialog-choice)の形だと項目の1つに見えたので、参考の窓と同じ「下の中央の丸いボタン」にし、窓の中を送っても下に貼り付けて画面の外へ出さない */.mh-dialog-close{position:sticky;bottom:0;z-index:2;flex:none;align-self:center;min-width:168px;min-height:46px;margin-top:auto;padding:0 28px;border:1px solid #ffffff38;border-radius:999px;background:#334155;color:#f1f5f9;font-weight:900;box-shadow:0 3px 0 #0009,0 -14px 14px 2px #0f172a}.mh-dialog-close:active{transform:translateY(1px) scale(.98)}.mh-dialog-head:has(>h3:only-child){justify-content:center}/* 更新履歴の窓(2026-11-19 r1119-010・U-14)。参考の窓(見出しの帯/中身/下の中央のとじる)にそろえ、窓の中で送るのは一覧だけにする。送った札は日付の見出しと上のふちの下へもぐり、切れた枠に見えない。字は 10px より小さくしない */.mh-title-dialog--changelog{width:min(100%,440px);height:min(calc(var(--mh-vh) - 40px - env(safe-area-inset-top) - env(safe-area-inset-bottom)),760px);max-height:none;padding:0;gap:0;overflow:hidden;border:2px solid #a78bfa88}.mh-title-dialog--changelog>.mh-dialog-head{flex:none;justify-content:center;min-height:44px;padding:8px 16px;background:linear-gradient(180deg,#2b3150,#1b2036);border-bottom:1px solid #ffffff1f}.mh-title-dialog--changelog>.mh-dialog-head h3{font-size:15px;letter-spacing:.04em}.mh-title-dialog--changelog>.mh-changelog-tabs{flex:none;margin:10px 12px 0;padding:3px;gap:3px;border-radius:12px;background:#0b1222;border:1px solid #ffffff14}.mh-title-dialog--changelog>.mh-changelog-tabs button{display:flex;align-items:center;justify-content:center;gap:4px;min-height:44px;padding:0 4px;white-space:nowrap;border-radius:9px;background:transparent;color:#94a3b8;font-size:12px;font-weight:900}.mh-title-dialog--changelog>.mh-changelog-tabs button.active{background:linear-gradient(180deg,#d97706,#b45309);color:#fff;box-shadow:0 2px 0 #0006}.mh-title-dialog--changelog .mh-changelog-tabs .mh-unread-badge{position:static;width:16px;height:16px;border-width:1.5px;font-size:10px;box-shadow:none}.mh-title-dialog--changelog>.mh-changelog-list{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;margin-top:10px;padding:0 12px 12px;border-top:1px solid #ffffff1a;box-shadow:inset 0 8px 8px -8px #000c}.mh-title-dialog--changelog .mh-changelog-day{margin:0 -12px 8px;padding:6px 12px;background:#0f172af2;border-bottom:1px solid #ffffff12;box-shadow:0 6px 8px -6px #000c;font-size:11px;color:#c7d2fe}.mh-title-dialog--changelog .mh-changelog-day:first-child{margin-top:0}.mh-title-dialog--changelog .mh-changelog-list>details:first-child{margin-top:10px!important}.mh-title-dialog--changelog .mh-changelog-list article{padding:10px 12px;margin-bottom:8px;border-radius:14px;background:#111a2e}.mh-title-dialog--changelog .mh-changelog-list article.unread{border-color:#f59e0bb0;box-shadow:inset 3px 0 0 #f59e0b}.mh-title-dialog--changelog .mh-changelog-head{min-height:40px}.mh-title-dialog--changelog .mh-changelog-head b{font-size:13px;line-height:1.4}.mh-title-dialog--changelog .mh-changelog-head small{font-size:10px}.mh-title-dialog--changelog .mh-changelog-count{font-size:10px}.mh-title-dialog--changelog .mh-changelog-count em,.mh-title-dialog--changelog .mh-changelog-item time em{font-size:9px}.mh-title-dialog--changelog .mh-changelog-kind{font-size:10px}.mh-title-dialog--changelog .mh-changelog-peek{font-size:11px;color:#a8b3c7}.mh-title-dialog--changelog .mh-changelog-list p{font-size:12px;line-height:1.65}.mh-title-dialog--changelog .mh-changelog-item time{font-size:10px}.mh-title-dialog--changelog .mh-changelog-item b{font-size:12.5px}.mh-title-dialog--changelog>.mh-dialog-close{position:static;margin:10px auto 12px;box-shadow:0 3px 0 #0009}@media(orientation:landscape) and (max-height:500px){.mh-title-dialog--changelog{display:grid;grid-template-columns:minmax(150px,24%) 1fr;grid-template-rows:auto auto 1fr auto;width:min(100%,860px);height:calc(var(--mh-vh) - 16px);padding:0}.mh-title-dialog--changelog>.mh-dialog-head{grid-column:1;grid-row:1;border-right:1px solid #ffffff14}.mh-title-dialog--changelog>.mh-changelog-tabs{grid-column:1;grid-row:2;grid-template-columns:1fr;margin:10px}.mh-title-dialog--changelog>.mh-dialog-close{grid-column:1;grid-row:4;align-self:end;justify-self:center;min-width:0;width:calc(100% - 20px);margin:0 10px 10px}.mh-title-dialog--changelog>.mh-changelog-list{grid-column:2;grid-row:1/-1;margin:0;padding-top:0;border-top:0;border-left:1px solid #ffffff1a;box-shadow:none}}/* 2026-11-27 r1126-074 小4: タブレットでは窓を広げる。縦は幅680まで・高さは画面に合わせる。横は小さい横と同じ左右の組(左に見出し・タブ・閉じる、右に一覧) */@media(min-width:700px) and (orientation:portrait){.mh-title-dialog--changelog{width:min(100%,680px);height:min(calc(var(--mh-vh) - 40px - env(safe-area-inset-top) - env(safe-area-inset-bottom)),1100px)}}@media(orientation:landscape) and (min-height:501px){.mh-title-dialog--changelog{display:grid;grid-template-columns:minmax(190px,24%) 1fr;grid-template-rows:auto auto 1fr auto;width:min(100%,1040px);height:min(calc(var(--mh-vh) - 40px - env(safe-area-inset-top) - env(safe-area-inset-bottom)),860px);padding:0}.mh-title-dialog--changelog>.mh-dialog-head{grid-column:1;grid-row:1;border-right:1px solid #ffffff14}.mh-title-dialog--changelog>.mh-changelog-tabs{grid-column:1;grid-row:2;grid-template-columns:1fr;margin:10px}.mh-title-dialog--changelog>.mh-dialog-close{grid-column:1;grid-row:4;align-self:end;justify-self:center;min-width:0;width:calc(100% - 20px);margin:0 10px 10px}.mh-title-dialog--changelog>.mh-changelog-list{grid-column:2;grid-row:1/-1;margin:0;padding-top:0;border-top:0;border-left:1px solid #ffffff1a;box-shadow:none}}@media(orientation:landscape) and (max-height:500px){.mh-title-dialog--menu{display:grid;grid-template-columns:1fr 1fr;align-content:start}.mh-title-dialog--menu>.mh-dialog-head,.mh-title-dialog--menu>.mh-dialog-close{grid-column:1/-1;justify-self:center}.mh-title-dialog--menu>.mh-dialog-choice{padding:10px 12px}}.mh-changelog-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.mh-changelog-tabs button{position:relative;padding:9px;border-radius:10px;background:#1e293b;font-size:11px;font-weight:800}.mh-changelog-tabs button.active{background:#b45309}.mh-unread-badge{position:absolute;right:-5px;top:-6px;display:flex;align-items:center;justify-content:center;width:17px;height:17px;border:2px solid #fff;border-radius:50%;background:#dc2626;color:#fff;font:900 11px/1 sans-serif;font-style:normal;box-shadow:0 2px 5px #0008;pointer-events:none}.mh-changelog-list{overflow:auto}.mh-changelog-list article{padding:11px;margin-bottom:8px;border:1px solid #ffffff18;border-radius:13px;background:#0005}.mh-changelog-list time,.mh-changelog-list b{display:block}.mh-changelog-list time{font:9px monospace;color:#94a3b8}.mh-changelog-list b{font-size:12px;margin:4px 0}.mh-changelog-kind{display:inline-block;margin-top:5px;padding:2px 7px;border-radius:999px;border:1px solid currentColor;font:900 9px/1.5 sans-serif}.mh-changelog-kind[data-kind="fix"]{color:#fca5a5;background:#7f1d1d55}.mh-changelog-kind[data-kind="feature"]{color:#86efac;background:#14532d55}.mh-changelog-kind[data-kind="update"]{color:#93c5fd;background:#1e3a8a55}.mh-changelog-kind[data-kind="market"]{color:#fcd34d;background:#78350f55}.mh-changelog-kind[data-kind="issue"]{color:#d8b4fe;background:#4c1d9555}.mh-changelog-kind[data-kind="mode"]{color:#67e8f9;background:#164e6355}.mh-changelog-kind[data-kind="content"]{color:#f9a8d4;background:#83184355}.mh-changelog-kind[data-kind="event"]{color:#fdba74;background:#7c2d1255}.mh-changelog-list p{font-size:10px;color:#cbd5e1}.mh-changelog-head{display:flex;align-items:center;gap:8px;width:100%;min-height:36px;padding:0;border:0;background:transparent;color:inherit;text-align:left}.mh-changelog-head b{flex:1;min-width:0;margin:4px 0}.mh-changelog-head small{flex:none;font-size:8px;font-weight:900;color:#94a3b8;white-space:nowrap}.mh-changelog-detail{margin-top:2px;padding-top:6px;border-top:1px solid #ffffff14}.mh-changelog-empty{padding:18px 12px;text-align:center;line-height:1.7;color:#fbbf24}.mh-changelog-day{position:sticky;top:0;z-index:1;margin:10px 0 6px;padding:3px 0;background:#0f172a;color:#a5b4fc;font:900 10px/1.4 monospace;letter-spacing:.04em}.mh-changelog-day:first-child{margin-top:0}.mh-changelog-group-emoji{flex:none;font-size:13px;line-height:1}.mh-changelog-count{flex:none;position:relative;padding:2px 7px;border-radius:999px;background:#ffffff14;color:#cbd5e1;font:900 9px/1.5 sans-serif;white-space:nowrap}.mh-changelog-count em{margin-left:5px;padding:1px 4px;border-radius:5px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-changelog-peek{margin-top:4px;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;font-size:9px;line-height:1.5;color:#94a3b8}.mh-changelog-kinds{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}.mh-changelog-kinds .mh-changelog-kind{margin-top:0}.mh-changelog-kind i{margin-left:3px;font-style:normal;opacity:.85}.mh-changelog-item{padding:9px 0;border-top:1px solid #ffffff14}.mh-changelog-item:first-child{padding-top:2px;border-top:0}.mh-changelog-item time{display:inline-block;margin-right:6px;font:9px monospace;color:#94a3b8}.mh-changelog-item time em{margin-left:4px;padding:1px 4px;border-radius:5px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-changelog-item b{display:block;margin:4px 0;font-size:11px;line-height:1.5}.mh-changelog-item .mh-changelog-kind{margin-top:0}[data-changelog-link]{display:inline-flex;align-items:center;gap:4px;margin-top:8px;padding:8px 13px;border:1px solid #7dd3fc55;border-radius:11px;background:#0ea5e922;color:#7dd3fc;font:900 10px/1.4 sans-serif;text-decoration:none}.mh-title-dialog textarea{min-height:90px;padding:8px;border-radius:10px;background:#0008;font:9px monospace}
     .mh-tile-viewport{touch-action:none;overscroll-behavior:contain;cursor:grab}.mh-tile-viewport:active{cursor:grabbing}.mh-tile-viewport.overview{overflow:auto}.mh-tile-viewport.overview .mh-tile-board{transform:none}.mh-training-tile{transform:scale(var(--map-scale,1))}.mh-training-tile.current{transform:scale(calc(var(--map-scale,1)*1.08))}.mh-tile-board>i.route{height:17px;border-color:#fef08a;background:#facc15;box-shadow:0 0 14px #fde047;animation:trainingRoutePulse .7s infinite alternate}.mh-training-tile.route-preview{border-color:#fde047;box-shadow:0 0 16px #fde047,0 5px 0 #713f12}.mh-training-tile.stop-preview{z-index:7;border-color:#fff;box-shadow:0 0 0 5px #f97316,0 0 25px #fb923c}.mh-board-buttons{display:flex;align-items:center;gap:4px}.mh-board-buttons button{min-height:34px;padding:0 8px;border-radius:9px;background:#164e63;font-size:8px;font-weight:900}.mh-board-buttons span{padding:3px 5px;border-radius:7px;background:#020617;color:#bae6fd;font:8px monospace}.mh-changelog-list article.unread{border-color:#f59e0b88}.mh-changelog-list time em{float:right;padding:2px 5px;border-radius:6px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-training-effect{position:fixed;z-index:45000;left:50%;top:43%;width:min(78vw,300px);min-height:150px;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;border:3px solid #fff;border-radius:28px;background:radial-gradient(circle,#0ea5e9dd,#020617ee 72%);box-shadow:0 0 55px #38bdf8;pointer-events:none;animation:trainingEffectPop 1.25s ease-out both}.mh-training-effect>span{font-size:58px;filter:drop-shadow(0 0 15px #fff)}.mh-training-effect>b{z-index:2;max-width:90%;text-align:center;color:#fff;font-size:16px;text-shadow:0 2px 5px #000}.mh-training-effect.xp,.mh-training-effect.effect,.mh-training-effect.turn{background:radial-gradient(circle,#22c55edd,#052e16ee 72%);box-shadow:0 0 55px #4ade80}.mh-training-effect.diamond{background:radial-gradient(circle,#38bdf8ee,#172554ee 72%)}.mh-training-effect.item,.mh-training-effect.tool,.mh-training-effect.goal{background:radial-gradient(circle,#fbbf24ee,#581c87ee 72%);box-shadow:0 0 70px #fde047}.mh-training-effect.move,.mh-training-effect.happening{background:radial-gradient(circle,#ef4444dd,#450a0aee 72%);box-shadow:0 0 55px #fb7185}.mh-training-effect i{position:absolute;width:9px;height:9px;border-radius:50%;background:#fff;box-shadow:0 0 12px #fff;animation:trainingParticle 1s ease-out both}.mh-training-effect i:nth-of-type(1){--a:0deg}.mh-training-effect i:nth-of-type(2){--a:60deg}.mh-training-effect i:nth-of-type(3){--a:120deg}.mh-training-effect i:nth-of-type(4){--a:180deg}.mh-training-effect i:nth-of-type(5){--a:240deg}.mh-training-effect i:nth-of-type(6){--a:300deg}@keyframes trainingEffectPop{0%{opacity:0;transform:translate(-50%,-50%) scale(.4)}18%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-58%) scale(.96)}}@keyframes trainingParticle{from{transform:rotate(var(--a)) translateX(18px);opacity:1}to{transform:rotate(var(--a)) translateX(115px) scale(.2);opacity:0}}@keyframes trainingRoutePulse{to{filter:brightness(1.6)}}
     .mh-entering>img{animation:mhGateZoom 1.15s ease-in both}.mh-gate-core{position:absolute;z-index:3;left:50%;top:44%;width:12vmin;height:12vmin;border-radius:50%;background:#fff;box-shadow:0 0 25px 12px #d8b4fe,0 0 90px 40px #7e22ce;transform:translate(-50%,-50%);animation:mhCoreGrow 1.15s ease-in both}.mh-gate-particles{position:absolute;z-index:2;inset:-30%;background:repeating-conic-gradient(from 0deg,transparent 0 8deg,#fbbf2444 9deg,#a855f766 10deg,transparent 11deg 19deg);animation:mhParticles 1.1s ease-in both}.mh-gate-flash{position:absolute;z-index:4;inset:0;background:#f5f0ff;animation:mhGateFlash 1.15s ease-in both}.mh-entering p{position:absolute;z-index:6;left:0;right:0;bottom:calc(9% + env(safe-area-inset-bottom));text-align:center;font-size:11px;font-weight:800;text-shadow:0 2px 6px #000}
     @keyframes mhMocchiHop{0%,100%{transform:translateY(0) scale(1.05,.95)}45%{transform:translateY(-14px) rotate(-2deg) scale(.98,1.02)}70%{transform:translateY(0) scale(1.08,.9)}}@keyframes mhReadyHop{45%{transform:translateY(-25px) scale(1.1)}100%{transform:translateY(0)}}@keyframes mhShadow{0%,100%{transform:scaleX(1);opacity:.6}45%{transform:scaleX(.65);opacity:.3}}@keyframes mhSparkle{50%{transform:scale(1.5) rotate(90deg);opacity:.35}}@keyframes mhBigHop{45%{transform:translateY(-34px) scale(.95,1.08)}100%{transform:translateY(5px) scale(1.12,.88)}}@keyframes mhEntryFlash{45%{opacity:0}80%{opacity:1}100%{opacity:0}}@keyframes titleReveal{from{opacity:0;filter:brightness(2)}to{opacity:1;filter:none}}@keyframes mhGateZoom{to{transform:scale(1.16);filter:blur(2px) brightness(1.5)}}@keyframes mhCoreGrow{0%{transform:translate(-50%,-50%) scale(.15);opacity:0}70%{opacity:1}100%{transform:translate(-50%,-50%) scale(18)}}@keyframes mhParticles{to{transform:rotate(35deg) scale(.2);opacity:0}}@keyframes mhGateFlash{0%,68%{opacity:0}85%{opacity:.95}100%{opacity:1}}

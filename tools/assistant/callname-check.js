@@ -189,6 +189,7 @@ const browser = async () => {
     await page.route(/functions\/v1\/(?!assistant-chat)/, r => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
     await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
     await toHome(page); await page.waitForTimeout(1200); await finishTalk(page);
+    await page.evaluate(() => { try { HOME_ASSISTANT_COMMENT_STORE.setOn(true); } catch (_) {} }); await page.waitForTimeout(400); // 2026-11-27 r1126-073: HOME の吹き出しは顔だけが既定。開いてからメニューを出す
     await page.locator('.mh-home-assistant [data-bubble-menu-toggle]').first().dispatchEvent('click').catch(() => {}); await page.waitForTimeout(200); // おしゃべりは吹き出しのメニューの中(r1119-050)
     await page.locator('[data-home-assistant-chat]').dispatchEvent('click');
     await page.locator('[data-assistant-chat]').waitFor({ timeout: 10000 });

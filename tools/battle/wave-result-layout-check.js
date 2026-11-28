@@ -44,7 +44,14 @@ check('見出しと内訳をスクロールできる入れ物にまとめてい�
 check('ボタンは縮まないので必ず画面内に残る', /shrink-0[^"`]*`}[^]{0,200}次へ進む|shrink-0/.test(block.slice(block.indexOf('{handleNextWave'))));
 
 // --- ② 実ブラウザで測る ---
+// 点数の欄は、幅に合わせて字を縮める部品 FitNumber(41-screen-ui.jsx)を使う。寸法に効くので、ダミーにせず本体をそのまま切り出す
+//   (2026-11-28: 点数の欄が FitNumber に替わったあと、この切り出しに無くて「画面を描ける」が落ちていた)
+const fitFrom = whole.indexOf('const FitNumber = (');
+const fitTo = fitFrom >= 0 ? whole.indexOf('\n};\n', fitFrom) + 4 : -1;
+if (fitFrom < 0 || fitTo < 4) { console.error('NG: FitNumber の本体が見つかりませんでした'); process.exit(1); }
+const fitNumberSrc = whole.slice(fitFrom, fitTo);
 const app = `
+${fitNumberSrc}
 const Trophy = ({className,size}) => <span className={className} style={{fontSize:size,display:'block'}}>T</span>;
 const ChevronRight = ({className,size}) => <span className={className} style={{fontSize:size}}>></span>;
 const Loader2 = ({className,size}) => <span className={className} style={{fontSize:size}}>o</span>;
@@ -101,7 +108,7 @@ html,body{margin:0;background:#020617;color:#e2e8f0;font-family:system-ui,sans-s
 .grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}
 .items-center{align-items:center}.items-end{align-items:flex-end}.items-baseline{align-items:baseline}
 .justify-center{justify-content:center}.justify-between{justify-content:space-between}
-.shrink-0{flex-shrink:0}.flex-1{flex:1 1 0%}.min-h-0{min-height:0}.m-auto{margin:auto}
+.shrink-0{flex-shrink:0}.flex-1{flex:1 1 0%}.min-h-0{min-height:0}.min-w-0{min-width:0}.m-auto{margin:auto}
 .w-full{width:100%}.max-w-sm{max-width:24rem}.max-w-xs{max-width:20rem}.mx-auto{margin-left:auto;margin-right:auto}
 .overflow-hidden{overflow:hidden}.overflow-y-auto{overflow-y:auto}
 .text-center{text-align:center}.text-left{text-align:left}.text-right{text-align:right}
