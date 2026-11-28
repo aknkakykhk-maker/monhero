@@ -64,6 +64,9 @@ const ROUTES = [
   // r1126-115 視点の編 ドラの編(真グッドのあと、第2章 A2 に③)
   { name: '視点の編 ドラ、黙って見送る', want: 'END-PD1', from: 'A2', picks: { A2: 'go:PD-1', APD1: 'opt:0' }, seen: ['END-G'] },
   { name: '視点の編 ドラ、名前を呼ぶ(もしも)', want: 'END-PD2', from: 'APD1', picks: { A2: 'go:PD-1', APD1: 'go:PD-Y' }, seen: ['END-G'], short: true },
+  // r1126-115 視点の編 ききの編(真グッドのあと、第5章 C5-1 の最後に新しい選択 APK0)
+  { name: '視点の編 きき、みんなと冷たい空気をたどる', want: 'END-PK1', from: 'APK0', picks: { APK0: 'go:PK-1', APK1: 'opt:0' }, seen: ['END-G'] },
+  { name: '視点の編 きき、1人で2階へ(もしも)', want: 'END-PK2', from: 'APK1', picks: { APK0: 'go:PK-1', APK1: 'go:PK-Y' }, seen: ['END-G'], short: true },
   { name: '真グッドの前は A2 にドラの編は出ない', want: 'END-X1', from: 'A2', picks: { A2: 'danger' }, noOpt: { A2: 'PD-1' }, short: true },
   { name: 'しおりが無いと A1b に③は出ない', want: 'END-X6', from: 'A1b', picks: { A1b: 'danger' }, seen: ['END-G'], noOpt: { A1b: 'RW-1' }, short: true },
   { name: '寄り道の2つめ(イチーカ・こっそり・ドラの声)を通って真グッドへ', want: 'END-G', from: 'A4y', picks: { A4y: 'opt:1', A6y: 'opt:1', A8y: 'go:C8-Z', Q7a: 'kyuko' }, short: true },
