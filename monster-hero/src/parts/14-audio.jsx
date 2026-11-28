@@ -179,6 +179,8 @@ const Audio_ = (() => {
     "audio/bgm-freedom-dive.mp3": "34616b2fccd3",
     "audio/bgm-fusion.mp3": "6f0d4675789f",
     "audio/bgm-game-over.mp3": "d9fb75a7c827",
+    "audio/bgm-glass-crown-short.mp3": "b413fcfdf853",
+    "audio/bgm-glass-crown.mp3": "506aa4aa55d9",
     "audio/bgm-gourmet-race-64.mp3": "8d110d3430e4",
     "audio/bgm-gourmet-race-dx.mp3": "cb6d19e5ff52",
     "audio/bgm-grievous-lady.mp3": "28bfeda8d534",

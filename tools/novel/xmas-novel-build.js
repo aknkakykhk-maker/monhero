@@ -22,7 +22,7 @@ const SPEAKERS = [
   ['黒羽', 'kuroba'], ['白瀬', 'shirase'], ['ワトソンくん', 'watson'],
 ];
 // 過去編(12年前の聖夜)だけに出る、立ち絵の無い話し手(名前だけ出す。注意に出さない・r1126-046)
-const PAST_SPEAKERS = ['カノン', '祖父', '幼いきゅうこ', '幼いイチーカ', '幼いももすけ', 'ももすけの母', '薬屋の主人', '幼いえるびん'];
+const PAST_SPEAKERS = ['カノン', '祖父', '幼いきゅうこ', '幼いイチーカ', '幼いももすけ', 'ももすけの母', '薬屋の主人', '幼いえるびん', '灰谷']; // 灰谷 … もしもの話「仮面のワルツ」の大人の客(絵なし・名前だけ・r1126-115)
 // 返しの行の英字(-dora など) → 人のid
 const PERSON_KEYS = { dora: 'dra', dra: 'dra', mua: 'myua', myua: 'myua', miyua: 'myua', atsu: 'atsu', kiki: 'kiki', momo: 'momosuke', momosuke: 'momosuke',
   kyuko: 'kyuko', sorashido: 'sorashido', sora: 'sorashido', erubin: 'erubin', elvin: 'erubin', ichika: 'ichika', ichiika: 'ichika',
@@ -41,7 +41,11 @@ const FX_TAGS = { 赤いにじみ: 'bleed', 倒れた影: 'fallen', 赤く光る
 // 音の印(〔音:鐘〕など・r1126-066)→ 画面の xmasNovelSe の種類
 const SOUND_MARKS = { 鐘: 'bell', 時計: 'tick', 柱時計: 'tick', 手紙: 'letter' };
 // (手紙) … 紙の手紙を赤い字で浮かべる(文の「／」で改行・r1126-058)
-const ENDING_KIND = { G: 'good', N: 'normal', B: 'bad', A: 'another', X: 'forced', M: 'accuse', O: 'omake' };
+const ENDING_KIND = { G: 'good', N: 'normal', B: 'bad', A: 'another', X: 'forced', M: 'accuse', K: 'accuse', O: 'omake', L: 'unsolved' }; // K・L は r1126-108(動機ちがいの名指し・迷宮入り)
+// ID で決まる種類(先頭の英字と違う物)。END-G2 は真ルートの終章の選びまちがい「真相のその先」(r1126-108 第3弾)
+const ENDING_KIND_ID = { 'END-G2': 'truebad' };
+// もしもの話(r1126-115): 別ジャンルの話は ifroute、助手の視点の編は pov。id の頭文字は if-routes-r1126-115/README.md の割り振り表で決める
+Object.assign(ENDING_KIND, { R: 'ifroute', H: 'ifroute', T: 'ifroute', W: 'ifroute', Y: 'ifroute', PD: 'pov', PM: 'pov', PK: 'pov', PE: 'pov', PO: 'pov', PQ: 'pov' });
 const CHAPTER_NO = { 序章: 0, 終章: 9 };
 
 const warn = [];
@@ -55,7 +59,7 @@ const parseCond = (src) => {
   const any = s.split(/\s*(?:または|\|\||\|| or )\s*/).map((part) => ({
     all: part.split(/\s*(?:かつ|&&|&|、|,| and )\s*/).map((a) => {
       // end_G … そのエンディングを見たことがある(エンドヒストリー)なら 1(r1126-062 おまけの選択肢)
-      const m = a.match(/^(f_\w+|score|clues|end_[A-Z]+\d*)\s*(>=|<=|!=|=|>|<)\s*(-?\d+)$/);
+      const m = a.match(/^(f_\w+|score|clues|end_[A-Z]+\d*|bm_[a-z]+|rd_[A-Za-z0-9_]+)\s*(>=|<=|!=|=|>|<)\s*(-?\d+)$/);
       if (!m) { if (a) note('条件', `読めない「${a}」(f_xxx=1 / score>=7 の形)`); return null; }
       return { k: m[1], op: m[2], v: Number(m[3]) };
     }).filter(Boolean),
@@ -123,7 +127,7 @@ const parseSceneHead = (cells, chapter, seq) => {
     title = info.replace(/[(（].*$/, '').trim();
   }
   const kv = {};
-  const keys = [...info.matchAll(/(条件|曲|背景|次)\s*[:：]/g)];
+  const keys = [...info.matchAll(/(条件|曲|背景|次|時刻)\s*[:：]/g)]; // 時刻 … 正典の区間(CANON.md・xmas-canon-check.js が見る。ゲームでは使わない)
   keys.forEach((k, i) => {
     const from = k.index + k[0].length;
     const to = i + 1 < keys.length ? keys[i + 1].index : info.length;
@@ -160,6 +164,8 @@ const parseSceneHead = (cells, chapter, seq) => {
   // 過去編(真グッドを見たあと「章から」で読む章)の場面は、並びでは入らない。最後の場面のあとは起動画面へ戻る(r1126-046)
   if (chapter.past) { scene.past = true; scene.jumpOnly = true; }
   if (afterM) scene.after = { scene: afterM[1], row: afterM[2] || null };
+  // 「次: おしまい」のエンディングは、すぐうしろの場面が外側(OUT-*)のときだけ続ける(r1126-108: END-K1 のあとに C10-L が流れていた)
+  if (/^おしまい/.test(nextRaw)) scene.stopHere = true;
   // カーテンコールの場面(題か ID に「カーテンコール」「CC」)。エンディングの場面の「次」でつなぐ
   if (/カーテンコール/.test(title) || /(^|-)CC(-|$)/.test(id)) scene.curtain = true;
   const em = !scene.curtain && id.match(/^END-([A-Z]+)\d*$/);
@@ -167,7 +173,7 @@ const parseSceneHead = (cells, chapter, seq) => {
     // 名前は見出しの題か、「### END-G 真グッド「…」」の小見出しから
     const src = title || (chapter.endingNames && chapter.endingNames[id]) || '';
     const nameM = src.match(/^([^「『]*?)\s*[「『]([^」』]*)[」』]/);
-    scene.ending = { id, kind: ENDING_KIND[em[1]] || 'normal', label: nameM ? nameM[1].trim() : '', name: nameM ? nameM[2] : src };
+    scene.ending = { id, kind: ENDING_KIND_ID[id] || ENDING_KIND[em[1]] || 'normal', label: nameM ? nameM[1].trim() : '', name: nameM ? nameM[2] : src };
   }
   return scene;
 };
@@ -221,6 +227,8 @@ const parseQuestion = (id, raw) => {
   const label = (tagText.match(/【([^】]*)】/) || [])[1];
   if (label) q.label = label.replace(/・?一発目で決まる[\s:：]*(f_\w+)?/, '').replace(/・?人を選ぶ/, '').replace(/・?動機を選ぶ/, '').trim();
   if (/最後の問い|1回目の推理/.test(tagText)) q.group = 'final';
+  // 【寄り道】… エンドの無い小さな分かれ道(数行で元の道へ戻る)。地図に点線の□で出す(r1126-108 第3弾)
+  if (/【寄り道】/.test(tagText)) q.detour = true;
   if (!/^A/.test(id) && !NOSCORE.test(tagText)) q.score = true;
   if (firstM) { q.first = firstM[1] || null; if (!firstM[1]) note(id, '【一発目で決まる】のフラグの名前が無い(【一発目で決まる f_kuroba】の形)'); }
   if (last.note) { q.route = parseRoutes(last.note, id); q.once = true; }
@@ -235,6 +243,8 @@ const parseQuestion = (id, raw) => {
     q.options = rest.filter((o) => !/^正解の手がかり/.test(o)).map((o, i) => {
       let t = o; const opt = {};
       if (/【正解】/.test(t)) { (q.answer = q.answer || []).push(i); t = t.replace(/【正解】/g, ''); }
+      // 【二周目】… 解放された選択肢に印(✦)を付ける。付けなければ印なし(わざと気づかせない・r1126-115)
+      if (/【二周目】/.test(t)) { opt.mark = 1; t = t.replace(/【二周目】/g, ''); }
       t = t.replace(/\[([^\]]*)\]/g, (_, c) => { opt.c = parseCond(c); return ''; });
       t = t.replace(/\{([^}]*)\}/g, (_, c) => { opt.set = parseSets(c); return ''; });
       const tt = takeTo(t); if (tt.to) opt.to = tt.to;
@@ -430,7 +440,7 @@ const parseScript = (md, srcName) => {
         chapters.push(chapter); scene = null; lastQ = null; seq = 0;
         continue;
       }
-      const cm = t.replace(/^後半\s*/, '').replace(/^(強制バッド|名指しエンド|おまけ).*$/, 'エンディング').match(/^(序章|終章|第\s*(\d+)\s*章|エンディング|カーテンコール)\s*(?:[～〜]\s*([^～〜]+?)\s*[～〜])?/);
+      const cm = t.replace(/^後半\s*/, '').replace(/^(強制バッド|名指しエンド|おまけ|迷宮入り|真相のその先|もしも|視点の編).*$/, 'エンディング').match(/^(序章|終章|第\s*(\d+)\s*章|エンディング|カーテンコール)\s*(?:[～〜]\s*([^～〜]+?)\s*[～〜])?/);
       if (cm) {
         started = true;
         const no = cm[2] ? Number(cm[2]) : CHAPTER_NO[cm[1]];
@@ -505,8 +515,9 @@ const parseScript = (md, srcName) => {
   scenes.forEach((sc, i) => {
     const nx = scenes[i + 1];
     const nextIsRow = sc.next && scenes.some((x) => x.rows.some((r) => r.id.replace(/\[.*$/, '') === sc.next));
-    if (sc.ending && !nextIsRow && (!sc.next || !scenes.some((x) => x.id === sc.next)) && nx && !nx.ending && nx.chapter === sc.chapter && !nx.after && !/-X$/.test(nx.id)) sc.next = nx.id;
+    if (sc.ending && !nextIsRow && (!sc.next || !scenes.some((x) => x.id === sc.next)) && nx && !nx.ending && nx.chapter === sc.chapter && !nx.after && !/-X$/.test(nx.id) && (!sc.stopHere || nx.outside)) sc.next = nx.id;
   });
+  scenes.forEach((sc) => { delete sc.stopHere; });
   const seenCh = new Set();
   const chs = chapters.filter((c) => scenes.some((s) => s.chapter === c.id) && !seenCh.has(c.id) && seenCh.add(c.id));
   return { v: 1, src: srcName, chapters: chs.map(({ id, no, label, disp, title, outside, past }) => ({ id, no, label, disp, title, ...(outside ? { outside: true } : {}), ...(past ? { past: true } : {}) })), scenes };
@@ -554,11 +565,43 @@ const XMAS_NOVEL_SCRIPT = ${json};
 `;
 };
 
+const ARCS = path.join(ROOT, 'docs/progress/event-xmas-2026/arcs');
+const readArcs = () => (fs.existsSync(ARCS) ? fs.readdirSync(ARCS).filter((f) => /\.md$/.test(f) && f !== 'README.md').sort().map((f) => `\n\n${fs.readFileSync(path.join(ARCS, f), 'utf8')}`).join('') : '');
+
+// 編の台本の「選択肢を足す: A1b / ③…[bm_red=1](→RW-1 へ)」の行は、本編のその選択の行の末尾へ選択肢を足す(行の数は変わらない・続きの場所はずれない)
+const withArcs = (md) => {
+  let arcs = readArcs();
+  const adds = [];
+  arcs = arcs.replace(/^選択肢を足す\s*[:：]\s*([A-Z]\d+[a-z]*)\s*\/\s*(.+)$/gm, (_, q, opt) => { adds.push([q, opt.trim()]); return ''; });
+  // 「選択を足す: C1-1 / | A1z[end_G=1] | 選択 | | … |」… 選択の無い場面の最後へ、新しい選択の行を1行足す(場面の途中には入れない・続きの場所はずれない)
+  const rows = [];
+  arcs = arcs.replace(/^選択を足す\s*[:：]\s*((?:C\d+|[A-Z]{2,}\d*)-[0-9A-Za-z]+)\s*\/\s*(\|.+\|)\s*$/gm, (_, sc, row) => { rows.push([sc, row.trim()]); return ''; });
+  rows.forEach(([sc, row]) => {
+    const lines = md.split('\n');
+    const h = lines.findIndex((l) => /^\|\s*\|\s*\*\*/.test(l) && l.includes(`**${sc} `));
+    if (h < 0) { note(sc, `選択を足す先の場面が無い(${row.slice(0, 20)}…)`); return; }
+    let end = h;
+    while (end + 1 < lines.length && /^\|/.test(lines[end + 1]) && !/^\|\s*\|\s*\*\*/.test(lines[end + 1])) end += 1;
+    lines.splice(end + 1, 0, row);
+    md = lines.join('\n');
+  });
+  adds.forEach(([q, opt]) => {
+    const re = new RegExp(`^(\\| ${q}(?:\\[[^\\]]*\\])? \\| 選択 \\|.*?)\\s*\\|\\s*$`, 'm');
+    if (!re.test(md)) { note(q, `選択肢を足す先の選択の行が無い(${opt.slice(0, 20)}…)`); return; }
+    md = md.replace(re, (_, body) => `${body} / ${opt} |`);
+  });
+  // 本番の台本は「# 旧案」から先を読まないので、その手前へ入れる
+  const cut = md.search(/^# 旧案/m);
+  return cut >= 0 ? `${md.slice(0, cut)}${arcs}\n\n${md.slice(cut)}` : md + arcs;
+};
+
 const main = () => {
   const args = process.argv.slice(2);
   const fromIdx = args.indexOf('--from');
   let src = fromIdx >= 0 ? path.resolve(args[fromIdx + 1]) : args.includes('--sample') ? SAMPLE : REAL;
   let md = fs.readFileSync(src, 'utf8');
+  // もしもの話・助手の視点の編(r1126-115)は、編ごとに別の台本 docs/progress/event-xmas-2026/arcs/*.md に書く(並行で書いてもぶつからない)。本番の台本のうしろへつなぐ
+  if (src === REAL) md = withArcs(md);
   let data = parseScript(md, path.relative(ROOT, src));
   if (src === REAL && !data.scenes.some((s) => /^C[1-9]/.test(s.id) || s.ending)) {
     console.log('本番の台本には、まだ第1章からの本文が無い → 仮の台本から作る');

@@ -1,5 +1,6 @@
 -- 事件簿(聖夜の名探偵)のランキングの表と関数(案・r1126-107・2026-11-28 バトル部)。設計: docs/progress/event-xmas-2026/ranking-r1126-107/README.md
--- ★まだ流さない(社長が案を選んでから、窓口が流す)。
+-- 社長の選択(r1126-107 追記1): はじめのタブは見たエンドの数・遊んだ回数はエンドに着いた回数(同じエンドは1日1回まで)・入口は事件簿の起動画面だけ・ごほうびなし。
+-- 確定版(2026-11-28)。流すのは窓口。
 -- 流すのは窓口。**足すだけ**(既存の表・関数・ランキング・保存には触らない)。何度流しても同じになる(if not exists・create or replace・on conflict do nothing)。
 -- 前提: 202611110001_masmon_pvp.sql(持ち主の鍵 masmon_pvp_owner_check を使い回す)。
 --
@@ -26,12 +27,14 @@ create table if not exists public.xmas_novel_end_ids (
   constraint xmas_novel_end_ids_pkey primary key (event_id, end_id),
   constraint xmas_novel_end_ids_shape check (event_id ~ '^[a-z0-9_]{1,40}$' and end_id ~ '^END-[A-Z]+[0-9]*$' and kind ~ '^[a-z]{2,16}$')
 );
--- 今ある16のエンド(弾を出すときは、同じ形で行を足すだけ)
+-- 今ある16のエンドと、分かれ道 第1弾(r1126-108)の7つ。合わせて23(弾を出すときは、同じ形で行を足すだけ)
 insert into public.xmas_novel_end_ids (event_id, end_id, kind) values
   ('xmas_novel_2026', 'END-G', 'good'), ('xmas_novel_2026', 'END-N', 'normal'), ('xmas_novel_2026', 'END-A', 'another'), ('xmas_novel_2026', 'END-B', 'bad'),
   ('xmas_novel_2026', 'END-X1', 'forced'), ('xmas_novel_2026', 'END-X2', 'forced'), ('xmas_novel_2026', 'END-X3', 'forced'), ('xmas_novel_2026', 'END-X4', 'forced'), ('xmas_novel_2026', 'END-X5', 'forced'),
   ('xmas_novel_2026', 'END-M1', 'accuse'), ('xmas_novel_2026', 'END-M2', 'accuse'), ('xmas_novel_2026', 'END-M3', 'accuse'), ('xmas_novel_2026', 'END-M4', 'accuse'), ('xmas_novel_2026', 'END-M5', 'accuse'),
-  ('xmas_novel_2026', 'END-O', 'omake'), ('xmas_novel_2026', 'END-O2', 'omake')
+  ('xmas_novel_2026', 'END-O', 'omake'), ('xmas_novel_2026', 'END-O2', 'omake'),
+  ('xmas_novel_2026', 'END-M6', 'accuse'), ('xmas_novel_2026', 'END-M7', 'accuse'), ('xmas_novel_2026', 'END-M8', 'accuse'), ('xmas_novel_2026', 'END-M9', 'accuse'),
+  ('xmas_novel_2026', 'END-K1', 'accuse'), ('xmas_novel_2026', 'END-L1', 'unsolved'), ('xmas_novel_2026', 'END-L2', 'unsolved')
 on conflict (event_id, end_id) do nothing;
 
 create table if not exists public.xmas_novel_players (
@@ -86,6 +89,8 @@ revoke all on public.xmas_novel_plays   from anon, authenticated;
 revoke all on public.xmas_novel_firsts  from anon, authenticated;
 revoke all on public.xmas_novel_usage   from anon, authenticated;
 grant select on public.xmas_novel_end_ids to anon, authenticated;   -- エンドの総数を画面に出すため(名前は持たない・id と種類だけ)
+-- RLS が掛かっているので、読む決まりも要る(無いと端末から0件に見え、ランキングの総数が「？」になる・2026-11-28 窓口が本番に流した)
+do $$ begin if not exists (select 1 from pg_policies where schemaname='public' and tablename='xmas_novel_end_ids' and policyname='xmas_novel_end_ids_read') then create policy xmas_novel_end_ids_read on public.xmas_novel_end_ids for select to anon, authenticated using (true); end if; end $$;
 
 -- 人ごとの数(一覧に入っているエンドだけ数える)。owner_id は見え方には出さない
 create or replace view public.xmas_novel_stats as
@@ -239,7 +244,17 @@ revoke all on function public.xmas_novel_rank_submit(text, text, jsonb) from pub
 grant execute on function public.xmas_novel_rank_mine(text, text) to anon, authenticated, service_role;
 grant execute on function public.xmas_novel_rank_submit(text, text, jsonb) to anon, authenticated, service_role;
 
--- 弾を出したときに足す行の例(第1弾・名前は README の「足すエンド」の表)
--- insert into public.xmas_novel_end_ids (event_id, end_id, kind) values ('xmas_novel_2026', 'END-M6', 'accuse') on conflict do nothing;
+-- 弾を出したときに足す行(r1126-108)。第2弾(4つ・合わせて27)
+insert into public.xmas_novel_end_ids (event_id, end_id, kind) values
+  ('xmas_novel_2026', 'END-X6', 'forced'), ('xmas_novel_2026', 'END-X7', 'forced'), ('xmas_novel_2026', 'END-X8', 'forced'), ('xmas_novel_2026', 'END-A2', 'another')
+on conflict (event_id, end_id) do nothing;
+-- 第3弾(3つ・合わせて30)
+insert into public.xmas_novel_end_ids (event_id, end_id, kind) values
+  ('xmas_novel_2026', 'END-G2', 'truebad'), ('xmas_novel_2026', 'END-O3', 'omake'), ('xmas_novel_2026', 'END-O4', 'omake')
+on conflict (event_id, end_id) do nothing;
+-- もしもの話 ① 仮面のワルツ(r1126-115・3つ・合わせて33)
+insert into public.xmas_novel_end_ids (event_id, end_id, kind) values
+  ('xmas_novel_2026', 'END-R1', 'ifroute'), ('xmas_novel_2026', 'END-R2', 'ifroute'), ('xmas_novel_2026', 'END-R3', 'ifroute')
+on conflict (event_id, end_id) do nothing;
 -- ずるの疑いのある人を隠す(消さない)
 -- update public.xmas_novel_players set hidden = true where event_id = 'xmas_novel_2026' and user_name = '…';

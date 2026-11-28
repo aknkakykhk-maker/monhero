@@ -37,6 +37,32 @@ const ROUTES = [
   // r1126-077 眠りのドラ: ソラシド派の第7章 A7 で②(ワトソンくんの奥の手)。あつ派には A7 が出ない(noQ で確かめる)
   { name: '第7章 A7 で「ワトソンくんの奥の手」', want: 'END-O2', from: 'A7', picks: { A7: 'opt:1' }, only: 'sorashido' },
   { name: '第7章 A7 は出ない(あつ派)', want: 'END-M4', from: 'Q7a', picks: { Q7a: 'P' }, only: 'atsu', noQ: 'A7', short: true },
+  // r1126-108 第1弾: 名指しのあとの「閉じこめる」・動機ちがいの「探しに行く」・後半の迷宮入り2つ。①(もっと考える・任せる・今夜決める)は今の道のまま
+  { name: 'みゅあを名指しして閉じこめる', want: 'END-M6', from: 'Q7a', picks: { Q7a: 'myua', A7c: 'go:C7-R1' }, panel: { momosuke: 'dead' } },
+  { name: 'ききを名指しして閉じこめる', want: 'END-M7', from: 'Q7a', picks: { Q7a: 'kiki', A7d: 'go:C7-R2' }, panel: { erubin: 'dead' } },
+  { name: 'えるびんを名指しして閉じこめる', want: 'END-M8', from: 'Q7a', picks: { Q7a: 'erubin', A7e: 'go:C7-R3' }, panel: { erubin: 'dead' } },
+  { name: 'イチーカを名指しして開かずの部屋へ', want: 'END-M9', from: 'Q7a', picks: { Q7a: 'ichika', A7f: 'go:C7-R4' }, panel: { mochimaru: 'dead' } },
+  { name: 'きゅうこ+動機ちがいで探しに行く', want: 'END-K1', from: 'Q7m', picks: { Q7a: 'kyuko', Q7m: 'opt:0', A7k: 'go:C7-K1' }, panel: { erubin: 'missing', momosuke: 'missing' } },
+  { name: '名指しのあと「もっと考える」で後半へ(みゅあ)', want: 'END-N', from: 'A7c', picks: { Q7a: 'myua', A7c: 'go:C7-B', Q11a: 'kyuko' }, short: true },
+  { name: '後半、もちまるの見回りについていく', want: 'END-L2', from: 'A10b', picks: { Q7a: 'kiki', A10b: 'go:C10-L' }, panel: { mochimaru: undefined } },
+  { name: '後半、山道があくまで誰も選ばない', want: 'END-L1', from: 'A11', picks: { Q7a: 'ichika', A11: 'go:C11-L' } },
+  // r1126-108 第2弾: 前半の行動の選択(①は今までの道のまま)
+  { name: '第1章の夜、一人で廊下の影を追う', want: 'END-X6', from: 'A1b', picks: { A1b: 'danger' } },
+  { name: '第3章、一人で切れた電話の線をたどる', want: 'END-X8', from: 'A3', picks: { A3: 'danger' } },
+  { name: '第3章、ドラを部屋に閉じこめる', want: 'END-A2', from: 'A3b', picks: { A3b: 'go:C3-D' }, panel: { shirase: 'missing' } },
+  { name: '第4章の夜、一人で子守歌を確かめに行く', want: 'END-X7', from: 'A4', picks: { A4: 'danger' } },
+  // r1126-108 第3弾: 真ルートの終章の選びまちがい(真相のその先)・おまけ2つ・寄り道3つ(どれも①が今までの道)
+  { name: '終章、走って追いかけて腕をつかむ', want: 'END-G2', from: 'A9', picks: { Q7a: 'kyuko', A9: 'danger' } },
+  { name: '終章、名前を大声で呼び続ける', want: 'END-G2', from: 'A9', picks: { Q7a: 'kyuko', A9: 'go:C9-Y' }, short: true },
+  { name: '第7章 A7b で「みゅあの助手の勘」', want: 'END-O3', from: 'A7b', picks: { A7b: 'opt:1' }, only: 'atsu' },
+  { name: '第7章 A7b は出ない(ソラシド派)', want: 'END-M4', from: 'Q7a', picks: { Q7a: 'P' }, only: 'sorashido', noQ: 'A7b', short: true },
+  { name: '真グッドのあと、A1 で「今日はゲームをやめて」', want: 'END-O4', from: 'A1', picks: { A1: 'opt:3' }, seen: ['END-G'] },
+  // r1126-115 もしもの話 ① 仮面のワルツ: 紅のしおり(真グッド+名指しエンド5つ)を持っている人だけ、A1b に③が出る
+  { name: 'もしも 仮面のワルツ、灰谷に耳打ちする', want: 'END-R1', from: 'A1b', picks: { A1b: 'go:RW-1', AR1: 'opt:0' }, seen: ['END-G', 'END-M1', 'END-M2', 'END-M3', 'END-M4', 'END-M5'] },
+  { name: 'もしも 仮面のワルツ、黒羽を引き止める', want: 'END-R2', from: 'AR1', picks: { A1b: 'go:RW-1', AR1: 'opt:1' }, seen: ['END-G', 'END-M1', 'END-M2', 'END-M3', 'END-M4', 'END-M5'], short: true },
+  { name: 'もしも 仮面のワルツ、見守る', want: 'END-R3', from: 'AR1', picks: { A1b: 'go:RW-1', AR1: 'opt:2' }, seen: ['END-G', 'END-M1', 'END-M2', 'END-M3', 'END-M4', 'END-M5'], short: true },
+  { name: 'しおりが無いと A1b に③は出ない', want: 'END-X6', from: 'A1b', picks: { A1b: 'danger' }, seen: ['END-G'], noOpt: { A1b: 'RW-1' }, short: true },
+  { name: '寄り道の2つめ(イチーカ・こっそり・ドラの声)を通って真グッドへ', want: 'END-G', from: 'A4y', picks: { A4y: 'opt:1', A6y: 'opt:1', A8y: 'go:C8-Z', Q7a: 'kyuko' }, short: true },
 ];
 
 const run = (side, route) => {
@@ -46,13 +72,14 @@ const run = (side, route) => {
   const seen = route.seen || [];
   const lines = [];
   const asked = [];
+  const offered = {};
   let rec = false;
   let st = E.xmasNovelSettle(S, E.xmasNovelFreshCur(S));
   const push = (r, scene) => { if (rec) lines.push({ id: r.id, scene, t: r.t, w: r.w || null, n: r.n || null, e: r.e || null, x: r.x || '' }); };
   for (let steps = 0; steps < 8000; steps += 1) {
     if (!st.row) {
       if (st.ending) lines.push({ t: 'ending', id: st.ending.id, x: st.ending.name || st.ending.id });
-      return { lines, asked, end: st.ending ? st.ending.id : null, panel: (st.cur && st.cur.panel) || {} };
+      return { lines, asked, offered, end: st.ending ? st.ending.id : null, panel: (st.cur && st.cur.panel) || {} };
     }
     const row = st.row;
     if (row.t !== 'q') { push(row, st.cur.scene); st = E.xmasNovelStep(S, E.xmasNovelApplyRow(st.cur, row)); continue; }
@@ -63,8 +90,10 @@ const run = (side, route) => {
     let label = '';
     if (row.kind === 'action') {
       const opts = E.xmasNovelOptionsOf(row, E.xmasNovelCtx(S, st.cur, seen));
+      offered[row.id] = opts.map((x) => x.to);
       let o;
       if (want && /^opt:\d+$/.test(want)) o = opts.find((x) => x.i === Number(want.slice(4)));
+      else if (want && /^go:/.test(want)) o = opts.find((x) => x.to === want.slice(3)); // 行き先の場面で選ぶ(派ごとに番号の違う選択肢・r1126-108)
       else if (row.id === 'A1') o = opts[side === 'atsu' ? 0 : 1];
       else if (Array.isArray(row.answer) && row.answer.length) o = opts.find((x) => x.i === row.answer[0]);
       else if (want === 'danger') o = opts.find(isDanger);
@@ -87,6 +116,11 @@ const NAME = { atsu: 'あつ派', sorashido: 'ソラシド派' };
 const FACE = { normal: 'ふつう', happy: '笑顔', wink: 'ウインク', surprise: '驚き', troubled: '困り顔', angry: 'むくれ顔', crying: '泣き顔', excited: 'わくわく', sleep: '寝顔' };
 const ng = [];
 const summary = [];
+// どのエンディングも、「次」は無いか・選択の行(やり直し)か・外側(OUT-*)の場面だけ(r1126-108)
+S.scenes.filter((sc) => sc.ending).forEach((sc) => {
+  const nx = sc.next;
+  if (nx && !/^OUT-/.test(nx) && S.scenes.some((x) => x.id === nx)) ng.push(`${sc.ending.id}: エンディングのあとに場面 ${nx} が続く(外側の場面だけのはず)`);
+});
 ['atsu', 'sorashido'].forEach((side) => {
   const md = [`# 事件簿 足したエンドの通し読み(${NAME[side]}・r1126-062)`, '',
     '`node tools/novel/xmas-novel-ends-trace.js --out docs/progress/event-xmas-2026` で作った一覧(手で直さない)。画面と同じ手順で、生成物の台本をたどった順。分かれ目の選択からエンドまで。', ''];
@@ -97,7 +131,11 @@ const summary = [];
     const bad = [];
     if (res.err) bad.push(res.err);
     if (r.noQ && (res.asked || []).includes(r.noQ)) bad.push(`${r.noQ} が出た(出ないはず)`);
+    Object.entries(r.noOpt || {}).forEach(([q, to]) => { if ((res.offered || {})[q] && res.offered[q].includes(to)) bad.push(`${q} に ${to} への選択肢が出た(出ないはず)`); });
     if (res.end !== r.want) bad.push(`着いたのは ${res.end || '(なし)'}(${r.want} のはず)`);
+    // エンディングの場面に入ったあとに出てよいのは、そのエンディングと外側(OUT-*)の場面の行だけ(r1126-108: END-K1 のあとに C10-L が流れていた)
+    const endAt = res.lines.findIndex((l) => l.scene && /^END-/.test(l.scene));
+    if (endAt >= 0) res.lines.slice(endAt).filter((l) => l.scene && !/^END-/.test(l.scene) && !/^OUT-/.test(l.scene)).slice(0, 1).forEach((l) => bad.push(`エンディングのあとに ${l.scene} の行 ${l.id} が出た(外側の場面だけのはず)`));
     Object.entries(r.panel || {}).forEach(([k, v]) => { const id = pq[k] || k; if ((res.panel || {})[id] !== v) bad.push(`パネル ${id} が ${(res.panel || {})[id] || 'ふつう'}(${v} のはず)`); });
     // 派の行: 相手の派の行(末尾 a / s)が混ざっていないか
     const other = side === 'atsu' ? /\d s$/ : /\d a$/;
