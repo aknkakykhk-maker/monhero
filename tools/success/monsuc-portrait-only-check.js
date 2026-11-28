@@ -51,7 +51,7 @@ const look = (page) => page.evaluate(() => {
       await page.waitForFunction(() => document.body?.innerText.includes('TAP TO START'), { timeout: 40000 });
       await page.getByRole('button', { name: 'TAP TO START' }).click({ force: true });
       await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
-      await page.waitForFunction(() => document.querySelector('.mh-home-assistant'), { timeout: 40000 });
+      await page.waitForFunction(() => document.querySelector('.mh-home-assistant, .mh-home-assistant-fold'), { timeout: 40000 });
       for (let i = 0; i < 20; i++) {
         const did = await page.evaluate(() => { const l = [...document.querySelectorAll('button')].filter((b) => /^(スキップ|確認|閉じる|OK|受け取る|(?:分|わ)かった|はい|あとで読む|とじる)$/.test((b.innerText || '').replace(/\s+/g, ' ').trim()) && b.getBoundingClientRect().width > 0); if (!l.length) return false; l[0].click(); return true; });
         if (!did) break; await page.waitForTimeout(400);

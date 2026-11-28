@@ -72,7 +72,9 @@ const ASSISTANT_LIFE_MAP_HEAD = Object.freeze({
 });
 // 町の地図の大きさの倍率(上の表に行が無い絵だけ。2026-11-15 全身画3人の公開 #6357 で、地図の絵が stand-normal/ の新しい絵に替わり、
 //   みゅあ・ソラシド・えるびんの顔(目から顎)がほかの人の 1.2〜1.5倍に出ていた。ほかの人の 7〜8px にそろえる。assistant-art-scenes-check の map のばらつき)
-const ASSISTANT_LIFE_MAP_FIT = Object.freeze({ 'stand-normal/myua': 0.74, 'stand-normal/sorashido': 0.83, 'stand-normal/erubin': 0.7, sorashido_sleep: 0.82 });
+//   2026-11-28 r1124-006 追記(社長「それもこっちでなおして」): みゅあの 0.74 を外した。11/24 に全身絵から切り出し直した絵(#7449)では顔が大きく出なくなり、0.74 のままだと
+//   みゅあだけ顔がほかの人の 0.7倍ほど(縦 5.7px・ほか 7.3〜9.2px)に縮んでいた。外すと 7.7px でそろう。地図だけの倍率なので、助手ライフの場面の大きさ・重なりは変わらない
+const ASSISTANT_LIFE_MAP_FIT = Object.freeze({ 'stand-normal/sorashido': 0.83, 'stand-normal/erubin': 0.7, sorashido_sleep: 0.82 });
 // 小さな全身(絵の描かれている範囲を測って、見た目の高さを h にそろえる。胸から上の絵は下をぼかす)
 function AssistantLifeMapFig({ who, h, sleep, spent = false }) {
   // 寝ている助手は、社長の寝顔の絵があればそれ(assistantLifeSleepSrc・2026-11-11 社長「絵をそのまま使う」)
@@ -131,7 +133,7 @@ function AssistantLifeMapViewRow({ id, place, town = false, w = null }) {
       </div>
     </div>);
 }
-function AssistantLifeMapRow({ id, place, town = false, life, selected = false, cheerMsg = null, setCheerMsg = () => {}, close = () => {}, onRoom = null, onBeat = null, onCard = null }) {
+function AssistantLifeMapRow({ id, place, town = false, life, selected = false, cheerMsg = null, setCheerMsg = () => {}, close = () => {}, onRoom = null, onBeat = null, onCard = null, noSuccess = false }) {
     const a = assistantById(id); if (!a) return null;
     const w = assistantLifeWhereOf(life, id); const d = w && ASSISTANT_LIFE_DOINGS[w.doing];
     const withNames = w && w.with && w.with.length ? `${w.with.map(assistantLifeName).join('・')}と` : 'ひとりで';
@@ -141,7 +143,9 @@ function AssistantLifeMapRow({ id, place, town = false, life, selected = false, 
     let bi = null; if (place === 'battle') { try { bi = typeof assistantMasmonBattleRowInfo === 'function' && typeof assistantMasmonBattleOpen === 'function' ? assistantMasmonBattleRowInfo(id) : null; } catch (_) { bi = null; } }
     const battleBtn = bi && <button type="button" disabled={!!bi.disabled} title={bi.disabled ? (bi.why || '') : (bi.sub || '')} data-assistant-life-map-act="masmon-battle" onClick={() => { close(); try { assistantMasmonBattleOpen({ assistantId: id, from: 'place' }); } catch (_) {} }} className="rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 min-h-[44px] px-2 py-1 text-[12px] font-black text-white active:scale-95 disabled:opacity-50" style={JA_LABEL_STYLE}>{jaWrap(String(bi.label || '⚔ マスモンで対戦(β)').replace('で対戦', 'で\u200B対戦'))}</button>;
     // モンヒロサクセス(β)の入口(2026-11-14 社長・印 monheroSuccess が偽なら null)。モンヒロバトルにいる助手の札にだけ
-    let si = null; if (place === 'battle') { try { si = typeof assistantLifeSuccessRowInfo === 'function' ? assistantLifeSuccessRowInfo(id) : null; } catch (_) { si = null; } }
+    // noSuccess … バトルを選ぶ画面の「いまモンヒロバトルにいる助手」では出さない(2026-11-27 台帳 r1126-073 追記2・入口の整理②。
+    //   サクセスの入口は HOME の大きな札と助手ライフの部屋・地図に残す。開発部が窓口の判断で出し方だけ変えた)
+    let si = null; if (place === 'battle' && !noSuccess) { try { si = typeof assistantLifeSuccessRowInfo === 'function' ? assistantLifeSuccessRowInfo(id) : null; } catch (_) { si = null; } }
     const successBtn = si && <button type="button" title={si.sub} data-assistant-life-map-act="monhero-success" onClick={() => { close(); try { assistantLifeSuccessOpen({ assistantId: id, from: 'place' }); } catch (_) {} }} className="w-full rounded-xl bg-gradient-to-r from-emerald-600 to-lime-600 min-h-[44px] px-2 py-1 text-[12px] font-black text-white active:scale-95"><span style={JA_LABEL_STYLE}>{jaWrap(si.label)}</span><span className="block text-[10px] font-bold text-emerald-50" style={JA_LABEL_STYLE}>{jaWrap(si.sub)}</span></button>;
     const tiLine = ti && (ti.today ? `🥋 今日の修行: ${ti.today.nick} ― ${ti.today.kindText || ti.today.kind}${ti.today.learned ? ` NEW 新しい技「${ti.today.learned}」を覚えた` : ''}${ti.today.main ? ` 技の熟練度 ${ti.today.main} +${ti.today.gain}` : ''}` : '🥋 今日はまだ修行していません');
     return (
@@ -206,7 +210,7 @@ function AssistantLifeBattleHall({ metIds }) {
       {typeof AssistantMasmonTrainWatchHost === 'function' && <AssistantMasmonTrainWatchHost/>}
       <p className="text-[12px] font-black text-amber-200" style={JA_WRAP_STYLE}>{jaWrap('🏡 いまモンヒロバトルにいる助手')}</p>
       {ids.map(id => (
-        <AssistantLifeMapRow key={id} id={id} place="battle" life={life} cheerMsg={cheerMsg} setCheerMsg={setCheerMsg}
+        <AssistantLifeMapRow key={id} id={id} place="battle" life={life} cheerMsg={cheerMsg} setCheerMsg={setCheerMsg} noSuccess={typeof homeV2At !== 'function' || homeV2At()}
           onRoom={(rid) => { try { ASSISTANT_LIFE_STORE.set({ open: true, focus: rid }); } catch (_) {} }}/>))}
     </section>);
 }
