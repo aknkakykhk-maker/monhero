@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b215f558992a8d60
+// source-sha256: 73cc2d6095fcf42e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -149885,6 +149885,7 @@ function AssistantLifeTownMap({
   const art = assistantLifeMapArtOf(home.src);
   const small = home.h < 500;
   const figH = home.h < 360 ? 30 : small ? 34 : 42;
+  const keepPeople = home.h < 360;
   React.useLayoutEffect(() => {
     const S = sceneRef.current;
     if (!S) return undefined;
@@ -149960,7 +149961,7 @@ function AssistantLifeTownMap({
         if (!anchor || anchor.hasAttribute('data-assistant-life-map-town')) continue;
         const a = rel(tagOf(anchor).getBoundingClientRect());
         let q = null;
-        for (const sc of [1, 0.8, 0.66]) {
+        for (const sc of keepPeople ? [1] : [1, 0.8, 0.66]) {
           const w = c.offsetWidth * sc,
             h = c.offsetHeight * sc,
             cx = (a.left + a.right) / 2,
@@ -150009,7 +150010,7 @@ function AssistantLifeTownMap({
           continue;
         }
         let got = null;
-        for (const [ts, cs, far] of c ? [[1, 1, 120], [1, 0.8, 120], [0.85, 0.66, 120], [0.72, 0.6, 120], [0.85, 0.66, 168]] : [[1, 1, 120], [0.85, 1, 120], [0.72, 1, 120], [0.85, 1, 168]]) {
+        for (const [ts, cs, far] of c ? keepPeople ? [[1, 1, 120], [0.85, 1, 120], [0.72, 1, 120], [0.6, 1, 120], [0.72, 1, 168], [0.6, 1, 168]] : [[1, 1, 120], [1, 0.8, 120], [0.85, 0.66, 120], [0.72, 0.6, 120], [0.85, 0.66, 168]] : [[1, 1, 120], [0.85, 1, 120], [0.72, 1, 120], [0.85, 1, 168]]) {
           const tw = el.offsetWidth * ts,
             th = el.offsetHeight * ts;
           const cw = c ? c.offsetWidth * cs : 0,

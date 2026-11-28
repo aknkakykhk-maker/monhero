@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 15f5c01ee0523cea
+// generated-sha256: e0fbd6c8d17817de
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -79860,6 +79860,7 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
   const art = assistantLifeMapArtOf(home.src);
   const small = home.h < 500;
   const figH = home.h < 360 ? 30 : small ? 34 : 42; // 背の低い横(568×320)はもう一回り小さく
+  const keepPeople = home.h < 360; // 背の低い横は、人の並びを縮めない(札の方を小さくする・2026-11-28 社長 r1126-079 追記)
   // 札と人の置き場所を決める(描いたあとに測る。DOM に直接書くので、描き直しは起きない)
   React.useLayoutEffect(() => {
     const S = sceneRef.current; if (!S) return undefined;
@@ -79901,7 +79902,8 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
         const anchor = S.querySelector(`[data-assistant-life-map-place="${k}"]`); if (!anchor || anchor.hasAttribute('data-assistant-life-map-town')) continue;
         const a = rel(tagOf(anchor).getBoundingClientRect());
         let q = null;
-        for (const sc of [1, 0.8, 0.66]) {
+        // 横小(背の低い横・figH 30)は人を縮めない(2026-11-28 社長「人は縮めず札を小さく」r1126-079 追記。0.66倍だと顔が 3.5px ほどで見分けられなかった)
+        for (const sc of (keepPeople ? [1] : [1, 0.8, 0.66])) {
           const w = c.offsetWidth * sc, h = c.offsetHeight * sc, cx = (a.left + a.right) / 2, cy = (a.top + a.bottom) / 2;
           const box = (l, t) => ({ left: l, top: t, right: l + w, bottom: t + h, width: w, height: h });
           const clampX = (l) => Math.max(3, Math.min(W - 3 - w, l));
@@ -79921,7 +79923,8 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
         if (!ib || !pos) { el.style.visibility = 'hidden'; if (c) c.style.visibility = 'hidden'; continue; }
         let got = null;
         // 入らないときは、札と人をいっしょに小さくする(0.85 → 0.72 倍。人だけはさらに 0.8 倍まで)。それでも入らなければ、少し遠く(170px まで)を探す
-        for (const [ts, cs, far] of c ? [[1, 1, 120], [1, 0.8, 120], [0.85, 0.66, 120], [0.72, 0.6, 120], [0.85, 0.66, 168]] : [[1, 1, 120], [0.85, 1, 120], [0.72, 1, 120], [0.85, 1, 168]]) {
+        //   横小は人を1倍のまま、札だけを小さく(0.85 → 0.72 → 0.6 倍)・少し遠く(168px)まで探す
+        for (const [ts, cs, far] of c ? (keepPeople ? [[1, 1, 120], [0.85, 1, 120], [0.72, 1, 120], [0.6, 1, 120], [0.72, 1, 168], [0.6, 1, 168]] : [[1, 1, 120], [1, 0.8, 120], [0.85, 0.66, 120], [0.72, 0.6, 120], [0.85, 0.66, 168]]) : [[1, 1, 120], [0.85, 1, 120], [0.72, 1, 120], [0.85, 1, 168]]) {
           const tw = el.offsetWidth * ts, th = el.offsetHeight * ts;
           const cw = c ? c.offsetWidth * cs : 0, ch = c ? c.offsetHeight * cs + 1 : 0;
           const w = Math.max(tw, cw), h = th + ch;
