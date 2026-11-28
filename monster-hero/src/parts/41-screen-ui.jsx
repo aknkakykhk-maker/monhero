@@ -895,13 +895,23 @@ const TrainingCountUp = ({ from, to, delay = 0, duration = 900, format = null })
     setValue(from);
     let raf = 0;
     let startAt = 0;
+    // 毎コマは数字の文字だけを直接書き換え、終わったときに1回だけ React の値をそろえる(2026-11-28 r1126-098)。
+    //   毎コマ setState で描き直すと、レイドのダメージの演出のように重い飾り(文字の塗り・影・揺れ)と重なる所でコマが落ちた
+    const fmt = (v) => String(format ? format(v) : v);
     const timer = setTimeout(() => {
       const tick = (now) => {
         if (!startAt) startAt = now;
         const t = Math.min(1, (now - startAt) / Math.max(1, duration));
         const eased = 1 - Math.pow(1 - t, 3);
-        setValue(Math.round(from + (to - from) * eased));
-        if (t < 1) raf = requestAnimationFrame(tick);
+        const v = Math.round(from + (to - from) * eased);
+        // React が作った文字の部品(firstChild)の中身だけを替える(部品を入れ替えると、あとで React が値を書いても画面に出なくなる)
+        const node = holderRef.current && holderRef.current.firstChild;
+        // 文字の部品が無い(format が文字以外を返した等)ときは、前と同じく React で描き直す
+        if (!node || node.nodeType !== 3) { setValue(v); if (t < 1) raf = requestAnimationFrame(tick); return; }
+        if (t >= 1) { node.nodeValue = fmt(to); setValue(to); return; }
+        const text = fmt(v);
+        if (node.nodeValue !== text) node.nodeValue = text;
+        raf = requestAnimationFrame(tick);
       };
       raf = requestAnimationFrame(tick);
     }, Math.max(0, delay));

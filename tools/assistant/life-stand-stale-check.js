@@ -40,12 +40,14 @@ const prefixOf = {};
 for (const m of src.matchAll(/\bid:\s*'([a-z0-9]+)'[\s\S]{0,3000}?imagePrefix:\s*'([a-z0-9]+)'/g)) if (!prefixOf[m[1]]) prefixOf[m[1]] = m[2];
 
 const made = fs.existsSync(MADE) ? JSON.parse(fs.readFileSync(MADE, 'utf8')) : {};
-const sets = [...new Set(fs.readdirSync(FB).filter(f => /__normal\.png$/.test(f)).map(f => f.replace(/__normal\.png$/, '')))].sort();
+// 重い絵は WebP の組あり(2026-11-28 r1126-095・tools/assistant/art_webp.py)。.png が無ければ .webp を見る
+const either = (p) => (fs.existsSync(p) ? p : p.replace(/\.png$/i, '.webp'));
+const sets = [...new Set(fs.readdirSync(FB).filter(f => /__normal\.(png|webp)$/.test(f)).map(f => f.replace(/__normal\.(png|webp)$/, '')))].sort();
 const ng = [];
 const rest = [];
 let ok = 0;
 for (const name of sets) {
-  const fbFiles = EXPR.map(e => path.join(FB, `${name}__${e}.png`));
+  const fbFiles = EXPR.map(e => either(path.join(FB, `${name}__${e}.png`)));
   if (!fbFiles.every(f => fs.existsSync(f))) continue; // 8表情そろっていない全身画は立ち絵の元にしていない
   const key = name.replace('_', ':');
   const dir = art[key];
@@ -55,7 +57,7 @@ for (const name of sets) {
   if (!rec) { ng.push(`${key}: 切り出した記録が無い(life-stand-from-fullbody.py の HEADS に足して --only ${key} --write)`); continue; }
   if (hash(fbFiles) !== rec.fullbody) { ng.push(`${key}: 全身画が立ち絵より新しい(切り出し直し忘れ) → python3 tools/assistant/life-stand-from-fullbody.py --only ${key} --write`); continue; }
   const prefix = prefixOf[key.split(':')[0]] || key.split(':')[0];
-  const stFiles = EXPR.map(e => path.join(IMG, dir, `${prefix}_${e}.png`));
+  const stFiles = EXPR.map(e => either(path.join(IMG, dir, `${prefix}_${e}.png`)));
   const missing = stFiles.filter(f => !fs.existsSync(f));
   if (missing.length) { ng.push(`${key}: 立ち絵が無い ${missing.map(f => path.relative(IMG, f)).join(' ')}`); continue; }
   if (hash(stFiles) !== rec.stand) { ng.push(`${key}: 立ち絵が道具の外で替わった(全身画から作り直す) → python3 tools/assistant/life-stand-from-fullbody.py --only ${key} --write`); continue; }

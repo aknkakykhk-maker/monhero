@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7dcbf3c1d8f9e358
+// generated-sha256: 40c9a5251cfaefb4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -7058,20 +7058,24 @@ const Audio_ = (() => {
     return longEntryOf(url, new Uint8Array(await res.arrayBuffer()));
   };
   // 2つの音の波形を突き合わせ、b[j] が a[j+L] に当たる L(サンプル・小数)を探す。L0 の前後 R だけ見る
-  const monoRange = (buf, from, len) => {
-    const out = new Float32Array(len), c0 = buf.getChannelData(0), c1 = buf.numberOfChannels > 1 ? buf.getChannelData(1) : null;
-    for (let i = 0; i < len; i++) { const k = from + i; if (k >= 0 && k < buf.length) out[i] = c1 ? (c0[k] + c1[k]) * 0.5 : c0[k]; }
+  // 作業用の配列は使い回す(2026-11-28 r1126-100「ワルキューレの原曲がかくつく」)。演奏中も約20秒ごとにつなぎ目を合わせるので、
+  // そのたびに数百KBの配列を作って捨てると、ごみ集め(GC)を呼ぶ。中身は毎回すべて書き直すので、結果は前と同じ
+  const longScratch = [];
+  const scratchOf = (slot, len) => { let a = longScratch[slot]; if (!a || a.length < len) a = longScratch[slot] = new Float32Array(Math.max(len, a ? a.length : 0)); return a.length === len ? a : a.subarray(0, len); };
+  const monoRange = (buf, from, len, slot = -1) => {
+    const out = slot >= 0 ? scratchOf(slot, len) : new Float32Array(len), c0 = buf.getChannelData(0), c1 = buf.numberOfChannels > 1 ? buf.getChannelData(1) : null;
+    for (let i = 0; i < len; i++) { const k = from + i; out[i] = k >= 0 && k < buf.length ? (c1 ? (c0[k] + c1[k]) * 0.5 : c0[k]) : 0; }
     return out;
   };
   const longAlignLag = (aBuf, bBuf, j0, len, L0, R = 3200) => {
     const D = 8; len -= len % D;
-    const A = monoRange(aBuf, j0 + L0 - R - D, len + 2 * R + 2 * D), B = monoRange(bBuf, j0, len);
-    const dec = (x) => { const m = Math.floor(x.length / D), o = new Float32Array(m); for (let i = 0; i < m; i++) { let t = 0; for (let k = 0; k < D; k++) t += x[i * D + k]; o[i] = t; } return o; };
-    const Ad = dec(A), Bd = dec(B), RD = R / D;
+    const A = monoRange(aBuf, j0 + L0 - R - D, len + 2 * R + 2 * D, 0), B = monoRange(bBuf, j0, len, 1);
+    const dec = (x, slot) => { const m = Math.floor(x.length / D), o = scratchOf(slot, m); for (let i = 0; i < m; i++) { let t = 0; for (let k = 0; k < D; k++) t += x[i * D + k]; o[i] = t; } return o; };
+    const Ad = dec(A, 2), Bd = dec(B, 3), RD = R / D;
     let best = -Infinity, bestD = 0;
     for (let d = -RD; d <= RD; d++) { let t = 0; const o = d + RD + 1; for (let i = 0; i < Bd.length; i++) t += Ad[i + o] * Bd[i]; if (t > best) { best = t; bestD = d; } }
     const Lc = L0 + bestD * D, W = 12, len2 = Math.min(len, 8192), j1 = j0 + Math.floor((len - len2) / 2);
-    const A2 = monoRange(aBuf, j1 + Lc - W, len2 + 2 * W), B2 = monoRange(bBuf, j1, len2);
+    const A2 = monoRange(aBuf, j1 + Lc - W, len2 + 2 * W, 4), B2 = monoRange(bBuf, j1, len2, 5);
     const sc = []; for (let L = -W; L <= W; L++) { let t = 0; for (let i = 0; i < len2; i++) t += A2[i + L + W] * B2[i]; sc.push(t); }
     let bi = 0; for (let i = 1; i < sc.length; i++) if (sc[i] > sc[bi]) bi = i;
     let frac = 0; if (bi > 0 && bi < sc.length - 1) { const den = sc[bi - 1] - 2 * sc[bi] + sc[bi + 1]; if (den < 0) frac = 0.5 * (sc[bi - 1] - sc[bi + 1]) / den; }
@@ -7123,7 +7127,7 @@ const Audio_ = (() => {
       const probeLen = 48, lo = LONG_PRE_FRAMES + 8, hi = Math.min(bounds[1] || n, n) - probeLen - 8;
       let bestP = -1, bestE = 0;
       for (let p = lo; p <= hi; p += Math.max(1, Math.round(1 / fsec))) {
-        const from = Math.round(p * fsec * rate), seg = monoRange(head, from, Math.round(0.5 * rate)); let e = 0;
+        const from = Math.round(p * fsec * rate), seg = monoRange(head, from, Math.round(0.5 * rate), 6); let e = 0;
         for (let i = 0; i < seg.length; i += 4) e += seg[i] * seg[i];
         if (e > bestE) { bestE = e; bestP = p; }
       }
@@ -7433,7 +7437,7 @@ const Audio_ = (() => {
     step(false);
   };
   const setPageHidden = (hidden) => { pageHidden = !!hidden; ctxTimeMark = null; if (pageHidden) { if (returnHealTimer) clearTimeout(returnHealTimer); returnHealTimer = null; ++bgmRequest; stopPreview(false); stopOthers(); stopJingles(); } else { if (currentKey) playBGM(currentKey); healAfterReturn(); } };
-  const setEnabled = async (on) => { enabled = !!on; if (typeof window !== 'undefined') window.__mhAudioEnabled = enabled; applyRhythmMute(); if (!enabled) { ++bgmRequest; stopPreview(false); stopOthers(); stopJingles(); } else if (currentKey) playBGM(currentKey); await ensure(); };
+  const setEnabled = async (on) => { enabled = !!on; if (typeof window !== 'undefined') window.__mhAudioEnabled = enabled; applyRhythmMute(); if (!enabled) { ++bgmRequest; stopPreview(false); stopOthers(); stopJingles(); { const want = nvAmbWant; void nvAmbient('none'); nvAmbWant = want; } } else if (currentKey) playBGM(currentKey); await ensure(); if (enabled) nvAmbientResume(); };
   const isEnabled = () => enabled;
   // いま実際に鳴っている曲を、外(検査)から見るための口。
   // BGMは <audio> ではなく Web Audio (AudioBufferSourceNode) で鳴らしているので、
@@ -7514,7 +7518,7 @@ const Audio_ = (() => {
   const uiSeVolume = () => uiSeVolumePct; // 検査が「ボタンの音の口が0でないか」を見る口
   const setSeVolume = (pct) => { seVolumePct = pct; if (seBus && Tone) { try { seBus.gain.rampTo(_gainFromPct(pct), 0.05); } catch (e) {} } };
   const setBgmVolume = (pct) => { bgmVolumePct = pct; applyTrackGain(resolveTrack(previewKey || currentKey)); if (pct <= 0) { stopPreview(false); stopOthers(); } else if (enabled && currentKey && !previewKey) playBGM(currentKey); };
-  const resumeIfNeeded = async () => { await ensureAudioCtxRunning(); if (Tone) { try { await Tone.start(); started = true; } catch (e) {} } if (enabled && currentKey && !bgmSource) playBGM(currentKey); };
+  const resumeIfNeeded = async () => { await ensureAudioCtxRunning(); if (Tone) { try { await Tone.start(); started = true; } catch (e) {} } if (enabled && currentKey && !bgmSource) playBGM(currentKey); if (enabled) nvAmbientResume(); };
   const unlock = async (playTestTone = false) => {
     if (!enabled) { enabled = true; if (typeof window !== 'undefined') window.__mhAudioEnabled = true; applyRhythmMute(); }
     // resume・決定SEはuser activationが残るイベント処理内で開始し、最初の再生前に待たない。
@@ -7529,6 +7533,7 @@ const Audio_ = (() => {
     await Promise.all([ensureAudioCtxRunning(), toneStart || Promise.resolve(), load()]);
     started = !!Tone;
     if (currentKey) playBGM(currentKey);
+    nvAmbientResume(); // 事件簿の環境音: 音が使えるようになる前に頼まれていた物を鳴らし始める(r1126-093 追記4)
     return !ctx || ctx.state === 'running';
   };
   const ensurePlaying = (key) => { if (enabled && key === currentKey && !bgmSource && !jingleSource) playBGM(key); };
@@ -7610,8 +7615,86 @@ const Audio_ = (() => {
       bell2.triggerAttackRelease(['E6', 'G6', 'C7', 'E7'], '8n', t + 0.68);
       setTimeout(() => { try { sw.dispose(); duo.dispose(); riser.dispose(); bell.dispose(); boom.dispose(); crash.dispose(); bell2.dispose(); } catch (e) {} }, 2200); },
     // 合体演出用: 上昇アルペジオ→(両者が重なるタイミングで)ベルの一撃+きらめき和音の「ピカーン」
-    fusion: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.25, release: 0.5 }, volume: -10 }).connect(reverb); const seq = [[0,'C5','8n'],[0.12,'E5','8n'],[0.24,'G5','8n'],[0.36,'C6','8n'],[0.48,'E6','4n']]; seq.forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt)); const bt = t + 0.6; const bell = new Tone.MetalSynth({ frequency: 800, envelope: { attack: 0.001, decay: 0.6, release: 0.3 }, harmonicity: 8, modulationIndex: 20, resonance: 5000, octaves: 1.5, volume: -14 }).connect(reverb); bell.triggerAttackRelease('16n', bt); const sparkle = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.4, sustain: 0.1, release: 0.5 }, volume: -12 }).connect(reverb); ['C6','E6','G6','C7'].forEach((n, i) => sparkle.triggerAttackRelease(n, '8n', bt + i * 0.03)); setTimeout(() => { try { v.dispose(); bell.dispose(); sparkle.dispose(); } catch (e) {} }, 2200); }
+    fusion: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.25, release: 0.5 }, volume: -10 }).connect(reverb); const seq = [[0,'C5','8n'],[0.12,'E5','8n'],[0.24,'G5','8n'],[0.36,'C6','8n'],[0.48,'E6','4n']]; seq.forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt)); const bt = t + 0.6; const bell = new Tone.MetalSynth({ frequency: 800, envelope: { attack: 0.001, decay: 0.6, release: 0.3 }, harmonicity: 8, modulationIndex: 20, resonance: 5000, octaves: 1.5, volume: -14 }).connect(reverb); bell.triggerAttackRelease('16n', bt); const sparkle = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.4, sustain: 0.1, release: 0.5 }, volume: -12 }).connect(reverb); ['C6','E6','G6','C7'].forEach((n, i) => sparkle.triggerAttackRelease(n, '8n', bt + i * 0.03)); setTimeout(() => { try { v.dispose(); bell.dispose(); sparkle.dispose(); } catch (e) {} }, 2200); },
+    // ===== 事件簿(ミステリーノベル)の効果音(2026-11-28 社長「ところどころのSEをもっと雰囲気出して」・台帳 r1126-093 追記2) =====
+    //   どれも小さく、低く暗い音。その場で合成する(音源ファイルなし・権利の心配なし)。効果音の音量(seBus)を通る
+    //   nvTick … 柱時計のチク(high)/タク。選択肢を待つ間に繰り返す。BGM とぶつからないよう、とても小さく短い
+    nvTick: async (high) => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.MetalSynth({ frequency: high ? 640 : 470, envelope: { attack: 0.001, decay: 0.035, release: 0.02 }, harmonicity: 3.1, modulationIndex: 10, resonance: high ? 3800 : 3000, octaves: 0.8, volume: -12 }).connect(seBus); s.triggerAttackRelease('64n', t); const k = new Tone.MembraneSynth({ pitchDecay: 0.008, octaves: 2, envelope: { attack: 0.001, decay: 0.05, sustain: 0 }, volume: -20 }).connect(seBus); k.triggerAttackRelease(high ? 'C4' : 'G3', '64n', t); setTimeout(() => { try { s.dispose(); k.dispose(); } catch (e) {} }, 300); },
+    //   nvCreak … 扉・床のきしみ「ギィ」(低いのこぎり波が、ゆっくり下がる)
+    nvCreak: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const f = new Tone.Filter(1800, 'lowpass').connect(seBus); const s = new Tone.Synth({ oscillator: { type: 'sawtooth' }, envelope: { attack: 0.08, decay: 0.7, sustain: 0, release: 0.2 }, volume: -8 }).connect(f); s.triggerAttackRelease('D4', '4n', t); try { s.frequency.rampTo('G3', 0.7, t); } catch (e) {} setTimeout(() => { try { s.dispose(); f.dispose(); } catch (e) {} }, 1400); },
+    //   nvThud … 重い物の落ちる・ぶつかる「ゴッ」(遠くのこもった低音。enemyAttack より小さく遠い)
+    nvThud: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.MembraneSynth({ pitchDecay: 0.05, octaves: 4, envelope: { attack: 0.002, decay: 0.35, sustain: 0 }, volume: -6 }).connect(seBus); s.triggerAttackRelease('E2', '8n', t); const n = new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: { attack: 0.002, decay: 0.15, sustain: 0 }, volume: -8 }).connect(seBus); n.triggerAttackRelease('16n', t); setTimeout(() => { try { s.dispose(); n.dispose(); } catch (e) {} }, 800); },
+    //   nvWind … 吹雪の風「ゴォォ……」(こもった雑音がふくらんで消える・2.5秒)
+    nvWind: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const f = new Tone.Filter({ frequency: 700, type: 'bandpass', Q: 0.7 }).connect(seBus); const n = new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: { attack: 0.9, decay: 0.4, sustain: 0.6, release: 1.2 }, volume: 0 }).connect(f); n.triggerAttackRelease(1.2, t); try { f.frequency.rampTo(1500, 0.9, t); f.frequency.rampTo(600, 1.4, t + 0.9); } catch (e) {} setTimeout(() => { try { n.dispose(); f.dispose(); } catch (e) {} }, 3200); },
+    //   nvFire … 暖炉の薪がはぜる「パチ……パチ」(小さな粒がまばらに)
+    nvFire: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const f = new Tone.Filter(1800, 'bandpass').connect(seBus); const n = new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.001, decay: 0.025, sustain: 0 }, volume: -8 }).connect(f); [0, 0.21, 0.37, 0.8, 1.05, 1.5].forEach((d) => n.triggerAttackRelease('64n', t + d)); setTimeout(() => { try { n.dispose(); f.dispose(); } catch (e) {} }, 2100); },
+    //   nvRustle … 紙・封・布のこすれる「カサ」
+    nvRustle: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const f = new Tone.Filter(2600, 'highpass').connect(seBus); const n = new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.01, decay: 0.12, sustain: 0 }, volume: -14 }).connect(f); n.triggerAttackRelease('16n', t); n.triggerAttackRelease('32n', t + 0.14); setTimeout(() => { try { n.dispose(); f.dispose(); } catch (e) {} }, 600); },
+    //   nvGlass … 窓ガラス・物の割れる「カシャ」(低めの金属の響き)
+    nvGlass: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.MetalSynth({ frequency: 260, envelope: { attack: 0.001, decay: 0.32, release: 0.1 }, harmonicity: 7.1, modulationIndex: 20, resonance: 3200, octaves: 1, volume: -12 }).connect(reverb); s.triggerAttackRelease('16n', t); setTimeout(() => { try { s.dispose(); } catch (e) {} }, 900); },
+    //   nvDread … 不穏な一音(低い2音の半音のぶつかりが、ゆっくり消える)。声・悲鳴・倒れた人が見つかった所
+    nvDread: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'sine' }, envelope: { attack: 0.35, decay: 0.6, sustain: 0.4, release: 1.6 }, volume: -10 }).connect(reverb); v.triggerAttackRelease(['C3', 'C#3', 'G3'], 1.1, t); setTimeout(() => { try { v.dispose(); } catch (e) {} }, 3600); },
+    //   nvMusicBox … オルゴールの子守歌(高い音を、小さく、ゆっくり下がる短調の4音)
+    nvMusicBox: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.002, decay: 0.9, sustain: 0, release: 0.6 }, volume: -14 }).connect(reverb); [[0, 'E5'], [0.42, 'D5'], [0.84, 'C5'], [1.4, 'A4']].forEach(([d, n]) => s.triggerAttackRelease(n, '4n', t + d)); setTimeout(() => { try { s.dispose(); } catch (e) {} }, 3200); },
+    //   r1126-093 追記3: 足音(nvStep)・駆ける足音(nvRun)・殴られる(nvHit)・倒れる(nvFall)・悲鳴の手前の息(nvGasp)・扉(nvDoor)・吹き込む風(nvGust)
+    nvStep: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.MembraneSynth({ pitchDecay: 0.02, octaves: 2, envelope: { attack: 0.002, decay: 0.09, sustain: 0 }, volume: -6 }).connect(seBus); const sf = new Tone.Filter({ frequency: 1500, type: 'bandpass', Q: 1.2 }).connect(seBus); const sc = new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: { attack: 0.002, decay: 0.05, sustain: 0 }, volume: -4 }).connect(sf); [0, 0.55, 1.1].forEach((d, i) => { s.triggerAttackRelease(i % 2 ? 'A2' : 'G2', '32n', t + d); sc.triggerAttackRelease('64n', t + d); }); setTimeout(() => { try { s.dispose(); sc.dispose(); sf.dispose(); } catch (e) {} }, 1700); },
+    nvRun: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.MembraneSynth({ pitchDecay: 0.02, octaves: 2, envelope: { attack: 0.002, decay: 0.07, sustain: 0 }, volume: -6 }).connect(seBus); const sf = new Tone.Filter({ frequency: 1500, type: 'bandpass', Q: 1.2 }).connect(seBus); const sc = new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: { attack: 0.002, decay: 0.05, sustain: 0 }, volume: -4 }).connect(sf); [0, 0.2, 0.4, 0.6, 0.8, 1.0].forEach((d, i) => { s.triggerAttackRelease(i % 2 ? 'A2' : 'G2', '32n', t + d); sc.triggerAttackRelease('64n', t + d); }); setTimeout(() => { try { s.dispose(); sc.dispose(); sf.dispose(); } catch (e) {} }, 1500); },
+    nvHit: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.MembraneSynth({ pitchDecay: 0.015, octaves: 3, envelope: { attack: 0.001, decay: 0.16, sustain: 0 }, volume: -2 }).connect(seBus); s.triggerAttackRelease('C3', '16n', t); const n = new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: { attack: 0.001, decay: 0.08, sustain: 0 }, volume: 2 }).connect(seBus); n.triggerAttackRelease('64n', t); setTimeout(() => { try { s.dispose(); n.dispose(); } catch (e) {} }, 600); },
+    nvFall: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.MembraneSynth({ pitchDecay: 0.06, octaves: 4, envelope: { attack: 0.003, decay: 0.5, sustain: 0 }, volume: -4 }).connect(seBus); s.triggerAttackRelease('D2', '4n', t); s.triggerAttackRelease('C2', '8n', t + 0.18); const n = new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: { attack: 0.01, decay: 0.4, sustain: 0 }, volume: -2 }).connect(seBus); n.triggerAttackRelease('8n', t + 0.05); setTimeout(() => { try { s.dispose(); n.dispose(); } catch (e) {} }, 1200); },
+    nvGasp: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const f = new Tone.Filter(1400, 'bandpass').connect(seBus); const n = new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: { attack: 0.12, decay: 0.18, sustain: 0, release: 0.08 }, volume: 4 }).connect(f); n.triggerAttackRelease(0.16, t); try { f.frequency.rampTo(2200, 0.25, t); } catch (e) {} setTimeout(() => { try { n.dispose(); f.dispose(); } catch (e) {} }, 800); },
+    nvDoor: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const m = new Tone.MetalSynth({ frequency: 180, envelope: { attack: 0.001, decay: 0.05, release: 0.02 }, harmonicity: 3.1, modulationIndex: 8, resonance: 2500, octaves: 0.5, volume: -14 }).connect(seBus); m.triggerAttackRelease('64n', t); const f = new Tone.Filter(1800, 'lowpass').connect(seBus); const s = new Tone.Synth({ oscillator: { type: 'sawtooth' }, envelope: { attack: 0.05, decay: 0.45, sustain: 0, release: 0.15 }, volume: -10 }).connect(f); s.triggerAttackRelease('A3', '8n', t + 0.08); try { s.frequency.rampTo('E3', 0.45, t + 0.08); } catch (e) {} setTimeout(() => { try { m.dispose(); s.dispose(); f.dispose(); } catch (e) {} }, 1200); },
+    nvGust: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const f = new Tone.Filter({ frequency: 800, type: 'bandpass', Q: 0.7 }).connect(seBus); const n = new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: { attack: 0.25, decay: 0.5, sustain: 0.2, release: 0.6 }, volume: 2 }).connect(f); n.triggerAttackRelease(0.6, t); try { f.frequency.rampTo(2000, 0.3, t); f.frequency.rampTo(700, 0.9, t + 0.3); } catch (e) {} setTimeout(() => { try { n.dispose(); f.dispose(); } catch (e) {} }, 2000); },
   };
+  // ===== 事件簿の環境音(ずっと小さく鳴る・r1126-093 追記3「BGM は静かか音無しにして SE で表現」) =====
+  //   kind: 'wind'(外の風)/ 'blizzard'(吹雪)/ 'fire'(暖炉)/ 'clock'(柱時計のチク・タク)/ 'room'(部屋のかすかなすきま風)/ 'none'
+  //   替えるときは前の音を 1.2 秒で小さくしてから捨て、新しい音を 1.5 秒で大きくする(つなぎ目なく替わる)。効果音の音量(seBus)を通る。
+  //   同じ kind なら何もしない。続けて呼ばれても、いちばんあとの kind だけが鳴る(待っている間に替わった物は作らない)
+  let nvAmb = { kind: 'none', stop: null };
+  let nvAmbWant = 'none'; // 頼まれている環境音(音がまだ使えず鳴らせなかった物も覚えておき、nvAmbientResume で鳴らし直す)
+  const nvAmbient = async (kindIn) => {
+    const kind = kindIn || 'none';
+    nvAmbWant = kind;
+    if (kind === nvAmb.kind) return;
+    const prev = nvAmb; const me = { kind, stop: null }; nvAmb = me;
+    if (prev.stop) { try { prev.stop(); } catch (e) {} }
+    if (kind === 'none') return;
+    if (!enabled) { nvAmb = { kind: 'none', stop: null }; return; } // 音がまだ使えない: 鳴らせなかったので「鳴っていない」に戻す(あとで鳴らし直せるように)
+    await ensure();
+    if (nvAmb !== me) return;
+    if (!Tone || !enabled) { nvAmb = { kind: 'none', stop: null }; return; }
+    const nodes = []; const timers = [];
+    try {
+      const g = new Tone.Gain(0).connect(seBus); nodes.push(g);
+      // 2026-11-28 r1126-093 追記4: 前の作りは -74〜-89dB と小さく、音の大半がスマホのスピーカーで出ない 300Hz より下だった(社長「無音になってる？」)。
+      //   大きさを上げ、帯域を 400〜2000Hz 寄り(スピーカーで聞こえる高さ)へ移した。目安: 効果音の音量が初期値のとき、ボタンの音と同じくらいに聞こえる
+      if (kind === 'wind' || kind === 'blizzard' || kind === 'room') {
+        const n = new Tone.Noise(kind === 'room' ? 'brown' : 'pink'); n.volume.value = kind === 'blizzard' ? 4 : kind === 'wind' ? 1 : 2;
+        const f = new Tone.Filter({ frequency: kind === 'blizzard' ? 900 : kind === 'wind' ? 650 : 450, type: 'bandpass', Q: 0.7 });
+        const lfo = new Tone.LFO(kind === 'blizzard' ? 0.21 : kind === 'wind' ? 0.09 : 0.05, kind === 'blizzard' ? 450 : kind === 'wind' ? 380 : 320, kind === 'blizzard' ? 2000 : kind === 'wind' ? 1300 : 650);
+        n.connect(f); f.connect(g); lfo.connect(f.frequency); n.start(); lfo.start(); nodes.push(n, f, lfo);
+      }
+      if (kind === 'fire') {
+        const n = new Tone.Noise('brown'); n.volume.value = -2; const f = new Tone.Filter({ frequency: 420, type: 'bandpass', Q: 0.8 }); n.connect(f); f.connect(g); n.start(); nodes.push(n, f);
+        const bp = new Tone.Filter(2400, 'bandpass').connect(g); const c = new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.001, decay: 0.025, sustain: 0 }, volume: -6 }).connect(bp); nodes.push(bp, c);
+        const pop = () => { if (nvAmb !== me) return; if (enabled) { try { c.triggerAttackRelease('64n'); } catch (e) {} } timers.push(setTimeout(pop, 140 + Math.random() * 620)); };
+        timers.push(setTimeout(pop, 300));
+      }
+      if (kind === 'clock') {
+        const m = new Tone.MetalSynth({ frequency: 600, envelope: { attack: 0.001, decay: 0.05, release: 0.03 }, harmonicity: 3.1, modulationIndex: 12, resonance: 3600, octaves: 0.8, volume: -12 }).connect(g);
+        const k = new Tone.MembraneSynth({ pitchDecay: 0.008, octaves: 2, envelope: { attack: 0.001, decay: 0.05, sustain: 0 }, volume: -20 }).connect(g); nodes.push(m, k);
+        let high = true;
+        const tick = () => { if (nvAmb !== me || !enabled) return; try { m.frequency.value = high ? 640 : 470; m.triggerAttackRelease('64n'); k.triggerAttackRelease(high ? 'C4' : 'G3', '64n'); } catch (e) {} high = !high; };
+        timers.push(setInterval(tick, 1000));
+      }
+      try { g.gain.rampTo(1, 1.5); } catch (e) { g.gain.value = 1; }
+      me.stop = () => {
+        timers.forEach((id) => { clearTimeout(id); clearInterval(id); });
+        try { g.gain.rampTo(0, 1.2); } catch (e) { g.gain.value = 0; }
+        setTimeout(() => { nodes.forEach((x) => { try { if (x.stop) x.stop(); } catch (e) {} try { x.dispose(); } catch (e) {} }); }, 1400);
+      };
+    } catch (e) { nodes.forEach((x) => { try { x.dispose(); } catch (e2) {} }); if (nvAmb === me) nvAmb = { kind: 'none', stop: null }; }
+  };
+  const nvAmbientResume = () => { if (nvAmbWant !== 'none' && nvAmb.kind !== nvAmbWant) void nvAmbient(nvAmbWant); };
   // ボタンのタップ音(音は fgSe.tap と同じ。通る口だけが uiBus)。全体ミュート(enabled)には従う。裏のバトルの音を止める印は見ない
   const uiTap = async () => { if (!enabled) return; await ensure(); if (!Tone || !uiBus) return; const t = Tone.now(); const s = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.001, decay: 0.04, sustain: 0, release: 0.02 }, volume: -16 }).connect(uiBus); s.triggerAttackRelease('C6', '64n', t); setTimeout(() => { try { s.dispose(); } catch (e) {} }, 200); };
   const se = Object.fromEntries(Object.entries(fgSe).map(([name, play]) => [name, (...args) => (backgroundSeQuiet ? Promise.resolve() : play(...args))]));
@@ -7650,7 +7733,7 @@ const Audio_ = (() => {
   // お知らせ・ヘルプの動画にかける音量(2026-11-14 社長「予告動画の音が設定の音量と関係なく鳴る」)。
   // 動画は曲と同じ扱いにして、BGM の音量と同じ曲線(_gainFromPct)で返す。音を切っている・BGM が 0 なら 0
   const videoGain = () => (enabled && bgmVolumePct > 0 ? _gainFromPct(bgmVolumePct) : 0);
-  return { currentBgmKey: () => currentKey, isBackgroundSeQuiet, setVideoHold, videoGain, setStoryEndFade, setStoryOpenFade, playSeFile, fgPlaySeFile, preloadSE, playBGM, fadeToBGM, stopBGM, setBgmOnce, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setUiSeVolume, uiSeVolume, uiTap, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
+  return { nvAmbient, currentBgmKey: () => currentKey, isBackgroundSeQuiet, setVideoHold, videoGain, setStoryEndFade, setStoryOpenFade, playSeFile, fgPlaySeFile, preloadSE, playBGM, fadeToBGM, stopBGM, setBgmOnce, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setUiSeVolume, uiSeVolume, uiTap, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
 })();
 
 // ---- part: 14-success-sound.jsx ----
@@ -15617,7 +15700,8 @@ const storyAssistantArtOf = (id, outfit) => {
   if (!who || !who.imageDir || !who.imagePrefix) return null;
   const dirs = (typeof STORY_OUTFIT_DIRS !== 'undefined' && STORY_OUTFIT_DIRS) || {};
   const dir = outfit ? dirs[outfit] : who.imageDir;
-  return dir ? `${dir}/${who.imagePrefix}_normal.PNG` : null;
+  const file = dir ? `${dir}/${who.imagePrefix}_normal.PNG` : null;
+  return file && typeof assistantArtFile === 'function' ? assistantArtFile(file) : file; // 重い絵は WebP の服あり(r1126-095)
 };
 // お話の真ん中に出すモンスターの全身の絵(台本の monsters の id → 絵。2026-10-27「推しに会える夜」)。足すときはここへ1行
 const STORY_MONSTER_ART = Object.freeze({
@@ -25144,7 +25228,11 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
   React.useEffect(()=>{if(!artZoom){setArtPage(0);setLyricFull(null);}},[artZoom]);
   const goArtPage=(i)=>{const el=artPagesRef.current;if(!el)return;el.scrollTo({left:i*el.clientWidth,behavior:'smooth'});};
   const playable=(songs||[]).filter(song=>(difficulties||[]).some(difficulty=>rhythmChartPlayable(song,difficulty.id)));
-  const setSongId=id=>{if(typeof onSongId==='function')onSongId(id);};
+  // 曲を選ぶ口は、いちばん新しい onSongId を呼ぶ(2026-11-28 r1126-104 案A)。
+  //   下の行の組み立てと一覧(<ul>)は、中身が変わったときだけ作り直す。作り置きした一覧の行を押しても、古い口ではなく今の口を呼ぶようにする
+  const onSongIdRef=React.useRef(onSongId);
+  onSongIdRef.current=onSongId;
+  const setSongId=id=>{const fn=onSongIdRef.current;if(typeof fn==='function')fn(id);};
   const setDifficultyId=id=>{if(typeof onDifficultyId==='function')onDifficultyId(id);};
   // 選んでいる曲・難易度が無くなっても落ちないよう、毎回その場で選び直す
   // (曲を変えたときに「前の曲にしかない難易度」が残らない)。
@@ -25255,7 +25343,8 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
   // 「はじめての1曲」(2026-11-07 本オープン案 A5・社長)。まだ1曲も遊んでいない人にだけ、短くてやさしい曲の行に札を出す。
   //   選び方: EASY を遊べる原曲(押すと原曲が選ばれるので、ショート版などは候補にしない)の中で、EASY の Lv. がいちばん低い曲
   //   → 同じなら短い曲 → それも同じなら一覧の順。曲の id は書き写さない(曲が増えても自動で選び直す)。1曲でも遊んだら出さない
-  const firstSongId=(()=>{
+  // 自己ベストか遊べる曲が変わったときだけ選び直す(2026-11-28 r1126-104 案A。描き直しのたびに全部の自己ベストを読み直していた)
+  const firstSongId=React.useMemo(()=>{
     const recs=bestRecords&&typeof bestRecords==='object'?bestRecords:{};
     const playedAny=Object.keys(recs).some(id=>recs[id]&&typeof recs[id]==='object'
       &&Object.keys(recs[id]).some(d=>{const r=rhythmBestRecord(recs,id,d);return !!(r&&r.played);}));
@@ -25269,8 +25358,16 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
       if(!pick||lv<pick.lv||(lv===pick.lv&&ms<pick.ms))pick={id:entry.songId,lv,ms};
     }
     return pick?pick.id:null;
-  })();
-  const rows=(()=>{
+  },[bestRecords,playable.map(entry=>entry.songId).join('|'),(difficulties||[]).map(item=>item.id).join('|')]);
+  // ★行の組み立ては、中身を決める値が変わったときだけやり直す(2026-11-28 r1126-104 案A)。
+  //   曲えらびは裏クイックが進むたび(毎秒数回)に親から描き直される。そのたびに全曲の組み分け・並べ替えをやり直していて、
+  //   iPhone の目安(CPU 4倍遅く)で一覧にいる間 CPU がほぼ埋まっていた(docs/progress/perf-2026-11-28/README.md)。
+  //   親が毎回作り直す配列(songs・difficulties)や関数(spotClass)は、中身(曲の id の並び・結果の文字)で比べる。見え方は前と同じ
+  const songsKey=playable.map(entry=>entry.songId).join('|');
+  const difficultiesKey=(difficulties||[]).map(item=>item.id).join('|');
+  const eventKey=[...eventSongIds].join('|');
+  const favoritesKey=[...favoriteIds].join('|');
+  const rows=React.useMemo(()=>{
     const out=[],at=new Map();
     for(const entry of playable.filter(genreMatches)){
       const head=rhythmSongVersionHead(entry.songId);
@@ -25285,7 +25382,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
     const byEntry=new Map(built.map(row=>[row.entry.songId,row]));
     return rhythmSortSongs(built.map(row=>row.entry),{sort:state.sort,desc:state.desc,levelOf:rowLevel,difficulties})
       .map(entry=>byEntry.get(entry.songId));
-  })();
+  },[songsKey,difficultiesKey,song?song.songId:'',difficulty?difficulty.id:'',genre.id,state.sort,state.desc,eventKey,favoritesKey]);
   const sortLabel=(RHYTHM_SORT_ORDERS.find(item=>item.id===state.sort)||RHYTHM_SORT_ORDERS[0]).label;
   // 選んでいる曲を鳴らすのは App本体(rhythmPreviewTrackId)。ここでは鳴らさない。
   // この画面の中で鳴らしていたころは、ランキングやマスモン設定を開いた瞬間に
@@ -25485,61 +25582,10 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
     return()=>{ro.disconnect();noteFitRo.current=null;};
   },[]);
   const noteTight=noteFitShow&&noteFit>=1;
-  return <div data-rhythm-song-select data-rhythm-song-genre={genre?genre.id:'all'} className="flex min-h-0 flex-1 flex-col landscape:flex-row">
-    {/* 曲の一覧。案内(notice)はスクロールの**外**へ置き、動くのは曲の並びだけにする。
-        中に入れていたときは、曲を探して指を動かすと案内も一緒に流れて場所を食っていた
-        (2026-09-05・ユーザー指示「固定タブを利用して音楽だけ動かせるようにしたい」)。 */}
-    {/* 2026-09-26 に見本の形へ(ユーザー指示「ジャンルとかを縦に置くと縦幅が狭くなるから見本のように横にするべき /
-        見本の形がかなり理想」)。横持ちは「左の細い列(ジャンル・並び替え・助手) / 曲の一覧 / 選んだ曲」の3列にして、
-        一覧の上に行を取らない。縦持ちは今までどおり一覧の上に1行で並べる */}
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col landscape:flex-row landscape:border-r landscape:border-white/10">
-      {/* 助手のひとことは畳める。曲を探すのに使える高さがそのぶん増える
-          (2026-09-05・ユーザー指摘「縦画面の楽曲選択が2曲までしか出ないのがやりづらい」)。
-          畳んだかどうかは覚えるので、毎回たたみ直さなくてよい。
-          横画面では右の欄(aside)の下へ移す。出す中身は同じで、置く場所だけがCSSで入れ替わる。 */}
-      {/* 縦は助手の一言を1行の形にする(押すと全文が開く)。2行の吹き出しで一覧の上が約70px埋まり、曲が5曲しか見えなかった(2026-11-22 r1119-094・点検 N6)。
-          助手の吹き出し(scene を持つ物)だけ。マルチの注意書きのような文はそのまま */}
-      {notice&&noticeOpen&&<div data-rhythm-song-notice className="shrink-0 px-2 pt-2 landscape:hidden">{React.isValidElement(notice)&&notice.props&&notice.props.scene?React.cloneElement(notice,{oneLine:true,faceSize:28}):notice}</div>}
-      {/* ジャンル・並び替え・助手の開け閉め。ジャンルは常に並べず、押すと下から選ぶところが出る
-          (2026-09-26・ユーザー指示「ジャンルは常時出すより押して選べるタイプにしたい」)。
-          ALL以外で絞っているあいだは色を付けて、一覧が絞られていることが分かるようにする */}
-      <div data-rhythm-song-toolbar className="flex shrink-0 items-center gap-1.5 px-2 pt-2 landscape:w-[104px] landscape:flex-col landscape:items-stretch landscape:gap-2 landscape:pb-2 landscape:pr-0">
-        <button type="button" data-rhythm-genre-open aria-haspopup="dialog" onClick={()=>setGenreOpen(true)}
-          className={`flex min-h-[40px] w-[42%] min-w-0 items-center justify-between gap-1 rounded-xl border px-3 text-[11px] font-black landscape:min-h-[52px] landscape:w-full landscape:px-2 ${genre&&genre.id!=='all'?'border-cyan-200/80 bg-cyan-500/20 text-cyan-50':'border-white/15 bg-slate-900/80 text-slate-200'}`}>
-          <span data-rhythm-genre-current={genre?genre.id:'all'} className="min-w-0 truncate landscape:flex landscape:flex-col landscape:items-start landscape:leading-tight">
-            <small className="text-[11px] font-black max-[359px]:hidden landscape:text-[10px] landscape:text-slate-400">ジャンル<span className="landscape:hidden">：</span></small><b className="max-w-full truncate font-black landscape:text-[13px]">{genre&&genre.favorite?'♥ ':''}{genre?genre.label:'ALL'}</b>
-          </span>
-          <span aria-hidden="true" className="shrink-0 text-slate-400">▾</span>
-        </button>
-        <button type="button" data-rhythm-song-sort onClick={()=>setSortOpen(true)}
-          className="flex min-h-[40px] min-w-0 flex-1 items-center justify-between gap-1 rounded-xl border border-white/15 bg-slate-900/80 px-3 text-[11px] font-black text-slate-200 landscape:min-h-[52px] landscape:flex-none landscape:px-2">
-          <span className="min-w-0 truncate landscape:flex landscape:flex-col landscape:items-start landscape:leading-tight">
-            {/* 幅320ほどの画面では「並べ替え：」を外して値だけ出す(2026-10-20 改善部 M9。いまの並べ方が切れて読めなかった) */}<small className="text-[11px] font-black max-[359px]:hidden landscape:text-[10px] landscape:text-slate-400">並べ替え<span className="landscape:hidden">：</span></small><b className="max-w-full truncate font-black landscape:text-[12px]">{sortLabel}{state.desc?'（逆）':''}</b>
-          </span>
-          <span aria-hidden="true" className="shrink-0 text-slate-400">▾</span>
-        </button>
-        {notice&&<button type="button" data-rhythm-song-notice-toggle aria-pressed={noticeOpen}
-          onClick={()=>setView(isShortScreen?{...state,noticeOpenShort:!noticeOpen}:{...state,noticeOpen:!noticeOpen,noticeTouched:true})}
-          title={noticeOpen?'助手のひとこと: 入(押すと切)':'助手のひとこと: 切(押すと入)'}
-          aria-label={noticeOpen?'助手のひとことと案内を畳む':(noticeHidden>0?`畳んである案内が${noticeHidden+1}つあります。出す`:'助手のひとことを出す')}
-          className={`relative flex h-[40px] w-[52px] shrink-0 items-center justify-center gap-0.5 rounded-xl border text-[11px] font-black landscape:h-[44px] landscape:w-full ${noticeOpen?'border-fuchsia-300/60 bg-fuchsia-900/40 text-fuchsia-100':'border-white/15 bg-slate-900/80 text-slate-300'}`}>
-          {/* 入/切が読める形にする(2026-11-23 r1119-144 社長「もんびーちゅうの助手の吹き出しのオンオフなくなった？」→「横にあるからきづけなかった」)。
-              横は列の幅があるので「ひとこと」も添える。縦は幅52pxなので「💬入▲」だけ */}
-          <span aria-hidden="true">💬</span><span aria-hidden="true" className="hidden landscape:inline">ひとこと</span>
-          <b data-rhythm-song-notice-state={noticeOpen?'on':'off'} aria-hidden="true" className={`rounded px-0.5 leading-tight ${noticeOpen?'bg-fuchsia-300 text-fuchsia-950':'bg-slate-600 text-slate-100'}`}>{noticeOpen?'入':'切'}</b>
-          <span aria-hidden="true" className="text-[9px]">{noticeOpen?'▲':'▼'}</span>
-          {/* 畳んでいるあいだに、ひとこと以外の案内(一度きりの案内・週間イベントなど)も隠れているときの印 */}
-          {!noticeOpen&&noticeHidden>0&&<b data-rhythm-song-notice-badge className="absolute -right-1 -top-1 min-w-[16px] rounded-full bg-fuchsia-400 px-1 text-[10px] leading-4 text-slate-950">{noticeHidden}</b>}
-        </button>}
-        {/* 呼ぶ側が足す小さな札(横持ちのビートPキャンペーンなど)。縦持ちで出すかどうかは呼ぶ側が決める */}
-        {toolbarExtra}
-      </div>
-    <div ref={listRef} onScroll={handleListScroll}
-      data-rhythm-song-list data-rhythm-song-loop={loopEnabled?'1':'0'}
-      className={`min-h-0 min-w-0 flex-1 overflow-y-auto mh-scroll px-2 py-2${spot('songList')}`}>
-      {list.length===0
-        ?<p style={JA_WRAP_STYLE} data-rhythm-song-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-xs text-slate-300">{genre&&genre.favorite?jaWrap('お気に入りの曲はまだありません。曲を選んで「♡ お気に入り」を押すと、ここに並びます。'):genre&&genre.id!=='all'?jaWrap('このジャンルの曲はまだありません。'):emptyText}</p>
-        :<ul className="space-y-0.5">{blocks.map(copy=>rows.map(row=>{
+  // 曲の一覧の行(2026-11-28 r1126-104 案A)。中身を決める値(行・選んでいる曲・自己ベスト・難易度・イベント・お気に入り・はじめての1曲・
+  //   買った曲・案内の目印)が変わったときだけ作り直す。裏クイックの WAVE が進んだだけでは作り直さない(見え方は前と同じ)
+  const songRowsSpotKey=['achievement','songLevel'].map(spot).join('|');
+  const songRowsList=React.useMemo(()=><ul className="space-y-0.5">{blocks.map(copy=>rows.map(row=>{
           const entry=row.entry;
           const main=copy===1;
           const selected=!!song&&entry.songId===song.songId;
@@ -25631,7 +25677,63 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
               </span>
             </button>
           </li>;
-        }))}</ul>}
+        }))}</ul>,
+    [rows,blocks.length,song?song.songId:'',bestRecords,difficultiesKey,difficulty?difficulty.id:'',eventKey,favoritesKey,firstSongId,songLock?songLock.owned:null,unlockAll,songRowsSpotKey]);
+  return <div data-rhythm-song-select data-rhythm-song-genre={genre?genre.id:'all'} className="flex min-h-0 flex-1 flex-col landscape:flex-row">
+    {/* 曲の一覧。案内(notice)はスクロールの**外**へ置き、動くのは曲の並びだけにする。
+        中に入れていたときは、曲を探して指を動かすと案内も一緒に流れて場所を食っていた
+        (2026-09-05・ユーザー指示「固定タブを利用して音楽だけ動かせるようにしたい」)。 */}
+    {/* 2026-09-26 に見本の形へ(ユーザー指示「ジャンルとかを縦に置くと縦幅が狭くなるから見本のように横にするべき /
+        見本の形がかなり理想」)。横持ちは「左の細い列(ジャンル・並び替え・助手) / 曲の一覧 / 選んだ曲」の3列にして、
+        一覧の上に行を取らない。縦持ちは今までどおり一覧の上に1行で並べる */}
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col landscape:flex-row landscape:border-r landscape:border-white/10">
+      {/* 助手のひとことは畳める。曲を探すのに使える高さがそのぶん増える
+          (2026-09-05・ユーザー指摘「縦画面の楽曲選択が2曲までしか出ないのがやりづらい」)。
+          畳んだかどうかは覚えるので、毎回たたみ直さなくてよい。
+          横画面では右の欄(aside)の下へ移す。出す中身は同じで、置く場所だけがCSSで入れ替わる。 */}
+      {/* 縦は助手の一言を1行の形にする(押すと全文が開く)。2行の吹き出しで一覧の上が約70px埋まり、曲が5曲しか見えなかった(2026-11-22 r1119-094・点検 N6)。
+          助手の吹き出し(scene を持つ物)だけ。マルチの注意書きのような文はそのまま */}
+      {notice&&noticeOpen&&<div data-rhythm-song-notice className="shrink-0 px-2 pt-2 landscape:hidden">{React.isValidElement(notice)&&notice.props&&notice.props.scene?React.cloneElement(notice,{oneLine:true,faceSize:28}):notice}</div>}
+      {/* ジャンル・並び替え・助手の開け閉め。ジャンルは常に並べず、押すと下から選ぶところが出る
+          (2026-09-26・ユーザー指示「ジャンルは常時出すより押して選べるタイプにしたい」)。
+          ALL以外で絞っているあいだは色を付けて、一覧が絞られていることが分かるようにする */}
+      <div data-rhythm-song-toolbar className="flex shrink-0 items-center gap-1.5 px-2 pt-2 landscape:w-[104px] landscape:flex-col landscape:items-stretch landscape:gap-2 landscape:pb-2 landscape:pr-0">
+        <button type="button" data-rhythm-genre-open aria-haspopup="dialog" onClick={()=>setGenreOpen(true)}
+          className={`flex min-h-[40px] w-[42%] min-w-0 items-center justify-between gap-1 rounded-xl border px-3 text-[11px] font-black landscape:min-h-[52px] landscape:w-full landscape:px-2 ${genre&&genre.id!=='all'?'border-cyan-200/80 bg-cyan-500/20 text-cyan-50':'border-white/15 bg-slate-900/80 text-slate-200'}`}>
+          <span data-rhythm-genre-current={genre?genre.id:'all'} className="min-w-0 truncate landscape:flex landscape:flex-col landscape:items-start landscape:leading-tight">
+            <small className="text-[11px] font-black max-[359px]:hidden landscape:text-[10px] landscape:text-slate-400">ジャンル<span className="landscape:hidden">：</span></small><b className="max-w-full truncate font-black landscape:text-[13px]">{genre&&genre.favorite?'♥ ':''}{genre?genre.label:'ALL'}</b>
+          </span>
+          <span aria-hidden="true" className="shrink-0 text-slate-400">▾</span>
+        </button>
+        <button type="button" data-rhythm-song-sort onClick={()=>setSortOpen(true)}
+          className="flex min-h-[40px] min-w-0 flex-1 items-center justify-between gap-1 rounded-xl border border-white/15 bg-slate-900/80 px-3 text-[11px] font-black text-slate-200 landscape:min-h-[52px] landscape:flex-none landscape:px-2">
+          <span className="min-w-0 truncate landscape:flex landscape:flex-col landscape:items-start landscape:leading-tight">
+            {/* 幅320ほどの画面では「並べ替え：」を外して値だけ出す(2026-10-20 改善部 M9。いまの並べ方が切れて読めなかった) */}<small className="text-[11px] font-black max-[359px]:hidden landscape:text-[10px] landscape:text-slate-400">並べ替え<span className="landscape:hidden">：</span></small><b className="max-w-full truncate font-black landscape:text-[12px]">{sortLabel}{state.desc?'（逆）':''}</b>
+          </span>
+          <span aria-hidden="true" className="shrink-0 text-slate-400">▾</span>
+        </button>
+        {notice&&<button type="button" data-rhythm-song-notice-toggle aria-pressed={noticeOpen}
+          onClick={()=>setView(isShortScreen?{...state,noticeOpenShort:!noticeOpen}:{...state,noticeOpen:!noticeOpen,noticeTouched:true})}
+          title={noticeOpen?'助手のひとこと: 入(押すと切)':'助手のひとこと: 切(押すと入)'}
+          aria-label={noticeOpen?'助手のひとことと案内を畳む':(noticeHidden>0?`畳んである案内が${noticeHidden+1}つあります。出す`:'助手のひとことを出す')}
+          className={`relative flex h-[40px] w-[52px] shrink-0 items-center justify-center gap-0.5 rounded-xl border text-[11px] font-black landscape:h-[44px] landscape:w-full ${noticeOpen?'border-fuchsia-300/60 bg-fuchsia-900/40 text-fuchsia-100':'border-white/15 bg-slate-900/80 text-slate-300'}`}>
+          {/* 入/切が読める形にする(2026-11-23 r1119-144 社長「もんびーちゅうの助手の吹き出しのオンオフなくなった？」→「横にあるからきづけなかった」)。
+              横は列の幅があるので「ひとこと」も添える。縦は幅52pxなので「💬入▲」だけ */}
+          <span aria-hidden="true">💬</span><span aria-hidden="true" className="hidden landscape:inline">ひとこと</span>
+          <b data-rhythm-song-notice-state={noticeOpen?'on':'off'} aria-hidden="true" className={`rounded px-0.5 leading-tight ${noticeOpen?'bg-fuchsia-300 text-fuchsia-950':'bg-slate-600 text-slate-100'}`}>{noticeOpen?'入':'切'}</b>
+          <span aria-hidden="true" className="text-[9px]">{noticeOpen?'▲':'▼'}</span>
+          {/* 畳んでいるあいだに、ひとこと以外の案内(一度きりの案内・週間イベントなど)も隠れているときの印 */}
+          {!noticeOpen&&noticeHidden>0&&<b data-rhythm-song-notice-badge className="absolute -right-1 -top-1 min-w-[16px] rounded-full bg-fuchsia-400 px-1 text-[10px] leading-4 text-slate-950">{noticeHidden}</b>}
+        </button>}
+        {/* 呼ぶ側が足す小さな札(横持ちのビートPキャンペーンなど)。縦持ちで出すかどうかは呼ぶ側が決める */}
+        {toolbarExtra}
+      </div>
+    <div ref={listRef} onScroll={handleListScroll}
+      data-rhythm-song-list data-rhythm-song-loop={loopEnabled?'1':'0'}
+      className={`min-h-0 min-w-0 flex-1 overflow-y-auto mh-scroll px-2 py-2${spot('songList')}`}>
+      {list.length===0
+        ?<p style={JA_WRAP_STYLE} data-rhythm-song-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-xs text-slate-300">{genre&&genre.favorite?jaWrap('お気に入りの曲はまだありません。曲を選んで「♡ お気に入り」を押すと、ここに並びます。'):genre&&genre.id!=='all'?jaWrap('このジャンルの曲はまだありません。'):emptyText}</p>
+        :songRowsList}
     </div>
     </div>
 
@@ -27479,7 +27581,7 @@ const rhythmRecordSeDelayOf=(isNewRecord,failed,practice,celebrateSeWhen)=>!isNe
 const rhythmFullComboBandMode=settings=>{const v=rhythmFxPick(settings,'fullComboBig');if(v==='OFF'||v==='NONE')return 'off';
   return 'full';};// ★2026-11-24(r1119-143 追記4): おまかせは軽量モード・演出量「最小」でも全部出す(控えめな形にしない)
 const RHYTHM_FULLCOMBO_CONFETTI=Object.freeze(Array.from({length:22},(_,k)=>Object.freeze({x:((k*37)%100)+.5,h:(k*47)%360,d:((k*13)%9)/20,s:.8+((k*7)%5)/10,r:((k*29)%2)?1:-1})));
-const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntries,onComplete,onExit,raidPlay=false,quickRunAward=null,beatRankAward=null,onRankBarFull=null,onRankBarDone=null,onRankBarStart=null,debugPlay=false,tutorial=false,calibrating=false,onApplyCalibration=null,multi=false,multiRewardScale=1,lineAdjust=null,breederName=''})=>{
+const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntries,onComplete,onExit,raidPlay=false,holdResultCount=false,quickRunAward=null,beatRankAward=null,onRankBarFull=null,onRankBarDone=null,onRankBarStart=null,debugPlay=false,tutorial=false,calibrating=false,onApplyCalibration=null,multi=false,multiRewardScale=1,lineAdjust=null,breederName=''})=>{
   // 判定ラインの位置の合わせ(lineAdjust)は、練習と同じ扱い(ライフを減らさない・記録を送らない)。練習の説明の帯は出さない
   const tutorialProp=tutorial;tutorial=tutorial||!!lineAdjust;
   // 合わせている間の地上の判定ラインの高さ(保存はまだ・親が持つ)。null なら設定のまま
@@ -28393,6 +28495,9 @@ useEffect(()=>{
     const run=runRef.current,ticks=note&&note._rhythmComboTicks;
     if(!run||!run.tickRules||!Array.isArray(ticks)||!ticks.length)return 0;
     const okNow=()=>Number(note._rhythmComboOk)||0,dropNow=()=>Number(note._rhythmComboDrop)||0;
+    // 曲の鑑賞では、外れて通った刻みも通ったとして数える(2026-11-28 台帳 r1126-100 追記1 社長「鑑賞でかくついたときにコンボが切れた。鑑賞なのに切れるのおかしい」)。
+    // 自動の手はコマごとに帯をなぞるので、コマが大きく飛ぶと帯から外れて見えることがある。鑑賞の成績はどこにも残さない(今までどおり)
+    if(lineAdjustRef.current&&lineAdjustRef.current.listen){const d=dropNow();if(d>0){note._rhythmComboOk=okNow()+d;note._rhythmComboDrop=0;}if(judgment)judgment='MARVELOUS';}
     if(judgment){const rest=ticks.length-okNow()-dropNow();if(rest>0){if(judgment==='BAD'||judgment==='MISS')note._rhythmComboDrop=dropNow()+rest;else note._rhythmComboOk=okNow()+rest;}note._rhythmComboIdx=ticks.length;}
     const ok=okNow()-(Number(note._rhythmComboSeenOk)||0),drop=dropNow()-(Number(note._rhythmComboSeenDrop)||0);
     if(!(ok>0)&&!(drop>0))return 0;
@@ -28410,7 +28515,10 @@ useEffect(()=>{
     }
     return ok;
   };
-  const applyJudgment=useCallback((note,judgment,deltaMs)=>{const _judgeT0=RHYTHM_PERF.enabled&&typeof performance!=='undefined'?performance.now():0;const run=runRef.current;if(!run||run.finished||run.paused||note.done)return;comboTicksRef.current(note,judgment);
+  const applyJudgment=useCallback((note,judgment,deltaMs)=>{const _judgeT0=RHYTHM_PERF.enabled&&typeof performance!=='undefined'?performance.now():0;const run=runRef.current;if(!run||run.finished||run.paused||note.done)return;/* 曲の鑑賞では、自動の手がいつも時刻どおりに取った扱いにする(2026-11-28 r1126-100 追記1)。自動の手はコマが来たときに押すので、
+   かくついて1コマが長いと押すのが遅れ、判定の窓を外れて MISS・BAD になりコンボが切れていた。鑑賞の成績はランキングにも自己ベストにも入れない(今までどおり) */
+if(lineAdjustRef.current&&lineAdjustRef.current.listen){deltaMs=0;judgment='MARVELOUS';}
+comboTicksRef.current(note,judgment);
 // 必死(ユグドラシル血統の能力)のあいだは、GREAT・EXCELLENTをMARVELOUSとして数える(判定だけをここで置き換える。
 // ずれは変えないので、ジャストのMARVELOUSになるのは本当にぴったりだったときだけ。2026-10-06 ユーザー指示)
 if(rhythmHisshiUpgrades(run.abilities,judgment,run.audio?.songTimeMs?.()??0))judgment='MARVELOUS';
@@ -28741,10 +28849,14 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
   // 数字は要素の文字を直接書き換える(中身は React が止まった形の値で持っている)。タップで止まった形へ飛ぶ
   const resultRootRef=useRef(null);
   const recordSeFireRef=useRef(null);
-  const resultCountId=view.status==='result'&&view.result&&view.result.countAnim?view.result.countAnim.id:null;
+  // holdResultCount(2026-11-28 r1126-098): レイドの「ダメージを与える演出」が上に重なっているあいだは、数え上げを始めない。
+  //   演出(4.3秒)の陰で数え上げ(3.3秒)と音が同時に走り、演出の SCORE・DAMAGE の数え上げのコマが落ちていた(社長「数字の動きがかくかく」)。
+  //   見えないまま終わっていた結果の数え上げは、演出が閉じてから始まる。止めているあいだも「数え上げ中」として、経験値の棒は待たせる
+  const resultCountIdRaw=view.status==='result'&&view.result&&view.result.countAnim?view.result.countAnim.id:null;
+  const resultCountId=holdResultCount?null:resultCountIdRaw;
   // 数え上げが終わった(タップで飛ばしたときも)印。それまで下の経験値の棒は動き出さない(r1119-166。同じ時に動くと数え上げのコマが落ちていた)
   const [resultCountDoneId,setResultCountDoneId]=useState(null);
-  const resultCountRunning=resultCountId!==null&&resultCountDoneId!==resultCountId;
+  const resultCountRunning=resultCountIdRaw!==null&&resultCountDoneId!==resultCountIdRaw;
   React.useLayoutEffect(()=>{
     const root=resultRootRef.current;
     if(!resultCountId||!root)return undefined;
@@ -29467,7 +29579,14 @@ const inputEnds=inputs=>{const run=runRef.current;if(!run||run.finished||run.pau
   const pressedSkyLanesNow=()=>[...(liveTouchSkySubLanesRef.current||[]),...(runRef.current?.activePointerSkyFeedback?.values()||[])];
   // 押せている帯のサブレーン(ビットの集まり。g=地上・s=空中)。tick が変わったときだけ書き換える(設定 holdTrace)
   const holdTraceRef=useRef({g:0,s:0});
-  const setPressedLanes=coordinates=>{const area=playAreaRef.current;if(!area)return;const active=new Set(Array.from(coordinates||[]).map(value=>Math.max(0,Math.min(RHYTHM_SUB_LANE_COUNT-1,Math.floor(Number(value))))).filter(Number.isFinite)),glowOpacity=settings.laneGlow==='NONE'?'0':settings.laneGlow==='LOW'?'.35':'1';let nodes=glowNodesRef.current;if(!nodes||!nodes.length||!nodes[0].isConnected)nodes=glowNodesRef.current=Array.from(area.querySelectorAll('[data-rhythm-sublane-feedback]'));nodes.forEach((el,index)=>{const pressed=active.has(index);const want=pressed?'true':'false';if(el.dataset.pressed===want&&(!pressed||el.style.opacity===glowOpacity))return;el.dataset.pressed=want;el.style.opacity=pressed?glowOpacity:'0';});if(typeof RHYTHM_CANVAS_RENDERER!=='undefined'&&typeof RHYTHM_CANVAS_RENDERER.setSkyPressed==='function'){{const skyMask=settings.holdTrace!==false?holdTraceRef.current.s:0;RHYTHM_CANVAS_RENDERER.setSkyPressed(skyMask?pressedSkyLanesNow().filter(v=>!(skyMask>>Math.floor(Number(v))&1)):pressedSkyLanesNow(),Number(glowOpacity));}paintIdleSkyPress();}};
+  const setPressedLanes=coordinates=>{const area=playAreaRef.current;if(!area)return;const glowOpacity=settings.laneGlow==='NONE'?'0':settings.laneGlow==='LOW'?'.35':'1';
+    /* 押しているサブレーンを印(ビット)にまとめる。指が動くたびに呼ばれる(iPhone の touchmove は指1本で毎秒60〜120回)ので、
+       前と同じ押し方・同じ濃さなら DOM に触らずに抜ける(2026-11-28 r1126-100「ワルキューレの原曲がかくつく」。以前は毎回 Set と配列を作り、
+       12本ぶんの dataset と style を読み直していた)。要素が作り直されたら覚えた印は捨てて書き直す。見た目は前と同じ */
+    let mask=0;if(coordinates){for(const value of coordinates){const n=Math.max(0,Math.min(RHYTHM_SUB_LANE_COUNT-1,Math.floor(Number(value))));if(Number.isFinite(n))mask|=1<<n;}}
+    let nodes=glowNodesRef.current;if(!nodes||!nodes.length||!nodes[0].isConnected){nodes=glowNodesRef.current=Array.from(area.querySelectorAll('[data-rhythm-sublane-feedback]'));glowNodesRef.lastKey=null;}
+    const glowKey=`${mask}|${glowOpacity}`;
+    if(glowNodesRef.lastKey!==glowKey){glowNodesRef.lastKey=glowKey;for(let index=0;index<nodes.length;index++){const el=nodes[index],pressed=((mask>>index)&1)===1;const want=pressed?'true':'false';/* 書いた値は要素に覚えておき、DOM を読み直さずに比べる(初めの1回だけ DOM を読む) */const curPressed=el._mhGlowPressed!==undefined?el._mhGlowPressed:el.dataset.pressed,curOpacity=el._mhGlowOpacity!==undefined?el._mhGlowOpacity:el.style.opacity;if(curPressed===want&&(!pressed||curOpacity===glowOpacity))continue;const nextOpacity=pressed?glowOpacity:'0';if(curPressed!==want)el.dataset.pressed=want;if(curOpacity!==nextOpacity)el.style.opacity=nextOpacity;el._mhGlowPressed=want;el._mhGlowOpacity=nextOpacity;}}if(typeof RHYTHM_CANVAS_RENDERER!=='undefined'&&typeof RHYTHM_CANVAS_RENDERER.setSkyPressed==='function'){{const skyMask=settings.holdTrace!==false?holdTraceRef.current.s:0;RHYTHM_CANVAS_RENDERER.setSkyPressed(skyMask?pressedSkyLanesNow().filter(v=>!(skyMask>>Math.floor(Number(v))&1)):pressedSkyLanesNow(),Number(glowOpacity));}paintIdleSkyPress();}};
   // 曲が始まる前の待機中(幕・READY→3→2→1)は、毎フレームの描画(tick)がまだ動いていない。地上のレーンの光は画面の要素なので光るが、
   // 空中のレーンの光は canvas に描くので、そのままだと光らなかった(2026-10-13 社長「待機中、地上は光るのに空中は光らない」)。
   // 指の出入りのたびに、空中の押した光だけをここで1回描く(叩いた光・ノーツはまだ無い)。止めている間(ポーズ)はノーツの絵を残すので描かない
@@ -42295,13 +42414,23 @@ const TrainingCountUp = ({ from, to, delay = 0, duration = 900, format = null })
     setValue(from);
     let raf = 0;
     let startAt = 0;
+    // 毎コマは数字の文字だけを直接書き換え、終わったときに1回だけ React の値をそろえる(2026-11-28 r1126-098)。
+    //   毎コマ setState で描き直すと、レイドのダメージの演出のように重い飾り(文字の塗り・影・揺れ)と重なる所でコマが落ちた
+    const fmt = (v) => String(format ? format(v) : v);
     const timer = setTimeout(() => {
       const tick = (now) => {
         if (!startAt) startAt = now;
         const t = Math.min(1, (now - startAt) / Math.max(1, duration));
         const eased = 1 - Math.pow(1 - t, 3);
-        setValue(Math.round(from + (to - from) * eased));
-        if (t < 1) raf = requestAnimationFrame(tick);
+        const v = Math.round(from + (to - from) * eased);
+        // React が作った文字の部品(firstChild)の中身だけを替える(部品を入れ替えると、あとで React が値を書いても画面に出なくなる)
+        const node = holderRef.current && holderRef.current.firstChild;
+        // 文字の部品が無い(format が文字以外を返した等)ときは、前と同じく React で描き直す
+        if (!node || node.nodeType !== 3) { setValue(v); if (t < 1) raf = requestAnimationFrame(tick); return; }
+        if (t >= 1) { node.nodeValue = fmt(to); setValue(to); return; }
+        const text = fmt(v);
+        if (node.nodeValue !== text) node.nodeValue = text;
+        raf = requestAnimationFrame(tick);
       };
       raf = requestAnimationFrame(tick);
     }, Math.max(0, delay));
@@ -44542,6 +44671,8 @@ const quickAnywhereFloatHits = (el, spot, known = null) => {
   let hits = 0;
   for (const o of document.querySelectorAll('button,a,[role=button],[data-quick-avoid]')) {
     if (o === el || el.contains(o) || o.contains(el) || o.closest('[data-quick-anywhere-detail]') || !o.getClientRects().length) continue;
+    // 見えないことにしてある物(HOME の送る札の、外へ送ってある札など。aria-hidden)は数えない(2026-11-28 r1126-088 追記3)
+    if (o.closest('[aria-hidden="true"]')) continue;
     if (known && known.has(o) && !o.hasAttribute('data-quick-avoid')) continue; // 隠したくない欄は、置いたときからあっても数える(スクロールで下に来たら札を隠す)
     const cs = getComputedStyle(o);
     if (cs.visibility === 'hidden' || cs.pointerEvents === 'none' || Number(cs.opacity) === 0) continue;
@@ -52328,21 +52459,32 @@ const HOME_V2_CSS = `
 .mh-home-v2 .mh-home-menu .mh-home-side-btn em.mh-unread-badge{width:auto!important;height:20px!important;min-width:20px;padding:0 6px!important;border-radius:999px!important;font-size:11px!important;line-height:1!important;white-space:nowrap}
 .mh-home-v2 .mh-home-settings .mh-home-side-ic{border-color:#cbd5e1aa;background:#1e293be8;color:#e2e8f0}
 .mh-home-v2 .mh-home-band{position:relative;z-index:6;margin:6px 8px 0}
-/* イベントの表示(r1126-088 で前の形に戻した): クリスマスの絵の札 → その下に細い帯(前の HOME と同じ作り)。
-   追記1(社長「イベントバナーをもう少し横幅小さくして」): 札は前(312×80)より少し小さく 278×74(縦横の比をほぼ同じにして、絵の切り方を前と同じに)。
-   細い帯も札と同じ幅まで。札の右の空きは裏クイックの札の置き場 */
-.mh-home-v2 .mh-home-band-xmas{width:calc(100% - 96px)}
-.mh-home-v2 .mh-home-band-xmas>button[data-home-xmas-entry]{height:74px!important}
+/* イベントの札(r1126-088)。追記1(社長「横幅もう少し小さく」): 前(312×80)より少し小さく 278×74。札の右の空きは裏クイックの札の置き場。
+   追記3(社長「フリックとかで動かせるように」): 札1枚分の場所を左右に送る。何枚目かの点は札の右下の中に小さく(札の外に段を足さない) */
+.mh-home-v2 .mh-home-band-view{position:relative;width:calc(100% - 96px);height:74px;overflow:hidden;border-radius:12px;touch-action:pan-y}
+.mh-home-v2 .mh-home-band-track{display:flex;height:100%;transition:transform .35s ease}
+@media(prefers-reduced-motion:reduce){.mh-home-v2 .mh-home-band-track{transition:none}}
+.mh-home-v2 .mh-home-band-slide{flex:0 0 100%;min-width:0;height:100%}
+.mh-home-v2 .mh-home-band-slide>button{width:100%;max-width:none;height:100%!important}
+.mh-home-v2 .mh-home-band-slide>.mh-home-event-banner{justify-content:center;border-radius:12px}
+.mh-home-v2 .mh-home-band-slide>.mh-home-tour-banner{border-radius:12px}
+.mh-home-v2 .mh-home-band-dots{position:absolute;right:5px;bottom:4px;z-index:3;display:flex;gap:1px;padding:0 3px;border-radius:999px;background:#0009}
+.mh-home-v2 .mh-home-band-dots button{display:flex;align-items:center;justify-content:center;width:16px;height:16px;padding:0;border:0;background:transparent}
+.mh-home-v2 .mh-home-band-dots i{display:block;width:6px;height:6px;border-radius:50%;background:#ffffff80}
+.mh-home-v2 .mh-home-band-dots button.on i{width:12px;border-radius:3px;background:#fde68a}
 .mh-home-v2 .mh-home-band-quick-slot{position:absolute;top:0;right:-6px;width:96px;height:74px;pointer-events:none}
-.mh-home-v2 .mh-home-band-strip{display:flex;align-items:center;gap:6px;width:fit-content;max-width:100%;margin-top:3px}
-.mh-home-v2 .mh-home-band-strip .mh-home-event-banner{max-width:calc(100cqw - 112px)}
-.mh-home-v2 .mh-home-band-strip .mh-home-tour-banner{max-width:min(72vw,300px)}
-/* ほかのイベントの絵の札(追記2)。クリスマスの札と同じ幅・少し低く(マップを狭くしない) */
-.mh-home-v2 .mh-home-band-strip:has(.mh-home-event-art){width:calc(100% - 96px)}
-.mh-home-v2 .mh-home-event-art{position:relative;display:block;flex:1 1 auto;width:100%;height:62px;overflow:hidden;padding:0;border:2px solid #f9a8d4;border-radius:12px;background:#3b0a2e;box-shadow:0 4px 12px #0009}
-.mh-home-v2 .mh-home-event-art:active{transform:scale(.97);filter:brightness(1.15)}
+/* ほかのイベントの絵の札(追記2) */
+.mh-home-v2 .mh-home-event-art{position:relative;display:block;overflow:hidden;padding:0;border:2px solid #f9a8d4;border-radius:12px;background:#3b0a2e}
+.mh-home-v2 .mh-home-event-art:active{filter:brightness(1.15)}
 .mh-home-v2 .mh-home-event-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 12%;pointer-events:none}
 .mh-home-v2 .mh-home-event-art-sub{position:absolute;left:6px;bottom:4px;padding:1px 7px;border:1px solid #fbcfe8;border-radius:999px;background:#9d174de6;color:#fff;font-size:10px;font-weight:900;line-height:1.3;white-space:nowrap}
+/* クリスマスの札(追記3・社長「聖夜のバナーの文字で絵が半分隠れてる」): 部品(79-screen-xmas-event.jsx)の中身は変えず、HOME の側で見え方だけ変える。
+   絵は人物と館が見える所で切り、左半分を覆っていた濃い地は下の端の細い影だけに。字は「聖夜の名探偵」(13px)と期間の札だけを左下へ小さく寄せる */
+.mh-home-v2 .mh-home-band .mh-xmas-entry img.mh-xmas-entry-art{object-position:50% 52%!important}
+.mh-home-v2 .mh-home-band .mh-xmas-entry>span[style*="linear-gradient"]{background:linear-gradient(0deg,#0b1733e0 0,#0b1733a0 20px,transparent 40px)!important}
+.mh-home-v2 .mh-home-band .mh-xmas-entry [data-xmas-entry-kicker]{display:none}
+.mh-home-v2 .mh-home-band .mh-xmas-entry>span[style*="flex-direction"]{top:auto!important;bottom:4px;left:6px!important;right:auto!important;flex-direction:row!important;align-items:center!important;gap:5px!important}
+.mh-home-v2 .mh-home-band .mh-xmas-entry-title{font-size:13px!important;filter:drop-shadow(0 1px 2px #000)}
 .mh-home-v2 .mh-home-assistant{width:70%;max-width:360px;margin:6px 0 0 8px}
 .mh-home-v2 .mh-home-assistant-fold{margin:6px 0 0 8px}
 .mh-home-v2 .mh-home-assistant-show-mark{right:-8px;bottom:-6px;width:24px;height:24px;font-size:14px;background:#fff!important;box-shadow:0 0 0 2px #e11d48,0 2px 6px #0009;animation:mhHomePeerMark 1.4s ease-in-out infinite}
@@ -52370,9 +52512,8 @@ body:has(.mh-home-v2){background:linear-gradient(to top,#0b1f1a calc(env(safe-ar
 @media(max-width:350px){.mh-home-v2 .mh-home-dock-top .mh-home-dock-name,.mh-home-v2 .mh-home-dock-top .mh-home-success .nm{font-size:10.5px;letter-spacing:-.06em}}
 @media(orientation:landscape) and (max-height:600px){
   .mh-home-v2 .mh-home-band{position:absolute;left:8px;top:58px;width:min(37%,330px);margin:0}
-  .mh-home-v2 .mh-home-band-xmas{width:100%}
-  .mh-home-v2 .mh-home-band-strip .mh-home-event-banner,.mh-home-v2 .mh-home-band-strip .mh-home-tour-banner{max-width:100%}
-  .mh-home-v2 .mh-home-assistant,.mh-home-v2 .mh-home-assistant-fold{position:absolute;left:8px;top:172px;margin:0}
+  .mh-home-v2 .mh-home-band-view{width:100%;height:56px}
+  .mh-home-v2 .mh-home-assistant,.mh-home-v2 .mh-home-assistant-fold{position:absolute;left:8px;top:128px;margin:0}
   .mh-home-v2 .mh-home-assistant{width:min(37%,330px)}
   .mh-home-v2 .mh-home-dock{flex-direction:row;align-items:flex-end;gap:8px;padding:5px 8px 6px}
   .mh-home-v2 .mh-home-dock-top{flex:1.9 1 0}
@@ -52382,8 +52523,7 @@ body:has(.mh-home-v2){background:linear-gradient(to top,#0b1f1a calc(env(safe-ar
 }
 @container (min-width:700px) and (min-height:560px){
   .mh-home-v2 .mh-home-band{width:min(600px,calc(100% - 16px));margin:8px auto 0}
-  .mh-home-v2 .mh-home-band-xmas{width:100%}
-  .mh-home-v2 .mh-home-band-xmas>button[data-home-xmas-entry]{height:92px!important}
+  .mh-home-v2 .mh-home-band-view{width:100%;height:92px}
   .mh-home-v2 .mh-home-assistant{width:360px}
   .mh-home-v2 .mh-home-dock{flex-direction:row;align-items:flex-end;gap:14px;padding:10px 14px 12px}
   .mh-home-v2 .mh-home-dock-top{flex:2 1 0;justify-content:center}
@@ -52397,10 +52537,9 @@ body:has(.mh-home-v2){background:linear-gradient(to top,#0b1f1a calc(env(safe-ar
 /* クリスマスの入口(79-screen-xmas-event.jsx)は、横向きで帯を右の列の横へ動かす決まりを持っている(前の HOME の右の列のため)。
    新しい HOME には右の列が無いので、帯の置き場(.mh-home-band)の中に置いたままにする(部品の中身は変えない。HOME の側で上書きするだけ)。
    背の低い横向きの高さ 54px と字の大きさは、部品の決まり(前の HOME と同じ)のまま */
-.mh-home-v2 .mh-home-band [data-home-xmas-entry-strip]{position:relative!important;left:auto!important;right:auto!important;top:auto!important;margin:0!important}
-.mh-home-v2 .mh-home-band .mh-home-band-xmas{width:calc(100% - 96px)!important}
-@media(orientation:landscape) and (max-height:600px){.mh-home-v2 .mh-home-band-strip:has(.mh-home-event-art){width:100%}.mh-home-v2 .mh-home-event-art{height:50px}.mh-home-v2 .mh-home-event-art img{object-position:50% 3%}.mh-home-v2 .mh-home-band .mh-home-band-xmas{width:100%!important}.mh-home-v2 .mh-home-band-xmas>button[data-home-xmas-entry]{height:54px!important}.mh-home-v2 .mh-home-band-quick-slot{display:none}}
-@container (min-width:700px) and (min-height:560px){.mh-home-v2 .mh-home-band-strip:has(.mh-home-event-art){width:100%}.mh-home-v2 .mh-home-event-art{height:84px}.mh-home-v2 .mh-home-band .mh-home-band-xmas{width:100%!important}.mh-home-v2 .mh-home-band-quick-slot{display:none}}
+.mh-home-v2 .mh-home-band [data-home-xmas-entry-strip]{position:relative!important;left:auto!important;right:auto!important;top:auto!important;width:auto!important;margin:0!important}
+@media(orientation:landscape) and (max-height:600px){.mh-home-v2 .mh-home-event-art img{object-position:50% 4%}.mh-home-v2 .mh-home-band-quick-slot{display:none}}
+@container (min-width:700px) and (min-height:560px){.mh-home-v2 .mh-home-band-quick-slot{display:none}}
 @media (orientation:landscape) and (max-height:520px){.mh-home-v2 .mh-home-band .mh-xmas-entry[data-home-xmas-entry="banner"] .mh-xmas-entry-sub{font-size:11px}}
 /* 横持ちの iPhone の切り欠き(カメラの欠け)に、押す物を入れない。左右の余白に端末の安全な余白(safe-area)を足す */
 .mh-home-v2 .mh-home-top{padding-left:calc(8px + env(safe-area-inset-left));padding-right:calc(8px + env(safe-area-inset-right))}
@@ -52707,7 +52846,23 @@ const homeWalletGrowPx=(goldText,bpText)=>{const w=t=>[...String(t)].reduce((n,c
 // ★HOME の作り直し(r1126-073)は、ゲームの中の時刻で切り替える(2026-11-28 台帳 r1126-086 追記1・社長「いままで2でやってたんだからそれでやればよくない？」)。
 //   2026-11-28 10:00(日本時間)より前は前の HOME(HomeScreenV1)、以後は新しい HOME(HomeScreenV2)。開いたまま 10:00 をまたいでも、15秒ごとに見直して切り替わる。
 //   新しい HOME と一緒に変えた所(吹き出しの既定・入口の印・会話の窓の出し方・小さい知らせの数・バトルを選ぶ画面のサクセスの入口)も homeV2At() で同じ時刻に切り替える
+// HOME の見た目の決まり(<head> へ入れる <style>)を、HOME を描く前にそろえる(2026-11-28 台帳 r1126-103・社長「ホームを開くと一瞬旧ホームが出てから新しいのにかわる」)。
+//   前は各部品の useEffect(描いたあと)で入れていたので、最初の1コマは新しい HOME の決まり(HOME_V2_CSS)もクリスマスの札の決まりも無いまま描かれ、
+//   前の HOME の決まり(70-bootstrap.jsx)だけで「四角い札8枚・左の丸いボタンの列・大きな告知の絵」に見えていた(docs/progress/home-flash-r1126-103/)。
+//   描く関数の中で呼ぶ(同じ id があれば何もしない。部品の useEffect も同じ id を見て入れない)
+const homeEnsureCss=()=>{
+  if(typeof document==='undefined'||!document.head)return;
+  const put=(id,text)=>{if(!text||document.getElementById(id))return;const tag=document.createElement('style');tag.id=id;tag.textContent=text;document.head.appendChild(tag);};
+  try{
+    put('mh-home-event-badge-css',HOME_EVENT_BADGE_CSS);
+    put('mh-home-v2-css',HOME_V2_CSS);
+    put('mh-home-raid-jack-css',HOME_RAID_JACK_CSS);
+    // クリスマスの入口の決まり(79-screen-xmas-event.jsx。読み込み順でこのファイルより後ろなので、描くときに見る)
+    if(typeof XMAS_HOME_ENTRY_CSS==='string')put('mh-xmas-home-entry-css',XMAS_HOME_ENTRY_CSS);
+  }catch(_){/* 入れられなくても、各部品の useEffect が後から入れる */}
+};
 function HomeScreen(props) {
+  homeEnsureCss();
   const v2=useHomeV2();
   return v2?<HomeScreenV2 {...props}/>:<HomeScreenV1 {...props}/>;
 }
@@ -53057,15 +53212,24 @@ function HomeScreenV2({
     if(!homeBandEvent||typeof rhythmLimitedEventAt!=='function')return '';
     try{const ev=rhythmLimitedEventAt(Date.now());return ev&&typeof ev.banner==='string'&&typeof ev.name==='string'&&ev.name.startsWith(homeBandEvent.banner.title)?ev.banner:'';}catch(_){return '';}
   })();
-  const homeBandStripCount=(homeBandEvent?1:0)+(homeBandTour?1:0);
+  // 追記3(社長「別のイベントの表示を同じバナー位置でフリックとかで動かせるようにして」): 縦に2枚並べる形はやめ、札1枚分の場所を左右に送る。
+  //   指で左右に払う(40px 以上)・札の右下の小さな点を押すと替わる。触らなければ7秒ごとに次へ、触ったら20秒は止める。押すとそのイベントのページ(今までどおり)。
+  //   並び: クリスマス → ほかの開催中のイベント → 公式杯。クリスマスがまだ予告のあいだは、開催中のイベントを先にする(API の点検 7)
+  const homeBandSlides=[];
+  if(homeBandEvent&&homeBandXmas&&xmasEntry.preOpen)homeBandSlides.push('event');
+  if(homeBandXmas)homeBandSlides.push('xmas');
+  if(homeBandEvent&&!homeBandSlides.includes('event'))homeBandSlides.push('event');
+  if(homeBandTour)homeBandSlides.push('tour');
+  const homeBandCount=homeBandSlides.length;
   const [homeBandIdx,setHomeBandIdx]=React.useState(0);
+  const homeBandTouchRef=React.useRef({x:null,at:0,swiped:false});
   React.useEffect(()=>{
-    if(homeBandStripCount<2)return undefined;
-    const id=setInterval(()=>setHomeBandIdx(i=>i+1),5000);
+    if(homeBandCount<2)return undefined;
+    const id=setInterval(()=>{if(Date.now()-homeBandTouchRef.current.at>=20000)setHomeBandIdx(i=>i+1);},7000);
     return ()=>clearInterval(id);
-  },[homeBandStripCount]);
-  const homeBandStripShow=homeBandStripCount?homeBandIdx%homeBandStripCount:0;
-  const homeBandCount=(homeBandXmas?1:0)+homeBandStripCount;
+  },[homeBandCount]);
+  const homeBandShow=homeBandCount?((homeBandIdx%homeBandCount)+homeBandCount)%homeBandCount:0;
+  const homeBandGo=(step)=>{homeBandTouchRef.current.at=Date.now();setHomeBandIdx(i=>i+step);};
   // メニュー☰(案A)。右の列(時計・更新履歴・ミッション・ギフト)と設定・ブリーダーP をここへまとめる。赤い数字は合計
   //   ボタンはいつも描いておき(閉じているときは見えないだけ)、案内(チュートリアル)がミッション・ギフト・設定を指すときは開いておく
   const [homeMenuOpen,setHomeMenuOpen]=React.useState(false);
@@ -53124,29 +53288,35 @@ function HomeScreenV2({
             :<em className="mh-unread-badge" aria-label="未読あり">!</em>)}</button>
           <button onClick={homeMenuGo(onOpenSettings)} className={`mh-home-side-btn mh-home-settings${spotClass('settings')}`} aria-label="設定"><span className="mh-home-side-ic"><Settings size={18}/></span><span className="mh-home-side-lb">設定</span></button>
         </div>
-        {/* イベントの表示(r1126-088 で前の形に戻した): クリスマスの絵の札 → その下に細い帯。並びと切り替えは上の homeBandXmas/homeBandStripShow */}
-        {homeBandCount>0&&<div className="mh-home-band" data-home-band={homeBandXmas?'xmas':'strip'}>
-          {homeBandXmas&&<div className="mh-home-band-xmas" data-home-xmas-entry-strip>
-            <HomeXmasEventEntry onOpen={xmasEntry.onOpen} preOpen={!!xmasEntry.preOpen}/>
-          </div>}
-          {/* クリスマスの札の右の空き(前の HOME の時計の列の所)。裏クイックの札(45-quick-anywhere-float.jsx)はここに置く(r1126-088 ⑤)。押せない・何も描かない枠 */}
-          {homeBandXmas&&<span className="mh-home-band-quick-slot" data-quick-anywhere-slot aria-hidden="true"/>}
-          {homeBandStripCount>0&&<div className="mh-home-band-strip" data-home-event-strip>
-            {/* 押すとモンヒロビートへ直に入る(2026-11-27 台帳 r1126-073 追記2・入口の整理①。前は更新履歴が開いた) */}
-            {homeBandEvent&&homeBandStripShow===0&&homeBandEventArt&&<button type="button" data-home-event-banner="art" className="mh-home-event-art" onClick={homeBandEvent.id==='xmas_2026'&&typeof onOpenXmasEvent==='function'?onOpenXmasEvent:onOpenRhythm} aria-label={`${homeBandEvent.banner.title}${homeBandEvent.banner.title2||''} ${homeBandEvent.banner.sub}`}>
-              {/* 絵の題字(上のまん中)が見えるよう上寄りに切る(更新履歴の告知と同じ 50% 12%)。期間は字で左下に重ねる */}
-              <img src={homeBandEventArt} alt="" draggable={false}/>
-              <span className="mh-home-event-art-sub">{homeBandEvent.banner.sub}</span>
-            </button>}
-            {homeBandEvent&&homeBandStripShow===0&&!homeBandEventArt&&<button type="button" data-home-event-banner className="mh-home-event-banner" onClick={homeBandEvent.id==='xmas_2026'&&typeof onOpenXmasEvent==='function'?onOpenXmasEvent:onOpenRhythm} aria-label={`${homeBandEvent.banner.title}${homeBandEvent.banner.title2||''} ${homeBandEvent.banner.sub}`}>
-              {/* 1行目に題と期間(sub)、2行目に副題(title2)(r1119-131) */}
-              <b className="r1"><span>{homeBandEvent.banner.emoji} {homeBandEvent.banner.title}</span><small>{homeBandEvent.banner.sub}</small></b>{homeBandEvent.banner.title2?<span className="t2">{homeBandEvent.banner.title2}</span>:null}
-            </button>}
-            {homeBandTour&&homeBandStripShow===(homeBandEvent?1:0)&&<button type="button" data-home-card-tour={homeBandTour.id} className="mh-home-tour-banner" onClick={()=>onOpenCardTour(homeBandTour.id)} aria-label={`${homeBandTour.name} ${homeBandTour.sub}`}>
-              <span aria-hidden="true">🏆</span><span><b>{homeBandTour.name}</b><small>{homeBandTour.sub}{homeBandTour.prize&&<em>{homeBandTour.prize}</em>}</small></span>
-            </button>}
-            {homeBandStripCount>1&&<span className="mh-home-event-strip-dots" aria-hidden="true">{Array.from({length:homeBandStripCount},(_,i)=><i key={i} className={i===homeBandStripShow?'on':''}/>)}</span>}
-          </div>}
+        {/* イベントの札(r1126-088・追記3): 札1枚分の場所を左右に送る。並びと送り方は上の homeBandSlides */}
+        {homeBandCount>0&&<div className="mh-home-band" data-home-band={homeBandSlides[homeBandShow]}>
+          <div className="mh-home-band-view"
+            onPointerDown={e=>{homeBandTouchRef.current={...homeBandTouchRef.current,x:e.clientX,swiped:false};}}
+            onPointerUp={e=>{const t=homeBandTouchRef.current;if(t.x===null||homeBandCount<2)return;const dx=e.clientX-t.x;t.x=null;if(Math.abs(dx)>=40){t.swiped=true;homeBandGo(dx<0?1:-1);}}}
+            onPointerCancel={()=>{homeBandTouchRef.current.x=null;}}
+            onClickCapture={e=>{if(homeBandTouchRef.current.swiped){homeBandTouchRef.current.swiped=false;e.stopPropagation();e.preventDefault();}}}>
+            <div className="mh-home-band-track" style={{transform:`translateX(${-homeBandShow*100}%)`}}>
+              {homeBandSlides.map((k,i)=>(
+                <div key={k} className="mh-home-band-slide" aria-hidden={i!==homeBandShow} {...(k==='xmas'?{'data-home-xmas-entry-strip':''}:{'data-home-event-strip':''})}>
+                  {k==='xmas'&&<HomeXmasEventEntry onOpen={xmasEntry.onOpen} preOpen={!!xmasEntry.preOpen}/>}
+                  {/* 絵のあるイベントは絵の札(追記2)。押すとモンヒロビートへ直に入る(r1126-073 追記2) */}
+                  {k==='event'&&homeBandEventArt&&<button type="button" data-home-event-banner="art" className="mh-home-event-art" tabIndex={i===homeBandShow?0:-1} onClick={homeBandEvent.id==='xmas_2026'&&typeof onOpenXmasEvent==='function'?onOpenXmasEvent:onOpenRhythm} aria-label={`${homeBandEvent.banner.title}${homeBandEvent.banner.title2||''} ${homeBandEvent.banner.sub}`}>
+                    <img src={homeBandEventArt} alt="" draggable={false}/>
+                    <span className="mh-home-event-art-sub">{homeBandEvent.banner.sub}</span>
+                  </button>}
+                  {k==='event'&&!homeBandEventArt&&<button type="button" data-home-event-banner className="mh-home-event-banner" tabIndex={i===homeBandShow?0:-1} onClick={homeBandEvent.id==='xmas_2026'&&typeof onOpenXmasEvent==='function'?onOpenXmasEvent:onOpenRhythm} aria-label={`${homeBandEvent.banner.title}${homeBandEvent.banner.title2||''} ${homeBandEvent.banner.sub}`}>
+                    <b className="r1"><span>{homeBandEvent.banner.emoji} {homeBandEvent.banner.title}</span><small>{homeBandEvent.banner.sub}</small></b>{homeBandEvent.banner.title2?<span className="t2">{homeBandEvent.banner.title2}</span>:null}
+                  </button>}
+                  {k==='tour'&&<button type="button" data-home-card-tour={homeBandTour.id} className="mh-home-tour-banner" tabIndex={i===homeBandShow?0:-1} onClick={()=>onOpenCardTour(homeBandTour.id)} aria-label={`${homeBandTour.name} ${homeBandTour.sub}`}>
+                    <span aria-hidden="true">🏆</span><span><b>{homeBandTour.name}</b><small>{homeBandTour.sub}{homeBandTour.prize&&<em>{homeBandTour.prize}</em>}</small></span>
+                  </button>}
+                </div>))}
+            </div>
+            {/* 何枚目か(札の右下の中に小さく。札の外に段を足さない=マップを狭くしない)。押すとその札へ */}
+            {homeBandCount>1&&<span className="mh-home-band-dots" data-home-band-dots>{homeBandSlides.map((k,i)=><button key={k} type="button" className={i===homeBandShow?'on':''} aria-label={`${i+1}枚目を見る`} onClick={e=>{e.stopPropagation();homeBandGo(i-homeBandShow);}}><i/></button>)}</span>}
+          </div>
+          {/* 札の右の空き(前の HOME の時計の列の所)。裏クイックの札(45-quick-anywhere-float.jsx)はここに置く(r1126-088 ⑤)。押せない・何も描かない枠 */}
+          <span className="mh-home-band-quick-slot" data-quick-anywhere-slot aria-hidden="true"/>
         </div>}
         {/* 下部の統一ドック(2026-11-17 ホーム一新): 上から「次にやること」→施設カード×8(ふつうは4列×2段、広い場面と横画面では8枚1列。70-bootstrap.jsx)。
             施設ごとに担当の助手が分かれているので、8つとも同じ大きさ・同じ形の正方形カードにそろえた(2026-11-17 あっくん追加指示)。
@@ -62759,7 +62929,7 @@ function ModeSelectAssistantPanel({ assistant, showArt, showComment, onToggle, a
             {standPlace
               ? <img data-rhythm-mode-assistant-art data-rhythm-mode-assistant-art-face src={assistant.image} alt="" draggable={false} onLoad={onArtLoad} className="mhms-art-face absolute max-w-none" style={{ width: standPlace.width, height: 'auto', left: standPlace.left, top: standPlace.top }} />
               : RHYTHM_MODE_ASSISTANT_FRAMES[assistant.id]
-              ? (() => { const fr = RHYTHM_MODE_ASSISTANT_FRAMES[assistant.id]; const ex = (/_([a-z]+)\.png$/i.exec(assistant.image || '') || [])[1]; const cx = (fr.cxBy && fr.cxBy[ex]) || fr.cx; const masks = [Number.isFinite(fr.fadeBottom) ? `linear-gradient(to bottom, #000 ${fr.fadeBottom * 100}%, transparent 100%)` : null, Number.isFinite(fr.fadeSides) ? `linear-gradient(to right, transparent 0%, #000 ${fr.fadeSides * 100}%, #000 ${100 - fr.fadeSides * 100}%, transparent 100%)` : null].filter(Boolean); const mask = masks.length ? { WebkitMaskImage: masks.join(', '), maskImage: masks.join(', '), WebkitMaskComposite: masks.length > 1 ? 'source-in' : undefined, maskComposite: masks.length > 1 ? 'intersect' : undefined } : {}; return <img data-rhythm-mode-assistant-art src={assistant.image} alt="" draggable={false} onLoad={onArtLoad} className="mhms-art-img absolute max-w-none" style={{ '--mhms-w': `${fr.zoom * 100}%`, '--mhms-cover': '0px', '--mhms-cap': capOf(fr.show || 1), height: 'auto', left: '50%', top: `${fr.top * 100}%`, transform: `translate(-${cx * 100}%, -${fr.cy * 100}%)`, ...mask }} />; })()
+              ? (() => { const fr = RHYTHM_MODE_ASSISTANT_FRAMES[assistant.id]; const ex = (/_([a-z]+)\.(?:png|webp)$/i.exec(assistant.image || '') || [])[1]; const cx = (fr.cxBy && fr.cxBy[ex]) || fr.cx; const masks = [Number.isFinite(fr.fadeBottom) ? `linear-gradient(to bottom, #000 ${fr.fadeBottom * 100}%, transparent 100%)` : null, Number.isFinite(fr.fadeSides) ? `linear-gradient(to right, transparent 0%, #000 ${fr.fadeSides * 100}%, #000 ${100 - fr.fadeSides * 100}%, transparent 100%)` : null].filter(Boolean); const mask = masks.length ? { WebkitMaskImage: masks.join(', '), maskImage: masks.join(', '), WebkitMaskComposite: masks.length > 1 ? 'source-in' : undefined, maskComposite: masks.length > 1 ? 'intersect' : undefined } : {}; return <img data-rhythm-mode-assistant-art src={assistant.image} alt="" draggable={false} onLoad={onArtLoad} className="mhms-art-img absolute max-w-none" style={{ '--mhms-w': `${fr.zoom * 100}%`, '--mhms-cover': '0px', '--mhms-cap': capOf(fr.show || 1), height: 'auto', left: '50%', top: `${fr.top * 100}%`, transform: `translate(-${cx * 100}%, -${fr.cy * 100}%)`, ...mask }} />; })()
               : <img data-rhythm-mode-assistant-art src={assistant.image} alt="" draggable={false} onLoad={onArtLoad} className="mhms-art-img absolute max-w-none [--mhms-y:0.22] landscape:[--mhms-y:0.3]" style={{ ...(artRatio && artRatio > 1.1 ? { '--mhms-y': 0.03 } : null), '--mhms-w': '100%', '--mhms-cover': artRatio ? `${(100 / artRatio).toFixed(2)}cqh` : '0px', '--mhms-cap': capOf(RHYTHM_MODE_ASSISTANT_DEFAULT_SHOW), height: 'auto', left: '50%', top: 'calc(var(--mhms-y) * 100%)', transform: 'translate(-50%, calc(var(--mhms-y) * -100%))' }} />}
           </div>
         </div>
@@ -66292,8 +66462,10 @@ const rhythmAssistSessionTalk = ({ assistantId, kind, songId = '', score = 0, di
     const sp = mode === 'few' ? '' : special();
     if (sp) return sp;
     const sid = songId || roomSong();
-    const special = rhythmAssistSessionSongScene(assistantId, sid);
-    if (special && rand() < 0.5) return say(special);
+    // 好きな曲・苦手な曲の専用の場面。名前を special にすると、上の special() がこの塊の const を指して
+    // 「初期化の前に使った」エラーになり、結果への反応が毎回黙っていた(2026-11-28 r1126-111)
+    const songScene = rhythmAssistSessionSongScene(assistantId, sid);
+    if (songScene && rand() < 0.5) return say(songScene);
     if (rhythmAssistSessionTaste(assistantId, sid) === 'dislike' && rand() < 0.5) return say('overcome');
     if (Number(fc) > 0) return say('fc');
     const ratio = rhythmAssistSessionRatio(score, diffId);
@@ -67174,7 +67346,7 @@ const RaidJackTierRewards = ({ kind, index, claimed, ev = RAID_EVENT_JACK }) => 
   );
 };
 // 報酬一覧(モード別・難易度別)。レイド画面の「報酬一覧」から開く
-const RaidJackRewardList = ({ onClose, claimed, initialTab = 'a', ev = RAID_EVENT_JACK }) => {
+const RaidJackRewardList = ({ onClose, claimed, initialTab = 'a', ev = RAID_EVENT_JACK, lockedOf = null }) => {
   const [tab, setTab] = useState(initialTab);
   const have = Array.isArray(claimed) ? claimed : [];
   return (
@@ -67192,7 +67364,7 @@ const RaidJackRewardList = ({ onClose, claimed, initialTab = 'a', ev = RAID_EVEN
         </div>
         {ev.tiers(tab).map((t, i) => (
           <div key={t.id} data-raid-jack-reward-tier={t.id} className="rounded-2xl border border-white/10 bg-black/30 p-3">
-            <div className="mb-1 text-[12px] font-black text-white">{i + 1}. {t.name}</div>
+            <div className="mb-1 text-[12px] font-black text-white">{i + 1}. {raidTierNameOf(ev, tab, i, lockedOf)}</div>
             <RaidJackTierRewards kind={tab} index={i} claimed={have} ev={ev} />
           </div>
         ))}
@@ -67238,7 +67410,7 @@ const RaidJackRankingRows = ({ rows, myId, renderPlace, renderIcon, cardClass, l
 // ランキング画面(レイド画面の「ランキング」ボタンから開く)。モード別(レイドバトル/グランドスラム)・レイドバトルは段階別。
 //   レイドバトルは「累計ダメージ(全段階の合計)」もいつでも見られる(2026-10-15 社長「合計もいつでも累計を出す」。前は大王が倒れたあとだけ)。
 //   順位の報酬は、これまでどおり段階ごとの貢献で決まる。上位100位まで。自分の記録と順位は圏外でも出る
-const RaidJackRankingList = ({ onClose, eventId, initialTab = 'a', initialTier = 0, renderPlace, renderIcon, cardClass, ev = RAID_EVENT_JACK }) => {
+const RaidJackRankingList = ({ onClose, eventId, initialTab = 'a', initialTier = 0, renderPlace, renderIcon, cardClass, ev = RAID_EVENT_JACK, lockedOf = null }) => {
   const [tab, setTab] = useState(initialTab);
   const [tierIdx, setTierIdx] = useState(Math.min(Math.max(initialTier, 0), ev.aTiers.length - 1));
   const [allMode, setAllMode] = useState(false);   // A の「累計ダメージ(全段階の合計)」。合計・バトル・モンヒロビートのどれでもいつでも選べる
@@ -67295,10 +67467,10 @@ const RaidJackRankingList = ({ onClose, eventId, initialTab = 'a', initialTier =
     return () => { alive = false; };
   }, [tab, tierIdx, useAll, maxHit, maxTier, src, eventId]);
   const myTotal = (useSrc || maxHit) ? (Number(myMax) || 0) : self ? (useAll ? Object.values(self.a).reduce((sum, n) => sum + (Number(n) || 0), 0) : tab === 'a' ? (self.a[tierIdx + 1] || 0) : self.bTotal) : 0;
-  const maxTierName = maxTier >= 1 ? ev.tiers(tab)[maxTier - 1].name : '全難易度';
+  const maxTierName = maxTier >= 1 ? raidTierNameOf(ev, tab, maxTier - 1, lockedOf) : '全難易度';
   const title = useSrc && maxHit ? `${srcName}の最大ダメージ(${srcUnit}あたり・${maxTierName})`
-    : useSrc ? `${srcName}で与えたダメージの合計(${useAll ? '全段階の合計' : `${raidEventTierShort(ev, ev.aTiers[tierIdx])}`})`
-    : maxHit ? `${tab === 'a' ? 'レイドバトル' : 'グランドスラム'}の最大ダメージ(1戦あたり・${maxTierName})` : useAll ? 'レイドバトルの累計ダメージ(全段階の合計)' : tab === 'a' ? `${ev.aTiers[tierIdx].name}への貢献ランキング` : 'グランドスラムの累計ダメージ(5難易度の合計)';
+    : useSrc ? `${srcName}で与えたダメージの合計(${useAll ? '全段階の合計' : `${raidTierShortOf(ev, 'a', tierIdx, lockedOf)}`})`
+    : maxHit ? `${tab === 'a' ? 'レイドバトル' : 'グランドスラム'}の最大ダメージ(1戦あたり・${maxTierName})` : useAll ? 'レイドバトルの累計ダメージ(全段階の合計)' : tab === 'a' ? `${raidTierNameOf(ev, 'a', tierIdx, lockedOf)}への貢献ランキング` : 'グランドスラムの累計ダメージ(5難易度の合計)';
   return (
     <div data-raid-jack-ranking-list className="fixed inset-0 z-[32000] flex flex-col bg-slate-950 p-3" role="dialog" aria-modal="true" aria-label={`${ev.bossWord}のランキング`}
       style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top))', paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
@@ -67327,7 +67499,7 @@ const RaidJackRankingList = ({ onClose, eventId, initialTab = 'a', initialTier =
       </div>
       {maxHit && (
         <div data-raid-jack-ranking-max-tiers className="mb-2 flex shrink-0 gap-1.5 overflow-x-auto mh-scroll whitespace-nowrap text-[10px] font-black [&>*]:shrink-0">
-          {[{ id: 'all', name: '全難易度', n: 0 }, ...ev.tiers(tab).map((t, i) => ({ id: t.id, name: raidEventTierShort(ev, t), n: i + 1 }))].map((t) => (
+          {[{ id: 'all', name: '全難易度', n: 0 }, ...ev.tiers(tab).map((t, i) => ({ id: t.id, name: raidTierShortOf(ev, tab, i, lockedOf), n: i + 1 }))].map((t) => (
             <button type="button" key={t.id} data-raid-jack-ranking-max-tier={t.n} onClick={() => setMaxTier(t.n)}
               className={`min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${maxTier === t.n ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`}>{t.name}</button>
           ))}
@@ -67337,7 +67509,7 @@ const RaidJackRankingList = ({ onClose, eventId, initialTab = 'a', initialTier =
         <div data-raid-jack-ranking-tiers className="mb-2 flex shrink-0 gap-1.5 overflow-x-auto mh-scroll whitespace-nowrap text-[10px] font-black [&>*]:shrink-0">
           {ev.aTiers.map((t, i) => (
             <button type="button" key={t.id} data-raid-jack-ranking-tier={t.id} onClick={() => { setTierIdx(i); setAllMode(false); }}
-              className={`min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${!useAll && tierIdx === i ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`}>{raidEventTierShort(ev, t)}</button>
+              className={`min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${!useAll && tierIdx === i ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`}>{raidTierShortOf(ev, 'a', i, lockedOf)}</button>
           ))}
           <button type="button" data-raid-jack-ranking-all onClick={() => setAllMode(true)}
             className={`min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${useAll ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`}>累計ダメージ</button>
@@ -67362,6 +67534,11 @@ const RaidJackRankingList = ({ onClose, eventId, initialTab = 'a', initialTier =
 //   順位のメダル・ブリーダーのアイコン(プロフィール枠つき)・1位の金色のカードを、レイドでも同じ見た目にそろえる
 // ev … どのイベントか(36-raid-xmas-api.jsx の RAID_EVENT_JACK / RAID_EVENT_XMAS)。既定はジャック(これまでどおり)。
 // ways … レイドバトルの挑み方のボタン('battle' / 'rhythm' / 'card')。クリスマスは本体が、つないだ物だけ渡す
+// まだ開いていない段階の名前は伏せる(台帳 r1126-097 追記2・社長「レイドで開放されてない段階は名前伏せといて」)。番号・影の絵・案内の文はそのまま。
+//  lockedOf: (kind, i) => 伏せるか。渡さないとき(今までの呼び方)は伏せない
+const RAID_HIDDEN_TIER_NAME = '？？？';
+const raidTierNameOf = (ev, kind, i, lockedOf) => (typeof lockedOf === 'function' && lockedOf(kind, i) ? RAID_HIDDEN_TIER_NAME : ev.tiers(kind)[i].name);
+const raidTierShortOf = (ev, kind, i, lockedOf) => (typeof lockedOf === 'function' && lockedOf(kind, i) ? RAID_HIDDEN_TIER_NAME : raidEventTierShort(ev, ev.tiers(kind)[i]));
 const RAID_WAY_BUTTONS = Object.freeze({
   battle: { label: 'バトルで', data: 'data-raid-jack-challenge', tone: 'border-orange-300/70 bg-orange-700' },
   rhythm: { label: 'モンヒロビートで', data: 'data-raid-jack-challenge-rhythm', tone: 'border-fuchsia-300/70 bg-fuchsia-800' },
@@ -67384,6 +67561,8 @@ const RaidJackScreen = ({ ev = RAID_EVENT_JACK, ways = null, initialTier = 0, on
   const [showRanking, setShowRanking] = useState(false);
   // 大王を倒したあと、レイドバトルのランキングを「大王への貢献」から「累計ダメージ(全段階の合計)」へ切り替えられる
   const [aAll, setAAll] = useState(false);
+  // 詰めた形: クリスマスのイベントページ(head を渡す)だけ。ボスの一覧を広く見せる(台帳 r1126-097)。ジャックは今までどおり
+  const compact = !!head;
   const nowMs = Date.now();
   const windowState = ev.windowAt(nowMs);
   const open = forced || windowState === 'open';
@@ -67451,13 +67630,19 @@ const RaidJackScreen = ({ ev = RAID_EVENT_JACK, ways = null, initialTier = 0, on
   const isOpenTier = unlocked(current);
   const bossDownNow = tab === 'a' && !!totals && aDefeated(tiers.length - 1);
   const showAll = bossDownNow && aAll;
+  // 段階が開いているか(タブを問わず)。レイドバトルは共有の合計が読めるまで、最初の段階のほかは伏せる
+  const lockedOf = (kind, i) => {
+    if (unlimited || i <= 0) return false;
+    if (kind === 'a') { if (!totals || !totals.a || !totals.a[i]) return true; return totals.a[i].total < ev.tiers('a')[i - 1].hp; }
+    return i >= raidJackUnlockedCount('b', state.b.defeated);
+  };
   const myTotalHere = self ? (showAll ? Object.values(self.a).reduce((sum, n) => sum + (Number(n) || 0), 0) : tab === 'a' ? (self.a[current + 1] || 0) : self.bTotal) : 0;
 
   const buy = async () => {
     setBusy(true); setMessage('');
     try {
       const result = await onPurchase(tab);
-      if (result && result.ok) { setMessage(`追加の挑戦を1回ぶん買いました(ビートP ${ev.extraCost})`); setTick((n) => n + 1); }
+      if (result && result.ok) { setMessage(`追加の挑戦を1回ぶん買いました(ビートP ${Number(ev.extraCost).toLocaleString()})`); setTick((n) => n + 1); }
       else setMessage(result && result.reason === 'short' ? 'ビートPが足りません' : '買えませんでした。もう1度試してください');
     } finally { setBusy(false); }
   };
@@ -67482,26 +67667,44 @@ const RaidJackScreen = ({ ev = RAID_EVENT_JACK, ways = null, initialTier = 0, on
         </div>
       )}
       <ScreenTabs items={[{ id: 'a', label: 'レイドバトル' }, { id: 'b', label: 'グランドスラム' }]} value={tab} onChange={setTab} />
-      <div className="mb-2 flex shrink-0 items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[11px] text-slate-100">
-        <div>
-          <div className="font-black text-orange-200">{tab === 'a' ? 'ベースモンで挑戦' : 'マスモンで挑戦'}</div>
-          <div data-raid-jack-remaining>{unlimited ? <>今日の残り <b className="text-white">無制限</b>(デバッグ・全段階を選べます)</> : <>今日の残り <b className="text-white">{remaining}</b> 回(無料{ev.freePerDay}回+買い足し)</>}</div>
+      {compact ? (
+        // 残り回数・1回追加・ランキング・報酬一覧を1段にまとめる(小さいボタン)
+        <div data-raid-compact-bar className="mb-1.5 flex shrink-0 items-center gap-1.5 rounded-xl border border-white/10 bg-black/30 py-1 pl-2.5 pr-1 text-[10px] text-slate-100">
+          <div className="min-w-0 flex-1 leading-tight">
+            <div className="truncate font-black text-orange-200">{tab === 'a' ? 'ベースモンで挑戦' : 'マスモンで挑戦'}</div>
+            <div data-raid-jack-remaining className="truncate">{unlimited ? <>残り <b className="text-white">無制限</b>(デバッグ)</> : <>今日の残り <b className="text-[12px] text-white">{remaining}</b> 回</>}</div>
+          </div>
+          <button type="button" data-raid-jack-buy disabled={busy || !open || unlimited} onClick={buy}
+            className="min-h-[40px] shrink-0 rounded-lg border border-amber-400/60 bg-amber-950/40 px-1.5 text-[10px] font-black leading-tight text-amber-100 active:scale-95 disabled:opacity-40">
+            1回追加<br /><small className="text-[8px] opacity-80">{Number(ev.extraCost).toLocaleString()}P(所持 {(Number(beatPoints) || 0).toLocaleString()})</small>
+          </button>
+          <button type="button" data-raid-jack-ranking-open onClick={() => setShowRanking(true)} aria-label="ランキング"
+            className="min-h-[40px] w-[44px] shrink-0 rounded-lg border border-orange-300/60 bg-orange-950/50 text-[9px] font-black leading-tight text-orange-100 active:scale-95"><span className="block text-[14px]">🏆</span>順位</button>
+          <button type="button" data-raid-jack-reward-list-open-top onClick={() => setShowRewards(true)} aria-label="報酬一覧"
+            className="min-h-[40px] w-[44px] shrink-0 rounded-lg border border-orange-300/60 bg-orange-950/50 text-[9px] font-black leading-tight text-orange-100 active:scale-95"><span className="block text-[14px]">🎁</span>報酬</button>
         </div>
-        <button type="button" data-raid-jack-buy disabled={busy || !open || unlimited} onClick={buy}
-          className="min-h-[40px] shrink-0 rounded-xl border border-amber-400/60 bg-amber-950/40 px-3 text-[11px] font-black leading-tight text-amber-100 active:scale-95 disabled:opacity-40">
-          1回追加<br /><small className="text-[9px] opacity-80">ビートP {ev.extraCost}(所持 {beatPoints})</small>
-        </button>
-      </div>
-      <div className="mb-2 grid shrink-0 grid-cols-2 gap-2">
-        <button type="button" data-raid-jack-ranking-open onClick={() => setShowRanking(true)}
-          className="min-h-[40px] rounded-xl border border-orange-300/60 bg-orange-950/50 px-3 text-[12px] font-black text-orange-100 active:scale-95">🏆 ランキング</button>
-        <button type="button" data-raid-jack-reward-list-open-top onClick={() => setShowRewards(true)}
-          className="min-h-[40px] rounded-xl border border-orange-300/60 bg-orange-950/50 px-3 text-[12px] font-black text-orange-100 active:scale-95">🎁 報酬一覧</button>
-      </div>
+      ) : <>
+        <div className="mb-2 flex shrink-0 items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[11px] text-slate-100">
+          <div>
+            <div className="font-black text-orange-200">{tab === 'a' ? 'ベースモンで挑戦' : 'マスモンで挑戦'}</div>
+            <div data-raid-jack-remaining>{unlimited ? <>今日の残り <b className="text-white">無制限</b>(デバッグ・全段階を選べます)</> : <>今日の残り <b className="text-white">{remaining}</b> 回(無料{ev.freePerDay}回+買い足し)</>}</div>
+          </div>
+          <button type="button" data-raid-jack-buy disabled={busy || !open || unlimited} onClick={buy}
+            className="min-h-[40px] shrink-0 rounded-xl border border-amber-400/60 bg-amber-950/40 px-3 text-[11px] font-black leading-tight text-amber-100 active:scale-95 disabled:opacity-40">
+            1回追加<br /><small className="text-[9px] opacity-80">ビートP {Number(ev.extraCost).toLocaleString()}(所持 {(Number(beatPoints) || 0).toLocaleString()})</small>
+          </button>
+        </div>
+        <div className="mb-2 grid shrink-0 grid-cols-2 gap-2">
+          <button type="button" data-raid-jack-ranking-open onClick={() => setShowRanking(true)}
+            className="min-h-[40px] rounded-xl border border-orange-300/60 bg-orange-950/50 px-3 text-[12px] font-black text-orange-100 active:scale-95">🏆 ランキング</button>
+          <button type="button" data-raid-jack-reward-list-open-top onClick={() => setShowRewards(true)}
+            className="min-h-[40px] rounded-xl border border-orange-300/60 bg-orange-950/50 px-3 text-[12px] font-black text-orange-100 active:scale-95">🎁 報酬一覧</button>
+        </div>
+      </>}
       {message && <div className="mb-2 shrink-0 text-center text-[11px] font-black text-amber-200" role="status">{message}</div>}
       {totals === null && <div className="mb-2 shrink-0 rounded-xl border border-amber-400/40 bg-amber-950/30 p-2 text-center text-[10px] text-amber-100">サーバーを準備中です。みんなの記録は少し待ってから見られます(戦った記録はあとで自動で送られます)</div>}
 
-      <div className={`${SCREEN_LIST_CLASS} [@media(orientation:landscape)_and_(max-height:520px)]:flex-none [@media(orientation:landscape)_and_(max-height:520px)]:overflow-visible space-y-2`}>
+      <div className={`${SCREEN_LIST_CLASS} [@media(orientation:landscape)_and_(max-height:520px)]:flex-none [@media(orientation:landscape)_and_(max-height:520px)]:overflow-visible ${compact ? 'space-y-1.5' : 'space-y-2'}`}>
         {/* 初めて読み込むあいだは、段階もライフも分からないので一覧を出さない(出すと男爵・満タンから本当の姿へ切り替わって見える) */}
         {tab === 'a' && totals === undefined && <div data-raid-jack-loading className="py-6 text-center text-[11px] text-slate-300">読み込み中…</div>}
         {!(tab === 'a' && totals === undefined) && tiers.map((t, i) => {
@@ -67513,18 +67716,18 @@ const RaidJackScreen = ({ ev = RAID_EVENT_JACK, ways = null, initialTier = 0, on
           const on = i === current;
           return (
             <button type="button" key={t.id} data-raid-jack-tier={t.id} onClick={() => setSel((prev) => ({ ...prev, [tab]: i }))}
-              className={`flex w-full items-center gap-3 rounded-2xl border-2 p-2 text-left active:scale-[0.99] ${on ? 'border-orange-300 bg-orange-950/40' : 'border-white/10 bg-slate-900/60'}`}>
+              className={`flex w-full items-center rounded-2xl border-2 text-left active:scale-[0.99] ${compact ? 'gap-2 px-2 py-1' : 'gap-3 p-2'} ${on ? 'border-orange-300 bg-orange-950/40' : 'border-white/10 bg-slate-900/60'}`}>
               {/* 段階ごとに見た目が変わる(オーラの炎・絵の光の色)。未解放は黒いシルエットのまま */}
-              <span data-jack-aura={ev.aura && isOpen && !isPumpkin ? i + 1 : undefined} data-raid-pumpkin={isPumpkin ? 'true' : undefined} className="relative block h-14 w-16 shrink-0">
+              <span data-jack-aura={ev.aura && isOpen && !isPumpkin ? i + 1 : undefined} data-raid-pumpkin={isPumpkin ? 'true' : undefined} className={`relative block shrink-0 ${compact ? 'h-11 w-12' : 'h-14 w-16'}`}>
                 {ev.aura && isOpen && !isPumpkin && <JackAuraLayer tier={i + 1} limit={8} />}
                 {isPumpkin
-                  ? <img src={ev.afterBossImg()} alt="" className="relative mx-auto h-14 w-14 object-contain" />
-                  : <img src={ev.bossImg()} alt="" className="relative h-14 w-16 object-contain"
+                  ? <img src={ev.afterBossImg()} alt="" className={`relative mx-auto object-contain ${compact ? 'h-11 w-11' : 'h-14 w-14'}`} />
+                  : <img src={ev.bossImg()} alt="" className={`relative object-contain ${compact ? 'h-11 w-12' : 'h-14 w-16'}`}
                       style={isOpen ? (ev.aura ? { filter: raidJackAuraGlowFilter(i + 1, 0.4) } : undefined) : { filter: 'brightness(0)', opacity: 0.5 }} />}
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="truncate text-[13px] font-black text-white">{i + 1}. {isPumpkin ? ev.afterBoss.name : t.name}</span>
+                  <span className="truncate text-[13px] font-black text-white">{i + 1}. {isPumpkin ? ev.afterBoss.name : raidTierNameOf(ev, tab, i, lockedOf)}</span>
                   <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-black ${isPumpkin ? 'bg-amber-500 text-slate-950' : done ? 'bg-emerald-600 text-white' : isOpen ? 'bg-orange-600 text-white' : 'bg-slate-700 text-slate-300'}`}>
                     {isPumpkin ? ev.afterBossBadge : done ? '討伐済み' : isOpen ? '挑戦できる' : '未解放'}
                   </span>
@@ -67548,7 +67751,7 @@ const RaidJackScreen = ({ ev = RAID_EVENT_JACK, ways = null, initialTier = 0, on
 
         <div data-raid-jack-rewards className="rounded-2xl border border-white/10 bg-black/30 p-3 text-[11px] text-slate-100">
           <div className="mb-1 flex items-center justify-between gap-2">
-            <span className="font-black text-orange-200">{tier.name}の報酬</span>
+            <span className="font-black text-orange-200">{raidTierNameOf(ev, tab, current, lockedOf)}の報酬</span>
             <button type="button" data-raid-jack-reward-list-open onClick={() => setShowRewards(true)}
               className="min-h-[32px] shrink-0 rounded-xl border border-orange-300/50 bg-orange-950/40 px-3 text-[10px] font-black text-orange-100 active:scale-95">報酬一覧</button>
           </div>
@@ -67557,7 +67760,7 @@ const RaidJackScreen = ({ ev = RAID_EVENT_JACK, ways = null, initialTier = 0, on
 
         <div className="rounded-2xl border border-white/10 bg-black/30 p-3">
           <div className="mb-1 flex items-baseline justify-between text-[11px]">
-            <span className="font-black text-orange-200">{showAll ? 'レイドバトルの累計ダメージ(全段階の合計)' : tab === 'a' ? `${tier.name}への貢献ランキング` : '累計ダメージランキング(5段階の合計)'}</span>
+            <span className="font-black text-orange-200">{showAll ? 'レイドバトルの累計ダメージ(全段階の合計)' : tab === 'a' ? `${raidTierNameOf(ev, 'a', current, lockedOf)}への貢献ランキング` : '累計ダメージランキング(5段階の合計)'}</span>
             {myTotalHere > 0 && <span data-raid-jack-mine className="text-[10px] text-slate-200">あなた {myTotalHere.toLocaleString()}{ahead !== null ? `(${ahead + 1}位)` : ''}</span>}
           </div>
           {bossDownNow && (
@@ -67582,12 +67785,12 @@ const RaidJackScreen = ({ ev = RAID_EVENT_JACK, ways = null, initialTier = 0, on
         {/* レイドバトルは「バトル」と「モンヒロビート」の2つの挑み方(2026-10-06・ユーザー指示)。回数は同じものを使う。
             挑めないとき(開始前・未解放・倒された・回数切れ)は、これまでどおり理由を出す1つのボタンにする */}
         {tab === 'a' && open && isOpenTier && !closedTier && remaining > 0 && Array.isArray(ways) && ways.length > 1 ? (
-          <div data-raid-ways={ways.join(' ')} className={`grid gap-2 ${ways.length >= 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+          <div data-raid-ways={ways.join(' ')} className={`grid ${compact ? 'gap-1.5' : 'gap-2'} ${ways.length >= 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
             {ways.map((way) => {
               const w = RAID_WAY_BUTTONS[way];
               return w ? (
                 <button type="button" key={way} {...{ [w.data]: true }} onClick={() => onChallenge(tab, current, way)}
-                  className={`min-h-[48px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[36px] rounded-2xl border-2 px-1 text-[12px] font-black leading-tight text-white active:scale-95 ${w.tone}`}>{w.label}<br className="[@media(orientation:landscape)_and_(max-height:520px)]:hidden" />挑戦する</button>
+                  className={`${compact ? 'min-h-[40px] rounded-xl py-0.5 text-[11px]' : 'min-h-[48px] rounded-2xl text-[12px]'} [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[36px] border-2 px-1 font-black leading-tight text-white active:scale-95 ${w.tone}`}>{w.label}<br className="[@media(orientation:landscape)_and_(max-height:520px)]:hidden" />{compact ? <small className="text-[9px] opacity-90">挑戦する</small> : '挑戦する'}</button>
               ) : null;
             })}
           </div>
@@ -67601,13 +67804,13 @@ const RaidJackScreen = ({ ev = RAID_EVENT_JACK, ways = null, initialTier = 0, on
         ) : (
           <button type="button" data-raid-jack-challenge disabled={!open || !isOpenTier || closedTier || remaining <= 0}
             onClick={() => onChallenge(tab, current, 'battle')}
-            className="w-full min-h-[48px] rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400">
+            className={`w-full ${compact ? 'min-h-[40px] rounded-xl' : 'min-h-[48px] rounded-2xl'} border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400`}>
             {challengeLabel}
           </button>
         )}
       </div>
-      {showRanking && <RaidJackRankingList ev={ev} eventId={eventId} initialTab={tab} initialTier={current} renderPlace={renderPlace} renderIcon={renderIcon} cardClass={cardClass} onClose={() => setShowRanking(false)} />}
-      {showRewards && <RaidJackRewardList ev={ev} claimed={state.claimed} initialTab={tab} onClose={() => setShowRewards(false)} />}
+      {showRanking && <RaidJackRankingList ev={ev} lockedOf={lockedOf} eventId={eventId} initialTab={tab} initialTier={current} renderPlace={renderPlace} renderIcon={renderIcon} cardClass={cardClass} onClose={() => setShowRanking(false)} />}
+      {showRewards && <RaidJackRewardList ev={ev} lockedOf={lockedOf} claimed={state.claimed} initialTab={tab} onClose={() => setShowRewards(false)} />}
     </div>
   );
 };
@@ -68197,26 +68400,27 @@ const XmasEventScreen = ({ tab = 'story', onTab, onBack, forced = false, preOpen
     </div>
   ) : null;
   const head = (
-    <div data-xmas-event-head className={`mx-auto w-full shrink-0 ${raidShown ? '' : 'max-w-2xl'}`}>
+    // 看板・期間の帯・タブの段は、どのタブでも同じ大きさ・同じ位置(台帳 r1126-097 追記1・社長「タブごとに位置が変わるのやだ」)。
+    //  高さは前のレイドのタブくらいにそろえ、ボスの一覧を広く見せる(r1126-097)。背の低い横画面では、どのタブでも看板を出さない
+    <div data-xmas-event-head className="mx-auto w-full shrink-0">
       <ScreenHead title={<span className="flex items-center gap-1"><XmasHolly size={24} /><span className="mh-xmas-title whitespace-nowrap">聖夜の名探偵</span></span>}
         onBack={onBack} compact note={forced ? '(デバッグ表示・開始前でも見えます)' : ''} />
-      {/* レイドの中身を出すときは小さく。背の低い横画面では、レイドの一覧が見えるように出さない(題と期間とタブだけ) */}
-      <div data-xmas-event-poster className={`mh-xmas-frame mx-auto mb-2 w-fit max-w-full overflow-hidden rounded-xl bg-slate-950 ${raidShown ? '[@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`}>
+      <div data-xmas-event-poster className="mh-xmas-frame mx-auto mb-1.5 w-fit max-w-full overflow-hidden rounded-xl bg-slate-950 [@media(orientation:landscape)_and_(max-height:520px)]:hidden">
         {posterOpen ? (
           // 開催中: 「開催予告」の文字とボスの影が入った予告の絵は出さず、ペンションの雪景色に題字を重ねた帯にする(本番用の絵が届いたら XMAS_EVENT_POSTER_OPEN_IMG に差し替える)
-          <div data-xmas-event-title-band className="relative overflow-hidden" style={{ width: raidShown ? 'min(100vw - 32px, 26vh)' : 'min(100vw - 32px, 48vh)', aspectRatio: '2 / 1' }}>
+          <div data-xmas-event-title-band className="relative overflow-hidden" style={{ width: 'min(100vw - 32px, 26vh)', aspectRatio: '2 / 1' }}>
             <img src={XMAS_EVENT_POSTER_OPEN_IMG || XMAS_EVENT_TITLE_BAND_BG} alt="" className="absolute inset-0 h-full w-full object-cover" style={{ objectPosition: '50% 40%' }} />
             {!XMAS_EVENT_POSTER_OPEN_IMG && (
               <span className="absolute inset-0 flex flex-col items-center justify-center text-center" style={{ background: 'radial-gradient(80% 70% at 50% 55%, #0b1733cc 0%, #0b173388 55%, transparent 100%)' }}>
-                <span className={`font-black text-amber-100 ${raidShown ? 'text-[8px]' : 'text-[11px]'}`} style={{ letterSpacing: '.2em', textShadow: '0 1px 3px #000' }}>クリスマスイベント</span>
-                <b className={`mh-xmas-title whitespace-nowrap leading-tight ${raidShown ? 'text-[20px]' : 'text-[38px]'}`} style={{ fontFamily: "'Hiragino Mincho ProN', 'Yu Mincho', serif", filter: 'drop-shadow(0 2px 2px #000) drop-shadow(0 0 6px #000a)' }}>聖夜の名探偵</b>
-                <span className={`font-bold text-amber-50 ${raidShown ? 'text-[7px]' : 'text-[11px]'}`} style={{ textShadow: '0 1px 3px #000' }}>～十三番目の鐘が鳴る夜～</span>
+                <span className="text-[8px] font-black text-amber-100" style={{ letterSpacing: '.2em', textShadow: '0 1px 3px #000' }}>クリスマスイベント</span>
+                <b className="mh-xmas-title whitespace-nowrap text-[20px] leading-tight" style={{ fontFamily: "'Hiragino Mincho ProN', 'Yu Mincho', serif", filter: 'drop-shadow(0 2px 2px #000) drop-shadow(0 0 6px #000a)' }}>聖夜の名探偵</b>
+                <span className="text-[7px] font-bold text-amber-50" style={{ textShadow: '0 1px 3px #000' }}>～十三番目の鐘が鳴る夜～</span>
               </span>
             )}
           </div>
-        ) : <img src={XMAS_EVENT_POSTER_IMG} alt="クリスマスイベント 聖夜の名探偵" className={`block h-auto w-auto max-w-full ${raidShown ? 'max-h-[13vh]' : 'max-h-[24vh]'}`} />}
+        ) : <img src={XMAS_EVENT_POSTER_IMG} alt="クリスマスイベント 聖夜の名探偵" className="block h-auto w-auto max-w-full max-h-[13vh]" />}
       </div>
-      <div data-xmas-event-period className="mh-xmas-ribbon mx-auto mb-2 max-w-md px-5 py-1 text-center text-[11px] font-black text-amber-50">
+      <div data-xmas-event-period className="mh-xmas-ribbon mx-auto mb-1.5 max-w-md px-5 py-0.5 text-center text-[10px] font-black text-amber-50">
         開催期間 {xmasEventPeriodText()}
       </div>
       <ScreenTabs items={XMAS_EVENT_TABS} value={tab} onChange={(id) => onTab && onTab(id)} />
@@ -68584,6 +68788,21 @@ const xmasNovelAnswer = (script, cur, q, pick, endings) => {
     const to = xmasNovelRepliesTo(replies);
     return { cur: next, ok: true, replies, then: to ? { to } : 'next' };
   }
+  // まちがえても進む問い(r1126-099 追記1・q.pass): 返し(近い手がかり / 1回目のまちがい)→ 話し手が正しい手がかりを突きつける帯 → 正解の返しで先へ。
+  //   一発目を外したことは ans の f(成績)に残る。ans の形 { t, f, w, done } は変えない
+  if (q.pass && q.kind === 'present') {
+    const okRows = xmasNovelPickReplies(q, 'ok');
+    const why = Array.isArray(q.near) && q.near.includes(pick) && xmasNovelPickReplies(q, 'near').length ? xmasNovelPickReplies(q, 'near') : xmasNovelPickReplies(q, 'x1');
+    const by = okRows[0] && okRows[0].w ? xmasNovelCastOf(okRows[0].w) : null;
+    const clue = answers[0] || '';
+    const band = clue ? [{ id: `${q.id}-pass`, t: 'band', x: `${by && by.name ? by.name : '探偵'}が、手がかり帳から【${clue}】を突きつけた` }] : [];
+    // 正解の返しの頭の「はい。」は、選んだ人への返事なので、仲間が自分で突きつけたときは外す
+    const okSelf = okRows.map((r, i) => (i === 0 && r && typeof r.x === 'string' && /^はい。\s*/.test(r.x) ? { ...r, x: r.x.replace(/^はい。\s*/, '') } : r));
+    const replies = [...why, ...band, ...okSelf];
+    const passed = { ...next, ans: { ...next.ans, [q.id]: { ...next.ans[q.id], done: true } } };
+    const to = xmasNovelRepliesTo(replies);
+    return { cur: passed, ok: false, replies, then: to ? { to } : 'next' };
+  }
   // まちがい: 人ごとの返し → 近い手がかりの返し → 回数の返し(3回目からは x3)
   const personal = q.kind === 'person' ? xmasNovelPickReplies(q, String(pick)) : [];
   const near = q.kind === 'present' && Array.isArray(q.near) && q.near.includes(pick) ? xmasNovelPickReplies(q, 'near') : [];
@@ -68597,6 +68816,24 @@ const xmasNovelAnswer = (script, cur, q, pick, endings) => {
 const xmasNovelRepliesTo = (replies) => {
   for (let i = (replies || []).length - 1; i >= 0; i -= 1) if (replies[i] && replies[i].to) return replies[i].to;
   return null;
+};
+// 行動の選択肢の行き先の先にあるエンディングのID(強制バッドの「見たエンド」の印・r1126-099 追記1)。場面を next でたどる。無ければ null
+const xmasNovelEndingAhead = (script, to) => {
+  let s = to ? xmasNovelSceneById(script, to) : null;
+  for (let k = 0; s && k < 12; k += 1) {
+    if (s.ending && s.ending.id) return s.ending.id;
+    if ((s.rows || []).some((r) => r && r.t === 'q')) return null; // 途中に分かれ道がある道は、エンドの直前ではない(r1126-102)
+    s = typeof s.next === 'string' ? xmasNovelSceneById(script, s.next) : null;
+  }
+  return null;
+};
+// 手がかり帳のうち、問いで突きつけられる物(q.narrow があれば、その候補だけ・r1126-099 追記1)。絞った結果に正解が無ければ全部
+const xmasNovelPresentable = (q, clues) => {
+  const list = Array.isArray(clues) ? clues : [];
+  if (!q || !Array.isArray(q.narrow) || !q.narrow.length) return list;
+  const picked = list.filter((c) => q.narrow.includes(c.n));
+  const ans = Array.isArray(q.answer) ? q.answer : [];
+  return picked.some((c) => ans.includes(c.n)) ? picked : list;
 };
 // 行動の選択肢のうち、いま出せる物(条件つきの選択肢: 「オルゴールを鳴らす」は f_lullaby=1 のときだけ)
 const xmasNovelOptionsOf = (q, ctx) => (Array.isArray(q && q.options) ? q.options : [])
@@ -68693,7 +68930,78 @@ const XMAS_NOVEL_ENDING_KINDS = Object.freeze({
   forced: { label: '強制バッド', tone: '#b0303a' },
   accuse: { label: '名指しエンド', tone: '#a78bd8' },
   omake: { label: 'おまけ', tone: '#7fd6a8' },
+  unsolved: { label: '迷宮入り', tone: '#8fa3c8' }, // r1126-108: 黒いサンタが誰か分からないまま終わる
 });
+
+// ---- 分岐の地図「聖夜の見取り図」の読み直し(r1126-102) ----
+//  保存は新しいキー mh_xmas_novel_route_v1 だけ(mh_xmas_novel_v1 は形も中身も変えない・⑦)。
+//  { v:1, at:{ "<問いID>|<派 0〜2>": その問いの行に止まった時の cur }, back: 読み直す前の cur | null, seeded: 0|1 }
+//  付与・補償・数を足す処理は無い(上書きと読み出しだけ)。seeded は「今の保存から機械で作る」を1回だけにする印
+const XMAS_NOVEL_ROUTE_KEY = 'mh_xmas_novel_route_v1';
+const xmasNovelRouteKeyOf = (qid, cur) => {
+  const side = cur && cur.flags && Number.isFinite(cur.flags.f_A1) ? Math.max(0, Math.min(2, Math.floor(cur.flags.f_A1))) : 0;
+  return `${qid}|${side}`;
+};
+const xmasNovelRowAt = (script, cur) => {
+  const scene = cur ? xmasNovelSceneById(script, cur.scene) : null;
+  const row = scene && Array.isArray(scene.rows) ? scene.rows[Number(cur.idx) || 0] : null;
+  return row || null;
+};
+const xmasNovelRouteNormalize = (raw, script = null) => {
+  const r = raw && typeof raw === 'object' ? raw : {};
+  const at = {};
+  if (r.at && typeof r.at === 'object') Object.keys(r.at).slice(0, 120).forEach((k) => {
+    const m = /^([AQ]\d+[a-z]?)\|([0-2])$/.exec(k);
+    if (!m) return;
+    const c = xmasNovelNormalizeCur(r.at[k], script);
+    if (!c) return;
+    if (script) { const row = xmasNovelRowAt(script, c); if (!row || row.t !== 'q' || row.id !== m[1]) return; } // 台本が変わって問いの行でなくなった物は捨てる
+    at[k] = c;
+  });
+  return { v: 1, at, back: xmasNovelNormalizeCur(r.back, script), seeded: r.seeded === 1 ? 1 : 0 };
+};
+// 問いの行に着いたときに、その時の状態を残す(同じ分かれ道は一番新しく通った時で上書き)
+const xmasNovelRouteRecord = (route, script, cur) => {
+  const row = xmasNovelRowAt(script, cur);
+  if (!route || !row || row.t !== 'q') return route;
+  const c = xmasNovelNormalizeCur(cur, script);
+  if (!c) return route;
+  return { ...route, at: { ...route.at, [xmasNovelRouteKeyOf(row.id, c)]: c } };
+};
+// 地図を入れる前に通った分かれ道を、今の保存(章の頭の状態 snaps・読んだ印 read・続き cur)から機械で作る(1回だけ)。
+//   章の頭から、安全な方・正解で、その章の中だけ進める。読んだ印のある問いの行だけを残す。やり直しのない推理(1回目・2回目)は残して止まる
+const xmasNovelRouteSeed = (script, save, route) => {
+  const base = route || xmasNovelRouteNormalize(null, script);
+  if (base.seeded === 1) return base;
+  const read = new Set((save && Array.isArray(save.read)) ? save.read : []);
+  let at = { ...base.at };
+  const keep = (cur, row) => { const k = xmasNovelRouteKeyOf(row.id, cur); if (!at[k] && read.has(row.k)) { const c = xmasNovelNormalizeCur(cur, script); if (c) at = { ...at, [k]: c }; } };
+  const sideOfSave = save && save.cur && save.cur.flags && Number.isFinite(save.cur.flags.f_A1) ? save.cur.flags.f_A1 : 0;
+  const snaps = save && save.snaps && typeof save.snaps === 'object' ? save.snaps : {};
+  Object.keys(snaps).filter((k) => /^C\d+$/.test(k)).forEach((chId) => {
+    let st = xmasNovelSettle(script, snaps[chId]);
+    for (let guard = 0; st && st.row && guard < 3000; guard += 1) {
+      if (!st.scene || st.scene.chapter !== chId) break;
+      const r = st.row;
+      if (r.t !== 'q') { st = xmasNovelStep(script, xmasNovelApplyRow(st.cur, r)); continue; }
+      keep(st.cur, r);
+      if (r.once) break;
+      let pick = null;
+      if (r.kind === 'present') pick = (r.answer || [])[0];
+      else if (r.kind === 'action') {
+        const opts = xmasNovelOptionsOf(r, xmasNovelCtx(script, st.cur, (save && save.endings) || []));
+        if (r.id === 'A1') { const o = opts.find((x) => x.i === sideOfSave - 1); if (!o) break; pick = o.i; }
+        else { const safe = opts.find((o) => !(o.to && xmasNovelEndingAhead(script, o.to))); if (!safe) break; pick = safe.i; }
+      }
+      if (pick === null || pick === undefined) break;
+      const a = xmasNovelAnswer(script, st.cur, r, pick, (save && save.endings) || []);
+      let c = a.cur; (a.replies || []).forEach((x) => { c = xmasNovelApplyRow(c, x); });
+      st = a.then === 'next' ? xmasNovelStep(script, c) : a.then === 'retry' ? null : xmasNovelSettle(script, xmasNovelJump(script, c, a.then.to));
+    }
+  });
+  if (save && save.cur) { const row = xmasNovelRowAt(script, save.cur); if (row && row.t === 'q') keep(save.cur, row); }
+  return { ...base, at, seeded: 1 };
+};
 
 // ---- part: 79-xmas-novel-script.jsx ----
 // ===== クリスマスのミステリーノベルの台本データ(生成物・手で直さない) =====
@@ -68929,7 +69237,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"2-4-3","t":"line","w":"kiki","x":"停電の前から、玄関は私が見てまちた。誰も通ってないでつ","e":"troubled","k":"C2-4:2-4-3"},
 {"id":"2-4-4","t":"line","w":"mochimaru","x":"……あれ？ ろうそくを取りに行った帰りに、台所をのぞいたら、裏口のかんぬきが閉まってたっちー。ぼく、開けておいたのに……","k":"C2-4:2-4-4"},
 {"id":"2-4-4c","t":"clue","clue":"閉まった裏口","x":"もちまるが開けておいた裏口のかんぬきが、停電の後、閉まっていた","k":"C2-4:2-4-4c"},
-{"id":"2-4-5","t":"line","w":"myua","x":"あつくん、早く！ どこを探す！？","e":"surprise","k":"C2-4:2-4-5"},{"t":"q","id":"Q2a","kind":"present","x":"黒羽は、どこにいる？ 居場所を示す手がかりを、手がかり帳から1つ突きつけよう","replies":{"x1":[{"id":"Q2a-x1","t":"line","w":"watson","x":"その手がかりは、今、黒羽さんがいる場所とは結びつきません","note":"もう1度選ぶ"}],"x2":[{"id":"Q2a-x2","t":"line","w":"myua","x":"違うっぽい……！ もちまるん、さっきなんて言ってた？","e":"troubled","note":"もう1度選ぶ"}],"x3":[{"id":"Q2a-x3","t":"line","w":"sorashido","x":"開けておいたはずの物が、閉まっていた。……誰かを、外に出したままにするためです","e":"normal","note":"もう1度選ぶ"}],"near":[{"id":"Q2a-near","t":"line","w":"atsu","x":"鐘がずれてるのは気になる。……けど、今は、おっさんがどこにいるか！","e":"troubled","note":"もう1度選ぶ"}],"ok":[{"id":"Q2a-ok","t":"line","w":"atsu","x":"裏口だ！ 開けておいたのが閉まってたってことは——外に、閉め出されたんだ！","e":"normal","to":"C2-5"}]},"label":"推理の問い①","score":true,"answer":["閉まった裏口"],"k":"C2-4:Q2a","near":["早く鳴った鐘"]}]},
+{"id":"2-4-5","t":"line","w":"myua","x":"あつくん、早く！ どこを探す！？","e":"surprise","k":"C2-4:2-4-5"},{"t":"q","id":"Q2a","kind":"present","x":"黒羽は、どこにいる？ 居場所を示す手がかりを、手がかり帳から1つ突きつけよう","replies":{"x1":[{"id":"Q2a-x1","t":"line","w":"watson","x":"その手がかりは、今、黒羽さんがいる場所とは結びつきません","note":"もう1度選ぶ"}],"x2":[{"id":"Q2a-x2","t":"line","w":"myua","x":"違うっぽい……！ もちまるん、さっきなんて言ってた？","e":"troubled","note":"もう1度選ぶ"}],"x3":[{"id":"Q2a-x3","t":"line","w":"sorashido","x":"開けておいたはずの物が、閉まっていた。……誰かを、外に出したままにするためです","e":"normal","note":"もう1度選ぶ"}],"near":[{"id":"Q2a-near","t":"line","w":"atsu","x":"鐘がずれてるのは気になる。……けど、今は、おっさんがどこにいるか！","e":"troubled","note":"もう1度選ぶ"}],"ok":[{"id":"Q2a-ok","t":"line","w":"atsu","x":"裏口だ！ 開けておいたのが閉まってたってことは——外に、閉め出されたんだ！","e":"normal","to":"C2-5"}]},"label":"推理の問い①","score":true,"pass":true,"answer":["閉まった裏口"],"k":"C2-4:Q2a","near":["早く鳴った鐘"]}]},
 {"id":"C2-5","chapter":"C2","title":"吹雪の向こう","cond":null,"bgm":"melo_dullahan_steel_ghost","bg":"夜の裏口(吹雪","next":"C3-1","rows":[{"id":"2-5-1","t":"band","x":"ガタン！(あつが、かんぬきを外す)","fx":["se"],"se":"impact","k":"C2-5:2-5-1"},
 {"id":"2-5-2","t":"band","x":"扉の外は、真っ白な吹雪。ろうそくの火が、一息で消える","k":"C2-5:2-5-2"},
 {"id":"2-5-3","t":"band","x":"……ァ……(吹雪の向こうで、かすかな声)","fx":["se"],"se":"tap","k":"C2-5:2-5-3"},
@@ -68962,7 +69270,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"3-2-2","t":"line","w":"sorashido","x":"長靴の足跡は、雪原の真ん中まで行って……そこで、ぷっつり消えています","e":"normal","k":"C3-2:3-2-2"},
 {"id":"3-2-3","t":"line","w":"dra","x":"き、消えてる……。空でも飛んだのか？","e":"surprise","k":"C3-2:3-2-3"},
 {"id":"3-2-4","t":"line","w":"myua","x":"あつくん、見て。最後の足跡だけ、ほかより深くて、ふちが二重にぶれてない？","e":"normal","k":"C3-2:3-2-4"},
-{"id":"3-2-4c","t":"clue","clue":"深い足跡","x":"雪原の真ん中で消えた長靴の足跡。最後の1つだけ、ほかより深く、ふちが二重にぶれている","k":"C3-2:3-2-4c"},{"t":"q","id":"Q3a","kind":"present","x":"黒いサンタは、雪原から外へ逃げた？ それとも——。わけを示す手がかりを、手がかり帳から1つ突きつけよう","replies":{"x1":[{"id":"Q3a-x1","t":"line","w":"watson","x":"その手がかりは、雪原の足跡とは別の場所の物です。足跡そのものを、よく見てみましょう","note":"もう1度選ぶ"}],"x2":[{"id":"Q3a-x2","t":"line","w":"myua","x":"うーん……。最後のほうの足跡、なんか違ったよね？","e":"troubled","note":"もう1度選ぶ"}],"x3":[{"id":"Q3a-x3","t":"line","w":"sorashido","x":"同じ所を2回踏んだら、足跡はどうなるでしょう","e":"normal","note":"もう1度選ぶ"}],"near":[{"id":"Q3a-near","t":"line","w":"atsu","x":"裏口から出たのは分かってる。……知りたいのは、その後、どこへ行ったか","e":"troubled","note":"もう1度選ぶ"}],"ok":[{"id":"Q3a-ok","t":"line","w":"sorashido","x":"はい。同じ足跡を踏んで、後ろ向きに戻ったんです。黒いサンタは、外へ逃げていない。……戻ったのは、このペンションの中です","e":"normal"}]},"label":"推理の問い②","score":true,"answer":["深い足跡"],"k":"C3-2:Q3a","near":["閉まった裏口"]},
+{"id":"3-2-4c","t":"clue","clue":"深い足跡","x":"雪原の真ん中で消えた長靴の足跡。最後の1つだけ、ほかより深く、ふちが二重にぶれている","k":"C3-2:3-2-4c"},{"t":"q","id":"Q3a","kind":"present","x":"黒いサンタは、雪原から外へ逃げた？ それとも——。わけを示す手がかりを、手がかり帳から1つ突きつけよう","replies":{"x1":[{"id":"Q3a-x1","t":"line","w":"watson","x":"その手がかりは、雪原の足跡とは別の場所の物です。足跡そのものを、よく見てみましょう","note":"もう1度選ぶ"}],"x2":[{"id":"Q3a-x2","t":"line","w":"myua","x":"うーん……。最後のほうの足跡、なんか違ったよね？","e":"troubled","note":"もう1度選ぶ"}],"x3":[{"id":"Q3a-x3","t":"line","w":"sorashido","x":"同じ所を2回踏んだら、足跡はどうなるでしょう","e":"normal","note":"もう1度選ぶ"}],"near":[{"id":"Q3a-near","t":"line","w":"atsu","x":"裏口から出たのは分かってる。……知りたいのは、その後、どこへ行ったか","e":"troubled","note":"もう1度選ぶ"}],"ok":[{"id":"Q3a-ok","t":"line","w":"sorashido","x":"はい。同じ足跡を踏んで、後ろ向きに戻ったんです。黒いサンタは、外へ逃げていない。……戻ったのは、このペンションの中です","e":"normal"}]},"label":"推理の問い②","score":true,"pass":true,"answer":["深い足跡"],"k":"C3-2:Q3a","near":["閉まった裏口"]},
 {"id":"3-2-5","t":"line","w":"atsu","x":"……この中に、黒いサンタがいる","f":"close","e":"normal","k":"C3-2:3-2-5"}]},
 {"id":"C3-3","chapter":"C3","title":"閉ざされた山","cond":null,"bgm":"melo_dullahan_clockwork","bg":"ペンションのホール","next":"C3-4","rows":[{"id":"3-3-1","t":"line","w":"mochimaru","x":"大変だっちー！ 電話が、繋がらないっちー！ 線が、外で切れてたっちー","k":"C3-3:3-3-1"},
 {"id":"3-3-2","t":"line","w":"ichika","x":"山道も、ゆうべの雪で、塞がってしまいました。……道があくまで、誰もここへは来られませんし、誰も出られません","k":"C3-3:3-3-2"},
@@ -69033,7 +69341,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"4-3-3","t":"line","w":"sorashido","x":"読みます。『0時の鐘、なんだか早かったっちー。オーナーが裏口を開けに行ったら、もう、かんぬきが閉まってたっちー』","e":"normal","k":"C4-3:4-3-3"},
 {"id":"4-3-3c","t":"clue","clue":"12年前の帳面","x":"もちまるの12年前の帳面。12月24日「0時の鐘、なんだか早かったっちー」。オーナーが行った時、裏口はもう閉まっていた","k":"C4-3:4-3-3c"},
 {"id":"4-3-4","t":"line","w":"mochimaru","x":"ぼく、うそは書けないっちー。……本当に、早かったっちー","k":"C4-3:4-3-4"},
-{"id":"4-3-5","t":"line","w":"atsu","x":"……おっちゃんがいなくなった夜の鐘も、早かった","e":"normal","k":"C4-3:4-3-5"},{"t":"q","id":"Q4a","kind":"present","x":"あの夜の鐘と、12年前の鐘。黒いサンタが、12年前と同じ仕掛けを使ったと示す手がかりを、手がかり帳から1つ突きつけよう","replies":{"x1":[{"id":"Q4a-x1","t":"line","w":"watson","x":"その手がかりは、12年前のことを示していません","note":"もう1度選ぶ"}],"x2":[{"id":"Q4a-x2","t":"line","w":"atsu","x":"あの夜のことは分かってる。……12年前のことが書いてある物、あったよね","e":"normal","note":"もう1度選ぶ"}],"x3":[{"id":"Q4a-x3","t":"line","w":"mochimaru","x":"ぼくの帳面、見てほしいっちー……","note":"もう1度選ぶ"}],"near":[{"id":"Q4a-near","t":"line","w":"sorashido","x":"それは、黒羽さんがいなくなった夜の鐘です。12年前の鐘も早かったと分かる物が、もう1つ要ります","e":"normal","note":"もう1度選ぶ"}],"ok":[{"id":"Q4a-ok","t":"line","w":"sorashido","x":"はい。12年前も、鐘は早く鳴り、裏口は閉まっていた。あの夜と、同じです。……黒いサンタは、12年前の夜を、もう1度やろうとしているのかもしれません","e":"normal"}]},"label":"推理の問い③","score":true,"answer":["12年前の帳面"],"k":"C4-3:Q4a","near":["早く鳴った鐘"]},
+{"id":"4-3-5","t":"line","w":"atsu","x":"……おっちゃんがいなくなった夜の鐘も、早かった","e":"normal","k":"C4-3:4-3-5"},{"t":"q","id":"Q4a","kind":"present","x":"あの夜の鐘と、12年前の鐘。黒いサンタが、12年前と同じ仕掛けを使ったと示す手がかりを、手がかり帳から1つ突きつけよう","replies":{"x1":[{"id":"Q4a-x1","t":"line","w":"watson","x":"その手がかりは、12年前のことを示していません","note":"もう1度選ぶ"}],"x2":[{"id":"Q4a-x2","t":"line","w":"atsu","x":"あの夜のことは分かってる。……12年前のことが書いてある物、あったよね","e":"normal","note":"もう1度選ぶ"}],"x3":[{"id":"Q4a-x3","t":"line","w":"mochimaru","x":"ぼくの帳面、見てほしいっちー……","note":"もう1度選ぶ"}],"near":[{"id":"Q4a-near","t":"line","w":"sorashido","x":"それは、黒羽さんがいなくなった夜の鐘です。12年前の鐘も早かったと分かる物が、もう1つ要ります","e":"normal","note":"もう1度選ぶ"}],"ok":[{"id":"Q4a-ok","t":"line","w":"sorashido","x":"はい。12年前も、鐘は早く鳴り、裏口は閉まっていた。あの夜と、同じです。……黒いサンタは、12年前の夜を、もう1度やろうとしているのかもしれません","e":"normal"}]},"label":"推理の問い③","score":true,"pass":true,"answer":["12年前の帳面"],"k":"C4-3:Q4a","near":["早く鳴った鐘"]},
 {"id":"4-3-6","t":"line","w":"kiki","x":"12年前のことを、知ってる人……？","e":"troubled","k":"C4-3:4-3-6"},
 {"id":"4-3-7","t":"line","w":"sorashido","x":"それに、柱時計の針を動かせる人です","e":"normal","k":"C4-3:4-3-7"},
 {"id":"4-3-7b","t":"band","x":"みんなが台所を出ていった後。ワトソンくんの画面の隅に、小さな字が出る","k":"C4-3:4-3-7b"},
@@ -69099,7 +69407,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"5-3-7a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"myua","x":"あつくん、1人で！？ 書斎、さっきから誰もいないよ……","e":"troubled","k":"C5-3:5-3-7a"},
 {"id":"5-3-7s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"watson","x":"ソラシドさん。お1人で動くのは、危険です","k":"C5-3:5-3-7s"},
 {"id":"5-3-7b","t":"line","w":"momosuke","x":"でも、白瀬さん、今も寒い所にいるかもしれないんだよ……！ 早く、探しに行こうよ……！","f":"close","e":"crying","k":"C5-3:5-3-7b"},{"t":"q","id":"A5","kind":"action","x":"写真の影の正体か、白瀬の居場所か——","replies":{},"label":"行動の選択","options":[{"c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"to":"C5-X","x":"あつが、1人で書斎にこもり、えるびんのカメラの写真を拡大して、影の正体を探る"},{"c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"to":"C5-X","x":"ソラシドが、1人で書斎にこもり、ワトソンくんの中の写真を拡大して、影の正体を探る"},{"to":"5-3-8","x":"写真は後にして、みんなで冷たい空気の流れをたどる"}],"k":"C5-3:A5"},
-{"id":"5-3-8","t":"line","w":"atsu","x":"白瀬さんを探す！ どこだ……！","f":"close","e":"angry","k":"C5-3:5-3-8"},{"t":"q","id":"Q5a","kind":"present","x":"白瀬は、どこに閉じこめられている？ 場所を示す手がかりを、手がかり帳から1つ突きつけよう","replies":{"x1":[{"id":"Q5a-x1","t":"line","w":"watson","x":"その手がかりは、白瀬さんのいる場所とは結びつきません","note":"もう1度選ぶ"}],"x2":[{"id":"Q5a-x2","t":"line","w":"myua","x":"冷たい空気……どこから来てるの……？","e":"troubled","note":"もう1度選ぶ"}],"x3":[{"id":"Q5a-x3","t":"line","w":"mochimaru","x":"奥の1枚だけ、ふちがきれいだったっちー……","note":"もう1度選ぶ"}],"near":[{"id":"Q5a-near","t":"line","w":"sorashido","x":"写真の影は、鏡の廊下にいました。……知りたいのは、その廊下の、どこが扉になっているかです","e":"normal","note":"もう1度選ぶ"}],"ok":[{"id":"Q5a-ok","t":"line","w":"atsu","x":"鏡だ！ あの1枚だけ、誰かが何度も触ってる。……あれが、扉なんだ！","e":"normal","to":"C5-4"}]},"label":"推理の問い④","score":true,"answer":["ほこりのない鏡のふち"],"k":"C5-3:Q5a","near":["えるびんの写真"]}]},
+{"id":"5-3-8","t":"line","w":"atsu","x":"白瀬さんを探す！ どこだ……！","f":"close","e":"angry","k":"C5-3:5-3-8"},{"t":"q","id":"Q5a","kind":"present","x":"白瀬は、どこに閉じこめられている？ 場所を示す手がかりを、手がかり帳から1つ突きつけよう","replies":{"x1":[{"id":"Q5a-x1","t":"line","w":"watson","x":"その手がかりは、白瀬さんのいる場所とは結びつきません","note":"もう1度選ぶ"}],"x2":[{"id":"Q5a-x2","t":"line","w":"myua","x":"冷たい空気……どこから来てるの……？","e":"troubled","note":"もう1度選ぶ"}],"x3":[{"id":"Q5a-x3","t":"line","w":"mochimaru","x":"奥の1枚だけ、ふちがきれいだったっちー……","note":"もう1度選ぶ"}],"near":[{"id":"Q5a-near","t":"line","w":"sorashido","x":"写真の影は、鏡の廊下にいました。……知りたいのは、その廊下の、どこが扉になっているかです","e":"normal","note":"もう1度選ぶ"}],"ok":[{"id":"Q5a-ok","t":"line","w":"atsu","x":"鏡だ！ あの1枚だけ、誰かが何度も触ってる。……あれが、扉なんだ！","e":"normal","to":"C5-4"}]},"label":"推理の問い④","score":true,"pass":true,"answer":["ほこりのない鏡のふち"],"k":"C5-3:Q5a","near":["えるびんの写真"]}]},
 {"id":"C5-4","chapter":"C5","title":"鏡の向こう","cond":null,"bgm":"melo_sad_song_short","bg":"朝の鏡の廊下","next":"C5-5","rows":[{"id":"5-4-1","t":"band","x":"けれど、奥の1枚は、押しても、叩いても、びくともしない。開け方が分からないまま、みんなで夜通し、鏡の前を調べ続けた","k":"C5-4:5-4-1"},
 {"id":"5-4-2","t":"band","x":"朝。雪の光が差しこむと、奥の鏡の下の隙間に、赤い手袋の指先が挟まっているのが見えた","k":"C5-4:5-4-2"},
 {"id":"5-4-2c","t":"clue","clue":"赤い手袋","x":"白瀬の赤い毛糸の手袋。朝、鏡の廊下の奥の鏡の下の隙間に、片方挟まっていた","k":"C5-4:5-4-2c"},
@@ -69161,7 +69469,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"6-2-5","t":"line","w":"watson","x":"……写真に残しておきます。12月20日の夕方に撮った、この部屋の写真とも、見比べておきます","k":"C6-2:6-2-5"},
 {"id":"6-2-6","t":"line","w":"atsu","x":"……ドラちゃん。今は、信じたい。でも、これは記録しとく","e":"troubled","k":"C6-2:6-2-6"}]},
 {"id":"C6-3","chapter":"C6","title":"止まった針","cond":null,"bgm":"melo_dullahan_clockwork_alt","bg":"食堂","next":"C6-4","rows":[{"id":"6-3-1","t":"line","w":"sorashido","x":"整理します。あの夜、柱時計の鐘は、ワトソンくんの時計より早く鳴った。黒羽さんが外へ出たのは、鐘のすぐ後です","e":"normal","k":"C6-3:6-3-1"},
-{"id":"6-3-2","t":"line","w":"atsu","x":"おっちゃん、いつも懐中時計を見てた。『時は金なり』って。……あの時計が、ずれてたとは思えない","e":"normal","k":"C6-3:6-3-2"},{"t":"q","id":"Q6a","kind":"present","x":"あの夜、柱時計の鐘が本当に鳴ったのは、何時ごろ？ 本当の時刻を示す手がかりを、手がかり帳から1つ突きつけよう","replies":{"x1":[{"id":"Q6a-x1","t":"line","w":"watson","x":"その手がかりには、時刻が書かれていません","note":"もう1度選ぶ"}],"x2":[{"id":"Q6a-x2","t":"line","w":"atsu","x":"時刻が分かる物……。雪の上で、おっちゃんのそばに落ちてた物は？","e":"normal","note":"もう1度選ぶ"}],"x3":[{"id":"Q6a-x3","t":"line","w":"sorashido","x":"黒羽さんが外へ出て、すぐに止まった物です","e":"normal","note":"もう1度選ぶ"}],"near":[{"id":"Q6a-near","t":"line","w":"watson","x":"鐘が早かったことは分かっています。何分早かったかを示す物が、要ります","note":"もう1度選ぶ"}],"ok":[{"id":"Q6a-ok","t":"line","w":"sorashido","x":"はい。懐中時計は23時47分で止まっていた。鐘は、本当は23時47分ごろ。……柱時計は、13分、進められていたんです。12年前と同じように","e":"normal"}]},"label":"推理の問い⑤","score":true,"answer":["止まった懐中時計"],"k":"C6-3:Q6a","near":["早く鳴った鐘"]},
+{"id":"6-3-2","t":"line","w":"atsu","x":"おっちゃん、いつも懐中時計を見てた。『時は金なり』って。……あの時計が、ずれてたとは思えない","e":"normal","k":"C6-3:6-3-2"},{"t":"q","id":"Q6a","kind":"present","x":"あの夜、柱時計の鐘が本当に鳴ったのは、何時ごろ？ 本当の時刻を示す手がかりを、手がかり帳から1つ突きつけよう","replies":{"x1":[{"id":"Q6a-x1","t":"line","w":"watson","x":"その手がかりには、時刻が書かれていません","note":"もう1度選ぶ"}],"x2":[{"id":"Q6a-x2","t":"line","w":"atsu","x":"時刻が分かる物……。雪の上で、おっちゃんのそばに落ちてた物は？","e":"normal","note":"もう1度選ぶ"}],"x3":[{"id":"Q6a-x3","t":"line","w":"sorashido","x":"黒羽さんが外へ出て、すぐに止まった物です","e":"normal","note":"もう1度選ぶ"}],"near":[{"id":"Q6a-near","t":"line","w":"watson","x":"鐘が早かったことは分かっています。何分早かったかを示す物が、要ります","note":"もう1度選ぶ"}],"ok":[{"id":"Q6a-ok","t":"line","w":"sorashido","x":"はい。懐中時計は23時47分で止まっていた。鐘は、本当は23時47分ごろ。……柱時計は、13分、進められていたんです。12年前と同じように","e":"normal"}]},"label":"推理の問い⑤","score":true,"pass":true,"narrow":["早く鳴った鐘","止まった懐中時計","12年前の帳面","白瀬の手紙"],"answer":["止まった懐中時計"],"k":"C6-3:Q6a","near":["早く鳴った鐘"]},
 {"id":"6-3-3","t":"line","w":"mochimaru","x":"針を……。柱時計のねじ巻きは、毎晩、きゅうこさんだったっちー……","k":"C6-3:6-3-3"},
 {"id":"6-3-4","t":"line","w":"atsu","x":"……時計は、誰でも触れられる。ホールの真ん中にあるんだから","e":"troubled","k":"C6-3:6-3-4"}]},
 {"id":"C6-4","chapter":"C6","title":"うしろの人","cond":null,"bgm":"melo_dullahan_clockwork","bg":"ペンションのホール","next":"C6-5","rows":[{"id":"6-4-1","t":"line","w":"erubin","x":"……俺、あの写真の影、もう1度確かめてくる。通り道の、鏡の廊下のほう","e":"normal","k":"C6-4:6-4-1"},
@@ -69175,7 +69483,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"6-5-4","t":"line","w":"myua","x":"血……！ るびちん、血が……！","f":"close","e":"crying","k":"C6-5:6-5-4"},
 {"id":"6-5-5","t":"line","w":"erubin","x":"……大丈夫。……はしごの上で、黒いフードの人に、押されて……頭から……","f":"close","e":"troubled","k":"C6-5:6-5-5"},
 {"id":"6-5-6","t":"band","x":"みゅあが、自分のハンカチで額を押さえる。白いハンカチが、みるみる赤く染まっていく","fx":["bleed"],"k":"C6-5:6-5-6"},
-{"id":"6-5-7","t":"line","w":"erubin","x":"カメラ、取られちゃった。……ごめん","e":"troubled","k":"C6-5:6-5-7"},{"t":"q","id":"Q6b","kind":"present","x":"黒いサンタは、えるびんから、何を取ろうとした？ わけを示す手がかりを、手がかり帳から1つ突きつけよう","replies":{"x1":[{"id":"Q6b-x1","t":"line","w":"watson","x":"その手がかりは、えるびんさんが持っていた物ではありません","note":"もう1度選ぶ"}],"x2":[{"id":"Q6b-x2","t":"line","w":"myua","x":"るびちんが、鏡の廊下で撮った……","e":"troubled","note":"もう1度選ぶ"}],"x3":[{"id":"Q6b-x3","t":"line","w":"erubin","x":"カメラの中の、あの1枚……","e":"troubled","note":"もう1度選ぶ"}],"near":[{"id":"Q6b-near","t":"line","w":"sorashido","x":"鏡の廊下までは合っています。……そこで、えるさんが残した物は？","e":"normal","note":"もう1度選ぶ"}],"ok":[{"id":"Q6b-ok","t":"line","w":"sorashido","x":"はい。黒いサンタは、あの写真を消したかった。……写っていた影は、見られたら困る、誰かです","e":"normal"}]},"label":"推理の問い⑥","score":true,"answer":["えるびんの写真"],"k":"C6-5:Q6b","near":["ほこりのない鏡のふち"]},
+{"id":"6-5-7","t":"line","w":"erubin","x":"カメラ、取られちゃった。……ごめん","e":"troubled","k":"C6-5:6-5-7"},{"t":"q","id":"Q6b","kind":"present","x":"黒いサンタは、えるびんから、何を取ろうとした？ わけを示す手がかりを、手がかり帳から1つ突きつけよう","replies":{"x1":[{"id":"Q6b-x1","t":"line","w":"watson","x":"その手がかりは、えるびんさんが持っていた物ではありません","note":"もう1度選ぶ"}],"x2":[{"id":"Q6b-x2","t":"line","w":"myua","x":"るびちんが、鏡の廊下で撮った……","e":"troubled","note":"もう1度選ぶ"}],"x3":[{"id":"Q6b-x3","t":"line","w":"erubin","x":"カメラの中の、あの1枚……","e":"troubled","note":"もう1度選ぶ"}],"near":[{"id":"Q6b-near","t":"line","w":"sorashido","x":"鏡の廊下までは合っています。……そこで、えるさんが残した物は？","e":"normal","note":"もう1度選ぶ"}],"ok":[{"id":"Q6b-ok","t":"line","w":"sorashido","x":"はい。黒いサンタは、あの写真を消したかった。……写っていた影は、見られたら困る、誰かです","e":"normal"}]},"label":"推理の問い⑥","score":true,"pass":true,"narrow":["えるびんの写真","ほこりのない鏡のふち","赤い手袋","かばんの黒い服"],"answer":["えるびんの写真"],"k":"C6-5:Q6b","near":["ほこりのない鏡のふち"]},
 {"id":"6-5-8b","t":"line","w":"erubin","x":"……でも、写真は、ソラくんのパソコンにも送ってあるよ","e":"troubled","k":"C6-5:6-5-8b"},
 {"id":"6-5-8c","t":"line","w":"watson","x":"写真は、わたしの所に残っています","k":"C6-5:6-5-8c"},
 {"id":"6-5-9","t":"band","x":"はしごの下。血のしずくのそばに、何か小さな物が光っている","k":"C6-5:6-5-9"}]},
@@ -69259,7 +69567,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"7-1-14","t":"line","w":"dra","x":"(握ったリボンを見つめて、黙っている)……おで、は……","f":"close","e":"troubled","k":"C7-1:7-1-14"},
 {"id":"7-1-15a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"atsu","x":"(黙って、銀の音符の飾りを、手の中で転がしている)","e":"troubled","k":"C7-1:7-1-15a"},
 {"id":"7-1-15s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"sorashido","x":"(黙って、ワトソンくんの画面を見ている)","e":"troubled","k":"C7-1:7-1-15s"},{"t":"q","id":"A7","kind":"action","x":"ドラは、リボンを握ったまま、何も言わない。このまま黙っていたら、ドラが黒いサンタに決まってしまう——","replies":{},"label":"行動の選択","options":[{"to":"C7-2","x":"このまま、1回目の推理へ進む"},{"to":"C7-W","x":"ワトソンくんの「奥の手」で、ドラの口を借りる"}],"c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"k":"C7-1:A7"}]},
-{"id":"C7-2","chapter":"C7","title":"1回目の推理","cond":null,"bgm":"melo_kiss_mystery","bg":"ペンションのホール","next":"Q7a","rows":[{"id":"7-2-1","t":"band","x":"黒いサンタは、誰なのか。今決めるか、もっと考えるか。{name}の答えは——","k":"C7-2:7-2-1"},{"t":"q","id":"Q7a","kind":"person","x":"黒いサンタの正体は、誰？ 登場人物パネルの12人(亡くなった人・いなくなった人も含む)から1人を選ぶか、「まだ決めない」を選ぼう","replies":{"ok":[{"id":"Q7a-ok","t":"band","x":"{name}が指さしたのは、きゅうこの名前だった。——では、きゅうこは、なぜ、こんなことを？","to":"Q7m"}]},"label":"1回目の推理 1段目","group":"final","score":true,"route":{"dra":"C7-A","kyuko":"Q7m","momosuke":"C7-P1","mochimaru":"C7-P2","kuroba":"C7-P3","shirase":"C7-P3","atsu":"C7-4a","sorashido":"C7-5a","*":"C7-B","__undecided":"C7-B"},"once":true,"extra":[{"key":"__undecided","x":"まだ決めない(もっと考える)"}],"answer":["kyuko"],"k":"C7-2:Q7a"},{"t":"q","id":"Q7m","kind":"action","x":"きゅうこが黒いサンタになったわけは？","replies":{},"label":"1回目の推理 2段目","group":"final","score":true,"route":{"o3":"C8-1","*":"C7-B"},"once":true,"answer":[3],"options":[{"x":"24日のプレゼントを、独り占めしたかった"},{"x":"言い伝えの黒いサンタを、本当にしたかった"},{"x":"ドラに罪を着せたかった"},{"x":"12年前の聖夜、母を雪の中に閉め出した人たちに、同じ寒さを味わわせたかった"},{"x":"ペンションを、自分の物にしたかった"}],"k":"C7-2:Q7m"}]},
+{"id":"C7-2","chapter":"C7","title":"1回目の推理","cond":null,"bgm":"melo_kiss_mystery","bg":"ペンションのホール","next":"Q7a","rows":[{"id":"7-2-1","t":"band","x":"黒いサンタは、誰なのか。今決めるか、もっと考えるか。{name}の答えは——","k":"C7-2:7-2-1"},{"t":"q","id":"Q7a","kind":"person","x":"黒いサンタの正体は、誰？ 登場人物パネルの12人(亡くなった人・いなくなった人も含む)から1人を選ぶか、「まだ決めない」を選ぼう","replies":{"ok":[{"id":"Q7a-ok","t":"band","x":"{name}が指さしたのは、きゅうこの名前だった。——では、きゅうこは、なぜ、こんなことを？","to":"Q7m"}]},"label":"1回目の推理 1段目","group":"final","score":true,"route":{"dra":"C7-A","kyuko":"Q7m","momosuke":"C7-P1","mochimaru":"C7-P2","kuroba":"C7-P3","shirase":"C7-P3","atsu":"C7-4a","sorashido":"C7-5a","myua":"C7-Q1","kiki":"C7-Q2","erubin":"C7-Q3","ichika":"C7-Q4","*":"C7-B","__undecided":"C7-B"},"once":true,"extra":[{"key":"__undecided","x":"まだ決めない(もっと考える)"}],"answer":["kyuko"],"k":"C7-2:Q7a"},{"t":"q","id":"Q7m","kind":"action","x":"きゅうこが黒いサンタになったわけは？","replies":{},"label":"1回目の推理 2段目","group":"final","score":true,"route":{"o3":"C8-1","*":"C7-K"},"once":true,"answer":[3],"options":[{"x":"24日のプレゼントを、独り占めしたかった"},{"x":"言い伝えの黒いサンタを、本当にしたかった"},{"x":"ドラに罪を着せたかった"},{"x":"12年前の聖夜、母を雪の中に閉め出した人たちに、同じ寒さを味わわせたかった"},{"x":"ペンションを、自分の物にしたかった"}],"k":"C7-2:Q7m"}]},
 {"id":"C7-A","chapter":"C7","title":"偽りの解決","cond":null,"bgm":"melo_sad_song_short","bg":"ペンションのホール","next":"END-A","rows":[{"id":"7-A-1a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"sorashido","x":"……ドラさん。あなたなんですね","e":"normal","k":"C7-A:7-A-1a"},
 {"id":"7-A-1s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"atsu","x":"……ドラちゃん。きみなんでしょ","e":"normal","k":"C7-A:7-A-1s"},
 {"id":"7-A-2","t":"line","w":"dra","x":"(長い間、黙って、窓の外の雪を見ている)","e":"normal","k":"C7-A:7-A-2"},
@@ -69406,6 +69714,71 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"7-W-46","t":"line","w":"ichika","x":"ふふっ。今夜は、名探偵さんに、温かいココアをいれましょうね","k":"C7-W:7-W-46"},
 {"id":"7-W-47","t":"line","w":"sorashido","x":"(椅子の後ろから、何もなかった顔で出てきて)……みなさん、何かありましたか？","e":"happy","k":"C7-W:7-W-47"},
 {"id":"7-W-48","t":"line","w":"atsu","x":"ばこっちゃん、それはさすがに無理ある笑","e":"happy","k":"C7-W:7-W-48"}],"jumpOnly":true},
+{"id":"C7-Q1","chapter":"C7","title":"疑われた助手","cond":null,"bgm":"melo_dullahan_clockwork","bg":"ペンションのホール","next":null,"rows":[{"id":"7-Q1-1","t":"band","x":"{name}が指さしたのは、みゅあの名前だった","k":"C7-Q1:7-Q1-1"},
+{"id":"7-Q1-2","t":"line","w":"myua","x":"……え。あたし……？","e":"surprise","k":"C7-Q1:7-Q1-2"},
+{"id":"7-Q1-3a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"sorashido","x":"……停電の夜、みゅあさんは、台所にいました。黒い毛糸を持って。何をしていたのか、誰も見ていません","e":"troubled","k":"C7-Q1:7-Q1-3a"},
+{"id":"7-Q1-3s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"atsu","x":"……停電の夜、みゅあは台所にいた。黒い毛糸を持って。何してたのか、誰も見てない","e":"troubled","k":"C7-Q1:7-Q1-3s"},
+{"id":"7-Q1-4","t":"line","w":"myua","x":"違うよ……！ あれは、ただ、編み物してただけぢゃん……！","e":"crying","k":"C7-Q1:7-Q1-4"},
+{"id":"7-Q1-5","t":"line","w":"kiki","x":"みゅあちん……。何を編んでいたのか、言えないのでつか？","e":"troubled","k":"C7-Q1:7-Q1-5"},
+{"id":"7-Q1-6","t":"line","w":"myua","x":"……言えない。まだ、言いたくないの","e":"troubled","k":"C7-Q1:7-Q1-6"},
+{"id":"7-Q1-7","t":"line","w":"ichika","x":"……今夜だけ、お部屋で休んでもらうのは、どうでしょう。外から鍵をかけて。みゅあさんを守るためにも、ですよ","k":"C7-Q1:7-Q1-7"},{"t":"q","id":"A7c","kind":"action","x":"みゅあを、部屋に閉じこめる？","replies":{},"label":"行動の選択","options":[{"to":"C7-B","x":"やっぱり違うかもしれない。閉じこめずに、もっと考える"},{"to":"C7-R1","x":"今夜だけ、みゅあを部屋に閉じこめる"}],"k":"C7-Q1:A7c"}],"frame":"close","jumpOnly":true},
+{"id":"C7-R1","chapter":"C7","title":"編み棒の音","cond":null,"bgm":"melo_sad_song_short","bg":"2階の廊下(夜","next":"END-M6","rows":[{"id":"7-R1-1","t":"band","x":"みゅあの部屋の扉に、外から鍵がかけられた。鍵は、もちまるの鍵の束に戻された","k":"C7-R1:7-R1-1"},
+{"id":"7-R1-2","t":"line","w":"myua","x":"……いいよ。あたし、ここで、続きを編んでるから","e":"troubled","note":"扉の向こうから","k":"C7-R1:7-R1-2"},
+{"id":"7-R1-3","t":"band","x":"その夜。扉の向こうから、かち、かち、と編み棒の音だけが、ずっと聞こえていた","k":"C7-R1:7-R1-3"},
+{"id":"7-R1-4","t":"line","w":"momosuke","x":"……ねえ。今、屋根裏のほうから、きゅうちゃんの声がした","e":"surprise","k":"C7-R1:7-R1-4"},
+{"id":"7-R1-5","t":"line","w":"dra","x":"(顔を上げ、何か言いかけて……やめる)……もも、今夜は、おでのそばにいろ","e":"troubled","k":"C7-R1:7-R1-5"},
+{"id":"7-R1-6","t":"band","x":"けれど、見張りが1人足りない夜だった。ドラがうとうとした、ほんの少しの間に、ももすけの毛布は、空になっていた","k":"C7-R1:7-R1-6"},
+{"id":"7-R1-7","t":"band","x":"……きゃ……(暗い廊下の奥で、小さな声。それから、重い物が落ちる音)","fx":["se"],"se":"tap","k":"C7-R1:7-R1-7"},
+{"id":"7-R1-8","t":"band","x":"扉の向こうの編み棒の音が、1度だけ、止まった","k":"C7-R1:7-R1-8"}],"jumpOnly":true},
+{"id":"C7-Q2","chapter":"C7","title":"白紙のページ","cond":null,"bgm":"melo_dullahan_clockwork","bg":"ペンションのホール","next":null,"rows":[{"id":"7-Q2-1","t":"band","x":"{name}が指さしたのは、ききの名前だった","k":"C7-Q2:7-Q2-1"},
+{"id":"7-Q2-2","t":"line","w":"kiki","x":"……私、でつか","e":"surprise","k":"C7-Q2:7-Q2-2"},
+{"id":"7-Q2-3a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"sorashido","x":"見張りのノートを書いていたのは、ききさんです。……書かないでおくことも、できたはずです","e":"troubled","k":"C7-Q2:7-Q2-3a"},
+{"id":"7-Q2-3s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"atsu","x":"見張りのノートを書いてたのは、ききだ。……書かないでおくことも、できた","e":"troubled","k":"C7-Q2:7-Q2-3s"},
+{"id":"7-Q2-4","t":"line","w":"kiki","x":"……私のノートが信じてもらえないなら、何を言っても、同じでつ","e":"troubled","k":"C7-Q2:7-Q2-4"},
+{"id":"7-Q2-5","t":"line","w":"dra","x":"靴下さん……","e":"troubled","k":"C7-Q2:7-Q2-5"},
+{"id":"7-Q2-6","t":"line","w":"ichika","x":"ききさん。今夜だけ、お部屋で休んでいただけますか。外から鍵をかけて","k":"C7-Q2:7-Q2-6"},{"t":"q","id":"A7d","kind":"action","x":"ききを、部屋に閉じこめる？","replies":{},"label":"行動の選択","options":[{"to":"C7-B","x":"やっぱり違うかもしれない。閉じこめずに、もっと考える"},{"to":"C7-R2","x":"今夜だけ、ききを部屋に閉じこめる"}],"k":"C7-Q2:A7d"}],"frame":"close","jumpOnly":true},
+{"id":"C7-R2","chapter":"C7","title":"書かれなかった夜","cond":null,"bgm":"melo_sad_song_short","bg":"夜のホール","next":"END-M7","rows":[{"id":"7-R2-1","t":"band","x":"ききは、見張りのノートをテーブルに置くと、自分から部屋に入った。扉に、外から鍵がかけられた","k":"C7-R2:7-R2-1"},
+{"id":"7-R2-2","t":"line","w":"kiki","x":"今夜の見張りは、どなたかに、お願いしまつ","e":"normal","note":"扉の向こうから","k":"C7-R2:7-R2-2"},
+{"id":"7-R2-3","t":"band","x":"その夜。ノートを開く人は、いなかった。鐘が鳴った時刻も、廊下の足音も、誰も書きとめなかった","k":"C7-R2:7-R2-3"},
+{"id":"7-R2-4","t":"band","x":"ボーン……ボーン……(柱時計が、0時の鐘を打つ)","fx":["se"],"se":"bell","seN":2,"k":"C7-R2:7-R2-4"},
+{"id":"7-R2-5","t":"band","x":"2階のどこかで、窓の開く音がした。吹雪の音にまぎれて、誰も、それが何の音だったのか、気にとめなかった","k":"C7-R2:7-R2-5"}],"jumpOnly":true},
+{"id":"C7-Q3","chapter":"C7","title":"襲われた人","cond":null,"bgm":"melo_dullahan_clockwork","bg":"ペンションのホール","next":null,"rows":[{"id":"7-Q3-1","t":"band","x":"{name}が指さしたのは、えるびんの名前だった","k":"C7-Q3:7-Q3-1"},
+{"id":"7-Q3-2","t":"line","w":"erubin","x":"……俺、かな？ 俺は、襲われた側だよ","e":"surprise","k":"C7-Q3:7-Q3-2"},
+{"id":"7-Q3-3a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"sorashido","x":"……襲われたところを見た人は、いません。はしごの下で見つかった時、えるさんは1人でした","e":"troubled","k":"C7-Q3:7-Q3-3a"},
+{"id":"7-Q3-3s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"atsu","x":"……襲われたとこは、誰も見てない。はしごの下で見つかった時、エルちゃんは1人だった","e":"troubled","k":"C7-Q3:7-Q3-3s"},
+{"id":"7-Q3-4","t":"line","w":"erubin","x":"……そうだね。足をくじいたのが自分でやったことじゃないって、証明はできないかな","e":"troubled","k":"C7-Q3:7-Q3-4"},
+{"id":"7-Q3-5","t":"line","w":"myua","x":"るびちん……","e":"troubled","k":"C7-Q3:7-Q3-5"},
+{"id":"7-Q3-6","t":"line","w":"ichika","x":"えるびんさんのお部屋に、外から鍵をかけましょうか。……足を怪我していますから、どちらにしても、遠くへは行けませんよ","k":"C7-Q3:7-Q3-6"},{"t":"q","id":"A7e","kind":"action","x":"足を怪我したえるびんを、部屋に閉じこめる？","replies":{},"label":"行動の選択","options":[{"to":"C7-B","x":"やっぱり違うかもしれない。閉じこめずに、もっと考える"},{"to":"C7-R3","x":"今夜だけ、えるびんの部屋に外から鍵をかける"}],"k":"C7-Q3:A7e"}],"frame":"close","jumpOnly":true},
+{"id":"C7-R3","chapter":"C7","title":"叩かれる扉","cond":null,"bgm":"melo_dullahan_steel_ghost","bg":"2階の廊下(夜","next":"END-M8","rows":[{"id":"7-R3-1","t":"band","x":"えるびんの部屋の扉に、外から鍵がかけられた。鍵は、もちまるの鍵の束に戻された","k":"C7-R3:7-R3-1"},
+{"id":"7-R3-2","t":"line","w":"erubin","x":"大丈夫。……1人には、慣れてるから","e":"normal","note":"扉の向こうから","k":"C7-R3:7-R3-2"},
+{"id":"7-R3-3","t":"band","x":"その夜。0時をすぎたころ、2階の奥で、扉を叩く音がした","k":"C7-R3:7-R3-3"},
+{"id":"7-R3-4","t":"line","w":"erubin","x":"……誰か！ 窓の外に——開けて！ ここを開けて！","e":"surprise","note":"扉の向こうから","k":"C7-R3:7-R3-4"},
+{"id":"7-R3-5","t":"band","x":"鍵の束を探すもちまるの手が震えて、何度も鍵を取り落とす。廊下に、窓の開く音と、吹雪の音が流れこんできた","k":"C7-R3:7-R3-5"},
+{"id":"7-R3-6","t":"band","x":"扉を叩く音が、止まった","k":"C7-R3:7-R3-6"}],"jumpOnly":true},
+{"id":"C7-Q4","chapter":"C7","title":"宿の主","cond":null,"bgm":"melo_dullahan_clockwork","bg":"ペンションのホール","next":null,"rows":[{"id":"7-Q4-1","t":"band","x":"{name}が指さしたのは、イチーカの名前だった","k":"C7-Q4:7-Q4-1"},
+{"id":"7-Q4-2","t":"line","w":"ichika","x":"……わたし、ですか","k":"C7-Q4:7-Q4-2"},
+{"id":"7-Q4-3a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"sorashido","x":"開かずの部屋の鍵を持っているのは、イチーカさんだけです。12年前のことを知っているのも","e":"troubled","k":"C7-Q4:7-Q4-3a"},
+{"id":"7-Q4-3s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"atsu","x":"開かずの部屋の鍵を持ってるのは、イチーカさんだけだ。12年前のことを知ってるのも","e":"troubled","k":"C7-Q4:7-Q4-3s"},
+{"id":"7-Q4-4","t":"line","w":"mochimaru","x":"オーナーは、そんなことしないっちー……！","k":"C7-Q4:7-Q4-4"},
+{"id":"7-Q4-5","t":"line","w":"ichika","x":"いいのよ、もちまる。……疑われたままでは、みなさんも休めませんものね","k":"C7-Q4:7-Q4-5"},
+{"id":"7-Q4-6","t":"line","w":"ichika","x":"わたしは、カノンさんのお部屋で休みます。宿の鍵の束は、もちまるに預けますね","k":"C7-Q4:7-Q4-6"},{"t":"q","id":"A7f","kind":"action","x":"イチーカを、開かずの部屋に閉じこめる？","replies":{},"label":"行動の選択","options":[{"to":"C7-B","x":"やっぱり違うかもしれない。閉じこめずに、もっと考える"},{"to":"C7-R4","x":"今夜だけ、イチーカに開かずの部屋で休んでもらう"}],"k":"C7-Q4:A7f"}],"frame":"close","jumpOnly":true},
+{"id":"C7-R4","chapter":"C7","title":"鍵の束","cond":null,"bgm":"melo_dullahan_steel_ghost","bg":"夜のホール","next":"END-M9","rows":[{"id":"7-R4-1","t":"band","x":"開かずの部屋の扉が、外から閉められた。宿の鍵の束は、もちまるの腰に下がった","k":"C7-R4:7-R4-1"},
+{"id":"7-R4-2","t":"line","w":"mochimaru","x":"今夜は、ぼくが、オーナーの代わりだっちー。……見回り、行ってくるっちー","k":"C7-R4:7-R4-2"},
+{"id":"7-R4-3","t":"band","x":"ランタンの灯りが、ホールの奥へ遠ざかっていく。鍵の束の鳴る音が、ちゃり、ちゃり、と小さくなっていった","k":"C7-R4:7-R4-3"},
+{"id":"7-R4-4","t":"band","x":"カチ……カチ……(柱時計の音)","fx":["se"],"se":"tick","seN":2,"k":"C7-R4:7-R4-4"},
+{"id":"7-R4-5","t":"band","x":"鍵の束の音が、柱時計のあたりで、ふっと止んだ","k":"C7-R4:7-R4-5"}],"jumpOnly":true},
+{"id":"C7-K","chapter":"C7","title":"すれちがう推理","cond":null,"bgm":"melo_dullahan_clockwork","bg":"ペンションのホール","next":null,"rows":[{"id":"7-K-1","t":"band","x":"{name}が選んだのは、きゅうこの名前と、1つのわけだった","k":"C7-K:7-K-1"},
+{"id":"7-K-2a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"sorashido","x":"……きゅうこちゃんが？ でも、きゅうこちゃんは、崖で……","e":"troubled","k":"C7-K:7-K-2a"},
+{"id":"7-K-2s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"atsu","x":"……きゅうこちゃんが？ でも、きゅうこちゃんは、崖で……","e":"troubled","k":"C7-K:7-K-2s"},
+{"id":"7-K-3","t":"line","w":"dra","x":"(リボンを握る手が、びくりと震える)","e":"surprise","k":"C7-K:7-K-3"},
+{"id":"7-K-4","t":"line","w":"momosuke","x":"きゅうちゃんが、生きてるってこと……？ だったら、探そうよ！ 今すぐ！","e":"angry","k":"C7-K:7-K-4"},{"t":"q","id":"A7k","kind":"action","x":"きゅうこは、生きているのかもしれない——","replies":{},"label":"行動の選択","options":[{"to":"C7-B","x":"まだ、繋がりきっていない。もう1度考える"},{"to":"C7-K1","x":"生きているきゅうこを、みんなで探しに行く"}],"k":"C7-K:A7k"}],"jumpOnly":true},
+{"id":"C7-K1","chapter":"C7","title":"呼ぶ声","cond":null,"bgm":"melo_sad_song_short","bg":"2階の廊下(夜","next":"END-K1","rows":[{"id":"7-K1-1","t":"band","x":"ランタンを手に、みんなで家じゅうを探して回った。客室、台所、書斎、鏡の廊下——","k":"C7-K1:7-K1-1"},
+{"id":"7-K1-2","t":"line","w":"momosuke","x":"きゅうちゃん！ いるんでしょ！ 出てきてよ！ ……なんで、こんなことしたの！","e":"angry","k":"C7-K1:7-K1-2"},
+{"id":"7-K1-3a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"atsu","x":"きゅうこちゃん！ 分かってるんだ！ 隠れてないで、出てこい！","e":"angry","k":"C7-K1:7-K1-3a"},
+{"id":"7-K1-3s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"sorashido","x":"きゅうこちゃん。理由は、もう分かっています。出てきてください","e":"normal","k":"C7-K1:7-K1-3s"},
+{"id":"7-K1-4","t":"band","x":"2階の壁の奥で、ずっと鳴っていたオルゴールが——ぷつりと、止まった","k":"C7-K1:7-K1-4"},
+{"id":"7-K1-5","t":"line","w":"dra","x":"……もう、やめてくれ。……呼ぶなら、そんな呼び方、しないでやってくれ","f":"close","e":"crying","k":"C7-K1:7-K1-5"},
+{"id":"7-K1-6","t":"band","x":"その夜。誰も、何も見つけられないまま、ホールで眠りについた","k":"C7-K1:7-K1-6"}],"jumpOnly":true},
 {"id":"C8-1","chapter":"C8","title":"ひとつずつ","cond":null,"bgm":"melo_kiss_mystery","bg":"ペンションのホール","next":"C8-2","rows":[{"id":"8-1-1","t":"band","x":"聖夜の名探偵 第8章 〜本当の名探偵〜","k":"C8-1:8-1-1"},
 {"id":"8-1-2a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"atsu","x":"……うん。ばこっちゃんの推理の筋道は、合ってた。おかしいのは、手がかりのほうなんだ","e":"normal","k":"C8-1:8-1-2a"},
 {"id":"8-1-2s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"sorashido","x":"その通りです。……あつさんの推理の筋道は、正しかった。おかしいのは、手がかりのほうです","e":"normal","k":"C8-1:8-1-2s"},
@@ -69520,7 +69893,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"10-2-12","t":"line","w":"dra","x":"おでが……おでが、寝ちまったから……！ おでが、ちゃんと……！","f":"close","e":"crying","k":"C10-2:10-2-12"},
 {"id":"10-2-13","t":"line","w":"mochimaru","x":"……ももすけさんの箱も、木の下から、なくなってるっちー……","k":"C10-2:10-2-13"},
 {"id":"10-2-13c","t":"clue","clue":"消えた箱","x":"ももすけが亡くなった朝も、ももすけの箱が消えていた","add":true,"k":"C10-2:10-2-13c"},
-{"id":"10-2-14","t":"panel","x":"","ops":[{"id":"momosuke","st":"dead"}],"k":"C10-2:10-2-14"}]},
+{"id":"10-2-14","t":"panel","x":"","ops":[{"id":"momosuke","st":"dead"}],"k":"C10-2:10-2-14"},{"t":"q","id":"A10b","kind":"action","x":"今夜も、誰かが見回りをしなければ——","replies":{},"label":"行動の選択","options":[{"to":"C10-3","x":"見回りは、もちまるに任せて、みんなでホールにいる"},{"c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"to":"C10-L","x":"あつが、もちまるの見回りについていく"},{"c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"to":"C10-L","x":"ソラシドが、もちまるの見回りについていく"}],"k":"C10-2:A10b"}]},
 {"id":"C10-3","chapter":"C10","title":"見回りのランタン","cond":null,"bgm":"melo_dullahan_steel_ghost","bg":"夜のホール","next":"C10-4","rows":[{"id":"10-3-1","t":"line","w":"mochimaru","x":"今夜は、ぼくが、ずっと見回りをするっちー。……怖いけど、もう、誰も、いなくならないように","k":"C10-3:10-3-1"},
 {"id":"10-3-2","t":"line","w":"ichika","x":"もちまる、1人で無理をしないでね","k":"C10-3:10-3-2"},
 {"id":"10-3-3","t":"line","w":"mochimaru","x":"大丈夫だっちー。ぼく、毎晩やってる仕事だっちー","k":"C10-3:10-3-3"},
@@ -69536,7 +69909,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"10-3-12","t":"band","x":"もみの木の下。箱は、1つも減っていなかった","k":"C10-3:10-3-12"},
 {"id":"10-3-12c","t":"clue","clue":"箱のない犠牲者","x":"もちまるは世話役で、初めから箱を持っていない。もちまるが亡くなった朝、木の下の箱は、1つも減っていなかった","k":"C10-3:10-3-12c"},
 {"id":"10-3-13","t":"panel","x":"","ops":[{"id":"mochimaru","st":"dead"}],"k":"C10-3:10-3-13"}]},
-{"id":"C10-4","chapter":"C10","title":"誤算","cond":null,"bgm":"melo_kiss_mystery","bg":"ペンションのホール","next":"C11-1","rows":[{"id":"10-4-1","t":"line","w":"myua","x":"……ねえ、あつくん。今度は、箱がなくなってない。……もちまるん、世話役だから、箱、持ってなかったもんね","e":"troubled","k":"C10-4:10-4-1"},{"t":"q","id":"Q10a","kind":"present","x":"もちまるが亡くなった朝は、今までに亡くなった人たちの時と、違う所がある。それを示す手がかりを、手がかり帳から1つ突きつけよう","replies":{"x1":[{"id":"Q10a-x1","t":"line","w":"watson","x":"その手がかりは、前に見つけた物です。今朝、新しく分かったことを選んでください","note":"もう1度選ぶ"}],"x2":[{"id":"Q10a-x2","t":"line","w":"sorashido","x":"……木の下を、もう1度見てください","e":"troubled","note":"もう1度選ぶ"}],"x3":[{"id":"Q10a-x3","t":"line","w":"myua","x":"もちまるんは、世話役だから……","e":"troubled","note":"もう1度選ぶ"}],"near":[{"id":"Q10a-near","t":"line","w":"atsu","x":"そう、今までは箱が消えてた。……今回は？","e":"normal","note":"もう1度選ぶ"}],"ok":[{"id":"Q10a-ok","t":"line","w":"sorashido","x":"はい。黒いサンタは、箱を持つお客を狙い、その箱を持っていく。でも、もちまるさんは世話役で、箱を持っていなかった。……決まりから外れています。もちまるさんは、狙われていなかったんです","e":"normal"}]},"label":"推理の問い⑦","answer":["箱のない犠牲者"],"k":"C10-4:Q10a","near":["消えた箱"]},
+{"id":"C10-4","chapter":"C10","title":"誤算","cond":null,"bgm":"melo_kiss_mystery","bg":"ペンションのホール","next":"C11-1","rows":[{"id":"10-4-1","t":"line","w":"myua","x":"……ねえ、あつくん。今度は、箱がなくなってない。……もちまるん、世話役だから、箱、持ってなかったもんね","e":"troubled","k":"C10-4:10-4-1"},{"t":"q","id":"Q10a","kind":"present","x":"もちまるが亡くなった朝は、今までに亡くなった人たちの時と、違う所がある。それを示す手がかりを、手がかり帳から1つ突きつけよう","replies":{"x1":[{"id":"Q10a-x1","t":"line","w":"watson","x":"その手がかりは、前に見つけた物です。今朝、新しく分かったことを選んでください","note":"もう1度選ぶ"}],"x2":[{"id":"Q10a-x2","t":"line","w":"sorashido","x":"……木の下を、もう1度見てください","e":"troubled","note":"もう1度選ぶ"}],"x3":[{"id":"Q10a-x3","t":"line","w":"myua","x":"もちまるんは、世話役だから……","e":"troubled","note":"もう1度選ぶ"}],"near":[{"id":"Q10a-near","t":"line","w":"atsu","x":"そう、今までは箱が消えてた。……今回は？","e":"normal","note":"もう1度選ぶ"}],"ok":[{"id":"Q10a-ok","t":"line","w":"sorashido","x":"はい。黒いサンタは、箱を持つお客を狙い、その箱を持っていく。でも、もちまるさんは世話役で、箱を持っていなかった。……決まりから外れています。もちまるさんは、狙われていなかったんです","e":"normal"}]},"label":"推理の問い⑦","pass":true,"narrow":["消えた箱","帳面の最後の行","箱のない犠牲者","鳴りやまないオルゴール"],"answer":["箱のない犠牲者"],"k":"C10-4:Q10a","near":["消えた箱"]},
 {"id":"10-4-2a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"atsu","x":"帳面の最後の行、『柱時計の前に、誰か』。もちまるは、見ちゃいけない物を見ちゃったんだ。……狙ってたんじゃない。黒いサンタにとっても、計算外だった","e":"normal","k":"C10-4:10-4-2a"},
 {"id":"10-4-2s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"sorashido","x":"帳面の最後の行。『柱時計の前に、誰か』。もちまるさんは、見てはいけない物を見てしまった。計画の外。……誤算です","e":"normal","k":"C10-4:10-4-2s"},
 {"id":"10-4-3a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"sorashido","x":"柱時計の前で、何をしていたんでしょう……","e":"normal","k":"C10-4:10-4-3a"},
@@ -69545,7 +69918,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"10-4-5a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"atsu","x":"針を動かしてたやつ。……毎晩、柱時計のねじを巻いてた人だ","e":"normal","k":"C10-4:10-4-5a"},
 {"id":"10-4-5s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"sorashido","x":"針を動かしていた人。……毎晩、柱時計のねじを巻いていた人です","e":"normal","k":"C10-4:10-4-5s"},
 {"id":"10-4-6","t":"line","w":"dra","x":"(握ったリボンに、顔をうずめる)","f":"close","e":"crying","k":"C10-4:10-4-6"},
-{"id":"10-4-7","t":"panel","x":"登場人物 12人","missing":[],"hurt":[],"dead":[],"k":"C10-4:10-4-7"}]},
+{"id":"10-4-7","t":"panel","x":"登場人物 12人","missing":[],"hurt":[],"dead":[],"k":"C10-4:10-4-7"},{"t":"q","id":"A11","kind":"action","x":"残ったのは、6人。今夜、黒いサンタの名前を決める？","replies":{},"label":"行動の選択","options":[{"to":"C11-1","x":"今夜、決める"},{"to":"C11-L","x":"山道があくまで、誰の名前も選ばない"}],"k":"C10-4:A11"}]},
 {"id":"C11-1","chapter":"C11","title":"今度こそ","cond":null,"bgm":"melo_kiss_mystery","bg":"ペンションのホール","next":"Q11a","rows":[{"id":"11-1-1","t":"band","x":"聖夜の名探偵 第9章 〜2度目の推理〜","k":"C11-1:11-1-1"},
 {"id":"11-1-2","t":"band","x":"残ったのは、6人。暖炉の前に、みんなが集まる","k":"C11-1:11-1-2"},
 {"id":"11-1-3","t":"line","w":"atsu","x":"……今度こそ、決める。もう、誰も失いたくない","e":"troubled","k":"C11-1:11-1-3"},
@@ -69739,6 +70112,87 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"M5-9a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"panel","x":"","ops":[{"id":"sorashido","st":"dead"}],"k":"END-M5:M5-9a"},
 {"id":"M5-9s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"panel","x":"","ops":[{"id":"atsu","st":"dead"}],"k":"END-M5:M5-9s"},
 {"id":"M5-10","t":"band","x":"——その名前を指さしたのは、{name}だった","k":"END-M5:M5-10"}],"frame":"close","ending":{"id":"END-M5","kind":"accuse","label":"名指しエンド","name":"一人きりの名探偵"}},
+{"id":"END-M6","chapter":"END","title":"","cond":null,"bgm":"melo_sad_song_short","bg":"ペンションのホール(朝","next":null,"rows":[{"id":"M6-1","t":"band","x":"聖夜の名探偵 エンディング「編みかけのマフラー」","k":"END-M6:M6-1"},
+{"id":"M6-2","t":"band","x":"朝。屋根裏へ上る通り道のはしごの下で、ももすけが、仰向けに倒れて見つかった。頭の下の血だまりは、もう乾きかけていた","fx":["fallen"],"body":"momosuke","k":"END-M6:M6-2"},
+{"id":"M6-3","t":"line","w":"mochimaru","x":"……ももすけさんの箱も、木の下から、なくなってるっちー……","k":"END-M6:M6-3"},
+{"id":"M6-4","t":"band","x":"みゅあの部屋の鍵を開ける。扉は、一晩じゅう、外から閉まったままだった","k":"END-M6:M6-4"},
+{"id":"M6-5","t":"band","x":"ベッドの上に、黒い毛糸のマフラーが、きれいにたたんで並んでいた。一本、二本……人数分。端に、毛糸で小さく名前が編みこんである","k":"END-M6:M6-5"},
+{"id":"M6-6","t":"line","w":"myua","x":"……みんなの分。クリスマスに、渡したかったの。……ももの分も、あるのに","f":"close","e":"crying","k":"END-M6:M6-6"},
+{"id":"M6-7","t":"band","x":"「もも」と編みこまれたマフラーだけが、誰の首にも巻かれないまま、残った","k":"END-M6:M6-7"},
+{"id":"M6-8","t":"panel","x":"","ops":[{"id":"momosuke","st":"dead"}],"k":"END-M6:M6-8"},
+{"id":"M6-9","t":"band","x":"——その名前を指さしたのは、{name}だった","k":"END-M6:M6-9"}],"frame":"close","ending":{"id":"END-M6","kind":"accuse","label":"名指しエンド","name":"編みかけのマフラー"}},
+{"id":"END-M7","chapter":"END","title":"","cond":null,"bgm":"melo_sad_song_short","bg":"えるびんの部屋(朝","next":null,"rows":[{"id":"M7-1","t":"band","x":"聖夜の名探偵 エンディング「白紙の見張り帳」","k":"END-M7:M7-1"},
+{"id":"M7-2","t":"band","x":"朝。足を怪我して休んでいたえるびんの部屋の窓が、開いていた。吹きこんだ雪の下、ベッドの上のえるびんは、もう動かなかった。白い枕が、頭の後ろから、赤黒く染まっていた","fx":["bleed"],"body":"erubin","k":"END-M7:M7-2"},
+{"id":"M7-3","t":"line","w":"myua","x":"……るびちん……！ なんで、誰も気づかなかったの……！","e":"crying","k":"END-M7:M7-3"},
+{"id":"M7-4","t":"line","w":"mochimaru","x":"……もみの木の下の、えるびんさんの箱が、なくなってるっちー","k":"END-M7:M7-4"},
+{"id":"M7-5","t":"band","x":"ききの部屋の鍵を開ける。ききは、扉のすぐ内側に座ったまま、一晩じゅう起きていた","k":"END-M7:M7-5"},
+{"id":"M7-6","t":"line","w":"kiki","x":"……窓の音、聞こえたんでつ。何時だったのか、書いておこうとして……ノートが、ここに無くて","f":"close","e":"crying","k":"END-M7:M7-6"},
+{"id":"M7-7","t":"band","x":"テーブルの上の見張りのノート。その夜のページだけが、白いままだった","k":"END-M7:M7-7"},
+{"id":"M7-8","t":"panel","x":"","ops":[{"id":"erubin","st":"dead"}],"k":"END-M7:M7-8"},
+{"id":"M7-9","t":"band","x":"——その名前を指さしたのは、{name}だった","k":"END-M7:M7-9"}],"frame":"close","ending":{"id":"END-M7","kind":"accuse","label":"名指しエンド","name":"白紙の見張り帳"}},
+{"id":"END-M8","chapter":"END","title":"","cond":null,"bgm":"melo_sad_song_short","bg":"えるびんの部屋(朝","next":null,"rows":[{"id":"M8-1","t":"band","x":"聖夜の名探偵 エンディング「鍵をかけたのは」","k":"END-M8:M8-1"},
+{"id":"M8-2","t":"band","x":"扉を開けた時には、窓から吹雪が吹きこんでいた。えるびんは、扉のほうへ手を伸ばしたまま、床にうつ伏せに倒れていた。後ろ頭の髪が、血で固まっている","fx":["bleed","fallen"],"body":"erubin","k":"END-M8:M8-2"},
+{"id":"M8-3","t":"line","w":"mochimaru","x":"……ぼくが、もっと早く、鍵を見つけていれば……っちー……","k":"END-M8:M8-3"},
+{"id":"M8-4","t":"band","x":"扉の内側には、叩き続けた手の跡が、いくつも残っていた","k":"END-M8:M8-4"},
+{"id":"M8-5a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"atsu","x":"……鍵をかけたのは、俺たちだ","f":"close","e":"crying","k":"END-M8:M8-5a"},
+{"id":"M8-5s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"sorashido","x":"……鍵をかけたのは、自分たちです","f":"close","e":"crying","k":"END-M8:M8-5s"},
+{"id":"M8-6","t":"line","w":"mochimaru","x":"……もみの木の下の、えるびんさんの箱が、なくなってるっちー","k":"END-M8:M8-6"},
+{"id":"M8-7","t":"panel","x":"","ops":[{"id":"erubin","st":"dead"}],"k":"END-M8:M8-7"},
+{"id":"M8-8","t":"band","x":"——その名前を指さしたのは、{name}だった","k":"END-M8:M8-8"}],"frame":"close","ending":{"id":"END-M8","kind":"accuse","label":"名指しエンド","name":"鍵をかけたのは"}},
+{"id":"END-M9","chapter":"END","title":"","cond":null,"bgm":"melo_sad_song_short","bg":"ペンションのホール(柱時計","next":null,"rows":[{"id":"M9-1","t":"band","x":"聖夜の名探偵 エンディング「主のいない宿」","k":"END-M9:M9-1"},
+{"id":"M9-2","t":"band","x":"朝。柱時計の前に、火の消えたランタン。もちまるは、時計の足もとに、うつ伏せに倒れていた。後ろ頭の毛が、赤黒く濡れて固まっている","fx":["bleed","fallen"],"body":"mochimaru","k":"END-M9:M9-2"},
+{"id":"M9-3","t":"band","x":"そばに、宿の鍵の束が落ちていた。一本も、欠けていなかった","k":"END-M9:M9-3"},
+{"id":"M9-4","t":"band","x":"開かずの部屋の扉を開ける。イチーカは、12年前の母と子の小さなベッドの横に座って、一晩じゅう、扉を見ていた","k":"END-M9:M9-4"},
+{"id":"M9-5","t":"line","w":"ichika","x":"……もちまる。あなたに、鍵を預けたりしなければ。……ごめんなさい、もちまる……","f":"close","k":"END-M9:M9-5"},
+{"id":"M9-6","t":"panel","x":"","ops":[{"id":"mochimaru","st":"dead"}],"k":"END-M9:M9-6"},
+{"id":"M9-7","t":"band","x":"——その名前を指さしたのは、{name}だった","k":"END-M9:M9-7"}],"frame":"close","ending":{"id":"END-M9","kind":"accuse","label":"名指しエンド","name":"主のいない宿"}},
+{"id":"END-K1","chapter":"END","title":"","cond":null,"bgm":"melo_sad_song_short","bg":"きゅうこの部屋","next":null,"rows":[{"id":"K1-1","t":"band","x":"聖夜の名探偵 エンディング「ちがう、と言えない夜」","k":"END-K1:K1-1"},
+{"id":"K1-2","t":"band","x":"朝。もみの木の下から、箱が2つ、消えていた","k":"END-K1:K1-2"},
+{"id":"K1-3","t":"line","w":"mochimaru","x":"……えるびんさんと、ももすけさんの箱だっちー。……お2人とも、お部屋に、いないっちー……","k":"END-K1:K1-3"},
+{"id":"K1-4","t":"band","x":"開いた窓。はしごの下の暗がり。2人は、それきり、見つからなかった","k":"END-K1:K1-4"},
+{"id":"K1-5","t":"band","x":"きゅうこの部屋。止まったオルゴールの上に、1枚の紙が置かれていた。震えた字で、ひと言だけ","k":"END-K1:K1-5"},
+{"id":"K1-6","t":"band","x":"ちがうよ","fx":["letter"],"k":"END-K1:K1-6"},
+{"id":"K1-7","t":"band","x":"何が、どう、違うのか。それを書いた人は、もう、どこにもいなかった","k":"END-K1:K1-7"},
+{"id":"K1-8","t":"panel","x":"","ops":[{"id":"erubin","st":"missing"},
+{"id":"momosuke","st":"missing"}],"k":"END-K1:K1-8"},
+{"id":"K1-9","t":"band","x":"——そのわけを選んだのは、{name}だった","k":"END-K1:K1-9"}],"frame":"close","ending":{"id":"END-K1","kind":"accuse","label":"名指しエンド","name":"ちがう、と言えない夜"}},
+{"id":"C10-L","chapter":"END","title":"2つの灯り","cond":null,"bgm":"melo_dullahan_steel_ghost","bg":"夜のホール","next":"END-L2","rows":[{"id":"10-L-1","t":"line","w":"mochimaru","x":"……ついてきてくれるっちー？ ありがとうだっちー。ほんとは、ちょっとだけ、怖かったっちー","k":"C10-L:10-L-1"},
+{"id":"10-L-2a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"atsu","x":"1人で行かせるわけないじゃん。……灯り、俺が持つよ","e":"normal","k":"C10-L:10-L-2a"},
+{"id":"10-L-2s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"sorashido","x":"1人で行かせるわけにはいきません。……灯りは、自分が持ちます","e":"normal","k":"C10-L:10-L-2s"},
+{"id":"10-L-3","t":"band","x":"0時をすぎたホール。ランタンの輪の外は、真っ暗だった","k":"C10-L:10-L-3"},
+{"id":"10-L-4","t":"band","x":"カチ……カチ……","fx":["se"],"se":"tick","seN":2,"k":"C10-L:10-L-4"},
+{"id":"10-L-5","t":"line","w":"mochimaru","x":"……時計の前に、誰か、いるっちー","note":"小さな声で","k":"C10-L:10-L-5"},
+{"id":"10-L-6","t":"band","x":"柱時計の前に、黒いサンタのシルエット。ガラスの扉が開いていて、その手は、文字盤に伸びていた","k":"C10-L:10-L-6"},
+{"id":"10-L-7a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"atsu","x":"誰だ！","f":"close","e":"angry","k":"C10-L:10-L-7a"},
+{"id":"10-L-7s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"sorashido","x":"誰ですか！","f":"close","e":"angry","k":"C10-L:10-L-7s"},
+{"id":"10-L-8","t":"band","x":"ランタンを向けた瞬間、影は身をひるがえし、裏口のほうへ走った。冷たい風。吹雪の音。灯りが大きく揺れて——消えた","k":"C10-L:10-L-8"},
+{"id":"10-L-9","t":"band","x":"","fx":["dark"],"k":"C10-L:10-L-9"},
+{"id":"10-L-10","t":"line","w":"mochimaru","x":"……行っちゃったっちー……","k":"C10-L:10-L-10"}],"jumpOnly":true},
+{"id":"END-L2","chapter":"END","title":"","cond":null,"bgm":"melo_sad_song_short","bg":"朝の雪原","next":null,"rows":[{"id":"L2-1","t":"band","x":"聖夜の名探偵 エンディング「ランタンの消えた朝」","k":"END-L2:L2-1"},
+{"id":"L2-2","t":"band","x":"朝。裏口の外の雪には、崖のほうへ続く足跡が一筋。その先は、吹きだまりに埋もれていた","k":"END-L2:L2-2"},
+{"id":"L2-3","t":"band","x":"それから、黒いサンタは、2度と現れなかった。鐘は鳴り、停電はなく、誰も、いなくならなかった","k":"END-L2:L2-3"},
+{"id":"L2-4","t":"band","x":"12月27日。雪がやみ、ふもとから人が上がってきた。屋根裏も、壁の中の通り道も調べられたが、誰も見つからなかった","k":"END-L2:L2-4"},
+{"id":"L2-5","t":"band","x":"黒いサンタが誰だったのか。なぜ、あの夜をくり返したのか。誰にも分からないまま、山を下りる日が来た","k":"END-L2:L2-5"},
+{"id":"L2-6","t":"line","w":"mochimaru","x":"(帳面を開いて、最後の行を書く)","k":"END-L2:L2-6"},
+{"id":"L2-7","t":"band","x":"帳面の最後の行。「12月27日 晴れ。黒いサンタは、もう来ないっちー。……でも、誰だったのかは、分からないっちー」","k":"END-L2:L2-7"},
+{"id":"L2-8","t":"panel","x":"登場人物 12人","missing":[],"hurt":[],"dead":[],"k":"END-L2:L2-8"},
+{"id":"L2-9","t":"band","x":"——灯りが消えなければ、その顔が、見えていたのかもしれない","k":"END-L2:L2-9"}],"ending":{"id":"END-L2","kind":"unsolved","label":"迷宮入り","name":"ランタンの消えた朝"}},
+{"id":"C11-L","chapter":"END","title":"誰も選ばない夜","cond":null,"bgm":"melo_dullahan_clockwork","bg":"夜のホール","next":"END-L1","rows":[{"id":"11-L-1a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"atsu","x":"……決めない。決めて、また間違えたら……今度こそ、取り返しがつかない","e":"troubled","k":"C11-L:11-L-1a"},
+{"id":"11-L-1s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"sorashido","x":"……決めません。決めて、また間違えたら、今度こそ、取り返しがつきません","e":"troubled","k":"C11-L:11-L-1s"},
+{"id":"11-L-2","t":"line","w":"ichika","x":"では、みんなで、ここにいましょう。山道があくまで、誰も、1人にならないように","k":"C11-L:11-L-2"},
+{"id":"11-L-3","t":"band","x":"暖炉の前に毛布を並べ、6人は、背中を合わせて夜を明かした。12月25日。12月26日——","k":"C11-L:11-L-3"},
+{"id":"11-L-4","t":"band","x":"ボーン……ボーン……(柱時計の鐘)","fx":["se"],"se":"bell","seN":2,"k":"C11-L:11-L-4"},
+{"id":"11-L-5","t":"band","x":"鐘は鳴った。けれど、誰も、いなくならなかった","k":"C11-L:11-L-5"},
+{"id":"11-L-6","t":"line","w":"dra","x":"(眠らずに、窓の外の雪を見ている。握ったリボンを、離さない)","e":"troubled","k":"C11-L:11-L-6"}],"frame":"far","jumpOnly":true},
+{"id":"END-L1","chapter":"END","title":"","cond":null,"bgm":"melo_sad_song_short","bg":"朝の雪原","next":null,"rows":[{"id":"L1-1","t":"band","x":"聖夜の名探偵 エンディング「雪どけの迷宮」","k":"END-L1:L1-1"},
+{"id":"L1-2","t":"band","x":"12月27日の朝。雪がやみ、ふもとから人が上がってくる足音がした","k":"END-L1:L1-2"},
+{"id":"L1-3","t":"band","x":"……♪(2階の奥から、オルゴールの音。それが、ふっと途切れた)","fx":["se"],"se":"music","k":"END-L1:L1-3"},
+{"id":"L1-4","t":"band","x":"裏口の前の雪に、ひと晩でついた足跡が一筋。崖のほうへ向かい、途中で途切れていた","k":"END-L1:L1-4"},
+{"id":"L1-5","t":"band","x":"ふもとの人たちが、屋根裏も、壁の中の通り道も調べた。見つかったのは、冷えきった毛布と、ねじの止まったオルゴールだけだった","k":"END-L1:L1-5"},
+{"id":"L1-6","t":"line","w":"dra","x":"…………(リボンに、顔をうずめる)","f":"close","e":"crying","k":"END-L1:L1-6"},
+{"id":"L1-7","t":"band","x":"黒いサンタが誰だったのか。誰も、その名前を口にしないまま、山を下りた","k":"END-L1:L1-7"},
+{"id":"L1-8","t":"panel","x":"登場人物 12人","missing":[],"hurt":[],"dead":[],"k":"END-L1:L1-8"},
+{"id":"L1-9","t":"band","x":"——名前を選ばなかったのは、{name}だった","k":"END-L1:L1-9"}],"ending":{"id":"END-L1","kind":"unsolved","label":"迷宮入り","name":"雪どけの迷宮"}},
 {"id":"END-G","chapter":"END","title":"","cond":null,"bgm":"melo_sad_song_short","bg":"ペンションのホール(朝","next":"OUT-G","rows":[{"id":"G-1","t":"band","x":"聖夜の名探偵 エンディング「やり直しのクリスマス会」","k":"END-G:G-1"},
 {"id":"G-2","t":"band","x":"12月24日。雪がやみ、山の上に、真っ青な空","k":"END-G:G-2"},
 {"id":"G-3","t":"band","x":"ホール。ソラシドが、柱時計のねじを巻く。針は、もうずれていない","k":"END-G:G-3"},
@@ -69975,7 +70429,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 // 入口は openXmasNovel(opts) の関数1つ(イベントページの物語タブなどから呼ぶ)。App の状態は使わず、自分で body に重ねて開き、閉じたら片づける。
 //   opts.playerName … 台詞の {name} に入れる名前 / opts.onClose() … 閉じたあと / opts.force … 期間の外でも開く(デバッグ・検査だけ)
 //   遊べるのはイベントの期間中だけ(xmasNovelPlayableAt)。期間の外は開かずに false を返す。保存の記録は消さない
-// 保存は新しいキー mh_xmas_novel_v1 だけ(書くのはこれだけ・⑦)。ほかに読むのは、台詞の {name} に入れるブリーダー名(mh_breeder_name)だけ。形は xmasNovelNormalize。
+// 保存は新しいキー mh_xmas_novel_v1 と、分岐の地図の読み直しの mh_xmas_novel_route_v1(r1126-102)だけ(⑦)。ほかに読むのは、台詞の {name} に入れるブリーダー名(mh_breeder_name)だけ。形は xmasNovelNormalize。
 // 見た目: 暗めの紺と雪・金の細い縁・明朝寄りの見出し。縦・横・タブレットで、立ち絵と文の箱の置き方を変える。動きは prefers-reduced-motion で止める
 
 const XMAS_NOVEL_CSS = `
@@ -70111,8 +70565,6 @@ const XMAS_NOVEL_CSS = `
 .mh-nv-fallen { position: absolute; left: 50%; bottom: 24%; width: min(80vw, 520px); transform: translateX(-50%); z-index: 4; filter: drop-shadow(0 0 2px rgba(190,200,230,.35)); pointer-events: none; animation: mh-nv-fade 1.2s ease both; }
 .mh-nv-body { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
 .mh-nv-body.noblood .pool { display: none; }
-.mh-nv-body.noblood .mh-nv-body-lie img { filter: brightness(0) drop-shadow(0 0 1px rgba(190,205,235,.55)) drop-shadow(0 0 14px rgba(120,150,200,.35)) !important; }
-.mh-nv-body.noblood .mh-nv-body-dim { background: radial-gradient(120% 90% at 50% 40%, rgba(6,10,34,.35), rgba(0,0,4,.88)) !important; }
 .mh-nv-body-dim { position: absolute; inset: 0; -webkit-backdrop-filter: grayscale(.9) brightness(.55); backdrop-filter: grayscale(.9) brightness(.55);
   background: radial-gradient(70% 34% at var(--fx, 50%) var(--fy, 74%), rgba(120,0,14,.42), rgba(120,0,14,0) 72%), radial-gradient(120% 90% at 50% 40%, rgba(6,10,34,.35), rgba(0,0,4,.88)); animation: mh-nv-fade 1.4s ease both; }
 .mh-nv-body-lie { position: absolute; }
@@ -70193,6 +70645,129 @@ const XMAS_NOVEL_CSS = `
   .mh-nv-boot [data-xmas-novel-perfect] { margin-top: 8px; }
 }
 @media (min-width: 900px) and (min-height: 700px) { .mh-nv-text { font-size: 19px; } .mh-nv-box { min-height: 150px; } }
+/* ---- 場面の切り替えと人物の登場の演出(台帳 r1126-094)。暗い側に合わせ、光らせない・跳ねさせない ----
+   切り替え(.mh-nv-sw): place=場所が替わる(暗い幕が横に流れて明ける) / time=時間が飛ぶ(暗転して、ゆっくり明ける) /
+   past=過去編へ入る(色あせた光がにじんで、古い写真の色になる) / open=章の札のあと・読み始め(黒から明ける)。
+   既読・オートは .fast で短く、スキップ中は出さない。札(.mh-nv-place)は場所の名前 */
+.mh-nv-sw { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
+.mh-nv-sw.place { background: linear-gradient(90deg, transparent 0%, rgba(0,0,0,.85) 14%, #000 26%, #000 100%); animation: mh-nv-sw-wipe 1.15s cubic-bezier(.55,.05,.35,1) both; }
+@keyframes mh-nv-sw-wipe { 0% { transform: translateX(-26%); opacity: 1; } 100% { transform: translateX(105%); opacity: 1; } }
+.mh-nv-sw.time { background: #000; animation: mh-nv-sw-time 2.1s ease-in both; }
+@keyframes mh-nv-sw-time { 0%, 30% { opacity: 1; } 100% { opacity: 0; } }
+.mh-nv-sw.open { background: #000; animation: mh-nv-sw-time 1.5s ease-in both; }
+.mh-nv-sw.past { background: radial-gradient(80% 70% at 50% 45%, rgba(214,182,128,.55) 0%, rgba(90,60,24,.8) 60%, rgba(12,7,2,1) 100%); animation: mh-nv-sw-past 2.6s ease-out both; }
+.mh-nv-sw.past::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, rgba(0,0,0,.18) 0 1px, transparent 1px 7px); animation: mh-nv-sw-film .18s steps(2) 8; }
+@keyframes mh-nv-sw-past { 0% { opacity: 1; filter: blur(10px); } 35% { opacity: .92; filter: blur(4px); } 100% { opacity: 0; filter: none; } }
+@keyframes mh-nv-sw-film { 50% { transform: translateX(3px); opacity: .5; } }
+.mh-nv-sw.fast { animation-duration: .45s; }
+.mh-nv-sw.fast.place { animation-duration: .5s; }
+.mh-nv-sw.fast::after { animation: none; }
+/* 背景の絵は、替わったときにゆっくり寄る(押し込みすぎない) */
+.mh-nv-bg.in-place { animation: mh-nv-bg-push 2.2s ease-out both; }
+.mh-nv-bg.in-time, .mh-nv-bg.in-open { animation: mh-nv-bg-push 3s ease-out both; }
+.mh-nv-bg.in-past { animation: mh-nv-bg-push 3.4s ease-out both; }
+.mh-nv-bg.fast { animation-duration: .5s; }
+@keyframes mh-nv-bg-push { from { transform: scale(1.06); } to { transform: none; } }
+.mh-nv-place { position: absolute; left: 14px; top: calc(max(8px, env(safe-area-inset-top)) + 50px); z-index: 5; pointer-events: none; max-width: calc(100% - 28px);
+  padding: 6px 14px 6px 12px; border-left: 2px solid rgba(232,196,106,.8); background: linear-gradient(90deg, rgba(0,0,0,.72), rgba(0,0,0,0));
+  color: #e6dcc0; font-size: 14px; font-weight: 800; letter-spacing: .14em; text-shadow: 0 1px 3px #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  animation: mh-nv-place 3.2s ease both; }
+.mh-nv-place.past { border-left-color: rgba(196,150,90,.85); color: #e2cfa6; }
+.mh-nv-place.fast { animation-duration: 1.4s; }
+@keyframes mh-nv-place { 0% { opacity: 0; transform: translateX(-12px); } 18% { opacity: 1; transform: none; } 78% { opacity: 1; } 100% { opacity: 0; } }
+@media (orientation: portrait) { .mh-nv-place { top: calc(max(8px, env(safe-area-inset-top)) + 72px); } }
+/* 章の札: 黒から明けて、章の名前が字の間を詰めながら浮かび、線が中から伸び、題がにじみから浮かぶ */
+.mh-nv-card.open { animation: mh-nv-fade 1s ease both; background: radial-gradient(110% 70% at 50% 45%, rgba(26,22,40,.92), rgba(1,2,6,.99)); }
+.mh-nv-card.open .mh-nv-card-label { animation: mh-nv-card-label 1.6s ease-out both; }
+.mh-nv-card.open .mh-nv-rule { animation: mh-nv-card-rule 1.1s ease-out .35s both; }
+.mh-nv-card.open .mh-nv-card-title { animation: mh-nv-card-title 1.5s ease-out .6s both; }
+.mh-nv-card.open .mh-nv-card-hint { animation: mh-nv-fade .8s ease 1.9s both; }
+.mh-nv-card.open .mh-nv-card-ghost { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; overflow: hidden;
+  font-size: min(26vw, 220px); font-weight: 900; color: rgba(160,20,30,.08); letter-spacing: -.02em; white-space: nowrap; animation: mh-nv-card-ghost 4s ease-out both; }
+.mh-nv-cardtext { position: relative; }
+@keyframes mh-nv-card-label { from { opacity: 0; letter-spacing: 1.2em; } to { opacity: 1; letter-spacing: .5em; } }
+@keyframes mh-nv-card-rule { from { transform: scaleX(0); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes mh-nv-card-title { 0% { opacity: 0; filter: blur(8px); transform: translateY(8px); } 100% { opacity: 1; filter: none; transform: none; } }
+@keyframes mh-nv-card-ghost { from { opacity: 0; transform: scale(1.08); } to { opacity: 1; transform: none; } }
+/* 人物の登場: first=その人が初めて出る(影の姿から浮かぶ) / swap=話し手が替わる(少し寄って出る) / face=表情だけ替わる(すっと替わる)。fast は短く */
+.mh-nv-fig.enter-first img { animation: mh-nv-enter-first 1.5s ease-out both; }
+.mh-nv-fig.enter-swap img { animation: mh-nv-enter-swap .5s cubic-bezier(.2,.7,.3,1) both; }
+.mh-nv-fig.enter-face img { animation: mh-nv-enter-face .22s ease both; }
+.mh-nv-fig.fast img { animation-duration: .3s; }
+@keyframes mh-nv-enter-first {
+  0% { opacity: 0; transform: translateY(10px) scale(.985); filter: brightness(0) blur(4px) drop-shadow(0 6px 18px rgba(0,0,0,.6)); }
+  40% { opacity: 1; transform: none; filter: brightness(0) blur(1px) drop-shadow(0 0 6px rgba(180,190,220,.35)); }
+  100% { opacity: 1; transform: none; filter: brightness(1) blur(0) drop-shadow(0 6px 18px rgba(0,0,0,.6)); } }
+@keyframes mh-nv-enter-swap { from { opacity: 0; transform: translateX(-16px) scale(.97); filter: brightness(.7) drop-shadow(0 6px 18px rgba(0,0,0,.6)); } to { opacity: 1; transform: none; filter: brightness(1) drop-shadow(0 6px 18px rgba(0,0,0,.6)); } }
+@keyframes mh-nv-enter-face { from { opacity: .55; } to { opacity: 1; } }
+/* 初めて出る人の名札: 立ち絵の左上に、金の線が左から伸びてから肩書きと名前が浮かぶ。しばらくして消える */
+.mh-nv-intro { position: absolute !important; left: 6%; top: 18%; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 0 18px 8px 2px; pointer-events: none; z-index: 2;
+  animation: mh-nv-intro 3.6s ease both; }
+.mh-nv-intro .bar { position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: linear-gradient(90deg, #e8c46a, rgba(232,196,106,.6) 70%, transparent); transform-origin: left; animation: mh-nv-intro-bar .7s ease-out both; }
+.mh-nv-intro .nm { font-size: clamp(24px, 6.4vw, 32px); font-weight: 900; letter-spacing: .16em; line-height: 1.2; color: #f1e6c8; white-space: nowrap; text-shadow: 0 0 12px rgba(0,0,0,.95), 0 2px 3px #000; animation: mh-nv-intro-nm 1.1s ease-out .3s both; }
+.mh-nv-intro .role { font-size: 12px; font-weight: 800; letter-spacing: .3em; color: #d2b272; white-space: nowrap; text-shadow: 0 0 8px #000, 0 1px 3px #000; animation: mh-nv-intro-nm .9s ease-out .15s both; }
+.mh-nv-intro.fast { animation-duration: 1.6s; }
+.mh-nv-intro.fast .bar, .mh-nv-intro.fast .nm, .mh-nv-intro.fast .role { animation-duration: .3s; animation-delay: 0s; }
+@keyframes mh-nv-intro { 0% { opacity: 1; } 82% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes mh-nv-intro-bar { from { transform: scaleX(0); } to { transform: none; } }
+@keyframes mh-nv-intro-nm { from { opacity: 0; filter: blur(6px); transform: translateX(-10px); } to { opacity: 1; filter: none; transform: none; } }
+@media (orientation: landscape) and (max-height: 560px) { .mh-nv-intro { left: 4%; top: 22%; } .mh-nv-intro .nm { font-size: 24px; } }
+/* 遺体・倒れた影を見つける行(台帳 r1126-094 追記1): 文のあいだは暗転(dark)、文が出きって一拍おいてから、ゆっくり明ける(show)。影はその下から浮かぶ */
+.mh-nv-veil { position: absolute; inset: 0; z-index: 4; pointer-events: none; background: #000; }
+.mh-nv-veil.dark { animation: mh-nv-fade .35s ease both; }
+.mh-nv-veil.show { animation: mh-nv-veil-lift 1.8s ease-in both; }
+.mh-nv-veil.fast.show { animation-duration: .5s; }
+@keyframes mh-nv-veil-lift { 0%, 15% { opacity: 1; } 100% { opacity: 0; } }
+/* 血を見せない影(白瀬など)は、真っ黒で見えなかった(社長「白瀬の死亡シーンって出てた？」)。冷たい光を当て、縁を白く光らせて形を見せる */
+.mh-nv-body.noblood .mh-nv-body-dim { background: radial-gradient(42% 30% at var(--fx, 50%) var(--fy, 74%), rgba(150,180,235,.30), rgba(150,180,235,0) 75%), radial-gradient(120% 90% at 50% 40%, rgba(6,10,34,.35), rgba(0,0,4,.88)) !important; }
+.mh-nv-body.noblood .mh-nv-body-lie img { filter: brightness(0) drop-shadow(0 0 1.5px rgba(225,235,255,.95)) drop-shadow(0 0 3px rgba(200,215,250,.6)) drop-shadow(0 0 20px rgba(140,170,230,.55)) !important; }
+/* 大事な選択の「選んだ状態」と決定の札(台帳 r1126-113)。光らせすぎず、真鍮の縁と赤い印で示す */
+.mh-nv-person[data-pick] { box-shadow: 0 0 0 2px #e8c46a, 0 0 16px rgba(232,196,106,.35); background: rgba(40,30,10,.8); }
+.mh-nv-person[data-pick]::after { content: '✓'; position: absolute; top: 2px; left: 4px; width: 18px; height: 18px; border-radius: 50%; background: #b0101a; color: #fff; font-size: 11px; line-height: 18px; text-align: center; }
+.mh-nv-clue[data-pick] { box-shadow: 0 0 0 2px #e8c46a, 0 0 16px rgba(232,196,106,.25); }
+.mh-nv-choice[data-pick] { box-shadow: 0 0 0 2px #e8c46a, 0 0 18px rgba(232,196,106,.3); background: linear-gradient(180deg, rgba(60,44,14,.95), rgba(24,18,8,.95)); }
+.mh-nv-decide { margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(232,196,106,.35); }
+.mh-nv-decide-what { margin-bottom: 6px; font-size: 13px; font-weight: 800; color: #f3e3b0; text-align: left; word-break: normal; overflow-wrap: anywhere; }
+/* 背の低い横では、窓の全体を1つに流し(人の並び・手がかりが0の高さにつぶれた)、決定の札は下に貼りつける */
+@media (orientation: landscape) and (max-height: 560px) {
+  .mh-nv-sheet .mh-nv-panel { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .mh-nv-sheet .mh-nv-panel > .mh-nv-scroll { flex: none; overflow: visible; }
+  .mh-nv-decide { position: sticky; bottom: calc(-1 * max(14px, env(safe-area-inset-bottom))); z-index: 2; margin-left: -14px; margin-right: -14px; padding: 8px 14px 10px; background: #0b1430; }
+  .mh-nv-decide .mh-nv-btn.wide { min-height: 42px; }
+}
+.mh-nv-decide .mh-nv-btn:not(:disabled) { background: #8f1d24; color: #fff3e0; box-shadow: 0 0 0 1px #e8c46a; }
+/* 人物の並びの置き場(登場人物の行・カーテンコール): 上の帯(ボタンと章の題)と文字の箱のあいだの、まん中(台帳 r1126-094 追記4。上に寄せた枠が章の題の帯にかぶっていた) */
+.mh-nv-panelwrap { position: absolute; left: 0; right: 0; top: calc(max(8px, env(safe-area-inset-top)) + 54px); bottom: 172px; z-index: 5; display: flex; align-items: center; justify-content: center; padding: 0 3vw; pointer-events: none; }
+.mh-nv-panelin { width: min(100%, 640px); max-height: 100%; }
+.mh-nv-panelbox { border-radius: 16px; padding: 12px 12px 14px; background: radial-gradient(120% 90% at 50% 30%, rgba(14,20,44,.92), rgba(3,5,14,.95)); box-shadow: 0 0 0 1px rgba(232,196,106,.75), 0 18px 40px rgba(0,0,0,.6); }
+.mh-nv-panelhead { text-align: center; font-size: 17px; font-weight: 900; letter-spacing: .5em; padding-left: .5em; }
+.mh-nv-panelrule { height: 1px; margin: 8px auto 10px; width: 70%; background: linear-gradient(90deg, transparent, #e8c46a, transparent); }
+.mh-nv-cast.big .mh-nv-person { font-size: 11px; }
+@media (orientation: portrait) {
+  .mh-nv-panelwrap { top: calc(max(8px, env(safe-area-inset-top)) + 80px); }
+  .mh-nv-cast.big { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .mh-nv-cast.big .mh-nv-person { font-size: 12px; padding: 5px 3px 6px; }
+}
+@media (orientation: landscape) and (max-height: 560px) { .mh-nv-panelwrap { bottom: 132px; padding: 0 2vw; } .mh-nv-panelin { width: min(100%, 760px); } .mh-nv-panelbox { padding: 8px 10px 10px; } .mh-nv-panelhead { font-size: 14px; } .mh-nv-panelrule { margin: 5px auto 7px; } }
+/* 紹介の動き: 枠が暗がりから開き → 見出しの字の間が詰まり → 1人ずつ(0.16秒おき)影の姿から色が戻って名前と入る → そろったら全員に金の光が1度走る */
+.mh-nv-panelbox.intro { animation: mh-nv-panel-open .7s ease-out both; }
+.mh-nv-panelbox.intro .mh-nv-panelhead { animation: mh-nv-card-label 1.1s ease-out both; }
+.mh-nv-panelbox.intro .mh-nv-panelrule { animation: mh-nv-card-rule .9s ease-out .25s both; }
+.mh-nv-panelbox.intro .mh-nv-person { animation: mh-nv-cast-in .75s cubic-bezier(.2,.7,.3,1) calc(.55s + var(--i, 0) * .16s) both, mh-nv-cast-glow 1.2s ease-out 2.75s both; }
+.mh-nv-panelbox.intro .mh-nv-person .ph img { animation: mh-nv-cast-face .75s ease-out calc(.55s + var(--i, 0) * .16s) both; }
+.mh-nv-panelbox.intro.fast .mh-nv-person { animation: mh-nv-cast-in .3s ease-out calc(.1s + var(--i, 0) * .04s) both, mh-nv-cast-glow .8s ease-out .7s both; }
+.mh-nv-panelbox.intro.fast .mh-nv-person .ph img { animation: mh-nv-cast-face .3s ease-out calc(.1s + var(--i, 0) * .04s) both; }
+.mh-nv-panelbox.intro.fast, .mh-nv-panelbox.intro.fast .mh-nv-panelhead, .mh-nv-panelbox.intro.fast .mh-nv-panelrule { animation-duration: .3s; animation-delay: 0s; }
+.mh-nv-panelbox.intro.done, .mh-nv-panelbox.intro.done *, .mh-nv-panelbox.intro.done .mh-nv-person .ph img { animation: none !important; }
+@keyframes mh-nv-panel-open { from { opacity: 0; transform: scale(.96); filter: brightness(.3); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes mh-nv-cast-in { 0% { opacity: 0; transform: translateY(12px) scale(.94); } 60% { opacity: 1; } 100% { opacity: 1; transform: none; } }
+@keyframes mh-nv-cast-face { 0% { filter: brightness(0) blur(3px); } 45% { filter: brightness(0) blur(0); } 100% { filter: none; } }
+@keyframes mh-nv-cast-glow { 0% { box-shadow: 0 0 0 1px rgba(232,196,106,.3); } 35% { box-shadow: 0 0 0 1px rgba(232,196,106,.95), 0 0 14px rgba(232,196,106,.35); } 100% { box-shadow: 0 0 0 1px rgba(232,196,106,.3); } }
+@media (prefers-reduced-motion: reduce) {
+  .mh-nv-panelbox.intro, .mh-nv-panelbox.intro * { animation: none !important; }
+  .mh-nv-veil { animation-duration: .01s !important; }
+  .mh-nv-sw, .mh-nv-sw::after, .mh-nv-bg.in-place, .mh-nv-bg.in-time, .mh-nv-bg.in-open, .mh-nv-bg.in-past, .mh-nv-card.open *, .mh-nv-fig.enter-first img, .mh-nv-fig.enter-swap img, .mh-nv-fig.enter-face img, .mh-nv-intro, .mh-nv-intro * { animation-duration: .01s !important; animation-delay: 0s !important; }
+}
 @media (prefers-reduced-motion: reduce) { .mh-nv-snow, .mh-nv-next, .mh-nv-shake, .mh-nv-get, .mh-nv-fig img { animation: none !important; } }
 `;
 const useXmasNovelCss = () => {
@@ -70297,6 +70872,98 @@ const xmasNovelSceneBgName = (scene, idx) => {
   return name;
 };
 
+// ---- 場面の切り替えの演出(台帳 r1126-094) ----
+//  背景の名前の移り変わりから、どの切り替えかを決める(純粋な計算。検査からも呼ぶ)
+//  '' = 出さない / 'open' = 読み始め / 'past' = 過去編(12年前)へ入る / 'time' = 時間が飛ぶ・過去編から戻る / 'place' = 場所が替わる
+const xmasNovelTimeOf = (n) => (/12年前/.test(n) ? 'past' : /明け方|朝/.test(n) ? 'morning' : /夜|ろうそく|停電|暗転/.test(n) ? 'night' : 'day');
+const xmasNovelSwitchKind = (prevName, nextName) => {
+  const a = String(prevName || '').split('→')[0];
+  const b = String(nextName || '').split('→')[0];
+  const tb = xmasNovelTimeOf(b);
+  if (prevName == null) return tb === 'past' ? 'past' : 'open';
+  if (a === b) return '';
+  const ta = xmasNovelTimeOf(a);
+  if (tb === 'past' && ta !== 'past') return 'past';
+  if (ta !== tb) return 'time';
+  const ia = xmasNovelBgOf(a);
+  const ib = xmasNovelBgOf(b);
+  if ((ia.img || ia.grad) === (ib.img || ib.grad) && (ia.tint || '') === (ib.tint || '')) return '';
+  return 'place';
+};
+//  場所の札に出す名前(「夜の裏口(吹雪」→「夜の裏口　吹雪」)。外側の広場など、絵の名前そのままの物は出さない
+const xmasNovelPlaceLabel = (name) => {
+  const n = String(name || '').split('→')[0].trim();
+  if (!n || /^[a-z0-9_]+(?=$|[(（])/.test(n) || /ゲーム機をかこむ/.test(n)) return '';
+  const m = n.match(/^([^(（]+)(?:[(（]([^)）]*)[)）]?)?/);
+  if (!m) return n;
+  const base = m[1].trim();
+  const inner = (m[2] || '').trim();
+  return inner ? `${base}　${inner}` : base;
+};
+
+//  人ごとに、台本でいちばん初めに話す行(名札と「影から浮かぶ」はこの行だけ。つづきから読んでも、もう出た人には出さない)
+const XMAS_NOVEL_FIRST_LINE_CACHE = new WeakMap();
+const xmasNovelFirstLines = (script) => {
+  if (!script || typeof script !== 'object') return {};
+  if (XMAS_NOVEL_FIRST_LINE_CACHE.has(script)) return XMAS_NOVEL_FIRST_LINE_CACHE.get(script);
+  const out = {};
+  (Array.isArray(script.scenes) ? script.scenes : []).forEach((s) => (Array.isArray(s.rows) ? s.rows : []).forEach((r) => {
+    if (r && r.t === 'line' && r.w && r.n !== '？？？' && !out[r.w]) out[r.w] = r.id;
+  }));
+  XMAS_NOVEL_FIRST_LINE_CACHE.set(script, out);
+  return out;
+};
+
+// ---- 先の展開が分かる題を伏せる(台帳 r1126-094 追記3・社長「ところどころのタイトルで展開が見えるから出し方かえたほうがいい」) ----
+//  場面の題: その場面を1度読み終えるまでは出さない(上の帯は章だけ。場所は場所の札で分かる)
+//  章の題: 先が分かる章(遺体が見つかる・最初の推理がはずれる・人が減っていく)は、その先の章を読むまで別の題で出す
+const XMAS_NOVEL_CHAPTER_VEIL = Object.freeze({ C3: '白い朝', C8: 'ひとつずつ', C10: '長い夜' });
+const XMAS_NOVEL_CH_KEYS_CACHE = new WeakMap();
+const xmasNovelChapterDone = (script, ch, read) => {
+  if (!script || !ch) return false;
+  let keys = XMAS_NOVEL_CH_KEYS_CACHE.get(script);
+  if (!keys) {
+    keys = {};
+    (Array.isArray(script.scenes) ? script.scenes : []).forEach((s) => { (keys[s.chapter] = keys[s.chapter] || []).push(...(Array.isArray(s.rows) ? s.rows : []).map((r) => r && r.k).filter(Boolean)); });
+    XMAS_NOVEL_CH_KEYS_CACHE.set(script, keys);
+  }
+  const set = read instanceof Set ? read : new Set(Array.isArray(read) ? read : []);
+  return (Array.isArray(script.chapters) ? script.chapters : []).some((c) => c && !c.past && !c.outside && c.no > ch.no && c.no < 90 && (keys[c.id] || []).some((k) => set.has(k)));
+};
+const xmasNovelChapterTitle = (script, ch, read) => {
+  if (!ch) return '';
+  const veil = XMAS_NOVEL_CHAPTER_VEIL[ch.id];
+  return veil && !xmasNovelChapterDone(script, ch, read) ? veil : (ch.title || '');
+};
+const xmasNovelSceneDone = (scene, read) => {
+  const rows = scene && Array.isArray(scene.rows) ? scene.rows : [];
+  const last = [...rows].reverse().find((r) => r && r.k);
+  return !!(last && Array.isArray(read) && read.includes(last.k));
+};
+// ---- 場面ごとの揺れ(台帳 r1126-094 追記3・社長「場面場面の振動とかそういうのちゃんとして」) ----
+//  行ID → 強さ(1 小さく / 2 ふつう / 3 強く)。音の帯は音と同時、遺体を見つける行は暗転が明けるときに 1。
+//  端末の振動は、navigator.vibrate がある端末(Android)だけ短く。iPhone は画面の揺れと音で伝える。動きを減らす設定の端末では、どちらも出さない
+const XMAS_NOVEL_SHAKE = Object.freeze({
+  '1-3-1': 2, '2-1-10': 1, '2-3-4': 1, '2-3-7': 1, '2-3-9b': 1, '2-3-9c': 2, '2-5-1': 2, '5-4-4': 1, '6-5-1': 3, '6-7-4b': 2,
+  '7-P1-13': 1, '7-P3-11': 1, '7-P3-12': 1, '7-W-8': 1, '9-1-4': 1, '10-2-6': 2,
+  '2-X-2': 3, '5-X-3': 3, '6-X-4': 3, '6-X-5': 2, '6-X-8': 2, '2-Y-9': 3, '2-Y-17': 1, '10-X-8': 3,
+  'B-2': 1, 'B-3': 1, 'B-4': 2, 'B-13': 2, '1-O-22': 1, '12-3-2': 1, '12-4-2': 1, '12-4-5': 1,
+});
+const XMAS_NOVEL_SHAKE_PX = [0, 2.5, 5, 9];
+const XMAS_NOVEL_BUZZ = [0, 20, 45, [70, 40, 90]];
+const xmasNovelQuake = (el, lv) => {
+  const a = XMAS_NOVEL_SHAKE_PX[lv] || 0;
+  if (!a) return;
+  try { if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return; } catch (e) { /* 分からなければ揺らす */ }
+  if (el && typeof el.animate === 'function') {
+    try {
+      el.animate([{ transform: 'none' }, { transform: `translate(${-a}px, ${a / 2}px)` }, { transform: `translate(${a}px, ${-a / 3}px)` }, { transform: `translate(${-a * 0.6}px, ${a / 3}px)` },
+        { transform: `translate(${a * 0.35}px, 0)` }, { transform: 'none' }], { duration: 240 + lv * 100, easing: 'ease-out' });
+    } catch (e) { /* 揺れなくても続ける */ }
+  }
+  try { if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(XMAS_NOVEL_BUZZ[lv]); } catch (e) { /* ふるえなくても続ける */ }
+};
+
 // ---- 立ち絵 ----
 //  助手はサンタのきせかえの立ち絵(stand-santa。ドラは顔の絵なので santa の顔)。イチーカ・もちまるは絵が1枚。謎の客2人・？？？は影
 const XMAS_NOVEL_FACES = Object.freeze(['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited']);
@@ -70308,8 +70975,9 @@ const xmasNovelFigureSrc = (who, e) => {
   if (c.kind === 'assistant') {
     const dir = typeof STORY_OUTFIT_DIRS !== 'undefined' && STORY_OUTFIT_DIRS && STORY_OUTFIT_DIRS.santa ? STORY_OUTFIT_DIRS.santa : '';
     if (!dir) return null;
-    if (who === 'dra') return { src: `${dir}/dra_${face}.PNG`, face: true };
-    return { src: `${dir.replace(/\/santa$/, '/stand-santa')}/${who}_${face}.png`, fallback: `${dir}/${who}_${face}.PNG` };
+    if (who === 'dra') return { src: typeof assistantArtFile === 'function' ? assistantArtFile(`${dir}/dra_${face}.PNG`) : `${dir}/dra_${face}.PNG`, face: true };
+    const art = (p) => (typeof assistantArtFile === 'function' ? assistantArtFile(p) : p); // 重い絵は WebP(r1126-095)
+    return { src: art(`${dir.replace(/\/santa$/, '/stand-santa')}/${who}_${face}.png`), fallback: art(`${dir}/${who}_${face}.PNG`) };
   }
   if (c.kind === 'monster' || c.kind === 'guest') return { src: c.art };
   return null;
@@ -70436,25 +71104,37 @@ const useXmasNovelPlace = (who, frame, artKey) => {
 };
 const XmasNovelFigure = (props) => {
   const { row } = props;
-  const who = !row ? '' : (row.t === 'band' ? 'boss' : (row.n === '？？？' ? (xmasNovelIsLaugh(row) ? 'boss' : 'shadow') : (row.w || '')));
+  const who = !row ? '' : (row.t === 'band' ? 'boss' : (row.n === '？？？' ? 'boss' : (row.w || '')));
   return <XmasNovelFigureArt {...props} who={who} frame={xmasNovelFrameOf(row, props.scene)} key={`${who}-${(row && row.e) || ''}`} />;
 };
-const XmasNovelFigureArt = ({ row, dim = false, who = '', frame = 'normal' }) => {
+//  初めて出る人の名札。肩書きは台本で本人や周りが名乗る物だけ(助手たちは名前だけ)。名前は名札と同じ呼び名(フルネームは本人が名乗るまで出さない)
+const XMAS_NOVEL_INTRO_ROLE = Object.freeze({ ichika: 'ペンションのオーナー', mochimaru: 'ペンションの世話役', kuroba: '招かれざる客', shirase: '招かれざる客' });
+const XmasNovelIntro = ({ c, fast }) => (c ? (
+  <div className={`mh-nv-intro mh-nv-serif${fast ? ' fast' : ''}`} data-xmas-novel-intro={c.id}>
+    {XMAS_NOVEL_INTRO_ROLE[c.id] && <span className="role">{XMAS_NOVEL_INTRO_ROLE[c.id]}</span>}
+    <span className="nm">{c.name}</span>
+    <span className="bar" />
+  </div>
+) : null);
+const XmasNovelFigureArt = ({ row, dim = false, who = '', frame = 'normal', enter = null }) => {
   const [broken, setBroken] = useState(0);
+  const ek = enter && enter.kind ? ` enter-${enter.kind}${enter.fast ? ' fast' : ''}` : '';
   const ref = useXmasNovelPlace(who, frame, `${row ? row.id : ''}-${broken}`);
   if (row && row.t === 'band' && xmasNovelIsSilhouette(row)) return <div ref={ref} className={`mh-nv-fig${dim ? ' dim' : ''}`} key={`band-${row.id}`}><XmasNovelBossShadow /></div>;
   if (!row || row.t !== 'line') return null;
   const key = `${row.w || row.n}-${row.e || ''}`;
   const laugh = row.n === '？？？' && xmasNovelIsLaugh(row);
-  if (row.n === '？？？' || !row.w) return row.n === '？？？' ? <div ref={ref} className={`mh-nv-fig${dim ? ' dim' : ''}${laugh ? ' laugh' : ''}`} key={key}>{laugh ? <XmasNovelBossShadow /> : <XmasNovelShadow tone="#1c2240" label="？？？" />}</div> : null;
+  if (row.n === '？？？' || !row.w) return row.n === '？？？' ? <div ref={ref} className={`mh-nv-fig${dim ? ' dim' : ''}${laugh ? ' laugh' : ''}`} key={key}><XmasNovelBossShadow />{/* 名前を伏せた話し手は、いつも黒いサンタの影(丸い頭の影はやめた・台帳 r1126-094 追記2) */}</div> : null;
   if (row.w === 'watson') return <div ref={ref} className="mh-nv-fig" key={key}><XmasNovelLaptop /></div>;
   const c = xmasNovelCastOf(row.w);
   const fig = xmasNovelFigureSrc(row.w, row.e);
-  if (!fig || broken >= 2) return <div ref={ref} className={`mh-nv-fig${dim ? ' dim' : ''}`} key={key}><XmasNovelShadow tone={(c && c.tone) || '#2a3350'} label={c ? c.name : ''} /></div>;
+  const intro = enter && enter.kind === 'first' && enter.intro ? <XmasNovelIntro c={c} fast={enter.fast} /> : null;
+  if (!fig || broken >= 2) return <div ref={ref} className={`mh-nv-fig${dim ? ' dim' : ''}`} key={key}><XmasNovelShadow tone={(c && c.tone) || '#2a3350'} label={c ? c.name : ''} />{intro}</div>;
   const src = broken === 1 && fig.fallback ? fig.fallback : fig.src;
   return (
-    <div ref={ref} className={`mh-nv-fig${fig.face ? ' face' : ''}${dim ? ' dim' : ''}`} key={key}>
+    <div ref={ref} className={`mh-nv-fig${fig.face ? ' face' : ''}${dim ? ' dim' : ''}${ek}`} key={key} data-xmas-novel-enter={enter && enter.kind ? enter.kind : undefined}>
       <img src={src} alt={c ? c.name : ''} draggable={false} onError={() => setBroken((b) => (b === 0 && fig.fallback ? 1 : 2))} />
+      {intro}
     </div>
   );
 };
@@ -70494,7 +71174,7 @@ const xmasNovelBodySrc = (who) => {
   if (!c) return '';
   if (c.kind === 'assistant') {
     const dir = typeof STORY_OUTFIT_DIRS !== 'undefined' && STORY_OUTFIT_DIRS && STORY_OUTFIT_DIRS.santa ? STORY_OUTFIT_DIRS.santa : '';
-    return dir ? `${dir}/${who}_normal.PNG` : '';
+    return dir ? (typeof assistantArtFile === 'function' ? assistantArtFile(`${dir}/${who}_normal.PNG`) : `${dir}/${who}_normal.PNG`) : '';
   }
   return c.art || '';
 };
@@ -70672,9 +71352,9 @@ const XmasNovelBloodCross = () => (
     </g>
   </svg>
 );
-const XmasNovelCast = ({ states = {}, changed = [], onPick = null }) => (
-  <div className="mh-nv-cast">
-    {XMAS_NOVEL_CAST.map((c) => {
+const XmasNovelCast = ({ states = {}, changed = [], onPick = null, big = false, picked = '' }) => (
+  <div className={`mh-nv-cast${big ? ' big' : ''}`}>
+    {XMAS_NOVEL_CAST.map((c, i) => {
       const st = states[c.id] || '';
       const fresh = changed.includes(c.id);
       const face = xmasNovelFaceOf(c.id);
@@ -70689,8 +71369,8 @@ const XmasNovelCast = ({ states = {}, changed = [], onPick = null }) => (
         </>
       );
       return onPick
-        ? <button type="button" key={c.id} data-xmas-novel-person={c.id} data-st={st || undefined} className="mh-nv-person active:scale-95" onClick={() => onPick(c.id)}>{inner}</button>
-        : <div key={c.id} data-xmas-novel-cast={c.id} data-st={st || undefined} data-fresh={fresh ? '' : undefined} className="mh-nv-person">{inner}</div>;
+        ? <button type="button" key={c.id} data-xmas-novel-person={c.id} data-st={st || undefined} data-pick={picked === c.id ? '' : undefined} aria-pressed={picked === c.id} className="mh-nv-person active:scale-95" onClick={() => onPick(c.id)}>{inner}</button>
+        : <div key={c.id} data-xmas-novel-cast={c.id} data-st={st || undefined} data-fresh={fresh ? '' : undefined} className="mh-nv-person" style={{ '--i': i }}>{inner}</div>;
     })}
   </div>
 );
@@ -70747,27 +71427,104 @@ const xmasNovelSe = (kind) => {
 //   連打しても重ねない: 次の行へ進んだら残りの回数は鳴らさず、同じ音を前の音のすぐあと(hold の間)には鳴らし直さない
 const XMAS_NOVEL_SE_SEQ = Object.freeze({
   bell: { gap: 1150, hold: 900, play: ['guard', 'trainingFail'] },
-  //   r1126-093 追記1(暗く): 時計 = 高い「チッ」(xpTick)をやめ、低くこもった「コツ」(trainingDice)/ 手紙 = きらめきの入った enemyCharge をやめ、低いうなりと下がる2音(trainingBad・trainingFail)
-  tick: { gap: 520, hold: 300, play: ['trainingDice'] },
-  letter: { gap: 0, hold: 1500, play: ['trainingBad', 'trainingFail'] },
+  //   r1126-093 追記2(雰囲気): 時計 = 柱時計のチク(nvTick)/ 手紙 = 不穏な一音(nvDread)。下は帯の文から選び直した音(xmasNovelSeKindOf)。
+  //   play の1つは '名前' か [名前, 引数, 遅らせるミリ秒]。音そのものは 14-audio.jsx の fgSe.nv*(その場で合成・小さく低い)
+  tick: { gap: 520, hold: 300, play: [['nvTick', true]] },
+  letter: { gap: 0, hold: 1500, play: ['nvDread'] },
+  knock: { gap: 460, hold: 300, play: ['nvThud'] },
+  thud: { gap: 420, hold: 250, play: ['nvThud'] },
+  creak: { gap: 0, hold: 800, play: ['nvCreak'] },
+  creakGlass: { gap: 0, hold: 1200, play: ['nvCreak', ['nvGlass', undefined, 650]] },
+  glass: { gap: 0, hold: 500, play: ['nvGlass'] },
+  windGlass: { gap: 0, hold: 1500, play: ['nvWind', ['nvGlass', undefined, 500], ['nvGlass', undefined, 1100]] },
+  slamLock: { gap: 0, hold: 700, play: ['nvThud', ['nvTick', true, 380], ['nvTick', false, 470]] },
+  lock: { gap: 0, hold: 400, play: [['nvTick', true], ['nvTick', false, 90]] },
+  rustle: { gap: 0, hold: 400, play: ['nvRustle'] },
+  dread: { gap: 0, hold: 1500, play: ['nvDread'] },
+  lightsOut: { gap: 0, hold: 1500, play: ['nvThud', ['nvDread', undefined, 120]] },
+  musicbox: { gap: 0, hold: 1800, play: ['nvMusicBox'] },
+  clap: { gap: 0, hold: 1200, play: ['nvRustle', ['nvRustle', undefined, 650]] },
+  fire: { gap: 0, hold: 1500, play: ['nvFire'] },
+  wind: { gap: 0, hold: 2500, play: ['nvWind'] },
+  //   r1126-093 追記3: 足音・駆ける・殴られる・倒れる・悲鳴の手前の息・扉・吹きこむ風
+  steps: { gap: 0, hold: 1500, play: ['nvStep'] },
+  run: { gap: 0, hold: 1300, play: ['nvRun'] },
+  hit: { gap: 0, hold: 500, play: ['nvHit'] },
+  hitFall: { gap: 0, hold: 1200, play: ['nvHit', ['nvFall', undefined, 420]] },
+  fall: { gap: 0, hold: 1000, play: ['nvFall'] },
+  scream: { gap: 0, hold: 1500, play: ['nvGasp', ['nvDread', undefined, 260]] },
+  door: { gap: 0, hold: 900, play: ['nvDoor'] },
+  doorGust: { gap: 0, hold: 1500, play: ['nvDoor', ['nvGust', undefined, 200]] },
+  gust: { gap: 0, hold: 1500, play: ['nvGust'] },
+  glassKnock: { gap: 380, hold: 300, play: ['nvGlass'] },
+  winding: { gap: 330, hold: 250, play: [['nvTick', true], ['nvTick', false, 120]] },
 });
+//  効果音の印の無い帯にも、文に合わせて1回鳴らす所(r1126-093 追記3)。行ID → [音, 回数]。a/s の2つある行は両方に書く
+const XMAS_NOVEL_SE_ROW = Object.freeze({
+  '2-L-12': ['knock', 2], '2-M-15': ['windGlass'], '2-5-2': ['doorGust'], '2-5-6b': ['gust'],
+  '4-4-1': ['winding', 3], '4-M-16': ['steps'], '5-4-1': ['knock', 2],
+  '5-X-4a': ['run'], '5-X-4s': ['run'], '6-X-6': ['run'], '2-Y-7': ['steps'], '2-Y-10': ['hitFall'], '2-Y-11': ['fall'],
+  '6-7-4': ['doorGust'], '7-P1-8': ['doorGust'], '9-1-2': ['winding', 2], '9-1-5': ['doorGust'], '6-X-1a': ['doorGust'], '6-X-1s': ['doorGust'],
+  '10-3-9': ['fall'], 'M5-2': ['steps'], 'B-13': ['fall'], 'G-3': ['winding', 3], 'N-3': ['winding', 2], '1-O-19': ['winding', 2],
+  '12-2-9': ['lock'], '12-3-6': ['knock', 3], '12-5-3': ['glassKnock', 3],
+});
+//  帯の効果音を、文に合わせて選び直す(台本データの印は 物音(tap)・衝撃(impact)・拍手・オルゴールの4つだけで、どれも同じ音だった・r1126-093 追記2)
+const xmasNovelSeKindOf = (kind, row) => {
+  if (kind === 'bell' || kind === 'tick' || kind === 'letter') return kind;
+  if (kind === 'music') return 'musicbox';
+  if (kind === 'clap') return 'clap';
+  const x = String((row && row.x) || '');
+  if (/声|悲鳴|叫び|きゃ|うわ|っ！/.test(x)) return 'scream';
+  if (/ピー/.test(x)) return 'dread';
+  if (/ブツン|停電/.test(x)) return 'lightsOut';
+  if (/(ギィ|ギシ)[\s\S]*(ガシャン|割れ)/.test(x)) return 'creakGlass';
+  if (/吹雪[\s\S]*ガラス|ガラス[\s\S]*吹雪/.test(x)) return 'windGlass';
+  if (/ギィ|ギシ|きしむ|開く音/.test(x)) return 'creak';
+  if (/ガシャン|ガラス|カシャ|割れ/.test(x)) return 'glass';
+  if (/バタン[\s\S]*(カチャリ|鍵)/.test(x)) return 'slamLock';
+  if (/カチリ|カチャリ|留め金|鍵の音/.test(x)) return 'lock';
+  if (/封|カサ|プシュッ/.test(x)) return 'rustle';
+  if (/叩く|打ちつける|ドン、ドン|コン、コン/.test(x)) return 'knock';
+  if (/ガタッ[\s\S]*ゴッ/.test(x)) return 'hitFall';
+  if (/ドサッ/.test(x)) return 'fall';
+  if (/^ゴッ|ゴッ[(（]|鈍い音/.test(x)) return 'hit';
+  if (/ドサッ|ゴッ|ゴトン|ガタ|重い|ドン/.test(x)) return 'thud';
+  return kind === 'impact' ? 'impact' : 'thud';
+};
+//  叩く音の回数は、文の「ドン」「コン」の数(3回まで)
+const xmasNovelSeTimesOf = (kind, row, times) => {
+  if (Number.isFinite(times)) return times;
+  if (kind !== 'knock' && kind !== 'thud') return 1;
+  const m = String((row && row.x) || '').match(/ドン|コン/g);
+  return kind === 'knock' && m ? Math.min(3, m.length) : 1;
+};
 let xmasNovelSeTimers = [];
 let xmasNovelSeLast = { kind: '', at: 0 };
 const xmasNovelSeStop = () => { xmasNovelSeTimers.forEach((t) => clearTimeout(t)); xmasNovelSeTimers = []; };
+const xmasNovelSeFn = (name) => { try { const fn = (Audio_.fgSe || Audio_.se)[name]; return typeof fn === 'function' ? fn : null; } catch (e) { return null; } };
 const xmasNovelSeHit = (kind) => {
   try {
     if (typeof Audio_ === 'undefined' || !Audio_ || !Audio_.se) return;
     const seq = XMAS_NOVEL_SE_SEQ[kind];
     xmasNovelSeLast = { kind, at: Date.now() };
     // 表の画面の口(fgSe)から鳴らす(裏クイックの音を止める印を受けない・r1126-072。上の xmasNovelSe と同じ)
-    seq.play.forEach((name) => { const fn = (Audio_.fgSe || Audio_.se)[name]; if (typeof fn === 'function') fn(); });
+    seq.play.forEach((item) => {
+      const [name, arg, delay] = Array.isArray(item) ? item : [item];
+      const fn = xmasNovelSeFn(name);
+      if (!fn) return;
+      if (delay > 0) xmasNovelSeTimers.push(setTimeout(() => fn(arg), delay)); else fn(arg);
+    });
   } catch (e) { /* 音が出せなくても読み進める */ }
 };
-const xmasNovelRowSe = (kind, times) => {
+//  既読飛ばしの間は、帯の1回の音を鳴らさない(つぎつぎ重なるため・r1126-093 追記3)。画面が skip に合わせて立てる
+let xmasNovelSeQuiet = false;
+const xmasNovelRowSe = (kindIn, times, row) => {
   xmasNovelSeStop();
+  if (xmasNovelSeQuiet) return;
+  const kind = xmasNovelSeKindOf(kindIn, row);
   const seq = XMAS_NOVEL_SE_SEQ[kind];
   if (!seq) { xmasNovelSe(kind); return; }
-  const n = Math.max(1, Math.min(3, Number.isFinite(times) ? times : 1));
+  const n = Math.max(1, Math.min(3, xmasNovelSeTimesOf(kind, row, times)));
   const wait = xmasNovelSeLast.kind === kind ? Math.max(0, seq.hold - (Date.now() - xmasNovelSeLast.at)) : 0;
   for (let i = 0; i < n; i += 1) {
     const at = wait + i * seq.gap;
@@ -70775,37 +71532,54 @@ const xmasNovelRowSe = (kind, times) => {
     else xmasNovelSeTimers.push(setTimeout(() => xmasNovelSeHit(kind), at));
   }
 };
+//  場所の環境音(ずっと小さく鳴る・r1126-093 追記3)。背景の名前で決め、場面・背景が替わったらつなぎ目なく替える(14-audio.jsx の nvAmbient)
+//    外側(助手たちの前)・エンドの札(背景なし)は鳴らさない。下の表は背景と話が合わない所だけ
+const XMAS_NOVEL_AMBIENT_SCENE = Object.freeze({ 'C2-M': 'wind', 'C12-2': 'wind', 'C2-L': 'clock', 'C1-6': 'clock' });
+const xmasNovelAmbientOf = (scene, bgName) => {
+  if (!scene || scene.outside) return 'none';
+  if (Object.prototype.hasOwnProperty.call(XMAS_NOVEL_AMBIENT_SCENE, scene.id)) return XMAS_NOVEL_AMBIENT_SCENE[scene.id];
+  const bg = String(bgName || scene.bg || '');
+  if (!bg || /助手たち|monhero_/.test(bg)) return 'none';
+  if (/吹雪/.test(bg)) return 'blizzard';
+  if (/雪原|雪の山道|崖/.test(bg)) return 'wind';
+  if (/暖炉/.test(bg)) return 'fire';
+  if (/柱時計|ホール/.test(bg)) return 'clock';
+  return 'room';
+};
+const xmasNovelSetAmbient = (kind) => { try { if (typeof Audio_ !== 'undefined' && Audio_ && typeof Audio_.nvAmbient === 'function') void Audio_.nvAmbient(kind || 'none'); } catch (e) { /* 音が出せなくても読み進める */ } };
 //  事件簿の曲(2026-11-28 社長「音楽で声有りはやめて」「ちゃんとばめんにあったやつに」「音無しとかばめんによって」「全体的に暗く」・台帳 r1126-093)。
 //    歌(声)の入った曲は使わない。声の有無は声の分離器で測った(表と測り方: docs/progress/event-xmas-2026/NOVEL-BGM-R1126-093.md)。
+//    r1126-093 追記3(社長「BGM を明るいとこ以外は極力静かなやつか音無しにいれて SE で表現」): 明るい場面と静かな曲(ピアノ・プロフィール・ゲームオーバー)だけ残し、
+//    不穏・怖い・推理の曲は音無しにして、場所の環境音(xmasNovelAmbientOf)と帯の音で表す。
 //    'silence' は曲を止める(死の場面・張りつめた所・静かな独白)。台本データ(79-xmas-novel-script.jsx)の曲より、この表が勝つ
 const XMAS_NOVEL_BGM_SCENE = Object.freeze({
-  'OUT-0-1': 'original_profile', 'OUT-0-2': 'melo_dullahan_clockwork', 'C0-1': 'original_profile', 'C0-2': 'original_profile',
-  'OUT-1': 'melo_dullahan_clockwork', 'C1-1': 'original_profile', 'C1-2': 'original_profile', 'C1-3': 'melo_dullahan_clockwork',
-  'C1-4': 'melo_dullahan_clockwork', 'C1-5': 'close_to_your_heart_alt', 'C1-6': 'melo_dullahan_steel_ghost', 'C1-M': 'silence',
-  'C2-1': 'melo_dullahan_clockwork', 'C2-L': 'silence', 'C2-M': 'makutsu_no_senritsu', 'C2-2': 'original_profile',
-  'C2-3': 'melo_dullahan_steel_ghost', 'C2-4': 'melo_dullahan_steel_ghost_alt', 'C2-5': 'original_dullahan', 'C3-1': 'silence',
-  'C3-2': 'melo_dullahan_clockwork_alt', 'C3-3': 'melo_dullahan_clockwork', 'C3-4': 'melo_dullahan_clockwork_alt', 'C3-5': 'melo_erfolg_piano',
-  'C3-M': 'melo_erfolg_piano', 'C4-1': 'makutsu_no_senritsu', 'C4-2': 'silence', 'C4-3': 'melo_dullahan_clockwork_alt',
-  'C4-4': 'melo_dullahan_clockwork', 'C4-5': 'melo_dullahan_steel_ghost', 'C4-M': 'silence', 'C5-1': 'melo_erfolg_piano',
-  'C5-2': 'melo_dullahan_steel_ghost_alt', 'C5-3': 'melo_dullahan_steel_ghost', 'C5-4': 'melo_dullahan_steel_ghost', 'C5-5': 'makutsu_no_senritsu',
-  'C5-M': 'melo_dullahan_clockwork', 'C6-1': 'melo_dullahan_clockwork_alt', 'C6-2': 'melo_dullahan_steel_ghost',
-  'C6-3': 'melo_dullahan_clockwork_alt', 'C6-4': 'melo_dullahan_steel_ghost_alt', 'C6-5': 'melo_dullahan_steel_ghost',
-  'C6-6': 'melo_dullahan_clockwork_alt', 'C6-7': 'original_dullahan', 'C6-8': 'melo_erfolg_piano', 'C6-9': 'melo_dullahan_steel_ghost',
-  'C6-M': 'melo_erfolg_piano', 'C7-1': 'melo_dullahan_clockwork_alt', 'C7-2': 'melo_dullahan_steel_ghost_alt', 'C7-A': 'melo_erfolg_piano',
-  'C7-B': 'melo_dullahan_clockwork', 'C7-P1': 'original_dullahan', 'C7-P2': 'melo_erfolg_piano', 'C7-P3': 'melo_dullahan_clockwork',
-  'C7-4a': 'melo_erfolg_piano', 'C7-4b': 'melo_dullahan_steel_ghost', 'C7-5a': 'melo_erfolg_piano', 'C7-5b': 'melo_dullahan_steel_ghost',
-  'C7-W': 'melo_dullahan_clockwork_alt', 'C8-1': 'melo_dullahan_steel_ghost_alt', 'C8-2': 'makutsu_no_senritsu', 'C8-3': 'melo_erfolg_piano',
-  'C9-1': 'silence', 'C9-2': 'close_to_your_heart_alt', 'C10-1': 'melo_dullahan_steel_ghost', 'C10-2': 'makutsu_no_senritsu',
-  'C10-3': 'melo_dullahan_steel_ghost', 'C10-4': 'melo_dullahan_steel_ghost_alt', 'C11-1': 'melo_dullahan_steel_ghost_alt',
-  'C11-N': 'melo_erfolg_piano', 'C11-A': 'melo_erfolg_piano', 'C11-B': 'melo_dullahan_clockwork', 'C2-X': 'melo_dullahan_steel_ghost',
-  'END-X1': 'original_game_over', 'C5-X': 'melo_dullahan_steel_ghost', 'END-X2': 'original_game_over', 'C6-X': 'melo_dullahan_steel_ghost',
-  'END-X3': 'original_game_over', 'C2-Y': 'melo_dullahan_steel_ghost', 'END-X4': 'original_game_over', 'C10-X': 'melo_dullahan_steel_ghost',
-  'END-X5': 'original_game_over', 'END-M1': 'original_game_over', 'END-M2': 'melo_dullahan_steel_ghost', 'END-M3': 'melo_dullahan_steel_ghost',
-  'END-M4': 'original_game_over', 'END-M5': 'melo_dullahan_steel_ghost', 'END-G': 'melo_erfolg_piano', 'OUT-G': 'close_to_your_heart_alt',
-  'END-N': 'melo_erfolg_piano', 'OUT-N': 'melo_erfolg_piano', 'END-A': 'melo_dullahan_clockwork', 'OUT-A': 'melo_dullahan_clockwork',
-  'END-B': 'melo_dullahan_steel_ghost', 'OUT-B': 'melo_dullahan_steel_ghost', 'C1-O': 'original_profile', 'END-O': 'original_profile',
+  'OUT-0-1': 'original_profile', 'OUT-0-2': 'silence', 'C0-1': 'original_profile', 'C0-2': 'original_profile',
+  'OUT-1': 'silence', 'C1-1': 'original_profile', 'C1-2': 'original_profile', 'C1-3': 'silence',
+  'C1-4': 'silence', 'C1-5': 'close_to_your_heart_alt', 'C1-6': 'silence', 'C1-M': 'silence',
+  'C2-1': 'silence', 'C2-L': 'silence', 'C2-M': 'silence', 'C2-2': 'original_profile',
+  'C2-3': 'silence', 'C2-4': 'silence', 'C2-5': 'silence', 'C3-1': 'silence',
+  'C3-2': 'silence', 'C3-3': 'silence', 'C3-4': 'silence', 'C3-5': 'melo_erfolg_piano',
+  'C3-M': 'melo_erfolg_piano', 'C4-1': 'silence', 'C4-2': 'silence', 'C4-3': 'silence',
+  'C4-4': 'silence', 'C4-5': 'silence', 'C4-M': 'silence', 'C5-1': 'melo_erfolg_piano',
+  'C5-2': 'silence', 'C5-3': 'silence', 'C5-4': 'silence', 'C5-5': 'silence',
+  'C5-M': 'silence', 'C6-1': 'silence', 'C6-2': 'silence',
+  'C6-3': 'silence', 'C6-4': 'silence', 'C6-5': 'silence',
+  'C6-6': 'silence', 'C6-7': 'silence', 'C6-8': 'melo_erfolg_piano', 'C6-9': 'silence',
+  'C6-M': 'melo_erfolg_piano', 'C7-1': 'silence', 'C7-2': 'silence', 'C7-A': 'melo_erfolg_piano',
+  'C7-B': 'silence', 'C7-P1': 'silence', 'C7-P2': 'melo_erfolg_piano', 'C7-P3': 'silence',
+  'C7-4a': 'melo_erfolg_piano', 'C7-4b': 'silence', 'C7-5a': 'melo_erfolg_piano', 'C7-5b': 'silence',
+  'C7-W': 'silence', 'C8-1': 'silence', 'C8-2': 'silence', 'C8-3': 'melo_erfolg_piano',
+  'C9-1': 'silence', 'C9-2': 'close_to_your_heart_alt', 'C10-1': 'silence', 'C10-2': 'silence',
+  'C10-3': 'silence', 'C10-4': 'silence', 'C11-1': 'silence',
+  'C11-N': 'melo_erfolg_piano', 'C11-A': 'melo_erfolg_piano', 'C11-B': 'silence', 'C2-X': 'silence',
+  'END-X1': 'original_game_over', 'C5-X': 'silence', 'END-X2': 'original_game_over', 'C6-X': 'silence',
+  'END-X3': 'original_game_over', 'C2-Y': 'silence', 'END-X4': 'original_game_over', 'C10-X': 'silence',
+  'END-X5': 'original_game_over', 'END-M1': 'original_game_over', 'END-M2': 'silence', 'END-M3': 'silence',
+  'END-M4': 'original_game_over', 'END-M5': 'silence', 'END-G': 'melo_erfolg_piano', 'OUT-G': 'close_to_your_heart_alt',
+  'END-N': 'melo_erfolg_piano', 'OUT-N': 'melo_erfolg_piano', 'END-A': 'silence', 'OUT-A': 'silence',
+  'END-B': 'silence', 'OUT-B': 'silence', 'C1-O': 'original_profile', 'END-O': 'original_profile',
   'OUT-O': 'original_profile', 'END-O2': 'close_to_your_heart_alt', 'OUT-O2': 'close_to_your_heart_alt', 'C12-1': 'close_to_your_heart_alt',
-  'C12-2': 'melo_erfolg_piano', 'C12-3': 'original_dullahan', 'C12-4': 'melo_dullahan_clockwork', 'C12-5': 'melo_dullahan_steel_ghost',
+  'C12-2': 'melo_erfolg_piano', 'C12-3': 'silence', 'C12-4': 'silence', 'C12-5': 'silence',
   'C12-6': 'silence', 'C12-7': 'melo_erfolg_piano',
 });
 //  場面の途中で曲を変える・止める所。場面ID → [その行から先, 曲の鍵](a/s の2つある行は、前の方の行に付ける)
@@ -70813,8 +71587,8 @@ const XMAS_NOVEL_BGM_SHIFT = Object.freeze({
   'C2-3': [['2-3-7', 'silence']],
   'C5-4': [['5-4-5', 'silence']],
   'C6-5': [['6-5-3', 'silence']],
-  'C7-1': [['7-1-3a', 'melo_dullahan_steel_ghost_alt']],
-  'C7-W': [['7-W-14', 'melo_dullahan_steel_ghost_alt']],
+  'C7-1': [['7-1-3a', 'silence']],
+  'C7-W': [['7-W-14', 'silence']],
   'C10-1': [['10-1-5', 'silence']],
   'C10-2': [['10-2-7', 'silence']],
   'C10-3': [['10-3-7', 'silence']],
@@ -71081,6 +71855,7 @@ const XMAS_NOVEL_ICONS = {
   skip: '<polygon points="4 5 12 12 4 19 4 5"/><polygon points="12 5 20 12 12 19 12 5"/>',
   log: '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>',
   book: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><circle cx="12" cy="10" r="3"/><line x1="14.2" y1="12.2" x2="16.5" y2="14.5"/>',
+  map: '<polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21 3 6"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/>',
   menu: '<line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/>',
 };
 
@@ -71091,6 +71866,14 @@ const xmasNovelLoad = async (script = XMAS_NOVEL_SCRIPT) => {
 };
 const xmasNovelStore = async (save, script = XMAS_NOVEL_SCRIPT) => {
   try { await storeSet(XMAS_NOVEL_STORAGE_KEY, xmasNovelNormalize(save, script), false); return true; } catch (e) { return false; }
+};
+// 分岐の地図の読み直し(r1126-102): 新しいキー mh_xmas_novel_route_v1。形は xmasNovelRouteNormalize
+const xmasNovelRouteLoad = async (script = XMAS_NOVEL_SCRIPT) => {
+  try { return xmasNovelRouteNormalize(await storeGet(XMAS_NOVEL_ROUTE_KEY, null, false), script); }
+  catch (e) { return xmasNovelRouteNormalize(null, script); }
+};
+const xmasNovelRouteStore = async (route, script = XMAS_NOVEL_SCRIPT) => {
+  try { await storeSet(XMAS_NOVEL_ROUTE_KEY, xmasNovelRouteNormalize(route, script), false); return true; } catch (e) { return false; }
 };
 // ほかの画面から読む口: 見たエンディング(日時つき)・一発で当てた数(記録だけ)
 const xmasNovelRecordState = async () => {
@@ -71109,7 +71892,7 @@ const xmasNovelDateText = (iso) => {
 // ---- 画面 ----
 const XMAS_NOVEL_AUTO_MS = [0, 1800, 1000];
 // script … 検査で仮の台本を渡すときだけ(ふだんは渡さない)
-const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = null }) => {
+const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = null, rankOff = false }) => {
   useXmasNovelCss();
   // 台詞の {name}: 渡されなければブリーダー名を読むだけ(書かない)
   const [playerName, setPlayerName] = useState(playerNameProp);
@@ -71120,13 +71903,14 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
     return () => { alive = false; };
   }, [playerNameProp]);
   const S = script || XMAS_NOVEL_SCRIPT;
+  // ランキング(r1126-107): 開いたときに、ためていた分と、ランキングを入れる前の記録(1回だけ)を送る。待たない・落ちない
+  useEffect(() => { if (!rankOff && typeof xmasNovelRankFlush === 'function') void xmasNovelRankFlush(S); }, []);
   const [save, setSave] = useState(null);
-  const [mode, setMode] = useState('title'); // title / read / endings / chapters
+  const [mode, setMode] = useState('title'); // title / read / endings / chapters / ranking(r1126-107)
   const [st, setSt] = useState(null); // xmasNovelSettle の結果(いまの行)
   const [reply, setReply] = useState(null); // { list:[行], i, then, q } 問いの返しを読んでいるところ
   const [shown, setShown] = useState(0); // 文字送りで出した字数
   const [fx, setFx] = useState(null); // { kind, n }
-  const [shake, setShake] = useState(0);
   const [curtain, setCurtain] = useState(null);
   const [transit, setTransit] = useState(null); // { dir:'in'|'out', n } 外側⇔ゲームの中の切り替え(画面に吸い込まれる/画面から引く) // 'down'(下りて閉じたまま)/ 'up'(上がっていく)
   const replayRef = useRef(false);
@@ -71135,24 +71919,110 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
   const card = cards[0] || null;
   const setCard = (c) => setCards((list) => (c ? [...list, c] : []));
   const [sheet, setSheet] = useState(null); // 'book' / 'log' / 'menu' / { kind:'present'|'person'|'action', q }
+  // 選択肢・推理の問い・名指しを待っている間は、柱時計のチク・タクを小さく繰り返す。選ぶ・窓を閉じると止まる(社長「選択肢の待ち時間はチクタクって時計おとが流れる」・r1126-093 追記2)
+  useEffect(() => {
+    if (!sheet || typeof sheet !== 'object' || !sheet.q) return undefined;
+    let high = true;
+    const tick = () => { const fn = xmasNovelSeFn('nvTick'); if (fn) fn(high); high = !high; };
+    const id = setInterval(tick, 640);
+    const first = setTimeout(tick, 250);
+    return () => { clearInterval(id); clearTimeout(first); };
+  }, [sheet]);
   const [got, setGot] = useState(null); // 手に入れた手がかり { n, d, add }
   const [skip, setSkip] = useState(false);
   const [log, setLog] = useState([]);
   const [confirmNew, setConfirmNew] = useState(false);
   const saveRef = useRef(null);
+  const [route, setRoute] = useState(null); // 分岐の地図の読み直し(mh_xmas_novel_route_v1・r1126-102)
+  const routeRef = useRef(null);
   const lastBgm = useRef(null);
   const lastChapter = useRef(null);
   const prevBgm = useRef(null);
   const storeTimer = useRef(null);
   const unreadRef = useRef(false); // いまの行が、着く前はまだ読んでいなかったか(既読スキップを止める)
+  // 場面の切り替えと人物の登場の演出(台帳 r1126-094)
+  const [sw, setSw] = useState(null); // { kind:'place'|'time'|'past'|'open', fast, place, n } 背景が替わった所
+  const [figEnter, setFigEnter] = useState(null); // { kind:'first'|'swap'|'face', fast, intro, n } 立ち絵の出かた
+  const lastBgRef = useRef(null); // 前の行の背景の名前(null = 読み始め)
+  const pendingSwRef = useRef(null); // 章の札を閉じたあとに出す切り替え
+  const seenWhoRef = useRef(new Set()); // この読み始めから立ち絵が出た人
+  const lastWhoRef = useRef('');
+  // 出すタイミング(台帳 r1126-094 追記1): 「文が出る → 一拍 → 演出」。遺体の影は、見つける文のあいだ暗転させ、文が出きってから明けて出す
+  const [reveal, setReveal] = useState(null); // { id, stage:'dark'|'show' } 遺体・倒れた影を見つける行
+  const pendingFxRef = useRef(null); // 文が出きってから出す演出 { id, vis, bleedAfter, shake }
+  const lastBodyRef = useRef('');
+  const fireFx = (p) => {
+    if (!p) return;
+    if (p.bleedAfter) setTimeout(() => setFx({ kind: 'bleed', n: Date.now() }), 380); // 赤く光ってから、にじむ
+    setFx(p.vis ? { kind: p.vis, n: Date.now() } : null);
+    if (p.shake) xmasNovelQuake(stageRef.current, 2);
+  };
+  const stageRef = useRef(null);
+  const pendingQuakeRef = useRef(0);
+  // 大事な選択は「押して選ぶ → 決定で確かめる」(台帳 r1126-113)。{ qid, key, label }
+  const [pick, setPick] = useState(null);
+  const [panelIntro, setPanelIntro] = useState(null); // { id, fast, done, at } 人物紹介の行
+  const [titleOk, setTitleOk] = useState(false); // いまの場面を前に読み終えているか(場面の題を出すか)
+  const fxFast = (unread) => !unread || !!(saveRef.current && saveRef.current.auto);
+  const fireSw = (v) => {
+    if (!v) { setSw(null); return; }
+    const n = Date.now();
+    setSw({ ...v, n });
+    setTimeout(() => setSw((x) => (x && x.n === n ? null : x)), v.fast ? 1500 : 3400);
+  };
 
   useEffect(() => {
     let alive = true;
     try { prevBgm.current = typeof Audio_ !== 'undefined' && Audio_.currentBgmKey ? Audio_.currentBgmKey() : null; } catch (e) { prevBgm.current = null; }
-    xmasNovelLoad(S).then((s) => { if (alive) { saveRef.current = s; setSave(s); } });
-    xmasNovelBgm('melo_dullahan_clockwork'); // 開いた所(題の画面)。歌の入った Kiss からはじまるミステリーをやめ、柱時計の不穏な曲に(r1126-093)
+    xmasNovelLoad(S).then((s) => {
+      if (!alive) return;
+      saveRef.current = s; setSave(s);
+      // 分岐の地図の読み直し(r1126-102): 別のキーから読み、地図より前に通った分かれ道は今の保存から1回だけ作る
+      xmasNovelRouteLoad(S).then((r) => {
+        if (!alive) return;
+        const seeded = r.seeded === 1 ? r : xmasNovelRouteSeed(S, s, r);
+        routeRef.current = seeded; setRoute(seeded);
+        if (seeded !== r) void xmasNovelRouteStore(seeded, S);
+      });
+    });
+    xmasNovelBgm('silence'); // 開いた所(題の画面)は曲なしで、柱時計の環境音(r1126-093 追記3)。前: 呪われた騎士の時計仕掛け。歌の入った Kiss からはじまるミステリーをやめ、柱時計の不穏な曲に(r1126-093)
     return () => { alive = false; xmasNovelSeStop(); if (storeTimer.current) clearTimeout(storeTimer.current); };
   }, []);
+  const putRoute = (next) => {
+    if (!next) return;
+    routeRef.current = next; setRoute(next);
+    void xmasNovelRouteStore(next, S);
+  };
+  // 地図の「↺ ここから読み直す」: 読み直す前の続きを back に逃がしてから(すでにあれば、一番はじめの続きを残す)、その分かれ道の状態で始める
+  const redoFrom = (cur) => {
+    const r = routeRef.current || xmasNovelRouteNormalize(null, S);
+    const now = saveRef.current && saveRef.current.cur;
+    putRoute({ ...r, back: r.back || now || null });
+    setSheet(null);
+    start(cur);
+  };
+  const backFromRedo = () => {
+    const r = routeRef.current;
+    if (!r || !r.back) return;
+    const b = r.back;
+    putRoute({ ...r, back: null });
+    setSheet(null);
+    start(b);
+  };
+  // 既読飛ばしの間は帯の1回の音を止める(r1126-093 追記3)
+  useEffect(() => { xmasNovelSeQuiet = !!skip; if (skip) xmasNovelSeStop(); }, [skip]);
+  // 場所の環境音: 読んでいる場面の背景で決め、題の画面は柱時計。選択肢を待つ間のチクタクとかぶる柱時計は、その間だけ止める。
+  //   既読飛ばしで場面がつぎつぎ替わっても重ねないよう、0.35 秒落ち着いてから替える。閉じたら止める
+  const ambSceneId = st && st.scene ? st.scene.id : '';
+  const ambBg = st && st.scene ? xmasNovelSceneBgName(st.scene, st.cur ? st.cur.idx : 0) : '';
+  const ambWait = !!(sheet && typeof sheet === 'object' && sheet.q);
+  useEffect(() => {
+    let kind = mode === 'read' ? xmasNovelAmbientOf(st && st.scene, ambBg) : mode === 'title' ? 'clock' : 'none';
+    if (ambWait && kind === 'clock') kind = 'none';
+    const id = setTimeout(() => xmasNovelSetAmbient(kind), 350);
+    return () => clearTimeout(id);
+  }, [mode, ambSceneId, ambBg, ambWait]);
+  useEffect(() => () => { xmasNovelSeQuiet = false; xmasNovelSetAmbient('none'); }, []);
   const persist = (next, now = false) => {
     saveRef.current = next; setSave(next);
     if (replayRef.current) return; // 見返しは保存しない
@@ -71179,20 +72049,44 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
     let s = base;
     unreadRef.current = !!(r.k && !s.read.includes(r.k));
     if (r.k && !s.read.includes(r.k)) s = { ...s, read: [...s.read, r.k] };
-    if (r.t === 'band' && r.se) xmasNovelRowSe(r.se, r.seN); else xmasNovelSeStop();
+    if (r.t === 'band' && r.se) xmasNovelRowSe(r.se, r.seN, r); else xmasNovelSeStop();
+    if (!opts.quiet && r.t === 'band' && !r.se && XMAS_NOVEL_SE_ROW[r.id]) xmasNovelRowSe(XMAS_NOVEL_SE_ROW[r.id][0], XMAS_NOVEL_SE_ROW[r.id][1], r); // 文に合わせた1回の音(r1126-093 追記3)
+    else if (!opts.quiet && !xmasNovelSeQuiet && r.t === 'band' && !r.se && Array.isArray(r.fx) && r.fx.includes('fallen')) xmasNovelSeHit('dread'); // 倒れた人が見つかった帯に、不穏な一音(r1126-093 追記2)
+    // 章の札の下で着いた行は、札を閉じてから揺らす(札に隠れて見えなかった)
+    pendingQuakeRef.current = 0;
+    if (XMAS_NOVEL_SHAKE[r.id] && !skip) { if (opts.held) pendingQuakeRef.current = XMAS_NOVEL_SHAKE[r.id]; else xmasNovelQuake(stageRef.current, XMAS_NOVEL_SHAKE[r.id]); }
     if (r.t === 'band' && Array.isArray(r.fx)) {
       const vis = r.fx.find((f) => ['dark', 'white', 'red', 'light', 'bleed'].includes(f));
-      if (r.fx.includes('bleed') && r.fx.includes('red')) setTimeout(() => setFx({ kind: 'bleed', n: Date.now() }), 380); // 赤く光ってから、にじむ
-      setFx(vis ? { kind: vis, n: Date.now() } : null);
-      if (r.fx.includes('shake')) setShake((n) => n + 1);
+      const p = { id: r.id, vis, bleedAfter: r.fx.includes('bleed') && r.fx.includes('red'), shake: r.fx.includes('shake') };
+      // 音の行(ドン・ギィ など)と暗転は文と同時。様子を書いた行の赤・にじみ・揺れは、文が出きって一拍おいてから
+      if (xmasNovelIsSeRow(r) || vis === 'dark' || skip || (!vis && !p.shake)) { pendingFxRef.current = null; fireFx(p); } else { pendingFxRef.current = p; setFx(null); }
       if (r.fx.includes('curtainDown')) setCurtain('down');
       if (r.fx.includes('curtainUp')) { setCurtain('up'); setTimeout(() => setCurtain((c) => (c === 'up' ? null : c)), 1700); }
       if (r.fx.includes('title') || r.fx.includes('chapter')) { setCard({ kind: r.fx.includes('title') ? 'title' : 'band', text: r.x }); setShown(99999); return s; }
-    } else setFx((f) => (f && f.kind === 'dark' ? null : f));
+    } else { pendingFxRef.current = null; setFx((f) => (f && f.kind === 'dark' ? null : f)); }
+    // 遺体・倒れた影が初めて出る行: 文のあいだは暗転、出きってから明けて出す(同じ人が続く行はそのまま)
+    {
+      const bodyKey = r.t === 'band' ? (r.body || (Array.isArray(r.fx) && r.fx.includes('fallen') ? `fallen-${r.id}` : '')) : '';
+      if (bodyKey && bodyKey !== lastBodyRef.current) setReveal({ id: r.id, stage: skip ? 'show' : 'dark', fast: !unreadRef.current, n: Date.now() });
+      else setReveal(null);
+      if (bodyKey) lastBodyRef.current = bodyKey; // 台詞をはさんで同じ人の影に戻るときは、暗転させない(場面が替わったら忘れる)
+    }
     // 行の曲(台本データ)は、返しの行のときだけここで鳴らす。本筋の行は下の xmasNovelBgmAt(場面の曲の表)が決める(r1126-093)
     if (opts.quiet && r.bgm && (XMAS_NOVEL_VOCAL_BGM[r.bgm] || r.bgm) !== lastBgm.current) { lastBgm.current = XMAS_NOVEL_VOCAL_BGM[r.bgm] || r.bgm; xmasNovelBgm(r.bgm); }
+    // 人物紹介(印の付かない「登場人物」の行): 1人ずつ入る。既読・オートは短く、スキップ中はそろった所から
+    if (r.t === 'panel' && !r.stamp && /登場人物/.test(String(r.x || ''))) setPanelIntro({ id: r.id, fast: !unreadRef.current || !!(saveRef.current && saveRef.current.auto), done: !!skip, at: Date.now() });
+    else if (r.t !== 'panel') setPanelIntro(null);
     if (r.t === 'clue') { setGot({ n: r.clue, d: r.x, add: !!r.add }); xmasNovelSe('clue'); }
     if (r.t === 'line' && r.n === '？？？' && xmasNovelIsLaugh(r)) xmasNovelSe('laugh');
+    if (r.t === 'line') {
+      // 立ち絵の出かた: その人が初めて出る / 話し手が替わる / 表情だけ替わる。スキップ中は演出なし
+      const who = r.n === '？？？' ? '？？？' : (r.w || '');
+      const first = !!(who && who !== '？？？' && who !== 'watson' && !seenWhoRef.current.has(who) && xmasNovelFirstLines(S)[who] === r.id);
+      if (who) seenWhoRef.current.add(who);
+      const kind = first ? 'first' : who !== lastWhoRef.current ? 'swap' : 'face';
+      lastWhoRef.current = who;
+      setFigEnter(skip ? null : { kind, fast: fxFast(unreadRef.current), intro: first, n: Date.now() });
+    } else if (r.t === 'band') lastWhoRef.current = '';
     if (r.t === 'line' || r.t === 'band') setLog((l) => [...l.slice(-299), { who: r.t === 'line' ? xmasNovelNameOf(r) : '', text: xmasNovelFill(r.x, playerName) }]);
     if (r.t === 'q' && !opts.quiet && !opts.held) setSheet({ kind: r.kind, q: r });
     setShown(opts.instant ? 99999 : 0);
@@ -71210,6 +72104,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
       if (replayRef.current) { setSt(next); setSkip(false); setSheet(null); setCard({ kind: 'ending', ending, replay: true }); return; }
       const firstTime = !s.endings.includes(ending.id);
       s = { ...xmasNovelRecordEnding(s, ending.id, new Date().toISOString()), cur: after };
+      if (typeof xmasNovelRankNote === 'function') xmasNovelRankNote({ k: 'end', id: ending.id }, { off: rankOff, script: S }); // ランキング(r1126-107)。見返すときは通らない
       persist(s, true);
       setSt(next); setSkip(false); setSheet(null);
       setCard({ kind: 'ending', ending, retry: !!after, fresh: firstTime, count: xmasNovelPerfectCount(S, s), total: xmasNovelScoreGroups(S).length });
@@ -71219,7 +72114,9 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
     const scene = next.scene;
     let chapterCard = false;
     // 外側(助手たち本人)⇔ゲームの中が切り替わったら、画面に吸い込まれる/画面から引く
-    if (scene && lastSceneRef.current && !!lastSceneRef.current.outside !== !!scene.outside) { setTransit({ dir: scene.outside ? 'out' : 'in', n: Date.now() }); xmasNovelSe('tap'); }
+    if (lastSceneRef.current !== (scene || null)) { lastBodyRef.current = ''; setTitleOk(xmasNovelSceneDone(scene, s.read)); }
+    const transitNow = !!(scene && lastSceneRef.current && !!lastSceneRef.current.outside !== !!scene.outside);
+    if (transitNow) { setTransit({ dir: scene.outside ? 'out' : 'in', n: Date.now() }); xmasNovelSe('tap'); }
     // カーテンコールの場面を出たら、下りていた幕を上げる
     if (scene && lastSceneRef.current && lastSceneRef.current.curtain && !scene.curtain) { setCurtain((c) => (c === 'down' ? 'up' : c)); setTimeout(() => setCurtain((c) => (c === 'up' ? null : c)), 1700); }
     lastSceneRef.current = scene || null;
@@ -71231,8 +72128,18 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
       lastChapter.current = scene.chapter;
       if (ch && ch.id !== 'END' && !ch.outside) {
         if (!s.snaps[ch.id] || next.cur.idx === 0) s = { ...s, snaps: { ...s.snaps, [ch.id]: { scene: scene.id, idx: 0, flags: next.cur.flags, clues: next.cur.clues, ans: next.cur.ans, panel: next.cur.panel || {} } } };
-        if (opening) { setCard({ kind: 'chapter', label: xmasNovelChapterLabel(ch), title: ch.title }); setSkip(false); chapterCard = true; }
+        if (opening) { setCard({ kind: 'chapter', label: xmasNovelChapterLabel(ch), title: xmasNovelChapterTitle(S, ch, s.read) }); setSkip(false); chapterCard = true; }
       }
+    }
+    // 背景が替わった所の切り替え(外側⇔ゲームの中は吸い込まれる演出があるので出さない・章の札のあとは札を閉じてから)
+    {
+      const bgNow = xmasNovelSceneBgName(scene, next.cur ? next.cur.idx : 0);
+      const kind = xmasNovelSwitchKind(lastBgRef.current, bgNow);
+      lastBgRef.current = bgNow;
+      const unread = !!(next.row && next.row.k && !s.read.includes(next.row.k));
+      const bodyRow = !!(next.row && next.row.t === 'band' && (next.row.body || (Array.isArray(next.row.fx) && next.row.fx.includes('fallen'))));
+      const v = kind && !skip && !bodyRow ? { kind, fast: fxFast(unread), place: scene && !scene.outside ? xmasNovelPlaceLabel(bgNow) : '' } : null;
+      if (chapterCard) { pendingSwRef.current = v ? { ...v, kind: v.kind === 'place' ? 'open' : v.kind } : { kind: 'open', fast: false, place: '' }; fireSw(null); } else if (v && !transitNow) fireSw(v);
     }
     let cur = next.cur;
     let panelChanged = [];
@@ -71241,6 +72148,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
       if (next.row.t === 'panel') { panelChanged = xmasNovelPanelChanged(next.cur.panel, cur.panel); if (next.row.stamp) xmasNovelSe('impact'); }
     }
     const settled = { ...next, cur, panelChanged };
+    if (next.row.t === 'q' && !replayRef.current && routeRef.current) putRoute(xmasNovelRouteRecord(routeRef.current, S, cur)); // 分かれ道の状態(r1126-102)
     s = arriveRow(next.row, { ...s, cur }, { held: chapterCard });
     setSt(settled);
     persist(s);
@@ -71252,6 +72160,8 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
     setCurtain(null); setTransit(null);
     lastBgm.current = null; lastChapter.current = null;
     setLog([]); setCard(null); setSheet(null); setGot(null); setFx(null); setSkip(false);
+    lastBgRef.current = null; pendingSwRef.current = null; seenWhoRef.current = new Set(); lastWhoRef.current = ''; setSw(null); setFigEnter(null);
+    setReveal(null); pendingFxRef.current = null; lastBodyRef.current = ''; setPanelIntro(null);
     setMode('read');
     arrive(xmasNovelSettle(S, cur));
   };
@@ -71261,6 +72171,9 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
     if (card) {
       if (card.kind === 'ending') return;
       setCards((list) => list.slice(1));
+      // 章の札を閉じたら、黒から場面が明ける(既読スキップ中は出さない)
+      if (card.kind === 'chapter' && cards.length === 1 && pendingSwRef.current) { const v = pendingSwRef.current; pendingSwRef.current = null; if (!skip) fireSw(v); }
+      if (cards.length === 1 && pendingQuakeRef.current) { const lv = pendingQuakeRef.current; pendingQuakeRef.current = 0; if (!skip) setTimeout(() => xmasNovelQuake(stageRef.current, lv), 250); }
       // 題字・帯の札は、その行そのもの。札を閉じたら次の行へ(章の札は行ではないので、閉じるだけ)
       if ((card.kind === 'title' || card.kind === 'band') && cards.length === 1) goNext();
       return;
@@ -71269,7 +72182,9 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
   };
   const goNext = () => {
     if (sheet || !row) return;
-    if (typing) { setShown(text.length); return; }
+    if (typing) { setShown(text.length); if (sw && !sw.fast) setSw(null); return; }
+    if (panelIntro && row && panelIntro.id === row.id && !panelIntro.done && Date.now() - panelIntro.at < (panelIntro.fast ? 900 : 3200)) { setPanelIntro({ ...panelIntro, done: true }); return; } // 人物紹介の途中は、まず全員そろえる
+    if (!reply && reveal && row && reveal.id === row.id && reveal.stage === 'dark') { setReveal({ ...reveal, stage: 'show' }); xmasNovelQuake(stageRef.current, 1); return; } // 暗いままで進めない(見つける所を必ず見せる)
     if (got) setGot(null);
     if (reply) {
       if (reply.i + 1 < reply.list.length) {
@@ -71294,9 +72209,13 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
   };
   // 答える
   const answer = (q, pick) => {
+    setPick(null);
     const res = xmasNovelAnswer(S, st.cur, q, pick, (saveRef.current && saveRef.current.endings) || []);
     let s = saveRef.current;
-    if (q.score) { s = xmasNovelRecordFirst(s, q.id, res.ok); xmasNovelSe(res.ok ? 'ok' : 'ng'); }
+    if (q.score) {
+      if (!(s.first && s.first[q.id]) && typeof xmasNovelRankNote === 'function') xmasNovelRankNote({ k: 'first', id: q.id, ok: !!res.ok }, { off: rankOff, script: S }); // 一番はじめの答えだけ(r1126-107)
+      s = xmasNovelRecordFirst(s, q.id, res.ok); xmasNovelSe(res.ok ? 'ok' : 'ng');
+    }
     setSheet(null);
     persist({ ...s, cur: res.cur });
     const list = (res.replies || []);
@@ -71313,11 +72232,28 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
     const id = setTimeout(() => setShown((n) => Math.min(text.length, n + (skip ? 99999 : 2))), skip ? 0 : 38);
     return () => clearTimeout(id);
   }, [typing, shown, text, skip]);
+  // 文が出きったら: 一拍おいて遺体の影を明ける / 様子の演出を出す
+  const rowKey = row ? row.id : '';
+  const revealDark = !!(reveal && reveal.id === rowKey && reveal.stage === 'dark');
+  useEffect(() => {
+    if (mode !== 'read' || !rowKey || typing) return undefined;
+    if (revealDark) {
+      const id = setTimeout(() => { setReveal((v) => (v && v.id === rowKey && v.stage === 'dark' ? { ...v, stage: 'show' } : v)); if (!skip) xmasNovelQuake(stageRef.current, 1); }, reveal.fast || skip ? 150 : 700);
+      return () => clearTimeout(id);
+    }
+    const p = pendingFxRef.current;
+    if (p && p.id === rowKey) {
+      const id = setTimeout(() => { if (pendingFxRef.current === p) { pendingFxRef.current = null; fireFx(p); } }, reveal && reveal.id === rowKey ? 1300 : 300);
+      return () => clearTimeout(id);
+    }
+    return undefined;
+  }, [mode, rowKey, typing, revealDark]);
   // オート・スキップ(スキップは読んだ行だけ。まだ読んでいない行・問い・札で止まる)
   const autoLevel = save ? save.auto : 0;
   useEffect(() => {
     if (mode !== 'read' || !row || sheet || typing) return undefined;
     if (card && card.kind === 'ending') return undefined;
+    if (revealDark && !skip) return undefined; // 明けるのを待つ
     if (card && !skip) return undefined;
     if (skip) {
       if ((row.t === 'q' && !reply) || (unreadRef.current && !reply)) { setSkip(false); return undefined; }
@@ -71367,6 +72303,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
                 <button type="button" className="mh-nv-btn wide mh-nv-serif mh-nv-boot-btn" data-xmas-novel-new onClick={() => (save.cur ? setConfirmNew(true) : start(xmasNovelFreshCur(S)))}>はじめから</button>
                 <button type="button" className="mh-nv-btn wide mh-nv-serif mh-nv-boot-btn" data-xmas-novel-chapters disabled={!Object.keys(save.snaps).length} onClick={() => setMode('chapters')}>章から</button>
                 <button type="button" className="mh-nv-btn wide mh-nv-serif mh-nv-boot-btn" data-xmas-novel-endings onClick={() => setMode('endings')}>エンドヒストリー {seenCount} / {endingsAll.length}</button>
+                {typeof XmasNovelRank === 'function' && <button type="button" className="mh-nv-btn wide mh-nv-serif mh-nv-boot-btn" data-xmas-novel-ranking onClick={() => setMode('ranking')}>ランキング</button>}
               </div>
               <div data-xmas-novel-perfect className="mt-4 text-[10px] text-slate-400">推理の問い 一発で当てた数 {xmasNovelPerfectCount(S, save)} / {perfectTotal}</div>
               {confirmNew && (
@@ -71383,6 +72320,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
               )}
             </div>
           )}
+          {mode === 'ranking' && typeof XmasNovelRank === 'function' && <XmasNovelRank script={S} off={rankOff} onBack={() => setMode('title')} />}
           {mode === 'endings' && (
             <div className="my-auto w-full max-w-md" data-xmas-novel-ending-list>
               <div className="mh-nv-serif mh-nv-gold text-center text-[22px] font-black tracking-widest">エンドヒストリー</div>
@@ -71423,7 +72361,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
                       <button type="button" data-xmas-novel-chapter={c.id} disabled={!snap} className="mh-nv-clue flex items-center gap-3 disabled:opacity-40"
                         onClick={() => snap && start({ ...snap, idx: 0 })}>
                         <span className="mh-nv-serif mh-nv-gold w-14 shrink-0 text-[14px] font-black">{xmasNovelChapterLabel(c)}</span>
-                        <span className="mh-nv-serif min-w-0 flex-1 truncate text-[15px] font-black">{snap ? c.title : '？？？'}</span>
+                        <span className="mh-nv-serif min-w-0 flex-1 truncate text-[15px] font-black">{snap ? xmasNovelChapterTitle(S, c, save.read) : '？？？'}</span>
                         {snap ? <ChevronRight size={16} className="text-amber-200" /> : <Lock size={14} />}
                       </button>
                     </li>
@@ -71444,28 +72382,45 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
   const darkNow = fx && fx.kind === 'dark';
   const name = isLine ? xmasNovelNameOf(row) : '';
   const q = sheet && typeof sheet === 'object' ? sheet.q : null;
+  // 大事な選択(人を名指し・手がかりを突きつける・一発で当てる/やり直せない行動)は、押すと選んだ状態になり、下の「決定」で確かめる(台帳 r1126-113)
+  const picked = pick && q && pick.qid === q.id ? pick : null;
+  const choose = (key, label) => setPick({ qid: q.id, key, label });
+  const decideBar = (verb) => (
+    <div className="mh-nv-decide" data-xmas-novel-decide-bar>
+      <div className="mh-nv-decide-what mh-nv-serif">{picked ? `「${picked.label}」${verb}` : '選んでから、決定を押そう'}</div>
+      <button type="button" className="mh-nv-btn wide mh-nv-serif" data-xmas-novel-decide disabled={!picked} onClick={() => { if (picked) answer(q, picked.key); }}>決定</button>
+    </div>
+  );
+  const presentList = q && q.kind === 'present' ? xmasNovelPresentable(q, clues) : clues; // 候補を絞る問い(r1126-099 追記1)
   return (
     <div className="mh-nv" data-xmas-novel="read" data-scene={scene ? scene.id : ''} data-row={row ? row.id : ''}>
-      <div key={`stage-${shake}`} className={`mh-nv-stage${shake ? ' mh-nv-shake' : ''}`} onClick={advance}>
-        <div className="mh-nv-bg" key={bgName || (scene ? scene.id : 'bg')} data-xmas-novel-bg={bg.tintKind || ''} style={bg.img ? { backgroundImage: `${bg.tint ? `${bg.tint}, ` : ''}url(${bg.img})`, backgroundPosition: bg.pos || 'center' } : { background: bg.grad }} />
+      <div ref={stageRef} className="mh-nv-stage" onClick={advance}>
+        <div className={`mh-nv-bg${sw ? ` in-${sw.kind}${sw.fast ? ' fast' : ''}` : ''}`} key={bgName || (scene ? scene.id : 'bg')} data-xmas-novel-bg={bg.tintKind || ''} style={bg.img ? { backgroundImage: `${bg.tint ? `${bg.tint}, ` : ''}url(${bg.img})`, backgroundPosition: bg.pos || 'center' } : { background: bg.grad }} />
         {(bg.snow || !bg.img) && <><div className="mh-nv-snow" />{bg.snow && <div className="mh-nv-snow b" />}</>}
-        {!darkNow && (isLine || (isBand && xmasNovelIsSilhouette(row))) && <XmasNovelFigure row={row} scene={scene} />}
+        {!darkNow && (isLine || (isBand && xmasNovelIsSilhouette(row))) && <XmasNovelFigure row={row} scene={scene} enter={isLine ? figEnter : null} />}
+        {sw && <div key={`sw-${sw.n}`} className={`mh-nv-sw ${sw.kind}${sw.fast ? ' fast' : ''}`} data-xmas-novel-switch={sw.kind} />}
+        {sw && sw.place && <div key={`place-${sw.n}`} className={`mh-nv-place mh-nv-serif${sw.kind === 'past' ? ' past' : ''}${sw.fast ? ' fast' : ''}`} data-xmas-novel-place>{sw.place}</div>}
+        {isBand && row.body && !revealDark && <XmasNovelBody key={`body-${row.body}`} bg={bg} who={xmasNovelBodyWho(row.body, st && st.cur && st.cur.flags)} scene={scene ? scene.id : ''} at={st && st.cur && Number.isFinite(st.cur.idx) ? st.cur.idx : 0} noBlood={!!row.noBlood} />}
+        {isBand && !row.body && !revealDark && Array.isArray(row.fx) && row.fx.includes('fallen') && <XmasNovelFallen />}
+        {reveal && reveal.id === rowKey && <div key={`veil-${reveal.n}`} className={`mh-nv-veil ${reveal.stage}${reveal.fast ? ' fast' : ''}`} data-xmas-novel-veil={reveal.stage} />}
         {fx && <div key={fx.n} className={`mh-nv-fx ${fx.kind}`} />}
-        {isBand && row.body && <XmasNovelBody key={`body-${row.body}`} bg={bg} who={xmasNovelBodyWho(row.body, st && st.cur && st.cur.flags)} scene={scene ? scene.id : ''} at={st && st.cur && Number.isFinite(st.cur.idx) ? st.cur.idx : 0} noBlood={!!row.noBlood} />}
-        {isBand && !row.body && Array.isArray(row.fx) && row.fx.includes('fallen') && <XmasNovelFallen />}
         {isBand && Array.isArray(row.fx) && row.fx.includes('letter') && <div key={`letter-${row.id}`} className="mh-nv-letter mh-nv-serif" data-xmas-novel-letter>{String(text).replace(/／/g, '\n')}</div>}
         {inside && <div className="mh-nv-crt" data-xmas-novel-inside />}
         {transit && <div key={transit.n} className="mh-nv-transit" data-dir={transit.dir} data-xmas-novel-transit={transit.dir} onAnimationEnd={(e) => { if (e.target === e.currentTarget) setTransit(null); }}><div className="scr" /><div className="mh-nv-noise" /><div className="mh-nv-scan" /></div>}
         {curtain && <div key={`curtain-${curtain}`} className="mh-nv-curtain" data-st={curtain} data-xmas-novel-curtain={curtain} />}
         {scene && scene.curtain && curtain === 'down' && !(row && row.t === 'panel') && (
-          <div className="absolute inset-x-0 top-[14%] z-[5] mx-auto w-[min(94vw,640px)]" data-xmas-novel-lineup>
-            <XmasNovelCast states={{}} />
+          <div className="mh-nv-panelwrap" data-xmas-novel-lineup>
+            <div className="mh-nv-panelin"><XmasNovelCast states={{}} big /></div>
           </div>
         )}
         {row && row.t === 'panel' && (
-          <div className="absolute inset-x-0 top-[12%] z-[5] mx-auto w-[min(94vw,640px)] rounded-2xl p-3" data-xmas-novel-panel style={{ background: 'rgba(4,8,22,.88)', boxShadow: '0 0 0 1px #e8c46a' }}>
-            <div className="mh-nv-serif mh-nv-gold mb-2 text-center text-[15px] font-black">登場人物</div>
-            <XmasNovelCast states={xmasNovelPanelStates(st && st.cur && st.cur.panel, row)} changed={(st && st.panelChanged) || []} />
+          <div className="mh-nv-panelwrap">
+            {/* 人物紹介(「登場人物 12人」の行・台帳 r1126-094 追記4): まん中に、1人ずつ影から浮かんで名前と入り、最後に全員がそろって光る。タップで全員そろった所へ */}
+            <div key={`panel-${row.id}`} className={`mh-nv-panelin mh-nv-panelbox${panelIntro && panelIntro.id === row.id ? ` intro${panelIntro.fast ? ' fast' : ''}${panelIntro.done ? ' done' : ''}` : ''}`} data-xmas-novel-panel data-xmas-novel-intro-panel={panelIntro && panelIntro.id === row.id ? (panelIntro.done ? 'done' : 'play') : undefined}>
+              <div className="mh-nv-panelhead mh-nv-serif mh-nv-gold">登場人物</div>
+              <div className="mh-nv-panelrule" />
+              <XmasNovelCast states={xmasNovelPanelStates(st && st.cur && st.cur.panel, row)} changed={(st && st.panelChanged) || []} big />
+            </div>
           </div>
         )}
         {(isLine || isBand || (row && (row.t === 'clue' || row.t === 'panel' || row.t === 'q'))) && !(card && card.kind !== 'band') && (
@@ -71486,13 +72441,18 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
         )}
       </div>
       <div className="mh-nv-top">
-        <span className="mh-nv-where mh-nv-serif" data-xmas-novel-where>{/* エンドの場面のあいだは章名だけ(場面名がエンド名を先に明かす・台帳 r1126-087「結末まで伏せる」) */}{chapter && !chapter.outside ? <span className="ch">{`${xmasNovelChapterLabel(chapter)}${chapter.title ? `　${chapter.title}` : ''}`}<span className="sep">　/　</span></span> : null}{scene && scene.title && !(scene.ending || (chapter && chapter.id === 'END') || /^END-/.test(String(scene.next || ''))) ? <span className="sc">{scene.title}</span> : null}</span>
+        <span className="mh-nv-where mh-nv-serif" data-xmas-novel-where>{/* エンドの場面のあいだは章名だけ(場面名がエンド名を先に明かす・台帳 r1126-087「結末まで伏せる」) */}{/* 場面の題は、その場面を1度読み終えてから(先の展開が題で分かる・台帳 r1126-094 追記3)。章の題も先が分かる物は伏せる */}{(() => {
+          const chTitle = chapter && !chapter.outside ? xmasNovelChapterTitle(S, chapter, save.read) : '';
+          const showScene = !!(titleOk && scene && scene.title && !(scene.ending || (chapter && chapter.id === 'END') || /^END-/.test(String(scene.next || ''))));
+          return <>{chapter && !chapter.outside ? <span className="ch">{`${xmasNovelChapterLabel(chapter)}${chTitle ? `　${chTitle}` : ''}`}{showScene ? <span className="sep">　/　</span> : null}</span> : null}{showScene ? <span className="sc">{scene.title}</span> : null}</>;
+        })()}</span>
         <button type="button" className="mh-nv-btn" data-xmas-novel-open-book onClick={() => setSheet('book')} aria-label="手がかり帳"><XmasNovelIcon d={XMAS_NOVEL_ICONS.book} /><span className="hidden sm:inline">手がかり帳</span><b className="text-[11px]">{clues.length}</b></button>
         <button type="button" className="mh-nv-btn" data-xmas-novel-log onClick={() => setSheet('log')} aria-label="ログ"><XmasNovelIcon d={XMAS_NOVEL_ICONS.log} /><span className="hidden sm:inline">ログ</span></button>
         <button type="button" className="mh-nv-btn" data-xmas-novel-auto data-on={autoLevel ? '' : undefined} onClick={() => persist({ ...saveRef.current, auto: (autoLevel + 1) % 3 }, true)} aria-label="オート">
           <XmasNovelIcon d={XMAS_NOVEL_ICONS.auto} /><span>{autoLevel === 2 ? 'はやい' : 'オート'}</span>
         </button>
         <button type="button" className="mh-nv-btn" data-xmas-novel-skip data-on={skip ? '' : undefined} onClick={toggleSkip} aria-label="既読スキップ"><XmasNovelIcon d={XMAS_NOVEL_ICONS.skip} /><span className="hidden sm:inline">スキップ</span></button>
+        <button type="button" className="mh-nv-btn" data-xmas-novel-open-map onClick={() => setSheet('map')} aria-label="地図"><XmasNovelIcon d={XMAS_NOVEL_ICONS.map} /><span>地図</span></button>
         <button type="button" className="mh-nv-btn" data-xmas-novel-menu onClick={() => setSheet('menu')} aria-label="メニュー"><XmasNovelIcon d={XMAS_NOVEL_ICONS.menu} /></button>
       </div>
 
@@ -71505,17 +72465,18 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
       )}
 
       {card && (
-        <div className="mh-nv-card" data-xmas-novel-card={card.kind} onClick={advance}>
+        <div key={`card-${card.kind}-${card.label || card.text || ''}`} className={`mh-nv-card${card.kind !== 'ending' ? ' open' : ''}`} data-xmas-novel-card={card.kind} onClick={advance}>
+          {card.kind === 'chapter' && card.label && <div className="mh-nv-card-ghost mh-nv-serif" aria-hidden="true">{card.label}</div>}
           {card.kind === 'chapter' && (<div className="mh-nv-plain mh-nv-cardtext">
-            <div className="mh-nv-serif text-[15px] tracking-[0.5em] text-slate-200">{card.label}</div>
+            <div className="mh-nv-card-label mh-nv-serif text-[15px] tracking-[0.5em] text-slate-200">{card.label}</div>
             <div className="mh-nv-rule" />
-            <div className="mh-nv-serif mh-nv-gold text-[30px] font-black leading-tight sm:text-[38px]">{xmasNovelWrap(card.title, 10)}</div>
+            <div className="mh-nv-card-title mh-nv-serif mh-nv-gold text-[30px] font-black leading-tight sm:text-[38px]">{xmasNovelWrap(card.title, 10)}</div>
             <div className="mh-nv-rule" />
-            <div className="mt-6 text-[11px] text-slate-400">タップで進む</div>
+            <div className="mh-nv-card-hint mt-6 text-[11px] text-slate-400">タップで進む</div>
           </div>)}
           {(card.kind === 'title' || card.kind === 'band') && (<div className="mh-nv-plain mh-nv-cardtext">
             <div className="mh-nv-rule" />
-            <div className="mh-nv-serif mh-nv-gold text-[30px] font-black leading-tight sm:text-[40px]">{xmasNovelWrap(card.text, 10)}</div>
+            <div className="mh-nv-card-title mh-nv-serif mh-nv-gold text-[30px] font-black leading-tight sm:text-[40px]">{xmasNovelWrap(card.text, 10)}</div>
             <div className="mh-nv-rule" />
           </div>)}
           {card.kind === 'ending' && (() => {
@@ -71542,7 +72503,10 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
         </div>
       )}
 
-      {sheet && (
+      {sheet === 'map' && save && (
+        <XmasNovelMap script={S} save={save} route={route} playerName={playerName} onRedo={redoFrom} onBack={backFromRedo} onClose={() => setSheet(null)} />
+      )}
+      {sheet && sheet !== 'map' && (
         <div className="mh-nv-sheet" data-xmas-novel-sheet={typeof sheet === 'string' ? sheet : sheet.kind}
           onClick={() => { if (typeof sheet === 'string') setSheet(null); }}>
           <div className="mh-nv-panel" onClick={(e) => e.stopPropagation()}>
@@ -71559,46 +72523,59 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
               <button type="button" className="mh-nv-btn wide mt-3" onClick={() => setSheet(null)}>閉じる</button>
             </>)}
             {(sheet === 'book' || (q && q.kind === 'present')) && (<>
-              <div className="mh-nv-serif mh-nv-gold text-[18px] font-black">手がかり帳 <span className="text-[12px] text-slate-300">{clues.length}個</span></div>
+              <div className="mh-nv-serif mh-nv-gold text-[18px] font-black">手がかり帳 <span className="text-[12px] text-slate-300">{presentList.length}個</span></div>
               {q && <div data-xmas-novel-question={q.id} className="mt-2 rounded-lg p-2 text-[13px] font-bold leading-relaxed" style={{ background: 'rgba(120,20,30,.35)', boxShadow: '0 0 0 1px rgba(232,120,120,.6)' }}>
                 {q.label && <div className="mh-nv-serif text-[11px] font-black text-rose-200">{q.label}</div>}
                 {xmasNovelWrap(xmasNovelFill(q.x, playerName))}
-                <div className="mt-1 text-[11px] text-rose-100">突きつける手がかりを1つ選ぼう</div>
+                <div className="mt-1 text-[11px] text-rose-100">{presentList.length < clues.length ? `候補を${presentList.length}つに絞った。突きつける手がかりを1つ選ぼう` : '突きつける手がかりを1つ選ぼう'}</div>
+                {q.pass && <div data-xmas-novel-pass className="mh-nv-plain mt-1 text-[11px] text-rose-200">外しても、仲間が拾って話は進む。一発で当てると成績に残る</div>}
               </div>}
               <div className="mh-nv-scroll mt-2 flex-1 space-y-2 pr-1">
-                {clues.length ? clues.map((c) => (
-                  <div key={c.n} className="mh-nv-clue" data-xmas-novel-clue={c.n}>
+                {presentList.length ? presentList.map((c) => (
+                  <div key={c.n} className="mh-nv-clue" data-xmas-novel-clue={c.n} data-pick={picked && picked.key === c.n ? '' : undefined}>
                     <div className="flex items-center gap-2">
                       <div className="mh-nv-serif mh-nv-gold min-w-0 flex-1 text-[15px] font-black">【{c.n}】</div>
-                      {q && <button type="button" className="mh-nv-btn shrink-0" data-xmas-novel-present={c.n} onClick={() => answer(q, c.n)}>突きつける</button>}
+                      {q && <button type="button" className="mh-nv-btn shrink-0" data-xmas-novel-present={c.n} data-on={picked && picked.key === c.n ? '' : undefined} aria-pressed={!!(picked && picked.key === c.n)} onClick={() => choose(c.n, c.n)}>{picked && picked.key === c.n ? '選んだ' : 'これを選ぶ'}</button>}
                     </div>
                     <p className="mh-nv-plain mt-1 whitespace-pre-wrap text-[12px] leading-relaxed text-slate-200">{xmasNovelWrap(c.d)}</p>
                   </div>
                 )) : <div className="text-[12px] text-slate-400">まだ手がかりはありません</div>}
               </div>
               {!q && <button type="button" className="mh-nv-btn wide mt-3" onClick={() => setSheet(null)}>閉じる</button>}
-              {q && <button type="button" className="mh-nv-btn wide mt-3" onClick={() => setSheet(null)}>話をもう1度見る</button>}
+              {q && decideBar('を突きつける')}
+              {q && <button type="button" className="mh-nv-btn wide mt-2" onClick={() => { setPick(null); setSheet(null); }}>話をもう1度見る</button>}
             </>)}
             {q && q.kind === 'person' && (<>
               <div data-xmas-novel-question={q.id} className="mb-3 rounded-lg p-2 text-[13px] font-bold leading-relaxed" style={{ background: 'rgba(120,20,30,.35)', boxShadow: '0 0 0 1px rgba(232,120,120,.6)' }}>
                 {q.label && <div className="mh-nv-serif text-[11px] font-black text-rose-200">{q.label}</div>}
                 {xmasNovelWrap(xmasNovelFill(q.x, playerName))}
               </div>
-              <div className="mh-nv-scroll"><XmasNovelCast onPick={(id) => answer(q, id)} /></div>
+              <div className="mh-nv-scroll"><XmasNovelCast picked={picked ? picked.key : ''} onPick={(id) => { const c = xmasNovelCastOf(id); choose(id, c ? c.name : id); }} /></div>
               {(q.extra || []).map((x) => (
-                <button type="button" key={x.key} className="mh-nv-choice mh-nv-serif mt-2" data-xmas-novel-extra={x.key} onClick={() => answer(q, x.key)}>{xmasNovelWrap(x.x)}</button>
+                <button type="button" key={x.key} className="mh-nv-choice mh-nv-serif mt-2" data-xmas-novel-extra={x.key} data-pick={picked && picked.key === x.key ? '' : undefined} aria-pressed={!!(picked && picked.key === x.key)} onClick={() => choose(x.key, String(x.x || '').replace(/[「」]/g, ''))}>{xmasNovelWrap(x.x)}</button>
               ))}
-              {q.once && <div className="mh-nv-plain mt-2 text-[11px] font-bold text-rose-200">選んだら、やり直しはできません</div>}
-              <button type="button" className="mh-nv-btn wide mt-3" onClick={() => setSheet(null)}>話をもう1度見る</button>
+              {q.once && <div className="mh-nv-plain mt-2 text-[11px] font-bold text-rose-200">決定したら、やり直しはできません</div>}
+              {decideBar(q.extra && q.extra.some((x) => picked && picked.key === x.key) ? 'に決める' : 'を名指しする')}
+              <button type="button" className="mh-nv-btn wide mt-2" onClick={() => { setPick(null); setSheet(null); }}>話をもう1度見る</button>
             </>)}
             {q && q.kind === 'action' && (<>
               <div data-xmas-novel-question={q.id} className="mh-nv-plain mh-nv-serif mh-nv-gold mb-3 text-[17px] font-black">{xmasNovelWrap(xmasNovelFill(q.x, playerName))}</div>
               <div className="space-y-2.5">
-                {xmasNovelOptionsOf(q, xmasNovelCtx(S, st.cur, save.endings)).map((o) => (
-                  <button type="button" key={o.i} className="mh-nv-choice mh-nv-serif" data-xmas-novel-option={o.i} onClick={() => answer(q, o.i)}>{xmasNovelWrap(xmasNovelFill(o.x, playerName))}</button>
-                ))}
+                {xmasNovelOptionsOf(q, xmasNovelCtx(S, st.cur, save.endings)).map((o) => {
+                  // 一度見た強制バッドの選択肢には「見たエンド」の印(r1126-099 追記1)
+                  const endAhead = !q.once && o.to ? xmasNovelEndingAhead(S, o.to) : null;
+                  const seenEnd = endAhead && Array.isArray(save.endings) && save.endings.includes(endAhead) ? xmasNovelSceneById(S, endAhead) : null;
+                  return (
+                    <button type="button" key={o.i} className="mh-nv-choice mh-nv-serif" data-xmas-novel-option={o.i} data-pick={picked && picked.key === o.i ? '' : undefined} aria-pressed={!!(picked && picked.key === o.i)}
+                      onClick={() => (q.score || q.once ? choose(o.i, xmasNovelFill(o.x, playerName)) : answer(q, o.i))}>
+                      {xmasNovelWrap(xmasNovelFill(o.x, playerName))}
+                      {seenEnd && <span data-xmas-novel-seen-end={endAhead} className="mh-nv-plain mt-1 block text-[11px] font-bold text-rose-200">見たエンド: {seenEnd.ending && seenEnd.ending.name ? `「${seenEnd.ending.name}」` : 'バッドエンド'}</span>}
+                    </button>
+                  );
+                })}
               </div>
-              {q.once && <div className="mh-nv-plain mt-2 text-[11px] font-bold text-rose-200">選んだら、やり直しはできません</div>}
+              {q.once && <div className="mh-nv-plain mt-2 text-[11px] font-bold text-rose-200">決定したら、やり直しはできません</div>}
+              {(q.score || q.once) && decideBar('に決める')}
             </>)}
             {sheet === 'menu' && (<>
               <div className="mh-nv-serif mh-nv-gold mb-3 text-center text-[18px] font-black">メニュー</div>
@@ -71647,8 +72624,488 @@ const openXmasNovel = (opts = {}) => {
     setTimeout(() => { try { h.root.unmount(); } catch (e) { /* 片づけに失敗しても画面は消す */ } try { h.el.remove(); } catch (e) { /* 同上 */ } }, 0);
     try { opts.onClose && opts.onClose(); } catch (e) { /* 呼び出し元の失敗は持ちこまない */ }
   };
-  root.render(<XmasNovelScreen playerName={opts.playerName || ''} onClose={done} script={opts.script || null} />);
+  root.render(<XmasNovelScreen playerName={opts.playerName || ''} onClose={done} script={opts.script || null} rankOff={!!opts.force} />);
   return true;
+};
+
+// ---- part: 79-xmas-novel-rank.jsx ----
+// ===== 事件簿(聖夜の名探偵)のランキング(台帳 r1126-107・追記1) =====
+// 設計: docs/progress/event-xmas-2026/ranking-r1126-107/README.md / サーバ: 同じ所の xmas_novel_rank.sql(窓口が本番に流した)
+//
+// 決めごと:
+//  ・端末は数を送らない。送るのは「どのエンドに着いた」「どの問いを一発で当てた/外した」という出来事だけ。数と順位はサーバが数える
+//  ・遊んだ回数 = エンドに着いた回数(同じエンドは1日1回まで・サーバが決める)。はじめに開くタブは「見たエンド」。入口は事件簿の起動画面だけ。ごほうびなし
+//  ・持ち主の鍵は助手マスモン対戦と同じ(masmonPvpSelf・mh_masmon_pvp_owner_key_v1)。ブリーダーIDと鍵は画面に出さない
+//  ・端末の保存は新しいキー mh_xmas_novel_rank_v1 だけ。mh_xmas_novel_v1・mh_xmas_novel_route_v1 は読むだけで、形も中身も変えない(⑦)
+//    { v:1, seeded:0|1, pending:[{ k:'end', id } | { k:'first', id, ok }] }(ためるのは50件まで・壊れていたら既定値)
+//  ・ランキングを入れる前の記録(mh_xmas_novel_v1 の endings・endAt・first)は、1回だけまとめて送る(seed。サーバも人ごとに1回だけ受ける)
+//  ・デバッグ・検査で開いたとき(openXmasNovel の force)は送らない。サーバは 5秒に1回まで受けるので、ためた分は間を空けて1件ずつ送る
+//  ・表や関数が無い・つながらない・期間外でも、事件簿はふつうに遊べる(送れなかった分はためておく)
+
+const XMAS_NOVEL_RANK_KEY = 'mh_xmas_novel_rank_v1';
+const XMAS_NOVEL_RANK_EVENT = 'xmas_novel_2026';
+const XMAS_NOVEL_RANK_PENDING_MAX = 50;
+const XMAS_NOVEL_RANK_GAP_MS = 5600;      // サーバの「5秒に1回」より少し長く
+const XMAS_NOVEL_RANK_SHOW = 100;
+const XMAS_NOVEL_RANK_QIDS = ['Q2a', 'Q3a', 'Q4a', 'Q5a', 'Q6a', 'Q6b', 'Q7a', 'Q7m'];
+const XMAS_NOVEL_RANK_TABS = [
+  { id: 'ends', label: '見たエンド', view: 'xmas_novel_rank_ends', col: 'ends', order: 'place.asc,ends_at.asc', rule: ['見たエンディングの種類の数。', '同じ数なら、先にその数に届いた人が上'] },
+  { id: 'perfect', label: '一発正解', view: 'xmas_novel_rank_perfect', col: 'perfect', order: 'place.asc,perfect_at.asc', rule: ['推理の問いを、一番はじめに答えたとき', '一発で当てた数(7問)。同じ数なら、', '見たエンディングの多い人が上'] },
+  { id: 'plays', label: '読んだ回数', view: 'xmas_novel_rank_plays', col: 'plays', order: 'place.asc,plays_at.asc', rule: ['エンディングに着いた回数。', '同じエンディングは、1日(朝4:00区切り)に', '1回まで数える'] },
+];
+
+const xmasNovelRankNormalize = (raw) => {
+  const r = raw && typeof raw === 'object' ? raw : {};
+  const pending = (Array.isArray(r.pending) ? r.pending : []).filter((p) => p && typeof p === 'object' && (
+    (p.k === 'end' && typeof p.id === 'string' && /^END-[A-Z]{1,4}\d{0,2}$/.test(p.id))
+    || (p.k === 'first' && XMAS_NOVEL_RANK_QIDS.includes(p.id) && typeof p.ok === 'boolean'))).map((p) => (p.k === 'end' ? { k: 'end', id: p.id } : { k: 'first', id: p.id, ok: p.ok }));
+  return { v: 1, seeded: r.seeded === 1 ? 1 : 0, pending: pending.slice(-XMAS_NOVEL_RANK_PENDING_MAX) };
+};
+const xmasNovelRankLoad = async () => { try { return xmasNovelRankNormalize(await storeGet(XMAS_NOVEL_RANK_KEY, null, false)); } catch (e) { return xmasNovelRankNormalize(null); } };
+const xmasNovelRankSave = async (v) => { try { return await storeSet(XMAS_NOVEL_RANK_KEY, xmasNovelRankNormalize(v), false); } catch (e) { return false; } };
+
+// 表・関数が無いと分かったら、その起動のあいだは呼ばない
+let xmasNovelRankMissing = false;
+const xmasNovelRankFetch = async (path, init = {}) => {
+  if (xmasNovelRankMissing || typeof SUPABASE_URL === 'undefined') return null;
+  const ac = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = ac ? setTimeout(() => ac.abort(), 8000) : null;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, { cache: 'no-store', ...init, headers: typeof SB_HEADERS !== 'undefined' ? SB_HEADERS : { 'Content-Type': 'application/json' }, signal: ac ? ac.signal : undefined });
+    const body = await res.text();
+    if (!res.ok) {
+      if (res.status === 404 && /PGRST20[25]|Could not find the (table|function)|does not exist/i.test(body)) xmasNovelRankMissing = true;
+      return null;
+    }
+    return JSON.parse(body || 'null');
+  } catch (e) { return null; } finally { if (timer) clearTimeout(timer); }
+};
+const xmasNovelRankSelf = async () => {
+  try { return typeof masmonPvpSelf === 'function' ? await masmonPvpSelf(true) : null; } catch (e) { return null; }
+};
+const xmasNovelRankName = async () => {
+  try { const n = await storeGet('mh_breeder_name', '', false); return typeof n === 'string' ? n.trim().slice(0, 40) : ''; } catch (e) { return ''; }
+};
+const xmasNovelRankRpc = async (fn, args) => xmasNovelRankFetch(`rpc/${fn}`, { method: 'POST', body: JSON.stringify(args) });
+
+// 1件を送る。返り値: サーバの返事(ok / reason / 自分の数と順位)か null(届かなかった)
+const xmasNovelRankSend = async (self, name, row) => xmasNovelRankRpc('xmas_novel_rank_submit', { p_owner: self.owner, p_key: self.key, p_row: { ...row, user_name: name } });
+
+// ためた分を送る(同時に2本走らせない)。seed(前の記録)が先
+let xmasNovelRankBusy = false;
+const xmasNovelRankFlush = async (script = null) => {
+  if (xmasNovelRankBusy) return null;
+  xmasNovelRankBusy = true;
+  let last = null;
+  try {
+    const self = await xmasNovelRankSelf();
+    if (!self) return null;
+    const name = await xmasNovelRankName();
+    let st = await xmasNovelRankLoad();
+    const wait = () => new Promise((r) => setTimeout(r, XMAS_NOVEL_RANK_GAP_MS));
+    if (!st.seeded) {
+      const S = script || (typeof XMAS_NOVEL_SCRIPT !== 'undefined' ? XMAS_NOVEL_SCRIPT : null);
+      const save = typeof xmasNovelLoad === 'function' && S ? await xmasNovelLoad(S) : null;
+      if (!save) return null;
+      const ends = (save.endings || []).filter((id) => /^END-[A-Z]{1,4}\d{0,2}$/.test(id)).slice(0, 60).map((id) => ({ id, at: (save.endAt && save.endAt[id]) || null }));
+      const firsts = {};
+      Object.keys(save.first || {}).forEach((q) => { if (XMAS_NOVEL_RANK_QIDS.includes(q) && typeof save.first[q].f === 'boolean') firsts[q] = save.first[q].f; });
+      const res = await xmasNovelRankSend(self, name, { kind: 'seed', ends, firsts });
+      if (!res || (!res.ok && res.reason !== 'seeded')) return res;   // 届かない・busy・期間外 → 次の機会に
+      last = res;
+      st = { ...(await xmasNovelRankLoad()), seeded: 1 };
+      await xmasNovelRankSave(st);
+      if (st.pending.length) await wait();
+    }
+    for (let guard = 0; guard < XMAS_NOVEL_RANK_PENDING_MAX; guard += 1) {
+      st = await xmasNovelRankLoad();
+      const p = st.pending[0];
+      if (!p) break;
+      const res = await xmasNovelRankSend(self, name, p.k === 'end' ? { kind: 'end', end_id: p.id } : { kind: 'first', qid: p.id, ok: p.ok });
+      if (!res) break;                              // 届かない → ためたまま
+      if (!res.ok && res.reason === 'busy') { await wait(); continue; }
+      last = res;
+      const now = await xmasNovelRankLoad();          // 送っているあいだに足された分を消さない
+      await xmasNovelRankSave({ ...now, pending: now.pending.slice(1) });
+      if (!res.ok && (res.reason === 'closed' || res.reason === 'locked')) break;
+      if ((await xmasNovelRankLoad()).pending.length) await wait();
+    }
+    return last;
+  } catch (e) { return last; } finally { xmasNovelRankBusy = false; }
+};
+
+// 事件簿の画面から呼ぶ(待たなくてよい・落ちない)。off … デバッグ・検査で開いたとき
+const xmasNovelRankNote = (item, { off = false, script = null } = {}) => {
+  if (off || !item) return;
+  (async () => {
+    const st = await xmasNovelRankLoad();
+    await xmasNovelRankSave({ ...st, pending: [...st.pending, item] });
+    void xmasNovelRankFlush(script);
+  })().catch(() => {});
+};
+
+// 一覧と自分の行
+const xmasNovelRankList = async (tab) => {
+  const t = XMAS_NOVEL_RANK_TABS.find((x) => x.id === tab) || XMAS_NOVEL_RANK_TABS[0];
+  const cols = t.id === 'ends' ? 'user_name,ends,end_list,place' : t.id === 'perfect' ? 'user_name,perfect,ends,place' : 'user_name,plays,place';
+  const rows = await xmasNovelRankFetch(`${t.view}?select=${cols}&event_id=eq.${XMAS_NOVEL_RANK_EVENT}&order=${t.order}&limit=${XMAS_NOVEL_RANK_SHOW}`);
+  return Array.isArray(rows) ? rows : null;
+};
+const xmasNovelRankEndKinds = async () => {
+  const rows = await xmasNovelRankFetch(`xmas_novel_end_ids?select=end_id,kind&event_id=eq.${XMAS_NOVEL_RANK_EVENT}`);
+  if (!Array.isArray(rows)) return null;
+  const m = {}; rows.forEach((r) => { if (r && typeof r.end_id === 'string') m[r.end_id] = typeof r.kind === 'string' ? r.kind : 'normal'; });
+  return m;
+};
+const xmasNovelRankMine = async () => {
+  const self = await xmasNovelRankSelf();
+  if (!self) return null;
+  const r = await xmasNovelRankRpc('xmas_novel_rank_mine', { p_owner: self.owner, p_key: self.key });
+  return r && r.ok ? r : null;
+};
+
+// 見たエンドの内訳の点(種類の色だけ。どのエンドかは出さない)
+const XMAS_NOVEL_RANK_KIND_ORDER = ['good', 'normal', 'another', 'bad', 'forced', 'accuse', 'unsolved', 'omake'];
+const XmasNovelRankDots = ({ list, kinds, total }) => {
+  const seen = (Array.isArray(list) ? list : []).map((id) => kinds[id] || 'normal')
+    .sort((a, b) => XMAS_NOVEL_RANK_KIND_ORDER.indexOf(a) - XMAS_NOVEL_RANK_KIND_ORDER.indexOf(b));
+  const rest = Math.max(0, total - seen.length);
+  return (
+    <div className="mh-nvr-dots" aria-hidden="true">
+      {seen.map((k, i) => <i key={`s${i}`} style={{ background: (XMAS_NOVEL_ENDING_KINDS[k] || XMAS_NOVEL_ENDING_KINDS.normal).tone }} />)}
+      {Array.from({ length: Math.min(rest, 60) }).map((_, i) => <i key={`r${i}`} />)}
+    </div>
+  );
+};
+
+const XMAS_NOVEL_RANK_CSS = `
+.mh-nvr { width: 100%; max-width: 28rem; margin: auto; padding-bottom: 120px; }
+.mh-nvr-tabs { display: flex; gap: 6px; margin-top: 12px; }
+.mh-nvr-tab { flex: 1; padding: 8px 0; border-radius: 999px; border: 1px solid #b8913a; color: #e8c873; font-weight: 900; font-size: 13px; }
+.mh-nvr-tab[data-on] { background: linear-gradient(#e8c873, #b8913a); color: #2a1a05; }
+.mh-nvr-rule { margin: 10px 0 4px; padding: 7px 10px; border-radius: 8px; background: rgba(255,255,255,.05); font-size: 11px; line-height: 1.6; color: #aab6d8; }
+.mh-nvr-row { display: flex; align-items: center; gap: 10px; padding: 9px 10px; margin-top: 6px; border-radius: 12px; background: rgba(20,33,74,.78); border: 1px solid #26335e; }
+.mh-nvr-row[data-top="1"] { border-color: #b8913a; background: linear-gradient(90deg, rgba(232,200,115,.18), rgba(20,33,74,.78)); }
+.mh-nvr-place { width: 38px; flex: none; text-align: center; font-weight: 900; font-size: 18px; color: #cfd8f5; }
+.mh-nvr-row[data-top="1"] .mh-nvr-place { color: #f5d27a; } .mh-nvr-row[data-top="2"] .mh-nvr-place { color: #d9e2f0; } .mh-nvr-row[data-top="3"] .mh-nvr-place { color: #e0a46a; }
+.mh-nvr-name { flex: 1; min-width: 0; font-weight: 800; font-size: 14px; color: #eef3ff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mh-nvr-val { flex: none; text-align: right; font-weight: 900; font-size: 17px; color: #e8c873; line-height: 1.1; }
+.mh-nvr-val small { display: block; font-size: 10px; font-weight: 700; color: #8592b5; }
+.mh-nvr-dots { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 3px; }
+.mh-nvr-dots i { width: 7px; height: 7px; border-radius: 2px; background: #2c375c; }
+.mh-nvr-me { position: fixed; left: 12px; right: 12px; bottom: max(14px, env(safe-area-inset-bottom)); max-width: 28rem; margin: 0 auto; z-index: 3; border: 2px solid #e8c873 !important;
+  background: linear-gradient(90deg, rgba(232,200,115,.28), rgba(15,25,60,.97)) !important; }
+.mh-nvr-me .mh-nvr-place { color: #e8c873; }
+.mh-nvr-tag { display: inline-block; margin-right: 5px; padding: 1px 7px; border-radius: 999px; background: #e8c873; color: #2a1a05; font-size: 10px; font-weight: 900; vertical-align: 2px; }
+.mh-nvr-empty { margin-top: 18px; text-align: center; font-size: 12px; color: #9fb0d8; line-height: 1.7; }
+`;
+const useXmasNovelRankCss = () => {
+  useEffect(() => {
+    if (typeof document === 'undefined' || document.getElementById('mh-nvr-css')) return;
+    const el = document.createElement('style'); el.id = 'mh-nvr-css'; el.textContent = XMAS_NOVEL_RANK_CSS; document.head.appendChild(el);
+  }, []);
+};
+
+// ランキングの画面(事件簿の起動画面の中で出す)。off … デバッグ・検査で開いたときは送らない(見るだけ)
+const XmasNovelRank = ({ script = null, off = false, onBack }) => {
+  useXmasNovelRankCss();
+  const [tab, setTab] = useState('ends');
+  const [rows, setRows] = useState(undefined);       // undefined = 読みこみ中 / null = 取れなかった
+  const [mine, setMine] = useState(null);
+  const [kinds, setKinds] = useState({});
+  const [total, setTotal] = useState(0);
+  const [name, setName] = useState('');
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      xmasNovelRankName().then((n) => { if (alive) setName(n); });
+      const k = await xmasNovelRankEndKinds();
+      if (alive && k) { setKinds(k); setTotal(Object.keys(k).length); }
+      if (!off) await xmasNovelRankFlush(script);     // ためていた分(と前の記録)を送ってから自分の順位を読む
+      const m = await xmasNovelRankMine();
+      if (alive) setMine(m);
+    })().catch(() => {});
+    return () => { alive = false; };
+  }, []);
+  useEffect(() => {
+    let alive = true;
+    setRows(undefined);
+    xmasNovelRankList(tab).then((r) => { if (alive) setRows(r); }).catch(() => { if (alive) setRows(null); });
+    return () => { alive = false; };
+  }, [tab]);
+  const t = XMAS_NOVEL_RANK_TABS.find((x) => x.id === tab);
+  const valOf = (r) => (tab === 'ends' ? r.ends : tab === 'perfect' ? r.perfect : r.plays);
+  const unitOf = () => (tab === 'ends' ? `/${total || '？'}` : tab === 'perfect' ? '/7' : '回');
+  const minePlace = mine ? (tab === 'ends' ? mine.place_ends : tab === 'perfect' ? mine.place_perfect : mine.place_plays) : null;
+  const mineVal = mine ? (tab === 'ends' ? mine.ends : tab === 'perfect' ? mine.perfect : mine.plays) : null;
+  return (
+    <div className="mh-nvr" data-xmas-novel-rank={tab}>
+      <div className="mh-nv-serif mh-nv-gold text-center text-[22px] font-black tracking-widest">事件簿ランキング</div>
+      <div className="mt-1 text-center text-[11px] text-slate-400">全国 ・ 12/31 3:59 まで(そのあとも見られます)</div>
+      <div className="mh-nvr-tabs" role="tablist">
+        {XMAS_NOVEL_RANK_TABS.map((x) => (
+          <button key={x.id} type="button" role="tab" aria-selected={tab === x.id} className="mh-nvr-tab mh-nv-serif" data-on={tab === x.id ? '' : undefined} data-xmas-novel-rank-tab={x.id} onClick={() => setTab(x.id)}>{x.label}</button>
+        ))}
+      </div>
+      <div className="mh-nvr-rule">{t.rule.map((s, i) => <span key={i}>{s}{i < t.rule.length - 1 ? <br /> : null}</span>)}</div>
+      {rows === undefined && <div className="mh-nvr-empty">読みこんでいます……</div>}
+      {rows === null && <div className="mh-nvr-empty" data-xmas-novel-rank-error>ランキングを読みこめませんでした。<br />通信のよい所で、もう一度開いてください。</div>}
+      {Array.isArray(rows) && !rows.length && <div className="mh-nvr-empty">まだ、だれも載っていません。</div>}
+      {Array.isArray(rows) && rows.map((r, i) => (
+        <div key={i} className="mh-nvr-row" data-top={r.place <= 3 ? String(r.place) : undefined} data-xmas-novel-rank-row>
+          <div className="mh-nvr-place mh-nv-serif">{r.place}</div>
+          <div className="min-w-0 flex-1">
+            <div className="mh-nvr-name">{r.user_name || '名無しのブリーダー'}</div>
+            {tab === 'ends' && <XmasNovelRankDots list={r.end_list} kinds={kinds} total={total} />}
+          </div>
+          <div className="mh-nvr-val mh-nv-serif">{valOf(r)}<small>{unitOf()}</small></div>
+        </div>
+      ))}
+      <div className="mh-nvr-row mh-nvr-me" data-xmas-novel-rank-me>
+        <div className="mh-nvr-place mh-nv-serif">{minePlace || '—'}</div>
+        <div className="min-w-0 flex-1">
+          <div className="mh-nvr-name"><span className="mh-nvr-tag">あなた</span>{name || 'ブリーダー'}</div>
+          {!minePlace && <div className="text-[10px] text-slate-400">{off ? '検査で開いたので、送っていません' : 'エンディングに着くと載ります'}</div>}
+        </div>
+        <div className="mh-nvr-val mh-nv-serif">{mineVal ?? 0}<small>{unitOf()}</small></div>
+      </div>
+      <button type="button" className="mh-nv-btn wide mt-4" data-xmas-novel-rank-back onClick={onBack}>戻る</button>
+    </div>
+  );
+};
+
+// ---- part: 79-xmas-novel-map.jsx ----
+// ---- 分岐の地図「聖夜の見取り図」(台帳 r1126-102・追記1) ----
+//  事件簿の上の段の「地図」から開く。章・分かれ道(行動の選択・推理の問い・名指し)・エンドを、台本から機械で並べる。
+//  読んだ所は明るく、まだの所は「？？？」で形だけ見せる(題は読むまで伏せる・r1126-094 追記3)。エンドは見た物だけ名前を出す。
+//  通った分かれ道は「↺」から、その問いの直前の状態(手がかり帳・登場人物パネル・フラグ・派)で読み直せる。
+//  状態は mh_xmas_novel_route_v1(79-xmas-novel-engine.jsx の xmasNovelRoute*)。この部品は読むだけで、保存は呼ぶ側がする
+const XMAS_NOVEL_MAP_CSS = `
+.mh-nvm { position: absolute; inset: 0; z-index: 12; display: flex; flex-direction: column; color: #eef3ff; font-family: inherit; animation: mh-nv-fade .2s ease both;
+  background: radial-gradient(ellipse at 50% -10%, rgba(232,200,115,.18), transparent 55%),
+    linear-gradient(rgba(120,150,220,.07) 1px, transparent 1px) 0 0/22px 22px,
+    linear-gradient(90deg, rgba(120,150,220,.07) 1px, transparent 1px) 0 0/22px 22px,
+    linear-gradient(#0b1430, #101b3d 60%, #0b1430); }
+.mh-nvm-head { flex: none; padding: calc(max(10px, env(safe-area-inset-top)) + 2px) 16px 8px; background: linear-gradient(#0b1430 75%, rgba(11,20,48,0)); }
+.mh-nvm-ttl { display: flex; align-items: center; gap: 8px; }
+.mh-nvm-ttl h2 { font-size: 19px; font-weight: 900; color: #e8c873; letter-spacing: .06em; }
+.mh-nvm-x { margin-left: auto; width: 32px; height: 32px; border-radius: 50%; border: 1px solid #b8913a; color: #e8c873; display: grid; place-items: center; font-weight: 900; }
+.mh-nvm-row { display: flex; gap: 8px; margin-top: 8px; align-items: center; }
+.mh-nvm-tab { flex: 1; min-width: 0; text-align: center; padding: 6px 0; border-radius: 999px; font-size: 13px; font-weight: 900; border: 1px solid #b8913a; color: #e8c873; }
+.mh-nvm-tab[data-on] { background: linear-gradient(#e8c873, #b8913a); color: #2a1a05; }
+.mh-nvm-ends { flex: none; font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 999px; background: rgba(200,50,60,.25); border: 1px solid rgba(232,120,120,.6); white-space: nowrap; }
+.mh-nvm-back { display: block; width: 100%; margin-top: 8px; padding: 7px 0; border-radius: 10px; font-size: 13px; font-weight: 900; color: #fff; background: rgba(200,50,60,.55); border: 1px solid #f0a0a0; }
+.mh-nvm-legend { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 8px; font-size: 10px; color: #9fb0d8; }
+.mh-nvm-body { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 0 16px calc(max(16px, env(safe-area-inset-bottom)) + 12px); }
+.mh-nvm-it { position: relative; display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 4px 0 4px 52px; }
+.mh-nvm-it::before { content: ""; position: absolute; left: 30px; top: 0; bottom: 0; width: 4px; border-radius: 2px; background: linear-gradient(#e8c873, #b8913a); box-shadow: 0 0 8px rgba(232,200,115,.45); }
+.mh-nvm-it[data-dark]::before { background: repeating-linear-gradient(#2b3658 0 8px, transparent 8px 14px); box-shadow: none; }
+.mh-nvm-door { position: absolute; left: 0; width: 64px; height: 38px; border-radius: 19px 19px 4px 4px; background: linear-gradient(#6b4423, #3e2612); border: 2px solid #e8c873; display: grid; place-items: center; font-size: 11px; font-weight: 900; color: #e8c873; box-shadow: 0 0 12px rgba(232,200,115,.4); z-index: 1; }
+.mh-nvm-it[data-dark] .mh-nvm-door { background: #1a2342; border-color: #3a4670; color: #5d6a90; box-shadow: none; }
+.mh-nvm-chap { padding-left: 76px; min-height: 50px; margin-top: 6px; }
+.mh-nvm-cname { font-size: 15px; font-weight: 900; line-height: 1.3; }
+.mh-nvm-it[data-dark] .mh-nvm-cname { color: #5d6a90; }
+.mh-nvm-mk { position: absolute; left: 18px; width: 28px; height: 28px; display: grid; place-items: center; font-size: 12px; font-weight: 900; z-index: 1; }
+.mh-nvm-mk[data-k="action"] { transform: rotate(45deg) scale(.86); background: #7a1f28; border: 2px solid #f0a0a0; border-radius: 4px; }
+.mh-nvm-mk[data-k="action"] > span { transform: rotate(-45deg); }
+.mh-nvm-mk[data-k="present"] { border-radius: 50%; background: #173a2a; border: 2px solid #8fd6a8; }
+.mh-nvm-mk[data-k="person"] { border-radius: 6px; background: #3a2a5a; border: 2px solid #c7b2ff; }
+.mh-nvm-it[data-dark] .mh-nvm-mk { background: #1a2342; border-color: #3a4670; color: #5d6a90; }
+.mh-nvm-it[data-now] .mh-nvm-mk { box-shadow: 0 0 0 3px #fff, 0 0 16px 4px rgba(255,90,90,.9); }
+.mh-nvm-lab { min-width: 0; flex: 1; font-size: 12.5px; font-weight: 800; line-height: 1.35; }
+.mh-nvm-lab small { display: block; font-size: 10.5px; font-weight: 600; color: #9fb0d8; }
+.mh-nvm-it[data-dark] .mh-nvm-lab { color: #5d6a90; }
+.mh-nvm-it[data-dark] .mh-nvm-lab small { color: #3f4b70; }
+.mh-nvm-redo { flex: none; width: 32px; height: 32px; border-radius: 50%; border: 1px solid #b8913a; color: #e8c873; background: rgba(232,200,115,.08); display: grid; place-items: center; font-size: 15px; font-weight: 900; }
+.mh-nvm-now { flex: none; padding: 3px 8px; font-size: 10px; font-weight: 900; color: #fff; background: #c8323c; border-radius: 3px; box-shadow: 0 0 0 2px #fff, 0 0 14px rgba(255,80,80,.9); white-space: nowrap; }
+.mh-nvm-ends-list { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; flex: none; max-width: 52%; }
+.mh-nvm-orn { position: relative; min-width: 96px; max-width: 150px; padding: 5px 8px 5px 24px; border-radius: 13px; font-size: 10.5px; font-weight: 800; line-height: 1.3; background: linear-gradient(135deg, #8a1c26, #4a0f15); border: 1px solid #f0a0a0; color: #ffe9e9; }
+.mh-nvm-orn::before { content: ""; position: absolute; left: 7px; top: 50%; width: 12px; height: 12px; margin-top: -6px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ffd2d2, #c8323c 60%, #6a1018); box-shadow: 0 0 6px rgba(255,120,120,.8); }
+.mh-nvm-orn small { display: block; font-size: 9.5px; font-weight: 600; color: #f7c2c2; }
+.mh-nvm-orn[data-good] { background: linear-gradient(135deg, #7a5a14, #3d2c08); border-color: #e8c873; }
+.mh-nvm-orn[data-good]::before { background: radial-gradient(circle at 35% 30%, #fff3c0, #e8c873 60%, #7a5a14); }
+.mh-nvm-orn[data-unseen] { background: #151d38; border-color: #3a4670; color: #5d6a90; }
+.mh-nvm-orn[data-unseen]::before { background: #2a3456; box-shadow: none; }
+.mh-nvm-orn[data-unseen] small { color: #3f4b70; }
+.mh-nvm-lane { margin: 14px 0 0; padding: 4px 10px; border-left: 3px solid #b8913a; font-size: 11px; font-weight: 900; color: #e8c873; letter-spacing: .08em; }
+.mh-nvm-lane[data-dark] { border-left-color: #3a4670; color: #5d6a90; }
+.mh-nvm-foot { margin-top: 16px; padding: 10px 12px; border-radius: 12px; border: 1px solid #3a4670; font-size: 11px; color: #9fb0d8; line-height: 1.6; background: rgba(20,33,74,.6); }
+.mh-nvm-sheet { position: absolute; inset: 0; z-index: 2; display: flex; align-items: flex-end; background: rgba(5,8,20,.55); }
+.mh-nvm-panel { width: 100%; padding: 16px 16px calc(max(16px, env(safe-area-inset-bottom)) + 6px); border-radius: 18px 18px 0 0; background: linear-gradient(#18244d, #0d1634); border-top: 2px solid #e8c873; box-shadow: 0 -10px 30px rgba(0,0,0,.5); }
+.mh-nvm-panel h3 { font-size: 15px; font-weight: 900; color: #e8c873; }
+.mh-nvm-q { margin-top: 8px; padding: 8px 10px; border-radius: 10px; background: rgba(120,20,30,.35); box-shadow: 0 0 0 1px rgba(232,120,120,.6); font-size: 13px; font-weight: 800; line-height: 1.5; }
+.mh-nvm-panel ul { margin-top: 10px; font-size: 12px; line-height: 1.7; color: #d9e2ff; }
+.mh-nvm-btn { display: block; width: 100%; margin-top: 10px; padding: 12px 0; text-align: center; border-radius: 12px; font-weight: 900; font-size: 15px; }
+.mh-nvm-btn[data-main] { background: linear-gradient(#e8c873, #b8913a); color: #2a1a05; }
+.mh-nvm-btn[data-sub] { border: 1px solid #b8913a; color: #e8c873; }
+@media (orientation: landscape) and (max-height: 500px) { .mh-nvm-body, .mh-nvm-head { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); } .mh-nvm-panel { max-width: 560px; margin: 0 auto; border-radius: 18px 18px 0 0; } }
+`;
+const XMAS_NOVEL_MAP_SIDES = [{ v: 1, label: 'あつ派' }, { v: 2, label: 'ソラシド派' }];
+// 地図の並び: 本筋(序章〜第7章)→ 1回目の推理のあとの2つの道 → 過去編
+const XMAS_NOVEL_MAP_LANES = [
+  { id: 'main', chapters: ['C0', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7'] },
+  { id: 'late', name: '当てられなかった道', chapters: ['C10', 'C11'] },
+  { id: 'true', name: '真相への道', chapters: ['C8', 'C9'] },
+];
+let xmasNovelMapModelCache = null;
+// 台本から、章ごとの分かれ道とその先のエンドを並べる(台本が同じなら作り直さない)
+const xmasNovelMapModel = (script) => {
+  if (xmasNovelMapModelCache && xmasNovelMapModelCache.script === script) return xmasNovelMapModelCache.model;
+  const scenes = xmasNovelScenes(script);
+  const order = {}; scenes.forEach((s, i) => { order[s.id] = i; });
+  const laneChapters = new Set(XMAS_NOVEL_MAP_LANES.flatMap((l) => l.chapters));
+  const endInfo = {};
+  scenes.forEach((s) => { if (s.ending && s.ending.id && !endInfo[s.ending.id]) endInfo[s.ending.id] = s.ending; });
+  const endsOf = (q, chId) => {
+    const tos = [];
+    (q.options || []).forEach((o) => { if (o && o.to) tos.push(o.to); });
+    Object.values(q.route || {}).forEach((t) => { if (typeof t === 'string') tos.push(t); });
+    const out = [];
+    tos.forEach((to) => {
+      const sc = xmasNovelSceneById(script, to);
+      if (!sc || (sc.chapter !== chId && laneChapters.has(sc.chapter))) return; // ほかの章へ続く道(真相・後半)は、地図の道で見せる。強制バッド・おまけ(章 END)は札で
+      const e = xmasNovelEndingAhead(script, to);
+      if (e && !out.includes(e)) out.push(e);
+    });
+    return out;
+  };
+  const chapters = {};
+  xmasNovelChapters(script).forEach((ch) => {
+    const scs = scenes.filter((s) => s.chapter === ch.id && !(s.ending && s.ending.id));
+    const nodes = [];
+    scs.forEach((s) => (s.rows || []).forEach((r, idx) => {
+      if (r && r.t === 'q') nodes.push({ id: r.id, q: r, scene: s.id, idx, pos: order[s.id] * 10000 + idx, ends: endsOf(r, ch.id) });
+    }));
+    chapters[ch.id] = { ch, scenes: scs.map((s) => s.id), keys: new Set(scs.flatMap((s) => (s.rows || []).filter((r) => r && r.k).map((r) => r.k))), nodes };
+  });
+  const model = { chapters, order, endInfo, endTotal: Object.keys(endInfo).length };
+  xmasNovelMapModelCache = { script, model };
+  return model;
+};
+const xmasNovelMapNum = (label) => { const m = String(label || '').match(/[①-⑨]/); return m ? m[0] : ''; };
+
+const XmasNovelMap = ({ script, save, route, playerName, onRedo, onBack, onClose }) => {
+  const model = xmasNovelMapModel(script);
+  const curSide = save && save.cur && save.cur.flags && Number.isFinite(save.cur.flags.f_A1) ? save.cur.flags.f_A1 : 0;
+  const [side, setSide] = useState(curSide === 2 ? 2 : 1);
+  const [pick, setPick] = useState(null);
+  const read = useMemo(() => new Set((save && save.read) || []), [save]);
+  const endings = (save && save.endings) || [];
+  const at = (route && route.at) || {};
+  const keyOf = (id) => `${id}|${id === 'A1' ? 0 : side}`;
+  const nodeLit = (n) => !!at[keyOf(n.id)] || (!!n.q.k && read.has(n.q.k) && (n.id === 'A1' || curSide === side));
+  const chEntered = (c) => [...c.keys].some((k) => read.has(k));
+  const chLit = (c) => {
+    if (!c || !chEntered(c)) return false;
+    if (c.ch.id === 'C0' || c.ch.id === 'C1' || curSide === side) return true;
+    return c.nodes.some(nodeLit) || Object.keys(at).some((k) => k.endsWith(`|${side}`) && c.scenes.includes(at[k].scene));
+  };
+  // 今いる所: 続きの場所のある章の、続きの位置より後で一番近い分かれ道(無ければ章の札)
+  const now = (() => {
+    const cur = save && save.cur;
+    if (!cur || (curSide && curSide !== side)) return null;
+    const sc = xmasNovelSceneById(script, cur.scene);
+    if (!sc || !model.chapters[sc.chapter]) return null;
+    const p = (model.order[sc.id] || 0) * 10000 + (Number(cur.idx) || 0);
+    const n = model.chapters[sc.chapter].nodes.find((x) => x.pos >= p);
+    return n ? { node: n.id } : { chapter: sc.chapter };
+  })();
+  const seenCount = Object.keys(model.endInfo).filter((e) => endings.includes(e)).length;
+  const pickedSnap = pick ? at[keyOf(pick.id)] : null;
+  const pickedCh = pick ? model.chapters[xmasNovelSceneById(script, pick.scene) ? xmasNovelSceneById(script, pick.scene).chapter : ''] : null;
+
+  const endCard = (e) => {
+    const info = model.endInfo[e] || {};
+    const seen = endings.includes(e);
+    const good = info.kind === 'good' || info.kind === 'normal' || info.kind === 'extra';
+    return (
+      <div key={e} className="mh-nvm-orn" data-xmas-novel-map-end={e} data-unseen={seen ? undefined : ''} data-good={seen && good ? '' : undefined}>
+        {seen ? xmasNovelWrap(info.name || '') : '？？？'}<small>{seen ? (info.label || 'エンド') : '未見のエンド'}</small>
+      </div>
+    );
+  };
+  const chapterItem = (c) => {
+    const lit = chLit(c);
+    const label = xmasNovelChapterLabel(c.ch) || c.ch.label || '';
+    const title = lit ? xmasNovelChapterTitle(script, c.ch, save.read) : '？？？';
+    const isNow = now && now.chapter === c.ch.id;
+    return (
+      <div key={`ch-${c.ch.id}`} className="mh-nvm-it mh-nvm-chap" data-xmas-novel-map-chapter={c.ch.id} data-dark={lit ? undefined : ''}>
+        <div className="mh-nvm-door">{lit ? label : (c.ch.past ? '🔒' : c.ch.no === 0 ? '序章' : '第？章')}</div>
+        <div className="mh-nvm-cname">{xmasNovelWrap(title)}</div>
+        {isNow && <span className="mh-nvm-now" data-xmas-novel-map-now>いまここ</span>}
+      </div>
+    );
+  };
+  const nodeItem = (n) => {
+    const lit = nodeLit(n);
+    const isNow = now && now.node === n.id;
+    const canRedo = !!at[keyOf(n.id)];
+    const q = n.q;
+    const first = save && save.first && save.first[n.id];
+    const sub = !lit ? 'まだ読んでいない' : isNow ? '考え中' : q.kind === 'present' && first ? (first.f ? '一発で正解' : '外して仲間が拾った') : n.id === 'A1' ? (side === 2 ? 'ソラシド派' : 'あつ派') : '';
+    const kind = n.id === 'A1' ? 'person' : q.kind; // 派を選ぶ所は名指しの印
+    const mark = kind === 'action' ? '◆' : kind === 'present' ? (xmasNovelMapNum(q.label) || '？') : '✦';
+    return (
+      <div key={`q-${n.id}`} className="mh-nvm-it" data-xmas-novel-map-node={n.id} data-dark={lit ? undefined : ''} data-now={isNow ? '' : undefined}>
+        <div className="mh-nvm-mk" data-k={kind}><span>{lit ? mark : '？'}</span></div>
+        <div className="mh-nvm-lab">{lit ? xmasNovelWrap(q.label || '分かれ道') : '？？？'}{sub ? <small>{sub}</small> : null}</div>
+        {isNow && <span className="mh-nvm-now" data-xmas-novel-map-now>いまここ</span>}
+        {canRedo && !isNow && <button type="button" className="mh-nvm-redo" data-xmas-novel-map-redo={n.id} aria-label="ここから読み直す" onClick={() => setPick(n)}>↺</button>}
+        {n.ends.length > 0 && <div className="mh-nvm-ends-list">{n.ends.map(endCard)}</div>}
+      </div>
+    );
+  };
+  const laneLit = (lane) => lane.chapters.some((id) => model.chapters[id] && chLit(model.chapters[id]));
+  const past = xmasNovelChapters(script).find((c) => c.past);
+  const pastOpen = endings.includes('END-G');
+
+  return (
+    <div className="mh-nvm" data-xmas-novel-map onClick={(e) => e.stopPropagation()}>
+      <style>{XMAS_NOVEL_MAP_CSS}</style>
+      <div className="mh-nvm-head">
+        <div className="mh-nvm-ttl"><h2 className="mh-nv-serif">聖夜の見取り図</h2><span className="text-[11px] text-slate-400">分岐の地図</span>
+          <button type="button" className="mh-nvm-x" data-xmas-novel-map-close aria-label="閉じる" onClick={onClose}>✕</button></div>
+        <div className="mh-nvm-row">
+          {XMAS_NOVEL_MAP_SIDES.map((s) => <button type="button" key={s.v} className="mh-nvm-tab" data-xmas-novel-map-side={s.v} data-on={side === s.v ? '' : undefined} onClick={() => setSide(s.v)}>{s.label}</button>)}
+          <div className="mh-nvm-ends" data-xmas-novel-map-count>エンド {seenCount}/{model.endTotal}</div>
+        </div>
+        {route && route.back && <button type="button" className="mh-nvm-back" data-xmas-novel-map-back onClick={onBack}>読み直す前の続きへ戻る</button>}
+        <div className="mh-nvm-legend"><span>◆ 行動の選択</span><span>① 推理の問い</span><span>✦ 名指し</span><span>● エンド</span><span>↺ ここから読み直す</span></div>
+      </div>
+      <div className="mh-nvm-body">
+        {XMAS_NOVEL_MAP_LANES.map((lane) => (
+          <div key={lane.id} data-xmas-novel-map-lane={lane.id}>
+            {lane.name && <div className="mh-nvm-lane" data-dark={laneLit(lane) ? undefined : ''}>{laneLit(lane) ? lane.name : '？？？へ続く道'}</div>}
+            {lane.chapters.map((id) => model.chapters[id]).filter(Boolean).map((c) => [chapterItem(c), ...c.nodes.map(nodeItem)])}
+          </div>
+        ))}
+        {past && (
+          <div className="mh-nvm-it mh-nvm-chap" data-xmas-novel-map-chapter={past.id} data-dark={pastOpen ? undefined : ''}>
+            <div className="mh-nvm-door">{pastOpen ? xmasNovelChapterLabel(past) : '🔒'}</div>
+            <div className="mh-nvm-cname">{pastOpen ? past.title : '？？？'}</div>
+          </div>
+        )}
+        <div className="mh-nvm-foot">明るい所は読んだ所。↺ を押すと、その分かれ道の直前から読み直せます(手がかり帳・登場人物パネル・選んだ派も、その時のまま)。一発で当てた記録と見たエンドは消えません。</div>
+      </div>
+      {pick && pickedSnap && (
+        <div className="mh-nvm-sheet" onClick={() => setPick(null)}>
+          <div className="mh-nvm-panel" data-xmas-novel-map-sheet={pick.id} onClick={(e) => e.stopPropagation()}>
+            <h3 className="mh-nv-serif">{pickedCh ? `${xmasNovelChapterLabel(pickedCh.ch)}　${xmasNovelChapterTitle(script, pickedCh.ch, save.read)}` : ''} ― {pick.q.label || '分かれ道'}</h3>
+            <div className="mh-nvm-q">{xmasNovelWrap(xmasNovelFill(pick.q.x, playerName))}</div>
+            <ul>
+              <li>・手がかり帳: {(pickedSnap.clues || []).length}個(その時のまま)</li>
+              <li>・登場人物パネル・選んだ派も、その時のまま</li>
+              <li>・一発で当てた記録・見たエンドは消えません</li>
+            </ul>
+            <button type="button" className="mh-nvm-btn" data-main="" data-xmas-novel-map-go onClick={() => { const c = pickedSnap; setPick(null); onRedo && onRedo(c); }}>ここから読み直す</button>
+            <button type="button" className="mh-nvm-btn" data-sub="" onClick={() => setPick(null)}>やめる</button>
+            <div className="mt-2 text-[10.5px] leading-relaxed text-slate-400">いまの続きは残ります。地図の「読み直す前の続きへ戻る」で、いつでも戻れます。</div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 };
 
 // ---- part: 56-assistant-chat.jsx ----
@@ -76554,9 +78011,10 @@ const ASSISTANT_LIFE_STAND_BOX = new Map();
 //   2026-11-23 r1119-153 社長「助手絵は最新の全身絵に切り替えて」: 全身画がある組は全部この形で切り出したので、立ち絵の置き場(stand-*)はどれも normal の範囲で置く
 const assistantLifeStandFrameSrc = (src) => {
   const s = String(src || '');
-  const m = /\/assistant\/(stand-[a-z0-9-]+)\/([a-z]+)_([a-z]+)\.png/i.exec(s);
+  // 立ち絵は .png か .webp(重い絵を WebP にした服・2026-11-28 r1126-095)。拡張子はそのまま残す
+  const m = /\/assistant\/(stand-[a-z0-9-]+)\/([a-z]+)_([a-z]+)\.(png|webp)/i.exec(s);
   if (!m || m[3] === 'normal') return src;
-  return s.replace(`/${m[1]}/${m[2]}_${m[3]}.png`, `/${m[1]}/${m[2]}_normal.png`);
+  return s.replace(`/${m[1]}/${m[2]}_${m[3]}.${m[4]}`, `/${m[1]}/${m[2]}_normal.${m[4]}`);
 };
 const assistantLifeStandBox = (src) => new Promise((res) => {
   if (ASSISTANT_LIFE_STAND_BOX.has(src)) { res(ASSISTANT_LIFE_STAND_BOX.get(src)); return; }
@@ -76625,24 +78083,24 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   //   みゅあ(ふだん・ハロウィン)の cx は、長い髪が目の高さで横につながり道具では左へずれるので、立ち絵を目盛りつきで見て両目の真ん中に置いた(2026-11-24・life-stand-face-cx.py の MANUAL_X)
   //   cx … 顔の横の真ん中(見えている体の左を0・右を1)。モードえらびの枠が顔で寄せるのに使う(2026-11-24 r1119-153 追記4)。測り直し: python3 -I tools/assistant/life-stand-face-cx.py --write
   'stand-normal': { mua: { top: 0.1592, eye: 0.3668, chin: 0.4305, m: 0.58, cx: 0.5339, above: 0.7 }, momosuke: { top: 0.0635, eye: 0.3248, chin: 0.4296, m: 0.78, cx: 0.5051, above: 0.7 }, kiki: { top: 0.0879, eye: 0.3357, chin: 0.4301, m: 0.904, cx: 0.5388 }, atsu: { top: 0.0726, eye: 0.3274, chin: 0.4296, m: 0.76, cx: 0.4669 }, kyuko: { top: 0.0584, eye: 0.3167, chin: 0.4297, m: 0.949, cx: 0.5084 }, sorashido: { top: 0.0008, eye: 0.2722, chin: 0.4301, m: 1.175, cx: 0.4165 } , erubin: { top: 0.0109, eye: 0.2535, chin: 0.4303, m: 1.316, cx: 0.4834 } },
-  'stand-sekiyuou': { erubin: { top: -0.0059, eye: 0.2449, chin: 0.4297, m: 1.376, cx: 0.5112 } },
+  'stand-sekiyuou': { erubin: { top: 0.0034, eye: 0.285, chin: 0.43, m: 1.079, cx: 0.5166 } },
   'stand-hosei': { sorashido: { top: 0.0227, eye: 0.2938, chin: 0.4301, m: 1.059, cx: 0.3906 } },
   'stand-halloween': { mua: { top: 0.1808, eye: 0.3718, chin: 0.4301, m: 0.541, cx: 0.5108, above: 0.95 }, momosuke: { top: 0.061, eye: 0.3118, chin: 0.4301, m: 0.88, cx: 0.5312, above: 0.95 }, kiki: { top: 0.1495, eye: 0.3352, chin: 0.4305, m: 0.709, cx: 0.5304, above: 0.95 } },
   'stand-card-master': { mua: { top: 0.116, eye: 0.3209, chin: 0.4298, m: 1.01, cx: 0.4725, above: 0.75 } },
   // 冬の装いの寝顔(winter/kyuko_sleep.PNG・392×1440の全身)。目・顎は絵を目盛りつきで測った(2026-11-19)
   winter: { kyuko: { top: 0.004, eye: 0.132, chin: 0.191, m: 0.441 } },
-  'stand-winter': { kyuko: { top: 0.0146, eye: 0.3312, chin: 0.4299, m: 0.734, cx: 0.5313 } },
+  'stand-winter': { kyuko: { top: 0.0134, eye: 0.3307, chin: 0.4296, m: 0.736, cx: 0.5293 } },
   // ききのツインテール(全身画から実測。2026-11-20)。top はリボンを除いた頭のてっぺん、above は大きなリボンが切れないように
   //   2026-11-24 r1119-153 追記4: stand-* の行は、立ち絵を縮めた組で点がずれていたのを直して出し直した(life-stand-from-fullbody.py)。ツインテールの印も目の真ん中・顎の先へ直した
   twintail: { kiki: { top: 0.112, eye: 0.183, chin: 0.244, m: 0.383, above: 0.95 } },
-  'stand-twintail': { kiki: { top: 0.1807, eye: 0.3402, chin: 0.4301, m: 1.014, cx: 0.5119, above: 0.95 } },
+  'stand-twintail': { kiki: { top: 0.1823, eye: 0.3406, chin: 0.4299, m: 0.664, cx: 0.5227, above: 0.95 } },
   // みゅあのサンタ(2026-11-25 クリスマスイベント r1119-172)。santa はバスト絵の置き場に置いた全身画(santa/myua_<表情>.PNG)の点、
   //   stand-santa は life-stand-from-fullbody.py の出力(目印は life-stand-marks.json の mua:santa。top は帽子を除いた頭のてっぺん)
   santa: { mua: { top: 0.1007, eye: 0.2132, chin: 0.2677, m: 0.406, above: 0.95 }, kiki: { top: 0.0941, eye: 0.1797, chin: 0.2325, m: 0.393, above: 0.95 }, momosuke: { top: 0.0735, eye: 0.1865, chin: 0.2374, m: 0.379, above: 0.95 }, sorashido: { top: 0.0026, eye: 0.1116, chin: 0.1664, m: 0.408, above: 0.95 }, atsu: { top: 0.0175, eye: 0.0994, chin: 0.1473, m: 0.357, above: 0.95 }, erubin: { top: 0.0589, eye: 0.1006, chin: 0.147, m: 0.345, above: 0.95 }, kyuko: { top: 0.0727, eye: 0.1552, chin: 0.218, m: 0.467, above: 0.95 } },
-  'stand-santa': { mua: { top: 0.1614, eye: 0.342, chin: 0.4296, m: 0.652, cx: 0.4783, above: 0.95 }, kiki: { top: 0.1746, eye: 0.3328, chin: 0.4303, m: 0.725, cx: 0.551, above: 0.95 }, momosuke: { top: 0.1333, eye: 0.338, chin: 0.4302, m: 0.686, cx: 0.4985, above: 0.95 }, sorashido: { top: 0.0065, eye: 0.2884, chin: 0.4301, m: 1.054, cx: 0.577, above: 0.95 }, atsu: { top: 0.0562, eye: 0.305, chin: 0.4302, m: 0.932, cx: 0.4455, above: 0.95 }, erubin: { top: 0.1725, eye: 0.2944, chin: 0.4303, m: 1.011, cx: 0.5528, above: 0.95 }, kyuko: { top: 0.143, eye: 0.3059, chin: 0.4298, m: 0.922, cx: 0.4314, above: 0.95 } },
+  'stand-santa': { mua: { top: 0.1614, eye: 0.3425, chin: 0.4303, m: 0.653, cx: 0.4595, above: 0.95 }, kiki: { top: 0.1741, eye: 0.3324, chin: 0.43, m: 0.726, cx: 0.5647, above: 0.95 }, momosuke: { top: 0.1331, eye: 0.3379, chin: 0.43, m: 0.686, cx: 0.4919, above: 0.95 }, sorashido: { top: 0.0066, eye: 0.2884, chin: 0.4299, m: 1.053, cx: 0.5794, above: 0.95 }, atsu: { top: 0.0562, eye: 0.3048, chin: 0.4299, m: 0.931, cx: 0.4538, above: 0.95 }, erubin: { top: 0.1728, eye: 0.2944, chin: 0.43, m: 1.008, cx: 0.5503, above: 0.95 }, kyuko: { top: 0.1427, eye: 0.3059, chin: 0.4299, m: 0.923, cx: 0.4351, above: 0.95 } },
 });
 // 絵の置き場所から、着替えの名前を引く(ふだんの服は null)
-const assistantLifeStandOutfitOf = (src) => { const m = /\/assistant\/([a-z0-9-]+)\/[a-z]+_[a-z]+\.png/i.exec(String(src || '')); return m && m[1] !== 'face' && m[1] !== 'temp' ? m[1] : null; };
+const assistantLifeStandOutfitOf = (src) => { const m = /\/assistant\/([a-z0-9-]+)\/[a-z]+_[a-z]+\.(?:png|webp)/i.exec(String(src || '')); return m && m[1] !== 'face' && m[1] !== 'temp' ? m[1] : null; };
 // 着替えなど表に無い絵は、8人のふつうの形で見る
 const assistantLifeStandFace = (pid, src) => {
   const who = typeof assistantById === 'function' ? assistantById(pid) : null;
@@ -78157,7 +79615,7 @@ function AssistantLifeMapFig({ who, h, sleep, spent = false }) {
   //   場面の立ち絵の表は目〜顎と頬の幅でそろえていて、髪やうさ耳で頭が大きく見える人が出ていた。さらに、寝ている絵・ハロウィンのももすけなど表の点が合わない絵が大きく出ていた。
   //   表(assistantLifeStandFace)に顎の点がある絵はそれを使い、無い絵は下の ASSISTANT_LIFE_MAP_HEAD(絵を目盛りつきで切り出して手で読んだ 上・顎。見えている体の高さに対する割合)を使う
   const face0 = typeof assistantLifeStandFace === 'function' ? assistantLifeStandFace(who && who.id, src) : null;
-  const headKey = String(src || '').replace(/[?#].*$/, '').replace(/^.*assistant\//, '').replace(/\.png$/i, '').replace(/_(?!sleep$)[a-z]+$/i, '');
+  const headKey = String(src || '').replace(/[?#].*$/, '').replace(/^.*assistant\//, '').replace(/\.(?:png|webp)$/i, '').replace(/_(?!sleep$)[a-z]+$/i, '');
   const head = ASSISTANT_LIFE_MAP_HEAD[headKey] || null;
   const topChin = head ? { top: head[0], chin: head[1] } : (face0 && Number.isFinite(face0.top) && (Number.isFinite(face0.chin) || face0.head) ? { top: face0.top, chin: face0.head ? 1 : face0.chin } : null);
   const face = face0 && topChin && typeof ASSISTANT_LIFE_STAND_EC === 'number'
@@ -78909,8 +80367,10 @@ function assistantLifeSleepMeasured(pid, src) {
 function assistantLifeSleepArt(pid, src) {
   const who = typeof assistantById === 'function' ? assistantById(pid) : null;
   const s0 = String(src || '').replace(/[?#].*$/, ''), dir = who && who.imageDir ? `${who.imageDir}/` : null;
-  const rel = dir && s0.includes(dir) ? s0.slice(s0.indexOf(dir) + dir.length) : null;
-  return rel && ASSISTANT_LIFE_SLEEP_ART.has(rel) ? `${dir}${rel.replace(/_normal\.PNG$/, '_sleep.PNG')}` : null;
+  // WebP にした服の絵(assistantArtFile)も、表の名前(.PNG)で引く
+  const rel = dir && s0.includes(dir) ? s0.slice(s0.indexOf(dir) + dir.length).replace(/\.webp$/, '.PNG') : null;
+  const out = rel && ASSISTANT_LIFE_SLEEP_ART.has(rel) ? `${dir}${rel.replace(/_normal\.PNG$/, '_sleep.PNG')}` : null;
+  return out && typeof assistantArtFile === 'function' ? assistantArtFile(out) : out;
 }
 // 寝ているときに出す全身の絵: 社長の寝顔の絵があればそれ、無ければ元の絵のまま。
 //   起きているときの全身の絵が別の場所(全身画など)を指す助手もいるので、見つからないときは顔アイコン(ふつうの顔)のパスから、どの服の寝顔かを割り出す(…/face/◯◯_normal.PNG → …/◯◯_sleep.PNG)
@@ -80805,7 +82265,7 @@ const ASSISTANT_LIFE_PROFILE_FULL_MAX_H = Object.freeze({
 });
 const ASSISTANT_LIFE_PROFILE_FULL_NH = new Map(); // 読み込んだ絵の高さ(画素)
 const assistantLifeProfileFullMaxH = (src) => {
-  const m = /\/fullbody\/(.+?)__[a-z]+\.png/.exec(String(src || ''));
+  const m = /\/fullbody\/(.+?)__[a-z]+\.(?:png|webp)/.exec(String(src || ''));
   return (m && ASSISTANT_LIFE_PROFILE_FULL_MAX_H[m[1]]) || 0;
 };
 function AssistantLifeProfileStand({ who, head = 0.32, top = 0.16, expr = 'happy' }) {
@@ -114208,24 +115668,32 @@ const CARD_RAID_BOSS = Object.freeze({
   id: 'raid_xmas_2026',
   name: '黒いサンタ',            // 仮の名前(社長が決める)
   deckName: '奪われた贈り物',    // 仮のデッキ名
-  // 3体(仮)。黒い服の子を集めた: ジョーカー(空中)・ゴースト(空中)・ゴーレム(地上・ライフが多い)
-  monsters: Object.freeze(['C-047', 'C-024', 'C-003']),
+  // 3体。黒いサンタはハムなので、ハム種(ハム・ダークハム・ハムライガー)から2体と、ほかの候補(黒い服の子)から1体を、挑むたびに選ぶ(台帳 r1126-101 追記1)
+  //   monsters … 種を渡さないとき(検査・代わりの組み方)の3体 / hare … ハム種の候補 / others … ほかの候補
+  monsters: Object.freeze(['C-008', 'C-055', 'C-003']),
+  hare: Object.freeze(['C-008', 'C-055', 'C-010']),
+  others: Object.freeze(['C-047', 'C-024', 'C-003']),
+  favor: 'hare',               // この種の札を少し好んで入れる(ハムの技が多い山札にする)
+  favorBonus: 0.6,
+  cardNoise: 0.45,             // 挑むたびに山札の中身が入れ替わる揺れ(種を渡したときだけ)
   // 考え方のくせ(重みの意味は 82-card-battle-core.jsx の CARD_AI_HABITS と同じ)。
   //   「贈り物を奪う」ので、相手の手札・ガッツをいじる札(disrupt)をいちばん好む。弱った子を狙い、全体攻撃も好き
   habit: Object.freeze({ attack: 1.2, keepGuard: 0.8, saveGuts: 0.8, big: 1.0, disrupt: 1.7, area: 1.3, finish: 1.3 }),
-  // デッキに先に入れる札(この3体で使える物だけが入る。無い名前は飛ばす)
-  prefer: Object.freeze(['大鎌']),
+  // デッキに先に入れる札(この3体で使える物だけが入る。無い名前は飛ばす)。「贈り物を奪う」ので相手の手札を捨てさせる「大声」
+  prefer: Object.freeze(['大声']),
 });
 
-// 段階ごと(レイドの5段階・0 始まり)のボスの強さ(仮)。
-//   level … 考え方の強さ(CARD_AI_LEVELS の難易度) / life … ボスの3体のライフの倍率(レイドのボスなので1戦では倒しきりにくい)
+// 段階ごと(レイドの5段階・0 始まり)のボスの強さ。
+//   level … 考え方の強さ(CARD_AI_LEVELS の難易度) / life … ボスの3体のライフの倍率。ふだんのカードと同じ 1(台帳 r1126-101 追記2・社長「ライフはそのままでAIで強く調整して」)
+//   ai … 考え方の上乗せ(CARD_AI_LEVELS の値を上書き)。ライフを戻したぶん、ふだんの同じ難易度より強く打つ
+//     readHand … 相手の手札を読んで守りを見越す(「贈り物を奪う」ボスなので手の内を知っている) / whim・sloppy … 気まぐれ・雑さ(小さいほど手堅い)
 //   rate … 換算の段階の補正(上の段階ほど1点が重い)
 const CARD_RAID_TIERS = Object.freeze([
-  Object.freeze({ level: 'normal', life: 2, rate: 1.0 }),
-  Object.freeze({ level: 'hard', life: 2, rate: 1.25 }),
-  Object.freeze({ level: 'expert', life: 2.5, rate: 1.5 }),
-  Object.freeze({ level: 'master', life: 3, rate: 1.75 }),
-  Object.freeze({ level: 'master', life: 3, rate: 2.0 }),
+  Object.freeze({ level: 'hard', life: 1, rate: 1.0, ai: Object.freeze({ whim: 0.04, sloppy: 0.08, readHand: true }) }),
+  Object.freeze({ level: 'expert', life: 1, rate: 1.25, ai: Object.freeze({ whim: 0.02, sloppy: 0.03, readHand: true }) }),
+  Object.freeze({ level: 'master', life: 1, rate: 1.5, ai: Object.freeze({ whim: 0.01, sloppy: 0, readHand: true }) }),
+  Object.freeze({ level: 'master', life: 1, rate: 1.75, ai: Object.freeze({ whim: 0, sloppy: 0, readHand: true }) }),
+  Object.freeze({ level: 'master', life: 1, rate: 2.0, ai: Object.freeze({ whim: 0, sloppy: 0, readHand: true }) }),
 ]);
 const cardRaidTierOf = (tierIndex) => CARD_RAID_TIERS[Math.min(CARD_RAID_TIERS.length - 1, Math.max(0, Math.floor(Number(tierIndex) || 0)))];
 
@@ -114235,18 +115703,32 @@ const cardRaidTierOf = (tierIndex) => CARD_RAID_TIERS[Math.min(CARD_RAID_TIERS.l
 //   投了しても、それまでに与えたぶんは足す(勝ちの上乗せは付かない)。途中で閉じた(結果が出なかった)ときは 0
 const CARD_RAID_DAMAGE = Object.freeze({ perPoint: 8000, perKo: 40000, win: 150000, cap: null });
 
-// ボスのデッキを組む(段階で決まる種。同じ段階なら毎回同じデッキ)
-const cardRaidBossDeck = (db, tierIndex = 0) => {
+// ボスの3体を選ぶ(ハム種から2体+ほかから1体)。rnd が無いときは決まった3体
+const cardRaidBossMonsters = (db, rnd = null) => {
+  const ok = (list) => list.filter((no) => cardMonsterOf(db, no));
+  if (!rnd) return ok(CARD_RAID_BOSS.monsters);
+  const pick = (list, n) => { const a = ok(list).slice(); const out = []; while (a.length && out.length < n) out.push(a.splice(Math.floor(rnd() * a.length), 1)[0]); return out; };
+  const out = [...pick(CARD_RAID_BOSS.hare, 2), ...pick(CARD_RAID_BOSS.others, 1)];
+  // 同じ種が2体にならないように(カードの表が変わったときの守り)。足りなければ決まった3体
+  const sp = out.map((no) => cardMonsterOf(db, no).species);
+  return out.length === 3 && new Set(sp).size === 3 ? out : ok(CARD_RAID_BOSS.monsters);
+};
+
+// ボスのデッキを組む。seed を渡すと挑むたびに3体と山札が少し変わる(画面は対戦の種を渡す)。渡さなければ段階ごとに毎回同じ(検査用)
+const cardRaidBossDeck = (db, tierIndex = 0, seed = null) => {
   const tier = cardRaidTierOf(tierIndex);
   const cfg = CARD_AI_BUILD[tier.level] || CARD_AI_BUILD.normal;
   const habit = CARD_RAID_BOSS.habit;
-  const rnd = cardAiSeededRand(`${CARD_RAID_BOSS.id}:${tier.level}`);
-  const monsters = CARD_RAID_BOSS.monsters.filter((no) => cardMonsterOf(db, no));
+  const roll = seed !== null && seed !== undefined && Number.isFinite(Number(seed));
+  const rnd = cardAiSeededRand(`${CARD_RAID_BOSS.id}:${tier.level}${roll ? `:${Math.floor(Number(seed))}` : ''}`);
+  const monsters = cardRaidBossMonsters(db, roll ? rnd : null);
   const mons = monsters.map((no) => cardMonsterOf(db, no));
+  const noise = cfg.noise + (roll ? CARD_RAID_BOSS.cardNoise : 0);
+  const favor = (c) => (c.user === CARD_RAID_BOSS.favor ? CARD_RAID_BOSS.favorBonus : 0);
   // 弾の制限はかけない(ボスは全部の弾の札を使う)。名前ごとに入れたい度の高い番号1つ
   const pool = Object.values(db.cards).filter((c) => c.ready && (c.user === 'any' || c.user === 'breeder' || mons.some((m) => cardUsableBy(c, { ...m, ko: false }))));
   const byName = {};
-  pool.forEach((c) => { const v = cardAiCardValue(c, habit) + cfg.noise * (rnd() * 2 - 1); if (!byName[c.name] || byName[c.name].v < v) byName[c.name] = { c, v }; });
+  pool.forEach((c) => { const v = cardAiCardValue(c, habit) + favor(c) + noise * (rnd() * 2 - 1); if (!byName[c.name] || byName[c.name].v < v) byName[c.name] = { c, v }; });
   const ranked = Object.values(byName).sort((a, b) => b.v - a.v || (a.c.no < b.c.no ? -1 : 1));
   const cards = [];
   const count = (no) => cards.filter((n) => n === no).length;
@@ -114285,7 +115767,7 @@ const cardRaidBossDeck = (db, tierIndex = 0) => {
 const cardRaidBossPolicy = (tierIndex = 0) => {
   const tier = cardRaidTierOf(tierIndex);
   const base = cardAiPolicy('kyuko', tier.level, { noTactics: true });
-  return { ...base, habit: { ...CARD_RAID_BOSS.habit } };
+  return { ...base, level: { ...base.level, ...(tier.ai || {}) }, habit: { ...CARD_RAID_BOSS.habit } };
 };
 
 // 始まりの場に、ボスのライフの倍率をかける(p はボスの側)。cardCreateGame の直後に1回だけ呼ぶ
@@ -114293,6 +115775,7 @@ const cardRaidPrepareGame = (st, tierIndex = 0, p = 1) => {
   const tier = cardRaidTierOf(tierIndex);
   const pl = st && st.players && st.players[p];
   if (!pl) return st;
+  // ライフはふだんのカードと同じ(倍率 1。台帳 r1126-101 追記2)。倍率が 1 でないときだけかける
   pl.mons.forEach((m) => { const life = Math.max(1, Math.round(m.max * tier.life)); m.life = life; m.max = life; });
   st.raid = { boss: CARD_RAID_BOSS.id, tier: Math.max(0, Math.floor(Number(tierIndex) || 0)), side: p };
   return st;
@@ -115671,6 +117154,17 @@ const CARD_VS_LINES = Object.freeze({
 // 練習試合のひとこと(みゅあ)
 const CARD_VS_TUTORIAL_LINE = Object.freeze({ e: 'happy', t: '練習だよ！ ゆっくりいこ♪' });
 // 出している長さ(ミリ秒)。タップで飛ばせる
+// レイドのボスの顔アイコン(クリスマスは RAID_XMAS_BOSS_IMG。顔だけの絵は無いので、全身の絵を顔が枠に入るよう寄せて出す。台帳 r1126-101)
+//   VS の画面の大きな丸と、対戦中の左上の小さな枠で同じ物を使う。絵が無いときだけ今までの仮の絵文字
+const CARD_RAID_BOSS_FACE = Object.freeze({ size: '200% auto', pos: '50% 24%' });
+//   ★このファイルは検査(card-deck-name-check など)が JSX 抜きで読むので、JSX を使わず React.createElement で書く
+const CardRaidBossFace = ({ className = '' }) => {
+  const src = typeof RAID_XMAS_BOSS_IMG !== 'undefined' ? RAID_XMAS_BOSS_IMG : '';
+  if (!src) return React.createElement('span', { 'data-card-raid-boss-face': '', className: `flex items-center justify-center text-[26px] ${className}` }, '🎅');
+  return React.createElement('span', { 'data-card-raid-boss-face': src, role: 'img', 'aria-label': '黒いサンタ', className: `block bg-no-repeat ${className}`,
+    style: { backgroundImage: `url(${src})`, backgroundSize: CARD_RAID_BOSS_FACE.size, backgroundPosition: CARD_RAID_BOSS_FACE.pos } });
+};
+
 const CARD_VS_MS = Object.freeze({ assistant: 2600, pvp: 2600, tutorial: 1300 });
 
 // 種族(血統)の名前。混血は主血統で数える
@@ -115872,7 +117366,10 @@ const CardVsIntro = ({ db, intro, onDone, meIcon = null }) => {
                   ? <div data-card-vs-foe-art className="w-full"><CardAssistantArt src={assistantFullImage(who, (foe.line && foe.line.e) || 'happy')} alt={who.name} className="w-full" style={{ aspectRatio: '3 / 4' }}/></div>
                   : <CardVsArt data-card-vs-foe-art src={assistantFullImage(who, (foe.line && foe.line.e) || 'happy')} alt={who.name} aspect={3 / 4}/>)
                                 // マルチの相手: プロフィールと同じ部品(フレーム付き)。アイコンの id は絵に直す(字のまま出していた。91 の CardPvpAvatar)
-                : <span data-card-vs-foe-icon className="block aspect-square w-full"><CardPvpAvatar icon={foe.icon} frame={foe.frame} className="h-full w-full"/></span>}
+                // レイドのボス: ボスの絵の顔の所を丸の枠に寄せて出す(CardRaidBossFace)
+                : foe.raidBoss
+                  ? <span data-card-vs-foe-icon data-card-vs-raid-boss className="block aspect-square w-full overflow-hidden rounded-full border-[3px] border-red-500 bg-slate-950 shadow-[0_0_18px_rgba(239,68,68,.45)]"><CardRaidBossFace className="h-full w-full"/></span>
+                  : <span data-card-vs-foe-icon className="block aspect-square w-full"><CardPvpAvatar icon={foe.icon} frame={foe.frame} className="h-full w-full"/></span>}
             </div>
             <div className="mh-vs-fade min-w-0 flex-1 pb-1" style={{ animationDelay: '250ms' }}>
               <b className="block text-[16px] font-black leading-tight" style={JA_LABEL_STYLE}>{foe.name || 'あいて'}</b>
@@ -119135,7 +120632,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       {/* マルチの電波の知らせは、上の帯の番の札に出す(段を増やさない。2026-10-29 案B) */}
       {/* 相手の帯(隠さない) */}
       <div className={`flex ${tiny ? 'h-[36px]' : compact ? 'h-[42px]' : 'h-[50px]'} shrink-0 items-center gap-2 px-2`}>
-        {raid ? <span data-card-raid-foe aria-hidden="true" className={`flex ${tiny ? 'h-[34px] w-[34px] text-[20px]' : 'h-[42px] w-[42px] text-[26px]'} shrink-0 items-center justify-center rounded-xl border-2 border-red-500 bg-slate-950`}>🎅</span>
+        {raid ? <span data-card-raid-foe aria-hidden="true" className={`block ${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} shrink-0 overflow-hidden rounded-xl border-2 border-red-500 bg-slate-950`}><CardRaidBossFace className="h-full w-full"/></span>
           : (pvp || share) ? <span data-card-pvp-foe className={`block ${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} shrink-0`}><CardPvpAvatar icon={(pvp || share).icon} frame={(pvp || share).frame} className="h-full w-full"/></span>
           : <img src={assistantFaceImage(who, face)} alt={who.name} className={`${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} rounded-xl border-2 bg-black object-cover object-top`} style={{ borderColor: who.accent }}/>}
         <div className={`min-w-0 text-[13px] font-black leading-tight ${pvp ? 'max-w-[34%] truncate whitespace-nowrap' : 'shrink-0 whitespace-nowrap'}`}>{who.name}<small className="block text-[10px] font-bold text-rose-200">{pvp ? 'マルチ対戦' : raid ? 'レイドバトル' : cardBattleLevelLabel(game.level, game.share) || 'フリー対戦'}</small></div>
@@ -120893,14 +122390,15 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       try { ok = typeof rc.onStart === 'function' ? (await rc.onStart()) !== false : true; } catch (_) { ok = false; }
       if (!ok) { setNotice('きょうの挑戦の回数がありません'); setRaid(null); setView('top'); if (typeof rc.onClose === 'function') rc.onClose('noCount'); return; }
       const tier = cardRaidTierOf(rc.tierIndex);
-      const cpuDeck = cardRaidBossDeck(db, rc.tierIndex);
       const seed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
+      // 挑むたびに、ボスの3体(ハム種2体+ほか1体)と山札が少し変わる(台帳 r1126-101 追記1)
+      const cpuDeck = cardRaidBossDeck(db, rc.tierIndex, seed);
       const first = Math.random() < 0.5 ? CARD_ME : CARD_CPU;
       const bossName = rc.bossName || CARD_RAID_BOSS.name;
       const st = cardRaidPrepareGame(cardCreateGame(db, { decks: [{ monsters: deck.monsters, cards: deck.cards }, cpuDeck], names: ['あなた', bossName], seed, first }), rc.tierIndex, CARD_CPU);
       setResult(null);
       setRaidDone(null);
-      const intro = { mode: 'assistant', foe: { who: null, name: bossName, icon: null, frame: null, line: null, deckName: CARD_RAID_BOSS.deckName, monsters: vsMons(st, CARD_CPU) },
+      const intro = { mode: 'assistant', foe: { who: null, name: bossName, icon: null, frame: null, raidBoss: true, line: null, deckName: CARD_RAID_BOSS.deckName, monsters: vsMons(st, CARD_CPU) },
         me: { name: myName, deckName: deck.name || null, monsters: vsMons(st, CARD_ME) } };
       setGame({ key: `raid-${seed}`, st, who: 'raid', level: tier.level, settings: save.settings, intro, raid: { tier: Math.max(0, Math.floor(Number(rc.tierIndex) || 0)), tierName: rc.tierName || '', bossName, run: rc } });
       // レイドのボスとの対戦はクリスマスのレイドバトル曲「winter fall」(台帳 r1126-023)。曲が無いときは今までどおり
@@ -138929,6 +140427,9 @@ function MonsterHeroGame() {
       && bgmArrangement.home === DEFAULT_BGM_ARRANGEMENT.home) ? RAID_JACK_BGM_TRACK
       // クリスマスイベントの期間は「Dear Santa」(台帳 r1126-023・デフォルトのままの人だけ)
       : (xmasEventBgmOpenAt(Date.now()) && bgmArrangement.home === DEFAULT_BGM_ARRANGEMENT.home) ? XMAS_HOME_BGM_TRACK : bgmArrangement.home;
+    // カードの画面では裏の周回が負け・やめでもカードの曲のまま(r1126-101 追記2)
+    if (state === 'CARD_TOP' || state === 'CARD_BATTLE') return cardBgm || homeBgm;
+    if (state === 'CARD_PACK_OPEN') return homeBgm;
     if (isGameOver) return bgmArrangement.gameOver;
     if (!debugBattleRef.current && currentWave === 10 && (state === 'WAVE_RESULT' || state === 'CHAMPION')) {
       // AUTO∞は最終リザルトでも直前の戦闘BGMを継続する。設定をONにした場合だけ従来のクリアBGMへ切り替える。
@@ -147007,7 +148508,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 待ち時間は、消える0.6秒＋VICTORY!の1秒に合わせる
     if(defeatFxOn) setDefeatFx({name:enemy?.name||'敵',boss:wave>=10,key:Date.now()});
     // 裏クイックがクリスマスのイベントページ・事件簿で回っているあいだは鳴らさない(ジングルは曲を止めるので、事件簿の曲が途切れる・r1126-072)
-    if ((!autoBattleRef.current || bgmArrangement.autoVictoryJingle === 'on') && !(runBackgroundAllowedRef.current && isXmasQuietScreen(gameStateNowRef.current))) Audio_.playJingle('victory');
+    //   MFバトルカードの画面で裏の周回が回っているあいだも鳴らさない(ジングルがカードの曲を止める・台帳 r1126-101 追記2)
+    if ((!autoBattleRef.current || bgmArrangement.autoVictoryJingle === 'on') && !(runBackgroundAllowedRef.current && (isXmasQuietScreen(gameStateNowRef.current) || isCardRunScreen(gameStateNowRef.current)))) Audio_.playJingle('victory');
     // 呼ぶ側は、今回のぶん(damage・distDamage)を足してからここへ来る。合計は「いまの値」から読む(上の currentWaveDamageRef の説明)
     const totalWaveDamage=waveDamageAtDefeat(currentWaveDamageRef.current,currentWaveDamage,damage);
     const waveMult=1.0+(wave*0.1); const remainingTurns=Math.max(0,21-turnCount);
@@ -154488,7 +155990,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
         {raidDamageFx&&((gameState==='RHYTHM_PLAY'&&rhythmPlay&&rhythmPlay.from==='raid')||gameState==='RAID_JACK_DEBUG')&&<RaidJackDamageFx key={raidDamageFx.key} fx={raidDamageFx} onDone={()=>setRaidDamageFx(null)}/>}
         {beatRankFx&&beatRankFx.ready&&gameState==='RHYTHM_PLAY'&&<PlayerRankUpFx kind="beat" from={beatRankFx.from} to={beatRankFx.to} gains={beatRankFx.gains} onClose={()=>setBeatRankFx(null)}/>}
-        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest key={rhythmPlay.from==='lineAdjust'&&rhythmLineAdjust?`line-adjust-${rhythmLineAdjust.key}`:rhythmPlay.from==='preview'&&rhythmPreview?`option-preview-${rhythmPreview.key}`:undefined} raidPlay={rhythmPlay.from==='raid'} song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmPlay.from==='multi'?rhythmMultiPlaySettings:rhythmPlay.from==='preview'&&rhythmPreview?rhythmPreview.draft:rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} breederName={breederName} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak,rhythmPlay.multiCpus):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} beatRankAward={beatRankAward}
+        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest key={rhythmPlay.from==='lineAdjust'&&rhythmLineAdjust?`line-adjust-${rhythmLineAdjust.key}`:rhythmPlay.from==='preview'&&rhythmPreview?`option-preview-${rhythmPreview.key}`:undefined} raidPlay={rhythmPlay.from==='raid'} holdResultCount={rhythmPlay.from==='raid'&&!!raidDamageFx} song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmPlay.from==='multi'?rhythmMultiPlaySettings:rhythmPlay.from==='preview'&&rhythmPreview?rhythmPreview.draft:rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} breederName={breederName} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak,rhythmPlay.multiCpus):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} beatRankAward={beatRankAward}
           onRankBarFull={()=>setBeatRankFx(f=>f&&!f.ready?{...f,ready:true}:f)} onRankBarStart={()=>setBeatRankFx(f=>f&&!f.started?{...f,started:true}:f)} onRankBarDone={()=>setBeatRankBarPlaying(false)} onComplete={async(result,merged)=>{
           // デバッグ画面の試作曲(RHYTHM_PROTO_SONGS)は、何も残さない。周回の報酬・経験値・自己ベスト・クリア回数・
           // 実績・全国ランキングのどれにも入れない(CLAUDE.md ⑦。試作は公開しない曲なので、記録に混ぜない)
@@ -157712,8 +159214,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // (storyBaseWho は 21-assistant.jsx。一部だけを動かす検査では無いことがあるので、無ければ id のまま)
         const storyBase=(id)=>typeof storyBaseWho==='function'?storyBaseWho(id):(typeof id==='string'?id.split('@')[0]:id);
         const castNow=(who)=>{for(let i=step;i>=0;i--){const w=script[i]&&script[i].who;if(storyBase(w)===who.id)return w===who.id?who:assistantById(w);}return who;};
-        const cast=storyCastOf(script).filter(who=>who.role!=='ゲスト')
-          .filter(who=>!hiddenUntil.includes(who.id)||script.slice(0,step+1).some(l=>l&&storyBase(l.who)===who.id));
+        // 下の欄で話すお客さん(speakBottom・クリスマスのハム・サンタ・謎の客など)は、顔の絵があれば助手と同じく顔の列にも並べる(r1126-090 追記2)
+        const cast=storyCastOf(script).filter(who=>who.role!=='ゲスト'||(who.speakBottom&&!who.noFace&&!!who.image))
+          .filter(who=>!hiddenUntil.includes(who.id)||script.slice(0,step+1).some(l=>l&&storyBase(l.who)===who.id))
+          // 同じ人の別の姿(storyFigureSlot が同じ・赤と黒のサンタ)は、いまの行までで最後に話したほうだけ
+          .filter((who,_,all)=>{if(!who.storyFigureSlot)return true;let lastId=null;for(let i=Math.min(step,script.length-1);i>=0&&!lastId;i--){const w=script[i]&&script[i].who&&assistantById(script[i].who);if(w&&w.storyFigureSlot===who.storyFigureSlot)lastId=w.id;}return lastId?lastId===who.id:all.find(x=>x.storyFigureSlot===who.storyFigureSlot)===who;});
         let stageIdx=-1;
         // 顔を出さない話し手(noFace・クリスマスのワトソンくん)は、話している行だけ上に出す(ジャックのように残し続けない)
         for(let i=step;i>=0;i--){const l=script[i];if(l.stage==='none'){stageIdx=-1;break;}if(l.stage||isGuestWho(l.who)){stageIdx=(i<step&&!l.stage&&assistantById(l.who).noFace)?-1:i;break;}}
@@ -157774,9 +159279,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const storyCplBubble=Math.max(6,storyLand?Math.floor((storyBoxW-118)/12)-3:Math.floor((storyBoxW-156)/14)-4);
         // 折り方を決める1行の字数は、ページ分けの控えめな見込みではなく、実際の欄の幅から出す(欄の内側の幅÷字の大きさ。端の1字ぶんは余らせる)
         const storyCapBottom=Math.floor((storyBoxW-64-(storyLand?62:100))/13-0.2);
-        // 全身の絵をまん中に出す話し手(storyFigure)は、下の欄に顔を置かないので、そのぶん1行の字数が増える
-        const storyFaceCols=Math.floor((storyLand?62:100)/13);
-        const storyCapBottomOf=(w)=>storyCapBottom+(w&&w.storyFigure?storyFaceCols:0);
+        // 下の欄の顔は、全身の絵をまん中に出す話し手(storyFigure)にも置く(r1126-090 追記2 社長「ハムとかさんたの顔アイコンがない」)。1行の字数はほかの話し手と同じ
+        const storyCapBottomOf=()=>storyCapBottom;
         const storyCapBubble=Math.floor((storyLand?(storyBoxW-118)/12:(storyBoxW-156)/14)-0.2);
         // 台詞を文の切れ目のかたまりごとに並べる(storyChunkLines)。かたまりで折ると行が増えるときは、今までどおり
         //   横の低い画面の吹き出しは高さ 84px で2行しか入らないので、かたまりで並べるのは2行まで(70-bootstrap.jsx)
@@ -157807,7 +159311,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const l=script[i];
           const w=l?assistantById(l.who):null;
           const text=l&&w&&!l.band?speakText(l,w):'';
-          const pages=storyZones&&typeof storySplitPages==='function'?storySplitPages(text,isGuestWho(l&&l.who)?storyCplBubble:storyCplBottom+(w&&w.storyFigure?storyFaceCols:0),3):[text];
+          const pages=storyZones&&typeof storySplitPages==='function'?storySplitPages(text,isGuestWho(l&&l.who)?storyCplBubble:storyCplBottom,3):[text];
           storyPageCache[i]=pages;
           return pages;
         };
@@ -158017,7 +159521,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 収まらない台詞は、上の storyPagesOf でページに分ける */}
             <div data-story-speaker-row={storyZones?'':undefined} className={storyZones?'flex items-start gap-2':undefined}>
             {/* 話している助手の顔(上部ゾーンのゲストと同じ大きさ・名前の札は顔の下)。ゲストが話しているあいだは、直前の助手を暗く残す */}
-            {storyZones&&bottomLine&&!bottomSpeaker.storyFigure&&<div key={`face-${bottomSpeaker.id}`} data-story-speaker={bottomSpeaker.id} className="shrink-0 text-center">
+            {storyZones&&bottomLine&&<div key={`face-${bottomSpeaker.id}`} data-story-speaker={bottomSpeaker.id} className="shrink-0 text-center">
               <span style={{display:'block',opacity:dimBottom?.55:1,filter:dimBottom?'brightness(.7)':`drop-shadow(0 0 10px ${bottomSpeaker.accent})`,transition:'opacity .2s, filter .2s'}}><AssistantFace who={bottomSpeaker} size={92} accent={bottomSpeaker.accent} expression={!dimBottom&&bottomLine===line?line.e:'normal'}/></span>
               <span className="mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-black" style={{color:dimBottom?bottomSpeaker.accent:'#0f172a',background:dimBottom?'rgba(15,23,42,.8)':bottomSpeaker.accent}}>{bottomLine.name||bottomSpeaker.name}</span>
             </div>}
@@ -163886,7 +165390,10 @@ const createAnimationStyle = () => {
     .mh-rjdmg-life { position: relative; font-size: 10px; font-weight: 900; color: #fca5a5; font-variant-numeric: tabular-nums; animation: mhRjRise .4s ease-out .6s both; }
     .mh-rjdmg-damage { position: relative; text-align: center; opacity: 0; animation: mhRjSlam .55s cubic-bezier(.2,1.4,.4,1) 1s both; }
     .mh-rjdmg-damage small { display: block; font-size: 11px; font-weight: 900; letter-spacing: .4em; color: #fecaca; }
-    .mh-rjdmg-damage b { display: block; padding: 0 .15em; font-size: 52px; font-weight: 900; font-style: italic; line-height: 1; font-variant-numeric: tabular-nums; background: linear-gradient(180deg, #fff, #fde68a 45%, #f59e0b); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 4px 0 rgba(0,0,0,.85)) drop-shadow(0 0 20px rgba(251,191,36,.9)); }
+    .mh-rjdmg-damage b { display: block; padding: 0 .15em; font-size: 52px; font-weight: 900; font-style: italic; line-height: 1; font-variant-numeric: tabular-nums; background: linear-gradient(180deg, #fff, #fde68a 45%, #f59e0b); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 4px 0 rgba(0,0,0,.85)); }
+    /* 数字のまわりの金色の光(2026-11-28 r1126-098)。前は数字そのものに drop-shadow(0 0 20px) を掛けていたが、数え上げで毎コマ数字が変わるたびに
+       ぼかしごと描き直しになり、コマが落ちた(社長「数字の動きがかくかく」)。光は数字の後ろの動かない1枚(ぼかし無しの放射の色)にした */
+    .mh-rjdmg-damage:not(.mh-rjdmg-damage-none)::before { content: ''; position: absolute; z-index: -1; left: 50%; top: 62%; width: calc(100% + 56px); height: 96px; transform: translate(-50%, -50%); background: radial-gradient(closest-side, rgba(251,191,36,.55), rgba(251,191,36,.22) 55%, rgba(251,191,36,0)); pointer-events: none; }
     .mh-rjdmg-damage-none b { font-size: 26px; background: none; color: #cbd5e1; filter: drop-shadow(0 2px 0 #000); }
     .mh-rjdmg-damage-none small { margin-top: 4px; font-size: 10px; letter-spacing: .05em; color: #94a3b8; }
     .mh-rjdmg-down { position: absolute; left: 0; right: 0; top: 40%; text-align: center; font-size: 64px; font-weight: 900; font-style: italic; color: #fde047; text-shadow: 0 5px 0 #7c2d12, 0 0 28px rgba(250,204,21,.95); opacity: 0; animation: mhRjSlam .6s cubic-bezier(.2,1.4,.4,1) 2.3s both; pointer-events: none; z-index: 3; }

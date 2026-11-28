@@ -96,3 +96,12 @@ A1(派を選ぶ)・A7(ソラシド派のネタのルート)・Q7a・Q7m(1回目�
 - 台本は `docs/progress/event-xmas-2026/SCRIPT.md` を直し、`node tools/novel/xmas-novel-build.js` で `79-xmas-novel-script.jsx` を作り直す(生成物は直に触らない)
 - 同じ事件簿の音楽(session_0113GBaBc3i3prRoZantbHrR)と演出(session_0113GBaBXXqeEdGgfS9XaBKS)を別の会話が直しているので、直す前に main を取り込み、`79-screen-xmas-novel.jsx` の重なりに気を付ける
 - ヘルプ・更新履歴: 遊び方が変わるので、直したときは `changelog-help-update` スキルで両方を書く
+
+## 5. 選ばれた案(r1126-099 追記1)
+
+社長の選択は**案B+候補を絞る(Q6a・Q6b・Q10a)**。行動の選択5つは今のまま、一度見た強制バッドの選択肢に「見たエンド」の印。
+
+- 台本: 問いの行に「 / まちがえても進む」「 / 候補: A・B・C・D」(どちらも【正解】の前)。組み立ては `tools/novel/xmas-novel-build.js` が `q.pass` / `q.narrow` にする
+- エンジン: `xmasNovelAnswer` は `q.pass` の問いで外すと、返し(`-near` か `-x1`)→ 帯「◯◯が、手がかり帳から【正解】を突きつけた」→ `-ok`(頭の「はい。」は外す)で先へ。`cur.ans` は `{ t, f:false, w, done:true }`(形は今のまま)
+- 候補: Q6a 早く鳴った鐘・止まった懐中時計・12年前の帳面・白瀬の手紙 / Q6b えるびんの写真・ほこりのない鏡のふち・赤い手袋・かばんの黒い服 / Q10a 消えた箱・帳面の最後の行・箱のない犠牲者・鳴りやまないオルゴール
+- 数: 先に進めない所 12 → 5(残りは強制バッドの5つ)

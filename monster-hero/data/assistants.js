@@ -828,6 +828,12 @@ const assistantExpressionName = (who, expression) => {
   const fallback = (who && who.defaultExpression) || ASSISTANT_DEFAULT_EXPRESSION;
   return list.includes(expression) ? expression : fallback;
 };
+// 重い絵を WebP にした服(2026-11-28 r1126-095 社長「助手画像が全部荒い」→ 原本から2倍で作り直し。PNG だと重すぎるので WebP 画質90)。
+//   サンタ服の全身(fullbody/<名前>_santa…)・半身の置き場(santa/<接頭辞>_<表情>)・立ち絵(stand-santa/)と、きゅうこの冬服の全身・立ち絵(fullbody/kyuko_winter…・stand-winter/)だけ。
+//   顔アイコン(santa/face/ など)は軽いので PNG のまま。冬服の半身の置き場(winter/)は受け取った絵そのままなので PNG のまま
+//   絵の道筋を作る所(assistantCostumeImage・assistantStandArt・assistantFullBodyImageOf・寝顔・事件簿)は、最後にこれを通す
+const ASSISTANT_WEBP_ART_RE = /(images\/assistant\/(?:santa\/(?!face\/)[^/?#]+|stand-(?:santa|winter)\/[^/?#]+|fullbody\/[a-z]+_(?:santa|winter)(?:__[a-z]+)?))\.(?:PNG|png)(?=$|[?#])/;
+const assistantArtFile = (path) => (typeof path === 'string' ? path.replace(ASSISTANT_WEBP_ART_RE, '$1.webp') : path);
 // 吹き出しの丸い顔に使う軽い画像
 // ★着替え(data/breeder.js の assistantCostumeImage)を着ているときは、その服の絵を返す。服の絵が決まらないときは元の服
 // ★大きい絵がまだ届いていない助手(tempImageDir を持つ)は、顔の絵を吹き出しにも大きい絵の場所にも使う(2026-10-22 あつ)
@@ -853,7 +859,7 @@ const assistantStandArt = (who, expression, outfit = '') => {
   if (!who || !who.id || !who.imagePrefix) return null;
   const dir = ASSISTANT_STAND_ART[outfit ? `${who.id}:${outfit}` : who.id];
   const ex = assistantExpressionName(who, expression);
-  return dir && ASSISTANT_STAND_EXPRESSIONS.includes(ex) ? `images/assistant/${dir}/${who.imagePrefix}_${ex}.png` : null;
+  return dir && ASSISTANT_STAND_EXPRESSIONS.includes(ex) ? assistantArtFile(`images/assistant/${dir}/${who.imagePrefix}_${ex}.png`) : null;
 };
 // いま着ている服の名前(服の絵のフォルダの名前。ふだんの服は '')
 const assistantWornOutfitName = (who) => {
@@ -863,7 +869,7 @@ const assistantFullImage = (who, expression) => (who && who.imagePrefix)
   ? (assistantStandArt(who, expression, assistantWornOutfitName(who))
     || (typeof assistantCostumeImage === 'function' && assistantCostumeImage(who, assistantExpressionName(who, expression), 'full'))
     || assistantTempImage(who, expression)
-    || `${who.imageDir}/${who.imagePrefix}_${assistantExpressionName(who, expression)}.PNG`)
+    || assistantArtFile(`${who.imageDir}/${who.imagePrefix}_${assistantExpressionName(who, expression)}.PNG`))
   : ASSISTANT_NO_IMAGE;
 
 // 社長の全身画(2026-11-11 社長「全身画作ってるから…助手の紹介ページに使って」)。キーは「助手id」か「助手id:服の名前」。
@@ -888,7 +894,7 @@ const ASSISTANT_FULLBODY_EXPRESSIONS = Object.freeze({
 const assistantFullBodyImageOf = (name, expression = 'happy') => {
   if (!name) return null;
   const exprs = ASSISTANT_FULLBODY_EXPRESSIONS[name];
-  return `images/assistant/fullbody/${name}${Array.isArray(exprs) && exprs.includes(expression) ? `__${expression}` : ''}.png`;
+  return assistantArtFile(`images/assistant/fullbody/${name}${Array.isArray(exprs) && exprs.includes(expression) ? `__${expression}` : ''}.png`);
 };
 // その助手が(いま着ている服で)全身画を持っていれば絵の置き場所を返す。服の全身画が無いときは null(今の立ち絵へ)
 const assistantFullBodyImage = (who, expression = 'happy') => {
@@ -11351,14 +11357,14 @@ const STORY_GUEST_SPEAKERS = [
   { id: 'kuroba', name: '黒羽', role: 'ゲスト', speakBottom: true, emoji: '🕰️', accent: '#94a3b8', image: 'images/story-guests/kuroba_face.png', expressions: [], defaultExpression: 'normal' },
   { id: 'shirase', name: '白瀬', role: 'ゲスト', speakBottom: true, emoji: '🧤', accent: '#f87171', image: 'images/story-guests/shirase_face.png', expressions: [], defaultExpression: 'normal' },
   // 赤いサンタはレイドの絵(正気に戻ったサンタ・santa-red.png)。黒いサンタはレイドのボスの絵(行の name で段階の名前に上書きする)。
-  //   どちらも全身の絵なので imageFit: 'contain'。絵が読めないときだけ絵文字(r1126-083 の点検 1番)
-  //   storyFigure: 顔の枠ではなく、画面のまん中に全身の絵で出す(下の窓には名前の札と台詞だけ。60-app.jsx の storyFigures・r1126-090 追記1)。
+  //   顔の枠には全身の絵から切り出した顔アイコン(santa-red.png・santa-black.png・r1126-090 追記2)。全身の絵は storyFigure でまん中に出す。絵が読めないときだけ絵文字(r1126-083 の点検 1番)
+  //   storyFigure: 画面のまん中に全身の絵でも出す(60-app.jsx の storyFigures・r1126-090 追記1)。下の窓には助手と同じく顔アイコン(追記2)。
   //   storyFigureSlot が同じ話し手(赤と黒のサンタ)は同じ人なので、まん中には1人ぶんだけ出す
-  { id: 'xmas_santa', name: 'サンタ', role: 'ゲスト', speakBottom: true, emoji: '🎅', accent: '#ef4444', image: (typeof RAID_XMAS_SANTA_IMG !== 'undefined' ? RAID_XMAS_SANTA_IMG : null), imageFit: 'contain', storyFigure: (typeof RAID_XMAS_SANTA_IMG !== 'undefined' ? RAID_XMAS_SANTA_IMG : null), storyFigureSlot: 'santa', expressions: [], defaultExpression: 'normal' },
+  { id: 'xmas_santa', name: 'サンタ', role: 'ゲスト', speakBottom: true, emoji: '🎅', accent: '#ef4444', image: (typeof RAID_XMAS_SANTA_FACE_ICON !== 'undefined' ? RAID_XMAS_SANTA_FACE_ICON : (typeof RAID_XMAS_SANTA_IMG !== 'undefined' ? RAID_XMAS_SANTA_IMG : null)), storyFigure: (typeof RAID_XMAS_SANTA_IMG !== 'undefined' ? RAID_XMAS_SANTA_IMG : null), storyFigureSlot: 'santa', expressions: [], defaultExpression: 'normal' },
   // ペンションの雪かき係のハム(r1126-055)。サンタに憧れて手作りのサンタ帽をかぶっている。一人称「オイラ」
   //   ハム・黒いサンタも下の欄で話す(上の段に別の枠で出て、後ろの画面と重なっていた・r1126-090 追記1)
   { id: 'ham', name: 'ハム', role: 'ゲスト', speakBottom: true, emoji: '🐰', accent: '#d6a36b', image: (typeof HAM_FACE_ICON !== 'undefined' ? HAM_FACE_ICON : (typeof HAM_IMG !== 'undefined' ? HAM_IMG : null)), storyFigure: (typeof HAM_IMG !== 'undefined' ? HAM_IMG : null), storyFigureSlot: 'ham', expressions: [], defaultExpression: 'normal' },
-  { id: 'xmas_kurosanta', name: '黒いサンタ', role: 'ゲスト', speakBottom: true, emoji: '🎅', accent: '#7f1d1d', image: (typeof RAID_XMAS_BOSS_IMG !== 'undefined' ? RAID_XMAS_BOSS_IMG : null), imageFit: 'contain', storyFigure: (typeof RAID_XMAS_BOSS_IMG !== 'undefined' ? RAID_XMAS_BOSS_IMG : null), storyFigureSlot: 'santa', expressions: [], defaultExpression: 'normal' },
+  { id: 'xmas_kurosanta', name: '黒いサンタ', role: 'ゲスト', speakBottom: true, emoji: '🎅', accent: '#7f1d1d', image: (typeof RAID_XMAS_BOSS_FACE_ICON !== 'undefined' ? RAID_XMAS_BOSS_FACE_ICON : (typeof RAID_XMAS_BOSS_IMG !== 'undefined' ? RAID_XMAS_BOSS_IMG : null)), storyFigure: (typeof RAID_XMAS_BOSS_IMG !== 'undefined' ? RAID_XMAS_BOSS_IMG : null), storyFigureSlot: 'santa', expressions: [], defaultExpression: 'normal' },
 ];
 
 // ===== ぱんぷきん×ジャックのストーリー(第1.5部〜終章) =====

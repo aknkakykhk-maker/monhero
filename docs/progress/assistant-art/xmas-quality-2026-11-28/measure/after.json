@@ -1,0 +1,2059 @@
+{
+ "mua": [
+  {
+   "tag": "home",
+   "url": "santa/face/myua_normal.PNG",
+   "cssW": 36,
+   "cssH": 36,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.37
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/myua_normal.PNG",
+   "cssW": 16,
+   "cssH": 16,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 5.33
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/myua_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/kiki_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/atsu_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/momosuke_normal.PNG",
+   "cssW": 16,
+   "cssH": 16,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 5.33
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/momosuke_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/dra_normal.PNG",
+   "cssW": 16,
+   "cssH": 16,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 5.33
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/dra_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/sorashido_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/erubin_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/myua_normal.PNG",
+   "cssW": 36,
+   "cssH": 36,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.37
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/myua_happy.PNG",
+   "cssW": 40,
+   "cssH": 40,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.13
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/kiki_normal.PNG",
+   "cssW": 36,
+   "cssH": 36,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.37
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/myua_normal.PNG",
+   "cssW": 16,
+   "cssH": 16,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 5.33
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/myua_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/kiki_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/atsu_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/momosuke_normal.PNG",
+   "cssW": 16,
+   "cssH": 16,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 5.33
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/momosuke_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/dra_normal.PNG",
+   "cssW": 16,
+   "cssH": 16,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 5.33
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/dra_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/sorashido_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/erubin_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "battle-entry",
+   "url": "stand-santa/myua_normal.webp",
+   "cssW": 266,
+   "cssH": 330,
+   "natW": 1615,
+   "natH": 2000,
+   "ratio": 2.02
+  },
+  {
+   "tag": "life-room",
+   "url": "santa/face/myua_normal.PNG",
+   "cssW": 36,
+   "cssH": 36,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.37
+  },
+  {
+   "tag": "life-room",
+   "url": "santa/face/momosuke_normal.PNG",
+   "cssW": 32,
+   "cssH": 32,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.67
+  },
+  {
+   "tag": "life-room",
+   "url": "santa/face/sorashido_normal.PNG",
+   "cssW": 32,
+   "cssH": 32,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.67
+  },
+  {
+   "tag": "life-room",
+   "url": "santa/face/sorashido_sleep.PNG",
+   "cssW": 32,
+   "cssH": 32,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.67
+  },
+  {
+   "tag": "life-room",
+   "url": "santa/face/erubin_normal.PNG",
+   "cssW": 32,
+   "cssH": 32,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.67
+  },
+  {
+   "tag": "life-room",
+   "url": "santa/face/erubin_sleep.PNG",
+   "cssW": 32,
+   "cssH": 32,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.67
+  },
+  {
+   "tag": "life-room",
+   "url": "santa/face/dra_normal.PNG",
+   "cssW": 40,
+   "cssH": 40,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.13
+  },
+  {
+   "tag": "watch",
+   "url": "santa/face/myua_normal.PNG",
+   "cssW": 36,
+   "cssH": 36,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.37
+  },
+  {
+   "tag": "watch",
+   "url": "santa/face/momosuke_normal.PNG",
+   "cssW": 32,
+   "cssH": 32,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.67
+  },
+  {
+   "tag": "watch",
+   "url": "santa/face/sorashido_normal.PNG",
+   "cssW": 32,
+   "cssH": 32,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.67
+  },
+  {
+   "tag": "watch",
+   "url": "santa/face/sorashido_sleep.PNG",
+   "cssW": 32,
+   "cssH": 32,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.67
+  },
+  {
+   "tag": "watch",
+   "url": "santa/face/erubin_normal.PNG",
+   "cssW": 32,
+   "cssH": 32,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.67
+  },
+  {
+   "tag": "watch",
+   "url": "santa/face/erubin_sleep.PNG",
+   "cssW": 32,
+   "cssH": 32,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.67
+  },
+  {
+   "tag": "watch",
+   "url": "santa/face/dra_normal.PNG",
+   "cssW": 40,
+   "cssH": 40,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.13
+  }
+ ],
+ "kiki": [
+  {
+   "tag": "home",
+   "url": "santa/face/kiki_normal.PNG",
+   "cssW": 36,
+   "cssH": 36,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.37
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/myua_normal.PNG",
+   "cssW": 16,
+   "cssH": 16,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 5.33
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/myua_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/kiki_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/atsu_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/momosuke_normal.PNG",
+   "cssW": 16,
+   "cssH": 16,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 5.33
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/momosuke_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/dra_normal.PNG",
+   "cssW": 16,
+   "cssH": 16,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 5.33
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/dra_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/sorashido_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/erubin_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/kiki_normal.PNG",
+   "cssW": 36,
+   "cssH": 36,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.37
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/myua_happy.PNG",
+   "cssW": 40,
+   "cssH": 40,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.13
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/kiki_normal.PNG",
+   "cssW": 36,
+   "cssH": 36,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.37
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/myua_normal.PNG",
+   "cssW": 16,
+   "cssH": 16,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 5.33
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/myua_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/kiki_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/atsu_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/momosuke_normal.PNG",
+   "cssW": 16,
+   "cssH": 16,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 5.33
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/momosuke_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/dra_normal.PNG",
+   "cssW": 16,
+   "cssH": 16,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 5.33
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/dra_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/sorashido_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/erubin_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "battle-entry",
+   "url": "stand-santa/kiki_normal.webp",
+   "cssW": 203,
+   "cssH": 341,
+   "natW": 1189,
+   "natH": 2000,
+   "ratio": 1.95
+  },
+  {
+   "tag": "life-room",
+   "url": "santa/face/kiki_normal.PNG",
+   "cssW": 36,
+   "cssH": 36,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.37
+  },
+  {
+   "tag": "life-room",
+   "url": "santa/face/momosuke_normal.PNG",
+   "cssW": 32,
+   "cssH": 32,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.67
+  },
+  {
+   "tag": "life-room",
+   "url": "santa/face/sorashido_normal.PNG",
+   "cssW": 32,
+   "cssH": 32,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.67
+  },
+  {
+   "tag": "life-room",
+   "url": "santa/face/sorashido_sleep.PNG",
+   "cssW": 32,
+   "cssH": 32,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.67
+  },
+  {
+   "tag": "life-room",
+   "url": "santa/face/erubin_normal.PNG",
+   "cssW": 32,
+   "cssH": 32,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.67
+  },
+  {
+   "tag": "life-room",
+   "url": "santa/face/erubin_sleep.PNG",
+   "cssW": 32,
+   "cssH": 32,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.67
+  },
+  {
+   "tag": "life-room",
+   "url": "santa/face/dra_normal.PNG",
+   "cssW": 40,
+   "cssH": 40,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.13
+  },
+  {
+   "tag": "watch",
+   "url": "santa/face/kiki_normal.PNG",
+   "cssW": 36,
+   "cssH": 36,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.37
+  },
+  {
+   "tag": "watch",
+   "url": "santa/face/momosuke_normal.PNG",
+   "cssW": 32,
+   "cssH": 32,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.67
+  },
+  {
+   "tag": "watch",
+   "url": "santa/face/sorashido_normal.PNG",
+   "cssW": 32,
+   "cssH": 32,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.67
+  },
+  {
+   "tag": "watch",
+   "url": "santa/face/sorashido_sleep.PNG",
+   "cssW": 32,
+   "cssH": 32,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.67
+  },
+  {
+   "tag": "watch",
+   "url": "santa/face/erubin_normal.PNG",
+   "cssW": 32,
+   "cssH": 32,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.67
+  },
+  {
+   "tag": "watch",
+   "url": "santa/face/erubin_sleep.PNG",
+   "cssW": 32,
+   "cssH": 32,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.67
+  },
+  {
+   "tag": "watch",
+   "url": "santa/face/dra_normal.PNG",
+   "cssW": 40,
+   "cssH": 40,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.13
+  }
+ ],
+ "momosuke": [
+  {
+   "tag": "home",
+   "url": "santa/face/momosuke_normal.PNG",
+   "cssW": 36,
+   "cssH": 36,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.37
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/myua_normal.PNG",
+   "cssW": 16,
+   "cssH": 16,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 5.33
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/myua_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/kiki_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/atsu_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/momosuke_normal.PNG",
+   "cssW": 16,
+   "cssH": 16,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 5.33
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/momosuke_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/dra_normal.PNG",
+   "cssW": 16,
+   "cssH": 16,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 5.33
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/dra_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/sorashido_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/erubin_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/momosuke_normal.PNG",
+   "cssW": 36,
+   "cssH": 36,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.37
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/myua_happy.PNG",
+   "cssW": 40,
+   "cssH": 40,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.13
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/kiki_normal.PNG",
+   "cssW": 36,
+   "cssH": 36,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.37
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/myua_normal.PNG",
+   "cssW": 16,
+   "cssH": 16,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 5.33
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/myua_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/kiki_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/atsu_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/momosuke_normal.PNG",
+   "cssW": 16,
+   "cssH": 16,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 5.33
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/momosuke_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/dra_normal.PNG",
+   "cssW": 16,
+   "cssH": 16,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 5.33
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/dra_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/sorashido_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/erubin_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "battle-entry",
+   "url": "stand-santa/momosuke_wink.webp",
+   "cssW": 307,
+   "cssH": 325,
+   "natW": 1708,
+   "natH": 1808,
+   "ratio": 1.86
+  },
+  {
+   "tag": "life-room",
+   "url": "santa/face/momosuke_normal.PNG",
+   "cssW": 36,
+   "cssH": 36,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.37
+  },
+  {
+   "tag": "life-room",
+   "url": "santa/face/momosuke_normal.PNG",
+   "cssW": 32,
+   "cssH": 32,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.67
+  },
+  {
+   "tag": "life-room",
+   "url": "santa/face/atsu_normal.PNG",
+   "cssW": 32,
+   "cssH": 32,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.67
+  },
+  {
+   "tag": "life-room",
+   "url": "fullbody/momosuke_santa__troubled.webp",
+   "cssW": 10,
+   "cssH": 27,
+   "natW": 1250,
+   "natH": 3319,
+   "ratio": 40.97
+  },
+  {
+   "tag": "life-room",
+   "url": "stand-santa/momosuke_happy.webp",
+   "cssW": 119,
+   "cssH": 126,
+   "natW": 1708,
+   "natH": 1808,
+   "ratio": 4.79
+  }
+ ],
+ "sorashido": [
+  {
+   "tag": "home",
+   "url": "santa/face/sorashido_normal.PNG",
+   "cssW": 36,
+   "cssH": 36,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.37
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/myua_normal.PNG",
+   "cssW": 16,
+   "cssH": 16,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 5.33
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/myua_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/kiki_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/atsu_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/momosuke_normal.PNG",
+   "cssW": 16,
+   "cssH": 16,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 5.33
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/momosuke_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/dra_normal.PNG",
+   "cssW": 16,
+   "cssH": 16,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 5.33
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/dra_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/sorashido_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/erubin_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/sorashido_normal.PNG",
+   "cssW": 36,
+   "cssH": 36,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.37
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/myua_happy.PNG",
+   "cssW": 40,
+   "cssH": 40,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.13
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/kiki_normal.PNG",
+   "cssW": 36,
+   "cssH": 36,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.37
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/myua_normal.PNG",
+   "cssW": 16,
+   "cssH": 16,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 5.33
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/myua_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/kiki_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/atsu_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/momosuke_normal.PNG",
+   "cssW": 16,
+   "cssH": 16,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 5.33
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/momosuke_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/dra_normal.PNG",
+   "cssW": 16,
+   "cssH": 16,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 5.33
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/dra_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/sorashido_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/erubin_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "battle-entry",
+   "url": "stand-santa/sorashido_normal.webp",
+   "cssW": 219,
+   "cssH": 215,
+   "natW": 1550,
+   "natH": 1516,
+   "ratio": 2.36
+  },
+  {
+   "tag": "life-room",
+   "url": "santa/face/sorashido_normal.PNG",
+   "cssW": 36,
+   "cssH": 36,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.37
+  },
+  {
+   "tag": "life-room",
+   "url": "santa/face/atsu_normal.PNG",
+   "cssW": 32,
+   "cssH": 32,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.67
+  },
+  {
+   "tag": "life-room",
+   "url": "santa/face/sorashido_normal.PNG",
+   "cssW": 32,
+   "cssH": 32,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.67
+  },
+  {
+   "tag": "life-room",
+   "url": "fullbody/sorashido_santa__happy.webp",
+   "cssW": 10,
+   "cssH": 28,
+   "natW": 1463,
+   "natH": 4096,
+   "ratio": 49.44
+  },
+  {
+   "tag": "life-room",
+   "url": "stand-santa/sorashido_happy.webp",
+   "cssW": 84,
+   "cssH": 82,
+   "natW": 1550,
+   "natH": 1516,
+   "ratio": 6.16
+  }
+ ],
+ "atsu": [
+  {
+   "tag": "home",
+   "url": "santa/face/atsu_normal.PNG",
+   "cssW": 36,
+   "cssH": 36,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.37
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/myua_normal.PNG",
+   "cssW": 16,
+   "cssH": 16,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 5.33
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/myua_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/kiki_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/atsu_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/momosuke_normal.PNG",
+   "cssW": 16,
+   "cssH": 16,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 5.33
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/momosuke_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/dra_normal.PNG",
+   "cssW": 16,
+   "cssH": 16,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 5.33
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/dra_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/sorashido_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/erubin_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/atsu_normal.PNG",
+   "cssW": 36,
+   "cssH": 36,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.37
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/myua_happy.PNG",
+   "cssW": 40,
+   "cssH": 40,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.13
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/kiki_normal.PNG",
+   "cssW": 36,
+   "cssH": 36,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.37
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/myua_normal.PNG",
+   "cssW": 16,
+   "cssH": 16,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 5.33
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/myua_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/kiki_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/atsu_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/momosuke_normal.PNG",
+   "cssW": 16,
+   "cssH": 16,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 5.33
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/momosuke_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/dra_normal.PNG",
+   "cssW": 16,
+   "cssH": 16,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 5.33
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/dra_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/sorashido_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/erubin_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "battle-entry",
+   "url": "stand-santa/atsu_normal.webp",
+   "cssW": 263,
+   "cssH": 243,
+   "natW": 1366,
+   "natH": 1260,
+   "ratio": 1.73
+  },
+  {
+   "tag": "life-room",
+   "url": "santa/face/atsu_normal.PNG",
+   "cssW": 36,
+   "cssH": 36,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.37
+  },
+  {
+   "tag": "life-room",
+   "url": "santa/face/atsu_normal.PNG",
+   "cssW": 32,
+   "cssH": 32,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.67
+  },
+  {
+   "tag": "life-room",
+   "url": "fullbody/atsu_santa__troubled.webp",
+   "cssW": 9,
+   "cssH": 28,
+   "natW": 1198,
+   "natH": 3529,
+   "ratio": 42.66
+  },
+  {
+   "tag": "life-room",
+   "url": "stand-santa/atsu_happy.webp",
+   "cssW": 101,
+   "cssH": 93,
+   "natW": 1366,
+   "natH": 1260,
+   "ratio": 4.53
+  }
+ ],
+ "kyuko": [
+  {
+   "tag": "home",
+   "url": "santa/face/kyuko_normal.PNG",
+   "cssW": 36,
+   "cssH": 36,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.37
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/myua_normal.PNG",
+   "cssW": 16,
+   "cssH": 16,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 5.33
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/myua_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/kiki_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/atsu_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/momosuke_normal.PNG",
+   "cssW": 16,
+   "cssH": 16,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 5.33
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/momosuke_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/dra_normal.PNG",
+   "cssW": 16,
+   "cssH": 16,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 5.33
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/dra_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/sorashido_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/erubin_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/kyuko_normal.PNG",
+   "cssW": 36,
+   "cssH": 36,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.37
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/myua_happy.PNG",
+   "cssW": 40,
+   "cssH": 40,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.13
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/kiki_normal.PNG",
+   "cssW": 36,
+   "cssH": 36,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.37
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/myua_normal.PNG",
+   "cssW": 16,
+   "cssH": 16,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 5.33
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/myua_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/kiki_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/atsu_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/momosuke_normal.PNG",
+   "cssW": 16,
+   "cssH": 16,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 5.33
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/momosuke_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/dra_normal.PNG",
+   "cssW": 16,
+   "cssH": 16,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 5.33
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/dra_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/sorashido_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/erubin_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "battle-entry",
+   "url": "stand-santa/kyuko_happy.webp",
+   "cssW": 316,
+   "cssH": 252,
+   "natW": 1756,
+   "natH": 1402,
+   "ratio": 1.85
+  },
+  {
+   "tag": "life-room",
+   "url": "santa/face/kyuko_normal.PNG",
+   "cssW": 36,
+   "cssH": 36,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.37
+  },
+  {
+   "tag": "life-room",
+   "url": "santa/face/atsu_normal.PNG",
+   "cssW": 32,
+   "cssH": 32,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.67
+  },
+  {
+   "tag": "life-room",
+   "url": "santa/face/kyuko_normal.PNG",
+   "cssW": 32,
+   "cssH": 32,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.67
+  },
+  {
+   "tag": "life-room",
+   "url": "fullbody/kyuko_santa__happy.webp",
+   "cssW": 15,
+   "cssH": 27,
+   "natW": 1685,
+   "natH": 3029,
+   "ratio": 36.91
+  },
+  {
+   "tag": "life-room",
+   "url": "stand-santa/kyuko_happy.webp",
+   "cssW": 121,
+   "cssH": 96,
+   "natW": 1756,
+   "natH": 1402,
+   "ratio": 4.85
+  }
+ ],
+ "erubin": [
+  {
+   "tag": "home",
+   "url": "santa/face/erubin_normal.PNG",
+   "cssW": 36,
+   "cssH": 36,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.37
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/myua_normal.PNG",
+   "cssW": 16,
+   "cssH": 16,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 5.33
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/myua_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/kiki_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/atsu_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/momosuke_normal.PNG",
+   "cssW": 16,
+   "cssH": 16,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 5.33
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/momosuke_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/dra_normal.PNG",
+   "cssW": 16,
+   "cssH": 16,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 5.33
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/dra_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/sorashido_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home",
+   "url": "santa/face/erubin_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/erubin_normal.PNG",
+   "cssW": 36,
+   "cssH": 36,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.37
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/myua_happy.PNG",
+   "cssW": 40,
+   "cssH": 40,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.13
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/kiki_normal.PNG",
+   "cssW": 36,
+   "cssH": 36,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.37
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/myua_normal.PNG",
+   "cssW": 16,
+   "cssH": 16,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 5.33
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/myua_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/kiki_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/atsu_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/momosuke_normal.PNG",
+   "cssW": 16,
+   "cssH": 16,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 5.33
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/momosuke_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/dra_normal.PNG",
+   "cssW": 16,
+   "cssH": 16,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 5.33
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/dra_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/sorashido_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "home-talk",
+   "url": "santa/face/erubin_normal.PNG",
+   "cssW": 20,
+   "cssH": 20,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 4.27
+  },
+  {
+   "tag": "battle-entry",
+   "url": "stand-santa/erubin_normal.webp",
+   "cssW": 345,
+   "cssH": 229,
+   "natW": 1791,
+   "natH": 1187,
+   "ratio": 1.73
+  },
+  {
+   "tag": "life-room",
+   "url": "santa/face/erubin_normal.PNG",
+   "cssW": 36,
+   "cssH": 36,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.37
+  },
+  {
+   "tag": "life-room",
+   "url": "santa/face/atsu_normal.PNG",
+   "cssW": 32,
+   "cssH": 32,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.67
+  },
+  {
+   "tag": "life-room",
+   "url": "santa/face/erubin_normal.PNG",
+   "cssW": 32,
+   "cssH": 32,
+   "natW": 256,
+   "natH": 256,
+   "ratio": 2.67
+  },
+  {
+   "tag": "life-room",
+   "url": "fullbody/erubin_santa__happy.webp",
+   "cssW": 14,
+   "cssH": 27,
+   "natW": 1692,
+   "natH": 3299,
+   "ratio": 40.08
+  },
+  {
+   "tag": "life-room",
+   "url": "stand-santa/erubin_happy.webp",
+   "cssW": 132,
+   "cssH": 87,
+   "natW": 1791,
+   "natH": 1187,
+   "ratio": 4.52
+  }
+ ]
+}

@@ -87,6 +87,8 @@ const seed = () => {
         const hits = [];
         for (const o of document.querySelectorAll('button,a,[role=button]')) {
           if (o === el || el.contains(o) || o.contains(el) || o.closest('[data-quick-anywhere-detail]') || !o.getClientRects().length) continue;
+          // 見えないことにしてある物(HOME の送る札の、外へ送ってある札など。aria-hidden)は数えない(本体の 45-quick-anywhere-float.jsx と同じ。r1126-088 追記3)
+          if (o.closest('[aria-hidden="true"]')) continue;
           const cs = getComputedStyle(o); if (cs.visibility === 'hidden' || cs.pointerEvents === 'none' || Number(cs.opacity) === 0) continue;
           const r = o.getBoundingClientRect(); if (r.width < 2 || r.height < 2) continue;
           if (Math.min(R.right, r.right) - Math.max(R.left, r.left) > 1 && Math.min(R.bottom, r.bottom) - Math.max(R.top, r.top) > 1) hits.push(((o.getAttribute('aria-label') || o.innerText || o.tagName) + '').replace(/\s+/g, ' ').slice(0, 24));

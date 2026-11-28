@@ -23,7 +23,7 @@ combo | mua excited このままフルコンいけるかも♪
 miss | mua normal どんまい！ここから取り返そ♪
 miss | mua normal 大丈夫、あたしもいるよ♪
 climax | mua excited サビきた〜！テンションまぢ上がる♪
-climax | mua excited ここ一番楽しいとこ！
+climax | mua excited ここ1番楽しいとこ！
 climax | mua excited いっくよ〜♪
 last | mua normal あとちょっと！ラストまで一緒に♪
 last | mua normal 最後まで笑顔でいこ！
@@ -32,7 +32,7 @@ mvp | mua wink 今日のあたし、まぢノッてたかもｗ
 high | mua happy まぢいい感じぢゃん！楽しかったぁ♪
 high | mua happy 今の、めっちゃそろってたよね♪
 mid | mua happy いい感じだったよ！次はもっといけるかも♪
-mid | mua happy 楽しかったぁ♪ もう一曲いこ！
+mid | mua happy 楽しかったぁ♪ もう1曲いこ！
 low | mua troubled 次はもっと合わせよ！あたしもがんばる♪
 low | mua troubled 大丈夫！何回でも付き合うよ♪
 fc | mua surprise フルコンぢゃん！{name}天才かもｗ
@@ -49,7 +49,7 @@ song:grievous_lady | mua happy Grievous Lady、最後までついていけた！
 sp50 | mua happy あたしたち、もうセッションLv.50ぢゃん！まぢ最強コンビかも♪
 sp50 | mua wink {name}とならどんな曲でも楽しいの、ほんとだよ♪
 sp80 | mua excited Lv.80！ここまで来たら、もう息ぴったりぢゃん♪
-sp80 | mua happy あたしの一番のセッション相手は、{name}だよｗ
+sp80 | mua happy あたしの1番のセッション相手は、{name}だよｗ
 sp100 | mua excited セッションLv.100！あたしたち、セッションマスターぢゃん！
 sp100 | mua happy ここまで一緒に叩いてくれて、まぢありがと♪
 woke | mua troubled ふぁ…{name}？ 起こされたけど、行く〜
@@ -71,7 +71,7 @@ combo | kiki excited とってもきれいにつながっていますよ♪
 combo | kiki excited {name}、さすがでつ
 miss | kiki normal 大丈夫でつ、落ち着いていきましょう♪
 miss | kiki normal ひと呼吸おけば、また合わせられまつよ
-climax | kiki excited ここが一番きれいなところでつ♪
+climax | kiki excited ここが1番きれいなところでつ♪
 climax | kiki excited ここは押し切りまつ ( ˘ω˘)9グッ!
 climax | kiki excited 雪が舞うみたいな気持ちになりまつ♪
 last | kiki normal あと少しでつ。最後までていねいに♪
@@ -81,11 +81,11 @@ mvp | kiki wink 今日は指がよく動きました♪
 high | kiki happy とってもいい演奏でした♪
 high | kiki happy 息がぴったりでしたね♪
 mid | kiki happy いい演奏でした。次はもっと合わせられそうです
-mid | kiki happy 楽しかったです♪ もう一曲いかがですか？
+mid | kiki happy 楽しかったです♪ もう1曲いかがですか？
 low | kiki troubled 次はきっと、もっと合わせられますよ♪
 low | kiki troubled 何度でもお付き合いしまつ♪
 fc | kiki surprise フルコンボでつ！{name}、すごいです♪
-fc | kiki surprise 最後まで一つも落とさないなんて、見とれちゃいました
+fc | kiki surprise 最後まで1つも落とさないなんて、見とれちゃいました
 levelup | kiki happy セッションLvが上がりました♪ うれしいでつ
 levelup | kiki happy 少しずつ、上手になれている気がします♪
 likeup | kiki wink この曲、だんだん好きになってきました♪
@@ -111,7 +111,7 @@ refuse | kiki troubled …ごめんなさい…もう、夢の中でつ…
 ## momosuke
 join | momosuke happy ももが来たからには盛り上げるよ！！
 join | momosuke happy {name}、ももとセッションできるなんてラッキーだよw
-first | momosuke excited はじめての曲！！ももが一番に覚えちゃうもんね
+first | momosuke excited はじめての曲！！ももが1番に覚えちゃうもんね
 first | momosuke excited 新曲でもももは完璧にこなすよ♡
 like | momosuke happy この曲ももの推し曲！！
 dislike | momosuke troubled チクタクがずっと鳴っててもも眠くなる〜♡
@@ -120,7 +120,7 @@ combo | momosuke excited まだつながってるの！？やるじゃんw
 combo | momosuke excited このままいけばもも並みだよ♡
 miss | momosuke normal ドンマイドンマイ！ももがついてるよw
 miss | momosuke normal ちょっとくらいミスってもかわいいから平気♡
-climax | momosuke excited サビ！！ここで一番かわいく決めるよ♡
+climax | momosuke excited サビ！！ここで1番かわいく決めるよ♡
 climax | momosuke excited ここがももの見せ場！！
 climax | momosuke excited ペンライト振って〜！！
 last | momosuke normal ラストスパート！！最後までアイドルでいくよ♡
@@ -140,13 +140,13 @@ levelup | momosuke happy 上達してるのはももだけじゃないよ、{nam
 likeup | momosuke wink この曲、ちょっとだけ好きになったかも…ちょっとだけね！！
 overcome | momosuke happy 眠くならずに最後までいけた！！もも、えらい♡
 overcome | momosuke happy 苦手でもちゃんと決めるのがアイドルだよw
-song:crossing_field | momosuke happy crossing field は、ももが一番かわいく踊れる曲！！
+song:crossing_field | momosuke happy crossing field は、ももが1番かわいく踊れる曲！！
 song:only_my_railgun | momosuke happy only my railgun、テンション上がりっぱなしw
 song:rose | momosuke happy ROSE はかっこいいももも見せられる曲なんだよ♡
 song:dullahan_clockwork | momosuke happy チクタクに負けなかった！！{name}もえらい♡
 sp50 | momosuke excited Lv.50！！ももと{name}、もう名コンビだね♡
 sp50 | momosuke wink ここまで来たら、ももの専属だよw
-sp80 | momosuke excited Lv.80！！ステージの上で一番息が合うの、{name}かも♡
+sp80 | momosuke excited Lv.80！！ステージの上で1番息が合うの、{name}かも♡
 sp80 | momosuke happy ももについてこれるの、{name}くらいだよ！！
 sp100 | momosuke excited Lv.100！！セッションマスターはもものおかげだよね♡
 sp100 | momosuke happy ずっと一緒にステージ立ってくれて、ありがと！！
@@ -179,7 +179,7 @@ mvp | dra wink 今日はおで、調子よかったな
 high | dra happy いい演奏だったな。おで楽しかったよ
 high | dra happy ぴったりだったな、えへへ
 mid | dra happy なかなかよかったな。次も行くからな
-mid | dra happy 楽しかったな。もう一回いいか？
+mid | dra happy 楽しかったな。もう1回いいか？
 low | dra troubled どんまいだな、次でとりかえすからな
 low | dra troubled おでも練習するからな。一緒にがんばろう
 fc | dra surprise 全部つながったな！？すごいな、{name}
@@ -189,7 +189,7 @@ levelup | dra happy おでも少しは上手になってきたかな
 likeup | dra wink この曲、だんだん好きになってきたわ
 overcome | dra happy 苦手な曲だったけど、最後まで行けたな
 overcome | dra happy 照れくさかったけど、いい曲だったな
-song:mou_hitotsu_no_sekai_e | dra happy もう一つの世界へは、おでの曲だからな。冒険って感じでいいだろ
+song:mou_hitotsu_no_sekai_e | dra happy もう1つの世界へは、おでの曲だからな。冒険って感じでいいだろ
 song:big_bridge_no_shitou | dra happy ビッグブリッヂの死闘、橋を渡りきった気分だな
 song:senjou_no_shippuu | dra happy 戦場の疾風、風みたいに駆け抜けたな
 song:stay_with_me | dra happy Stay With Me、しんみりしたけど、悪くなかったよ
@@ -207,7 +207,7 @@ refuse | dra happy …むにゃ…グジラ…でっかい…
 refuse | dra troubled …すまん…膝が、まだ寝てる…
 
 ## atsu
-join | atsu happy とりあえず一曲いくか笑
+join | atsu happy とりあえず1曲いくか笑
 join | atsu happy 来たよ！ 今日もやろ笑
 first | atsu excited てか初見の曲？ 燃えるじゃん笑
 first | atsu excited 知らない曲こそ、とりあえずやってみるか笑
@@ -228,7 +228,7 @@ mvp | atsu wink 今日は俺の日だったな笑
 high | atsu happy てか今の、普通にうまかったな笑
 high | atsu happy いい締めだったな！
 mid | atsu happy 悪くないな。次はもっと上いけるだろ笑
-mid | atsu happy とりあえずもう一曲いくか笑
+mid | atsu happy とりあえずもう1曲いくか笑
 low | atsu troubled まあ次だな、切り替えていこう！
 low | atsu troubled 練習あるのみだな笑
 fc | atsu surprise フルコンかよ！やるな笑
@@ -266,9 +266,9 @@ combo | kyuko excited ほい！ いい流れだねぇ
 combo | kyuko excited リズムが安定してるからつながるんだよね〜
 combo | kyuko excited このままいけるよぉ。ありがとん笑
 miss | kyuko normal ぐぬぬぬ、でもリズムは合ってるよ〜
-miss | kyuko normal 一回深呼吸ね〜、次の小節から戻そ
-climax | kyuko excited 一回ためて…ここだねぇ
-climax | kyuko excited ここが一番盛り上がるとこだよぉ
+miss | kyuko normal 1回深呼吸ね〜、次の小節から戻そ
+climax | kyuko excited 1回ためて…ここだねぇ
+climax | kyuko excited ここが1番盛り上がるとこだよぉ
 climax | kyuko excited ここから音が増えるよ〜、おけ〜？
 last | kyuko normal 最後まで、ていねいにね〜
 last | kyuko normal あと少しだぁ。おけ？
@@ -326,7 +326,7 @@ mvp | sorashido wink え、自分がMVPですか！？ 表に太字で書いて�
 high | sorashido happy 計算どおりの名演でしたねー！
 high | sorashido happy 今の数字、表に残しておきたいです笑
 mid | sorashido happy 悪くない数字ですね。次はもっと上がる計算です
-mid | sorashido happy もう一曲いきましょう！ 次は勝ちます笑
+mid | sorashido happy もう1曲いきましょう！ 次は勝ちます笑
 low | sorashido troubled 次は全ノーツ計算して挑みます笑
 low | sorashido crying くやしい・・・！ 次は上げます！
 fc | sorashido surprise フルコンですねー！ すごいです笑
@@ -375,7 +375,7 @@ mvp | erubin wink 今日はたまたま調子がよかったかな
 high | erubin happy いい演奏だったね、おつかれさま
 high | erubin happy 息が合ってたね、うれしいな
 mid | erubin happy いい演奏だったよ。少し休んでもいいからね
-mid | erubin happy 楽しかったね、もう一曲どうかな
+mid | erubin happy 楽しかったね、もう1曲どうかな
 low | erubin troubled 大丈夫、次はきっと合うよ
 low | erubin troubled 疲れてないかな？無理しないでね
 fc | erubin surprise フルコンかな？ すごいね☺️

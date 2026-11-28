@@ -461,6 +461,43 @@ const HALLOWEEN_MARKET_ICONS = HALLOWEEN_ICON_SETS.flatMap(set => set.items.map(
   get shop() { return halloweenIconSale() === 'breederPoint' ? undefined : false; },
 })));
 
+// クリスマスのサンタ服の助手の顔アイコン(2026-11-28 社長「顔アイコンの販売ないから出しといて」・台帳 r1126-096)。ハロウィンと同じ仕様。
+//   ・ふだんのアイコン・ハロウィンとは別のまとまり(mua_santa など)・別の id(myua_santa_happy など)。持っているかも別々に数える
+//   ・イベント中(ASSISTANT_COSTUME_XMAS_START_AT〜ASSISTANT_COSTUME_XMAS_END_AT。12/31 3:59 まで)はビートP交換所で1000P、
+//     終わったあとはブリーダーP交換所で1pt(下の xmasIconSale が決める。時刻はクリスマスの服と同じ定数を読む)
+//   ・どちらで買っても8表情ぜんぶ手に入る(まとめの中身が mh_market_icons に全部入る。新しい保存キーは作らない)
+//   ・絵はサンタ服の顔アイコンをそのまま使う(images/assistant/santa/face/)。別のファイルを作らない(絵が作り直されても同じパスで替わる)
+// ★1つずつの名前は16文字まで。名前を _ICON で終わらせない(ハロウィンと同じ)
+const XMAS_ICON_SETS = Object.freeze([
+  ['mua', 'myua', 'みゅあ'],
+  ['kiki', 'kiki', 'きき'],
+  ['momosuke', 'momosuke', 'ももすけ'],
+  ['dra', 'dra', 'ドラ'],
+  ['atsu', 'atsu', 'あつ'],
+  ['kyuko', 'kyuko', 'きゅうこ'],
+  ['sorashido', 'sorashido', 'ソラシド'],
+  ['erubin', 'erubin', 'えるびん'],
+].map(([assistantId, prefix, who]) => {
+  const items = Object.freeze(MYUA_ICON_EXPRESSIONS.map(([key, label]) => Object.freeze({
+    id: `${prefix}_santa_${key}`, name: `クリスマス${who}（${label}）`, icon: `images/assistant/santa/face/${prefix}_${key}.PNG`,
+  })));
+  return Object.freeze({ groupId: `${assistantId}_santa`, assistantId, name: `${who}（クリスマス）`, items, memberIds: Object.freeze(items.map(item => item.id)) });
+}));
+// いまの売り場。'beatPoint'(ビートP交換所)・'breederPoint'(ブリーダーP交換所)・null(まだ売らない)。見るたびに数え直す
+const xmasIconSale = (nowMs = Date.now()) => {
+  if (nowMs < Date.parse(ASSISTANT_COSTUME_XMAS_START_AT)) return null;
+  return nowMs < Date.parse(ASSISTANT_COSTUME_XMAS_END_AT) ? 'beatPoint' : 'breederPoint';
+};
+const XMAS_MARKET_ICONS = XMAS_ICON_SETS.flatMap(set => set.items.map(item => ({
+  id: item.id,
+  name: item.name,
+  type: 'icon',
+  icon: item.icon,
+  cost: 1,
+  // ブリーダーP交換所に並ぶのはイベントが終わってから(それまでは false で出ない)
+  get shop() { return xmasIconSale() === 'breederPoint' ? undefined : false; },
+})));
+
 // きゅうこのカードが交換所に並ぶか。公開の印と「加入のお話を見たか」を見るたびに読む。
 // 見たかどうかは、ゲーム側が「見終えたお話の id」(mh_rhythm_event_story_v1。新しいキーは作らない)を読んだときに
 // setKyukoJoinSeenForShop で知らせる(保存の読み書きは Claude アプリの保存場所も通るので、ここでは直接読まない)
@@ -711,7 +748,8 @@ const BREEDER_MARKET_ITEMS = [
   ...KYUKO_MARKET_ICONS,
   ...SORASHIDO_MARKET_ICONS,
   ...ERUBIN_MARKET_ICONS,
-  ...HALLOWEEN_MARKET_ICONS
+  ...HALLOWEEN_MARKET_ICONS,
+  ...XMAS_MARKET_ICONS
 ];
 // ==================== アイコンのまとめ売り(2026-10-03・ユーザー指示) ====================
 // 同じキャラのアイコンが何種類もある(助手の8表情・モンスターの顔と円盤石など)。
@@ -729,6 +767,9 @@ const breederIconGroupKeyOf = (id) => {
   const halloween = /^(myua|kiki|momosuke)_halloween_/.exec(key);
   if (halloween) return `${halloween[1] === 'myua' ? 'mua' : halloween[1]}_halloween`;
   if (/^snegurochka_halloween_/.test(key)) return 'snegurochka_halloween';
+  // クリスマスのアイコンも通常・ハロウィンと混ぜない
+  const xmas = /^(myua|kiki|momosuke|dra|atsu|kyuko|sorashido|erubin)_santa_/.exec(key);
+  if (xmas) return `${xmas[1] === 'myua' ? 'mua' : xmas[1]}_santa`;
   if (key === 'mua' || /^myua_/.test(key)) return 'mua';
   if (key === 'dra' || /^dra_/.test(key)) return 'dra';
   if (key === 'kiki_icon' || /^kiki_/.test(key)) return 'kiki';
@@ -741,7 +782,8 @@ const breederIconGroupKeyOf = (id) => {
   return key.replace(/_disc_icon$/, '').replace(/_awakened_icon$/, '').replace(/_icon$/, '');
 };
 const BREEDER_ICON_GROUP_NAMES = Object.freeze({ mua:'みゅあ', dra:'ドラ', kiki:'きき', momosuke:'ももすけ', atsu:'あつ', kyuko:'きゅうこ', sorashido:'ソラシド', erubin:'えるびん',
-  mua_halloween:'みゅあ（ハロウィン）', kiki_halloween:'きき（ハロウィン）', momosuke_halloween:'ももすけ（ハロウィン）', snegurochka_halloween:'スネグーラチカ（ハロウィン）' });
+  mua_halloween:'みゅあ（ハロウィン）', kiki_halloween:'きき（ハロウィン）', momosuke_halloween:'ももすけ（ハロウィン）', snegurochka_halloween:'スネグーラチカ（ハロウィン）',
+  ...Object.fromEntries(XMAS_ICON_SETS.map(set => [set.groupId, set.name])) });
 // 中身が2つ以上あるキャラだけがまとまる(1つしかないアイコンは今までどおり1枚で売る)。並びは商品の並びのまま
 const BREEDER_ICON_GROUPS = (() => {
   const order = [];
@@ -1307,7 +1349,7 @@ const kikiTwintailCostume = Object.freeze({
 // ★期間はクリスマスイベントの期間(docs/progress/event-xmas-2026/PLAN.md)。イベントの定義を足したら、そちらと食い違わないように検査で見張る
 const ASSISTANT_COSTUME_XMAS_START_AT = '2026-11-28T10:00:00+09:00';
 const ASSISTANT_COSTUME_XMAS_END_AT = '2026-12-31T04:00:00+09:00';
-const MUA_SANTA_COSTUME_ART = "images/assistant/santa/face/myua_happy.PNG?v=0c64729b1058";
+const MUA_SANTA_COSTUME_ART = "images/assistant/santa/face/myua_happy.PNG?v=005260813756";
 const muaSantaCostume = Object.freeze({
   id: 'mua_santa_2026', assistantId: 'mua',
   name: 'クリスマス', desc: 'クリスマスの衣装。白いファーのピンクのサンタ服と、ぽんぽんのついたサンタ帽です。',
@@ -1321,7 +1363,7 @@ const muaSantaCostume = Object.freeze({
 });
 // ききのサンタ(2026-11-25 クリスマスイベント r1119-172)。みゅあのサンタと同じ売り方・同じ期間。絵は images/assistant/santa/kiki_*(立ち絵は stand-santa、全身画は fullbody/kiki_santa)。
 //   原本は tools/art-sources/assistants/kiki/santa/received/(加工せずに保管)。スカートは指示の緑と違って赤だが、社長はこのままでよい
-const KIKI_SANTA_COSTUME_ART = "images/assistant/santa/face/kiki_happy.PNG?v=d6d29eada6b3";
+const KIKI_SANTA_COSTUME_ART = "images/assistant/santa/face/kiki_happy.PNG?v=ecd06871d642";
 const kikiSantaCostume = Object.freeze({
   id: 'kiki_santa_2026', assistantId: 'kiki',
   name: 'クリスマス', desc: 'クリスマスの衣装。白いファーの真っ赤なサンタケープとスカートに、柊の飾りのサンタ帽です。',
@@ -1335,7 +1377,7 @@ const kikiSantaCostume = Object.freeze({
 });
 // ももすけのサンタ(2026-11-25 クリスマスイベント r1119-172)。みゅあ・ききのサンタと同じ売り方・同じ期間。絵は images/assistant/santa/momosuke_*(立ち絵は stand-santa、全身画は fullbody/momosuke_santa)。
 //   原本は tools/art-sources/assistants/momosuke/santa/received/(加工せずに保管)。服は指示の真っ赤ではなく濃いピンク(社長「このまま」)。寝顔は座った姿の絵
-const MOMOSUKE_SANTA_COSTUME_ART = "images/assistant/santa/face/momosuke_happy.PNG?v=e11ade57cb96";
+const MOMOSUKE_SANTA_COSTUME_ART = "images/assistant/santa/face/momosuke_happy.PNG?v=71db41524b0d";
 const momosukeSantaCostume = Object.freeze({
   id: 'momosuke_santa_2026', assistantId: 'momosuke',
   name: 'クリスマス', desc: 'クリスマスの衣装。白いファーの濃いピンクのサンタ服に、雪の結晶と柊の飾りのサンタ帽です。',
@@ -1350,7 +1392,7 @@ const momosukeSantaCostume = Object.freeze({
 // ソラシドのクリスマス(探偵の衣装・2026-11-25 クリスマスイベント r1119-172。お話では名探偵役)。みゅあ・きき・ももすけのサンタと同じ売り方・同じ期間。
 //   絵は images/assistant/santa/sorashido_*(立ち絵は stand-santa、全身画は fullbody/sorashido_santa)。原本は tools/art-sources/assistants/sorashido/santa/received/(加工せずに保管)。
 //   紺のブレザー・赤い蝶ネクタイ・丸い眼鏡・紺の半ズボン・サンタ帽の猫2匹。虫めがねは無く手の小物はノートPCだけ(社長「このまま」)
-const SORASHIDO_XMAS_COSTUME_ART = "images/assistant/santa/face/sorashido_happy.PNG?v=28d98c6ccb75";
+const SORASHIDO_XMAS_COSTUME_ART = "images/assistant/santa/face/sorashido_happy.PNG?v=a9890a008d04";
 const sorashidoXmasCostume = Object.freeze({
   id: 'sorashido_santa_2026', assistantId: 'sorashido',
   name: '探偵', desc: 'クリスマスの衣装。紺のブレザーに赤い蝶ネクタイ、丸い眼鏡の探偵の姿です。腰の猫のキーホルダーもサンタ帽をかぶっています。',
@@ -1365,7 +1407,7 @@ const sorashidoXmasCostume = Object.freeze({
 // あつのクリスマス(探偵の衣装・2026-11-25 クリスマスイベント r1119-172。お話ではソラシドのライバルの探偵役)。ほかの助手のクリスマスの衣装と同じ売り方・同じ期間。
 //   絵は images/assistant/santa/atsu_*(立ち絵は stand-santa、全身画は fullbody/atsu_santa)。原本は tools/art-sources/assistants/atsu/santa/received/(加工せずに保管)。
 //   王冠は指示の銀ではなく金・マフラーはグレーのチェック(社長「このまま」)。顔アイコンの切り方は tools/assistant/life-stand-cut.json の atsu:santa
-const ATSU_XMAS_COSTUME_ART = "images/assistant/santa/face/atsu_happy.PNG?v=fac1809954fd";
+const ATSU_XMAS_COSTUME_ART = "images/assistant/santa/face/atsu_happy.PNG?v=4475a67bd986";
 const atsuXmasCostume = Object.freeze({
   id: 'atsu_santa_2026', assistantId: 'atsu',
   name: '探偵', desc: 'クリスマスの衣装。黒いコートにグレーのチェックのマフラー、柊の飾りをつけた探偵の姿です。頭には金の王冠。',
@@ -1379,7 +1421,7 @@ const atsuXmasCostume = Object.freeze({
 });
 // えるびんのサンタ(2026-11-25 クリスマスイベント r1119-172)。ほかの助手のクリスマスの衣装と同じ売り方・同じ期間。絵は images/assistant/santa/erubin_*(立ち絵は stand-santa、全身画は fullbody/erubin_santa)。
 //   原本は tools/art-sources/assistants/erubin/santa/received/(加工せずに保管・大きさがばらばら・寝顔はプレゼント箱に座った横長)。顔アイコンの切り方は life-stand-cut.json の erubin:santa
-const ERUBIN_SANTA_COSTUME_ART = "images/assistant/santa/face/erubin_happy.PNG?v=57849ea73e8a";
+const ERUBIN_SANTA_COSTUME_ART = "images/assistant/santa/face/erubin_happy.PNG?v=bd5cc6d1daee";
 const erubinSantaCostume = Object.freeze({
   id: 'erubin_santa_2026', assistantId: 'erubin',
   name: 'クリスマス', desc: 'クリスマスの衣装。白いファーの赤いサンタのマントと頭巾に、金の刺しゅうの白い衣です。',
@@ -1394,7 +1436,7 @@ const erubinSantaCostume = Object.freeze({
 // きゅうこのサンタ(2026-11-25 クリスマスイベント r1119-172)。ほかの助手のクリスマスの衣装と同じ売り方・同じ期間。絵は images/assistant/santa/kyuko_*(立ち絵は stand-santa、全身画は fullbody/kyuko_santa)。
 //   原本は tools/art-sources/assistants/kyuko/santa/received/(加工せずに保管)。服は指示のローズピンクではなく黄色(社長「このまま」)。顔アイコンの切り方は life-stand-cut.json の kyuko:santa
 // ★冬の装い(kyuko_winter_v1)とは別の服。imageDir が違う(winter / santa)
-const KYUKO_SANTA_COSTUME_ART = "images/assistant/santa/face/kyuko_happy.PNG?v=7fd99e5f6344";
+const KYUKO_SANTA_COSTUME_ART = "images/assistant/santa/face/kyuko_happy.PNG?v=bae355928555";
 const kyukoSantaCostume = Object.freeze({
   id: 'kyuko_santa_2026', assistantId: 'kyuko',
   name: 'クリスマス', desc: 'クリスマスの衣装。白いファーの黄色いサンタケープと、音符と柊の飾りのサンタ帽です。',
@@ -1409,7 +1451,7 @@ const kyukoSantaCostume = Object.freeze({
 // ドラのサンタ(2026-11-25 クリスマスイベント r1119-172)。ほかの助手のクリスマスの衣装と同じ売り方・同じ期間。
 //   ドラは全身の絵が無く、ふだんも顔だけ。社長の選択で、クリスマスも顔だけのまま(全身の決まりの例外)。絵は images/assistant/santa/dra_*(384×384・ふだんと同じ大きさ)と face/(256×256)。
 //   立ち絵・全身画は無いので、ふだんと同じく顔の絵が立ち絵の代わりに出る。原本は tools/art-sources/assistants/dra/santa/received/(加工せずに保管)
-const DRA_SANTA_COSTUME_ART = "images/assistant/santa/face/dra_happy.PNG?v=fa847762c222";
+const DRA_SANTA_COSTUME_ART = "images/assistant/santa/face/dra_happy.PNG?v=c8bb49e5ae4e";
 const draSantaCostume = Object.freeze({
   id: 'dra_santa_2026', assistantId: 'dra',
   name: 'クリスマス', desc: 'クリスマスの衣装。緑のサンタ帽に、星の形のめがねと赤い鼻、もこもこのつけひげです。',
@@ -1593,7 +1635,8 @@ const assistantCostumeImage = (who, expression, kind) => {
   if (!costume || !costume.imageDir || !who.imagePrefix) return null;
   const list = Array.isArray(who.expressions) ? who.expressions : [];
   if (!list.includes(expression)) return null;
-  return `${costume.imageDir}/${kind === 'face' ? 'face/' : ''}${who.imagePrefix}_${expression}.PNG`;
+  const file = `${costume.imageDir}/${kind === 'face' ? 'face/' : ''}${who.imagePrefix}_${expression}.PNG`;
+  return typeof assistantArtFile === 'function' ? assistantArtFile(file) : file; // 重い絵を WebP にした服(data/assistants.js)
 };
 // ダイヤショップに並べる服は、ASSISTANT_COSTUMES の売り値(price.diamond)から**自動で**作る(手で書き写さない)。
 // type:'costume' が着替えの商品。買う処理(buyMarketItem)・所持の判定(isMarketItemOwned)・見た目はこの type を扱う。

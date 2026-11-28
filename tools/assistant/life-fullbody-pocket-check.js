@@ -39,7 +39,10 @@ const nearWhite = (d, i) => d[i + 3] >= 250 && Math.min(d[i], d[i + 1], d[i + 2]
 
 const worstEnclosedWhite = (file) => {
   const img = new Image();
-  img.src = fs.readFileSync(file);
+  // node-canvas は WebP を読めないので、WebP は Python(PIL)で PNG に直して渡す(2026-11-28 r1126-095)
+  img.src = /\.webp$/i.test(file)
+    ? require('child_process').execFileSync('python3', ['-c', 'import sys,io;from PIL import Image;b=io.BytesIO();Image.open(sys.argv[1]).save(b,"PNG",compress_level=1);sys.stdout.buffer.write(b.getvalue())', file], { maxBuffer: 512 * 1024 * 1024 })
+    : fs.readFileSync(file);
   const w = img.width, h = img.height;
   const cv = createCanvas(w, h);
   const ctx = cv.getContext('2d');
@@ -75,8 +78,8 @@ const worstEnclosedWhite = (file) => {
 };
 
 let failed = 0;
-for (const f of fs.readdirSync(DIR).filter((n) => /\.png$/.test(n)).sort()) {
-  const name = f.replace(/\.png$/, '');
+for (const f of fs.readdirSync(DIR).filter((n) => /\.(png|webp)$/.test(n)).sort()) { // WebP の服あり(2026-11-28 r1126-095)
+  const name = f.replace(/\.(png|webp)$/, '');
   if (name.includes('__')) continue; // 表情の絵は、元の絵(表情なし)と同じ作り方
   const { worst, at, h } = worstEnclosedWhite(path.join(DIR, f));
   // 許す大きさは、高さ 768 の絵で測った画素。元の大きさで作り直した絵(高さ約1530・2026-11-15 r1115-143)は、面積の比で読みかえる(同じ服の白が4倍の画素になる)

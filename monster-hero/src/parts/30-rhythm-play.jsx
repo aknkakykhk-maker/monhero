@@ -1371,7 +1371,7 @@ const rhythmRecordSeDelayOf=(isNewRecord,failed,practice,celebrateSeWhen)=>!isNe
 const rhythmFullComboBandMode=settings=>{const v=rhythmFxPick(settings,'fullComboBig');if(v==='OFF'||v==='NONE')return 'off';
   return 'full';};// ★2026-11-24(r1119-143 追記4): おまかせは軽量モード・演出量「最小」でも全部出す(控えめな形にしない)
 const RHYTHM_FULLCOMBO_CONFETTI=Object.freeze(Array.from({length:22},(_,k)=>Object.freeze({x:((k*37)%100)+.5,h:(k*47)%360,d:((k*13)%9)/20,s:.8+((k*7)%5)/10,r:((k*29)%2)?1:-1})));
-const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntries,onComplete,onExit,raidPlay=false,quickRunAward=null,beatRankAward=null,onRankBarFull=null,onRankBarDone=null,onRankBarStart=null,debugPlay=false,tutorial=false,calibrating=false,onApplyCalibration=null,multi=false,multiRewardScale=1,lineAdjust=null,breederName=''})=>{
+const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntries,onComplete,onExit,raidPlay=false,holdResultCount=false,quickRunAward=null,beatRankAward=null,onRankBarFull=null,onRankBarDone=null,onRankBarStart=null,debugPlay=false,tutorial=false,calibrating=false,onApplyCalibration=null,multi=false,multiRewardScale=1,lineAdjust=null,breederName=''})=>{
   // 判定ラインの位置の合わせ(lineAdjust)は、練習と同じ扱い(ライフを減らさない・記録を送らない)。練習の説明の帯は出さない
   const tutorialProp=tutorial;tutorial=tutorial||!!lineAdjust;
   // 合わせている間の地上の判定ラインの高さ(保存はまだ・親が持つ)。null なら設定のまま
@@ -2285,6 +2285,9 @@ useEffect(()=>{
     const run=runRef.current,ticks=note&&note._rhythmComboTicks;
     if(!run||!run.tickRules||!Array.isArray(ticks)||!ticks.length)return 0;
     const okNow=()=>Number(note._rhythmComboOk)||0,dropNow=()=>Number(note._rhythmComboDrop)||0;
+    // 曲の鑑賞では、外れて通った刻みも通ったとして数える(2026-11-28 台帳 r1126-100 追記1 社長「鑑賞でかくついたときにコンボが切れた。鑑賞なのに切れるのおかしい」)。
+    // 自動の手はコマごとに帯をなぞるので、コマが大きく飛ぶと帯から外れて見えることがある。鑑賞の成績はどこにも残さない(今までどおり)
+    if(lineAdjustRef.current&&lineAdjustRef.current.listen){const d=dropNow();if(d>0){note._rhythmComboOk=okNow()+d;note._rhythmComboDrop=0;}if(judgment)judgment='MARVELOUS';}
     if(judgment){const rest=ticks.length-okNow()-dropNow();if(rest>0){if(judgment==='BAD'||judgment==='MISS')note._rhythmComboDrop=dropNow()+rest;else note._rhythmComboOk=okNow()+rest;}note._rhythmComboIdx=ticks.length;}
     const ok=okNow()-(Number(note._rhythmComboSeenOk)||0),drop=dropNow()-(Number(note._rhythmComboSeenDrop)||0);
     if(!(ok>0)&&!(drop>0))return 0;
@@ -2302,7 +2305,10 @@ useEffect(()=>{
     }
     return ok;
   };
-  const applyJudgment=useCallback((note,judgment,deltaMs)=>{const _judgeT0=RHYTHM_PERF.enabled&&typeof performance!=='undefined'?performance.now():0;const run=runRef.current;if(!run||run.finished||run.paused||note.done)return;comboTicksRef.current(note,judgment);
+  const applyJudgment=useCallback((note,judgment,deltaMs)=>{const _judgeT0=RHYTHM_PERF.enabled&&typeof performance!=='undefined'?performance.now():0;const run=runRef.current;if(!run||run.finished||run.paused||note.done)return;/* 曲の鑑賞では、自動の手がいつも時刻どおりに取った扱いにする(2026-11-28 r1126-100 追記1)。自動の手はコマが来たときに押すので、
+   かくついて1コマが長いと押すのが遅れ、判定の窓を外れて MISS・BAD になりコンボが切れていた。鑑賞の成績はランキングにも自己ベストにも入れない(今までどおり) */
+if(lineAdjustRef.current&&lineAdjustRef.current.listen){deltaMs=0;judgment='MARVELOUS';}
+comboTicksRef.current(note,judgment);
 // 必死(ユグドラシル血統の能力)のあいだは、GREAT・EXCELLENTをMARVELOUSとして数える(判定だけをここで置き換える。
 // ずれは変えないので、ジャストのMARVELOUSになるのは本当にぴったりだったときだけ。2026-10-06 ユーザー指示)
 if(rhythmHisshiUpgrades(run.abilities,judgment,run.audio?.songTimeMs?.()??0))judgment='MARVELOUS';
@@ -2633,10 +2639,14 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
   // 数字は要素の文字を直接書き換える(中身は React が止まった形の値で持っている)。タップで止まった形へ飛ぶ
   const resultRootRef=useRef(null);
   const recordSeFireRef=useRef(null);
-  const resultCountId=view.status==='result'&&view.result&&view.result.countAnim?view.result.countAnim.id:null;
+  // holdResultCount(2026-11-28 r1126-098): レイドの「ダメージを与える演出」が上に重なっているあいだは、数え上げを始めない。
+  //   演出(4.3秒)の陰で数え上げ(3.3秒)と音が同時に走り、演出の SCORE・DAMAGE の数え上げのコマが落ちていた(社長「数字の動きがかくかく」)。
+  //   見えないまま終わっていた結果の数え上げは、演出が閉じてから始まる。止めているあいだも「数え上げ中」として、経験値の棒は待たせる
+  const resultCountIdRaw=view.status==='result'&&view.result&&view.result.countAnim?view.result.countAnim.id:null;
+  const resultCountId=holdResultCount?null:resultCountIdRaw;
   // 数え上げが終わった(タップで飛ばしたときも)印。それまで下の経験値の棒は動き出さない(r1119-166。同じ時に動くと数え上げのコマが落ちていた)
   const [resultCountDoneId,setResultCountDoneId]=useState(null);
-  const resultCountRunning=resultCountId!==null&&resultCountDoneId!==resultCountId;
+  const resultCountRunning=resultCountIdRaw!==null&&resultCountDoneId!==resultCountIdRaw;
   React.useLayoutEffect(()=>{
     const root=resultRootRef.current;
     if(!resultCountId||!root)return undefined;
@@ -3359,7 +3369,14 @@ const inputEnds=inputs=>{const run=runRef.current;if(!run||run.finished||run.pau
   const pressedSkyLanesNow=()=>[...(liveTouchSkySubLanesRef.current||[]),...(runRef.current?.activePointerSkyFeedback?.values()||[])];
   // 押せている帯のサブレーン(ビットの集まり。g=地上・s=空中)。tick が変わったときだけ書き換える(設定 holdTrace)
   const holdTraceRef=useRef({g:0,s:0});
-  const setPressedLanes=coordinates=>{const area=playAreaRef.current;if(!area)return;const active=new Set(Array.from(coordinates||[]).map(value=>Math.max(0,Math.min(RHYTHM_SUB_LANE_COUNT-1,Math.floor(Number(value))))).filter(Number.isFinite)),glowOpacity=settings.laneGlow==='NONE'?'0':settings.laneGlow==='LOW'?'.35':'1';let nodes=glowNodesRef.current;if(!nodes||!nodes.length||!nodes[0].isConnected)nodes=glowNodesRef.current=Array.from(area.querySelectorAll('[data-rhythm-sublane-feedback]'));nodes.forEach((el,index)=>{const pressed=active.has(index);const want=pressed?'true':'false';if(el.dataset.pressed===want&&(!pressed||el.style.opacity===glowOpacity))return;el.dataset.pressed=want;el.style.opacity=pressed?glowOpacity:'0';});if(typeof RHYTHM_CANVAS_RENDERER!=='undefined'&&typeof RHYTHM_CANVAS_RENDERER.setSkyPressed==='function'){{const skyMask=settings.holdTrace!==false?holdTraceRef.current.s:0;RHYTHM_CANVAS_RENDERER.setSkyPressed(skyMask?pressedSkyLanesNow().filter(v=>!(skyMask>>Math.floor(Number(v))&1)):pressedSkyLanesNow(),Number(glowOpacity));}paintIdleSkyPress();}};
+  const setPressedLanes=coordinates=>{const area=playAreaRef.current;if(!area)return;const glowOpacity=settings.laneGlow==='NONE'?'0':settings.laneGlow==='LOW'?'.35':'1';
+    /* 押しているサブレーンを印(ビット)にまとめる。指が動くたびに呼ばれる(iPhone の touchmove は指1本で毎秒60〜120回)ので、
+       前と同じ押し方・同じ濃さなら DOM に触らずに抜ける(2026-11-28 r1126-100「ワルキューレの原曲がかくつく」。以前は毎回 Set と配列を作り、
+       12本ぶんの dataset と style を読み直していた)。要素が作り直されたら覚えた印は捨てて書き直す。見た目は前と同じ */
+    let mask=0;if(coordinates){for(const value of coordinates){const n=Math.max(0,Math.min(RHYTHM_SUB_LANE_COUNT-1,Math.floor(Number(value))));if(Number.isFinite(n))mask|=1<<n;}}
+    let nodes=glowNodesRef.current;if(!nodes||!nodes.length||!nodes[0].isConnected){nodes=glowNodesRef.current=Array.from(area.querySelectorAll('[data-rhythm-sublane-feedback]'));glowNodesRef.lastKey=null;}
+    const glowKey=`${mask}|${glowOpacity}`;
+    if(glowNodesRef.lastKey!==glowKey){glowNodesRef.lastKey=glowKey;for(let index=0;index<nodes.length;index++){const el=nodes[index],pressed=((mask>>index)&1)===1;const want=pressed?'true':'false';/* 書いた値は要素に覚えておき、DOM を読み直さずに比べる(初めの1回だけ DOM を読む) */const curPressed=el._mhGlowPressed!==undefined?el._mhGlowPressed:el.dataset.pressed,curOpacity=el._mhGlowOpacity!==undefined?el._mhGlowOpacity:el.style.opacity;if(curPressed===want&&(!pressed||curOpacity===glowOpacity))continue;const nextOpacity=pressed?glowOpacity:'0';if(curPressed!==want)el.dataset.pressed=want;if(curOpacity!==nextOpacity)el.style.opacity=nextOpacity;el._mhGlowPressed=want;el._mhGlowOpacity=nextOpacity;}}if(typeof RHYTHM_CANVAS_RENDERER!=='undefined'&&typeof RHYTHM_CANVAS_RENDERER.setSkyPressed==='function'){{const skyMask=settings.holdTrace!==false?holdTraceRef.current.s:0;RHYTHM_CANVAS_RENDERER.setSkyPressed(skyMask?pressedSkyLanesNow().filter(v=>!(skyMask>>Math.floor(Number(v))&1)):pressedSkyLanesNow(),Number(glowOpacity));}paintIdleSkyPress();}};
   // 曲が始まる前の待機中(幕・READY→3→2→1)は、毎フレームの描画(tick)がまだ動いていない。地上のレーンの光は画面の要素なので光るが、
   // 空中のレーンの光は canvas に描くので、そのままだと光らなかった(2026-10-13 社長「待機中、地上は光るのに空中は光らない」)。
   // 指の出入りのたびに、空中の押した光だけをここで1回描く(叩いた光・ノーツはまだ無い)。止めている間(ポーズ)はノーツの絵を残すので描かない
