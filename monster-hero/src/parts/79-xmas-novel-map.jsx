@@ -53,6 +53,7 @@ const XMAS_NOVEL_MAP_CSS = `
 .mh-nvm-orn[data-unseen] small { color: #3f4b70; }
 .mh-nvm-lane { margin: 14px 0 0; padding: 4px 10px; border-left: 3px solid #b8913a; font-size: 11px; font-weight: 900; color: #e8c873; letter-spacing: .08em; }
 .mh-nvm-lane[data-dark] { border-left-color: #3a4670; color: #5d6a90; }
+.mh-nvm-lane[data-if] { border-left-style: dashed; } /* もしもの道(真グッドのあとだけ・r1126-108 第4弾)は金の点線 */
 .mh-nvm-foot { margin-top: 16px; padding: 10px 12px; border-radius: 12px; border: 1px solid #3a4670; font-size: 11px; color: #9fb0d8; line-height: 1.6; background: rgba(20,33,74,.6); }
 .mh-nvm-sheet { position: absolute; inset: 0; z-index: 2; display: flex; align-items: flex-end; background: rgba(5,8,20,.55); }
 .mh-nvm-panel { width: 100%; padding: 16px 16px calc(max(16px, env(safe-area-inset-bottom)) + 6px); border-radius: 18px 18px 0 0; background: linear-gradient(#18244d, #0d1634); border-top: 2px solid #e8c873; box-shadow: 0 -10px 30px rgba(0,0,0,.5); }
@@ -204,12 +205,14 @@ const XmasNovelMap = ({ script, save, route, playerName, onRedo, onBack, onClose
             {lane.chapters.map((id) => model.chapters[id]).filter(Boolean).map((c) => [chapterItem(c), ...c.nodes.map(nodeItem)])}
           </div>
         ))}
+        {past && <div className="mh-nvm-lane" data-if="" data-xmas-novel-map-lane="if" data-dark={pastOpen ? undefined : ''}>{pastOpen ? '過去編ともしもの道' : '？？？へ続く道'}</div>}
         {past && (
           <div className="mh-nvm-it mh-nvm-chap" data-xmas-novel-map-chapter={past.id} data-dark={pastOpen ? undefined : ''}>
             <div className="mh-nvm-door">{pastOpen ? xmasNovelChapterLabel(past) : '🔒'}</div>
             <div className="mh-nvm-cname">{pastOpen ? past.title : '？？？'}</div>
           </div>
         )}
+        {past && pastOpen && model.chapters[past.id] && model.chapters[past.id].nodes.map(nodeItem)}
         <div className="mh-nvm-foot">明るい所は読んだ所。↺ を押すと、その分かれ道の直前から読み直せます(手がかり帳・登場人物パネル・選んだ派も、その時のまま)。一発で当てた記録と見たエンドは消えません。</div>
       </div>
       {pick && pickedSnap && (
