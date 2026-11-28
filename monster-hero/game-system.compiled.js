@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: dee3d36b9bdb8132
+// source-sha256: 53fed0632dd4dc26
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -8588,6 +8588,10 @@ const Audio_ = (() => {
     pageHidden = false;
   let uiBus = null,
     uiSeVolumePct = 0;
+  let nvVol = null;
+  const nvScale = k => nvVol && Number.isFinite(nvVol[k]) ? Math.max(0, Math.min(1, nvVol[k])) : 1;
+  let nvAmbBus = null,
+    nvClockBus = null;
   let backgroundSeQuiet = false;
   let enabled = false;
   const activeRhythmGains = new Set();
@@ -8633,7 +8637,7 @@ const Audio_ = (() => {
           const toneCtx = Tone.getContext && Tone.getContext();
           if (toneCtx && 'updateInterval' in toneCtx) toneCtx.updateInterval = 0.25;
         } catch (e) {}
-        seBus = new Tone.Gain(_gainFromPct(seVolumePct)).toDestination();
+        seBus = new Tone.Gain(_gainFromPct(seVolumePct) * nvScale('se')).toDestination();
         uiBus = new Tone.Gain(_gainFromPct(uiSeVolumePct)).toDestination();
         reverb = new Tone.Reverb({
           decay: 2.4,
@@ -8817,7 +8821,7 @@ const Audio_ = (() => {
     masterOut.connect(analyser);
     analyser.connect(ctx.destination);
     bgmGain = ctx.createGain();
-    bgmGain.gain.value = _bgmGain(bgmVolumePct);
+    bgmGain.gain.value = _bgmGain(bgmVolumePct) * nvScale('bgm');
     bgmGain.connect(masterOut);
   };
   const getAudioCtx = () => {
@@ -9043,7 +9047,7 @@ const Audio_ = (() => {
       try {
         bgmGain.gain.cancelScheduledValues(0);
       } catch (e) {}
-      bgmGain.gain.value = Math.min(1, _bgmGain(bgmVolumePct) * safeTrackGain(track));
+      bgmGain.gain.value = Math.min(1, _bgmGain(bgmVolumePct) * safeTrackGain(track) * nvScale('bgm'));
     }
   };
   const startBgmBuffer = (key, track, buffer, request) => {
@@ -10407,11 +10411,48 @@ const Audio_ = (() => {
   const uiSeVolume = () => uiSeVolumePct;
   const setSeVolume = pct => {
     seVolumePct = pct;
-    if (seBus && Tone) {
+    nvApplyBuses();
+  };
+  const nvApplyBuses = () => {
+    if (!Tone) return;
+    const base = _gainFromPct(seVolumePct);
+    if (seBus) {
       try {
-        seBus.gain.rampTo(_gainFromPct(pct), 0.05);
+        seBus.gain.rampTo(base * nvScale('se'), 0.05);
       } catch (e) {}
     }
+    if (nvAmbBus) {
+      try {
+        nvAmbBus.gain.rampTo(base * nvScale('amb'), 0.05);
+      } catch (e) {}
+    }
+    if (nvClockBus) {
+      try {
+        nvClockBus.gain.rampTo(base * nvScale('clock'), 0.05);
+      } catch (e) {}
+    }
+  };
+  const nvBusOf = k => {
+    if (!Tone) return null;
+    const base = _gainFromPct(seVolumePct);
+    if (k === 'amb') {
+      if (!nvAmbBus) nvAmbBus = new Tone.Gain(base * nvScale('amb')).toDestination();
+      return nvAmbBus;
+    }
+    if (!nvClockBus) nvClockBus = new Tone.Gain(base * nvScale('clock')).toDestination();
+    return nvClockBus;
+  };
+  const setNovelVolume = v => {
+    nvVol = v && typeof v === 'object' ? {
+      bgm: Number(v.bgm),
+      se: Number(v.se),
+      amb: Number(v.amb),
+      clock: Number(v.clock)
+    } : null;
+    nvApplyBuses();
+    try {
+      applyTrackGain(resolveTrack(previewKey || currentKey));
+    } catch (e) {}
   };
   const setBgmVolume = pct => {
     bgmVolumePct = pct;
@@ -11509,6 +11550,44 @@ const Audio_ = (() => {
         } catch (e) {}
       }, 300);
     },
+    nvClockTick: async high => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const bus = nvBusOf('clock') || seBus;
+      const t = Tone.now();
+      const s = new Tone.MetalSynth({
+        frequency: high ? 640 : 470,
+        envelope: {
+          attack: 0.001,
+          decay: 0.035,
+          release: 0.02
+        },
+        harmonicity: 3.1,
+        modulationIndex: 10,
+        resonance: high ? 3800 : 3000,
+        octaves: 0.8,
+        volume: -12
+      }).connect(bus);
+      s.triggerAttackRelease('64n', t);
+      const k = new Tone.MembraneSynth({
+        pitchDecay: 0.008,
+        octaves: 2,
+        envelope: {
+          attack: 0.001,
+          decay: 0.05,
+          sustain: 0
+        },
+        volume: -20
+      }).connect(bus);
+      k.triggerAttackRelease(high ? 'C4' : 'G3', '64n', t);
+      setTimeout(() => {
+        try {
+          s.dispose();
+          k.dispose();
+        } catch (e) {}
+      }, 300);
+    },
     nvCreak: async () => {
       if (!enabled) return;
       await ensure();
@@ -12036,7 +12115,7 @@ const Audio_ = (() => {
     const nodes = [];
     const timers = [];
     try {
-      const g = new Tone.Gain(0).connect(seBus);
+      const g = new Tone.Gain(0).connect(nvBusOf('amb') || seBus);
       nodes.push(g);
       if (kind === 'wind' || kind === 'blizzard' || kind === 'room') {
         const n = new Tone.Noise(kind === 'room' ? 'brown' : 'pink');
@@ -12230,6 +12309,10 @@ const Audio_ = (() => {
   const videoGain = () => enabled && bgmVolumePct > 0 ? _gainFromPct(bgmVolumePct) : 0;
   return {
     nvAmbient,
+    setNovelVolume,
+    novelVolume: () => nvVol ? {
+      ...nvVol
+    } : null,
     currentBgmKey: () => currentKey,
     isBackgroundSeQuiet,
     setVideoHold,
@@ -132958,6 +133041,8 @@ const XMAS_NOVEL_CSS = `
   background: radial-gradient(120% 70% at 50% 45%, rgba(18,32,72,.9), rgba(2,5,14,.97)); animation: mh-nv-fade .6s ease both; }
 .mh-nv-rule { width: min(70vw, 360px); height: 1px; background: linear-gradient(90deg, transparent, #e8c46a, transparent); margin: 14px auto; }
 .mh-nv-gold { color: #f3d98e; text-shadow: 0 0 12px rgba(232,196,106,.35), 0 2px 2px rgba(0,0,0,.6); }
+.mh-nv-vol-range { flex: 1 1 auto; min-width: 0; height: 30px; accent-color: #e8c46a; }
+.mh-nv-vol-row { padding: 8px 10px; border-radius: 10px; background: rgba(255,255,255,.04); box-shadow: inset 0 0 0 1px rgba(232,196,106,.25); }
 .mh-nv-sheet { position: absolute; inset: 0; z-index: 9; display: flex; align-items: flex-end; justify-content: center; background: rgba(0,0,0,.6); animation: mh-nv-fade .2s ease both; }
 .mh-nv-panel { width: min(100%, 720px); max-height: 92%; display: flex; flex-direction: column; border-radius: 16px 16px 0 0; padding: 14px 14px max(14px, env(safe-area-inset-bottom));
   background: linear-gradient(180deg, #13214a, #070e26); box-shadow: 0 0 0 1px rgba(232,196,106,.7); }
@@ -135456,7 +135541,138 @@ const XMAS_NOVEL_ICONS = {
   log: '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>',
   book: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><circle cx="12" cy="10" r="3"/><line x1="14.2" y1="12.2" x2="16.5" y2="14.5"/>',
   map: '<polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21 3 6"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/>',
+  vol: '<polygon points="4 9 8 9 13 5 13 19 8 15 4 15 4 9"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19 6a8.5 8.5 0 0 1 0 12"/>',
   menu: '<line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/>'
+};
+const XMAS_NOVEL_VOLUME_KEY = 'mh_xmas_novel_volume_v1';
+const XMAS_NOVEL_VOLUME_KINDS = Object.freeze([{
+  k: 'bgm',
+  label: '曲',
+  note: '流れる曲'
+}, {
+  k: 'se',
+  label: '効果音',
+  note: '扉・足音・鐘などの1回の音'
+}, {
+  k: 'amb',
+  label: '環境音',
+  note: '風・吹雪・暖炉・柱時計など、ずっと鳴る音'
+}, {
+  k: 'clock',
+  label: '時計の音',
+  note: '選ぶのを待つ間のチクタク'
+}]);
+const xmasNovelVolumeNormalize = raw => {
+  const src = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const out = {
+    v: 1
+  };
+  XMAS_NOVEL_VOLUME_KINDS.forEach(({
+    k
+  }) => {
+    const n = Number(src[k]);
+    out[k] = Number.isFinite(n) ? Math.max(0, Math.min(100, Math.round(n))) : 100;
+  });
+  return out;
+};
+const xmasNovelVolumeScale = pct => pct <= 0 ? 0 : Math.pow(10, (Math.min(100, pct) - 100) * 0.3 / 20);
+const xmasNovelVolumeScales = vol => {
+  const v = xmasNovelVolumeNormalize(vol);
+  return {
+    bgm: xmasNovelVolumeScale(v.bgm),
+    se: xmasNovelVolumeScale(v.se),
+    amb: xmasNovelVolumeScale(v.amb),
+    clock: xmasNovelVolumeScale(v.clock)
+  };
+};
+const xmasNovelVolumeLoad = async () => {
+  try {
+    return xmasNovelVolumeNormalize(await storeGet(XMAS_NOVEL_VOLUME_KEY, null, false));
+  } catch (e) {
+    return xmasNovelVolumeNormalize(null);
+  }
+};
+const xmasNovelVolumeStore = async vol => {
+  try {
+    await storeSet(XMAS_NOVEL_VOLUME_KEY, xmasNovelVolumeNormalize(vol), false);
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
+const xmasNovelVolumeApply = vol => {
+  try {
+    if (typeof Audio_ !== 'undefined' && Audio_ && typeof Audio_.setNovelVolume === 'function') Audio_.setNovelVolume(vol ? xmasNovelVolumeScales(vol) : null);
+  } catch (e) {}
+};
+const XmasNovelVolumeSheet = ({
+  vol,
+  onChange,
+  onClose
+}) => {
+  const v = xmasNovelVolumeNormalize(vol);
+  const last = useRef({});
+  const set = (k, n) => {
+    if (n > 0) last.current[k] = n;
+    onChange({
+      ...v,
+      [k]: n
+    });
+  };
+  return React.createElement("div", {
+    className: "mh-nv-sheet",
+    "data-xmas-novel-sheet": "volume",
+    onClick: onClose
+  }, React.createElement("div", {
+    className: "mh-nv-panel",
+    onClick: e => e.stopPropagation()
+  }, React.createElement("div", {
+    className: "mh-nv-serif mh-nv-gold mb-1 text-center text-[18px] font-black"
+  }, "音量"), React.createElement("div", {
+    className: "mh-nv-plain mb-3 text-center text-[11px] font-bold text-slate-300"
+  }, "事件簿の中だけの音量です(ゲーム全体の音量の設定に掛かります)"), React.createElement("div", {
+    className: "space-y-3"
+  }, XMAS_NOVEL_VOLUME_KINDS.map(({
+    k,
+    label,
+    note
+  }) => React.createElement("div", {
+    key: k,
+    "data-xmas-novel-volume": k,
+    className: "mh-nv-vol-row"
+  }, React.createElement("div", {
+    className: "flex items-baseline justify-between gap-2"
+  }, React.createElement("span", {
+    className: "mh-nv-serif text-[14px] font-black text-amber-100"
+  }, label), React.createElement("span", {
+    className: "mh-nv-plain text-[11px] font-bold text-slate-400"
+  }, note)), React.createElement("div", {
+    className: "mt-1 flex items-center gap-2"
+  }, React.createElement("input", {
+    type: "range",
+    min: "0",
+    max: "100",
+    step: "5",
+    value: v[k],
+    "aria-label": `${label}の音量`,
+    className: "mh-nv-vol-range",
+    "data-xmas-novel-volume-range": k,
+    onChange: e => set(k, Math.round(Number(e.target.value) || 0))
+  }), React.createElement("span", {
+    className: "mh-nv-plain w-9 text-right text-[12px] font-black text-amber-100",
+    "data-xmas-novel-volume-value": k
+  }, v[k] <= 0 ? '0' : v[k]), React.createElement("button", {
+    type: "button",
+    className: "mh-nv-btn",
+    "data-xmas-novel-volume-mute": k,
+    "data-on": v[k] <= 0 ? '' : undefined,
+    onClick: () => set(k, v[k] > 0 ? 0 : last.current[k] || 100)
+  }, v[k] > 0 ? '消す' : '戻す'))))), React.createElement("button", {
+    type: "button",
+    className: "mh-nv-btn wide mt-4",
+    "data-xmas-novel-volume-close": true,
+    onClick: onClose
+  }, "閉じる")));
 };
 const xmasNovelLoad = async (script = XMAS_NOVEL_SCRIPT) => {
   try {
@@ -135545,7 +135761,7 @@ const XmasNovelScreen = ({
     if (!sheet || typeof sheet !== 'object' || !sheet.q) return undefined;
     let high = true;
     const tick = () => {
-      const fn = xmasNovelSeFn('nvTick');
+      const fn = xmasNovelSeFn('nvClockTick') || xmasNovelSeFn('nvTick');
       if (fn) fn(high);
       high = !high;
     };
@@ -135560,6 +135776,54 @@ const XmasNovelScreen = ({
   const [skip, setSkip] = useState(false);
   const [log, setLog] = useState([]);
   const [confirmNew, setConfirmNew] = useState(false);
+  const [vol, setVol] = useState(() => xmasNovelVolumeNormalize(null));
+  const [volOpen, setVolOpen] = useState(false);
+  const volTimer = useRef(null);
+  useEffect(() => {
+    let alive = true;
+    xmasNovelVolumeLoad().then(v => {
+      if (alive) setVol(v);
+    });
+    return () => {
+      alive = false;
+      if (volTimer.current) clearTimeout(volTimer.current);
+      xmasNovelVolumeApply(null);
+    };
+  }, []);
+  useEffect(() => {
+    xmasNovelVolumeApply(vol);
+  }, [vol]);
+  const changeVol = next => {
+    const v = xmasNovelVolumeNormalize(next);
+    setVol(v);
+    if (volTimer.current) clearTimeout(volTimer.current);
+    volTimer.current = setTimeout(() => {
+      void xmasNovelVolumeStore(v);
+    }, 300);
+  };
+  const volBtn = React.createElement("button", {
+    type: "button",
+    className: "mh-nv-btn",
+    "data-xmas-novel-volume-open": true,
+    onClick: () => setVolOpen(true),
+    "aria-label": "音量"
+  }, React.createElement(XmasNovelIcon, {
+    d: XMAS_NOVEL_ICONS.vol
+  }), React.createElement("span", {
+    className: "hidden sm:inline"
+  }, "音量"));
+  const volSheet = volOpen ? React.createElement(XmasNovelVolumeSheet, {
+    vol: vol,
+    onChange: changeVol,
+    onClose: () => {
+      if (volTimer.current) {
+        clearTimeout(volTimer.current);
+        volTimer.current = null;
+      }
+      void xmasNovelVolumeStore(vol);
+      setVolOpen(false);
+    }
+  }) : null;
   const saveRef = useRef(null);
   const [route, setRoute] = useState(null);
   const routeRef = useRef(null);
@@ -136216,7 +136480,7 @@ const XmasNovelScreen = ({
       className: "mh-nv-top"
     }, React.createElement("span", {
       className: "mh-nv-where"
-    }), React.createElement("button", {
+    }), volBtn, React.createElement("button", {
       type: "button",
       className: "mh-nv-btn",
       "data-xmas-novel-close": true,
@@ -136454,7 +136718,7 @@ const XmasNovelScreen = ({
       type: "button",
       className: "mh-nv-btn wide mt-4",
       onClick: () => setMode('title')
-    }, "戻る"))));
+    }, "戻る"))), volSheet);
   }
   const isBand = row && row.t === 'band';
   const isLine = row && row.t === 'line';
@@ -136676,7 +136940,7 @@ const XmasNovelScreen = ({
     "aria-label": "地図"
   }, React.createElement(XmasNovelIcon, {
     d: XMAS_NOVEL_ICONS.map
-  }), React.createElement("span", null, "地図")), React.createElement("button", {
+  }), React.createElement("span", null, "地図")), volBtn, React.createElement("button", {
     type: "button",
     className: "mh-nv-btn",
     "data-xmas-novel-menu": true,
@@ -136824,7 +137088,7 @@ const XmasNovelScreen = ({
     onRedo: redoFrom,
     onBack: backFromRedo,
     onClose: () => setSheet(null)
-  }), sheet && sheet !== 'map' && React.createElement("div", {
+  }), volSheet, sheet && sheet !== 'map' && React.createElement("div", {
     className: "mh-nv-sheet",
     "data-xmas-novel-sheet": typeof sheet === 'string' ? sheet : sheet.kind,
     onClick: () => {
