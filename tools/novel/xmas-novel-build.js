@@ -43,9 +43,9 @@ const SOUND_MARKS = { 鐘: 'bell', 時計: 'tick', 柱時計: 'tick', 手紙: 'l
 // (手紙) … 紙の手紙を赤い字で浮かべる(文の「／」で改行・r1126-058)
 const ENDING_KIND = { G: 'good', N: 'normal', B: 'bad', A: 'another', X: 'forced', M: 'accuse', K: 'accuse', O: 'omake', L: 'unsolved' }; // K・L は r1126-108(動機ちがいの名指し・迷宮入り)
 // ID で決まる種類(先頭の英字と違う物)。END-G2 は真ルートの終章の選びまちがい「真相のその先」(r1126-108 第3弾)
-const ENDING_KIND_ID = { 'END-G2': 'truebad' };
+const ENDING_KIND_ID = { 'END-G2': 'truebad' }; // I … もしもの道(真グッドのあとだけ・r1126-108 第4弾)の END-I1〜I3
 // もしもの話(r1126-115): 別ジャンルの話は ifroute、助手の視点の編は pov。id の頭文字は if-routes-r1126-115/README.md の割り振り表で決める
-Object.assign(ENDING_KIND, { R: 'ifroute', H: 'ifroute', T: 'ifroute', W: 'ifroute', Y: 'ifroute', PD: 'pov', PM: 'pov', PK: 'pov', PE: 'pov', PO: 'pov', PQ: 'pov' });
+Object.assign(ENDING_KIND, { I: 'ifroute', R: 'ifroute', H: 'ifroute', T: 'ifroute', W: 'ifroute', Y: 'ifroute', PD: 'pov', PM: 'pov', PK: 'pov', PE: 'pov', PO: 'pov', PQ: 'pov' });
 const CHAPTER_NO = { 序章: 0, 終章: 9 };
 
 const warn = [];
@@ -245,6 +245,8 @@ const parseQuestion = (id, raw) => {
       if (/【正解】/.test(t)) { (q.answer = q.answer || []).push(i); t = t.replace(/【正解】/g, ''); }
       // 【二周目】… 解放された選択肢に印(✦)を付ける。付けなければ印なし(わざと気づかせない・r1126-115)
       if (/【二周目】/.test(t)) { opt.mark = 1; t = t.replace(/【二周目】/g, ''); }
+      // 【もしも】… もしもの道の入口(r1126-108 第4弾)。金の文字で出し、下に「なぜか、そうしなければいけない気がする」
+      if (/【もしも】/.test(t)) { opt.gold = 1; t = t.replace(/【もしも】/g, ''); }
       t = t.replace(/\[([^\]]*)\]/g, (_, c) => { opt.c = parseCond(c); return ''; });
       t = t.replace(/\{([^}]*)\}/g, (_, c) => { opt.set = parseSets(c); return ''; });
       const tt = takeTo(t); if (tt.to) opt.to = tt.to;
