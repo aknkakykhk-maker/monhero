@@ -706,7 +706,9 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
   //   (ASSISTANT_PEER_STORE.state.homeWaiting)、押されたら(homeOpenAt)その掛け合いの窓を開く。開いた掛け合いの id を覚え、次の掛け合いはまた印から。
   //   窓が入口・イベントの帯・ボスを隠していた(点検 r1126-070 で 24枚中10枚)。見返し(replay)はこれまでどおりすぐ開く
   const [homeOpenedId, setHomeOpenedId] = React.useState(null);
-  const homeWaiting = scene === 'home' && !!cur && !cur.replay && homeOpenedId !== cur.talk.id;
+  // 10:00 より前(前の HOME)は今までどおりすぐ開く(r1126-086 追記1)
+  const homeV2Now = typeof homeV2At === 'function' ? homeV2At() : true;
+  const homeWaiting = homeV2Now && scene === 'home' && !!cur && !cur.replay && homeOpenedId !== cur.talk.id;
   React.useEffect(() => { if (!!ASSISTANT_PEER_STORE.state.homeWaiting !== homeWaiting) ASSISTANT_PEER_STORE.set({ homeWaiting }); }, [homeWaiting]);
   React.useEffect(() => () => { if (ASSISTANT_PEER_STORE.state.homeWaiting) ASSISTANT_PEER_STORE.set({ homeWaiting: false }); }, []);
   const homeOpenRef = React.useRef(st.homeOpenAt || 0);
@@ -720,7 +722,7 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
   //   出す位置だけを HOME の部品の位置から測って決める(中身は変えない)。縦とタブレットは顔の下、背の低い横は帯の右。
   //   下の入口(ドック)の上端までに収め、収まらない分は窓の中で送る。測れないときは今までどおり画面の下
   const [homeBox, setHomeBox] = React.useState(null);
-  const homeShown = scene === 'home' && !!cur && !homeWaiting && !(peerFolded && !cur.replay);
+  const homeShown = homeV2Now && scene === 'home' && !!cur && !homeWaiting && !(peerFolded && !cur.replay);
   React.useEffect(() => {
     if (!homeShown || typeof document === 'undefined') { setHomeBox(null); return undefined; }
     const measure = () => {

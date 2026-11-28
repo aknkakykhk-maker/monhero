@@ -208,7 +208,7 @@ function AssistantLifeBattleHall({ metIds }) {
       {typeof AssistantMasmonTrainWatchHost === 'function' && <AssistantMasmonTrainWatchHost/>}
       <p className="text-[12px] font-black text-amber-200" style={JA_WRAP_STYLE}>{jaWrap('🏡 いまモンヒロバトルにいる助手')}</p>
       {ids.map(id => (
-        <AssistantLifeMapRow key={id} id={id} place="battle" life={life} cheerMsg={cheerMsg} setCheerMsg={setCheerMsg} noSuccess
+        <AssistantLifeMapRow key={id} id={id} place="battle" life={life} cheerMsg={cheerMsg} setCheerMsg={setCheerMsg} noSuccess={typeof homeV2At !== 'function' || homeV2At()}
           onRoom={(rid) => { try { ASSISTANT_LIFE_STORE.set({ open: true, focus: rid }); } catch (_) {} }}/>))}
     </section>);
 }

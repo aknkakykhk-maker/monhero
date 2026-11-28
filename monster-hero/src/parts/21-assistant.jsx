@@ -350,6 +350,19 @@ const useAssistantBubbleState = () => {
 //   保存が無い・壊れているときは「切」(顔の丸だけの畳んだ形)にした(2026-11-27 台帳 r1126-073・HOME の作り直しの直し2。前の既定は「入」)。
 //   自分で「入」を選んだ人(true を保存している人)は今までどおり吹き出しが出る
 //   助手の告知(アップデートのお知らせ)はこの部品を使っていないので、この設定の影響を受けない
+// HOME の作り直し(r1126-073)を出す時刻(2026-11-28 10:00 日本時間・台帳 r1126-086 追記1)。これより前は前の HOME と前の出し方
+const HOME_V2_FROM = Date.parse('2026-11-28T10:00:00+09:00');
+const homeV2At = (t = Date.now()) => t >= HOME_V2_FROM;
+// 描いている間に 10:00 をまたいでも切り替わるよう、15秒ごとに見直す
+const useHomeV2 = () => {
+  const [v2, setV2] = useState(() => homeV2At());
+  useEffect(() => {
+    if (v2) return undefined;
+    const id = setInterval(() => { if (homeV2At()) setV2(true); }, 15000);
+    return () => clearInterval(id);
+  }, [v2]);
+  return v2;
+};
 const HOME_ASSISTANT_COMMENT_KEY = 'mh_home_assistant_comment_v1';
 const HOME_ASSISTANT_COMMENT_STORE = (() => {
   let state = { on: false, loaded: false };
@@ -361,16 +374,17 @@ const HOME_ASSISTANT_COMMENT_STORE = (() => {
     load() {
       if (loading) return loading;
       loading = (async () => {
-        let on = false;
-        try { on = (await storeGet(HOME_ASSISTANT_COMMENT_KEY, null, false)) === true; } catch (_) { /* 読めなければ「切」(畳んだ形) */ }
-        state = { on, loaded: true };
+        let on = false, explicit = false;
+        try { const v = await storeGet(HOME_ASSISTANT_COMMENT_KEY, null, false); explicit = v === true || v === false; on = v === true; } catch (_) { /* 読めなければ「切」(畳んだ形) */ }
+        // explicit … 自分で入/切を選んで保存してあるか。10:00 より前の HOME は、選んでいない人を前の既定「入」で出す(r1126-086 追記1)
+        state = { on, explicit, loaded: true };
         emit();
       })();
       return loading;
     },
     subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
     setOn(next) {
-      state = { ...state, on: next === true, loaded: true };
+      state = { ...state, on: next === true, explicit: true, loaded: true };
       emit();
       try { void Promise.resolve(storeSet(HOME_ASSISTANT_COMMENT_KEY, state.on)).catch(() => {}); } catch (_) { /* 保存できなくてもこの回は効く */ }
     },

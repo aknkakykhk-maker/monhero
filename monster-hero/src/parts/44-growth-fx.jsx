@@ -773,7 +773,7 @@ const GrowthFxLayer = ({ screen, load }) => {
   // Lvアップを貯めているあいだも、ほかの全面(アイテムのカードなど)は先に出す
   const sheet = sheets.find(s => growthFxSheetReady(s, vis, atHome)) || null;
   // HOME では小さい札は1枚だけ(2026-11-27 台帳 r1126-073・すぐできる直し8)。左右の下に2〜3枚並ぶと端が散らかった。残りは前の札が消えたあとに出る
-  const smallMax = atHome ? 1 : GROWTH_FX_SMALL_MAX;
+  const smallMax = atHome && (typeof homeV2At !== 'function' || homeV2At()) ? 1 : GROWTH_FX_SMALL_MAX;
   return (
     <>
       {!holdAll && !sheet && small.length > 0 && <GrowthFxChipsBox level={level} count={Math.min(small.length, smallMax)}>

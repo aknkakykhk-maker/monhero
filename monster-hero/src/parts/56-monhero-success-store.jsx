@@ -602,7 +602,7 @@ function MonheroSuccessHomeEntry({ callNameOf, bondLvOf, onOpenChange }) {
             (ホーム略称「サクセス」は 2026-11-17 の一新で一時使ったが、同日のあっくん追加指示でフルネームへ戻した) */}
         {/* 2026-11-23 r1119-130 社長「モンビーのイベント開催中と同じ作りにすればいい」: 傾けた10pxの字がにじんでいたので、
             モンヒロビートの入口の「開催中」の札と同じ部品(HOME_EVENT_BADGE_STYLE・光り方の mh-home-event-badge)にそろえる。文と黄色はそのまま */}
-        <em className="rb mh-home-event-badge" aria-hidden="true" style={HOME_EVENT_BADGE_STYLE}>β版 開幕！</em>
+        <em className="rb mh-home-event-badge" aria-hidden="true" style={typeof homeV2At === 'function' && !homeV2At() && typeof HOME_EVENT_BADGE_STYLE_V1 !== 'undefined' ? HOME_EVENT_BADGE_STYLE_V1 : HOME_EVENT_BADGE_STYLE}>β版 開幕！</em>
         <span className="pic"><img src="images/home/facility-success.webp" alt="" draggable={false}/></span>
         <span className="txt"><span className="nm">モンヒロサクセス</span><span className="sb">育成</span></span>
       </button>

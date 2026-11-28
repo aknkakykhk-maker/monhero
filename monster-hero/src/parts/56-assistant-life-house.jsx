@@ -1808,7 +1808,87 @@ function AssistantLifeSpentMark({ size = 20 }) {
 // 対応表(ASSISTANT_LIFE_SPOT_FAC)はそのまま。家と町にいる助手は「ライフ」のバッジに集まる
 const ASSISTANT_LIFE_FACILITY_SEL = Object.freeze({ rhythm: 'main.mh-home-scene [data-home-fac="rhythm"]', card: 'main.mh-home-scene [data-home-fac="card"]', management: 'main.mh-home-scene [data-home-fac="management"]', temple: 'main.mh-home-scene [data-home-fac="temple"]', market: 'main.mh-home-scene [data-home-fac="market"]', battle: 'main.mh-home-scene [data-home-fac="battle"]', life: 'main.mh-home-scene [data-home-fac="life"]' });
 const ASSISTANT_LIFE_BADGE_FACE = 24; // 顔バッジの顔の大きさ(px・固定)
-function AssistantLifeHomeFaces({ metIds }) {
+// HOME の作り直し(r1126-073)と同じ時刻(2026-11-28 10:00)で、前の顔の束(押すと助手ライフ)から、押せない小さい顔1つへ切り替える(台帳 r1126-086 追記1)
+function AssistantLifeHomeFaces(props) {
+  const v2 = typeof useHomeV2 === 'function' ? useHomeV2() : true;
+  return v2 ? <AssistantLifeHomeFacesV2 {...props}/> : <AssistantLifeHomeFacesV1 {...props}/>;
+}
+function AssistantLifeHomeFacesV1({ metIds }) {
+  const st = useAssistantLifeNow(metIds);
+  const [rects, setRects] = React.useState({});
+  React.useEffect(() => {
+    if (!assistantLifeEnabled()) return undefined;
+    const measure = () => {
+      const o = {};
+      // 🔄横(端末は縦のまま、器を90度回して描く)では、画面の座標ではなく器の中の座標で測る。バッジも器の中に置かれるため
+      //   (2026-11-07 本番で、🔄横の顔が札と関係ない所に出ていた)
+      const rot = typeof RHYTHM_VIEW_ROTATION !== 'undefined' && RHYTHM_VIEW_ROTATION.active();
+      const rectOf = (el) => (rot ? RHYTHM_VIEW_ROTATION.rectOf(el) : el.getBoundingClientRect());
+      const vw = rot ? window.innerHeight : window.innerWidth;
+      for (const [k, sel] of Object.entries(ASSISTANT_LIFE_FACILITY_SEL)) {
+        const el = document.querySelector(sel);
+        if (!el || !el.offsetParent) continue;
+        const r = rectOf(el);
+        o[k] = { x: r.left, y: r.top, w: r.width, h: r.height, right: r.left + r.width / 2 > vw / 2 };
+      }
+      // フレンドの帯の置き場所用に、ドック全体の上端も測る(帯はドックの上に出す)
+      const dk = document.querySelector('.mh-home-dock');
+      if (dk && dk.offsetParent) o.__dockTop = rectOf(dk).top;
+      setRects(prev => (JSON.stringify(prev) === JSON.stringify(o) ? prev : o));
+    };
+    measure();
+    const t = setInterval(measure, 700);
+    window.addEventListener('resize', measure);
+    return () => { clearInterval(t); window.removeEventListener('resize', measure); };
+  }, []);
+  if (!assistantLifeEnabled() || !st.loaded || st.open) return null;
+  const life = st.life;
+  if (!life || life.abs !== assistantLifeSlotAt().abs) return null;
+  const ids = (metIds || []).filter(id => ASSISTANT_LIFE_PREFS[id]);
+  const by = {};
+  for (const id of ASSISTANT_LIFE_HOUSE_ORDER) {
+    if (!ids.includes(id)) continue;
+    let f = assistantLifeFacilityOf(assistantLifeWhereOf(life, id));
+    // カード部屋の 1.5倍を使い切った助手も顔は出し、「済」の印を付ける(2026-11-08 社長「HOMEも地図も出す」)。押すと部屋で次の時間帯が分かる
+    if (!rects[f]) f = 'life';
+    if (!rects[f]) continue;
+    (by[f] = by[f] || []).push(id);
+  }
+  // カード部屋にいる助手と対戦するとごほうびアップ(カード部の口があるときだけ)。バトルカードのボタンの左上に小さく「UP」
+  const cardUp = typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && assistantLifeHouseCardIds().some(id => (by.card || []).includes(id) && !assistantLifeCardSpent(id)); // 「UP」は、まだごほうびが上がる助手がいるときだけ
+  const peer = typeof ASSISTANT_PEER_STORE !== 'undefined' ? ASSISTANT_PEER_STORE.state : null;
+  const q = peer && peer.quarrel && peer.quarrel.pending;
+  const after = new Set(q && q.pair ? String(q.pair).split('-') : []);
+  const size = ASSISTANT_LIFE_BADGE_FACE;
+  const step = size - 8; // 少し重ねる(顔の約1/3)
+  return (<>
+    {Object.entries(by).map(([f, list]) => {
+      const r = rects[f];
+      const shown = list.slice(0, 3);
+      const extra = list.length - shown.length;
+      const rowW = size + Math.max(0, shown.length - 1) * step + (extra > 0 ? 22 : 0) + 6;
+      const left = r.x + r.w - rowW + 6; // ボタンの右上隅に少しはみ出す
+      const top = r.y - 9;
+      const names = list.map(id => { const who = assistantById(id); return who ? who.name : id; }).join('・');
+      return (
+        <div key={f} data-assistant-life-home-faces={f} data-assistant-life-home-faces-ids={list.join(',')} className="pointer-events-none fixed" style={{ zIndex: 40, left, top, width: rowW, height: size + 2 }}>
+          <button type="button" data-assistant-life-home-badge={f} aria-label={`${names}がいます。助手ライフを開く`} onClick={() => { ASSISTANT_LIFE_STORE.set({ open: true, focus: shown[0] }); }}
+            className="pointer-events-auto flex items-center rounded-full bg-slate-950/70 px-[3px] shadow active:scale-95" style={{ height: size + 2 }}>
+            {shown.map((id, i) => { const who = assistantById(id); if (!who) return null; const w = assistantLifeWhereOf(life, id); const lonely = w && w.reason === 'lonely';
+              const spent = f === 'card' && !!assistantLifeCardSpent(id);
+              return (
+                <span key={id} data-assistant-life-home-face={id} data-assistant-life-home-face-spent={spent ? '1' : undefined} className="relative shrink-0 rounded-full" style={{ marginLeft: i ? -8 : 0, boxShadow: lonely ? '0 0 0 1.5px #fbbf24,0 0 6px #fbbf24' : after.has(id) ? '0 0 0 1.5px #7dd3fc' : '0 0 0 1.5px #fff' }}>
+                  <span className="block" style={spent ? { filter: 'grayscale(.6) brightness(.8)' } : undefined}><AssistantFace who={who} size={size} accent={who.accent}/></span>
+                  {spent && <AssistantLifeSpentMark size={size}/>}
+                </span>); })}
+            {extra > 0 && <span data-assistant-life-home-faces-extra={extra} className="shrink-0 rounded-full bg-slate-100 px-1 font-black text-slate-900 shadow" style={{ marginLeft: 2, fontSize: 9, lineHeight: '14px' }}>+{extra}</span>}
+          </button>
+        </div>); })}
+    {rects.card && cardUp && <span data-assistant-life-home-card-up className="pointer-events-none fixed rounded-full bg-amber-300 font-black text-slate-950 shadow" style={{ zIndex: 40, left: Math.max(2, rects.card.x - 4), top: rects.card.y - 8, fontSize: 9, lineHeight: '15px', padding: '0 5px' }}>UP</span>}
+    {rects.life && typeof AssistantLifeFriendHomeBadge === 'function' && <AssistantLifeFriendHomeBadge rect={rects.life} dockTop={rects.__dockTop}/>}
+  </>);
+}
+function AssistantLifeHomeFacesV2({ metIds }) {
   const st = useAssistantLifeNow(metIds);
   const [rects, setRects] = React.useState({});
   React.useEffect(() => {

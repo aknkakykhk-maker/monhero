@@ -126,7 +126,9 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
   // 助手どうしの会話を自動で進めるか(56-assistant-peer.jsx の ASSISTANT_PEER_AUTO_STORE。既定は切)
   const peerAuto = typeof useAssistantPeerAuto === 'function' ? useAssistantPeerAuto() : null;
   // HOMEの助手コメントを出すか(21-assistant.jsx の HOME_ASSISTANT_COMMENT_STORE。既定は切=顔だけ・r1126-073)
-  const homeComment = useHomeAssistantComment();
+  const homeComment0 = useHomeAssistantComment();
+  // 10:00 より前は、選んでいない人の既定を前のまま「入」で見せる(r1126-086 追記1)
+  const homeComment = homeComment0.explicit || homeV2At() ? homeComment0 : { ...homeComment0, on: true };
   // 行動カードの見た目(71-screen-battle.jsx の BATTLE_CARD_LOOK。端末に保存する。バトル画面は開くたびに読む)
   const [battleCardLook, setBattleCardLook] = useState(() => BATTLE_CARD_LOOK.value);
   if (assetDownloadOpen) return <AssetDownloadPage onBack={() => setAssetDownloadOpen(false)}/>;

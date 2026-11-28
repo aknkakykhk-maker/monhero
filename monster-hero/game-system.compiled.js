@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1edf0b9055ee3628
+// source-sha256: ac776fd1f15a6f6f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -23150,6 +23150,19 @@ const useAssistantBubbleState = () => {
   }, []);
   return state;
 };
+const HOME_V2_FROM = Date.parse('2026-11-28T10:00:00+09:00');
+const homeV2At = (t = Date.now()) => t >= HOME_V2_FROM;
+const useHomeV2 = () => {
+  const [v2, setV2] = useState(() => homeV2At());
+  useEffect(() => {
+    if (v2) return undefined;
+    const id = setInterval(() => {
+      if (homeV2At()) setV2(true);
+    }, 15000);
+    return () => clearInterval(id);
+  }, [v2]);
+  return v2;
+};
 const HOME_ASSISTANT_COMMENT_KEY = 'mh_home_assistant_comment_v1';
 const HOME_ASSISTANT_COMMENT_STORE = (() => {
   let state = {
@@ -23168,12 +23181,16 @@ const HOME_ASSISTANT_COMMENT_STORE = (() => {
     load() {
       if (loading) return loading;
       loading = (async () => {
-        let on = false;
+        let on = false,
+          explicit = false;
         try {
-          on = (await storeGet(HOME_ASSISTANT_COMMENT_KEY, null, false)) === true;
+          const v = await storeGet(HOME_ASSISTANT_COMMENT_KEY, null, false);
+          explicit = v === true || v === false;
+          on = v === true;
         } catch (_) {}
         state = {
           on,
+          explicit,
           loaded: true
         };
         emit();
@@ -23188,6 +23205,7 @@ const HOME_ASSISTANT_COMMENT_STORE = (() => {
       state = {
         ...state,
         on: next === true,
+        explicit: true,
         loaded: true
       };
       emit();
@@ -72138,7 +72156,7 @@ const GrowthFxLayer = ({
   const level = growthFxLevelOf(load);
   const atHome = screen === 'HOME' && !domHold.monsuc;
   const sheet = sheets.find(s => growthFxSheetReady(s, vis, atHome)) || null;
-  const smallMax = atHome ? 1 : GROWTH_FX_SMALL_MAX;
+  const smallMax = atHome && (typeof homeV2At !== 'function' || homeV2At()) ? 1 : GROWTH_FX_SMALL_MAX;
   return React.createElement(React.Fragment, null, !holdAll && !sheet && small.length > 0 && React.createElement(GrowthFxChipsBox, {
     level: level,
     count: Math.min(small.length, smallMax)
@@ -72737,7 +72755,11 @@ function SettingsScreen({
   const [homeScreenGuideOpen, setHomeScreenGuideOpen] = useState(false);
   const assistantBubble = useAssistantBubbleState();
   const peerAuto = typeof useAssistantPeerAuto === 'function' ? useAssistantPeerAuto() : null;
-  const homeComment = useHomeAssistantComment();
+  const homeComment0 = useHomeAssistantComment();
+  const homeComment = homeComment0.explicit || homeV2At() ? homeComment0 : {
+    ...homeComment0,
+    on: true
+  };
   const [battleCardLook, setBattleCardLook] = useState(() => BATTLE_CARD_LOOK.value);
   if (assetDownloadOpen) return React.createElement(AssetDownloadPage, {
     onBack: () => setAssetDownloadOpen(false)
@@ -87049,6 +87071,27 @@ function MasuRegisterModal({
     className: "w-3/5 bg-pink-600 text-white py-3 rounded-2xl font-black text-xs uppercase shadow-lg active:scale-95"
   }, "登録する"))));
 }
+const HOME_EVENT_BADGE_STYLE_V1 = Object.freeze({
+  position: 'absolute',
+  top: '-10px',
+  right: '-9px',
+  zIndex: 8,
+  display: 'block',
+  overflow: 'hidden',
+  padding: '2px 7px',
+  border: '1px solid #fff3c4',
+  borderRadius: '999px',
+  background: 'linear-gradient(135deg,#f59e0b,#fde047 45%,#f97316)',
+  color: '#4a1d00',
+  fontSize: '8px',
+  fontWeight: 1000,
+  fontStyle: 'normal',
+  lineHeight: 1.6,
+  whiteSpace: 'nowrap',
+  textShadow: '0 1px 0 #fff8',
+  pointerEvents: 'none',
+  boxShadow: '0 0 0 1px #0006,0 2px 8px #000a,0 0 10px #fbbf24cc,0 0 18px #f59e0b80'
+});
 const HOME_EVENT_BADGE_STYLE = Object.freeze({
   position: 'absolute',
   top: '4px',
@@ -87808,7 +87851,494 @@ const homeWalletGrowPx = (goldText, bpText) => {
   const w = t => [...String(t)].reduce((n, c) => n + (c.charCodeAt(0) > 0x7f ? 2.5 : 1), 0);
   return Math.min(24, Math.max(0, Math.ceil(w(goldText) * 6.4 - 50), Math.ceil(w(bpText) * 6.4 - 29)));
 };
-function HomeScreen({
+function HomeScreen(props) {
+  const v2 = useHomeV2();
+  return v2 ? React.createElement(HomeScreenV2, props) : React.createElement(HomeScreenV1, props);
+}
+function HomeScreenV1({
+  assistantBondUp,
+  friendRequestCount = 0,
+  breederIcon,
+  breederLevel,
+  breederName,
+  breederPoints,
+  gifts,
+  gold,
+  hasUnreadChangelog,
+  homeBackgroundReady,
+  homeArt,
+  homePastureMasumons,
+  masuMons,
+  missions,
+  onOpenBattle,
+  onOpenManagement,
+  onOpenMarket,
+  onOpenProfile,
+  onOpenRhythm,
+  onOpenSettings,
+  onOpenTemple,
+  openChangelog,
+  openGiftBox,
+  openMissions,
+  profileFrameId,
+  resolveIconUrl,
+  spotClass,
+  raidJackVisible = false,
+  raidJackEventId,
+  onOpenRaidJack,
+  onOpenXmasEvent = null,
+  raidXmasVisible = false,
+  raidXmasEventId = '',
+  onOpenRaidXmas = null,
+  xmasEntry = null,
+  onOpenAssistantChat = null,
+  cardBattleVisible = false,
+  onOpenCardBattle = null,
+  cardBattleTeaser = false,
+  onOpenCardTeaser = null,
+  cardTourVisible = false,
+  onOpenCardTour = null,
+  nextStep = null,
+  successEntry = null
+}) {
+  React.useEffect(() => {
+    if (typeof ASSISTANT_LIFE_LINKS !== 'undefined' && ASSISTANT_LIFE_LINKS) ASSISTANT_LIFE_LINKS.goPlace = {
+      ranch: onOpenManagement,
+      temple: onOpenTemple,
+      market: onOpenMarket,
+      battle: onOpenBattle
+    };
+  });
+  const homeSceneRef = React.useRef(null);
+  const [homeSceneShape, setHomeSceneShape] = React.useState('portrait');
+  React.useEffect(() => {
+    const el = homeSceneRef.current;
+    if (!el) return undefined;
+    const measure = () => {
+      const w = el.clientWidth,
+        h = el.clientHeight;
+      if (w > 0 && h > 0) {
+        const r = w / h;
+        setHomeSceneShape(r > 1.2 ? 'wide' : r >= 0.75 ? 'square' : 'portrait');
+      }
+    };
+    measure();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', measure);
+      return () => window.removeEventListener('resize', measure);
+    }
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const homeBackgroundSrc = homeArtSrc(homeArt, homeSceneShape);
+  const homeBackgroundWide = homeArtIsWide(homeArt, homeSceneShape);
+  const homeBackgroundSquare = homeArtIsSquare(homeArt, homeSceneShape);
+  React.useEffect(() => {
+    if (typeof document === 'undefined') return;
+    if (document.getElementById('mh-home-event-badge-css')) return;
+    const tag = document.createElement('style');
+    tag.id = 'mh-home-event-badge-css';
+    tag.textContent = HOME_EVENT_BADGE_CSS;
+    document.head.appendChild(tag);
+  }, []);
+  const homeEventCampaign = (() => {
+    if (typeof RELEASE_FLAGS === 'undefined' || !RELEASE_FLAGS || RELEASE_FLAGS.rhythmEventPoints !== true || typeof rhythmEventPointCampaignAt !== 'function') return null;
+    const campaign = rhythmEventPointCampaignAt(Date.now());
+    return campaign && campaign.banner ? campaign : null;
+  })();
+  const [cardTourList, setCardTourList] = React.useState(null);
+  const [cardTourNow, setCardTourNow] = React.useState(() => Date.now());
+  React.useEffect(() => {
+    if (!cardTourVisible || typeof cardTourFetchList !== 'function') return undefined;
+    let alive = true;
+    const load = () => {
+      cardTourFetchList().then(l => {
+        if (alive) setCardTourList(Array.isArray(l) ? l : null);
+      }).catch(() => {});
+    };
+    load();
+    let ticks = 0;
+    const id = setInterval(() => {
+      ticks += 1;
+      setCardTourNow(Date.now());
+      if (ticks % 10 === 0) load();
+    }, 60000);
+    return () => {
+      alive = false;
+      clearInterval(id);
+    };
+  }, [cardTourVisible]);
+  const homeCardTour = cardTourVisible && typeof cardTourHomeBanner === 'function' ? cardTourHomeBanner(cardTourList, cardTourNow) : null;
+  const homeRhythmEventOpen = (() => {
+    const released = typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS && RELEASE_FLAGS.rhythmWeeklyRanking === true;
+    if (!released || typeof rhythmLimitedEventAt !== 'function') return false;
+    return !!rhythmLimitedEventAt(Date.now());
+  })();
+  const homeStripCount = (homeEventCampaign ? 1 : 0) + (homeCardTour && typeof onOpenCardTour === 'function' ? 1 : 0);
+  const [homeStripIdx, setHomeStripIdx] = React.useState(0);
+  React.useEffect(() => {
+    if (homeStripCount < 2) return undefined;
+    const id = setInterval(() => setHomeStripIdx(i => i + 1), 5000);
+    return () => clearInterval(id);
+  }, [homeStripCount]);
+  const homeStripShow = homeStripCount ? homeStripIdx % homeStripCount : 0;
+  const xmasEntryInStrip = !!xmasEntry;
+  const homeComment0 = useHomeAssistantComment();
+  const homeComment = homeComment0.explicit ? homeComment0 : {
+    ...homeComment0,
+    on: true
+  };
+  return React.createElement("main", {
+    ref: homeSceneRef,
+    className: "mh-home-scene",
+    "aria-label": "村の広場"
+  }, React.createElement("picture", {
+    className: `mh-home-background ${homeBackgroundReady ? 'is-ready' : ''} ${homeBackgroundWide ? 'is-wide' : ''} ${homeBackgroundSquare ? 'is-square' : ''}`,
+    "aria-hidden": "true"
+  }, React.createElement("img", {
+    className: "mh-home-backdrop",
+    src: homeBackgroundSrc,
+    alt: ""
+  }), React.createElement("img", {
+    className: "mh-home-main",
+    src: homeBackgroundSrc,
+    alt: ""
+  })), React.createElement("div", {
+    className: "mh-home-masumon-layer",
+    "aria-hidden": "true"
+  }, homePastureMasumons.map((masu, index) => React.createElement(HomeWalkingMasumon, {
+    key: masu.id,
+    masu: masu,
+    base: ALL_PLAYER_MONSTERS[masu.baseId],
+    masuColors: getMasuColors(masu),
+    index: index,
+    count: homePastureMasumons.length
+  }))), raidXmasVisible && typeof onOpenRaidXmas === 'function' ? React.createElement(HomeRaidJack, {
+    key: "raid-xmas",
+    ev: RAID_EVENT_XMAS,
+    eventId: raidXmasEventId,
+    onOpen: onOpenRaidXmas
+  }) : raidJackVisible && React.createElement(HomeRaidJack, {
+    eventId: raidJackEventId,
+    onOpen: onOpenRaidJack
+  }), React.createElement("header", {
+    className: `mh-home-status${spotClass('settings')}`
+  }, React.createElement("button", {
+    type: "button",
+    className: "mh-home-player relative",
+    onClick: onOpenProfile,
+    "aria-label": "プロフィールを開く"
+  }, React.createElement(HomeProfileIcon, {
+    src: resolveIconUrl(breederIcon),
+    id: breederIcon,
+    frameId: profileFrameId
+  }), React.createElement("div", {
+    className: "mh-home-player-copy"
+  }, React.createElement("strong", null, breederName), React.createElement("span", null, "ブリーダー Lv.", breederLevel.level), React.createElement("div", {
+    className: "mh-home-xp-row"
+  }, React.createElement("div", {
+    className: "mh-home-xp"
+  }, React.createElement("i", {
+    style: {
+      width: `${Math.min(100, breederLevel.xpIntoLevel / breederLevel.xpForNext * 100)}%`
+    }
+  })), React.createElement("small", null, breederLevel.xpIntoLevel.toLocaleString(), "/", breederLevel.xpForNext.toLocaleString(), " XP"))), React.createElement(ChevronRight, {
+    className: "mh-home-profile-arrow",
+    size: 15
+  }), Number(friendRequestCount) > 0 && React.createElement("span", {
+    "data-home-friend-badge": true,
+    "aria-label": `フレンド申請が${Number(friendRequestCount)}件届いています`,
+    className: "absolute -right-1 -top-2 flex h-6 min-w-[24px] items-center justify-center rounded-full bg-rose-500 px-1.5 text-[12px] font-black text-white shadow-lg"
+  }, Math.min(99, Number(friendRequestCount)))), React.createElement("section", {
+    className: "mh-home-wallet",
+    style: {
+      '--wal-grow': `${homeWalletGrowPx(compactCount(gold), compactCount(breederPoints))}px`
+    }
+  }, React.createElement("div", null, React.createElement(Gem, {
+    size: 14
+  }), React.createElement(CompactCount, {
+    value: gold,
+    style: {
+      '--len': String(compactCount(gold)).length
+    }
+  }), React.createElement("small", null, "ダイヤ")), React.createElement("div", null, React.createElement(Coins, {
+    size: 14
+  }), React.createElement(CompactCount, {
+    value: breederPoints,
+    style: {
+      '--len': String(compactCount(breederPoints)).length
+    }
+  }), React.createElement("small", null, "ブリーダーP")), React.createElement("button", {
+    onClick: onOpenSettings,
+    className: `mh-home-settings${spotClass('settings')}`,
+    "aria-label": "設定"
+  }, React.createElement(Settings, {
+    size: 20
+  }), React.createElement("span", null, "設定")))), xmasEntryInStrip && React.createElement("div", {
+    className: "mh-home-event-strip",
+    "data-home-xmas-entry-strip": true,
+    style: {
+      width: 'calc(100% - 78px)'
+    }
+  }, React.createElement(HomeXmasEventEntry, {
+    onOpen: xmasEntry.onOpen,
+    preOpen: !!xmasEntry.preOpen
+  })), homeStripCount > 0 && !(xmasEntryInStrip && homeEventCampaign && homeEventCampaign.id === 'xmas_2026' && !homeCardTour) && React.createElement("div", {
+    className: "mh-home-event-strip",
+    "data-home-event-strip": true
+  }, homeEventCampaign && homeStripShow === 0 && React.createElement("button", {
+    type: "button",
+    "data-home-event-banner": true,
+    className: "mh-home-event-banner",
+    onClick: homeEventCampaign.id === 'xmas_2026' && typeof onOpenXmasEvent === 'function' ? onOpenXmasEvent : openChangelog,
+    "aria-label": `${homeEventCampaign.banner.title}${homeEventCampaign.banner.title2 || ''} ${homeEventCampaign.banner.sub}`
+  }, React.createElement("b", {
+    className: "r1"
+  }, React.createElement("span", null, homeEventCampaign.banner.emoji, " ", homeEventCampaign.banner.title), React.createElement("small", null, homeEventCampaign.banner.sub)), homeEventCampaign.banner.title2 ? React.createElement("span", {
+    className: "t2"
+  }, homeEventCampaign.banner.title2) : null), homeCardTour && typeof onOpenCardTour === 'function' && homeStripShow === (homeEventCampaign ? 1 : 0) && React.createElement("button", {
+    type: "button",
+    "data-home-card-tour": homeCardTour.id,
+    className: "mh-home-tour-banner",
+    onClick: () => onOpenCardTour(homeCardTour.id),
+    "aria-label": `${homeCardTour.name} ${homeCardTour.sub}`
+  }, React.createElement("span", {
+    "aria-hidden": "true"
+  }, "🏆"), React.createElement("span", null, React.createElement("b", null, homeCardTour.name), React.createElement("small", null, homeCardTour.sub, homeCardTour.prize && React.createElement("em", null, homeCardTour.prize)))), homeStripCount > 1 && React.createElement("span", {
+    className: "mh-home-event-strip-dots",
+    "aria-hidden": "true"
+  }, Array.from({
+    length: homeStripCount
+  }, (_, i) => React.createElement("i", {
+    key: i,
+    className: i === homeStripShow ? 'on' : ''
+  })))), React.createElement("div", {
+    className: "mh-home-side-stack"
+  }, typeof TimeOfDayClock === 'function' && React.createElement(TimeOfDayClock, {
+    home: true
+  }), React.createElement("button", {
+    onClick: openChangelog,
+    className: "mh-home-side-btn mh-home-update",
+    "aria-label": "更新履歴"
+  }, React.createElement("span", {
+    className: "mh-home-side-ic"
+  }, React.createElement(RefreshCcw, {
+    size: 19
+  })), React.createElement("span", {
+    className: "mh-home-side-lb"
+  }, "更新履歴"), hasUnreadChangelog && React.createElement("em", {
+    className: "mh-unread-badge",
+    "aria-label": "未読あり"
+  }, "!")), React.createElement("button", {
+    onClick: openMissions,
+    className: `mh-home-side-btn mh-home-mission${spotClass('reward')}`,
+    "aria-label": "ミッション"
+  }, React.createElement("span", {
+    className: "mh-home-side-ic"
+  }, React.createElement(List, {
+    size: 20
+  })), React.createElement("span", {
+    className: "mh-home-side-lb"
+  }, "ミッション"), missionClaimableCount(normalizeMissions(missions)) > 0 && React.createElement("em", null, missionClaimableCount(normalizeMissions(missions)))), React.createElement("button", {
+    onClick: openGiftBox,
+    className: `mh-home-side-btn mh-home-gift${spotClass('reward')}`,
+    "aria-label": "ギフト"
+  }, React.createElement("span", {
+    className: "mh-home-side-ic"
+  }, React.createElement(Package, {
+    size: 20
+  })), React.createElement("span", {
+    className: "mh-home-side-lb"
+  }, "ギフト"), giftClaimableCount(gifts) > 0 && React.createElement("em", null, giftClaimableCount(gifts)))), React.createElement("div", {
+    className: "mh-home-dock"
+  }, nextStep && React.createElement("button", {
+    type: "button",
+    className: "mh-home-nextstep",
+    "data-home-next-step": nextStep.n,
+    onClick: nextStep.onTap,
+    "aria-label": `次にやること ${nextStep.n}/3 ${nextStep.title}`
+  }, React.createElement("span", {
+    className: "mh-home-nextstep-lab"
+  }, "次に", React.createElement("br", null), "やること", React.createElement("b", null, nextStep.n, "/3")), React.createElement("span", {
+    className: "mh-home-nextstep-body"
+  }, React.createElement("b", null, ['①', '②', '③'][nextStep.n - 1], " ", nextStep.title), React.createElement("small", null, nextStep.sub)), React.createElement("i", {
+    "aria-hidden": "true"
+  }, "›")), React.createElement("div", {
+    className: "mh-home-dock-row mh-home-dock-top"
+  }, successEntry, React.createElement("button", {
+    type: "button",
+    "data-home-fac": "battle",
+    className: `mh-home-dock-card battle${spotClass('battle')}`,
+    onClick: onOpenBattle,
+    "aria-label": "モンヒロバトル"
+  }, React.createElement("span", {
+    className: "mh-home-dock-pic"
+  }, React.createElement("img", {
+    src: "images/home/facility-battle.webp",
+    alt: "",
+    draggable: false
+  })), React.createElement("span", {
+    className: "mh-home-dock-txt"
+  }, React.createElement("span", {
+    className: "mh-home-dock-name"
+  }, "モンヒロバトル"), React.createElement("span", {
+    className: "mh-home-dock-sub"
+  }, "挑戦"))), React.createElement("button", {
+    type: "button",
+    "data-home-fac": "rhythm",
+    className: "mh-home-dock-card rhythm",
+    onClick: onOpenRhythm,
+    "aria-label": RHYTHM_MODE_PUBLIC_RELEASE ? "モンヒロビート" : "モンヒロビート（準備中）"
+  }, React.createElement("span", {
+    className: "mh-home-dock-pic"
+  }, React.createElement("img", {
+    src: "images/home/facility-beat.webp",
+    alt: "",
+    draggable: false
+  })), React.createElement("span", {
+    className: "mh-home-dock-txt"
+  }, React.createElement("span", {
+    className: "mh-home-dock-name"
+  }, "モンヒロビート", !RHYTHM_MODE_PUBLIC_RELEASE && React.createElement("small", {
+    className: "mh-home-dock-soon"
+  }, "準備中")), React.createElement("span", {
+    className: "mh-home-dock-sub"
+  }, "音ゲー")), homeRhythmEventOpen && React.createElement("em", {
+    "data-home-event-badge": true,
+    className: "mh-home-event-badge",
+    style: HOME_EVENT_BADGE_STYLE_V1
+  }, "✨開催中✨")), cardBattleVisible && typeof onOpenCardBattle === 'function' && React.createElement("button", {
+    type: "button",
+    "data-home-fac": "card",
+    "data-home-card-battle": true,
+    className: "mh-home-dock-card card",
+    onClick: onOpenCardBattle,
+    "aria-label": "MFバトルカード"
+  }, React.createElement("span", {
+    className: "mh-home-dock-pic"
+  }, React.createElement("img", {
+    src: "images/home/facility-card.webp",
+    alt: "",
+    draggable: false
+  })), React.createElement("span", {
+    className: "mh-home-dock-txt"
+  }, React.createElement("span", {
+    className: "mh-home-dock-name"
+  }, "MFバトルカード"), React.createElement("span", {
+    className: "mh-home-dock-sub"
+  }, "カード対戦"))), !cardBattleVisible && cardBattleTeaser && typeof onOpenCardTeaser === 'function' && React.createElement("button", {
+    type: "button",
+    "data-home-fac": "card",
+    "data-home-card-battle-teaser": true,
+    className: "mh-home-dock-card card soon",
+    onClick: onOpenCardTeaser,
+    "aria-label": "MFバトルカード 近日公開"
+  }, React.createElement("span", {
+    className: "mh-home-dock-pic"
+  }, React.createElement("img", {
+    src: "images/home/facility-card.webp",
+    alt: "",
+    draggable: false
+  })), React.createElement("span", {
+    className: "mh-home-dock-txt"
+  }, React.createElement("span", {
+    className: "mh-home-dock-name"
+  }, "MFバトルカード"), React.createElement("span", {
+    className: "mh-home-dock-sub"
+  }, "カード対戦")), React.createElement("small", {
+    className: "mh-home-dock-chip"
+  }, "近日公開"))), React.createElement("nav", {
+    className: "mh-home-dock-row mh-home-dock-bottom",
+    "aria-label": "拠点施設"
+  }, React.createElement("button", {
+    type: "button",
+    "data-home-fac": "management",
+    className: `mh-home-dock-card management${spotClass('management')}`,
+    onClick: onOpenManagement,
+    "aria-label": "M/B管理"
+  }, React.createElement("span", {
+    className: "mh-home-dock-pic"
+  }, React.createElement("img", {
+    src: "images/home/facility-management.webp",
+    alt: "",
+    draggable: false
+  })), React.createElement("span", {
+    className: "mh-home-dock-txt"
+  }, React.createElement("span", {
+    className: "mh-home-dock-name"
+  }, "M/B管理"))), React.createElement("button", {
+    type: "button",
+    "data-home-fac": "temple",
+    className: `mh-home-dock-card temple${spotClass('temple')}`,
+    onClick: onOpenTemple,
+    "aria-label": "神殿"
+  }, React.createElement("span", {
+    className: "mh-home-dock-pic"
+  }, React.createElement("img", {
+    src: "images/home/facility-temple.webp",
+    alt: "",
+    draggable: false
+  })), React.createElement("span", {
+    className: "mh-home-dock-txt"
+  }, React.createElement("span", {
+    className: "mh-home-dock-name"
+  }, "神殿"))), React.createElement("button", {
+    type: "button",
+    "data-home-fac": "market",
+    className: `mh-home-dock-card market${spotClass('market')}`,
+    onClick: onOpenMarket,
+    "aria-label": "マーケット"
+  }, React.createElement("span", {
+    className: "mh-home-dock-pic"
+  }, React.createElement("img", {
+    src: "images/home/facility-market.webp",
+    alt: "",
+    draggable: false
+  })), React.createElement("span", {
+    className: "mh-home-dock-txt"
+  }, React.createElement("span", {
+    className: "mh-home-dock-name"
+  }, "マーケット"))), typeof assistantLifeEnabled === 'function' && assistantLifeEnabled() && React.createElement("button", {
+    type: "button",
+    "data-home-fac": "life",
+    "data-home-assistant-life": true,
+    className: "mh-home-dock-card life",
+    onClick: () => assistantLifeOpenScreen(),
+    "aria-label": "助手ライフ"
+  }, React.createElement("span", {
+    className: "mh-home-dock-pic"
+  }, React.createElement("img", {
+    src: "images/home/facility-life.webp",
+    alt: "",
+    draggable: false
+  })), React.createElement("span", {
+    className: "mh-home-dock-txt"
+  }, React.createElement("span", {
+    className: "mh-home-dock-name"
+  }, "助手ライフ"))))), homeComment.on && React.createElement("div", {
+    className: `mh-home-assistant${spotClass('assistant')}`
+  }, React.createElement(AssistantBubble, {
+    scene: "home",
+    condition: assistantBondUp ? 'bondUp' : masuMons.length === 0 ? 'firstRun' : null,
+    compact: true,
+    menu: typeof onOpenAssistantChat === 'function' ? [{
+      key: 'chat',
+      label: '💬 おしゃべりする',
+      onClick: onOpenAssistantChat,
+      attr: {
+        'data-home-assistant-chat': ''
+      }
+    }] : null
+  }), React.createElement(HomeAssistantCommentToggle, {
+    on: true
+  })), !homeComment.on && React.createElement("div", {
+    className: `mh-home-assistant-fold${spotClass('assistant')}`
+  }, React.createElement(HomeAssistantCommentToggle, {
+    on: false
+  })));
+}
+function HomeScreenV2({
   assistantBondUp,
   friendRequestCount = 0,
   breederIcon,
@@ -131498,7 +132028,8 @@ function AssistantPeerTalk({
   const auto = useAssistantPeerAuto();
   const [cur, setCur] = React.useState(null);
   const [homeOpenedId, setHomeOpenedId] = React.useState(null);
-  const homeWaiting = scene === 'home' && !!cur && !cur.replay && homeOpenedId !== cur.talk.id;
+  const homeV2Now = typeof homeV2At === 'function' ? homeV2At() : true;
+  const homeWaiting = homeV2Now && scene === 'home' && !!cur && !cur.replay && homeOpenedId !== cur.talk.id;
   React.useEffect(() => {
     if (!!ASSISTANT_PEER_STORE.state.homeWaiting !== homeWaiting) ASSISTANT_PEER_STORE.set({
       homeWaiting
@@ -131520,7 +132051,7 @@ function AssistantPeerTalk({
     }
   }, [st.homeOpenAt]);
   const [homeBox, setHomeBox] = React.useState(null);
-  const homeShown = scene === 'home' && !!cur && !homeWaiting && !(peerFolded && !cur.replay);
+  const homeShown = homeV2Now && scene === 'home' && !!cur && !homeWaiting && !(peerFolded && !cur.replay);
   React.useEffect(() => {
     if (!homeShown || typeof document === 'undefined') {
       setHomeBox(null);
@@ -141719,7 +142250,154 @@ const ASSISTANT_LIFE_FACILITY_SEL = Object.freeze({
   life: 'main.mh-home-scene [data-home-fac="life"]'
 });
 const ASSISTANT_LIFE_BADGE_FACE = 24;
-function AssistantLifeHomeFaces({
+function AssistantLifeHomeFaces(props) {
+  const v2 = typeof useHomeV2 === 'function' ? useHomeV2() : true;
+  return v2 ? React.createElement(AssistantLifeHomeFacesV2, props) : React.createElement(AssistantLifeHomeFacesV1, props);
+}
+function AssistantLifeHomeFacesV1({
+  metIds
+}) {
+  const st = useAssistantLifeNow(metIds);
+  const [rects, setRects] = React.useState({});
+  React.useEffect(() => {
+    if (!assistantLifeEnabled()) return undefined;
+    const measure = () => {
+      const o = {};
+      const rot = typeof RHYTHM_VIEW_ROTATION !== 'undefined' && RHYTHM_VIEW_ROTATION.active();
+      const rectOf = el => rot ? RHYTHM_VIEW_ROTATION.rectOf(el) : el.getBoundingClientRect();
+      const vw = rot ? window.innerHeight : window.innerWidth;
+      for (const [k, sel] of Object.entries(ASSISTANT_LIFE_FACILITY_SEL)) {
+        const el = document.querySelector(sel);
+        if (!el || !el.offsetParent) continue;
+        const r = rectOf(el);
+        o[k] = {
+          x: r.left,
+          y: r.top,
+          w: r.width,
+          h: r.height,
+          right: r.left + r.width / 2 > vw / 2
+        };
+      }
+      const dk = document.querySelector('.mh-home-dock');
+      if (dk && dk.offsetParent) o.__dockTop = rectOf(dk).top;
+      setRects(prev => JSON.stringify(prev) === JSON.stringify(o) ? prev : o);
+    };
+    measure();
+    const t = setInterval(measure, 700);
+    window.addEventListener('resize', measure);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener('resize', measure);
+    };
+  }, []);
+  if (!assistantLifeEnabled() || !st.loaded || st.open) return null;
+  const life = st.life;
+  if (!life || life.abs !== assistantLifeSlotAt().abs) return null;
+  const ids = (metIds || []).filter(id => ASSISTANT_LIFE_PREFS[id]);
+  const by = {};
+  for (const id of ASSISTANT_LIFE_HOUSE_ORDER) {
+    if (!ids.includes(id)) continue;
+    let f = assistantLifeFacilityOf(assistantLifeWhereOf(life, id));
+    if (!rects[f]) f = 'life';
+    if (!rects[f]) continue;
+    (by[f] = by[f] || []).push(id);
+  }
+  const cardUp = typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && assistantLifeHouseCardIds().some(id => (by.card || []).includes(id) && !assistantLifeCardSpent(id));
+  const peer = typeof ASSISTANT_PEER_STORE !== 'undefined' ? ASSISTANT_PEER_STORE.state : null;
+  const q = peer && peer.quarrel && peer.quarrel.pending;
+  const after = new Set(q && q.pair ? String(q.pair).split('-') : []);
+  const size = ASSISTANT_LIFE_BADGE_FACE;
+  const step = size - 8;
+  return React.createElement(React.Fragment, null, Object.entries(by).map(([f, list]) => {
+    const r = rects[f];
+    const shown = list.slice(0, 3);
+    const extra = list.length - shown.length;
+    const rowW = size + Math.max(0, shown.length - 1) * step + (extra > 0 ? 22 : 0) + 6;
+    const left = r.x + r.w - rowW + 6;
+    const top = r.y - 9;
+    const names = list.map(id => {
+      const who = assistantById(id);
+      return who ? who.name : id;
+    }).join('・');
+    return React.createElement("div", {
+      key: f,
+      "data-assistant-life-home-faces": f,
+      "data-assistant-life-home-faces-ids": list.join(','),
+      className: "pointer-events-none fixed",
+      style: {
+        zIndex: 40,
+        left,
+        top,
+        width: rowW,
+        height: size + 2
+      }
+    }, React.createElement("button", {
+      type: "button",
+      "data-assistant-life-home-badge": f,
+      "aria-label": `${names}がいます。助手ライフを開く`,
+      onClick: () => {
+        ASSISTANT_LIFE_STORE.set({
+          open: true,
+          focus: shown[0]
+        });
+      },
+      className: "pointer-events-auto flex items-center rounded-full bg-slate-950/70 px-[3px] shadow active:scale-95",
+      style: {
+        height: size + 2
+      }
+    }, shown.map((id, i) => {
+      const who = assistantById(id);
+      if (!who) return null;
+      const w = assistantLifeWhereOf(life, id);
+      const lonely = w && w.reason === 'lonely';
+      const spent = f === 'card' && !!assistantLifeCardSpent(id);
+      return React.createElement("span", {
+        key: id,
+        "data-assistant-life-home-face": id,
+        "data-assistant-life-home-face-spent": spent ? '1' : undefined,
+        className: "relative shrink-0 rounded-full",
+        style: {
+          marginLeft: i ? -8 : 0,
+          boxShadow: lonely ? '0 0 0 1.5px #fbbf24,0 0 6px #fbbf24' : after.has(id) ? '0 0 0 1.5px #7dd3fc' : '0 0 0 1.5px #fff'
+        }
+      }, React.createElement("span", {
+        className: "block",
+        style: spent ? {
+          filter: 'grayscale(.6) brightness(.8)'
+        } : undefined
+      }, React.createElement(AssistantFace, {
+        who: who,
+        size: size,
+        accent: who.accent
+      })), spent && React.createElement(AssistantLifeSpentMark, {
+        size: size
+      }));
+    }), extra > 0 && React.createElement("span", {
+      "data-assistant-life-home-faces-extra": extra,
+      className: "shrink-0 rounded-full bg-slate-100 px-1 font-black text-slate-900 shadow",
+      style: {
+        marginLeft: 2,
+        fontSize: 9,
+        lineHeight: '14px'
+      }
+    }, "+", extra)));
+  }), rects.card && cardUp && React.createElement("span", {
+    "data-assistant-life-home-card-up": true,
+    className: "pointer-events-none fixed rounded-full bg-amber-300 font-black text-slate-950 shadow",
+    style: {
+      zIndex: 40,
+      left: Math.max(2, rects.card.x - 4),
+      top: rects.card.y - 8,
+      fontSize: 9,
+      lineHeight: '15px',
+      padding: '0 5px'
+    }
+  }, "UP"), rects.life && typeof AssistantLifeFriendHomeBadge === 'function' && React.createElement(AssistantLifeFriendHomeBadge, {
+    rect: rects.life,
+    dockTop: rects.__dockTop
+  }));
+}
+function AssistantLifeHomeFacesV2({
   metIds
 }) {
   const st = useAssistantLifeNow(metIds);
@@ -143824,7 +144502,7 @@ function AssistantLifeBattleHall({
     life: life,
     cheerMsg: cheerMsg,
     setCheerMsg: setCheerMsg,
-    noSuccess: true,
+    noSuccess: typeof homeV2At !== 'function' || homeV2At(),
     onRoom: rid => {
       try {
         ASSISTANT_LIFE_STORE.set({
@@ -188780,7 +189458,7 @@ function MonheroSuccessHomeEntry({
   }, React.createElement("em", {
     className: "rb mh-home-event-badge",
     "aria-hidden": "true",
-    style: HOME_EVENT_BADGE_STYLE
+    style: typeof homeV2At === 'function' && !homeV2At() && typeof HOME_EVENT_BADGE_STYLE_V1 !== 'undefined' ? HOME_EVENT_BADGE_STYLE_V1 : HOME_EVENT_BADGE_STYLE
   }, "β版 開幕！"), React.createElement("span", {
     className: "pic"
   }, React.createElement("img", {

@@ -65,6 +65,12 @@ const dockShapeChecks = (label, cards) => {
 
 (async () => {
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+  // HOME の作り直しは 2026-11-28 10:00 にゲームの中で切り替わる(r1126-086 追記1)。それより前に回すときは、時計を 10:05 にずらして新しい HOME を測る
+  if (Date.now() < Date.parse('2026-11-28T10:00:00+09:00')) {
+    const shift = `(()=>{const off=Date.parse('2026-11-28T10:05:00+09:00')-Date.now();const RD=Date;class D extends RD{constructor(...a){if(a.length===0)super(RD.now()+off);else super(...a);}static now(){return RD.now()+off;}}D.parse=RD.parse;D.UTC=RD.UTC;window.Date=D;})();`;
+    const np = browser.newPage.bind(browser);
+    browser.newPage = async (...a) => { const pg = await np(...a); await pg.addInitScript({ content: shift }); return pg; };
+  }
   // ---- 本物の画面でも測る(2026-10-20 改善部 M7) ----
   // 上の見本は .mh-home- の CSS だけで組むので、index.html の CSS や吹き出しの本当の文の長さが入らない。
   // 320×568 で「みゅあの吹き出しが施設の左上を隠す」のを見逃していた。本物を開いて、

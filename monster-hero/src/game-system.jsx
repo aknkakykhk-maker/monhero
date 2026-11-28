@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 86b61e6c7b214ef1
+// generated-sha256: e446c44652d067dd
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -15897,6 +15897,19 @@ const useAssistantBubbleState = () => {
 //   保存が無い・壊れているときは「切」(顔の丸だけの畳んだ形)にした(2026-11-27 台帳 r1126-073・HOME の作り直しの直し2。前の既定は「入」)。
 //   自分で「入」を選んだ人(true を保存している人)は今までどおり吹き出しが出る
 //   助手の告知(アップデートのお知らせ)はこの部品を使っていないので、この設定の影響を受けない
+// HOME の作り直し(r1126-073)を出す時刻(2026-11-28 10:00 日本時間・台帳 r1126-086 追記1)。これより前は前の HOME と前の出し方
+const HOME_V2_FROM = Date.parse('2026-11-28T10:00:00+09:00');
+const homeV2At = (t = Date.now()) => t >= HOME_V2_FROM;
+// 描いている間に 10:00 をまたいでも切り替わるよう、15秒ごとに見直す
+const useHomeV2 = () => {
+  const [v2, setV2] = useState(() => homeV2At());
+  useEffect(() => {
+    if (v2) return undefined;
+    const id = setInterval(() => { if (homeV2At()) setV2(true); }, 15000);
+    return () => clearInterval(id);
+  }, [v2]);
+  return v2;
+};
 const HOME_ASSISTANT_COMMENT_KEY = 'mh_home_assistant_comment_v1';
 const HOME_ASSISTANT_COMMENT_STORE = (() => {
   let state = { on: false, loaded: false };
@@ -15908,16 +15921,17 @@ const HOME_ASSISTANT_COMMENT_STORE = (() => {
     load() {
       if (loading) return loading;
       loading = (async () => {
-        let on = false;
-        try { on = (await storeGet(HOME_ASSISTANT_COMMENT_KEY, null, false)) === true; } catch (_) { /* 読めなければ「切」(畳んだ形) */ }
-        state = { on, loaded: true };
+        let on = false, explicit = false;
+        try { const v = await storeGet(HOME_ASSISTANT_COMMENT_KEY, null, false); explicit = v === true || v === false; on = v === true; } catch (_) { /* 読めなければ「切」(畳んだ形) */ }
+        // explicit … 自分で入/切を選んで保存してあるか。10:00 より前の HOME は、選んでいない人を前の既定「入」で出す(r1126-086 追記1)
+        state = { on, explicit, loaded: true };
         emit();
       })();
       return loading;
     },
     subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
     setOn(next) {
-      state = { ...state, on: next === true, loaded: true };
+      state = { ...state, on: next === true, explicit: true, loaded: true };
       emit();
       try { void Promise.resolve(storeSet(HOME_ASSISTANT_COMMENT_KEY, state.on)).catch(() => {}); } catch (_) { /* 保存できなくてもこの回は効く */ }
     },
@@ -44417,7 +44431,7 @@ const GrowthFxLayer = ({ screen, load }) => {
   // Lvアップを貯めているあいだも、ほかの全面(アイテムのカードなど)は先に出す
   const sheet = sheets.find(s => growthFxSheetReady(s, vis, atHome)) || null;
   // HOME では小さい札は1枚だけ(2026-11-27 台帳 r1126-073・すぐできる直し8)。左右の下に2〜3枚並ぶと端が散らかった。残りは前の札が消えたあとに出る
-  const smallMax = atHome ? 1 : GROWTH_FX_SMALL_MAX;
+  const smallMax = atHome && (typeof homeV2At !== 'function' || homeV2At()) ? 1 : GROWTH_FX_SMALL_MAX;
   return (
     <>
       {!holdAll && !sheet && small.length > 0 && <GrowthFxChipsBox level={level} count={Math.min(small.length, smallMax)}>
@@ -44799,7 +44813,9 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
   // 助手どうしの会話を自動で進めるか(56-assistant-peer.jsx の ASSISTANT_PEER_AUTO_STORE。既定は切)
   const peerAuto = typeof useAssistantPeerAuto === 'function' ? useAssistantPeerAuto() : null;
   // HOMEの助手コメントを出すか(21-assistant.jsx の HOME_ASSISTANT_COMMENT_STORE。既定は切=顔だけ・r1126-073)
-  const homeComment = useHomeAssistantComment();
+  const homeComment0 = useHomeAssistantComment();
+  // 10:00 より前は、選んでいない人の既定を前のまま「入」で見せる(r1126-086 追記1)
+  const homeComment = homeComment0.explicit || homeV2At() ? homeComment0 : { ...homeComment0, on: true };
   // 行動カードの見た目(71-screen-battle.jsx の BATTLE_CARD_LOOK。端末に保存する。バトル画面は開くたびに読む)
   const [battleCardLook, setBattleCardLook] = useState(() => BATTLE_CARD_LOOK.value);
   if (assetDownloadOpen) return <AssetDownloadPage onBack={() => setAssetDownloadOpen(false)}/>;
@@ -52162,6 +52178,16 @@ function MasuRegisterModal({
 //   クラスのほうは「光り方・動き」だけを足す係にする。
 // 2026-11-27 r1126-073(すぐできる直し3): 入口の札(β版 開幕！・開催中・近日公開)は「左上・同じ高さ・同じ形」の1種類にそろえる。
 //   前は右上の角へはみ出す置き方で、助手の顔の丸の下に7割ほど隠れていた。字は小さい字の決まり(11px)に合わせる
+// 10:00 より前の HOME(HomeScreenV1)で使う、前の置き方(右上の角へはみ出す・8px)
+const HOME_EVENT_BADGE_STYLE_V1 = Object.freeze({
+  position:'absolute', top:'-10px', right:'-9px', zIndex:8,
+  display:'block', overflow:'hidden', padding:'2px 7px',
+  border:'1px solid #fff3c4', borderRadius:'999px',
+  background:'linear-gradient(135deg,#f59e0b,#fde047 45%,#f97316)',
+  color:'#4a1d00', fontSize:'8px', fontWeight:1000, fontStyle:'normal',
+  lineHeight:1.6, whiteSpace:'nowrap', textShadow:'0 1px 0 #fff8', pointerEvents:'none',
+  boxShadow:'0 0 0 1px #0006,0 2px 8px #000a,0 0 10px #fbbf24cc,0 0 18px #f59e0b80',
+});
 const HOME_EVENT_BADGE_STYLE = Object.freeze({
   position:'absolute', top:'4px', left:'4px', zIndex:8,
   display:'block', overflow:'hidden', padding:'2px 7px',
@@ -52609,7 +52635,249 @@ const HomeRaidJack = ({ eventId, onOpen, ev = RAID_EVENT_JACK }) => {
 // tools/home-layout-check.js がこの1行を取り出して同じ計算で測る
 // 「億」「兆」のような全角の字は数字より広いので、2.5字ぶんとして数える(N5・2026-10-21)。数字とカンマだけのときは今までと同じ
 const homeWalletGrowPx=(goldText,bpText)=>{const w=t=>[...String(t)].reduce((n,c)=>n+(c.charCodeAt(0)>0x7f?2.5:1),0);return Math.min(24,Math.max(0,Math.ceil(w(goldText)*6.4-50),Math.ceil(w(bpText)*6.4-29)));};
-function HomeScreen({
+// ★HOME の作り直し(r1126-073)は、ゲームの中の時刻で切り替える(2026-11-28 台帳 r1126-086 追記1・社長「いままで2でやってたんだからそれでやればよくない？」)。
+//   2026-11-28 10:00(日本時間)より前は前の HOME(HomeScreenV1)、以後は新しい HOME(HomeScreenV2)。開いたまま 10:00 をまたいでも、15秒ごとに見直して切り替わる。
+//   新しい HOME と一緒に変えた所(吹き出しの既定・入口の印・会話の窓の出し方・小さい知らせの数・バトルを選ぶ画面のサクセスの入口)も homeV2At() で同じ時刻に切り替える
+function HomeScreen(props) {
+  const v2=useHomeV2();
+  return v2?<HomeScreenV2 {...props}/>:<HomeScreenV1 {...props}/>;
+}
+
+function HomeScreenV1({
+  assistantBondUp, friendRequestCount = 0, breederIcon, breederLevel, breederName, breederPoints, gifts, gold,
+  hasUnreadChangelog, homeBackgroundReady, homeArt, homePastureMasumons, masuMons, missions,
+  onOpenBattle, onOpenManagement, onOpenMarket, onOpenProfile, onOpenRhythm, onOpenSettings,
+  onOpenTemple, openChangelog, openGiftBox, openMissions, profileFrameId, resolveIconUrl, spotClass,
+  raidJackVisible = false, raidJackEventId, onOpenRaidJack,
+  // クリスマスのイベントページを開く(台帳 r1126-006)。開始時刻までは null(札は今までどおり更新履歴を開く)
+  onOpenXmasEvent = null,
+  // クリスマスのレイドのボス(ジャックと同じ置き方・押すとイベントページの「レイド」タブ)。出すかどうかは 60-app.jsx が決める
+  raidXmasVisible = false, raidXmasEventId = '', onOpenRaidXmas = null,
+  // クリスマスのイベントページの入口(台帳 r1126-014)。{ onOpen, preOpen }。null なら出さない(11/28 10:00〜12/31 4:00 に 60-app.jsx が渡す)
+  xmasEntry = null,
+  // 助手とおしゃべり(2026-10-14)。公開の印 assistantChat が立つまでは null(ボタンを出さない)
+  onOpenAssistantChat = null,
+  // MFバトルカードの入口(案A・左の列のいちばん下)。公開の印 cardBattle が立ち、公開のお話を見た人だけ(60-app.jsx が決める)
+  cardBattleVisible = false, onOpenCardBattle = null, cardBattleTeaser = false, onOpenCardTeaser = null,
+  cardTourVisible = false, onOpenCardTour = null,
+  // はじめての人の「つぎにやること」(2026-11-11 案4)。{ n:1〜3, title, sub, onTap }。null なら出さない
+  nextStep = null,
+  // モンヒロサクセス β の札(2026-11-13 社長「HOMEにβの札」)。中身は 56-monhero-success-store.jsx の MonheroSuccessHomeEntry(公開の印が偽なら何も出さない)
+  successEntry = null,
+}) {
+  // 背景の絵は「HOMEの枠の縦横比」で選ぶ。画面の向きでは決めない。
+  // パソコンは画面が横長でも、HOMEは幅600の縦長の列に収まるので、横長の絵を出すと村の真ん中だけが大きく写り、
+  // 施設ボタンが建物と合わなくなる。枠の大きさは自前で回しているとき(横持ちの描き方)も回す前の値なので、そのまま使える
+  // 形の境目(2026-11-17・正方形の絵を追加して3方向に): 比が 3/4 未満は縦長、3/4〜1.2 はほぼ正方形、1.2 を超えたら横長。
+  // 下の境目 3/4 は、タイトル絵の「ほぼ正方形」の帯(3:4〜。70-bootstrap.jsx)の下端と、ホームの3枚の比
+  // (縦 941/1672・正方形 1600/1600・横 2048/1152)の相乗平均 0.75 に一致する。タブレット縦(768x1024=0.75)は正方形になる。
+  // 上の境目は、横長の判定として使ってきた 1.2 をそのまま使う(タブレット横 1024x768=1.33 は横長になる)
+  // 助手ライフの「いま行くと得なこと」から施設へ行く口(HOME の札と同じ動き。助手ライフ側が呼ぶ)
+  React.useEffect(()=>{ if(typeof ASSISTANT_LIFE_LINKS!=='undefined'&&ASSISTANT_LIFE_LINKS) ASSISTANT_LIFE_LINKS.goPlace={ranch:onOpenManagement,temple:onOpenTemple,market:onOpenMarket,battle:onOpenBattle}; });
+  const homeSceneRef=React.useRef(null);
+  const [homeSceneShape,setHomeSceneShape]=React.useState('portrait');
+  React.useEffect(()=>{
+    const el=homeSceneRef.current;
+    if(!el)return undefined;
+    const measure=()=>{const w=el.clientWidth,h=el.clientHeight;if(w>0&&h>0){const r=w/h;setHomeSceneShape(r>1.2?'wide':r>=0.75?'square':'portrait');}};
+    measure();
+    if(typeof ResizeObserver==='undefined'){window.addEventListener('resize',measure);return()=>window.removeEventListener('resize',measure);}
+    const ro=new ResizeObserver(measure);ro.observe(el);return()=>ro.disconnect();
+  },[]);
+  // 【2026-11-17 ホーム一新で撤去】吹き出しが伸びたら施設の札を押し下げる測定機構(--mh-home-* の CSS変数6つ)。
+  //   施設は下のドックに集約され、吹き出しは上の帯・細バナーの下に流れで置くようになったので、押し下げ合いは起きない。
+  //   ジャックの吹き出しの測り直しは HomeRaidJack 自身の ResizeObserver(吹き出しを見る)+1.5秒間隔が受け持つ
+  const homeBackgroundSrc=homeArtSrc(homeArt,homeSceneShape);
+  const homeBackgroundWide=homeArtIsWide(homeArt,homeSceneShape);
+  const homeBackgroundSquare=homeArtIsSquare(homeArt,homeSceneShape);
+  // ★バッジのCSSは <head> へ1回だけ入れる。HOMEのDOMへ <style> を混ぜると、
+  //   配置の検査(home-layout-check.js)が施設の位置を測るときに数がずれる。
+  //   head なら画面の中身に影響しない。
+  React.useEffect(()=>{
+    if(typeof document==='undefined')return;
+    if(document.getElementById('mh-home-event-badge-css'))return;
+    const tag=document.createElement('style');
+    tag.id='mh-home-event-badge-css';
+    tag.textContent=HOME_EVENT_BADGE_CSS;
+    document.head.appendChild(tag);
+  },[]);
+  // 開催中のキャンペーンのうち、HOMEの札・バナー(banner)を持つもの(ハロウィン・ナイト)。描くたびに数え直す
+  const homeEventCampaign=(()=>{
+    if(typeof RELEASE_FLAGS==='undefined'||!RELEASE_FLAGS||RELEASE_FLAGS.rhythmEventPoints!==true||typeof rhythmEventPointCampaignAt!=='function')return null;
+    const campaign=rhythmEventPointCampaignAt(Date.now());
+    return campaign&&campaign.banner?campaign:null;
+  })();
+  // 公式杯の札(2026-10-31 社長・案A。中身は 99-card-tournament の cardTourHomeBanner)。
+  //   一覧は HOME を開いたときと10分ごとに読む。残り時間は1分ごとに数え直す。読めない・大会が無いときは出さない
+  const [cardTourList,setCardTourList]=React.useState(null);
+  const [cardTourNow,setCardTourNow]=React.useState(()=>Date.now());
+  React.useEffect(()=>{
+    if(!cardTourVisible||typeof cardTourFetchList!=='function')return undefined;
+    let alive=true;
+    const load=()=>{cardTourFetchList().then(l=>{if(alive)setCardTourList(Array.isArray(l)?l:null);}).catch(()=>{});};
+    load();
+    let ticks=0;
+    const id=setInterval(()=>{ticks+=1;setCardTourNow(Date.now());if(ticks%10===0)load();},60000);
+    return ()=>{alive=false;clearInterval(id);};
+  },[cardTourVisible]);
+  const homeCardTour=cardTourVisible&&typeof cardTourHomeBanner==='function'?cardTourHomeBanner(cardTourList,cardTourNow):null;
+  // モンヒロビートのイベントを開催しているか。描くたびに数え直す(上の★のとおり)
+  const homeRhythmEventOpen=(()=>{
+    const released=(typeof RELEASE_FLAGS!=='undefined'&&RELEASE_FLAGS&&RELEASE_FLAGS.rhythmWeeklyRanking===true);
+    if(!released||typeof rhythmLimitedEventAt!=='function')return false;
+    return !!rhythmLimitedEventAt(Date.now());
+  })();
+  // 期間ものの細バナー(2026-11-17 ホーム一新): イベントと公式杯を上の帯の下の1本に集約する。
+  // 両方あるときはカルーセル(5秒ごとに切替・手で切り替える操作は付けない。バナー自体が行き先ボタンのため)
+  const homeStripCount=(homeEventCampaign?1:0)+((homeCardTour&&typeof onOpenCardTour==='function')?1:0);
+  const [homeStripIdx,setHomeStripIdx]=React.useState(0);
+  React.useEffect(()=>{
+    if(homeStripCount<2)return undefined;
+    const id=setInterval(()=>setHomeStripIdx(i=>i+1),5000);
+    return ()=>clearInterval(id);
+  },[homeStripCount]);
+  const homeStripShow=homeStripCount?homeStripIdx%homeStripCount:0;
+  // クリスマスのイベントの入口(r1126-014・社長の選択は「上の大きな帯」)。細バナーの場所に置き、同じ中身の「クリスマスイベント」の細バナーは出さない
+  const xmasEntryInStrip=!!xmasEntry;
+  // HOMEの助手コメントを出すか(2026-11-17 あっくん「助手のコメントのオンオフ」)。設定は 21-assistant.jsx の
+  // HOME_ASSISTANT_COMMENT_STORE(既定は入)。「切」のときは吹き出しの枠ごと描かず、そのぶん広場が広くなる
+  const homeComment0=useHomeAssistantComment();
+  // 10:00 より前の HOME は、保存が無いときの既定を前のまま「入」にする(r1126-086 追記1)
+  const homeComment=homeComment0.explicit?homeComment0:{...homeComment0,on:true};
+  return (
+
+      <main ref={homeSceneRef} className="mh-home-scene" aria-label="村の広場">
+        {/* 背景は設定の「ホーム画面アレンジ」で選んだ絵。HOMEの枠の形に合った絵を画面いっぱいに出す(横長は is-wide、正方形は is-square) */}
+        <picture className={`mh-home-background ${homeBackgroundReady?'is-ready':''} ${homeBackgroundWide?'is-wide':''} ${homeBackgroundSquare?'is-square':''}`} aria-hidden="true"><img className="mh-home-backdrop" src={homeBackgroundSrc} alt=""/><img className="mh-home-main" src={homeBackgroundSrc} alt=""/></picture>
+        <div className="mh-home-masumon-layer" aria-hidden="true">{homePastureMasumons.map((masu,index)=><HomeWalkingMasumon key={masu.id} masu={masu} base={ALL_PLAYER_MONSTERS[masu.baseId]} masuColors={getMasuColors(masu)} index={index} count={homePastureMasumons.length}/>)}</div>
+        {/* 設定を光らせるときは、上の帯ごと暗幕より前に出す(帯が z-index を持っていて中だけ前に出せないため) */}
+        {raidXmasVisible&&typeof onOpenRaidXmas==='function'?<HomeRaidJack key="raid-xmas" ev={RAID_EVENT_XMAS} eventId={raidXmasEventId} onOpen={onOpenRaidXmas}/>
+          :raidJackVisible&&<HomeRaidJack eventId={raidJackEventId} onOpen={onOpenRaidJack}/>}
+        <header className={`mh-home-status${spotClass('settings')}`}>
+          <button type="button" className="mh-home-player relative" onClick={onOpenProfile} aria-label="プロフィールを開く">
+            <HomeProfileIcon src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={profileFrameId}/>
+            <div className="mh-home-player-copy"><strong>{breederName}</strong><span>ブリーダー Lv.{breederLevel.level}</span><div className="mh-home-xp-row"><div className="mh-home-xp"><i style={{width:`${Math.min(100,(breederLevel.xpIntoLevel/breederLevel.xpForNext)*100)}%`}}></i></div><small>{breederLevel.xpIntoLevel.toLocaleString()}/{breederLevel.xpForNext.toLocaleString()} XP</small></div></div>
+            <ChevronRight className="mh-home-profile-arrow" size={15}/>
+            {Number(friendRequestCount)>0&&<span data-home-friend-badge aria-label={`フレンド申請が${Number(friendRequestCount)}件届いています`} className="absolute -right-1 -top-2 flex h-6 min-w-[24px] items-center justify-center rounded-full bg-rose-500 px-1.5 text-[12px] font-black text-white shadow-lg">{Math.min(99,Number(friendRequestCount))}</span>}
+          </button>
+          {/* ダイヤ・ブリーダーP は桁が増えても折り返さず1行のまま(2026-10-13 社長「8桁で『ダイヤ』が縦に折れて枠が伸びた」)。
+              桁が多いときだけ枠を少し広げ(homeWalletGrowPx)、それでも入らないぶんは文字数(--len)に合わせて字を小さくする(70-bootstrap.jsx の --wal-room) */}
+          {/* 9桁(1億)からは「67.3億」のように縮めて出す(N5)。押すと細かい数が出る(CompactCount) */}
+          <section className="mh-home-wallet" style={{'--wal-grow':`${homeWalletGrowPx(compactCount(gold),compactCount(breederPoints))}px`}}>
+            <div><Gem size={14}/><CompactCount value={gold} style={{'--len':String(compactCount(gold)).length}}/><small>ダイヤ</small></div><div><Coins size={14}/><CompactCount value={breederPoints} style={{'--len':String(compactCount(breederPoints)).length}}/><small>ブリーダーP</small></div>
+            <button onClick={onOpenSettings} className={`mh-home-settings${spotClass('settings')}`} aria-label="設定"><Settings size={20}/><span>設定</span></button>
+          </section>
+        </header>
+        {/* 期間ものの細バナー(2026-11-17 ホーム一新)。イベントと公式杯を、上の帯の下の1本に集約する。
+            両方あるときはカルーセルで切り替わる(homeStripShow)。近日公開の予告はバトルカードのカード側へ移した */}
+        {xmasEntryInStrip&&<div className="mh-home-event-strip" data-home-xmas-entry-strip style={{width:'calc(100% - 78px)'}}>
+          <HomeXmasEventEntry onOpen={xmasEntry.onOpen} preOpen={!!xmasEntry.preOpen}/>
+        </div>}
+        {homeStripCount>0&&!(xmasEntryInStrip&&homeEventCampaign&&homeEventCampaign.id==='xmas_2026'&&!homeCardTour)&&<div className="mh-home-event-strip" data-home-event-strip>
+          {homeEventCampaign&&homeStripShow===0&&<button type="button" data-home-event-banner className="mh-home-event-banner" onClick={homeEventCampaign.id==='xmas_2026'&&typeof onOpenXmasEvent==='function'?onOpenXmasEvent:openChangelog} aria-label={`${homeEventCampaign.banner.title}${homeEventCampaign.banner.title2||''} ${homeEventCampaign.banner.sub}`}>
+            {/* title2 … 題の2行目(2026-11-14「本オープン記念」だけでは何の本オープンか分からないため、題を2行に分けられるようにした) */}
+            {/* 2026-11-23 r1119-131 社長「右の時計の手前まで横に伸ばし、行数を減らして縦を詰める」: 1行目に題と期間(sub)、2行目に副題(title2)。
+                幅が足りない端末では期間だけが題の下へ折り返す(.r1 の flex-wrap) */}
+            <b className="r1"><span>{homeEventCampaign.banner.emoji} {homeEventCampaign.banner.title}</span><small>{homeEventCampaign.banner.sub}</small></b>{homeEventCampaign.banner.title2?<span className="t2">{homeEventCampaign.banner.title2}</span>:null}
+          </button>}
+          {homeCardTour&&typeof onOpenCardTour==='function'&&homeStripShow===(homeEventCampaign?1:0)&&<button type="button" data-home-card-tour={homeCardTour.id} className="mh-home-tour-banner" onClick={()=>onOpenCardTour(homeCardTour.id)} aria-label={`${homeCardTour.name} ${homeCardTour.sub}`}>
+            <span aria-hidden="true">🏆</span><span><b>{homeCardTour.name}</b><small>{homeCardTour.sub}{homeCardTour.prize&&<em>{homeCardTour.prize}</em>}</small></span>
+          </button>}
+          {homeStripCount>1&&<span className="mh-home-event-strip-dots" aria-hidden="true">{Array.from({length:homeStripCount},(_,i)=><i key={i} className={i===homeStripShow?'on':''}/>)}</span>}
+        </div>}
+        {/* 右端の縦スタック(2026-11-17 ホーム一新): 更新履歴・ミッション・ギフトを丸ボタン+小ラベルで縦に寄せる。
+            並びは同日のあっくん追加指示で「更新履歴 → ミッション → ギフト」に変更(当初はギフト・ミッション・更新履歴)。
+            時刻は当初スタック末尾だったが、同日あっくん指示「時計は右上の角に」で先頭(=右上の角)へ移動 */}
+        <div className="mh-home-side-stack">
+          {typeof TimeOfDayClock==='function'&&<TimeOfDayClock home/>}
+          <button onClick={openChangelog} className="mh-home-side-btn mh-home-update" aria-label="更新履歴"><span className="mh-home-side-ic"><RefreshCcw size={19}/></span><span className="mh-home-side-lb">更新履歴</span>{hasUnreadChangelog&&<em className="mh-unread-badge" aria-label="未読あり">!</em>}</button>
+          <button onClick={openMissions} className={`mh-home-side-btn mh-home-mission${spotClass('reward')}`} aria-label="ミッション"><span className="mh-home-side-ic"><List size={20}/></span><span className="mh-home-side-lb">ミッション</span>
+            {missionClaimableCount(normalizeMissions(missions))>0&&<em>{missionClaimableCount(normalizeMissions(missions))}</em>}
+          </button>
+          <button onClick={openGiftBox} className={`mh-home-side-btn mh-home-gift${spotClass('reward')}`} aria-label="ギフト"><span className="mh-home-side-ic"><Package size={20}/></span><span className="mh-home-side-lb">ギフト</span>
+            {giftClaimableCount(gifts)>0&&<em>{giftClaimableCount(gifts)}</em>}
+          </button>
+        </div>
+        {/* 下部の統一ドック(2026-11-17 ホーム一新): 上から「次にやること」→施設カード×8(ふつうは4列×2段、広い場面と横画面では8枚1列。70-bootstrap.jsx)。
+            施設ごとに担当の助手が分かれているので、8つとも同じ大きさ・同じ形の正方形カードにそろえた(2026-11-17 あっくん追加指示)。
+            施設名は当初ホームだけ略称にしたが、統一カードの実画面を見て「フルネームでもおかしくない」とあっくんが判断し、
+            ホームでもフルネームに戻した(2026-11-17 あっくん追加指示)。名前の字の大きさは最長の「モンヒロサクセス」が
+            1行に収まるよう全施設一律に決めてある(70-bootstrap.jsx の .mh-home-dock-name)。助手の顔バッジは AssistantLifeHomeFaces が
+            data-home-fac のボタンの右上へ重ねる(56-assistant-life-house.jsx) */}
+        <div className="mh-home-dock">
+          {nextStep&&<button type="button" className="mh-home-nextstep" data-home-next-step={nextStep.n} onClick={nextStep.onTap} aria-label={`次にやること ${nextStep.n}/3 ${nextStep.title}`}>
+            <span className="mh-home-nextstep-lab">次に<br/>やること<b>{nextStep.n}/3</b></span>
+            <span className="mh-home-nextstep-body"><b>{['①','②','③'][nextStep.n-1]} {nextStep.title}</b><small>{nextStep.sub}</small></span>
+            <i aria-hidden="true">›</i>
+          </button>}
+          <div className="mh-home-dock-row mh-home-dock-top">
+            {/* モンヒロサクセス β の入口(2026-11-13 社長)。中身は 56-monhero-success-store.jsx の MonheroSuccessHomeEntry で、
+                ドック上段の先頭のセルとして流れる(公開の印が偽なら何も出さず、残りのカードで割り直す) */}
+            {successEntry}
+            {/* 2026-09-20 ユーザー指示で正式名称を「モンヒロバトル」にした。下の言葉は「挑戦」(2026-11-17 あっくん決定)。
+                ホームの名前も正式名称のまま(略称「モンバト」は 2026-11-17 の一新で一時使ったが、同日のあっくん追加指示でフルネームへ戻した) */}
+            <button type="button" data-home-fac="battle" className={`mh-home-dock-card battle${spotClass('battle')}`} onClick={onOpenBattle} aria-label="モンヒロバトル">
+              <span className="mh-home-dock-pic"><img src="images/home/facility-battle.webp" alt="" draggable={false}/></span>
+              <span className="mh-home-dock-txt"><span className="mh-home-dock-name">モンヒロバトル</span><span className="mh-home-dock-sub">挑戦</span></span>
+            </button>
+            {/* モンヒロビート(2026-09-03に修行の場所を譲った。2026-09-04に正式名称を「モンスタービート」から「モンヒロビート」へ変更)。
+                公開フラグが立つまでは「準備中」の案内だけを出し、本編からは遊べない */}
+            {/* ★イベント開催中は、その遊びのボタンに札を出す(2026-09-11・ユーザー指示)。いまのイベントはモンヒロビートの曲だけを対象にするので、札もここだけ。
+                ★期間の判定は描くたびに行う(読み込み時に1回だけ決めると、開きっぱなしの端末で古いままになる・CLAUDE.md ⑥-4) */}
+            <button type="button" data-home-fac="rhythm" className="mh-home-dock-card rhythm" onClick={onOpenRhythm} aria-label={RHYTHM_MODE_PUBLIC_RELEASE?"モンヒロビート":"モンヒロビート（準備中）"}>
+              <span className="mh-home-dock-pic"><img src="images/home/facility-beat.webp" alt="" draggable={false}/></span>
+              <span className="mh-home-dock-txt"><span className="mh-home-dock-name">モンヒロビート{!RHYTHM_MODE_PUBLIC_RELEASE&&<small className="mh-home-dock-soon">準備中</small>}</span><span className="mh-home-dock-sub">音ゲー</span></span>
+              {homeRhythmEventOpen&&<em data-home-event-badge className="mh-home-event-badge" style={HOME_EVENT_BADGE_STYLE_V1}>✨開催中✨</em>}
+            </button>
+            {/* MFバトルカード(公開の印 cardBattle が立ち、公開のお話を見た人だけ。60-app.jsx が決める) */}
+            {cardBattleVisible&&typeof onOpenCardBattle==='function'&&<button type="button" data-home-fac="card" data-home-card-battle className="mh-home-dock-card card" onClick={onOpenCardBattle} aria-label="MFバトルカード">
+              <span className="mh-home-dock-pic"><img src="images/home/facility-card.webp" alt="" draggable={false}/></span>
+              <span className="mh-home-dock-txt"><span className="mh-home-dock-name">MFバトルカード</span><span className="mh-home-dock-sub">カード対戦</span></span>
+            </button>}
+            {/* 公開前の予告(社長 2026-10-25)。カード自体に「近日公開」を付け、押すと予告の小窓。中には入れない。
+                公開の印(RELEASE_FLAGS.cardBattle)を立てると、60-app がこちらを下ろして上のふつうの入口に切り替える */}
+            {!cardBattleVisible&&cardBattleTeaser&&typeof onOpenCardTeaser==='function'&&<button type="button" data-home-fac="card" data-home-card-battle-teaser className="mh-home-dock-card card soon" onClick={onOpenCardTeaser} aria-label="MFバトルカード 近日公開">
+              <span className="mh-home-dock-pic"><img src="images/home/facility-card.webp" alt="" draggable={false}/></span>
+              <span className="mh-home-dock-txt"><span className="mh-home-dock-name">MFバトルカード</span><span className="mh-home-dock-sub">カード対戦</span></span>
+              <small className="mh-home-dock-chip">近日公開</small>
+            </button>}
+          </div>
+          {/* 下段の4施設は「下の言葉」が無い。縦位置の受け方は全カード共通で、絵は上端そろえ、
+              名前は文字の枠(.mh-home-dock-txt。「名前1行+間+下の言葉1行」ぶんの固定の高さ)の中で
+              縦に中央寄せする(70-bootstrap.jsx)。下の言葉が無い施設は名前1行だけが枠の縦中央に来る
+              (2026-11-17 あっくん追加指示。センター合わせの対象はカード全体ではなく文字の枠部分) */}
+          <nav className="mh-home-dock-row mh-home-dock-bottom" aria-label="拠点施設">
+            <button type="button" data-home-fac="management" className={`mh-home-dock-card management${spotClass('management')}`} onClick={onOpenManagement} aria-label="M/B管理">
+              <span className="mh-home-dock-pic"><img src="images/home/facility-management.webp" alt="" draggable={false}/></span><span className="mh-home-dock-txt"><span className="mh-home-dock-name">M/B管理</span></span>
+            </button>
+            <button type="button" data-home-fac="temple" className={`mh-home-dock-card temple${spotClass('temple')}`} onClick={onOpenTemple} aria-label="神殿">
+              <span className="mh-home-dock-pic"><img src="images/home/facility-temple.webp" alt="" draggable={false}/></span><span className="mh-home-dock-txt"><span className="mh-home-dock-name">神殿</span></span>
+            </button>
+            <button type="button" data-home-fac="market" className={`mh-home-dock-card market${spotClass('market')}`} onClick={onOpenMarket} aria-label="マーケット">
+              <span className="mh-home-dock-pic"><img src="images/home/facility-market.webp" alt="" draggable={false}/></span><span className="mh-home-dock-txt"><span className="mh-home-dock-name">マーケット</span></span>
+            </button>
+            {/* 助手ライフ(2026-11-07 社長)。家と町にいる助手の顔は、このボタンの右上のバッジに集まる(56-assistant-life-house.jsx の AssistantLifeHomeFaces) */}
+            {typeof assistantLifeEnabled==='function'&&assistantLifeEnabled()&&<button type="button" data-home-fac="life" data-home-assistant-life className="mh-home-dock-card life" onClick={()=>assistantLifeOpenScreen()} aria-label="助手ライフ">
+              <span className="mh-home-dock-pic"><img src="images/home/facility-life.webp" alt="" draggable={false}/></span><span className="mh-home-dock-txt"><span className="mh-home-dock-name">助手ライフ</span></span>
+            </button>}
+          </nav>
+        </div>
+
+        {/* 仲良し度が上がった直後だけ、みゅあがそのことに触れる(HOMEを離れると元に戻る)。
+            設定「ホームの助手コメント」が「切」のときは、この枠ごと出さない(2026-11-17 あっくん) */}
+        {homeComment.on&&<div className={`mh-home-assistant${spotClass('assistant')}`}><AssistantBubble scene="home" condition={assistantBondUp?'bondUp':(masuMons.length===0?'firstRun':null)} compact menu={typeof onOpenAssistantChat==='function'?[{ key:'chat', label:'💬 おしゃべりする', onClick:onOpenAssistantChat, attr:{ 'data-home-assistant-chat':'' } }]:null}/>
+          {/* 「💬 おしゃべり」は吹き出しの中に重ねず、吹き出しを押したときのメニューに入れた(押し所が2つで違いが分からなかった。r1119-050 窓-36) */}
+          <HomeAssistantCommentToggle on/>
+        </div>}
+        {/* 「切」のときも、HOME から1押しで吹き出しを戻せる小さな顔のボタンを残す(r1119-081 社長「ホームの助手のオンオフはホーム上で出し入れできるようにして」) */}
+        {!homeComment.on&&<div className={`mh-home-assistant-fold${spotClass('assistant')}`}><HomeAssistantCommentToggle on={false}/></div>}
+      </main>
+    
+  );
+}
+
+
+function HomeScreenV2({
   assistantBondUp, friendRequestCount = 0, breederIcon, breederLevel, breederName, breederPoints, gifts, gold,
   hasUnreadChangelog, changelogUnreadCount, homeBackgroundReady, homeArt, homePastureMasumons, masuMons, missions,
   onOpenBattle, onOpenManagement, onOpenMarket, onOpenProfile, onOpenRhythm, onOpenSettings,
@@ -72690,7 +72958,9 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
   //   (ASSISTANT_PEER_STORE.state.homeWaiting)、押されたら(homeOpenAt)その掛け合いの窓を開く。開いた掛け合いの id を覚え、次の掛け合いはまた印から。
   //   窓が入口・イベントの帯・ボスを隠していた(点検 r1126-070 で 24枚中10枚)。見返し(replay)はこれまでどおりすぐ開く
   const [homeOpenedId, setHomeOpenedId] = React.useState(null);
-  const homeWaiting = scene === 'home' && !!cur && !cur.replay && homeOpenedId !== cur.talk.id;
+  // 10:00 より前(前の HOME)は今までどおりすぐ開く(r1126-086 追記1)
+  const homeV2Now = typeof homeV2At === 'function' ? homeV2At() : true;
+  const homeWaiting = homeV2Now && scene === 'home' && !!cur && !cur.replay && homeOpenedId !== cur.talk.id;
   React.useEffect(() => { if (!!ASSISTANT_PEER_STORE.state.homeWaiting !== homeWaiting) ASSISTANT_PEER_STORE.set({ homeWaiting }); }, [homeWaiting]);
   React.useEffect(() => () => { if (ASSISTANT_PEER_STORE.state.homeWaiting) ASSISTANT_PEER_STORE.set({ homeWaiting: false }); }, []);
   const homeOpenRef = React.useRef(st.homeOpenAt || 0);
@@ -72704,7 +72974,7 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
   //   出す位置だけを HOME の部品の位置から測って決める(中身は変えない)。縦とタブレットは顔の下、背の低い横は帯の右。
   //   下の入口(ドック)の上端までに収め、収まらない分は窓の中で送る。測れないときは今までどおり画面の下
   const [homeBox, setHomeBox] = React.useState(null);
-  const homeShown = scene === 'home' && !!cur && !homeWaiting && !(peerFolded && !cur.replay);
+  const homeShown = homeV2Now && scene === 'home' && !!cur && !homeWaiting && !(peerFolded && !cur.replay);
   React.useEffect(() => {
     if (!homeShown || typeof document === 'undefined') { setHomeBox(null); return undefined; }
     const measure = () => {
@@ -76978,7 +77248,87 @@ function AssistantLifeSpentMark({ size = 20 }) {
 // 対応表(ASSISTANT_LIFE_SPOT_FAC)はそのまま。家と町にいる助手は「ライフ」のバッジに集まる
 const ASSISTANT_LIFE_FACILITY_SEL = Object.freeze({ rhythm: 'main.mh-home-scene [data-home-fac="rhythm"]', card: 'main.mh-home-scene [data-home-fac="card"]', management: 'main.mh-home-scene [data-home-fac="management"]', temple: 'main.mh-home-scene [data-home-fac="temple"]', market: 'main.mh-home-scene [data-home-fac="market"]', battle: 'main.mh-home-scene [data-home-fac="battle"]', life: 'main.mh-home-scene [data-home-fac="life"]' });
 const ASSISTANT_LIFE_BADGE_FACE = 24; // 顔バッジの顔の大きさ(px・固定)
-function AssistantLifeHomeFaces({ metIds }) {
+// HOME の作り直し(r1126-073)と同じ時刻(2026-11-28 10:00)で、前の顔の束(押すと助手ライフ)から、押せない小さい顔1つへ切り替える(台帳 r1126-086 追記1)
+function AssistantLifeHomeFaces(props) {
+  const v2 = typeof useHomeV2 === 'function' ? useHomeV2() : true;
+  return v2 ? <AssistantLifeHomeFacesV2 {...props}/> : <AssistantLifeHomeFacesV1 {...props}/>;
+}
+function AssistantLifeHomeFacesV1({ metIds }) {
+  const st = useAssistantLifeNow(metIds);
+  const [rects, setRects] = React.useState({});
+  React.useEffect(() => {
+    if (!assistantLifeEnabled()) return undefined;
+    const measure = () => {
+      const o = {};
+      // 🔄横(端末は縦のまま、器を90度回して描く)では、画面の座標ではなく器の中の座標で測る。バッジも器の中に置かれるため
+      //   (2026-11-07 本番で、🔄横の顔が札と関係ない所に出ていた)
+      const rot = typeof RHYTHM_VIEW_ROTATION !== 'undefined' && RHYTHM_VIEW_ROTATION.active();
+      const rectOf = (el) => (rot ? RHYTHM_VIEW_ROTATION.rectOf(el) : el.getBoundingClientRect());
+      const vw = rot ? window.innerHeight : window.innerWidth;
+      for (const [k, sel] of Object.entries(ASSISTANT_LIFE_FACILITY_SEL)) {
+        const el = document.querySelector(sel);
+        if (!el || !el.offsetParent) continue;
+        const r = rectOf(el);
+        o[k] = { x: r.left, y: r.top, w: r.width, h: r.height, right: r.left + r.width / 2 > vw / 2 };
+      }
+      // フレンドの帯の置き場所用に、ドック全体の上端も測る(帯はドックの上に出す)
+      const dk = document.querySelector('.mh-home-dock');
+      if (dk && dk.offsetParent) o.__dockTop = rectOf(dk).top;
+      setRects(prev => (JSON.stringify(prev) === JSON.stringify(o) ? prev : o));
+    };
+    measure();
+    const t = setInterval(measure, 700);
+    window.addEventListener('resize', measure);
+    return () => { clearInterval(t); window.removeEventListener('resize', measure); };
+  }, []);
+  if (!assistantLifeEnabled() || !st.loaded || st.open) return null;
+  const life = st.life;
+  if (!life || life.abs !== assistantLifeSlotAt().abs) return null;
+  const ids = (metIds || []).filter(id => ASSISTANT_LIFE_PREFS[id]);
+  const by = {};
+  for (const id of ASSISTANT_LIFE_HOUSE_ORDER) {
+    if (!ids.includes(id)) continue;
+    let f = assistantLifeFacilityOf(assistantLifeWhereOf(life, id));
+    // カード部屋の 1.5倍を使い切った助手も顔は出し、「済」の印を付ける(2026-11-08 社長「HOMEも地図も出す」)。押すと部屋で次の時間帯が分かる
+    if (!rects[f]) f = 'life';
+    if (!rects[f]) continue;
+    (by[f] = by[f] || []).push(id);
+  }
+  // カード部屋にいる助手と対戦するとごほうびアップ(カード部の口があるときだけ)。バトルカードのボタンの左上に小さく「UP」
+  const cardUp = typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && assistantLifeHouseCardIds().some(id => (by.card || []).includes(id) && !assistantLifeCardSpent(id)); // 「UP」は、まだごほうびが上がる助手がいるときだけ
+  const peer = typeof ASSISTANT_PEER_STORE !== 'undefined' ? ASSISTANT_PEER_STORE.state : null;
+  const q = peer && peer.quarrel && peer.quarrel.pending;
+  const after = new Set(q && q.pair ? String(q.pair).split('-') : []);
+  const size = ASSISTANT_LIFE_BADGE_FACE;
+  const step = size - 8; // 少し重ねる(顔の約1/3)
+  return (<>
+    {Object.entries(by).map(([f, list]) => {
+      const r = rects[f];
+      const shown = list.slice(0, 3);
+      const extra = list.length - shown.length;
+      const rowW = size + Math.max(0, shown.length - 1) * step + (extra > 0 ? 22 : 0) + 6;
+      const left = r.x + r.w - rowW + 6; // ボタンの右上隅に少しはみ出す
+      const top = r.y - 9;
+      const names = list.map(id => { const who = assistantById(id); return who ? who.name : id; }).join('・');
+      return (
+        <div key={f} data-assistant-life-home-faces={f} data-assistant-life-home-faces-ids={list.join(',')} className="pointer-events-none fixed" style={{ zIndex: 40, left, top, width: rowW, height: size + 2 }}>
+          <button type="button" data-assistant-life-home-badge={f} aria-label={`${names}がいます。助手ライフを開く`} onClick={() => { ASSISTANT_LIFE_STORE.set({ open: true, focus: shown[0] }); }}
+            className="pointer-events-auto flex items-center rounded-full bg-slate-950/70 px-[3px] shadow active:scale-95" style={{ height: size + 2 }}>
+            {shown.map((id, i) => { const who = assistantById(id); if (!who) return null; const w = assistantLifeWhereOf(life, id); const lonely = w && w.reason === 'lonely';
+              const spent = f === 'card' && !!assistantLifeCardSpent(id);
+              return (
+                <span key={id} data-assistant-life-home-face={id} data-assistant-life-home-face-spent={spent ? '1' : undefined} className="relative shrink-0 rounded-full" style={{ marginLeft: i ? -8 : 0, boxShadow: lonely ? '0 0 0 1.5px #fbbf24,0 0 6px #fbbf24' : after.has(id) ? '0 0 0 1.5px #7dd3fc' : '0 0 0 1.5px #fff' }}>
+                  <span className="block" style={spent ? { filter: 'grayscale(.6) brightness(.8)' } : undefined}><AssistantFace who={who} size={size} accent={who.accent}/></span>
+                  {spent && <AssistantLifeSpentMark size={size}/>}
+                </span>); })}
+            {extra > 0 && <span data-assistant-life-home-faces-extra={extra} className="shrink-0 rounded-full bg-slate-100 px-1 font-black text-slate-900 shadow" style={{ marginLeft: 2, fontSize: 9, lineHeight: '14px' }}>+{extra}</span>}
+          </button>
+        </div>); })}
+    {rects.card && cardUp && <span data-assistant-life-home-card-up className="pointer-events-none fixed rounded-full bg-amber-300 font-black text-slate-950 shadow" style={{ zIndex: 40, left: Math.max(2, rects.card.x - 4), top: rects.card.y - 8, fontSize: 9, lineHeight: '15px', padding: '0 5px' }}>UP</span>}
+    {rects.life && typeof AssistantLifeFriendHomeBadge === 'function' && <AssistantLifeFriendHomeBadge rect={rects.life} dockTop={rects.__dockTop}/>}
+  </>);
+}
+function AssistantLifeHomeFacesV2({ metIds }) {
   const st = useAssistantLifeNow(metIds);
   const [rects, setRects] = React.useState({});
   React.useEffect(() => {
@@ -77769,7 +78119,7 @@ function AssistantLifeBattleHall({ metIds }) {
       {typeof AssistantMasmonTrainWatchHost === 'function' && <AssistantMasmonTrainWatchHost/>}
       <p className="text-[12px] font-black text-amber-200" style={JA_WRAP_STYLE}>{jaWrap('🏡 いまモンヒロバトルにいる助手')}</p>
       {ids.map(id => (
-        <AssistantLifeMapRow key={id} id={id} place="battle" life={life} cheerMsg={cheerMsg} setCheerMsg={setCheerMsg} noSuccess
+        <AssistantLifeMapRow key={id} id={id} place="battle" life={life} cheerMsg={cheerMsg} setCheerMsg={setCheerMsg} noSuccess={typeof homeV2At !== 'function' || homeV2At()}
           onRoom={(rid) => { try { ASSISTANT_LIFE_STORE.set({ open: true, focus: rid }); } catch (_) {} }}/>))}
     </section>);
 }
@@ -99565,7 +99915,7 @@ function MonheroSuccessHomeEntry({ callNameOf, bondLvOf, onOpenChange }) {
             (ホーム略称「サクセス」は 2026-11-17 の一新で一時使ったが、同日のあっくん追加指示でフルネームへ戻した) */}
         {/* 2026-11-23 r1119-130 社長「モンビーのイベント開催中と同じ作りにすればいい」: 傾けた10pxの字がにじんでいたので、
             モンヒロビートの入口の「開催中」の札と同じ部品(HOME_EVENT_BADGE_STYLE・光り方の mh-home-event-badge)にそろえる。文と黄色はそのまま */}
-        <em className="rb mh-home-event-badge" aria-hidden="true" style={HOME_EVENT_BADGE_STYLE}>β版 開幕！</em>
+        <em className="rb mh-home-event-badge" aria-hidden="true" style={typeof homeV2At === 'function' && !homeV2At() && typeof HOME_EVENT_BADGE_STYLE_V1 !== 'undefined' ? HOME_EVENT_BADGE_STYLE_V1 : HOME_EVENT_BADGE_STYLE}>β版 開幕！</em>
         <span className="pic"><img src="images/home/facility-success.webp" alt="" draggable={false}/></span>
         <span className="txt"><span className="nm">モンヒロサクセス</span><span className="sb">育成</span></span>
       </button>
