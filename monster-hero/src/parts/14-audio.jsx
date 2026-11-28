@@ -69,6 +69,12 @@ const Audio_ = (() => {
   //   タップ音もその seBus を通っていたので一緒に消えていた。タップ音だけはこの uiBus を通し、保存してある効果音の音量に従わせる
   //   (超省エネの0は呼ぶ側 60-app.jsx が渡す)。裏のバトルの音は今までどおり seBus のまま
   let uiBus = null, uiSeVolumePct = 0;
+  // 事件簿(ミステリーノベル)の専用の音量(2026-11-28 社長「読んでる最中に専用の音量設定がほしい」・台帳 r1126-116)。
+  //   { bgm, se, amb, clock } はそれぞれ 0〜1 の倍率で、ゲーム全体の音量(曲・効果音)に掛ける。事件簿を閉じている間は null(1倍)。
+  //   se は事件簿の1回の音(seBus)、amb は環境音(nvAmbBus)、clock は選択肢を待つ間のチクタク(nvClockBus)、bgm は曲
+  let nvVol = null;
+  const nvScale = (k) => (nvVol && Number.isFinite(nvVol[k]) ? Math.max(0, Math.min(1, nvVol[k])) : 1);
+  let nvAmbBus = null, nvClockBus = null;
   let backgroundSeQuiet = false; // 裏の周回の効果音を止める印(下の setBackgroundSeQuiet)
   let enabled = false;
   // 音ゲーのBGM音量は、メインのBGM音量設定(対数カーブ・bgmGain)を経由させず独立させる。
@@ -101,7 +107,7 @@ const Audio_ = (() => {
         //   Tone の時計は効果音を鳴らしていないあいだもずっと本体を起こし続けていた。
         //   効果音は Tone.now() から直接鳴らしていて時計の予定表(Transport)を使わないので、音の出方は変わらない
         try { const toneCtx = Tone.getContext && Tone.getContext(); if (toneCtx && 'updateInterval' in toneCtx) toneCtx.updateInterval = 0.25; } catch (e) {}
-        seBus = new Tone.Gain(_gainFromPct(seVolumePct)).toDestination();
+        seBus = new Tone.Gain(_gainFromPct(seVolumePct) * nvScale('se')).toDestination();
         uiBus = new Tone.Gain(_gainFromPct(uiSeVolumePct)).toDestination();
         reverb = new Tone.Reverb({ decay: 2.4, wet: 0.22 }).connect(seBus);
         try { await reverb.ready; } catch (e) {}
@@ -291,7 +297,7 @@ const Audio_ = (() => {
     masterOut.connect(analyser);
     analyser.connect(ctx.destination);
     bgmGain = ctx.createGain();
-    bgmGain.gain.value = _bgmGain(bgmVolumePct);
+    bgmGain.gain.value = _bgmGain(bgmVolumePct) * nvScale('bgm');
     bgmGain.connect(masterOut);
   };
   const getAudioCtx = () => {
@@ -438,7 +444,7 @@ const Audio_ = (() => {
   const resolveTrack = key => BGM_TRACK_BY_ID[key] || BGM_TRACK_BY_KEY[key] || null;
   const safeTrackGain = track => Math.max(0, Math.min(1.25, Number.isFinite(track?.gain) ? track.gain : 1));
   // ★fadeToBGM で下げている途中でも、次の曲を鳴らすときは予定を消してから音量を戻す(0のまま止まらないように)
-  const applyTrackGain = track => { if (bgmGain) { try { bgmGain.gain.cancelScheduledValues(0); } catch (e) {} bgmGain.gain.value = Math.min(1, _bgmGain(bgmVolumePct) * safeTrackGain(track)); } };
+  const applyTrackGain = track => { if (bgmGain) { try { bgmGain.gain.cancelScheduledValues(0); } catch (e) {} bgmGain.gain.value = Math.min(1, _bgmGain(bgmVolumePct) * safeTrackGain(track) * nvScale('bgm')); } };
 
   const startBgmBuffer = (key, track, buffer, request) => {
     const ctx = getAudioCtx();
@@ -1162,7 +1168,27 @@ const Audio_ = (() => {
   };
   const setUiSeVolume = (pct) => { uiSeVolumePct = pct; if (uiBus && Tone) { try { uiBus.gain.rampTo(_gainFromPct(pct), 0.05); } catch (e) {} } };
   const uiSeVolume = () => uiSeVolumePct; // 検査が「ボタンの音の口が0でないか」を見る口
-  const setSeVolume = (pct) => { seVolumePct = pct; if (seBus && Tone) { try { seBus.gain.rampTo(_gainFromPct(pct), 0.05); } catch (e) {} } };
+  const setSeVolume = (pct) => { seVolumePct = pct; nvApplyBuses(); };
+  // 効果音の口と、事件簿の環境音・時計の口の大きさを、いまの効果音の音量 × 事件簿の倍率にそろえる(どの口もゲームの効果音の音量の決まり=0にする画面などに従う)
+  const nvApplyBuses = () => {
+    if (!Tone) return;
+    const base = _gainFromPct(seVolumePct);
+    if (seBus) { try { seBus.gain.rampTo(base * nvScale('se'), 0.05); } catch (e) {} }
+    if (nvAmbBus) { try { nvAmbBus.gain.rampTo(base * nvScale('amb'), 0.05); } catch (e) {} }
+    if (nvClockBus) { try { nvClockBus.gain.rampTo(base * nvScale('clock'), 0.05); } catch (e) {} }
+  };
+  const nvBusOf = (k) => {
+    if (!Tone) return null;
+    const base = _gainFromPct(seVolumePct);
+    if (k === 'amb') { if (!nvAmbBus) nvAmbBus = new Tone.Gain(base * nvScale('amb')).toDestination(); return nvAmbBus; }
+    if (!nvClockBus) nvClockBus = new Tone.Gain(base * nvScale('clock')).toDestination(); return nvClockBus;
+  };
+  // 事件簿が開いている間の音量の倍率を入れる(null で閉じた=1倍へ戻す)。鳴っている曲・環境音にもすぐ効く
+  const setNovelVolume = (v) => {
+    nvVol = v && typeof v === 'object' ? { bgm: Number(v.bgm), se: Number(v.se), amb: Number(v.amb), clock: Number(v.clock) } : null;
+    nvApplyBuses();
+    try { applyTrackGain(resolveTrack(previewKey || currentKey)); } catch (e) {}
+  };
   const setBgmVolume = (pct) => { bgmVolumePct = pct; applyTrackGain(resolveTrack(previewKey || currentKey)); if (pct <= 0) { stopPreview(false); stopOthers(); } else if (enabled && currentKey && !previewKey) playBGM(currentKey); };
   const resumeIfNeeded = async () => { await ensureAudioCtxRunning(); if (Tone) { try { await Tone.start(); started = true; } catch (e) {} } if (enabled && currentKey && !bgmSource) playBGM(currentKey); if (enabled) nvAmbientResume(); };
   const unlock = async (playTestTone = false) => {
@@ -1266,6 +1292,8 @@ const Audio_ = (() => {
     //   どれも小さく、低く暗い音。その場で合成する(音源ファイルなし・権利の心配なし)。効果音の音量(seBus)を通る
     //   nvTick … 柱時計のチク(high)/タク。選択肢を待つ間に繰り返す。BGM とぶつからないよう、とても小さく短い
     nvTick: async (high) => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.MetalSynth({ frequency: high ? 640 : 470, envelope: { attack: 0.001, decay: 0.035, release: 0.02 }, harmonicity: 3.1, modulationIndex: 10, resonance: high ? 3800 : 3000, octaves: 0.8, volume: -12 }).connect(seBus); s.triggerAttackRelease('64n', t); const k = new Tone.MembraneSynth({ pitchDecay: 0.008, octaves: 2, envelope: { attack: 0.001, decay: 0.05, sustain: 0 }, volume: -20 }).connect(seBus); k.triggerAttackRelease(high ? 'C4' : 'G3', '64n', t); setTimeout(() => { try { s.dispose(); k.dispose(); } catch (e) {} }, 300); },
+    //   nvClockTick … 選択肢を待つ間のチク・タク(nvTick と同じ音で、事件簿の「時計の音」の音量の口を通る・r1126-116)
+    nvClockTick: async (high) => { if (!enabled) return; await ensure(); if (!Tone) return; const bus = nvBusOf('clock') || seBus; const t = Tone.now(); const s = new Tone.MetalSynth({ frequency: high ? 640 : 470, envelope: { attack: 0.001, decay: 0.035, release: 0.02 }, harmonicity: 3.1, modulationIndex: 10, resonance: high ? 3800 : 3000, octaves: 0.8, volume: -12 }).connect(bus); s.triggerAttackRelease('64n', t); const k = new Tone.MembraneSynth({ pitchDecay: 0.008, octaves: 2, envelope: { attack: 0.001, decay: 0.05, sustain: 0 }, volume: -20 }).connect(bus); k.triggerAttackRelease(high ? 'C4' : 'G3', '64n', t); setTimeout(() => { try { s.dispose(); k.dispose(); } catch (e) {} }, 300); },
     //   nvCreak … 扉・床のきしみ「ギィ」(低いのこぎり波が、ゆっくり下がる)
     nvCreak: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const f = new Tone.Filter(1800, 'lowpass').connect(seBus); const s = new Tone.Synth({ oscillator: { type: 'sawtooth' }, envelope: { attack: 0.08, decay: 0.7, sustain: 0, release: 0.2 }, volume: -8 }).connect(f); s.triggerAttackRelease('D4', '4n', t); try { s.frequency.rampTo('G3', 0.7, t); } catch (e) {} setTimeout(() => { try { s.dispose(); f.dispose(); } catch (e) {} }, 1400); },
     //   nvThud … 重い物の落ちる・ぶつかる「ゴッ」(遠くのこもった低音。enemyAttack より小さく遠い)
@@ -1310,7 +1338,7 @@ const Audio_ = (() => {
     if (!Tone || !enabled) { nvAmb = { kind: 'none', stop: null }; return; }
     const nodes = []; const timers = [];
     try {
-      const g = new Tone.Gain(0).connect(seBus); nodes.push(g);
+      const g = new Tone.Gain(0).connect(nvBusOf('amb') || seBus); nodes.push(g);
       // 2026-11-28 r1126-093 追記4: 前の作りは -74〜-89dB と小さく、音の大半がスマホのスピーカーで出ない 300Hz より下だった(社長「無音になってる？」)。
       //   大きさを上げ、帯域を 400〜2000Hz 寄り(スピーカーで聞こえる高さ)へ移した。目安: 効果音の音量が初期値のとき、ボタンの音と同じくらいに聞こえる
       if (kind === 'wind' || kind === 'blizzard' || kind === 'room') {
@@ -1379,5 +1407,6 @@ const Audio_ = (() => {
   // お知らせ・ヘルプの動画にかける音量(2026-11-14 社長「予告動画の音が設定の音量と関係なく鳴る」)。
   // 動画は曲と同じ扱いにして、BGM の音量と同じ曲線(_gainFromPct)で返す。音を切っている・BGM が 0 なら 0
   const videoGain = () => (enabled && bgmVolumePct > 0 ? _gainFromPct(bgmVolumePct) : 0);
-  return { nvAmbient, currentBgmKey: () => currentKey, isBackgroundSeQuiet, setVideoHold, videoGain, setStoryEndFade, setStoryOpenFade, playSeFile, fgPlaySeFile, preloadSE, playBGM, fadeToBGM, stopBGM, setBgmOnce, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setUiSeVolume, uiSeVolume, uiTap, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
+  // novelVolume … 事件簿の音量の倍率をいま入れているか(検査が見る口。null = 事件簿の外 = 1倍)
+  return { nvAmbient, setNovelVolume, novelVolume: () => (nvVol ? { ...nvVol } : null), currentBgmKey: () => currentKey, isBackgroundSeQuiet, setVideoHold, videoGain, setStoryEndFade, setStoryOpenFade, playSeFile, fgPlaySeFile, preloadSE, playBGM, fadeToBGM, stopBGM, setBgmOnce, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setUiSeVolume, uiSeVolume, uiTap, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
 })();
