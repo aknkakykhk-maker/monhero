@@ -72,7 +72,9 @@ const ASSISTANT_LIFE_MAP_HEAD = Object.freeze({
 });
 // 町の地図の大きさの倍率(上の表に行が無い絵だけ。2026-11-15 全身画3人の公開 #6357 で、地図の絵が stand-normal/ の新しい絵に替わり、
 //   みゅあ・ソラシド・えるびんの顔(目から顎)がほかの人の 1.2〜1.5倍に出ていた。ほかの人の 7〜8px にそろえる。assistant-art-scenes-check の map のばらつき)
-const ASSISTANT_LIFE_MAP_FIT = Object.freeze({ 'stand-normal/myua': 0.74, 'stand-normal/sorashido': 0.83, 'stand-normal/erubin': 0.7, sorashido_sleep: 0.82 });
+//   2026-11-28 r1124-006 追記(社長「それもこっちでなおして」): みゅあの 0.74 を外した。11/24 に全身絵から切り出し直した絵(#7449)では顔が大きく出なくなり、0.74 のままだと
+//   みゅあだけ顔がほかの人の 0.7倍ほど(縦 5.7px・ほか 7.3〜9.2px)に縮んでいた。外すと 7.7px でそろう。地図だけの倍率なので、助手ライフの場面の大きさ・重なりは変わらない
+const ASSISTANT_LIFE_MAP_FIT = Object.freeze({ 'stand-normal/sorashido': 0.83, 'stand-normal/erubin': 0.7, sorashido_sleep: 0.82 });
 // 小さな全身(絵の描かれている範囲を測って、見た目の高さを h にそろえる。胸から上の絵は下をぼかす)
 function AssistantLifeMapFig({ who, h, sleep, spent = false }) {
   // 寝ている助手は、社長の寝顔の絵があればそれ(assistantLifeSleepSrc・2026-11-11 社長「絵をそのまま使う」)

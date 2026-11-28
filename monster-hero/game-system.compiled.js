@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 681c6bcfd1ca73b4
+// source-sha256: 8d21926397255c06
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -112810,7 +112810,7 @@ const RaidJackRewardList = ({
     className: "mb-2 flex shrink-0 items-center justify-between"
   }, React.createElement("div", {
     className: "text-[14px] font-black text-orange-200"
-  }, ev.icon, " ", ev.bossWord, "の報酬一覧"), React.createElement("button", {
+  }, cardIconNode(ev.icon, 16), " ", ev.bossWord, "の報酬一覧"), React.createElement("button", {
     type: "button",
     "data-raid-jack-reward-close": true,
     onClick: onClose,
@@ -144076,7 +144076,6 @@ const ASSISTANT_LIFE_MAP_HEAD = Object.freeze({
   erubin: [0.01, 0.45]
 });
 const ASSISTANT_LIFE_MAP_FIT = Object.freeze({
-  'stand-normal/myua': 0.74,
   'stand-normal/sorashido': 0.83,
   'stand-normal/erubin': 0.7,
   sorashido_sleep: 0.82
@@ -148872,7 +148871,7 @@ const AluTabBar = ({
   "data-alu-tab": t.key,
   "data-assistant-life-icon": t.key,
   onClick: () => onTab && onTab(t.key)
-}, React.createElement("i", null, t.icon), t.label)));
+}, React.createElement("i", null, cardIconNode(t.icon, 16)), t.label)));
 const AluFrame = ({
   title,
   onBack,
@@ -149040,7 +149039,7 @@ const AluResult = ({
   key: i
 }, React.createElement("span", {
   className: "alu-n"
-}, g.icon, " ", g.label), React.createElement("b", {
+}, cardIconNode(g.icon, 14), " ", g.label), React.createElement("b", {
   className: "alu-num"
 }, "+", g.v)))), finds.length ? React.createElement("div", {
   className: "alu-t",
@@ -177601,7 +177600,7 @@ function MsxEvResult({
       style: {
         fontWeight: 900
       }
-    }, d.icon, " ", d.name, "になった(", d.dur, ")"), React.createElement("br", null), String(d.text).split('・').map((t, i) => React.createElement("span", {
+    }, cardIconNode(d.icon, 14), " ", d.name, "になった(", d.dur, ")"), React.createElement("br", null), String(d.text).split('・').map((t, i) => React.createElement("span", {
       key: i,
       style: {
         display: 'inline-block',
