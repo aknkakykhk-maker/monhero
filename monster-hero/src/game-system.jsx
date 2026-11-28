@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ee148d197ca34384
+// generated-sha256: e2490c69ea24a9bd
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -7058,20 +7058,24 @@ const Audio_ = (() => {
     return longEntryOf(url, new Uint8Array(await res.arrayBuffer()));
   };
   // 2つの音の波形を突き合わせ、b[j] が a[j+L] に当たる L(サンプル・小数)を探す。L0 の前後 R だけ見る
-  const monoRange = (buf, from, len) => {
-    const out = new Float32Array(len), c0 = buf.getChannelData(0), c1 = buf.numberOfChannels > 1 ? buf.getChannelData(1) : null;
-    for (let i = 0; i < len; i++) { const k = from + i; if (k >= 0 && k < buf.length) out[i] = c1 ? (c0[k] + c1[k]) * 0.5 : c0[k]; }
+  // 作業用の配列は使い回す(2026-11-28 r1126-100「ワルキューレの原曲がかくつく」)。演奏中も約20秒ごとにつなぎ目を合わせるので、
+  // そのたびに数百KBの配列を作って捨てると、ごみ集め(GC)を呼ぶ。中身は毎回すべて書き直すので、結果は前と同じ
+  const longScratch = [];
+  const scratchOf = (slot, len) => { let a = longScratch[slot]; if (!a || a.length < len) a = longScratch[slot] = new Float32Array(Math.max(len, a ? a.length : 0)); return a.length === len ? a : a.subarray(0, len); };
+  const monoRange = (buf, from, len, slot = -1) => {
+    const out = slot >= 0 ? scratchOf(slot, len) : new Float32Array(len), c0 = buf.getChannelData(0), c1 = buf.numberOfChannels > 1 ? buf.getChannelData(1) : null;
+    for (let i = 0; i < len; i++) { const k = from + i; out[i] = k >= 0 && k < buf.length ? (c1 ? (c0[k] + c1[k]) * 0.5 : c0[k]) : 0; }
     return out;
   };
   const longAlignLag = (aBuf, bBuf, j0, len, L0, R = 3200) => {
     const D = 8; len -= len % D;
-    const A = monoRange(aBuf, j0 + L0 - R - D, len + 2 * R + 2 * D), B = monoRange(bBuf, j0, len);
-    const dec = (x) => { const m = Math.floor(x.length / D), o = new Float32Array(m); for (let i = 0; i < m; i++) { let t = 0; for (let k = 0; k < D; k++) t += x[i * D + k]; o[i] = t; } return o; };
-    const Ad = dec(A), Bd = dec(B), RD = R / D;
+    const A = monoRange(aBuf, j0 + L0 - R - D, len + 2 * R + 2 * D, 0), B = monoRange(bBuf, j0, len, 1);
+    const dec = (x, slot) => { const m = Math.floor(x.length / D), o = scratchOf(slot, m); for (let i = 0; i < m; i++) { let t = 0; for (let k = 0; k < D; k++) t += x[i * D + k]; o[i] = t; } return o; };
+    const Ad = dec(A, 2), Bd = dec(B, 3), RD = R / D;
     let best = -Infinity, bestD = 0;
     for (let d = -RD; d <= RD; d++) { let t = 0; const o = d + RD + 1; for (let i = 0; i < Bd.length; i++) t += Ad[i + o] * Bd[i]; if (t > best) { best = t; bestD = d; } }
     const Lc = L0 + bestD * D, W = 12, len2 = Math.min(len, 8192), j1 = j0 + Math.floor((len - len2) / 2);
-    const A2 = monoRange(aBuf, j1 + Lc - W, len2 + 2 * W), B2 = monoRange(bBuf, j1, len2);
+    const A2 = monoRange(aBuf, j1 + Lc - W, len2 + 2 * W, 4), B2 = monoRange(bBuf, j1, len2, 5);
     const sc = []; for (let L = -W; L <= W; L++) { let t = 0; for (let i = 0; i < len2; i++) t += A2[i + L + W] * B2[i]; sc.push(t); }
     let bi = 0; for (let i = 1; i < sc.length; i++) if (sc[i] > sc[bi]) bi = i;
     let frac = 0; if (bi > 0 && bi < sc.length - 1) { const den = sc[bi - 1] - 2 * sc[bi] + sc[bi + 1]; if (den < 0) frac = 0.5 * (sc[bi - 1] - sc[bi + 1]) / den; }
@@ -7123,7 +7127,7 @@ const Audio_ = (() => {
       const probeLen = 48, lo = LONG_PRE_FRAMES + 8, hi = Math.min(bounds[1] || n, n) - probeLen - 8;
       let bestP = -1, bestE = 0;
       for (let p = lo; p <= hi; p += Math.max(1, Math.round(1 / fsec))) {
-        const from = Math.round(p * fsec * rate), seg = monoRange(head, from, Math.round(0.5 * rate)); let e = 0;
+        const from = Math.round(p * fsec * rate), seg = monoRange(head, from, Math.round(0.5 * rate), 6); let e = 0;
         for (let i = 0; i < seg.length; i += 4) e += seg[i] * seg[i];
         if (e > bestE) { bestE = e; bestP = p; }
       }
@@ -7433,7 +7437,7 @@ const Audio_ = (() => {
     step(false);
   };
   const setPageHidden = (hidden) => { pageHidden = !!hidden; ctxTimeMark = null; if (pageHidden) { if (returnHealTimer) clearTimeout(returnHealTimer); returnHealTimer = null; ++bgmRequest; stopPreview(false); stopOthers(); stopJingles(); } else { if (currentKey) playBGM(currentKey); healAfterReturn(); } };
-  const setEnabled = async (on) => { enabled = !!on; if (typeof window !== 'undefined') window.__mhAudioEnabled = enabled; applyRhythmMute(); if (!enabled) { ++bgmRequest; stopPreview(false); stopOthers(); stopJingles(); void nvAmbient('none'); } else if (currentKey) playBGM(currentKey); await ensure(); };
+  const setEnabled = async (on) => { enabled = !!on; if (typeof window !== 'undefined') window.__mhAudioEnabled = enabled; applyRhythmMute(); if (!enabled) { ++bgmRequest; stopPreview(false); stopOthers(); stopJingles(); { const want = nvAmbWant; void nvAmbient('none'); nvAmbWant = want; } } else if (currentKey) playBGM(currentKey); await ensure(); if (enabled) nvAmbientResume(); };
   const isEnabled = () => enabled;
   // いま実際に鳴っている曲を、外(検査)から見るための口。
   // BGMは <audio> ではなく Web Audio (AudioBufferSourceNode) で鳴らしているので、
@@ -7514,7 +7518,7 @@ const Audio_ = (() => {
   const uiSeVolume = () => uiSeVolumePct; // 検査が「ボタンの音の口が0でないか」を見る口
   const setSeVolume = (pct) => { seVolumePct = pct; if (seBus && Tone) { try { seBus.gain.rampTo(_gainFromPct(pct), 0.05); } catch (e) {} } };
   const setBgmVolume = (pct) => { bgmVolumePct = pct; applyTrackGain(resolveTrack(previewKey || currentKey)); if (pct <= 0) { stopPreview(false); stopOthers(); } else if (enabled && currentKey && !previewKey) playBGM(currentKey); };
-  const resumeIfNeeded = async () => { await ensureAudioCtxRunning(); if (Tone) { try { await Tone.start(); started = true; } catch (e) {} } if (enabled && currentKey && !bgmSource) playBGM(currentKey); };
+  const resumeIfNeeded = async () => { await ensureAudioCtxRunning(); if (Tone) { try { await Tone.start(); started = true; } catch (e) {} } if (enabled && currentKey && !bgmSource) playBGM(currentKey); if (enabled) nvAmbientResume(); };
   const unlock = async (playTestTone = false) => {
     if (!enabled) { enabled = true; if (typeof window !== 'undefined') window.__mhAudioEnabled = true; applyRhythmMute(); }
     // resume・決定SEはuser activationが残るイベント処理内で開始し、最初の再生前に待たない。
@@ -7529,6 +7533,7 @@ const Audio_ = (() => {
     await Promise.all([ensureAudioCtxRunning(), toneStart || Promise.resolve(), load()]);
     started = !!Tone;
     if (currentKey) playBGM(currentKey);
+    nvAmbientResume(); // 事件簿の環境音: 音が使えるようになる前に頼まれていた物を鳴らし始める(r1126-093 追記4)
     return !ctx || ctx.state === 'running';
   };
   const ensurePlaying = (key) => { if (enabled && key === currentKey && !bgmSource && !jingleSource) playBGM(key); };
@@ -7614,65 +7619,71 @@ const Audio_ = (() => {
     // ===== 事件簿(ミステリーノベル)の効果音(2026-11-28 社長「ところどころのSEをもっと雰囲気出して」・台帳 r1126-093 追記2) =====
     //   どれも小さく、低く暗い音。その場で合成する(音源ファイルなし・権利の心配なし)。効果音の音量(seBus)を通る
     //   nvTick … 柱時計のチク(high)/タク。選択肢を待つ間に繰り返す。BGM とぶつからないよう、とても小さく短い
-    nvTick: async (high) => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.MetalSynth({ frequency: high ? 340 : 240, envelope: { attack: 0.001, decay: 0.035, release: 0.02 }, harmonicity: 3.1, modulationIndex: 10, resonance: high ? 2600 : 1800, octaves: 0.6, volume: -32 }).connect(seBus); s.triggerAttackRelease('64n', t); const k = new Tone.MembraneSynth({ pitchDecay: 0.01, octaves: 2, envelope: { attack: 0.001, decay: 0.05, sustain: 0 }, volume: -30 }).connect(seBus); k.triggerAttackRelease(high ? 'G2' : 'D2', '64n', t); setTimeout(() => { try { s.dispose(); k.dispose(); } catch (e) {} }, 300); },
+    nvTick: async (high) => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.MetalSynth({ frequency: high ? 640 : 470, envelope: { attack: 0.001, decay: 0.035, release: 0.02 }, harmonicity: 3.1, modulationIndex: 10, resonance: high ? 3800 : 3000, octaves: 0.8, volume: -12 }).connect(seBus); s.triggerAttackRelease('64n', t); const k = new Tone.MembraneSynth({ pitchDecay: 0.008, octaves: 2, envelope: { attack: 0.001, decay: 0.05, sustain: 0 }, volume: -20 }).connect(seBus); k.triggerAttackRelease(high ? 'C4' : 'G3', '64n', t); setTimeout(() => { try { s.dispose(); k.dispose(); } catch (e) {} }, 300); },
     //   nvCreak … 扉・床のきしみ「ギィ」(低いのこぎり波が、ゆっくり下がる)
-    nvCreak: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const f = new Tone.Filter(700, 'lowpass').connect(seBus); const s = new Tone.Synth({ oscillator: { type: 'sawtooth' }, envelope: { attack: 0.08, decay: 0.7, sustain: 0, release: 0.2 }, volume: -22 }).connect(f); s.triggerAttackRelease('D3', '4n', t); try { s.frequency.rampTo('G2', 0.7, t); } catch (e) {} setTimeout(() => { try { s.dispose(); f.dispose(); } catch (e) {} }, 1400); },
+    nvCreak: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const f = new Tone.Filter(1800, 'lowpass').connect(seBus); const s = new Tone.Synth({ oscillator: { type: 'sawtooth' }, envelope: { attack: 0.08, decay: 0.7, sustain: 0, release: 0.2 }, volume: -8 }).connect(f); s.triggerAttackRelease('D4', '4n', t); try { s.frequency.rampTo('G3', 0.7, t); } catch (e) {} setTimeout(() => { try { s.dispose(); f.dispose(); } catch (e) {} }, 1400); },
     //   nvThud … 重い物の落ちる・ぶつかる「ゴッ」(遠くのこもった低音。enemyAttack より小さく遠い)
-    nvThud: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.MembraneSynth({ pitchDecay: 0.05, octaves: 4, envelope: { attack: 0.002, decay: 0.35, sustain: 0 }, volume: -12 }).connect(seBus); s.triggerAttackRelease('E1', '8n', t); const n = new Tone.NoiseSynth({ noise: { type: 'brown' }, envelope: { attack: 0.002, decay: 0.15, sustain: 0 }, volume: -20 }).connect(seBus); n.triggerAttackRelease('16n', t); setTimeout(() => { try { s.dispose(); n.dispose(); } catch (e) {} }, 800); },
+    nvThud: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.MembraneSynth({ pitchDecay: 0.05, octaves: 4, envelope: { attack: 0.002, decay: 0.35, sustain: 0 }, volume: -6 }).connect(seBus); s.triggerAttackRelease('E2', '8n', t); const n = new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: { attack: 0.002, decay: 0.15, sustain: 0 }, volume: -8 }).connect(seBus); n.triggerAttackRelease('16n', t); setTimeout(() => { try { s.dispose(); n.dispose(); } catch (e) {} }, 800); },
     //   nvWind … 吹雪の風「ゴォォ……」(こもった雑音がふくらんで消える・2.5秒)
-    nvWind: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const f = new Tone.Filter(520, 'lowpass').connect(seBus); const n = new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: { attack: 0.9, decay: 0.4, sustain: 0.6, release: 1.2 }, volume: -24 }).connect(f); n.triggerAttackRelease(1.2, t); try { f.frequency.rampTo(900, 0.9, t); f.frequency.rampTo(380, 1.4, t + 0.9); } catch (e) {} setTimeout(() => { try { n.dispose(); f.dispose(); } catch (e) {} }, 3200); },
+    nvWind: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const f = new Tone.Filter({ frequency: 700, type: 'bandpass', Q: 0.7 }).connect(seBus); const n = new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: { attack: 0.9, decay: 0.4, sustain: 0.6, release: 1.2 }, volume: 0 }).connect(f); n.triggerAttackRelease(1.2, t); try { f.frequency.rampTo(1500, 0.9, t); f.frequency.rampTo(600, 1.4, t + 0.9); } catch (e) {} setTimeout(() => { try { n.dispose(); f.dispose(); } catch (e) {} }, 3200); },
     //   nvFire … 暖炉の薪がはぜる「パチ……パチ」(小さな粒がまばらに)
-    nvFire: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const f = new Tone.Filter(1800, 'bandpass').connect(seBus); const n = new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.001, decay: 0.025, sustain: 0 }, volume: -24 }).connect(f); [0, 0.21, 0.37, 0.8, 1.05, 1.5].forEach((d) => n.triggerAttackRelease('64n', t + d)); setTimeout(() => { try { n.dispose(); f.dispose(); } catch (e) {} }, 2100); },
+    nvFire: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const f = new Tone.Filter(1800, 'bandpass').connect(seBus); const n = new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.001, decay: 0.025, sustain: 0 }, volume: -8 }).connect(f); [0, 0.21, 0.37, 0.8, 1.05, 1.5].forEach((d) => n.triggerAttackRelease('64n', t + d)); setTimeout(() => { try { n.dispose(); f.dispose(); } catch (e) {} }, 2100); },
     //   nvRustle … 紙・封・布のこすれる「カサ」
-    nvRustle: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const f = new Tone.Filter(2600, 'highpass').connect(seBus); const n = new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.01, decay: 0.12, sustain: 0 }, volume: -28 }).connect(f); n.triggerAttackRelease('16n', t); n.triggerAttackRelease('32n', t + 0.14); setTimeout(() => { try { n.dispose(); f.dispose(); } catch (e) {} }, 600); },
+    nvRustle: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const f = new Tone.Filter(2600, 'highpass').connect(seBus); const n = new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.01, decay: 0.12, sustain: 0 }, volume: -14 }).connect(f); n.triggerAttackRelease('16n', t); n.triggerAttackRelease('32n', t + 0.14); setTimeout(() => { try { n.dispose(); f.dispose(); } catch (e) {} }, 600); },
     //   nvGlass … 窓ガラス・物の割れる「カシャ」(低めの金属の響き)
-    nvGlass: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.MetalSynth({ frequency: 260, envelope: { attack: 0.001, decay: 0.32, release: 0.1 }, harmonicity: 7.1, modulationIndex: 20, resonance: 3200, octaves: 1, volume: -26 }).connect(reverb); s.triggerAttackRelease('16n', t); setTimeout(() => { try { s.dispose(); } catch (e) {} }, 900); },
+    nvGlass: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.MetalSynth({ frequency: 260, envelope: { attack: 0.001, decay: 0.32, release: 0.1 }, harmonicity: 7.1, modulationIndex: 20, resonance: 3200, octaves: 1, volume: -12 }).connect(reverb); s.triggerAttackRelease('16n', t); setTimeout(() => { try { s.dispose(); } catch (e) {} }, 900); },
     //   nvDread … 不穏な一音(低い2音の半音のぶつかりが、ゆっくり消える)。声・悲鳴・倒れた人が見つかった所
-    nvDread: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'sine' }, envelope: { attack: 0.35, decay: 0.6, sustain: 0.4, release: 1.6 }, volume: -20 }).connect(reverb); v.triggerAttackRelease(['C2', 'C#2', 'G2'], 1.1, t); setTimeout(() => { try { v.dispose(); } catch (e) {} }, 3600); },
+    nvDread: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'sine' }, envelope: { attack: 0.35, decay: 0.6, sustain: 0.4, release: 1.6 }, volume: -10 }).connect(reverb); v.triggerAttackRelease(['C3', 'C#3', 'G3'], 1.1, t); setTimeout(() => { try { v.dispose(); } catch (e) {} }, 3600); },
     //   nvMusicBox … オルゴールの子守歌(高い音を、小さく、ゆっくり下がる短調の4音)
-    nvMusicBox: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.002, decay: 0.9, sustain: 0, release: 0.6 }, volume: -24 }).connect(reverb); [[0, 'E5'], [0.42, 'D5'], [0.84, 'C5'], [1.4, 'A4']].forEach(([d, n]) => s.triggerAttackRelease(n, '4n', t + d)); setTimeout(() => { try { s.dispose(); } catch (e) {} }, 3200); },
+    nvMusicBox: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.002, decay: 0.9, sustain: 0, release: 0.6 }, volume: -14 }).connect(reverb); [[0, 'E5'], [0.42, 'D5'], [0.84, 'C5'], [1.4, 'A4']].forEach(([d, n]) => s.triggerAttackRelease(n, '4n', t + d)); setTimeout(() => { try { s.dispose(); } catch (e) {} }, 3200); },
     //   r1126-093 追記3: 足音(nvStep)・駆ける足音(nvRun)・殴られる(nvHit)・倒れる(nvFall)・悲鳴の手前の息(nvGasp)・扉(nvDoor)・吹き込む風(nvGust)
-    nvStep: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.MembraneSynth({ pitchDecay: 0.02, octaves: 2, envelope: { attack: 0.002, decay: 0.09, sustain: 0 }, volume: -22 }).connect(seBus); [0, 0.55, 1.1].forEach((d, i) => s.triggerAttackRelease(i % 2 ? 'A1' : 'G1', '32n', t + d)); setTimeout(() => { try { s.dispose(); } catch (e) {} }, 1700); },
-    nvRun: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.MembraneSynth({ pitchDecay: 0.02, octaves: 2, envelope: { attack: 0.002, decay: 0.07, sustain: 0 }, volume: -20 }).connect(seBus); [0, 0.2, 0.4, 0.6, 0.8, 1.0].forEach((d, i) => s.triggerAttackRelease(i % 2 ? 'A1' : 'G1', '32n', t + d)); setTimeout(() => { try { s.dispose(); } catch (e) {} }, 1500); },
-    nvHit: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.MembraneSynth({ pitchDecay: 0.015, octaves: 3, envelope: { attack: 0.001, decay: 0.16, sustain: 0 }, volume: -8 }).connect(seBus); s.triggerAttackRelease('C2', '16n', t); const n = new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: { attack: 0.001, decay: 0.06, sustain: 0 }, volume: -16 }).connect(seBus); n.triggerAttackRelease('64n', t); setTimeout(() => { try { s.dispose(); n.dispose(); } catch (e) {} }, 600); },
-    nvFall: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.MembraneSynth({ pitchDecay: 0.06, octaves: 4, envelope: { attack: 0.003, decay: 0.5, sustain: 0 }, volume: -11 }).connect(seBus); s.triggerAttackRelease('D1', '4n', t); s.triggerAttackRelease('C1', '8n', t + 0.18); const n = new Tone.NoiseSynth({ noise: { type: 'brown' }, envelope: { attack: 0.01, decay: 0.4, sustain: 0 }, volume: -22 }).connect(seBus); n.triggerAttackRelease('8n', t + 0.05); setTimeout(() => { try { s.dispose(); n.dispose(); } catch (e) {} }, 1200); },
-    nvGasp: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const f = new Tone.Filter(1400, 'bandpass').connect(seBus); const n = new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: { attack: 0.12, decay: 0.18, sustain: 0, release: 0.08 }, volume: -22 }).connect(f); n.triggerAttackRelease(0.16, t); try { f.frequency.rampTo(2200, 0.25, t); } catch (e) {} setTimeout(() => { try { n.dispose(); f.dispose(); } catch (e) {} }, 800); },
-    nvDoor: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const m = new Tone.MetalSynth({ frequency: 180, envelope: { attack: 0.001, decay: 0.05, release: 0.02 }, harmonicity: 3.1, modulationIndex: 8, resonance: 1500, octaves: 0.5, volume: -28 }).connect(seBus); m.triggerAttackRelease('64n', t); const f = new Tone.Filter(600, 'lowpass').connect(seBus); const s = new Tone.Synth({ oscillator: { type: 'sawtooth' }, envelope: { attack: 0.05, decay: 0.45, sustain: 0, release: 0.15 }, volume: -25 }).connect(f); s.triggerAttackRelease('A2', '8n', t + 0.08); try { s.frequency.rampTo('E2', 0.45, t + 0.08); } catch (e) {} setTimeout(() => { try { m.dispose(); s.dispose(); f.dispose(); } catch (e) {} }, 1200); },
-    nvGust: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const f = new Tone.Filter(600, 'lowpass').connect(seBus); const n = new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: { attack: 0.25, decay: 0.5, sustain: 0.2, release: 0.6 }, volume: -18 }).connect(f); n.triggerAttackRelease(0.6, t); try { f.frequency.rampTo(1500, 0.3, t); f.frequency.rampTo(400, 0.9, t + 0.3); } catch (e) {} setTimeout(() => { try { n.dispose(); f.dispose(); } catch (e) {} }, 2000); },
+    nvStep: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.MembraneSynth({ pitchDecay: 0.02, octaves: 2, envelope: { attack: 0.002, decay: 0.09, sustain: 0 }, volume: -6 }).connect(seBus); const sf = new Tone.Filter({ frequency: 1500, type: 'bandpass', Q: 1.2 }).connect(seBus); const sc = new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: { attack: 0.002, decay: 0.05, sustain: 0 }, volume: -4 }).connect(sf); [0, 0.55, 1.1].forEach((d, i) => { s.triggerAttackRelease(i % 2 ? 'A2' : 'G2', '32n', t + d); sc.triggerAttackRelease('64n', t + d); }); setTimeout(() => { try { s.dispose(); sc.dispose(); sf.dispose(); } catch (e) {} }, 1700); },
+    nvRun: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.MembraneSynth({ pitchDecay: 0.02, octaves: 2, envelope: { attack: 0.002, decay: 0.07, sustain: 0 }, volume: -6 }).connect(seBus); const sf = new Tone.Filter({ frequency: 1500, type: 'bandpass', Q: 1.2 }).connect(seBus); const sc = new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: { attack: 0.002, decay: 0.05, sustain: 0 }, volume: -4 }).connect(sf); [0, 0.2, 0.4, 0.6, 0.8, 1.0].forEach((d, i) => { s.triggerAttackRelease(i % 2 ? 'A2' : 'G2', '32n', t + d); sc.triggerAttackRelease('64n', t + d); }); setTimeout(() => { try { s.dispose(); sc.dispose(); sf.dispose(); } catch (e) {} }, 1500); },
+    nvHit: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.MembraneSynth({ pitchDecay: 0.015, octaves: 3, envelope: { attack: 0.001, decay: 0.16, sustain: 0 }, volume: -2 }).connect(seBus); s.triggerAttackRelease('C3', '16n', t); const n = new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: { attack: 0.001, decay: 0.08, sustain: 0 }, volume: 2 }).connect(seBus); n.triggerAttackRelease('64n', t); setTimeout(() => { try { s.dispose(); n.dispose(); } catch (e) {} }, 600); },
+    nvFall: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.MembraneSynth({ pitchDecay: 0.06, octaves: 4, envelope: { attack: 0.003, decay: 0.5, sustain: 0 }, volume: -4 }).connect(seBus); s.triggerAttackRelease('D2', '4n', t); s.triggerAttackRelease('C2', '8n', t + 0.18); const n = new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: { attack: 0.01, decay: 0.4, sustain: 0 }, volume: -2 }).connect(seBus); n.triggerAttackRelease('8n', t + 0.05); setTimeout(() => { try { s.dispose(); n.dispose(); } catch (e) {} }, 1200); },
+    nvGasp: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const f = new Tone.Filter(1400, 'bandpass').connect(seBus); const n = new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: { attack: 0.12, decay: 0.18, sustain: 0, release: 0.08 }, volume: 4 }).connect(f); n.triggerAttackRelease(0.16, t); try { f.frequency.rampTo(2200, 0.25, t); } catch (e) {} setTimeout(() => { try { n.dispose(); f.dispose(); } catch (e) {} }, 800); },
+    nvDoor: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const m = new Tone.MetalSynth({ frequency: 180, envelope: { attack: 0.001, decay: 0.05, release: 0.02 }, harmonicity: 3.1, modulationIndex: 8, resonance: 2500, octaves: 0.5, volume: -14 }).connect(seBus); m.triggerAttackRelease('64n', t); const f = new Tone.Filter(1800, 'lowpass').connect(seBus); const s = new Tone.Synth({ oscillator: { type: 'sawtooth' }, envelope: { attack: 0.05, decay: 0.45, sustain: 0, release: 0.15 }, volume: -10 }).connect(f); s.triggerAttackRelease('A3', '8n', t + 0.08); try { s.frequency.rampTo('E3', 0.45, t + 0.08); } catch (e) {} setTimeout(() => { try { m.dispose(); s.dispose(); f.dispose(); } catch (e) {} }, 1200); },
+    nvGust: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const f = new Tone.Filter({ frequency: 800, type: 'bandpass', Q: 0.7 }).connect(seBus); const n = new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: { attack: 0.25, decay: 0.5, sustain: 0.2, release: 0.6 }, volume: 2 }).connect(f); n.triggerAttackRelease(0.6, t); try { f.frequency.rampTo(2000, 0.3, t); f.frequency.rampTo(700, 0.9, t + 0.3); } catch (e) {} setTimeout(() => { try { n.dispose(); f.dispose(); } catch (e) {} }, 2000); },
   };
   // ===== 事件簿の環境音(ずっと小さく鳴る・r1126-093 追記3「BGM は静かか音無しにして SE で表現」) =====
   //   kind: 'wind'(外の風)/ 'blizzard'(吹雪)/ 'fire'(暖炉)/ 'clock'(柱時計のチク・タク)/ 'room'(部屋のかすかなすきま風)/ 'none'
   //   替えるときは前の音を 1.2 秒で小さくしてから捨て、新しい音を 1.5 秒で大きくする(つなぎ目なく替わる)。効果音の音量(seBus)を通る。
   //   同じ kind なら何もしない。続けて呼ばれても、いちばんあとの kind だけが鳴る(待っている間に替わった物は作らない)
   let nvAmb = { kind: 'none', stop: null };
+  let nvAmbWant = 'none'; // 頼まれている環境音(音がまだ使えず鳴らせなかった物も覚えておき、nvAmbientResume で鳴らし直す)
   const nvAmbient = async (kindIn) => {
     const kind = kindIn || 'none';
+    nvAmbWant = kind;
     if (kind === nvAmb.kind) return;
     const prev = nvAmb; const me = { kind, stop: null }; nvAmb = me;
     if (prev.stop) { try { prev.stop(); } catch (e) {} }
-    if (kind === 'none' || !enabled) return;
+    if (kind === 'none') return;
+    if (!enabled) { nvAmb = { kind: 'none', stop: null }; return; } // 音がまだ使えない: 鳴らせなかったので「鳴っていない」に戻す(あとで鳴らし直せるように)
     await ensure();
-    if (!Tone || nvAmb !== me || !enabled) return;
+    if (nvAmb !== me) return;
+    if (!Tone || !enabled) { nvAmb = { kind: 'none', stop: null }; return; }
     const nodes = []; const timers = [];
     try {
       const g = new Tone.Gain(0).connect(seBus); nodes.push(g);
+      // 2026-11-28 r1126-093 追記4: 前の作りは -74〜-89dB と小さく、音の大半がスマホのスピーカーで出ない 300Hz より下だった(社長「無音になってる？」)。
+      //   大きさを上げ、帯域を 400〜2000Hz 寄り(スピーカーで聞こえる高さ)へ移した。目安: 効果音の音量が初期値のとき、ボタンの音と同じくらいに聞こえる
       if (kind === 'wind' || kind === 'blizzard' || kind === 'room') {
-        const n = new Tone.Noise(kind === 'room' ? 'brown' : 'pink'); n.volume.value = kind === 'blizzard' ? -27 : kind === 'wind' ? -31 : -36;
-        const f = new Tone.Filter(kind === 'blizzard' ? 650 : kind === 'wind' ? 420 : 200, 'lowpass');
-        const lfo = new Tone.LFO(kind === 'blizzard' ? 0.21 : 0.09, kind === 'room' ? 120 : 260, kind === 'blizzard' ? 1250 : kind === 'wind' ? 780 : 320);
+        const n = new Tone.Noise(kind === 'room' ? 'brown' : 'pink'); n.volume.value = kind === 'blizzard' ? 4 : kind === 'wind' ? 1 : 2;
+        const f = new Tone.Filter({ frequency: kind === 'blizzard' ? 900 : kind === 'wind' ? 650 : 450, type: 'bandpass', Q: 0.7 });
+        const lfo = new Tone.LFO(kind === 'blizzard' ? 0.21 : kind === 'wind' ? 0.09 : 0.05, kind === 'blizzard' ? 450 : kind === 'wind' ? 380 : 320, kind === 'blizzard' ? 2000 : kind === 'wind' ? 1300 : 650);
         n.connect(f); f.connect(g); lfo.connect(f.frequency); n.start(); lfo.start(); nodes.push(n, f, lfo);
       }
       if (kind === 'fire') {
-        const n = new Tone.Noise('brown'); n.volume.value = -36; const f = new Tone.Filter(170, 'lowpass'); n.connect(f); f.connect(g); n.start(); nodes.push(n, f);
-        const bp = new Tone.Filter(1700, 'bandpass').connect(g); const c = new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.001, decay: 0.02, sustain: 0 }, volume: -31 }).connect(bp); nodes.push(bp, c);
+        const n = new Tone.Noise('brown'); n.volume.value = -2; const f = new Tone.Filter({ frequency: 420, type: 'bandpass', Q: 0.8 }); n.connect(f); f.connect(g); n.start(); nodes.push(n, f);
+        const bp = new Tone.Filter(2400, 'bandpass').connect(g); const c = new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.001, decay: 0.025, sustain: 0 }, volume: -6 }).connect(bp); nodes.push(bp, c);
         const pop = () => { if (nvAmb !== me) return; if (enabled) { try { c.triggerAttackRelease('64n'); } catch (e) {} } timers.push(setTimeout(pop, 140 + Math.random() * 620)); };
         timers.push(setTimeout(pop, 300));
       }
       if (kind === 'clock') {
-        const m = new Tone.MetalSynth({ frequency: 300, envelope: { attack: 0.001, decay: 0.03, release: 0.02 }, harmonicity: 3.1, modulationIndex: 10, resonance: 2200, octaves: 0.6, volume: -37 }).connect(g);
-        const k = new Tone.MembraneSynth({ pitchDecay: 0.01, octaves: 2, envelope: { attack: 0.001, decay: 0.04, sustain: 0 }, volume: -36 }).connect(g); nodes.push(m, k);
+        const m = new Tone.MetalSynth({ frequency: 600, envelope: { attack: 0.001, decay: 0.05, release: 0.03 }, harmonicity: 3.1, modulationIndex: 12, resonance: 3600, octaves: 0.8, volume: -12 }).connect(g);
+        const k = new Tone.MembraneSynth({ pitchDecay: 0.008, octaves: 2, envelope: { attack: 0.001, decay: 0.05, sustain: 0 }, volume: -20 }).connect(g); nodes.push(m, k);
         let high = true;
-        const tick = () => { if (nvAmb !== me || !enabled) return; try { m.frequency.value = high ? 330 : 230; m.triggerAttackRelease('64n'); k.triggerAttackRelease(high ? 'G2' : 'D2', '64n'); } catch (e) {} high = !high; };
+        const tick = () => { if (nvAmb !== me || !enabled) return; try { m.frequency.value = high ? 640 : 470; m.triggerAttackRelease('64n'); k.triggerAttackRelease(high ? 'C4' : 'G3', '64n'); } catch (e) {} high = !high; };
         timers.push(setInterval(tick, 1000));
       }
       try { g.gain.rampTo(1, 1.5); } catch (e) { g.gain.value = 1; }
@@ -7681,8 +7692,9 @@ const Audio_ = (() => {
         try { g.gain.rampTo(0, 1.2); } catch (e) { g.gain.value = 0; }
         setTimeout(() => { nodes.forEach((x) => { try { if (x.stop) x.stop(); } catch (e) {} try { x.dispose(); } catch (e) {} }); }, 1400);
       };
-    } catch (e) { nodes.forEach((x) => { try { x.dispose(); } catch (e2) {} }); }
+    } catch (e) { nodes.forEach((x) => { try { x.dispose(); } catch (e2) {} }); if (nvAmb === me) nvAmb = { kind: 'none', stop: null }; }
   };
+  const nvAmbientResume = () => { if (nvAmbWant !== 'none' && nvAmb.kind !== nvAmbWant) void nvAmbient(nvAmbWant); };
   // ボタンのタップ音(音は fgSe.tap と同じ。通る口だけが uiBus)。全体ミュート(enabled)には従う。裏のバトルの音を止める印は見ない
   const uiTap = async () => { if (!enabled) return; await ensure(); if (!Tone || !uiBus) return; const t = Tone.now(); const s = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.001, decay: 0.04, sustain: 0, release: 0.02 }, volume: -16 }).connect(uiBus); s.triggerAttackRelease('C6', '64n', t); setTimeout(() => { try { s.dispose(); } catch (e) {} }, 200); };
   const se = Object.fromEntries(Object.entries(fgSe).map(([name, play]) => [name, (...args) => (backgroundSeQuiet ? Promise.resolve() : play(...args))]));
@@ -29543,7 +29555,14 @@ const inputEnds=inputs=>{const run=runRef.current;if(!run||run.finished||run.pau
   const pressedSkyLanesNow=()=>[...(liveTouchSkySubLanesRef.current||[]),...(runRef.current?.activePointerSkyFeedback?.values()||[])];
   // 押せている帯のサブレーン(ビットの集まり。g=地上・s=空中)。tick が変わったときだけ書き換える(設定 holdTrace)
   const holdTraceRef=useRef({g:0,s:0});
-  const setPressedLanes=coordinates=>{const area=playAreaRef.current;if(!area)return;const active=new Set(Array.from(coordinates||[]).map(value=>Math.max(0,Math.min(RHYTHM_SUB_LANE_COUNT-1,Math.floor(Number(value))))).filter(Number.isFinite)),glowOpacity=settings.laneGlow==='NONE'?'0':settings.laneGlow==='LOW'?'.35':'1';let nodes=glowNodesRef.current;if(!nodes||!nodes.length||!nodes[0].isConnected)nodes=glowNodesRef.current=Array.from(area.querySelectorAll('[data-rhythm-sublane-feedback]'));nodes.forEach((el,index)=>{const pressed=active.has(index);const want=pressed?'true':'false';if(el.dataset.pressed===want&&(!pressed||el.style.opacity===glowOpacity))return;el.dataset.pressed=want;el.style.opacity=pressed?glowOpacity:'0';});if(typeof RHYTHM_CANVAS_RENDERER!=='undefined'&&typeof RHYTHM_CANVAS_RENDERER.setSkyPressed==='function'){{const skyMask=settings.holdTrace!==false?holdTraceRef.current.s:0;RHYTHM_CANVAS_RENDERER.setSkyPressed(skyMask?pressedSkyLanesNow().filter(v=>!(skyMask>>Math.floor(Number(v))&1)):pressedSkyLanesNow(),Number(glowOpacity));}paintIdleSkyPress();}};
+  const setPressedLanes=coordinates=>{const area=playAreaRef.current;if(!area)return;const glowOpacity=settings.laneGlow==='NONE'?'0':settings.laneGlow==='LOW'?'.35':'1';
+    /* 押しているサブレーンを印(ビット)にまとめる。指が動くたびに呼ばれる(iPhone の touchmove は指1本で毎秒60〜120回)ので、
+       前と同じ押し方・同じ濃さなら DOM に触らずに抜ける(2026-11-28 r1126-100「ワルキューレの原曲がかくつく」。以前は毎回 Set と配列を作り、
+       12本ぶんの dataset と style を読み直していた)。要素が作り直されたら覚えた印は捨てて書き直す。見た目は前と同じ */
+    let mask=0;if(coordinates){for(const value of coordinates){const n=Math.max(0,Math.min(RHYTHM_SUB_LANE_COUNT-1,Math.floor(Number(value))));if(Number.isFinite(n))mask|=1<<n;}}
+    let nodes=glowNodesRef.current;if(!nodes||!nodes.length||!nodes[0].isConnected){nodes=glowNodesRef.current=Array.from(area.querySelectorAll('[data-rhythm-sublane-feedback]'));glowNodesRef.lastKey=null;}
+    const glowKey=`${mask}|${glowOpacity}`;
+    if(glowNodesRef.lastKey!==glowKey){glowNodesRef.lastKey=glowKey;for(let index=0;index<nodes.length;index++){const el=nodes[index],pressed=((mask>>index)&1)===1;const want=pressed?'true':'false';/* 書いた値は要素に覚えておき、DOM を読み直さずに比べる(初めの1回だけ DOM を読む) */const curPressed=el._mhGlowPressed!==undefined?el._mhGlowPressed:el.dataset.pressed,curOpacity=el._mhGlowOpacity!==undefined?el._mhGlowOpacity:el.style.opacity;if(curPressed===want&&(!pressed||curOpacity===glowOpacity))continue;const nextOpacity=pressed?glowOpacity:'0';if(curPressed!==want)el.dataset.pressed=want;if(curOpacity!==nextOpacity)el.style.opacity=nextOpacity;el._mhGlowPressed=want;el._mhGlowOpacity=nextOpacity;}}if(typeof RHYTHM_CANVAS_RENDERER!=='undefined'&&typeof RHYTHM_CANVAS_RENDERER.setSkyPressed==='function'){{const skyMask=settings.holdTrace!==false?holdTraceRef.current.s:0;RHYTHM_CANVAS_RENDERER.setSkyPressed(skyMask?pressedSkyLanesNow().filter(v=>!(skyMask>>Math.floor(Number(v))&1)):pressedSkyLanesNow(),Number(glowOpacity));}paintIdleSkyPress();}};
   // 曲が始まる前の待機中(幕・READY→3→2→1)は、毎フレームの描画(tick)がまだ動いていない。地上のレーンの光は画面の要素なので光るが、
   // 空中のレーンの光は canvas に描くので、そのままだと光らなかった(2026-10-13 社長「待機中、地上は光るのに空中は光らない」)。
   // 指の出入りのたびに、空中の押した光だけをここで1回描く(叩いた光・ノーツはまだ無い)。止めている間(ポーズ)はノーツの絵を残すので描かない
@@ -70529,6 +70548,21 @@ const XMAS_NOVEL_CSS = `
 /* 血を見せない影(白瀬など)は、真っ黒で見えなかった(社長「白瀬の死亡シーンって出てた？」)。冷たい光を当て、縁を白く光らせて形を見せる */
 .mh-nv-body.noblood .mh-nv-body-dim { background: radial-gradient(42% 30% at var(--fx, 50%) var(--fy, 74%), rgba(150,180,235,.30), rgba(150,180,235,0) 75%), radial-gradient(120% 90% at 50% 40%, rgba(6,10,34,.35), rgba(0,0,4,.88)) !important; }
 .mh-nv-body.noblood .mh-nv-body-lie img { filter: brightness(0) drop-shadow(0 0 1.5px rgba(225,235,255,.95)) drop-shadow(0 0 3px rgba(200,215,250,.6)) drop-shadow(0 0 20px rgba(140,170,230,.55)) !important; }
+/* 大事な選択の「選んだ状態」と決定の札(台帳 r1126-113)。光らせすぎず、真鍮の縁と赤い印で示す */
+.mh-nv-person[data-pick] { box-shadow: 0 0 0 2px #e8c46a, 0 0 16px rgba(232,196,106,.35); background: rgba(40,30,10,.8); }
+.mh-nv-person[data-pick]::after { content: '✓'; position: absolute; top: 2px; left: 4px; width: 18px; height: 18px; border-radius: 50%; background: #b0101a; color: #fff; font-size: 11px; line-height: 18px; text-align: center; }
+.mh-nv-clue[data-pick] { box-shadow: 0 0 0 2px #e8c46a, 0 0 16px rgba(232,196,106,.25); }
+.mh-nv-choice[data-pick] { box-shadow: 0 0 0 2px #e8c46a, 0 0 18px rgba(232,196,106,.3); background: linear-gradient(180deg, rgba(60,44,14,.95), rgba(24,18,8,.95)); }
+.mh-nv-decide { margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(232,196,106,.35); }
+.mh-nv-decide-what { margin-bottom: 6px; font-size: 13px; font-weight: 800; color: #f3e3b0; text-align: left; word-break: normal; overflow-wrap: anywhere; }
+/* 背の低い横では、窓の全体を1つに流し(人の並び・手がかりが0の高さにつぶれた)、決定の札は下に貼りつける */
+@media (orientation: landscape) and (max-height: 560px) {
+  .mh-nv-sheet .mh-nv-panel { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .mh-nv-sheet .mh-nv-panel > .mh-nv-scroll { flex: none; overflow: visible; }
+  .mh-nv-decide { position: sticky; bottom: calc(-1 * max(14px, env(safe-area-inset-bottom))); z-index: 2; margin-left: -14px; margin-right: -14px; padding: 8px 14px 10px; background: #0b1430; }
+  .mh-nv-decide .mh-nv-btn.wide { min-height: 42px; }
+}
+.mh-nv-decide .mh-nv-btn:not(:disabled) { background: #8f1d24; color: #fff3e0; box-shadow: 0 0 0 1px #e8c46a; }
 /* 人物の並びの置き場(登場人物の行・カーテンコール): 上の帯(ボタンと章の題)と文字の箱のあいだの、まん中(台帳 r1126-094 追記4。上に寄せた枠が章の題の帯にかぶっていた) */
 .mh-nv-panelwrap { position: absolute; left: 0; right: 0; top: calc(max(8px, env(safe-area-inset-top)) + 54px); bottom: 172px; z-index: 5; display: flex; align-items: center; justify-content: center; padding: 0 3vw; pointer-events: none; }
 .mh-nv-panelin { width: min(100%, 640px); max-height: 100%; }
@@ -71145,7 +71179,7 @@ const XmasNovelBloodCross = () => (
     </g>
   </svg>
 );
-const XmasNovelCast = ({ states = {}, changed = [], onPick = null, big = false }) => (
+const XmasNovelCast = ({ states = {}, changed = [], onPick = null, big = false, picked = '' }) => (
   <div className={`mh-nv-cast${big ? ' big' : ''}`}>
     {XMAS_NOVEL_CAST.map((c, i) => {
       const st = states[c.id] || '';
@@ -71162,7 +71196,7 @@ const XmasNovelCast = ({ states = {}, changed = [], onPick = null, big = false }
         </>
       );
       return onPick
-        ? <button type="button" key={c.id} data-xmas-novel-person={c.id} data-st={st || undefined} className="mh-nv-person active:scale-95" onClick={() => onPick(c.id)}>{inner}</button>
+        ? <button type="button" key={c.id} data-xmas-novel-person={c.id} data-st={st || undefined} data-pick={picked === c.id ? '' : undefined} aria-pressed={picked === c.id} className="mh-nv-person active:scale-95" onClick={() => onPick(c.id)}>{inner}</button>
         : <div key={c.id} data-xmas-novel-cast={c.id} data-st={st || undefined} data-fresh={fresh ? '' : undefined} className="mh-nv-person" style={{ '--i': i }}>{inner}</div>;
     })}
   </div>
@@ -71750,6 +71784,8 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
   };
   const stageRef = useRef(null);
   const pendingQuakeRef = useRef(0);
+  // 大事な選択は「押して選ぶ → 決定で確かめる」(台帳 r1126-113)。{ qid, key, label }
+  const [pick, setPick] = useState(null);
   const [panelIntro, setPanelIntro] = useState(null); // { id, fast, done, at } 人物紹介の行
   const [titleOk, setTitleOk] = useState(false); // いまの場面を前に読み終えているか(場面の題を出すか)
   const fxFast = (unread) => !unread || !!(saveRef.current && saveRef.current.auto);
@@ -71997,6 +72033,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
   };
   // 答える
   const answer = (q, pick) => {
+    setPick(null);
     const res = xmasNovelAnswer(S, st.cur, q, pick, (saveRef.current && saveRef.current.endings) || []);
     let s = saveRef.current;
     if (q.score) { s = xmasNovelRecordFirst(s, q.id, res.ok); xmasNovelSe(res.ok ? 'ok' : 'ng'); }
@@ -72164,6 +72201,15 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
   const darkNow = fx && fx.kind === 'dark';
   const name = isLine ? xmasNovelNameOf(row) : '';
   const q = sheet && typeof sheet === 'object' ? sheet.q : null;
+  // 大事な選択(人を名指し・手がかりを突きつける・一発で当てる/やり直せない行動)は、押すと選んだ状態になり、下の「決定」で確かめる(台帳 r1126-113)
+  const picked = pick && q && pick.qid === q.id ? pick : null;
+  const choose = (key, label) => setPick({ qid: q.id, key, label });
+  const decideBar = (verb) => (
+    <div className="mh-nv-decide" data-xmas-novel-decide-bar>
+      <div className="mh-nv-decide-what mh-nv-serif">{picked ? `「${picked.label}」${verb}` : '選んでから、決定を押そう'}</div>
+      <button type="button" className="mh-nv-btn wide mh-nv-serif" data-xmas-novel-decide disabled={!picked} onClick={() => { if (picked) answer(q, picked.key); }}>決定</button>
+    </div>
+  );
   const presentList = q && q.kind === 'present' ? xmasNovelPresentable(q, clues) : clues; // 候補を絞る問い(r1126-099 追記1)
   return (
     <div className="mh-nv" data-xmas-novel="read" data-scene={scene ? scene.id : ''} data-row={row ? row.id : ''}>
@@ -72305,29 +72351,31 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
               </div>}
               <div className="mh-nv-scroll mt-2 flex-1 space-y-2 pr-1">
                 {presentList.length ? presentList.map((c) => (
-                  <div key={c.n} className="mh-nv-clue" data-xmas-novel-clue={c.n}>
+                  <div key={c.n} className="mh-nv-clue" data-xmas-novel-clue={c.n} data-pick={picked && picked.key === c.n ? '' : undefined}>
                     <div className="flex items-center gap-2">
                       <div className="mh-nv-serif mh-nv-gold min-w-0 flex-1 text-[15px] font-black">【{c.n}】</div>
-                      {q && <button type="button" className="mh-nv-btn shrink-0" data-xmas-novel-present={c.n} onClick={() => answer(q, c.n)}>突きつける</button>}
+                      {q && <button type="button" className="mh-nv-btn shrink-0" data-xmas-novel-present={c.n} data-on={picked && picked.key === c.n ? '' : undefined} aria-pressed={!!(picked && picked.key === c.n)} onClick={() => choose(c.n, c.n)}>{picked && picked.key === c.n ? '選んだ' : 'これを選ぶ'}</button>}
                     </div>
                     <p className="mh-nv-plain mt-1 whitespace-pre-wrap text-[12px] leading-relaxed text-slate-200">{xmasNovelWrap(c.d)}</p>
                   </div>
                 )) : <div className="text-[12px] text-slate-400">まだ手がかりはありません</div>}
               </div>
               {!q && <button type="button" className="mh-nv-btn wide mt-3" onClick={() => setSheet(null)}>閉じる</button>}
-              {q && <button type="button" className="mh-nv-btn wide mt-3" onClick={() => setSheet(null)}>話をもう一度見る</button>}
+              {q && decideBar('を突きつける')}
+              {q && <button type="button" className="mh-nv-btn wide mt-2" onClick={() => { setPick(null); setSheet(null); }}>話をもう一度見る</button>}
             </>)}
             {q && q.kind === 'person' && (<>
               <div data-xmas-novel-question={q.id} className="mb-3 rounded-lg p-2 text-[13px] font-bold leading-relaxed" style={{ background: 'rgba(120,20,30,.35)', boxShadow: '0 0 0 1px rgba(232,120,120,.6)' }}>
                 {q.label && <div className="mh-nv-serif text-[11px] font-black text-rose-200">{q.label}</div>}
                 {xmasNovelWrap(xmasNovelFill(q.x, playerName))}
               </div>
-              <div className="mh-nv-scroll"><XmasNovelCast onPick={(id) => answer(q, id)} /></div>
+              <div className="mh-nv-scroll"><XmasNovelCast picked={picked ? picked.key : ''} onPick={(id) => { const c = xmasNovelCastOf(id); choose(id, c ? c.name : id); }} /></div>
               {(q.extra || []).map((x) => (
-                <button type="button" key={x.key} className="mh-nv-choice mh-nv-serif mt-2" data-xmas-novel-extra={x.key} onClick={() => answer(q, x.key)}>{xmasNovelWrap(x.x)}</button>
+                <button type="button" key={x.key} className="mh-nv-choice mh-nv-serif mt-2" data-xmas-novel-extra={x.key} data-pick={picked && picked.key === x.key ? '' : undefined} aria-pressed={!!(picked && picked.key === x.key)} onClick={() => choose(x.key, String(x.x || '').replace(/[「」]/g, ''))}>{xmasNovelWrap(x.x)}</button>
               ))}
-              {q.once && <div className="mh-nv-plain mt-2 text-[11px] font-bold text-rose-200">選んだら、やり直しはできません</div>}
-              <button type="button" className="mh-nv-btn wide mt-3" onClick={() => setSheet(null)}>話をもう一度見る</button>
+              {q.once && <div className="mh-nv-plain mt-2 text-[11px] font-bold text-rose-200">決定したら、やり直しはできません</div>}
+              {decideBar(q.extra && q.extra.some((x) => picked && picked.key === x.key) ? 'に決める' : 'を名指しする')}
+              <button type="button" className="mh-nv-btn wide mt-2" onClick={() => { setPick(null); setSheet(null); }}>話をもう一度見る</button>
             </>)}
             {q && q.kind === 'action' && (<>
               <div data-xmas-novel-question={q.id} className="mh-nv-plain mh-nv-serif mh-nv-gold mb-3 text-[17px] font-black">{xmasNovelWrap(xmasNovelFill(q.x, playerName))}</div>
@@ -72337,14 +72385,16 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
                   const endAhead = !q.once && o.to ? xmasNovelEndingAhead(S, o.to) : null;
                   const seenEnd = endAhead && Array.isArray(save.endings) && save.endings.includes(endAhead) ? xmasNovelSceneById(S, endAhead) : null;
                   return (
-                    <button type="button" key={o.i} className="mh-nv-choice mh-nv-serif" data-xmas-novel-option={o.i} onClick={() => answer(q, o.i)}>
+                    <button type="button" key={o.i} className="mh-nv-choice mh-nv-serif" data-xmas-novel-option={o.i} data-pick={picked && picked.key === o.i ? '' : undefined} aria-pressed={!!(picked && picked.key === o.i)}
+                      onClick={() => (q.score || q.once ? choose(o.i, xmasNovelFill(o.x, playerName)) : answer(q, o.i))}>
                       {xmasNovelWrap(xmasNovelFill(o.x, playerName))}
                       {seenEnd && <span data-xmas-novel-seen-end={endAhead} className="mh-nv-plain mt-1 block text-[11px] font-bold text-rose-200">見たエンド: {seenEnd.ending && seenEnd.ending.name ? `「${seenEnd.ending.name}」` : 'バッドエンド'}</span>}
                     </button>
                   );
                 })}
               </div>
-              {q.once && <div className="mh-nv-plain mt-2 text-[11px] font-bold text-rose-200">選んだら、やり直しはできません</div>}
+              {q.once && <div className="mh-nv-plain mt-2 text-[11px] font-bold text-rose-200">決定したら、やり直しはできません</div>}
+              {(q.score || q.once) && decideBar('に決める')}
             </>)}
             {sheet === 'menu' && (<>
               <div className="mh-nv-serif mh-nv-gold mb-3 text-center text-[18px] font-black">メニュー</div>

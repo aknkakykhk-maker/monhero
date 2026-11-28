@@ -130,8 +130,10 @@ check('ジェスチャー側rAFも毎フレーム捨てている',
 check('サブレーン発光の要素を覚えて使い回す',
   /let glowNodes=null;/.test(source)
   &&/if\(!glowNodes\|\|!glowNodes\.length\|\|!glowNodes\[0\]\.isConnected\)\{/.test(source));
+// 2026-11-28 r1126-100: 書いた状態を要素に覚えて比べる形にした(dataset を毎回読み直さない)。変わったサブレーンだけ書くのは同じ
 check('発光は変わったサブレーンだけ書き換える',
-  /if\(want===\(el\.dataset\.rhythmTouchspan==='true'\)\)return;/.test(source));
+  /const cur=el\._mhTouchspan!==undefined\?el\._mhTouchspan:el\.dataset\.rhythmTouchspan==='true';\s*if\(want===cur\)continue;/.test(source)
+  &&/el\._mhTouchspan=want;/.test(source));
 
 // ── DOMの変化のたびに全ノーツを引き直していないか ──────────────────────
 // decorate() は area 配下の全ノーツを引き直すので、無関係な変化でも走ると重い。
