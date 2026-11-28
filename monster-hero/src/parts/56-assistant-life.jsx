@@ -978,8 +978,8 @@ const assistantLifeCloseScreen = () => ASSISTANT_LIFE_STORE.set({ open: false })
 const assistantLifeOpenMapAt = (place, id = null) => { if (assistantLifeEnabled()) ASSISTANT_LIFE_STORE.set({ open: true, mapFocus: { place, id: id || null, n: Date.now() } }); };
 // 段ごとのひとこと(上の帯)
 const ASSISTANT_LIFE_TIER_NOTES = Object.freeze({
-  quiet: 'のんびりした一日。遊ぶほど、友情Lv が上がりやすくなります', // 前は「みんなの動きが増えます」(見守れる回数)。1日の上限をなくしたので言いかえた(2026-11-08)
-  normal: 'いつもどおりの一日。みんな、それぞれ過ごしています',
+  quiet: 'のんびりした1日。遊ぶほど、友情Lv が上がりやすくなります', // 前は「みんなの動きが増えます」(見守れる回数)。1日の上限をなくしたので言いかえた(2026-11-08)
+  normal: 'いつもどおりの1日。みんな、それぞれ過ごしています',
   lively: 'よく遊んでくれたから、みんな元気！',
   festival: 'お祭りみたいににぎやか！ 友情Lv がぐんぐん上がります',
 });
@@ -1144,7 +1144,7 @@ function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem
           <div data-assistant-life-tier={tier.id} className="rounded-2xl border border-pink-300/40 bg-pink-400/10 p-2.5">
             <div className="flex items-baseline gap-2">
               <p className="text-[12px] font-black text-pink-100">今日のにぎわい「{tier.label}」</p>
-              <p className="ml-auto whitespace-nowrap text-[10px] font-bold text-pink-200">{next ? `あと${next.min - play.points}で「${next.label}」` : '一番上の段'}</p>
+              <p className="ml-auto whitespace-nowrap text-[10px] font-bold text-pink-200">{next ? `あと${next.min - play.points}で「${next.label}」` : '1番上の段'}</p>
             </div>
             <div className="mt-1 h-2 overflow-hidden rounded-full bg-slate-800" aria-hidden="true">
               <div className="h-full bg-pink-400" style={{ width: `${next ? Math.min(100, Math.round(100 * (play.points - tier.min) / (next.min - tier.min))) : 100}%` }}/>

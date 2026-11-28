@@ -66,7 +66,7 @@ const BGM_TRACKS = [
   // モンビーの新曲(2026-09-14)。m4aで受け取った音源から映像とタグを落として入れたもの
   { id:'melo_the_city_beneath_the_comets', name:'The City Beneath the Comets', creator:'オリジナル', src:'audio/bgm-the-city-beneath-the-comets.mp3', gain:1, loop:true },
   // 「ドラ」さんのゲーム「CREATE MONSTERS」の曲(2026-09-14)。本人の許可を得て入れている
-  { id:'melo_mou_hitotsu_no_sekai_e', name:'もう一つの世界へ', creator:'ドラ', src:'audio/bgm-mou-hitotsu-no-sekai-e.mp3', gain:1, loop:true },
+  { id:'melo_mou_hitotsu_no_sekai_e', name:'もう1つの世界へ', creator:'ドラ', src:'audio/bgm-mou-hitotsu-no-sekai-e.mp3', gain:1, loop:true },
   // モンビーの新曲(2026-09-28)。mp4で受け取った音源から映像とタグを落として入れたもの
   { id:'melo_only_my_railgun', name:'only my railgun', creator:'オリジナル', src:'audio/bgm-only-my-railgun.mp3', gain:1, loop:true },
   { id:'melo_big_bridge_no_shitou', name:'ビッグブリッヂの死闘', creator:'オリジナル', src:'audio/bgm-big-bridge-no-shitou.mp3', gain:1, loop:true },
@@ -881,7 +881,7 @@ const RHYTHM_FX_HELP = Object.freeze({
   stageBright:'ライブ背景の明るさです。既定は「おまかせ」（これまでどおり100%）。ノーツが背景に紛れて見づらいときは下げてください。',
   searchlight:'左右から揺れるサーチライトを出すかです。既定は「おまかせ」（ライブ背景が「派手」「ライブ」で、演出量が「最小」でないときに出ます）。\n「出す」を選ぶと、ライブ背景・演出量・軽量モードに関係なく出ます。',
   sparks:'背景に舞う光の粒の量です。既定は「おまかせ」（サーチライトと同じときに出ます）。「少ない」は手前の粒だけにします。',
-  laser:'「ライブ」の背景で、小節ごとに向きと色を変えて走るレーザーです。既定は「おまかせ」。\n絵を描くのが得意な専用の部分（GPU）が無い端末では出せません。一番重い演出の1つです。',
+  laser:'「ライブ」の背景で、小節ごとに向きと色を変えて走るレーザーです。既定は「おまかせ」。\n絵を描くのが得意な専用の部分（GPU）が無い端末では出せません。1番重い演出の1つです。',
   penlight:'「ライブ」の背景で、道の両側に並ぶ観客のペンライトの量です。既定は「おまかせ」。「少ない」は本数を半分ほどにします。\nGPU が無い端末では出せません。重い演出の1つです。',
   timingLight:'ノーツが判定ラインへ来るタイミングで、背景が光る演出です。既定は「おまかせ」（ライブ背景が「シンプル」以外のときに出ます）。',
   beatLine:'曲の拍ごとに、細い線が道の奥から流れてくる演出です。小節の頭では明るい線になります。既定は「おまかせ」（「道の演出」どおり）。',

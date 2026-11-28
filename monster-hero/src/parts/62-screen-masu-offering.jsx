@@ -62,7 +62,7 @@ function MasuOfferingScreen({
         setFx({ plan:res.plan, baseId:selected.baseId, name:selected.name, colors:getMasuColors(selected), src:base?.iconUrl });
         setDiamondText('');
       }
-      else setError(res?.error || 'お布施を保存できませんでした。もう一度お試しください。');
+      else setError(res?.error || 'お布施を保存できませんでした。もう1度お試しください。');
     } finally { setBusy(false); }
   };
   const needsConfirm = !!plan && (plan.breakthroughs>0 || plan.reincarnations>0);
