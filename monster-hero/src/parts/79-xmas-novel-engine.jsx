@@ -44,11 +44,40 @@ const xmasNovelCastOf = (id) => XMAS_NOVEL_CAST.find((c) => c.id === id) || XMAS
 // ---- 条件 ----
 //  条件のデータ: { any: [ { all: [ { k:'f_kuroba', op:'=', v:1 }, ... ] }, ... ] }(または のどれか・かつ の全部)。null は「いつでも」
 //  k は f_* のフラグ、score(いまの読み進めで一発目で当てた数)、clues(手がかりの数)
+// ---- 特別なしおり(r1126-115) ----
+//  エンドを集めると手に入り、もしもの話の選択肢が開く。持っているかは見たエンド(mh_xmas_novel_v1 の endings)から毎回数える。
+//  保存のキーも形も増やさない(⑦)。need: all … 全部見た / some … of のうち n 個 / marks … ほかのしおりを全部持っている
+const XMAS_NOVEL_BOOKMARK_ACCUSE = ['END-M1', 'END-M2', 'END-M3', 'END-M4', 'END-M5', 'END-M6', 'END-M7', 'END-M8', 'END-M9', 'END-K1'];
+const XMAS_NOVEL_BOOKMARKS = Object.freeze([
+  { id: 'red', name: '紅のしおり', color: '紅い', tone: '#9b1c28', need: { all: ['END-G'], some: { of: XMAS_NOVEL_BOOKMARK_ACCUSE, n: 5 } } },
+  { id: 'ash', name: '灰のしおり', color: '灰色の', tone: '#8a8580', need: { all: ['END-G', 'END-X1', 'END-X2', 'END-X3', 'END-X4', 'END-X5', 'END-X6', 'END-X7', 'END-X8'] } },
+  { id: 'green', name: '緑のしおり', color: '緑の', tone: '#3f7a52', need: { all: ['END-G', 'END-O', 'END-O2', 'END-O3', 'END-O4'] } },
+  { id: 'silver', name: '銀のしおり', color: '銀色の', tone: '#c8ccd4', need: { all: ['END-G', 'END-G2', 'END-L1', 'END-L2'] } },
+  { id: 'white', name: '白紙のしおり', color: '白い', tone: '#eeeae0', need: { marks: ['red', 'ash', 'green', 'silver'] } },
+]);
+const xmasNovelBookmarkMet = (b, list, owned) => {
+  const n = b.need || {};
+  if (Array.isArray(n.all) && !n.all.every((e) => list.includes(e))) return false;
+  if (n.some && n.some.of.filter((e) => list.includes(e)).length < n.some.n) return false;
+  if (Array.isArray(n.marks) && !n.marks.every((m) => owned.includes(m))) return false;
+  return true;
+};
+// 持っているしおりの id の並び(XMAS_NOVEL_BOOKMARKS の順)
+const xmasNovelBookmarks = (endings) => {
+  const list = Array.isArray(endings) ? endings : [];
+  const owned = [];
+  XMAS_NOVEL_BOOKMARKS.forEach((b) => { if (xmasNovelBookmarkMet(b, list, owned)) owned.push(b.id); });
+  return owned;
+};
+const xmasNovelBookmarkOf = (id) => XMAS_NOVEL_BOOKMARKS.find((b) => b.id === id) || null;
+
 const xmasNovelValueOf = (k, ctx) => {
   if (k === 'score') return Number(ctx.score) || 0;
   if (k === 'clues') return Array.isArray(ctx.clues) ? ctx.clues.length : 0;
   // end_G … そのエンディングを見たことがあれば 1(エンドヒストリー。おまけの選択肢・r1126-062)
   if (/^end_[A-Z]+\d*$/.test(k)) return Array.isArray(ctx.endings) && ctx.endings.includes(`END-${k.slice(4)}`) ? 1 : 0;
+  // bm_red … その特別なしおりを持っていれば 1(見たエンドから毎回数える。保存は増やさない・r1126-115)
+  if (/^bm_[a-z]+$/.test(k)) return xmasNovelBookmarks(ctx.endings).includes(k.slice(3)) ? 1 : 0;
   const v = ctx.flags ? ctx.flags[k] : undefined;
   return Number.isFinite(v) ? v : 0;
 };
@@ -422,6 +451,8 @@ const XMAS_NOVEL_ENDING_KINDS = Object.freeze({
   omake: { label: 'おまけ', tone: '#7fd6a8' },
   unsolved: { label: '迷宮入り', tone: '#8fa3c8' }, // r1126-108: 黒いサンタが誰か分からないまま終わる
   truebad: { label: '真相のその先', tone: '#8fd0e6' }, // r1126-108 第3弾: 真ルートの終章で選びまちがえる
+  ifroute: { label: 'もしも', tone: '#d9a7c7' }, // r1126-115: しおりで開く、別ジャンルのもしもの話
+  pov: { label: '視点の編', tone: '#b6c98f' }, // r1126-115: 真グッドのあとに開く、助手の視点の編
 });
 
 // ---- 分岐の地図「聖夜の見取り図」の読み直し(r1126-102) ----

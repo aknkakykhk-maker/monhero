@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 72761633efc5ef28
+// source-sha256: 225384b1c8d8a702
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -115649,10 +115649,73 @@ const XMAS_NOVEL_SPEAKERS_EXTRA = Object.freeze([{
   kind: 'laptop'
 }]);
 const xmasNovelCastOf = id => XMAS_NOVEL_CAST.find(c => c.id === id) || XMAS_NOVEL_SPEAKERS_EXTRA.find(c => c.id === id) || null;
+const XMAS_NOVEL_BOOKMARK_ACCUSE = ['END-M1', 'END-M2', 'END-M3', 'END-M4', 'END-M5', 'END-M6', 'END-M7', 'END-M8', 'END-M9', 'END-K1'];
+const XMAS_NOVEL_BOOKMARKS = Object.freeze([{
+  id: 'red',
+  name: '紅のしおり',
+  color: '紅い',
+  tone: '#9b1c28',
+  need: {
+    all: ['END-G'],
+    some: {
+      of: XMAS_NOVEL_BOOKMARK_ACCUSE,
+      n: 5
+    }
+  }
+}, {
+  id: 'ash',
+  name: '灰のしおり',
+  color: '灰色の',
+  tone: '#8a8580',
+  need: {
+    all: ['END-G', 'END-X1', 'END-X2', 'END-X3', 'END-X4', 'END-X5', 'END-X6', 'END-X7', 'END-X8']
+  }
+}, {
+  id: 'green',
+  name: '緑のしおり',
+  color: '緑の',
+  tone: '#3f7a52',
+  need: {
+    all: ['END-G', 'END-O', 'END-O2', 'END-O3', 'END-O4']
+  }
+}, {
+  id: 'silver',
+  name: '銀のしおり',
+  color: '銀色の',
+  tone: '#c8ccd4',
+  need: {
+    all: ['END-G', 'END-G2', 'END-L1', 'END-L2']
+  }
+}, {
+  id: 'white',
+  name: '白紙のしおり',
+  color: '白い',
+  tone: '#eeeae0',
+  need: {
+    marks: ['red', 'ash', 'green', 'silver']
+  }
+}]);
+const xmasNovelBookmarkMet = (b, list, owned) => {
+  const n = b.need || {};
+  if (Array.isArray(n.all) && !n.all.every(e => list.includes(e))) return false;
+  if (n.some && n.some.of.filter(e => list.includes(e)).length < n.some.n) return false;
+  if (Array.isArray(n.marks) && !n.marks.every(m => owned.includes(m))) return false;
+  return true;
+};
+const xmasNovelBookmarks = endings => {
+  const list = Array.isArray(endings) ? endings : [];
+  const owned = [];
+  XMAS_NOVEL_BOOKMARKS.forEach(b => {
+    if (xmasNovelBookmarkMet(b, list, owned)) owned.push(b.id);
+  });
+  return owned;
+};
+const xmasNovelBookmarkOf = id => XMAS_NOVEL_BOOKMARKS.find(b => b.id === id) || null;
 const xmasNovelValueOf = (k, ctx) => {
   if (k === 'score') return Number(ctx.score) || 0;
   if (k === 'clues') return Array.isArray(ctx.clues) ? ctx.clues.length : 0;
   if (/^end_[A-Z]+\d*$/.test(k)) return Array.isArray(ctx.endings) && ctx.endings.includes(`END-${k.slice(4)}`) ? 1 : 0;
+  if (/^bm_[a-z]+$/.test(k)) return xmasNovelBookmarks(ctx.endings).includes(k.slice(3)) ? 1 : 0;
   const v = ctx.flags ? ctx.flags[k] : undefined;
   return Number.isFinite(v) ? v : 0;
 };
@@ -116289,6 +116352,14 @@ const XMAS_NOVEL_ENDING_KINDS = Object.freeze({
   truebad: {
     label: '真相のその先',
     tone: '#8fd0e6'
+  },
+  ifroute: {
+    label: 'もしも',
+    tone: '#d9a7c7'
+  },
+  pov: {
+    label: '視点の編',
+    tone: '#b6c98f'
   }
 });
 const XMAS_NOVEL_ROUTE_KEY = 'mh_xmas_novel_route_v1';
@@ -117436,6 +117507,18 @@ const XMAS_NOVEL_SCRIPT = {
         },
         "to": "C1-X",
         "x": "ソラシドが、1人で廊下を見に行く"
+      }, {
+        "c": {
+          "any": [{
+            "all": [{
+              "k": "bm_red",
+              "op": "=",
+              "v": 1
+            }]
+          }]
+        },
+        "to": "RW-1",
+        "x": "ホールから、かすかにピアノの音。音のするほうへ下りていく"
       }],
       "k": "C1-6:A1b"
     }]
@@ -131595,6 +131678,681 @@ const XMAS_NOVEL_SCRIPT = {
     }],
     "jumpOnly": true,
     "past": true
+  }, {
+    "id": "RW-1",
+    "chapter": "END",
+    "title": "真夜中のピアノ",
+    "cond": null,
+    "bgm": "close_to_your_heart_alt",
+    "bg": "夜のホール",
+    "next": "RW-2",
+    "rows": [{
+      "id": "RW-1-1",
+      "t": "band",
+      "x": "——これは、起きなかった夜の話",
+      "k": "RW-1:RW-1-1"
+    }, {
+      "id": "RW-1-2",
+      "t": "band",
+      "x": "真夜中のホール。暖炉の残り火のそばで、古いピアノのふたが開いていた",
+      "k": "RW-1:RW-1-2"
+    }, {
+      "id": "RW-1-3",
+      "t": "band",
+      "x": "♪……(低く、ゆっくりとしたワルツ)",
+      "fx": ["se"],
+      "se": "music",
+      "k": "RW-1:RW-1-3"
+    }, {
+      "id": "RW-1-4",
+      "t": "band",
+      "x": "弾いていたのは、見知らぬ男だった。白髪まじりの髪を、無造作に後ろで束ねている。コートの肩に、まだ雪が残っていた",
+      "k": "RW-1:RW-1-4"
+    }, {
+      "id": "RW-1-5",
+      "t": "line",
+      "n": "灰谷",
+      "x": "……起こしてしまいましたか。すみません。最終のバスに乗り遅れて、さっき、ここに着いたところでして",
+      "k": "RW-1:RW-1-5"
+    }, {
+      "id": "RW-1-6",
+      "t": "line",
+      "n": "灰谷",
+      "x": "灰谷といいます。昔、ピアノを弾いていた者です。……招待状が、どういうわけか、わたしにも届きましてね",
+      "k": "RW-1:RW-1-6"
+    }, {
+      "id": "RW-1-7",
+      "t": "band",
+      "x": "男は、鍵盤から手を下ろすと、2階の廊下のほうを、一度だけ見上げた",
+      "k": "RW-1:RW-1-7"
+    }, {
+      "id": "RW-1-8",
+      "t": "line",
+      "n": "灰谷",
+      "x": "このペンションに、白瀬という人が泊まっていませんか。……いえ。答えなくて、いいです",
+      "k": "RW-1:RW-1-8"
+    }],
+    "jumpOnly": true
+  }, {
+    "id": "RW-2",
+    "chapter": "END",
+    "title": "仮面の朝",
+    "cond": null,
+    "bgm": "kaze_ga_soyogu",
+    "bg": "ペンションのホール",
+    "next": "RW-3",
+    "rows": [{
+      "id": "RW-2-1",
+      "t": "band",
+      "x": "次の朝。ホールに、イチーカが箱を1つ抱えて現れた",
+      "k": "RW-2:RW-2-1"
+    }, {
+      "id": "RW-2-2",
+      "t": "line",
+      "w": "ichika",
+      "x": "ふふっ。吹雪で、山を下りられないそうですね。……でしたら、今夜は、仮面舞踏会にしましょうね",
+      "k": "RW-2:RW-2-2"
+    }, {
+      "id": "RW-2-3",
+      "t": "band",
+      "x": "箱の中には、古い仮面がいくつも入っていた。銀の縁どり、黒いレース、羽根飾り",
+      "k": "RW-2:RW-2-3"
+    }, {
+      "id": "RW-2-4",
+      "t": "line",
+      "w": "myua",
+      "x": "まぢ！？ 仮面舞踏会とか、映画でしか見たことないぢゃん！",
+      "e": "excited",
+      "k": "RW-2:RW-2-4"
+    }, {
+      "id": "RW-2-5",
+      "t": "line",
+      "w": "dra",
+      "x": "おで、ごちそうを運ぶ係がいい。運びながら、ちょっと食う",
+      "e": "happy",
+      "k": "RW-2:RW-2-5"
+    }, {
+      "id": "RW-2-6",
+      "t": "line",
+      "w": "mochimaru",
+      "x": "ドラさん、運ぶ係は、食べない係でもあるっちー",
+      "k": "RW-2:RW-2-6"
+    }, {
+      "id": "RW-2-7",
+      "t": "line",
+      "w": "sorashido",
+      "x": "音楽は、どうしましょう。ワトソンくんに流してもらうこともできますが",
+      "e": "normal",
+      "k": "RW-2:RW-2-7"
+    }, {
+      "id": "RW-2-8",
+      "t": "line",
+      "n": "灰谷",
+      "x": "……それなら、わたしが弾きましょう。今夜の一宿一飯のお礼に",
+      "k": "RW-2:RW-2-8"
+    }, {
+      "id": "RW-2-9",
+      "t": "band",
+      "x": "階段の途中で、白瀬が立ち止まっていた。手すりを握った指が、白くなっている",
+      "k": "RW-2:RW-2-9"
+    }, {
+      "id": "RW-2-10",
+      "t": "line",
+      "w": "shirase",
+      "x": "……灰谷、さん",
+      "k": "RW-2:RW-2-10"
+    }, {
+      "id": "RW-2-11",
+      "t": "line",
+      "n": "灰谷",
+      "x": "12年ぶりですね、白瀬さん。……相変わらず、目をふせて話す",
+      "k": "RW-2:RW-2-11"
+    }, {
+      "id": "RW-2-12",
+      "t": "line",
+      "w": "shirase",
+      "x": "……ごめんなさい",
+      "k": "RW-2:RW-2-12"
+    }, {
+      "id": "RW-2-13",
+      "t": "line",
+      "n": "灰谷",
+      "x": "その口ぐせも、相変わらずだ",
+      "k": "RW-2:RW-2-13"
+    }, {
+      "id": "RW-2-14",
+      "t": "band",
+      "x": "食堂の入り口で、黒羽が、懐中時計のふたを、ぱちんと閉じた",
+      "k": "RW-2:RW-2-14"
+    }, {
+      "id": "RW-2-15",
+      "t": "line",
+      "w": "kuroba",
+      "x": "……伴奏屋が、何の用かね。時は金なり、だよ。きみの時間には、もう値がつかないと思っていたが",
+      "k": "RW-2:RW-2-15"
+    }, {
+      "id": "RW-2-16",
+      "t": "line",
+      "n": "灰谷",
+      "x": "ええ。ですから、今夜はただで弾きます",
+      "k": "RW-2:RW-2-16"
+    }, {
+      "id": "RW-2-17",
+      "t": "line",
+      "w": "kiki",
+      "x": "(小声で)……空気が、ぴりぴりしてまつ",
+      "e": "troubled",
+      "k": "RW-2:RW-2-17"
+    }, {
+      "id": "RW-2-18",
+      "t": "line",
+      "w": "atsu",
+      "x": "(小声で)知り合い、みたいだね。……3人とも",
+      "e": "normal",
+      "k": "RW-2:RW-2-18"
+    }],
+    "frame": "far"
+  }, {
+    "id": "RW-3",
+    "chapter": "END",
+    "title": "二人の昔",
+    "cond": null,
+    "bgm": "melo_sad_song_short",
+    "bg": "夜の食堂",
+    "next": "RW-4",
+    "rows": [{
+      "id": "RW-3-1",
+      "t": "band",
+      "x": "夕方。食堂の窓辺で、白瀬が仮面を膝にのせて、雪を見ていた。給仕の練習をしていたえるびんが、お茶を置く",
+      "k": "RW-3:RW-3-1"
+    }, {
+      "id": "RW-3-2",
+      "t": "line",
+      "w": "erubin",
+      "x": "白瀬さん。……さっきの人、昔の知り合い？",
+      "e": "normal",
+      "k": "RW-3:RW-3-2"
+    }, {
+      "id": "RW-3-3",
+      "t": "line",
+      "w": "shirase",
+      "x": "……わたしが歌い始めた頃、伴奏をしてくれていた人です。小さな店で、毎晩",
+      "k": "RW-3:RW-3-3"
+    }, {
+      "id": "RW-3-4",
+      "t": "line",
+      "w": "shirase",
+      "x": "黒羽さんの事務所に入る時に、言われました。『伴奏屋とは組むな。きみは、もっと大きな舞台に立つ』と",
+      "k": "RW-3:RW-3-4"
+    }, {
+      "id": "RW-3-5",
+      "t": "line",
+      "w": "shirase",
+      "x": "わたしは、その言葉に従いました。灰谷さんには、さよならも言わずに",
+      "k": "RW-3:RW-3-5"
+    }, {
+      "id": "RW-3-6",
+      "t": "line",
+      "w": "erubin",
+      "x": "……言わなかったんじゃなくて、言えなかったのかな",
+      "e": "troubled",
+      "k": "RW-3:RW-3-6"
+    }, {
+      "id": "RW-3-7",
+      "t": "line",
+      "w": "shirase",
+      "x": "……どちらでも、同じことです",
+      "k": "RW-3:RW-3-7"
+    }, {
+      "id": "RW-3-8",
+      "t": "band",
+      "x": "白瀬は、仮面を、そっと顔に当ててみた。窓ガラスに映ったのは、目もとだけ隠れた、知らない女の人だった",
+      "k": "RW-3:RW-3-8"
+    }, {
+      "id": "RW-3-9",
+      "t": "line",
+      "w": "shirase",
+      "x": "仮面をつけると、少しだけ、言えることが増える気がしますね",
+      "k": "RW-3:RW-3-9"
+    }]
+  }, {
+    "id": "RW-4",
+    "chapter": "END",
+    "title": "ワルツ",
+    "cond": null,
+    "bgm": "close_to_your_heart_alt",
+    "bg": "ペンションのホール",
+    "next": null,
+    "rows": [{
+      "id": "RW-4-1",
+      "t": "band",
+      "x": "夜。ホールのシャンデリアに、灯りが入る。仮面をつけたみんなの影が、壁に長く伸びた",
+      "k": "RW-4:RW-4-1"
+    }, {
+      "id": "RW-4-2",
+      "t": "band",
+      "x": "♪……(灰谷のピアノ。ゆったりとした三拍子)",
+      "fx": ["se"],
+      "se": "music",
+      "k": "RW-4:RW-4-2"
+    }, {
+      "id": "RW-4-3",
+      "t": "line",
+      "w": "momosuke",
+      "x": "わぁ……みんな、誰が誰だか分かんない♡",
+      "e": "excited",
+      "k": "RW-4:RW-4-3"
+    }, {
+      "id": "RW-4-4",
+      "t": "line",
+      "w": "kyuko",
+      "x": "ドラちゃんは分かるよぉ。仮面の下から、クッキーのくず、こぼれてるもん笑",
+      "e": "happy",
+      "k": "RW-4:RW-4-4"
+    }, {
+      "id": "RW-4-5",
+      "t": "band",
+      "x": "黒羽が、白瀬の前に立ち、黒い革の手袋をはめた手を差し出した",
+      "k": "RW-4:RW-4-5"
+    }, {
+      "id": "RW-4-6",
+      "t": "line",
+      "w": "kuroba",
+      "x": "一曲、どうかね。……昔は、わたしの言うことなら、何でも聞いたじゃないか",
+      "k": "RW-4:RW-4-6"
+    }, {
+      "id": "RW-4-7",
+      "t": "line",
+      "w": "shirase",
+      "x": "……昔は、です",
+      "k": "RW-4:RW-4-7"
+    }, {
+      "id": "RW-4-8",
+      "t": "band",
+      "x": "それでも、白瀬は、その手を取った。ピアノの音が、ほんの一瞬だけ乱れて、すぐに戻る",
+      "k": "RW-4:RW-4-8"
+    }, {
+      "id": "RW-4-9",
+      "t": "band",
+      "x": "くるり、くるりと回るたびに、白瀬の目が、ピアノのほうへ流れる。黒羽は、それに気づいていた。手袋の指に、力がこもる",
+      "k": "RW-4:RW-4-9"
+    }, {
+      "id": "RW-4-10",
+      "t": "line",
+      "w": "kuroba",
+      "x": "どこを見ている。……12年前も、きみは、あの男のほうばかり見ていた",
+      "k": "RW-4:RW-4-10"
+    }, {
+      "id": "RW-4-11",
+      "t": "line",
+      "w": "shirase",
+      "x": "……見ていません",
+      "k": "RW-4:RW-4-11"
+    }, {
+      "id": "RW-4-12",
+      "t": "line",
+      "w": "kuroba",
+      "x": "うそが下手なのも、変わらんな",
+      "k": "RW-4:RW-4-12"
+    }, {
+      "id": "RW-4-13",
+      "t": "line",
+      "w": "myua",
+      "x": "(小声で、給仕のトレイを抱えて)……なにこの空気。大人すぎぢゃん……",
+      "e": "troubled",
+      "k": "RW-4:RW-4-13"
+    }, {
+      "id": "RW-4-14",
+      "t": "line",
+      "w": "sorashido",
+      "x": "(小声で)……曲が、もうすぐ終わります。次の曲で、相手が変わるかもしれません",
+      "e": "troubled",
+      "k": "RW-4:RW-4-14"
+    }, {
+      "t": "q",
+      "id": "AR1",
+      "kind": "action",
+      "x": "ワルツが終わる。次の曲の前に、{name}は——",
+      "replies": {},
+      "label": "行動の選択",
+      "options": [{
+        "to": "RW-5a",
+        "x": "ピアノの灰谷に「次は、あなたが踊る番です」と、そっと耳打ちする"
+      }, {
+        "to": "RW-5b",
+        "x": "黒羽のグラスに、ワインを注ぎ続けて、引き止める"
+      }, {
+        "to": "RW-5c",
+        "x": "何もしない。仮面の下で、3人を見守る"
+      }],
+      "k": "RW-4:AR1"
+    }],
+    "frame": "far"
+  }, {
+    "id": "RW-5a",
+    "chapter": "END",
+    "title": "交代",
+    "cond": null,
+    "bgm": "close_to_your_heart_alt",
+    "bg": "ペンションのホール",
+    "next": "END-R1",
+    "rows": [{
+      "id": "RW-5a-1",
+      "t": "band",
+      "x": "灰谷は、少しのあいだ鍵盤を見つめてから、立ち上がった。ピアノの前に、ソラシドが座る",
+      "k": "RW-5a:RW-5a-1"
+    }, {
+      "id": "RW-5a-2",
+      "t": "line",
+      "w": "sorashido",
+      "x": "……ワトソンくん、楽譜を。三拍子でお願いします",
+      "e": "normal",
+      "k": "RW-5a:RW-5a-2"
+    }, {
+      "id": "RW-5a-3",
+      "t": "line",
+      "w": "watson",
+      "x": "はい。……ゆっくりめに、しておきます",
+      "k": "RW-5a:RW-5a-3"
+    }, {
+      "id": "RW-5a-4",
+      "t": "line",
+      "n": "灰谷",
+      "x": "黒羽さん。次の曲は、わたしに譲っていただけますか",
+      "k": "RW-5a:RW-5a-4"
+    }, {
+      "id": "RW-5a-5",
+      "t": "line",
+      "w": "kuroba",
+      "x": "……ふん。伴奏屋が、表に出てくるとはな",
+      "k": "RW-5a:RW-5a-5"
+    }, {
+      "id": "RW-5a-6",
+      "t": "band",
+      "x": "灰谷は、手袋を外した手を差し出した。白瀬は、その手と、灰谷の顔を、何度も見比べた",
+      "k": "RW-5a:RW-5a-6"
+    }, {
+      "id": "RW-5a-7",
+      "t": "line",
+      "n": "灰谷",
+      "x": "12年前、言いそびれたことがあります。……今夜は仮面をしているので、言えそうです",
+      "k": "RW-5a:RW-5a-7"
+    }, {
+      "id": "RW-5a-8",
+      "t": "line",
+      "w": "shirase",
+      "x": "……仮面を外してから、聞かせてください",
+      "k": "RW-5a:RW-5a-8"
+    }, {
+      "id": "RW-5a-9",
+      "t": "band",
+      "x": "二人は、ホールの真ん中で、ゆっくりと回り始めた。誰も、そのあいだに割って入らなかった",
+      "k": "RW-5a:RW-5a-9"
+    }],
+    "jumpOnly": true
+  }, {
+    "id": "RW-5b",
+    "chapter": "END",
+    "title": "引き止める手",
+    "cond": null,
+    "bgm": "melo_sad_song_short",
+    "bg": "ペンションのホール",
+    "next": "END-R2",
+    "rows": [{
+      "id": "RW-5b-1",
+      "t": "band",
+      "x": "{name}は、黒羽のグラスに、ワインを注いだ。空になると、また注いだ",
+      "k": "RW-5b:RW-5b-1"
+    }, {
+      "id": "RW-5b-2",
+      "t": "line",
+      "w": "kuroba",
+      "x": "……気がきくじゃないか。時は金なり、だが、こういう時間は、悪くない",
+      "k": "RW-5b:RW-5b-2"
+    }, {
+      "id": "RW-5b-3",
+      "t": "band",
+      "x": "ピアノは、次の曲を弾き始めない。灰谷は、鍵盤の上で手を止めたまま、白瀬を見ていた",
+      "k": "RW-5b:RW-5b-3"
+    }, {
+      "id": "RW-5b-4",
+      "t": "band",
+      "x": "白瀬は、誰の手も取らずに、ホールの真ん中に、ひとりで立った。仮面を外す",
+      "k": "RW-5b:RW-5b-4"
+    }, {
+      "id": "RW-5b-5",
+      "t": "line",
+      "w": "shirase",
+      "x": "……灰谷さん。あの頃の曲を、弾いていただけますか。わたしが、まだ誰のものでもなかった頃の",
+      "k": "RW-5b:RW-5b-5"
+    }, {
+      "id": "RW-5b-6",
+      "t": "band",
+      "x": "♪……(ピアノが、そっと鳴る)",
+      "fx": ["se"],
+      "se": "music",
+      "k": "RW-5b:RW-5b-6"
+    }, {
+      "id": "RW-5b-7",
+      "t": "band",
+      "x": "白瀬は、歌い始めた。12年、誰の前でも歌わなかった声で",
+      "k": "RW-5b:RW-5b-7"
+    }],
+    "jumpOnly": true
+  }, {
+    "id": "RW-5c",
+    "chapter": "END",
+    "title": "見守る",
+    "cond": null,
+    "bgm": "melo_dullahan_clockwork",
+    "bg": "ペンションのホール",
+    "next": "END-R3",
+    "rows": [{
+      "id": "RW-5c-1",
+      "t": "band",
+      "x": "{name}は、何もしなかった。仮面の下で、3人を見ていた",
+      "k": "RW-5c:RW-5c-1"
+    }, {
+      "id": "RW-5c-2",
+      "t": "band",
+      "x": "次の曲が始まっても、黒羽は白瀬の手を離さなかった。灰谷は、目を閉じて弾き続けた",
+      "k": "RW-5c:RW-5c-2"
+    }, {
+      "id": "RW-5c-3",
+      "t": "band",
+      "x": "曲の途中で、黒羽が、ふいに足を止めた",
+      "k": "RW-5c:RW-5c-3"
+    }, {
+      "id": "RW-5c-4",
+      "t": "line",
+      "w": "kuroba",
+      "x": "……もういい。踊りながら、ほかの男のピアノを聞いている女と回っても、つまらん",
+      "k": "RW-5c:RW-5c-4"
+    }, {
+      "id": "RW-5c-5",
+      "t": "band",
+      "x": "黒羽は、懐中時計を外すと、ピアノの上に置いた",
+      "k": "RW-5c:RW-5c-5"
+    }, {
+      "id": "RW-5c-6",
+      "t": "line",
+      "w": "kuroba",
+      "x": "伴奏屋。……時は金なり、だ。今夜の残りの時間は、きみにくれてやる。釣りはいらんよ",
+      "k": "RW-5c:RW-5c-6"
+    }, {
+      "id": "RW-5c-7",
+      "t": "band",
+      "x": "黒羽は、それきり振り返らずに、階段を上っていった。革の手袋が、手すりの上に、片方だけ残っていた",
+      "k": "RW-5c:RW-5c-7"
+    }],
+    "jumpOnly": true
+  }, {
+    "id": "END-R1",
+    "chapter": "END",
+    "title": "もしも「仮面の下の約束」",
+    "cond": null,
+    "bgm": "close_to_your_heart_alt",
+    "bg": "ペンションのホール",
+    "next": "OUT-RW",
+    "rows": [{
+      "id": "R1-1",
+      "t": "band",
+      "x": "聖夜の名探偵 エンディング「仮面の下の約束」",
+      "k": "END-R1:R1-1"
+    }, {
+      "id": "R1-2",
+      "t": "band",
+      "x": "明け方。雪のやんだ窓辺に、仮面が2つ、並べて置いてあった",
+      "k": "END-R1:R1-2"
+    }, {
+      "id": "R1-3",
+      "t": "band",
+      "x": "灰谷が言いそびれた言葉を、白瀬がどう受け取ったのかは、誰も知らない。ただ、その朝、白瀬は一度も「ごめんなさい」と言わなかった",
+      "k": "END-R1:R1-3"
+    }, {
+      "id": "R1-4",
+      "t": "band",
+      "x": "聖夜の名探偵 —— もしも、おしまい",
+      "k": "END-R1:R1-4"
+    }],
+    "ending": {
+      "id": "END-R1",
+      "kind": "ifroute",
+      "label": "もしも",
+      "name": "仮面の下の約束"
+    }
+  }, {
+    "id": "END-R2",
+    "chapter": "END",
+    "title": "もしも「ひとりの歌」",
+    "cond": null,
+    "bgm": "melo_sad_song_short",
+    "bg": "ペンションのホール",
+    "next": "OUT-RW",
+    "rows": [{
+      "id": "R2-1",
+      "t": "band",
+      "x": "聖夜の名探偵 エンディング「ひとりの歌」",
+      "k": "END-R2:R2-1"
+    }, {
+      "id": "R2-2",
+      "t": "band",
+      "x": "白瀬の歌は、誰の名前も呼ばなかった。それでも、ピアノの音だけは、最後まで、ぴたりと寄りそっていた",
+      "k": "END-R2:R2-2"
+    }, {
+      "id": "R2-3",
+      "t": "band",
+      "x": "黒羽は、グラスを持ったまま、一度も口をつけずに、それを聞いていた",
+      "k": "END-R2:R2-3"
+    }, {
+      "id": "R2-4",
+      "t": "band",
+      "x": "聖夜の名探偵 —— もしも、おしまい",
+      "k": "END-R2:R2-4"
+    }],
+    "ending": {
+      "id": "END-R2",
+      "kind": "ifroute",
+      "label": "もしも",
+      "name": "ひとりの歌"
+    }
+  }, {
+    "id": "END-R3",
+    "chapter": "END",
+    "title": "もしも「釣りはいらない」",
+    "cond": null,
+    "bgm": "close_to_your_heart_alt",
+    "bg": "ペンションのホール",
+    "next": "OUT-RW",
+    "rows": [{
+      "id": "R3-1",
+      "t": "band",
+      "x": "聖夜の名探偵 エンディング「釣りはいらない」",
+      "k": "END-R3:R3-1"
+    }, {
+      "id": "R3-2",
+      "t": "band",
+      "x": "残りの曲を、白瀬と灰谷が踊ったのか、ただ並んで聞いていたのか。ピアノの上の懐中時計だけが、その時間を数えていた",
+      "k": "END-R3:R3-2"
+    }, {
+      "id": "R3-3",
+      "t": "band",
+      "x": "次の朝、黒羽は、いつもより少しだけ遅く、食堂に下りてきた",
+      "k": "END-R3:R3-3"
+    }, {
+      "id": "R3-4",
+      "t": "band",
+      "x": "聖夜の名探偵 —— もしも、おしまい",
+      "k": "END-R3:R3-4"
+    }],
+    "ending": {
+      "id": "END-R3",
+      "kind": "ifroute",
+      "label": "もしも",
+      "name": "釣りはいらない"
+    }
+  }, {
+    "id": "OUT-RW",
+    "chapter": "END",
+    "title": "画面の前で(仮面のワルツのあと)",
+    "cond": null,
+    "bgm": "close_to_your_heart_alt",
+    "bg": "ゲーム機をかこむ助手たち",
+    "next": null,
+    "rows": [{
+      "id": "OUT-RW-0",
+      "t": "band",
+      "x": "画面の前。エンディングの曲が、三拍子で流れている",
+      "k": "OUT-RW:OUT-RW-0"
+    }, {
+      "id": "OUT-RW-1",
+      "t": "line",
+      "w": "myua",
+      "x": "待って、なにこれ、大人の話すぎぢゃん！ ドキドキした……！",
+      "e": "excited",
+      "k": "OUT-RW:OUT-RW-1"
+    }, {
+      "id": "OUT-RW-2",
+      "t": "line",
+      "w": "mochimaru",
+      "x": "……ゲームの中で、黒羽さまが、ちょっとだけかっこよかったっちー",
+      "k": "OUT-RW:OUT-RW-2"
+    }, {
+      "id": "OUT-RW-3",
+      "t": "line",
+      "w": "sorashido",
+      "x": "事件が起きなかった夜も、ちゃんと何かが起きている。……そういう書き方ですね",
+      "e": "normal",
+      "k": "OUT-RW:OUT-RW-3"
+    }, {
+      "id": "OUT-RW-4",
+      "t": "line",
+      "w": "dra",
+      "x": "ゲームの中のおで、仮面の下で、ずっと食ってた。えへへ",
+      "e": "happy",
+      "k": "OUT-RW:OUT-RW-4"
+    }, {
+      "id": "OUT-RW-5",
+      "t": "line",
+      "w": "kiki",
+      "x": "白瀬さん、最後に歌えて、よかったでつ",
+      "e": "happy",
+      "k": "OUT-RW:OUT-RW-5"
+    }, {
+      "id": "OUT-RW-6",
+      "t": "line",
+      "w": "atsu",
+      "x": "……本編だと、この3人は、あんな夜にならなかったんだよね",
+      "e": "normal",
+      "k": "OUT-RW:OUT-RW-6"
+    }, {
+      "id": "OUT-RW-7",
+      "t": "band",
+      "x": "画面の中で、ピアノの上の仮面が、静かにこちらを向いていた",
+      "k": "OUT-RW:OUT-RW-7"
+    }],
+    "frame": "far",
+    "outside": true
   }]
 };
 const XMAS_NOVEL_CSS = `
@@ -134547,6 +135305,7 @@ const XmasNovelScreen = ({
         return;
       }
       const firstTime = !s.endings.includes(ending.id);
+      const marksBefore = xmasNovelBookmarks(s.endings);
       s = {
         ...xmasNovelRecordEnding(s, ending.id, new Date().toISOString()),
         cur: after
@@ -134558,6 +135317,7 @@ const XmasNovelScreen = ({
         off: rankOff,
         script: S
       });
+      const marksNew = xmasNovelBookmarks(s.endings).filter(id => !marksBefore.includes(id));
       persist(s, true);
       setSt(next);
       setSkip(false);
@@ -134568,7 +135328,8 @@ const XmasNovelScreen = ({
         retry: !!after,
         fresh: firstTime,
         count: xmasNovelPerfectCount(S, s),
-        total: xmasNovelScoreGroups(S).length
+        total: xmasNovelScoreGroups(S).length,
+        marks: marksNew
       });
       return;
     }
@@ -135023,7 +135784,28 @@ const XmasNovelScreen = ({
     })()), React.createElement("div", {
       "data-xmas-novel-perfect": true,
       className: "mt-4 text-[10px] text-slate-400"
-    }, "推理の問い 一発で当てた数 ", xmasNovelPerfectCount(S, save), " / ", perfectTotal), confirmNew && React.createElement("div", {
+    }, "推理の問い 一発で当てた数 ", xmasNovelPerfectCount(S, save), " / ", perfectTotal), xmasNovelBookmarks(save.endings).length > 0 && React.createElement("div", {
+      className: "mt-3 flex items-end gap-2",
+      "data-xmas-novel-ribbons": true,
+      "aria-label": "挟まれたリボン"
+    }, xmasNovelBookmarks(save.endings).map(id => {
+      const b = xmasNovelBookmarkOf(id);
+      return b ? React.createElement("span", {
+        key: id,
+        "data-xmas-novel-ribbon": id,
+        title: b.name,
+        style: {
+          display: 'block',
+          width: 8,
+          height: 34,
+          background: b.tone,
+          clipPath: 'polygon(0 0,100% 0,100% 100%,50% 82%,0 100%)',
+          boxShadow: '0 2px 4px rgba(0,0,0,.6)'
+        }
+      }) : null;
+    }), React.createElement("span", {
+      className: "mh-nv-serif text-[10px] tracking-[0.2em] text-slate-400"
+    }, "挟まれたリボン")), confirmNew && React.createElement("div", {
       className: "mh-nv-sheet",
       onClick: () => setConfirmNew(false)
     }, React.createElement("div", {
@@ -135462,7 +136244,18 @@ const XmasNovelScreen = ({
       className: "text-[12px] text-slate-200"
     }, card.fresh ? 'エンドヒストリーに記録しました' : 'エンドヒストリーに記録ずみ'), !card.replay && React.createElement("div", {
       className: "mt-1 text-[11px] text-slate-300"
-    }, "推理の問い 一発で当てた数 ", card.count, " / ", card.total), !card.replay && card.ending.id === 'END-G' && xmasNovelChapters(S).some(c => c.past) && React.createElement("div", {
+    }, "推理の問い 一発で当てた数 ", card.count, " / ", card.total), !card.replay && (card.marks || []).map(id => {
+      const b = xmasNovelBookmarkOf(id);
+      return b ? React.createElement("div", {
+        key: id,
+        className: "mh-nv-serif mt-3 text-[13px] font-black",
+        style: {
+          ...JA_LABEL_STYLE,
+          color: b.tone
+        },
+        "data-xmas-novel-mark-got": id
+      }, jaWrap(`頁のあいだに、${b.color}リボンが挟まっていた`)) : null;
+    }), !card.replay && card.ending.id === 'END-G' && xmasNovelChapters(S).some(c => c.past) && React.createElement("div", {
       className: "mh-nv-serif mh-nv-gold mt-3 text-[13px] font-black",
       "data-xmas-novel-past-open": true,
       style: JA_LABEL_STYLE
@@ -135960,7 +136753,7 @@ const xmasNovelRankMine = async () => {
   });
   return r && r.ok ? r : null;
 };
-const XMAS_NOVEL_RANK_KIND_ORDER = ['good', 'truebad', 'normal', 'another', 'bad', 'forced', 'accuse', 'unsolved', 'omake'];
+const XMAS_NOVEL_RANK_KIND_ORDER = ['good', 'truebad', 'normal', 'another', 'bad', 'forced', 'accuse', 'unsolved', 'pov', 'ifroute', 'omake'];
 const XmasNovelRankDots = ({
   list,
   kinds,

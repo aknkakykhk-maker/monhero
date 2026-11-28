@@ -22,7 +22,7 @@ const SPEAKERS = [
   ['黒羽', 'kuroba'], ['白瀬', 'shirase'], ['ワトソンくん', 'watson'],
 ];
 // 過去編(12年前の聖夜)だけに出る、立ち絵の無い話し手(名前だけ出す。注意に出さない・r1126-046)
-const PAST_SPEAKERS = ['カノン', '祖父', '幼いきゅうこ', '幼いイチーカ', '幼いももすけ', 'ももすけの母', '薬屋の主人', '幼いえるびん'];
+const PAST_SPEAKERS = ['カノン', '祖父', '幼いきゅうこ', '幼いイチーカ', '幼いももすけ', 'ももすけの母', '薬屋の主人', '幼いえるびん', '灰谷']; // 灰谷 … もしもの話「仮面のワルツ」の大人の客(絵なし・名前だけ・r1126-115)
 // 返しの行の英字(-dora など) → 人のid
 const PERSON_KEYS = { dora: 'dra', dra: 'dra', mua: 'myua', myua: 'myua', miyua: 'myua', atsu: 'atsu', kiki: 'kiki', momo: 'momosuke', momosuke: 'momosuke',
   kyuko: 'kyuko', sorashido: 'sorashido', sora: 'sorashido', erubin: 'erubin', elvin: 'erubin', ichika: 'ichika', ichiika: 'ichika',
@@ -44,6 +44,8 @@ const SOUND_MARKS = { 鐘: 'bell', 時計: 'tick', 柱時計: 'tick', 手紙: 'l
 const ENDING_KIND = { G: 'good', N: 'normal', B: 'bad', A: 'another', X: 'forced', M: 'accuse', K: 'accuse', O: 'omake', L: 'unsolved' }; // K・L は r1126-108(動機ちがいの名指し・迷宮入り)
 // ID で決まる種類(先頭の英字と違う物)。END-G2 は真ルートの終章の選びまちがい「真相のその先」(r1126-108 第3弾)
 const ENDING_KIND_ID = { 'END-G2': 'truebad' };
+// もしもの話(r1126-115): 別ジャンルの話は ifroute、助手の視点の編は pov。id の頭文字は if-routes-r1126-115/README.md の割り振り表で決める
+Object.assign(ENDING_KIND, { R: 'ifroute', H: 'ifroute', T: 'ifroute', W: 'ifroute', Y: 'ifroute', PD: 'pov', PM: 'pov', PK: 'pov', PE: 'pov', PO: 'pov', PQ: 'pov' });
 const CHAPTER_NO = { 序章: 0, 終章: 9 };
 
 const warn = [];
@@ -57,7 +59,7 @@ const parseCond = (src) => {
   const any = s.split(/\s*(?:または|\|\||\|| or )\s*/).map((part) => ({
     all: part.split(/\s*(?:かつ|&&|&|、|,| and )\s*/).map((a) => {
       // end_G … そのエンディングを見たことがある(エンドヒストリー)なら 1(r1126-062 おまけの選択肢)
-      const m = a.match(/^(f_\w+|score|clues|end_[A-Z]+\d*)\s*(>=|<=|!=|=|>|<)\s*(-?\d+)$/);
+      const m = a.match(/^(f_\w+|score|clues|end_[A-Z]+\d*|bm_[a-z]+)\s*(>=|<=|!=|=|>|<)\s*(-?\d+)$/);
       if (!m) { if (a) note('条件', `読めない「${a}」(f_xxx=1 / score>=7 の形)`); return null; }
       return { k: m[1], op: m[2], v: Number(m[3]) };
     }).filter(Boolean),
@@ -125,7 +127,7 @@ const parseSceneHead = (cells, chapter, seq) => {
     title = info.replace(/[(（].*$/, '').trim();
   }
   const kv = {};
-  const keys = [...info.matchAll(/(条件|曲|背景|次)\s*[:：]/g)];
+  const keys = [...info.matchAll(/(条件|曲|背景|次|時刻)\s*[:：]/g)]; // 時刻 … 正典の区間(CANON.md・xmas-canon-check.js が見る。ゲームでは使わない)
   keys.forEach((k, i) => {
     const from = k.index + k[0].length;
     const to = i + 1 < keys.length ? keys[i + 1].index : info.length;
@@ -436,7 +438,7 @@ const parseScript = (md, srcName) => {
         chapters.push(chapter); scene = null; lastQ = null; seq = 0;
         continue;
       }
-      const cm = t.replace(/^後半\s*/, '').replace(/^(強制バッド|名指しエンド|おまけ|迷宮入り|真相のその先).*$/, 'エンディング').match(/^(序章|終章|第\s*(\d+)\s*章|エンディング|カーテンコール)\s*(?:[～〜]\s*([^～〜]+?)\s*[～〜])?/);
+      const cm = t.replace(/^後半\s*/, '').replace(/^(強制バッド|名指しエンド|おまけ|迷宮入り|真相のその先|もしも|視点の編).*$/, 'エンディング').match(/^(序章|終章|第\s*(\d+)\s*章|エンディング|カーテンコール)\s*(?:[～〜]\s*([^～〜]+?)\s*[～〜])?/);
       if (cm) {
         started = true;
         const no = cm[2] ? Number(cm[2]) : CHAPTER_NO[cm[1]];
@@ -561,11 +563,31 @@ const XMAS_NOVEL_SCRIPT = ${json};
 `;
 };
 
+const ARCS = path.join(ROOT, 'docs/progress/event-xmas-2026/arcs');
+const readArcs = () => (fs.existsSync(ARCS) ? fs.readdirSync(ARCS).filter((f) => /\.md$/.test(f) && f !== 'README.md').sort().map((f) => `\n\n${fs.readFileSync(path.join(ARCS, f), 'utf8')}`).join('') : '');
+
+// 編の台本の「選択肢を足す: A1b / ③…[bm_red=1](→RW-1 へ)」の行は、本編のその選択の行の末尾へ選択肢を足す(行の数は変わらない・続きの場所はずれない)
+const withArcs = (md) => {
+  let arcs = readArcs();
+  const adds = [];
+  arcs = arcs.replace(/^選択肢を足す\s*[:：]\s*([A-Z]\d+[a-z]*)\s*\/\s*(.+)$/gm, (_, q, opt) => { adds.push([q, opt.trim()]); return ''; });
+  adds.forEach(([q, opt]) => {
+    const re = new RegExp(`^(\\| ${q}(?:\\[[^\\]]*\\])? \\| 選択 \\|.*?)\\s*\\|\\s*$`, 'm');
+    if (!re.test(md)) { note(q, `選択肢を足す先の選択の行が無い(${opt.slice(0, 20)}…)`); return; }
+    md = md.replace(re, (_, body) => `${body} / ${opt} |`);
+  });
+  // 本番の台本は「# 旧案」から先を読まないので、その手前へ入れる
+  const cut = md.search(/^# 旧案/m);
+  return cut >= 0 ? `${md.slice(0, cut)}${arcs}\n\n${md.slice(cut)}` : md + arcs;
+};
+
 const main = () => {
   const args = process.argv.slice(2);
   const fromIdx = args.indexOf('--from');
   let src = fromIdx >= 0 ? path.resolve(args[fromIdx + 1]) : args.includes('--sample') ? SAMPLE : REAL;
   let md = fs.readFileSync(src, 'utf8');
+  // もしもの話・助手の視点の編(r1126-115)は、編ごとに別の台本 docs/progress/event-xmas-2026/arcs/*.md に書く(並行で書いてもぶつからない)。本番の台本のうしろへつなぐ
+  if (src === REAL) md = withArcs(md);
   let data = parseScript(md, path.relative(ROOT, src));
   if (src === REAL && !data.scenes.some((s) => /^C[1-9]/.test(s.id) || s.ending)) {
     console.log('本番の台本には、まだ第1章からの本文が無い → 仮の台本から作る');
