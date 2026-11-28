@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2109263cf7054a2a
+// generated-sha256: 11ab203acd769aa9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -52534,6 +52534,12 @@ const HOME_V2_CSS = `
 @media(prefers-reduced-motion:reduce){.mh-home-v2 .mh-home-menu.is-open{animation:none}}
 .mh-home-v2 .mh-home-menu-info{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:0 2px 4px;border-bottom:1px solid #fff2}
 .mh-home-v2 .mh-home-menu .mh-tod-clock{position:static!important}
+/* 上の段の時計(r1126-118)。ダイヤの枠の2行目。枠の幅はダイヤの行で決まり、時計で広がらない */
+.mh-home-v2 .mh-home-top .mh-home-top-wallet:has(.mh-tod-clock){flex-direction:column;justify-content:center;align-items:flex-end;gap:2px}
+.mh-home-v2 .mh-home-top-clock{display:flex;line-height:1}
+.mh-home-v2 .mh-home-top-clock:empty{display:none}
+.mh-home-v2 .mh-home-top .mh-tod-clock{position:static!important;pointer-events:none;padding:0;border:0;background:none;color:#fce6ab;font-size:12px;line-height:1.1;white-space:nowrap}
+.mh-home-v2 .mh-home-top .mh-tod-clock i{font-size:12px}
 .mh-home-v2 .mh-home-menu-bp{display:flex;align-items:center;gap:4px;margin-left:auto;color:#ffe08a;font-size:13px;font-weight:900}
 .mh-home-v2 .mh-home-menu-bp small{font-size:11px;color:#f4e7c3}
 .mh-home-v2 .mh-home-menu .mh-home-side-btn{display:flex;flex-direction:row;align-items:center;gap:10px;width:100%;min-height:46px;padding:5px 10px 5px 6px;border-radius:12px;background:#ffffff10;color:#fff;text-align:left}
@@ -53349,6 +53355,10 @@ function HomeScreenV2({
           {/* ダイヤは桁が増えても1行のまま。9桁(1億)からは「67.3億」のように縮めて出し、押すと細かい数が出る(CompactCount・N5) */}
           <section className="mh-home-wallet mh-home-top-wallet" aria-label="ダイヤ">
             <div><Gem size={15}/><CompactCount value={gold} style={{'--len':String(compactCount(gold)).length}}/><small>ダイヤ</small></div>
+            {/* 時計は HOME にいつも出す(2026-11-28 台帳 r1126-118 社長「時計表示はホームに出てるほうがいい」)。メニューの中の時計も残す。
+                ダイヤの枠の2行目に置く(上の段に枠を足すと、ダイヤが8桁のとき名前の欄がつぶれた)。
+                ここは見せるだけ(押せない)。押せる所が 44px に届かないため(ミハリの指摘・社長の選択)。24時間/AM・PM の切り替えはメニューの中の時計から */}
+            {typeof TimeOfDayClock==='function'&&<span className="mh-home-top-clock" data-home-top-clock><TimeOfDayClock/></span>}
           </section>
           <button type="button" className={`mh-home-menu-btn${homeMenuOpen?' is-open':''}`} data-home-menu-btn onClick={()=>setHomeMenuOpen(o=>!o)} aria-label={homeMenuBadge>0?`メニュー(${homeMenuBadge}件)`:'メニュー'} aria-expanded={homeMenuOpen}>
             <span className="mh-home-menu-bars" aria-hidden="true"><i/><i/><i/></span><span className="mh-home-menu-lb">メニュー</span>
