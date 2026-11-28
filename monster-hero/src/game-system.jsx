@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d6064080a63a1340
+// generated-sha256: 2f8189a3fefac638
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -52717,7 +52717,23 @@ const homeWalletGrowPx=(goldText,bpText)=>{const w=t=>[...String(t)].reduce((n,c
 // ★HOME の作り直し(r1126-073)は、ゲームの中の時刻で切り替える(2026-11-28 台帳 r1126-086 追記1・社長「いままで2でやってたんだからそれでやればよくない？」)。
 //   2026-11-28 10:00(日本時間)より前は前の HOME(HomeScreenV1)、以後は新しい HOME(HomeScreenV2)。開いたまま 10:00 をまたいでも、15秒ごとに見直して切り替わる。
 //   新しい HOME と一緒に変えた所(吹き出しの既定・入口の印・会話の窓の出し方・小さい知らせの数・バトルを選ぶ画面のサクセスの入口)も homeV2At() で同じ時刻に切り替える
+// HOME の見た目の決まり(<head> へ入れる <style>)を、HOME を描く前にそろえる(2026-11-28 台帳 r1126-103・社長「ホームを開くと一瞬旧ホームが出てから新しいのにかわる」)。
+//   前は各部品の useEffect(描いたあと)で入れていたので、最初の1コマは新しい HOME の決まり(HOME_V2_CSS)もクリスマスの札の決まりも無いまま描かれ、
+//   前の HOME の決まり(70-bootstrap.jsx)だけで「四角い札8枚・左の丸いボタンの列・大きな告知の絵」に見えていた(docs/progress/home-flash-r1126-103/)。
+//   描く関数の中で呼ぶ(同じ id があれば何もしない。部品の useEffect も同じ id を見て入れない)
+const homeEnsureCss=()=>{
+  if(typeof document==='undefined'||!document.head)return;
+  const put=(id,text)=>{if(!text||document.getElementById(id))return;const tag=document.createElement('style');tag.id=id;tag.textContent=text;document.head.appendChild(tag);};
+  try{
+    put('mh-home-event-badge-css',HOME_EVENT_BADGE_CSS);
+    put('mh-home-v2-css',HOME_V2_CSS);
+    put('mh-home-raid-jack-css',HOME_RAID_JACK_CSS);
+    // クリスマスの入口の決まり(79-screen-xmas-event.jsx。読み込み順でこのファイルより後ろなので、描くときに見る)
+    if(typeof XMAS_HOME_ENTRY_CSS==='string')put('mh-xmas-home-entry-css',XMAS_HOME_ENTRY_CSS);
+  }catch(_){/* 入れられなくても、各部品の useEffect が後から入れる */}
+};
 function HomeScreen(props) {
+  homeEnsureCss();
   const v2=useHomeV2();
   return v2?<HomeScreenV2 {...props}/>:<HomeScreenV1 {...props}/>;
 }
@@ -116040,6 +116056,17 @@ const CARD_VS_LINES = Object.freeze({
 // 練習試合のひとこと(みゅあ)
 const CARD_VS_TUTORIAL_LINE = Object.freeze({ e: 'happy', t: '練習だよ！ ゆっくりいこ♪' });
 // 出している長さ(ミリ秒)。タップで飛ばせる
+// レイドのボスの顔アイコン(クリスマスは RAID_XMAS_BOSS_IMG。顔だけの絵は無いので、全身の絵を顔が枠に入るよう寄せて出す。台帳 r1126-101)
+//   VS の画面の大きな丸と、対戦中の左上の小さな枠で同じ物を使う。絵が無いときだけ今までの仮の絵文字
+const CARD_RAID_BOSS_FACE = Object.freeze({ size: '200% auto', pos: '50% 24%' });
+//   ★このファイルは検査(card-deck-name-check など)が JSX 抜きで読むので、JSX を使わず React.createElement で書く
+const CardRaidBossFace = ({ className = '' }) => {
+  const src = typeof RAID_XMAS_BOSS_IMG !== 'undefined' ? RAID_XMAS_BOSS_IMG : '';
+  if (!src) return React.createElement('span', { 'data-card-raid-boss-face': '', className: `flex items-center justify-center text-[26px] ${className}` }, '🎅');
+  return React.createElement('span', { 'data-card-raid-boss-face': src, role: 'img', 'aria-label': '黒いサンタ', className: `block bg-no-repeat ${className}`,
+    style: { backgroundImage: `url(${src})`, backgroundSize: CARD_RAID_BOSS_FACE.size, backgroundPosition: CARD_RAID_BOSS_FACE.pos } });
+};
+
 const CARD_VS_MS = Object.freeze({ assistant: 2600, pvp: 2600, tutorial: 1300 });
 
 // 種族(血統)の名前。混血は主血統で数える
@@ -116241,7 +116268,10 @@ const CardVsIntro = ({ db, intro, onDone, meIcon = null }) => {
                   ? <div data-card-vs-foe-art className="w-full"><CardAssistantArt src={assistantFullImage(who, (foe.line && foe.line.e) || 'happy')} alt={who.name} className="w-full" style={{ aspectRatio: '3 / 4' }}/></div>
                   : <CardVsArt data-card-vs-foe-art src={assistantFullImage(who, (foe.line && foe.line.e) || 'happy')} alt={who.name} aspect={3 / 4}/>)
                                 // マルチの相手: プロフィールと同じ部品(フレーム付き)。アイコンの id は絵に直す(字のまま出していた。91 の CardPvpAvatar)
-                : <span data-card-vs-foe-icon className="block aspect-square w-full"><CardPvpAvatar icon={foe.icon} frame={foe.frame} className="h-full w-full"/></span>}
+                // レイドのボス: ボスの絵の顔の所を丸の枠に寄せて出す(CardRaidBossFace)
+                : foe.raidBoss
+                  ? <span data-card-vs-foe-icon data-card-vs-raid-boss className="block aspect-square w-full overflow-hidden rounded-full border-[3px] border-red-500 bg-slate-950 shadow-[0_0_18px_rgba(239,68,68,.45)]"><CardRaidBossFace className="h-full w-full"/></span>
+                  : <span data-card-vs-foe-icon className="block aspect-square w-full"><CardPvpAvatar icon={foe.icon} frame={foe.frame} className="h-full w-full"/></span>}
             </div>
             <div className="mh-vs-fade min-w-0 flex-1 pb-1" style={{ animationDelay: '250ms' }}>
               <b className="block text-[16px] font-black leading-tight" style={JA_LABEL_STYLE}>{foe.name || 'あいて'}</b>
@@ -119504,7 +119534,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       {/* マルチの電波の知らせは、上の帯の番の札に出す(段を増やさない。2026-10-29 案B) */}
       {/* 相手の帯(隠さない) */}
       <div className={`flex ${tiny ? 'h-[36px]' : compact ? 'h-[42px]' : 'h-[50px]'} shrink-0 items-center gap-2 px-2`}>
-        {raid ? <span data-card-raid-foe aria-hidden="true" className={`flex ${tiny ? 'h-[34px] w-[34px] text-[20px]' : 'h-[42px] w-[42px] text-[26px]'} shrink-0 items-center justify-center rounded-xl border-2 border-red-500 bg-slate-950`}>🎅</span>
+        {raid ? <span data-card-raid-foe aria-hidden="true" className={`block ${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} shrink-0 overflow-hidden rounded-xl border-2 border-red-500 bg-slate-950`}><CardRaidBossFace className="h-full w-full"/></span>
           : (pvp || share) ? <span data-card-pvp-foe className={`block ${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} shrink-0`}><CardPvpAvatar icon={(pvp || share).icon} frame={(pvp || share).frame} className="h-full w-full"/></span>
           : <img src={assistantFaceImage(who, face)} alt={who.name} className={`${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} rounded-xl border-2 bg-black object-cover object-top`} style={{ borderColor: who.accent }}/>}
         <div className={`min-w-0 text-[13px] font-black leading-tight ${pvp ? 'max-w-[34%] truncate whitespace-nowrap' : 'shrink-0 whitespace-nowrap'}`}>{who.name}<small className="block text-[10px] font-bold text-rose-200">{pvp ? 'マルチ対戦' : raid ? 'レイドバトル' : cardBattleLevelLabel(game.level, game.share) || 'フリー対戦'}</small></div>
@@ -121269,7 +121299,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       const st = cardRaidPrepareGame(cardCreateGame(db, { decks: [{ monsters: deck.monsters, cards: deck.cards }, cpuDeck], names: ['あなた', bossName], seed, first }), rc.tierIndex, CARD_CPU);
       setResult(null);
       setRaidDone(null);
-      const intro = { mode: 'assistant', foe: { who: null, name: bossName, icon: null, frame: null, line: null, deckName: CARD_RAID_BOSS.deckName, monsters: vsMons(st, CARD_CPU) },
+      const intro = { mode: 'assistant', foe: { who: null, name: bossName, icon: null, frame: null, raidBoss: true, line: null, deckName: CARD_RAID_BOSS.deckName, monsters: vsMons(st, CARD_CPU) },
         me: { name: myName, deckName: deck.name || null, monsters: vsMons(st, CARD_ME) } };
       setGame({ key: `raid-${seed}`, st, who: 'raid', level: tier.level, settings: save.settings, intro, raid: { tier: Math.max(0, Math.floor(Number(rc.tierIndex) || 0)), tierName: rc.tierName || '', bossName, run: rc } });
       // レイドのボスとの対戦はクリスマスのレイドバトル曲「winter fall」(台帳 r1126-023)。曲が無いときは今までどおり

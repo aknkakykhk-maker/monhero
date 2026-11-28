@@ -5,7 +5,7 @@
 //
 // 見るもの
 //   ① デバッグから開いたトップに、ボスと戦う試し(段階1〜5)が出る
-//   ② デッキ選び → 対戦。相手の帯がボス(🎅・レイドバトル)で、ボスのライフに倍率が入っている
+//   ② デッキ選び → 対戦。VS と相手の帯のアイコンがボスの絵(RAID_XMAS_BOSS_IMG の顔)・レイドバトルで、ボスのライフに倍率が入っている
 //   ③ 投了すると、レイドバトルの結果(与ダメージ・レイドへのダメージ)が出る。デバッグの試しは送らない
 //   ④ 「レイドへ戻る」で閉じる / ⑤ 助手と対戦の記録に数えない・mh_card_* 以外の保存を書き換えない / ⑥ 実行時エラーが無い
 const http = require('http');
@@ -88,9 +88,15 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.locator('[data-card-deck-pick-go]').waitFor({ timeout: 10000 });
     check('② デッキ選びにレイドの説明が出る', /レイドのボス/.test(await page.locator('[data-mh-screen]').first().innerText()));
     await page.locator('[data-card-deck-pick-go]').click();
+    // VS の画面: 相手のアイコンがボスの絵(顔の所)。空の人の形(CardPvpAvatar)ではない(台帳 r1126-101)
+    await page.locator('[data-card-vs-raid-boss]').waitFor({ timeout: 20000 }).catch(() => {});
+    const vsFace = await page.locator('[data-card-vs-raid-boss] [data-card-raid-boss-face]').getAttribute('data-card-raid-boss-face').catch(() => '');
+    check('② VS の画面の相手のアイコンがボスの絵', /santa-black/.test(vsFace || ''), vsFace || 'なし');
+    if (SHOT) { fs.mkdirSync(SHOT, { recursive: true }); await page.waitForTimeout(700); await page.screenshot({ path: path.join(SHOT, 'raid-vs.png') }); }
     await page.locator('[data-card-battle]').waitFor({ timeout: 20000 });
     await page.waitForTimeout(600);
     check('② 相手の帯にボスの印とレイドバトル', (await page.locator('[data-card-raid-foe]').count()) === 1 && /レイドバトル/.test(await page.locator('[data-card-battle]').innerText()));
+    check('② 対戦中の左上のアイコンがボスの絵', /santa-black/.test((await page.locator('[data-card-raid-foe] [data-card-raid-boss-face]').getAttribute('data-card-raid-boss-face').catch(() => '')) || ''));
     const foeLife = await page.evaluate(() => [...document.querySelectorAll('[data-card-mon^="1-"]')].map((e) => { const m = e.innerText.match(/(\d+)\s*\/\s*(\d+)/); return m ? Number(m[2]) : null; }));
     check('② ボスのライフに倍率が入っている(段階4は3倍)', foeLife.length === 3 && foeLife.every((n) => n === null || n >= 12), JSON.stringify(foeLife));
     if (SHOT) { fs.mkdirSync(SHOT, { recursive: true }); await page.screenshot({ path: path.join(SHOT, 'raid-board.png') }); }
