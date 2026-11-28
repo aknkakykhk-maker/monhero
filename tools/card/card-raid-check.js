@@ -67,8 +67,7 @@ E.CARD_RAID_TIERS.forEach((t, i) => {
   const mine = st.players[0].mons.map((m) => m.max);
   E.cardRaidPrepareGame(st, 3, 1);
   const mul = E.CARD_RAID_TIERS[3].life;
-  const fit = E.CARD_RAID_BOSS.baseLife / base.reduce((a, x) => a + x, 0);
-  check('② ボスのライフに倍率が入る(3体の合計を baseLife に寄せてから)', st.players[1].mons.every((m, k) => m.max === Math.max(1, Math.round(base[k] * fit * mul)) && m.life === m.max), st.players[1].mons.map((m) => m.max).join(','));
+  check('② ボスのライフはふだんのカードと同じ(倍率 1・台帳 r1126-101 追記2)', E.CARD_RAID_TIERS.every((t) => t.life === 1) && st.players[1].mons.every((m, k) => m.max === Math.max(1, Math.round(base[k] * mul)) && m.life === m.max), st.players[1].mons.map((m) => m.max).join(','));
   check('② こちらのライフは変わらない', st.players[0].mons.every((m, k) => m.max === mine[k]));
   check('② 場にレイドの印', st.raid && st.raid.tier === 3 && st.raid.side === 1);
   check('③ はじめは与ダメージ 0', E.cardRaidDealt(st, 1).dealt === 0);

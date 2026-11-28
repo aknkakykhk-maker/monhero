@@ -18,8 +18,6 @@ const CARD_RAID_BOSS = Object.freeze({
   favor: 'hare',               // この種の札を少し好んで入れる(ハムの技が多い山札にする)
   favorBonus: 0.6,
   cardNoise: 0.45,             // 挑むたびに山札の中身が入れ替わる揺れ(種を渡したときだけ)
-  // ボスの3体のライフの合計の元(倍率をかける前)。組み合わせが変わっても強さの帯が変わらないよう、合計をこの値に寄せる(前の3体の合計 21)
-  baseLife: 21,
   // 考え方のくせ(重みの意味は 82-card-battle-core.jsx の CARD_AI_HABITS と同じ)。
   //   「贈り物を奪う」ので、相手の手札・ガッツをいじる札(disrupt)をいちばん好む。弱った子を狙い、全体攻撃も好き
   habit: Object.freeze({ attack: 1.2, keepGuard: 0.8, saveGuts: 0.8, big: 1.0, disrupt: 1.7, area: 1.3, finish: 1.3 }),
@@ -27,15 +25,17 @@ const CARD_RAID_BOSS = Object.freeze({
   prefer: Object.freeze(['大声']),
 });
 
-// 段階ごと(レイドの5段階・0 始まり)のボスの強さ(仮)。
-//   level … 考え方の強さ(CARD_AI_LEVELS の難易度) / life … ボスの3体のライフの倍率(レイドのボスなので1戦では倒しきりにくい)
+// 段階ごと(レイドの5段階・0 始まり)のボスの強さ。
+//   level … 考え方の強さ(CARD_AI_LEVELS の難易度) / life … ボスの3体のライフの倍率。ふだんのカードと同じ 1(台帳 r1126-101 追記2・社長「ライフはそのままでAIで強く調整して」)
+//   ai … 考え方の上乗せ(CARD_AI_LEVELS の値を上書き)。ライフを戻したぶん、ふだんの同じ難易度より強く打つ
+//     readHand … 相手の手札を読んで守りを見越す(「贈り物を奪う」ボスなので手の内を知っている) / whim・sloppy … 気まぐれ・雑さ(小さいほど手堅い)
 //   rate … 換算の段階の補正(上の段階ほど1点が重い)
 const CARD_RAID_TIERS = Object.freeze([
-  Object.freeze({ level: 'normal', life: 2, rate: 1.0 }),
-  Object.freeze({ level: 'hard', life: 2, rate: 1.25 }),
-  Object.freeze({ level: 'expert', life: 2.5, rate: 1.5 }),
-  Object.freeze({ level: 'master', life: 3, rate: 1.75 }),
-  Object.freeze({ level: 'master', life: 3, rate: 2.0 }),
+  Object.freeze({ level: 'hard', life: 1, rate: 1.0, ai: Object.freeze({ whim: 0.04, sloppy: 0.08, readHand: true }) }),
+  Object.freeze({ level: 'expert', life: 1, rate: 1.25, ai: Object.freeze({ whim: 0.02, sloppy: 0.03, readHand: true }) }),
+  Object.freeze({ level: 'master', life: 1, rate: 1.5, ai: Object.freeze({ whim: 0.01, sloppy: 0, readHand: true }) }),
+  Object.freeze({ level: 'master', life: 1, rate: 1.75, ai: Object.freeze({ whim: 0, sloppy: 0, readHand: true }) }),
+  Object.freeze({ level: 'master', life: 1, rate: 2.0, ai: Object.freeze({ whim: 0, sloppy: 0, readHand: true }) }),
 ]);
 const cardRaidTierOf = (tierIndex) => CARD_RAID_TIERS[Math.min(CARD_RAID_TIERS.length - 1, Math.max(0, Math.floor(Number(tierIndex) || 0)))];
 
@@ -109,7 +109,7 @@ const cardRaidBossDeck = (db, tierIndex = 0, seed = null) => {
 const cardRaidBossPolicy = (tierIndex = 0) => {
   const tier = cardRaidTierOf(tierIndex);
   const base = cardAiPolicy('kyuko', tier.level, { noTactics: true });
-  return { ...base, habit: { ...CARD_RAID_BOSS.habit } };
+  return { ...base, level: { ...base.level, ...(tier.ai || {}) }, habit: { ...CARD_RAID_BOSS.habit } };
 };
 
 // 始まりの場に、ボスのライフの倍率をかける(p はボスの側)。cardCreateGame の直後に1回だけ呼ぶ
@@ -117,10 +117,8 @@ const cardRaidPrepareGame = (st, tierIndex = 0, p = 1) => {
   const tier = cardRaidTierOf(tierIndex);
   const pl = st && st.players && st.players[p];
   if (!pl) return st;
-  // 3体の合計を CARD_RAID_BOSS.baseLife に寄せてから倍率をかける(組み合わせで合計が 17〜22 と揺れるため。強さの帯をそろえる)
-  const sum = pl.mons.reduce((a, m) => a + Math.max(0, Number(m.max) || 0), 0);
-  const fit = sum > 0 && CARD_RAID_BOSS.baseLife > 0 ? CARD_RAID_BOSS.baseLife / sum : 1;
-  pl.mons.forEach((m) => { const life = Math.max(1, Math.round(m.max * fit * tier.life)); m.life = life; m.max = life; });
+  // ライフはふだんのカードと同じ(倍率 1。台帳 r1126-101 追記2)。倍率が 1 でないときだけかける
+  pl.mons.forEach((m) => { const life = Math.max(1, Math.round(m.max * tier.life)); m.life = life; m.max = life; });
   st.raid = { boss: CARD_RAID_BOSS.id, tier: Math.max(0, Math.floor(Number(tierIndex) || 0)), side: p };
   return st;
 };
