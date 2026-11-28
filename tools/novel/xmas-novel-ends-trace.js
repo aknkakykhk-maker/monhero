@@ -66,6 +66,10 @@ const ROUTES = [
   { name: '視点の編 ドラ、名前を呼ぶ(もしも)', want: 'END-PD2', from: 'APD1', picks: { A2: 'go:PD-1', APD1: 'go:PD-Y' }, seen: ['END-G'], short: true },
   { name: '真グッドの前は A2 にドラの編は出ない', want: 'END-X1', from: 'A2', picks: { A2: 'danger' }, noOpt: { A2: 'PD-1' }, short: true },
   { name: 'しおりが無いと A1b に③は出ない', want: 'END-X6', from: 'A1b', picks: { A1b: 'danger' }, seen: ['END-G'], noOpt: { A1b: 'RW-1' }, short: true },
+  // r1126-115 視点の編 ももすけの編(真グッドのあと、第3章 C3-1 の最後に新しい選択 APO0)
+  { name: '視点の編 ももすけ、窓の影をしまっておく', want: 'END-PO1', from: 'APO0', picks: { APO0: 'go:PO-1', APO1: 'opt:0' }, seen: ['END-G'] },
+  { name: '視点の編 ももすけ、ドラにだけ話す', want: 'END-PO2', from: 'APO1', picks: { APO0: 'go:PO-1', APO1: 'go:PO-6' }, seen: ['END-G'], short: true },
+  { name: '真グッドの前は C3-1 に APO0 は出ない', want: 'END-X8', from: 'A3', picks: { A3: 'danger' }, noQ: 'APO0', short: true },
   { name: '寄り道の2つめ(イチーカ・こっそり・ドラの声)を通って真グッドへ', want: 'END-G', from: 'A4y', picks: { A4y: 'opt:1', A6y: 'opt:1', A8y: 'go:C8-Z', Q7a: 'kyuko' }, short: true },
 ];
 
