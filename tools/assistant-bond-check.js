@@ -753,7 +753,8 @@ check('案内の描画は1か所だけ', !!unlockBlock
   && (source.match(/assistantUnlockNoticeOf\(/g) || []).length === 1);
 check('本文はdata側から受け取る（画面へ直接書いていない）',
   !!unlockBlock && /notice\.pages/.test(unlockBlock) && !/[ぁ-んァ-ヶ一-龠]/.test(
-    unlockBlock.replace(/\/\/[^\n]*/g, '').replace(/次へ|閉じる|見に行く/g, '')));
+    // JSX の中のコメント {/* … */} も文ではないので外す(2026-11-28 #7953 で吹き出しの折り方の説明が入った)
+    unlockBlock.replace(/\{\/\*[\s\S]*?\*\/\}/g, '').replace(/\/\/[^\n]*/g, '').replace(/次へ|閉じる|見に行く/g, '')));
 check('起動時に既読を読み込んでいる',
   new RegExp(`setAssistantUnlockSeen\\(normalizeAssistantUnlockSeen\\(await storeGet\\(ASSISTANT_UNLOCK_NOTICE_SEEN_KEY`).test(source));
 check('読み終えたら既読として保存している',

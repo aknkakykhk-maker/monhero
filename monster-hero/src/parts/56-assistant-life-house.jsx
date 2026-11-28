@@ -852,7 +852,7 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
     const details = (
       <div data-assistant-life-room-details style={{ marginTop: 8 }}>
         <div className="alu-n">詳しく</div>
-        <AluRow pic="🤝" text={`友情Lv ${friends.map(f => `${assistantLifeName(f.id)} Lv${f.lv}`).join('・')}`} note="1番仲のいい3人" />
+        <AluRow pic="🤝" text={`友情Lv ${friends.map(f => `${assistantLifeName(f.id)} Lv${f.lv}`).join('・')}`} note="一番仲のいい3人" />
         {sess ? <AluRow pic="🎵" text={`セッションLv${sess.level}`} note={`一緒に ${sess.lives}回`} /> : null}
         {rhythm ? <AluRow pic="🕰" text={rhythm.replace(/^🕰 /, '')} note="" /> : null}
         {typeof AssistantLifeRoomTypedLikes === 'function' && <AssistantLifeRoomTypedLikes id={id}/>}
@@ -1599,7 +1599,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
       {(!uiV2 || tab === 'house') && <div className="mt-1 flex items-center gap-1.5" data-assistant-life-tier={tier.id} title={ASSISTANT_LIFE_TIER_NOTES[tier.id]}>
         {uiV2 ? <button type="button" className="mhl-chip" data-assistant-life-tier-help aria-label="にぎわいの説明" onClick={() => setNote(`🎉 にぎわい「${tier.label}」: 今日 🤝 友情Lv の上がり方が ×${tier.mult}。モンヒロビート・モンヒロバトル・MFバトルカード・見守るで遊ぶほど上がります${next ? `(あと ${next.min - play.points} で「${next.label}」×${next.mult})` : ''}。朝4時に戻ります`)} style={{ minHeight: 32, padding: '0 10px' }}>🎉 {tier.label} ×{tier.mult} <span aria-hidden="true">ⓘ</span></button> : <span className="mhl-chip">🎉 {tier.label} ×{tier.mult}</span>}
         <span className="mhl-bar" aria-hidden="true"><i style={{ width: `${next ? Math.min(100, Math.round(100 * (play.points - tier.min) / (next.min - tier.min))) : 100}%` }}/></span>
-        <span className="whitespace-nowrap text-[9.5px] font-bold text-slate-200">{next ? `${next.label}まで ${next.min - play.points}` : '1番上'}</span>
+        <span className="whitespace-nowrap text-[9.5px] font-bold text-slate-200">{next ? `${next.label}まで ${next.min - play.points}` : '一番上'}</span>
       </div>}
     </div>);
   const findBtn = <button type="button" className="mhl-find" data-assistant-life-find onClick={() => { if (uiV2) { setMapFocusPlace(null); setMapFocusAssistantId(null); } setTab('where'); }}>📋 みんなの居場所 ›</button>;

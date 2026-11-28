@@ -12,8 +12,8 @@ const MASMON_PVP_TIMEOUT_MS = 12000;
 const MASMON_PVP_CHALLENGE_DAILY = 20;      // サーバの CHALLENGE_DAILY_LIMIT と同じ(残りの目安に使う。決めるのはサーバ)
 const MASMON_PVP_REASON_TEXT = Object.freeze({
   off: 'フレンド対戦は準備中です',
-  network: 'つながりませんでした。少し待ってからもう1度ためしてね',
-  server: 'サーバーが混んでいるみたい。少し待ってからもう1度ためしてね',
+  network: 'つながりませんでした。少し待ってからもう一度ためしてね',
+  server: 'サーバーが混んでいるみたい。少し待ってからもう一度ためしてね',
   no_id: 'この端末ではまだ登録できません',
   locked: 'この登録は別の端末で作られています',
   over_cap: '育った量が、日数から考えられる上限を超えています',

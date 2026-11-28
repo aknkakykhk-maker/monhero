@@ -922,7 +922,7 @@ const CARD_PVP = (() => {
       onClose: () => {
         if (socket !== me || !s) return;
         alive = false;
-        if (s.phase === 'connecting') { set({ phase: 'error', error: 'つながりませんでした。電波のよい所で、もう1度お試しください' }); return; }
+        if (s.phase === 'connecting') { set({ phase: 'error', error: 'つながりませんでした。電波のよい所で、もう一度お試しください' }); return; }
         if (s.phase === 'idle' || s.phase === 'error') return;
         set({ offline: true });
         retry = setTimeout(connect, CARD_PVP_RECONNECT_MS);
@@ -1631,7 +1631,7 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
                             {label && <span data-card-pvp-invite-state={state} className={`shrink-0 text-[11px] font-bold tabular-nums ${state === 'live' ? 'text-emerald-200' : 'text-amber-200'}`}>{label}</span>}
                             {state !== 'live' && (
                               <button type="button" data-card-pvp-invite-to={f.otherId} className="mh-button mh-button-primary min-h-[36px] rounded-lg px-3 text-[12px] font-black disabled:opacity-50"
-                                onClick={() => { Audio_.fgSe.tap(); void sendInvite(f.otherId, room.code); }}>{state ? 'もう1度' : '招待する'}</button>
+                                onClick={() => { Audio_.fgSe.tap(); void sendInvite(f.otherId, room.code); }}>{state ? 'もう一度' : '招待する'}</button>
                             )}
                           </>);
                         })()}

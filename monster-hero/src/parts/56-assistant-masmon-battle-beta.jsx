@@ -707,7 +707,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, presetFriend, 
   if (!ticked || (!ready && !loadFailed)) {
     body = <div className="ambw-card"><p className="ambw-small">対戦のじゅんびをしています…</p></div>;
   } else if (!ready || !catalog) {
-    body = <div className="ambw-card"><p className="ambw-small">対戦の計算を読み込めませんでした。通信のよいところで、もう1度開いてください。</p></div>;
+    body = <div className="ambw-card"><p className="ambw-small">対戦の計算を読み込めませんでした。通信のよいところで、もう一度開いてください。</p></div>;
   } else if (!me || !myUnits.length) {
     body = <div className="ambw-card" data-ambb-empty><p className="ambw-small">対戦に出せるマスモンがいません。助手ライフで、助手がマスモンを迎えると対戦できます。</p></div>;
   } else if (phase === 'prep') {
@@ -920,7 +920,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, presetFriend, 
               )}
             </div>
             <div className="ambw-ctl">
-              <button className="ambw-btn" data-ambb-again onClick={() => setPhase('prep')}>⚔ もう1度</button>
+              <button className="ambw-btn" data-ambb-again onClick={() => setPhase('prep')}>⚔ もう一度</button>
               <button className="ambw-btn2" onClick={() => { setPos(0); setPaused(false); setPhase('watch'); }}>▶ 見返す</button>
               <button className="ambw-btn2" data-ambb-rank-open onClick={() => setPhase('rank')}>🏆 ランキング</button>
             </div>

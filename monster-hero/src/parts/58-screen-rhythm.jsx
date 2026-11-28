@@ -180,7 +180,7 @@ function RhythmSongSelectScreen({
       return (
       <main data-rhythm-demo-home={debugAll?undefined:true} data-rhythm-debug-select={debugAll?true:undefined} className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white">
         {/* 周回を締めているあいだ。いまは報酬の付与と記録だけで端末の中で完結するので
-            ほぼ一瞬だが、まれに引っかかったときに2度押しされないよう薄い幕だけ残す
+            ほぼ一瞬だが、まれに引っかかったときに二度押しされないよう薄い幕だけ残す
             (2026-09-14・ユーザー指摘「待ち時間が長くてストレス」。
              それまでは進んでいるターンの演出の終わりを待っていて、実測で3〜6秒かかっていた。
              いまは returnToHome がランの世代を1つ進めて演出を止めるので、待つ必要がない) */}
@@ -293,7 +293,7 @@ function RhythmSongSelectScreen({
                 //   まだその難易度をクリアしていない人には入らないので、そこも言い分ける
                 :rhythmPlayRunLoopsAllowed(difficulty,quickClearCounts)
                   ?jaWrap('ここにいるあいだも周回は進みます。演奏中は止まりますが、曲を最後まで演奏すると、その曲の長さぶんの周回がクリア扱いで入ります（2分台までは4周・3分台は6周…）。イベント開催中は、その対象曲だけ3倍（2分台6周・3分台9周）になります。')
-                  :jaWrap('ここにいるあいだも周回は進みます。演奏中は止まり、そのぶんは曲のあとに速く進んで取り戻します。この難易度をクイックで1度クリアすると、演奏したぶんがそのまま周回クリアとして入るようになります。')}</p>
+                  :jaWrap('ここにいるあいだも周回は進みます。演奏中は止まり、そのぶんは曲のあとに速く進んで取り戻します。この難易度をクイックで一度クリアすると、演奏したぶんがそのまま周回クリアとして入るようになります。')}</p>
             {/* ===== ここから操作。状態は3つだけ(2026-09-07に整理) =====
                   ① 回っている                … バトルへ戻る ／ ここで周回をやめる
                   ② 止まった・挑戦は生きている … 周回を再開する ／ バトルへ戻る
@@ -332,7 +332,7 @@ function RhythmSongSelectScreen({
           </div>}
         </div>}
         {/* 週間ランキングの「今週の対象曲」案内(docs/spec/RHYTHM_RANKING.md §10.2)。
-            その週の初回に1度だけ出す。閉じるか、その週にもう1度見たら出ない。
+            その週の初回に1度だけ出す。閉じるか、その週にもう一度見たら出ない。
             ★ヘルプと更新履歴は探しに行った人しか読まないので、画面のなかでも伝える(CLAUDE.md ⑤) */}
         {selectNoticesOpen&&rhythmEventNotice&&!eventNoticeOpen&&<div data-rhythm-event-notice data-rhythm-event-notice-folded className="shrink-0 border-b border-fuchsia-400/20 bg-slate-950/90 px-2">
           <div className="flex items-center gap-1">
@@ -568,7 +568,7 @@ function RhythmHelpScreen({
               <p className="mt-2 text-[10px] leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('ノーツを1種類ずつ選んで、実際のプレイ画面で流して試せます。HELL の空のノーツも見られます。記録には残りません。')}</p>
             </>}
             <button style={JA_WRAP_STYLE} data-rhythm-demo-help-tutorial onClick={startRhythmTutorial}
-              className="mt-3 min-h-[52px] w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-sm font-black text-white">{jaWrap('🎓 もう1度チュートリアルを見る')}</button>
+              className="mt-3 min-h-[52px] w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-sm font-black text-white">{jaWrap('🎓 もう一度チュートリアルを見る')}</button>
             <p className="mt-2 text-[10px] leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('曲選びへ戻って、助手が最初から説明します。何度でも見られます。')}</p>
             <div data-rhythm-demo-help-list className="mt-4 space-y-2">
               {topics.length===0
@@ -1136,7 +1136,7 @@ function RhythmRankingScreen({
                     {/* ぴったりのMARVELOUSの回数。MARVELOUSの**内数**だが、並びはリザルトとそろえて
                         MARVELOUSの**上**へ置く(2026-09-13・ユーザー指示)。
                         ★これより前に送られた記録には precise が無い。
-                          0と出すと「1度も取れていない」に見えるので「—」で分ける。 */}
+                          0と出すと「一度も取れていない」に見えるので「—」で分ける。 */}
                     {id==='MARVELOUS'&&<React.Fragment key="precise">
                       <dt data-rhythm-ranking-precise-label data-rhythm-judgment-row="JUST">JUST MARVELOUS</dt>
                       <dd data-rhythm-ranking-precise data-rhythm-judgment-row="JUST" className="text-right font-mono">{Number.isFinite(Number(rhythmRankingDetail.detail?.precise))?Math.max(0,Math.floor(Number(rhythmRankingDetail.detail.precise))):'—'}</dd>

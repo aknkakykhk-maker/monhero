@@ -289,7 +289,7 @@ const CardDeckList = ({ db, collection, decks, onBack, onEdit, onPut, onRemove, 
     <div data-mh-screen data-card-deck-list className={SCREEN_SHELL_CLASS}>
       <ScreenHead title="デッキ編成" accent="text-amber-200" onBack={onBack}/>
       <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-2`}>
-        <p data-card-deck-count={decks.decks.length} className="text-[11px] font-bold text-slate-400">{`デッキ ${decks.decks.length} / ${CARD_DECK_MAX}。★のデッキで対戦します(★のデッキは1番上に出ます)`}</p>
+        <p data-card-deck-count={decks.decks.length} className="text-[11px] font-bold text-slate-400">{`デッキ ${decks.decks.length} / ${CARD_DECK_MAX}。★のデッキで対戦します(★のデッキは一番上に出ます)`}</p>
         {/* ★(使っている)デッキはいちばん上に出す(20まで並ぶと、どれを使っているか探しにくい。2026-10-30)。保存の並びは変えない */}
         {[...decks.decks].sort((a, b) => (b.id === decks.active) - (a.id === decks.active)).map((d) => {
           const ready = cardDeckReady(db, d, col);
@@ -519,7 +519,7 @@ const CardRules = ({ onBack, onTutorial }) => (
       ))}
     </div>
     <div className={SCREEN_FOOTER_CLASS}>
-      <button type="button" data-card-tutorial-again className="mh-button min-h-[52px] w-full rounded-2xl border border-emerald-300/50 bg-emerald-900/60 font-black text-emerald-50 active:scale-[.98]" onClick={() => { Audio_.fgSe.tap(); onTutorial(); }}>練習試合をもう1度<span className="block text-[10px] font-bold text-emerald-200" style={JA_LABEL_STYLE}>{jaWrap('ドラと、みゅあ相手に5つの決まりをおさらい')}</span></button>
+      <button type="button" data-card-tutorial-again className="mh-button min-h-[52px] w-full rounded-2xl border border-emerald-300/50 bg-emerald-900/60 font-black text-emerald-50 active:scale-[.98]" onClick={() => { Audio_.fgSe.tap(); onTutorial(); }}>練習試合をもう一度<span className="block text-[10px] font-bold text-emerald-200" style={JA_LABEL_STYLE}>{jaWrap('ドラと、みゅあ相手に5つの決まりをおさらい')}</span></button>
     </div>
   </div>
 );
