@@ -2441,7 +2441,8 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
                   return (
                     <button type="button" key={o.i} className="mh-nv-choice mh-nv-serif" data-xmas-novel-option={o.i} data-pick={picked && picked.key === o.i ? '' : undefined} aria-pressed={!!(picked && picked.key === o.i)}
                       onClick={() => (q.score || q.once ? choose(o.i, xmasNovelFill(o.x, playerName)) : answer(q, o.i))}>
-                      {o.mark ? <span data-xmas-novel-option-mark className="mr-1 text-[12px]" style={{ color: '#e8c873' }} aria-label="新しい選択肢">✦</span> : null}{xmasNovelWrap(xmasNovelFill(o.x, playerName))}
+                      {o.mark ? <span data-xmas-novel-option-mark className="mr-1 text-[12px]" style={{ color: '#e8c873' }} aria-label="新しい選択肢">✦</span> : null}{o.gold ? <span data-xmas-novel-option-gold className="mh-nv-gold">{xmasNovelWrap(xmasNovelFill(o.x, playerName))}</span> : xmasNovelWrap(xmasNovelFill(o.x, playerName))}
+                      {o.gold && <span className="mh-nv-plain mt-1 block text-[11px] font-bold" style={{ color: '#d8bd72' }}>なぜか、そうしなければいけない気がする</span>}
                       {seenEnd && <span data-xmas-novel-seen-end={endAhead} className="mh-nv-plain mt-1 block text-[11px] font-bold text-rose-200">見たエンド: {seenEnd.ending && seenEnd.ending.name ? `「${seenEnd.ending.name}」` : 'バッドエンド'}</span>}
                     </button>
                   );

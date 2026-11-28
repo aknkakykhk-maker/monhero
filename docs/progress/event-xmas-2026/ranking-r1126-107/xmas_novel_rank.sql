@@ -268,5 +268,9 @@ on conflict (event_id, end_id) do nothing;
 insert into public.xmas_novel_end_ids (event_id, end_id, kind) values
   ('xmas_novel_2026', 'END-H1', 'ifroute'), ('xmas_novel_2026', 'END-H2', 'ifroute'), ('xmas_novel_2026', 'END-H3', 'ifroute')
 on conflict (event_id, end_id) do nothing;
+-- 分かれ道 第4弾 もしもの道(r1126-108・真グッドのあとだけ・3つ)
+insert into public.xmas_novel_end_ids (event_id, end_id, kind) values
+  ('xmas_novel_2026', 'END-I1', 'ifroute'), ('xmas_novel_2026', 'END-I2', 'ifroute'), ('xmas_novel_2026', 'END-I3', 'ifroute')
+on conflict (event_id, end_id) do nothing;
 -- ずるの疑いのある人を隠す(消さない)
 -- update public.xmas_novel_players set hidden = true where event_id = 'xmas_novel_2026' and user_name = '…';

@@ -124,10 +124,6 @@ const walk = (cur0, depth, log) => {
   fail(`行が多すぎて止まらない: ${st.cur.scene}`);
 };
 walk(E.xmasNovelFreshCur(S), 0, []);
-// 着けないエンディングは、台本の「次」の書き損じのことが多いので注意に出す(1つも着けなければ止める)
-const unreached = endingsAll.filter((e) => !reached.has(e));
-if (!reached.size) fail('どのエンディングにも着かない');
-unreached.forEach((e) => fail(`エンディング ${e} に着く道が無い(台本の「次」を確かめる)`));
 // 過去編(真グッドのあとに「章から」で読む章・r1126-046): はじめの場面から読むと、章の場面を全部通り、エンディングに着かずに終わるか
 S.chapters.filter((c) => c.past).forEach((c) => {
   const first = S.scenes.find((x) => x.chapter === c.id);
@@ -137,7 +133,19 @@ S.chapters.filter((c) => c.past).forEach((c) => {
   for (let n = 0; n < 2000 && st.row; n += 1) {
     seen.add(st.cur.scene); visited.add(st.cur.scene);
     if (st.scene && st.scene.chapter !== c.id) { fail(`${c.id}: 過去編から別の章(${st.scene.id})へ出てしまう`); break; }
-    if (st.row.t === 'q') { fail(`${c.id}: 過去編に選択がある(${st.row.id})`); break; }
+    if (st.row.t === 'q') {
+      // もしもの道の入口(r1126-108 第4弾 A12i)だけは置いてよい: 行動の選択で、①が今までの道・②から先が全部【もしも】(金の文字)
+      const row = st.row;
+      const opts = row.kind === 'action' ? (row.options || []) : [];
+      if (!opts.length || opts[0].gold || !opts.slice(1).length || !opts.slice(1).every((o) => o.gold)) { fail(`${c.id}: 過去編に選択がある(${row.id})`); break; }
+      opts.slice(1).forEach((o, k) => {
+        const a = afterAnswer(E.xmasNovelAnswer(S, st.cur, row, k + 1, SEEN), row);
+        walk(a.jumped ? a.cur : { ...a.cur, idx: a.cur.idx + 1 }, 0, [`${row.id}=${k + 1}`]);
+      });
+      const a0 = afterAnswer(E.xmasNovelAnswer(S, st.cur, row, 0, SEEN), row);
+      st = a0.jumped ? E.xmasNovelSettle(S, a0.cur, { endings: SEEN }) : E.xmasNovelStep(S, a0.cur, { endings: SEEN });
+      continue;
+    }
     st = E.xmasNovelStep(S, st.cur, { endings: SEEN });
   }
   if (st.ending) fail(`${c.id}: 過去編のあとにエンディング(${st.ending.id})へ進んでしまう`);
@@ -145,6 +153,10 @@ S.chapters.filter((c) => c.past).forEach((c) => {
   if (miss.length) fail(`${c.id}: 過去編で通らない場面 ${miss.join(' ')}`);
   if (S.scenes.some((x) => x.chapter === c.id && !x.jumpOnly)) fail(`${c.id}: 過去編の場面が並びで入れる形になっている(本編から迷いこむ)`);
 });
+// 着けないエンディングは、台本の「次」の書き損じのことが多いので注意に出す(1つも着けなければ止める)。過去編の中のもしもの道(A12i)も数えるので、過去編のあとで
+const unreached = endingsAll.filter((e) => !reached.has(e));
+if (!reached.size) fail('どのエンディングにも着かない');
+unreached.forEach((e) => fail(`エンディング ${e} に着く道が無い(台本の「次」を確かめる)`));
 // どの道でも通らない場面(台本の「次」の書き損じのことが多い)。台本係へ知らせる注意で、止めない
 const unvisited = S.scenes.filter((s) => !visited.has(s.id) && !(s.rows || []).every((r) => r.t === 'flag')).map((s) => s.id);
 

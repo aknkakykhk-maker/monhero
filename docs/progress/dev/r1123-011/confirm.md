@@ -2,9 +2,10 @@
 
 <!-- node tools/image/assistant-art-catalog.js が書く。手で直さない -->
 
-## 要確認(9 件)
+## 要確認(10 件)
 
 - erubin/sekiyuou/fullbody: 表情なしの全身絵(erubin_sekiyuou.png・2026-11-23)が、表情つき(2026-11-25)より古い世代のまま現行フォルダにある
+- momosuke/normal/fullbody: 表情なしの全身絵(momosuke.png・2026-11-18)が、表情つき(2026-11-28)より古い世代のまま現行フォルダにある
 - momosuke/halloween/fullbody: 表情なしの全身絵(momosuke_halloween.png・2026-11-18)が、表情つき(2026-11-25)より古い世代のまま現行フォルダにある
 - mua/normal/fullbody: 表情なしの全身絵(mua.png・2026-11-21)が、表情つき(2026-11-22)より古い世代のまま現行フォルダにある
 - mua/halloween/fullbody: 表情なしの全身絵(mua_halloween.png・2026-11-21)が、表情つき(2026-11-22)より古い世代のまま現行フォルダにある
