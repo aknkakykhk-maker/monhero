@@ -61,6 +61,10 @@ const ROUTES = [
   { name: 'もしも 仮面のワルツ、灰谷に耳打ちする', want: 'END-R1', from: 'A1b', picks: { A1b: 'go:RW-1', AR1: 'opt:0' }, seen: ['END-G', 'END-M1', 'END-M2', 'END-M3', 'END-M4', 'END-M5'] },
   { name: 'もしも 仮面のワルツ、黒羽を引き止める', want: 'END-R2', from: 'AR1', picks: { A1b: 'go:RW-1', AR1: 'opt:1' }, seen: ['END-G', 'END-M1', 'END-M2', 'END-M3', 'END-M4', 'END-M5'], short: true },
   { name: 'もしも 仮面のワルツ、見守る', want: 'END-R3', from: 'AR1', picks: { A1b: 'go:RW-1', AR1: 'opt:2' }, seen: ['END-G', 'END-M1', 'END-M2', 'END-M3', 'END-M4', 'END-M5'], short: true },
+  // r1126-115 視点の編 ドラの編(真グッドのあと、第2章 A2 に③)
+  { name: '視点の編 ドラ、黙って見送る', want: 'END-PD1', from: 'A2', picks: { A2: 'go:PD-1', APD1: 'opt:0' }, seen: ['END-G'] },
+  { name: '視点の編 ドラ、名前を呼ぶ(もしも)', want: 'END-PD2', from: 'APD1', picks: { A2: 'go:PD-1', APD1: 'go:PD-Y' }, seen: ['END-G'], short: true },
+  { name: '真グッドの前は A2 にドラの編は出ない', want: 'END-X1', from: 'A2', picks: { A2: 'danger' }, noOpt: { A2: 'PD-1' }, short: true },
   { name: 'しおりが無いと A1b に③は出ない', want: 'END-X6', from: 'A1b', picks: { A1b: 'danger' }, seen: ['END-G'], noOpt: { A1b: 'RW-1' }, short: true },
   { name: '寄り道の2つめ(イチーカ・こっそり・ドラの声)を通って真グッドへ', want: 'END-G', from: 'A4y', picks: { A4y: 'opt:1', A6y: 'opt:1', A8y: 'go:C8-Z', Q7a: 'kyuko' }, short: true },
 ];
