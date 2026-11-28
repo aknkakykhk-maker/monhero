@@ -6807,8 +6807,7 @@ function MonsterHeroGame() {
       && bgmArrangement.home === DEFAULT_BGM_ARRANGEMENT.home) ? RAID_JACK_BGM_TRACK
       // クリスマスイベントの期間は「Dear Santa」(台帳 r1126-023・デフォルトのままの人だけ)
       : (xmasEventBgmOpenAt(Date.now()) && bgmArrangement.home === DEFAULT_BGM_ARRANGEMENT.home) ? XMAS_HOME_BGM_TRACK : bgmArrangement.home;
-    // MFバトルカードの画面にいるあいだは、裏の周回が負け・やめ(締める)になってもゲームオーバーの曲へ替えない(台帳 r1126-101 追記2・社長「カードバトル中に裏クイックまとめたら裏の音楽が割り込んでくる」)。
-    //   カードの画面はランの画面ではないので、ここで isGameOver になるのは裏の周回だけ。曲はカードの画面の部品が決める(下の CARD_TOP・CARD_BATTLE と同じ)
+    // カードの画面では裏の周回が負け・やめでもカードの曲のまま(r1126-101 追記2)
     if (state === 'CARD_TOP' || state === 'CARD_BATTLE') return cardBgm || homeBgm;
     if (state === 'CARD_PACK_OPEN') return homeBgm;
     if (isGameOver) return bgmArrangement.gameOver;
