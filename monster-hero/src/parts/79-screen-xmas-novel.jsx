@@ -1466,7 +1466,7 @@ const xmasNovelDateText = (iso) => {
 // ---- 画面 ----
 const XMAS_NOVEL_AUTO_MS = [0, 1800, 1000];
 // script … 検査で仮の台本を渡すときだけ(ふだんは渡さない)
-const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = null }) => {
+const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = null, rankOff = false }) => {
   useXmasNovelCss();
   // 台詞の {name}: 渡されなければブリーダー名を読むだけ(書かない)
   const [playerName, setPlayerName] = useState(playerNameProp);
@@ -1477,8 +1477,10 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
     return () => { alive = false; };
   }, [playerNameProp]);
   const S = script || XMAS_NOVEL_SCRIPT;
+  // ランキング(r1126-107): 開いたときに、ためていた分と、ランキングを入れる前の記録(1回だけ)を送る。待たない・落ちない
+  useEffect(() => { if (!rankOff && typeof xmasNovelRankFlush === 'function') void xmasNovelRankFlush(S); }, []);
   const [save, setSave] = useState(null);
-  const [mode, setMode] = useState('title'); // title / read / endings / chapters
+  const [mode, setMode] = useState('title'); // title / read / endings / chapters / ranking(r1126-107)
   const [st, setSt] = useState(null); // xmasNovelSettle の結果(いまの行)
   const [reply, setReply] = useState(null); // { list:[行], i, then, q } 問いの返しを読んでいるところ
   const [shown, setShown] = useState(0); // 文字送りで出した字数
@@ -1676,6 +1678,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
       if (replayRef.current) { setSt(next); setSkip(false); setSheet(null); setCard({ kind: 'ending', ending, replay: true }); return; }
       const firstTime = !s.endings.includes(ending.id);
       s = { ...xmasNovelRecordEnding(s, ending.id, new Date().toISOString()), cur: after };
+      if (typeof xmasNovelRankNote === 'function') xmasNovelRankNote({ k: 'end', id: ending.id }, { off: rankOff, script: S }); // ランキング(r1126-107)。見返すときは通らない
       persist(s, true);
       setSt(next); setSkip(false); setSheet(null);
       setCard({ kind: 'ending', ending, retry: !!after, fresh: firstTime, count: xmasNovelPerfectCount(S, s), total: xmasNovelScoreGroups(S).length });
@@ -1783,7 +1786,10 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
     setPick(null);
     const res = xmasNovelAnswer(S, st.cur, q, pick, (saveRef.current && saveRef.current.endings) || []);
     let s = saveRef.current;
-    if (q.score) { s = xmasNovelRecordFirst(s, q.id, res.ok); xmasNovelSe(res.ok ? 'ok' : 'ng'); }
+    if (q.score) {
+      if (!(s.first && s.first[q.id]) && typeof xmasNovelRankNote === 'function') xmasNovelRankNote({ k: 'first', id: q.id, ok: !!res.ok }, { off: rankOff, script: S }); // 一番はじめの答えだけ(r1126-107)
+      s = xmasNovelRecordFirst(s, q.id, res.ok); xmasNovelSe(res.ok ? 'ok' : 'ng');
+    }
     setSheet(null);
     persist({ ...s, cur: res.cur });
     const list = (res.replies || []);
@@ -1871,6 +1877,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
                 <button type="button" className="mh-nv-btn wide mh-nv-serif mh-nv-boot-btn" data-xmas-novel-new onClick={() => (save.cur ? setConfirmNew(true) : start(xmasNovelFreshCur(S)))}>はじめから</button>
                 <button type="button" className="mh-nv-btn wide mh-nv-serif mh-nv-boot-btn" data-xmas-novel-chapters disabled={!Object.keys(save.snaps).length} onClick={() => setMode('chapters')}>章から</button>
                 <button type="button" className="mh-nv-btn wide mh-nv-serif mh-nv-boot-btn" data-xmas-novel-endings onClick={() => setMode('endings')}>エンドヒストリー {seenCount} / {endingsAll.length}</button>
+                {typeof XmasNovelRank === 'function' && <button type="button" className="mh-nv-btn wide mh-nv-serif mh-nv-boot-btn" data-xmas-novel-ranking onClick={() => setMode('ranking')}>ランキング</button>}
               </div>
               <div data-xmas-novel-perfect className="mt-4 text-[10px] text-slate-400">推理の問い 一発で当てた数 {xmasNovelPerfectCount(S, save)} / {perfectTotal}</div>
               {confirmNew && (
@@ -1887,6 +1894,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
               )}
             </div>
           )}
+          {mode === 'ranking' && typeof XmasNovelRank === 'function' && <XmasNovelRank script={S} off={rankOff} onBack={() => setMode('title')} />}
           {mode === 'endings' && (
             <div className="my-auto w-full max-w-md" data-xmas-novel-ending-list>
               <div className="mh-nv-serif mh-nv-gold text-center text-[22px] font-black tracking-widest">エンドヒストリー</div>
@@ -2190,6 +2198,6 @@ const openXmasNovel = (opts = {}) => {
     setTimeout(() => { try { h.root.unmount(); } catch (e) { /* 片づけに失敗しても画面は消す */ } try { h.el.remove(); } catch (e) { /* 同上 */ } }, 0);
     try { opts.onClose && opts.onClose(); } catch (e) { /* 呼び出し元の失敗は持ちこまない */ }
   };
-  root.render(<XmasNovelScreen playerName={opts.playerName || ''} onClose={done} script={opts.script || null} />);
+  root.render(<XmasNovelScreen playerName={opts.playerName || ''} onClose={done} script={opts.script || null} rankOff={!!opts.force} />);
   return true;
 };
