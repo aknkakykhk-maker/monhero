@@ -40,7 +40,8 @@ const storyAssistantArtOf = (id, outfit) => {
   if (!who || !who.imageDir || !who.imagePrefix) return null;
   const dirs = (typeof STORY_OUTFIT_DIRS !== 'undefined' && STORY_OUTFIT_DIRS) || {};
   const dir = outfit ? dirs[outfit] : who.imageDir;
-  return dir ? `${dir}/${who.imagePrefix}_normal.PNG` : null;
+  const file = dir ? `${dir}/${who.imagePrefix}_normal.PNG` : null;
+  return file && typeof assistantArtFile === 'function' ? assistantArtFile(file) : file; // 重い絵は WebP の服あり(r1126-095)
 };
 // お話の真ん中に出すモンスターの全身の絵(台本の monsters の id → 絵。2026-10-27「推しに会える夜」)。足すときはここへ1行
 const STORY_MONSTER_ART = Object.freeze({

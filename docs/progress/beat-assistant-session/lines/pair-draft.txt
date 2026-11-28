@@ -32,7 +32,7 @@ result | atsu happy いいね、今日のセッション最高じゃん笑 | mua
 gattai | atsu excited {c}、ここ決めるぞ笑 | mua excited りょ！いっくよ〜♪
 
 ## mua kyuko
-play | kyuko happy {c}、ここで一回ためるよぉ | mua happy おっけ！あたし合わせる♪
+play | kyuko happy {c}、ここで1回ためるよぉ | mua happy おっけ！あたし合わせる♪
 play | mua happy {c}、余裕そうぢゃん！ | kyuko happy ほい、構成は読めてるよ〜
 result | kyuko happy いい流れだったね〜、ありがとん笑 | mua wink こっちこそ！楽しかった♪
 gattai | kyuko excited {c}、ここだよ〜 | mua excited まかせて！せーの♪
@@ -98,7 +98,7 @@ result | atsu happy いいステージだったじゃん笑 | momosuke wink で�
 gattai | momosuke excited {c}、ももに合わせて！！ | atsu excited よし、決めるぞ！
 
 ## momosuke kyuko
-play | kyuko happy {c}、ここサビ前だよ〜 | momosuke happy 知ってる！！ももが一番かわいくなるとこ♡
+play | kyuko happy {c}、ここサビ前だよ〜 | momosuke happy 知ってる！！ももが1番かわいくなるとこ♡
 play | momosuke happy {c}、もものダンスどう？ | kyuko happy ほい、リズムぴったりだよ〜
 result | kyuko happy 2人でいい流れだったね〜 | momosuke wink {c}、ももについてこれてえらい♡
 gattai | momosuke excited {c}、いくよ！！ | kyuko excited おけ〜、せーの！

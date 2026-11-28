@@ -101,25 +101,25 @@
    "master": [
     "tools/art-sources/assistants/atsu/santa/received/atsu_santa_*.png"
    ],
-   "how": "`tools/assistant/life-fullbody-art.py` の全身絵をそのまま写す(ほかの助手のクリスマスの衣装と同じく、全身の絵をバスト絵の置き場に置く)"
+   "how": "2026-11-28 r1126-095 から: 原本を拡大の道具(tools/image/upscale-anime/upscale.py)で2倍にした物(<キャラ>/santa/upscaled-2026-11-28/received/*_x2.webp)から `tools/assistant/life-xmas-art-remake.py` で作る(全身・半身・立ち絵は WebP 画質90)。 前: `tools/assistant/life-fullbody-art.py` の全身絵をそのまま写す(ほかの助手のクリスマスの衣装と同じく、全身の絵をバスト絵の置き場に置く)"
   },
   "atsu/santa/face": {
    "master": [
     "tools/art-sources/assistants/atsu/santa/received/atsu_santa_*.png"
    ],
-   "how": "`tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(顔の切り方は life-stand-cut.json の atsu:santa。目の高さ・顔の幅はナカヨシの基準に合わせた)"
+   "how": "2026-11-28 r1126-095 から: 原本を拡大の道具(tools/image/upscale-anime/upscale.py)で2倍にした物(<キャラ>/santa/upscaled-2026-11-28/received/*_x2.webp)から `tools/assistant/life-xmas-art-remake.py` で作る(全身・半身・立ち絵は WebP 画質90)。 前: `tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(顔の切り方は life-stand-cut.json の atsu:santa。目の高さ・顔の幅はナカヨシの基準に合わせた)"
   },
   "atsu/santa/fullbody": {
    "master": [
     "tools/art-sources/assistants/atsu/santa/received/atsu_santa_*.png"
    ],
-   "how": "`tools/assistant/life-fullbody-art.py`(受け取った全身の10枚。received は加工せずに保管)"
+   "how": "2026-11-28 r1126-095 から: 原本を拡大の道具(tools/image/upscale-anime/upscale.py)で2倍にした物(<キャラ>/santa/upscaled-2026-11-28/received/*_x2.webp)から `tools/assistant/life-xmas-art-remake.py` で作る(全身・半身・立ち絵は WebP 画質90)。 前: `tools/assistant/life-fullbody-art.py`(受け取った全身の10枚。received は加工せずに保管)"
   },
   "atsu/santa/stand": {
    "master": [
     "tools/art-sources/assistants/atsu/santa/received/atsu_santa_*.png"
    ],
-   "how": "`tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(全身絵から切り出す)"
+   "how": "2026-11-28 r1126-095 から: 原本を拡大の道具(tools/image/upscale-anime/upscale.py)で2倍にした物(<キャラ>/santa/upscaled-2026-11-28/received/*_x2.webp)から `tools/assistant/life-xmas-art-remake.py` で作る(全身・半身・立ち絵は WebP 画質90)。 前: `tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(全身絵から切り出す)"
   },
   "atsu/normal/bust": {
    "master": "self",
@@ -148,13 +148,13 @@
    "master": [
     "tools/art-sources/assistants/dra/santa/received/dra_santa_*.png"
    ],
-   "how": "元絵(1254×1254 の顔だけの絵)の外の薄いもやを縁を残して消し、ふだんのドラの絵と同じ 384×384 に縮めた。顔アイコンは normal の絵の範囲で倍率をそろえて 256×256 に切った(9枚とも同じ切り方。2026-11-25 クリスマス作業場の処理・全身画は無い)"
+   "how": "2026-11-28 r1126-095 から `tools/assistant/life-dra-santa-art.py`: 半身は原本の大きさのまま(1254×1254・WebP 画質90)、顔アイコンは前と同じ枠(原本の上で 134,127・一辺1021)で 256×256。前: 元絵(1254×1254 の顔だけの絵)の外の薄いもやを縁を残して消し、ふだんのドラの絵と同じ 384×384 に縮めた。顔アイコンは normal の絵の範囲で倍率をそろえて 256×256 に切った(9枚とも同じ切り方。2026-11-25 クリスマス作業場の処理・全身画は無い)"
   },
   "dra/santa/face": {
    "master": [
     "tools/art-sources/assistants/dra/santa/received/dra_santa_*.png"
    ],
-   "how": "元絵(1254×1254 の顔だけの絵)の外の薄いもやを縁を残して消し、ふだんのドラの絵と同じ 384×384 に縮めた。顔アイコンは normal の絵の範囲で倍率をそろえて 256×256 に切った(9枚とも同じ切り方。2026-11-25 クリスマス作業場の処理・全身画は無い)"
+   "how": "2026-11-28 r1126-095 から `tools/assistant/life-dra-santa-art.py`: 半身は原本の大きさのまま(1254×1254・WebP 画質90)、顔アイコンは前と同じ枠(原本の上で 134,127・一辺1021)で 256×256。前: 元絵(1254×1254 の顔だけの絵)の外の薄いもやを縁を残して消し、ふだんのドラの絵と同じ 384×384 に縮めた。顔アイコンは normal の絵の範囲で倍率をそろえて 256×256 に切った(9枚とも同じ切り方。2026-11-25 クリスマス作業場の処理・全身画は無い)"
   },
   "dra/normal/bust": {
    "master": [
@@ -172,25 +172,25 @@
    "master": [
     "tools/art-sources/assistants/erubin/santa/received/erubin_santa_*.png"
    ],
-   "how": "`tools/assistant/life-fullbody-art.py` の全身絵をそのまま写す(ほかの助手のクリスマスの衣装と同じく、全身の絵をバスト絵の置き場に置く)"
+   "how": "2026-11-28 r1126-095 から: 原本を拡大の道具(tools/image/upscale-anime/upscale.py)で2倍にした物(<キャラ>/santa/upscaled-2026-11-28/received/*_x2.webp)から `tools/assistant/life-xmas-art-remake.py` で作る(全身・半身・立ち絵は WebP 画質90)。 前: `tools/assistant/life-fullbody-art.py` の全身絵をそのまま写す(ほかの助手のクリスマスの衣装と同じく、全身の絵をバスト絵の置き場に置く)"
   },
   "erubin/santa/face": {
    "master": [
     "tools/art-sources/assistants/erubin/santa/received/erubin_santa_*.png"
    ],
-   "how": "`tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(顔の切り方は life-stand-cut.json の erubin:santa。えるびん(ふだん)・石油王の顔に大きさ・目の高さをそろえた)"
+   "how": "2026-11-28 r1126-095 から: 原本を拡大の道具(tools/image/upscale-anime/upscale.py)で2倍にした物(<キャラ>/santa/upscaled-2026-11-28/received/*_x2.webp)から `tools/assistant/life-xmas-art-remake.py` で作る(全身・半身・立ち絵は WebP 画質90)。 前: `tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(顔の切り方は life-stand-cut.json の erubin:santa。えるびん(ふだん)・石油王の顔に大きさ・目の高さをそろえた)"
   },
   "erubin/santa/fullbody": {
    "master": [
     "tools/art-sources/assistants/erubin/santa/received/erubin_santa_*.png"
    ],
-   "how": "`tools/assistant/life-fullbody-art.py`(受け取った全身の10枚。received は加工せずに保管)"
+   "how": "2026-11-28 r1126-095 から: 原本を拡大の道具(tools/image/upscale-anime/upscale.py)で2倍にした物(<キャラ>/santa/upscaled-2026-11-28/received/*_x2.webp)から `tools/assistant/life-xmas-art-remake.py` で作る(全身・半身・立ち絵は WebP 画質90)。 前: `tools/assistant/life-fullbody-art.py`(受け取った全身の10枚。received は加工せずに保管)"
   },
   "erubin/santa/stand": {
    "master": [
     "tools/art-sources/assistants/erubin/santa/received/erubin_santa_*.png"
    ],
-   "how": "`tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(全身絵から切り出す)"
+   "how": "2026-11-28 r1126-095 から: 原本を拡大の道具(tools/image/upscale-anime/upscale.py)で2倍にした物(<キャラ>/santa/upscaled-2026-11-28/received/*_x2.webp)から `tools/assistant/life-xmas-art-remake.py` で作る(全身・半身・立ち絵は WebP 画質90)。 前: `tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(全身絵から切り出す)"
   },
   "erubin/normal/bust": {
    "master": [
@@ -290,25 +290,25 @@
    "master": [
     "tools/art-sources/assistants/kiki/santa/received/kiki_santa_*.png"
    ],
-   "how": "`tools/assistant/life-fullbody-art.py` の全身絵をそのまま写す(みゅあのサンタと同じく、全身の絵をバスト絵の置き場に置く)"
+   "how": "2026-11-28 r1126-095 から: 原本を拡大の道具(tools/image/upscale-anime/upscale.py)で2倍にした物(<キャラ>/santa/upscaled-2026-11-28/received/*_x2.webp)から `tools/assistant/life-xmas-art-remake.py` で作る(全身・半身・立ち絵は WebP 画質90)。 前: `tools/assistant/life-fullbody-art.py` の全身絵をそのまま写す(みゅあのサンタと同じく、全身の絵をバスト絵の置き場に置く)"
   },
   "kiki/santa/face": {
    "master": [
     "tools/art-sources/assistants/kiki/santa/received/kiki_santa_*.png"
    ],
-   "how": "`tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(寝顔はふつうの顔と同じ枠で切る)"
+   "how": "2026-11-28 r1126-095 から: 原本を拡大の道具(tools/image/upscale-anime/upscale.py)で2倍にした物(<キャラ>/santa/upscaled-2026-11-28/received/*_x2.webp)から `tools/assistant/life-xmas-art-remake.py` で作る(全身・半身・立ち絵は WebP 画質90)。 前: `tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(寝顔はふつうの顔と同じ枠で切る)"
   },
   "kiki/santa/fullbody": {
    "master": [
     "tools/art-sources/assistants/kiki/santa/received/kiki_santa_*.png"
    ],
-   "how": "`tools/assistant/life-fullbody-art.py`(受け取った全身の10枚。received は加工せずに保管)"
+   "how": "2026-11-28 r1126-095 から: 原本を拡大の道具(tools/image/upscale-anime/upscale.py)で2倍にした物(<キャラ>/santa/upscaled-2026-11-28/received/*_x2.webp)から `tools/assistant/life-xmas-art-remake.py` で作る(全身・半身・立ち絵は WebP 画質90)。 前: `tools/assistant/life-fullbody-art.py`(受け取った全身の10枚。received は加工せずに保管)"
   },
   "kiki/santa/stand": {
    "master": [
     "tools/art-sources/assistants/kiki/santa/received/kiki_santa_*.png"
    ],
-   "how": "`tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(全身絵から切り出す)"
+   "how": "2026-11-28 r1126-095 から: 原本を拡大の道具(tools/image/upscale-anime/upscale.py)で2倍にした物(<キャラ>/santa/upscaled-2026-11-28/received/*_x2.webp)から `tools/assistant/life-xmas-art-remake.py` で作る(全身・半身・立ち絵は WebP 画質90)。 前: `tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(全身絵から切り出す)"
   },
   "kiki/twintail/bust": {
    "master": "self",
@@ -348,25 +348,25 @@
    "master": [
     "tools/art-sources/assistants/kyuko/santa/received/kyuko_santa_*.png"
    ],
-   "how": "`tools/assistant/life-fullbody-art.py` の全身絵をそのまま写す(ほかの助手のクリスマスの衣装と同じく、全身の絵をバスト絵の置き場に置く)"
+   "how": "2026-11-28 r1126-095 から: 原本を拡大の道具(tools/image/upscale-anime/upscale.py)で2倍にした物(<キャラ>/santa/upscaled-2026-11-28/received/*_x2.webp)から `tools/assistant/life-xmas-art-remake.py` で作る(全身・半身・立ち絵は WebP 画質90)。 前: `tools/assistant/life-fullbody-art.py` の全身絵をそのまま写す(ほかの助手のクリスマスの衣装と同じく、全身の絵をバスト絵の置き場に置く)"
   },
   "kyuko/santa/face": {
    "master": [
     "tools/art-sources/assistants/kyuko/santa/received/kyuko_santa_*.png"
    ],
-   "how": "`tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(顔の切り方は life-stand-cut.json の kyuko:santa。きゅうこ(ふだん)・冬の装いの顔にそろえる)"
+   "how": "2026-11-28 r1126-095 から: 原本を拡大の道具(tools/image/upscale-anime/upscale.py)で2倍にした物(<キャラ>/santa/upscaled-2026-11-28/received/*_x2.webp)から `tools/assistant/life-xmas-art-remake.py` で作る(全身・半身・立ち絵は WebP 画質90)。 前: `tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(顔の切り方は life-stand-cut.json の kyuko:santa。きゅうこ(ふだん)・冬の装いの顔にそろえる)"
   },
   "kyuko/santa/fullbody": {
    "master": [
     "tools/art-sources/assistants/kyuko/santa/received/kyuko_santa_*.png"
    ],
-   "how": "`tools/assistant/life-fullbody-art.py`(受け取った全身の10枚。received は加工せずに保管。輪郭の外の薄いもやは書き出しで掃除)"
+   "how": "2026-11-28 r1126-095 から: 原本を拡大の道具(tools/image/upscale-anime/upscale.py)で2倍にした物(<キャラ>/santa/upscaled-2026-11-28/received/*_x2.webp)から `tools/assistant/life-xmas-art-remake.py` で作る(全身・半身・立ち絵は WebP 画質90)。 前: `tools/assistant/life-fullbody-art.py`(受け取った全身の10枚。received は加工せずに保管。輪郭の外の薄いもやは書き出しで掃除)"
   },
   "kyuko/santa/stand": {
    "master": [
     "tools/art-sources/assistants/kyuko/santa/received/kyuko_santa_*.png"
    ],
-   "how": "`tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(全身絵から切り出す)"
+   "how": "2026-11-28 r1126-095 から: 原本を拡大の道具(tools/image/upscale-anime/upscale.py)で2倍にした物(<キャラ>/santa/upscaled-2026-11-28/received/*_x2.webp)から `tools/assistant/life-xmas-art-remake.py` で作る(全身・半身・立ち絵は WebP 画質90)。 前: `tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(全身絵から切り出す)"
   },
   "kyuko/winter/bust": {
    "master": "self",
@@ -382,37 +382,37 @@
    "master": [
     "tools/art-sources/assistants/kyuko/winter/fullbody/kyuko_winter__*.png"
    ],
-   "how": "`tools/assistant/life-fullbody-art.py`。2026-11-18 に表示の大きさへ縮めた"
+   "how": "2026-11-28 r1126-095 から: 全身の原本を拡大の道具で2倍にした物(kyuko/winter/upscaled-2026-11-28/fullbody/)から `tools/assistant/life-xmas-art-remake.py` で作る(WebP 画質90・顔は #7943 の物を残す)。前: `tools/assistant/life-fullbody-art.py`。2026-11-18 に表示の大きさへ縮めた"
   },
   "kyuko/winter/stand": {
    "master": [
-    "tools/art-sources/assistants/kyuko/winter/pre-resize-2026-11-17/stand/kyuko_*.png"
+    "tools/art-sources/assistants/kyuko/winter/fullbody/kyuko_winter__*.png"
    ],
-   "how": "`tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(全身絵から切り出す)。正本は表示の大きさへ縮める前(2026-11-17)の物"
+   "how": "2026-11-28 r1126-095 から: 全身の原本を拡大の道具で2倍にした物(kyuko/winter/upscaled-2026-11-28/fullbody/)から `tools/assistant/life-xmas-art-remake.py` で作る(WebP 画質90・顔は #7943 の物を残す)。前: `tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(全身絵から切り出す)。正本は表示の大きさへ縮める前(2026-11-17)の物"
   },
   "momosuke/santa/bust": {
    "master": [
     "tools/art-sources/assistants/momosuke/santa/received/momosuke_santa_*.png"
    ],
-   "how": "`tools/assistant/life-fullbody-art.py` の全身絵をそのまま写す(みゅあ・ききのサンタと同じく、全身の絵をバスト絵の置き場に置く)"
+   "how": "2026-11-28 r1126-095 から: 原本を拡大の道具(tools/image/upscale-anime/upscale.py)で2倍にした物(<キャラ>/santa/upscaled-2026-11-28/received/*_x2.webp)から `tools/assistant/life-xmas-art-remake.py` で作る(全身・半身・立ち絵は WebP 画質90)。 前: `tools/assistant/life-fullbody-art.py` の全身絵をそのまま写す(みゅあ・ききのサンタと同じく、全身の絵をバスト絵の置き場に置く)"
   },
   "momosuke/santa/face": {
    "master": [
     "tools/art-sources/assistants/momosuke/santa/received/momosuke_santa_*.png"
    ],
-   "how": "`tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(寝顔は座った姿の絵から、ふつうの顔と同じ大きさで切る)"
+   "how": "2026-11-28 r1126-095 から: 原本を拡大の道具(tools/image/upscale-anime/upscale.py)で2倍にした物(<キャラ>/santa/upscaled-2026-11-28/received/*_x2.webp)から `tools/assistant/life-xmas-art-remake.py` で作る(全身・半身・立ち絵は WebP 画質90)。 前: `tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(寝顔は座った姿の絵から、ふつうの顔と同じ大きさで切る)"
   },
   "momosuke/santa/fullbody": {
    "master": [
     "tools/art-sources/assistants/momosuke/santa/received/momosuke_santa_*.png"
    ],
-   "how": "`tools/assistant/life-fullbody-art.py`(受け取った全身の10枚。received は加工せずに保管)"
+   "how": "2026-11-28 r1126-095 から: 原本を拡大の道具(tools/image/upscale-anime/upscale.py)で2倍にした物(<キャラ>/santa/upscaled-2026-11-28/received/*_x2.webp)から `tools/assistant/life-xmas-art-remake.py` で作る(全身・半身・立ち絵は WebP 画質90)。 前: `tools/assistant/life-fullbody-art.py`(受け取った全身の10枚。received は加工せずに保管)"
   },
   "momosuke/santa/stand": {
    "master": [
     "tools/art-sources/assistants/momosuke/santa/received/momosuke_santa_*.png"
    ],
-   "how": "`tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(全身絵から切り出す)"
+   "how": "2026-11-28 r1126-095 から: 原本を拡大の道具(tools/image/upscale-anime/upscale.py)で2倍にした物(<キャラ>/santa/upscaled-2026-11-28/received/*_x2.webp)から `tools/assistant/life-xmas-art-remake.py` で作る(全身・半身・立ち絵は WebP 画質90)。 前: `tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(全身絵から切り出す)"
   },
   "momosuke/halloween/bust": {
    "master": "self",
@@ -460,25 +460,25 @@
    "master": [
     "tools/art-sources/assistants/mua/santa/received/mua_santa_*.png"
    ],
-   "how": "`tools/assistant/life-fullbody-art.py` の全身絵をそのまま写す(ききのツインテールと同じく、全身の絵をバスト絵の置き場に置く)"
+   "how": "2026-11-28 r1126-095 から: 原本を拡大の道具(tools/image/upscale-anime/upscale.py)で2倍にした物(<キャラ>/santa/upscaled-2026-11-28/received/*_x2.webp)から `tools/assistant/life-xmas-art-remake.py` で作る(全身・半身・立ち絵は WebP 画質90)。 前: `tools/assistant/life-fullbody-art.py` の全身絵をそのまま写す(ききのツインテールと同じく、全身の絵をバスト絵の置き場に置く)"
   },
   "mua/santa/face": {
    "master": [
     "tools/art-sources/assistants/mua/santa/received/mua_santa_*.png"
    ],
-   "how": "`tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(寝顔はふつうの顔と同じ枠で切る)"
+   "how": "2026-11-28 r1126-095 から: 原本を拡大の道具(tools/image/upscale-anime/upscale.py)で2倍にした物(<キャラ>/santa/upscaled-2026-11-28/received/*_x2.webp)から `tools/assistant/life-xmas-art-remake.py` で作る(全身・半身・立ち絵は WebP 画質90)。 前: `tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(寝顔はふつうの顔と同じ枠で切る)"
   },
   "mua/santa/fullbody": {
    "master": [
     "tools/art-sources/assistants/mua/santa/received/mua_santa_*.png"
    ],
-   "how": "`tools/assistant/life-fullbody-art.py`(受け取った全身の10枚。received は加工せずに保管)"
+   "how": "2026-11-28 r1126-095 から: 原本を拡大の道具(tools/image/upscale-anime/upscale.py)で2倍にした物(<キャラ>/santa/upscaled-2026-11-28/received/*_x2.webp)から `tools/assistant/life-xmas-art-remake.py` で作る(全身・半身・立ち絵は WebP 画質90)。 前: `tools/assistant/life-fullbody-art.py`(受け取った全身の10枚。received は加工せずに保管)"
   },
   "mua/santa/stand": {
    "master": [
     "tools/art-sources/assistants/mua/santa/received/mua_santa_*.png"
    ],
-   "how": "`tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(全身絵から切り出す)"
+   "how": "2026-11-28 r1126-095 から: 原本を拡大の道具(tools/image/upscale-anime/upscale.py)で2倍にした物(<キャラ>/santa/upscaled-2026-11-28/received/*_x2.webp)から `tools/assistant/life-xmas-art-remake.py` で作る(全身・半身・立ち絵は WebP 画質90)。 前: `tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(全身絵から切り出す)"
   },
   "mua/card-master/bust": {
    "master": "self",
@@ -532,25 +532,25 @@
    "master": [
     "tools/art-sources/assistants/sorashido/santa/received/sorashido_santa_*.png"
    ],
-   "how": "`tools/assistant/life-fullbody-art.py` の全身絵をそのまま写す(みゅあ・きき・ももすけのサンタと同じく、全身の絵をバスト絵の置き場に置く)"
+   "how": "2026-11-28 r1126-095 から: 原本を拡大の道具(tools/image/upscale-anime/upscale.py)で2倍にした物(<キャラ>/santa/upscaled-2026-11-28/received/*_x2.webp)から `tools/assistant/life-xmas-art-remake.py` で作る(全身・半身・立ち絵は WebP 画質90)。 前: `tools/assistant/life-fullbody-art.py` の全身絵をそのまま写す(みゅあ・きき・ももすけのサンタと同じく、全身の絵をバスト絵の置き場に置く)"
   },
   "sorashido/santa/face": {
    "master": [
     "tools/art-sources/assistants/sorashido/santa/received/sorashido_santa_*.png"
    ],
-   "how": "`tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(寝顔はふつうの顔と同じ大きさで切る)"
+   "how": "2026-11-28 r1126-095 から: 原本を拡大の道具(tools/image/upscale-anime/upscale.py)で2倍にした物(<キャラ>/santa/upscaled-2026-11-28/received/*_x2.webp)から `tools/assistant/life-xmas-art-remake.py` で作る(全身・半身・立ち絵は WebP 画質90)。 前: `tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(寝顔はふつうの顔と同じ大きさで切る)"
   },
   "sorashido/santa/fullbody": {
    "master": [
     "tools/art-sources/assistants/sorashido/santa/received/sorashido_santa_*.png"
    ],
-   "how": "`tools/assistant/life-fullbody-art.py`(受け取った全身の10枚。received は加工せずに保管)"
+   "how": "2026-11-28 r1126-095 から: 原本を拡大の道具(tools/image/upscale-anime/upscale.py)で2倍にした物(<キャラ>/santa/upscaled-2026-11-28/received/*_x2.webp)から `tools/assistant/life-xmas-art-remake.py` で作る(全身・半身・立ち絵は WebP 画質90)。 前: `tools/assistant/life-fullbody-art.py`(受け取った全身の10枚。received は加工せずに保管)"
   },
   "sorashido/santa/stand": {
    "master": [
     "tools/art-sources/assistants/sorashido/santa/received/sorashido_santa_*.png"
    ],
-   "how": "`tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(全身絵から切り出す)"
+   "how": "2026-11-28 r1126-095 から: 原本を拡大の道具(tools/image/upscale-anime/upscale.py)で2倍にした物(<キャラ>/santa/upscaled-2026-11-28/received/*_x2.webp)から `tools/assistant/life-xmas-art-remake.py` で作る(全身・半身・立ち絵は WebP 画質90)。 前: `tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(全身絵から切り出す)"
   },
   "sorashido/hosei/bust": {
    "master": "self",
@@ -691,6 +691,17 @@
     "tools/art-sources/assistants/dra_wink.PNG"
    ],
    "why": "旧版ではなく重複。配信中のバスト絵と1バイトも違わない同じ物が2か所にある(「同じ中身を2か所で持たない」決まり)。原本のシート dra-expressions-sheet.png は正本として残す"
+  },
+  {
+   "to": "archive/old-art/assistant/kyuko/santa/2026-11-28-old-upscaled-from-game",
+   "date": "2026-11-28",
+   "from": [
+    "tools/art-sources/assistants/kyuko/santa/upscaled-2026-11-28/fullbody",
+    "tools/art-sources/assistants/kyuko/santa/upscaled-2026-11-28/santa",
+    "tools/art-sources/assistants/kyuko/santa/upscaled-2026-11-28/stand-santa",
+    "tools/art-sources/assistants/kyuko/santa/upscaled-2026-11-28/README.md"
+   ],
+   "why": "きゅうこのサンタ服を、ゲームの絵を拡大した版(#7949・#7951)から、受け取った原本を拡大した版(upscaled-2026-11-28/received/)へ作り直した(r1126-095)"
   }
  ]
 }

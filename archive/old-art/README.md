@@ -8,7 +8,7 @@
 - 置き方: `archive/old-art/assistant/<キャラ>/<服>/<その版が入った日>-old-<何の版>/`
 - 戻すときは `git mv` で元の場所へ戻し、`tools/image/assistant-art-catalog.json` の `moved` から外して正本に書く(検査 `--check` が、戻した旧版と目録の食い違いを見ている)
 
-合計 38 枚・52.6MB(10 組)
+合計 66 枚・132.4MB(11 組)
 
 | 保管庫の場所 | 枚数 | 容量 | 移した日 | 元の場所 | 旧版とする理由 |
 | --- | ---: | ---: | --- | --- | --- |
@@ -22,3 +22,4 @@
 | `archive/old-art/assistant/sorashido/hosei/2026-11-12-old-fullbody-received-v1/` | 2 | 4.8MB | 2026-11-23 | `tools/art-sources/assistant-fullbody/received-v1/sorashido-8expressions-sheet1.png`<br>`tools/art-sources/assistant-fullbody/received-v1/sorashido-8expressions-sheet2.png` | ソラシド(補正)の全身絵8表情は 2026-11-20〜21 に直接入れた完成品へ差し替え済み |
 | `archive/old-art/assistant/sorashido/hosei/2026-10-27-old-bust-sheet/` | 1 | 3.4MB | 2026-11-23 | `tools/art-sources/assistants/sorashido-faces-sheet.png` | ソラシドの最初のバスト絵8表情のシート(2026-10-27)。バスト絵・顔は、ふだん・補正とも 2026-11-20〜21 に直接入れた物へ差し替え済み |
 | `archive/old-art/assistant/dra/normal/2026-09-17-duplicate-of-current-bust/` | 8 | 0.2MB | 2026-11-23 | `tools/art-sources/assistants/dra_angry.PNG`<br>`tools/art-sources/assistants/dra_crying.PNG`<br>`tools/art-sources/assistants/dra_excited.PNG`<br>`tools/art-sources/assistants/dra_happy.PNG`<br>`tools/art-sources/assistants/dra_normal.PNG`<br>`tools/art-sources/assistants/dra_surprise.PNG`<br>`tools/art-sources/assistants/dra_troubled.PNG`<br>`tools/art-sources/assistants/dra_wink.PNG` | 旧版ではなく重複。配信中のバスト絵と1バイトも違わない同じ物が2か所にある(「同じ中身を2か所で持たない」決まり)。原本のシート dra-expressions-sheet.png は正本として残す |
+| `archive/old-art/assistant/kyuko/santa/2026-11-28-old-upscaled-from-game/` | 28 | 79.8MB | 2026-11-28 | `tools/art-sources/assistants/kyuko/santa/upscaled-2026-11-28/fullbody`<br>`tools/art-sources/assistants/kyuko/santa/upscaled-2026-11-28/santa`<br>`tools/art-sources/assistants/kyuko/santa/upscaled-2026-11-28/stand-santa`<br>`tools/art-sources/assistants/kyuko/santa/upscaled-2026-11-28/README.md` | きゅうこのサンタ服を、ゲームの絵を拡大した版(#7949・#7951)から、受け取った原本を拡大した版(upscaled-2026-11-28/received/)へ作り直した(r1126-095) |

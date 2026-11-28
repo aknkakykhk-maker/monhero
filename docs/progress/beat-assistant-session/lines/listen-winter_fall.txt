@@ -3,6 +3,6 @@ listen:winter_fall | kiki normal 0:02から0:24までの静かな始まり、と
 listen:winter_fall | momosuke excited 2:22も2:48も3:07もいちばん強い！ ももはこの勢いが大好き♡
 listen:winter_fall | dra normal 5分近くある長い冒険だな。BPM166で駆け抜けるからな
 listen:winter_fall | atsu happy 3:58でいちばん強いところを越えて、最後に静かに締めるのいいよね笑
-listen:winter_fall | kyuko happy 1:37でいったん落として、2:22でまた一番上まで上げる。構成が効いてるんだよね〜
+listen:winter_fall | kyuko happy 1:37でいったん落として、2:22でまた1番上まで上げる。構成が効いてるんだよね〜
 listen:winter_fall | sorashido normal BPM166、強い音46%・軽い音6%。力で押していく配分だぜ・・・！
 listen:winter_fall | erubin normal 1:37や3:13の落ち着いた所でひと息。長い曲だし、そこで整えようかな

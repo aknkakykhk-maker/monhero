@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9916946068666254
+// source-sha256: 5fca261d3a0077c3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -10274,9 +10274,14 @@ const Audio_ = (() => {
       stopPreview(false);
       stopOthers();
       stopJingles();
-      void nvAmbient('none');
+      {
+        const want = nvAmbWant;
+        void nvAmbient('none');
+        nvAmbWant = want;
+      }
     } else if (currentKey) playBGM(currentKey);
     await ensure();
+    if (enabled) nvAmbientResume();
   };
   const isEnabled = () => enabled;
   const debugPlayingTracks = () => {
@@ -10409,6 +10414,7 @@ const Audio_ = (() => {
       } catch (e) {}
     }
     if (enabled && currentKey && !bgmSource) playBGM(currentKey);
+    if (enabled) nvAmbientResume();
   };
   const unlock = async (playTestTone = false) => {
     if (!enabled) {
@@ -10451,6 +10457,7 @@ const Audio_ = (() => {
     await Promise.all([ensureAudioCtxRunning(), toneStart || Promise.resolve(), load()]);
     started = !!Tone;
     if (currentKey) playBGM(currentKey);
+    nvAmbientResume();
     return !ctx || ctx.state === 'running';
   };
   const ensurePlaying = key => {
@@ -11455,7 +11462,7 @@ const Audio_ = (() => {
       if (!Tone) return;
       const t = Tone.now();
       const s = new Tone.MetalSynth({
-        frequency: high ? 340 : 240,
+        frequency: high ? 640 : 470,
         envelope: {
           attack: 0.001,
           decay: 0.035,
@@ -11463,22 +11470,22 @@ const Audio_ = (() => {
         },
         harmonicity: 3.1,
         modulationIndex: 10,
-        resonance: high ? 2600 : 1800,
-        octaves: 0.6,
-        volume: -32
+        resonance: high ? 3800 : 3000,
+        octaves: 0.8,
+        volume: -12
       }).connect(seBus);
       s.triggerAttackRelease('64n', t);
       const k = new Tone.MembraneSynth({
-        pitchDecay: 0.01,
+        pitchDecay: 0.008,
         octaves: 2,
         envelope: {
           attack: 0.001,
           decay: 0.05,
           sustain: 0
         },
-        volume: -30
+        volume: -20
       }).connect(seBus);
-      k.triggerAttackRelease(high ? 'G2' : 'D2', '64n', t);
+      k.triggerAttackRelease(high ? 'C4' : 'G3', '64n', t);
       setTimeout(() => {
         try {
           s.dispose();
@@ -11491,7 +11498,7 @@ const Audio_ = (() => {
       await ensure();
       if (!Tone) return;
       const t = Tone.now();
-      const f = new Tone.Filter(700, 'lowpass').connect(seBus);
+      const f = new Tone.Filter(1800, 'lowpass').connect(seBus);
       const s = new Tone.Synth({
         oscillator: {
           type: 'sawtooth'
@@ -11502,11 +11509,11 @@ const Audio_ = (() => {
           sustain: 0,
           release: 0.2
         },
-        volume: -22
+        volume: -8
       }).connect(f);
-      s.triggerAttackRelease('D3', '4n', t);
+      s.triggerAttackRelease('D4', '4n', t);
       try {
-        s.frequency.rampTo('G2', 0.7, t);
+        s.frequency.rampTo('G3', 0.7, t);
       } catch (e) {}
       setTimeout(() => {
         try {
@@ -11528,19 +11535,19 @@ const Audio_ = (() => {
           decay: 0.35,
           sustain: 0
         },
-        volume: -12
+        volume: -6
       }).connect(seBus);
-      s.triggerAttackRelease('E1', '8n', t);
+      s.triggerAttackRelease('E2', '8n', t);
       const n = new Tone.NoiseSynth({
         noise: {
-          type: 'brown'
+          type: 'pink'
         },
         envelope: {
           attack: 0.002,
           decay: 0.15,
           sustain: 0
         },
-        volume: -20
+        volume: -8
       }).connect(seBus);
       n.triggerAttackRelease('16n', t);
       setTimeout(() => {
@@ -11555,7 +11562,11 @@ const Audio_ = (() => {
       await ensure();
       if (!Tone) return;
       const t = Tone.now();
-      const f = new Tone.Filter(520, 'lowpass').connect(seBus);
+      const f = new Tone.Filter({
+        frequency: 700,
+        type: 'bandpass',
+        Q: 0.7
+      }).connect(seBus);
       const n = new Tone.NoiseSynth({
         noise: {
           type: 'pink'
@@ -11566,12 +11577,12 @@ const Audio_ = (() => {
           sustain: 0.6,
           release: 1.2
         },
-        volume: -24
+        volume: 0
       }).connect(f);
       n.triggerAttackRelease(1.2, t);
       try {
-        f.frequency.rampTo(900, 0.9, t);
-        f.frequency.rampTo(380, 1.4, t + 0.9);
+        f.frequency.rampTo(1500, 0.9, t);
+        f.frequency.rampTo(600, 1.4, t + 0.9);
       } catch (e) {}
       setTimeout(() => {
         try {
@@ -11595,7 +11606,7 @@ const Audio_ = (() => {
           decay: 0.025,
           sustain: 0
         },
-        volume: -24
+        volume: -8
       }).connect(f);
       [0, 0.21, 0.37, 0.8, 1.05, 1.5].forEach(d => n.triggerAttackRelease('64n', t + d));
       setTimeout(() => {
@@ -11620,7 +11631,7 @@ const Audio_ = (() => {
           decay: 0.12,
           sustain: 0
         },
-        volume: -28
+        volume: -14
       }).connect(f);
       n.triggerAttackRelease('16n', t);
       n.triggerAttackRelease('32n', t + 0.14);
@@ -11647,7 +11658,7 @@ const Audio_ = (() => {
         modulationIndex: 20,
         resonance: 3200,
         octaves: 1,
-        volume: -26
+        volume: -12
       }).connect(reverb);
       s.triggerAttackRelease('16n', t);
       setTimeout(() => {
@@ -11671,9 +11682,9 @@ const Audio_ = (() => {
           sustain: 0.4,
           release: 1.6
         },
-        volume: -20
+        volume: -10
       }).connect(reverb);
-      v.triggerAttackRelease(['C2', 'C#2', 'G2'], 1.1, t);
+      v.triggerAttackRelease(['C3', 'C#3', 'G3'], 1.1, t);
       setTimeout(() => {
         try {
           v.dispose();
@@ -11695,7 +11706,7 @@ const Audio_ = (() => {
           sustain: 0,
           release: 0.6
         },
-        volume: -24
+        volume: -14
       }).connect(reverb);
       [[0, 'E5'], [0.42, 'D5'], [0.84, 'C5'], [1.4, 'A4']].forEach(([d, n]) => s.triggerAttackRelease(n, '4n', t + d));
       setTimeout(() => {
@@ -11717,12 +11728,33 @@ const Audio_ = (() => {
           decay: 0.09,
           sustain: 0
         },
-        volume: -22
+        volume: -6
       }).connect(seBus);
-      [0, 0.55, 1.1].forEach((d, i) => s.triggerAttackRelease(i % 2 ? 'A1' : 'G1', '32n', t + d));
+      const sf = new Tone.Filter({
+        frequency: 1500,
+        type: 'bandpass',
+        Q: 1.2
+      }).connect(seBus);
+      const sc = new Tone.NoiseSynth({
+        noise: {
+          type: 'pink'
+        },
+        envelope: {
+          attack: 0.002,
+          decay: 0.05,
+          sustain: 0
+        },
+        volume: -4
+      }).connect(sf);
+      [0, 0.55, 1.1].forEach((d, i) => {
+        s.triggerAttackRelease(i % 2 ? 'A2' : 'G2', '32n', t + d);
+        sc.triggerAttackRelease('64n', t + d);
+      });
       setTimeout(() => {
         try {
           s.dispose();
+          sc.dispose();
+          sf.dispose();
         } catch (e) {}
       }, 1700);
     },
@@ -11739,12 +11771,33 @@ const Audio_ = (() => {
           decay: 0.07,
           sustain: 0
         },
-        volume: -20
+        volume: -6
       }).connect(seBus);
-      [0, 0.2, 0.4, 0.6, 0.8, 1.0].forEach((d, i) => s.triggerAttackRelease(i % 2 ? 'A1' : 'G1', '32n', t + d));
+      const sf = new Tone.Filter({
+        frequency: 1500,
+        type: 'bandpass',
+        Q: 1.2
+      }).connect(seBus);
+      const sc = new Tone.NoiseSynth({
+        noise: {
+          type: 'pink'
+        },
+        envelope: {
+          attack: 0.002,
+          decay: 0.05,
+          sustain: 0
+        },
+        volume: -4
+      }).connect(sf);
+      [0, 0.2, 0.4, 0.6, 0.8, 1.0].forEach((d, i) => {
+        s.triggerAttackRelease(i % 2 ? 'A2' : 'G2', '32n', t + d);
+        sc.triggerAttackRelease('64n', t + d);
+      });
       setTimeout(() => {
         try {
           s.dispose();
+          sc.dispose();
+          sf.dispose();
         } catch (e) {}
       }, 1500);
     },
@@ -11761,19 +11814,19 @@ const Audio_ = (() => {
           decay: 0.16,
           sustain: 0
         },
-        volume: -8
+        volume: -2
       }).connect(seBus);
-      s.triggerAttackRelease('C2', '16n', t);
+      s.triggerAttackRelease('C3', '16n', t);
       const n = new Tone.NoiseSynth({
         noise: {
           type: 'pink'
         },
         envelope: {
           attack: 0.001,
-          decay: 0.06,
+          decay: 0.08,
           sustain: 0
         },
-        volume: -16
+        volume: 2
       }).connect(seBus);
       n.triggerAttackRelease('64n', t);
       setTimeout(() => {
@@ -11796,20 +11849,20 @@ const Audio_ = (() => {
           decay: 0.5,
           sustain: 0
         },
-        volume: -11
+        volume: -4
       }).connect(seBus);
-      s.triggerAttackRelease('D1', '4n', t);
-      s.triggerAttackRelease('C1', '8n', t + 0.18);
+      s.triggerAttackRelease('D2', '4n', t);
+      s.triggerAttackRelease('C2', '8n', t + 0.18);
       const n = new Tone.NoiseSynth({
         noise: {
-          type: 'brown'
+          type: 'pink'
         },
         envelope: {
           attack: 0.01,
           decay: 0.4,
           sustain: 0
         },
-        volume: -22
+        volume: -2
       }).connect(seBus);
       n.triggerAttackRelease('8n', t + 0.05);
       setTimeout(() => {
@@ -11835,7 +11888,7 @@ const Audio_ = (() => {
           sustain: 0,
           release: 0.08
         },
-        volume: -22
+        volume: 4
       }).connect(f);
       n.triggerAttackRelease(0.16, t);
       try {
@@ -11862,12 +11915,12 @@ const Audio_ = (() => {
         },
         harmonicity: 3.1,
         modulationIndex: 8,
-        resonance: 1500,
+        resonance: 2500,
         octaves: 0.5,
-        volume: -28
+        volume: -14
       }).connect(seBus);
       m.triggerAttackRelease('64n', t);
-      const f = new Tone.Filter(600, 'lowpass').connect(seBus);
+      const f = new Tone.Filter(1800, 'lowpass').connect(seBus);
       const s = new Tone.Synth({
         oscillator: {
           type: 'sawtooth'
@@ -11878,11 +11931,11 @@ const Audio_ = (() => {
           sustain: 0,
           release: 0.15
         },
-        volume: -25
+        volume: -10
       }).connect(f);
-      s.triggerAttackRelease('A2', '8n', t + 0.08);
+      s.triggerAttackRelease('A3', '8n', t + 0.08);
       try {
-        s.frequency.rampTo('E2', 0.45, t + 0.08);
+        s.frequency.rampTo('E3', 0.45, t + 0.08);
       } catch (e) {}
       setTimeout(() => {
         try {
@@ -11897,7 +11950,11 @@ const Audio_ = (() => {
       await ensure();
       if (!Tone) return;
       const t = Tone.now();
-      const f = new Tone.Filter(600, 'lowpass').connect(seBus);
+      const f = new Tone.Filter({
+        frequency: 800,
+        type: 'bandpass',
+        Q: 0.7
+      }).connect(seBus);
       const n = new Tone.NoiseSynth({
         noise: {
           type: 'pink'
@@ -11908,12 +11965,12 @@ const Audio_ = (() => {
           sustain: 0.2,
           release: 0.6
         },
-        volume: -18
+        volume: 2
       }).connect(f);
       n.triggerAttackRelease(0.6, t);
       try {
-        f.frequency.rampTo(1500, 0.3, t);
-        f.frequency.rampTo(400, 0.9, t + 0.3);
+        f.frequency.rampTo(2000, 0.3, t);
+        f.frequency.rampTo(700, 0.9, t + 0.3);
       } catch (e) {}
       setTimeout(() => {
         try {
@@ -11927,8 +11984,10 @@ const Audio_ = (() => {
     kind: 'none',
     stop: null
   };
+  let nvAmbWant = 'none';
   const nvAmbient = async kindIn => {
     const kind = kindIn || 'none';
+    nvAmbWant = kind;
     if (kind === nvAmb.kind) return;
     const prev = nvAmb;
     const me = {
@@ -11941,9 +12000,23 @@ const Audio_ = (() => {
         prev.stop();
       } catch (e) {}
     }
-    if (kind === 'none' || !enabled) return;
+    if (kind === 'none') return;
+    if (!enabled) {
+      nvAmb = {
+        kind: 'none',
+        stop: null
+      };
+      return;
+    }
     await ensure();
-    if (!Tone || nvAmb !== me || !enabled) return;
+    if (nvAmb !== me) return;
+    if (!Tone || !enabled) {
+      nvAmb = {
+        kind: 'none',
+        stop: null
+      };
+      return;
+    }
     const nodes = [];
     const timers = [];
     try {
@@ -11951,9 +12024,13 @@ const Audio_ = (() => {
       nodes.push(g);
       if (kind === 'wind' || kind === 'blizzard' || kind === 'room') {
         const n = new Tone.Noise(kind === 'room' ? 'brown' : 'pink');
-        n.volume.value = kind === 'blizzard' ? -27 : kind === 'wind' ? -31 : -36;
-        const f = new Tone.Filter(kind === 'blizzard' ? 650 : kind === 'wind' ? 420 : 200, 'lowpass');
-        const lfo = new Tone.LFO(kind === 'blizzard' ? 0.21 : 0.09, kind === 'room' ? 120 : 260, kind === 'blizzard' ? 1250 : kind === 'wind' ? 780 : 320);
+        n.volume.value = kind === 'blizzard' ? 4 : kind === 'wind' ? 1 : 2;
+        const f = new Tone.Filter({
+          frequency: kind === 'blizzard' ? 900 : kind === 'wind' ? 650 : 450,
+          type: 'bandpass',
+          Q: 0.7
+        });
+        const lfo = new Tone.LFO(kind === 'blizzard' ? 0.21 : kind === 'wind' ? 0.09 : 0.05, kind === 'blizzard' ? 450 : kind === 'wind' ? 380 : 320, kind === 'blizzard' ? 2000 : kind === 'wind' ? 1300 : 650);
         n.connect(f);
         f.connect(g);
         lfo.connect(f.frequency);
@@ -11963,23 +12040,27 @@ const Audio_ = (() => {
       }
       if (kind === 'fire') {
         const n = new Tone.Noise('brown');
-        n.volume.value = -36;
-        const f = new Tone.Filter(170, 'lowpass');
+        n.volume.value = -2;
+        const f = new Tone.Filter({
+          frequency: 420,
+          type: 'bandpass',
+          Q: 0.8
+        });
         n.connect(f);
         f.connect(g);
         n.start();
         nodes.push(n, f);
-        const bp = new Tone.Filter(1700, 'bandpass').connect(g);
+        const bp = new Tone.Filter(2400, 'bandpass').connect(g);
         const c = new Tone.NoiseSynth({
           noise: {
             type: 'white'
           },
           envelope: {
             attack: 0.001,
-            decay: 0.02,
+            decay: 0.025,
             sustain: 0
           },
-          volume: -31
+          volume: -6
         }).connect(bp);
         nodes.push(bp, c);
         const pop = () => {
@@ -11995,36 +12076,36 @@ const Audio_ = (() => {
       }
       if (kind === 'clock') {
         const m = new Tone.MetalSynth({
-          frequency: 300,
+          frequency: 600,
           envelope: {
             attack: 0.001,
-            decay: 0.03,
-            release: 0.02
+            decay: 0.05,
+            release: 0.03
           },
           harmonicity: 3.1,
-          modulationIndex: 10,
-          resonance: 2200,
-          octaves: 0.6,
-          volume: -37
+          modulationIndex: 12,
+          resonance: 3600,
+          octaves: 0.8,
+          volume: -12
         }).connect(g);
         const k = new Tone.MembraneSynth({
-          pitchDecay: 0.01,
+          pitchDecay: 0.008,
           octaves: 2,
           envelope: {
             attack: 0.001,
-            decay: 0.04,
+            decay: 0.05,
             sustain: 0
           },
-          volume: -36
+          volume: -20
         }).connect(g);
         nodes.push(m, k);
         let high = true;
         const tick = () => {
           if (nvAmb !== me || !enabled) return;
           try {
-            m.frequency.value = high ? 330 : 230;
+            m.frequency.value = high ? 640 : 470;
             m.triggerAttackRelease('64n');
-            k.triggerAttackRelease(high ? 'G2' : 'D2', '64n');
+            k.triggerAttackRelease(high ? 'C4' : 'G3', '64n');
           } catch (e) {}
           high = !high;
         };
@@ -12062,7 +12143,14 @@ const Audio_ = (() => {
           x.dispose();
         } catch (e2) {}
       });
+      if (nvAmb === me) nvAmb = {
+        kind: 'none',
+        stop: null
+      };
     }
+  };
+  const nvAmbientResume = () => {
+    if (nvAmbWant !== 'none' && nvAmb.kind !== nvAmbWant) void nvAmbient(nvAmbWant);
   };
   const uiTap = async () => {
     if (!enabled) return;
@@ -23369,7 +23457,8 @@ const storyAssistantArtOf = (id, outfit) => {
   if (!who || !who.imageDir || !who.imagePrefix) return null;
   const dirs = typeof STORY_OUTFIT_DIRS !== 'undefined' && STORY_OUTFIT_DIRS || {};
   const dir = outfit ? dirs[outfit] : who.imageDir;
-  return dir ? `${dir}/${who.imagePrefix}_normal.PNG` : null;
+  const file = dir ? `${dir}/${who.imagePrefix}_normal.PNG` : null;
+  return file && typeof assistantArtFile === 'function' ? assistantArtFile(file) : file;
 };
 const STORY_MONSTER_ART = Object.freeze({
   Kyubi: typeof KYUBI_IMG !== 'undefined' ? KYUBI_IMG : null,
@@ -105927,7 +106016,7 @@ function ModeSelectAssistantPanel({
     }
   }) : RHYTHM_MODE_ASSISTANT_FRAMES[assistant.id] ? (() => {
     const fr = RHYTHM_MODE_ASSISTANT_FRAMES[assistant.id];
-    const ex = (/_([a-z]+)\.png$/i.exec(assistant.image || '') || [])[1];
+    const ex = (/_([a-z]+)\.(?:png|webp)$/i.exec(assistant.image || '') || [])[1];
     const cx = fr.cxBy && fr.cxBy[ex] || fr.cx;
     const masks = [Number.isFinite(fr.fadeBottom) ? `linear-gradient(to bottom, #000 ${fr.fadeBottom * 100}%, transparent 100%)` : null, Number.isFinite(fr.fadeSides) ? `linear-gradient(to right, transparent 0%, #000 ${fr.fadeSides * 100}%, #000 ${100 - fr.fadeSides * 100}%, transparent 100%)` : null].filter(Boolean);
     const mask = masks.length ? {
@@ -112113,8 +112202,8 @@ const rhythmAssistSessionTalk = ({
     const sp = mode === 'few' ? '' : special();
     if (sp) return sp;
     const sid = songId || roomSong();
-    const special = rhythmAssistSessionSongScene(assistantId, sid);
-    if (special && rand() < 0.5) return say(special);
+    const songScene = rhythmAssistSessionSongScene(assistantId, sid);
+    if (songScene && rand() < 0.5) return say(songScene);
     if (rhythmAssistSessionTaste(assistantId, sid) === 'dislike' && rand() < 0.5) return say('overcome');
     if (Number(fc) > 0) return say('fc');
     const ratio = rhythmAssistSessionRatio(score, diffId);
@@ -128361,6 +128450,21 @@ const XMAS_NOVEL_CSS = `
 /* 血を見せない影(白瀬など)は、真っ黒で見えなかった(社長「白瀬の死亡シーンって出てた？」)。冷たい光を当て、縁を白く光らせて形を見せる */
 .mh-nv-body.noblood .mh-nv-body-dim { background: radial-gradient(42% 30% at var(--fx, 50%) var(--fy, 74%), rgba(150,180,235,.30), rgba(150,180,235,0) 75%), radial-gradient(120% 90% at 50% 40%, rgba(6,10,34,.35), rgba(0,0,4,.88)) !important; }
 .mh-nv-body.noblood .mh-nv-body-lie img { filter: brightness(0) drop-shadow(0 0 1.5px rgba(225,235,255,.95)) drop-shadow(0 0 3px rgba(200,215,250,.6)) drop-shadow(0 0 20px rgba(140,170,230,.55)) !important; }
+/* 大事な選択の「選んだ状態」と決定の札(台帳 r1126-113)。光らせすぎず、真鍮の縁と赤い印で示す */
+.mh-nv-person[data-pick] { box-shadow: 0 0 0 2px #e8c46a, 0 0 16px rgba(232,196,106,.35); background: rgba(40,30,10,.8); }
+.mh-nv-person[data-pick]::after { content: '✓'; position: absolute; top: 2px; left: 4px; width: 18px; height: 18px; border-radius: 50%; background: #b0101a; color: #fff; font-size: 11px; line-height: 18px; text-align: center; }
+.mh-nv-clue[data-pick] { box-shadow: 0 0 0 2px #e8c46a, 0 0 16px rgba(232,196,106,.25); }
+.mh-nv-choice[data-pick] { box-shadow: 0 0 0 2px #e8c46a, 0 0 18px rgba(232,196,106,.3); background: linear-gradient(180deg, rgba(60,44,14,.95), rgba(24,18,8,.95)); }
+.mh-nv-decide { margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(232,196,106,.35); }
+.mh-nv-decide-what { margin-bottom: 6px; font-size: 13px; font-weight: 800; color: #f3e3b0; text-align: left; word-break: normal; overflow-wrap: anywhere; }
+/* 背の低い横では、窓の全体を1つに流し(人の並び・手がかりが0の高さにつぶれた)、決定の札は下に貼りつける */
+@media (orientation: landscape) and (max-height: 560px) {
+  .mh-nv-sheet .mh-nv-panel { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .mh-nv-sheet .mh-nv-panel > .mh-nv-scroll { flex: none; overflow: visible; }
+  .mh-nv-decide { position: sticky; bottom: calc(-1 * max(14px, env(safe-area-inset-bottom))); z-index: 2; margin-left: -14px; margin-right: -14px; padding: 8px 14px 10px; background: #0b1430; }
+  .mh-nv-decide .mh-nv-btn.wide { min-height: 42px; }
+}
+.mh-nv-decide .mh-nv-btn:not(:disabled) { background: #8f1d24; color: #fff3e0; box-shadow: 0 0 0 1px #e8c46a; }
 /* 人物の並びの置き場(登場人物の行・カーテンコール): 上の帯(ボタンと章の題)と文字の箱のあいだの、まん中(台帳 r1126-094 追記4。上に寄せた枠が章の題の帯にかぶっていた) */
 .mh-nv-panelwrap { position: absolute; left: 0; right: 0; top: calc(max(8px, env(safe-area-inset-top)) + 54px); bottom: 172px; z-index: 5; display: flex; align-items: center; justify-content: center; padding: 0 3vw; pointer-events: none; }
 .mh-nv-panelin { width: min(100%, 640px); max-height: 100%; }
@@ -128686,12 +128790,13 @@ const xmasNovelFigureSrc = (who, e) => {
     const dir = typeof STORY_OUTFIT_DIRS !== 'undefined' && STORY_OUTFIT_DIRS && STORY_OUTFIT_DIRS.santa ? STORY_OUTFIT_DIRS.santa : '';
     if (!dir) return null;
     if (who === 'dra') return {
-      src: `${dir}/dra_${face}.PNG`,
+      src: typeof assistantArtFile === 'function' ? assistantArtFile(`${dir}/dra_${face}.PNG`) : `${dir}/dra_${face}.PNG`,
       face: true
     };
+    const art = p => typeof assistantArtFile === 'function' ? assistantArtFile(p) : p;
     return {
-      src: `${dir.replace(/\/santa$/, '/stand-santa')}/${who}_${face}.png`,
-      fallback: `${dir}/${who}_${face}.PNG`
+      src: art(`${dir.replace(/\/santa$/, '/stand-santa')}/${who}_${face}.png`),
+      fallback: art(`${dir}/${who}_${face}.PNG`)
     };
   }
   if (c.kind === 'monster' || c.kind === 'guest') return {
@@ -129154,7 +129259,7 @@ const xmasNovelBodySrc = who => {
   if (!c) return '';
   if (c.kind === 'assistant') {
     const dir = typeof STORY_OUTFIT_DIRS !== 'undefined' && STORY_OUTFIT_DIRS && STORY_OUTFIT_DIRS.santa ? STORY_OUTFIT_DIRS.santa : '';
-    return dir ? `${dir}/${who}_normal.PNG` : '';
+    return dir ? typeof assistantArtFile === 'function' ? assistantArtFile(`${dir}/${who}_normal.PNG`) : `${dir}/${who}_normal.PNG` : '';
   }
   return c.art || '';
 };
@@ -129657,7 +129762,8 @@ const XmasNovelCast = ({
   states = {},
   changed = [],
   onPick = null,
-  big = false
+  big = false,
+  picked = ''
 }) => React.createElement("div", {
   className: `mh-nv-cast${big ? ' big' : ''}`
 }, XMAS_NOVEL_CAST.map((c, i) => {
@@ -129693,6 +129799,8 @@ const XmasNovelCast = ({
     key: c.id,
     "data-xmas-novel-person": c.id,
     "data-st": st || undefined,
+    "data-pick": picked === c.id ? '' : undefined,
+    "aria-pressed": picked === c.id,
     className: "mh-nv-person active:scale-95",
     onClick: () => onPick(c.id)
   }, inner) : React.createElement("div", {
@@ -130611,6 +130719,7 @@ const XmasNovelScreen = ({
   };
   const stageRef = useRef(null);
   const pendingQuakeRef = useRef(0);
+  const [pick, setPick] = useState(null);
   const [panelIntro, setPanelIntro] = useState(null);
   const [titleOk, setTitleOk] = useState(false);
   const fxFast = unread => !unread || !!(saveRef.current && saveRef.current.auto);
@@ -131092,6 +131201,7 @@ const XmasNovelScreen = ({
     arrive(xmasNovelStep(S, cur));
   };
   const answer = (q, pick) => {
+    setPick(null);
     const res = xmasNovelAnswer(S, st.cur, q, pick, saveRef.current && saveRef.current.endings || []);
     let s = saveRef.current;
     if (q.score) {
@@ -131397,6 +131507,26 @@ const XmasNovelScreen = ({
   const darkNow = fx && fx.kind === 'dark';
   const name = isLine ? xmasNovelNameOf(row) : '';
   const q = sheet && typeof sheet === 'object' ? sheet.q : null;
+  const picked = pick && q && pick.qid === q.id ? pick : null;
+  const choose = (key, label) => setPick({
+    qid: q.id,
+    key,
+    label
+  });
+  const decideBar = verb => React.createElement("div", {
+    className: "mh-nv-decide",
+    "data-xmas-novel-decide-bar": true
+  }, React.createElement("div", {
+    className: "mh-nv-decide-what mh-nv-serif"
+  }, picked ? `「${picked.label}」${verb}` : '選んでから、決定を押そう'), React.createElement("button", {
+    type: "button",
+    className: "mh-nv-btn wide mh-nv-serif",
+    "data-xmas-novel-decide": true,
+    disabled: !picked,
+    onClick: () => {
+      if (picked) answer(q, picked.key);
+    }
+  }, "決定"));
   const presentList = q && q.kind === 'present' ? xmasNovelPresentable(q, clues) : clues;
   return React.createElement("div", {
     className: "mh-nv",
@@ -131764,7 +131894,8 @@ const XmasNovelScreen = ({
   }, presentList.length ? presentList.map(c => React.createElement("div", {
     key: c.n,
     className: "mh-nv-clue",
-    "data-xmas-novel-clue": c.n
+    "data-xmas-novel-clue": c.n,
+    "data-pick": picked && picked.key === c.n ? '' : undefined
   }, React.createElement("div", {
     className: "flex items-center gap-2"
   }, React.createElement("div", {
@@ -131773,8 +131904,10 @@ const XmasNovelScreen = ({
     type: "button",
     className: "mh-nv-btn shrink-0",
     "data-xmas-novel-present": c.n,
-    onClick: () => answer(q, c.n)
-  }, "突きつける")), React.createElement("p", {
+    "data-on": picked && picked.key === c.n ? '' : undefined,
+    "aria-pressed": !!(picked && picked.key === c.n),
+    onClick: () => choose(c.n, c.n)
+  }, picked && picked.key === c.n ? '選んだ' : 'これを選ぶ')), React.createElement("p", {
     className: "mh-nv-plain mt-1 whitespace-pre-wrap text-[12px] leading-relaxed text-slate-200"
   }, xmasNovelWrap(c.d)))) : React.createElement("div", {
     className: "text-[12px] text-slate-400"
@@ -131782,10 +131915,13 @@ const XmasNovelScreen = ({
     type: "button",
     className: "mh-nv-btn wide mt-3",
     onClick: () => setSheet(null)
-  }, "閉じる"), q && React.createElement("button", {
+  }, "閉じる"), q && decideBar('を突きつける'), q && React.createElement("button", {
     type: "button",
-    className: "mh-nv-btn wide mt-3",
-    onClick: () => setSheet(null)
+    className: "mh-nv-btn wide mt-2",
+    onClick: () => {
+      setPick(null);
+      setSheet(null);
+    }
   }, "話をもう一度見る")), q && q.kind === 'person' && React.createElement(React.Fragment, null, React.createElement("div", {
     "data-xmas-novel-question": q.id,
     className: "mb-3 rounded-lg p-2 text-[13px] font-bold leading-relaxed",
@@ -131798,19 +131934,28 @@ const XmasNovelScreen = ({
   }, q.label), xmasNovelWrap(xmasNovelFill(q.x, playerName))), React.createElement("div", {
     className: "mh-nv-scroll"
   }, React.createElement(XmasNovelCast, {
-    onPick: id => answer(q, id)
+    picked: picked ? picked.key : '',
+    onPick: id => {
+      const c = xmasNovelCastOf(id);
+      choose(id, c ? c.name : id);
+    }
   })), (q.extra || []).map(x => React.createElement("button", {
     type: "button",
     key: x.key,
     className: "mh-nv-choice mh-nv-serif mt-2",
     "data-xmas-novel-extra": x.key,
-    onClick: () => answer(q, x.key)
+    "data-pick": picked && picked.key === x.key ? '' : undefined,
+    "aria-pressed": !!(picked && picked.key === x.key),
+    onClick: () => choose(x.key, String(x.x || '').replace(/[「」]/g, ''))
   }, xmasNovelWrap(x.x))), q.once && React.createElement("div", {
     className: "mh-nv-plain mt-2 text-[11px] font-bold text-rose-200"
-  }, "選んだら、やり直しはできません"), React.createElement("button", {
+  }, "決定したら、やり直しはできません"), decideBar(q.extra && q.extra.some(x => picked && picked.key === x.key) ? 'に決める' : 'を名指しする'), React.createElement("button", {
     type: "button",
-    className: "mh-nv-btn wide mt-3",
-    onClick: () => setSheet(null)
+    className: "mh-nv-btn wide mt-2",
+    onClick: () => {
+      setPick(null);
+      setSheet(null);
+    }
   }, "話をもう一度見る")), q && q.kind === 'action' && React.createElement(React.Fragment, null, React.createElement("div", {
     "data-xmas-novel-question": q.id,
     className: "mh-nv-plain mh-nv-serif mh-nv-gold mb-3 text-[17px] font-black"
@@ -131824,14 +131969,16 @@ const XmasNovelScreen = ({
       key: o.i,
       className: "mh-nv-choice mh-nv-serif",
       "data-xmas-novel-option": o.i,
-      onClick: () => answer(q, o.i)
+      "data-pick": picked && picked.key === o.i ? '' : undefined,
+      "aria-pressed": !!(picked && picked.key === o.i),
+      onClick: () => q.score || q.once ? choose(o.i, xmasNovelFill(o.x, playerName)) : answer(q, o.i)
     }, xmasNovelWrap(xmasNovelFill(o.x, playerName)), seenEnd && React.createElement("span", {
       "data-xmas-novel-seen-end": endAhead,
       className: "mh-nv-plain mt-1 block text-[11px] font-bold text-rose-200"
     }, "見たエンド: ", seenEnd.ending && seenEnd.ending.name ? `「${seenEnd.ending.name}」` : 'バッドエンド'));
   })), q.once && React.createElement("div", {
     className: "mh-nv-plain mt-2 text-[11px] font-bold text-rose-200"
-  }, "選んだら、やり直しはできません")), sheet === 'menu' && React.createElement(React.Fragment, null, React.createElement("div", {
+  }, "決定したら、やり直しはできません"), (q.score || q.once) && decideBar('に決める')), sheet === 'menu' && React.createElement(React.Fragment, null, React.createElement("div", {
     className: "mh-nv-serif mh-nv-gold mb-3 text-center text-[18px] font-black"
   }, "メニュー"), React.createElement("div", {
     className: "space-y-2"
@@ -142051,9 +142198,9 @@ function AssistantLifeRoomSheet({
 const ASSISTANT_LIFE_STAND_BOX = new Map();
 const assistantLifeStandFrameSrc = src => {
   const s = String(src || '');
-  const m = /\/assistant\/(stand-[a-z0-9-]+)\/([a-z]+)_([a-z]+)\.png/i.exec(s);
+  const m = /\/assistant\/(stand-[a-z0-9-]+)\/([a-z]+)_([a-z]+)\.(png|webp)/i.exec(s);
   if (!m || m[3] === 'normal') return src;
-  return s.replace(`/${m[1]}/${m[2]}_${m[3]}.png`, `/${m[1]}/${m[2]}_normal.png`);
+  return s.replace(`/${m[1]}/${m[2]}_${m[3]}.${m[4]}`, `/${m[1]}/${m[2]}_normal.${m[4]}`);
 };
 const assistantLifeStandBox = src => new Promise(res => {
   if (ASSISTANT_LIFE_STAND_BOX.has(src)) {
@@ -142343,11 +142490,11 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   },
   'stand-winter': {
     kyuko: {
-      top: 0.0146,
-      eye: 0.3312,
-      chin: 0.4299,
-      m: 0.734,
-      cx: 0.5313
+      top: 0.0134,
+      eye: 0.3307,
+      chin: 0.4296,
+      m: 0.736,
+      cx: 0.5293
     }
   },
   twintail: {
@@ -142423,64 +142570,64 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   'stand-santa': {
     mua: {
       top: 0.1614,
-      eye: 0.342,
-      chin: 0.4296,
-      m: 0.652,
-      cx: 0.4783,
+      eye: 0.3425,
+      chin: 0.4303,
+      m: 0.653,
+      cx: 0.4595,
       above: 0.95
     },
     kiki: {
-      top: 0.1746,
-      eye: 0.3328,
-      chin: 0.4303,
-      m: 0.725,
-      cx: 0.551,
+      top: 0.1741,
+      eye: 0.3324,
+      chin: 0.43,
+      m: 0.726,
+      cx: 0.5647,
       above: 0.95
     },
     momosuke: {
-      top: 0.1333,
-      eye: 0.338,
-      chin: 0.4302,
+      top: 0.1331,
+      eye: 0.3379,
+      chin: 0.43,
       m: 0.686,
-      cx: 0.4985,
+      cx: 0.4919,
       above: 0.95
     },
     sorashido: {
-      top: 0.0065,
+      top: 0.0066,
       eye: 0.2884,
-      chin: 0.4301,
-      m: 1.054,
-      cx: 0.577,
+      chin: 0.4299,
+      m: 1.053,
+      cx: 0.5794,
       above: 0.95
     },
     atsu: {
       top: 0.0562,
-      eye: 0.305,
-      chin: 0.4302,
-      m: 0.932,
-      cx: 0.4455,
+      eye: 0.3048,
+      chin: 0.4299,
+      m: 0.931,
+      cx: 0.4538,
       above: 0.95
     },
     erubin: {
-      top: 0.1725,
+      top: 0.1728,
       eye: 0.2944,
-      chin: 0.4303,
-      m: 1.011,
-      cx: 0.5528,
+      chin: 0.43,
+      m: 1.008,
+      cx: 0.5503,
       above: 0.95
     },
     kyuko: {
-      top: 0.143,
+      top: 0.1427,
       eye: 0.3059,
-      chin: 0.4298,
-      m: 0.922,
-      cx: 0.4314,
+      chin: 0.4299,
+      m: 0.923,
+      cx: 0.4351,
       above: 0.95
     }
   }
 });
 const assistantLifeStandOutfitOf = src => {
-  const m = /\/assistant\/([a-z0-9-]+)\/[a-z]+_[a-z]+\.png/i.exec(String(src || ''));
+  const m = /\/assistant\/([a-z0-9-]+)\/[a-z]+_[a-z]+\.(?:png|webp)/i.exec(String(src || ''));
   return m && m[1] !== 'face' && m[1] !== 'temp' ? m[1] : null;
 };
 const assistantLifeStandFace = (pid, src) => {
@@ -146481,7 +146628,7 @@ function AssistantLifeMapFig({
     ar: 0.6
   };
   const face0 = typeof assistantLifeStandFace === 'function' ? assistantLifeStandFace(who && who.id, src) : null;
-  const headKey = String(src || '').replace(/[?#].*$/, '').replace(/^.*assistant\//, '').replace(/\.png$/i, '').replace(/_(?!sleep$)[a-z]+$/i, '');
+  const headKey = String(src || '').replace(/[?#].*$/, '').replace(/^.*assistant\//, '').replace(/\.(?:png|webp)$/i, '').replace(/_(?!sleep$)[a-z]+$/i, '');
   const head = ASSISTANT_LIFE_MAP_HEAD[headKey] || null;
   const topChin = head ? {
     top: head[0],
@@ -148447,8 +148594,9 @@ function assistantLifeSleepArt(pid, src) {
   const who = typeof assistantById === 'function' ? assistantById(pid) : null;
   const s0 = String(src || '').replace(/[?#].*$/, ''),
     dir = who && who.imageDir ? `${who.imageDir}/` : null;
-  const rel = dir && s0.includes(dir) ? s0.slice(s0.indexOf(dir) + dir.length) : null;
-  return rel && ASSISTANT_LIFE_SLEEP_ART.has(rel) ? `${dir}${rel.replace(/_normal\.PNG$/, '_sleep.PNG')}` : null;
+  const rel = dir && s0.includes(dir) ? s0.slice(s0.indexOf(dir) + dir.length).replace(/\.webp$/, '.PNG') : null;
+  const out = rel && ASSISTANT_LIFE_SLEEP_ART.has(rel) ? `${dir}${rel.replace(/_normal\.PNG$/, '_sleep.PNG')}` : null;
+  return out && typeof assistantArtFile === 'function' ? assistantArtFile(out) : out;
 }
 const assistantLifeSleepSrc = (pid, src) => {
   const a = assistantLifeSleepArt(pid, src);
@@ -152434,7 +152582,7 @@ const ASSISTANT_LIFE_PROFILE_FULL_MAX_H = Object.freeze({
 });
 const ASSISTANT_LIFE_PROFILE_FULL_NH = new Map();
 const assistantLifeProfileFullMaxH = src => {
-  const m = /\/fullbody\/(.+?)__[a-z]+\.png/.exec(String(src || ''));
+  const m = /\/fullbody\/(.+?)__[a-z]+\.(?:png|webp)/.exec(String(src || ''));
   return m && ASSISTANT_LIFE_PROFILE_FULL_MAX_H[m[1]] || 0;
 };
 function AssistantLifeProfileStand({
