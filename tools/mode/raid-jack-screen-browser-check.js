@@ -192,8 +192,9 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     check('「わかった」で案内が閉じる', (await page.locator('[data-raid-jack-guide]').count()) === 0);
     check('デバッグの強制表示では「見た」を保存しない(本番の案内を消さない)', await page.evaluate(() => localStorage.getItem('mh_raid_jack_guide_seen_v1') === null));
     let t = await raidText();
-    check('A: 5段階が並ぶ', ['ジャック男爵', 'ジャック子爵', 'ジャック伯爵', 'ジャック公爵', 'ジャック大王'].every((n) => t.includes(n)));
-    check('A: 男爵は討伐済み・子爵は挑戦できる・伯爵以降は未解放', /1\. ジャック男爵\s*討伐済み/.test(t) && /2\. ジャック子爵\s*挑戦できる/.test(t) && /3\. ジャック伯爵\s*未解放/.test(t) && /5\. ジャック大王\s*未解放/.test(t), t.replace(/\s+/g, ' ').slice(0, 200));
+    // まだ開いていない段階の名前は「？？？」に伏せる(台帳 r1126-097 追記2)。番号は残る
+    check('A: 5段階が並ぶ(開いた段階は名前・未解放は？？？)', ['1. ジャック男爵', '2. ジャック子爵', '3. ？？？', '4. ？？？', '5. ？？？'].every((n) => t.includes(n)) && !['ジャック伯爵', 'ジャック公爵', 'ジャック大王'].some((n) => t.includes(n)));
+    check('A: 男爵は討伐済み・子爵は挑戦できる・伯爵以降は未解放', /1\. ジャック男爵\s*討伐済み/.test(t) && /2\. ジャック子爵\s*挑戦できる/.test(t) && /3\. ？？？\s*未解放/.test(t) && /5\. ？？？\s*未解放/.test(t), t.replace(/\s+/g, ' ').slice(0, 200));
     check('A: 共有HPと参加人数が出る(子爵 3,200,000 のうち 500,000 を削った)', /共有HP 2,700,000 \/ 3,200,000/.test(t) && /7人が参加/.test(t));
     const silhouettes = await page.locator('[data-raid-jack-tier] img').evaluateAll((els) => els.map((e) => e.style.filter));
     check('A: 未解放の段階はシルエット(黒塗り)で見せる', silhouettes.slice(2).every((f) => /brightness\(0\)/.test(f)) && !/brightness\(0\)/.test(silhouettes[1]), JSON.stringify(silhouettes));
@@ -385,7 +386,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.getByRole('tab', { name: 'グランドスラム' }).click();
     await page.waitForFunction(() => /初級ジャック/.test(document.querySelector('[data-raid-jack-screen]').innerText), null, { timeout: 30000 });
     t = await raidText();
-    check('B: 初級だけ挑戦でき、中級以降は未解放', /1\. 初級ジャック\s*挑戦できる/.test(t) && /2\. 中級ジャック\s*未解放/.test(t) && /5\. 極級ジャック\s*未解放/.test(t), t.replace(/\s+/g, ' ').slice(0, 180));
+    check('B: 初級だけ挑戦でき、中級以降は未解放', /1\. 初級ジャック\s*挑戦できる/.test(t) && /2\. ？？？\s*未解放/.test(t) && /5\. ？？？\s*未解放/.test(t), t.replace(/\s+/g, ' ').slice(0, 180));
     await page.waitForFunction(() => /累計ダメージランキング/.test(document.querySelector('[data-raid-jack-screen]').innerText) && /3,000,000/.test(document.querySelector('[data-raid-jack-screen]').innerText), null, { timeout: 30000 });
     check('B: 累計ダメージランキング(5段階の合計)に数字が出る', /累計ダメージランキング/.test(await raidText()) && /3,000,000/.test(await raidText()));
     check('B: 自分の累計(70,000)が出る', /あなた 70,000/.test(await page.locator('[data-raid-jack-mine]').innerText()));
