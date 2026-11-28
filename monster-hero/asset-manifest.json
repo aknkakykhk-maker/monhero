@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "08c6d240b6ec",
-  "packs": {"beat":{"bytes":331569515,"count":175},"battle":{"bytes":814725829,"count":1870},"card":{"bytes":38085297,"count":1046},"all":{"bytes":1184380641,"count":3091},"core":{"bytes":27259370,"count":25}},
+  "id": "0d97576e2bfa",
+  "packs": {"beat":{"bytes":340618557,"count":178},"battle":{"bytes":814725829,"count":1870},"card":{"bytes":38085297,"count":1046},"all":{"bytes":1193429683,"count":3094},"core":{"bytes":27362173,"count":25}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"b43d691d4773","size":2833344,"pack":"beat"},
@@ -53,6 +53,8 @@
     "audio/bgm-freedom-dive.mp3": {"v":"34616b2fccd3","size":1744848,"pack":"beat"},
     "audio/bgm-fusion.mp3": {"v":"6f0d4675789f","size":1461061,"pack":"battle"},
     "audio/bgm-game-over.mp3": {"v":"d9fb75a7c827","size":344043,"pack":"battle"},
+    "audio/bgm-glass-crown-short.mp3": {"v":"b413fcfdf853","size":3681600,"pack":"beat"},
+    "audio/bgm-glass-crown.mp3": {"v":"506aa4aa55d9","size":5117760,"pack":"beat"},
     "audio/bgm-gourmet-race-64.mp3": {"v":"8d110d3430e4","size":4591104,"pack":"beat"},
     "audio/bgm-gourmet-race-dx.mp3": {"v":"cb6d19e5ff52","size":3717888,"pack":"beat"},
     "audio/bgm-grievous-lady.mp3": {"v":"28bfeda8d534","size":2271190,"pack":"beat"},
@@ -2569,6 +2571,7 @@
     "images/song-art/erfolg.jpg": {"v":"fa9cc09ab064","size":602341,"pack":"beat"},
     "images/song-art/evans.jpg": {"v":"33c4ea278fce","size":36846,"pack":"beat"},
     "images/song-art/freedom-dive.jpg": {"v":"8541349e07f8","size":68100,"pack":"beat"},
+    "images/song-art/glass-crown.jpg": {"v":"39bd7424289e","size":249682,"pack":"beat"},
     "images/song-art/gourmet-race-64.jpg": {"v":"455fd3f450af","size":364544,"pack":"beat"},
     "images/song-art/gourmet-race-dx.jpg": {"v":"a1caf1af3975","size":304403,"pack":"beat"},
     "images/song-art/grievous-lady.jpg": {"v":"0933a2c340b4","size":74743,"pack":"beat"},
@@ -3096,7 +3099,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"658dad643950","size":322141,"pack":"core"},
+    "tailwind.css": {"v":"5cc2c7b6d2a4","size":322141,"pack":"core"},
     "data/images/images-ally.js": {"v":"7fcc9331d4b6","size":92225,"pack":"core"},
     "data/images/images-enemy.js": {"v":"fc6148828d29","size":4003,"pack":"core"},
     "data/ally-monsters.js": {"v":"6737b7dced48","size":60894,"pack":"core"},
@@ -3104,7 +3107,7 @@
     "data/breeder.js": {"v":"d88e8ee15b28","size":160948,"pack":"core"},
     "data/enemy-monsters.js": {"v":"6811f59c3732","size":7879,"pack":"core"},
     "data/skills.js": {"v":"06be9af9b367","size":4375,"pack":"core"},
-    "data/rhythm-mode.js": {"v":"71f623224a4e","size":7248055,"pack":"core"},
+    "data/rhythm-mode.js": {"v":"2e1af452cd8b","size":7349129,"pack":"core"},
     "data/rhythm-lane-svg.js": {"v":"2c49090a007d","size":13321,"pack":"core"},
     "data/rhythm-geometry-calibration.js": {"v":"02534cca12f6","size":15552,"pack":"core"},
     "data/rhythm-result-replay-remount.js": {"v":"381554180360","size":5743,"pack":"core"},
@@ -3118,6 +3121,6 @@
     "data/assistant-masmon-techs.js": {"v":"353cf73676a6","size":113841,"pack":"core"},
     "data/assistant-life-rel-talks.js": {"v":"cde51ded5428","size":225977,"pack":"core"},
     "data/success-sounds.js": {"v":"9692dd51493a","size":19367,"pack":"core"},
-    "game-system.compiled.js": {"v":"47de445d52cc","size":13241958,"pack":"core"}
+    "game-system.compiled.js": {"v":"04e686aa33cd","size":13243687,"pack":"core"}
   }
 }

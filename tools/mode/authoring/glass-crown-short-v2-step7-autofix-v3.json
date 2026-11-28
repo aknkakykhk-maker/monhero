@@ -1,0 +1,163 @@
+{
+ "schemaVersion": 1,
+ "analysisType": "rhythm-chart-v2-step7-autofix",
+ "trackId": "glass_crown_short",
+ "source": "v3",
+ "sourceLabel": "V3 生成",
+ "reviewRequired": true,
+ "runtimeConnected": false,
+ "handModel": {
+  "hands": 2,
+  "laneSpeedComfort": 10,
+  "laneSpeedLimit": 18,
+  "restrikeComfortMs": 150,
+  "restrikeLimitMs": 105,
+  "chordMinLaneGap": 1,
+  "releaseMarginMs": 30,
+  "endFlickReleaseMs": 80
+ },
+ "weights": {
+  "impossible": 10000,
+  "reach": 10000,
+  "strained": 100,
+  "hardJump": 120,
+  "laneSpread": 1,
+  "move": 3,
+  "maxPasses": 8
+ },
+ "difficulties": {
+  "EASY": {
+   "noteCount": 116,
+   "fixCount": 0,
+   "passes": 0,
+   "before": {
+    "impossible": 0,
+    "strained": 0,
+    "reach": 0,
+    "hardJumps": 0,
+    "overSteps": 0,
+    "spread": 27,
+    "cost": 27
+   },
+   "after": {
+    "impossible": 0,
+    "strained": 0,
+    "reach": 0,
+    "hardJumps": 0,
+    "overSteps": 0,
+    "spread": 27,
+    "cost": 27
+   },
+   "fixes": []
+  },
+  "NORMAL": {
+   "noteCount": 130,
+   "fixCount": 0,
+   "passes": 0,
+   "before": {
+    "impossible": 0,
+    "strained": 0,
+    "reach": 0,
+    "hardJumps": 0,
+    "overSteps": 0,
+    "spread": 25,
+    "cost": 25
+   },
+   "after": {
+    "impossible": 0,
+    "strained": 0,
+    "reach": 0,
+    "hardJumps": 0,
+    "overSteps": 0,
+    "spread": 25,
+    "cost": 25
+   },
+   "fixes": []
+  },
+  "HARD": {
+   "noteCount": 180,
+   "fixCount": 0,
+   "passes": 0,
+   "before": {
+    "impossible": 0,
+    "strained": 0,
+    "reach": 0,
+    "hardJumps": 1,
+    "overSteps": 0,
+    "spread": 52,
+    "cost": 172
+   },
+   "after": {
+    "impossible": 0,
+    "strained": 0,
+    "reach": 0,
+    "hardJumps": 1,
+    "overSteps": 0,
+    "spread": 52,
+    "cost": 172
+   },
+   "fixes": []
+  },
+  "EXPERT": {
+   "noteCount": 217,
+   "fixCount": 1,
+   "passes": 1,
+   "before": {
+    "impossible": 0,
+    "strained": 2,
+    "reach": 0,
+    "hardJumps": 4,
+    "overSteps": 0,
+    "spread": 49,
+    "cost": 729
+   },
+   "after": {
+    "impossible": 0,
+    "strained": 2,
+    "reach": 0,
+    "hardJumps": 3,
+    "overSteps": 0,
+    "spread": 49,
+    "cost": 609
+   },
+   "fixes": [
+    {
+     "grid": 376,
+     "bar": 23,
+     "timeMs": 41252,
+     "type": "TAP",
+     "move": "サブレーン0→3",
+     "pass": 1,
+     "costBefore": 729,
+     "costAfter": 609,
+     "impossibleAfter": 0,
+     "strainedAfter": 2
+    }
+   ]
+  },
+  "MASTER": {
+   "noteCount": 251,
+   "fixCount": 0,
+   "passes": 0,
+   "before": {
+    "impossible": 0,
+    "strained": 3,
+    "reach": 0,
+    "hardJumps": 7,
+    "overSteps": 0,
+    "spread": 49,
+    "cost": 1189
+   },
+   "after": {
+    "impossible": 0,
+    "strained": 3,
+    "reach": 0,
+    "hardJumps": 7,
+    "overSteps": 0,
+    "spread": 49,
+    "cost": 1189
+   },
+   "fixes": []
+  }
+ }
+}

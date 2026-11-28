@@ -2273,6 +2273,40 @@
         "source": "command"
       },
       "chartIntensity": "strong"
+    },
+    "glass_crown": {
+      "flowPlacement": true,
+      "audio": "monster-hero/audio/bgm-glass-crown.mp3",
+      "chartRevision": 42,
+      "audioSha256": "506aa4aa55d90f28f2f65ef5023db6b16322117573d710524eb7e8dbd400f071",
+      "durationMs": 213240,
+      "analyzedTiming": {
+        "bpm": 138,
+        "beatZeroMs": 382,
+        "beatsPerBar": 4,
+        "subdivisionsPerBeat": 4,
+        "source": "command"
+      }
+    },
+    "glass_crown_short": {
+      "flowPlacement": true,
+      "audio": "monster-hero/audio/bgm-glass-crown-short.mp3",
+      "splices": [
+        {
+          "atMs": 47300,
+          "shiftMs": -695.7
+        }
+      ],
+      "chartRevision": 42,
+      "audioSha256": "b413fcfdf8534bc98b7c2f2eb3a6c7ea3dfb1423dc682e43afb2b10737e859bd",
+      "durationMs": 92040,
+      "analyzedTiming": {
+        "bpm": 138,
+        "beatZeroMs": 382,
+        "beatsPerBar": 4,
+        "subdivisionsPerBeat": 4,
+        "source": "command"
+      }
     }
   }
 }
