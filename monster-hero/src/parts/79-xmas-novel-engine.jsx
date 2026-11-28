@@ -78,6 +78,8 @@ const xmasNovelValueOf = (k, ctx) => {
   if (/^end_[A-Z]+\d*$/.test(k)) return Array.isArray(ctx.endings) && ctx.endings.includes(`END-${k.slice(4)}`) ? 1 : 0;
   // bm_red … その特別なしおりを持っていれば 1(見たエンドから毎回数える。保存は増やさない・r1126-115)
   if (/^bm_[a-z]+$/.test(k)) return xmasNovelBookmarks(ctx.endings).includes(k.slice(3)) ? 1 : 0;
+  // rd_RW_5a … その場面(RW-5a)を一度でも読んでいれば 1(読んだ印 read「場面ID:行ID」から。別の編の途中まで読んだ、の条件・r1126-115)
+  if (/^rd_[A-Za-z0-9_]+$/.test(k)) { const sc = `${k.slice(3).replace(/_/g, '-')}:`; return Array.isArray(ctx.read) && ctx.read.some((m) => typeof m === 'string' && m.startsWith(sc)) ? 1 : 0; }
   const v = ctx.flags ? ctx.flags[k] : undefined;
   return Number.isFinite(v) ? v : 0;
 };
@@ -125,7 +127,7 @@ const xmasNovelScoreOf = (script, ans) => {
   const a = ans && typeof ans === 'object' ? ans : {};
   return xmasNovelScoreGroups(script).filter((g) => g.qs.every((q) => a[q] && a[q].f === true)).length;
 };
-const xmasNovelCtx = (script, cur, endings) => ({ flags: (cur && cur.flags) || {}, clues: (cur && cur.clues) || [], score: xmasNovelScoreOf(script, cur && cur.ans), endings: Array.isArray(endings) ? endings : [] });
+const xmasNovelCtx = (script, cur, endings, read) => ({ read: Array.isArray(read) ? read : [], flags: (cur && cur.flags) || {}, clues: (cur && cur.clues) || [], score: xmasNovelScoreOf(script, cur && cur.ans), endings: Array.isArray(endings) ? endings : [] });
 
 // 場面へ入る: id の場面の条件が合わなければ、同じ仲間(C3-1a→C3-1b)で条件の合う場面へ。どれも合わなければ null
 const xmasNovelResolveScene = (script, id, ctx) => {
@@ -267,7 +269,7 @@ const xmasNovelStep = (script, cur) => xmasNovelSettle(script, { ...cur, idx: (N
 //  返り値 { cur, ok, replies:[行], then:'retry'|'next'|{to} }。replies を読ませたあと then のとおりに進める
 const xmasNovelPickReplies = (q, key) => (q.replies && Array.isArray(q.replies[key]) ? q.replies[key] : []);
 // endings … 見たエンディングの一覧(おまけの選択肢など end_G の条件に使う)
-const xmasNovelAnswer = (script, cur, q, pick, endings) => {
+const xmasNovelAnswer = (script, cur, q, pick, endings, read) => {
   if (!q || q.t !== 'q') return { cur, ok: false, replies: [], then: 'next' };
   const was = (cur.ans && cur.ans[q.id]) || null;
   const tries = (was ? was.t : 0) + 1;
@@ -284,7 +286,7 @@ const xmasNovelAnswer = (script, cur, q, pick, endings) => {
     return { cur: next, ok, replies, then: rto ? { to: rto } : to ? { to } : 'next' };
   }
   if (q.kind === 'action') {
-    const ctx = xmasNovelCtx(script, cur, endings);
+    const ctx = xmasNovelCtx(script, cur, endings, read);
     const opts = xmasNovelOptionsOf(q, ctx);
     const opt = opts.find((o) => o.i === pick) || null;
     if (!opt) return { cur, ok: false, replies: [], then: 'retry' };

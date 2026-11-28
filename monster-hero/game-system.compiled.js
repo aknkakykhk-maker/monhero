@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d2090c8b04fd9bcf
+// source-sha256: e332a191c2ebf3ca
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -115742,6 +115742,10 @@ const xmasNovelValueOf = (k, ctx) => {
   if (k === 'clues') return Array.isArray(ctx.clues) ? ctx.clues.length : 0;
   if (/^end_[A-Z]+\d*$/.test(k)) return Array.isArray(ctx.endings) && ctx.endings.includes(`END-${k.slice(4)}`) ? 1 : 0;
   if (/^bm_[a-z]+$/.test(k)) return xmasNovelBookmarks(ctx.endings).includes(k.slice(3)) ? 1 : 0;
+  if (/^rd_[A-Za-z0-9_]+$/.test(k)) {
+    const sc = `${k.slice(3).replace(/_/g, '-')}:`;
+    return Array.isArray(ctx.read) && ctx.read.some(m => typeof m === 'string' && m.startsWith(sc)) ? 1 : 0;
+  }
   const v = ctx.flags ? ctx.flags[k] : undefined;
   return Number.isFinite(v) ? v : 0;
 };
@@ -115794,7 +115798,8 @@ const xmasNovelScoreOf = (script, ans) => {
   const a = ans && typeof ans === 'object' ? ans : {};
   return xmasNovelScoreGroups(script).filter(g => g.qs.every(q => a[q] && a[q].f === true)).length;
 };
-const xmasNovelCtx = (script, cur, endings) => ({
+const xmasNovelCtx = (script, cur, endings, read) => ({
+  read: Array.isArray(read) ? read : [],
   flags: cur && cur.flags || {},
   clues: cur && cur.clues || [],
   score: xmasNovelScoreOf(script, cur && cur.ans),
@@ -116023,7 +116028,7 @@ const xmasNovelStep = (script, cur) => xmasNovelSettle(script, {
   idx: (Number(cur.idx) || 0) + 1
 });
 const xmasNovelPickReplies = (q, key) => q.replies && Array.isArray(q.replies[key]) ? q.replies[key] : [];
-const xmasNovelAnswer = (script, cur, q, pick, endings) => {
+const xmasNovelAnswer = (script, cur, q, pick, endings, read) => {
   if (!q || q.t !== 'q') return {
     cur,
     ok: false,
@@ -116068,7 +116073,7 @@ const xmasNovelAnswer = (script, cur, q, pick, endings) => {
     };
   }
   if (q.kind === 'action') {
-    const ctx = xmasNovelCtx(script, cur, endings);
+    const ctx = xmasNovelCtx(script, cur, endings, read);
     const opts = xmasNovelOptionsOf(q, ctx);
     const opt = opts.find(o => o.i === pick) || null;
     if (!opt) return {
@@ -135587,7 +135592,7 @@ const XmasNovelScreen = ({
   };
   const answer = (q, pick) => {
     setPick(null);
-    const res = xmasNovelAnswer(S, st.cur, q, pick, saveRef.current && saveRef.current.endings || []);
+    const res = xmasNovelAnswer(S, st.cur, q, pick, saveRef.current && saveRef.current.endings || [], saveRef.current && saveRef.current.read || []);
     let s = saveRef.current;
     if (q.score) {
       if (!(s.first && s.first[q.id]) && typeof xmasNovelRankNote === 'function') xmasNovelRankNote({
@@ -136448,7 +136453,7 @@ const XmasNovelScreen = ({
     className: "mh-nv-plain mh-nv-serif mh-nv-gold mb-3 text-[17px] font-black"
   }, xmasNovelWrap(xmasNovelFill(q.x, playerName))), React.createElement("div", {
     className: "space-y-2.5"
-  }, xmasNovelOptionsOf(q, xmasNovelCtx(S, st.cur, save.endings)).map(o => {
+  }, xmasNovelOptionsOf(q, xmasNovelCtx(S, st.cur, save.endings, save.read)).map(o => {
     const endAhead = !q.once && o.to ? xmasNovelEndingAhead(S, o.to) : null;
     const seenEnd = endAhead && Array.isArray(save.endings) && save.endings.includes(endAhead) ? xmasNovelSceneById(S, endAhead) : null;
     return React.createElement("button", {
@@ -136459,7 +136464,14 @@ const XmasNovelScreen = ({
       "data-pick": picked && picked.key === o.i ? '' : undefined,
       "aria-pressed": !!(picked && picked.key === o.i),
       onClick: () => q.score || q.once ? choose(o.i, xmasNovelFill(o.x, playerName)) : answer(q, o.i)
-    }, xmasNovelWrap(xmasNovelFill(o.x, playerName)), seenEnd && React.createElement("span", {
+    }, o.mark ? React.createElement("span", {
+      "data-xmas-novel-option-mark": true,
+      className: "mr-1 text-[12px]",
+      style: {
+        color: '#e8c873'
+      },
+      "aria-label": "新しい選択肢"
+    }, "✦") : null, xmasNovelWrap(xmasNovelFill(o.x, playerName)), seenEnd && React.createElement("span", {
       "data-xmas-novel-seen-end": endAhead,
       className: "mh-nv-plain mt-1 block text-[11px] font-bold text-rose-200"
     }, "見たエンド: ", seenEnd.ending && seenEnd.ending.name ? `「${seenEnd.ending.name}」` : 'バッドエンド'));

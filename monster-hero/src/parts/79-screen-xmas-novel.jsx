@@ -1923,7 +1923,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
   // 答える
   const answer = (q, pick) => {
     setPick(null);
-    const res = xmasNovelAnswer(S, st.cur, q, pick, (saveRef.current && saveRef.current.endings) || []);
+    const res = xmasNovelAnswer(S, st.cur, q, pick, (saveRef.current && saveRef.current.endings) || [], (saveRef.current && saveRef.current.read) || []);
     let s = saveRef.current;
     if (q.score) {
       if (!(s.first && s.first[q.id]) && typeof xmasNovelRankNote === 'function') xmasNovelRankNote({ k: 'first', id: q.id, ok: !!res.ok }, { off: rankOff, script: S }); // 一番はじめの答えだけ(r1126-107)
@@ -2300,14 +2300,14 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
             {q && q.kind === 'action' && (<>
               <div data-xmas-novel-question={q.id} className="mh-nv-plain mh-nv-serif mh-nv-gold mb-3 text-[17px] font-black">{xmasNovelWrap(xmasNovelFill(q.x, playerName))}</div>
               <div className="space-y-2.5">
-                {xmasNovelOptionsOf(q, xmasNovelCtx(S, st.cur, save.endings)).map((o) => {
+                {xmasNovelOptionsOf(q, xmasNovelCtx(S, st.cur, save.endings, save.read)).map((o) => {
                   // 一度見た強制バッドの選択肢には「見たエンド」の印(r1126-099 追記1)
                   const endAhead = !q.once && o.to ? xmasNovelEndingAhead(S, o.to) : null;
                   const seenEnd = endAhead && Array.isArray(save.endings) && save.endings.includes(endAhead) ? xmasNovelSceneById(S, endAhead) : null;
                   return (
                     <button type="button" key={o.i} className="mh-nv-choice mh-nv-serif" data-xmas-novel-option={o.i} data-pick={picked && picked.key === o.i ? '' : undefined} aria-pressed={!!(picked && picked.key === o.i)}
                       onClick={() => (q.score || q.once ? choose(o.i, xmasNovelFill(o.x, playerName)) : answer(q, o.i))}>
-                      {xmasNovelWrap(xmasNovelFill(o.x, playerName))}
+                      {o.mark ? <span data-xmas-novel-option-mark className="mr-1 text-[12px]" style={{ color: '#e8c873' }} aria-label="新しい選択肢">✦</span> : null}{xmasNovelWrap(xmasNovelFill(o.x, playerName))}
                       {seenEnd && <span data-xmas-novel-seen-end={endAhead} className="mh-nv-plain mt-1 block text-[11px] font-bold text-rose-200">見たエンド: {seenEnd.ending && seenEnd.ending.name ? `「${seenEnd.ending.name}」` : 'バッドエンド'}</span>}
                     </button>
                   );

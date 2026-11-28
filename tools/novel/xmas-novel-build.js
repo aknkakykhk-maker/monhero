@@ -59,7 +59,7 @@ const parseCond = (src) => {
   const any = s.split(/\s*(?:または|\|\||\|| or )\s*/).map((part) => ({
     all: part.split(/\s*(?:かつ|&&|&|、|,| and )\s*/).map((a) => {
       // end_G … そのエンディングを見たことがある(エンドヒストリー)なら 1(r1126-062 おまけの選択肢)
-      const m = a.match(/^(f_\w+|score|clues|end_[A-Z]+\d*|bm_[a-z]+)\s*(>=|<=|!=|=|>|<)\s*(-?\d+)$/);
+      const m = a.match(/^(f_\w+|score|clues|end_[A-Z]+\d*|bm_[a-z]+|rd_[A-Za-z0-9_]+)\s*(>=|<=|!=|=|>|<)\s*(-?\d+)$/);
       if (!m) { if (a) note('条件', `読めない「${a}」(f_xxx=1 / score>=7 の形)`); return null; }
       return { k: m[1], op: m[2], v: Number(m[3]) };
     }).filter(Boolean),
@@ -243,6 +243,8 @@ const parseQuestion = (id, raw) => {
     q.options = rest.filter((o) => !/^正解の手がかり/.test(o)).map((o, i) => {
       let t = o; const opt = {};
       if (/【正解】/.test(t)) { (q.answer = q.answer || []).push(i); t = t.replace(/【正解】/g, ''); }
+      // 【二周目】… 解放された選択肢に印(✦)を付ける。付けなければ印なし(わざと気づかせない・r1126-115)
+      if (/【二周目】/.test(t)) { opt.mark = 1; t = t.replace(/【二周目】/g, ''); }
       t = t.replace(/\[([^\]]*)\]/g, (_, c) => { opt.c = parseCond(c); return ''; });
       t = t.replace(/\{([^}]*)\}/g, (_, c) => { opt.set = parseSets(c); return ''; });
       const tt = takeTo(t); if (tt.to) opt.to = tt.to;
@@ -571,6 +573,18 @@ const withArcs = (md) => {
   let arcs = readArcs();
   const adds = [];
   arcs = arcs.replace(/^選択肢を足す\s*[:：]\s*([A-Z]\d+[a-z]*)\s*\/\s*(.+)$/gm, (_, q, opt) => { adds.push([q, opt.trim()]); return ''; });
+  // 「選択を足す: C1-1 / | A1z[end_G=1] | 選択 | | … |」… 選択の無い場面の最後へ、新しい選択の行を1行足す(場面の途中には入れない・続きの場所はずれない)
+  const rows = [];
+  arcs = arcs.replace(/^選択を足す\s*[:：]\s*((?:C\d+|[A-Z]{2,}\d*)-[0-9A-Za-z]+)\s*\/\s*(\|.+\|)\s*$/gm, (_, sc, row) => { rows.push([sc, row.trim()]); return ''; });
+  rows.forEach(([sc, row]) => {
+    const lines = md.split('\n');
+    const h = lines.findIndex((l) => /^\|\s*\|\s*\*\*/.test(l) && l.includes(`**${sc} `));
+    if (h < 0) { note(sc, `選択を足す先の場面が無い(${row.slice(0, 20)}…)`); return; }
+    let end = h;
+    while (end + 1 < lines.length && /^\|/.test(lines[end + 1]) && !/^\|\s*\|\s*\*\*/.test(lines[end + 1])) end += 1;
+    lines.splice(end + 1, 0, row);
+    md = lines.join('\n');
+  });
   adds.forEach(([q, opt]) => {
     const re = new RegExp(`^(\\| ${q}(?:\\[[^\\]]*\\])? \\| 選択 \\|.*?)\\s*\\|\\s*$`, 'm');
     if (!re.test(md)) { note(q, `選択肢を足す先の選択の行が無い(${opt.slice(0, 20)}…)`); return; }

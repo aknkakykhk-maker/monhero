@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b3295c92eb76be67
+// generated-sha256: 5a5d7f298673415f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -68601,6 +68601,8 @@ const xmasNovelValueOf = (k, ctx) => {
   if (/^end_[A-Z]+\d*$/.test(k)) return Array.isArray(ctx.endings) && ctx.endings.includes(`END-${k.slice(4)}`) ? 1 : 0;
   // bm_red … その特別なしおりを持っていれば 1(見たエンドから毎回数える。保存は増やさない・r1126-115)
   if (/^bm_[a-z]+$/.test(k)) return xmasNovelBookmarks(ctx.endings).includes(k.slice(3)) ? 1 : 0;
+  // rd_RW_5a … その場面(RW-5a)を一度でも読んでいれば 1(読んだ印 read「場面ID:行ID」から。別の編の途中まで読んだ、の条件・r1126-115)
+  if (/^rd_[A-Za-z0-9_]+$/.test(k)) { const sc = `${k.slice(3).replace(/_/g, '-')}:`; return Array.isArray(ctx.read) && ctx.read.some((m) => typeof m === 'string' && m.startsWith(sc)) ? 1 : 0; }
   const v = ctx.flags ? ctx.flags[k] : undefined;
   return Number.isFinite(v) ? v : 0;
 };
@@ -68648,7 +68650,7 @@ const xmasNovelScoreOf = (script, ans) => {
   const a = ans && typeof ans === 'object' ? ans : {};
   return xmasNovelScoreGroups(script).filter((g) => g.qs.every((q) => a[q] && a[q].f === true)).length;
 };
-const xmasNovelCtx = (script, cur, endings) => ({ flags: (cur && cur.flags) || {}, clues: (cur && cur.clues) || [], score: xmasNovelScoreOf(script, cur && cur.ans), endings: Array.isArray(endings) ? endings : [] });
+const xmasNovelCtx = (script, cur, endings, read) => ({ read: Array.isArray(read) ? read : [], flags: (cur && cur.flags) || {}, clues: (cur && cur.clues) || [], score: xmasNovelScoreOf(script, cur && cur.ans), endings: Array.isArray(endings) ? endings : [] });
 
 // 場面へ入る: id の場面の条件が合わなければ、同じ仲間(C3-1a→C3-1b)で条件の合う場面へ。どれも合わなければ null
 const xmasNovelResolveScene = (script, id, ctx) => {
@@ -68790,7 +68792,7 @@ const xmasNovelStep = (script, cur) => xmasNovelSettle(script, { ...cur, idx: (N
 //  返り値 { cur, ok, replies:[行], then:'retry'|'next'|{to} }。replies を読ませたあと then のとおりに進める
 const xmasNovelPickReplies = (q, key) => (q.replies && Array.isArray(q.replies[key]) ? q.replies[key] : []);
 // endings … 見たエンディングの一覧(おまけの選択肢など end_G の条件に使う)
-const xmasNovelAnswer = (script, cur, q, pick, endings) => {
+const xmasNovelAnswer = (script, cur, q, pick, endings, read) => {
   if (!q || q.t !== 'q') return { cur, ok: false, replies: [], then: 'next' };
   const was = (cur.ans && cur.ans[q.id]) || null;
   const tries = (was ? was.t : 0) + 1;
@@ -68807,7 +68809,7 @@ const xmasNovelAnswer = (script, cur, q, pick, endings) => {
     return { cur: next, ok, replies, then: rto ? { to: rto } : to ? { to } : 'next' };
   }
   if (q.kind === 'action') {
-    const ctx = xmasNovelCtx(script, cur, endings);
+    const ctx = xmasNovelCtx(script, cur, endings, read);
     const opts = xmasNovelOptionsOf(q, ctx);
     const opt = opts.find((o) => o.i === pick) || null;
     if (!opt) return { cur, ok: false, replies: [], then: 'retry' };
@@ -72676,7 +72678,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
   // 答える
   const answer = (q, pick) => {
     setPick(null);
-    const res = xmasNovelAnswer(S, st.cur, q, pick, (saveRef.current && saveRef.current.endings) || []);
+    const res = xmasNovelAnswer(S, st.cur, q, pick, (saveRef.current && saveRef.current.endings) || [], (saveRef.current && saveRef.current.read) || []);
     let s = saveRef.current;
     if (q.score) {
       if (!(s.first && s.first[q.id]) && typeof xmasNovelRankNote === 'function') xmasNovelRankNote({ k: 'first', id: q.id, ok: !!res.ok }, { off: rankOff, script: S }); // 一番はじめの答えだけ(r1126-107)
@@ -73053,14 +73055,14 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
             {q && q.kind === 'action' && (<>
               <div data-xmas-novel-question={q.id} className="mh-nv-plain mh-nv-serif mh-nv-gold mb-3 text-[17px] font-black">{xmasNovelWrap(xmasNovelFill(q.x, playerName))}</div>
               <div className="space-y-2.5">
-                {xmasNovelOptionsOf(q, xmasNovelCtx(S, st.cur, save.endings)).map((o) => {
+                {xmasNovelOptionsOf(q, xmasNovelCtx(S, st.cur, save.endings, save.read)).map((o) => {
                   // 一度見た強制バッドの選択肢には「見たエンド」の印(r1126-099 追記1)
                   const endAhead = !q.once && o.to ? xmasNovelEndingAhead(S, o.to) : null;
                   const seenEnd = endAhead && Array.isArray(save.endings) && save.endings.includes(endAhead) ? xmasNovelSceneById(S, endAhead) : null;
                   return (
                     <button type="button" key={o.i} className="mh-nv-choice mh-nv-serif" data-xmas-novel-option={o.i} data-pick={picked && picked.key === o.i ? '' : undefined} aria-pressed={!!(picked && picked.key === o.i)}
                       onClick={() => (q.score || q.once ? choose(o.i, xmasNovelFill(o.x, playerName)) : answer(q, o.i))}>
-                      {xmasNovelWrap(xmasNovelFill(o.x, playerName))}
+                      {o.mark ? <span data-xmas-novel-option-mark className="mr-1 text-[12px]" style={{ color: '#e8c873' }} aria-label="新しい選択肢">✦</span> : null}{xmasNovelWrap(xmasNovelFill(o.x, playerName))}
                       {seenEnd && <span data-xmas-novel-seen-end={endAhead} className="mh-nv-plain mt-1 block text-[11px] font-bold text-rose-200">見たエンド: {seenEnd.ending && seenEnd.ending.name ? `「${seenEnd.ending.name}」` : 'バッドエンド'}</span>}
                     </button>
                   );
