@@ -1004,6 +1004,27 @@ const XMAS_NOVEL_SE_SEQ = Object.freeze({
   clap: { gap: 0, hold: 1200, play: ['nvRustle', ['nvRustle', undefined, 650]] },
   fire: { gap: 0, hold: 1500, play: ['nvFire'] },
   wind: { gap: 0, hold: 2500, play: ['nvWind'] },
+  //   r1126-093 追記3: 足音・駆ける・殴られる・倒れる・悲鳴の手前の息・扉・吹きこむ風
+  steps: { gap: 0, hold: 1500, play: ['nvStep'] },
+  run: { gap: 0, hold: 1300, play: ['nvRun'] },
+  hit: { gap: 0, hold: 500, play: ['nvHit'] },
+  hitFall: { gap: 0, hold: 1200, play: ['nvHit', ['nvFall', undefined, 420]] },
+  fall: { gap: 0, hold: 1000, play: ['nvFall'] },
+  scream: { gap: 0, hold: 1500, play: ['nvGasp', ['nvDread', undefined, 260]] },
+  door: { gap: 0, hold: 900, play: ['nvDoor'] },
+  doorGust: { gap: 0, hold: 1500, play: ['nvDoor', ['nvGust', undefined, 200]] },
+  gust: { gap: 0, hold: 1500, play: ['nvGust'] },
+  glassKnock: { gap: 380, hold: 300, play: ['nvGlass'] },
+  winding: { gap: 330, hold: 250, play: [['nvTick', true], ['nvTick', false, 120]] },
+});
+//  効果音の印の無い帯にも、文に合わせて1回鳴らす所(r1126-093 追記3)。行ID → [音, 回数]。a/s の2つある行は両方に書く
+const XMAS_NOVEL_SE_ROW = Object.freeze({
+  '2-L-12': ['knock', 2], '2-M-15': ['windGlass'], '2-5-2': ['doorGust'], '2-5-6b': ['gust'],
+  '4-4-1': ['winding', 3], '4-M-16': ['steps'], '5-4-1': ['knock', 2],
+  '5-X-4a': ['run'], '5-X-4s': ['run'], '6-X-6': ['run'], '2-Y-7': ['steps'], '2-Y-10': ['hitFall'], '2-Y-11': ['fall'],
+  '6-7-4': ['doorGust'], '7-P1-8': ['doorGust'], '9-1-2': ['winding', 2], '9-1-5': ['doorGust'], '6-X-1a': ['doorGust'], '6-X-1s': ['doorGust'],
+  '10-3-9': ['fall'], 'M5-2': ['steps'], 'B-13': ['fall'], 'G-3': ['winding', 3], 'N-3': ['winding', 2], '1-O-19': ['winding', 2],
+  '12-2-9': ['lock'], '12-3-6': ['knock', 3], '12-5-3': ['glassKnock', 3],
 });
 //  帯の効果音を、文に合わせて選び直す(台本データの印は 物音(tap)・衝撃(impact)・拍手・オルゴールの4つだけで、どれも同じ音だった・r1126-093 追記2)
 const xmasNovelSeKindOf = (kind, row) => {
@@ -1011,7 +1032,8 @@ const xmasNovelSeKindOf = (kind, row) => {
   if (kind === 'music') return 'musicbox';
   if (kind === 'clap') return 'clap';
   const x = String((row && row.x) || '');
-  if (/声|悲鳴|叫び|きゃ|うわ|っ！|ピー/.test(x)) return 'dread';
+  if (/声|悲鳴|叫び|きゃ|うわ|っ！/.test(x)) return 'scream';
+  if (/ピー/.test(x)) return 'dread';
   if (/ブツン|停電/.test(x)) return 'lightsOut';
   if (/(ギィ|ギシ)[\s\S]*(ガシャン|割れ)/.test(x)) return 'creakGlass';
   if (/吹雪[\s\S]*ガラス|ガラス[\s\S]*吹雪/.test(x)) return 'windGlass';
@@ -1021,6 +1043,9 @@ const xmasNovelSeKindOf = (kind, row) => {
   if (/カチリ|カチャリ|留め金|鍵の音/.test(x)) return 'lock';
   if (/封|カサ|プシュッ/.test(x)) return 'rustle';
   if (/叩く|打ちつける|ドン、ドン|コン、コン/.test(x)) return 'knock';
+  if (/ガタッ[\s\S]*ゴッ/.test(x)) return 'hitFall';
+  if (/ドサッ/.test(x)) return 'fall';
+  if (/^ゴッ|ゴッ[(（]|鈍い音/.test(x)) return 'hit';
   if (/ドサッ|ゴッ|ゴトン|ガタ|重い|ドン/.test(x)) return 'thud';
   return kind === 'impact' ? 'impact' : 'thud';
 };
@@ -1049,8 +1074,11 @@ const xmasNovelSeHit = (kind) => {
     });
   } catch (e) { /* 音が出せなくても読み進める */ }
 };
+//  既読飛ばしの間は、帯の1回の音を鳴らさない(つぎつぎ重なるため・r1126-093 追記3)。画面が skip に合わせて立てる
+let xmasNovelSeQuiet = false;
 const xmasNovelRowSe = (kindIn, times, row) => {
   xmasNovelSeStop();
+  if (xmasNovelSeQuiet) return;
   const kind = xmasNovelSeKindOf(kindIn, row);
   const seq = XMAS_NOVEL_SE_SEQ[kind];
   if (!seq) { xmasNovelSe(kind); return; }
@@ -1062,47 +1090,54 @@ const xmasNovelRowSe = (kindIn, times, row) => {
     else xmasNovelSeTimers.push(setTimeout(() => xmasNovelSeHit(kind), at));
   }
 };
-//  場面に入ったときの、その場所の音(1回だけ・小さく)。背景の名前で決める(r1126-093 追記2)
-const xmasNovelAmbientOf = (scene) => {
-  const bg = String((scene && scene.bg) || '');
-  if (/吹雪/.test(bg)) return 'wind';
+//  場所の環境音(ずっと小さく鳴る・r1126-093 追記3)。背景の名前で決め、場面・背景が替わったらつなぎ目なく替える(14-audio.jsx の nvAmbient)
+//    外側(助手たちの前)・エンドの札(背景なし)は鳴らさない。下の表は背景と話が合わない所だけ
+const XMAS_NOVEL_AMBIENT_SCENE = Object.freeze({ 'C2-M': 'wind', 'C12-2': 'wind', 'C2-L': 'clock', 'C1-6': 'clock' });
+const xmasNovelAmbientOf = (scene, bgName) => {
+  if (!scene || scene.outside) return 'none';
+  if (Object.prototype.hasOwnProperty.call(XMAS_NOVEL_AMBIENT_SCENE, scene.id)) return XMAS_NOVEL_AMBIENT_SCENE[scene.id];
+  const bg = String(bgName || scene.bg || '');
+  if (!bg || /助手たち|monhero_/.test(bg)) return 'none';
+  if (/吹雪/.test(bg)) return 'blizzard';
+  if (/雪原|雪の山道|崖/.test(bg)) return 'wind';
   if (/暖炉/.test(bg)) return 'fire';
-  if (/雪原|雪の山道/.test(bg)) return 'wind';
-  if (/柱時計/.test(bg)) return 'lock';
-  return '';
+  if (/柱時計|ホール/.test(bg)) return 'clock';
+  return 'room';
 };
-const xmasNovelAmbient = (scene) => { const k = xmasNovelAmbientOf(scene); if (k) xmasNovelSeHit(k); };
+const xmasNovelSetAmbient = (kind) => { try { if (typeof Audio_ !== 'undefined' && Audio_ && typeof Audio_.nvAmbient === 'function') void Audio_.nvAmbient(kind || 'none'); } catch (e) { /* 音が出せなくても読み進める */ } };
 //  事件簿の曲(2026-11-28 社長「音楽で声有りはやめて」「ちゃんとばめんにあったやつに」「音無しとかばめんによって」「全体的に暗く」・台帳 r1126-093)。
 //    歌(声)の入った曲は使わない。声の有無は声の分離器で測った(表と測り方: docs/progress/event-xmas-2026/NOVEL-BGM-R1126-093.md)。
+//    r1126-093 追記3(社長「BGM を明るいとこ以外は極力静かなやつか音無しにいれて SE で表現」): 明るい場面と静かな曲(ピアノ・プロフィール・ゲームオーバー)だけ残し、
+//    不穏・怖い・推理の曲は音無しにして、場所の環境音(xmasNovelAmbientOf)と帯の音で表す。
 //    'silence' は曲を止める(死の場面・張りつめた所・静かな独白)。台本データ(79-xmas-novel-script.jsx)の曲より、この表が勝つ
 const XMAS_NOVEL_BGM_SCENE = Object.freeze({
-  'OUT-0-1': 'original_profile', 'OUT-0-2': 'melo_dullahan_clockwork', 'C0-1': 'original_profile', 'C0-2': 'original_profile',
-  'OUT-1': 'melo_dullahan_clockwork', 'C1-1': 'original_profile', 'C1-2': 'original_profile', 'C1-3': 'melo_dullahan_clockwork',
-  'C1-4': 'melo_dullahan_clockwork', 'C1-5': 'close_to_your_heart_alt', 'C1-6': 'melo_dullahan_steel_ghost', 'C1-M': 'silence',
-  'C2-1': 'melo_dullahan_clockwork', 'C2-L': 'silence', 'C2-M': 'makutsu_no_senritsu', 'C2-2': 'original_profile',
-  'C2-3': 'melo_dullahan_steel_ghost', 'C2-4': 'melo_dullahan_steel_ghost_alt', 'C2-5': 'original_dullahan', 'C3-1': 'silence',
-  'C3-2': 'melo_dullahan_clockwork_alt', 'C3-3': 'melo_dullahan_clockwork', 'C3-4': 'melo_dullahan_clockwork_alt', 'C3-5': 'melo_erfolg_piano',
-  'C3-M': 'melo_erfolg_piano', 'C4-1': 'makutsu_no_senritsu', 'C4-2': 'silence', 'C4-3': 'melo_dullahan_clockwork_alt',
-  'C4-4': 'melo_dullahan_clockwork', 'C4-5': 'melo_dullahan_steel_ghost', 'C4-M': 'silence', 'C5-1': 'melo_erfolg_piano',
-  'C5-2': 'melo_dullahan_steel_ghost_alt', 'C5-3': 'melo_dullahan_steel_ghost', 'C5-4': 'melo_dullahan_steel_ghost', 'C5-5': 'makutsu_no_senritsu',
-  'C5-M': 'melo_dullahan_clockwork', 'C6-1': 'melo_dullahan_clockwork_alt', 'C6-2': 'melo_dullahan_steel_ghost',
-  'C6-3': 'melo_dullahan_clockwork_alt', 'C6-4': 'melo_dullahan_steel_ghost_alt', 'C6-5': 'melo_dullahan_steel_ghost',
-  'C6-6': 'melo_dullahan_clockwork_alt', 'C6-7': 'original_dullahan', 'C6-8': 'melo_erfolg_piano', 'C6-9': 'melo_dullahan_steel_ghost',
-  'C6-M': 'melo_erfolg_piano', 'C7-1': 'melo_dullahan_clockwork_alt', 'C7-2': 'melo_dullahan_steel_ghost_alt', 'C7-A': 'melo_erfolg_piano',
-  'C7-B': 'melo_dullahan_clockwork', 'C7-P1': 'original_dullahan', 'C7-P2': 'melo_erfolg_piano', 'C7-P3': 'melo_dullahan_clockwork',
-  'C7-4a': 'melo_erfolg_piano', 'C7-4b': 'melo_dullahan_steel_ghost', 'C7-5a': 'melo_erfolg_piano', 'C7-5b': 'melo_dullahan_steel_ghost',
-  'C7-W': 'melo_dullahan_clockwork_alt', 'C8-1': 'melo_dullahan_steel_ghost_alt', 'C8-2': 'makutsu_no_senritsu', 'C8-3': 'melo_erfolg_piano',
-  'C9-1': 'silence', 'C9-2': 'close_to_your_heart_alt', 'C10-1': 'melo_dullahan_steel_ghost', 'C10-2': 'makutsu_no_senritsu',
-  'C10-3': 'melo_dullahan_steel_ghost', 'C10-4': 'melo_dullahan_steel_ghost_alt', 'C11-1': 'melo_dullahan_steel_ghost_alt',
-  'C11-N': 'melo_erfolg_piano', 'C11-A': 'melo_erfolg_piano', 'C11-B': 'melo_dullahan_clockwork', 'C2-X': 'melo_dullahan_steel_ghost',
-  'END-X1': 'original_game_over', 'C5-X': 'melo_dullahan_steel_ghost', 'END-X2': 'original_game_over', 'C6-X': 'melo_dullahan_steel_ghost',
-  'END-X3': 'original_game_over', 'C2-Y': 'melo_dullahan_steel_ghost', 'END-X4': 'original_game_over', 'C10-X': 'melo_dullahan_steel_ghost',
-  'END-X5': 'original_game_over', 'END-M1': 'original_game_over', 'END-M2': 'melo_dullahan_steel_ghost', 'END-M3': 'melo_dullahan_steel_ghost',
-  'END-M4': 'original_game_over', 'END-M5': 'melo_dullahan_steel_ghost', 'END-G': 'melo_erfolg_piano', 'OUT-G': 'close_to_your_heart_alt',
-  'END-N': 'melo_erfolg_piano', 'OUT-N': 'melo_erfolg_piano', 'END-A': 'melo_dullahan_clockwork', 'OUT-A': 'melo_dullahan_clockwork',
-  'END-B': 'melo_dullahan_steel_ghost', 'OUT-B': 'melo_dullahan_steel_ghost', 'C1-O': 'original_profile', 'END-O': 'original_profile',
+  'OUT-0-1': 'original_profile', 'OUT-0-2': 'silence', 'C0-1': 'original_profile', 'C0-2': 'original_profile',
+  'OUT-1': 'silence', 'C1-1': 'original_profile', 'C1-2': 'original_profile', 'C1-3': 'silence',
+  'C1-4': 'silence', 'C1-5': 'close_to_your_heart_alt', 'C1-6': 'silence', 'C1-M': 'silence',
+  'C2-1': 'silence', 'C2-L': 'silence', 'C2-M': 'silence', 'C2-2': 'original_profile',
+  'C2-3': 'silence', 'C2-4': 'silence', 'C2-5': 'silence', 'C3-1': 'silence',
+  'C3-2': 'silence', 'C3-3': 'silence', 'C3-4': 'silence', 'C3-5': 'melo_erfolg_piano',
+  'C3-M': 'melo_erfolg_piano', 'C4-1': 'silence', 'C4-2': 'silence', 'C4-3': 'silence',
+  'C4-4': 'silence', 'C4-5': 'silence', 'C4-M': 'silence', 'C5-1': 'melo_erfolg_piano',
+  'C5-2': 'silence', 'C5-3': 'silence', 'C5-4': 'silence', 'C5-5': 'silence',
+  'C5-M': 'silence', 'C6-1': 'silence', 'C6-2': 'silence',
+  'C6-3': 'silence', 'C6-4': 'silence', 'C6-5': 'silence',
+  'C6-6': 'silence', 'C6-7': 'silence', 'C6-8': 'melo_erfolg_piano', 'C6-9': 'silence',
+  'C6-M': 'melo_erfolg_piano', 'C7-1': 'silence', 'C7-2': 'silence', 'C7-A': 'melo_erfolg_piano',
+  'C7-B': 'silence', 'C7-P1': 'silence', 'C7-P2': 'melo_erfolg_piano', 'C7-P3': 'silence',
+  'C7-4a': 'melo_erfolg_piano', 'C7-4b': 'silence', 'C7-5a': 'melo_erfolg_piano', 'C7-5b': 'silence',
+  'C7-W': 'silence', 'C8-1': 'silence', 'C8-2': 'silence', 'C8-3': 'melo_erfolg_piano',
+  'C9-1': 'silence', 'C9-2': 'close_to_your_heart_alt', 'C10-1': 'silence', 'C10-2': 'silence',
+  'C10-3': 'silence', 'C10-4': 'silence', 'C11-1': 'silence',
+  'C11-N': 'melo_erfolg_piano', 'C11-A': 'melo_erfolg_piano', 'C11-B': 'silence', 'C2-X': 'silence',
+  'END-X1': 'original_game_over', 'C5-X': 'silence', 'END-X2': 'original_game_over', 'C6-X': 'silence',
+  'END-X3': 'original_game_over', 'C2-Y': 'silence', 'END-X4': 'original_game_over', 'C10-X': 'silence',
+  'END-X5': 'original_game_over', 'END-M1': 'original_game_over', 'END-M2': 'silence', 'END-M3': 'silence',
+  'END-M4': 'original_game_over', 'END-M5': 'silence', 'END-G': 'melo_erfolg_piano', 'OUT-G': 'close_to_your_heart_alt',
+  'END-N': 'melo_erfolg_piano', 'OUT-N': 'melo_erfolg_piano', 'END-A': 'silence', 'OUT-A': 'silence',
+  'END-B': 'silence', 'OUT-B': 'silence', 'C1-O': 'original_profile', 'END-O': 'original_profile',
   'OUT-O': 'original_profile', 'END-O2': 'close_to_your_heart_alt', 'OUT-O2': 'close_to_your_heart_alt', 'C12-1': 'close_to_your_heart_alt',
-  'C12-2': 'melo_erfolg_piano', 'C12-3': 'original_dullahan', 'C12-4': 'melo_dullahan_clockwork', 'C12-5': 'melo_dullahan_steel_ghost',
+  'C12-2': 'melo_erfolg_piano', 'C12-3': 'silence', 'C12-4': 'silence', 'C12-5': 'silence',
   'C12-6': 'silence', 'C12-7': 'melo_erfolg_piano',
 });
 //  場面の途中で曲を変える・止める所。場面ID → [その行から先, 曲の鍵](a/s の2つある行は、前の方の行に付ける)
@@ -1110,8 +1145,8 @@ const XMAS_NOVEL_BGM_SHIFT = Object.freeze({
   'C2-3': [['2-3-7', 'silence']],
   'C5-4': [['5-4-5', 'silence']],
   'C6-5': [['6-5-3', 'silence']],
-  'C7-1': [['7-1-3a', 'melo_dullahan_steel_ghost_alt']],
-  'C7-W': [['7-W-14', 'melo_dullahan_steel_ghost_alt']],
+  'C7-1': [['7-1-3a', 'silence']],
+  'C7-W': [['7-W-14', 'silence']],
   'C10-1': [['10-1-5', 'silence']],
   'C10-2': [['10-2-7', 'silence']],
   'C10-3': [['10-3-7', 'silence']],
@@ -1504,7 +1539,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
         if (seeded !== r) void xmasNovelRouteStore(seeded, S);
       });
     });
-    xmasNovelBgm('melo_dullahan_clockwork'); // 開いた所(題の画面)。歌の入った Kiss からはじまるミステリーをやめ、柱時計の不穏な曲に(r1126-093)
+    xmasNovelBgm('silence'); // 開いた所(題の画面)は曲なしで、柱時計の環境音(r1126-093 追記3)。前: 呪われた騎士の時計仕掛け。歌の入った Kiss からはじまるミステリーをやめ、柱時計の不穏な曲に(r1126-093)
     return () => { alive = false; xmasNovelSeStop(); if (storeTimer.current) clearTimeout(storeTimer.current); };
   }, []);
   const putRoute = (next) => {
@@ -1528,6 +1563,20 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
     setSheet(null);
     start(b);
   };
+  // 既読飛ばしの間は帯の1回の音を止める(r1126-093 追記3)
+  useEffect(() => { xmasNovelSeQuiet = !!skip; if (skip) xmasNovelSeStop(); }, [skip]);
+  // 場所の環境音: 読んでいる場面の背景で決め、題の画面は柱時計。選択肢を待つ間のチクタクとかぶる柱時計は、その間だけ止める。
+  //   既読飛ばしで場面がつぎつぎ替わっても重ねないよう、0.35 秒落ち着いてから替える。閉じたら止める
+  const ambSceneId = st && st.scene ? st.scene.id : '';
+  const ambBg = st && st.scene ? xmasNovelSceneBgName(st.scene, st.cur ? st.cur.idx : 0) : '';
+  const ambWait = !!(sheet && typeof sheet === 'object' && sheet.q);
+  useEffect(() => {
+    let kind = mode === 'read' ? xmasNovelAmbientOf(st && st.scene, ambBg) : mode === 'title' ? 'clock' : 'none';
+    if (ambWait && kind === 'clock') kind = 'none';
+    const id = setTimeout(() => xmasNovelSetAmbient(kind), 350);
+    return () => clearTimeout(id);
+  }, [mode, ambSceneId, ambBg, ambWait]);
+  useEffect(() => () => { xmasNovelSeQuiet = false; xmasNovelSetAmbient('none'); }, []);
   const persist = (next, now = false) => {
     saveRef.current = next; setSave(next);
     if (replayRef.current) return; // 見返しは保存しない
@@ -1555,7 +1604,8 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
     unreadRef.current = !!(r.k && !s.read.includes(r.k));
     if (r.k && !s.read.includes(r.k)) s = { ...s, read: [...s.read, r.k] };
     if (r.t === 'band' && r.se) xmasNovelRowSe(r.se, r.seN, r); else xmasNovelSeStop();
-    if (!opts.quiet && r.t === 'band' && !r.se && Array.isArray(r.fx) && r.fx.includes('fallen')) xmasNovelSeHit('dread'); // 倒れた人が見つかった帯に、不穏な一音(r1126-093 追記2)
+    if (!opts.quiet && r.t === 'band' && !r.se && XMAS_NOVEL_SE_ROW[r.id]) xmasNovelRowSe(XMAS_NOVEL_SE_ROW[r.id][0], XMAS_NOVEL_SE_ROW[r.id][1], r); // 文に合わせた1回の音(r1126-093 追記3)
+    else if (!opts.quiet && !xmasNovelSeQuiet && r.t === 'band' && !r.se && Array.isArray(r.fx) && r.fx.includes('fallen')) xmasNovelSeHit('dread'); // 倒れた人が見つかった帯に、不穏な一音(r1126-093 追記2)
     // 章の札の下で着いた行は、札を閉じてから揺らす(札に隠れて見えなかった)
     pendingQuakeRef.current = 0;
     if (XMAS_NOVEL_SHAKE[r.id] && !skip) { if (opts.held) pendingQuakeRef.current = XMAS_NOVEL_SHAKE[r.id]; else xmasNovelQuake(stageRef.current, XMAS_NOVEL_SHAKE[r.id]); }
@@ -1618,7 +1668,6 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
     let chapterCard = false;
     // 外側(助手たち本人)⇔ゲームの中が切り替わったら、画面に吸い込まれる/画面から引く
     if (lastSceneRef.current !== (scene || null)) { lastBodyRef.current = ''; setTitleOk(xmasNovelSceneDone(scene, s.read)); }
-    if (scene && (!lastSceneRef.current || lastSceneRef.current.id !== scene.id)) xmasNovelAmbient(scene); // 場面に入ったときの場所の音(r1126-093 追記2)
     const transitNow = !!(scene && lastSceneRef.current && !!lastSceneRef.current.outside !== !!scene.outside);
     if (transitNow) { setTransit({ dir: scene.outside ? 'out' : 'in', n: Date.now() }); xmasNovelSe('tap'); }
     // カーテンコールの場面を出たら、下りていた幕を上げる
