@@ -242,7 +242,9 @@ revoke all on function public.xmas_novel_rank_submit(text, text, jsonb) from pub
 grant execute on function public.xmas_novel_rank_mine(text, text) to anon, authenticated, service_role;
 grant execute on function public.xmas_novel_rank_submit(text, text, jsonb) to anon, authenticated, service_role;
 
--- 弾を出したときに足す行の例(第2弾・r1126-108 の README の表)
--- insert into public.xmas_novel_end_ids (event_id, end_id, kind) values ('xmas_novel_2026', 'END-X6', 'forced') on conflict do nothing;
+-- 弾を出したときに足す行(r1126-108)。第2弾(4つ・合わせて27)
+insert into public.xmas_novel_end_ids (event_id, end_id, kind) values
+  ('xmas_novel_2026', 'END-X6', 'forced'), ('xmas_novel_2026', 'END-X7', 'forced'), ('xmas_novel_2026', 'END-X8', 'forced'), ('xmas_novel_2026', 'END-A2', 'another')
+on conflict (event_id, end_id) do nothing;
 -- ずるの疑いのある人を隠す(消さない)
 -- update public.xmas_novel_players set hidden = true where event_id = 'xmas_novel_2026' and user_name = '…';

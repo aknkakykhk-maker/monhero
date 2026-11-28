@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>事件簿 ホラー案</title>
+<!-- 事件簿のホラー案(台帳 r1126-112 追記2・社長「もっとホラーな感じを全体的に」)。#8064 の調書の案を作り直した。
+     闇の濃淡・にじむ赤・ちらつき・傷んだ紙・ゆっくり寄る黒いサンタの影。字の大きさ・押せる大きさは今と同じ。光らせて明るくはしない。
+     元の説明: 事件簿(モンヒロ事件簿)の見た目の改善案(台帳 r1126-112)。iPhone 縦 390×844 の見本6枚。
+     方向: 「古い捜査記録(調書)」。墨の黒・暗い紙・乾いた赤の判・くすんだ真鍮。他作品の見た目は写さない。絵はゲームの物だけ -->
+<style>
+:root {
+  --ink: #06070a; --paper: #14120e; --paper2: #1c1914; --bone: #e8e0cc; --bone2: #b9b09a; --dim: #7d7666;
+  --red: #8f1d24; --red2: #c0343c; --brass: #b8955a; --brass2: #8a6d3e;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #2a2a2e; font-family: 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif; color: var(--bone); padding: 24px; }
+.serif { font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', serif; }
+.boards { display: flex; flex-wrap: wrap; gap: 28px; }
+.label { font-size: 13px; color: #ddd; margin-bottom: 8px; font-weight: 700; }
+.ab { position: relative; width: 390px; height: 844px; overflow: hidden; background: var(--ink); border-radius: 4px; }
+.grain::before { content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 1; opacity: .16;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>"); }
+.vig::after { content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 2; background: radial-gradient(120% 85% at 50% 40%, transparent 45%, rgba(0,0,0,.82) 100%); }
+.bg { position: absolute; inset: 0; background-size: cover; background-position: center; filter: saturate(.55) brightness(.62) contrast(1.05); }
+.z { position: relative; z-index: 3; }
+/* 上の帯: ボタンを1本の細い棒にまとめ、章は左の細い札に */
+.bar { position: absolute; z-index: 5; top: 12px; left: 12px; right: 12px; display: flex; align-items: center; gap: 8px; }
+.chap { min-width: 0; white-space: nowrap; overflow: hidden; display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--bone2); letter-spacing: .12em; }
+.chap b { flex: none; font-weight: 800; color: var(--bone); padding: 2px 7px; border: 1px solid rgba(184,149,90,.6); letter-spacing: .2em; }
+.pill { margin-left: auto; display: flex; background: rgba(6,7,10,.72); border: 1px solid rgba(184,149,90,.45); border-radius: 999px; overflow: hidden; }
+.pill { flex: none; } .pill span { width: 36px; height: 34px; display: grid; place-items: center; font-size: 10px; color: var(--bone2); border-left: 1px solid rgba(184,149,90,.18); }
+.pill span:first-child { border-left: 0; }
+.pill svg { width: 16px; height: 16px; stroke: var(--bone2); fill: none; stroke-width: 1.6; }
+/* 文字の窓: 紙の黒に真鍮の髪の毛の線。名前は左の赤い刻みつきの札 */
+.box { position: absolute; z-index: 5; left: 10px; right: 10px; bottom: 14px; min-height: 140px; padding: 26px 18px 16px;
+  background: linear-gradient(180deg, rgba(20,18,14,.93), rgba(8,8,10,.96)); border-top: 1px solid rgba(184,149,90,.7);
+  box-shadow: 0 -1px 0 rgba(0,0,0,.6), 0 18px 40px rgba(0,0,0,.7); }
+.box::before { content: ''; position: absolute; left: 0; right: 0; top: 4px; height: 1px; background: rgba(184,149,90,.25); }
+.nm { position: absolute; top: -14px; left: 14px; padding: 4px 14px 4px 16px; background: var(--paper2); color: var(--bone); font-size: 14px; font-weight: 800; letter-spacing: .14em;
+  border: 1px solid rgba(184,149,90,.6); }
+.nm::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--red); }
+.txt { font-size: 17px; line-height: 1.85; font-weight: 600; color: var(--bone); }
+.caret { display: inline-block; width: 8px; height: 8px; background: var(--red2); margin-left: 4px; vertical-align: 2px; }
+.place { position: absolute; z-index: 5; left: 14px; top: 58px; font-size: 13px; letter-spacing: .2em; color: var(--bone2); padding-left: 10px; border-left: 2px solid var(--red); }
+/* 起動画面 */
+.cover { position: absolute; inset: 0; background: radial-gradient(90% 60% at 50% 30%, #1d1a14, #08080a 70%); }
+.tab { position: absolute; top: 70px; left: 32px; padding: 5px 14px; font-size: 11px; letter-spacing: .3em; color: var(--bone2); background: var(--paper2); border: 1px solid rgba(184,149,90,.45); border-bottom: 0; }
+.folder { position: absolute; top: 98px; left: 22px; right: 22px; height: 330px; background: linear-gradient(180deg, #1f1b15, #141210); border: 1px solid rgba(184,149,90,.4);
+  box-shadow: 0 30px 60px rgba(0,0,0,.6), inset 0 0 60px rgba(0,0,0,.5); padding: 40px 26px 0; }
+.series { white-space: nowrap; font-size: 34px; font-weight: 900; letter-spacing: .06em; color: var(--bone); line-height: 1.15; }
+.sub { margin-top: 10px; font-size: 14px; letter-spacing: .3em; color: var(--bone2); }
+.rule { height: 1px; background: linear-gradient(90deg, var(--brass), transparent); margin: 18px 0; }
+.case { font-size: 26px; font-weight: 900; letter-spacing: .14em; color: var(--bone); }
+.seal { position: absolute; right: 22px; bottom: 26px; width: 84px; height: 84px; border: 3px solid var(--red2); color: var(--red2); border-radius: 50%; display: grid; place-items: center;
+  font-size: 18px; font-weight: 900; letter-spacing: .1em; transform: rotate(-12deg); opacity: .85; box-shadow: inset 0 0 0 4px rgba(192,52,60,.25); }
+.idx { position: absolute; left: 22px; right: 22px; top: 462px; }
+.row { display: flex; align-items: baseline; gap: 12px; padding: 15px 6px; border-bottom: 1px solid rgba(184,149,90,.22); font-size: 16px; font-weight: 800; color: var(--bone); }
+.row .no { width: 20px; color: var(--brass); font-size: 13px; }
+.row .lead { flex: 1; border-bottom: 1px dotted rgba(185,176,154,.35); transform: translateY(-5px); }
+.row .cnt { font-size: 12px; color: var(--bone2); }
+.row.off { color: var(--dim); }
+.foot { position: absolute; left: 0; right: 0; bottom: 36px; text-align: center; font-size: 11px; color: var(--dim); letter-spacing: .12em; }
+/* 選択肢 */
+.dim { position: absolute; inset: 0; z-index: 4; background: rgba(3,3,5,.72); }
+.ask { position: absolute; z-index: 6; left: 14px; right: 14px; bottom: 26px; }
+.qtag { display: inline-block; font-size: 11px; letter-spacing: .35em; padding: 3px 10px; color: var(--bone); background: var(--red); }
+.q { margin: 10px 0 14px; font-size: 18px; font-weight: 800; line-height: 1.6; color: var(--bone); }
+.opt { display: flex; gap: 12px; align-items: flex-start; margin-top: 10px; padding: 14px 14px 14px 12px; background: linear-gradient(180deg, #1d1a14, #121110); border: 1px solid rgba(184,149,90,.38); border-left: 3px solid var(--red); }
+.opt .n { flex: none; width: 26px; height: 26px; border: 1px solid var(--brass); color: var(--brass); display: grid; place-items: center; font-size: 13px; font-weight: 800; }
+.opt .t { font-size: 15px; font-weight: 700; line-height: 1.6; }
+.opt.on { border-color: var(--brass); box-shadow: 0 0 0 1px var(--brass), 0 0 22px rgba(184,149,90,.18); }
+/* 人物紹介 */
+.files { position: absolute; z-index: 5; left: 14px; right: 14px; top: 104px; }
+.fh { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
+.fh .t { font-size: 18px; font-weight: 900; letter-spacing: .45em; }
+.fh .c { font-size: 11px; color: var(--bone2); letter-spacing: .2em; }
+.grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; }
+.card { position: relative; background: var(--paper2); border: 1px solid rgba(184,149,90,.3); padding: 5px 5px 6px; }
+.card .ph { aspect-ratio: 1; background: #0c0c0e; overflow: hidden; filter: grayscale(.25) contrast(1.05); }
+.card .ph img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+.card .na { margin-top: 4px; font-size: 11px; font-weight: 800; text-align: center; letter-spacing: .06em; }
+.card .clip { position: absolute; top: -4px; right: 8px; width: 10px; height: 18px; border: 2px solid #8b8577; border-radius: 6px; border-bottom: 0; }
+.card.wait { opacity: .35; } .card.wait .ph { filter: brightness(0); }
+.card.lit { border-color: var(--brass); box-shadow: 0 0 16px rgba(184,149,90,.22); }
+/* 章の札 */
+.divider { position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column; justify-content: center; padding: 0 34px; background: radial-gradient(100% 70% at 50% 45%, rgba(22,19,14,.94), rgba(3,3,5,.99)); }
+.ghost { position: absolute; right: 6px; top: 150px; font-size: 150px; letter-spacing: -.05em; font-weight: 900; color: rgba(143,29,36,.10); writing-mode: vertical-rl; }
+.cl { font-size: 14px; letter-spacing: .6em; color: var(--bone2); }
+.ct { margin-top: 18px; font-size: 38px; font-weight: 900; line-height: 1.3; color: var(--bone); }
+.thread { margin-top: 22px; height: 2px; width: 72%; background: linear-gradient(90deg, var(--red), rgba(143,29,36,0)); }
+.cn { margin-top: 14px; font-size: 11px; letter-spacing: .3em; color: var(--dim); }
+.tap { position: absolute; bottom: 60px; left: 34px; font-size: 11px; letter-spacing: .3em; color: var(--dim); }
+/* エンド */
+.endp { position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column; justify-content: center; padding: 0 30px; background: radial-gradient(100% 70% at 50% 40%, rgba(40,8,10,.92), rgba(3,2,3,.99)); }
+.stamp { align-self: flex-start; padding: 6px 16px; border: 3px solid var(--red2); color: var(--red2); font-size: 22px; font-weight: 900; letter-spacing: .3em; transform: rotate(-6deg); opacity: .9; }
+.kind { margin-top: 26px; font-size: 12px; letter-spacing: .4em; color: var(--bone2); }
+.ename { margin-top: 10px; font-size: 30px; font-weight: 900; line-height: 1.35; color: var(--bone); }
+.meta { margin-top: 18px; font-size: 12px; color: var(--bone2); line-height: 1.9; border-top: 1px solid rgba(184,149,90,.3); padding-top: 12px; }
+.btns { margin-top: 26px; display: grid; gap: 10px; }
+.btn { padding: 14px; text-align: left; font-size: 15px; font-weight: 800; color: var(--bone); background: linear-gradient(180deg, #1d1a14, #121110); border: 1px solid rgba(184,149,90,.38); border-left: 3px solid var(--brass); }
+
+/* ===== ホラー寄りの上書き(追記2) ===== */
+:root { --ink: #030304; --paper: #100d0b; --paper2: #17120f; --bone: #e2d9c4; --bone2: #a59c87; --dim: #6b6456; --red: #6d0b12; --red2: #a3161f; --brass: #8f7448; }
+.grain::before { opacity: .26; animation: hr-grain .45s steps(3) infinite; }
+@keyframes hr-grain { 33% { transform: translate(-2%, 1%); } 66% { transform: translate(1%, -2%); } }
+.vig::after { background: radial-gradient(110% 80% at 50% 42%, transparent 30%, rgba(0,0,0,.92) 100%),
+  radial-gradient(40% 25% at 0% 0%, rgba(110,8,14,.35), transparent 70%), radial-gradient(45% 30% at 100% 100%, rgba(110,8,14,.30), transparent 70%); }
+/* 闇の濃淡: 上から下へ、闇がゆっくり息をするように濃くなる */
+.ab::before { content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none; background: linear-gradient(180deg, rgba(0,0,0,.55), transparent 30%, transparent 60%, rgba(0,0,0,.7)); animation: hr-breathe 7s ease-in-out infinite; }
+@keyframes hr-breathe { 50% { opacity: .65; } }
+.bg { filter: saturate(.3) brightness(.42) contrast(1.15) sepia(.25); }
+/* 傷んだ紙: 端を不ぞろいに欠き、しみを置く */
+.stain { background-image: radial-gradient(18% 12% at 22% 30%, rgba(70,20,12,.45), transparent 70%), radial-gradient(10% 7% at 80% 64%, rgba(60,16,10,.5), transparent 70%), radial-gradient(28% 16% at 60% 90%, rgba(20,10,6,.6), transparent 70%); }
+.torn { clip-path: polygon(0 3%, 6% 0, 14% 2%, 23% 0, 31% 1.5%, 44% 0, 52% 2%, 63% .5%, 74% 2.5%, 86% 0, 94% 1.5%, 100% 0, 100% 97%, 93% 100%, 81% 98%, 70% 100%, 57% 98.5%, 45% 100%, 33% 98%, 20% 100%, 9% 98.5%, 0 100%); }
+/* にじむ赤 */
+.bleed { color: var(--bone); text-shadow: 0 0 1px rgba(163,22,31,.9), 0 2px 6px rgba(109,11,18,.85), 1px 0 0 rgba(109,11,18,.6); }
+.drip { position: absolute; width: 3px; background: linear-gradient(180deg, var(--red), #3a0508); border-radius: 0 0 3px 3px; transform-origin: top; animation: hr-drip 5s ease-in infinite; }
+@keyframes hr-drip { 0%, 30% { transform: scaleY(.2); } 100% { transform: scaleY(1); } }
+/* ちらつき(切れかけの灯り) */
+.flick { animation: hr-flick 5s steps(1) infinite; }
+@keyframes hr-flick { 0%, 88%, 92%, 100% { opacity: 1; } 89% { opacity: .35; } 90% { opacity: .9; } 91% { opacity: .2; } }
+/* ゆっくり寄る黒いサンタの影(目だけ暗い赤) */
+.stalker { position: absolute; z-index: 2; pointer-events: none; opacity: .7; filter: brightness(0) drop-shadow(0 0 2px rgba(130,12,20,.75)) drop-shadow(0 0 18px rgba(90,6,12,.5)); animation: hr-creep 14s ease-in-out infinite alternate; }
+.stalker-eyes { position: absolute; z-index: 2; width: 7px; height: 4px; border-radius: 50%; background: #7a0d14; box-shadow: 0 0 6px 2px rgba(122,13,20,.55); animation: hr-creep 14s ease-in-out infinite alternate, hr-blink 6s steps(1) infinite; }
+@keyframes hr-creep { from { transform: translateX(-10px) scale(.97); } to { transform: translateX(6px) scale(1.03); } }
+@keyframes hr-blink { 0%, 93%, 100% { opacity: 1; } 94%, 96% { opacity: 0; } }
+/* ひっかき傷 */
+.scratch { position: absolute; z-index: 3; pointer-events: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(226,217,196,.25), transparent); transform: rotate(-8deg); }
+/* 上書き: 部品 */
+.box { background: linear-gradient(180deg, rgba(14,10,9,.95), rgba(4,3,3,.97)); border-top: 1px solid rgba(109,11,18,.9); }
+.box::before { background: rgba(109,11,18,.35); }
+.nm { background: #120d0b; border-color: rgba(109,11,18,.9); }
+.nm::before { background: var(--red2); }
+.caret { background: var(--red2); animation: hr-flick 2.2s steps(1) infinite; }
+.place { border-left-color: var(--red2); color: var(--bone2); }
+.chap b { border-color: rgba(109,11,18,.9); }
+.pill { border-color: rgba(109,11,18,.6); background: rgba(3,3,4,.8); }
+.folder { background: linear-gradient(180deg, #1a1410, #0e0b09); border-color: rgba(109,11,18,.55); }
+.tab { border-color: rgba(109,11,18,.55); }
+.seal { border-color: var(--red); color: var(--red2); filter: blur(.3px); box-shadow: inset 0 0 0 4px rgba(109,11,18,.25), 0 0 0 2px rgba(109,11,18,.12); }
+.row { border-bottom-color: rgba(109,11,18,.35); }
+.row .no { color: var(--red2); }
+.opt { background: linear-gradient(180deg, #17110e, #0b0807); border-color: rgba(109,11,18,.45); border-left-color: var(--red2); }
+.opt .n { border-color: var(--red2); color: var(--red2); }
+.opt.on { border-color: var(--red2); box-shadow: 0 0 0 1px var(--red2), inset 0 0 24px rgba(109,11,18,.35); }
+.qtag { background: var(--red); }
+.card { background: #120e0c; border-color: rgba(109,11,18,.4); }
+.card .ph { filter: grayscale(.55) contrast(1.1) brightness(.85) sepia(.2); }
+.card .clip { border-color: #5d554a; }
+.card.lit { border-color: var(--red2); box-shadow: inset 0 0 14px rgba(109,11,18,.5); }
+.divider { background: radial-gradient(90% 60% at 50% 45%, rgba(24,10,10,.95), rgba(2,1,1,.995)); }
+.ghost { color: rgba(109,11,18,.16); filter: blur(1px); }
+.thread { background: linear-gradient(90deg, var(--red2), rgba(109,11,18,0)); }
+.endp { background: radial-gradient(90% 60% at 50% 40%, rgba(34,4,6,.95), rgba(2,1,1,.995)); }
+.stamp { border-color: var(--red); color: var(--red2); filter: blur(.4px); }
+.btn { background: linear-gradient(180deg, #17110e, #0b0807); border-color: rgba(109,11,18,.45); border-left-color: var(--red2); }
+</style>
+</head>
+<body>
+<div class="boards">
+
+  <!-- 1 起動画面 -->
+  <div><div class="label">1 起動画面: 傷んだ事件ファイルと、後ろに寄る影</div>
+  <div class="ab grain vig" data-board="title">
+    <div class="cover"></div>
+    <img class="stalker" src="../../../../monster-hero/images/enemies/santa-black.png" style="left:150px;top:300px;width:300px"><span class="stalker-eyes" style="left:262px;top:398px"></span><span class="stalker-eyes" style="left:286px;top:398px"></span>
+    <div class="tab z serif">事件記録　No.13</div>
+    <div class="folder z torn stain">
+      <div class="series serif bleed flick">モンヒロ事件簿</div>
+      <div class="sub serif">呪いのセーブデータ</div>
+      <div class="rule"></div>
+      <div class="case serif">十三番目の鐘</div>
+      <div class="seal serif">記録</div>
+      <span class="drip" style="left:70px;top:330px;height:46px"></span><span class="drip" style="left:212px;top:330px;height:28px;animation-delay:1.6s"></span>
+    </div>
+    <div class="idx z serif">
+      <div class="row"><span class="no">1</span>つづきから<span class="lead"></span></div>
+      <div class="row"><span class="no">2</span>はじめから<span class="lead"></span></div>
+      <div class="row off"><span class="no">3</span>章から<span class="lead"></span><span class="cnt">まだ無い</span></div>
+      <div class="row"><span class="no">4</span>エンドヒストリー<span class="lead"></span><span class="cnt">0 / 16</span></div>
+    </div>
+    <div class="scratch" style="left:30px;right:60px;top:600px"></div><div class="scratch" style="left:120px;right:20px;top:640px;transform:rotate(5deg)"></div>
+    <div class="foot z">推理の問い　1発で当てた数　0 / 7</div>
+  </div></div>
+
+  <!-- 2 文字の窓 -->
+  <div><div class="label">2 文字の窓: 欠けた紙・名札から垂れる赤</div>
+  <div class="ab grain vig" data-board="text">
+    <div class="bg" style="background-image:url(../../../../monster-hero/images/story-bg/xmas_hall_day.jpg)"></div>
+    <div class="bar"><div class="chap serif"><b>第一章</b>ペンション・シュプール</div>
+      <div class="pill"><span><svg viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5z"/><path d="M9 11h6M9 15h6"/></svg></span><span><svg viewBox="0 0 24 24"><path d="M5 7h14M5 12h14M5 17h9"/></svg></span><span>オート</span><span><svg viewBox="0 0 24 24"><path d="M5 6l7 6-7 6zM12 6l7 6-7 6z"/></svg></span><span><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></span></div></div>
+    <div class="place serif">ペンションのホール</div>
+    <img src="../../../../monster-hero/images/assistant/santa/dra_normal.webp" style="position:absolute;z-index:3;left:50%;transform:translateX(-50%);bottom:190px;width:300px;filter:drop-shadow(0 8px 20px rgba(0,0,0,.7)) saturate(.9)">
+    <img class="stalker" src="../../../../monster-hero/images/enemies/santa-black.png" style="left:250px;top:250px;width:190px;opacity:.35"><div class="box stain"><div class="nm serif">ドラ<span class="drip" style="left:6px;top:100%;height:18px"></span></div>
+      <div class="txt">「ごはんの係！ もちまる、おで、おまえとは仲良くなれそうだ」<span class="caret"></span></div></div>
+  </div></div>
+
+  <!-- 3 選択肢 -->
+  <div><div class="label">3 選択肢: 闇の向こうの目</div>
+  <div class="ab grain vig" data-board="choice">
+    <div class="bg" style="background-image:url(../../../../monster-hero/images/story-bg/xmas_hall_night.jpg)"></div>
+    <div class="dim"></div>
+    <img class="stalker" src="../../../../monster-hero/images/enemies/santa-black.png" style="left:40px;top:120px;width:320px;opacity:.4"><span class="stalker-eyes" style="left:176px;top:250px"></span><span class="stalker-eyes" style="left:202px;top:250px"></span>
+    <div class="bar"><div class="chap serif"><b>第二章</b></div></div>
+    <div class="ask">
+      <span class="qtag serif">推理</span>
+      <div class="q serif bleed">どこを先に調べる？</div>
+      <div class="opt torn"><span class="n serif">1</span><span class="t">裏口の外の足あと</span></div>
+      <div class="opt on torn"><span class="n serif">2</span><span class="t">2階の廊下の、冷たい空気</span></div>
+      <div class="opt torn"><span class="n serif">3</span><span class="t">手がかり帳を見返す</span></div>
+    </div>
+  </div></div>
+
+  <!-- 4 人物紹介 -->
+  <div><div class="label">4 人物紹介: 色あせた写真</div>
+  <div class="ab grain vig" data-board="cast">
+    <div class="bg" style="background-image:url(../../../../monster-hero/images/story-bg/xmas_hall_night.jpg)"></div>
+    <div class="dim" style="background:rgba(3,3,5,.6)"></div>
+    <div class="bar"><div class="chap serif"><b>第一章</b>ペンション・シュプール</div></div>
+    <div class="files">
+      <div class="fh serif"><span class="t bleed">登場人物</span><span class="c">12人</span></div>
+      <div class="rule" style="margin:0 0 14px"></div>
+      <div class="grid serif">
+        <div class="card"><span class="clip"></span><div class="ph"><img src="../../../../monster-hero/images/assistant/santa/face/atsu_normal.PNG"></div><div class="na">あつ</div></div>
+        <div class="card"><span class="clip"></span><div class="ph"><img src="../../../../monster-hero/images/assistant/santa/face/myua_normal.PNG"></div><div class="na">みゅあ</div></div>
+        <div class="card"><span class="clip"></span><div class="ph"><img src="../../../../monster-hero/images/assistant/santa/face/sorashido_normal.PNG"></div><div class="na">ソラシド</div></div>
+        <div class="card"><span class="clip"></span><div class="ph"><img src="../../../../monster-hero/images/assistant/santa/face/kiki_normal.PNG"></div><div class="na">きき</div></div>
+        <div class="card"><span class="clip"></span><div class="ph"><img src="../../../../monster-hero/images/assistant/santa/face/momosuke_normal.PNG"></div><div class="na">ももすけ</div></div>
+        <div class="card"><span class="clip"></span><div class="ph"><img src="../../../../monster-hero/images/assistant/santa/face/dra_normal.PNG"></div><div class="na">ドラ</div></div>
+        <div class="card"><span class="clip"></span><div class="ph"><img src="../../../../monster-hero/images/assistant/santa/face/kyuko_normal.PNG"></div><div class="na">きゅうこ</div></div>
+        <div class="card"><span class="clip"></span><div class="ph"><img src="../../../../monster-hero/images/assistant/santa/face/erubin_normal.PNG"></div><div class="na">えるびん</div></div>
+        <div class="card lit"><span class="clip"></span><div class="ph"><img src="../../../../monster-hero/images/monster-icons/face/snegurochka.png"></div><div class="na">イチーカ</div></div>
+        <div class="card wait"><div class="ph"><img src="../../../../monster-hero/images/monster-icons/face/mocchi.png"></div><div class="na">もちまる</div></div>
+        <div class="card wait"><div class="ph"><img src="../../../../monster-hero/images/story-guests/kuroba_face.png"></div><div class="na">黒羽</div></div>
+        <div class="card wait"><div class="ph"><img src="../../../../monster-hero/images/story-guests/shirase_face.png"></div><div class="na">白瀬</div></div>
+      </div>
+    </div>
+    <div class="box" style="min-height:120px"><div class="txt">ペンションに集まった人たち。</div></div>
+  </div></div>
+
+  <!-- 5 章の札 -->
+  <div><div class="label">5 章の札: ちらつく題と、脇の影</div>
+  <div class="ab grain vig" data-board="chapter">
+    <div class="divider stain"><div class="ghost serif">第一章</div><img class="stalker" src="../../../../monster-hero/images/enemies/santa-black.png" style="right:-80px;bottom:80px;width:260px;opacity:.45">
+      <div class="cl serif">第一章</div>
+      <div class="ct serif bleed flick">ペンション・<br>シュプール</div>
+      <div class="thread"></div>
+      <div class="cn serif">記録　12月24日　夜</div>
+      <div class="tap">タップで進む</div>
+    </div>
+  </div></div>
+
+  <!-- 6 エンドの画面 -->
+  <div><div class="label">6 エンドの画面: 上から垂れる赤</div>
+  <div class="ab grain vig" data-board="ending">
+    <div class="endp stain"><span class="drip" style="left:40px;top:0;height:120px"></span><span class="drip" style="left:120px;top:0;height:70px;animation-delay:.8s"></span><span class="drip" style="left:300px;top:0;height:160px;animation-delay:2s"></span><span class="drip" style="left:350px;top:0;height:60px;animation-delay:1.2s"></span>
+      <div class="stamp serif">記録終了</div>
+      <div class="kind serif">バッド　エンド</div>
+      <div class="ename serif bleed">「（エンドの名前）」</div>
+      <div class="meta">エンドヒストリーに記録しました<br>推理の問い　1発で当てた数　0 / 7</div>
+      <div class="btns serif"><div class="btn">選択の直前からやり直す</div><div class="btn">タイトルへ</div></div>
+    </div>
+  </div></div>
+
+</div>
+</body>
+</html>
