@@ -66,6 +66,15 @@ const ROUTES = [
   { name: '視点の編 ドラ、名前を呼ぶ(もしも)', want: 'END-PD2', from: 'APD1', picks: { A2: 'go:PD-1', APD1: 'go:PD-Y' }, seen: ['END-G'], short: true },
   { name: '真グッドの前は A2 にドラの編は出ない', want: 'END-X1', from: 'A2', picks: { A2: 'danger' }, noOpt: { A2: 'PD-1' }, short: true },
   { name: 'しおりが無いと A1b に③は出ない', want: 'END-X6', from: 'A1b', picks: { A1b: 'danger' }, seen: ['END-G'], noOpt: { A1b: 'RW-1' }, short: true },
+  // r1126-115 もしもの話 ② 十三番目の客: 灰のしおり(真グッド+強制バッド X1〜X8 を全部)を持っている人だけ、A4 に③が出る
+  { name: 'もしも 十三番目の客、朝まで数え続ける', want: 'END-H1', from: 'A4', picks: { A4: 'go:HJ-1', AH1: 'opt:0' }, seen: ['END-G', 'END-X1', 'END-X2', 'END-X3', 'END-X4', 'END-X5', 'END-X6', 'END-X7', 'END-X8'] },
+  { name: 'もしも 十三番目の客、13行目を読む', want: 'END-H2', from: 'AH1', picks: { A4: 'go:HJ-1', AH1: 'opt:1' }, seen: ['END-G', 'END-X1', 'END-X2', 'END-X3', 'END-X4', 'END-X5', 'END-X6', 'END-X7', 'END-X8'], short: true },
+  { name: 'もしも 十三番目の客、宿帳を閉じる', want: 'END-H3', from: 'AH1', picks: { A4: 'go:HJ-1', AH1: 'opt:2' }, seen: ['END-G', 'END-X1', 'END-X2', 'END-X3', 'END-X4', 'END-X5', 'END-X6', 'END-X7', 'END-X8'], short: true },
+  { name: '灰のしおりが無いと A4 に③は出ない', want: 'END-X7', from: 'A4', picks: { A4: 'danger' }, seen: ['END-G'], noOpt: { A4: 'HJ-1' }, short: true },
+  // r1126-115 もしもの話 ③ 壁の中の宝の地図: 緑のしおり(おまけのエンドを全部)を持っている人だけ、第6章 A6y に③が出る
+  { name: 'もしも 宝の地図、オルゴールを最後まで聞く', want: 'END-T1', from: 'A6y', picks: { A6y: 'go:TK-1', AT1: 'opt:0', AT2: 'opt:0' }, seen: ['END-G', 'END-O', 'END-O2', 'END-O3', 'END-O4'] },
+  { name: 'もしも 宝の地図、くすぐってから台所へ', want: 'END-T2', from: 'AT1', picks: { A6y: 'go:TK-1', AT1: 'opt:1', AT2: 'opt:1' }, seen: ['END-G', 'END-O', 'END-O2', 'END-O3', 'END-O4'], short: true },
+  { name: '緑のしおりが無いと A6y に③は出ない', want: 'END-G', from: 'A6y', picks: { A6y: 'opt:0', Q7a: 'kyuko' }, seen: ['END-G'], noOpt: { A6y: 'TK-1' }, short: true },
   { name: '寄り道の2つめ(イチーカ・こっそり・ドラの声)を通って真グッドへ', want: 'END-G', from: 'A4y', picks: { A4y: 'opt:1', A6y: 'opt:1', A8y: 'go:C8-Z', Q7a: 'kyuko' }, short: true },
 ];
 
