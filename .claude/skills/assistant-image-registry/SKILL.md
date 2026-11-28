@@ -12,3 +12,11 @@
 - 承認状態は `approvals.json`、参照元記録は `provenance.json` が保持する。記録が無い組の承認状態は `unknown` で、勝手に承認扱いにしない。
 - 既存の `tools/image/assistant-art-catalog.json` (原本の宣言) とは役割分担: あちらは原本、こちらは個々のファイルのハッシュ・承認・鮮度。
 - 新規 GitHub Actions は作らない。公開素材の変更・削除は承認された作業の範囲でのみ。
+
+## 縁を原本のままにする(2026-11-28 r1126-095 追記2・社長「新着替えでまた同じ現象。実装の仕方が悪い」)
+
+- 透け方は原本の物を Lanczos で広げて使い、AI 拡大(`tools/image/upscale-anime/upscale.py`)は色だけ。
+  原本の縁を削る・ぼかす・内側の色で塗り直す掃除はしない(「なめらかにする」「ぼかして馴染ませる」加工は縁にも中身にも入れない)。
+  全身は `tools/assistant/life-fullbody-art.py` が `tools/assistant/art_edge.py` を通して作る(新しい服は `LEGACY_CLEAN` に足さない)。
+  入れたら `node tools/assistant/art-edge-check.js`(原本と比べて白い縁取り・外の線の消え・ギザギザ・ぼやけが悪ければ落ちる。`run-checks.js --changed` が選ぶ)
+- 道具の掃除が外の黒い線を肌色で塗って白い縁取りを作った前例: #8044(止め絵 `docs/progress/assistant-art/edge-fix-2026-11-28/`)

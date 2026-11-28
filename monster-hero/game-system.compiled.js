@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4ee62b7f9931ccbe
+// source-sha256: bed70e125f24660c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -154653,11 +154653,11 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   },
   'stand-winter': {
     kyuko: {
-      top: 0.0134,
-      eye: 0.3307,
-      chin: 0.4296,
-      m: 0.736,
-      cx: 0.5293
+      top: 0.0125,
+      eye: 0.3308,
+      chin: 0.43,
+      m: 0.738,
+      cx: 0.5292
     }
   },
   twintail: {
@@ -154732,35 +154732,35 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   },
   'stand-santa': {
     mua: {
-      top: 0.1614,
-      eye: 0.3425,
-      chin: 0.4303,
-      m: 0.653,
-      cx: 0.4595,
+      top: 0.1604,
+      eye: 0.3418,
+      chin: 0.4297,
+      m: 0.654,
+      cx: 0.4593,
       above: 0.95
     },
     kiki: {
       top: 0.1741,
-      eye: 0.3324,
-      chin: 0.43,
-      m: 0.726,
-      cx: 0.5647,
+      eye: 0.3325,
+      chin: 0.4302,
+      m: 0.727,
+      cx: 0.5748,
       above: 0.95
     },
     momosuke: {
-      top: 0.1331,
+      top: 0.1332,
       eye: 0.3379,
-      chin: 0.43,
+      chin: 0.4301,
       m: 0.686,
-      cx: 0.4919,
+      cx: 0.5627,
       above: 0.95
     },
     sorashido: {
-      top: 0.0066,
-      eye: 0.2884,
-      chin: 0.4299,
-      m: 1.053,
-      cx: 0.5794,
+      top: 0.0065,
+      eye: 0.2885,
+      chin: 0.4301,
+      m: 1.054,
+      cx: 0.579,
       above: 0.95
     },
     atsu: {
@@ -154768,23 +154768,23 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       eye: 0.3048,
       chin: 0.4299,
       m: 0.931,
-      cx: 0.4538,
+      cx: 0.455,
       above: 0.95
     },
     erubin: {
-      top: 0.1728,
-      eye: 0.2944,
-      chin: 0.43,
-      m: 1.008,
-      cx: 0.5503,
+      top: 0.1733,
+      eye: 0.2947,
+      chin: 0.4301,
+      m: 1.007,
+      cx: 0.5504,
       above: 0.95
     },
     kyuko: {
-      top: 0.1427,
-      eye: 0.3059,
+      top: 0.1435,
+      eye: 0.3062,
       chin: 0.4299,
-      m: 0.923,
-      cx: 0.4351,
+      m: 0.921,
+      cx: 0.4356,
       above: 0.95
     }
   }
