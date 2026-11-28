@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 39fa4fba6897c4e5
+// generated-sha256: ab1fd928ec3d9248
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -7433,7 +7433,7 @@ const Audio_ = (() => {
     step(false);
   };
   const setPageHidden = (hidden) => { pageHidden = !!hidden; ctxTimeMark = null; if (pageHidden) { if (returnHealTimer) clearTimeout(returnHealTimer); returnHealTimer = null; ++bgmRequest; stopPreview(false); stopOthers(); stopJingles(); } else { if (currentKey) playBGM(currentKey); healAfterReturn(); } };
-  const setEnabled = async (on) => { enabled = !!on; if (typeof window !== 'undefined') window.__mhAudioEnabled = enabled; applyRhythmMute(); if (!enabled) { ++bgmRequest; stopPreview(false); stopOthers(); stopJingles(); } else if (currentKey) playBGM(currentKey); await ensure(); };
+  const setEnabled = async (on) => { enabled = !!on; if (typeof window !== 'undefined') window.__mhAudioEnabled = enabled; applyRhythmMute(); if (!enabled) { ++bgmRequest; stopPreview(false); stopOthers(); stopJingles(); void nvAmbient('none'); } else if (currentKey) playBGM(currentKey); await ensure(); };
   const isEnabled = () => enabled;
   // いま実際に鳴っている曲を、外(検査)から見るための口。
   // BGMは <audio> ではなく Web Audio (AudioBufferSourceNode) で鳴らしているので、
@@ -7610,7 +7610,78 @@ const Audio_ = (() => {
       bell2.triggerAttackRelease(['E6', 'G6', 'C7', 'E7'], '8n', t + 0.68);
       setTimeout(() => { try { sw.dispose(); duo.dispose(); riser.dispose(); bell.dispose(); boom.dispose(); crash.dispose(); bell2.dispose(); } catch (e) {} }, 2200); },
     // 合体演出用: 上昇アルペジオ→(両者が重なるタイミングで)ベルの一撃+きらめき和音の「ピカーン」
-    fusion: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.25, release: 0.5 }, volume: -10 }).connect(reverb); const seq = [[0,'C5','8n'],[0.12,'E5','8n'],[0.24,'G5','8n'],[0.36,'C6','8n'],[0.48,'E6','4n']]; seq.forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt)); const bt = t + 0.6; const bell = new Tone.MetalSynth({ frequency: 800, envelope: { attack: 0.001, decay: 0.6, release: 0.3 }, harmonicity: 8, modulationIndex: 20, resonance: 5000, octaves: 1.5, volume: -14 }).connect(reverb); bell.triggerAttackRelease('16n', bt); const sparkle = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.4, sustain: 0.1, release: 0.5 }, volume: -12 }).connect(reverb); ['C6','E6','G6','C7'].forEach((n, i) => sparkle.triggerAttackRelease(n, '8n', bt + i * 0.03)); setTimeout(() => { try { v.dispose(); bell.dispose(); sparkle.dispose(); } catch (e) {} }, 2200); }
+    fusion: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.25, release: 0.5 }, volume: -10 }).connect(reverb); const seq = [[0,'C5','8n'],[0.12,'E5','8n'],[0.24,'G5','8n'],[0.36,'C6','8n'],[0.48,'E6','4n']]; seq.forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt)); const bt = t + 0.6; const bell = new Tone.MetalSynth({ frequency: 800, envelope: { attack: 0.001, decay: 0.6, release: 0.3 }, harmonicity: 8, modulationIndex: 20, resonance: 5000, octaves: 1.5, volume: -14 }).connect(reverb); bell.triggerAttackRelease('16n', bt); const sparkle = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.4, sustain: 0.1, release: 0.5 }, volume: -12 }).connect(reverb); ['C6','E6','G6','C7'].forEach((n, i) => sparkle.triggerAttackRelease(n, '8n', bt + i * 0.03)); setTimeout(() => { try { v.dispose(); bell.dispose(); sparkle.dispose(); } catch (e) {} }, 2200); },
+    // ===== 事件簿(ミステリーノベル)の効果音(2026-11-28 社長「ところどころのSEをもっと雰囲気出して」・台帳 r1126-093 追記2) =====
+    //   どれも小さく、低く暗い音。その場で合成する(音源ファイルなし・権利の心配なし)。効果音の音量(seBus)を通る
+    //   nvTick … 柱時計のチク(high)/タク。選択肢を待つ間に繰り返す。BGM とぶつからないよう、とても小さく短い
+    nvTick: async (high) => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.MetalSynth({ frequency: high ? 340 : 240, envelope: { attack: 0.001, decay: 0.035, release: 0.02 }, harmonicity: 3.1, modulationIndex: 10, resonance: high ? 2600 : 1800, octaves: 0.6, volume: -32 }).connect(seBus); s.triggerAttackRelease('64n', t); const k = new Tone.MembraneSynth({ pitchDecay: 0.01, octaves: 2, envelope: { attack: 0.001, decay: 0.05, sustain: 0 }, volume: -30 }).connect(seBus); k.triggerAttackRelease(high ? 'G2' : 'D2', '64n', t); setTimeout(() => { try { s.dispose(); k.dispose(); } catch (e) {} }, 300); },
+    //   nvCreak … 扉・床のきしみ「ギィ」(低いのこぎり波が、ゆっくり下がる)
+    nvCreak: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const f = new Tone.Filter(700, 'lowpass').connect(seBus); const s = new Tone.Synth({ oscillator: { type: 'sawtooth' }, envelope: { attack: 0.08, decay: 0.7, sustain: 0, release: 0.2 }, volume: -22 }).connect(f); s.triggerAttackRelease('D3', '4n', t); try { s.frequency.rampTo('G2', 0.7, t); } catch (e) {} setTimeout(() => { try { s.dispose(); f.dispose(); } catch (e) {} }, 1400); },
+    //   nvThud … 重い物の落ちる・ぶつかる「ゴッ」(遠くのこもった低音。enemyAttack より小さく遠い)
+    nvThud: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.MembraneSynth({ pitchDecay: 0.05, octaves: 4, envelope: { attack: 0.002, decay: 0.35, sustain: 0 }, volume: -12 }).connect(seBus); s.triggerAttackRelease('E1', '8n', t); const n = new Tone.NoiseSynth({ noise: { type: 'brown' }, envelope: { attack: 0.002, decay: 0.15, sustain: 0 }, volume: -20 }).connect(seBus); n.triggerAttackRelease('16n', t); setTimeout(() => { try { s.dispose(); n.dispose(); } catch (e) {} }, 800); },
+    //   nvWind … 吹雪の風「ゴォォ……」(こもった雑音がふくらんで消える・2.5秒)
+    nvWind: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const f = new Tone.Filter(520, 'lowpass').connect(seBus); const n = new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: { attack: 0.9, decay: 0.4, sustain: 0.6, release: 1.2 }, volume: -24 }).connect(f); n.triggerAttackRelease(1.2, t); try { f.frequency.rampTo(900, 0.9, t); f.frequency.rampTo(380, 1.4, t + 0.9); } catch (e) {} setTimeout(() => { try { n.dispose(); f.dispose(); } catch (e) {} }, 3200); },
+    //   nvFire … 暖炉の薪がはぜる「パチ……パチ」(小さな粒がまばらに)
+    nvFire: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const f = new Tone.Filter(1800, 'bandpass').connect(seBus); const n = new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.001, decay: 0.025, sustain: 0 }, volume: -24 }).connect(f); [0, 0.21, 0.37, 0.8, 1.05, 1.5].forEach((d) => n.triggerAttackRelease('64n', t + d)); setTimeout(() => { try { n.dispose(); f.dispose(); } catch (e) {} }, 2100); },
+    //   nvRustle … 紙・封・布のこすれる「カサ」
+    nvRustle: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const f = new Tone.Filter(2600, 'highpass').connect(seBus); const n = new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.01, decay: 0.12, sustain: 0 }, volume: -28 }).connect(f); n.triggerAttackRelease('16n', t); n.triggerAttackRelease('32n', t + 0.14); setTimeout(() => { try { n.dispose(); f.dispose(); } catch (e) {} }, 600); },
+    //   nvGlass … 窓ガラス・物の割れる「カシャ」(低めの金属の響き)
+    nvGlass: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.MetalSynth({ frequency: 260, envelope: { attack: 0.001, decay: 0.32, release: 0.1 }, harmonicity: 7.1, modulationIndex: 20, resonance: 3200, octaves: 1, volume: -26 }).connect(reverb); s.triggerAttackRelease('16n', t); setTimeout(() => { try { s.dispose(); } catch (e) {} }, 900); },
+    //   nvDread … 不穏な一音(低い2音の半音のぶつかりが、ゆっくり消える)。声・悲鳴・倒れた人が見つかった所
+    nvDread: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'sine' }, envelope: { attack: 0.35, decay: 0.6, sustain: 0.4, release: 1.6 }, volume: -20 }).connect(reverb); v.triggerAttackRelease(['C2', 'C#2', 'G2'], 1.1, t); setTimeout(() => { try { v.dispose(); } catch (e) {} }, 3600); },
+    //   nvMusicBox … オルゴールの子守歌(高い音を、小さく、ゆっくり下がる短調の4音)
+    nvMusicBox: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.002, decay: 0.9, sustain: 0, release: 0.6 }, volume: -24 }).connect(reverb); [[0, 'E5'], [0.42, 'D5'], [0.84, 'C5'], [1.4, 'A4']].forEach(([d, n]) => s.triggerAttackRelease(n, '4n', t + d)); setTimeout(() => { try { s.dispose(); } catch (e) {} }, 3200); },
+    //   r1126-093 追記3: 足音(nvStep)・駆ける足音(nvRun)・殴られる(nvHit)・倒れる(nvFall)・悲鳴の手前の息(nvGasp)・扉(nvDoor)・吹き込む風(nvGust)
+    nvStep: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.MembraneSynth({ pitchDecay: 0.02, octaves: 2, envelope: { attack: 0.002, decay: 0.09, sustain: 0 }, volume: -22 }).connect(seBus); [0, 0.55, 1.1].forEach((d, i) => s.triggerAttackRelease(i % 2 ? 'A1' : 'G1', '32n', t + d)); setTimeout(() => { try { s.dispose(); } catch (e) {} }, 1700); },
+    nvRun: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.MembraneSynth({ pitchDecay: 0.02, octaves: 2, envelope: { attack: 0.002, decay: 0.07, sustain: 0 }, volume: -20 }).connect(seBus); [0, 0.2, 0.4, 0.6, 0.8, 1.0].forEach((d, i) => s.triggerAttackRelease(i % 2 ? 'A1' : 'G1', '32n', t + d)); setTimeout(() => { try { s.dispose(); } catch (e) {} }, 1500); },
+    nvHit: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.MembraneSynth({ pitchDecay: 0.015, octaves: 3, envelope: { attack: 0.001, decay: 0.16, sustain: 0 }, volume: -8 }).connect(seBus); s.triggerAttackRelease('C2', '16n', t); const n = new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: { attack: 0.001, decay: 0.06, sustain: 0 }, volume: -16 }).connect(seBus); n.triggerAttackRelease('64n', t); setTimeout(() => { try { s.dispose(); n.dispose(); } catch (e) {} }, 600); },
+    nvFall: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.MembraneSynth({ pitchDecay: 0.06, octaves: 4, envelope: { attack: 0.003, decay: 0.5, sustain: 0 }, volume: -11 }).connect(seBus); s.triggerAttackRelease('D1', '4n', t); s.triggerAttackRelease('C1', '8n', t + 0.18); const n = new Tone.NoiseSynth({ noise: { type: 'brown' }, envelope: { attack: 0.01, decay: 0.4, sustain: 0 }, volume: -22 }).connect(seBus); n.triggerAttackRelease('8n', t + 0.05); setTimeout(() => { try { s.dispose(); n.dispose(); } catch (e) {} }, 1200); },
+    nvGasp: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const f = new Tone.Filter(1400, 'bandpass').connect(seBus); const n = new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: { attack: 0.12, decay: 0.18, sustain: 0, release: 0.08 }, volume: -22 }).connect(f); n.triggerAttackRelease(0.16, t); try { f.frequency.rampTo(2200, 0.25, t); } catch (e) {} setTimeout(() => { try { n.dispose(); f.dispose(); } catch (e) {} }, 800); },
+    nvDoor: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const m = new Tone.MetalSynth({ frequency: 180, envelope: { attack: 0.001, decay: 0.05, release: 0.02 }, harmonicity: 3.1, modulationIndex: 8, resonance: 1500, octaves: 0.5, volume: -28 }).connect(seBus); m.triggerAttackRelease('64n', t); const f = new Tone.Filter(600, 'lowpass').connect(seBus); const s = new Tone.Synth({ oscillator: { type: 'sawtooth' }, envelope: { attack: 0.05, decay: 0.45, sustain: 0, release: 0.15 }, volume: -25 }).connect(f); s.triggerAttackRelease('A2', '8n', t + 0.08); try { s.frequency.rampTo('E2', 0.45, t + 0.08); } catch (e) {} setTimeout(() => { try { m.dispose(); s.dispose(); f.dispose(); } catch (e) {} }, 1200); },
+    nvGust: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const f = new Tone.Filter(600, 'lowpass').connect(seBus); const n = new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: { attack: 0.25, decay: 0.5, sustain: 0.2, release: 0.6 }, volume: -18 }).connect(f); n.triggerAttackRelease(0.6, t); try { f.frequency.rampTo(1500, 0.3, t); f.frequency.rampTo(400, 0.9, t + 0.3); } catch (e) {} setTimeout(() => { try { n.dispose(); f.dispose(); } catch (e) {} }, 2000); },
+  };
+  // ===== 事件簿の環境音(ずっと小さく鳴る・r1126-093 追記3「BGM は静かか音無しにして SE で表現」) =====
+  //   kind: 'wind'(外の風)/ 'blizzard'(吹雪)/ 'fire'(暖炉)/ 'clock'(柱時計のチク・タク)/ 'room'(部屋のかすかなすきま風)/ 'none'
+  //   替えるときは前の音を 1.2 秒で小さくしてから捨て、新しい音を 1.5 秒で大きくする(つなぎ目なく替わる)。効果音の音量(seBus)を通る。
+  //   同じ kind なら何もしない。続けて呼ばれても、いちばんあとの kind だけが鳴る(待っている間に替わった物は作らない)
+  let nvAmb = { kind: 'none', stop: null };
+  const nvAmbient = async (kindIn) => {
+    const kind = kindIn || 'none';
+    if (kind === nvAmb.kind) return;
+    const prev = nvAmb; const me = { kind, stop: null }; nvAmb = me;
+    if (prev.stop) { try { prev.stop(); } catch (e) {} }
+    if (kind === 'none' || !enabled) return;
+    await ensure();
+    if (!Tone || nvAmb !== me || !enabled) return;
+    const nodes = []; const timers = [];
+    try {
+      const g = new Tone.Gain(0).connect(seBus); nodes.push(g);
+      if (kind === 'wind' || kind === 'blizzard' || kind === 'room') {
+        const n = new Tone.Noise(kind === 'room' ? 'brown' : 'pink'); n.volume.value = kind === 'blizzard' ? -27 : kind === 'wind' ? -31 : -36;
+        const f = new Tone.Filter(kind === 'blizzard' ? 650 : kind === 'wind' ? 420 : 200, 'lowpass');
+        const lfo = new Tone.LFO(kind === 'blizzard' ? 0.21 : 0.09, kind === 'room' ? 120 : 260, kind === 'blizzard' ? 1250 : kind === 'wind' ? 780 : 320);
+        n.connect(f); f.connect(g); lfo.connect(f.frequency); n.start(); lfo.start(); nodes.push(n, f, lfo);
+      }
+      if (kind === 'fire') {
+        const n = new Tone.Noise('brown'); n.volume.value = -36; const f = new Tone.Filter(170, 'lowpass'); n.connect(f); f.connect(g); n.start(); nodes.push(n, f);
+        const bp = new Tone.Filter(1700, 'bandpass').connect(g); const c = new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.001, decay: 0.02, sustain: 0 }, volume: -31 }).connect(bp); nodes.push(bp, c);
+        const pop = () => { if (nvAmb !== me) return; if (enabled) { try { c.triggerAttackRelease('64n'); } catch (e) {} } timers.push(setTimeout(pop, 140 + Math.random() * 620)); };
+        timers.push(setTimeout(pop, 300));
+      }
+      if (kind === 'clock') {
+        const m = new Tone.MetalSynth({ frequency: 300, envelope: { attack: 0.001, decay: 0.03, release: 0.02 }, harmonicity: 3.1, modulationIndex: 10, resonance: 2200, octaves: 0.6, volume: -37 }).connect(g);
+        const k = new Tone.MembraneSynth({ pitchDecay: 0.01, octaves: 2, envelope: { attack: 0.001, decay: 0.04, sustain: 0 }, volume: -36 }).connect(g); nodes.push(m, k);
+        let high = true;
+        const tick = () => { if (nvAmb !== me || !enabled) return; try { m.frequency.value = high ? 330 : 230; m.triggerAttackRelease('64n'); k.triggerAttackRelease(high ? 'G2' : 'D2', '64n'); } catch (e) {} high = !high; };
+        timers.push(setInterval(tick, 1000));
+      }
+      try { g.gain.rampTo(1, 1.5); } catch (e) { g.gain.value = 1; }
+      me.stop = () => {
+        timers.forEach((id) => { clearTimeout(id); clearInterval(id); });
+        try { g.gain.rampTo(0, 1.2); } catch (e) { g.gain.value = 0; }
+        setTimeout(() => { nodes.forEach((x) => { try { if (x.stop) x.stop(); } catch (e) {} try { x.dispose(); } catch (e) {} }); }, 1400);
+      };
+    } catch (e) { nodes.forEach((x) => { try { x.dispose(); } catch (e2) {} }); }
   };
   // ボタンのタップ音(音は fgSe.tap と同じ。通る口だけが uiBus)。全体ミュート(enabled)には従う。裏のバトルの音を止める印は見ない
   const uiTap = async () => { if (!enabled) return; await ensure(); if (!Tone || !uiBus) return; const t = Tone.now(); const s = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.001, decay: 0.04, sustain: 0, release: 0.02 }, volume: -16 }).connect(uiBus); s.triggerAttackRelease('C6', '64n', t); setTimeout(() => { try { s.dispose(); } catch (e) {} }, 200); };
@@ -7650,7 +7721,7 @@ const Audio_ = (() => {
   // お知らせ・ヘルプの動画にかける音量(2026-11-14 社長「予告動画の音が設定の音量と関係なく鳴る」)。
   // 動画は曲と同じ扱いにして、BGM の音量と同じ曲線(_gainFromPct)で返す。音を切っている・BGM が 0 なら 0
   const videoGain = () => (enabled && bgmVolumePct > 0 ? _gainFromPct(bgmVolumePct) : 0);
-  return { currentBgmKey: () => currentKey, isBackgroundSeQuiet, setVideoHold, videoGain, setStoryEndFade, setStoryOpenFade, playSeFile, fgPlaySeFile, preloadSE, playBGM, fadeToBGM, stopBGM, setBgmOnce, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setUiSeVolume, uiSeVolume, uiTap, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
+  return { nvAmbient, currentBgmKey: () => currentKey, isBackgroundSeQuiet, setVideoHold, videoGain, setStoryEndFade, setStoryOpenFade, playSeFile, fgPlaySeFile, preloadSE, playBGM, fadeToBGM, stopBGM, setBgmOnce, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setUiSeVolume, uiSeVolume, uiTap, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
 })();
 
 // ---- part: 14-success-sound.jsx ----
@@ -68705,6 +68776,7 @@ const xmasNovelEndingAhead = (script, to) => {
   let s = to ? xmasNovelSceneById(script, to) : null;
   for (let k = 0; s && k < 12; k += 1) {
     if (s.ending && s.ending.id) return s.ending.id;
+    if ((s.rows || []).some((r) => r && r.t === 'q')) return null; // 途中に分かれ道がある道は、エンドの直前ではない(r1126-102)
     s = typeof s.next === 'string' ? xmasNovelSceneById(script, s.next) : null;
   }
   return null;
@@ -68813,6 +68885,76 @@ const XMAS_NOVEL_ENDING_KINDS = Object.freeze({
   accuse: { label: '名指しエンド', tone: '#a78bd8' },
   omake: { label: 'おまけ', tone: '#7fd6a8' },
 });
+
+// ---- 分岐の地図「聖夜の見取り図」の読み直し(r1126-102) ----
+//  保存は新しいキー mh_xmas_novel_route_v1 だけ(mh_xmas_novel_v1 は形も中身も変えない・⑦)。
+//  { v:1, at:{ "<問いID>|<派 0〜2>": その問いの行に止まった時の cur }, back: 読み直す前の cur | null, seeded: 0|1 }
+//  付与・補償・数を足す処理は無い(上書きと読み出しだけ)。seeded は「今の保存から機械で作る」を1回だけにする印
+const XMAS_NOVEL_ROUTE_KEY = 'mh_xmas_novel_route_v1';
+const xmasNovelRouteKeyOf = (qid, cur) => {
+  const side = cur && cur.flags && Number.isFinite(cur.flags.f_A1) ? Math.max(0, Math.min(2, Math.floor(cur.flags.f_A1))) : 0;
+  return `${qid}|${side}`;
+};
+const xmasNovelRowAt = (script, cur) => {
+  const scene = cur ? xmasNovelSceneById(script, cur.scene) : null;
+  const row = scene && Array.isArray(scene.rows) ? scene.rows[Number(cur.idx) || 0] : null;
+  return row || null;
+};
+const xmasNovelRouteNormalize = (raw, script = null) => {
+  const r = raw && typeof raw === 'object' ? raw : {};
+  const at = {};
+  if (r.at && typeof r.at === 'object') Object.keys(r.at).slice(0, 120).forEach((k) => {
+    const m = /^([AQ]\d+[a-z]?)\|([0-2])$/.exec(k);
+    if (!m) return;
+    const c = xmasNovelNormalizeCur(r.at[k], script);
+    if (!c) return;
+    if (script) { const row = xmasNovelRowAt(script, c); if (!row || row.t !== 'q' || row.id !== m[1]) return; } // 台本が変わって問いの行でなくなった物は捨てる
+    at[k] = c;
+  });
+  return { v: 1, at, back: xmasNovelNormalizeCur(r.back, script), seeded: r.seeded === 1 ? 1 : 0 };
+};
+// 問いの行に着いたときに、その時の状態を残す(同じ分かれ道は一番新しく通った時で上書き)
+const xmasNovelRouteRecord = (route, script, cur) => {
+  const row = xmasNovelRowAt(script, cur);
+  if (!route || !row || row.t !== 'q') return route;
+  const c = xmasNovelNormalizeCur(cur, script);
+  if (!c) return route;
+  return { ...route, at: { ...route.at, [xmasNovelRouteKeyOf(row.id, c)]: c } };
+};
+// 地図を入れる前に通った分かれ道を、今の保存(章の頭の状態 snaps・読んだ印 read・続き cur)から機械で作る(1回だけ)。
+//   章の頭から、安全な方・正解で、その章の中だけ進める。読んだ印のある問いの行だけを残す。やり直しのない推理(1回目・2回目)は残して止まる
+const xmasNovelRouteSeed = (script, save, route) => {
+  const base = route || xmasNovelRouteNormalize(null, script);
+  if (base.seeded === 1) return base;
+  const read = new Set((save && Array.isArray(save.read)) ? save.read : []);
+  let at = { ...base.at };
+  const keep = (cur, row) => { const k = xmasNovelRouteKeyOf(row.id, cur); if (!at[k] && read.has(row.k)) { const c = xmasNovelNormalizeCur(cur, script); if (c) at = { ...at, [k]: c }; } };
+  const sideOfSave = save && save.cur && save.cur.flags && Number.isFinite(save.cur.flags.f_A1) ? save.cur.flags.f_A1 : 0;
+  const snaps = save && save.snaps && typeof save.snaps === 'object' ? save.snaps : {};
+  Object.keys(snaps).filter((k) => /^C\d+$/.test(k)).forEach((chId) => {
+    let st = xmasNovelSettle(script, snaps[chId]);
+    for (let guard = 0; st && st.row && guard < 3000; guard += 1) {
+      if (!st.scene || st.scene.chapter !== chId) break;
+      const r = st.row;
+      if (r.t !== 'q') { st = xmasNovelStep(script, xmasNovelApplyRow(st.cur, r)); continue; }
+      keep(st.cur, r);
+      if (r.once) break;
+      let pick = null;
+      if (r.kind === 'present') pick = (r.answer || [])[0];
+      else if (r.kind === 'action') {
+        const opts = xmasNovelOptionsOf(r, xmasNovelCtx(script, st.cur, (save && save.endings) || []));
+        if (r.id === 'A1') { const o = opts.find((x) => x.i === sideOfSave - 1); if (!o) break; pick = o.i; }
+        else { const safe = opts.find((o) => !(o.to && xmasNovelEndingAhead(script, o.to))); if (!safe) break; pick = safe.i; }
+      }
+      if (pick === null || pick === undefined) break;
+      const a = xmasNovelAnswer(script, st.cur, r, pick, (save && save.endings) || []);
+      let c = a.cur; (a.replies || []).forEach((x) => { c = xmasNovelApplyRow(c, x); });
+      st = a.then === 'next' ? xmasNovelStep(script, c) : a.then === 'retry' ? null : xmasNovelSettle(script, xmasNovelJump(script, c, a.then.to));
+    }
+  });
+  if (save && save.cur) { const row = xmasNovelRowAt(script, save.cur); if (row && row.t === 'q') keep(save.cur, row); }
+  return { ...base, at, seeded: 1 };
+};
 
 // ---- part: 79-xmas-novel-script.jsx ----
 // ===== クリスマスのミステリーノベルの台本データ(生成物・手で直さない) =====
@@ -70094,7 +70236,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 // 入口は openXmasNovel(opts) の関数1つ(イベントページの物語タブなどから呼ぶ)。App の状態は使わず、自分で body に重ねて開き、閉じたら片づける。
 //   opts.playerName … 台詞の {name} に入れる名前 / opts.onClose() … 閉じたあと / opts.force … 期間の外でも開く(デバッグ・検査だけ)
 //   遊べるのはイベントの期間中だけ(xmasNovelPlayableAt)。期間の外は開かずに false を返す。保存の記録は消さない
-// 保存は新しいキー mh_xmas_novel_v1 だけ(書くのはこれだけ・⑦)。ほかに読むのは、台詞の {name} に入れるブリーダー名(mh_breeder_name)だけ。形は xmasNovelNormalize。
+// 保存は新しいキー mh_xmas_novel_v1 と、分岐の地図の読み直しの mh_xmas_novel_route_v1(r1126-102)だけ(⑦)。ほかに読むのは、台詞の {name} に入れるブリーダー名(mh_breeder_name)だけ。形は xmasNovelNormalize。
 // 見た目: 暗めの紺と雪・金の細い縁・明朝寄りの見出し。縦・横・タブレットで、立ち絵と文の箱の置き方を変える。動きは prefers-reduced-motion で止める
 
 const XMAS_NOVEL_CSS = `
@@ -71076,27 +71218,104 @@ const xmasNovelSe = (kind) => {
 //   連打しても重ねない: 次の行へ進んだら残りの回数は鳴らさず、同じ音を前の音のすぐあと(hold の間)には鳴らし直さない
 const XMAS_NOVEL_SE_SEQ = Object.freeze({
   bell: { gap: 1150, hold: 900, play: ['guard', 'trainingFail'] },
-  //   r1126-093 追記1(暗く): 時計 = 高い「チッ」(xpTick)をやめ、低くこもった「コツ」(trainingDice)/ 手紙 = きらめきの入った enemyCharge をやめ、低いうなりと下がる2音(trainingBad・trainingFail)
-  tick: { gap: 520, hold: 300, play: ['trainingDice'] },
-  letter: { gap: 0, hold: 1500, play: ['trainingBad', 'trainingFail'] },
+  //   r1126-093 追記2(雰囲気): 時計 = 柱時計のチク(nvTick)/ 手紙 = 不穏な一音(nvDread)。下は帯の文から選び直した音(xmasNovelSeKindOf)。
+  //   play の1つは '名前' か [名前, 引数, 遅らせるミリ秒]。音そのものは 14-audio.jsx の fgSe.nv*(その場で合成・小さく低い)
+  tick: { gap: 520, hold: 300, play: [['nvTick', true]] },
+  letter: { gap: 0, hold: 1500, play: ['nvDread'] },
+  knock: { gap: 460, hold: 300, play: ['nvThud'] },
+  thud: { gap: 420, hold: 250, play: ['nvThud'] },
+  creak: { gap: 0, hold: 800, play: ['nvCreak'] },
+  creakGlass: { gap: 0, hold: 1200, play: ['nvCreak', ['nvGlass', undefined, 650]] },
+  glass: { gap: 0, hold: 500, play: ['nvGlass'] },
+  windGlass: { gap: 0, hold: 1500, play: ['nvWind', ['nvGlass', undefined, 500], ['nvGlass', undefined, 1100]] },
+  slamLock: { gap: 0, hold: 700, play: ['nvThud', ['nvTick', true, 380], ['nvTick', false, 470]] },
+  lock: { gap: 0, hold: 400, play: [['nvTick', true], ['nvTick', false, 90]] },
+  rustle: { gap: 0, hold: 400, play: ['nvRustle'] },
+  dread: { gap: 0, hold: 1500, play: ['nvDread'] },
+  lightsOut: { gap: 0, hold: 1500, play: ['nvThud', ['nvDread', undefined, 120]] },
+  musicbox: { gap: 0, hold: 1800, play: ['nvMusicBox'] },
+  clap: { gap: 0, hold: 1200, play: ['nvRustle', ['nvRustle', undefined, 650]] },
+  fire: { gap: 0, hold: 1500, play: ['nvFire'] },
+  wind: { gap: 0, hold: 2500, play: ['nvWind'] },
+  //   r1126-093 追記3: 足音・駆ける・殴られる・倒れる・悲鳴の手前の息・扉・吹きこむ風
+  steps: { gap: 0, hold: 1500, play: ['nvStep'] },
+  run: { gap: 0, hold: 1300, play: ['nvRun'] },
+  hit: { gap: 0, hold: 500, play: ['nvHit'] },
+  hitFall: { gap: 0, hold: 1200, play: ['nvHit', ['nvFall', undefined, 420]] },
+  fall: { gap: 0, hold: 1000, play: ['nvFall'] },
+  scream: { gap: 0, hold: 1500, play: ['nvGasp', ['nvDread', undefined, 260]] },
+  door: { gap: 0, hold: 900, play: ['nvDoor'] },
+  doorGust: { gap: 0, hold: 1500, play: ['nvDoor', ['nvGust', undefined, 200]] },
+  gust: { gap: 0, hold: 1500, play: ['nvGust'] },
+  glassKnock: { gap: 380, hold: 300, play: ['nvGlass'] },
+  winding: { gap: 330, hold: 250, play: [['nvTick', true], ['nvTick', false, 120]] },
 });
+//  効果音の印の無い帯にも、文に合わせて1回鳴らす所(r1126-093 追記3)。行ID → [音, 回数]。a/s の2つある行は両方に書く
+const XMAS_NOVEL_SE_ROW = Object.freeze({
+  '2-L-12': ['knock', 2], '2-M-15': ['windGlass'], '2-5-2': ['doorGust'], '2-5-6b': ['gust'],
+  '4-4-1': ['winding', 3], '4-M-16': ['steps'], '5-4-1': ['knock', 2],
+  '5-X-4a': ['run'], '5-X-4s': ['run'], '6-X-6': ['run'], '2-Y-7': ['steps'], '2-Y-10': ['hitFall'], '2-Y-11': ['fall'],
+  '6-7-4': ['doorGust'], '7-P1-8': ['doorGust'], '9-1-2': ['winding', 2], '9-1-5': ['doorGust'], '6-X-1a': ['doorGust'], '6-X-1s': ['doorGust'],
+  '10-3-9': ['fall'], 'M5-2': ['steps'], 'B-13': ['fall'], 'G-3': ['winding', 3], 'N-3': ['winding', 2], '1-O-19': ['winding', 2],
+  '12-2-9': ['lock'], '12-3-6': ['knock', 3], '12-5-3': ['glassKnock', 3],
+});
+//  帯の効果音を、文に合わせて選び直す(台本データの印は 物音(tap)・衝撃(impact)・拍手・オルゴールの4つだけで、どれも同じ音だった・r1126-093 追記2)
+const xmasNovelSeKindOf = (kind, row) => {
+  if (kind === 'bell' || kind === 'tick' || kind === 'letter') return kind;
+  if (kind === 'music') return 'musicbox';
+  if (kind === 'clap') return 'clap';
+  const x = String((row && row.x) || '');
+  if (/声|悲鳴|叫び|きゃ|うわ|っ！/.test(x)) return 'scream';
+  if (/ピー/.test(x)) return 'dread';
+  if (/ブツン|停電/.test(x)) return 'lightsOut';
+  if (/(ギィ|ギシ)[\s\S]*(ガシャン|割れ)/.test(x)) return 'creakGlass';
+  if (/吹雪[\s\S]*ガラス|ガラス[\s\S]*吹雪/.test(x)) return 'windGlass';
+  if (/ギィ|ギシ|きしむ|開く音/.test(x)) return 'creak';
+  if (/ガシャン|ガラス|カシャ|割れ/.test(x)) return 'glass';
+  if (/バタン[\s\S]*(カチャリ|鍵)/.test(x)) return 'slamLock';
+  if (/カチリ|カチャリ|留め金|鍵の音/.test(x)) return 'lock';
+  if (/封|カサ|プシュッ/.test(x)) return 'rustle';
+  if (/叩く|打ちつける|ドン、ドン|コン、コン/.test(x)) return 'knock';
+  if (/ガタッ[\s\S]*ゴッ/.test(x)) return 'hitFall';
+  if (/ドサッ/.test(x)) return 'fall';
+  if (/^ゴッ|ゴッ[(（]|鈍い音/.test(x)) return 'hit';
+  if (/ドサッ|ゴッ|ゴトン|ガタ|重い|ドン/.test(x)) return 'thud';
+  return kind === 'impact' ? 'impact' : 'thud';
+};
+//  叩く音の回数は、文の「ドン」「コン」の数(3回まで)
+const xmasNovelSeTimesOf = (kind, row, times) => {
+  if (Number.isFinite(times)) return times;
+  if (kind !== 'knock' && kind !== 'thud') return 1;
+  const m = String((row && row.x) || '').match(/ドン|コン/g);
+  return kind === 'knock' && m ? Math.min(3, m.length) : 1;
+};
 let xmasNovelSeTimers = [];
 let xmasNovelSeLast = { kind: '', at: 0 };
 const xmasNovelSeStop = () => { xmasNovelSeTimers.forEach((t) => clearTimeout(t)); xmasNovelSeTimers = []; };
+const xmasNovelSeFn = (name) => { try { const fn = (Audio_.fgSe || Audio_.se)[name]; return typeof fn === 'function' ? fn : null; } catch (e) { return null; } };
 const xmasNovelSeHit = (kind) => {
   try {
     if (typeof Audio_ === 'undefined' || !Audio_ || !Audio_.se) return;
     const seq = XMAS_NOVEL_SE_SEQ[kind];
     xmasNovelSeLast = { kind, at: Date.now() };
     // 表の画面の口(fgSe)から鳴らす(裏クイックの音を止める印を受けない・r1126-072。上の xmasNovelSe と同じ)
-    seq.play.forEach((name) => { const fn = (Audio_.fgSe || Audio_.se)[name]; if (typeof fn === 'function') fn(); });
+    seq.play.forEach((item) => {
+      const [name, arg, delay] = Array.isArray(item) ? item : [item];
+      const fn = xmasNovelSeFn(name);
+      if (!fn) return;
+      if (delay > 0) xmasNovelSeTimers.push(setTimeout(() => fn(arg), delay)); else fn(arg);
+    });
   } catch (e) { /* 音が出せなくても読み進める */ }
 };
-const xmasNovelRowSe = (kind, times) => {
+//  既読飛ばしの間は、帯の1回の音を鳴らさない(つぎつぎ重なるため・r1126-093 追記3)。画面が skip に合わせて立てる
+let xmasNovelSeQuiet = false;
+const xmasNovelRowSe = (kindIn, times, row) => {
   xmasNovelSeStop();
+  if (xmasNovelSeQuiet) return;
+  const kind = xmasNovelSeKindOf(kindIn, row);
   const seq = XMAS_NOVEL_SE_SEQ[kind];
   if (!seq) { xmasNovelSe(kind); return; }
-  const n = Math.max(1, Math.min(3, Number.isFinite(times) ? times : 1));
+  const n = Math.max(1, Math.min(3, xmasNovelSeTimesOf(kind, row, times)));
   const wait = xmasNovelSeLast.kind === kind ? Math.max(0, seq.hold - (Date.now() - xmasNovelSeLast.at)) : 0;
   for (let i = 0; i < n; i += 1) {
     const at = wait + i * seq.gap;
@@ -71104,37 +71323,54 @@ const xmasNovelRowSe = (kind, times) => {
     else xmasNovelSeTimers.push(setTimeout(() => xmasNovelSeHit(kind), at));
   }
 };
+//  場所の環境音(ずっと小さく鳴る・r1126-093 追記3)。背景の名前で決め、場面・背景が替わったらつなぎ目なく替える(14-audio.jsx の nvAmbient)
+//    外側(助手たちの前)・エンドの札(背景なし)は鳴らさない。下の表は背景と話が合わない所だけ
+const XMAS_NOVEL_AMBIENT_SCENE = Object.freeze({ 'C2-M': 'wind', 'C12-2': 'wind', 'C2-L': 'clock', 'C1-6': 'clock' });
+const xmasNovelAmbientOf = (scene, bgName) => {
+  if (!scene || scene.outside) return 'none';
+  if (Object.prototype.hasOwnProperty.call(XMAS_NOVEL_AMBIENT_SCENE, scene.id)) return XMAS_NOVEL_AMBIENT_SCENE[scene.id];
+  const bg = String(bgName || scene.bg || '');
+  if (!bg || /助手たち|monhero_/.test(bg)) return 'none';
+  if (/吹雪/.test(bg)) return 'blizzard';
+  if (/雪原|雪の山道|崖/.test(bg)) return 'wind';
+  if (/暖炉/.test(bg)) return 'fire';
+  if (/柱時計|ホール/.test(bg)) return 'clock';
+  return 'room';
+};
+const xmasNovelSetAmbient = (kind) => { try { if (typeof Audio_ !== 'undefined' && Audio_ && typeof Audio_.nvAmbient === 'function') void Audio_.nvAmbient(kind || 'none'); } catch (e) { /* 音が出せなくても読み進める */ } };
 //  事件簿の曲(2026-11-28 社長「音楽で声有りはやめて」「ちゃんとばめんにあったやつに」「音無しとかばめんによって」「全体的に暗く」・台帳 r1126-093)。
 //    歌(声)の入った曲は使わない。声の有無は声の分離器で測った(表と測り方: docs/progress/event-xmas-2026/NOVEL-BGM-R1126-093.md)。
+//    r1126-093 追記3(社長「BGM を明るいとこ以外は極力静かなやつか音無しにいれて SE で表現」): 明るい場面と静かな曲(ピアノ・プロフィール・ゲームオーバー)だけ残し、
+//    不穏・怖い・推理の曲は音無しにして、場所の環境音(xmasNovelAmbientOf)と帯の音で表す。
 //    'silence' は曲を止める(死の場面・張りつめた所・静かな独白)。台本データ(79-xmas-novel-script.jsx)の曲より、この表が勝つ
 const XMAS_NOVEL_BGM_SCENE = Object.freeze({
-  'OUT-0-1': 'original_profile', 'OUT-0-2': 'melo_dullahan_clockwork', 'C0-1': 'original_profile', 'C0-2': 'original_profile',
-  'OUT-1': 'melo_dullahan_clockwork', 'C1-1': 'original_profile', 'C1-2': 'original_profile', 'C1-3': 'melo_dullahan_clockwork',
-  'C1-4': 'melo_dullahan_clockwork', 'C1-5': 'close_to_your_heart_alt', 'C1-6': 'melo_dullahan_steel_ghost', 'C1-M': 'silence',
-  'C2-1': 'melo_dullahan_clockwork', 'C2-L': 'silence', 'C2-M': 'makutsu_no_senritsu', 'C2-2': 'original_profile',
-  'C2-3': 'melo_dullahan_steel_ghost', 'C2-4': 'melo_dullahan_steel_ghost_alt', 'C2-5': 'original_dullahan', 'C3-1': 'silence',
-  'C3-2': 'melo_dullahan_clockwork_alt', 'C3-3': 'melo_dullahan_clockwork', 'C3-4': 'melo_dullahan_clockwork_alt', 'C3-5': 'melo_erfolg_piano',
-  'C3-M': 'melo_erfolg_piano', 'C4-1': 'makutsu_no_senritsu', 'C4-2': 'silence', 'C4-3': 'melo_dullahan_clockwork_alt',
-  'C4-4': 'melo_dullahan_clockwork', 'C4-5': 'melo_dullahan_steel_ghost', 'C4-M': 'silence', 'C5-1': 'melo_erfolg_piano',
-  'C5-2': 'melo_dullahan_steel_ghost_alt', 'C5-3': 'melo_dullahan_steel_ghost', 'C5-4': 'melo_dullahan_steel_ghost', 'C5-5': 'makutsu_no_senritsu',
-  'C5-M': 'melo_dullahan_clockwork', 'C6-1': 'melo_dullahan_clockwork_alt', 'C6-2': 'melo_dullahan_steel_ghost',
-  'C6-3': 'melo_dullahan_clockwork_alt', 'C6-4': 'melo_dullahan_steel_ghost_alt', 'C6-5': 'melo_dullahan_steel_ghost',
-  'C6-6': 'melo_dullahan_clockwork_alt', 'C6-7': 'original_dullahan', 'C6-8': 'melo_erfolg_piano', 'C6-9': 'melo_dullahan_steel_ghost',
-  'C6-M': 'melo_erfolg_piano', 'C7-1': 'melo_dullahan_clockwork_alt', 'C7-2': 'melo_dullahan_steel_ghost_alt', 'C7-A': 'melo_erfolg_piano',
-  'C7-B': 'melo_dullahan_clockwork', 'C7-P1': 'original_dullahan', 'C7-P2': 'melo_erfolg_piano', 'C7-P3': 'melo_dullahan_clockwork',
-  'C7-4a': 'melo_erfolg_piano', 'C7-4b': 'melo_dullahan_steel_ghost', 'C7-5a': 'melo_erfolg_piano', 'C7-5b': 'melo_dullahan_steel_ghost',
-  'C7-W': 'melo_dullahan_clockwork_alt', 'C8-1': 'melo_dullahan_steel_ghost_alt', 'C8-2': 'makutsu_no_senritsu', 'C8-3': 'melo_erfolg_piano',
-  'C9-1': 'silence', 'C9-2': 'close_to_your_heart_alt', 'C10-1': 'melo_dullahan_steel_ghost', 'C10-2': 'makutsu_no_senritsu',
-  'C10-3': 'melo_dullahan_steel_ghost', 'C10-4': 'melo_dullahan_steel_ghost_alt', 'C11-1': 'melo_dullahan_steel_ghost_alt',
-  'C11-N': 'melo_erfolg_piano', 'C11-A': 'melo_erfolg_piano', 'C11-B': 'melo_dullahan_clockwork', 'C2-X': 'melo_dullahan_steel_ghost',
-  'END-X1': 'original_game_over', 'C5-X': 'melo_dullahan_steel_ghost', 'END-X2': 'original_game_over', 'C6-X': 'melo_dullahan_steel_ghost',
-  'END-X3': 'original_game_over', 'C2-Y': 'melo_dullahan_steel_ghost', 'END-X4': 'original_game_over', 'C10-X': 'melo_dullahan_steel_ghost',
-  'END-X5': 'original_game_over', 'END-M1': 'original_game_over', 'END-M2': 'melo_dullahan_steel_ghost', 'END-M3': 'melo_dullahan_steel_ghost',
-  'END-M4': 'original_game_over', 'END-M5': 'melo_dullahan_steel_ghost', 'END-G': 'melo_erfolg_piano', 'OUT-G': 'close_to_your_heart_alt',
-  'END-N': 'melo_erfolg_piano', 'OUT-N': 'melo_erfolg_piano', 'END-A': 'melo_dullahan_clockwork', 'OUT-A': 'melo_dullahan_clockwork',
-  'END-B': 'melo_dullahan_steel_ghost', 'OUT-B': 'melo_dullahan_steel_ghost', 'C1-O': 'original_profile', 'END-O': 'original_profile',
+  'OUT-0-1': 'original_profile', 'OUT-0-2': 'silence', 'C0-1': 'original_profile', 'C0-2': 'original_profile',
+  'OUT-1': 'silence', 'C1-1': 'original_profile', 'C1-2': 'original_profile', 'C1-3': 'silence',
+  'C1-4': 'silence', 'C1-5': 'close_to_your_heart_alt', 'C1-6': 'silence', 'C1-M': 'silence',
+  'C2-1': 'silence', 'C2-L': 'silence', 'C2-M': 'silence', 'C2-2': 'original_profile',
+  'C2-3': 'silence', 'C2-4': 'silence', 'C2-5': 'silence', 'C3-1': 'silence',
+  'C3-2': 'silence', 'C3-3': 'silence', 'C3-4': 'silence', 'C3-5': 'melo_erfolg_piano',
+  'C3-M': 'melo_erfolg_piano', 'C4-1': 'silence', 'C4-2': 'silence', 'C4-3': 'silence',
+  'C4-4': 'silence', 'C4-5': 'silence', 'C4-M': 'silence', 'C5-1': 'melo_erfolg_piano',
+  'C5-2': 'silence', 'C5-3': 'silence', 'C5-4': 'silence', 'C5-5': 'silence',
+  'C5-M': 'silence', 'C6-1': 'silence', 'C6-2': 'silence',
+  'C6-3': 'silence', 'C6-4': 'silence', 'C6-5': 'silence',
+  'C6-6': 'silence', 'C6-7': 'silence', 'C6-8': 'melo_erfolg_piano', 'C6-9': 'silence',
+  'C6-M': 'melo_erfolg_piano', 'C7-1': 'silence', 'C7-2': 'silence', 'C7-A': 'melo_erfolg_piano',
+  'C7-B': 'silence', 'C7-P1': 'silence', 'C7-P2': 'melo_erfolg_piano', 'C7-P3': 'silence',
+  'C7-4a': 'melo_erfolg_piano', 'C7-4b': 'silence', 'C7-5a': 'melo_erfolg_piano', 'C7-5b': 'silence',
+  'C7-W': 'silence', 'C8-1': 'silence', 'C8-2': 'silence', 'C8-3': 'melo_erfolg_piano',
+  'C9-1': 'silence', 'C9-2': 'close_to_your_heart_alt', 'C10-1': 'silence', 'C10-2': 'silence',
+  'C10-3': 'silence', 'C10-4': 'silence', 'C11-1': 'silence',
+  'C11-N': 'melo_erfolg_piano', 'C11-A': 'melo_erfolg_piano', 'C11-B': 'silence', 'C2-X': 'silence',
+  'END-X1': 'original_game_over', 'C5-X': 'silence', 'END-X2': 'original_game_over', 'C6-X': 'silence',
+  'END-X3': 'original_game_over', 'C2-Y': 'silence', 'END-X4': 'original_game_over', 'C10-X': 'silence',
+  'END-X5': 'original_game_over', 'END-M1': 'original_game_over', 'END-M2': 'silence', 'END-M3': 'silence',
+  'END-M4': 'original_game_over', 'END-M5': 'silence', 'END-G': 'melo_erfolg_piano', 'OUT-G': 'close_to_your_heart_alt',
+  'END-N': 'melo_erfolg_piano', 'OUT-N': 'melo_erfolg_piano', 'END-A': 'silence', 'OUT-A': 'silence',
+  'END-B': 'silence', 'OUT-B': 'silence', 'C1-O': 'original_profile', 'END-O': 'original_profile',
   'OUT-O': 'original_profile', 'END-O2': 'close_to_your_heart_alt', 'OUT-O2': 'close_to_your_heart_alt', 'C12-1': 'close_to_your_heart_alt',
-  'C12-2': 'melo_erfolg_piano', 'C12-3': 'original_dullahan', 'C12-4': 'melo_dullahan_clockwork', 'C12-5': 'melo_dullahan_steel_ghost',
+  'C12-2': 'melo_erfolg_piano', 'C12-3': 'silence', 'C12-4': 'silence', 'C12-5': 'silence',
   'C12-6': 'silence', 'C12-7': 'melo_erfolg_piano',
 });
 //  場面の途中で曲を変える・止める所。場面ID → [その行から先, 曲の鍵](a/s の2つある行は、前の方の行に付ける)
@@ -71142,8 +71378,8 @@ const XMAS_NOVEL_BGM_SHIFT = Object.freeze({
   'C2-3': [['2-3-7', 'silence']],
   'C5-4': [['5-4-5', 'silence']],
   'C6-5': [['6-5-3', 'silence']],
-  'C7-1': [['7-1-3a', 'melo_dullahan_steel_ghost_alt']],
-  'C7-W': [['7-W-14', 'melo_dullahan_steel_ghost_alt']],
+  'C7-1': [['7-1-3a', 'silence']],
+  'C7-W': [['7-W-14', 'silence']],
   'C10-1': [['10-1-5', 'silence']],
   'C10-2': [['10-2-7', 'silence']],
   'C10-3': [['10-3-7', 'silence']],
@@ -71410,6 +71646,7 @@ const XMAS_NOVEL_ICONS = {
   skip: '<polygon points="4 5 12 12 4 19 4 5"/><polygon points="12 5 20 12 12 19 12 5"/>',
   log: '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>',
   book: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><circle cx="12" cy="10" r="3"/><line x1="14.2" y1="12.2" x2="16.5" y2="14.5"/>',
+  map: '<polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21 3 6"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/>',
   menu: '<line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/>',
 };
 
@@ -71420,6 +71657,14 @@ const xmasNovelLoad = async (script = XMAS_NOVEL_SCRIPT) => {
 };
 const xmasNovelStore = async (save, script = XMAS_NOVEL_SCRIPT) => {
   try { await storeSet(XMAS_NOVEL_STORAGE_KEY, xmasNovelNormalize(save, script), false); return true; } catch (e) { return false; }
+};
+// 分岐の地図の読み直し(r1126-102): 新しいキー mh_xmas_novel_route_v1。形は xmasNovelRouteNormalize
+const xmasNovelRouteLoad = async (script = XMAS_NOVEL_SCRIPT) => {
+  try { return xmasNovelRouteNormalize(await storeGet(XMAS_NOVEL_ROUTE_KEY, null, false), script); }
+  catch (e) { return xmasNovelRouteNormalize(null, script); }
+};
+const xmasNovelRouteStore = async (route, script = XMAS_NOVEL_SCRIPT) => {
+  try { await storeSet(XMAS_NOVEL_ROUTE_KEY, xmasNovelRouteNormalize(route, script), false); return true; } catch (e) { return false; }
 };
 // ほかの画面から読む口: 見たエンディング(日時つき)・一発で当てた数(記録だけ)
 const xmasNovelRecordState = async () => {
@@ -71463,11 +71708,22 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
   const card = cards[0] || null;
   const setCard = (c) => setCards((list) => (c ? [...list, c] : []));
   const [sheet, setSheet] = useState(null); // 'book' / 'log' / 'menu' / { kind:'present'|'person'|'action', q }
+  // 選択肢・推理の問い・名指しを待っている間は、柱時計のチク・タクを小さく繰り返す。選ぶ・窓を閉じると止まる(社長「選択肢の待ち時間はチクタクって時計おとが流れる」・r1126-093 追記2)
+  useEffect(() => {
+    if (!sheet || typeof sheet !== 'object' || !sheet.q) return undefined;
+    let high = true;
+    const tick = () => { const fn = xmasNovelSeFn('nvTick'); if (fn) fn(high); high = !high; };
+    const id = setInterval(tick, 640);
+    const first = setTimeout(tick, 250);
+    return () => { clearInterval(id); clearTimeout(first); };
+  }, [sheet]);
   const [got, setGot] = useState(null); // 手に入れた手がかり { n, d, add }
   const [skip, setSkip] = useState(false);
   const [log, setLog] = useState([]);
   const [confirmNew, setConfirmNew] = useState(false);
   const saveRef = useRef(null);
+  const [route, setRoute] = useState(null); // 分岐の地図の読み直し(mh_xmas_novel_route_v1・r1126-102)
+  const routeRef = useRef(null);
   const lastBgm = useRef(null);
   const lastChapter = useRef(null);
   const prevBgm = useRef(null);
@@ -71505,10 +71761,55 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
   useEffect(() => {
     let alive = true;
     try { prevBgm.current = typeof Audio_ !== 'undefined' && Audio_.currentBgmKey ? Audio_.currentBgmKey() : null; } catch (e) { prevBgm.current = null; }
-    xmasNovelLoad(S).then((s) => { if (alive) { saveRef.current = s; setSave(s); } });
-    xmasNovelBgm('melo_dullahan_clockwork'); // 開いた所(題の画面)。歌の入った Kiss からはじまるミステリーをやめ、柱時計の不穏な曲に(r1126-093)
+    xmasNovelLoad(S).then((s) => {
+      if (!alive) return;
+      saveRef.current = s; setSave(s);
+      // 分岐の地図の読み直し(r1126-102): 別のキーから読み、地図より前に通った分かれ道は今の保存から1回だけ作る
+      xmasNovelRouteLoad(S).then((r) => {
+        if (!alive) return;
+        const seeded = r.seeded === 1 ? r : xmasNovelRouteSeed(S, s, r);
+        routeRef.current = seeded; setRoute(seeded);
+        if (seeded !== r) void xmasNovelRouteStore(seeded, S);
+      });
+    });
+    xmasNovelBgm('silence'); // 開いた所(題の画面)は曲なしで、柱時計の環境音(r1126-093 追記3)。前: 呪われた騎士の時計仕掛け。歌の入った Kiss からはじまるミステリーをやめ、柱時計の不穏な曲に(r1126-093)
     return () => { alive = false; xmasNovelSeStop(); if (storeTimer.current) clearTimeout(storeTimer.current); };
   }, []);
+  const putRoute = (next) => {
+    if (!next) return;
+    routeRef.current = next; setRoute(next);
+    void xmasNovelRouteStore(next, S);
+  };
+  // 地図の「↺ ここから読み直す」: 読み直す前の続きを back に逃がしてから(すでにあれば、一番はじめの続きを残す)、その分かれ道の状態で始める
+  const redoFrom = (cur) => {
+    const r = routeRef.current || xmasNovelRouteNormalize(null, S);
+    const now = saveRef.current && saveRef.current.cur;
+    putRoute({ ...r, back: r.back || now || null });
+    setSheet(null);
+    start(cur);
+  };
+  const backFromRedo = () => {
+    const r = routeRef.current;
+    if (!r || !r.back) return;
+    const b = r.back;
+    putRoute({ ...r, back: null });
+    setSheet(null);
+    start(b);
+  };
+  // 既読飛ばしの間は帯の1回の音を止める(r1126-093 追記3)
+  useEffect(() => { xmasNovelSeQuiet = !!skip; if (skip) xmasNovelSeStop(); }, [skip]);
+  // 場所の環境音: 読んでいる場面の背景で決め、題の画面は柱時計。選択肢を待つ間のチクタクとかぶる柱時計は、その間だけ止める。
+  //   既読飛ばしで場面がつぎつぎ替わっても重ねないよう、0.35 秒落ち着いてから替える。閉じたら止める
+  const ambSceneId = st && st.scene ? st.scene.id : '';
+  const ambBg = st && st.scene ? xmasNovelSceneBgName(st.scene, st.cur ? st.cur.idx : 0) : '';
+  const ambWait = !!(sheet && typeof sheet === 'object' && sheet.q);
+  useEffect(() => {
+    let kind = mode === 'read' ? xmasNovelAmbientOf(st && st.scene, ambBg) : mode === 'title' ? 'clock' : 'none';
+    if (ambWait && kind === 'clock') kind = 'none';
+    const id = setTimeout(() => xmasNovelSetAmbient(kind), 350);
+    return () => clearTimeout(id);
+  }, [mode, ambSceneId, ambBg, ambWait]);
+  useEffect(() => () => { xmasNovelSeQuiet = false; xmasNovelSetAmbient('none'); }, []);
   const persist = (next, now = false) => {
     saveRef.current = next; setSave(next);
     if (replayRef.current) return; // 見返しは保存しない
@@ -71535,7 +71836,9 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
     let s = base;
     unreadRef.current = !!(r.k && !s.read.includes(r.k));
     if (r.k && !s.read.includes(r.k)) s = { ...s, read: [...s.read, r.k] };
-    if (r.t === 'band' && r.se) xmasNovelRowSe(r.se, r.seN); else xmasNovelSeStop();
+    if (r.t === 'band' && r.se) xmasNovelRowSe(r.se, r.seN, r); else xmasNovelSeStop();
+    if (!opts.quiet && r.t === 'band' && !r.se && XMAS_NOVEL_SE_ROW[r.id]) xmasNovelRowSe(XMAS_NOVEL_SE_ROW[r.id][0], XMAS_NOVEL_SE_ROW[r.id][1], r); // 文に合わせた1回の音(r1126-093 追記3)
+    else if (!opts.quiet && !xmasNovelSeQuiet && r.t === 'band' && !r.se && Array.isArray(r.fx) && r.fx.includes('fallen')) xmasNovelSeHit('dread'); // 倒れた人が見つかった帯に、不穏な一音(r1126-093 追記2)
     // 章の札の下で着いた行は、札を閉じてから揺らす(札に隠れて見えなかった)
     pendingQuakeRef.current = 0;
     if (XMAS_NOVEL_SHAKE[r.id] && !skip) { if (opts.held) pendingQuakeRef.current = XMAS_NOVEL_SHAKE[r.id]; else xmasNovelQuake(stageRef.current, XMAS_NOVEL_SHAKE[r.id]); }
@@ -71631,6 +71934,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
       if (next.row.t === 'panel') { panelChanged = xmasNovelPanelChanged(next.cur.panel, cur.panel); if (next.row.stamp) xmasNovelSe('impact'); }
     }
     const settled = { ...next, cur, panelChanged };
+    if (next.row.t === 'q' && !replayRef.current && routeRef.current) putRoute(xmasNovelRouteRecord(routeRef.current, S, cur)); // 分かれ道の状態(r1126-102)
     s = arriveRow(next.row, { ...s, cur }, { held: chapterCard });
     setSt(settled);
     persist(s);
@@ -71919,6 +72223,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
           <XmasNovelIcon d={XMAS_NOVEL_ICONS.auto} /><span>{autoLevel === 2 ? 'はやい' : 'オート'}</span>
         </button>
         <button type="button" className="mh-nv-btn" data-xmas-novel-skip data-on={skip ? '' : undefined} onClick={toggleSkip} aria-label="既読スキップ"><XmasNovelIcon d={XMAS_NOVEL_ICONS.skip} /><span className="hidden sm:inline">スキップ</span></button>
+        <button type="button" className="mh-nv-btn" data-xmas-novel-open-map onClick={() => setSheet('map')} aria-label="地図"><XmasNovelIcon d={XMAS_NOVEL_ICONS.map} /><span>地図</span></button>
         <button type="button" className="mh-nv-btn" data-xmas-novel-menu onClick={() => setSheet('menu')} aria-label="メニュー"><XmasNovelIcon d={XMAS_NOVEL_ICONS.menu} /></button>
       </div>
 
@@ -71969,7 +72274,10 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
         </div>
       )}
 
-      {sheet && (
+      {sheet === 'map' && save && (
+        <XmasNovelMap script={S} save={save} route={route} playerName={playerName} onRedo={redoFrom} onBack={backFromRedo} onClose={() => setSheet(null)} />
+      )}
+      {sheet && sheet !== 'map' && (
         <div className="mh-nv-sheet" data-xmas-novel-sheet={typeof sheet === 'string' ? sheet : sheet.kind}
           onClick={() => { if (typeof sheet === 'string') setSheet(null); }}>
           <div className="mh-nv-panel" onClick={(e) => e.stopPropagation()}>
@@ -72085,6 +72393,240 @@ const openXmasNovel = (opts = {}) => {
   };
   root.render(<XmasNovelScreen playerName={opts.playerName || ''} onClose={done} script={opts.script || null} />);
   return true;
+};
+
+// ---- part: 79-xmas-novel-map.jsx ----
+// ---- 分岐の地図「聖夜の見取り図」(台帳 r1126-102・追記1) ----
+//  事件簿の上の段の「地図」から開く。章・分かれ道(行動の選択・推理の問い・名指し)・エンドを、台本から機械で並べる。
+//  読んだ所は明るく、まだの所は「？？？」で形だけ見せる(題は読むまで伏せる・r1126-094 追記3)。エンドは見た物だけ名前を出す。
+//  通った分かれ道は「↺」から、その問いの直前の状態(手がかり帳・登場人物パネル・フラグ・派)で読み直せる。
+//  状態は mh_xmas_novel_route_v1(79-xmas-novel-engine.jsx の xmasNovelRoute*)。この部品は読むだけで、保存は呼ぶ側がする
+const XMAS_NOVEL_MAP_CSS = `
+.mh-nvm { position: absolute; inset: 0; z-index: 12; display: flex; flex-direction: column; color: #eef3ff; font-family: inherit; animation: mh-nv-fade .2s ease both;
+  background: radial-gradient(ellipse at 50% -10%, rgba(232,200,115,.18), transparent 55%),
+    linear-gradient(rgba(120,150,220,.07) 1px, transparent 1px) 0 0/22px 22px,
+    linear-gradient(90deg, rgba(120,150,220,.07) 1px, transparent 1px) 0 0/22px 22px,
+    linear-gradient(#0b1430, #101b3d 60%, #0b1430); }
+.mh-nvm-head { flex: none; padding: calc(max(10px, env(safe-area-inset-top)) + 2px) 16px 8px; background: linear-gradient(#0b1430 75%, rgba(11,20,48,0)); }
+.mh-nvm-ttl { display: flex; align-items: center; gap: 8px; }
+.mh-nvm-ttl h2 { font-size: 19px; font-weight: 900; color: #e8c873; letter-spacing: .06em; }
+.mh-nvm-x { margin-left: auto; width: 32px; height: 32px; border-radius: 50%; border: 1px solid #b8913a; color: #e8c873; display: grid; place-items: center; font-weight: 900; }
+.mh-nvm-row { display: flex; gap: 8px; margin-top: 8px; align-items: center; }
+.mh-nvm-tab { flex: 1; min-width: 0; text-align: center; padding: 6px 0; border-radius: 999px; font-size: 13px; font-weight: 900; border: 1px solid #b8913a; color: #e8c873; }
+.mh-nvm-tab[data-on] { background: linear-gradient(#e8c873, #b8913a); color: #2a1a05; }
+.mh-nvm-ends { flex: none; font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 999px; background: rgba(200,50,60,.25); border: 1px solid rgba(232,120,120,.6); white-space: nowrap; }
+.mh-nvm-back { display: block; width: 100%; margin-top: 8px; padding: 7px 0; border-radius: 10px; font-size: 13px; font-weight: 900; color: #fff; background: rgba(200,50,60,.55); border: 1px solid #f0a0a0; }
+.mh-nvm-legend { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 8px; font-size: 10px; color: #9fb0d8; }
+.mh-nvm-body { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 0 16px calc(max(16px, env(safe-area-inset-bottom)) + 12px); }
+.mh-nvm-it { position: relative; display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 4px 0 4px 52px; }
+.mh-nvm-it::before { content: ""; position: absolute; left: 30px; top: 0; bottom: 0; width: 4px; border-radius: 2px; background: linear-gradient(#e8c873, #b8913a); box-shadow: 0 0 8px rgba(232,200,115,.45); }
+.mh-nvm-it[data-dark]::before { background: repeating-linear-gradient(#2b3658 0 8px, transparent 8px 14px); box-shadow: none; }
+.mh-nvm-door { position: absolute; left: 0; width: 64px; height: 38px; border-radius: 19px 19px 4px 4px; background: linear-gradient(#6b4423, #3e2612); border: 2px solid #e8c873; display: grid; place-items: center; font-size: 11px; font-weight: 900; color: #e8c873; box-shadow: 0 0 12px rgba(232,200,115,.4); z-index: 1; }
+.mh-nvm-it[data-dark] .mh-nvm-door { background: #1a2342; border-color: #3a4670; color: #5d6a90; box-shadow: none; }
+.mh-nvm-chap { padding-left: 76px; min-height: 50px; margin-top: 6px; }
+.mh-nvm-cname { font-size: 15px; font-weight: 900; line-height: 1.3; }
+.mh-nvm-it[data-dark] .mh-nvm-cname { color: #5d6a90; }
+.mh-nvm-mk { position: absolute; left: 18px; width: 28px; height: 28px; display: grid; place-items: center; font-size: 12px; font-weight: 900; z-index: 1; }
+.mh-nvm-mk[data-k="action"] { transform: rotate(45deg) scale(.86); background: #7a1f28; border: 2px solid #f0a0a0; border-radius: 4px; }
+.mh-nvm-mk[data-k="action"] > span { transform: rotate(-45deg); }
+.mh-nvm-mk[data-k="present"] { border-radius: 50%; background: #173a2a; border: 2px solid #8fd6a8; }
+.mh-nvm-mk[data-k="person"] { border-radius: 6px; background: #3a2a5a; border: 2px solid #c7b2ff; }
+.mh-nvm-it[data-dark] .mh-nvm-mk { background: #1a2342; border-color: #3a4670; color: #5d6a90; }
+.mh-nvm-it[data-now] .mh-nvm-mk { box-shadow: 0 0 0 3px #fff, 0 0 16px 4px rgba(255,90,90,.9); }
+.mh-nvm-lab { min-width: 0; flex: 1; font-size: 12.5px; font-weight: 800; line-height: 1.35; }
+.mh-nvm-lab small { display: block; font-size: 10.5px; font-weight: 600; color: #9fb0d8; }
+.mh-nvm-it[data-dark] .mh-nvm-lab { color: #5d6a90; }
+.mh-nvm-it[data-dark] .mh-nvm-lab small { color: #3f4b70; }
+.mh-nvm-redo { flex: none; width: 32px; height: 32px; border-radius: 50%; border: 1px solid #b8913a; color: #e8c873; background: rgba(232,200,115,.08); display: grid; place-items: center; font-size: 15px; font-weight: 900; }
+.mh-nvm-now { flex: none; padding: 3px 8px; font-size: 10px; font-weight: 900; color: #fff; background: #c8323c; border-radius: 3px; box-shadow: 0 0 0 2px #fff, 0 0 14px rgba(255,80,80,.9); white-space: nowrap; }
+.mh-nvm-ends-list { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; flex: none; max-width: 52%; }
+.mh-nvm-orn { position: relative; min-width: 96px; max-width: 150px; padding: 5px 8px 5px 24px; border-radius: 13px; font-size: 10.5px; font-weight: 800; line-height: 1.3; background: linear-gradient(135deg, #8a1c26, #4a0f15); border: 1px solid #f0a0a0; color: #ffe9e9; }
+.mh-nvm-orn::before { content: ""; position: absolute; left: 7px; top: 50%; width: 12px; height: 12px; margin-top: -6px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ffd2d2, #c8323c 60%, #6a1018); box-shadow: 0 0 6px rgba(255,120,120,.8); }
+.mh-nvm-orn small { display: block; font-size: 9.5px; font-weight: 600; color: #f7c2c2; }
+.mh-nvm-orn[data-good] { background: linear-gradient(135deg, #7a5a14, #3d2c08); border-color: #e8c873; }
+.mh-nvm-orn[data-good]::before { background: radial-gradient(circle at 35% 30%, #fff3c0, #e8c873 60%, #7a5a14); }
+.mh-nvm-orn[data-unseen] { background: #151d38; border-color: #3a4670; color: #5d6a90; }
+.mh-nvm-orn[data-unseen]::before { background: #2a3456; box-shadow: none; }
+.mh-nvm-orn[data-unseen] small { color: #3f4b70; }
+.mh-nvm-lane { margin: 14px 0 0; padding: 4px 10px; border-left: 3px solid #b8913a; font-size: 11px; font-weight: 900; color: #e8c873; letter-spacing: .08em; }
+.mh-nvm-lane[data-dark] { border-left-color: #3a4670; color: #5d6a90; }
+.mh-nvm-foot { margin-top: 16px; padding: 10px 12px; border-radius: 12px; border: 1px solid #3a4670; font-size: 11px; color: #9fb0d8; line-height: 1.6; background: rgba(20,33,74,.6); }
+.mh-nvm-sheet { position: absolute; inset: 0; z-index: 2; display: flex; align-items: flex-end; background: rgba(5,8,20,.55); }
+.mh-nvm-panel { width: 100%; padding: 16px 16px calc(max(16px, env(safe-area-inset-bottom)) + 6px); border-radius: 18px 18px 0 0; background: linear-gradient(#18244d, #0d1634); border-top: 2px solid #e8c873; box-shadow: 0 -10px 30px rgba(0,0,0,.5); }
+.mh-nvm-panel h3 { font-size: 15px; font-weight: 900; color: #e8c873; }
+.mh-nvm-q { margin-top: 8px; padding: 8px 10px; border-radius: 10px; background: rgba(120,20,30,.35); box-shadow: 0 0 0 1px rgba(232,120,120,.6); font-size: 13px; font-weight: 800; line-height: 1.5; }
+.mh-nvm-panel ul { margin-top: 10px; font-size: 12px; line-height: 1.7; color: #d9e2ff; }
+.mh-nvm-btn { display: block; width: 100%; margin-top: 10px; padding: 12px 0; text-align: center; border-radius: 12px; font-weight: 900; font-size: 15px; }
+.mh-nvm-btn[data-main] { background: linear-gradient(#e8c873, #b8913a); color: #2a1a05; }
+.mh-nvm-btn[data-sub] { border: 1px solid #b8913a; color: #e8c873; }
+@media (orientation: landscape) and (max-height: 500px) { .mh-nvm-body, .mh-nvm-head { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); } .mh-nvm-panel { max-width: 560px; margin: 0 auto; border-radius: 18px 18px 0 0; } }
+`;
+const XMAS_NOVEL_MAP_SIDES = [{ v: 1, label: 'あつ派' }, { v: 2, label: 'ソラシド派' }];
+// 地図の並び: 本筋(序章〜第7章)→ 1回目の推理のあとの2つの道 → 過去編
+const XMAS_NOVEL_MAP_LANES = [
+  { id: 'main', chapters: ['C0', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7'] },
+  { id: 'late', name: '当てられなかった道', chapters: ['C10', 'C11'] },
+  { id: 'true', name: '真相への道', chapters: ['C8', 'C9'] },
+];
+let xmasNovelMapModelCache = null;
+// 台本から、章ごとの分かれ道とその先のエンドを並べる(台本が同じなら作り直さない)
+const xmasNovelMapModel = (script) => {
+  if (xmasNovelMapModelCache && xmasNovelMapModelCache.script === script) return xmasNovelMapModelCache.model;
+  const scenes = xmasNovelScenes(script);
+  const order = {}; scenes.forEach((s, i) => { order[s.id] = i; });
+  const laneChapters = new Set(XMAS_NOVEL_MAP_LANES.flatMap((l) => l.chapters));
+  const endInfo = {};
+  scenes.forEach((s) => { if (s.ending && s.ending.id && !endInfo[s.ending.id]) endInfo[s.ending.id] = s.ending; });
+  const endsOf = (q, chId) => {
+    const tos = [];
+    (q.options || []).forEach((o) => { if (o && o.to) tos.push(o.to); });
+    Object.values(q.route || {}).forEach((t) => { if (typeof t === 'string') tos.push(t); });
+    const out = [];
+    tos.forEach((to) => {
+      const sc = xmasNovelSceneById(script, to);
+      if (!sc || (sc.chapter !== chId && laneChapters.has(sc.chapter))) return; // ほかの章へ続く道(真相・後半)は、地図の道で見せる。強制バッド・おまけ(章 END)は札で
+      const e = xmasNovelEndingAhead(script, to);
+      if (e && !out.includes(e)) out.push(e);
+    });
+    return out;
+  };
+  const chapters = {};
+  xmasNovelChapters(script).forEach((ch) => {
+    const scs = scenes.filter((s) => s.chapter === ch.id && !(s.ending && s.ending.id));
+    const nodes = [];
+    scs.forEach((s) => (s.rows || []).forEach((r, idx) => {
+      if (r && r.t === 'q') nodes.push({ id: r.id, q: r, scene: s.id, idx, pos: order[s.id] * 10000 + idx, ends: endsOf(r, ch.id) });
+    }));
+    chapters[ch.id] = { ch, scenes: scs.map((s) => s.id), keys: new Set(scs.flatMap((s) => (s.rows || []).filter((r) => r && r.k).map((r) => r.k))), nodes };
+  });
+  const model = { chapters, order, endInfo, endTotal: Object.keys(endInfo).length };
+  xmasNovelMapModelCache = { script, model };
+  return model;
+};
+const xmasNovelMapNum = (label) => { const m = String(label || '').match(/[①-⑨]/); return m ? m[0] : ''; };
+
+const XmasNovelMap = ({ script, save, route, playerName, onRedo, onBack, onClose }) => {
+  const model = xmasNovelMapModel(script);
+  const curSide = save && save.cur && save.cur.flags && Number.isFinite(save.cur.flags.f_A1) ? save.cur.flags.f_A1 : 0;
+  const [side, setSide] = useState(curSide === 2 ? 2 : 1);
+  const [pick, setPick] = useState(null);
+  const read = useMemo(() => new Set((save && save.read) || []), [save]);
+  const endings = (save && save.endings) || [];
+  const at = (route && route.at) || {};
+  const keyOf = (id) => `${id}|${id === 'A1' ? 0 : side}`;
+  const nodeLit = (n) => !!at[keyOf(n.id)] || (!!n.q.k && read.has(n.q.k) && (n.id === 'A1' || curSide === side));
+  const chEntered = (c) => [...c.keys].some((k) => read.has(k));
+  const chLit = (c) => {
+    if (!c || !chEntered(c)) return false;
+    if (c.ch.id === 'C0' || c.ch.id === 'C1' || curSide === side) return true;
+    return c.nodes.some(nodeLit) || Object.keys(at).some((k) => k.endsWith(`|${side}`) && c.scenes.includes(at[k].scene));
+  };
+  // 今いる所: 続きの場所のある章の、続きの位置より後で一番近い分かれ道(無ければ章の札)
+  const now = (() => {
+    const cur = save && save.cur;
+    if (!cur || (curSide && curSide !== side)) return null;
+    const sc = xmasNovelSceneById(script, cur.scene);
+    if (!sc || !model.chapters[sc.chapter]) return null;
+    const p = (model.order[sc.id] || 0) * 10000 + (Number(cur.idx) || 0);
+    const n = model.chapters[sc.chapter].nodes.find((x) => x.pos >= p);
+    return n ? { node: n.id } : { chapter: sc.chapter };
+  })();
+  const seenCount = Object.keys(model.endInfo).filter((e) => endings.includes(e)).length;
+  const pickedSnap = pick ? at[keyOf(pick.id)] : null;
+  const pickedCh = pick ? model.chapters[xmasNovelSceneById(script, pick.scene) ? xmasNovelSceneById(script, pick.scene).chapter : ''] : null;
+
+  const endCard = (e) => {
+    const info = model.endInfo[e] || {};
+    const seen = endings.includes(e);
+    const good = info.kind === 'good' || info.kind === 'normal' || info.kind === 'extra';
+    return (
+      <div key={e} className="mh-nvm-orn" data-xmas-novel-map-end={e} data-unseen={seen ? undefined : ''} data-good={seen && good ? '' : undefined}>
+        {seen ? xmasNovelWrap(info.name || '') : '？？？'}<small>{seen ? (info.label || 'エンド') : '未見のエンド'}</small>
+      </div>
+    );
+  };
+  const chapterItem = (c) => {
+    const lit = chLit(c);
+    const label = xmasNovelChapterLabel(c.ch) || c.ch.label || '';
+    const title = lit ? xmasNovelChapterTitle(script, c.ch, save.read) : '？？？';
+    const isNow = now && now.chapter === c.ch.id;
+    return (
+      <div key={`ch-${c.ch.id}`} className="mh-nvm-it mh-nvm-chap" data-xmas-novel-map-chapter={c.ch.id} data-dark={lit ? undefined : ''}>
+        <div className="mh-nvm-door">{lit ? label : (c.ch.past ? '🔒' : c.ch.no === 0 ? '序章' : '第？章')}</div>
+        <div className="mh-nvm-cname">{xmasNovelWrap(title)}</div>
+        {isNow && <span className="mh-nvm-now" data-xmas-novel-map-now>いまここ</span>}
+      </div>
+    );
+  };
+  const nodeItem = (n) => {
+    const lit = nodeLit(n);
+    const isNow = now && now.node === n.id;
+    const canRedo = !!at[keyOf(n.id)];
+    const q = n.q;
+    const first = save && save.first && save.first[n.id];
+    const sub = !lit ? 'まだ読んでいない' : isNow ? '考え中' : q.kind === 'present' && first ? (first.f ? '一発で正解' : '外して仲間が拾った') : n.id === 'A1' ? (side === 2 ? 'ソラシド派' : 'あつ派') : '';
+    const kind = n.id === 'A1' ? 'person' : q.kind; // 派を選ぶ所は名指しの印
+    const mark = kind === 'action' ? '◆' : kind === 'present' ? (xmasNovelMapNum(q.label) || '？') : '✦';
+    return (
+      <div key={`q-${n.id}`} className="mh-nvm-it" data-xmas-novel-map-node={n.id} data-dark={lit ? undefined : ''} data-now={isNow ? '' : undefined}>
+        <div className="mh-nvm-mk" data-k={kind}><span>{lit ? mark : '？'}</span></div>
+        <div className="mh-nvm-lab">{lit ? xmasNovelWrap(q.label || '分かれ道') : '？？？'}{sub ? <small>{sub}</small> : null}</div>
+        {isNow && <span className="mh-nvm-now" data-xmas-novel-map-now>いまここ</span>}
+        {canRedo && !isNow && <button type="button" className="mh-nvm-redo" data-xmas-novel-map-redo={n.id} aria-label="ここから読み直す" onClick={() => setPick(n)}>↺</button>}
+        {n.ends.length > 0 && <div className="mh-nvm-ends-list">{n.ends.map(endCard)}</div>}
+      </div>
+    );
+  };
+  const laneLit = (lane) => lane.chapters.some((id) => model.chapters[id] && chLit(model.chapters[id]));
+  const past = xmasNovelChapters(script).find((c) => c.past);
+  const pastOpen = endings.includes('END-G');
+
+  return (
+    <div className="mh-nvm" data-xmas-novel-map onClick={(e) => e.stopPropagation()}>
+      <style>{XMAS_NOVEL_MAP_CSS}</style>
+      <div className="mh-nvm-head">
+        <div className="mh-nvm-ttl"><h2 className="mh-nv-serif">聖夜の見取り図</h2><span className="text-[11px] text-slate-400">分岐の地図</span>
+          <button type="button" className="mh-nvm-x" data-xmas-novel-map-close aria-label="閉じる" onClick={onClose}>✕</button></div>
+        <div className="mh-nvm-row">
+          {XMAS_NOVEL_MAP_SIDES.map((s) => <button type="button" key={s.v} className="mh-nvm-tab" data-xmas-novel-map-side={s.v} data-on={side === s.v ? '' : undefined} onClick={() => setSide(s.v)}>{s.label}</button>)}
+          <div className="mh-nvm-ends" data-xmas-novel-map-count>エンド {seenCount}/{model.endTotal}</div>
+        </div>
+        {route && route.back && <button type="button" className="mh-nvm-back" data-xmas-novel-map-back onClick={onBack}>読み直す前の続きへ戻る</button>}
+        <div className="mh-nvm-legend"><span>◆ 行動の選択</span><span>① 推理の問い</span><span>✦ 名指し</span><span>● エンド</span><span>↺ ここから読み直す</span></div>
+      </div>
+      <div className="mh-nvm-body">
+        {XMAS_NOVEL_MAP_LANES.map((lane) => (
+          <div key={lane.id} data-xmas-novel-map-lane={lane.id}>
+            {lane.name && <div className="mh-nvm-lane" data-dark={laneLit(lane) ? undefined : ''}>{laneLit(lane) ? lane.name : '？？？へ続く道'}</div>}
+            {lane.chapters.map((id) => model.chapters[id]).filter(Boolean).map((c) => [chapterItem(c), ...c.nodes.map(nodeItem)])}
+          </div>
+        ))}
+        {past && (
+          <div className="mh-nvm-it mh-nvm-chap" data-xmas-novel-map-chapter={past.id} data-dark={pastOpen ? undefined : ''}>
+            <div className="mh-nvm-door">{pastOpen ? xmasNovelChapterLabel(past) : '🔒'}</div>
+            <div className="mh-nvm-cname">{pastOpen ? past.title : '？？？'}</div>
+          </div>
+        )}
+        <div className="mh-nvm-foot">明るい所は読んだ所。↺ を押すと、その分かれ道の直前から読み直せます(手がかり帳・登場人物パネル・選んだ派も、その時のまま)。一発で当てた記録と見たエンドは消えません。</div>
+      </div>
+      {pick && pickedSnap && (
+        <div className="mh-nvm-sheet" onClick={() => setPick(null)}>
+          <div className="mh-nvm-panel" data-xmas-novel-map-sheet={pick.id} onClick={(e) => e.stopPropagation()}>
+            <h3 className="mh-nv-serif">{pickedCh ? `${xmasNovelChapterLabel(pickedCh.ch)}　${xmasNovelChapterTitle(script, pickedCh.ch, save.read)}` : ''} ― {pick.q.label || '分かれ道'}</h3>
+            <div className="mh-nvm-q">{xmasNovelWrap(xmasNovelFill(pick.q.x, playerName))}</div>
+            <ul>
+              <li>・手がかり帳: {(pickedSnap.clues || []).length}個(その時のまま)</li>
+              <li>・登場人物パネル・選んだ派も、その時のまま</li>
+              <li>・一発で当てた記録・見たエンドは消えません</li>
+            </ul>
+            <button type="button" className="mh-nvm-btn" data-main="" data-xmas-novel-map-go onClick={() => { const c = pickedSnap; setPick(null); onRedo && onRedo(c); }}>ここから読み直す</button>
+            <button type="button" className="mh-nvm-btn" data-sub="" onClick={() => setPick(null)}>やめる</button>
+            <div className="mt-2 text-[10.5px] leading-relaxed text-slate-400">いまの続きは残ります。地図の「読み直す前の続きへ戻る」で、いつでも戻れます。</div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 };
 
 // ---- part: 56-assistant-chat.jsx ----
@@ -77061,7 +77603,7 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   //   みゅあ(ふだん・ハロウィン)の cx は、長い髪が目の高さで横につながり道具では左へずれるので、立ち絵を目盛りつきで見て両目の真ん中に置いた(2026-11-24・life-stand-face-cx.py の MANUAL_X)
   //   cx … 顔の横の真ん中(見えている体の左を0・右を1)。モードえらびの枠が顔で寄せるのに使う(2026-11-24 r1119-153 追記4)。測り直し: python3 -I tools/assistant/life-stand-face-cx.py --write
   'stand-normal': { mua: { top: 0.1592, eye: 0.3668, chin: 0.4305, m: 0.58, cx: 0.5339, above: 0.7 }, momosuke: { top: 0.0635, eye: 0.3248, chin: 0.4296, m: 0.78, cx: 0.5051, above: 0.7 }, kiki: { top: 0.0879, eye: 0.3357, chin: 0.4301, m: 0.904, cx: 0.5388 }, atsu: { top: 0.0726, eye: 0.3274, chin: 0.4296, m: 0.76, cx: 0.4669 }, kyuko: { top: 0.0584, eye: 0.3167, chin: 0.4297, m: 0.949, cx: 0.5084 }, sorashido: { top: 0.0008, eye: 0.2722, chin: 0.4301, m: 1.175, cx: 0.4165 } , erubin: { top: 0.0109, eye: 0.2535, chin: 0.4303, m: 1.316, cx: 0.4834 } },
-  'stand-sekiyuou': { erubin: { top: -0.0059, eye: 0.2449, chin: 0.4297, m: 1.376, cx: 0.5112 } },
+  'stand-sekiyuou': { erubin: { top: 0.0034, eye: 0.285, chin: 0.43, m: 1.079, cx: 0.5166 } },
   'stand-hosei': { sorashido: { top: 0.0227, eye: 0.2938, chin: 0.4301, m: 1.059, cx: 0.3906 } },
   'stand-halloween': { mua: { top: 0.1808, eye: 0.3718, chin: 0.4301, m: 0.541, cx: 0.5108, above: 0.95 }, momosuke: { top: 0.061, eye: 0.3118, chin: 0.4301, m: 0.88, cx: 0.5312, above: 0.95 }, kiki: { top: 0.1495, eye: 0.3352, chin: 0.4305, m: 0.709, cx: 0.5304, above: 0.95 } },
   'stand-card-master': { mua: { top: 0.116, eye: 0.3209, chin: 0.4298, m: 1.01, cx: 0.4725, above: 0.75 } },
@@ -77071,7 +77613,7 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   // ききのツインテール(全身画から実測。2026-11-20)。top はリボンを除いた頭のてっぺん、above は大きなリボンが切れないように
   //   2026-11-24 r1119-153 追記4: stand-* の行は、立ち絵を縮めた組で点がずれていたのを直して出し直した(life-stand-from-fullbody.py)。ツインテールの印も目の真ん中・顎の先へ直した
   twintail: { kiki: { top: 0.112, eye: 0.183, chin: 0.244, m: 0.383, above: 0.95 } },
-  'stand-twintail': { kiki: { top: 0.1807, eye: 0.3402, chin: 0.4301, m: 1.014, cx: 0.5119, above: 0.95 } },
+  'stand-twintail': { kiki: { top: 0.1823, eye: 0.3406, chin: 0.4299, m: 0.664, cx: 0.5227, above: 0.95 } },
   // みゅあのサンタ(2026-11-25 クリスマスイベント r1119-172)。santa はバスト絵の置き場に置いた全身画(santa/myua_<表情>.PNG)の点、
   //   stand-santa は life-stand-from-fullbody.py の出力(目印は life-stand-marks.json の mua:santa。top は帽子を除いた頭のてっぺん)
   santa: { mua: { top: 0.1007, eye: 0.2132, chin: 0.2677, m: 0.406, above: 0.95 }, kiki: { top: 0.0941, eye: 0.1797, chin: 0.2325, m: 0.393, above: 0.95 }, momosuke: { top: 0.0735, eye: 0.1865, chin: 0.2374, m: 0.379, above: 0.95 }, sorashido: { top: 0.0026, eye: 0.1116, chin: 0.1664, m: 0.408, above: 0.95 }, atsu: { top: 0.0175, eye: 0.0994, chin: 0.1473, m: 0.357, above: 0.95 }, erubin: { top: 0.0589, eye: 0.1006, chin: 0.147, m: 0.345, above: 0.95 }, kyuko: { top: 0.0727, eye: 0.1552, chin: 0.218, m: 0.467, above: 0.95 } },
@@ -114644,24 +115186,32 @@ const CARD_RAID_BOSS = Object.freeze({
   id: 'raid_xmas_2026',
   name: '黒いサンタ',            // 仮の名前(社長が決める)
   deckName: '奪われた贈り物',    // 仮のデッキ名
-  // 3体(仮)。黒い服の子を集めた: ジョーカー(空中)・ゴースト(空中)・ゴーレム(地上・ライフが多い)
-  monsters: Object.freeze(['C-047', 'C-024', 'C-003']),
+  // 3体。黒いサンタはハムなので、ハム種(ハム・ダークハム・ハムライガー)から2体と、ほかの候補(黒い服の子)から1体を、挑むたびに選ぶ(台帳 r1126-101 追記1)
+  //   monsters … 種を渡さないとき(検査・代わりの組み方)の3体 / hare … ハム種の候補 / others … ほかの候補
+  monsters: Object.freeze(['C-008', 'C-055', 'C-003']),
+  hare: Object.freeze(['C-008', 'C-055', 'C-010']),
+  others: Object.freeze(['C-047', 'C-024', 'C-003']),
+  favor: 'hare',               // この種の札を少し好んで入れる(ハムの技が多い山札にする)
+  favorBonus: 0.6,
+  cardNoise: 0.45,             // 挑むたびに山札の中身が入れ替わる揺れ(種を渡したときだけ)
   // 考え方のくせ(重みの意味は 82-card-battle-core.jsx の CARD_AI_HABITS と同じ)。
   //   「贈り物を奪う」ので、相手の手札・ガッツをいじる札(disrupt)をいちばん好む。弱った子を狙い、全体攻撃も好き
   habit: Object.freeze({ attack: 1.2, keepGuard: 0.8, saveGuts: 0.8, big: 1.0, disrupt: 1.7, area: 1.3, finish: 1.3 }),
-  // デッキに先に入れる札(この3体で使える物だけが入る。無い名前は飛ばす)
-  prefer: Object.freeze(['大鎌']),
+  // デッキに先に入れる札(この3体で使える物だけが入る。無い名前は飛ばす)。「贈り物を奪う」ので相手の手札を捨てさせる「大声」
+  prefer: Object.freeze(['大声']),
 });
 
-// 段階ごと(レイドの5段階・0 始まり)のボスの強さ(仮)。
-//   level … 考え方の強さ(CARD_AI_LEVELS の難易度) / life … ボスの3体のライフの倍率(レイドのボスなので1戦では倒しきりにくい)
+// 段階ごと(レイドの5段階・0 始まり)のボスの強さ。
+//   level … 考え方の強さ(CARD_AI_LEVELS の難易度) / life … ボスの3体のライフの倍率。ふだんのカードと同じ 1(台帳 r1126-101 追記2・社長「ライフはそのままでAIで強く調整して」)
+//   ai … 考え方の上乗せ(CARD_AI_LEVELS の値を上書き)。ライフを戻したぶん、ふだんの同じ難易度より強く打つ
+//     readHand … 相手の手札を読んで守りを見越す(「贈り物を奪う」ボスなので手の内を知っている) / whim・sloppy … 気まぐれ・雑さ(小さいほど手堅い)
 //   rate … 換算の段階の補正(上の段階ほど1点が重い)
 const CARD_RAID_TIERS = Object.freeze([
-  Object.freeze({ level: 'normal', life: 2, rate: 1.0 }),
-  Object.freeze({ level: 'hard', life: 2, rate: 1.25 }),
-  Object.freeze({ level: 'expert', life: 2.5, rate: 1.5 }),
-  Object.freeze({ level: 'master', life: 3, rate: 1.75 }),
-  Object.freeze({ level: 'master', life: 3, rate: 2.0 }),
+  Object.freeze({ level: 'hard', life: 1, rate: 1.0, ai: Object.freeze({ whim: 0.04, sloppy: 0.08, readHand: true }) }),
+  Object.freeze({ level: 'expert', life: 1, rate: 1.25, ai: Object.freeze({ whim: 0.02, sloppy: 0.03, readHand: true }) }),
+  Object.freeze({ level: 'master', life: 1, rate: 1.5, ai: Object.freeze({ whim: 0.01, sloppy: 0, readHand: true }) }),
+  Object.freeze({ level: 'master', life: 1, rate: 1.75, ai: Object.freeze({ whim: 0, sloppy: 0, readHand: true }) }),
+  Object.freeze({ level: 'master', life: 1, rate: 2.0, ai: Object.freeze({ whim: 0, sloppy: 0, readHand: true }) }),
 ]);
 const cardRaidTierOf = (tierIndex) => CARD_RAID_TIERS[Math.min(CARD_RAID_TIERS.length - 1, Math.max(0, Math.floor(Number(tierIndex) || 0)))];
 
@@ -114671,18 +115221,32 @@ const cardRaidTierOf = (tierIndex) => CARD_RAID_TIERS[Math.min(CARD_RAID_TIERS.l
 //   投了しても、それまでに与えたぶんは足す(勝ちの上乗せは付かない)。途中で閉じた(結果が出なかった)ときは 0
 const CARD_RAID_DAMAGE = Object.freeze({ perPoint: 8000, perKo: 40000, win: 150000, cap: null });
 
-// ボスのデッキを組む(段階で決まる種。同じ段階なら毎回同じデッキ)
-const cardRaidBossDeck = (db, tierIndex = 0) => {
+// ボスの3体を選ぶ(ハム種から2体+ほかから1体)。rnd が無いときは決まった3体
+const cardRaidBossMonsters = (db, rnd = null) => {
+  const ok = (list) => list.filter((no) => cardMonsterOf(db, no));
+  if (!rnd) return ok(CARD_RAID_BOSS.monsters);
+  const pick = (list, n) => { const a = ok(list).slice(); const out = []; while (a.length && out.length < n) out.push(a.splice(Math.floor(rnd() * a.length), 1)[0]); return out; };
+  const out = [...pick(CARD_RAID_BOSS.hare, 2), ...pick(CARD_RAID_BOSS.others, 1)];
+  // 同じ種が2体にならないように(カードの表が変わったときの守り)。足りなければ決まった3体
+  const sp = out.map((no) => cardMonsterOf(db, no).species);
+  return out.length === 3 && new Set(sp).size === 3 ? out : ok(CARD_RAID_BOSS.monsters);
+};
+
+// ボスのデッキを組む。seed を渡すと挑むたびに3体と山札が少し変わる(画面は対戦の種を渡す)。渡さなければ段階ごとに毎回同じ(検査用)
+const cardRaidBossDeck = (db, tierIndex = 0, seed = null) => {
   const tier = cardRaidTierOf(tierIndex);
   const cfg = CARD_AI_BUILD[tier.level] || CARD_AI_BUILD.normal;
   const habit = CARD_RAID_BOSS.habit;
-  const rnd = cardAiSeededRand(`${CARD_RAID_BOSS.id}:${tier.level}`);
-  const monsters = CARD_RAID_BOSS.monsters.filter((no) => cardMonsterOf(db, no));
+  const roll = seed !== null && seed !== undefined && Number.isFinite(Number(seed));
+  const rnd = cardAiSeededRand(`${CARD_RAID_BOSS.id}:${tier.level}${roll ? `:${Math.floor(Number(seed))}` : ''}`);
+  const monsters = cardRaidBossMonsters(db, roll ? rnd : null);
   const mons = monsters.map((no) => cardMonsterOf(db, no));
+  const noise = cfg.noise + (roll ? CARD_RAID_BOSS.cardNoise : 0);
+  const favor = (c) => (c.user === CARD_RAID_BOSS.favor ? CARD_RAID_BOSS.favorBonus : 0);
   // 弾の制限はかけない(ボスは全部の弾の札を使う)。名前ごとに入れたい度の高い番号1つ
   const pool = Object.values(db.cards).filter((c) => c.ready && (c.user === 'any' || c.user === 'breeder' || mons.some((m) => cardUsableBy(c, { ...m, ko: false }))));
   const byName = {};
-  pool.forEach((c) => { const v = cardAiCardValue(c, habit) + cfg.noise * (rnd() * 2 - 1); if (!byName[c.name] || byName[c.name].v < v) byName[c.name] = { c, v }; });
+  pool.forEach((c) => { const v = cardAiCardValue(c, habit) + favor(c) + noise * (rnd() * 2 - 1); if (!byName[c.name] || byName[c.name].v < v) byName[c.name] = { c, v }; });
   const ranked = Object.values(byName).sort((a, b) => b.v - a.v || (a.c.no < b.c.no ? -1 : 1));
   const cards = [];
   const count = (no) => cards.filter((n) => n === no).length;
@@ -114721,7 +115285,7 @@ const cardRaidBossDeck = (db, tierIndex = 0) => {
 const cardRaidBossPolicy = (tierIndex = 0) => {
   const tier = cardRaidTierOf(tierIndex);
   const base = cardAiPolicy('kyuko', tier.level, { noTactics: true });
-  return { ...base, habit: { ...CARD_RAID_BOSS.habit } };
+  return { ...base, level: { ...base.level, ...(tier.ai || {}) }, habit: { ...CARD_RAID_BOSS.habit } };
 };
 
 // 始まりの場に、ボスのライフの倍率をかける(p はボスの側)。cardCreateGame の直後に1回だけ呼ぶ
@@ -114729,6 +115293,7 @@ const cardRaidPrepareGame = (st, tierIndex = 0, p = 1) => {
   const tier = cardRaidTierOf(tierIndex);
   const pl = st && st.players && st.players[p];
   if (!pl) return st;
+  // ライフはふだんのカードと同じ(倍率 1。台帳 r1126-101 追記2)。倍率が 1 でないときだけかける
   pl.mons.forEach((m) => { const life = Math.max(1, Math.round(m.max * tier.life)); m.life = life; m.max = life; });
   st.raid = { boss: CARD_RAID_BOSS.id, tier: Math.max(0, Math.floor(Number(tierIndex) || 0)), side: p };
   return st;
@@ -121343,8 +121908,9 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       try { ok = typeof rc.onStart === 'function' ? (await rc.onStart()) !== false : true; } catch (_) { ok = false; }
       if (!ok) { setNotice('きょうの挑戦の回数がありません'); setRaid(null); setView('top'); if (typeof rc.onClose === 'function') rc.onClose('noCount'); return; }
       const tier = cardRaidTierOf(rc.tierIndex);
-      const cpuDeck = cardRaidBossDeck(db, rc.tierIndex);
       const seed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
+      // 挑むたびに、ボスの3体(ハム種2体+ほか1体)と山札が少し変わる(台帳 r1126-101 追記1)
+      const cpuDeck = cardRaidBossDeck(db, rc.tierIndex, seed);
       const first = Math.random() < 0.5 ? CARD_ME : CARD_CPU;
       const bossName = rc.bossName || CARD_RAID_BOSS.name;
       const st = cardRaidPrepareGame(cardCreateGame(db, { decks: [{ monsters: deck.monsters, cards: deck.cards }, cpuDeck], names: ['あなた', bossName], seed, first }), rc.tierIndex, CARD_CPU);

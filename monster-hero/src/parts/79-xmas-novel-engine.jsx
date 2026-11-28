@@ -312,6 +312,7 @@ const xmasNovelEndingAhead = (script, to) => {
   let s = to ? xmasNovelSceneById(script, to) : null;
   for (let k = 0; s && k < 12; k += 1) {
     if (s.ending && s.ending.id) return s.ending.id;
+    if ((s.rows || []).some((r) => r && r.t === 'q')) return null; // 途中に分かれ道がある道は、エンドの直前ではない(r1126-102)
     s = typeof s.next === 'string' ? xmasNovelSceneById(script, s.next) : null;
   }
   return null;
@@ -420,3 +421,73 @@ const XMAS_NOVEL_ENDING_KINDS = Object.freeze({
   accuse: { label: '名指しエンド', tone: '#a78bd8' },
   omake: { label: 'おまけ', tone: '#7fd6a8' },
 });
+
+// ---- 分岐の地図「聖夜の見取り図」の読み直し(r1126-102) ----
+//  保存は新しいキー mh_xmas_novel_route_v1 だけ(mh_xmas_novel_v1 は形も中身も変えない・⑦)。
+//  { v:1, at:{ "<問いID>|<派 0〜2>": その問いの行に止まった時の cur }, back: 読み直す前の cur | null, seeded: 0|1 }
+//  付与・補償・数を足す処理は無い(上書きと読み出しだけ)。seeded は「今の保存から機械で作る」を1回だけにする印
+const XMAS_NOVEL_ROUTE_KEY = 'mh_xmas_novel_route_v1';
+const xmasNovelRouteKeyOf = (qid, cur) => {
+  const side = cur && cur.flags && Number.isFinite(cur.flags.f_A1) ? Math.max(0, Math.min(2, Math.floor(cur.flags.f_A1))) : 0;
+  return `${qid}|${side}`;
+};
+const xmasNovelRowAt = (script, cur) => {
+  const scene = cur ? xmasNovelSceneById(script, cur.scene) : null;
+  const row = scene && Array.isArray(scene.rows) ? scene.rows[Number(cur.idx) || 0] : null;
+  return row || null;
+};
+const xmasNovelRouteNormalize = (raw, script = null) => {
+  const r = raw && typeof raw === 'object' ? raw : {};
+  const at = {};
+  if (r.at && typeof r.at === 'object') Object.keys(r.at).slice(0, 120).forEach((k) => {
+    const m = /^([AQ]\d+[a-z]?)\|([0-2])$/.exec(k);
+    if (!m) return;
+    const c = xmasNovelNormalizeCur(r.at[k], script);
+    if (!c) return;
+    if (script) { const row = xmasNovelRowAt(script, c); if (!row || row.t !== 'q' || row.id !== m[1]) return; } // 台本が変わって問いの行でなくなった物は捨てる
+    at[k] = c;
+  });
+  return { v: 1, at, back: xmasNovelNormalizeCur(r.back, script), seeded: r.seeded === 1 ? 1 : 0 };
+};
+// 問いの行に着いたときに、その時の状態を残す(同じ分かれ道は一番新しく通った時で上書き)
+const xmasNovelRouteRecord = (route, script, cur) => {
+  const row = xmasNovelRowAt(script, cur);
+  if (!route || !row || row.t !== 'q') return route;
+  const c = xmasNovelNormalizeCur(cur, script);
+  if (!c) return route;
+  return { ...route, at: { ...route.at, [xmasNovelRouteKeyOf(row.id, c)]: c } };
+};
+// 地図を入れる前に通った分かれ道を、今の保存(章の頭の状態 snaps・読んだ印 read・続き cur)から機械で作る(1回だけ)。
+//   章の頭から、安全な方・正解で、その章の中だけ進める。読んだ印のある問いの行だけを残す。やり直しのない推理(1回目・2回目)は残して止まる
+const xmasNovelRouteSeed = (script, save, route) => {
+  const base = route || xmasNovelRouteNormalize(null, script);
+  if (base.seeded === 1) return base;
+  const read = new Set((save && Array.isArray(save.read)) ? save.read : []);
+  let at = { ...base.at };
+  const keep = (cur, row) => { const k = xmasNovelRouteKeyOf(row.id, cur); if (!at[k] && read.has(row.k)) { const c = xmasNovelNormalizeCur(cur, script); if (c) at = { ...at, [k]: c }; } };
+  const sideOfSave = save && save.cur && save.cur.flags && Number.isFinite(save.cur.flags.f_A1) ? save.cur.flags.f_A1 : 0;
+  const snaps = save && save.snaps && typeof save.snaps === 'object' ? save.snaps : {};
+  Object.keys(snaps).filter((k) => /^C\d+$/.test(k)).forEach((chId) => {
+    let st = xmasNovelSettle(script, snaps[chId]);
+    for (let guard = 0; st && st.row && guard < 3000; guard += 1) {
+      if (!st.scene || st.scene.chapter !== chId) break;
+      const r = st.row;
+      if (r.t !== 'q') { st = xmasNovelStep(script, xmasNovelApplyRow(st.cur, r)); continue; }
+      keep(st.cur, r);
+      if (r.once) break;
+      let pick = null;
+      if (r.kind === 'present') pick = (r.answer || [])[0];
+      else if (r.kind === 'action') {
+        const opts = xmasNovelOptionsOf(r, xmasNovelCtx(script, st.cur, (save && save.endings) || []));
+        if (r.id === 'A1') { const o = opts.find((x) => x.i === sideOfSave - 1); if (!o) break; pick = o.i; }
+        else { const safe = opts.find((o) => !(o.to && xmasNovelEndingAhead(script, o.to))); if (!safe) break; pick = safe.i; }
+      }
+      if (pick === null || pick === undefined) break;
+      const a = xmasNovelAnswer(script, st.cur, r, pick, (save && save.endings) || []);
+      let c = a.cur; (a.replies || []).forEach((x) => { c = xmasNovelApplyRow(c, x); });
+      st = a.then === 'next' ? xmasNovelStep(script, c) : a.then === 'retry' ? null : xmasNovelSettle(script, xmasNovelJump(script, c, a.then.to));
+    }
+  });
+  if (save && save.cur) { const row = xmasNovelRowAt(script, save.cur); if (row && row.t === 'q') keep(save.cur, row); }
+  return { ...base, at, seeded: 1 };
+};
