@@ -6807,6 +6807,9 @@ function MonsterHeroGame() {
       && bgmArrangement.home === DEFAULT_BGM_ARRANGEMENT.home) ? RAID_JACK_BGM_TRACK
       // クリスマスイベントの期間は「Dear Santa」(台帳 r1126-023・デフォルトのままの人だけ)
       : (xmasEventBgmOpenAt(Date.now()) && bgmArrangement.home === DEFAULT_BGM_ARRANGEMENT.home) ? XMAS_HOME_BGM_TRACK : bgmArrangement.home;
+    // カードの画面では裏の周回が負け・やめでもカードの曲のまま(r1126-101 追記2)
+    if (state === 'CARD_TOP' || state === 'CARD_BATTLE') return cardBgm || homeBgm;
+    if (state === 'CARD_PACK_OPEN') return homeBgm;
     if (isGameOver) return bgmArrangement.gameOver;
     if (!debugBattleRef.current && currentWave === 10 && (state === 'WAVE_RESULT' || state === 'CHAMPION')) {
       // AUTO∞は最終リザルトでも直前の戦闘BGMを継続する。設定をONにした場合だけ従来のクリアBGMへ切り替える。
@@ -7343,6 +7346,8 @@ function MonsterHeroGame() {
       if (!btn) return;
       // モンヒロビートの演奏エリアの中は鳴らさない(ノーツの音と重ねない。今までもここは鳴っていなかった)
       if (btn.closest('[data-rhythm-play-area]')) return;
+      // 事件簿(ミステリーノベル)の中は、明るい「ピッ」ではなく低く小さい「コトッ」(手持ちの trainingDice)。表の口(fgSe)から鳴らす(r1126-093 追記1)
+      if (btn.closest('[data-xmas-novel]') && Audio_.fgSe && typeof Audio_.fgSe.trainingDice === 'function') { Audio_.fgSe.trainingDice(); return; }
       // ボタンの音は、裏のバトルの音と別の口(uiTap)で鳴らす。モンヒロビートの画面・助手ライフの裏クイック中は
       // 効果音の口(seBus)を0にしているので、se/fgSe では鳴らなかった(2026-11-24 r1119-164)
       if (Audio_.uiTap) { Audio_.uiTap(); return; }
@@ -14883,7 +14888,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 待ち時間は、消える0.6秒＋VICTORY!の1秒に合わせる
     if(defeatFxOn) setDefeatFx({name:enemy?.name||'敵',boss:wave>=10,key:Date.now()});
     // 裏クイックがクリスマスのイベントページ・事件簿で回っているあいだは鳴らさない(ジングルは曲を止めるので、事件簿の曲が途切れる・r1126-072)
-    if ((!autoBattleRef.current || bgmArrangement.autoVictoryJingle === 'on') && !(runBackgroundAllowedRef.current && isXmasQuietScreen(gameStateNowRef.current))) Audio_.playJingle('victory');
+    //   MFバトルカードの画面で裏の周回が回っているあいだも鳴らさない(ジングルがカードの曲を止める・台帳 r1126-101 追記2)
+    if ((!autoBattleRef.current || bgmArrangement.autoVictoryJingle === 'on') && !(runBackgroundAllowedRef.current && (isXmasQuietScreen(gameStateNowRef.current) || isCardRunScreen(gameStateNowRef.current)))) Audio_.playJingle('victory');
     // 呼ぶ側は、今回のぶん(damage・distDamage)を足してからここへ来る。合計は「いまの値」から読む(上の currentWaveDamageRef の説明)
     const totalWaveDamage=waveDamageAtDefeat(currentWaveDamageRef.current,currentWaveDamage,damage);
     const waveMult=1.0+(wave*0.1); const remainingTurns=Math.max(0,21-turnCount);
@@ -22364,7 +22370,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
         {raidDamageFx&&((gameState==='RHYTHM_PLAY'&&rhythmPlay&&rhythmPlay.from==='raid')||gameState==='RAID_JACK_DEBUG')&&<RaidJackDamageFx key={raidDamageFx.key} fx={raidDamageFx} onDone={()=>setRaidDamageFx(null)}/>}
         {beatRankFx&&beatRankFx.ready&&gameState==='RHYTHM_PLAY'&&<PlayerRankUpFx kind="beat" from={beatRankFx.from} to={beatRankFx.to} gains={beatRankFx.gains} onClose={()=>setBeatRankFx(null)}/>}
-        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest key={rhythmPlay.from==='lineAdjust'&&rhythmLineAdjust?`line-adjust-${rhythmLineAdjust.key}`:rhythmPlay.from==='preview'&&rhythmPreview?`option-preview-${rhythmPreview.key}`:undefined} raidPlay={rhythmPlay.from==='raid'} song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmPlay.from==='multi'?rhythmMultiPlaySettings:rhythmPlay.from==='preview'&&rhythmPreview?rhythmPreview.draft:rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} breederName={breederName} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak,rhythmPlay.multiCpus):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} beatRankAward={beatRankAward}
+        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest key={rhythmPlay.from==='lineAdjust'&&rhythmLineAdjust?`line-adjust-${rhythmLineAdjust.key}`:rhythmPlay.from==='preview'&&rhythmPreview?`option-preview-${rhythmPreview.key}`:undefined} raidPlay={rhythmPlay.from==='raid'} holdResultCount={rhythmPlay.from==='raid'&&!!raidDamageFx} song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmPlay.from==='multi'?rhythmMultiPlaySettings:rhythmPlay.from==='preview'&&rhythmPreview?rhythmPreview.draft:rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} breederName={breederName} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak,rhythmPlay.multiCpus):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} beatRankAward={beatRankAward}
           onRankBarFull={()=>setBeatRankFx(f=>f&&!f.ready?{...f,ready:true}:f)} onRankBarStart={()=>setBeatRankFx(f=>f&&!f.started?{...f,started:true}:f)} onRankBarDone={()=>setBeatRankBarPlaying(false)} onComplete={async(result,merged)=>{
           // デバッグ画面の試作曲(RHYTHM_PROTO_SONGS)は、何も残さない。周回の報酬・経験値・自己ベスト・クリア回数・
           // 実績・全国ランキングのどれにも入れない(CLAUDE.md ⑦。試作は公開しない曲なので、記録に混ぜない)
@@ -25556,7 +25562,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         let storyFrame=null;
         for(let i=step;i>=0;i--){const l=script[i];if(l&&typeof l.frame==='string'){storyFrame=l.frame==='none'?null:l.frame;break;}}
         // 絵は data/breeder.js の STORY_SCENE_IMAGES(名前 → 絵)。表に無い名前は出さない
-        const storySceneImg=storyScene&&typeof STORY_SCENE_IMAGES!=='undefined'?(STORY_SCENE_IMAGES[storyScene]||null):null;
+        //   クリスマスのレイドのお話(bg:'xmas_…@色')は、事件簿と同じ絵の表と色(35-raid-xmas.jsx の raidXmasSceneBgOf・r1126-090)
+        const storyXmasBg=storyScene&&typeof raidXmasSceneBgOf==='function'?raidXmasSceneBgOf(storyScene):null;
+        const storySceneImg=storyXmasBg?storyXmasBg.img:(storyScene&&typeof STORY_SCENE_IMAGES!=='undefined'?(STORY_SCENE_IMAGES[storyScene]||null):null);
         // 一枚絵(台本の行の still:'名前'・2026-11-23 r1119-115)。その行だけ背景の上に絵を出し、上のステージ・真ん中のモンスターを消す(次の行に still が無ければ戻る)。
         //   絵は同じ STORY_SCENE_IMAGES。縦の画面用の絵(名前_tate)があれば、縦では幅いっぱい・上寄せでそれを出す(追記2 社長「縦の絵を使う・幅に合わせる」)。
         //   横は横の絵の全体。出し分けは 70-bootstrap.jsx の [data-story-still]。続けて同じ絵の行は出し直さない(key を絵の名前にする)
@@ -25566,7 +25574,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // このお話で使う背景は、開いたときに先に読んでおく(場面が替わった瞬間に絵が遅れて出ないように)
         if(typeof STORY_SCENE_IMAGES!=='undefined'&&typeof window!=='undefined'){
           const pre=window.__mhStoryScenePreloaded||(window.__mhStoryScenePreloaded=new Set());
-          script.forEach(l=>{[l&&l.bg,l&&l.still,l&&typeof l.still==='string'?`${l.still}_tate`:null].forEach(k=>{const src=typeof k==='string'?STORY_SCENE_IMAGES[k]:null;if(src&&!pre.has(src)){pre.add(src);try{const im=new Image();im.src=src;}catch(e){}}});});
+          script.forEach(l=>{[l&&l.bg,l&&l.still,l&&typeof l.still==='string'?`${l.still}_tate`:null].forEach(k=>{const xb=typeof k==='string'&&typeof raidXmasSceneBgOf==='function'?raidXmasSceneBgOf(k):null;const src=xb?xb.img:(typeof k==='string'?STORY_SCENE_IMAGES[k]:null);if(src&&!pre.has(src)){pre.add(src);try{const im=new Image();im.src=src;}catch(e){}}});
+            const fw=l&&l.who?assistantById(l.who):null;const fs=fw&&fw.storyFigure;if(fs&&!pre.has(fs)){pre.add(fs);try{const im=new Image();im.src=fs;}catch(e){}}});
         }
         // 出てくる全員の顔(その行の表情と、話していないときの normal)も、開いたときに先に読んでおく
         //   (2026-11-14 社長「あつだけ顔の絵の表示が遅い」r1114-080。途中から初めて出る話し手は、出た瞬間に読み始めて遅れて見えていた)
@@ -25585,8 +25594,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // (storyBaseWho は 21-assistant.jsx。一部だけを動かす検査では無いことがあるので、無ければ id のまま)
         const storyBase=(id)=>typeof storyBaseWho==='function'?storyBaseWho(id):(typeof id==='string'?id.split('@')[0]:id);
         const castNow=(who)=>{for(let i=step;i>=0;i--){const w=script[i]&&script[i].who;if(storyBase(w)===who.id)return w===who.id?who:assistantById(w);}return who;};
-        const cast=storyCastOf(script).filter(who=>who.role!=='ゲスト')
-          .filter(who=>!hiddenUntil.includes(who.id)||script.slice(0,step+1).some(l=>l&&storyBase(l.who)===who.id));
+        // 下の欄で話すお客さん(speakBottom・クリスマスのハム・サンタ・謎の客など)は、顔の絵があれば助手と同じく顔の列にも並べる(r1126-090 追記2)
+        const cast=storyCastOf(script).filter(who=>who.role!=='ゲスト'||(who.speakBottom&&!who.noFace&&!!who.image))
+          .filter(who=>!hiddenUntil.includes(who.id)||script.slice(0,step+1).some(l=>l&&storyBase(l.who)===who.id))
+          // 同じ人の別の姿(storyFigureSlot が同じ・赤と黒のサンタ)は、いまの行までで最後に話したほうだけ
+          .filter((who,_,all)=>{if(!who.storyFigureSlot)return true;let lastId=null;for(let i=Math.min(step,script.length-1);i>=0&&!lastId;i--){const w=script[i]&&script[i].who&&assistantById(script[i].who);if(w&&w.storyFigureSlot===who.storyFigureSlot)lastId=w.id;}return lastId?lastId===who.id:all.find(x=>x.storyFigureSlot===who.storyFigureSlot)===who;});
         let stageIdx=-1;
         // 顔を出さない話し手(noFace・クリスマスのワトソンくん)は、話している行だけ上に出す(ジャックのように残し続けない)
         for(let i=step;i>=0;i--){const l=script[i];if(l.stage==='none'){stageIdx=-1;break;}if(l.stage||isGuestWho(l.who)){stageIdx=(i<step&&!l.stage&&assistantById(l.who).noFace)?-1:i;break;}}
@@ -25614,6 +25626,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         let monstersIdx=-1;
         for(let i=step;i>=0;i--){if(Array.isArray(script[i].monsters)){monstersIdx=i;break;}}
         const storyMonsters=monstersIdx>=0&&!storyStillImg?script[monstersIdx].monsters.filter(m=>m&&m.pose!=='hide'&&STORY_MONSTER_ART[m.id]):[];
+        // 全身の絵を持つ話し手(storyFigure・クリスマスのレイドのハムとサンタ・r1126-090 追記1 社長「真ん中に全身絵とかにして」)は、顔の枠ではなく画面のまん中に全身で出す。
+        //   初めて話した行から、場面の絵が替わるか、去る行(figOut)まで残す。話していないときは暗くする。同じ枠(storyFigureSlot・赤と黒のサンタ)は1人ぶん
+        const storyFigures=[];
+        if(monstersIdx<0&&!storyStillImg){
+          let figBase=null;
+          for(let i=0;i<=step;i++){
+            const l=script[i];if(!l)continue;
+            if(typeof l.bg==='string'){const xb=typeof raidXmasSceneBgOf==='function'?raidXmasSceneBgOf(l.bg):null;const base=xb?xb.base:l.bg;if(base!==figBase){storyFigures.length=0;figBase=base;}}
+            if(l.figOut){storyFigures.length=0;continue;}
+            const fw=l.who&&!l.band?assistantById(l.who):null;
+            if(fw&&fw.storyFigure){const slot=fw.storyFigureSlot||fw.id;const f={slot,id:fw.id,src:fw.storyFigure};const k=storyFigures.findIndex(x=>x.slot===slot);if(k>=0)storyFigures[k]=f;else storyFigures.push(f);}
+          }
+        }
         const fxColors={fall:'255,214,150',split:'233,213,255',merge:'255,250,235',unlock:'253,230,138',transform:'255,237,180',rankup:['251,146,60','251,191,36','192,132,252','248,113,113','250,204,21'][Math.max(0,stageTier-1)],shrink:'186,230,253'};
         const speakText=(l,w)=>{
           // ★呼び方は normalizeAssistantBond には入っていない(別の入れ物 assistantCallStyles)。話している助手ごとのぶんを引く
@@ -25634,6 +25659,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const storyCplBubble=Math.max(6,storyLand?Math.floor((storyBoxW-118)/12)-3:Math.floor((storyBoxW-156)/14)-4);
         // 折り方を決める1行の字数は、ページ分けの控えめな見込みではなく、実際の欄の幅から出す(欄の内側の幅÷字の大きさ。端の1字ぶんは余らせる)
         const storyCapBottom=Math.floor((storyBoxW-64-(storyLand?62:100))/13-0.2);
+        // 下の欄の顔は、全身の絵をまん中に出す話し手(storyFigure)にも置く(r1126-090 追記2 社長「ハムとかさんたの顔アイコンがない」)。1行の字数はほかの話し手と同じ
+        const storyCapBottomOf=()=>storyCapBottom;
         const storyCapBubble=Math.floor((storyLand?(storyBoxW-118)/12:(storyBoxW-156)/14)-0.2);
         // 台詞を文の切れ目のかたまりごとに並べる(storyChunkLines)。かたまりで折ると行が増えるときは、今までどおり
         //   横の低い画面の吹き出しは高さ 84px で2行しか入らないので、かたまりで並べるのは2行まで(70-bootstrap.jsx)
@@ -25764,7 +25791,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           {/* 場面の背景(台本の行の bg)。場面が替わると key が替わり、ふわっと切り替わる。fx:'fall' の行では、
               穴へ落ちていくように背景が上へ流れて暗くなる(70-bootstrap.jsx の [data-story-bg]) */}
           {storySceneImg&&<div key={`${storyScene}:${storyFrame||''}`} data-story-bg={storyScene} data-story-bg-frame={storyFrame||undefined} data-story-bg-fx={fx==='fall'?'fall':undefined} aria-hidden="true"
-            style={{'--story-bg':`url("${storySceneImg}")`}}>{storyFrame==='game'&&<span data-story-bg-frame-label>モンヒロ事件簿</span>}</div>}
+            style={{'--story-bg':`url("${storySceneImg}")`}}>{storyXmasBg&&storyXmasBg.tint&&<span data-story-bg-tint style={{position:'absolute',inset:0,zIndex:1,background:storyXmasBg.tint}}/>}{storyFrame==='game'&&<span data-story-bg-frame-label>モンヒロ事件簿</span>}</div>}
           {storyStillImg&&<div key={`still:${storyStill}`} data-story-still={storyStill} data-story-still-has-tate={storyStillTate?'':undefined} aria-hidden="true"
             style={{'--story-still':`url("${storyStillImg}")`,...(storyStillTate?{'--story-still-tate':`url("${storyStillTate}")`}:{})}}><div data-story-still-area><img data-story-still-img src={storyStillImg} alt="" draggable={false}/></div>
             {storyStillTate&&<img data-story-still-tate src={storyStillTate} alt="" draggable={false}/>}</div>}
@@ -25811,6 +25838,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   </span>
                 );
               })}
+            </div>
+          )}
+          {/* 全身の絵の話し手(storyFigures・r1126-090 追記1)。置き場は真ん中のモンスターと同じ層(70-bootstrap.jsx の [data-story-monsters])。赤↔黒に替わると出し直す */}
+          {storyFigures.length>0&&(
+            <div data-story-monsters={storyFigures.length} data-story-figures="" aria-hidden="true" className="pointer-events-none" style={{top:'calc(env(safe-area-inset-top) + 6vh)'}}>
+              {storyFigures.map(f=>{const on=!line.band&&f.id===line.who;return(
+                <span key={`${f.slot}:${f.id}`} data-story-monster={`fig-${f.slot}`} data-story-pose="in" data-story-figure-dim={on?undefined:''}>
+                  <img src={f.src} alt="" draggable={false} className="block h-full w-full object-contain" style={{filter:on?'drop-shadow(0 6px 18px rgba(0,0,0,.65))':'brightness(.55) drop-shadow(0 6px 18px rgba(0,0,0,.65))',transition:'filter .2s'}}/>
+                </span>);})}
             </div>
           )}
           {/* 場面の説明(fxText)は、光る演出(fx)の無い行でも出す(2026-11-05。fx の無い行の説明が、どのお話でも出ていなかった) */}
@@ -25876,7 +25912,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   ここを素の {line.t} で出していたため、画面に {name} がそのまま出ていた
                   (2026-09-11・ユーザー指摘「名前呼びのとこが変換されてない」)。
                   呼び方も絆Lvも助手ごとに違うので、選んでいる助手ではなく「話している助手」から引く */}
-              <span className="block text-[13px] font-bold leading-relaxed text-white mt-1" style={{...storyLineStyle(storyZones?storyTextAt(bottomLine===line?step:assistIdx,bottomSpeaker):'',storyCapBottom),...(dimBottom?{visibility:'hidden'}:{})}}>{storyZones?storyLineNodes(storyTextAt(bottomLine===line?step:assistIdx,bottomSpeaker),storyCapBottom):bubbleLines(speakText(bottomLine,bottomSpeaker))}</span>
+              <span className="block text-[13px] font-bold leading-relaxed text-white mt-1" style={{...storyLineStyle(storyZones?storyTextAt(bottomLine===line?step:assistIdx,bottomSpeaker):'',storyCapBottomOf(bottomSpeaker)),...(dimBottom?{visibility:'hidden'}:{})}}>{storyZones?storyLineNodes(storyTextAt(bottomLine===line?step:assistIdx,bottomSpeaker),storyCapBottomOf(bottomSpeaker)):bubbleLines(speakText(bottomLine,bottomSpeaker))}</span>
             </div>:<div data-story-line-box className={`flex items-center justify-center rounded-2xl border-2 border-slate-700 bg-slate-900 px-3 py-3 text-center text-[11px] font-bold text-slate-400${storyZones?' min-w-0 flex-1':''}`}>▲ 上のことばを読んでね</div>}
             </div>
             <p className="mt-2 text-center text-[11px] font-bold tabular-nums text-slate-300">

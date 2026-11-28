@@ -461,6 +461,43 @@ const HALLOWEEN_MARKET_ICONS = HALLOWEEN_ICON_SETS.flatMap(set => set.items.map(
   get shop() { return halloweenIconSale() === 'breederPoint' ? undefined : false; },
 })));
 
+// クリスマスのサンタ服の助手の顔アイコン(2026-11-28 社長「顔アイコンの販売ないから出しといて」・台帳 r1126-096)。ハロウィンと同じ仕様。
+//   ・ふだんのアイコン・ハロウィンとは別のまとまり(mua_santa など)・別の id(myua_santa_happy など)。持っているかも別々に数える
+//   ・イベント中(ASSISTANT_COSTUME_XMAS_START_AT〜ASSISTANT_COSTUME_XMAS_END_AT。12/31 3:59 まで)はビートP交換所で1000P、
+//     終わったあとはブリーダーP交換所で1pt(下の xmasIconSale が決める。時刻はクリスマスの服と同じ定数を読む)
+//   ・どちらで買っても8表情ぜんぶ手に入る(まとめの中身が mh_market_icons に全部入る。新しい保存キーは作らない)
+//   ・絵はサンタ服の顔アイコンをそのまま使う(images/assistant/santa/face/)。別のファイルを作らない(絵が作り直されても同じパスで替わる)
+// ★1つずつの名前は16文字まで。名前を _ICON で終わらせない(ハロウィンと同じ)
+const XMAS_ICON_SETS = Object.freeze([
+  ['mua', 'myua', 'みゅあ'],
+  ['kiki', 'kiki', 'きき'],
+  ['momosuke', 'momosuke', 'ももすけ'],
+  ['dra', 'dra', 'ドラ'],
+  ['atsu', 'atsu', 'あつ'],
+  ['kyuko', 'kyuko', 'きゅうこ'],
+  ['sorashido', 'sorashido', 'ソラシド'],
+  ['erubin', 'erubin', 'えるびん'],
+].map(([assistantId, prefix, who]) => {
+  const items = Object.freeze(MYUA_ICON_EXPRESSIONS.map(([key, label]) => Object.freeze({
+    id: `${prefix}_santa_${key}`, name: `クリスマス${who}（${label}）`, icon: `images/assistant/santa/face/${prefix}_${key}.PNG`,
+  })));
+  return Object.freeze({ groupId: `${assistantId}_santa`, assistantId, name: `${who}（クリスマス）`, items, memberIds: Object.freeze(items.map(item => item.id)) });
+}));
+// いまの売り場。'beatPoint'(ビートP交換所)・'breederPoint'(ブリーダーP交換所)・null(まだ売らない)。見るたびに数え直す
+const xmasIconSale = (nowMs = Date.now()) => {
+  if (nowMs < Date.parse(ASSISTANT_COSTUME_XMAS_START_AT)) return null;
+  return nowMs < Date.parse(ASSISTANT_COSTUME_XMAS_END_AT) ? 'beatPoint' : 'breederPoint';
+};
+const XMAS_MARKET_ICONS = XMAS_ICON_SETS.flatMap(set => set.items.map(item => ({
+  id: item.id,
+  name: item.name,
+  type: 'icon',
+  icon: item.icon,
+  cost: 1,
+  // ブリーダーP交換所に並ぶのはイベントが終わってから(それまでは false で出ない)
+  get shop() { return xmasIconSale() === 'breederPoint' ? undefined : false; },
+})));
+
 // きゅうこのカードが交換所に並ぶか。公開の印と「加入のお話を見たか」を見るたびに読む。
 // 見たかどうかは、ゲーム側が「見終えたお話の id」(mh_rhythm_event_story_v1。新しいキーは作らない)を読んだときに
 // setKyukoJoinSeenForShop で知らせる(保存の読み書きは Claude アプリの保存場所も通るので、ここでは直接読まない)
@@ -711,7 +748,8 @@ const BREEDER_MARKET_ITEMS = [
   ...KYUKO_MARKET_ICONS,
   ...SORASHIDO_MARKET_ICONS,
   ...ERUBIN_MARKET_ICONS,
-  ...HALLOWEEN_MARKET_ICONS
+  ...HALLOWEEN_MARKET_ICONS,
+  ...XMAS_MARKET_ICONS
 ];
 // ==================== アイコンのまとめ売り(2026-10-03・ユーザー指示) ====================
 // 同じキャラのアイコンが何種類もある(助手の8表情・モンスターの顔と円盤石など)。
@@ -729,6 +767,9 @@ const breederIconGroupKeyOf = (id) => {
   const halloween = /^(myua|kiki|momosuke)_halloween_/.exec(key);
   if (halloween) return `${halloween[1] === 'myua' ? 'mua' : halloween[1]}_halloween`;
   if (/^snegurochka_halloween_/.test(key)) return 'snegurochka_halloween';
+  // クリスマスのアイコンも通常・ハロウィンと混ぜない
+  const xmas = /^(myua|kiki|momosuke|dra|atsu|kyuko|sorashido|erubin)_santa_/.exec(key);
+  if (xmas) return `${xmas[1] === 'myua' ? 'mua' : xmas[1]}_santa`;
   if (key === 'mua' || /^myua_/.test(key)) return 'mua';
   if (key === 'dra' || /^dra_/.test(key)) return 'dra';
   if (key === 'kiki_icon' || /^kiki_/.test(key)) return 'kiki';
@@ -741,7 +782,8 @@ const breederIconGroupKeyOf = (id) => {
   return key.replace(/_disc_icon$/, '').replace(/_awakened_icon$/, '').replace(/_icon$/, '');
 };
 const BREEDER_ICON_GROUP_NAMES = Object.freeze({ mua:'みゅあ', dra:'ドラ', kiki:'きき', momosuke:'ももすけ', atsu:'あつ', kyuko:'きゅうこ', sorashido:'ソラシド', erubin:'えるびん',
-  mua_halloween:'みゅあ（ハロウィン）', kiki_halloween:'きき（ハロウィン）', momosuke_halloween:'ももすけ（ハロウィン）', snegurochka_halloween:'スネグーラチカ（ハロウィン）' });
+  mua_halloween:'みゅあ（ハロウィン）', kiki_halloween:'きき（ハロウィン）', momosuke_halloween:'ももすけ（ハロウィン）', snegurochka_halloween:'スネグーラチカ（ハロウィン）',
+  ...Object.fromEntries(XMAS_ICON_SETS.map(set => [set.groupId, set.name])) });
 // 中身が2つ以上あるキャラだけがまとまる(1つしかないアイコンは今までどおり1枚で売る)。並びは商品の並びのまま
 const BREEDER_ICON_GROUPS = (() => {
   const order = [];
