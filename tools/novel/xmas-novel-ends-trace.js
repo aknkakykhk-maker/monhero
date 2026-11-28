@@ -67,6 +67,9 @@ const ROUTES = [
   { name: '視点の編 えるびん、カメラを離さない', want: 'END-PE1', from: 'APE0', picks: { APE0: 'go:PE-1', APE1: 'opt:0' }, seen: ['END-G'] },
   { name: '視点の編 えるびん、カメラを差し出す(もしも)', want: 'END-PE2', from: 'APE1', picks: { APE0: 'go:PE-1', APE1: 'go:PE-Y' }, seen: ['END-G'], short: true },
   { name: '真グッドの前は C6-4 にえるびんの編は出ない', want: 'END-X3', from: 'A6', picks: { A6: 'danger' }, noOpt: { APE0: 'PE-1' }, short: true },
+  // r1126-115 視点の編 ききの編(真グッドのあと、第5章 C5-1 の最後に新しい選択 APK0)
+  { name: '視点の編 きき、みんなと冷たい空気をたどる', want: 'END-PK1', from: 'APK0', picks: { APK0: 'go:PK-1', APK1: 'opt:0' }, seen: ['END-G'] },
+  { name: '視点の編 きき、1人で2階へ(もしも)', want: 'END-PK2', from: 'APK1', picks: { APK0: 'go:PK-1', APK1: 'go:PK-Y' }, seen: ['END-G'], short: true },
   { name: '視点の編 みゅあ、毛糸を隠す', want: 'END-PM1', from: 'APM0', picks: { APM0: 'go:PM-1', APM1: 'opt:0' }, seen: ['END-G'] },
   { name: '視点の編 みゅあ、ドラに見せる(もしも)', want: 'END-PM2', from: 'APM1', picks: { APM0: 'go:PM-1', APM1: 'go:PM-Y' }, seen: ['END-G'], short: true },
   { name: '真グッドの前は A2 にドラの編は出ない', want: 'END-X1', from: 'A2', picks: { A2: 'danger' }, noOpt: { A2: 'PD-1' }, short: true },

@@ -260,6 +260,10 @@ on conflict (event_id, end_id) do nothing;
 insert into public.xmas_novel_end_ids (event_id, end_id, kind) values
   ('xmas_novel_2026', 'END-PD1', 'pov'), ('xmas_novel_2026', 'END-PD2', 'ifroute')
 on conflict (event_id, end_id) do nothing;
+-- 視点の編 ききの編(r1126-115・2つ)
+insert into public.xmas_novel_end_ids (event_id, end_id, kind) values
+  ('xmas_novel_2026', 'END-PK1', 'pov'), ('xmas_novel_2026', 'END-PK2', 'ifroute')
+on conflict (event_id, end_id) do nothing;
 -- もしもの話 ② 十三番目の客(r1126-115・3つ)
 insert into public.xmas_novel_end_ids (event_id, end_id, kind) values
   ('xmas_novel_2026', 'END-H1', 'ifroute'), ('xmas_novel_2026', 'END-H2', 'ifroute'), ('xmas_novel_2026', 'END-H3', 'ifroute')
