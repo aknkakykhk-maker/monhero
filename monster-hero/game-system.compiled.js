@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 440e02c20d71541f
+// source-sha256: d2bd00bfaf923c57
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -220657,7 +220657,12 @@ const CARD_RAID_BOSS = Object.freeze({
   id: 'raid_xmas_2026',
   name: '黒いサンタ',
   deckName: '奪われた贈り物',
-  monsters: Object.freeze(['C-047', 'C-024', 'C-003']),
+  monsters: Object.freeze(['C-008', 'C-055', 'C-003']),
+  hare: Object.freeze(['C-008', 'C-055', 'C-010']),
+  others: Object.freeze(['C-047', 'C-024', 'C-003']),
+  favor: 'hare',
+  favorBonus: 0.6,
+  cardNoise: 0.45,
   habit: Object.freeze({
     attack: 1.2,
     keepGuard: 0.8,
@@ -220667,28 +220672,53 @@ const CARD_RAID_BOSS = Object.freeze({
     area: 1.3,
     finish: 1.3
   }),
-  prefer: Object.freeze(['大鎌'])
+  prefer: Object.freeze(['大声'])
 });
 const CARD_RAID_TIERS = Object.freeze([Object.freeze({
-  level: 'normal',
-  life: 2,
-  rate: 1.0
-}), Object.freeze({
   level: 'hard',
-  life: 2,
-  rate: 1.25
+  life: 1,
+  rate: 1.0,
+  ai: Object.freeze({
+    whim: 0.04,
+    sloppy: 0.08,
+    readHand: true
+  })
 }), Object.freeze({
   level: 'expert',
-  life: 2.5,
-  rate: 1.5
+  life: 1,
+  rate: 1.25,
+  ai: Object.freeze({
+    whim: 0.02,
+    sloppy: 0.03,
+    readHand: true
+  })
 }), Object.freeze({
   level: 'master',
-  life: 3,
-  rate: 1.75
+  life: 1,
+  rate: 1.5,
+  ai: Object.freeze({
+    whim: 0.01,
+    sloppy: 0,
+    readHand: true
+  })
 }), Object.freeze({
   level: 'master',
-  life: 3,
-  rate: 2.0
+  life: 1,
+  rate: 1.75,
+  ai: Object.freeze({
+    whim: 0,
+    sloppy: 0,
+    readHand: true
+  })
+}), Object.freeze({
+  level: 'master',
+  life: 1,
+  rate: 2.0,
+  ai: Object.freeze({
+    whim: 0,
+    sloppy: 0,
+    readHand: true
+  })
 })]);
 const cardRaidTierOf = tierIndex => CARD_RAID_TIERS[Math.min(CARD_RAID_TIERS.length - 1, Math.max(0, Math.floor(Number(tierIndex) || 0)))];
 const CARD_RAID_DAMAGE = Object.freeze({
@@ -220697,20 +220727,36 @@ const CARD_RAID_DAMAGE = Object.freeze({
   win: 150000,
   cap: null
 });
-const cardRaidBossDeck = (db, tierIndex = 0) => {
+const cardRaidBossMonsters = (db, rnd = null) => {
+  const ok = list => list.filter(no => cardMonsterOf(db, no));
+  if (!rnd) return ok(CARD_RAID_BOSS.monsters);
+  const pick = (list, n) => {
+    const a = ok(list).slice();
+    const out = [];
+    while (a.length && out.length < n) out.push(a.splice(Math.floor(rnd() * a.length), 1)[0]);
+    return out;
+  };
+  const out = [...pick(CARD_RAID_BOSS.hare, 2), ...pick(CARD_RAID_BOSS.others, 1)];
+  const sp = out.map(no => cardMonsterOf(db, no).species);
+  return out.length === 3 && new Set(sp).size === 3 ? out : ok(CARD_RAID_BOSS.monsters);
+};
+const cardRaidBossDeck = (db, tierIndex = 0, seed = null) => {
   const tier = cardRaidTierOf(tierIndex);
   const cfg = CARD_AI_BUILD[tier.level] || CARD_AI_BUILD.normal;
   const habit = CARD_RAID_BOSS.habit;
-  const rnd = cardAiSeededRand(`${CARD_RAID_BOSS.id}:${tier.level}`);
-  const monsters = CARD_RAID_BOSS.monsters.filter(no => cardMonsterOf(db, no));
+  const roll = seed !== null && seed !== undefined && Number.isFinite(Number(seed));
+  const rnd = cardAiSeededRand(`${CARD_RAID_BOSS.id}:${tier.level}${roll ? `:${Math.floor(Number(seed))}` : ''}`);
+  const monsters = cardRaidBossMonsters(db, roll ? rnd : null);
   const mons = monsters.map(no => cardMonsterOf(db, no));
+  const noise = cfg.noise + (roll ? CARD_RAID_BOSS.cardNoise : 0);
+  const favor = c => c.user === CARD_RAID_BOSS.favor ? CARD_RAID_BOSS.favorBonus : 0;
   const pool = Object.values(db.cards).filter(c => c.ready && (c.user === 'any' || c.user === 'breeder' || mons.some(m => cardUsableBy(c, {
     ...m,
     ko: false
   }))));
   const byName = {};
   pool.forEach(c => {
-    const v = cardAiCardValue(c, habit) + cfg.noise * (rnd() * 2 - 1);
+    const v = cardAiCardValue(c, habit) + favor(c) + noise * (rnd() * 2 - 1);
     if (!byName[c.name] || byName[c.name].v < v) byName[c.name] = {
       c,
       v
@@ -220782,6 +220828,10 @@ const cardRaidBossPolicy = (tierIndex = 0) => {
   });
   return {
     ...base,
+    level: {
+      ...base.level,
+      ...(tier.ai || {})
+    },
     habit: {
       ...CARD_RAID_BOSS.habit
     }
@@ -231884,8 +231934,8 @@ const CardBattleScreen = ({
         return;
       }
       const tier = cardRaidTierOf(rc.tierIndex);
-      const cpuDeck = cardRaidBossDeck(db, rc.tierIndex);
       const seed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
+      const cpuDeck = cardRaidBossDeck(db, rc.tierIndex, seed);
       const first = Math.random() < 0.5 ? CARD_ME : CARD_CPU;
       const bossName = rc.bossName || CARD_RAID_BOSS.name;
       const st = cardRaidPrepareGame(cardCreateGame(db, {
