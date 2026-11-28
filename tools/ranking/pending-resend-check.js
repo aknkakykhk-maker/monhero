@@ -172,7 +172,8 @@ check('リザルトで「送れませんでした」と知らせる',
     && resultSrc.includes('全国ランキングへ送れませんでした')
     && (resultSrc.match(/\{runHighlights\.rankingFailed&&<RankingFailedNote\/>\}/g) || []).length === 2,
   '勝ち・負けの両方のリザルト');
-check('自動で送り直すことも伝える', resultSrc.includes('自動でもう一度送ります'));
+// 数は算用数字(r1126-080)で「もう1度」になった
+check('自動で送り直すことも伝える', resultSrc.includes('自動でもう1度送ります'));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
