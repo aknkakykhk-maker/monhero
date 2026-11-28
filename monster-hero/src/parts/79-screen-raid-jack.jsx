@@ -97,7 +97,7 @@ const RaidJackRewardList = ({ onClose, claimed, initialTab = 'a', ev = RAID_EVEN
     <div data-raid-jack-reward-list className="fixed inset-0 z-[32000] flex flex-col bg-slate-950 p-3" role="dialog" aria-modal="true" aria-label={`${ev.bossWord}の報酬一覧`}
       style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top))', paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
       <div className="mb-2 flex shrink-0 items-center justify-between">
-        <div className="text-[14px] font-black text-orange-200">{ev.icon} {ev.bossWord}の報酬一覧</div>
+        <div className="text-[14px] font-black text-orange-200">{cardIconNode(ev.icon, 16)} {ev.bossWord}の報酬一覧</div>
         <button type="button" data-raid-jack-reward-close onClick={onClose} aria-label="報酬一覧を閉じる" className="min-h-[40px] rounded-xl border border-white/20 bg-white/10 px-4 text-[11px] font-black text-white active:scale-95">閉じる</button>
       </div>
       <ScreenTabs items={[{ id: 'a', label: 'レイドバトル' }, { id: 'b', label: 'グランドスラム' }]} value={tab} onChange={setTab} />

@@ -45,5 +45,11 @@
 
 | 検査 | 落ちた行の要点 | 持ち主 |
 | --- | --- | --- |
-| `battle/card-icon-check.js` | 「iconをそのまま描いている箇所が残っていない — ev.icon, t.icon, g.icon, d.icon」 | バトル部 |
+| `battle/card-icon-check.js` | 「iconをそのまま描いている箇所が残っていない — ev.icon, t.icon, g.icon, d.icon」 | バトル部 → **直した(2026-11-28)**: 4か所(助手ライフのタブと成長・モンサクの効果・レイドの報酬一覧の見出し)を `cardIconNode()` に通した。絵文字はそのまま文字で出るので見た目は同じ |
 | `ui/screen-effects-check.js` | 「表の目印は…ちょうど1つある — totals.a[prep.tierIndex + 1](2件)…」「表の件数と setTimeout の数が合っている — 172 箇所 / 表 164 行」 | 画面の演出(`40-screen-effects`・開発部) |
+
+## バトル部: `battle/wave-result-layout-check.js`(2026-11-28 直した)
+
+- 落ちていた所: 3つの大きさ×2つの場合すべてで「画面を描ける」
+- 原因: WAVE の結果画面の点数の欄が、幅に合わせて字を縮める部品 `FitNumber`(41-screen-ui.jsx)を使うようになったのに、検査が画面を切り出して描くときにその部品を持っていなかった(`FitNumber is not defined`)。ゲーム本体は壊れていない
+- 直し方: 検査が `FitNumber` の本体をゲームの元からそのまま切り出して一緒に描くようにした(ダミーにしない)。測る中身(ボタンが画面内・先頭がはみ出さない・押せる高さ・横にはみ出さない)は変えていない
