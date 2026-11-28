@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9281b8203f40b3c5
+// source-sha256: 37172c9036c9a376
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -128439,16 +128439,16 @@ const xmasNovelSe = kind => {
       return;
     }
     const map = {
-      clap: 'join',
+      clap: 'trainingDice',
       laugh: 'enemySpecial',
       impact: 'enemyAttack',
-      music: 'heal',
-      tap: 'tap',
-      clue: 'card',
-      ok: 'victory',
-      ng: 'guard'
+      music: 'trainingFail',
+      tap: 'trainingDice',
+      clue: 'enemyMove',
+      ok: 'attack',
+      ng: 'trainingBad'
     };
-    const fn = (Audio_.fgSe || Audio_.se)[map[kind] || 'tap'];
+    const fn = (Audio_.fgSe || Audio_.se)[map[kind] || 'trainingDice'];
     if (typeof fn === 'function') fn();
   } catch (e) {}
 };
@@ -128461,12 +128461,12 @@ const XMAS_NOVEL_SE_SEQ = Object.freeze({
   tick: {
     gap: 520,
     hold: 300,
-    play: ['xpTick']
+    play: ['trainingDice']
   },
   letter: {
     gap: 0,
     hold: 1500,
-    play: ['enemyCharge']
+    play: ['trainingBad', 'trainingFail']
   }
 });
 let xmasNovelSeTimers = [];
@@ -128506,28 +128506,169 @@ const xmasNovelRowSe = (kind, times) => {
     if (at <= 0) xmasNovelSeHit(kind);else xmasNovelSeTimers.push(setTimeout(() => xmasNovelSeHit(kind), at));
   }
 };
+const XMAS_NOVEL_BGM_SCENE = Object.freeze({
+  'OUT-0-1': 'original_profile',
+  'OUT-0-2': 'melo_dullahan_clockwork',
+  'C0-1': 'original_profile',
+  'C0-2': 'original_profile',
+  'OUT-1': 'melo_dullahan_clockwork',
+  'C1-1': 'original_profile',
+  'C1-2': 'original_profile',
+  'C1-3': 'melo_dullahan_clockwork',
+  'C1-4': 'melo_dullahan_clockwork',
+  'C1-5': 'close_to_your_heart_alt',
+  'C1-6': 'melo_dullahan_steel_ghost',
+  'C1-M': 'silence',
+  'C2-1': 'melo_dullahan_clockwork',
+  'C2-L': 'silence',
+  'C2-M': 'makutsu_no_senritsu',
+  'C2-2': 'original_profile',
+  'C2-3': 'melo_dullahan_steel_ghost',
+  'C2-4': 'melo_dullahan_steel_ghost_alt',
+  'C2-5': 'original_dullahan',
+  'C3-1': 'silence',
+  'C3-2': 'melo_dullahan_clockwork_alt',
+  'C3-3': 'melo_dullahan_clockwork',
+  'C3-4': 'melo_dullahan_clockwork_alt',
+  'C3-5': 'melo_erfolg_piano',
+  'C3-M': 'melo_erfolg_piano',
+  'C4-1': 'makutsu_no_senritsu',
+  'C4-2': 'silence',
+  'C4-3': 'melo_dullahan_clockwork_alt',
+  'C4-4': 'melo_dullahan_clockwork',
+  'C4-5': 'melo_dullahan_steel_ghost',
+  'C4-M': 'silence',
+  'C5-1': 'melo_erfolg_piano',
+  'C5-2': 'melo_dullahan_steel_ghost_alt',
+  'C5-3': 'melo_dullahan_steel_ghost',
+  'C5-4': 'melo_dullahan_steel_ghost',
+  'C5-5': 'makutsu_no_senritsu',
+  'C5-M': 'melo_dullahan_clockwork',
+  'C6-1': 'melo_dullahan_clockwork_alt',
+  'C6-2': 'melo_dullahan_steel_ghost',
+  'C6-3': 'melo_dullahan_clockwork_alt',
+  'C6-4': 'melo_dullahan_steel_ghost_alt',
+  'C6-5': 'melo_dullahan_steel_ghost',
+  'C6-6': 'melo_dullahan_clockwork_alt',
+  'C6-7': 'original_dullahan',
+  'C6-8': 'melo_erfolg_piano',
+  'C6-9': 'melo_dullahan_steel_ghost',
+  'C6-M': 'melo_erfolg_piano',
+  'C7-1': 'melo_dullahan_clockwork_alt',
+  'C7-2': 'melo_dullahan_steel_ghost_alt',
+  'C7-A': 'melo_erfolg_piano',
+  'C7-B': 'melo_dullahan_clockwork',
+  'C7-P1': 'original_dullahan',
+  'C7-P2': 'melo_erfolg_piano',
+  'C7-P3': 'melo_dullahan_clockwork',
+  'C7-4a': 'melo_erfolg_piano',
+  'C7-4b': 'melo_dullahan_steel_ghost',
+  'C7-5a': 'melo_erfolg_piano',
+  'C7-5b': 'melo_dullahan_steel_ghost',
+  'C7-W': 'melo_dullahan_clockwork_alt',
+  'C8-1': 'melo_dullahan_steel_ghost_alt',
+  'C8-2': 'makutsu_no_senritsu',
+  'C8-3': 'melo_erfolg_piano',
+  'C9-1': 'silence',
+  'C9-2': 'close_to_your_heart_alt',
+  'C10-1': 'melo_dullahan_steel_ghost',
+  'C10-2': 'makutsu_no_senritsu',
+  'C10-3': 'melo_dullahan_steel_ghost',
+  'C10-4': 'melo_dullahan_steel_ghost_alt',
+  'C11-1': 'melo_dullahan_steel_ghost_alt',
+  'C11-N': 'melo_erfolg_piano',
+  'C11-A': 'melo_erfolg_piano',
+  'C11-B': 'melo_dullahan_clockwork',
+  'C2-X': 'melo_dullahan_steel_ghost',
+  'END-X1': 'original_game_over',
+  'C5-X': 'melo_dullahan_steel_ghost',
+  'END-X2': 'original_game_over',
+  'C6-X': 'melo_dullahan_steel_ghost',
+  'END-X3': 'original_game_over',
+  'C2-Y': 'melo_dullahan_steel_ghost',
+  'END-X4': 'original_game_over',
+  'C10-X': 'melo_dullahan_steel_ghost',
+  'END-X5': 'original_game_over',
+  'END-M1': 'original_game_over',
+  'END-M2': 'melo_dullahan_steel_ghost',
+  'END-M3': 'melo_dullahan_steel_ghost',
+  'END-M4': 'original_game_over',
+  'END-M5': 'melo_dullahan_steel_ghost',
+  'END-G': 'melo_erfolg_piano',
+  'OUT-G': 'close_to_your_heart_alt',
+  'END-N': 'melo_erfolg_piano',
+  'OUT-N': 'melo_erfolg_piano',
+  'END-A': 'melo_dullahan_clockwork',
+  'OUT-A': 'melo_dullahan_clockwork',
+  'END-B': 'melo_dullahan_steel_ghost',
+  'OUT-B': 'melo_dullahan_steel_ghost',
+  'C1-O': 'original_profile',
+  'END-O': 'original_profile',
+  'OUT-O': 'original_profile',
+  'END-O2': 'close_to_your_heart_alt',
+  'OUT-O2': 'close_to_your_heart_alt',
+  'C12-1': 'close_to_your_heart_alt',
+  'C12-2': 'melo_erfolg_piano',
+  'C12-3': 'original_dullahan',
+  'C12-4': 'melo_dullahan_clockwork',
+  'C12-5': 'melo_dullahan_steel_ghost',
+  'C12-6': 'silence',
+  'C12-7': 'melo_erfolg_piano'
+});
 const XMAS_NOVEL_BGM_SHIFT = Object.freeze({
-  'END-G': [['G-10', 'melo_dear_santa']]
+  'C2-3': [['2-3-7', 'silence']],
+  'C5-4': [['5-4-5', 'silence']],
+  'C6-5': [['6-5-3', 'silence']],
+  'C7-1': [['7-1-3a', 'melo_dullahan_steel_ghost_alt']],
+  'C7-W': [['7-W-14', 'melo_dullahan_steel_ghost_alt']],
+  'C10-1': [['10-1-5', 'silence']],
+  'C10-2': [['10-2-7', 'silence']],
+  'C10-3': [['10-3-7', 'silence']],
+  'C2-X': [['2-X-6a', 'silence']],
+  'C5-X': [['5-X-4a', 'silence']],
+  'C6-X': [['6-X-8', 'silence']],
+  'C2-Y': [['2-Y-10', 'silence']],
+  'C10-X': [['10-X-8', 'silence']],
+  'END-M2': [['M2-4', 'silence']],
+  'END-M5': [['M5-5a', 'silence']],
+  'END-B': [['B-3', 'silence']],
+  'END-G': [['G-10', 'close_to_your_heart_alt']],
+  'C12-4': [['12-4-5', 'silence']]
+});
+const XMAS_NOVEL_VOCAL_BGM = Object.freeze({
+  kaze_ga_soyogu: 'original_profile',
+  melo_kiss_mystery: 'melo_dullahan_steel_ghost_alt',
+  melo_kiss_mystery_short: 'melo_dullahan_steel_ghost_alt',
+  melo_sad_song: 'melo_erfolg_piano',
+  melo_sad_song_short: 'melo_erfolg_piano',
+  melo_dear_santa: 'close_to_your_heart_alt',
+  melo_dear_santa_short: 'close_to_your_heart_alt',
+  melo_winter_fall: 'close_to_your_heart_alt',
+  melo_winter_fall_short: 'close_to_your_heart_alt',
+  close_to_your_heart: 'close_to_your_heart_alt'
 });
 const xmasNovelBgmAt = (scene, idx) => {
   if (!scene) return '';
-  let key = scene.bgm || '';
+  const fixed = Object.prototype.hasOwnProperty.call(XMAS_NOVEL_BGM_SCENE, scene.id);
+  let key = fixed ? XMAS_NOVEL_BGM_SCENE[scene.id] : scene.bgm || '';
   const rows = Array.isArray(scene.rows) ? scene.rows : [];
   const at = Number.isFinite(idx) ? idx : 0;
   const shifts = XMAS_NOVEL_BGM_SHIFT[scene.id] || [];
   for (let i = 0; i <= at && i < rows.length; i += 1) {
     const r = rows[i];
-    if (r && r.bgm) key = r.bgm;
+    if (!fixed && r && r.bgm) key = r.bgm;
     shifts.forEach(([rowId, k]) => {
       if (r && r.id === rowId) key = k;
     });
   }
-  return key;
+  return XMAS_NOVEL_VOCAL_BGM[key] || key;
 };
-const xmasNovelBgm = key => {
+const xmasNovelBgm = keyIn => {
+  let key = keyIn;
   try {
     if (typeof Audio_ === 'undefined' || !Audio_) return;
     if (!key) return;
+    key = XMAS_NOVEL_VOCAL_BGM[key] || key;
     if (key === 'silence') {
       Audio_.stopBGM();
       return;
@@ -128892,7 +129033,7 @@ const XmasNovelScreen = ({
         setSave(s);
       }
     });
-    xmasNovelBgm('melo_kiss_mystery');
+    xmasNovelBgm('melo_dullahan_clockwork');
     return () => {
       alive = false;
       xmasNovelSeStop();
@@ -128966,8 +129107,8 @@ const XmasNovelScreen = ({
         return s;
       }
     } else setFx(f => f && f.kind === 'dark' ? null : f);
-    if (r.bgm && r.bgm !== lastBgm.current) {
-      lastBgm.current = r.bgm;
+    if (opts.quiet && r.bgm && (XMAS_NOVEL_VOCAL_BGM[r.bgm] || r.bgm) !== lastBgm.current) {
+      lastBgm.current = XMAS_NOVEL_VOCAL_BGM[r.bgm] || r.bgm;
       xmasNovelBgm(r.bgm);
     }
     if (r.t === 'clue') {
@@ -260041,6 +260182,10 @@ function MonsterHeroGame() {
       const btn = e.target.closest && e.target.closest('button');
       if (!btn) return;
       if (btn.closest('[data-rhythm-play-area]')) return;
+      if (btn.closest('[data-xmas-novel]') && Audio_.fgSe && typeof Audio_.fgSe.trainingDice === 'function') {
+        Audio_.fgSe.trainingDice();
+        return;
+      }
       if (Audio_.uiTap) {
         Audio_.uiTap();
         return;

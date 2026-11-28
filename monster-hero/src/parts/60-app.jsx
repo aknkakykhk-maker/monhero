@@ -7343,6 +7343,8 @@ function MonsterHeroGame() {
       if (!btn) return;
       // モンヒロビートの演奏エリアの中は鳴らさない(ノーツの音と重ねない。今までもここは鳴っていなかった)
       if (btn.closest('[data-rhythm-play-area]')) return;
+      // 事件簿(ミステリーノベル)の中は、明るい「ピッ」ではなく低く小さい「コトッ」(手持ちの trainingDice)。表の口(fgSe)から鳴らす(r1126-093 追記1)
+      if (btn.closest('[data-xmas-novel]') && Audio_.fgSe && typeof Audio_.fgSe.trainingDice === 'function') { Audio_.fgSe.trainingDice(); return; }
       // ボタンの音は、裏のバトルの音と別の口(uiTap)で鳴らす。モンヒロビートの画面・助手ライフの裏クイック中は
       // 効果音の口(seBus)を0にしているので、se/fgSe では鳴らなかった(2026-11-24 r1119-164)
       if (Audio_.uiTap) { Audio_.uiTap(); return; }
