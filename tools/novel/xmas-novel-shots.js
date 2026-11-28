@@ -256,6 +256,17 @@ const SHOTS_115PK = [
   { name: '74-page', row: 'PK-6-10', side: 2, endings: ['END-G'], label: 'PK-6 朝の頁「待ってまつ」' },
   { name: '75-mirror', row: 'PK-Y-14', side: 1, endings: ['END-G'], label: 'もしも 鏡の中の影' },
 ];
+// r1126-115 視点の編 きゅうこの編(真グッド+5つの視点の編のあと)
+const SHOTS_115PQ = [
+  { name: '71-a9-pq', row: 'A9', side: 1, endings: ['END-G', 'END-PD1', 'END-PM1', 'END-PK1', 'END-PE1', 'END-PO1'], label: '終章 A9 の④(印なし)' },
+  { name: '72-score', row: 'PQ-2-4', side: 2, endings: ['END-G', 'END-PD1', 'END-PM1', 'END-PK1', 'END-PE1', 'END-PO1'], label: 'PQ-2 塗りつぶされた名前' },
+  { name: '73-apq1', row: 'APQ1', side: 1, endings: ['END-G', 'END-PD1', 'END-PM1', 'END-PK1', 'END-PE1', 'END-PO1'], label: 'PQ-5 かんぬきの前の選択' },
+  { name: '74-hand', row: 'PQ-6b-5', side: 2, endings: ['END-G', 'END-PD1', 'END-PM1', 'END-PK1', 'END-PE1', 'END-PO1'], label: 'PQ-6b 暗闇でつないだ手' },
+  { name: '75-wall', row: 'PQ-11-5', side: 1, endings: ['END-G', 'END-PD1', 'END-PM1', 'END-PK1', 'END-PE1', 'END-PO1'], label: 'PQ-11 板1枚の向こう' },
+  { name: '76-pq1', row: 'PQ1-3', side: 2, endings: ['END-G', 'END-PD1', 'END-PM1', 'END-PK1', 'END-PE1', 'END-PO1'], label: 'END-PQ1 十三分' },
+  { name: '77-pq2', row: 'PQ2-4', side: 1, endings: ['END-G', 'END-PD1', 'END-PM1', 'END-PK1', 'END-PE1', 'END-PO1'], label: 'END-PQ2 上がったままのかんぬき(もしも)' },
+  { name: '78-out', row: 'OUT-PQ-3', side: 1, endings: ['END-G', 'END-PD1', 'END-PM1', 'END-PK1', 'END-PE1', 'END-PO1'], label: 'OUT-PQ 画面の前で' },
+];
 // r1126-115 視点の編 ももすけの編
 const SHOTS_115PO = [
   { name: '71-c3-1-po', row: 'APO0', side: 1, endings: ['END-G'], label: '真グッドのあと 第3章 C3-1 の最後の新しい選択(✦)' },
@@ -317,7 +328,7 @@ const SHOTS_108D = [
   { name: '94-i3-card', row: 'I3-4', side: 2, tap: 10, endings: IF_SEEN, label: 'END-I3 エンドの札(もしも)' },
   { name: '95-out', row: 'OUT-IF3-3', side: 1, endings: [...IF_SEEN, 'END-I3'], label: 'OUT-IF3 画面の前で' },
 ];
-const LIST_ALL = process.argv.includes('--r1126-108d') ? SHOTS_108D : process.argv.includes('--r1126-115pe') ? SHOTS_115PE : process.argv.includes('--r1126-115pk') ? SHOTS_115PK : process.argv.includes('--r1126-115po') ? SHOTS_115PO : process.argv.includes('--r1126-115pm') ? SHOTS_115PM : process.argv.includes('--r1126-115h') ? SHOTS_115H : process.argv.includes('--r1126-115tk') ? SHOTS_115TK : process.argv.includes('--r1126-117') ? SHOTS_117 : process.argv.includes('--r1126-115pd') ? SHOTS_115PD : process.argv.includes('--r1126-115') ? SHOTS_115 : process.argv.includes('--r1126-108c') ? SHOTS_108C : process.argv.includes('--r1126-108b') ? SHOTS_108B : process.argv.includes('--r1126-108') ? SHOTS_108 : process.argv.includes('--spoil') ? SHOTS_SPOIL : process.argv.includes('--r1126-091') ? SHOTS_091 : process.argv.includes('--final') ? SHOTS_FINAL : process.argv.includes('--r1126-077') ? SHOTS_077 : process.argv.includes('--r1126-071') ? SHOTS_071 : process.argv.includes('--r1126-076') ? SHOTS_076 : process.argv.includes('--r1126-067') ? SHOTS_067 : process.argv.includes('--r1126-065') ? SHOTS_065 : process.argv.includes('--r1126-062') ? SHOTS_062 : process.argv.includes('--r1126-046') ? SHOTS_046 : process.argv.includes('--r1126-054') ? SHOTS_054 : process.argv.includes('--r1126-058') ? SHOTS_058 : SHOTS;
+const LIST_ALL = process.argv.includes('--r1126-115pq') ? SHOTS_115PQ : process.argv.includes('--r1126-108d') ? SHOTS_108D : process.argv.includes('--r1126-115pe') ? SHOTS_115PE : process.argv.includes('--r1126-115pk') ? SHOTS_115PK : process.argv.includes('--r1126-115po') ? SHOTS_115PO : process.argv.includes('--r1126-115pm') ? SHOTS_115PM : process.argv.includes('--r1126-115h') ? SHOTS_115H : process.argv.includes('--r1126-115tk') ? SHOTS_115TK : process.argv.includes('--r1126-117') ? SHOTS_117 : process.argv.includes('--r1126-115pd') ? SHOTS_115PD : process.argv.includes('--r1126-115') ? SHOTS_115 : process.argv.includes('--r1126-108c') ? SHOTS_108C : process.argv.includes('--r1126-108b') ? SHOTS_108B : process.argv.includes('--r1126-108') ? SHOTS_108 : process.argv.includes('--spoil') ? SHOTS_SPOIL : process.argv.includes('--r1126-091') ? SHOTS_091 : process.argv.includes('--final') ? SHOTS_FINAL : process.argv.includes('--r1126-077') ? SHOTS_077 : process.argv.includes('--r1126-071') ? SHOTS_071 : process.argv.includes('--r1126-076') ? SHOTS_076 : process.argv.includes('--r1126-067') ? SHOTS_067 : process.argv.includes('--r1126-065') ? SHOTS_065 : process.argv.includes('--r1126-062') ? SHOTS_062 : process.argv.includes('--r1126-046') ? SHOTS_046 : process.argv.includes('--r1126-054') ? SHOTS_054 : process.argv.includes('--r1126-058') ? SHOTS_058 : SHOTS;
 
 //  --only <語>: 名前にその語を含む物だけ撮る(例: --only kuroba)
 const ONLY = process.argv.includes('--only') ? process.argv[process.argv.indexOf('--only') + 1] || '' : '';

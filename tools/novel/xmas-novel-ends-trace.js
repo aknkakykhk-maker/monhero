@@ -78,6 +78,10 @@ const ROUTES = [
   { name: '視点の編 ももすけ、窓の影をしまっておく', want: 'END-PO1', from: 'APO0', picks: { APO0: 'go:PO-1', APO1: 'opt:0' }, seen: ['END-G'] },
   { name: '視点の編 ももすけ、ドラにだけ話す', want: 'END-PO2', from: 'APO1', picks: { APO0: 'go:PO-1', APO1: 'go:PO-6' }, seen: ['END-G'], short: true },
   { name: '真グッドの前は C3-1 に APO0 は出ない', want: 'END-X8', from: 'A3', picks: { A3: 'danger' }, noQ: 'APO0', short: true },
+  // r1126-115 視点の編 きゅうこの編(真グッド+5つの視点の編を全部見たあと、終章 A9 に④)
+  { name: '視点の編 きゅうこ、かんぬきを下ろす', want: 'END-PQ1', from: 'A9', picks: { A9: 'go:PQ-1', APQ1: 'opt:0' }, seen: ['END-G', 'END-PD1', 'END-PM1', 'END-PK1', 'END-PE1', 'END-PO1'] },
+  { name: '視点の編 きゅうこ、かんぬきを下ろせない(もしも)', want: 'END-PQ2', from: 'APQ1', picks: { A9: 'go:PQ-1', APQ1: 'go:PQ-Y' }, seen: ['END-G', 'END-PD1', 'END-PM1', 'END-PK1', 'END-PE1', 'END-PO1'], short: true },
+  { name: '視点の編が1つ欠けると A9 に④は出ない', want: 'END-G', from: 'A9', picks: { A9: 'opt:0' }, seen: ['END-G', 'END-PD1', 'END-PM1', 'END-PK1', 'END-PE1'], noOpt: { A9: 'PQ-1' }, short: true },
   // r1126-115 もしもの話 ② 十三番目の客: 灰のしおり(真グッド+強制バッド X1〜X8 を全部)を持っている人だけ、A4 に③が出る
   { name: 'もしも 十三番目の客、朝まで数え続ける', want: 'END-H1', from: 'A4', picks: { A4: 'go:HJ-1', AH1: 'opt:0' }, seen: ['END-G', 'END-X1', 'END-X2', 'END-X3', 'END-X4', 'END-X5', 'END-X6', 'END-X7', 'END-X8'] },
   { name: 'もしも 十三番目の客、13行目を読む', want: 'END-H2', from: 'AH1', picks: { A4: 'go:HJ-1', AH1: 'opt:1' }, seen: ['END-G', 'END-X1', 'END-X2', 'END-X3', 'END-X4', 'END-X5', 'END-X6', 'END-X7', 'END-X8'], short: true },
