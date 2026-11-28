@@ -466,8 +466,10 @@ const xmasNovelRouteSeed = (script, save, route) => {
   const read = new Set((save && Array.isArray(save.read)) ? save.read : []);
   let at = { ...base.at };
   const keep = (cur, row) => { const k = xmasNovelRouteKeyOf(row.id, cur); if (!at[k] && read.has(row.k)) { const c = xmasNovelNormalizeCur(cur, script); if (c) at = { ...at, [k]: c }; } };
-  const sideOfSave = save && save.cur && save.cur.flags && Number.isFinite(save.cur.flags.f_A1) ? save.cur.flags.f_A1 : 0;
   const snaps = save && save.snaps && typeof save.snaps === 'object' ? save.snaps : {};
+  // 派(A1 で選んだ方)は続きの場所から。読み終えて続きが空なら、章の頭の記録から(r1126-108: 第1章の A1 のあとの A1b まで作る)
+  const sideOf = (c) => (c && c.flags && Number.isFinite(c.flags.f_A1) && c.flags.f_A1 > 0 ? c.flags.f_A1 : 0);
+  const sideOfSave = sideOf(save && save.cur) || Object.keys(snaps).map((k) => sideOf(snaps[k])).find((v) => v > 0) || 0;
   Object.keys(snaps).filter((k) => /^C\d+$/.test(k)).forEach((chId) => {
     let st = xmasNovelSettle(script, snaps[chId]);
     for (let guard = 0; st && st.row && guard < 3000; guard += 1) {

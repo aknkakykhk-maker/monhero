@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5406518dbde06425
+// generated-sha256: e6f4647be94127eb
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -68976,8 +68976,10 @@ const xmasNovelRouteSeed = (script, save, route) => {
   const read = new Set((save && Array.isArray(save.read)) ? save.read : []);
   let at = { ...base.at };
   const keep = (cur, row) => { const k = xmasNovelRouteKeyOf(row.id, cur); if (!at[k] && read.has(row.k)) { const c = xmasNovelNormalizeCur(cur, script); if (c) at = { ...at, [k]: c }; } };
-  const sideOfSave = save && save.cur && save.cur.flags && Number.isFinite(save.cur.flags.f_A1) ? save.cur.flags.f_A1 : 0;
   const snaps = save && save.snaps && typeof save.snaps === 'object' ? save.snaps : {};
+  // 派(A1 で選んだ方)は続きの場所から。読み終えて続きが空なら、章の頭の記録から(r1126-108: 第1章の A1 のあとの A1b まで作る)
+  const sideOf = (c) => (c && c.flags && Number.isFinite(c.flags.f_A1) && c.flags.f_A1 > 0 ? c.flags.f_A1 : 0);
+  const sideOfSave = sideOf(save && save.cur) || Object.keys(snaps).map((k) => sideOf(snaps[k])).find((v) => v > 0) || 0;
   Object.keys(snaps).filter((k) => /^C\d+$/.test(k)).forEach((chId) => {
     let st = xmasNovelSettle(script, snaps[chId]);
     for (let guard = 0; st && st.row && guard < 3000; guard += 1) {
@@ -69137,7 +69139,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"C1-6","chapter":"C1","title":"最初の夜","cond":null,"bgm":"melo_dullahan_steel_ghost","bg":"夜のホール","next":"C1-M","rows":[{"id":"1-6-1","t":"band","x":"夜。みんなが眠った後。暖炉の火だけが、ホールを照らしている","k":"C1-6:1-6-1"},
 {"id":"1-6-2","t":"band","x":"カチ、カチ、カチ(柱時計の針が、ゆっくり動く音)","fx":["se"],"se":"tick","seN":3,"k":"C1-6:1-6-2"},
 {"id":"1-6-3","t":"line","secret":true,"x":"……やっと、そろった。12年、かかったね","f":"close","n":"？？？","e":"troubled","k":"C1-6:1-6-3"},
-{"id":"1-6-4","t":"panel","x":"登場人物 12人","missing":[],"hurt":[],"dead":[],"k":"C1-6:1-6-4"}]},
+{"id":"1-6-4","t":"panel","x":"登場人物 12人","missing":[],"hurt":[],"dead":[],"k":"C1-6:1-6-4"},{"t":"q","id":"A1b","kind":"action","x":"真夜中。2階の廊下で、床のきしむ音がした——","replies":{},"label":"行動の選択","options":[{"to":"C1-M","x":"気のせいにして、朝まで眠る"},{"c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"to":"C1-X","x":"あつが、一人で廊下を見に行く"},{"c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"to":"C1-X","x":"ソラシドが、一人で廊下を見に行く"}],"k":"C1-6:A1b"}]},
 {"id":"C1-M","chapter":"C1","title":"幕間 眠る客","cond":null,"bgm":"melo_dullahan_steel_ghost","bg":"黒羽の部屋(夜","next":"C2-1","rows":[{"id":"1-M-1","t":"band","x":"幕間 〜眠る客〜","k":"C1-M:1-M-1"},
 {"id":"1-M-2","t":"band","x":"同じ夜。2階の、黒羽の部屋の前","k":"C1-M:1-M-2"},
 {"id":"1-M-3","t":"band","x":"扉の取っ手が、音もなく回る。……鍵は、かかっていなかった","k":"C1-M:1-M-3"},
@@ -69278,7 +69280,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"3-3-4","t":"line","w":"sorashido","x":"ワトソンくん。電波は","e":"normal","k":"C3-3:3-3-4"},
 {"id":"3-3-5","t":"line","w":"watson","x":"ありません。外と連絡する方法は、今はありません","k":"C3-3:3-3-5"},
 {"id":"3-3-6","t":"line","w":"erubin","x":"……閉じこめられた、ってことかな","e":"troubled","k":"C3-3:3-3-6"},
-{"id":"3-3-7","t":"line","w":"atsu","x":"おっちゃんは、雪がやんだら、ちゃんとふもとへ連れて帰る。……それまでに、黒いサンタを見つける","e":"normal","k":"C3-3:3-3-7"}]},
+{"id":"3-3-7","t":"line","w":"atsu","x":"おっちゃんは、雪がやんだら、ちゃんとふもとへ連れて帰る。……それまでに、黒いサンタを見つける","e":"normal","k":"C3-3:3-3-7"},{"t":"q","id":"A3","kind":"action","x":"電話の線は、外で切られていた。誰が、どこで切ったのか——","replies":{},"label":"行動の選択","options":[{"to":"C3-4","x":"雪がやむまで、みんなで中にいる(線を切ったのが誰かは、分からないまま)"},{"c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"to":"C3-X","x":"あつが、一人で外へ出て、切れた電話の線をたどる"},{"c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"to":"C3-X","x":"ソラシドが、一人で外へ出て、切れた電話の線をたどる"}],"k":"C3-3:A3"}]},
 {"id":"C3-4","chapter":"C3","title":"緑の毛くず","cond":null,"bgm":"melo_dullahan_clockwork_alt","bg":"裏口","next":"C3-5","rows":[{"id":"3-4-1","t":"line","w":"kiki","x":"ソラシドさん、裏口の戸の隙間に、緑色の……毛くずでつ","e":"normal","k":"C3-4:3-4-1"},
 {"id":"3-4-2","t":"line","w":"sorashido","x":"約2センチ。……ワトソンくん、写真を","e":"normal","k":"C3-4:3-4-2"},
 {"id":"3-4-3","t":"line","w":"watson","x":"撮りました。色は、ドラさんの帽子の色と近いです","k":"C3-4:3-4-3"},
@@ -69287,7 +69289,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"3-4-5","t":"line","w":"myua","x":"……台所にはいたけど、鐘の時は、あたし、もう部屋に戻ってた……","e":"troubled","k":"C3-4:3-4-5"},
 {"id":"3-4-6","t":"line","w":"dra","x":"そんなぁ……","f":"close","e":"crying","k":"C3-4:3-4-6"},
 {"id":"3-4-7","t":"line","w":"momosuke","x":"ドラちゃんが、そんなことするわけないじゃん！","e":"angry","k":"C3-4:3-4-7"},
-{"id":"3-4-8","t":"line","w":"dra","x":"(何か言いかけて、口をつぐむ)……おで、何も見てない。……何も","e":"troubled","k":"C3-4:3-4-8"}]},
+{"id":"3-4-8","t":"line","w":"dra","x":"(何か言いかけて、口をつぐむ)……おで、何も見てない。……何も","e":"troubled","k":"C3-4:3-4-8"},{"t":"q","id":"A3b","kind":"action","x":"緑の毛くずは、ドラの帽子と同じ色——","replies":{},"label":"行動の選択","options":[{"to":"C3-5","x":"閉じこめずに、みんなで見張る(ドラへの疑いは、晴れないまま)"},{"to":"C3-D","x":"ドラを部屋に閉じこめて、外から鍵をかける"}],"k":"C3-4:A3b"}]},
 {"id":"C3-5","chapter":"C3","title":"窓辺の白瀬","cond":null,"bgm":"melo_sad_song_short","bg":"夜の食堂","next":"C3-M","rows":[{"id":"3-5-1","t":"band","x":"夜。食堂の窓辺に、白瀬が一人","k":"C3-5:3-5-1"},
 {"id":"3-5-2","t":"line","w":"erubin","x":"白瀬さん。あったかいお茶、もらってきたよ","e":"normal","k":"C3-5:3-5-2"},
 {"id":"3-5-3","t":"line","w":"shirase","x":"……ありがとう。えるびんさんは、優しいんですね","k":"C3-5:3-5-3"},
@@ -69360,7 +69362,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"4-5-4","t":"line","w":"sorashido","x":"(メモ)12年前の鐘と、あの夜の鐘。どちらも早かった。……柱時計の針を動かせる人","e":"normal","k":"C4-5:4-5-4"},
 {"id":"4-5-5","t":"band","x":"同じ頃。暗い屋根裏","k":"C4-5:4-5-5"},
 {"id":"4-5-6","t":"line","secret":true,"x":"……次は、白い人","f":"close","n":"？？？","e":"troubled","k":"C4-5:4-5-6"},
-{"id":"4-5-7","t":"panel","x":"","ops":[{"id":"kuroba","st":"dead"}],"k":"C4-5:4-5-7"}]},
+{"id":"4-5-7","t":"panel","x":"","ops":[{"id":"kuroba","st":"dead"}],"k":"C4-5:4-5-7"},{"t":"q","id":"A4","kind":"action","x":"真夜中。開かずの部屋のほうから、かすかにオルゴールの子守歌が聞こえる——","replies":{},"label":"行動の選択","options":[{"to":"C4-M","x":"朝まで、みんなでホールにいる(音の主は、分からないまま)"},{"c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"to":"C4-X","x":"あつが、一人で開かずの部屋を確かめに行く"},{"c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"to":"C4-X","x":"ソラシドが、一人で開かずの部屋を確かめに行く"}],"k":"C4-5:A4"}]},
 {"id":"C4-M","chapter":"C4","title":"幕間 書きかけの手紙","cond":null,"bgm":"melo_sad_song_short","bg":"白瀬の部屋(ろうそく","next":"C5-1","rows":[{"id":"4-M-1","t":"band","x":"幕間 〜書きかけの手紙〜","k":"C4-M:4-M-1"},
 {"id":"4-M-2","t":"band","x":"同じ夜。白瀬の部屋。小さな机の上で、ろうそくの火が揺れている","k":"C4-M:4-M-2"},
 {"id":"4-M-3","t":"band","x":"便せんに、何行か書いては、手が止まる。線を引いて消し、また書く","k":"C4-M:4-M-3"},
@@ -70059,6 +70061,77 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"END-X5","chapter":"END","title":"","cond":null,"bgm":"melo_sad_song_short","bg":null,"next":"A10","rows":[{"id":"X5-1","t":"band","x":"聖夜の名探偵 エンディング「はしごの上の灯り」","k":"END-X5:X5-1"},
 {"id":"X5-2","t":"band","x":"——いなくなったはずの声に、名探偵は、一人で近づきすぎた","k":"END-X5:X5-2"},
 {"id":"X5-3","t":"band","x":"","k":"END-X5:X5-3"}],"ending":{"id":"END-X5","kind":"forced","label":"強制バッド","name":"はしごの上の灯り"}},
+{"id":"C1-X","chapter":"END","title":"廊下の影","cond":null,"bgm":"melo_dullahan_steel_ghost","bg":"2階の廊下(夜)","next":"END-X6","rows":[{"id":"1-X-1a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"band","x":"あつは、ベッドを抜け出し、暗い2階の廊下へ出た","k":"C1-X:1-X-1a"},
+{"id":"1-X-1s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"band","x":"ソラシドは、ノートパソコンを閉じ、暗い2階の廊下へ出た","k":"C1-X:1-X-1s"},
+{"id":"1-X-2","t":"band","x":"廊下の奥を、黒い影が横切った。胸に、楽器のケースのような物を抱えている","k":"C1-X:1-X-2"},
+{"id":"1-X-3a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"atsu","x":"……誰？","e":"surprise","k":"C1-X:1-X-3a"},
+{"id":"1-X-3s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"sorashido","x":"……どなたですか","e":"surprise","k":"C1-X:1-X-3s"},
+{"id":"1-X-4","t":"band","x":"影は、音もなく階段を下りていく。追って下りたホールは真っ暗で、柱時計の振り子の音だけが聞こえた","k":"C1-X:1-X-4"},
+{"id":"1-X-5","t":"band","x":"カチ……カチ……","fx":["se"],"se":"tick","seN":2,"k":"C1-X:1-X-5"},
+{"id":"1-X-6","t":"band","x":"ゴッ","fx":["dark","se"],"se":"tap","k":"C1-X:1-X-6"},
+{"id":"1-X-7","t":"band","x":"朝。暖炉に火を入れに来たもちまるが、柱時計の前で、それを見つけた","k":"C1-X:1-X-7"},
+{"id":"1-X-8","t":"line","w":"mochimaru","x":"……っ！ みなさん！ みなさん、起きてほしいっちー！！","k":"C1-X:1-X-8"},
+{"id":"1-X-9a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"band","x":"柱時計の足もとに、あつが、横向きに倒れていた。……息を、していなかった","fx":["fallen"],"body":"atsu","k":"C1-X:1-X-9a"},
+{"id":"1-X-9s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"band","x":"柱時計の足もとに、ソラシドが、横向きに倒れていた。……息を、していなかった","fx":["fallen"],"body":"sorashido","k":"C1-X:1-X-9s"},
+{"id":"1-X-10","t":"band","x":"こめかみの傷から流れた血が、床板の上に、細く黒い筋を作っている","fx":["red"],"body":"lead","k":"C1-X:1-X-10"},
+{"id":"1-X-11","t":"line","w":"kuroba","x":"……な、なんだ、これは。……わたしの楽譜は。楽譜のケースは、どこだ！","k":"C1-X:1-X-11"},
+{"id":"1-X-12a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"myua","x":"……あつくん？ ……うそ。まだ、来たばっかりぢゃん……！","e":"crying","k":"C1-X:1-X-12a"},
+{"id":"1-X-12s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"atsu","x":"ばこっちゃん……！ 勝負、まだ始まってもないだろ……！","e":"crying","k":"C1-X:1-X-12s"}],"frame":"close","jumpOnly":true},
+{"id":"END-X6","chapter":"END","title":"","cond":null,"bgm":"melo_sad_song_short","bg":null,"next":"A1b","rows":[{"id":"X6-1","t":"band","x":"聖夜の名探偵 エンディング「最初の夜」","k":"END-X6:X6-1"},
+{"id":"X6-2","t":"band","x":"——事件が始まる前の夜。名探偵は、見てはいけない影を、追いかけてしまった","k":"END-X6:X6-2"},
+{"id":"X6-3","t":"band","x":"","k":"END-X6:X6-3"}],"ending":{"id":"END-X6","kind":"forced","label":"強制バッド","name":"最初の夜"}},
+{"id":"C3-X","chapter":"END","title":"切れた線","cond":null,"bgm":"melo_dullahan_steel_ghost","bg":"夜の裏口(吹雪)","next":"END-X8","rows":[{"id":"3-X-1a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"band","x":"あつは、ランタンを一つ持って、裏口から吹雪の中へ出ていった","k":"C3-X:3-X-1a"},
+{"id":"3-X-1s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"band","x":"ソラシドは、ノートパソコンを胸に抱え、ランタンを持って、裏口から吹雪の中へ出ていった","k":"C3-X:3-X-1s"},
+{"id":"3-X-2","t":"band","x":"電話の線は、軒下から、山道に沿った電柱へ続いている。ランタンの灯りの輪の外は、白い闇だった","k":"C3-X:3-X-2"},
+{"id":"3-X-3a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"myua","x":"あつくん、すぐ戻ってきてね……！ ほんとに、すぐだよ……！","e":"troubled","k":"C3-X:3-X-3a"},
+{"id":"3-X-3s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"watson","x":"ソラシドさん。外の気温が下がっています。15分で戻ってください","k":"C3-X:3-X-3s"},
+{"id":"3-X-4","t":"band","x":"15分たっても、30分たっても、裏口の扉は開かなかった。吹雪が、窓を叩き続けている","k":"C3-X:3-X-4"},
+{"id":"3-X-5","t":"line","w":"mochimaru","x":"……裏口、開けておくっちー。灯りも、ここに置いておくっちー","k":"C3-X:3-X-5"},
+{"id":"3-X-6","t":"band","x":"明け方。吹雪のやんだ雪原を、みんなで探した","k":"C3-X:3-X-6"},
+{"id":"3-X-7a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"band","x":"山道の曲がり角。崖の手前の吹きだまりから、探偵の帽子の先がのぞいていた","fx":["fallen"],"body":"atsu","k":"C3-X:3-X-7a"},
+{"id":"3-X-7s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"band","x":"山道の曲がり角。崖の手前の吹きだまりから、ノートパソコンの角がのぞいていた","fx":["fallen"],"body":"sorashido","k":"C3-X:3-X-7s"},
+{"id":"3-X-8","t":"band","x":"掘り出したからだは、氷のように冷たかった。まつげにも、唇にも、白い霜がついている。片手は、ランタンの取っ手を握ったまま、凍りついていた","body":"lead","k":"C3-X:3-X-8"},
+{"id":"3-X-9","t":"band","x":"雪の上の足あとは、ひと筋だけ。山道をそれて、崖のほうへ、ふらふらと曲がっていた","k":"C3-X:3-X-9"},
+{"id":"3-X-10a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"myua","x":"……あつくん。……起きて。……起きてよ……！","f":"close","e":"crying","k":"C3-X:3-X-10a"},
+{"id":"3-X-10s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"atsu","x":"ばこっちゃん……。一人で行かせるんじゃなかった……！","f":"close","e":"crying","k":"C3-X:3-X-10s"},
+{"id":"3-X-11","t":"line","w":"momosuke","x":"……吹雪の夜、黒いサンタが、連れていく……","e":"crying","k":"C3-X:3-X-11"}],"frame":"close","jumpOnly":true},
+{"id":"END-X8","chapter":"END","title":"","cond":null,"bgm":"melo_sad_song_short","bg":null,"next":"A3","rows":[{"id":"X8-1","t":"band","x":"聖夜の名探偵 エンディング「白い山道」","k":"END-X8:X8-1"},
+{"id":"X8-2","t":"band","x":"——誰の手でもなかった。吹雪の夜、白い山道が、名探偵を連れていった","k":"END-X8:X8-2"},
+{"id":"X8-3","t":"band","x":"","k":"END-X8:X8-3"}],"ending":{"id":"END-X8","kind":"forced","label":"強制バッド","name":"白い山道"}},
+{"id":"C3-D","chapter":"END","title":"鍵のかかった部屋","cond":null,"bgm":"melo_sad_song_short","bg":"ドラの部屋","next":"END-A2","rows":[{"id":"3-D-1","t":"band","x":"ドラの部屋の扉に、外から鍵がかけられた","k":"C3-D:3-D-1"},
+{"id":"3-D-2","t":"line","w":"momosuke","x":"ひどいよ！ ドラちゃん、なんにもしてないのに！","e":"angry","k":"C3-D:3-D-2"},
+{"id":"3-D-3","t":"line","w":"dra","x":"いいんだ、もも。……おでがここにいれば、みんな、眠れるんだろ","e":"troubled","note":"扉の向こうから","k":"C3-D:3-D-3"},
+{"id":"3-D-4","t":"band","x":"翌朝。扉の前に集まったみんなに、ドラは、扉ごしに言った","k":"C3-D:3-D-4"},
+{"id":"3-D-5","t":"line","w":"dra","x":"……おでが、やった。黒羽さんを、閉め出したのは、おでだ","f":"close","e":"normal","k":"C3-D:3-D-5"},
+{"id":"3-D-6","t":"line","w":"myua","x":"ドラケン……うそでしょ……？","e":"crying","k":"C3-D:3-D-6"},
+{"id":"3-D-7","t":"band","x":"「事件は終わった」。その日から、見張りはなくなった。誰もが、久しぶりに、ぐっすりと眠った","k":"C3-D:3-D-7"},
+{"id":"3-D-8","t":"band","x":"二晩あと。鏡の廊下の奥で、かすかな悲鳴が聞こえた気がした。誰も、起きなかった","k":"C3-D:3-D-8"}],"frame":"close","jumpOnly":true},
+{"id":"END-A2","chapter":"END","title":"","cond":null,"bgm":"melo_sad_song_short","bg":"朝の鏡の廊下","next":"A3b","rows":[{"id":"A2-1","t":"band","x":"聖夜の名探偵 エンディング「早すぎた解決」","k":"END-A2:A2-1"},
+{"id":"A2-2","t":"band","x":"朝。白瀬の部屋は、空っぽだった。鏡の廊下の床に、赤い毛糸の手袋が、片方だけ落ちていた","k":"END-A2:A2-2"},
+{"id":"A2-3","t":"line","w":"ichika","x":"白瀬さま……？ 白瀬さま、どちらにいらっしゃるのですか……？","k":"END-A2:A2-3"},
+{"id":"A2-4","t":"band","x":"ドラの部屋の扉の鍵は、外から、かかったままだった","k":"END-A2:A2-4"},
+{"id":"A2-5a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"atsu","x":"……ドラちゃんは、ずっとここにいた。じゃあ、白瀬さんを連れていったのは……","e":"troubled","k":"END-A2:A2-5a"},
+{"id":"A2-5s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"sorashido","x":"……ドラさんは、一晩じゅう、ここにいました。では、白瀬さんを連れていったのは……","e":"troubled","k":"END-A2:A2-5s"},
+{"id":"A2-6","t":"line","w":"dra","x":"(扉の向こうで、声を殺して泣いている)","e":"crying","k":"END-A2:A2-6"},
+{"id":"A2-7","t":"panel","x":"","ops":[{"id":"shirase","st":"missing"}],"k":"END-A2:A2-7"},
+{"id":"A2-8","t":"band","x":"——黒いサンタは、まだ、この宿のどこかにいる","k":"END-A2:A2-8"},
+{"id":"A2-9","t":"band","x":"","k":"END-A2:A2-9"}],"frame":"close","ending":{"id":"END-A2","kind":"another","label":"偽りエンド","name":"早すぎた解決"}},
+{"id":"C4-X","chapter":"END","title":"子守歌","cond":null,"bgm":"melo_dullahan_steel_ghost","bg":"2階の廊下(夜)","next":"END-X7","rows":[{"id":"4-X-1a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"band","x":"あつは、灯りを消したまま、2階の廊下を、開かずの部屋のほうへ歩いていった","k":"C4-X:4-X-1a"},
+{"id":"4-X-1s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"band","x":"ソラシドは、ノートパソコンの画面を暗くして、2階の廊下を、開かずの部屋のほうへ歩いていった","k":"C4-X:4-X-1s"},
+{"id":"4-X-2","t":"band","x":"……♪(扉の向こうから、オルゴールの子守歌)","fx":["se"],"se":"music","k":"C4-X:4-X-2"},
+{"id":"4-X-3","t":"band","x":"扉が、細く開いていた。すき間の向こうに、ろうそくの灯りが一つ。オルゴールの前に、黒いサンタのシルエットがうずくまっている。肩が、小さく震えていた","k":"C4-X:4-X-3"},
+{"id":"4-X-4","t":"band","x":"足もとで、床板が、きしんだ","k":"C4-X:4-X-4"},
+{"id":"4-X-5","t":"band","x":"ゴッ","fx":["dark","se"],"se":"tap","k":"C4-X:4-X-5"},
+{"id":"4-X-6a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"band","x":"朝。開かずの部屋の床に、あつが、うつ伏せに倒れていた。探偵の帽子が、オルゴールの台の下に転がっている","fx":["fallen"],"body":"atsu","k":"C4-X:4-X-6a"},
+{"id":"4-X-6s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"band","x":"朝。開かずの部屋の床に、ソラシドが、うつ伏せに倒れていた。ひびの入ったノートパソコンが、オルゴールの台の下に転がっている","fx":["fallen"],"body":"sorashido","k":"C4-X:4-X-6s"},
+{"id":"4-X-7","t":"band","x":"後ろ頭の髪が、血で固まっている。床に広がった血は、もう黒く乾きかけていた","fx":["red"],"body":"lead","k":"C4-X:4-X-7"},
+{"id":"4-X-8","t":"band","x":"オルゴールは、ねじを最後まで巻かれたまま、止まっていた","k":"C4-X:4-X-8"},
+{"id":"4-X-9","t":"line","w":"ichika","x":"この部屋の鍵は、わたしが持っていたのに……。どうして、扉が……","k":"C4-X:4-X-9"},
+{"id":"4-X-10a","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":1}]}]},"t":"line","w":"myua","x":"あつくん……。なんで、一人で行っちゃったの……！","f":"close","e":"crying","k":"C4-X:4-X-10a"},
+{"id":"4-X-10s","c":{"any":[{"all":[{"k":"f_A1","op":"=","v":2}]}]},"t":"line","w":"atsu","x":"ばこっちゃん……。なんで、一人で行ったんだよ……！","f":"close","e":"crying","k":"C4-X:4-X-10s"}],"frame":"close","jumpOnly":true},
+{"id":"END-X7","chapter":"END","title":"","cond":null,"bgm":"melo_sad_song_short","bg":null,"next":"A4","rows":[{"id":"X7-1","t":"band","x":"聖夜の名探偵 エンディング「子守歌の部屋」","k":"END-X7:X7-1"},
+{"id":"X7-2","t":"band","x":"——名探偵は、聞いてはいけない子守歌に、近づきすぎた","k":"END-X7:X7-2"},
+{"id":"X7-3","t":"band","x":"","k":"END-X7:X7-3"}],"ending":{"id":"END-X7","kind":"forced","label":"強制バッド","name":"子守歌の部屋"}},
 {"id":"END-M1","chapter":"END","title":"","cond":null,"bgm":"melo_sad_song_short","bg":"朝の雪原","next":null,"rows":[{"id":"M1-1","t":"band","x":"聖夜の名探偵 エンディング「吹雪の向こうへ」","k":"END-M1:M1-1"},
 {"id":"M1-2","t":"band","x":"朝。吹雪のやんだ雪原に、小さな足跡が一筋、ふもとへの山道のほうへ続いていた","k":"END-M1:M1-2"},
 {"id":"M1-3","t":"band","x":"足跡は、山道の手前で、吹きだまりに埋もれて見えなくなっていた。その先に、ももすけのお気に入りの髪飾りが一つ、雪の上で、赤く光っていた","k":"END-M1:M1-3"},
@@ -70858,6 +70931,10 @@ const XMAS_NOVEL_BG_SHIFT = Object.freeze({
   'C2-Y': [['2-Y-10', '裏の階段(夜)'], ['2-Y-11', '夜のホール'], ['2-Y-13a', '裏の階段の下']],
   'END-M2': [['M2-2', '朝の暖炉の前'], ['M2-3', '朝の雪原'], ['M2-4', '朝の薪小屋の中']],
   'END-G': [['G-10', '屋根裏の会場']],
+  // r1126-108 第2弾の強制バッド: 影を追ってホールへ・明け方の雪原・開かずの部屋の中
+  'C1-X': [['1-X-4', '夜のホール'], ['1-X-7', 'ペンションのホール(柱時計)']],
+  'C3-X': [['3-X-6', '朝の雪原(崖)']],
+  'C4-X': [['4-X-3', '開かずの部屋']],
 });
 const xmasNovelSceneBgName = (scene, idx) => {
   if (!scene) return '';
