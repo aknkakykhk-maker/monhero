@@ -14,6 +14,7 @@
 8. 書いたら通す: `node tools/novel/xmas-novel-build.js` → `node tools/novel/xmas-canon-check.js` → `node tools/novel/xmas-novel-check.js` → `node tools/novel/xmas-novel-ends-trace.js`(`ROUTES` に自分の道を1本ずつ足す・`seen` に開く条件のエンド)→ `python3 tools/assistant/script-peer-calls-check.py <自分のファイル>` → `node tools/build.js` と必須の4本
 9. 公開の前に止め絵(`tools/novel/xmas-novel-shots.js` に自分の組を足す)。エンドの id と種類(もしも=`ifroute`・視点の編=`pov`)を、最後の発言に SQL の行で書く(窓口が本番に流す)
 10. 更新履歴・ヘルプは、編ごとには足さない(窓口がまとめて書く)
+11. 公開の前に、台詞の細かい点検を分析の API に1回読ませる(台帳 r1126-115 追記6)。送る物: 自分の編のファイル全部・`CANON.md`・`CRAFT.md`・SCRIPT.md の「話の決まり」「もちまるの話し方」の節。観点: ①辻褄 ②その子らしい口調 ③誤字・不自然な言い回し・ひらがなの多すぎ ④真相のネタバレ ⑤全年齢 ⑥怖さ・面白さ(大きい順に「行ID・何がおかしいか・直し案」の表)。`node tools/analysis/gateway-client.js message --kind balance --system <ファイル> --prompt <ファイル> --out <結果>`(`ANALYSIS_GATEWAY_TOKEN=proxy`。先に `--dry-run`)。その場の呼び出しは150秒で時間切れになりやすいので、返事が長いときはバッチ(`send({ action: 'batch_submit', … })` → `batch-get`)。返事は `docs/progress/event-xmas-2026/arcs/review/<編のファイル名>-API.md` に置き、大きい所から直す。直さない物は理由を1行。使った額を報告に
 
 ## 割り振り表
 
@@ -23,7 +24,7 @@
 | # | 編 | 種類 | ジャンル | 開く条件 | 足し方 | 足す先 | ①の行き先 | 印 | 主な人物 | ファイル | 場面IDの頭 | 選択のID | エンドid | CANON の区間 | 本筋/もしも | 状態 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1 | 仮面のワルツ | もしも | 恋の駆け引き(全年齢) | `bm_red=1` | 選択肢を足す | 第1章 A1b(真夜中の廊下) | — | なし | 白瀬・灰谷(絵なし)・黒羽・イチーカ | `R-kamen-no-waltz.md` | RW | AR | END-R1〜R3 | — | もしも | 済(#8111) |
-| 2 | 十三番目の客 | もしも | ホラー(怪異) | `bm_ash=1` | 選択肢を足す | 第4章 A4(真夜中の子守歌) | — | なし | 主役・もちまる・ももすけ・ワトソンくん | `H-juusanbanme.md` | HJ | AH | END-H1〜H3 | — | もしも | 書いている |
+| 2 | 十三番目の客 | もしも | ホラー(怪異) | `bm_ash=1` | 選択肢を足す | 第4章 A4(真夜中の子守歌) | — | なし | 主役・もちまる・ももすけ・ワトソンくん | `H-juusanbanme.md` | HJ | AH | END-H1〜H3 | — | もしも | 済 |
 | 3 | 壁の中の宝の地図 | もしも | 冒険(明るい・ネタ寄り) | `bm_green=1` | 選択肢を足す | 第6章 A6y(寄り道・かばん) | — | ✦ | 助手みんな・イチーカ・もちまる | `T-takara.md` | TK | AT | END-T1〜T2 | — | もしも | 書いている |
 | 4 | 鳴りやまない鐘 | もしも | くり返す夜 | `bm_silver=1` | 選択肢を足す | 第2章 A2b(予告の手紙のあと) | — | なし | 主役・きゅうこ・ワトソンくん | `Y-kane.md` | YL | AY | END-Y1〜Y3 | — | もしも | 第4弾 I1〜I3 のあと |
 | 5 | 次の頁 | 外側 | ゲームの外 | `bm_white=1` | 選択肢を足す | 第1章 A1(どっちを手伝う？) | — | ✦ | 助手たち本人 | `W-tsugi.md` | WP | AW | END-W1 | — | 外側 | 2〜4のあと |
