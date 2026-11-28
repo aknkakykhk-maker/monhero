@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5fca261d3a0077c3
+// source-sha256: 23fc9f5e9343b41c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -44874,10 +44874,29 @@ const RhythmHudCombo = ({
   comboRef,
   comboRingRef
 }) => {
-  const combo = useRhythmHudPick(hud, h => h.combo),
+  const comboOn = useRhythmHudPick(hud, h => h.combo > 0),
+    comboTier = useRhythmHudPick(hud, h => h.combo > 0 ? rhythmComboTier(h.combo) : 0),
     countsState = useRhythmHudPick(hud, h => rhythmHudCountsState(h.counts));
-  if (settings.comboDisplay === false || !(combo > 0)) return null;
-  const comboTier = rhythmComboTier(combo);
+  const numRef = useRef(null);
+  const writeNum = useCallback(() => {
+    const el = numRef.current;
+    if (!el) return;
+    const text = String(hud.get().combo);
+    if (el._mhText !== text) {
+      rhythmHudSetText(el, text);
+      el._mhText = text;
+    }
+  }, [hud]);
+  const setNumRef = useCallback(el => {
+    numRef.current = el;
+    if (typeof comboRef === 'function') comboRef(el);else if (comboRef) comboRef.current = el;
+    if (el) writeNum();
+  }, [comboRef, writeNum]);
+  React.useLayoutEffect(() => hud.subscribe(writeNum), [hud, writeNum]);
+  React.useLayoutEffect(() => {
+    writeNum();
+  });
+  if (settings.comboDisplay === false || !comboOn) return null;
   const comboStatus = settings.comboStatusDisplay === false || assistOn || !countsState || countsState === 'broken' ? '' : countsState;
   return React.createElement("div", {
     "data-rhythm-combo-box": true,
@@ -44891,7 +44910,7 @@ const RhythmHudCombo = ({
     },
     className: "pointer-events-none absolute z-[2] text-center"
   }, React.createElement("b", {
-    ref: comboRef,
+    ref: setNumRef,
     "data-rhythm-combo": true,
     "data-combo-tier": String(comboTier),
     className: "block font-black leading-none tabular-nums text-white",
@@ -44899,7 +44918,7 @@ const RhythmHudCombo = ({
       '--mh-combo-scale': rhythmComboTierScale(comboTier),
       '--mh-combo-size': rhythmFiniteInRange(settings.comboSize, RHYTHM_COMBO_SIZE_MIN, RHYTHM_COMBO_SIZE_MAX, 100) / 100
     }
-  }, combo), settings.comboMilestoneFx === true && React.createElement("i", {
+  }), settings.comboMilestoneFx === true && React.createElement("i", {
     ref: comboRingRef,
     "data-rhythm-combo-ring": true,
     "aria-hidden": "true"
@@ -44965,6 +44984,20 @@ const RhythmHudLife = ({
     className: "pointer-events-none absolute right-0 top-full mt-0.5 text-[11px] font-black leading-none tabular-nums"
   }));
 };
+const rhythmHudSetText = (el, text) => {
+  const t = String(text ?? '');
+  const n = el.firstChild;
+  if (!t) {
+    if (n) el.textContent = '';
+    return;
+  }
+  if (n && n.nodeType === 3 && !n.nextSibling) {
+    if (n.data !== t) n.data = t;
+    return;
+  }
+  el.textContent = t;
+};
+const rhythmHudJudgmentFastSlowClass = (settings, fastSlow) => `mt-1 block min-h-[16px] text-xs font-black tracking-[0.24em] ${!settings.fastSlowDisplay ? 'text-transparent' : fastSlow === 'FAST' ? 'text-cyan-300' : fastSlow === 'SLOW' ? 'text-fuchsia-300' : 'text-transparent'}`;
 const RhythmHudJudgment = ({
   hud,
   settings,
@@ -44974,20 +45007,78 @@ const RhythmHudJudgment = ({
   judgmentTextRef,
   sky = false
 }) => {
-  const last = useRhythmHudPick(hud, h => sky ? h.skyLast : h.last),
-    lastPrecise = useRhythmHudPick(hud, h => sky ? h.skyLastPrecise : h.lastPrecise),
-    fastSlow = useRhythmHudPick(hud, h => sky ? h.skyFastSlow : h.fastSlow),
-    lastDeltaMs = useRhythmHudPick(hud, h => sky ? h.skyDeltaMs : h.lastDeltaMs);
+  const textRef = useRef(null),
+    smallRef = useRef(null),
+    propsRef = useRef(null);
+  propsRef.current = {
+    settings,
+    status,
+    haloKeys,
+    timingDisplay,
+    sky
+  };
+  const write = useCallback(() => {
+    const el = textRef.current,
+      sm = smallRef.current,
+      p = propsRef.current;
+    if (!el || !sm || !p) return;
+    const h = hud.get(),
+      {
+        settings,
+        status,
+        haloKeys,
+        timingDisplay
+      } = p;
+    const last = p.sky ? h.skyLast : h.last,
+      lastPrecise = p.sky ? h.skyLastPrecise : h.lastPrecise,
+      fastSlow = p.sky ? h.skyFastSlow : h.fastSlow,
+      lastDeltaMs = p.sky ? h.skyDeltaMs : h.lastDeltaMs;
+    const judgment = last || '',
+      precise = lastPrecise ? '1' : '',
+      halo = haloKeys && settings.judgmentTextDisplay && last && status !== 'error' && status !== 'loading' && haloKeys.has(`${last}|${lastPrecise ? '1' : ''}`) ? '1' : null;
+    const text = status === 'error' ? '音源を再生できません' : status === 'loading' ? 'LOADING…' : settings.judgmentTextDisplay ? last : '';
+    const smallClass = rhythmHudJudgmentFastSlowClass(settings, fastSlow),
+      smallText = settings.fastSlowDisplay ? fastSlow ? timingDisplay !== 'STANDARD' && typeof lastDeltaMs === 'number' ? `${fastSlow} ${Math.round(Math.abs(lastDeltaMs))}ms` : fastSlow : '—' : '—';
+    if (el._mhJudgment !== judgment) {
+      el.setAttribute('data-judgment', judgment);
+      el._mhJudgment = judgment;
+    }
+    if (el._mhPrecise !== precise) {
+      el.setAttribute('data-judgment-precise', precise);
+      el._mhPrecise = precise;
+    }
+    if (el._mhHalo !== halo) {
+      if (halo) el.setAttribute('data-halo', halo);else el.removeAttribute('data-halo');
+      el._mhHalo = halo;
+    }
+    if (el._mhText !== text) {
+      rhythmHudSetText(el, text);
+      el._mhText = text;
+    }
+    if (sm._mhClass !== smallClass) {
+      sm.className = smallClass;
+      sm._mhClass = smallClass;
+    }
+    if (sm._mhText !== smallText) {
+      rhythmHudSetText(sm, smallText);
+      sm._mhText = smallText;
+    }
+  }, [hud]);
+  const setTextRef = useCallback(el => {
+    textRef.current = el;
+    if (typeof judgmentTextRef === 'function') judgmentTextRef(el);else if (judgmentTextRef) judgmentTextRef.current = el;
+  }, [judgmentTextRef]);
+  React.useLayoutEffect(() => hud.subscribe(write), [hud, write]);
+  React.useLayoutEffect(() => {
+    write();
+  });
   return React.createElement(React.Fragment, null, React.createElement("b", {
-    ref: judgmentTextRef,
+    ref: setTextRef,
     "data-rhythm-judgment-text": true,
-    "data-judgment": last || '',
-    "data-judgment-precise": lastPrecise ? '1' : '',
-    "data-halo": haloKeys && settings.judgmentTextDisplay && last && status !== 'error' && status !== 'loading' && haloKeys.has(`${last}|${lastPrecise ? '1' : ''}`) ? '1' : undefined,
     className: "block text-[26px] font-black leading-none tracking-wide text-white"
-  }, status === 'error' ? '音源を再生できません' : status === 'loading' ? 'LOADING…' : settings.judgmentTextDisplay ? last : ''), React.createElement("small", {
-    className: `mt-1 block min-h-[16px] text-xs font-black tracking-[0.24em] ${!settings.fastSlowDisplay ? 'text-transparent' : fastSlow === 'FAST' ? 'text-cyan-300' : fastSlow === 'SLOW' ? 'text-fuchsia-300' : 'text-transparent'}`
-  }, settings.fastSlowDisplay ? fastSlow ? timingDisplay !== 'STANDARD' && typeof lastDeltaMs === 'number' ? `${fastSlow} ${Math.round(Math.abs(lastDeltaMs))}ms` : fastSlow : '—' : '—'));
+  }), React.createElement("small", {
+    ref: smallRef
+  }));
 };
 const rhythmAutoEffectMemory = {
   level: 0
@@ -49462,17 +49553,10 @@ const RhythmTapTest = ({
     if (glowNodesRef.lastKey !== glowKey) {
       glowNodesRef.lastKey = glowKey;
       for (let index = 0; index < nodes.length; index++) {
-        const el = nodes[index],
-          pressed = (mask >> index & 1) === 1;
-        const want = pressed ? 'true' : 'false';
-        const curPressed = el._mhGlowPressed !== undefined ? el._mhGlowPressed : el.dataset.pressed,
-          curOpacity = el._mhGlowOpacity !== undefined ? el._mhGlowOpacity : el.style.opacity;
-        if (curPressed === want && (!pressed || curOpacity === glowOpacity)) continue;
-        const nextOpacity = pressed ? glowOpacity : '0';
-        if (curPressed !== want) el.dataset.pressed = want;
-        if (curOpacity !== nextOpacity) el.style.opacity = nextOpacity;
-        el._mhGlowPressed = want;
-        el._mhGlowOpacity = nextOpacity;
+        const el = nodes[index];
+        el._mhGlowWantPressed = (mask >> index & 1) === 1;
+        el._mhGlowWantOpacity = glowOpacity;
+        rhythmLaneGlowApply(el);
       }
     }
     if (typeof RHYTHM_CANVAS_RENDERER !== 'undefined' && typeof RHYTHM_CANVAS_RENDERER.setSkyPressed === 'function') {
