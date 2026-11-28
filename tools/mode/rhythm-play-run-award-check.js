@@ -158,7 +158,7 @@ for (const [rel, src] of sources) {
   // まだその難易度をクリアしていない人には入らないので、そこも言い分ける
   check(`${rel}: 入らない人には別の説明を出す`,
     compact.includes('rhythmPlayRunLoopsAllowed(difficulty,quickClearCounts)?')
-    && compact.includes('この難易度をクイックで1度クリアすると'));
+    && compact.includes('この難易度をクイックで1度クリアすると') /* r1126-080 */);
 }
 
 // ---- 見せ方(出すところ) ----

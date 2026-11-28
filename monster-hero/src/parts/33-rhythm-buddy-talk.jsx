@@ -473,7 +473,7 @@ const rhythmBuddyTalkReplyKind = (text) => {
   if (/よろしく|はじめまして|こんにちは/.test(t)) return 'replyHello';
   if (/ありがとう/.test(t)) return 'replyThanks';
   if (/ナイス|すごい|うまい|GG/.test(t)) return 'replyNice';
-  if (/もう[一1]回|もう[一1]度|もういっかい|次いこう/.test(t)) return 'replyAgain';
+  if (/もう[一1]回|もう[一1]度|もういっかい|次いこう/.test(t)) return 'replyAgain'; // 人の発言は漢数字も算用数字も拾う
   if (/ドンマイ|おしい|惜しい/.test(t)) return 'replyDrop';
   if (/待って|まって/.test(t)) return 'replyWait';
   return '';

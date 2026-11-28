@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d3d445bf0650ec0c
+// source-sha256: f93d626ca0484c0b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -15421,6 +15421,55 @@ const SoulRankAura = ({
     className: "mh-reincarnate-sparks"
   }));
 };
+const homeWalkingMasumonTarget = (el, laneCenter, laneWidth) => {
+  const pick = () => ({
+    x: Math.max(6, Math.min(94, laneCenter + (Math.random() - 0.5) * laneWidth)),
+    y: 10 + Math.random() * 80
+  });
+  let avoid = null;
+  try {
+    const layer = el && el.parentElement;
+    const boss = typeof document !== 'undefined' ? document.querySelector('[data-home-raid-jack]') : null;
+    if (layer && boss && boss.getClientRects().length) {
+      const L = layer.getBoundingClientRect();
+      const rs = [boss, ...boss.querySelectorAll('img')].map(e => e.getBoundingClientRect()).filter(r => r.width > 1 && r.height > 1);
+      if (L.width > 0 && L.height > 0 && rs.length) {
+        const B = {
+          left: Math.min(...rs.map(r => r.left)),
+          right: Math.max(...rs.map(r => r.right)),
+          top: Math.min(...rs.map(r => r.top)),
+          bottom: Math.max(...rs.map(r => r.bottom))
+        };
+        const mw = el.offsetWidth || 56;
+        avoid = {
+          x1: (B.left - mw / 2 - L.left) / L.width * 100,
+          x2: (B.right + mw / 2 - L.left) / L.width * 100,
+          y1: (B.top - mw * 0.28 - L.top) / L.height * 100,
+          y2: (B.bottom + mw * 0.72 - L.top) / L.height * 100
+        };
+      }
+    }
+  } catch (_) {
+    avoid = null;
+  }
+  if (!avoid) return pick();
+  const inside = p => p.x > avoid.x1 && p.x < avoid.x2 && p.y > avoid.y1 && p.y < avoid.y2;
+  for (let i = 0; i < 16; i++) {
+    const p = pick();
+    if (!inside(p)) return p;
+  }
+  const p = pick();
+  if (avoid.y2 <= 96) return {
+    x: p.x,
+    y: avoid.y2 + Math.random() * Math.max(0, 96 - avoid.y2)
+  };
+  const left = p.x < 50 ? avoid.x1 - 2 - Math.random() * 12 : null,
+    right = p.x >= 50 ? avoid.x2 + 2 + Math.random() * 12 : null;
+  return {
+    x: Math.max(-30, Math.min(130, left !== null ? left : right)),
+    y: p.y
+  };
+};
 const HomeWalkingMasumon = ({
   masu,
   base,
@@ -15440,6 +15489,7 @@ const HomeWalkingMasumon = ({
   const timerRef = useRef(null);
   const mountedRef = useRef(true);
   const motionRef = useRef(motion);
+  const selfRef = useRef(null);
   useEffect(() => {
     mountedRef.current = true;
     const clearMotionTimer = () => {
@@ -15454,8 +15504,10 @@ const HomeWalkingMasumon = ({
         if (!mountedRef.current || document.visibilityState === 'hidden') return;
         const current = motionRef.current;
         const laneWidth = count <= 1 ? 84 : 30;
-        const x = Math.max(6, Math.min(94, laneCenter + (Math.random() - 0.5) * laneWidth));
-        const y = 10 + Math.random() * 80;
+        const {
+          x,
+          y
+        } = homeWalkingMasumonTarget(selfRef.current, laneCenter, laneWidth);
         const distance = Math.hypot(x - current.x, y - current.y);
         const duration = Math.max(2100, Math.min(4800, (1850 + distance * 32) * speedFactor));
         const next = {
@@ -15499,6 +15551,7 @@ const HomeWalkingMasumon = ({
     };
   }, [masu.id, index, count]);
   return React.createElement("div", {
+    ref: selfRef,
     className: `mh-home-masumon ${motion.walking ? 'is-walking' : ''}`,
     style: {
       left: `${motion.x}%`,
@@ -58949,7 +59002,7 @@ const RHYTHM_BUDDY_CONVO_RULES = Object.freeze([{
   re: /(ドンマイ|どんまい|惜しい|おしい|残念|ざんねん)/
 }, {
   kind: 'replyAgain',
-  re: /(もう[一1]回|もういっかい|もう[一1]度|次いこう|つぎいこう|もっかい)/
+  re: /(もう一回|もう1回|もういっかい|もう一度|もう1度|次いこう|つぎいこう|もっかい)/
 }, {
   kind: 'replyWait',
   re: /(待って|まって|ちょっと待|ちょっとまっ|少々|準備中)/
@@ -64233,6 +64286,18 @@ const RAID_XMAS_STORY_AFTER_TIER = Object.freeze({
 const RAID_XMAS_ENDING_CLEARED_ID = 'raid_xmas_ending_cleared';
 const RAID_XMAS_ENDING_NOTCLEARED_ID = 'raid_xmas_ending_notcleared';
 const RAID_XMAS_STORY_IDS = Object.freeze([RAID_XMAS_STORY_START_ID, ...Object.values(RAID_XMAS_STORY_AFTER_TIER), RAID_XMAS_ENDING_CLEARED_ID, RAID_XMAS_ENDING_NOTCLEARED_ID]);
+const raidXmasSceneBgOf = name => {
+  const m = typeof name === 'string' ? name.match(/^xmas_([a-z0-9_]+?)(?:@([a-z]+))?$/) : null;
+  if (!m || typeof XMAS_NOVEL_BG_IMG === 'undefined') return null;
+  const img = XMAS_NOVEL_BG_IMG[m[1]];
+  if (!img) return null;
+  const tint = m[2] && typeof XMAS_NOVEL_TINT !== 'undefined' ? XMAS_NOVEL_TINT[m[2]] || '' : '';
+  return {
+    img,
+    base: m[1],
+    tint
+  };
+};
 const raidXmasStoryCandidates = (totals, nowMs) => {
   const out = [];
   const a = totals && totals.a ? totals.a : null;
@@ -72182,6 +72247,22 @@ const QUICK_ANYWHERE_FLOAT_MAX_LIFT = 0.6;
 const QUICK_ANYWHERE_FLOAT_SIDES = Object.freeze({
   TEMPLE: 'left'
 });
+const quickAnywhereFloatSlot = el => {
+  if (typeof document === 'undefined' || !el) return null;
+  const slot = document.querySelector('[data-quick-anywhere-slot]');
+  if (!slot || !slot.getClientRects().length) return null;
+  const r = slot.getBoundingClientRect();
+  const w = el.offsetWidth || 70,
+    h = el.offsetHeight || 34;
+  if (r.width < w || r.height < h) return null;
+  return {
+    side: 'right',
+    lift: 0,
+    slot: true,
+    top: Math.round(r.top + (r.height - h) / 2),
+    left: Math.round(r.left + (r.width - w) / 2)
+  };
+};
 const quickAnywhereFloatStyle = spot => {
   const s = spot.hidden ? {
     visibility: 'hidden',
@@ -72189,6 +72270,11 @@ const quickAnywhereFloatStyle = spot => {
   } : {
     opacity: 0.86
   };
+  if (spot.slot) return Object.assign(s, {
+    position: 'fixed',
+    top: `${spot.top}px`,
+    left: `${spot.left}px`
+  });
   Object.assign(s, {
     position: 'fixed',
     bottom: `max(${8 + spot.lift}px, calc(var(--mh-sa-bottom, 0px) + ${6 + spot.lift}px))`
@@ -72199,6 +72285,12 @@ const quickAnywhereFloatStyle = spot => {
 const quickAnywhereFloatRect = (el, spot) => {
   const w = el.offsetWidth || 70,
     h = el.offsetHeight || 34;
+  if (spot.slot) return {
+    left: spot.left,
+    top: spot.top,
+    right: spot.left + w,
+    bottom: spot.top + h
+  };
   const css = getComputedStyle(document.documentElement);
   const num = v => {
     const n = parseFloat(v);
@@ -72236,6 +72328,8 @@ const quickAnywhereFloatHits = (el, spot, known = null) => {
 const quickAnywhereFloatPick = (el, screen) => {
   const first = QUICK_ANYWHERE_FLOAT_SIDES[screen] === 'left' ? 'left' : 'right';
   const sides = first === 'left' ? ['left', 'right'] : ['right', 'left'];
+  const slot = quickAnywhereFloatSlot(el);
+  if (slot && quickAnywhereFloatHits(el, slot) === 0) return slot;
   for (const side of sides) {
     const spot = {
       side,
@@ -72290,7 +72384,12 @@ const QuickAnywhereFloat = ({
       const next = quickAnywhereFloatPick(ref.current, screen);
       const base = {
         side: next.side,
-        lift: next.lift
+        lift: next.lift,
+        ...(next.slot ? {
+          slot: true,
+          top: next.top,
+          left: next.left
+        } : {})
       };
       placedRef.current = {
         ...base,
@@ -72312,10 +72411,15 @@ const QuickAnywhereFloat = ({
       }
       const base = {
         side: placed.side,
-        lift: placed.lift
+        lift: placed.lift,
+        ...(placed.slot ? {
+          slot: true,
+          top: placed.top,
+          left: placed.left
+        } : {})
       };
       const covered = quickAnywhereFloatHits(el, base, knownRef.current) > 0;
-      setSpot(prev => !!prev.hidden === covered && prev.side === base.side && prev.lift === base.lift ? prev : covered ? {
+      setSpot(prev => !!prev.hidden === covered && prev.side === base.side && prev.lift === base.lift && prev.top === base.top && prev.left === base.left ? prev : covered ? {
         ...base,
         hidden: true
       } : base);
@@ -72341,7 +72445,7 @@ const QuickAnywhereFloat = ({
   return React.createElement("button", _extends({
     ref: ref,
     type: "button",
-    "data-quick-anywhere-spot": spot.hidden ? 'hidden' : `${spot.side}-${spot.lift}`
+    "data-quick-anywhere-spot": spot.hidden ? 'hidden' : spot.slot ? 'slot' : `${spot.side}-${spot.lift}`
   }, rest, {
     style: {
       ...(style || {}),
@@ -87144,7 +87248,10 @@ const HOME_EVENT_BADGE_CSS = `
 `;
 const HOME_V2_CSS = `
 .mh-home-v2{--v2-panel:#102522eb;--v2-line:#f7df9a88}
-.mh-home-v2 .mh-home-top{display:flex;align-items:center;gap:6px;padding:calc(6px + env(safe-area-inset-top)) 8px 0;z-index:20}
+/* 上の1段の上は 6px だけ(2026-11-28 台帳 r1126-088 追記1・社長「上部空いてるのってなんだっけ？」)。
+   前は切り欠きの高さ env(safe-area-inset-top) も足していたが、body が同じ分をもう空けている(index.html)ので二重になり、時刻の段の下に空の絵だけの空きが出ていた。
+   body の空けで時刻の段にはかからない(Safari で開いたときは env が 0) */
+.mh-home-v2 .mh-home-top{display:flex;align-items:center;gap:6px;padding:6px 8px 0;z-index:20}
 .mh-home-v2 .mh-home-top .mh-home-player{flex:1 1 auto;min-width:0;height:46px;padding:3px 10px 3px 4px;gap:7px}
 .mh-home-v2 .mh-home-top .mh-home-avatar{flex:0 0 36px;width:36px;height:36px}
 .mh-home-v2 .mh-home-top .mh-home-player-copy strong{max-width:none;font-size:13px;line-height:1.25}
@@ -87161,7 +87268,7 @@ const HOME_V2_CSS = `
 .mh-home-v2 .mh-home-menu-btn em,.mh-home-v2 .mh-home-menu .mh-home-side-btn em{display:flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:999px;border:2px solid #fff;background:#e11d48;color:#fff;font-size:11px;font-style:normal;font-weight:900;line-height:1;box-shadow:0 2px 6px #0008}
 .mh-home-v2 .mh-home-menu-btn em{position:absolute;top:-7px;right:-6px}
 .mh-home-v2 .mh-home-menu-shade{position:absolute;inset:0;z-index:28;border:0;background:#0006;cursor:default}
-.mh-home-v2 .mh-home-menu{position:absolute;z-index:29;right:8px;top:calc(58px + env(safe-area-inset-top));display:flex;flex-direction:column;gap:6px;width:min(240px,calc(100% - 16px));padding:8px;border:1px solid var(--v2-line);border-radius:16px;background:#0d1f1cf7;box-shadow:0 10px 30px #000c}
+.mh-home-v2 .mh-home-menu{position:absolute;z-index:29;right:8px;top:58px;display:flex;flex-direction:column;gap:6px;width:min(240px,calc(100% - 16px));padding:8px;border:1px solid var(--v2-line);border-radius:16px;background:#0d1f1cf7;box-shadow:0 10px 30px #000c}
 /* 閉じているときは目に見えない形(読み上げには残す)。メニューの中の「設定」「ミッション」などを、読み上げの利用者と検査がいつでも見つけられるように */
 .mh-home-v2 .mh-home-menu:not(.is-open){width:1px;height:1px;padding:0;margin:0;border:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap;pointer-events:none;box-shadow:none}
 .mh-home-v2 .mh-home-menu.is-open{display:flex;animation:mhHomeMenuIn .15s ease-out}
@@ -87180,23 +87287,21 @@ const HOME_V2_CSS = `
 .mh-home-v2 .mh-home-menu .mh-home-side-btn em.mh-unread-badge{width:auto!important;height:20px!important;min-width:20px;padding:0 6px!important;border-radius:999px!important;font-size:11px!important;line-height:1!important;white-space:nowrap}
 .mh-home-v2 .mh-home-settings .mh-home-side-ic{border-color:#cbd5e1aa;background:#1e293be8;color:#e2e8f0}
 .mh-home-v2 .mh-home-band{position:relative;z-index:6;margin:6px 8px 0}
-.mh-home-v2 .mh-home-band-view{overflow:hidden;border-radius:14px}
-.mh-home-v2 .mh-home-band-track{display:flex;transition:transform .35s ease}
-.mh-home-v2 .mh-home-band-slide{flex:0 0 100%;min-width:0;height:80px}
-.mh-home-v2 .mh-home-band-slide>button{width:100%;height:80px}
-.mh-home-v2 .mh-home-band .mh-home-event-banner{max-width:none;justify-content:center;gap:4px;padding:8px 14px;border-radius:14px;font-size:15px}
-.mh-home-v2 .mh-home-band .mh-home-event-banner .r1{column-gap:8px}
-.mh-home-v2 .mh-home-band .mh-home-event-banner small{font-size:11px}
-.mh-home-v2 .mh-home-band .mh-home-event-banner .t2{font-size:12px}
-.mh-home-v2 .mh-home-band .mh-home-tour-banner{max-width:none;gap:10px;padding:8px 14px;border-radius:14px}
-.mh-home-v2 .mh-home-band .mh-home-tour-banner>span:first-child{font-size:30px}
-.mh-home-v2 .mh-home-band .mh-home-tour-banner b{font-size:15px}
-.mh-home-v2 .mh-home-band .mh-home-tour-banner small,.mh-home-v2 .mh-home-band .mh-home-tour-banner em{font-size:11px}
-.mh-home-v2 .mh-home-band-nav{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:2px}
-.mh-home-v2 .mh-home-band-nav .mh-home-event-strip-dots button{display:flex;align-items:center;justify-content:center;width:22px;height:22px;padding:0;border:0;background:transparent}
-.mh-home-v2 .mh-home-band-nav .mh-home-event-strip-dots i{width:8px;height:8px;box-shadow:0 0 0 1px #0008}
-.mh-home-v2 .mh-home-band-nav .mh-home-event-strip-dots button.on i{width:18px;border-radius:4px;background:#fde68a}
-.mh-home-v2 .mh-home-band-next{min-width:0;max-width:72%;min-height:22px;overflow:hidden;padding:2px 9px;border-radius:999px;background:#000a;color:#fffbeb;font-size:11px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}
+/* イベントの表示(r1126-088 で前の形に戻した): クリスマスの絵の札 → その下に細い帯(前の HOME と同じ作り)。
+   追記1(社長「イベントバナーをもう少し横幅小さくして」): 札は前(312×80)より少し小さく 278×74(縦横の比をほぼ同じにして、絵の切り方を前と同じに)。
+   細い帯も札と同じ幅まで。札の右の空きは裏クイックの札の置き場 */
+.mh-home-v2 .mh-home-band-xmas{width:calc(100% - 96px)}
+.mh-home-v2 .mh-home-band-xmas>button[data-home-xmas-entry]{height:74px!important}
+.mh-home-v2 .mh-home-band-quick-slot{position:absolute;top:0;right:-6px;width:96px;height:74px;pointer-events:none}
+.mh-home-v2 .mh-home-band-strip{display:flex;align-items:center;gap:6px;width:fit-content;max-width:100%;margin-top:3px}
+.mh-home-v2 .mh-home-band-strip .mh-home-event-banner{max-width:calc(100cqw - 112px)}
+.mh-home-v2 .mh-home-band-strip .mh-home-tour-banner{max-width:min(72vw,300px)}
+/* ほかのイベントの絵の札(追記2)。クリスマスの札と同じ幅・少し低く(マップを狭くしない) */
+.mh-home-v2 .mh-home-band-strip:has(.mh-home-event-art){width:calc(100% - 96px)}
+.mh-home-v2 .mh-home-event-art{position:relative;display:block;flex:1 1 auto;width:100%;height:62px;overflow:hidden;padding:0;border:2px solid #f9a8d4;border-radius:12px;background:#3b0a2e;box-shadow:0 4px 12px #0009}
+.mh-home-v2 .mh-home-event-art:active{transform:scale(.97);filter:brightness(1.15)}
+.mh-home-v2 .mh-home-event-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 12%;pointer-events:none}
+.mh-home-v2 .mh-home-event-art-sub{position:absolute;left:6px;bottom:4px;padding:1px 7px;border:1px solid #fbcfe8;border-radius:999px;background:#9d174de6;color:#fff;font-size:10px;font-weight:900;line-height:1.3;white-space:nowrap}
 .mh-home-v2 .mh-home-assistant{width:70%;max-width:360px;margin:6px 0 0 8px}
 .mh-home-v2 .mh-home-assistant-fold{margin:6px 0 0 8px}
 .mh-home-v2 .mh-home-assistant-show-mark{right:-8px;bottom:-6px;width:24px;height:24px;font-size:14px;background:#fff!important;box-shadow:0 0 0 2px #e11d48,0 2px 6px #0009;animation:mhHomePeerMark 1.4s ease-in-out infinite}
@@ -87204,7 +87309,11 @@ const HOME_V2_CSS = `
 @media(prefers-reduced-motion:reduce){.mh-home-v2 .mh-home-assistant-show-mark{animation:none}}
 .mh-home-v2 .mh-home-assistant-news-dot{position:absolute;top:1px;right:1px;width:13px;height:13px;border-radius:50%;border:2px solid #fff;background:#e11d48;box-shadow:0 1px 4px #0009}
 .mh-home-v2 .mh-home-peer-mark{position:absolute;left:52px;top:calc(100% + 4px);width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:50%;border:1.5px solid #f9a8d4;background:#1e0b24ee;font-size:16px;box-shadow:0 2px 8px #0009}
-.mh-home-v2 .mh-home-dock{gap:6px;padding:8px 8px calc(8px + env(safe-area-inset-bottom))}
+.mh-home-v2 .mh-home-dock{gap:6px;padding:8px}
+/* iPhone の下の安全域(ホームの棒の所)(2026-11-28 台帳 r1126-088 ③「入口の段の下に暗い余白、その下が黒い帯」)。
+   body が安全域の分だけ下を空けている(index.html)のに、ドックの下でも安全域の分をもう1回空けていた(暗い余白)。ドックの下は前の HOME と同じ 8px に戻し、
+   安全域(画面の外の親 .mh-app が切り取るので HOME を伸ばせない)は、HOME を出している間だけドックの下の端と同じ色で塗る(黒い帯にしない) */
+body:has(.mh-home-v2){background:linear-gradient(to top,#0b1f1a calc(env(safe-area-inset-bottom) + 1px),#000 0)}
 .mh-home-v2 .mh-home-dock-row{gap:6px}
 .mh-home-v2 .mh-home-dock-top>.mh-home-dock-card,.mh-home-v2 .mh-home-dock-top>.mh-home-success{height:clamp(112px,18cqh,150px);padding:0;gap:0;overflow:hidden;border-radius:14px}
 .mh-home-v2 .mh-home-dock-top .mh-home-dock-pic,.mh-home-v2 .mh-home-dock-top .mh-home-success .pic{flex:1 1 auto;width:100%;max-width:none;height:auto;min-height:0;aspect-ratio:auto;border-radius:0}
@@ -87219,12 +87328,12 @@ const HOME_V2_CSS = `
 .mh-home-v2 .mh-home-dock-bottom .mh-home-dock-name{font-size:11px;line-height:1.2}
 @media(max-width:350px){.mh-home-v2 .mh-home-dock-top .mh-home-dock-name,.mh-home-v2 .mh-home-dock-top .mh-home-success .nm{font-size:10.5px;letter-spacing:-.06em}}
 @media(orientation:landscape) and (max-height:600px){
-  .mh-home-v2 .mh-home-band{position:absolute;left:8px;top:calc(58px + env(safe-area-inset-top));width:min(37%,330px);margin:0}
-  .mh-home-v2 .mh-home-band-slide,.mh-home-v2 .mh-home-band-slide>button{height:68px}
-  .mh-home-v2 .mh-home-band-slide>button[data-home-xmas-entry]{height:68px!important}
-  .mh-home-v2 .mh-home-assistant,.mh-home-v2 .mh-home-assistant-fold{position:absolute;left:8px;top:calc(160px + env(safe-area-inset-top));margin:0}
+  .mh-home-v2 .mh-home-band{position:absolute;left:8px;top:58px;width:min(37%,330px);margin:0}
+  .mh-home-v2 .mh-home-band-xmas{width:100%}
+  .mh-home-v2 .mh-home-band-strip .mh-home-event-banner,.mh-home-v2 .mh-home-band-strip .mh-home-tour-banner{max-width:100%}
+  .mh-home-v2 .mh-home-assistant,.mh-home-v2 .mh-home-assistant-fold{position:absolute;left:8px;top:172px;margin:0}
   .mh-home-v2 .mh-home-assistant{width:min(37%,330px)}
-  .mh-home-v2 .mh-home-dock{flex-direction:row;align-items:flex-end;gap:8px;padding:5px 8px calc(6px + env(safe-area-inset-bottom))}
+  .mh-home-v2 .mh-home-dock{flex-direction:row;align-items:flex-end;gap:8px;padding:5px 8px 6px}
   .mh-home-v2 .mh-home-dock-top{flex:1.9 1 0}
   .mh-home-v2 .mh-home-dock-bottom{flex:1 1 0}
   .mh-home-v2 .mh-home-dock-top>.mh-home-dock-card,.mh-home-v2 .mh-home-dock-top>.mh-home-success{height:clamp(84px,25cqh,104px);max-width:none}
@@ -87232,10 +87341,10 @@ const HOME_V2_CSS = `
 }
 @container (min-width:700px) and (min-height:560px){
   .mh-home-v2 .mh-home-band{width:min(600px,calc(100% - 16px));margin:8px auto 0}
-  .mh-home-v2 .mh-home-band-slide,.mh-home-v2 .mh-home-band-slide>button{height:92px}
-  .mh-home-v2 .mh-home-band-slide>button[data-home-xmas-entry]{height:92px!important}
+  .mh-home-v2 .mh-home-band-xmas{width:100%}
+  .mh-home-v2 .mh-home-band-xmas>button[data-home-xmas-entry]{height:92px!important}
   .mh-home-v2 .mh-home-assistant{width:360px}
-  .mh-home-v2 .mh-home-dock{flex-direction:row;align-items:flex-end;gap:14px;padding:10px 14px calc(12px + env(safe-area-inset-bottom))}
+  .mh-home-v2 .mh-home-dock{flex-direction:row;align-items:flex-end;gap:14px;padding:10px 14px 12px}
   .mh-home-v2 .mh-home-dock-top{flex:2 1 0;justify-content:center}
   .mh-home-v2 .mh-home-dock-bottom{flex:1 1 0}
   .mh-home-v2 .mh-home-dock-top>.mh-home-dock-card,.mh-home-v2 .mh-home-dock-top>.mh-home-success{height:min(170px,19cqh);max-width:180px;border-radius:16px}
@@ -87244,9 +87353,13 @@ const HOME_V2_CSS = `
   .mh-home-v2 .mh-home-dock-bottom .mh-home-dock-pic{width:62px;height:62px}
   .mh-home-v2 .mh-home-dock-bottom .mh-home-dock-name{font-size:12px}
 }
-/* クリスマスの入口(79-screen-xmas-event.jsx)は、横向きで帯を右の列の横へ動かす決まりを持っている(前の HOME の形のため)。
-   新しい帯の中では、ほかの1枚と同じ位置・大きさのままにする(部品の中身は変えない。HOME の側で上書きするだけ) */
-.mh-home-v2 .mh-home-band-slide[data-home-xmas-entry-strip]{position:relative!important;left:auto!important;right:auto!important;top:auto!important;width:auto!important;margin:0!important}
+/* クリスマスの入口(79-screen-xmas-event.jsx)は、横向きで帯を右の列の横へ動かす決まりを持っている(前の HOME の右の列のため)。
+   新しい HOME には右の列が無いので、帯の置き場(.mh-home-band)の中に置いたままにする(部品の中身は変えない。HOME の側で上書きするだけ)。
+   背の低い横向きの高さ 54px と字の大きさは、部品の決まり(前の HOME と同じ)のまま */
+.mh-home-v2 .mh-home-band [data-home-xmas-entry-strip]{position:relative!important;left:auto!important;right:auto!important;top:auto!important;margin:0!important}
+.mh-home-v2 .mh-home-band .mh-home-band-xmas{width:calc(100% - 96px)!important}
+@media(orientation:landscape) and (max-height:600px){.mh-home-v2 .mh-home-band-strip:has(.mh-home-event-art){width:100%}.mh-home-v2 .mh-home-event-art{height:50px}.mh-home-v2 .mh-home-event-art img{object-position:50% 3%}.mh-home-v2 .mh-home-band .mh-home-band-xmas{width:100%!important}.mh-home-v2 .mh-home-band-xmas>button[data-home-xmas-entry]{height:54px!important}.mh-home-v2 .mh-home-band-quick-slot{display:none}}
+@container (min-width:700px) and (min-height:560px){.mh-home-v2 .mh-home-band-strip:has(.mh-home-event-art){width:100%}.mh-home-v2 .mh-home-event-art{height:84px}.mh-home-v2 .mh-home-band .mh-home-band-xmas{width:100%!important}.mh-home-v2 .mh-home-band-quick-slot{display:none}}
 @media (orientation:landscape) and (max-height:520px){.mh-home-v2 .mh-home-band .mh-xmas-entry[data-home-xmas-entry="banner"] .mh-xmas-entry-sub{font-size:11px}}
 /* 横持ちの iPhone の切り欠き(カメラの欠け)に、押す物を入れない。左右の余白に端末の安全な余白(safe-area)を足す */
 .mh-home-v2 .mh-home-top{padding-left:calc(8px + env(safe-area-inset-left));padding-right:calc(8px + env(safe-area-inset-right))}
@@ -87273,8 +87386,10 @@ const HOME_RAID_JACK_CSS = `
   82%{transform:translateY(0) scale(1.05,.94) rotate(1deg)}}
 @keyframes mhRaidJackShadow{0%,100%{transform:scaleX(1.05);opacity:.5}50%{transform:scaleX(.7);opacity:.3}}
 @media(prefers-reduced-motion:reduce){.mh-home-raid-jack-img,.mh-home-raid-jack-shadow{animation:none}}
+/* クリスマスのボス(背の高い絵)は、まん中に置く。前は translateX(-50%) で寄せていたが、跳ねる動き(transform)がそれを上書きして、
+   絵の幅の半分だけ右へずれていた(2026-11-28 台帳 r1126-088 ②「サンタが右寄りで大きすぎる」)。いまは left/right:0 と margin:auto で寄せ、高さも 135% → 110% に */
 /* 背の低い横画面: クリスマスのボスは枠より上へはみ出して描くので、耳が上の欄の裏に隠れた(#7857 点検の8)。絵を少し縮めて上を空ける。足もとの位置は変えない */
-@media(orientation:landscape) and (max-height:430px){.mh-home-raid-boss-tall{height:112% !important}}
+@media(orientation:landscape) and (max-height:430px){.mh-home-raid-boss-tall{height:100% !important}}
 `;
 const HOME_RAID_JACK_WRAP_STYLE = Object.freeze({
   position: 'absolute',
@@ -87639,20 +87754,21 @@ const HomeRaidJack = ({
   })), totals === null ? React.createElement("span", {
     style: {
       display: 'block',
-      fontSize: '8px',
+      fontSize: '11px',
       opacity: .8
     }
   }, "準備中") : totals === undefined ? React.createElement("span", {
     style: {
       display: 'block',
-      fontSize: '8px',
+      fontSize: '11px',
       opacity: .8
     }
   }, "…") : React.createElement("span", {
+    "data-home-raid-hp-text": true,
     style: {
       display: 'block',
-      fontSize: '8px',
-      opacity: .85
+      fontSize: '11px',
+      opacity: .9
     }
   }, "共有HP ", left.toLocaleString())));
   return React.createElement(React.Fragment, null, !allDone && ev.aura && React.createElement("div", {
@@ -87806,11 +87922,12 @@ const HomeRaidJack = ({
     draggable: false,
     style: {
       position: 'absolute',
-      left: '50%',
+      left: 0,
+      right: 0,
+      margin: '0 auto',
       bottom: 0,
-      height: '135%',
+      height: '110%',
       width: 'auto',
-      transform: 'translateX(-50%)',
       filter: 'drop-shadow(0 6px 10px #000a)',
       pointerEvents: 'none'
     }
@@ -87994,7 +88111,7 @@ function HomeScreenV1({
     className: "mh-home-scene",
     "aria-label": "村の広場"
   }, React.createElement("picture", {
-    className: `mh-home-background ${homeBackgroundReady ? 'is-ready' : ''} ${homeBackgroundWide ? 'is-wide' : ''} ${homeBackgroundSquare ? 'is-square' : ''}`,
+    className: `mh-home-background ${homeBackgroundReady ? 'is-ready' : ''} ${homeBackgroundWide ? 'is-wide' : ''} ${homeBackgroundSquare ? 'is-square' : ''} ${homeSceneShape === 'portrait' ? 'is-tall' : ''}`,
     "aria-hidden": "true"
   }, React.createElement("img", {
     className: "mh-home-backdrop",
@@ -88466,32 +88583,27 @@ function HomeScreenV2({
     if (!released || typeof rhythmLimitedEventAt !== 'function') return false;
     return !!rhythmLimitedEventAt(Date.now());
   })();
-  const homeBandSlides = [];
-  const homeBandEvent = homeEventCampaign && !(xmasEntry && homeEventCampaign.id === 'xmas_2026');
-  if (homeBandEvent && xmasEntry && xmasEntry.preOpen) homeBandSlides.push('event');
-  if (xmasEntry) homeBandSlides.push('xmas');
-  if (homeBandEvent && !homeBandSlides.includes('event')) homeBandSlides.push('event');
-  if (homeCardTour && typeof onOpenCardTour === 'function') homeBandSlides.push('tour');
-  const homeBandCount = homeBandSlides.length;
+  const homeBandXmas = !!xmasEntry;
+  const homeBandEvent = homeEventCampaign && !(xmasEntry && homeEventCampaign.id === 'xmas_2026') ? homeEventCampaign : null;
+  const homeBandTour = homeCardTour && typeof onOpenCardTour === 'function' ? homeCardTour : null;
+  const homeBandEventArt = (() => {
+    if (!homeBandEvent || typeof rhythmLimitedEventAt !== 'function') return '';
+    try {
+      const ev = rhythmLimitedEventAt(Date.now());
+      return ev && typeof ev.banner === 'string' && typeof ev.name === 'string' && ev.name.startsWith(homeBandEvent.banner.title) ? ev.banner : '';
+    } catch (_) {
+      return '';
+    }
+  })();
+  const homeBandStripCount = (homeBandEvent ? 1 : 0) + (homeBandTour ? 1 : 0);
   const [homeBandIdx, setHomeBandIdx] = React.useState(0);
-  const homeBandTouchRef = React.useRef({
-    x: null,
-    at: 0,
-    swiped: false
-  });
   React.useEffect(() => {
-    if (homeBandCount < 2) return undefined;
-    const id = setInterval(() => {
-      if (Date.now() - homeBandTouchRef.current.at >= 20000) setHomeBandIdx(i => i + 1);
-    }, 7000);
+    if (homeBandStripCount < 2) return undefined;
+    const id = setInterval(() => setHomeBandIdx(i => i + 1), 5000);
     return () => clearInterval(id);
-  }, [homeBandCount]);
-  const homeBandShow = homeBandCount ? (homeBandIdx % homeBandCount + homeBandCount) % homeBandCount : 0;
-  const homeBandGo = step => {
-    homeBandTouchRef.current.at = Date.now();
-    setHomeBandIdx(i => i + step);
-  };
-  const homeBandTitle = k => k === 'xmas' ? '聖夜の名探偵' : k === 'event' && homeEventCampaign ? homeEventCampaign.banner.title : k === 'tour' && homeCardTour ? homeCardTour.name : '';
+  }, [homeBandStripCount]);
+  const homeBandStripShow = homeBandStripCount ? homeBandIdx % homeBandStripCount : 0;
+  const homeBandCount = (homeBandXmas ? 1 : 0) + homeBandStripCount;
   const [homeMenuOpen, setHomeMenuOpen] = React.useState(false);
   const homeMissionCount = missionClaimableCount(normalizeMissions(missions));
   const homeGiftCount = giftClaimableCount(gifts);
@@ -88511,7 +88623,7 @@ function HomeScreenV2({
     className: "mh-home-scene mh-home-v2",
     "aria-label": "村の広場"
   }, React.createElement("picture", {
-    className: `mh-home-background ${homeBackgroundReady ? 'is-ready' : ''} ${homeBackgroundWide ? 'is-wide' : ''} ${homeBackgroundSquare ? 'is-square' : ''}`,
+    className: `mh-home-background ${homeBackgroundReady ? 'is-ready' : ''} ${homeBackgroundWide ? 'is-wide' : ''} ${homeBackgroundSquare ? 'is-square' : ''} ${homeSceneShape === 'portrait' ? 'is-tall' : ''}`,
     "aria-hidden": "true"
   }, React.createElement("img", {
     className: "mh-home-backdrop",
@@ -88648,85 +88760,59 @@ function HomeScreenV2({
     className: "mh-home-side-lb"
   }, "設定"))), homeBandCount > 0 && React.createElement("div", {
     className: "mh-home-band",
-    "data-home-band": homeBandSlides[homeBandShow],
-    onPointerDown: e => {
-      homeBandTouchRef.current = {
-        ...homeBandTouchRef.current,
-        x: e.clientX,
-        swiped: false
-      };
-    },
-    onPointerUp: e => {
-      const t = homeBandTouchRef.current;
-      if (t.x === null || homeBandCount < 2) return;
-      const dx = e.clientX - t.x;
-      t.x = null;
-      if (Math.abs(dx) >= 40) {
-        t.swiped = true;
-        homeBandGo(dx < 0 ? 1 : -1);
-      }
-    },
-    onClickCapture: e => {
-      if (homeBandTouchRef.current.swiped) {
-        homeBandTouchRef.current.swiped = false;
-        e.stopPropagation();
-        e.preventDefault();
-      }
-    }
-  }, React.createElement("div", {
-    className: "mh-home-band-view"
-  }, React.createElement("div", {
-    className: "mh-home-band-track",
-    style: {
-      transform: `translateX(${-homeBandShow * 100}%)`
-    }
-  }, homeBandSlides.map((k, i) => React.createElement("div", _extends({
-    key: k,
-    className: "mh-home-band-slide",
-    "aria-hidden": i !== homeBandShow
-  }, k === 'xmas' ? {
-    'data-home-xmas-entry-strip': ''
-  } : {
-    'data-home-event-strip': ''
-  }), k === 'xmas' && React.createElement(HomeXmasEventEntry, {
+    "data-home-band": homeBandXmas ? 'xmas' : 'strip'
+  }, homeBandXmas && React.createElement("div", {
+    className: "mh-home-band-xmas",
+    "data-home-xmas-entry-strip": true
+  }, React.createElement(HomeXmasEventEntry, {
     onOpen: xmasEntry.onOpen,
     preOpen: !!xmasEntry.preOpen
-  }), k === 'event' && React.createElement("button", {
+  })), homeBandXmas && React.createElement("span", {
+    className: "mh-home-band-quick-slot",
+    "data-quick-anywhere-slot": true,
+    "aria-hidden": "true"
+  }), homeBandStripCount > 0 && React.createElement("div", {
+    className: "mh-home-band-strip",
+    "data-home-event-strip": true
+  }, homeBandEvent && homeBandStripShow === 0 && homeBandEventArt && React.createElement("button", {
+    type: "button",
+    "data-home-event-banner": "art",
+    className: "mh-home-event-art",
+    onClick: homeBandEvent.id === 'xmas_2026' && typeof onOpenXmasEvent === 'function' ? onOpenXmasEvent : onOpenRhythm,
+    "aria-label": `${homeBandEvent.banner.title}${homeBandEvent.banner.title2 || ''} ${homeBandEvent.banner.sub}`
+  }, React.createElement("img", {
+    src: homeBandEventArt,
+    alt: "",
+    draggable: false
+  }), React.createElement("span", {
+    className: "mh-home-event-art-sub"
+  }, homeBandEvent.banner.sub)), homeBandEvent && homeBandStripShow === 0 && !homeBandEventArt && React.createElement("button", {
     type: "button",
     "data-home-event-banner": true,
     className: "mh-home-event-banner",
-    tabIndex: i === homeBandShow ? 0 : -1,
-    onClick: homeEventCampaign.id === 'xmas_2026' && typeof onOpenXmasEvent === 'function' ? onOpenXmasEvent : onOpenRhythm,
-    "aria-label": `${homeEventCampaign.banner.title}${homeEventCampaign.banner.title2 || ''} ${homeEventCampaign.banner.sub}`
+    onClick: homeBandEvent.id === 'xmas_2026' && typeof onOpenXmasEvent === 'function' ? onOpenXmasEvent : onOpenRhythm,
+    "aria-label": `${homeBandEvent.banner.title}${homeBandEvent.banner.title2 || ''} ${homeBandEvent.banner.sub}`
   }, React.createElement("b", {
     className: "r1"
-  }, React.createElement("span", null, homeEventCampaign.banner.emoji, " ", homeEventCampaign.banner.title), React.createElement("small", null, homeEventCampaign.banner.sub)), homeEventCampaign.banner.title2 ? React.createElement("span", {
+  }, React.createElement("span", null, homeBandEvent.banner.emoji, " ", homeBandEvent.banner.title), React.createElement("small", null, homeBandEvent.banner.sub)), homeBandEvent.banner.title2 ? React.createElement("span", {
     className: "t2"
-  }, homeEventCampaign.banner.title2) : null), k === 'tour' && React.createElement("button", {
+  }, homeBandEvent.banner.title2) : null), homeBandTour && homeBandStripShow === (homeBandEvent ? 1 : 0) && React.createElement("button", {
     type: "button",
-    "data-home-card-tour": homeCardTour.id,
+    "data-home-card-tour": homeBandTour.id,
     className: "mh-home-tour-banner",
-    tabIndex: i === homeBandShow ? 0 : -1,
-    onClick: () => onOpenCardTour(homeCardTour.id),
-    "aria-label": `${homeCardTour.name} ${homeCardTour.sub}`
+    onClick: () => onOpenCardTour(homeBandTour.id),
+    "aria-label": `${homeBandTour.name} ${homeBandTour.sub}`
   }, React.createElement("span", {
     "aria-hidden": "true"
-  }, "🏆"), React.createElement("span", null, React.createElement("b", null, homeCardTour.name), React.createElement("small", null, homeCardTour.sub, homeCardTour.prize && React.createElement("em", null, homeCardTour.prize)))))))), homeBandCount > 1 && React.createElement("div", {
-    className: "mh-home-band-nav"
-  }, React.createElement("span", {
-    className: "mh-home-event-strip-dots"
-  }, homeBandSlides.map((k, i) => React.createElement("button", {
-    key: k,
-    type: "button",
-    className: i === homeBandShow ? 'on' : '',
-    "aria-label": `${i + 1}枚目を見る`,
-    onClick: () => homeBandGo(i - homeBandShow)
-  }, React.createElement("i", null)))), React.createElement("button", {
-    type: "button",
-    className: "mh-home-band-next",
-    "data-home-band-next": true,
-    onClick: () => homeBandGo(1)
-  }, "次:", homeBandTitle(homeBandSlides[(homeBandShow + 1) % homeBandCount]), " ›"))), React.createElement("div", {
+  }, "🏆"), React.createElement("span", null, React.createElement("b", null, homeBandTour.name), React.createElement("small", null, homeBandTour.sub, homeBandTour.prize && React.createElement("em", null, homeBandTour.prize)))), homeBandStripCount > 1 && React.createElement("span", {
+    className: "mh-home-event-strip-dots",
+    "aria-hidden": "true"
+  }, Array.from({
+    length: homeBandStripCount
+  }, (_, i) => React.createElement("i", {
+    key: i,
+    className: i === homeBandStripShow ? 'on' : ''
+  }))))), React.createElement("div", {
     className: "mh-home-dock"
   }, nextStep && React.createElement("button", {
     type: "button",
@@ -89364,7 +89450,8 @@ function HomeUpdateGuideOverlay({
     "aria-modal": "true",
     "aria-label": notice.title,
     "data-home-update-guide": true
-  }, React.createElement("div", {
+  }, React.createElement("style", null, `@media (orientation:landscape) and (max-height:520px){[data-home-update-guide]>[data-update-guide-has-image]{max-width:min(calc(100% - 24px),880px);display:grid;grid-template-columns:minmax(0,38%) minmax(0,1fr);column-gap:14px;align-content:start;border-radius:1.5rem 1.5rem 0 0}[data-home-update-guide]>[data-update-guide-has-image]>*{grid-column:2}[data-home-update-guide]>[data-update-guide-has-image]>[data-update-notice-image]{grid-column:1;grid-row:1 / span 12;align-self:center;margin:0;max-height:calc(var(--mh-vh) - 40px - env(safe-area-inset-top) - env(safe-area-inset-bottom))}[data-home-update-guide]>[data-update-guide-has-image] button{min-height:44px}}`), React.createElement("div", {
+    "data-update-guide-has-image": notice.image ? '' : undefined,
     className: "w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4",
     style: {
       paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
@@ -117188,11 +117275,10 @@ const XMAS_NOVEL_SCRIPT = {
     }, {
       "id": "2-5-8",
       "t": "panel",
-      "x": "",
-      "ops": [{
-        "id": "kuroba",
-        "st": "missing"
-      }],
+      "x": "登場人物 12人",
+      "missing": [],
+      "hurt": [],
+      "dead": [],
       "k": "C2-5:2-5-8"
     }],
     "frame": "close"
@@ -127092,10 +127178,12 @@ const XMAS_NOVEL_CSS = `
 .mh-nv-top { position: absolute; top: max(8px, env(safe-area-inset-top)); left: 8px; right: 8px; display: flex; align-items: center; gap: 6px; z-index: 6; }
 .mh-nv-where { min-width: 0; flex: 1; font-size: 12px; color: #c9d4f2; text-shadow: 0 1px 3px #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* 縦では、章と場面の題を2行に分ける(1行だと「第七章　ひとつ…」と章の名前まで切れた・2026-11-28 総点検 4番)。それぞれ入らないときだけ「…」 */
+/* 縦では、題をボタンの段の下に1段で出し、画面の幅いっぱいを使う(右のボタン5つに押されて「第一章 ペンシ…」と切れた・台帳 r1126-091)。
+   いちばん長い題(「第一章　ペンション・シュプール　/　ホールのもみの木」26字)も 12px で1行に入る。入らない端末だけ「…」 */
 @media (orientation: portrait) {
-  .mh-nv-where { white-space: normal; line-height: 1.3; font-size: 11px; }
-  .mh-nv-where > .ch, .mh-nv-where > .sc { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .mh-nv-where > .ch .sep { display: none; }
+  .mh-nv-top { flex-wrap: wrap; row-gap: 4px; }
+  .mh-nv-top > .mh-nv-where { order: 2; flex: 0 0 100%; font-size: 12px; padding: 0 2px; }
+  .mh-nv-top > .mh-nv-where + .mh-nv-btn { margin-left: auto; }
 }
 .mh-nv-btn { min-height: 38px; min-width: 38px; padding: 0 10px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; font-size: 12px; font-weight: 800;
   color: #f3e3b0; background: rgba(8,16,40,.82); box-shadow: 0 0 0 1px rgba(232,196,106,.55); }
@@ -128453,16 +128541,16 @@ const xmasNovelSe = kind => {
       return;
     }
     const map = {
-      clap: 'join',
+      clap: 'trainingDice',
       laugh: 'enemySpecial',
       impact: 'enemyAttack',
-      music: 'heal',
-      tap: 'tap',
-      clue: 'card',
-      ok: 'victory',
-      ng: 'guard'
+      music: 'trainingFail',
+      tap: 'trainingDice',
+      clue: 'enemyMove',
+      ok: 'attack',
+      ng: 'trainingBad'
     };
-    const fn = (Audio_.fgSe || Audio_.se)[map[kind] || 'tap'];
+    const fn = (Audio_.fgSe || Audio_.se)[map[kind] || 'trainingDice'];
     if (typeof fn === 'function') fn();
   } catch (e) {}
 };
@@ -128475,12 +128563,12 @@ const XMAS_NOVEL_SE_SEQ = Object.freeze({
   tick: {
     gap: 520,
     hold: 300,
-    play: ['xpTick']
+    play: ['trainingDice']
   },
   letter: {
     gap: 0,
     hold: 1500,
-    play: ['enemyCharge']
+    play: ['trainingBad', 'trainingFail']
   }
 });
 let xmasNovelSeTimers = [];
@@ -128520,28 +128608,169 @@ const xmasNovelRowSe = (kind, times) => {
     if (at <= 0) xmasNovelSeHit(kind);else xmasNovelSeTimers.push(setTimeout(() => xmasNovelSeHit(kind), at));
   }
 };
+const XMAS_NOVEL_BGM_SCENE = Object.freeze({
+  'OUT-0-1': 'original_profile',
+  'OUT-0-2': 'melo_dullahan_clockwork',
+  'C0-1': 'original_profile',
+  'C0-2': 'original_profile',
+  'OUT-1': 'melo_dullahan_clockwork',
+  'C1-1': 'original_profile',
+  'C1-2': 'original_profile',
+  'C1-3': 'melo_dullahan_clockwork',
+  'C1-4': 'melo_dullahan_clockwork',
+  'C1-5': 'close_to_your_heart_alt',
+  'C1-6': 'melo_dullahan_steel_ghost',
+  'C1-M': 'silence',
+  'C2-1': 'melo_dullahan_clockwork',
+  'C2-L': 'silence',
+  'C2-M': 'makutsu_no_senritsu',
+  'C2-2': 'original_profile',
+  'C2-3': 'melo_dullahan_steel_ghost',
+  'C2-4': 'melo_dullahan_steel_ghost_alt',
+  'C2-5': 'original_dullahan',
+  'C3-1': 'silence',
+  'C3-2': 'melo_dullahan_clockwork_alt',
+  'C3-3': 'melo_dullahan_clockwork',
+  'C3-4': 'melo_dullahan_clockwork_alt',
+  'C3-5': 'melo_erfolg_piano',
+  'C3-M': 'melo_erfolg_piano',
+  'C4-1': 'makutsu_no_senritsu',
+  'C4-2': 'silence',
+  'C4-3': 'melo_dullahan_clockwork_alt',
+  'C4-4': 'melo_dullahan_clockwork',
+  'C4-5': 'melo_dullahan_steel_ghost',
+  'C4-M': 'silence',
+  'C5-1': 'melo_erfolg_piano',
+  'C5-2': 'melo_dullahan_steel_ghost_alt',
+  'C5-3': 'melo_dullahan_steel_ghost',
+  'C5-4': 'melo_dullahan_steel_ghost',
+  'C5-5': 'makutsu_no_senritsu',
+  'C5-M': 'melo_dullahan_clockwork',
+  'C6-1': 'melo_dullahan_clockwork_alt',
+  'C6-2': 'melo_dullahan_steel_ghost',
+  'C6-3': 'melo_dullahan_clockwork_alt',
+  'C6-4': 'melo_dullahan_steel_ghost_alt',
+  'C6-5': 'melo_dullahan_steel_ghost',
+  'C6-6': 'melo_dullahan_clockwork_alt',
+  'C6-7': 'original_dullahan',
+  'C6-8': 'melo_erfolg_piano',
+  'C6-9': 'melo_dullahan_steel_ghost',
+  'C6-M': 'melo_erfolg_piano',
+  'C7-1': 'melo_dullahan_clockwork_alt',
+  'C7-2': 'melo_dullahan_steel_ghost_alt',
+  'C7-A': 'melo_erfolg_piano',
+  'C7-B': 'melo_dullahan_clockwork',
+  'C7-P1': 'original_dullahan',
+  'C7-P2': 'melo_erfolg_piano',
+  'C7-P3': 'melo_dullahan_clockwork',
+  'C7-4a': 'melo_erfolg_piano',
+  'C7-4b': 'melo_dullahan_steel_ghost',
+  'C7-5a': 'melo_erfolg_piano',
+  'C7-5b': 'melo_dullahan_steel_ghost',
+  'C7-W': 'melo_dullahan_clockwork_alt',
+  'C8-1': 'melo_dullahan_steel_ghost_alt',
+  'C8-2': 'makutsu_no_senritsu',
+  'C8-3': 'melo_erfolg_piano',
+  'C9-1': 'silence',
+  'C9-2': 'close_to_your_heart_alt',
+  'C10-1': 'melo_dullahan_steel_ghost',
+  'C10-2': 'makutsu_no_senritsu',
+  'C10-3': 'melo_dullahan_steel_ghost',
+  'C10-4': 'melo_dullahan_steel_ghost_alt',
+  'C11-1': 'melo_dullahan_steel_ghost_alt',
+  'C11-N': 'melo_erfolg_piano',
+  'C11-A': 'melo_erfolg_piano',
+  'C11-B': 'melo_dullahan_clockwork',
+  'C2-X': 'melo_dullahan_steel_ghost',
+  'END-X1': 'original_game_over',
+  'C5-X': 'melo_dullahan_steel_ghost',
+  'END-X2': 'original_game_over',
+  'C6-X': 'melo_dullahan_steel_ghost',
+  'END-X3': 'original_game_over',
+  'C2-Y': 'melo_dullahan_steel_ghost',
+  'END-X4': 'original_game_over',
+  'C10-X': 'melo_dullahan_steel_ghost',
+  'END-X5': 'original_game_over',
+  'END-M1': 'original_game_over',
+  'END-M2': 'melo_dullahan_steel_ghost',
+  'END-M3': 'melo_dullahan_steel_ghost',
+  'END-M4': 'original_game_over',
+  'END-M5': 'melo_dullahan_steel_ghost',
+  'END-G': 'melo_erfolg_piano',
+  'OUT-G': 'close_to_your_heart_alt',
+  'END-N': 'melo_erfolg_piano',
+  'OUT-N': 'melo_erfolg_piano',
+  'END-A': 'melo_dullahan_clockwork',
+  'OUT-A': 'melo_dullahan_clockwork',
+  'END-B': 'melo_dullahan_steel_ghost',
+  'OUT-B': 'melo_dullahan_steel_ghost',
+  'C1-O': 'original_profile',
+  'END-O': 'original_profile',
+  'OUT-O': 'original_profile',
+  'END-O2': 'close_to_your_heart_alt',
+  'OUT-O2': 'close_to_your_heart_alt',
+  'C12-1': 'close_to_your_heart_alt',
+  'C12-2': 'melo_erfolg_piano',
+  'C12-3': 'original_dullahan',
+  'C12-4': 'melo_dullahan_clockwork',
+  'C12-5': 'melo_dullahan_steel_ghost',
+  'C12-6': 'silence',
+  'C12-7': 'melo_erfolg_piano'
+});
 const XMAS_NOVEL_BGM_SHIFT = Object.freeze({
-  'END-G': [['G-10', 'melo_dear_santa']]
+  'C2-3': [['2-3-7', 'silence']],
+  'C5-4': [['5-4-5', 'silence']],
+  'C6-5': [['6-5-3', 'silence']],
+  'C7-1': [['7-1-3a', 'melo_dullahan_steel_ghost_alt']],
+  'C7-W': [['7-W-14', 'melo_dullahan_steel_ghost_alt']],
+  'C10-1': [['10-1-5', 'silence']],
+  'C10-2': [['10-2-7', 'silence']],
+  'C10-3': [['10-3-7', 'silence']],
+  'C2-X': [['2-X-6a', 'silence']],
+  'C5-X': [['5-X-4a', 'silence']],
+  'C6-X': [['6-X-8', 'silence']],
+  'C2-Y': [['2-Y-10', 'silence']],
+  'C10-X': [['10-X-8', 'silence']],
+  'END-M2': [['M2-4', 'silence']],
+  'END-M5': [['M5-5a', 'silence']],
+  'END-B': [['B-3', 'silence']],
+  'END-G': [['G-10', 'close_to_your_heart_alt']],
+  'C12-4': [['12-4-5', 'silence']]
+});
+const XMAS_NOVEL_VOCAL_BGM = Object.freeze({
+  kaze_ga_soyogu: 'original_profile',
+  melo_kiss_mystery: 'melo_dullahan_steel_ghost_alt',
+  melo_kiss_mystery_short: 'melo_dullahan_steel_ghost_alt',
+  melo_sad_song: 'melo_erfolg_piano',
+  melo_sad_song_short: 'melo_erfolg_piano',
+  melo_dear_santa: 'close_to_your_heart_alt',
+  melo_dear_santa_short: 'close_to_your_heart_alt',
+  melo_winter_fall: 'close_to_your_heart_alt',
+  melo_winter_fall_short: 'close_to_your_heart_alt',
+  close_to_your_heart: 'close_to_your_heart_alt'
 });
 const xmasNovelBgmAt = (scene, idx) => {
   if (!scene) return '';
-  let key = scene.bgm || '';
+  const fixed = Object.prototype.hasOwnProperty.call(XMAS_NOVEL_BGM_SCENE, scene.id);
+  let key = fixed ? XMAS_NOVEL_BGM_SCENE[scene.id] : scene.bgm || '';
   const rows = Array.isArray(scene.rows) ? scene.rows : [];
   const at = Number.isFinite(idx) ? idx : 0;
   const shifts = XMAS_NOVEL_BGM_SHIFT[scene.id] || [];
   for (let i = 0; i <= at && i < rows.length; i += 1) {
     const r = rows[i];
-    if (r && r.bgm) key = r.bgm;
+    if (!fixed && r && r.bgm) key = r.bgm;
     shifts.forEach(([rowId, k]) => {
       if (r && r.id === rowId) key = k;
     });
   }
-  return key;
+  return XMAS_NOVEL_VOCAL_BGM[key] || key;
 };
-const xmasNovelBgm = key => {
+const xmasNovelBgm = keyIn => {
+  let key = keyIn;
   try {
     if (typeof Audio_ === 'undefined' || !Audio_) return;
     if (!key) return;
+    key = XMAS_NOVEL_VOCAL_BGM[key] || key;
     if (key === 'silence') {
       Audio_.stopBGM();
       return;
@@ -128906,7 +129135,7 @@ const XmasNovelScreen = ({
         setSave(s);
       }
     });
-    xmasNovelBgm('melo_kiss_mystery');
+    xmasNovelBgm('melo_dullahan_clockwork');
     return () => {
       alive = false;
       xmasNovelSeStop();
@@ -128980,8 +129209,8 @@ const XmasNovelScreen = ({
         return s;
       }
     } else setFx(f => f && f.kind === 'dark' ? null : f);
-    if (r.bgm && r.bgm !== lastBgm.current) {
-      lastBgm.current = r.bgm;
+    if (opts.quiet && r.bgm && (XMAS_NOVEL_VOCAL_BGM[r.bgm] || r.bgm) !== lastBgm.current) {
+      lastBgm.current = XMAS_NOVEL_VOCAL_BGM[r.bgm] || r.bgm;
       xmasNovelBgm(r.bgm);
     }
     if (r.t === 'clue') {
@@ -182754,15 +182983,15 @@ const ALF_VISIT_LINES = Object.freeze({
   "atsu": {
     "greet": ["お、いらっしゃい！ {h}さんの友だちだよね笑", "{name}、来てくれたんだ！ ゆっくりしてって笑", "おっ、お客さん笑 遠慮しないで入って！"],
     "doing": {
-      "snack": "ちょうどおやつ食べてた笑 一個どう？",
-      "practice": "いま一曲叩いてたとこ笑 {name}も聞いてく？",
+      "snack": "ちょうどおやつ食べてた笑 1個どう？",
+      "practice": "いま1曲叩いてたとこ笑 {name}も聞いてく？",
       "training": "ドラゴンの世話してた笑 ちょっと待ってて！",
       "cards": "デッキ組み直してたとこ笑 見ていく？",
       "read": "本読んでたら、ちょっと寝そうだった笑 来てくれて助かる！",
       "idle": "ぼーっとしてた笑 ちょうど話し相手ほしかった！"
     },
     "reply": ["ありがと笑 くつろいでって！", "そう言ってもらえると、うれしい笑", "いいって笑 {h}さんにも伝えとく！"],
-    "sleep": ["……次の一曲、いける……", "……ドラゴン、えらいぞ……( *'ω'*)ノ"]
+    "sleep": ["……次の1曲、いける……", "……ドラゴン、えらいぞ……( *'ω'*)ノ"]
   },
   "kyuko": {
     "greet": ["ほい、いらっしゃ〜い。{name}、ようこそだよぉ", "あ、お客さんだぁ。{h}さんの友だちかな？", "ちょうどひと休みしたかったんだぁ。どうぞどうぞ"],
@@ -260055,6 +260284,10 @@ function MonsterHeroGame() {
       const btn = e.target.closest && e.target.closest('button');
       if (!btn) return;
       if (btn.closest('[data-rhythm-play-area]')) return;
+      if (btn.closest('[data-xmas-novel]') && Audio_.fgSe && typeof Audio_.fgSe.trainingDice === 'function') {
+        Audio_.fgSe.trainingDice();
+        return;
+      }
       if (Audio_.uiTap) {
         Audio_.uiTap();
         return;
@@ -289260,7 +289493,8 @@ function MonsterHeroGame() {
           break;
         }
       }
-      const storySceneImg = storyScene && typeof STORY_SCENE_IMAGES !== 'undefined' ? STORY_SCENE_IMAGES[storyScene] || null : null;
+      const storyXmasBg = storyScene && typeof raidXmasSceneBgOf === 'function' ? raidXmasSceneBgOf(storyScene) : null;
+      const storySceneImg = storyXmasBg ? storyXmasBg.img : storyScene && typeof STORY_SCENE_IMAGES !== 'undefined' ? STORY_SCENE_IMAGES[storyScene] || null : null;
       const storyStill = typeof line.still === 'string' && typeof STORY_SCENE_IMAGES !== 'undefined' ? line.still : null;
       const storyStillImg = storyStill ? STORY_SCENE_IMAGES[storyStill] || null : null;
       const storyStillTate = storyStillImg ? STORY_SCENE_IMAGES[`${storyStill}_tate`] || null : null;
@@ -289268,7 +289502,8 @@ function MonsterHeroGame() {
         const pre = window.__mhStoryScenePreloaded || (window.__mhStoryScenePreloaded = new Set());
         script.forEach(l => {
           [l && l.bg, l && l.still, l && typeof l.still === 'string' ? `${l.still}_tate` : null].forEach(k => {
-            const src = typeof k === 'string' ? STORY_SCENE_IMAGES[k] : null;
+            const xb = typeof k === 'string' && typeof raidXmasSceneBgOf === 'function' ? raidXmasSceneBgOf(k) : null;
+            const src = xb ? xb.img : typeof k === 'string' ? STORY_SCENE_IMAGES[k] : null;
             if (src && !pre.has(src)) {
               pre.add(src);
               try {
@@ -289277,6 +289512,15 @@ function MonsterHeroGame() {
               } catch (e) {}
             }
           });
+          const fw = l && l.who ? assistantById(l.who) : null;
+          const fs = fw && fw.storyFigure;
+          if (fs && !pre.has(fs)) {
+            pre.add(fs);
+            try {
+              const im = new Image();
+              im.src = fs;
+            } catch (e) {}
+          }
         });
       }
       if (typeof window !== 'undefined' && typeof assistantFaceSrc === 'function') {
@@ -289361,6 +289605,37 @@ function MonsterHeroGame() {
         }
       }
       const storyMonsters = monstersIdx >= 0 && !storyStillImg ? script[monstersIdx].monsters.filter(m => m && m.pose !== 'hide' && STORY_MONSTER_ART[m.id]) : [];
+      const storyFigures = [];
+      if (monstersIdx < 0 && !storyStillImg) {
+        let figBase = null;
+        for (let i = 0; i <= step; i++) {
+          const l = script[i];
+          if (!l) continue;
+          if (typeof l.bg === 'string') {
+            const xb = typeof raidXmasSceneBgOf === 'function' ? raidXmasSceneBgOf(l.bg) : null;
+            const base = xb ? xb.base : l.bg;
+            if (base !== figBase) {
+              storyFigures.length = 0;
+              figBase = base;
+            }
+          }
+          if (l.figOut) {
+            storyFigures.length = 0;
+            continue;
+          }
+          const fw = l.who && !l.band ? assistantById(l.who) : null;
+          if (fw && fw.storyFigure) {
+            const slot = fw.storyFigureSlot || fw.id;
+            const f = {
+              slot,
+              id: fw.id,
+              src: fw.storyFigure
+            };
+            const k = storyFigures.findIndex(x => x.slot === slot);
+            if (k >= 0) storyFigures[k] = f;else storyFigures.push(f);
+          }
+        }
+      }
       const fxColors = {
         fall: '255,214,150',
         split: '233,213,255',
@@ -289383,6 +289658,8 @@ function MonsterHeroGame() {
       const storyCplBottom = Math.max(8, Math.floor((storyBoxW - 64 - (storyZones ? storyLand ? 62 : 100 : 0)) / 13) - (storyZones ? 4 : 2));
       const storyCplBubble = Math.max(6, storyLand ? Math.floor((storyBoxW - 118) / 12) - 3 : Math.floor((storyBoxW - 156) / 14) - 4);
       const storyCapBottom = Math.floor((storyBoxW - 64 - (storyLand ? 62 : 100)) / 13 - 0.2);
+      const storyFaceCols = Math.floor((storyLand ? 62 : 100) / 13);
+      const storyCapBottomOf = w => storyCapBottom + (w && w.storyFigure ? storyFaceCols : 0);
       const storyCapBubble = Math.floor((storyLand ? (storyBoxW - 118) / 12 : (storyBoxW - 156) / 14) - 0.2);
       const storyChunkMax = cap => storyLand && cap === storyCapBubble ? 2 : 3;
       const storyLineNodes = (text, cap) => {
@@ -289440,7 +289717,7 @@ function MonsterHeroGame() {
         const l = script[i];
         const w = l ? assistantById(l.who) : null;
         const text = l && w && !l.band ? speakText(l, w) : '';
-        const pages = storyZones && typeof storySplitPages === 'function' ? storySplitPages(text, isGuestWho(l && l.who) ? storyCplBubble : storyCplBottom, 3) : [text];
+        const pages = storyZones && typeof storySplitPages === 'function' ? storySplitPages(text, isGuestWho(l && l.who) ? storyCplBubble : storyCplBottom + (w && w.storyFigure ? storyFaceCols : 0), 3) : [text];
         storyPageCache[i] = pages;
         return pages;
       };
@@ -289571,7 +289848,15 @@ function MonsterHeroGame() {
         style: {
           '--story-bg': `url("${storySceneImg}")`
         }
-      }, storyFrame === 'game' && React.createElement("span", {
+      }, storyXmasBg && storyXmasBg.tint && React.createElement("span", {
+        "data-story-bg-tint": true,
+        style: {
+          position: 'absolute',
+          inset: 0,
+          zIndex: 1,
+          background: storyXmasBg.tint
+        }
+      }), storyFrame === 'game' && React.createElement("span", {
         "data-story-bg-frame-label": true
       }, "モンヒロ事件簿")), storyStillImg && React.createElement("div", {
         key: `still:${storyStill}`,
@@ -289663,10 +289948,11 @@ function MonsterHeroGame() {
         key: `b${bubbleIdx}${bubbleIdx === step ? `-${storyCurSub}` : ''}`,
         "data-story-guest-bubble": true,
         "data-story-pop": speakingGuest ? '1' : undefined,
-        className: "relative min-w-0 flex-1 rounded-2xl border-2 bg-slate-900/95 px-3 py-2",
+        "data-story-idle": speakingGuest ? undefined : '',
+        className: "relative min-w-0 flex-1 rounded-2xl border-2 bg-slate-900 px-3 py-2",
         style: {
-          borderColor: stageGuest.accent,
-          opacity: speakingGuest ? 1 : .4,
+          borderColor: speakingGuest ? stageGuest.accent : `${stageGuest.accent}55`,
+          opacity: 1,
           boxShadow: speakingGuest ? `0 0 0 2px ${stageGuest.accent}55, 0 0 20px ${stageGuest.accent}88` : 'none',
           marginTop: 8,
           animation: speakingGuest ? 'storyPop .3s ease-out both' : undefined
@@ -289687,11 +289973,17 @@ function MonsterHeroGame() {
         className: "inline-block rounded-full px-2 py-0.5 text-[10px] font-black",
         style: {
           color: '#0f172a',
-          background: stageGuest.accent
+          background: stageGuest.accent,
+          visibility: speakingGuest ? undefined : 'hidden'
         }
       }, bubbleLine.name || stageGuest.name), React.createElement("span", {
         className: "mt-1 block text-[14px] font-bold leading-relaxed text-white",
-        style: storyLineStyle(storyZones ? storyTextAt(bubbleIdx, stageGuest) : '', storyCapBubble)
+        style: {
+          ...storyLineStyle(storyZones ? storyTextAt(bubbleIdx, stageGuest) : '', storyCapBubble),
+          ...(speakingGuest ? {} : {
+            visibility: 'hidden'
+          })
+        }
       }, storyZones ? storyLineNodes(storyTextAt(bubbleIdx, stageGuest), storyCapBubble) : bubbleLines(speakText(bubbleLine, stageGuest)))))), storyMonsters.length > 0 && React.createElement("div", {
         "data-story-monsters": storyMonsters.length,
         "aria-hidden": "true",
@@ -289715,6 +290007,31 @@ function MonsterHeroGame() {
           fill: true,
           own: true
         }) : art);
+      })), storyFigures.length > 0 && React.createElement("div", {
+        "data-story-monsters": storyFigures.length,
+        "data-story-figures": "",
+        "aria-hidden": "true",
+        className: "pointer-events-none",
+        style: {
+          top: 'calc(env(safe-area-inset-top) + 6vh)'
+        }
+      }, storyFigures.map(f => {
+        const on = !line.band && f.id === line.who;
+        return React.createElement("span", {
+          key: `${f.slot}:${f.id}`,
+          "data-story-monster": `fig-${f.slot}`,
+          "data-story-pose": "in",
+          "data-story-figure-dim": on ? undefined : ''
+        }, React.createElement("img", {
+          src: f.src,
+          alt: "",
+          draggable: false,
+          className: "block h-full w-full object-contain",
+          style: {
+            filter: on ? 'drop-shadow(0 6px 18px rgba(0,0,0,.65))' : 'brightness(.55) drop-shadow(0 6px 18px rgba(0,0,0,.65))',
+            transition: 'filter .2s'
+          }
+        }));
       })), (fx || line.fxText && !(storyZones && storySub > 0)) && React.createElement("div", {
         key: `fx${step}`,
         "aria-hidden": "true",
@@ -289844,7 +290161,7 @@ function MonsterHeroGame() {
       })(), React.createElement("div", {
         "data-story-speaker-row": storyZones ? '' : undefined,
         className: storyZones ? 'flex items-start gap-2' : undefined
-      }, storyZones && bottomLine && React.createElement("div", {
+      }, storyZones && bottomLine && !bottomSpeaker.storyFigure && React.createElement("div", {
         key: `face-${bottomSpeaker.id}`,
         "data-story-speaker": bottomSpeaker.id,
         className: "shrink-0 text-center"
@@ -289871,9 +290188,10 @@ function MonsterHeroGame() {
         "data-story-pop": dimBottom ? undefined : '1',
         className: `rounded-2xl border-2 bg-slate-900 px-3 py-3${storyZones ? ' min-w-0 flex-1' : ''}`,
         "data-story-line-box": true,
+        "data-story-idle": dimBottom ? '' : undefined,
         style: {
-          borderColor: bottomSpeaker.accent,
-          opacity: dimBottom ? .4 : 1,
+          borderColor: dimBottom ? `${bottomSpeaker.accent}55` : bottomSpeaker.accent,
+          opacity: 1,
           boxShadow: dimBottom ? 'none' : `0 0 16px ${bottomSpeaker.accent}55`,
           transition: 'opacity .18s',
           animation: dimBottom ? undefined : 'storyPop .28s ease-out both'
@@ -289882,12 +290200,18 @@ function MonsterHeroGame() {
         className: "inline-block rounded-full px-2 py-0.5 text-[10px] font-black",
         style: {
           color: '#0f172a',
-          background: bottomSpeaker.accent
+          background: bottomSpeaker.accent,
+          visibility: dimBottom ? 'hidden' : undefined
         }
       }, bottomLine.name || bottomSpeaker.name), React.createElement("span", {
         className: "block text-[13px] font-bold leading-relaxed text-white mt-1",
-        style: storyLineStyle(storyZones ? storyTextAt(bottomLine === line ? step : assistIdx, bottomSpeaker) : '', storyCapBottom)
-      }, storyZones ? storyLineNodes(storyTextAt(bottomLine === line ? step : assistIdx, bottomSpeaker), storyCapBottom) : bubbleLines(speakText(bottomLine, bottomSpeaker)))) : React.createElement("div", {
+        style: {
+          ...storyLineStyle(storyZones ? storyTextAt(bottomLine === line ? step : assistIdx, bottomSpeaker) : '', storyCapBottomOf(bottomSpeaker)),
+          ...(dimBottom ? {
+            visibility: 'hidden'
+          } : {})
+        }
+      }, storyZones ? storyLineNodes(storyTextAt(bottomLine === line ? step : assistIdx, bottomSpeaker), storyCapBottomOf(bottomSpeaker)) : bubbleLines(speakText(bottomLine, bottomSpeaker)))) : React.createElement("div", {
         "data-story-line-box": true,
         className: `flex items-center justify-center rounded-2xl border-2 border-slate-700 bg-slate-900 px-3 py-3 text-center text-[11px] font-bold text-slate-400${storyZones ? ' min-w-0 flex-1' : ''}`
       }, "▲ 上のことばを読んでね")), React.createElement("p", {
@@ -297915,7 +298239,7 @@ const createAnimationStyle = () => {
     @keyframes mhDiscBorn{0%{opacity:0;transform:scale(.35)}60%{opacity:1;filter:drop-shadow(0 0 30px #fde68a) brightness(1.6)}100%{opacity:1;transform:scale(1);filter:drop-shadow(0 0 18px rgba(253,230,138,.55)) brightness(1)}}
     @keyframes mhDiscUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
     @media (prefers-reduced-motion: reduce){.mh-disc-rebirth-disc,.mh-disc-rebirth-flash,.mh-disc-rebirth-sparks i{animation:none;opacity:0}.mh-disc-rebirth-rays{animation:none;opacity:1}.mh-disc-rebirth-plate,.mh-disc-rebirth-art,.mh-disc-rebirth-name,.mh-disc-rebirth-note,.mh-disc-rebirth-close{animation:none;opacity:1;transform:none;pointer-events:auto}}
-    .mh-home-scene{position:relative;isolation:isolate;container-type:size;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-background img.mh-home-backdrop{position:absolute;z-index:0;inset:0;object-fit:cover;filter:blur(14px) brightness(.55);transform:scale(1.08)}.mh-home-background.is-wide img,.mh-home-background.is-square img{object-fit:cover}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:30%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(5px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:1.2}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:9px;line-height:1.2;font-weight:900}/* XP の字は 8px の等幅で読めなかった(2026-11-22 点検 #7059・r1119-080)。棒の右に 10px で並べ、札の高さは変えない */.mh-home-xp-row{display:flex;align-items:center;gap:4px;margin-top:2px}.mh-home-player-copy small{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#d7e3dc;font-size:10px;line-height:12px;font-weight:700;font-variant-numeric:tabular-nums}.mh-home-xp{flex:1 1 auto;min-width:18px;height:4px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:minmax(0,1fr) 44px;grid-template-rows:1fr 1fr;box-sizing:border-box;width:calc(153px + var(--wal-grow,0px));padding:3px 4px;border-radius:14px;--wal-col:calc(99px + var(--wal-grow,0px));--wal-max:10px}.mh-home-wallet>div{display:grid;grid-template-columns:14px minmax(0,1fr) auto;align-items:center;gap:2px;min-width:0;padding:1px 3px;color:#ffe08a;--wal-room:calc(var(--wal-col) - 50px)}.mh-home-wallet>div+div{--wal-room:calc(var(--wal-col) - 71px)}.mh-home-wallet>div b{font-size:min(var(--wal-max),calc(var(--wal-room) / (var(--len,1) * .64)));text-align:right;white-space:nowrap;min-width:0}.mh-home-wallet>div small{font-size:8px;color:#f4e7c3;white-space:nowrap}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:9px;font-weight:900;min-width:44px;min-height:44px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;padding:0;border:0;background:transparent;color:#fff;touch-action:manipulation}/* 押せる範囲は見えている札と、そのまわり8pxだけ(2026-10-11・社長の指摘)。以前は建物ぶんの透明な箱が押し場所で、札の外の何もない所でも施設が開き、ジャックの吹き出しを押せなかった。札の位置は、箱の位置と箱の中の札の位置を足し合わせた値にしてある(見た目の位置は前と同じ) */.mh-home-facility::after{content:'';position:absolute;inset:-8px}.mh-home-facility>span{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility-label{display:flex;flex-direction:column;align-items:flex-start;line-height:1.05;font-weight:inherit}.mh-home-facility-label small{margin-top:2px;font-size:8px;font-weight:800;letter-spacing:0;color:#ffe6a7;opacity:.9}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}[data-assistant-life-map] .mh-home-facility.management{left:2.52%;top:26.58%}.mh-home-facility.management>span{border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}[data-assistant-life-map] .mh-home-facility.temple{right:2.94%;top:25.9%}.mh-home-facility.temple>span{border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}[data-assistant-life-map] .mh-home-facility.market{right:1.95%;top:57%}.mh-home-facility.market>span{border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}[data-assistant-life-map] .mh-home-facility.battle{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%)}[data-assistant-life-map] .mh-home-facility.battle>span{min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}[data-assistant-life-map] .mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}[data-assistant-life-map] .mh-home-facility.battle:active>span{transform:scale(.94)}/* 背の低い画面(縦 700px 前後まで)では、イベントの札とMFバトルカードの札を、モンヒロビートの札(top:55.25%)の下まで下げる。重なっていた(2026-10-26) */.mh-home-event-banner{display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:6px 11px;border:1px solid #fdba74;border-radius:13px;background:linear-gradient(135deg,#7c2d12ee,#4c1d95ee);color:#ffedd5;font-size:11px;font-weight:900;line-height:1.2;box-shadow:0 3px 10px #0008;text-align:left}.mh-home-event-banner small{font-size:9px;font-weight:800;color:#fed7aa}[data-assistant-life-map] .mh-home-card-battle{position:absolute;z-index:5;left:9px;bottom:min(calc(33% - 40px),calc(44.75% - 126px));padding:0}[data-assistant-life-map] .mh-home-card-battle.raised{bottom:min(calc(33% + 4px),calc(44.75% - 82px))}/* 公式杯の札(2026-10-31 社長・案A)。イベントの札の下・MFバトルカードの札の上(MFバトルカードの札のいつもの段)。イベントの札が無いときは1段上がる。公式杯の札があるときは、MFバトルカードの札は1段下(below-tour) */.mh-home-tour-banner{display:flex;align-items:center;gap:6px;max-width:min(calc(100% - 150px),240px);padding:3px 10px 3px 7px;border:1.5px solid #fde68a;border-radius:13px;background:linear-gradient(135deg,#78350fee,#b45309ee 45%,#1e1b4bee);color:#fffbeb;text-align:left;box-shadow:0 0 0 2px #f59e0b55,0 3px 10px #0008}.mh-home-tour-banner>span:first-child{font-size:19px;line-height:1}.mh-home-tour-banner>span:last-child{display:flex;min-width:0;flex-direction:column;gap:1px;line-height:1.2}.mh-home-tour-banner b{overflow:hidden;font-size:11.5px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}.mh-home-tour-banner small{display:block;overflow:hidden;font-size:9.5px;font-weight:800;color:#fde68a;text-overflow:ellipsis;white-space:nowrap}.mh-home-tour-banner em{margin-left:5px;padding:0 5px;border-radius:999px;background:#fbbf24;color:#3d2305;font-style:normal;font-size:9px;font-weight:900;line-height:1.5}.mh-home-tour-banner:active{transform:scale(.96);filter:brightness(1.15)}[data-assistant-life-map] .mh-home-card-battle.below-tour{bottom:min(calc(33% - 84px),calc(44.75% - 170px))}[data-assistant-life-map] .mh-home-card-battle.soon>span{background:linear-gradient(135deg,#334155ee,#3b0764ee);border-color:#fcd34dcc}[data-assistant-life-map] .mh-home-card-battle.soon small{margin-left:4px;padding:1px 6px;border-radius:999px;background:#fbbf24;color:#3d2305;font-size:10px;font-weight:900;line-height:1.4}[data-assistant-life-map] .mh-home-card-battle>span{display:flex;align-items:center;gap:4px;padding:8px 12px;border:1.5px solid #7dd3fcdd;border-radius:13px;background:linear-gradient(135deg,#1e3a8aee,#4c1d95ee);color:#fff;font-size:12px;font-weight:900;line-height:1.2;box-shadow:0 3px 12px #0009,0 0 15px #38bdf866}@media(orientation:landscape) and (max-height:600px){[data-assistant-life-map] .mh-home-card-battle{bottom:12px}/* 横向きでもイベントの札を出す。MFバトルカードの札(下から12px)のすぐ上(2026-10-26 ダメダシくん「横では見当たらない」) *//* 横向きの公式杯の札は MFバトルカードの札のすぐ上、イベントの札はその上 */}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-temple-menu-card{position:relative;border:1px solid #a78bfa80;background:linear-gradient(135deg,#2e1065d9 0%,#1e1b4bcc 58%,#312e81b3 100%);box-shadow:inset 0 1px 0 #ddd6fe18,0 5px 16px #0006,0 0 18px #7c3aed12}.mh-temple-menu-card:active{filter:brightness(1.16);transform:scale(.98)}.mh-temple-menu-icon{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c4b5fd38;border-radius:10px;background:#4c1d9566;box-shadow:inset 0 1px 0 #ede9fe18}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
+    .mh-home-scene{position:relative;isolation:isolate;container-type:size;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-background img.mh-home-backdrop{position:absolute;z-index:0;inset:0;object-fit:cover;filter:blur(14px) brightness(.55);transform:scale(1.08)}.mh-home-background.is-wide img,.mh-home-background.is-square img{object-fit:cover}.mh-home-background.is-tall img.mh-home-main{object-fit:cover}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:30%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(5px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:1.2}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:9px;line-height:1.2;font-weight:900}/* XP の字は 8px の等幅で読めなかった(2026-11-22 点検 #7059・r1119-080)。棒の右に 10px で並べ、札の高さは変えない */.mh-home-xp-row{display:flex;align-items:center;gap:4px;margin-top:2px}.mh-home-player-copy small{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#d7e3dc;font-size:10px;line-height:12px;font-weight:700;font-variant-numeric:tabular-nums}.mh-home-xp{flex:1 1 auto;min-width:18px;height:4px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:minmax(0,1fr) 44px;grid-template-rows:1fr 1fr;box-sizing:border-box;width:calc(153px + var(--wal-grow,0px));padding:3px 4px;border-radius:14px;--wal-col:calc(99px + var(--wal-grow,0px));--wal-max:10px}.mh-home-wallet>div{display:grid;grid-template-columns:14px minmax(0,1fr) auto;align-items:center;gap:2px;min-width:0;padding:1px 3px;color:#ffe08a;--wal-room:calc(var(--wal-col) - 50px)}.mh-home-wallet>div+div{--wal-room:calc(var(--wal-col) - 71px)}.mh-home-wallet>div b{font-size:min(var(--wal-max),calc(var(--wal-room) / (var(--len,1) * .64)));text-align:right;white-space:nowrap;min-width:0}.mh-home-wallet>div small{font-size:8px;color:#f4e7c3;white-space:nowrap}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:9px;font-weight:900;min-width:44px;min-height:44px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;padding:0;border:0;background:transparent;color:#fff;touch-action:manipulation}/* 押せる範囲は見えている札と、そのまわり8pxだけ(2026-10-11・社長の指摘)。以前は建物ぶんの透明な箱が押し場所で、札の外の何もない所でも施設が開き、ジャックの吹き出しを押せなかった。札の位置は、箱の位置と箱の中の札の位置を足し合わせた値にしてある(見た目の位置は前と同じ) */.mh-home-facility::after{content:'';position:absolute;inset:-8px}.mh-home-facility>span{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility-label{display:flex;flex-direction:column;align-items:flex-start;line-height:1.05;font-weight:inherit}.mh-home-facility-label small{margin-top:2px;font-size:8px;font-weight:800;letter-spacing:0;color:#ffe6a7;opacity:.9}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}[data-assistant-life-map] .mh-home-facility.management{left:2.52%;top:26.58%}.mh-home-facility.management>span{border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}[data-assistant-life-map] .mh-home-facility.temple{right:2.94%;top:25.9%}.mh-home-facility.temple>span{border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}[data-assistant-life-map] .mh-home-facility.market{right:1.95%;top:57%}.mh-home-facility.market>span{border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}[data-assistant-life-map] .mh-home-facility.battle{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%)}[data-assistant-life-map] .mh-home-facility.battle>span{min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}[data-assistant-life-map] .mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}[data-assistant-life-map] .mh-home-facility.battle:active>span{transform:scale(.94)}/* 背の低い画面(縦 700px 前後まで)では、イベントの札とMFバトルカードの札を、モンヒロビートの札(top:55.25%)の下まで下げる。重なっていた(2026-10-26) */.mh-home-event-banner{display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:6px 11px;border:1px solid #fdba74;border-radius:13px;background:linear-gradient(135deg,#7c2d12ee,#4c1d95ee);color:#ffedd5;font-size:11px;font-weight:900;line-height:1.2;box-shadow:0 3px 10px #0008;text-align:left}.mh-home-event-banner small{font-size:9px;font-weight:800;color:#fed7aa}[data-assistant-life-map] .mh-home-card-battle{position:absolute;z-index:5;left:9px;bottom:min(calc(33% - 40px),calc(44.75% - 126px));padding:0}[data-assistant-life-map] .mh-home-card-battle.raised{bottom:min(calc(33% + 4px),calc(44.75% - 82px))}/* 公式杯の札(2026-10-31 社長・案A)。イベントの札の下・MFバトルカードの札の上(MFバトルカードの札のいつもの段)。イベントの札が無いときは1段上がる。公式杯の札があるときは、MFバトルカードの札は1段下(below-tour) */.mh-home-tour-banner{display:flex;align-items:center;gap:6px;max-width:min(calc(100% - 150px),240px);padding:3px 10px 3px 7px;border:1.5px solid #fde68a;border-radius:13px;background:linear-gradient(135deg,#78350fee,#b45309ee 45%,#1e1b4bee);color:#fffbeb;text-align:left;box-shadow:0 0 0 2px #f59e0b55,0 3px 10px #0008}.mh-home-tour-banner>span:first-child{font-size:19px;line-height:1}.mh-home-tour-banner>span:last-child{display:flex;min-width:0;flex-direction:column;gap:1px;line-height:1.2}.mh-home-tour-banner b{overflow:hidden;font-size:11.5px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}.mh-home-tour-banner small{display:block;overflow:hidden;font-size:9.5px;font-weight:800;color:#fde68a;text-overflow:ellipsis;white-space:nowrap}.mh-home-tour-banner em{margin-left:5px;padding:0 5px;border-radius:999px;background:#fbbf24;color:#3d2305;font-style:normal;font-size:9px;font-weight:900;line-height:1.5}.mh-home-tour-banner:active{transform:scale(.96);filter:brightness(1.15)}[data-assistant-life-map] .mh-home-card-battle.below-tour{bottom:min(calc(33% - 84px),calc(44.75% - 170px))}[data-assistant-life-map] .mh-home-card-battle.soon>span{background:linear-gradient(135deg,#334155ee,#3b0764ee);border-color:#fcd34dcc}[data-assistant-life-map] .mh-home-card-battle.soon small{margin-left:4px;padding:1px 6px;border-radius:999px;background:#fbbf24;color:#3d2305;font-size:10px;font-weight:900;line-height:1.4}[data-assistant-life-map] .mh-home-card-battle>span{display:flex;align-items:center;gap:4px;padding:8px 12px;border:1.5px solid #7dd3fcdd;border-radius:13px;background:linear-gradient(135deg,#1e3a8aee,#4c1d95ee);color:#fff;font-size:12px;font-weight:900;line-height:1.2;box-shadow:0 3px 12px #0009,0 0 15px #38bdf866}@media(orientation:landscape) and (max-height:600px){[data-assistant-life-map] .mh-home-card-battle{bottom:12px}/* 横向きでもイベントの札を出す。MFバトルカードの札(下から12px)のすぐ上(2026-10-26 ダメダシくん「横では見当たらない」) *//* 横向きの公式杯の札は MFバトルカードの札のすぐ上、イベントの札はその上 */}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-temple-menu-card{position:relative;border:1px solid #a78bfa80;background:linear-gradient(135deg,#2e1065d9 0%,#1e1b4bcc 58%,#312e81b3 100%);box-shadow:inset 0 1px 0 #ddd6fe18,0 5px 16px #0006,0 0 18px #7c3aed12}.mh-temple-menu-card:active{filter:brightness(1.16);transform:scale(.98)}.mh-temple-menu-icon{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c4b5fd38;border-radius:10px;background:#4c1d9566;box-shadow:inset 0 1px 0 #ede9fe18}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
     /* ==================== プロフィールフレーム(2026-09-15) ====================
        ブリーダーアイコンの外側へ重ねる飾り枠。アイコン画像そのものには触らない。
        ★太さを px で書かない。inset と mask を割合で書いてあるので、ランキングの 32px でも
@@ -298180,7 +298504,7 @@ const createAnimationStyle = () => {
     .mh-boot-copy{position:relative;z-index:2;width:min(100%,340px)}.mh-boot-copy h1{font-size:clamp(20px,6vw,30px);font-weight:1000;letter-spacing:.22em;color:#fff;text-shadow:0 0 18px #c084fc;margin:0 0 8px}.mh-boot-copy h2{font-size:12px;color:#ddd6fe;letter-spacing:.12em;margin:0 0 18px}.mh-boot-copy p{min-height:18px;font-size:10px;color:#c4b5fd;margin-top:10px}.mh-progress{height:10px;border:1px solid #c4b5fd88;border-radius:99px;background:#080617;overflow:hidden}.mh-progress span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#7c3aed,#d8b4fe,#fbbf24);box-shadow:0 0 14px #c084fc;transition:width .25s}.mh-boot-copy strong{display:block;margin-top:7px;font:800 11px monospace}.mh-boot-copy button{width:100%;min-height:56px;border:1px solid #f8d477;border-radius:18px;background:linear-gradient(135deg,#4c1d95dd,#7e22cedd);box-shadow:0 0 25px #a855f766;color:#fff;font-size:clamp(15px,5vw,20px);font-weight:1000;letter-spacing:.12em;touch-action:manipulation}.mh-boot-screen footer{position:absolute;z-index:2;bottom:calc(8px + env(safe-area-inset-bottom));font:8px monospace;color:#7773a0;letter-spacing:.15em}
     .mh-boot-screen.is-ready .mh-mocchi-wrap img{animation:mhReadyHop .75s ease-out 1,mhMocchiHop 1.8s ease-in-out .75s infinite}.mh-boot-screen.is-ready .mh-boot-copy{animation:titleReveal .55s ease-out both}.mh-boot-screen.is-ready .mh-mocchi-wrap i{display:block;animation:mhSparkle 1.5s infinite}.mh-boot-screen.is-ready .mh-mocchi-wrap i:nth-of-type(1){top:10%;left:4%}.mh-boot-screen.is-ready .mh-mocchi-wrap i:nth-of-type(2){top:24%;right:0;animation-delay:.55s}.mh-boot-screen.is-entering .mh-mocchi-wrap img{animation:mhBigHop .75s ease-in-out both}.mh-entry-flash{position:absolute;z-index:9;inset:0;pointer-events:none;background:radial-gradient(circle,#fff 0,#d8b4fe 18%,transparent 58%);opacity:0}.mh-boot-screen.is-entering .mh-entry-flash{animation:mhEntryFlash .76s ease-in both}
     .mh-title-gate,.mh-entering{position:fixed;inset:0;overflow:hidden;color:#fff;background:#05020e;isolation:isolate}.mh-title-gate{animation:titleReveal .65s ease-out both}.mh-title-visual,.mh-entering>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%}
-    .mh-title-header{position:absolute;z-index:22;top:0;left:0;right:0;padding:calc(11px + env(safe-area-inset-top)) 12px 0;display:flex;justify-content:space-between;align-items:flex-start;text-shadow:0 2px 5px #000;pointer-events:none}.mh-title-build{display:grid;padding:6px 8px;text-align:left;font-family:monospace;line-height:1.15;border:1px solid #ffffff30;border-radius:10px;background:#160d2588;backdrop-filter:blur(3px)}.mh-title-build b{font-size:7px;letter-spacing:.18em;color:#eadcff}.mh-title-build span{font-size:8px;margin-bottom:5px;color:#fff;max-width:130px;overflow:hidden;text-overflow:ellipsis}.mh-title-actions{display:flex;gap:7px;pointer-events:auto}.mh-title-actions button{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:50px;height:50px;border-radius:50%;background:#26152ecc;border:1px solid #ffd87a;color:#fff;font-size:8px;font-weight:800;box-shadow:0 2px 8px #000}.mh-title-actions em{position:absolute;right:-3px;top:-6px;background:#e33;padding:2px 4px;border-radius:8px;font-size:6px;font-style:normal}.mh-title-start{position:absolute;z-index:21;inset:0;width:100%;height:100%;border:0;background:transparent;touch-action:manipulation}.mh-title-start:disabled{pointer-events:none}
+    .mh-title-header{position:absolute;z-index:22;top:0;left:0;right:0;padding:calc(11px + env(safe-area-inset-top)) 12px 0;display:flex;justify-content:space-between;align-items:flex-start;text-shadow:0 2px 5px #000;pointer-events:none}.mh-title-build{position:fixed;left:calc(12px + env(safe-area-inset-left));bottom:calc(10px + env(safe-area-inset-bottom));display:grid;padding:6px 8px;text-align:left;font-family:monospace;line-height:1.15;border:1px solid #ffffff30;border-radius:10px;background:#160d2588;backdrop-filter:blur(3px)}.mh-title-build b{font-size:7px;letter-spacing:.18em;color:#eadcff}.mh-title-build span{font-size:8px;margin-bottom:5px;color:#fff;max-width:130px;overflow:hidden;text-overflow:ellipsis}.mh-title-actions{display:flex;gap:7px;margin-left:auto;pointer-events:auto}.mh-title-actions button{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:50px;height:50px;border-radius:50%;background:#26152ecc;border:1px solid #ffd87a;color:#fff;font-size:8px;font-weight:800;box-shadow:0 2px 8px #000}.mh-title-actions em{position:absolute;right:-3px;top:-6px;background:#e33;padding:2px 4px;border-radius:8px;font-size:6px;font-style:normal}.mh-title-start{position:absolute;z-index:21;inset:0;width:100%;height:100%;border:0;background:transparent;touch-action:manipulation}.mh-title-start:disabled{pointer-events:none}
     .mh-title-modal{position:fixed;z-index:100;inset:0;display:flex;align-items:center;justify-content:center;padding:calc(20px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));background:#03020eef}.mh-title-dialog{display:flex;flex-direction:column;gap:12px;width:min(100%,380px);max-height:86vh;padding:18px;border:1px solid #a78bfa77;border-radius:22px;background:#0f172a;color:#fff;overflow:auto}.mh-dialog-head{display:flex;align-items:center;justify-content:space-between}.mh-dialog-head h3{font-weight:900}.mh-dialog-head button{padding:13px;margin:-6px -8px -6px 0}.mh-dialog-choice{display:flex;justify-content:space-between;align-items:center;padding:14px;border:1px solid #ffffff22;border-radius:14px;background:#ffffff0c;font-weight:800}/* 窓の閉じる(2026-11-19 r1119-013 ⑥ B-1・B-2)。メニューの行(.mh-dialog-choice)の形だと項目の1つに見えたので、参考の窓と同じ「下の中央の丸いボタン」にし、窓の中を送っても下に貼り付けて画面の外へ出さない */.mh-dialog-close{position:sticky;bottom:0;z-index:2;flex:none;align-self:center;min-width:168px;min-height:46px;margin-top:auto;padding:0 28px;border:1px solid #ffffff38;border-radius:999px;background:#334155;color:#f1f5f9;font-weight:900;box-shadow:0 3px 0 #0009,0 -14px 14px 2px #0f172a}.mh-dialog-close:active{transform:translateY(1px) scale(.98)}.mh-dialog-head:has(>h3:only-child){justify-content:center}/* 更新履歴の窓(2026-11-19 r1119-010・U-14)。参考の窓(見出しの帯/中身/下の中央のとじる)にそろえ、窓の中で送るのは一覧だけにする。送った札は日付の見出しと上のふちの下へもぐり、切れた枠に見えない。字は 10px より小さくしない */.mh-title-dialog--changelog{width:min(100%,440px);height:min(calc(var(--mh-vh) - 40px - env(safe-area-inset-top) - env(safe-area-inset-bottom)),760px);max-height:none;padding:0;gap:0;overflow:hidden;border:2px solid #a78bfa88}.mh-title-dialog--changelog>.mh-dialog-head{flex:none;justify-content:center;min-height:44px;padding:8px 16px;background:linear-gradient(180deg,#2b3150,#1b2036);border-bottom:1px solid #ffffff1f}.mh-title-dialog--changelog>.mh-dialog-head h3{font-size:15px;letter-spacing:.04em}.mh-title-dialog--changelog>.mh-changelog-tabs{flex:none;margin:10px 12px 0;padding:3px;gap:3px;border-radius:12px;background:#0b1222;border:1px solid #ffffff14}.mh-title-dialog--changelog>.mh-changelog-tabs button{display:flex;align-items:center;justify-content:center;gap:4px;min-height:44px;padding:0 4px;white-space:nowrap;border-radius:9px;background:transparent;color:#94a3b8;font-size:12px;font-weight:900}.mh-title-dialog--changelog>.mh-changelog-tabs button.active{background:linear-gradient(180deg,#d97706,#b45309);color:#fff;box-shadow:0 2px 0 #0006}.mh-title-dialog--changelog .mh-changelog-tabs .mh-unread-badge{position:static;width:16px;height:16px;border-width:1.5px;font-size:10px;box-shadow:none}.mh-title-dialog--changelog>.mh-changelog-list{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;margin-top:10px;padding:0 12px 12px;border-top:1px solid #ffffff1a;box-shadow:inset 0 8px 8px -8px #000c}.mh-title-dialog--changelog .mh-changelog-day{margin:0 -12px 8px;padding:6px 12px;background:#0f172af2;border-bottom:1px solid #ffffff12;box-shadow:0 6px 8px -6px #000c;font-size:11px;color:#c7d2fe}.mh-title-dialog--changelog .mh-changelog-day:first-child{margin-top:0}.mh-title-dialog--changelog .mh-changelog-list>details:first-child{margin-top:10px!important}.mh-title-dialog--changelog .mh-changelog-list article{padding:10px 12px;margin-bottom:8px;border-radius:14px;background:#111a2e}.mh-title-dialog--changelog .mh-changelog-list article.unread{border-color:#f59e0bb0;box-shadow:inset 3px 0 0 #f59e0b}.mh-title-dialog--changelog .mh-changelog-head{min-height:40px}.mh-title-dialog--changelog .mh-changelog-head b{font-size:13px;line-height:1.4}.mh-title-dialog--changelog .mh-changelog-head small{font-size:10px}.mh-title-dialog--changelog .mh-changelog-count{font-size:10px}.mh-title-dialog--changelog .mh-changelog-count em,.mh-title-dialog--changelog .mh-changelog-item time em{font-size:9px}.mh-title-dialog--changelog .mh-changelog-kind{font-size:10px}.mh-title-dialog--changelog .mh-changelog-peek{font-size:11px;color:#a8b3c7}.mh-title-dialog--changelog .mh-changelog-list p{font-size:12px;line-height:1.65}.mh-title-dialog--changelog .mh-changelog-item time{font-size:10px}.mh-title-dialog--changelog .mh-changelog-item b{font-size:12.5px}.mh-title-dialog--changelog>.mh-dialog-close{position:static;margin:10px auto 12px;box-shadow:0 3px 0 #0009}@media(orientation:landscape) and (max-height:500px){.mh-title-dialog--changelog{display:grid;grid-template-columns:minmax(150px,24%) 1fr;grid-template-rows:auto auto 1fr auto;width:min(100%,860px);height:calc(var(--mh-vh) - 16px);padding:0}.mh-title-dialog--changelog>.mh-dialog-head{grid-column:1;grid-row:1;border-right:1px solid #ffffff14}.mh-title-dialog--changelog>.mh-changelog-tabs{grid-column:1;grid-row:2;grid-template-columns:1fr;margin:10px}.mh-title-dialog--changelog>.mh-dialog-close{grid-column:1;grid-row:4;align-self:end;justify-self:center;min-width:0;width:calc(100% - 20px);margin:0 10px 10px}.mh-title-dialog--changelog>.mh-changelog-list{grid-column:2;grid-row:1/-1;margin:0;padding-top:0;border-top:0;border-left:1px solid #ffffff1a;box-shadow:none}}/* 2026-11-27 r1126-074 小4: タブレットでは窓を広げる。縦は幅680まで・高さは画面に合わせる。横は小さい横と同じ左右の組(左に見出し・タブ・閉じる、右に一覧) */@media(min-width:700px) and (orientation:portrait){.mh-title-dialog--changelog{width:min(100%,680px);height:min(calc(var(--mh-vh) - 40px - env(safe-area-inset-top) - env(safe-area-inset-bottom)),1100px)}}@media(orientation:landscape) and (min-height:501px){.mh-title-dialog--changelog{display:grid;grid-template-columns:minmax(190px,24%) 1fr;grid-template-rows:auto auto 1fr auto;width:min(100%,1040px);height:min(calc(var(--mh-vh) - 40px - env(safe-area-inset-top) - env(safe-area-inset-bottom)),860px);padding:0}.mh-title-dialog--changelog>.mh-dialog-head{grid-column:1;grid-row:1;border-right:1px solid #ffffff14}.mh-title-dialog--changelog>.mh-changelog-tabs{grid-column:1;grid-row:2;grid-template-columns:1fr;margin:10px}.mh-title-dialog--changelog>.mh-dialog-close{grid-column:1;grid-row:4;align-self:end;justify-self:center;min-width:0;width:calc(100% - 20px);margin:0 10px 10px}.mh-title-dialog--changelog>.mh-changelog-list{grid-column:2;grid-row:1/-1;margin:0;padding-top:0;border-top:0;border-left:1px solid #ffffff1a;box-shadow:none}}@media(orientation:landscape) and (max-height:500px){.mh-title-dialog--menu{display:grid;grid-template-columns:1fr 1fr;align-content:start}.mh-title-dialog--menu>.mh-dialog-head,.mh-title-dialog--menu>.mh-dialog-close{grid-column:1/-1;justify-self:center}.mh-title-dialog--menu>.mh-dialog-choice{padding:10px 12px}}.mh-changelog-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.mh-changelog-tabs button{position:relative;padding:9px;border-radius:10px;background:#1e293b;font-size:11px;font-weight:800}.mh-changelog-tabs button.active{background:#b45309}.mh-unread-badge{position:absolute;right:-5px;top:-6px;display:flex;align-items:center;justify-content:center;width:17px;height:17px;border:2px solid #fff;border-radius:50%;background:#dc2626;color:#fff;font:900 11px/1 sans-serif;font-style:normal;box-shadow:0 2px 5px #0008;pointer-events:none}.mh-changelog-list{overflow:auto}.mh-changelog-list article{padding:11px;margin-bottom:8px;border:1px solid #ffffff18;border-radius:13px;background:#0005}.mh-changelog-list time,.mh-changelog-list b{display:block}.mh-changelog-list time{font:9px monospace;color:#94a3b8}.mh-changelog-list b{font-size:12px;margin:4px 0}.mh-changelog-kind{display:inline-block;margin-top:5px;padding:2px 7px;border-radius:999px;border:1px solid currentColor;font:900 9px/1.5 sans-serif}.mh-changelog-kind[data-kind="fix"]{color:#fca5a5;background:#7f1d1d55}.mh-changelog-kind[data-kind="feature"]{color:#86efac;background:#14532d55}.mh-changelog-kind[data-kind="update"]{color:#93c5fd;background:#1e3a8a55}.mh-changelog-kind[data-kind="market"]{color:#fcd34d;background:#78350f55}.mh-changelog-kind[data-kind="issue"]{color:#d8b4fe;background:#4c1d9555}.mh-changelog-kind[data-kind="mode"]{color:#67e8f9;background:#164e6355}.mh-changelog-kind[data-kind="content"]{color:#f9a8d4;background:#83184355}.mh-changelog-kind[data-kind="event"]{color:#fdba74;background:#7c2d1255}.mh-changelog-list p{font-size:10px;color:#cbd5e1}.mh-changelog-head{display:flex;align-items:center;gap:8px;width:100%;min-height:36px;padding:0;border:0;background:transparent;color:inherit;text-align:left}.mh-changelog-head b{flex:1;min-width:0;margin:4px 0}.mh-changelog-head small{flex:none;font-size:8px;font-weight:900;color:#94a3b8;white-space:nowrap}.mh-changelog-detail{margin-top:2px;padding-top:6px;border-top:1px solid #ffffff14}.mh-changelog-empty{padding:18px 12px;text-align:center;line-height:1.7;color:#fbbf24}.mh-changelog-day{position:sticky;top:0;z-index:1;margin:10px 0 6px;padding:3px 0;background:#0f172a;color:#a5b4fc;font:900 10px/1.4 monospace;letter-spacing:.04em}.mh-changelog-day:first-child{margin-top:0}.mh-changelog-group-emoji{flex:none;font-size:13px;line-height:1}.mh-changelog-count{flex:none;position:relative;padding:2px 7px;border-radius:999px;background:#ffffff14;color:#cbd5e1;font:900 9px/1.5 sans-serif;white-space:nowrap}.mh-changelog-count em{margin-left:5px;padding:1px 4px;border-radius:5px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-changelog-peek{margin-top:4px;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;font-size:9px;line-height:1.5;color:#94a3b8}.mh-changelog-kinds{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}.mh-changelog-kinds .mh-changelog-kind{margin-top:0}.mh-changelog-kind i{margin-left:3px;font-style:normal;opacity:.85}.mh-changelog-item{padding:9px 0;border-top:1px solid #ffffff14}.mh-changelog-item:first-child{padding-top:2px;border-top:0}.mh-changelog-item time{display:inline-block;margin-right:6px;font:9px monospace;color:#94a3b8}.mh-changelog-item time em{margin-left:4px;padding:1px 4px;border-radius:5px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-changelog-item b{display:block;margin:4px 0;font-size:11px;line-height:1.5}.mh-changelog-item .mh-changelog-kind{margin-top:0}[data-changelog-link]{display:inline-flex;align-items:center;gap:4px;margin-top:8px;padding:8px 13px;border:1px solid #7dd3fc55;border-radius:11px;background:#0ea5e922;color:#7dd3fc;font:900 10px/1.4 sans-serif;text-decoration:none}.mh-title-dialog textarea{min-height:90px;padding:8px;border-radius:10px;background:#0008;font:9px monospace}
     .mh-tile-viewport{touch-action:none;overscroll-behavior:contain;cursor:grab}.mh-tile-viewport:active{cursor:grabbing}.mh-tile-viewport.overview{overflow:auto}.mh-tile-viewport.overview .mh-tile-board{transform:none}.mh-training-tile{transform:scale(var(--map-scale,1))}.mh-training-tile.current{transform:scale(calc(var(--map-scale,1)*1.08))}.mh-tile-board>i.route{height:17px;border-color:#fef08a;background:#facc15;box-shadow:0 0 14px #fde047;animation:trainingRoutePulse .7s infinite alternate}.mh-training-tile.route-preview{border-color:#fde047;box-shadow:0 0 16px #fde047,0 5px 0 #713f12}.mh-training-tile.stop-preview{z-index:7;border-color:#fff;box-shadow:0 0 0 5px #f97316,0 0 25px #fb923c}.mh-board-buttons{display:flex;align-items:center;gap:4px}.mh-board-buttons button{min-height:34px;padding:0 8px;border-radius:9px;background:#164e63;font-size:8px;font-weight:900}.mh-board-buttons span{padding:3px 5px;border-radius:7px;background:#020617;color:#bae6fd;font:8px monospace}.mh-changelog-list article.unread{border-color:#f59e0b88}.mh-changelog-list time em{float:right;padding:2px 5px;border-radius:6px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-training-effect{position:fixed;z-index:45000;left:50%;top:43%;width:min(78vw,300px);min-height:150px;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;border:3px solid #fff;border-radius:28px;background:radial-gradient(circle,#0ea5e9dd,#020617ee 72%);box-shadow:0 0 55px #38bdf8;pointer-events:none;animation:trainingEffectPop 1.25s ease-out both}.mh-training-effect>span{font-size:58px;filter:drop-shadow(0 0 15px #fff)}.mh-training-effect>b{z-index:2;max-width:90%;text-align:center;color:#fff;font-size:16px;text-shadow:0 2px 5px #000}.mh-training-effect.xp,.mh-training-effect.effect,.mh-training-effect.turn{background:radial-gradient(circle,#22c55edd,#052e16ee 72%);box-shadow:0 0 55px #4ade80}.mh-training-effect.diamond{background:radial-gradient(circle,#38bdf8ee,#172554ee 72%)}.mh-training-effect.item,.mh-training-effect.tool,.mh-training-effect.goal{background:radial-gradient(circle,#fbbf24ee,#581c87ee 72%);box-shadow:0 0 70px #fde047}.mh-training-effect.move,.mh-training-effect.happening{background:radial-gradient(circle,#ef4444dd,#450a0aee 72%);box-shadow:0 0 55px #fb7185}.mh-training-effect i{position:absolute;width:9px;height:9px;border-radius:50%;background:#fff;box-shadow:0 0 12px #fff;animation:trainingParticle 1s ease-out both}.mh-training-effect i:nth-of-type(1){--a:0deg}.mh-training-effect i:nth-of-type(2){--a:60deg}.mh-training-effect i:nth-of-type(3){--a:120deg}.mh-training-effect i:nth-of-type(4){--a:180deg}.mh-training-effect i:nth-of-type(5){--a:240deg}.mh-training-effect i:nth-of-type(6){--a:300deg}@keyframes trainingEffectPop{0%{opacity:0;transform:translate(-50%,-50%) scale(.4)}18%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-58%) scale(.96)}}@keyframes trainingParticle{from{transform:rotate(var(--a)) translateX(18px);opacity:1}to{transform:rotate(var(--a)) translateX(115px) scale(.2);opacity:0}}@keyframes trainingRoutePulse{to{filter:brightness(1.6)}}
     .mh-entering>img{animation:mhGateZoom 1.15s ease-in both}.mh-gate-core{position:absolute;z-index:3;left:50%;top:44%;width:12vmin;height:12vmin;border-radius:50%;background:#fff;box-shadow:0 0 25px 12px #d8b4fe,0 0 90px 40px #7e22ce;transform:translate(-50%,-50%);animation:mhCoreGrow 1.15s ease-in both}.mh-gate-particles{position:absolute;z-index:2;inset:-30%;background:repeating-conic-gradient(from 0deg,transparent 0 8deg,#fbbf2444 9deg,#a855f766 10deg,transparent 11deg 19deg);animation:mhParticles 1.1s ease-in both}.mh-gate-flash{position:absolute;z-index:4;inset:0;background:#f5f0ff;animation:mhGateFlash 1.15s ease-in both}.mh-entering p{position:absolute;z-index:6;left:0;right:0;bottom:calc(9% + env(safe-area-inset-bottom));text-align:center;font-size:11px;font-weight:800;text-shadow:0 2px 6px #000}
@@ -298188,7 +298512,7 @@ const createAnimationStyle = () => {
     /* 横画面のタイトル。横長の絵は左上にロゴがあるので、VERSION の札を左下へ逃がし、絵は上を切らない位置で見せる */
     /* 背の低い横向き(844×390 など)では、更新履歴などの窓が縦長のまま小さく、中身が1件ぶんしか見えなかった(2026-10-27 ダメダシくんの見回り)。幅を広げ、余白を詰める */
     @media(orientation:landscape) and (max-height:500px){.mh-title-modal{padding:calc(8px + env(safe-area-inset-top)) 16px calc(8px + env(safe-area-inset-bottom))}.mh-title-dialog{width:min(100%,720px);max-height:calc(var(--mh-vh) - 16px);padding:12px 16px;gap:8px}}
-    @media(orientation:landscape){.mh-title-visual,.mh-entering>img{object-position:50% 12%}.mh-title-build{position:fixed;left:calc(12px + env(safe-area-inset-left));top:auto;bottom:calc(10px + env(safe-area-inset-bottom))}.mh-title-actions{margin-left:auto}}
+    @media(orientation:landscape){.mh-title-visual,.mh-entering>img{object-position:50% 12%}.mh-title-actions{margin-left:auto}}
     /* 背景の大きさ合わせ(2026-09-30・ユーザー指示「いろんな端末を見て」)。
        ・タイトル: ふつうは画面いっぱい(cover)。ほぼ正方形の画面(縦横比 3:4〜7:5。Foldの内側・4:3のタブレットの横持ち)だけは
          上下や左右が大きく切れてロゴが欠けるので、絵全体を出し(contain)、余りは同じ絵をぼかして埋める

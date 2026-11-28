@@ -339,7 +339,7 @@ ok('stage2以降の上書き規則がbackground-clipを巻き添えで消さな�
 ok('リザルトで達成を大きく祝う',game.includes('data-rhythm-result-celebrate'));
 ok('上位の称号を1つだけ大きく出す',
   game.includes("result.allMarvelous?'ALL MARVELOUS!!':result.allExcellent?'ALL EXCELLENT!!':'FULL COMBO!'"));
-ok('何を達成したのか言葉でも説明する',game.includes('1度もコンボを切らずに完走しました'));
+ok('何を達成したのか言葉でも説明する',game.includes('1度もコンボを切らずに完走しました') /* r1126-080 */);
 ok('達成していないときは出さない',
   game.includes('{(result.fullCombo||result.allExcellent||result.allMarvelous)&&<div data-rhythm-result-celebrate'));
 ok('称号のCSSがある',html.includes('[data-rhythm-result-celebrate] b')&&html.includes('@keyframes mhRhythmCelebrate'));

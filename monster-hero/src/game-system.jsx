@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 05d4cf240f3ff6e9
+// generated-sha256: 7dcbf3c1d8f9e358
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -10393,6 +10393,36 @@ const SoulRankAura = ({ soulRankStage = 0, className = '' }) => {
     <span className="mh-reincarnate-sparks"/>
   </span>;
 };
+// 次に歩いて行く所(歩く層の中の %)。レイドのボス(HP の札ごと)が出ているときは、ボスと重ならない所を選ぶ
+//   (2026-11-28 台帳 r1126-088 ①「まん中で黒いサンタ・歩くモンスター・HP の札が重なる」)。
+//   マスモンの絵は置き場所から左右へ幅の半分・上へ 72%・下へ 28% に描かれる(.mh-home-masumon の translate(-50%,-72%))ので、その分ボスの四角を広げて避ける。
+//   16回試して空いた所が無ければ、ボスの下へ。下に入らなければボスの左右の外へ行く
+const homeWalkingMasumonTarget = (el, laneCenter, laneWidth) => {
+  const pick = () => ({ x: Math.max(6, Math.min(94, laneCenter + (Math.random() - 0.5) * laneWidth)), y: 10 + Math.random() * 80 });
+  let avoid = null;
+  try {
+    const layer = el && el.parentElement;
+    const boss = typeof document !== 'undefined' ? document.querySelector('[data-home-raid-jack]') : null;
+    if (layer && boss && boss.getClientRects().length) {
+      const L = layer.getBoundingClientRect();
+      const rs = [boss, ...boss.querySelectorAll('img')].map((e) => e.getBoundingClientRect()).filter((r) => r.width > 1 && r.height > 1);
+      if (L.width > 0 && L.height > 0 && rs.length) {
+        const B = { left: Math.min(...rs.map((r) => r.left)), right: Math.max(...rs.map((r) => r.right)), top: Math.min(...rs.map((r) => r.top)), bottom: Math.max(...rs.map((r) => r.bottom)) };
+        const mw = el.offsetWidth || 56;
+        avoid = { x1: (B.left - mw / 2 - L.left) / L.width * 100, x2: (B.right + mw / 2 - L.left) / L.width * 100,
+          y1: (B.top - mw * 0.28 - L.top) / L.height * 100, y2: (B.bottom + mw * 0.72 - L.top) / L.height * 100 };
+      }
+    }
+  } catch (_) { avoid = null; }
+  if (!avoid) return pick();
+  const inside = (p) => p.x > avoid.x1 && p.x < avoid.x2 && p.y > avoid.y1 && p.y < avoid.y2;
+  for (let i = 0; i < 16; i++) { const p = pick(); if (!inside(p)) return p; }
+  const p = pick();
+  // ボスの下に入る余地があれば下へ。無ければ(背の低い横向きなど、ボスが歩く層より大きいとき)ボスの左右の外へ(層の外へ少し出てよい)
+  if (avoid.y2 <= 96) return { x: p.x, y: avoid.y2 + Math.random() * Math.max(0, 96 - avoid.y2) };
+  const left = p.x < 50 ? avoid.x1 - 2 - Math.random() * 12 : null, right = p.x >= 50 ? avoid.x2 + 2 + Math.random() * 12 : null;
+  return { x: Math.max(-30, Math.min(130, left !== null ? left : right)), y: p.y };
+};
 // HOME中央の安全領域だけを歩くマスモン。HOMEから外れるとコンポーネントごと破棄され、
 // visibilitychangeでもタイマーを止めるため、画面遷移やバックグラウンド復帰で処理が重複しない。
 const HomeWalkingMasumon = ({ masu, base, masuColors, index = 0, count = 1 }) => {
@@ -10403,6 +10433,7 @@ const HomeWalkingMasumon = ({ masu, base, masuColors, index = 0, count = 1 }) =>
   const timerRef = useRef(null);
   const mountedRef = useRef(true);
   const motionRef = useRef(motion);
+  const selfRef = useRef(null);
   useEffect(() => {
     mountedRef.current = true;
     const clearMotionTimer = () => { if (timerRef.current !== null) { clearTimeout(timerRef.current); timerRef.current = null; } };
@@ -10413,8 +10444,7 @@ const HomeWalkingMasumon = ({ masu, base, masuColors, index = 0, count = 1 }) =>
         const current = motionRef.current;
         // 横方向は個体ごとの緩いレーンを持たせ、5体が同じ場所に居続けるのを避ける。
         const laneWidth = count <= 1 ? 84 : 30;
-        const x = Math.max(6, Math.min(94, laneCenter + (Math.random() - 0.5) * laneWidth));
-        const y = 10 + Math.random() * 80;
+        const { x, y } = homeWalkingMasumonTarget(selfRef.current, laneCenter, laneWidth);
         const distance = Math.hypot(x - current.x, y - current.y);
         const duration = Math.max(2100, Math.min(4800, (1850 + distance * 32) * speedFactor));
         const next = { x, y, facing: x < current.x ? -1 : 1, walking: true, duration };
@@ -10441,7 +10471,7 @@ const HomeWalkingMasumon = ({ masu, base, masuColors, index = 0, count = 1 }) =>
     if (document.visibilityState !== 'hidden') scheduleWalk();
     return () => { mountedRef.current = false; clearMotionTimer(); document.removeEventListener('visibilitychange', onVisibilityChange); };
   }, [masu.id, index, count]);
-  return <div className={`mh-home-masumon ${motion.walking ? 'is-walking' : ''}`} style={{left:`${motion.x}%`,top:`${motion.y}%`,zIndex:Math.round(motion.y),transitionDuration:`${motion.duration}ms`}}>
+  return <div ref={selfRef} className={`mh-home-masumon ${motion.walking ? 'is-walking' : ''}`} style={{left:`${motion.x}%`,top:`${motion.y}%`,zIndex:Math.round(motion.y),transitionDuration:`${motion.duration}ms`}}>
     <div className="mh-home-masumon-bob" style={{transform:`scaleX(${motion.facing})`,isolation:'isolate'}}>
       <DyedMonsterImage baseId={masu.baseId} src={base.imgUrl || base.iconUrl} alt="" masuColors={masuColors} draggable={false}/>
       <SoulRankAura soulRankStage={masu.soulRankStage} className="is-home"/>
@@ -36050,7 +36080,7 @@ const rhythmBuddyTalkReplyKind = (text) => {
   if (/よろしく|はじめまして|こんにちは/.test(t)) return 'replyHello';
   if (/ありがとう/.test(t)) return 'replyThanks';
   if (/ナイス|すごい|うまい|GG/.test(t)) return 'replyNice';
-  if (/もう[一1]回|もう[一1]度|もういっかい|次いこう/.test(t)) return 'replyAgain';
+  if (/もう[一1]回|もう[一1]度|もういっかい|次いこう/.test(t)) return 'replyAgain'; // 人の発言は漢数字も算用数字も拾う
   if (/ドンマイ|おしい|惜しい/.test(t)) return 'replyDrop';
   if (/待って|まって/.test(t)) return 'replyWait';
   return '';
@@ -36084,7 +36114,7 @@ const RHYTHM_BUDDY_CONVO_RULES = Object.freeze([
   { kind: 'hardTalk', re: /(難しい|むずかしい|むずい|ムズ|きつい|キツ|無理|むり)/ },
   { kind: 'easyTalk', re: /(簡単|かんたん|楽勝|らくしょう|余裕|よゆう|ちょろい)/ },
   { kind: 'replyDrop', re: /(ドンマイ|どんまい|惜しい|おしい|残念|ざんねん)/ },
-  { kind: 'replyAgain', re: /(もう[一1]回|もういっかい|もう[一1]度|次いこう|つぎいこう|もっかい)/ },
+  { kind: 'replyAgain', re: /(もう一回|もう1回|もういっかい|もう一度|もう1度|次いこう|つぎいこう|もっかい)/ }, // 人が打つ言葉は漢数字も算用数字も拾う(r1126-080 で判定の語まで数字になっていた)
   { kind: 'replyWait', re: /(待って|まって|ちょっと待|ちょっとまっ|少々|準備中)/ },
   { kind: 'cheer', re: /(がんばれ|頑張れ|がんばろ|頑張ろ|ファイト|いくぞ|行くぞ|やるぞ|気合|きあい|任せた|まかせた)/ },
   { kind: 'challenge', re: /(勝負|対決|負けない|勝つ|勝てる|ライバル)/ },
@@ -39215,6 +39245,17 @@ const RAID_XMAS_ENDING_NOTCLEARED_ID = 'raid_xmas_ending_notcleared';
 const RAID_XMAS_STORY_IDS = Object.freeze([
   RAID_XMAS_STORY_START_ID, ...Object.values(RAID_XMAS_STORY_AFTER_TIER), RAID_XMAS_ENDING_CLEARED_ID, RAID_XMAS_ENDING_NOTCLEARED_ID,
 ]);
+// お話の場面の背景(r1126-090・社長「背景とかなんもないの？」)。台本の行の bg:'xmas_<絵の名前>@<かぶせる色>'(色は無くてよい)。
+//   絵は事件簿と同じ表(79-screen-xmas-novel.jsx の XMAS_NOVEL_BG_IMG)、色も事件簿の XMAS_NOVEL_TINT(night・storm・candle・morning)。
+//   どの話のどの行でどの絵かは docs/progress/raid-xmas-story-bg/BG-TABLE.md。xmas_ で始まらない名前は null(ほかのお話の背景はいつもの STORY_SCENE_IMAGES)
+const raidXmasSceneBgOf = (name) => {
+  const m = typeof name === 'string' ? name.match(/^xmas_([a-z0-9_]+?)(?:@([a-z]+))?$/) : null;
+  if (!m || typeof XMAS_NOVEL_BG_IMG === 'undefined') return null;
+  const img = XMAS_NOVEL_BG_IMG[m[1]];
+  if (!img) return null;
+  const tint = m[2] && typeof XMAS_NOVEL_TINT !== 'undefined' ? (XMAS_NOVEL_TINT[m[2]] || '') : '';
+  return { img, base: m[1], tint };
+};
 // 段階を倒したあと・期間が終わったあとに流すお話の候補(古い順)。totals が取れていないときは段階の話を出さない
 const raidXmasStoryCandidates = (totals, nowMs) => {
   const out = [];
@@ -44462,8 +44503,20 @@ const QUICK_ANYWHERE_FLOAT_STEP = 6;
 const QUICK_ANYWHERE_FLOAT_MAX_LIFT = 0.6;
 // 画面ごとの最初の候補の隅(書いていない画面は右下)。神殿は横向きで右半分がスクロールする一覧なので左下
 const QUICK_ANYWHERE_FLOAT_SIDES = Object.freeze({ TEMPLE: 'left' });
+// 置き場所の指定(2026-11-28 台帳 r1126-088 ⑤「右の『1周目 W3/10』の札が1つだけ浮く」): 画面が [data-quick-anywhere-slot] の空き枠を出していれば、
+//   まずその枠のまん中に置く(新しい HOME はクリスマスの札の右の空き。前の HOME で時計の列があった所)。枠が無い・見えない・ほかのボタンにかかるときは、今までどおり隅から探す
+const quickAnywhereFloatSlot = (el) => {
+  if (typeof document === 'undefined' || !el) return null;
+  const slot = document.querySelector('[data-quick-anywhere-slot]');
+  if (!slot || !slot.getClientRects().length) return null;
+  const r = slot.getBoundingClientRect();
+  const w = el.offsetWidth || 70, h = el.offsetHeight || 34;
+  if (r.width < w || r.height < h) return null;
+  return { side: 'right', lift: 0, slot: true, top: Math.round(r.top + (r.height - h) / 2), left: Math.round(r.left + (r.width - w) / 2) };
+};
 const quickAnywhereFloatStyle = (spot) => {
   const s = spot.hidden ? { visibility: 'hidden', pointerEvents: 'none' } : { opacity: 0.86 };
+  if (spot.slot) return Object.assign(s, { position: 'fixed', top: `${spot.top}px`, left: `${spot.left}px` });
   Object.assign(s, { position: 'fixed', bottom: `max(${8 + spot.lift}px, calc(var(--mh-sa-bottom, 0px) + ${6 + spot.lift}px))` });
   if (spot.side === 'right') s.right = 'max(8px, calc(var(--mh-sa-right, 0px) + 6px))';
   else s.left = 'max(8px, calc(var(--mh-sa-left, 0px) + 6px))';
@@ -44472,6 +44525,7 @@ const quickAnywhereFloatStyle = (spot) => {
 // そこに置いたときの帯の四角(画面の座標)
 const quickAnywhereFloatRect = (el, spot) => {
   const w = el.offsetWidth || 70, h = el.offsetHeight || 34;
+  if (spot.slot) return { left: spot.left, top: spot.top, right: spot.left + w, bottom: spot.top + h };
   const css = getComputedStyle(document.documentElement);
   const num = (v) => { const n = parseFloat(v); return Number.isFinite(n) ? n : 0; };
   const saB = num(css.getPropertyValue('--mh-sa-bottom')), saL = num(css.getPropertyValue('--mh-sa-left')), saR = num(css.getPropertyValue('--mh-sa-right'));
@@ -44500,6 +44554,8 @@ const quickAnywhereFloatHits = (el, spot, known = null) => {
 const quickAnywhereFloatPick = (el, screen) => {
   const first = QUICK_ANYWHERE_FLOAT_SIDES[screen] === 'left' ? 'left' : 'right';
   const sides = first === 'left' ? ['left', 'right'] : ['right', 'left'];
+  const slot = quickAnywhereFloatSlot(el);
+  if (slot && quickAnywhereFloatHits(el, slot) === 0) return slot;
   // まず隅そのもの(持ち上げない)を、最初の候補→反対の順に見る
   for (const side of sides) { const spot = { side, lift: 0 }; if (quickAnywhereFloatHits(el, spot) === 0) return spot; }
   const maxLift = Math.max(0, Math.floor(((typeof window !== 'undefined' ? window.innerHeight : 0) * QUICK_ANYWHERE_FLOAT_MAX_LIFT) / QUICK_ANYWHERE_FLOAT_STEP)) * QUICK_ANYWHERE_FLOAT_STEP;
@@ -44523,18 +44579,18 @@ const QuickAnywhereFloat = ({ screen, children, style, ...rest }) => {
     // 決めた場所にかかっているもの(画面を覆うシートなど)は入れない。かかっている間は隠し、どいたら出す
     const remember = (base) => { const set = new WeakSet(); const el = ref.current; if (typeof document !== 'undefined' && el) { const R = quickAnywhereFloatRect(el, base); for (const o of document.querySelectorAll('button,a,[role=button],[data-quick-avoid]')) { const r = o.getBoundingClientRect(); if (!(Math.min(R.right, r.right) - Math.max(R.left, r.left) > 1 && Math.min(R.bottom, r.bottom) - Math.max(R.top, r.top) > 1)) set.add(o); } } knownRef.current = set; };
     // 決める(画面が変わったとき・向きや大きさが変わったときだけ)
-    const decide = () => { if (!ref.current) return; const next = quickAnywhereFloatPick(ref.current, screen); const base = { side: next.side, lift: next.lift }; placedRef.current = { ...base, fromHidden: !!next.hidden }; remember(base); setSpot(next.hidden ? { ...base, hidden: true } : base); };
+    const decide = () => { if (!ref.current) return; const next = quickAnywhereFloatPick(ref.current, screen); const base = { side: next.side, lift: next.lift, ...(next.slot ? { slot: true, top: next.top, left: next.left } : {}) }; placedRef.current = { ...base, fromHidden: !!next.hidden }; remember(base); setSpot(next.hidden ? { ...base, hidden: true } : base); };
     // シート・確認の窓がかぶったかだけを見る。置いたときに無かったボタンにかかったら隠し、外れたら同じ場所に戻す(場所は変えない)
     // どこも空いていなくて隠れたとき(覆うシートが出ている最中に決めたとき)だけは、隠れたまま決め直す(見えている帯は動かさない)
-    const watch = () => { const el = ref.current, placed = placedRef.current; if (!el || !placed) return; if (placed.fromHidden) { decide(); return; } const base = { side: placed.side, lift: placed.lift }; const covered = quickAnywhereFloatHits(el, base, knownRef.current) > 0;
-      setSpot(prev => (!!prev.hidden === covered && prev.side === base.side && prev.lift === base.lift ? prev : covered ? { ...base, hidden: true } : base)); };
+    const watch = () => { const el = ref.current, placed = placedRef.current; if (!el || !placed) return; if (placed.fromHidden) { decide(); return; } const base = { side: placed.side, lift: placed.lift, ...(placed.slot ? { slot: true, top: placed.top, left: placed.left } : {}) }; const covered = quickAnywhereFloatHits(el, base, knownRef.current) > 0;
+      setSpot(prev => (!!prev.hidden === covered && prev.side === base.side && prev.lift === base.lift && prev.top === base.top && prev.left === base.left ? prev : covered ? { ...base, hidden: true } : base)); };
     decide();
     const t1 = setTimeout(decide, 300), t2 = setTimeout(decide, 1200), iv = setInterval(watch, 800);
     let rt = null; const onResize = () => { clearTimeout(rt); rt = setTimeout(decide, 250); };
     if (typeof window !== 'undefined') window.addEventListener('resize', onResize);
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(rt); clearInterval(iv); if (typeof window !== 'undefined') window.removeEventListener('resize', onResize); };
   }, [screen]);
-  return <button ref={ref} type="button" data-quick-anywhere-spot={spot.hidden ? 'hidden' : `${spot.side}-${spot.lift}`} {...rest} style={{ ...(style || {}), ...quickAnywhereFloatStyle(spot) }}>{children}</button>;
+  return <button ref={ref} type="button" data-quick-anywhere-spot={spot.hidden ? 'hidden' : spot.slot ? 'slot' : `${spot.side}-${spot.lift}`} {...rest} style={{ ...(style || {}), ...quickAnywhereFloatStyle(spot) }}>{children}</button>;
 };
 
 // ---- part: 50-error-boundary.jsx ----
@@ -52233,7 +52289,10 @@ const HOME_EVENT_BADGE_CSS = `
 //   字はいちばん小さくても 11px(すぐできる直し7)。横向き・タブレットは README の目安(帯の幅は最大 600px・入口は1列で遊ぶ4つを幅広に)
 const HOME_V2_CSS = `
 .mh-home-v2{--v2-panel:#102522eb;--v2-line:#f7df9a88}
-.mh-home-v2 .mh-home-top{display:flex;align-items:center;gap:6px;padding:calc(6px + env(safe-area-inset-top)) 8px 0;z-index:20}
+/* 上の1段の上は 6px だけ(2026-11-28 台帳 r1126-088 追記1・社長「上部空いてるのってなんだっけ？」)。
+   前は切り欠きの高さ env(safe-area-inset-top) も足していたが、body が同じ分をもう空けている(index.html)ので二重になり、時刻の段の下に空の絵だけの空きが出ていた。
+   body の空けで時刻の段にはかからない(Safari で開いたときは env が 0) */
+.mh-home-v2 .mh-home-top{display:flex;align-items:center;gap:6px;padding:6px 8px 0;z-index:20}
 .mh-home-v2 .mh-home-top .mh-home-player{flex:1 1 auto;min-width:0;height:46px;padding:3px 10px 3px 4px;gap:7px}
 .mh-home-v2 .mh-home-top .mh-home-avatar{flex:0 0 36px;width:36px;height:36px}
 .mh-home-v2 .mh-home-top .mh-home-player-copy strong{max-width:none;font-size:13px;line-height:1.25}
@@ -52250,7 +52309,7 @@ const HOME_V2_CSS = `
 .mh-home-v2 .mh-home-menu-btn em,.mh-home-v2 .mh-home-menu .mh-home-side-btn em{display:flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:999px;border:2px solid #fff;background:#e11d48;color:#fff;font-size:11px;font-style:normal;font-weight:900;line-height:1;box-shadow:0 2px 6px #0008}
 .mh-home-v2 .mh-home-menu-btn em{position:absolute;top:-7px;right:-6px}
 .mh-home-v2 .mh-home-menu-shade{position:absolute;inset:0;z-index:28;border:0;background:#0006;cursor:default}
-.mh-home-v2 .mh-home-menu{position:absolute;z-index:29;right:8px;top:calc(58px + env(safe-area-inset-top));display:flex;flex-direction:column;gap:6px;width:min(240px,calc(100% - 16px));padding:8px;border:1px solid var(--v2-line);border-radius:16px;background:#0d1f1cf7;box-shadow:0 10px 30px #000c}
+.mh-home-v2 .mh-home-menu{position:absolute;z-index:29;right:8px;top:58px;display:flex;flex-direction:column;gap:6px;width:min(240px,calc(100% - 16px));padding:8px;border:1px solid var(--v2-line);border-radius:16px;background:#0d1f1cf7;box-shadow:0 10px 30px #000c}
 /* 閉じているときは目に見えない形(読み上げには残す)。メニューの中の「設定」「ミッション」などを、読み上げの利用者と検査がいつでも見つけられるように */
 .mh-home-v2 .mh-home-menu:not(.is-open){width:1px;height:1px;padding:0;margin:0;border:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap;pointer-events:none;box-shadow:none}
 .mh-home-v2 .mh-home-menu.is-open{display:flex;animation:mhHomeMenuIn .15s ease-out}
@@ -52269,23 +52328,21 @@ const HOME_V2_CSS = `
 .mh-home-v2 .mh-home-menu .mh-home-side-btn em.mh-unread-badge{width:auto!important;height:20px!important;min-width:20px;padding:0 6px!important;border-radius:999px!important;font-size:11px!important;line-height:1!important;white-space:nowrap}
 .mh-home-v2 .mh-home-settings .mh-home-side-ic{border-color:#cbd5e1aa;background:#1e293be8;color:#e2e8f0}
 .mh-home-v2 .mh-home-band{position:relative;z-index:6;margin:6px 8px 0}
-.mh-home-v2 .mh-home-band-view{overflow:hidden;border-radius:14px}
-.mh-home-v2 .mh-home-band-track{display:flex;transition:transform .35s ease}
-.mh-home-v2 .mh-home-band-slide{flex:0 0 100%;min-width:0;height:80px}
-.mh-home-v2 .mh-home-band-slide>button{width:100%;height:80px}
-.mh-home-v2 .mh-home-band .mh-home-event-banner{max-width:none;justify-content:center;gap:4px;padding:8px 14px;border-radius:14px;font-size:15px}
-.mh-home-v2 .mh-home-band .mh-home-event-banner .r1{column-gap:8px}
-.mh-home-v2 .mh-home-band .mh-home-event-banner small{font-size:11px}
-.mh-home-v2 .mh-home-band .mh-home-event-banner .t2{font-size:12px}
-.mh-home-v2 .mh-home-band .mh-home-tour-banner{max-width:none;gap:10px;padding:8px 14px;border-radius:14px}
-.mh-home-v2 .mh-home-band .mh-home-tour-banner>span:first-child{font-size:30px}
-.mh-home-v2 .mh-home-band .mh-home-tour-banner b{font-size:15px}
-.mh-home-v2 .mh-home-band .mh-home-tour-banner small,.mh-home-v2 .mh-home-band .mh-home-tour-banner em{font-size:11px}
-.mh-home-v2 .mh-home-band-nav{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:2px}
-.mh-home-v2 .mh-home-band-nav .mh-home-event-strip-dots button{display:flex;align-items:center;justify-content:center;width:22px;height:22px;padding:0;border:0;background:transparent}
-.mh-home-v2 .mh-home-band-nav .mh-home-event-strip-dots i{width:8px;height:8px;box-shadow:0 0 0 1px #0008}
-.mh-home-v2 .mh-home-band-nav .mh-home-event-strip-dots button.on i{width:18px;border-radius:4px;background:#fde68a}
-.mh-home-v2 .mh-home-band-next{min-width:0;max-width:72%;min-height:22px;overflow:hidden;padding:2px 9px;border-radius:999px;background:#000a;color:#fffbeb;font-size:11px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}
+/* イベントの表示(r1126-088 で前の形に戻した): クリスマスの絵の札 → その下に細い帯(前の HOME と同じ作り)。
+   追記1(社長「イベントバナーをもう少し横幅小さくして」): 札は前(312×80)より少し小さく 278×74(縦横の比をほぼ同じにして、絵の切り方を前と同じに)。
+   細い帯も札と同じ幅まで。札の右の空きは裏クイックの札の置き場 */
+.mh-home-v2 .mh-home-band-xmas{width:calc(100% - 96px)}
+.mh-home-v2 .mh-home-band-xmas>button[data-home-xmas-entry]{height:74px!important}
+.mh-home-v2 .mh-home-band-quick-slot{position:absolute;top:0;right:-6px;width:96px;height:74px;pointer-events:none}
+.mh-home-v2 .mh-home-band-strip{display:flex;align-items:center;gap:6px;width:fit-content;max-width:100%;margin-top:3px}
+.mh-home-v2 .mh-home-band-strip .mh-home-event-banner{max-width:calc(100cqw - 112px)}
+.mh-home-v2 .mh-home-band-strip .mh-home-tour-banner{max-width:min(72vw,300px)}
+/* ほかのイベントの絵の札(追記2)。クリスマスの札と同じ幅・少し低く(マップを狭くしない) */
+.mh-home-v2 .mh-home-band-strip:has(.mh-home-event-art){width:calc(100% - 96px)}
+.mh-home-v2 .mh-home-event-art{position:relative;display:block;flex:1 1 auto;width:100%;height:62px;overflow:hidden;padding:0;border:2px solid #f9a8d4;border-radius:12px;background:#3b0a2e;box-shadow:0 4px 12px #0009}
+.mh-home-v2 .mh-home-event-art:active{transform:scale(.97);filter:brightness(1.15)}
+.mh-home-v2 .mh-home-event-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 12%;pointer-events:none}
+.mh-home-v2 .mh-home-event-art-sub{position:absolute;left:6px;bottom:4px;padding:1px 7px;border:1px solid #fbcfe8;border-radius:999px;background:#9d174de6;color:#fff;font-size:10px;font-weight:900;line-height:1.3;white-space:nowrap}
 .mh-home-v2 .mh-home-assistant{width:70%;max-width:360px;margin:6px 0 0 8px}
 .mh-home-v2 .mh-home-assistant-fold{margin:6px 0 0 8px}
 .mh-home-v2 .mh-home-assistant-show-mark{right:-8px;bottom:-6px;width:24px;height:24px;font-size:14px;background:#fff!important;box-shadow:0 0 0 2px #e11d48,0 2px 6px #0009;animation:mhHomePeerMark 1.4s ease-in-out infinite}
@@ -52293,7 +52350,11 @@ const HOME_V2_CSS = `
 @media(prefers-reduced-motion:reduce){.mh-home-v2 .mh-home-assistant-show-mark{animation:none}}
 .mh-home-v2 .mh-home-assistant-news-dot{position:absolute;top:1px;right:1px;width:13px;height:13px;border-radius:50%;border:2px solid #fff;background:#e11d48;box-shadow:0 1px 4px #0009}
 .mh-home-v2 .mh-home-peer-mark{position:absolute;left:52px;top:calc(100% + 4px);width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:50%;border:1.5px solid #f9a8d4;background:#1e0b24ee;font-size:16px;box-shadow:0 2px 8px #0009}
-.mh-home-v2 .mh-home-dock{gap:6px;padding:8px 8px calc(8px + env(safe-area-inset-bottom))}
+.mh-home-v2 .mh-home-dock{gap:6px;padding:8px}
+/* iPhone の下の安全域(ホームの棒の所)(2026-11-28 台帳 r1126-088 ③「入口の段の下に暗い余白、その下が黒い帯」)。
+   body が安全域の分だけ下を空けている(index.html)のに、ドックの下でも安全域の分をもう1回空けていた(暗い余白)。ドックの下は前の HOME と同じ 8px に戻し、
+   安全域(画面の外の親 .mh-app が切り取るので HOME を伸ばせない)は、HOME を出している間だけドックの下の端と同じ色で塗る(黒い帯にしない) */
+body:has(.mh-home-v2){background:linear-gradient(to top,#0b1f1a calc(env(safe-area-inset-bottom) + 1px),#000 0)}
 .mh-home-v2 .mh-home-dock-row{gap:6px}
 .mh-home-v2 .mh-home-dock-top>.mh-home-dock-card,.mh-home-v2 .mh-home-dock-top>.mh-home-success{height:clamp(112px,18cqh,150px);padding:0;gap:0;overflow:hidden;border-radius:14px}
 .mh-home-v2 .mh-home-dock-top .mh-home-dock-pic,.mh-home-v2 .mh-home-dock-top .mh-home-success .pic{flex:1 1 auto;width:100%;max-width:none;height:auto;min-height:0;aspect-ratio:auto;border-radius:0}
@@ -52308,12 +52369,12 @@ const HOME_V2_CSS = `
 .mh-home-v2 .mh-home-dock-bottom .mh-home-dock-name{font-size:11px;line-height:1.2}
 @media(max-width:350px){.mh-home-v2 .mh-home-dock-top .mh-home-dock-name,.mh-home-v2 .mh-home-dock-top .mh-home-success .nm{font-size:10.5px;letter-spacing:-.06em}}
 @media(orientation:landscape) and (max-height:600px){
-  .mh-home-v2 .mh-home-band{position:absolute;left:8px;top:calc(58px + env(safe-area-inset-top));width:min(37%,330px);margin:0}
-  .mh-home-v2 .mh-home-band-slide,.mh-home-v2 .mh-home-band-slide>button{height:68px}
-  .mh-home-v2 .mh-home-band-slide>button[data-home-xmas-entry]{height:68px!important}
-  .mh-home-v2 .mh-home-assistant,.mh-home-v2 .mh-home-assistant-fold{position:absolute;left:8px;top:calc(160px + env(safe-area-inset-top));margin:0}
+  .mh-home-v2 .mh-home-band{position:absolute;left:8px;top:58px;width:min(37%,330px);margin:0}
+  .mh-home-v2 .mh-home-band-xmas{width:100%}
+  .mh-home-v2 .mh-home-band-strip .mh-home-event-banner,.mh-home-v2 .mh-home-band-strip .mh-home-tour-banner{max-width:100%}
+  .mh-home-v2 .mh-home-assistant,.mh-home-v2 .mh-home-assistant-fold{position:absolute;left:8px;top:172px;margin:0}
   .mh-home-v2 .mh-home-assistant{width:min(37%,330px)}
-  .mh-home-v2 .mh-home-dock{flex-direction:row;align-items:flex-end;gap:8px;padding:5px 8px calc(6px + env(safe-area-inset-bottom))}
+  .mh-home-v2 .mh-home-dock{flex-direction:row;align-items:flex-end;gap:8px;padding:5px 8px 6px}
   .mh-home-v2 .mh-home-dock-top{flex:1.9 1 0}
   .mh-home-v2 .mh-home-dock-bottom{flex:1 1 0}
   .mh-home-v2 .mh-home-dock-top>.mh-home-dock-card,.mh-home-v2 .mh-home-dock-top>.mh-home-success{height:clamp(84px,25cqh,104px);max-width:none}
@@ -52321,10 +52382,10 @@ const HOME_V2_CSS = `
 }
 @container (min-width:700px) and (min-height:560px){
   .mh-home-v2 .mh-home-band{width:min(600px,calc(100% - 16px));margin:8px auto 0}
-  .mh-home-v2 .mh-home-band-slide,.mh-home-v2 .mh-home-band-slide>button{height:92px}
-  .mh-home-v2 .mh-home-band-slide>button[data-home-xmas-entry]{height:92px!important}
+  .mh-home-v2 .mh-home-band-xmas{width:100%}
+  .mh-home-v2 .mh-home-band-xmas>button[data-home-xmas-entry]{height:92px!important}
   .mh-home-v2 .mh-home-assistant{width:360px}
-  .mh-home-v2 .mh-home-dock{flex-direction:row;align-items:flex-end;gap:14px;padding:10px 14px calc(12px + env(safe-area-inset-bottom))}
+  .mh-home-v2 .mh-home-dock{flex-direction:row;align-items:flex-end;gap:14px;padding:10px 14px 12px}
   .mh-home-v2 .mh-home-dock-top{flex:2 1 0;justify-content:center}
   .mh-home-v2 .mh-home-dock-bottom{flex:1 1 0}
   .mh-home-v2 .mh-home-dock-top>.mh-home-dock-card,.mh-home-v2 .mh-home-dock-top>.mh-home-success{height:min(170px,19cqh);max-width:180px;border-radius:16px}
@@ -52333,9 +52394,13 @@ const HOME_V2_CSS = `
   .mh-home-v2 .mh-home-dock-bottom .mh-home-dock-pic{width:62px;height:62px}
   .mh-home-v2 .mh-home-dock-bottom .mh-home-dock-name{font-size:12px}
 }
-/* クリスマスの入口(79-screen-xmas-event.jsx)は、横向きで帯を右の列の横へ動かす決まりを持っている(前の HOME の形のため)。
-   新しい帯の中では、ほかの1枚と同じ位置・大きさのままにする(部品の中身は変えない。HOME の側で上書きするだけ) */
-.mh-home-v2 .mh-home-band-slide[data-home-xmas-entry-strip]{position:relative!important;left:auto!important;right:auto!important;top:auto!important;width:auto!important;margin:0!important}
+/* クリスマスの入口(79-screen-xmas-event.jsx)は、横向きで帯を右の列の横へ動かす決まりを持っている(前の HOME の右の列のため)。
+   新しい HOME には右の列が無いので、帯の置き場(.mh-home-band)の中に置いたままにする(部品の中身は変えない。HOME の側で上書きするだけ)。
+   背の低い横向きの高さ 54px と字の大きさは、部品の決まり(前の HOME と同じ)のまま */
+.mh-home-v2 .mh-home-band [data-home-xmas-entry-strip]{position:relative!important;left:auto!important;right:auto!important;top:auto!important;margin:0!important}
+.mh-home-v2 .mh-home-band .mh-home-band-xmas{width:calc(100% - 96px)!important}
+@media(orientation:landscape) and (max-height:600px){.mh-home-v2 .mh-home-band-strip:has(.mh-home-event-art){width:100%}.mh-home-v2 .mh-home-event-art{height:50px}.mh-home-v2 .mh-home-event-art img{object-position:50% 3%}.mh-home-v2 .mh-home-band .mh-home-band-xmas{width:100%!important}.mh-home-v2 .mh-home-band-xmas>button[data-home-xmas-entry]{height:54px!important}.mh-home-v2 .mh-home-band-quick-slot{display:none}}
+@container (min-width:700px) and (min-height:560px){.mh-home-v2 .mh-home-band-strip:has(.mh-home-event-art){width:100%}.mh-home-v2 .mh-home-event-art{height:84px}.mh-home-v2 .mh-home-band .mh-home-band-xmas{width:100%!important}.mh-home-v2 .mh-home-band-quick-slot{display:none}}
 @media (orientation:landscape) and (max-height:520px){.mh-home-v2 .mh-home-band .mh-xmas-entry[data-home-xmas-entry="banner"] .mh-xmas-entry-sub{font-size:11px}}
 /* 横持ちの iPhone の切り欠き(カメラの欠け)に、押す物を入れない。左右の余白に端末の安全な余白(safe-area)を足す */
 .mh-home-v2 .mh-home-top{padding-left:calc(8px + env(safe-area-inset-left));padding-right:calc(8px + env(safe-area-inset-right))}
@@ -52367,8 +52432,10 @@ const HOME_RAID_JACK_CSS = `
   82%{transform:translateY(0) scale(1.05,.94) rotate(1deg)}}
 @keyframes mhRaidJackShadow{0%,100%{transform:scaleX(1.05);opacity:.5}50%{transform:scaleX(.7);opacity:.3}}
 @media(prefers-reduced-motion:reduce){.mh-home-raid-jack-img,.mh-home-raid-jack-shadow{animation:none}}
+/* クリスマスのボス(背の高い絵)は、まん中に置く。前は translateX(-50%) で寄せていたが、跳ねる動き(transform)がそれを上書きして、
+   絵の幅の半分だけ右へずれていた(2026-11-28 台帳 r1126-088 ②「サンタが右寄りで大きすぎる」)。いまは left/right:0 と margin:auto で寄せ、高さも 135% → 110% に */
 /* 背の低い横画面: クリスマスのボスは枠より上へはみ出して描くので、耳が上の欄の裏に隠れた(#7857 点検の8)。絵を少し縮めて上を空ける。足もとの位置は変えない */
-@media(orientation:landscape) and (max-height:430px){.mh-home-raid-boss-tall{height:112% !important}}
+@media(orientation:landscape) and (max-height:430px){.mh-home-raid-boss-tall{height:100% !important}}
 `;
 // ★重なり順は 4(2026-10-11・社長の実機の指摘で、旧・施設の並び(z-index:3)より前にした)。
 //   枠そのものは押せなくして(pointerEvents:none)、吹き出しとジャック本体だけを押せるようにする
@@ -52568,9 +52635,9 @@ const HomeRaidJack = ({ eventId, onOpen, ev = RAID_EVENT_JACK }) => {
         <span style={{ display:'block', height:'7px', marginTop:'3px', borderRadius:'999px', overflow:'hidden', background:'#000a', border:'1px solid #fff3' }} role="progressbar" aria-valuemin={0} aria-valuemax={tier.hp} aria-valuenow={left}>
           <span style={{ display:'block', height:'100%', width:`${rate * 100}%`, background:'#f97316' }} />
         </span>
-        {totals === null ? <span style={{ display:'block', fontSize:'8px', opacity:.8 }}>準備中</span>
-          : totals === undefined ? <span style={{ display:'block', fontSize:'8px', opacity:.8 }}>…</span>
-          : <span style={{ display:'block', fontSize:'8px', opacity:.85 }}>共有HP {left.toLocaleString()}</span>}
+        {totals === null ? <span style={{ display:'block', fontSize:'11px', opacity:.8 }}>準備中</span>
+          : totals === undefined ? <span style={{ display:'block', fontSize:'11px', opacity:.8 }}>…</span>
+          : <span data-home-raid-hp-text style={{ display:'block', fontSize:'11px', opacity:.9 }}>共有HP {left.toLocaleString()}</span>}
         </>}
       </span>
   );
@@ -52614,8 +52681,10 @@ const HomeRaidJack = ({ eventId, onOpen, ev = RAID_EVENT_JACK }) => {
         {/* 大王を倒したあとは、小さなぱんぷきんが遊びに来る(オーラ・ポーズ絵なし。跳ねる動きは同じ) */}
         {allDone && isJack ? <img className="mh-home-raid-jack-img" src={PUMPKIN_ICON_IMG} alt="" draggable={false}
           style={{ position:'absolute', left:`${(1 - RAID_JACK_PUMPKIN_ART_SCALE) * 50}%`, bottom:0, width:`${RAID_JACK_PUMPKIN_ART_SCALE * 100}%`, height:'auto', filter:'drop-shadow(0 6px 10px #000a)', pointerEvents:'none' }} />
+        // ★真ん中へは left/right 0 と margin auto で寄せる。transform で寄せると、跳ねる動き(mhRaidJackHop の transform)に上書きされて
+        //   絵の幅の半分だけ右へずれる(2026-11-28 HOME の作り直しの点検: ボスの絵が共有HPの札より右にずれていた)
         : !isJack ? <img className="mh-home-raid-jack-img mh-home-raid-boss-tall" data-home-raid-boss={ev.key} src={allDone ? ev.afterBossImg() : ev.bossImg()} alt="" draggable={false}
-          style={{ position:'absolute', left:'50%', bottom:0, height:'135%', width:'auto', transform:'translateX(-50%)', filter:'drop-shadow(0 6px 10px #000a)', pointerEvents:'none' }} /> : <>
+          style={{ position:'absolute', left:0, right:0, margin:'0 auto', bottom:0, height:'110%', width:'auto', filter:'drop-shadow(0 6px 10px #000a)', pointerEvents:'none' }} /> : <>
         <img className="mh-home-raid-jack-img" src={JACK_IMG} alt="" draggable={false}
           style={{ position:'absolute', left:`${(1 - RAID_JACK_NORMAL_ART_SCALE) * 50}%`, bottom:0, width:`${RAID_JACK_NORMAL_ART_SCALE * 100}%`, height:'auto', opacity:pose ? 0 : 1, filter:`drop-shadow(0 6px 10px #000a) ${raidJackAuraGlowFilter(Number(String(tier.id).slice(1)) || 0, 0.8)}`, pointerEvents:'none' }} />
         <img className="mh-home-raid-jack-img" src={JACK_POSE_IMG} alt="" draggable={false} aria-hidden="true"
@@ -52748,7 +52817,7 @@ function HomeScreenV1({
 
       <main ref={homeSceneRef} className="mh-home-scene" aria-label="村の広場">
         {/* 背景は設定の「ホーム画面アレンジ」で選んだ絵。HOMEの枠の形に合った絵を画面いっぱいに出す(横長は is-wide、正方形は is-square) */}
-        <picture className={`mh-home-background ${homeBackgroundReady?'is-ready':''} ${homeBackgroundWide?'is-wide':''} ${homeBackgroundSquare?'is-square':''}`} aria-hidden="true"><img className="mh-home-backdrop" src={homeBackgroundSrc} alt=""/><img className="mh-home-main" src={homeBackgroundSrc} alt=""/></picture>
+        <picture className={`mh-home-background ${homeBackgroundReady?'is-ready':''} ${homeBackgroundWide?'is-wide':''} ${homeBackgroundSquare?'is-square':''} ${homeSceneShape==='portrait'?'is-tall':''}`} aria-hidden="true"><img className="mh-home-backdrop" src={homeBackgroundSrc} alt=""/><img className="mh-home-main" src={homeBackgroundSrc} alt=""/></picture>
         <div className="mh-home-masumon-layer" aria-hidden="true">{homePastureMasumons.map((masu,index)=><HomeWalkingMasumon key={masu.id} masu={masu} base={ALL_PLAYER_MONSTERS[masu.baseId]} masuColors={getMasuColors(masu)} index={index} count={homePastureMasumons.length}/>)}</div>
         {/* 設定を光らせるときは、上の帯ごと暗幕より前に出す(帯が z-index を持っていて中だけ前に出せないため) */}
         {raidXmasVisible&&typeof onOpenRaidXmas==='function'?<HomeRaidJack key="raid-xmas" ev={RAID_EVENT_XMAS} eventId={raidXmasEventId} onOpen={onOpenRaidXmas}/>
@@ -52975,23 +53044,28 @@ function HomeScreenV2({
   //   帯の下の「次:」を押す)。手で触らなければ7秒ごとに次へ進み、触ったら20秒は止める。
   //   並び: クリスマスの入口(r1126-014 の大きな帯)→ ほかの開催中のイベント → 公式杯。クリスマスの入口があるときは、同じ中身の「クリスマスイベント」の帯は出さない
   //   ただしクリスマスがまだ予告(序章だけ)のあいだは、いま遊べるイベントを1枚目にする(API の点検 7・予告より開催中を先に)
-  const homeBandSlides=[];
-  const homeBandEvent=homeEventCampaign&&!(xmasEntry&&homeEventCampaign.id==='xmas_2026');
-  if(homeBandEvent&&xmasEntry&&xmasEntry.preOpen)homeBandSlides.push('event');
-  if(xmasEntry)homeBandSlides.push('xmas');
-  if(homeBandEvent&&!homeBandSlides.includes('event'))homeBandSlides.push('event');
-  if(homeCardTour&&typeof onOpenCardTour==='function')homeBandSlides.push('tour');
-  const homeBandCount=homeBandSlides.length;
+  // 【2026-11-28 台帳 r1126-088・社長「ホームのイベント表示の画像まえのほうがよくない？」→「前の形に戻す」】
+  //   帯1枚を左右に送る形(点・「次:〜」の札)はやめ、前の HOME(HomeScreenV1)と同じ並びにした:
+  //   上にクリスマスの絵の札(前と同じ大きさ・切り方)、その下にほかのイベントの細い帯(公式杯とは5秒ごとに切り替わる。手で送る操作は付けない)。
+  //   クリスマスの入口があるときは、同じ中身の「クリスマスイベント」の細い帯は出さない(前と同じ)。行き先は新しい HOME のまま(細い帯はモンヒロビートへ)
+  const homeBandXmas=!!xmasEntry;
+  const homeBandEvent=homeEventCampaign&&!(xmasEntry&&homeEventCampaign.id==='xmas_2026')?homeEventCampaign:null;
+  const homeBandTour=homeCardTour&&typeof onOpenCardTour==='function'?homeCardTour:null;
+  // 追記2(社長「咲かせてはなうたのーとのバナー作ってある画像出せない？」): ほかのイベントも、絵があれば絵の札で出す。
+  //   絵はいま開いているモンヒロビートのイベント(rhythmLimitedEventAt の banner・告知の絵)。題が同じときだけ使い、無ければ今までどおり字の帯
+  const homeBandEventArt=(()=>{
+    if(!homeBandEvent||typeof rhythmLimitedEventAt!=='function')return '';
+    try{const ev=rhythmLimitedEventAt(Date.now());return ev&&typeof ev.banner==='string'&&typeof ev.name==='string'&&ev.name.startsWith(homeBandEvent.banner.title)?ev.banner:'';}catch(_){return '';}
+  })();
+  const homeBandStripCount=(homeBandEvent?1:0)+(homeBandTour?1:0);
   const [homeBandIdx,setHomeBandIdx]=React.useState(0);
-  const homeBandTouchRef=React.useRef({x:null,at:0,swiped:false});
   React.useEffect(()=>{
-    if(homeBandCount<2)return undefined;
-    const id=setInterval(()=>{if(Date.now()-homeBandTouchRef.current.at>=20000)setHomeBandIdx(i=>i+1);},7000);
+    if(homeBandStripCount<2)return undefined;
+    const id=setInterval(()=>setHomeBandIdx(i=>i+1),5000);
     return ()=>clearInterval(id);
-  },[homeBandCount]);
-  const homeBandShow=homeBandCount?((homeBandIdx%homeBandCount)+homeBandCount)%homeBandCount:0;
-  const homeBandGo=(step)=>{homeBandTouchRef.current.at=Date.now();setHomeBandIdx(i=>i+step);};
-  const homeBandTitle=(k)=>k==='xmas'?'聖夜の名探偵':k==='event'&&homeEventCampaign?homeEventCampaign.banner.title:k==='tour'&&homeCardTour?homeCardTour.name:'';
+  },[homeBandStripCount]);
+  const homeBandStripShow=homeBandStripCount?homeBandIdx%homeBandStripCount:0;
+  const homeBandCount=(homeBandXmas?1:0)+homeBandStripCount;
   // メニュー☰(案A)。右の列(時計・更新履歴・ミッション・ギフト)と設定・ブリーダーP をここへまとめる。赤い数字は合計
   //   ボタンはいつも描いておき(閉じているときは見えないだけ)、案内(チュートリアル)がミッション・ギフト・設定を指すときは開いておく
   const [homeMenuOpen,setHomeMenuOpen]=React.useState(false);
@@ -53010,7 +53084,7 @@ function HomeScreenV2({
 
       <main ref={homeSceneRef} className="mh-home-scene mh-home-v2" aria-label="村の広場">
         {/* 背景は設定の「ホーム画面アレンジ」で選んだ絵。HOMEの枠の形に合った絵を画面いっぱいに出す(横長は is-wide、正方形は is-square) */}
-        <picture className={`mh-home-background ${homeBackgroundReady?'is-ready':''} ${homeBackgroundWide?'is-wide':''} ${homeBackgroundSquare?'is-square':''}`} aria-hidden="true"><img className="mh-home-backdrop" src={homeBackgroundSrc} alt=""/><img className="mh-home-main" src={homeBackgroundSrc} alt=""/></picture>
+        <picture className={`mh-home-background ${homeBackgroundReady?'is-ready':''} ${homeBackgroundWide?'is-wide':''} ${homeBackgroundSquare?'is-square':''} ${homeSceneShape==='portrait'?'is-tall':''}`} aria-hidden="true"><img className="mh-home-backdrop" src={homeBackgroundSrc} alt=""/><img className="mh-home-main" src={homeBackgroundSrc} alt=""/></picture>
         <div className="mh-home-masumon-layer" aria-hidden="true">{homePastureMasumons.map((masu,index)=><HomeWalkingMasumon key={masu.id} masu={masu} base={ALL_PLAYER_MONSTERS[masu.baseId]} masuColors={getMasuColors(masu)} index={index} count={homePastureMasumons.length}/>)}</div>
         {/* 設定を光らせるときは、上の帯ごと暗幕より前に出す(帯が z-index を持っていて中だけ前に出せないため) */}
         {raidXmasVisible&&typeof onOpenRaidXmas==='function'?<HomeRaidJack key="raid-xmas" ev={RAID_EVENT_XMAS} eventId={raidXmasEventId} onOpen={onOpenRaidXmas}/>
@@ -53050,30 +53124,28 @@ function HomeScreenV2({
             :<em className="mh-unread-badge" aria-label="未読あり">!</em>)}</button>
           <button onClick={homeMenuGo(onOpenSettings)} className={`mh-home-side-btn mh-home-settings${spotClass('settings')}`} aria-label="設定"><span className="mh-home-side-ic"><Settings size={18}/></span><span className="mh-home-side-lb">設定</span></button>
         </div>
-        {/* イベントの帯1枚(案A)。2つ目からは横に送る。並びと送り方は上の homeBandSlides */}
-        {homeBandCount>0&&<div className="mh-home-band" data-home-band={homeBandSlides[homeBandShow]}
-          onPointerDown={e=>{homeBandTouchRef.current={...homeBandTouchRef.current,x:e.clientX,swiped:false};}}
-          onPointerUp={e=>{const t=homeBandTouchRef.current;if(t.x===null||homeBandCount<2)return;const dx=e.clientX-t.x;t.x=null;if(Math.abs(dx)>=40){t.swiped=true;homeBandGo(dx<0?1:-1);}}}
-          onClickCapture={e=>{if(homeBandTouchRef.current.swiped){homeBandTouchRef.current.swiped=false;e.stopPropagation();e.preventDefault();}}}>
-          <div className="mh-home-band-view">
-            <div className="mh-home-band-track" style={{transform:`translateX(${-homeBandShow*100}%)`}}>
-              {homeBandSlides.map((k,i)=>(
-                <div key={k} className="mh-home-band-slide" aria-hidden={i!==homeBandShow} {...(k==='xmas'?{'data-home-xmas-entry-strip':''}:{'data-home-event-strip':''})}>
-                  {k==='xmas'&&<HomeXmasEventEntry onOpen={xmasEntry.onOpen} preOpen={!!xmasEntry.preOpen}/>}
-                  {/* 押すとモンヒロビートへ直に入る(2026-11-27 台帳 r1126-073 追記2・入口の整理①。前は更新履歴が開いた) */}
-                  {k==='event'&&<button type="button" data-home-event-banner className="mh-home-event-banner" tabIndex={i===homeBandShow?0:-1} onClick={homeEventCampaign.id==='xmas_2026'&&typeof onOpenXmasEvent==='function'?onOpenXmasEvent:onOpenRhythm} aria-label={`${homeEventCampaign.banner.title}${homeEventCampaign.banner.title2||''} ${homeEventCampaign.banner.sub}`}>
-                    {/* 1行目に題と期間(sub)、2行目に副題(title2)(r1119-131) */}
-                    <b className="r1"><span>{homeEventCampaign.banner.emoji} {homeEventCampaign.banner.title}</span><small>{homeEventCampaign.banner.sub}</small></b>{homeEventCampaign.banner.title2?<span className="t2">{homeEventCampaign.banner.title2}</span>:null}
-                  </button>}
-                  {k==='tour'&&<button type="button" data-home-card-tour={homeCardTour.id} className="mh-home-tour-banner" tabIndex={i===homeBandShow?0:-1} onClick={()=>onOpenCardTour(homeCardTour.id)} aria-label={`${homeCardTour.name} ${homeCardTour.sub}`}>
-                    <span aria-hidden="true">🏆</span><span><b>{homeCardTour.name}</b><small>{homeCardTour.sub}{homeCardTour.prize&&<em>{homeCardTour.prize}</em>}</small></span>
-                  </button>}
-                </div>))}
-            </div>
-          </div>
-          {homeBandCount>1&&<div className="mh-home-band-nav">
-            <span className="mh-home-event-strip-dots">{homeBandSlides.map((k,i)=><button key={k} type="button" className={i===homeBandShow?'on':''} aria-label={`${i+1}枚目を見る`} onClick={()=>homeBandGo(i-homeBandShow)}><i/></button>)}</span>
-            <button type="button" className="mh-home-band-next" data-home-band-next onClick={()=>homeBandGo(1)}>次:{homeBandTitle(homeBandSlides[(homeBandShow+1)%homeBandCount])} ›</button>
+        {/* イベントの表示(r1126-088 で前の形に戻した): クリスマスの絵の札 → その下に細い帯。並びと切り替えは上の homeBandXmas/homeBandStripShow */}
+        {homeBandCount>0&&<div className="mh-home-band" data-home-band={homeBandXmas?'xmas':'strip'}>
+          {homeBandXmas&&<div className="mh-home-band-xmas" data-home-xmas-entry-strip>
+            <HomeXmasEventEntry onOpen={xmasEntry.onOpen} preOpen={!!xmasEntry.preOpen}/>
+          </div>}
+          {/* クリスマスの札の右の空き(前の HOME の時計の列の所)。裏クイックの札(45-quick-anywhere-float.jsx)はここに置く(r1126-088 ⑤)。押せない・何も描かない枠 */}
+          {homeBandXmas&&<span className="mh-home-band-quick-slot" data-quick-anywhere-slot aria-hidden="true"/>}
+          {homeBandStripCount>0&&<div className="mh-home-band-strip" data-home-event-strip>
+            {/* 押すとモンヒロビートへ直に入る(2026-11-27 台帳 r1126-073 追記2・入口の整理①。前は更新履歴が開いた) */}
+            {homeBandEvent&&homeBandStripShow===0&&homeBandEventArt&&<button type="button" data-home-event-banner="art" className="mh-home-event-art" onClick={homeBandEvent.id==='xmas_2026'&&typeof onOpenXmasEvent==='function'?onOpenXmasEvent:onOpenRhythm} aria-label={`${homeBandEvent.banner.title}${homeBandEvent.banner.title2||''} ${homeBandEvent.banner.sub}`}>
+              {/* 絵の題字(上のまん中)が見えるよう上寄りに切る(更新履歴の告知と同じ 50% 12%)。期間は字で左下に重ねる */}
+              <img src={homeBandEventArt} alt="" draggable={false}/>
+              <span className="mh-home-event-art-sub">{homeBandEvent.banner.sub}</span>
+            </button>}
+            {homeBandEvent&&homeBandStripShow===0&&!homeBandEventArt&&<button type="button" data-home-event-banner className="mh-home-event-banner" onClick={homeBandEvent.id==='xmas_2026'&&typeof onOpenXmasEvent==='function'?onOpenXmasEvent:onOpenRhythm} aria-label={`${homeBandEvent.banner.title}${homeBandEvent.banner.title2||''} ${homeBandEvent.banner.sub}`}>
+              {/* 1行目に題と期間(sub)、2行目に副題(title2)(r1119-131) */}
+              <b className="r1"><span>{homeBandEvent.banner.emoji} {homeBandEvent.banner.title}</span><small>{homeBandEvent.banner.sub}</small></b>{homeBandEvent.banner.title2?<span className="t2">{homeBandEvent.banner.title2}</span>:null}
+            </button>}
+            {homeBandTour&&homeBandStripShow===(homeBandEvent?1:0)&&<button type="button" data-home-card-tour={homeBandTour.id} className="mh-home-tour-banner" onClick={()=>onOpenCardTour(homeBandTour.id)} aria-label={`${homeBandTour.name} ${homeBandTour.sub}`}>
+              <span aria-hidden="true">🏆</span><span><b>{homeBandTour.name}</b><small>{homeBandTour.sub}{homeBandTour.prize&&<em>{homeBandTour.prize}</em>}</small></span>
+            </button>}
+            {homeBandStripCount>1&&<span className="mh-home-event-strip-dots" aria-hidden="true">{Array.from({length:homeBandStripCount},(_,i)=><i key={i} className={i===homeBandStripShow?'on':''}/>)}</span>}
           </div>}
         </div>}
         {/* 下部の統一ドック(2026-11-17 ホーム一新): 上から「次にやること」→施設カード×8(ふつうは4列×2段、広い場面と横画面では8枚1列。70-bootstrap.jsx)。
@@ -53367,7 +53439,9 @@ const pageExpression=(typeof assistantNoticePageExpression==='function')
   :(notice.expression||'happy');
 return(
     <div className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:76000,backgroundColor:'rgba(2,6,23,.94)'}} role="dialog" aria-modal="true" aria-label={notice.title} data-home-update-guide>
-      <div className="w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
+      {/* 横の低い画面(高さ 520px 以下)では、絵を左・文と「次へ」を右に並べて1画面に収める(2026-11-28 ミハリの総点検7「本文がはみ出し『次へ』が見えない」) */}
+      <style>{`@media (orientation:landscape) and (max-height:520px){[data-home-update-guide]>[data-update-guide-has-image]{max-width:min(calc(100% - 24px),880px);display:grid;grid-template-columns:minmax(0,38%) minmax(0,1fr);column-gap:14px;align-content:start;border-radius:1.5rem 1.5rem 0 0}[data-home-update-guide]>[data-update-guide-has-image]>*{grid-column:2}[data-home-update-guide]>[data-update-guide-has-image]>[data-update-notice-image]{grid-column:1;grid-row:1 / span 12;align-self:center;margin:0;max-height:calc(var(--mh-vh) - 40px - env(safe-area-inset-top) - env(safe-area-inset-bottom))}[data-home-update-guide]>[data-update-guide-has-image] button{min-height:44px}}`}</style>
+      <div data-update-guide-has-image={notice.image?'':undefined} className="w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
         {notice.debugOnly&&<div className="mb-2 rounded-lg bg-fuchsia-700 px-2 py-1 text-center text-[9px] font-black text-white">DEBUG・通常ログインでは表示されません</div>}
         {/* 告知画像(イベントなど)。あるときだけ、いちばん上に大きく出す。
             画面の高さを食いすぎないよう上限を付ける(正方形の絵でも説明が読める位置に残る)。
@@ -68864,7 +68938,7 @@ const XMAS_NOVEL_SCRIPT = {"v":1,"src":"docs/progress/event-xmas-2026/SCRIPT.md"
 {"id":"2-5-6","t":"line","w":"myua","x":"でも……！ でも、あの声……！","e":"crying","k":"C2-5:2-5-6"},
 {"id":"2-5-6b","t":"band","x":"吹雪が、扉を押し戻す。かすかな声は、風にかき消されて、どこから聞こえるのかも分からない。もちまるが、震える手で、扉を閉めるしかなかった","k":"C2-5:2-5-6b"},
 {"id":"2-5-7","t":"band","x":"暗転","k":"C2-5:2-5-7"},
-{"id":"2-5-8","t":"panel","x":"","ops":[{"id":"kuroba","st":"missing"}],"k":"C2-5:2-5-8"}],"frame":"close"},
+{"id":"2-5-8","t":"panel","x":"登場人物 12人","missing":[],"hurt":[],"dead":[],"k":"C2-5:2-5-8"}],"frame":"close"},
 {"id":"C3-1","chapter":"C3","title":"雪の上の影","cond":null,"bgm":"melo_sad_song_short","bg":"朝の雪原","next":"C3-2","rows":[{"id":"3-1-1","t":"band","x":"聖夜の名探偵 第3章 〜雪の上の影〜","k":"C3-1:3-1-1"},
 {"id":"3-1-2","t":"band","x":"朝。吹雪は、真夜中すぎにやんでいた。雪原が、しんと白い","k":"C3-1:3-1-2"},
 {"id":"3-1-3","t":"line","w":"momosuke","x":"……ねえ。あれ、何？ 雪の上……誰か、倒れてる……？","e":"surprise","k":"C3-1:3-1-3"},
@@ -69958,10 +70032,12 @@ const XMAS_NOVEL_CSS = `
 .mh-nv-top { position: absolute; top: max(8px, env(safe-area-inset-top)); left: 8px; right: 8px; display: flex; align-items: center; gap: 6px; z-index: 6; }
 .mh-nv-where { min-width: 0; flex: 1; font-size: 12px; color: #c9d4f2; text-shadow: 0 1px 3px #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* 縦では、章と場面の題を2行に分ける(1行だと「第七章　ひとつ…」と章の名前まで切れた・2026-11-28 総点検 4番)。それぞれ入らないときだけ「…」 */
+/* 縦では、題をボタンの段の下に1段で出し、画面の幅いっぱいを使う(右のボタン5つに押されて「第一章 ペンシ…」と切れた・台帳 r1126-091)。
+   いちばん長い題(「第一章　ペンション・シュプール　/　ホールのもみの木」26字)も 12px で1行に入る。入らない端末だけ「…」 */
 @media (orientation: portrait) {
-  .mh-nv-where { white-space: normal; line-height: 1.3; font-size: 11px; }
-  .mh-nv-where > .ch, .mh-nv-where > .sc { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .mh-nv-where > .ch .sep { display: none; }
+  .mh-nv-top { flex-wrap: wrap; row-gap: 4px; }
+  .mh-nv-top > .mh-nv-where { order: 2; flex: 0 0 100%; font-size: 12px; padding: 0 2px; }
+  .mh-nv-top > .mh-nv-where + .mh-nv-btn { margin-left: auto; }
 }
 .mh-nv-btn { min-height: 38px; min-width: 38px; padding: 0 10px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; font-size: 12px; font-weight: 800;
   color: #f3e3b0; background: rgba(8,16,40,.82); box-shadow: 0 0 0 1px rgba(232,196,106,.55); }
@@ -70657,19 +70733,23 @@ const xmasNovelSe = (kind) => {
     //   se・playSeFile だと事件簿の音まで消える(r1126-072)。口が無い古い作りなら今までの口へ
     const playFile = typeof Audio_.fgPlaySeFile === 'function' ? Audio_.fgPlaySeFile : Audio_.playSeFile;
     if (kind === 'laugh' && typeof playFile === 'function') { void playFile(XMAS_NOVEL_LAUGH_SE); return; }
-    const map = { clap: 'join', laugh: 'enemySpecial', impact: 'enemyAttack', music: 'heal', tap: 'tap', clue: 'card', ok: 'victory', ng: 'guard' };
-    const fn = (Audio_.fgSe || Audio_.se)[map[kind] || 'tap'];
+    // 2026-11-28 社長「SEとかも明るすぎる」(台帳 r1126-093 追記1): 明るい・軽い音をやめ、手持ちの低く重い・静かな音へ。
+    //   物音(tap・clap)= 低いこもった「コトッ」(trainingDice)/ オルゴール(music)= 下がっていく2音(trainingFail)/ 手がかり = 低い2音(enemyMove)/
+    //   正解 = 重い「ドン」(attack。前の victory はファンファーレで、曲まで止めていた)/ はずれ = 低いうなり(trainingBad)/ 衝撃 = 今のまま(enemyAttack)
+    const map = { clap: 'trainingDice', laugh: 'enemySpecial', impact: 'enemyAttack', music: 'trainingFail', tap: 'trainingDice', clue: 'enemyMove', ok: 'attack', ng: 'trainingBad' };
+    const fn = (Audio_.fgSe || Audio_.se)[map[kind] || 'trainingDice'];
     if (typeof fn === 'function') fn();
   } catch (e) { /* 音が出せなくても読み進める */ }
 };
 // 台本の〔音:鐘〕〔音:時計〕〔音:手紙〕の行の音(r1126-066)。手持ちの効果音だけを使う(新しい音は作らない)。
-//   鐘 = 金属の音(guard)に、低く下がる余韻(trainingFail)を重ねた「ボーン」/ 時計 = 短い針の音(xpTick)/ 手紙 = 不穏にふくらむ音(enemyCharge)。
+//   鐘 = 金属の音(guard)に、低く下がる余韻(trainingFail)を重ねた「ボーン」/ 時計・手紙は下の表(r1126-093 追記1 で暗い音へ替えた)。
 //   効果音の音量(seBus)を通るので設定どおりの大きさ。BGM は止めない。
 //   連打しても重ねない: 次の行へ進んだら残りの回数は鳴らさず、同じ音を前の音のすぐあと(hold の間)には鳴らし直さない
 const XMAS_NOVEL_SE_SEQ = Object.freeze({
   bell: { gap: 1150, hold: 900, play: ['guard', 'trainingFail'] },
-  tick: { gap: 520, hold: 300, play: ['xpTick'] },
-  letter: { gap: 0, hold: 1500, play: ['enemyCharge'] },
+  //   r1126-093 追記1(暗く): 時計 = 高い「チッ」(xpTick)をやめ、低くこもった「コツ」(trainingDice)/ 手紙 = きらめきの入った enemyCharge をやめ、低いうなりと下がる2音(trainingBad・trainingFail)
+  tick: { gap: 520, hold: 300, play: ['trainingDice'] },
+  letter: { gap: 0, hold: 1500, play: ['trainingBad', 'trainingFail'] },
 });
 let xmasNovelSeTimers = [];
 let xmasNovelSeLast = { kind: '', at: 0 };
@@ -70695,29 +70775,88 @@ const xmasNovelRowSe = (kind, times) => {
     else xmasNovelSeTimers.push(setTimeout(() => xmasNovelSeHit(kind), at));
   }
 };
-//  場面の途中で曲を変える所(台本の「切→温」のうち、新曲を当てた所・台帳 r1126-039)。場面ID → [その行から先, 曲の鍵]
-//  END-G: 屋根裏の会場のやり直しのクリスマス会と本物のサンタのそり(「温 ★」)から Dear Santa。それより前のせつない所は今の曲のまま
-const XMAS_NOVEL_BGM_SHIFT = Object.freeze({
-  'END-G': [['G-10', 'melo_dear_santa']],
+//  事件簿の曲(2026-11-28 社長「音楽で声有りはやめて」「ちゃんとばめんにあったやつに」「音無しとかばめんによって」「全体的に暗く」・台帳 r1126-093)。
+//    歌(声)の入った曲は使わない。声の有無は声の分離器で測った(表と測り方: docs/progress/event-xmas-2026/NOVEL-BGM-R1126-093.md)。
+//    'silence' は曲を止める(死の場面・張りつめた所・静かな独白)。台本データ(79-xmas-novel-script.jsx)の曲より、この表が勝つ
+const XMAS_NOVEL_BGM_SCENE = Object.freeze({
+  'OUT-0-1': 'original_profile', 'OUT-0-2': 'melo_dullahan_clockwork', 'C0-1': 'original_profile', 'C0-2': 'original_profile',
+  'OUT-1': 'melo_dullahan_clockwork', 'C1-1': 'original_profile', 'C1-2': 'original_profile', 'C1-3': 'melo_dullahan_clockwork',
+  'C1-4': 'melo_dullahan_clockwork', 'C1-5': 'close_to_your_heart_alt', 'C1-6': 'melo_dullahan_steel_ghost', 'C1-M': 'silence',
+  'C2-1': 'melo_dullahan_clockwork', 'C2-L': 'silence', 'C2-M': 'makutsu_no_senritsu', 'C2-2': 'original_profile',
+  'C2-3': 'melo_dullahan_steel_ghost', 'C2-4': 'melo_dullahan_steel_ghost_alt', 'C2-5': 'original_dullahan', 'C3-1': 'silence',
+  'C3-2': 'melo_dullahan_clockwork_alt', 'C3-3': 'melo_dullahan_clockwork', 'C3-4': 'melo_dullahan_clockwork_alt', 'C3-5': 'melo_erfolg_piano',
+  'C3-M': 'melo_erfolg_piano', 'C4-1': 'makutsu_no_senritsu', 'C4-2': 'silence', 'C4-3': 'melo_dullahan_clockwork_alt',
+  'C4-4': 'melo_dullahan_clockwork', 'C4-5': 'melo_dullahan_steel_ghost', 'C4-M': 'silence', 'C5-1': 'melo_erfolg_piano',
+  'C5-2': 'melo_dullahan_steel_ghost_alt', 'C5-3': 'melo_dullahan_steel_ghost', 'C5-4': 'melo_dullahan_steel_ghost', 'C5-5': 'makutsu_no_senritsu',
+  'C5-M': 'melo_dullahan_clockwork', 'C6-1': 'melo_dullahan_clockwork_alt', 'C6-2': 'melo_dullahan_steel_ghost',
+  'C6-3': 'melo_dullahan_clockwork_alt', 'C6-4': 'melo_dullahan_steel_ghost_alt', 'C6-5': 'melo_dullahan_steel_ghost',
+  'C6-6': 'melo_dullahan_clockwork_alt', 'C6-7': 'original_dullahan', 'C6-8': 'melo_erfolg_piano', 'C6-9': 'melo_dullahan_steel_ghost',
+  'C6-M': 'melo_erfolg_piano', 'C7-1': 'melo_dullahan_clockwork_alt', 'C7-2': 'melo_dullahan_steel_ghost_alt', 'C7-A': 'melo_erfolg_piano',
+  'C7-B': 'melo_dullahan_clockwork', 'C7-P1': 'original_dullahan', 'C7-P2': 'melo_erfolg_piano', 'C7-P3': 'melo_dullahan_clockwork',
+  'C7-4a': 'melo_erfolg_piano', 'C7-4b': 'melo_dullahan_steel_ghost', 'C7-5a': 'melo_erfolg_piano', 'C7-5b': 'melo_dullahan_steel_ghost',
+  'C7-W': 'melo_dullahan_clockwork_alt', 'C8-1': 'melo_dullahan_steel_ghost_alt', 'C8-2': 'makutsu_no_senritsu', 'C8-3': 'melo_erfolg_piano',
+  'C9-1': 'silence', 'C9-2': 'close_to_your_heart_alt', 'C10-1': 'melo_dullahan_steel_ghost', 'C10-2': 'makutsu_no_senritsu',
+  'C10-3': 'melo_dullahan_steel_ghost', 'C10-4': 'melo_dullahan_steel_ghost_alt', 'C11-1': 'melo_dullahan_steel_ghost_alt',
+  'C11-N': 'melo_erfolg_piano', 'C11-A': 'melo_erfolg_piano', 'C11-B': 'melo_dullahan_clockwork', 'C2-X': 'melo_dullahan_steel_ghost',
+  'END-X1': 'original_game_over', 'C5-X': 'melo_dullahan_steel_ghost', 'END-X2': 'original_game_over', 'C6-X': 'melo_dullahan_steel_ghost',
+  'END-X3': 'original_game_over', 'C2-Y': 'melo_dullahan_steel_ghost', 'END-X4': 'original_game_over', 'C10-X': 'melo_dullahan_steel_ghost',
+  'END-X5': 'original_game_over', 'END-M1': 'original_game_over', 'END-M2': 'melo_dullahan_steel_ghost', 'END-M3': 'melo_dullahan_steel_ghost',
+  'END-M4': 'original_game_over', 'END-M5': 'melo_dullahan_steel_ghost', 'END-G': 'melo_erfolg_piano', 'OUT-G': 'close_to_your_heart_alt',
+  'END-N': 'melo_erfolg_piano', 'OUT-N': 'melo_erfolg_piano', 'END-A': 'melo_dullahan_clockwork', 'OUT-A': 'melo_dullahan_clockwork',
+  'END-B': 'melo_dullahan_steel_ghost', 'OUT-B': 'melo_dullahan_steel_ghost', 'C1-O': 'original_profile', 'END-O': 'original_profile',
+  'OUT-O': 'original_profile', 'END-O2': 'close_to_your_heart_alt', 'OUT-O2': 'close_to_your_heart_alt', 'C12-1': 'close_to_your_heart_alt',
+  'C12-2': 'melo_erfolg_piano', 'C12-3': 'original_dullahan', 'C12-4': 'melo_dullahan_clockwork', 'C12-5': 'melo_dullahan_steel_ghost',
+  'C12-6': 'silence', 'C12-7': 'melo_erfolg_piano',
 });
-//  いまの行で鳴らす曲: 場面の曲 → その場面のいまの行までに出てきた行の曲・上の表の曲(あとのものが勝つ)
+//  場面の途中で曲を変える・止める所。場面ID → [その行から先, 曲の鍵](a/s の2つある行は、前の方の行に付ける)
+const XMAS_NOVEL_BGM_SHIFT = Object.freeze({
+  'C2-3': [['2-3-7', 'silence']],
+  'C5-4': [['5-4-5', 'silence']],
+  'C6-5': [['6-5-3', 'silence']],
+  'C7-1': [['7-1-3a', 'melo_dullahan_steel_ghost_alt']],
+  'C7-W': [['7-W-14', 'melo_dullahan_steel_ghost_alt']],
+  'C10-1': [['10-1-5', 'silence']],
+  'C10-2': [['10-2-7', 'silence']],
+  'C10-3': [['10-3-7', 'silence']],
+  'C2-X': [['2-X-6a', 'silence']],
+  'C5-X': [['5-X-4a', 'silence']],
+  'C6-X': [['6-X-8', 'silence']],
+  'C2-Y': [['2-Y-10', 'silence']],
+  'C10-X': [['10-X-8', 'silence']],
+  'END-M2': [['M2-4', 'silence']],
+  'END-M5': [['M5-5a', 'silence']],
+  'END-B': [['B-3', 'silence']],
+  'END-G': [['G-10', 'close_to_your_heart_alt']],
+  'C12-4': [['12-4-5', 'silence']],
+});
+//  歌の入った曲を、まちがって鳴らさないための網(台本データの古い曲の鍵が残っていても、声の無い曲へ替える)
+const XMAS_NOVEL_VOCAL_BGM = Object.freeze({
+  kaze_ga_soyogu: 'original_profile', melo_kiss_mystery: 'melo_dullahan_steel_ghost_alt', melo_kiss_mystery_short: 'melo_dullahan_steel_ghost_alt',
+  melo_sad_song: 'melo_erfolg_piano', melo_sad_song_short: 'melo_erfolg_piano', melo_dear_santa: 'close_to_your_heart_alt', melo_dear_santa_short: 'close_to_your_heart_alt',
+  melo_winter_fall: 'close_to_your_heart_alt', melo_winter_fall_short: 'close_to_your_heart_alt', close_to_your_heart: 'close_to_your_heart_alt',
+});
+//  いまの行で鳴らす曲: 場面の曲(上の表 → 台本データ)→ その場面のいまの行までの切り替え(あとのものが勝つ)。
+//    上の表にある場面は、台本データの行の曲(歌の入った新曲を指していた)を使わない
 const xmasNovelBgmAt = (scene, idx) => {
   if (!scene) return '';
-  let key = scene.bgm || '';
+  const fixed = Object.prototype.hasOwnProperty.call(XMAS_NOVEL_BGM_SCENE, scene.id);
+  let key = fixed ? XMAS_NOVEL_BGM_SCENE[scene.id] : (scene.bgm || '');
   const rows = Array.isArray(scene.rows) ? scene.rows : [];
   const at = Number.isFinite(idx) ? idx : 0;
   const shifts = XMAS_NOVEL_BGM_SHIFT[scene.id] || [];
   for (let i = 0; i <= at && i < rows.length; i += 1) {
     const r = rows[i];
-    if (r && r.bgm) key = r.bgm;
+    if (!fixed && r && r.bgm) key = r.bgm;
     shifts.forEach(([rowId, k]) => { if (r && r.id === rowId) key = k; });
   }
-  return key;
+  return XMAS_NOVEL_VOCAL_BGM[key] || key;
 };
-const xmasNovelBgm = (key) => {
+const xmasNovelBgm = (keyIn) => {
+  let key = keyIn;
   try {
     if (typeof Audio_ === 'undefined' || !Audio_) return;
     if (!key) return;
+    key = XMAS_NOVEL_VOCAL_BGM[key] || key; // 歌の入った曲は鳴らさない(r1126-093)
     if (key === 'silence') { Audio_.stopBGM(); return; }
     if (typeof Audio_.fadeToBGM === 'function') Audio_.fadeToBGM(key, 700); else Audio_.playBGM(key);
   } catch (e) { /* 曲が鳴らせなくても読み進める */ }
@@ -71011,7 +71150,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
     let alive = true;
     try { prevBgm.current = typeof Audio_ !== 'undefined' && Audio_.currentBgmKey ? Audio_.currentBgmKey() : null; } catch (e) { prevBgm.current = null; }
     xmasNovelLoad(S).then((s) => { if (alive) { saveRef.current = s; setSave(s); } });
-    xmasNovelBgm('melo_kiss_mystery');
+    xmasNovelBgm('melo_dullahan_clockwork'); // 開いた所(題の画面)。歌の入った Kiss からはじまるミステリーをやめ、柱時計の不穏な曲に(r1126-093)
     return () => { alive = false; xmasNovelSeStop(); if (storeTimer.current) clearTimeout(storeTimer.current); };
   }, []);
   const persist = (next, now = false) => {
@@ -71050,7 +71189,8 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
       if (r.fx.includes('curtainUp')) { setCurtain('up'); setTimeout(() => setCurtain((c) => (c === 'up' ? null : c)), 1700); }
       if (r.fx.includes('title') || r.fx.includes('chapter')) { setCard({ kind: r.fx.includes('title') ? 'title' : 'band', text: r.x }); setShown(99999); return s; }
     } else setFx((f) => (f && f.kind === 'dark' ? null : f));
-    if (r.bgm && r.bgm !== lastBgm.current) { lastBgm.current = r.bgm; xmasNovelBgm(r.bgm); }
+    // 行の曲(台本データ)は、返しの行のときだけここで鳴らす。本筋の行は下の xmasNovelBgmAt(場面の曲の表)が決める(r1126-093)
+    if (opts.quiet && r.bgm && (XMAS_NOVEL_VOCAL_BGM[r.bgm] || r.bgm) !== lastBgm.current) { lastBgm.current = XMAS_NOVEL_VOCAL_BGM[r.bgm] || r.bgm; xmasNovelBgm(r.bgm); }
     if (r.t === 'clue') { setGot({ n: r.clue, d: r.x, add: !!r.add }); xmasNovelSe('clue'); }
     if (r.t === 'line' && r.n === '？？？' && xmasNovelIsLaugh(r)) xmasNovelSe('laugh');
     if (r.t === 'line' || r.t === 'band') setLog((l) => [...l.slice(-299), { who: r.t === 'line' ? xmasNovelNameOf(r) : '', text: xmasNovelFill(r.x, playerName) }]);
@@ -95976,7 +96116,7 @@ const ALF_TALK_LINES = Object.freeze({
 });
 // 訪ねた家の台本(2026-11-08 コトバ・ツムギ。docs/progress/assistant-peer/lines/friend-*.txt・注文書 ORDER-FRIEND.md)
 //   greet … {name}(訪ねてきたプレイヤー)を迎える/doing … 部屋でしていることごとの迎え/reply … 返事への答え/sleep … 寝ている部屋の寝言
-const ALF_VISIT_LINES = Object.freeze({"mua": {"greet": ["はじめましてー！ {h}さんのお友だち？", "わ、お客さんだ！ ゆっくりしてってよー✨", "{name}って言うの？ よろしくね♪"], "doing": {"snack": "いま、おやつ食べてたとこー！ いっしょにどう？", "practice": "ちょうど練習してたの！ 見てってよー♪", "training": "モッチーのお世話中だったの！ かわいいでしょ？", "cards": "カード並べてたとこ！ どれがかわいいと思う？", "read": "雑誌見てたの！ コーデ決めてたとこ♪", "idle": "ちょうどヒマしてたの！ ナイスタイミングぢゃん👍"}, "reply": ["ありがとー！ 来てくれて、まぢうれしい♪", "うんうん(●ﾟｪﾟ))ｺｸｺｸ 楽しんでってね！", "そう言ってもらえると、照れるぢゃんｗ"], "sleep": ["…むにゃ…このリボン…かわいー…", "…すぅ…いらっしゃーい…むにゃ…"]}, "kiki": {"greet": ["まあ、お客さまでつね。ようこそいらっしゃいました", "はじめまして。{h}さんのところの、ききでつ", "{name}、どうぞお入りくださいな♪"], "doing": {"snack": "ちょうど、お茶菓子をいただいていたところでつ。おひとついかが？", "practice": "モンヒロビートの練習中でした。ちから全開でいきまつよ♪", "training": "ゴーレムさんのお世話をしていました。立派でしょう？", "cards": "カードを並べていたところでつ。攻撃のカードばかりですね♪", "read": "本を読んでいました。静かな時間は、いいものでつね", "idle": "ぼんやりお茶を飲んでいたところでした。ゆっくりしていってくださいね"}, "reply": ["ありがとうございます。くつろいでくださいね♪", "そう言っていただけると、うれしいでつ", "どうぞ、お茶でもいれましょうか"], "sleep": ["…すぅ…お茶が…さめてしまいまつ…", "…むにゃ…火力は…こちらに…"]}, "momosuke": {"greet": ["わ、お客さん！！ ももの部屋へようこそ♡", "はじめまして！！ {h}さんちの、ももだよ！！", "{name}、来てくれたの！？ うれしい！！"], "doing": {"snack": "おやつタイム中！！ ひと口あげるw", "practice": "いま練習中！！ ももの音、聞いてって♡", "training": "メタルナーみがいてたとこ！！ ぴかぴかでしょ？", "cards": "カード並べてた！！ かわいいのばっかでしょw", "read": "楽譜見てたの！！ 次の曲、どれにしよっかな", "idle": "ちょうどヒマだったの！！ 遊ぼ遊ぼ！！"}, "reply": ["でしょ！？ ももの自慢の部屋だもん♡", "ありがと！！ ゆっくりしてってねw", "えっへん！！ もっとほめていいよw"], "sleep": ["…すぅ…ライブ…まだ終わらない…", "…むにゃ…ぴかぴか…w"]}, "dra": {"greet": ["お、お客さんか。よく来たな", "はじめましてだな。{h}さんのところのドラだ", "{name}か。ゆっくりしていけよ"], "doing": {"snack": "ちょうどおやつ中だ。ひとつ食うか？", "practice": "モンビーの練習してたとこだ。リズムきざむぞ", "training": "グジラの世話してたんだ。でっかいだろ", "cards": "山札を確かめてたとこだ。見ていくか？", "read": "説明書きを読んでたんだ。わかりやすく書いてあるな", "idle": "ぼーっとしてたとこだ。ちょうどよかったな、えへへ"}, "reply": ["そうか、ありがとな。くつろいでいけ", "おでの部屋、気に入ったか？", "まあ、座ってくれ。おやつもあるぞ"], "sleep": ["…ぐぅ…グジラ…まだ食べるのか…", "…すぅ…いらっしゃい…むにゃ…"]}, "atsu": {"greet": ["お、いらっしゃい！ {h}さんの友だちだよね笑", "{name}、来てくれたんだ！ ゆっくりしてって笑", "おっ、お客さん笑 遠慮しないで入って！"], "doing": {"snack": "ちょうどおやつ食べてた笑 一個どう？", "practice": "いま一曲叩いてたとこ笑 {name}も聞いてく？", "training": "ドラゴンの世話してた笑 ちょっと待ってて！", "cards": "デッキ組み直してたとこ笑 見ていく？", "read": "本読んでたら、ちょっと寝そうだった笑 来てくれて助かる！", "idle": "ぼーっとしてた笑 ちょうど話し相手ほしかった！"}, "reply": ["ありがと笑 くつろいでって！", "そう言ってもらえると、うれしい笑", "いいって笑 {h}さんにも伝えとく！"], "sleep": ["……次の一曲、いける……", "……ドラゴン、えらいぞ……( *'ω'*)ノ"]}, "kyuko": {"greet": ["ほい、いらっしゃ〜い。{name}、ようこそだよぉ", "あ、お客さんだぁ。{h}さんの友だちかな？", "ちょうどひと休みしたかったんだぁ。どうぞどうぞ"], "doing": {"snack": "おやつ食べてたとこ〜。一緒にどう？", "practice": "いま練習してたんだぁ。ちょっと聞いてってよぉ", "training": "ニャーの世話してたとこ〜。かわいいでしょ笑", "cards": "新しい組み方、考えてたんだぁ。見る？", "read": "本読んでたとこ〜。いいところで来たねぇ笑", "idle": "ぼーっと音楽聞いてたんだぁ。座っていいよぉ"}, "reply": ["ありがとん笑 ゆっくりしてってねぇ", "そう言ってもらえると、うれしいなぁ", "ほい、どういたしまして〜。{h}さんも喜ぶよぉ"], "sleep": ["……むにゃ……あと一ページ……", "……ニャー、そこはだめだよぉ……"]}, "sorashido": {"greet": ["お客さんですねー！ よく来てくれました笑", "{name}、いらっしゃい！ くつろいでいってください笑", "{h}さんのお友だちですか。ゆっくりしていってくださいね"], "doing": {"snack": "ちょうどちんすこうを食べてたんです。一緒にどうですか？", "practice": "いま練習してたんですよ！ 聞いていきますか？", "training": "育成の記録をつけてたところです。ちょっと待っててくださいね", "cards": "新しい表を作ってたんです・・・！ 見ていきますか？", "read": "本を読んでたんです。いいところで来ましたね笑", "idle": "考えごとをしてたんです。話し相手ができてうれしいです"}, "reply": ["ありがとうございます！ でーじうれしいです笑", "そう言ってもらえると、表を作ったかいがありますねー", "気をつかわなくて大丈夫ですよ。ゆっくりしてください"], "sleep": ["・・・うぉぉ・・・むにゃ・・・表が・・・", "・・・なんくるないさ〜・・・すぅ・・・"]}, "erubin": {"greet": ["いらっしゃい。{name}、来てくれてありがとう", "はじめまして、かな。{h}さんのお友だちだね", "ようこそ。ゆっくりしていってね☺️"], "doing": {"snack": "ちょうどお茶とおやつの時間だったんだ。一緒にどうかな？", "practice": "いま練習してたところだよ。少し聞いていく？", "training": "デュラハンのお世話をしてたんだ。おとなしいでしょ", "cards": "カードの組み方を考えてたんだ。見ていく？", "read": "本を読んでたんだ。静かでいい時間だね", "idle": "窓の外をながめてたんだ。ちょうどよかったよ"}, "reply": ["ありがとう。そう言ってもらえるとうれしいな", "どういたしまして。気をつかわなくていいからね", "うん、{h}さんにも伝えておくね"], "sleep": ["……みんな、元気かな……", "……デュラハン、そこで守って……"]}});
+const ALF_VISIT_LINES = Object.freeze({"mua": {"greet": ["はじめましてー！ {h}さんのお友だち？", "わ、お客さんだ！ ゆっくりしてってよー✨", "{name}って言うの？ よろしくね♪"], "doing": {"snack": "いま、おやつ食べてたとこー！ いっしょにどう？", "practice": "ちょうど練習してたの！ 見てってよー♪", "training": "モッチーのお世話中だったの！ かわいいでしょ？", "cards": "カード並べてたとこ！ どれがかわいいと思う？", "read": "雑誌見てたの！ コーデ決めてたとこ♪", "idle": "ちょうどヒマしてたの！ ナイスタイミングぢゃん👍"}, "reply": ["ありがとー！ 来てくれて、まぢうれしい♪", "うんうん(●ﾟｪﾟ))ｺｸｺｸ 楽しんでってね！", "そう言ってもらえると、照れるぢゃんｗ"], "sleep": ["…むにゃ…このリボン…かわいー…", "…すぅ…いらっしゃーい…むにゃ…"]}, "kiki": {"greet": ["まあ、お客さまでつね。ようこそいらっしゃいました", "はじめまして。{h}さんのところの、ききでつ", "{name}、どうぞお入りくださいな♪"], "doing": {"snack": "ちょうど、お茶菓子をいただいていたところでつ。おひとついかが？", "practice": "モンヒロビートの練習中でした。ちから全開でいきまつよ♪", "training": "ゴーレムさんのお世話をしていました。立派でしょう？", "cards": "カードを並べていたところでつ。攻撃のカードばかりですね♪", "read": "本を読んでいました。静かな時間は、いいものでつね", "idle": "ぼんやりお茶を飲んでいたところでした。ゆっくりしていってくださいね"}, "reply": ["ありがとうございます。くつろいでくださいね♪", "そう言っていただけると、うれしいでつ", "どうぞ、お茶でもいれましょうか"], "sleep": ["…すぅ…お茶が…さめてしまいまつ…", "…むにゃ…火力は…こちらに…"]}, "momosuke": {"greet": ["わ、お客さん！！ ももの部屋へようこそ♡", "はじめまして！！ {h}さんちの、ももだよ！！", "{name}、来てくれたの！？ うれしい！！"], "doing": {"snack": "おやつタイム中！！ ひと口あげるw", "practice": "いま練習中！！ ももの音、聞いてって♡", "training": "メタルナーみがいてたとこ！！ ぴかぴかでしょ？", "cards": "カード並べてた！！ かわいいのばっかでしょw", "read": "楽譜見てたの！！ 次の曲、どれにしよっかな", "idle": "ちょうどヒマだったの！！ 遊ぼ遊ぼ！！"}, "reply": ["でしょ！？ ももの自慢の部屋だもん♡", "ありがと！！ ゆっくりしてってねw", "えっへん！！ もっとほめていいよw"], "sleep": ["…すぅ…ライブ…まだ終わらない…", "…むにゃ…ぴかぴか…w"]}, "dra": {"greet": ["お、お客さんか。よく来たな", "はじめましてだな。{h}さんのところのドラだ", "{name}か。ゆっくりしていけよ"], "doing": {"snack": "ちょうどおやつ中だ。ひとつ食うか？", "practice": "モンビーの練習してたとこだ。リズムきざむぞ", "training": "グジラの世話してたんだ。でっかいだろ", "cards": "山札を確かめてたとこだ。見ていくか？", "read": "説明書きを読んでたんだ。わかりやすく書いてあるな", "idle": "ぼーっとしてたとこだ。ちょうどよかったな、えへへ"}, "reply": ["そうか、ありがとな。くつろいでいけ", "おでの部屋、気に入ったか？", "まあ、座ってくれ。おやつもあるぞ"], "sleep": ["…ぐぅ…グジラ…まだ食べるのか…", "…すぅ…いらっしゃい…むにゃ…"]}, "atsu": {"greet": ["お、いらっしゃい！ {h}さんの友だちだよね笑", "{name}、来てくれたんだ！ ゆっくりしてって笑", "おっ、お客さん笑 遠慮しないで入って！"], "doing": {"snack": "ちょうどおやつ食べてた笑 1個どう？", "practice": "いま1曲叩いてたとこ笑 {name}も聞いてく？", "training": "ドラゴンの世話してた笑 ちょっと待ってて！", "cards": "デッキ組み直してたとこ笑 見ていく？", "read": "本読んでたら、ちょっと寝そうだった笑 来てくれて助かる！", "idle": "ぼーっとしてた笑 ちょうど話し相手ほしかった！"}, "reply": ["ありがと笑 くつろいでって！", "そう言ってもらえると、うれしい笑", "いいって笑 {h}さんにも伝えとく！"], "sleep": ["……次の1曲、いける……", "……ドラゴン、えらいぞ……( *'ω'*)ノ"]}, "kyuko": {"greet": ["ほい、いらっしゃ〜い。{name}、ようこそだよぉ", "あ、お客さんだぁ。{h}さんの友だちかな？", "ちょうどひと休みしたかったんだぁ。どうぞどうぞ"], "doing": {"snack": "おやつ食べてたとこ〜。一緒にどう？", "practice": "いま練習してたんだぁ。ちょっと聞いてってよぉ", "training": "ニャーの世話してたとこ〜。かわいいでしょ笑", "cards": "新しい組み方、考えてたんだぁ。見る？", "read": "本読んでたとこ〜。いいところで来たねぇ笑", "idle": "ぼーっと音楽聞いてたんだぁ。座っていいよぉ"}, "reply": ["ありがとん笑 ゆっくりしてってねぇ", "そう言ってもらえると、うれしいなぁ", "ほい、どういたしまして〜。{h}さんも喜ぶよぉ"], "sleep": ["……むにゃ……あと一ページ……", "……ニャー、そこはだめだよぉ……"]}, "sorashido": {"greet": ["お客さんですねー！ よく来てくれました笑", "{name}、いらっしゃい！ くつろいでいってください笑", "{h}さんのお友だちですか。ゆっくりしていってくださいね"], "doing": {"snack": "ちょうどちんすこうを食べてたんです。一緒にどうですか？", "practice": "いま練習してたんですよ！ 聞いていきますか？", "training": "育成の記録をつけてたところです。ちょっと待っててくださいね", "cards": "新しい表を作ってたんです・・・！ 見ていきますか？", "read": "本を読んでたんです。いいところで来ましたね笑", "idle": "考えごとをしてたんです。話し相手ができてうれしいです"}, "reply": ["ありがとうございます！ でーじうれしいです笑", "そう言ってもらえると、表を作ったかいがありますねー", "気をつかわなくて大丈夫ですよ。ゆっくりしてください"], "sleep": ["・・・うぉぉ・・・むにゃ・・・表が・・・", "・・・なんくるないさ〜・・・すぅ・・・"]}, "erubin": {"greet": ["いらっしゃい。{name}、来てくれてありがとう", "はじめまして、かな。{h}さんのお友だちだね", "ようこそ。ゆっくりしていってね☺️"], "doing": {"snack": "ちょうどお茶とおやつの時間だったんだ。一緒にどうかな？", "practice": "いま練習してたところだよ。少し聞いていく？", "training": "デュラハンのお世話をしてたんだ。おとなしいでしょ", "cards": "カードの組み方を考えてたんだ。見ていく？", "read": "本を読んでたんだ。静かでいい時間だね", "idle": "窓の外をながめてたんだ。ちょうどよかったよ"}, "reply": ["ありがとう。そう言ってもらえるとうれしいな", "どういたしまして。気をつかわなくていいからね", "うん、{h}さんにも伝えておくね"], "sleep": ["……みんな、元気かな……", "……デュラハン、そこで守って……"]}});
 // フレンドの家へ行ったとき・迎えるときに足す台本(前からの ALF_GO_LINES・ALF_WELCOME_LINES と合わせて選ぶ)
 const ALF_GO_MORE = Object.freeze({"mua": ["{h}さんの家、おしゃれすぎぢゃない！？", "{f}の部屋、見せてもらってもいい？"], "kiki": ["{h}さんのお家、落ち着いたすてきなお部屋でつね", "{f}、おじゃましまつ。お茶をお持ちしました♪"], "momosuke": ["{h}さんちの部屋、かわいいじゃん！！", "{f}、遊びに来たよ！！ 練習見せて♡"], "dra": ["{h}さんの家か。いい部屋だな", "{f}、おじゃまするぞ。おやつ持ってきた"], "atsu": ["{f}、遊びに来た笑 なんかして遊ぼ！", "{h}さんの部屋、いい感じじゃん！ また来たいな笑"], "kyuko": ["{f}、遊びに来たよぉ。何してたの？", "{h}さんの部屋、本がありそうで落ち着くねぇ"], "sorashido": ["{f}、遊びに来ました！ 今日はなにをしますか？", "{h}さんの部屋、でーじ落ち着きますね笑"], "erubin": ["{f}、遊びに来たよ。元気だったかな？", "{h}さんの部屋、やさしい感じがするね"]});
 const ALF_WELCOME_MORE = Object.freeze({"mua": ["{f}だ！ 来てくれたの、まぢうれしい♪", "あたしの部屋、こっちだよー！ ゆっくりしてってね✨"], "kiki": ["{f}、ようこそ。お茶をおいれしまつね", "遠いところ、ありがとうございまつ。ゆっくりしていってくださいな"], "momosuke": ["{f}だ！！ ももの部屋、案内するね♡", "いらっしゃい！！ おやつ用意してあるよw"], "dra": ["{f}か、よく来たな。ゆっくりしていけ", "おでの部屋はこっちだ。散らかってるけどな"], "atsu": ["いらっしゃい！ 来てくれたの、まじでうれしい笑", "{f}、よく来たじゃん笑 ゆっくりしてって！"], "kyuko": ["いらっしゃ〜い。{f}、待ってたよぉ", "ほい、上がって上がって〜。お茶いれるねぇ"], "sorashido": ["よく来てくれましたね！ {f}、待ってましたよ", "いらっしゃい！ ゆっくりしていってください笑"], "erubin": ["いらっしゃい、{f}。ゆっくりしていってね", "来てくれてうれしいよ。お茶をいれるね"]});
@@ -139325,6 +139465,8 @@ function MonsterHeroGame() {
       if (!btn) return;
       // モンヒロビートの演奏エリアの中は鳴らさない(ノーツの音と重ねない。今までもここは鳴っていなかった)
       if (btn.closest('[data-rhythm-play-area]')) return;
+      // 事件簿(ミステリーノベル)の中は、明るい「ピッ」ではなく低く小さい「コトッ」(手持ちの trainingDice)。表の口(fgSe)から鳴らす(r1126-093 追記1)
+      if (btn.closest('[data-xmas-novel]') && Audio_.fgSe && typeof Audio_.fgSe.trainingDice === 'function') { Audio_.fgSe.trainingDice(); return; }
       // ボタンの音は、裏のバトルの音と別の口(uiTap)で鳴らす。モンヒロビートの画面・助手ライフの裏クイック中は
       // 効果音の口(seBus)を0にしているので、se/fgSe では鳴らなかった(2026-11-24 r1119-164)
       if (Audio_.uiTap) { Audio_.uiTap(); return; }
@@ -157538,7 +157680,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         let storyFrame=null;
         for(let i=step;i>=0;i--){const l=script[i];if(l&&typeof l.frame==='string'){storyFrame=l.frame==='none'?null:l.frame;break;}}
         // 絵は data/breeder.js の STORY_SCENE_IMAGES(名前 → 絵)。表に無い名前は出さない
-        const storySceneImg=storyScene&&typeof STORY_SCENE_IMAGES!=='undefined'?(STORY_SCENE_IMAGES[storyScene]||null):null;
+        //   クリスマスのレイドのお話(bg:'xmas_…@色')は、事件簿と同じ絵の表と色(35-raid-xmas.jsx の raidXmasSceneBgOf・r1126-090)
+        const storyXmasBg=storyScene&&typeof raidXmasSceneBgOf==='function'?raidXmasSceneBgOf(storyScene):null;
+        const storySceneImg=storyXmasBg?storyXmasBg.img:(storyScene&&typeof STORY_SCENE_IMAGES!=='undefined'?(STORY_SCENE_IMAGES[storyScene]||null):null);
         // 一枚絵(台本の行の still:'名前'・2026-11-23 r1119-115)。その行だけ背景の上に絵を出し、上のステージ・真ん中のモンスターを消す(次の行に still が無ければ戻る)。
         //   絵は同じ STORY_SCENE_IMAGES。縦の画面用の絵(名前_tate)があれば、縦では幅いっぱい・上寄せでそれを出す(追記2 社長「縦の絵を使う・幅に合わせる」)。
         //   横は横の絵の全体。出し分けは 70-bootstrap.jsx の [data-story-still]。続けて同じ絵の行は出し直さない(key を絵の名前にする)
@@ -157548,7 +157692,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // このお話で使う背景は、開いたときに先に読んでおく(場面が替わった瞬間に絵が遅れて出ないように)
         if(typeof STORY_SCENE_IMAGES!=='undefined'&&typeof window!=='undefined'){
           const pre=window.__mhStoryScenePreloaded||(window.__mhStoryScenePreloaded=new Set());
-          script.forEach(l=>{[l&&l.bg,l&&l.still,l&&typeof l.still==='string'?`${l.still}_tate`:null].forEach(k=>{const src=typeof k==='string'?STORY_SCENE_IMAGES[k]:null;if(src&&!pre.has(src)){pre.add(src);try{const im=new Image();im.src=src;}catch(e){}}});});
+          script.forEach(l=>{[l&&l.bg,l&&l.still,l&&typeof l.still==='string'?`${l.still}_tate`:null].forEach(k=>{const xb=typeof k==='string'&&typeof raidXmasSceneBgOf==='function'?raidXmasSceneBgOf(k):null;const src=xb?xb.img:(typeof k==='string'?STORY_SCENE_IMAGES[k]:null);if(src&&!pre.has(src)){pre.add(src);try{const im=new Image();im.src=src;}catch(e){}}});
+            const fw=l&&l.who?assistantById(l.who):null;const fs=fw&&fw.storyFigure;if(fs&&!pre.has(fs)){pre.add(fs);try{const im=new Image();im.src=fs;}catch(e){}}});
         }
         // 出てくる全員の顔(その行の表情と、話していないときの normal)も、開いたときに先に読んでおく
         //   (2026-11-14 社長「あつだけ顔の絵の表示が遅い」r1114-080。途中から初めて出る話し手は、出た瞬間に読み始めて遅れて見えていた)
@@ -157596,6 +157741,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         let monstersIdx=-1;
         for(let i=step;i>=0;i--){if(Array.isArray(script[i].monsters)){monstersIdx=i;break;}}
         const storyMonsters=monstersIdx>=0&&!storyStillImg?script[monstersIdx].monsters.filter(m=>m&&m.pose!=='hide'&&STORY_MONSTER_ART[m.id]):[];
+        // 全身の絵を持つ話し手(storyFigure・クリスマスのレイドのハムとサンタ・r1126-090 追記1 社長「真ん中に全身絵とかにして」)は、顔の枠ではなく画面のまん中に全身で出す。
+        //   初めて話した行から、場面の絵が替わるか、去る行(figOut)まで残す。話していないときは暗くする。同じ枠(storyFigureSlot・赤と黒のサンタ)は1人ぶん
+        const storyFigures=[];
+        if(monstersIdx<0&&!storyStillImg){
+          let figBase=null;
+          for(let i=0;i<=step;i++){
+            const l=script[i];if(!l)continue;
+            if(typeof l.bg==='string'){const xb=typeof raidXmasSceneBgOf==='function'?raidXmasSceneBgOf(l.bg):null;const base=xb?xb.base:l.bg;if(base!==figBase){storyFigures.length=0;figBase=base;}}
+            if(l.figOut){storyFigures.length=0;continue;}
+            const fw=l.who&&!l.band?assistantById(l.who):null;
+            if(fw&&fw.storyFigure){const slot=fw.storyFigureSlot||fw.id;const f={slot,id:fw.id,src:fw.storyFigure};const k=storyFigures.findIndex(x=>x.slot===slot);if(k>=0)storyFigures[k]=f;else storyFigures.push(f);}
+          }
+        }
         const fxColors={fall:'255,214,150',split:'233,213,255',merge:'255,250,235',unlock:'253,230,138',transform:'255,237,180',rankup:['251,146,60','251,191,36','192,132,252','248,113,113','250,204,21'][Math.max(0,stageTier-1)],shrink:'186,230,253'};
         const speakText=(l,w)=>{
           // ★呼び方は normalizeAssistantBond には入っていない(別の入れ物 assistantCallStyles)。話している助手ごとのぶんを引く
@@ -157616,6 +157774,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const storyCplBubble=Math.max(6,storyLand?Math.floor((storyBoxW-118)/12)-3:Math.floor((storyBoxW-156)/14)-4);
         // 折り方を決める1行の字数は、ページ分けの控えめな見込みではなく、実際の欄の幅から出す(欄の内側の幅÷字の大きさ。端の1字ぶんは余らせる)
         const storyCapBottom=Math.floor((storyBoxW-64-(storyLand?62:100))/13-0.2);
+        // 全身の絵をまん中に出す話し手(storyFigure)は、下の欄に顔を置かないので、そのぶん1行の字数が増える
+        const storyFaceCols=Math.floor((storyLand?62:100)/13);
+        const storyCapBottomOf=(w)=>storyCapBottom+(w&&w.storyFigure?storyFaceCols:0);
         const storyCapBubble=Math.floor((storyLand?(storyBoxW-118)/12:(storyBoxW-156)/14)-0.2);
         // 台詞を文の切れ目のかたまりごとに並べる(storyChunkLines)。かたまりで折ると行が増えるときは、今までどおり
         //   横の低い画面の吹き出しは高さ 84px で2行しか入らないので、かたまりで並べるのは2行まで(70-bootstrap.jsx)
@@ -157646,7 +157807,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const l=script[i];
           const w=l?assistantById(l.who):null;
           const text=l&&w&&!l.band?speakText(l,w):'';
-          const pages=storyZones&&typeof storySplitPages==='function'?storySplitPages(text,isGuestWho(l&&l.who)?storyCplBubble:storyCplBottom,3):[text];
+          const pages=storyZones&&typeof storySplitPages==='function'?storySplitPages(text,isGuestWho(l&&l.who)?storyCplBubble:storyCplBottom+(w&&w.storyFigure?storyFaceCols:0),3):[text];
           storyPageCache[i]=pages;
           return pages;
         };
@@ -157746,7 +157907,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           {/* 場面の背景(台本の行の bg)。場面が替わると key が替わり、ふわっと切り替わる。fx:'fall' の行では、
               穴へ落ちていくように背景が上へ流れて暗くなる(70-bootstrap.jsx の [data-story-bg]) */}
           {storySceneImg&&<div key={`${storyScene}:${storyFrame||''}`} data-story-bg={storyScene} data-story-bg-frame={storyFrame||undefined} data-story-bg-fx={fx==='fall'?'fall':undefined} aria-hidden="true"
-            style={{'--story-bg':`url("${storySceneImg}")`}}>{storyFrame==='game'&&<span data-story-bg-frame-label>モンヒロ事件簿</span>}</div>}
+            style={{'--story-bg':`url("${storySceneImg}")`}}>{storyXmasBg&&storyXmasBg.tint&&<span data-story-bg-tint style={{position:'absolute',inset:0,zIndex:1,background:storyXmasBg.tint}}/>}{storyFrame==='game'&&<span data-story-bg-frame-label>モンヒロ事件簿</span>}</div>}
           {storyStillImg&&<div key={`still:${storyStill}`} data-story-still={storyStill} data-story-still-has-tate={storyStillTate?'':undefined} aria-hidden="true"
             style={{'--story-still':`url("${storyStillImg}")`,...(storyStillTate?{'--story-still-tate':`url("${storyStillTate}")`}:{})}}><div data-story-still-area><img data-story-still-img src={storyStillImg} alt="" draggable={false}/></div>
             {storyStillTate&&<img data-story-still-tate src={storyStillTate} alt="" draggable={false}/>}</div>}
@@ -157772,11 +157933,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <span className="mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-black" style={{color:speakingGuest?'#0f172a':stageGuest.accent,background:speakingGuest?stageGuest.accent:'rgba(15,23,42,.8)',transition:'background .2s, color .2s'}}>{stageName}</span>
                 </div>}
                 {bubbleLine&&(
-                  <div key={`b${bubbleIdx}${bubbleIdx===step?`-${storyCurSub}`:''}`} data-story-guest-bubble data-story-pop={speakingGuest?'1':undefined} className="relative min-w-0 flex-1 rounded-2xl border-2 bg-slate-900/95 px-3 py-2" style={{borderColor:stageGuest.accent,opacity:speakingGuest?1:.4,boxShadow:speakingGuest?`0 0 0 2px ${stageGuest.accent}55, 0 0 20px ${stageGuest.accent}88`:'none',marginTop:8,animation:speakingGuest?'storyPop .3s ease-out both':undefined}}>
+                  <div key={`b${bubbleIdx}${bubbleIdx===step?`-${storyCurSub}`:''}`} data-story-guest-bubble data-story-pop={speakingGuest?'1':undefined} data-story-idle={speakingGuest?undefined:''} className="relative min-w-0 flex-1 rounded-2xl border-2 bg-slate-900 px-3 py-2" style={{borderColor:speakingGuest?stageGuest.accent:`${stageGuest.accent}55`,opacity:1,boxShadow:speakingGuest?`0 0 0 2px ${stageGuest.accent}55, 0 0 20px ${stageGuest.accent}88`:'none',marginTop:8,animation:speakingGuest?'storyPop .3s ease-out both':undefined}}>
                     {/* 話している人の顔を指すしっぽ */}
                     {!stageGuest.noFace&&<span aria-hidden="true" style={{position:'absolute',left:-9,top:22,width:0,height:0,borderTop:'8px solid transparent',borderBottom:'8px solid transparent',borderRight:`9px solid ${stageGuest.accent}`}}/>}
-                    <span className="inline-block rounded-full px-2 py-0.5 text-[10px] font-black" style={{color:'#0f172a',background:stageGuest.accent}}>{bubbleLine.name||stageGuest.name}</span>
-                    <span className="mt-1 block text-[14px] font-bold leading-relaxed text-white" style={storyLineStyle(storyZones?storyTextAt(bubbleIdx,stageGuest):'',storyCapBubble)}>{storyZones?storyLineNodes(storyTextAt(bubbleIdx,stageGuest),storyCapBubble):bubbleLines(speakText(bubbleLine,stageGuest))}</span>
+                    {/* 話していないあいだは前の台詞を出さない(箱の大きさは保つ)。地は不透明(後ろの HOME の字が透けていた・2026-11-28 ミハリの総点検8) */}
+                    <span className="inline-block rounded-full px-2 py-0.5 text-[10px] font-black" style={{color:'#0f172a',background:stageGuest.accent,visibility:speakingGuest?undefined:'hidden'}}>{bubbleLine.name||stageGuest.name}</span>
+                    <span className="mt-1 block text-[14px] font-bold leading-relaxed text-white" style={{...storyLineStyle(storyZones?storyTextAt(bubbleIdx,stageGuest):'',storyCapBubble),...(speakingGuest?{}:{visibility:'hidden'})}}>{storyZones?storyLineNodes(storyTextAt(bubbleIdx,stageGuest),storyCapBubble):bubbleLines(speakText(bubbleLine,stageGuest))}</span>
                   </div>
                 )}
               </div>
@@ -157792,6 +157954,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   </span>
                 );
               })}
+            </div>
+          )}
+          {/* 全身の絵の話し手(storyFigures・r1126-090 追記1)。置き場は真ん中のモンスターと同じ層(70-bootstrap.jsx の [data-story-monsters])。赤↔黒に替わると出し直す */}
+          {storyFigures.length>0&&(
+            <div data-story-monsters={storyFigures.length} data-story-figures="" aria-hidden="true" className="pointer-events-none" style={{top:'calc(env(safe-area-inset-top) + 6vh)'}}>
+              {storyFigures.map(f=>{const on=!line.band&&f.id===line.who;return(
+                <span key={`${f.slot}:${f.id}`} data-story-monster={`fig-${f.slot}`} data-story-pose="in" data-story-figure-dim={on?undefined:''}>
+                  <img src={f.src} alt="" draggable={false} className="block h-full w-full object-contain" style={{filter:on?'drop-shadow(0 6px 18px rgba(0,0,0,.65))':'brightness(.55) drop-shadow(0 6px 18px rgba(0,0,0,.65))',transition:'filter .2s'}}/>
+                </span>);})}
             </div>
           )}
           {/* 場面の説明(fxText)は、光る演出(fx)の無い行でも出す(2026-11-05。fx の無い行の説明が、どのお話でも出ていなかった) */}
@@ -157846,17 +158017,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 収まらない台詞は、上の storyPagesOf でページに分ける */}
             <div data-story-speaker-row={storyZones?'':undefined} className={storyZones?'flex items-start gap-2':undefined}>
             {/* 話している助手の顔(上部ゾーンのゲストと同じ大きさ・名前の札は顔の下)。ゲストが話しているあいだは、直前の助手を暗く残す */}
-            {storyZones&&bottomLine&&<div key={`face-${bottomSpeaker.id}`} data-story-speaker={bottomSpeaker.id} className="shrink-0 text-center">
+            {storyZones&&bottomLine&&!bottomSpeaker.storyFigure&&<div key={`face-${bottomSpeaker.id}`} data-story-speaker={bottomSpeaker.id} className="shrink-0 text-center">
               <span style={{display:'block',opacity:dimBottom?.55:1,filter:dimBottom?'brightness(.7)':`drop-shadow(0 0 10px ${bottomSpeaker.accent})`,transition:'opacity .2s, filter .2s'}}><AssistantFace who={bottomSpeaker} size={92} accent={bottomSpeaker.accent} expression={!dimBottom&&bottomLine===line?line.e:'normal'}/></span>
               <span className="mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-black" style={{color:dimBottom?bottomSpeaker.accent:'#0f172a',background:dimBottom?'rgba(15,23,42,.8)':bottomSpeaker.accent}}>{bottomLine.name||bottomSpeaker.name}</span>
             </div>}
-            {bottomLine?<div key={dimBottom?'keep':`x${step}-${storyCurSub}`} data-story-pop={dimBottom?undefined:'1'} className={`rounded-2xl border-2 bg-slate-900 px-3 py-3${storyZones?' min-w-0 flex-1':''}`} data-story-line-box style={{borderColor:bottomSpeaker.accent,opacity:dimBottom?.4:1,boxShadow:dimBottom?'none':`0 0 16px ${bottomSpeaker.accent}55`,transition:'opacity .18s',animation:dimBottom?undefined:'storyPop .28s ease-out both'}}>
-              <span className="inline-block rounded-full px-2 py-0.5 text-[10px] font-black" style={{color:'#0f172a',background:bottomSpeaker.accent}}>{bottomLine.name||bottomSpeaker.name}</span>
+            {bottomLine?<div key={dimBottom?'keep':`x${step}-${storyCurSub}`} data-story-pop={dimBottom?undefined:'1'} className={`rounded-2xl border-2 bg-slate-900 px-3 py-3${storyZones?' min-w-0 flex-1':''}`} data-story-line-box data-story-idle={dimBottom?'':undefined} style={{borderColor:dimBottom?`${bottomSpeaker.accent}55`:bottomSpeaker.accent,opacity:1,boxShadow:dimBottom?'none':`0 0 16px ${bottomSpeaker.accent}55`,transition:'opacity .18s',animation:dimBottom?undefined:'storyPop .28s ease-out both'}}>
+              {/* 上の人・帯が話しているあいだは、前の台詞を残さない(箱の大きさは保つ・地は不透明。2026-11-28 ミハリの総点検8) */}
+              <span className="inline-block rounded-full px-2 py-0.5 text-[10px] font-black" style={{color:'#0f172a',background:bottomSpeaker.accent,visibility:dimBottom?'hidden':undefined}}>{bottomLine.name||bottomSpeaker.name}</span>
               {/* ★{name} は、そのとき話している助手の呼び方へ置き換える。
                   ここを素の {line.t} で出していたため、画面に {name} がそのまま出ていた
                   (2026-09-11・ユーザー指摘「名前呼びのとこが変換されてない」)。
                   呼び方も絆Lvも助手ごとに違うので、選んでいる助手ではなく「話している助手」から引く */}
-              <span className="block text-[13px] font-bold leading-relaxed text-white mt-1" style={storyLineStyle(storyZones?storyTextAt(bottomLine===line?step:assistIdx,bottomSpeaker):'',storyCapBottom)}>{storyZones?storyLineNodes(storyTextAt(bottomLine===line?step:assistIdx,bottomSpeaker),storyCapBottom):bubbleLines(speakText(bottomLine,bottomSpeaker))}</span>
+              <span className="block text-[13px] font-bold leading-relaxed text-white mt-1" style={{...storyLineStyle(storyZones?storyTextAt(bottomLine===line?step:assistIdx,bottomSpeaker):'',storyCapBottomOf(bottomSpeaker)),...(dimBottom?{visibility:'hidden'}:{})}}>{storyZones?storyLineNodes(storyTextAt(bottomLine===line?step:assistIdx,bottomSpeaker),storyCapBottomOf(bottomSpeaker)):bubbleLines(speakText(bottomLine,bottomSpeaker))}</span>
             </div>:<div data-story-line-box className={`flex items-center justify-center rounded-2xl border-2 border-slate-700 bg-slate-900 px-3 py-3 text-center text-[11px] font-bold text-slate-400${storyZones?' min-w-0 flex-1':''}`}>▲ 上のことばを読んでね</div>}
             </div>
             <p className="mt-2 text-center text-[11px] font-bold tabular-nums text-slate-300">
@@ -164375,7 +164547,7 @@ const createAnimationStyle = () => {
     @keyframes mhDiscBorn{0%{opacity:0;transform:scale(.35)}60%{opacity:1;filter:drop-shadow(0 0 30px #fde68a) brightness(1.6)}100%{opacity:1;transform:scale(1);filter:drop-shadow(0 0 18px rgba(253,230,138,.55)) brightness(1)}}
     @keyframes mhDiscUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
     @media (prefers-reduced-motion: reduce){.mh-disc-rebirth-disc,.mh-disc-rebirth-flash,.mh-disc-rebirth-sparks i{animation:none;opacity:0}.mh-disc-rebirth-rays{animation:none;opacity:1}.mh-disc-rebirth-plate,.mh-disc-rebirth-art,.mh-disc-rebirth-name,.mh-disc-rebirth-note,.mh-disc-rebirth-close{animation:none;opacity:1;transform:none;pointer-events:auto}}
-    .mh-home-scene{position:relative;isolation:isolate;container-type:size;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-background img.mh-home-backdrop{position:absolute;z-index:0;inset:0;object-fit:cover;filter:blur(14px) brightness(.55);transform:scale(1.08)}.mh-home-background.is-wide img,.mh-home-background.is-square img{object-fit:cover}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:30%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(5px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:1.2}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:9px;line-height:1.2;font-weight:900}/* XP の字は 8px の等幅で読めなかった(2026-11-22 点検 #7059・r1119-080)。棒の右に 10px で並べ、札の高さは変えない */.mh-home-xp-row{display:flex;align-items:center;gap:4px;margin-top:2px}.mh-home-player-copy small{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#d7e3dc;font-size:10px;line-height:12px;font-weight:700;font-variant-numeric:tabular-nums}.mh-home-xp{flex:1 1 auto;min-width:18px;height:4px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:minmax(0,1fr) 44px;grid-template-rows:1fr 1fr;box-sizing:border-box;width:calc(153px + var(--wal-grow,0px));padding:3px 4px;border-radius:14px;--wal-col:calc(99px + var(--wal-grow,0px));--wal-max:10px}.mh-home-wallet>div{display:grid;grid-template-columns:14px minmax(0,1fr) auto;align-items:center;gap:2px;min-width:0;padding:1px 3px;color:#ffe08a;--wal-room:calc(var(--wal-col) - 50px)}.mh-home-wallet>div+div{--wal-room:calc(var(--wal-col) - 71px)}.mh-home-wallet>div b{font-size:min(var(--wal-max),calc(var(--wal-room) / (var(--len,1) * .64)));text-align:right;white-space:nowrap;min-width:0}.mh-home-wallet>div small{font-size:8px;color:#f4e7c3;white-space:nowrap}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:9px;font-weight:900;min-width:44px;min-height:44px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;padding:0;border:0;background:transparent;color:#fff;touch-action:manipulation}/* 押せる範囲は見えている札と、そのまわり8pxだけ(2026-10-11・社長の指摘)。以前は建物ぶんの透明な箱が押し場所で、札の外の何もない所でも施設が開き、ジャックの吹き出しを押せなかった。札の位置は、箱の位置と箱の中の札の位置を足し合わせた値にしてある(見た目の位置は前と同じ) */.mh-home-facility::after{content:'';position:absolute;inset:-8px}.mh-home-facility>span{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility-label{display:flex;flex-direction:column;align-items:flex-start;line-height:1.05;font-weight:inherit}.mh-home-facility-label small{margin-top:2px;font-size:8px;font-weight:800;letter-spacing:0;color:#ffe6a7;opacity:.9}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}[data-assistant-life-map] .mh-home-facility.management{left:2.52%;top:26.58%}.mh-home-facility.management>span{border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}[data-assistant-life-map] .mh-home-facility.temple{right:2.94%;top:25.9%}.mh-home-facility.temple>span{border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}[data-assistant-life-map] .mh-home-facility.market{right:1.95%;top:57%}.mh-home-facility.market>span{border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}[data-assistant-life-map] .mh-home-facility.battle{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%)}[data-assistant-life-map] .mh-home-facility.battle>span{min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}[data-assistant-life-map] .mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}[data-assistant-life-map] .mh-home-facility.battle:active>span{transform:scale(.94)}/* 背の低い画面(縦 700px 前後まで)では、イベントの札とMFバトルカードの札を、モンヒロビートの札(top:55.25%)の下まで下げる。重なっていた(2026-10-26) */.mh-home-event-banner{display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:6px 11px;border:1px solid #fdba74;border-radius:13px;background:linear-gradient(135deg,#7c2d12ee,#4c1d95ee);color:#ffedd5;font-size:11px;font-weight:900;line-height:1.2;box-shadow:0 3px 10px #0008;text-align:left}.mh-home-event-banner small{font-size:9px;font-weight:800;color:#fed7aa}[data-assistant-life-map] .mh-home-card-battle{position:absolute;z-index:5;left:9px;bottom:min(calc(33% - 40px),calc(44.75% - 126px));padding:0}[data-assistant-life-map] .mh-home-card-battle.raised{bottom:min(calc(33% + 4px),calc(44.75% - 82px))}/* 公式杯の札(2026-10-31 社長・案A)。イベントの札の下・MFバトルカードの札の上(MFバトルカードの札のいつもの段)。イベントの札が無いときは1段上がる。公式杯の札があるときは、MFバトルカードの札は1段下(below-tour) */.mh-home-tour-banner{display:flex;align-items:center;gap:6px;max-width:min(calc(100% - 150px),240px);padding:3px 10px 3px 7px;border:1.5px solid #fde68a;border-radius:13px;background:linear-gradient(135deg,#78350fee,#b45309ee 45%,#1e1b4bee);color:#fffbeb;text-align:left;box-shadow:0 0 0 2px #f59e0b55,0 3px 10px #0008}.mh-home-tour-banner>span:first-child{font-size:19px;line-height:1}.mh-home-tour-banner>span:last-child{display:flex;min-width:0;flex-direction:column;gap:1px;line-height:1.2}.mh-home-tour-banner b{overflow:hidden;font-size:11.5px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}.mh-home-tour-banner small{display:block;overflow:hidden;font-size:9.5px;font-weight:800;color:#fde68a;text-overflow:ellipsis;white-space:nowrap}.mh-home-tour-banner em{margin-left:5px;padding:0 5px;border-radius:999px;background:#fbbf24;color:#3d2305;font-style:normal;font-size:9px;font-weight:900;line-height:1.5}.mh-home-tour-banner:active{transform:scale(.96);filter:brightness(1.15)}[data-assistant-life-map] .mh-home-card-battle.below-tour{bottom:min(calc(33% - 84px),calc(44.75% - 170px))}[data-assistant-life-map] .mh-home-card-battle.soon>span{background:linear-gradient(135deg,#334155ee,#3b0764ee);border-color:#fcd34dcc}[data-assistant-life-map] .mh-home-card-battle.soon small{margin-left:4px;padding:1px 6px;border-radius:999px;background:#fbbf24;color:#3d2305;font-size:10px;font-weight:900;line-height:1.4}[data-assistant-life-map] .mh-home-card-battle>span{display:flex;align-items:center;gap:4px;padding:8px 12px;border:1.5px solid #7dd3fcdd;border-radius:13px;background:linear-gradient(135deg,#1e3a8aee,#4c1d95ee);color:#fff;font-size:12px;font-weight:900;line-height:1.2;box-shadow:0 3px 12px #0009,0 0 15px #38bdf866}@media(orientation:landscape) and (max-height:600px){[data-assistant-life-map] .mh-home-card-battle{bottom:12px}/* 横向きでもイベントの札を出す。MFバトルカードの札(下から12px)のすぐ上(2026-10-26 ダメダシくん「横では見当たらない」) *//* 横向きの公式杯の札は MFバトルカードの札のすぐ上、イベントの札はその上 */}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-temple-menu-card{position:relative;border:1px solid #a78bfa80;background:linear-gradient(135deg,#2e1065d9 0%,#1e1b4bcc 58%,#312e81b3 100%);box-shadow:inset 0 1px 0 #ddd6fe18,0 5px 16px #0006,0 0 18px #7c3aed12}.mh-temple-menu-card:active{filter:brightness(1.16);transform:scale(.98)}.mh-temple-menu-icon{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c4b5fd38;border-radius:10px;background:#4c1d9566;box-shadow:inset 0 1px 0 #ede9fe18}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
+    .mh-home-scene{position:relative;isolation:isolate;container-type:size;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-background img.mh-home-backdrop{position:absolute;z-index:0;inset:0;object-fit:cover;filter:blur(14px) brightness(.55);transform:scale(1.08)}.mh-home-background.is-wide img,.mh-home-background.is-square img{object-fit:cover}.mh-home-background.is-tall img.mh-home-main{object-fit:cover}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:30%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(5px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:1.2}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:9px;line-height:1.2;font-weight:900}/* XP の字は 8px の等幅で読めなかった(2026-11-22 点検 #7059・r1119-080)。棒の右に 10px で並べ、札の高さは変えない */.mh-home-xp-row{display:flex;align-items:center;gap:4px;margin-top:2px}.mh-home-player-copy small{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#d7e3dc;font-size:10px;line-height:12px;font-weight:700;font-variant-numeric:tabular-nums}.mh-home-xp{flex:1 1 auto;min-width:18px;height:4px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:minmax(0,1fr) 44px;grid-template-rows:1fr 1fr;box-sizing:border-box;width:calc(153px + var(--wal-grow,0px));padding:3px 4px;border-radius:14px;--wal-col:calc(99px + var(--wal-grow,0px));--wal-max:10px}.mh-home-wallet>div{display:grid;grid-template-columns:14px minmax(0,1fr) auto;align-items:center;gap:2px;min-width:0;padding:1px 3px;color:#ffe08a;--wal-room:calc(var(--wal-col) - 50px)}.mh-home-wallet>div+div{--wal-room:calc(var(--wal-col) - 71px)}.mh-home-wallet>div b{font-size:min(var(--wal-max),calc(var(--wal-room) / (var(--len,1) * .64)));text-align:right;white-space:nowrap;min-width:0}.mh-home-wallet>div small{font-size:8px;color:#f4e7c3;white-space:nowrap}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:9px;font-weight:900;min-width:44px;min-height:44px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;padding:0;border:0;background:transparent;color:#fff;touch-action:manipulation}/* 押せる範囲は見えている札と、そのまわり8pxだけ(2026-10-11・社長の指摘)。以前は建物ぶんの透明な箱が押し場所で、札の外の何もない所でも施設が開き、ジャックの吹き出しを押せなかった。札の位置は、箱の位置と箱の中の札の位置を足し合わせた値にしてある(見た目の位置は前と同じ) */.mh-home-facility::after{content:'';position:absolute;inset:-8px}.mh-home-facility>span{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility-label{display:flex;flex-direction:column;align-items:flex-start;line-height:1.05;font-weight:inherit}.mh-home-facility-label small{margin-top:2px;font-size:8px;font-weight:800;letter-spacing:0;color:#ffe6a7;opacity:.9}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}[data-assistant-life-map] .mh-home-facility.management{left:2.52%;top:26.58%}.mh-home-facility.management>span{border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}[data-assistant-life-map] .mh-home-facility.temple{right:2.94%;top:25.9%}.mh-home-facility.temple>span{border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}[data-assistant-life-map] .mh-home-facility.market{right:1.95%;top:57%}.mh-home-facility.market>span{border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}[data-assistant-life-map] .mh-home-facility.battle{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%)}[data-assistant-life-map] .mh-home-facility.battle>span{min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}[data-assistant-life-map] .mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}[data-assistant-life-map] .mh-home-facility.battle:active>span{transform:scale(.94)}/* 背の低い画面(縦 700px 前後まで)では、イベントの札とMFバトルカードの札を、モンヒロビートの札(top:55.25%)の下まで下げる。重なっていた(2026-10-26) */.mh-home-event-banner{display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:6px 11px;border:1px solid #fdba74;border-radius:13px;background:linear-gradient(135deg,#7c2d12ee,#4c1d95ee);color:#ffedd5;font-size:11px;font-weight:900;line-height:1.2;box-shadow:0 3px 10px #0008;text-align:left}.mh-home-event-banner small{font-size:9px;font-weight:800;color:#fed7aa}[data-assistant-life-map] .mh-home-card-battle{position:absolute;z-index:5;left:9px;bottom:min(calc(33% - 40px),calc(44.75% - 126px));padding:0}[data-assistant-life-map] .mh-home-card-battle.raised{bottom:min(calc(33% + 4px),calc(44.75% - 82px))}/* 公式杯の札(2026-10-31 社長・案A)。イベントの札の下・MFバトルカードの札の上(MFバトルカードの札のいつもの段)。イベントの札が無いときは1段上がる。公式杯の札があるときは、MFバトルカードの札は1段下(below-tour) */.mh-home-tour-banner{display:flex;align-items:center;gap:6px;max-width:min(calc(100% - 150px),240px);padding:3px 10px 3px 7px;border:1.5px solid #fde68a;border-radius:13px;background:linear-gradient(135deg,#78350fee,#b45309ee 45%,#1e1b4bee);color:#fffbeb;text-align:left;box-shadow:0 0 0 2px #f59e0b55,0 3px 10px #0008}.mh-home-tour-banner>span:first-child{font-size:19px;line-height:1}.mh-home-tour-banner>span:last-child{display:flex;min-width:0;flex-direction:column;gap:1px;line-height:1.2}.mh-home-tour-banner b{overflow:hidden;font-size:11.5px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}.mh-home-tour-banner small{display:block;overflow:hidden;font-size:9.5px;font-weight:800;color:#fde68a;text-overflow:ellipsis;white-space:nowrap}.mh-home-tour-banner em{margin-left:5px;padding:0 5px;border-radius:999px;background:#fbbf24;color:#3d2305;font-style:normal;font-size:9px;font-weight:900;line-height:1.5}.mh-home-tour-banner:active{transform:scale(.96);filter:brightness(1.15)}[data-assistant-life-map] .mh-home-card-battle.below-tour{bottom:min(calc(33% - 84px),calc(44.75% - 170px))}[data-assistant-life-map] .mh-home-card-battle.soon>span{background:linear-gradient(135deg,#334155ee,#3b0764ee);border-color:#fcd34dcc}[data-assistant-life-map] .mh-home-card-battle.soon small{margin-left:4px;padding:1px 6px;border-radius:999px;background:#fbbf24;color:#3d2305;font-size:10px;font-weight:900;line-height:1.4}[data-assistant-life-map] .mh-home-card-battle>span{display:flex;align-items:center;gap:4px;padding:8px 12px;border:1.5px solid #7dd3fcdd;border-radius:13px;background:linear-gradient(135deg,#1e3a8aee,#4c1d95ee);color:#fff;font-size:12px;font-weight:900;line-height:1.2;box-shadow:0 3px 12px #0009,0 0 15px #38bdf866}@media(orientation:landscape) and (max-height:600px){[data-assistant-life-map] .mh-home-card-battle{bottom:12px}/* 横向きでもイベントの札を出す。MFバトルカードの札(下から12px)のすぐ上(2026-10-26 ダメダシくん「横では見当たらない」) *//* 横向きの公式杯の札は MFバトルカードの札のすぐ上、イベントの札はその上 */}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-temple-menu-card{position:relative;border:1px solid #a78bfa80;background:linear-gradient(135deg,#2e1065d9 0%,#1e1b4bcc 58%,#312e81b3 100%);box-shadow:inset 0 1px 0 #ddd6fe18,0 5px 16px #0006,0 0 18px #7c3aed12}.mh-temple-menu-card:active{filter:brightness(1.16);transform:scale(.98)}.mh-temple-menu-icon{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c4b5fd38;border-radius:10px;background:#4c1d9566;box-shadow:inset 0 1px 0 #ede9fe18}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
     /* ==================== プロフィールフレーム(2026-09-15) ====================
        ブリーダーアイコンの外側へ重ねる飾り枠。アイコン画像そのものには触らない。
        ★太さを px で書かない。inset と mask を割合で書いてあるので、ランキングの 32px でも
@@ -164640,7 +164812,7 @@ const createAnimationStyle = () => {
     .mh-boot-copy{position:relative;z-index:2;width:min(100%,340px)}.mh-boot-copy h1{font-size:clamp(20px,6vw,30px);font-weight:1000;letter-spacing:.22em;color:#fff;text-shadow:0 0 18px #c084fc;margin:0 0 8px}.mh-boot-copy h2{font-size:12px;color:#ddd6fe;letter-spacing:.12em;margin:0 0 18px}.mh-boot-copy p{min-height:18px;font-size:10px;color:#c4b5fd;margin-top:10px}.mh-progress{height:10px;border:1px solid #c4b5fd88;border-radius:99px;background:#080617;overflow:hidden}.mh-progress span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#7c3aed,#d8b4fe,#fbbf24);box-shadow:0 0 14px #c084fc;transition:width .25s}.mh-boot-copy strong{display:block;margin-top:7px;font:800 11px monospace}.mh-boot-copy button{width:100%;min-height:56px;border:1px solid #f8d477;border-radius:18px;background:linear-gradient(135deg,#4c1d95dd,#7e22cedd);box-shadow:0 0 25px #a855f766;color:#fff;font-size:clamp(15px,5vw,20px);font-weight:1000;letter-spacing:.12em;touch-action:manipulation}.mh-boot-screen footer{position:absolute;z-index:2;bottom:calc(8px + env(safe-area-inset-bottom));font:8px monospace;color:#7773a0;letter-spacing:.15em}
     .mh-boot-screen.is-ready .mh-mocchi-wrap img{animation:mhReadyHop .75s ease-out 1,mhMocchiHop 1.8s ease-in-out .75s infinite}.mh-boot-screen.is-ready .mh-boot-copy{animation:titleReveal .55s ease-out both}.mh-boot-screen.is-ready .mh-mocchi-wrap i{display:block;animation:mhSparkle 1.5s infinite}.mh-boot-screen.is-ready .mh-mocchi-wrap i:nth-of-type(1){top:10%;left:4%}.mh-boot-screen.is-ready .mh-mocchi-wrap i:nth-of-type(2){top:24%;right:0;animation-delay:.55s}.mh-boot-screen.is-entering .mh-mocchi-wrap img{animation:mhBigHop .75s ease-in-out both}.mh-entry-flash{position:absolute;z-index:9;inset:0;pointer-events:none;background:radial-gradient(circle,#fff 0,#d8b4fe 18%,transparent 58%);opacity:0}.mh-boot-screen.is-entering .mh-entry-flash{animation:mhEntryFlash .76s ease-in both}
     .mh-title-gate,.mh-entering{position:fixed;inset:0;overflow:hidden;color:#fff;background:#05020e;isolation:isolate}.mh-title-gate{animation:titleReveal .65s ease-out both}.mh-title-visual,.mh-entering>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%}
-    .mh-title-header{position:absolute;z-index:22;top:0;left:0;right:0;padding:calc(11px + env(safe-area-inset-top)) 12px 0;display:flex;justify-content:space-between;align-items:flex-start;text-shadow:0 2px 5px #000;pointer-events:none}.mh-title-build{display:grid;padding:6px 8px;text-align:left;font-family:monospace;line-height:1.15;border:1px solid #ffffff30;border-radius:10px;background:#160d2588;backdrop-filter:blur(3px)}.mh-title-build b{font-size:7px;letter-spacing:.18em;color:#eadcff}.mh-title-build span{font-size:8px;margin-bottom:5px;color:#fff;max-width:130px;overflow:hidden;text-overflow:ellipsis}.mh-title-actions{display:flex;gap:7px;pointer-events:auto}.mh-title-actions button{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:50px;height:50px;border-radius:50%;background:#26152ecc;border:1px solid #ffd87a;color:#fff;font-size:8px;font-weight:800;box-shadow:0 2px 8px #000}.mh-title-actions em{position:absolute;right:-3px;top:-6px;background:#e33;padding:2px 4px;border-radius:8px;font-size:6px;font-style:normal}.mh-title-start{position:absolute;z-index:21;inset:0;width:100%;height:100%;border:0;background:transparent;touch-action:manipulation}.mh-title-start:disabled{pointer-events:none}
+    .mh-title-header{position:absolute;z-index:22;top:0;left:0;right:0;padding:calc(11px + env(safe-area-inset-top)) 12px 0;display:flex;justify-content:space-between;align-items:flex-start;text-shadow:0 2px 5px #000;pointer-events:none}.mh-title-build{position:fixed;left:calc(12px + env(safe-area-inset-left));bottom:calc(10px + env(safe-area-inset-bottom));display:grid;padding:6px 8px;text-align:left;font-family:monospace;line-height:1.15;border:1px solid #ffffff30;border-radius:10px;background:#160d2588;backdrop-filter:blur(3px)}.mh-title-build b{font-size:7px;letter-spacing:.18em;color:#eadcff}.mh-title-build span{font-size:8px;margin-bottom:5px;color:#fff;max-width:130px;overflow:hidden;text-overflow:ellipsis}.mh-title-actions{display:flex;gap:7px;margin-left:auto;pointer-events:auto}.mh-title-actions button{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:50px;height:50px;border-radius:50%;background:#26152ecc;border:1px solid #ffd87a;color:#fff;font-size:8px;font-weight:800;box-shadow:0 2px 8px #000}.mh-title-actions em{position:absolute;right:-3px;top:-6px;background:#e33;padding:2px 4px;border-radius:8px;font-size:6px;font-style:normal}.mh-title-start{position:absolute;z-index:21;inset:0;width:100%;height:100%;border:0;background:transparent;touch-action:manipulation}.mh-title-start:disabled{pointer-events:none}
     .mh-title-modal{position:fixed;z-index:100;inset:0;display:flex;align-items:center;justify-content:center;padding:calc(20px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));background:#03020eef}.mh-title-dialog{display:flex;flex-direction:column;gap:12px;width:min(100%,380px);max-height:86vh;padding:18px;border:1px solid #a78bfa77;border-radius:22px;background:#0f172a;color:#fff;overflow:auto}.mh-dialog-head{display:flex;align-items:center;justify-content:space-between}.mh-dialog-head h3{font-weight:900}.mh-dialog-head button{padding:13px;margin:-6px -8px -6px 0}.mh-dialog-choice{display:flex;justify-content:space-between;align-items:center;padding:14px;border:1px solid #ffffff22;border-radius:14px;background:#ffffff0c;font-weight:800}/* 窓の閉じる(2026-11-19 r1119-013 ⑥ B-1・B-2)。メニューの行(.mh-dialog-choice)の形だと項目の1つに見えたので、参考の窓と同じ「下の中央の丸いボタン」にし、窓の中を送っても下に貼り付けて画面の外へ出さない */.mh-dialog-close{position:sticky;bottom:0;z-index:2;flex:none;align-self:center;min-width:168px;min-height:46px;margin-top:auto;padding:0 28px;border:1px solid #ffffff38;border-radius:999px;background:#334155;color:#f1f5f9;font-weight:900;box-shadow:0 3px 0 #0009,0 -14px 14px 2px #0f172a}.mh-dialog-close:active{transform:translateY(1px) scale(.98)}.mh-dialog-head:has(>h3:only-child){justify-content:center}/* 更新履歴の窓(2026-11-19 r1119-010・U-14)。参考の窓(見出しの帯/中身/下の中央のとじる)にそろえ、窓の中で送るのは一覧だけにする。送った札は日付の見出しと上のふちの下へもぐり、切れた枠に見えない。字は 10px より小さくしない */.mh-title-dialog--changelog{width:min(100%,440px);height:min(calc(var(--mh-vh) - 40px - env(safe-area-inset-top) - env(safe-area-inset-bottom)),760px);max-height:none;padding:0;gap:0;overflow:hidden;border:2px solid #a78bfa88}.mh-title-dialog--changelog>.mh-dialog-head{flex:none;justify-content:center;min-height:44px;padding:8px 16px;background:linear-gradient(180deg,#2b3150,#1b2036);border-bottom:1px solid #ffffff1f}.mh-title-dialog--changelog>.mh-dialog-head h3{font-size:15px;letter-spacing:.04em}.mh-title-dialog--changelog>.mh-changelog-tabs{flex:none;margin:10px 12px 0;padding:3px;gap:3px;border-radius:12px;background:#0b1222;border:1px solid #ffffff14}.mh-title-dialog--changelog>.mh-changelog-tabs button{display:flex;align-items:center;justify-content:center;gap:4px;min-height:44px;padding:0 4px;white-space:nowrap;border-radius:9px;background:transparent;color:#94a3b8;font-size:12px;font-weight:900}.mh-title-dialog--changelog>.mh-changelog-tabs button.active{background:linear-gradient(180deg,#d97706,#b45309);color:#fff;box-shadow:0 2px 0 #0006}.mh-title-dialog--changelog .mh-changelog-tabs .mh-unread-badge{position:static;width:16px;height:16px;border-width:1.5px;font-size:10px;box-shadow:none}.mh-title-dialog--changelog>.mh-changelog-list{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;margin-top:10px;padding:0 12px 12px;border-top:1px solid #ffffff1a;box-shadow:inset 0 8px 8px -8px #000c}.mh-title-dialog--changelog .mh-changelog-day{margin:0 -12px 8px;padding:6px 12px;background:#0f172af2;border-bottom:1px solid #ffffff12;box-shadow:0 6px 8px -6px #000c;font-size:11px;color:#c7d2fe}.mh-title-dialog--changelog .mh-changelog-day:first-child{margin-top:0}.mh-title-dialog--changelog .mh-changelog-list>details:first-child{margin-top:10px!important}.mh-title-dialog--changelog .mh-changelog-list article{padding:10px 12px;margin-bottom:8px;border-radius:14px;background:#111a2e}.mh-title-dialog--changelog .mh-changelog-list article.unread{border-color:#f59e0bb0;box-shadow:inset 3px 0 0 #f59e0b}.mh-title-dialog--changelog .mh-changelog-head{min-height:40px}.mh-title-dialog--changelog .mh-changelog-head b{font-size:13px;line-height:1.4}.mh-title-dialog--changelog .mh-changelog-head small{font-size:10px}.mh-title-dialog--changelog .mh-changelog-count{font-size:10px}.mh-title-dialog--changelog .mh-changelog-count em,.mh-title-dialog--changelog .mh-changelog-item time em{font-size:9px}.mh-title-dialog--changelog .mh-changelog-kind{font-size:10px}.mh-title-dialog--changelog .mh-changelog-peek{font-size:11px;color:#a8b3c7}.mh-title-dialog--changelog .mh-changelog-list p{font-size:12px;line-height:1.65}.mh-title-dialog--changelog .mh-changelog-item time{font-size:10px}.mh-title-dialog--changelog .mh-changelog-item b{font-size:12.5px}.mh-title-dialog--changelog>.mh-dialog-close{position:static;margin:10px auto 12px;box-shadow:0 3px 0 #0009}@media(orientation:landscape) and (max-height:500px){.mh-title-dialog--changelog{display:grid;grid-template-columns:minmax(150px,24%) 1fr;grid-template-rows:auto auto 1fr auto;width:min(100%,860px);height:calc(var(--mh-vh) - 16px);padding:0}.mh-title-dialog--changelog>.mh-dialog-head{grid-column:1;grid-row:1;border-right:1px solid #ffffff14}.mh-title-dialog--changelog>.mh-changelog-tabs{grid-column:1;grid-row:2;grid-template-columns:1fr;margin:10px}.mh-title-dialog--changelog>.mh-dialog-close{grid-column:1;grid-row:4;align-self:end;justify-self:center;min-width:0;width:calc(100% - 20px);margin:0 10px 10px}.mh-title-dialog--changelog>.mh-changelog-list{grid-column:2;grid-row:1/-1;margin:0;padding-top:0;border-top:0;border-left:1px solid #ffffff1a;box-shadow:none}}/* 2026-11-27 r1126-074 小4: タブレットでは窓を広げる。縦は幅680まで・高さは画面に合わせる。横は小さい横と同じ左右の組(左に見出し・タブ・閉じる、右に一覧) */@media(min-width:700px) and (orientation:portrait){.mh-title-dialog--changelog{width:min(100%,680px);height:min(calc(var(--mh-vh) - 40px - env(safe-area-inset-top) - env(safe-area-inset-bottom)),1100px)}}@media(orientation:landscape) and (min-height:501px){.mh-title-dialog--changelog{display:grid;grid-template-columns:minmax(190px,24%) 1fr;grid-template-rows:auto auto 1fr auto;width:min(100%,1040px);height:min(calc(var(--mh-vh) - 40px - env(safe-area-inset-top) - env(safe-area-inset-bottom)),860px);padding:0}.mh-title-dialog--changelog>.mh-dialog-head{grid-column:1;grid-row:1;border-right:1px solid #ffffff14}.mh-title-dialog--changelog>.mh-changelog-tabs{grid-column:1;grid-row:2;grid-template-columns:1fr;margin:10px}.mh-title-dialog--changelog>.mh-dialog-close{grid-column:1;grid-row:4;align-self:end;justify-self:center;min-width:0;width:calc(100% - 20px);margin:0 10px 10px}.mh-title-dialog--changelog>.mh-changelog-list{grid-column:2;grid-row:1/-1;margin:0;padding-top:0;border-top:0;border-left:1px solid #ffffff1a;box-shadow:none}}@media(orientation:landscape) and (max-height:500px){.mh-title-dialog--menu{display:grid;grid-template-columns:1fr 1fr;align-content:start}.mh-title-dialog--menu>.mh-dialog-head,.mh-title-dialog--menu>.mh-dialog-close{grid-column:1/-1;justify-self:center}.mh-title-dialog--menu>.mh-dialog-choice{padding:10px 12px}}.mh-changelog-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.mh-changelog-tabs button{position:relative;padding:9px;border-radius:10px;background:#1e293b;font-size:11px;font-weight:800}.mh-changelog-tabs button.active{background:#b45309}.mh-unread-badge{position:absolute;right:-5px;top:-6px;display:flex;align-items:center;justify-content:center;width:17px;height:17px;border:2px solid #fff;border-radius:50%;background:#dc2626;color:#fff;font:900 11px/1 sans-serif;font-style:normal;box-shadow:0 2px 5px #0008;pointer-events:none}.mh-changelog-list{overflow:auto}.mh-changelog-list article{padding:11px;margin-bottom:8px;border:1px solid #ffffff18;border-radius:13px;background:#0005}.mh-changelog-list time,.mh-changelog-list b{display:block}.mh-changelog-list time{font:9px monospace;color:#94a3b8}.mh-changelog-list b{font-size:12px;margin:4px 0}.mh-changelog-kind{display:inline-block;margin-top:5px;padding:2px 7px;border-radius:999px;border:1px solid currentColor;font:900 9px/1.5 sans-serif}.mh-changelog-kind[data-kind="fix"]{color:#fca5a5;background:#7f1d1d55}.mh-changelog-kind[data-kind="feature"]{color:#86efac;background:#14532d55}.mh-changelog-kind[data-kind="update"]{color:#93c5fd;background:#1e3a8a55}.mh-changelog-kind[data-kind="market"]{color:#fcd34d;background:#78350f55}.mh-changelog-kind[data-kind="issue"]{color:#d8b4fe;background:#4c1d9555}.mh-changelog-kind[data-kind="mode"]{color:#67e8f9;background:#164e6355}.mh-changelog-kind[data-kind="content"]{color:#f9a8d4;background:#83184355}.mh-changelog-kind[data-kind="event"]{color:#fdba74;background:#7c2d1255}.mh-changelog-list p{font-size:10px;color:#cbd5e1}.mh-changelog-head{display:flex;align-items:center;gap:8px;width:100%;min-height:36px;padding:0;border:0;background:transparent;color:inherit;text-align:left}.mh-changelog-head b{flex:1;min-width:0;margin:4px 0}.mh-changelog-head small{flex:none;font-size:8px;font-weight:900;color:#94a3b8;white-space:nowrap}.mh-changelog-detail{margin-top:2px;padding-top:6px;border-top:1px solid #ffffff14}.mh-changelog-empty{padding:18px 12px;text-align:center;line-height:1.7;color:#fbbf24}.mh-changelog-day{position:sticky;top:0;z-index:1;margin:10px 0 6px;padding:3px 0;background:#0f172a;color:#a5b4fc;font:900 10px/1.4 monospace;letter-spacing:.04em}.mh-changelog-day:first-child{margin-top:0}.mh-changelog-group-emoji{flex:none;font-size:13px;line-height:1}.mh-changelog-count{flex:none;position:relative;padding:2px 7px;border-radius:999px;background:#ffffff14;color:#cbd5e1;font:900 9px/1.5 sans-serif;white-space:nowrap}.mh-changelog-count em{margin-left:5px;padding:1px 4px;border-radius:5px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-changelog-peek{margin-top:4px;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;font-size:9px;line-height:1.5;color:#94a3b8}.mh-changelog-kinds{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}.mh-changelog-kinds .mh-changelog-kind{margin-top:0}.mh-changelog-kind i{margin-left:3px;font-style:normal;opacity:.85}.mh-changelog-item{padding:9px 0;border-top:1px solid #ffffff14}.mh-changelog-item:first-child{padding-top:2px;border-top:0}.mh-changelog-item time{display:inline-block;margin-right:6px;font:9px monospace;color:#94a3b8}.mh-changelog-item time em{margin-left:4px;padding:1px 4px;border-radius:5px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-changelog-item b{display:block;margin:4px 0;font-size:11px;line-height:1.5}.mh-changelog-item .mh-changelog-kind{margin-top:0}[data-changelog-link]{display:inline-flex;align-items:center;gap:4px;margin-top:8px;padding:8px 13px;border:1px solid #7dd3fc55;border-radius:11px;background:#0ea5e922;color:#7dd3fc;font:900 10px/1.4 sans-serif;text-decoration:none}.mh-title-dialog textarea{min-height:90px;padding:8px;border-radius:10px;background:#0008;font:9px monospace}
     .mh-tile-viewport{touch-action:none;overscroll-behavior:contain;cursor:grab}.mh-tile-viewport:active{cursor:grabbing}.mh-tile-viewport.overview{overflow:auto}.mh-tile-viewport.overview .mh-tile-board{transform:none}.mh-training-tile{transform:scale(var(--map-scale,1))}.mh-training-tile.current{transform:scale(calc(var(--map-scale,1)*1.08))}.mh-tile-board>i.route{height:17px;border-color:#fef08a;background:#facc15;box-shadow:0 0 14px #fde047;animation:trainingRoutePulse .7s infinite alternate}.mh-training-tile.route-preview{border-color:#fde047;box-shadow:0 0 16px #fde047,0 5px 0 #713f12}.mh-training-tile.stop-preview{z-index:7;border-color:#fff;box-shadow:0 0 0 5px #f97316,0 0 25px #fb923c}.mh-board-buttons{display:flex;align-items:center;gap:4px}.mh-board-buttons button{min-height:34px;padding:0 8px;border-radius:9px;background:#164e63;font-size:8px;font-weight:900}.mh-board-buttons span{padding:3px 5px;border-radius:7px;background:#020617;color:#bae6fd;font:8px monospace}.mh-changelog-list article.unread{border-color:#f59e0b88}.mh-changelog-list time em{float:right;padding:2px 5px;border-radius:6px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-training-effect{position:fixed;z-index:45000;left:50%;top:43%;width:min(78vw,300px);min-height:150px;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;border:3px solid #fff;border-radius:28px;background:radial-gradient(circle,#0ea5e9dd,#020617ee 72%);box-shadow:0 0 55px #38bdf8;pointer-events:none;animation:trainingEffectPop 1.25s ease-out both}.mh-training-effect>span{font-size:58px;filter:drop-shadow(0 0 15px #fff)}.mh-training-effect>b{z-index:2;max-width:90%;text-align:center;color:#fff;font-size:16px;text-shadow:0 2px 5px #000}.mh-training-effect.xp,.mh-training-effect.effect,.mh-training-effect.turn{background:radial-gradient(circle,#22c55edd,#052e16ee 72%);box-shadow:0 0 55px #4ade80}.mh-training-effect.diamond{background:radial-gradient(circle,#38bdf8ee,#172554ee 72%)}.mh-training-effect.item,.mh-training-effect.tool,.mh-training-effect.goal{background:radial-gradient(circle,#fbbf24ee,#581c87ee 72%);box-shadow:0 0 70px #fde047}.mh-training-effect.move,.mh-training-effect.happening{background:radial-gradient(circle,#ef4444dd,#450a0aee 72%);box-shadow:0 0 55px #fb7185}.mh-training-effect i{position:absolute;width:9px;height:9px;border-radius:50%;background:#fff;box-shadow:0 0 12px #fff;animation:trainingParticle 1s ease-out both}.mh-training-effect i:nth-of-type(1){--a:0deg}.mh-training-effect i:nth-of-type(2){--a:60deg}.mh-training-effect i:nth-of-type(3){--a:120deg}.mh-training-effect i:nth-of-type(4){--a:180deg}.mh-training-effect i:nth-of-type(5){--a:240deg}.mh-training-effect i:nth-of-type(6){--a:300deg}@keyframes trainingEffectPop{0%{opacity:0;transform:translate(-50%,-50%) scale(.4)}18%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-58%) scale(.96)}}@keyframes trainingParticle{from{transform:rotate(var(--a)) translateX(18px);opacity:1}to{transform:rotate(var(--a)) translateX(115px) scale(.2);opacity:0}}@keyframes trainingRoutePulse{to{filter:brightness(1.6)}}
     .mh-entering>img{animation:mhGateZoom 1.15s ease-in both}.mh-gate-core{position:absolute;z-index:3;left:50%;top:44%;width:12vmin;height:12vmin;border-radius:50%;background:#fff;box-shadow:0 0 25px 12px #d8b4fe,0 0 90px 40px #7e22ce;transform:translate(-50%,-50%);animation:mhCoreGrow 1.15s ease-in both}.mh-gate-particles{position:absolute;z-index:2;inset:-30%;background:repeating-conic-gradient(from 0deg,transparent 0 8deg,#fbbf2444 9deg,#a855f766 10deg,transparent 11deg 19deg);animation:mhParticles 1.1s ease-in both}.mh-gate-flash{position:absolute;z-index:4;inset:0;background:#f5f0ff;animation:mhGateFlash 1.15s ease-in both}.mh-entering p{position:absolute;z-index:6;left:0;right:0;bottom:calc(9% + env(safe-area-inset-bottom));text-align:center;font-size:11px;font-weight:800;text-shadow:0 2px 6px #000}
@@ -164648,7 +164820,7 @@ const createAnimationStyle = () => {
     /* 横画面のタイトル。横長の絵は左上にロゴがあるので、VERSION の札を左下へ逃がし、絵は上を切らない位置で見せる */
     /* 背の低い横向き(844×390 など)では、更新履歴などの窓が縦長のまま小さく、中身が1件ぶんしか見えなかった(2026-10-27 ダメダシくんの見回り)。幅を広げ、余白を詰める */
     @media(orientation:landscape) and (max-height:500px){.mh-title-modal{padding:calc(8px + env(safe-area-inset-top)) 16px calc(8px + env(safe-area-inset-bottom))}.mh-title-dialog{width:min(100%,720px);max-height:calc(var(--mh-vh) - 16px);padding:12px 16px;gap:8px}}
-    @media(orientation:landscape){.mh-title-visual,.mh-entering>img{object-position:50% 12%}.mh-title-build{position:fixed;left:calc(12px + env(safe-area-inset-left));top:auto;bottom:calc(10px + env(safe-area-inset-bottom))}.mh-title-actions{margin-left:auto}}
+    @media(orientation:landscape){.mh-title-visual,.mh-entering>img{object-position:50% 12%}.mh-title-actions{margin-left:auto}}
     /* 背景の大きさ合わせ(2026-09-30・ユーザー指示「いろんな端末を見て」)。
        ・タイトル: ふつうは画面いっぱい(cover)。ほぼ正方形の画面(縦横比 3:4〜7:5。Foldの内側・4:3のタブレットの横持ち)だけは
          上下や左右が大きく切れてロゴが欠けるので、絵全体を出し(contain)、余りは同じ絵をぼかして埋める
