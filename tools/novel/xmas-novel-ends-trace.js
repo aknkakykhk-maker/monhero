@@ -81,7 +81,8 @@ const run = (side, route) => {
   const asked = [];
   const offered = {};
   let rec = false;
-  let st = E.xmasNovelSettle(S, E.xmasNovelFreshCur(S));
+  const SEEN = { endings: seen, read: [] }; // 行・場面の条件(end_G など)にも、見たエンドを渡す(画面と同じ・r1126-115)
+  let st = E.xmasNovelSettle(S, E.xmasNovelFreshCur(S), SEEN);
   const push = (r, scene) => { if (rec) lines.push({ id: r.id, scene, t: r.t, w: r.w || null, n: r.n || null, e: r.e || null, x: r.x || '' }); };
   for (let steps = 0; steps < 8000; steps += 1) {
     if (!st.row) {
@@ -89,7 +90,7 @@ const run = (side, route) => {
       return { lines, asked, offered, end: st.ending ? st.ending.id : null, panel: (st.cur && st.cur.panel) || {} };
     }
     const row = st.row;
-    if (row.t !== 'q') { push(row, st.cur.scene); st = E.xmasNovelStep(S, E.xmasNovelApplyRow(st.cur, row)); continue; }
+    if (row.t !== 'q') { push(row, st.cur.scene); st = E.xmasNovelStep(S, E.xmasNovelApplyRow(st.cur, row), SEEN); continue; }
     asked.push(row.id);
     if (row.id === route.from) rec = true;
     const want = route.picks[row.id];
@@ -112,18 +113,37 @@ const run = (side, route) => {
     if (rec) lines.push({ t: 'choice', id: row.id, x: `${row.x} → 「${label}」` });
     const res = E.xmasNovelAnswer(S, st.cur, row, pick, seen);
     let c = res.cur; (res.replies || []).forEach((r) => { push(r, st.cur.scene); c = E.xmasNovelApplyRow(c, r); });
-    if (res.then === 'retry') { st = E.xmasNovelSettle(S, c); continue; }
-    if (res.then && res.then.to) st = E.xmasNovelSettle(S, E.xmasNovelJump(S, c, res.then.to));
-    else st = E.xmasNovelStep(S, { ...c });
+    if (res.then === 'retry') { st = E.xmasNovelSettle(S, c, SEEN); continue; }
+    if (res.then && res.then.to) st = E.xmasNovelSettle(S, E.xmasNovelJump(S, c, res.then.to), SEEN);
+    else st = E.xmasNovelStep(S, { ...c }, SEEN);
   }
   return { lines, end: null, err: '長すぎて止めた' };
 };
 
+// 「選択を足す」(場面の最後に足した、行の条件つきの選択)が、真グッドのあとだけ出るか(r1126-115: 行の条件に見たエンドが渡っていなかった)
+//   台本の写しの第1章 C1-1 の最後に [end_G=1] の選択を足して、見たエンドあり・なしで C1-1 の終わりから進める
+const rowCondCheck = () => {
+  const bad = [];
+  const T = JSON.parse(JSON.stringify(S));
+  const sc = T.scenes.find((x) => x.id === 'C1-1');
+  if (!sc) return ['C1-1 が無い'];
+  sc.rows.push({ t: 'q', id: 'AZZ0', kind: 'action', x: 'ためし', c: { any: [{ all: [{ k: 'end_G', op: '=', v: 1 }] }] }, options: [{ x: '今までどおり', to: sc.next }] });
+  const at = { ...E.xmasNovelFreshCur(T), scene: 'C1-1', idx: sc.rows.length - 2 };
+  const a = E.xmasNovelStep(T, at, { endings: ['END-G'], read: [] });
+  const b = E.xmasNovelStep(T, at, { endings: [], read: [] });
+  const c = E.xmasNovelStep(T, at);
+  if (!a.row || a.row.id !== 'AZZ0') bad.push('真グッドのあとなのに、C1-1 の最後に足した選択が出ない');
+  if (b.row && b.row.id === 'AZZ0') bad.push('真グッドの前なのに、C1-1 の最後に足した選択が出た');
+  if (c.row && c.row.id === 'AZZ0') bad.push('見たエンドを渡さないのに、足した選択が出た(今までどおりの動きのはず)');
+  return bad;
+};
 const NAME = { atsu: 'あつ派', sorashido: 'ソラシド派' };
 const FACE = { normal: 'ふつう', happy: '笑顔', wink: 'ウインク', surprise: '驚き', troubled: '困り顔', angry: 'むくれ顔', crying: '泣き顔', excited: 'わくわく', sleep: '寝顔' };
 const ng = [];
 const summary = [];
 // どのエンディングも、「次」は無いか・選択の行(やり直し)か・外側(OUT-*)の場面だけ(r1126-108)
+rowCondCheck().forEach((m) => ng.push(`選択を足す(行の条件): ${m}`));
+summary.push(`選択を足す(行の条件つき)が真グッドのあとだけ出る → ${rowCondCheck().length ? 'NG' : 'OK'}`);
 S.scenes.filter((sc) => sc.ending).forEach((sc) => {
   const nx = sc.next;
   if (nx && !/^OUT-/.test(nx) && S.scenes.some((x) => x.id === nx)) ng.push(`${sc.ending.id}: エンディングのあとに場面 ${nx} が続く(外側の場面だけのはず)`);
