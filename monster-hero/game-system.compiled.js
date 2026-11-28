@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 03c5086dcddcb4f4
+// source-sha256: 9916946068666254
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -46978,6 +46978,14 @@ const RhythmTapTest = ({
     if (!run || !run.tickRules || !Array.isArray(ticks) || !ticks.length) return 0;
     const okNow = () => Number(note._rhythmComboOk) || 0,
       dropNow = () => Number(note._rhythmComboDrop) || 0;
+    if (lineAdjustRef.current && lineAdjustRef.current.listen) {
+      const d = dropNow();
+      if (d > 0) {
+        note._rhythmComboOk = okNow() + d;
+        note._rhythmComboDrop = 0;
+      }
+      if (judgment) judgment = 'MARVELOUS';
+    }
     if (judgment) {
       const rest = ticks.length - okNow() - dropNow();
       if (rest > 0) {
@@ -47023,6 +47031,10 @@ const RhythmTapTest = ({
     const _judgeT0 = RHYTHM_PERF.enabled && typeof performance !== 'undefined' ? performance.now() : 0;
     const run = runRef.current;
     if (!run || run.finished || run.paused || note.done) return;
+    if (lineAdjustRef.current && lineAdjustRef.current.listen) {
+      deltaMs = 0;
+      judgment = 'MARVELOUS';
+    }
     comboTicksRef.current(note, judgment);
     if (rhythmHisshiUpgrades(run.abilities, judgment, run.audio?.songTimeMs?.() ?? 0)) judgment = 'MARVELOUS';
     {
