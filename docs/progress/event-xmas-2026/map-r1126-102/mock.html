@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>分岐の地図 見本</title>
+<style>body.nosheet .sheet,body.nosheet .sheetbg{display:none}
+:root{--gold:#e8c873;--gold2:#b8913a;--ink:#0b1430;--ink2:#14214a;--red:#c8323c;--snow:#eef3ff;--dim:#53607f;--green:#2f6b4a}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--ink);color:var(--snow);font-family:"Hiragino Mincho ProN","Noto Serif JP","Yu Mincho",serif;width:390px;overflow-x:hidden}
+.page{position:relative;min-height:844px;padding:0 0 40px;background:
+ radial-gradient(ellipse at 50% -10%,rgba(232,200,115,.18),transparent 55%),
+ linear-gradient(rgba(120,150,220,.07) 1px,transparent 1px) 0 0/22px 22px,
+ linear-gradient(90deg,rgba(120,150,220,.07) 1px,transparent 1px) 0 0/22px 22px,
+ linear-gradient(#0b1430,#101b3d 60%,#0b1430)}
+.snow{position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(#fff 1px,transparent 1.5px),radial-gradient(rgba(255,255,255,.6) 1px,transparent 1.5px);background-size:61px 73px,37px 41px;background-position:0 0,17px 23px;opacity:.25}
+.top{position:sticky;top:0;z-index:5;padding:12px 16px 10px;background:linear-gradient(#0b1430 70%,rgba(11,20,48,0));}
+.ttl{display:flex;align-items:center;gap:8px}
+.ttl h1{font-size:19px;color:var(--gold);letter-spacing:.06em}
+.ttl small{font-size:11px;color:#9fb0d8;margin-left:auto}
+.close{width:30px;height:30px;border-radius:50%;border:1px solid var(--gold2);color:var(--gold);display:grid;place-items:center;font-size:14px}
+.row{display:flex;gap:8px;margin-top:8px;align-items:center}
+.tab{flex:1;text-align:center;padding:6px 0;border-radius:999px;font-size:13px;font-weight:800;border:1px solid var(--gold2);color:var(--gold)}
+.tab.on{background:linear-gradient(#e8c873,#b8913a);color:#2a1a05}
+.ends{font-size:12px;color:var(--snow);padding:4px 10px;border-radius:999px;background:rgba(200,50,60,.25);border:1px solid rgba(232,120,120,.6);white-space:nowrap}
+.legend{display:flex;gap:10px;font-size:10px;color:#9fb0d8;margin-top:8px;flex-wrap:wrap}
+.legend i{display:inline-block;width:10px;height:10px;margin-right:3px;vertical-align:-1px}
+.map{position:relative;padding:4px 16px 0 16px}
+.spine{position:absolute;left:46px;top:0;bottom:0;width:4px;background:linear-gradient(var(--gold),var(--gold2));border-radius:2px;box-shadow:0 0 8px rgba(232,200,115,.5)}
+.spine.dark{background:repeating-linear-gradient(#2b3658 0 8px,transparent 8px 14px);box-shadow:none}
+.blk{position:relative}
+.chap{position:relative;margin:14px 0 6px 0;display:flex;align-items:center;gap:10px}
+.door{width:64px;height:40px;border-radius:20px 20px 4px 4px;background:linear-gradient(#6b4423,#3e2612);border:2px solid var(--gold);display:grid;place-items:center;font-size:11px;font-weight:900;color:var(--gold);box-shadow:0 0 12px rgba(232,200,115,.45);z-index:1}
+.chap .name{font-size:15px;font-weight:900;color:var(--snow)}
+.chap .name em{font-style:normal;font-size:11px;color:var(--gold);display:block;letter-spacing:.1em}
+.chap.dark .door{background:#1a2342;border-color:#3a4670;color:#5d6a90;box-shadow:none}
+.chap.dark .name{color:#5d6a90}
+.node{position:relative;display:flex;align-items:center;gap:8px;margin:8px 0 8px 18px;min-height:34px}
+.mark{width:28px;height:28px;display:grid;place-items:center;font-size:13px;z-index:1;flex:none}
+.mark.act{transform:rotate(45deg);background:#7a1f28;border:2px solid #f0a0a0;border-radius:4px}
+.mark.act span{transform:rotate(-45deg)}
+.mark.q{border-radius:50%;background:#173a2a;border:2px solid #8fd6a8}
+.mark.who{border-radius:6px;background:#3a2a5a;border:2px solid #c7b2ff}
+.node.dark .mark{background:#1a2342;border-color:#3a4670;color:#5d6a90}
+.lab{font-size:12.5px;font-weight:800;line-height:1.35}
+.lab small{display:block;font-size:10.5px;font-weight:600;color:#9fb0d8}
+.node.dark .lab{color:#5d6a90}.node.dark .lab small{color:#3f4b70}
+.redo{margin-left:auto;font-size:14px;font-weight:900;width:30px;height:30px;display:grid;place-items:center;padding:0;flex:none;border-radius:999px;border:1px solid var(--gold2);color:var(--gold);background:rgba(232,200,115,.08);white-space:nowrap}
+.side{display:flex;align-items:center;margin-left:6px;gap:0}
+.dash{width:22px;border-top:2px dashed rgba(240,160,160,.7)}
+.orn{position:relative;width:124px;padding:6px 6px 6px 24px;border-radius:14px;font-size:10.5px;font-weight:800;line-height:1.3;background:linear-gradient(135deg,#8a1c26,#4a0f15);border:1px solid #f0a0a0;color:#ffe9e9}
+.orn::before{content:"";position:absolute;left:7px;top:50%;width:13px;height:13px;margin-top:-6.5px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffd2d2,#c8323c 60%,#6a1018);box-shadow:0 0 6px rgba(255,120,120,.8)}
+.orn small{display:block;font-size:9.5px;color:#f7c2c2;font-weight:600}
+.orn.unseen{background:#151d38;border-color:#3a4670;color:#5d6a90}.orn.unseen::before{background:#2a3456;box-shadow:none}.orn.unseen small{color:#3f4b70}
+.orn.gold{background:linear-gradient(135deg,#7a5a14,#3d2c08);border-color:var(--gold)}
+.dash.dim{border-top-color:#3a4670}
+.here{position:absolute;left:-14px;top:50%;transform:translateY(-50%);z-index:2}
+.tag{position:relative;display:inline-block;padding:3px 8px 3px 10px;font-size:10px;font-weight:900;color:#fff;background:var(--red);border-radius:3px;box-shadow:0 0 0 2px #fff,0 0 14px rgba(255,80,80,.9)}
+.node.now .mark{box-shadow:0 0 0 3px #fff,0 0 16px 4px rgba(255,90,90,.9)}
+.fan{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:6px 0 4px 46px}
+.fan .orn{width:auto}
+.lane{margin:4px 0 0 46px;padding:6px 10px;border-left:2px dashed #3a4670;font-size:11px;color:#5d6a90}
+.foot{margin:18px 16px 0;padding:10px 12px;border-radius:12px;border:1px solid #3a4670;font-size:11px;color:#9fb0d8;line-height:1.5;background:rgba(20,33,74,.6)}
+.sheetbg{position:fixed;inset:0;background:rgba(5,8,20,.55);z-index:9}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:10;padding:16px 16px 22px;border-radius:18px 18px 0 0;background:linear-gradient(#18244d,#0d1634);border-top:2px solid var(--gold);box-shadow:0 -10px 30px rgba(0,0,0,.5)}
+.sheet h2{font-size:16px;color:var(--gold)}
+.sheet .q{margin-top:8px;padding:8px 10px;border-radius:10px;background:rgba(120,20,30,.35);box-shadow:0 0 0 1px rgba(232,120,120,.6);font-size:13px;font-weight:800;line-height:1.5}
+.sheet ul{margin:10px 0 0 0;list-style:none;font-size:12px;line-height:1.7;color:#d9e2ff}
+.sheet li::before{content:"・";color:var(--gold)}
+.btn{display:block;width:100%;margin-top:10px;padding:12px 0;text-align:center;border-radius:12px;font-weight:900;font-size:15px}
+.btn.main{background:linear-gradient(#e8c873,#b8913a);color:#2a1a05}
+.btn.sub{border:1px solid var(--gold2);color:var(--gold)}
+.note{margin-top:8px;font-size:10.5px;color:#9fb0d8;line-height:1.5}
+</style></head>
+<body class="SHEET_CLASS">
+<div class="page"><div class="snow"></div>
+<div class="top">
+ <div class="ttl"><h1>聖夜の見取り図</h1><small>分岐の地図</small><div class="close">✕</div></div>
+ <div class="row"><div class="tab on">あつ派</div><div class="tab">ソラシド派</div><div class="ends">エンド 2/16</div></div>
+ <div class="legend"><span><i style="background:#7a1f28;transform:rotate(45deg)"></i>行動の選択</span><span><i style="background:#173a2a;border-radius:50%"></i>推理の問い</span><span><i style="background:#3a2a5a"></i>名指し</span><span><i style="background:#c8323c;border-radius:50%"></i>エンド</span></div>
+</div>
+<div class="map">
+ <div class="spine" style="top:0;height:1180px"></div>
+ <div class="spine dark" style="top:1180px;height:520px"></div>
+
+ <div class="chap"><div class="door">序章</div><div class="name"><em>PROLOGUE</em>届いたゲーム</div></div>
+ <div class="chap"><div class="door">第一章</div><div class="name"><em>CHAPTER 1</em>ペンション・シュプール</div></div>
+ <div class="node"><div class="mark who"><span>✦</span></div><div class="lab">どっちを手伝う？<small>あつ派を選んだ</small></div><div class="redo">↺</div></div>
+
+ <div class="chap"><div class="door">第二章</div><div class="name"><em>CHAPTER 2</em>十二の鐘</div></div>
+ <div class="node"><div class="mark act"><span>◆</span></div><div class="lab">行動の選択<small>予告の手紙</small></div><div class="redo" style="margin-left:6px">↺</div>
+  <div class="side"><div class="dash dim"></div><div class="orn unseen">？？？<small>未見のエンド</small></div></div></div>
+ <div class="node"><div class="mark act"><span>◆</span></div><div class="lab">行動の選択<small>暗闇の物音</small></div><div class="redo" style="margin-left:6px">↺</div>
+  <div class="side"><div class="dash"></div><div class="orn">名探偵の消えた夜<small>強制バッド</small></div></div></div>
+ <div class="node"><div class="mark q"><span>①</span></div><div class="lab">推理の問い①<small>一発で正解</small></div><div class="redo">↺</div></div>
+
+ <div class="chap"><div class="door">第三章</div><div class="name"><em>CHAPTER 3</em>雪の上の影</div></div>
+ <div class="node"><div class="mark q"><span>②</span></div><div class="lab">推理の問い②<small>一発で正解</small></div><div class="redo">↺</div></div>
+ <div class="chap"><div class="door">第四章</div><div class="name"><em>CHAPTER 4</em>開かずの部屋</div></div>
+ <div class="node"><div class="mark q"><span>③</span></div><div class="lab">推理の問い③<small>外して仲間が拾った</small></div><div class="redo">↺</div></div>
+
+ <div class="chap"><div class="door">第五章</div><div class="name"><em>CHAPTER 5</em>鏡の廊下</div></div>
+ <div class="node"><div class="mark act"><span>◆</span></div><div class="lab">行動の選択<small>写真か、居場所か</small></div><div class="redo" style="margin-left:6px">↺</div>
+  <div class="side"><div class="dash"></div><div class="orn">途切れた記録<small>強制バッド</small></div></div></div>
+ <div class="node"><div class="mark q"><span>④</span></div><div class="lab">推理の問い④<small>一発で正解</small></div><div class="redo">↺</div></div>
+
+ <div class="chap"><div class="door">第六章</div><div class="name"><em>CHAPTER 6</em>壁の中の通り道</div></div>
+ <div class="node"><div class="mark q"><span>⑤</span></div><div class="lab">推理の問い⑤<small>一発で正解</small></div><div class="redo">↺</div></div>
+ <div class="node now"><div class="mark q"><span>⑥</span></div><div class="lab">推理の問い⑥<small>考え中</small></div><span class="tag" style="margin-left:auto">いまここ</span></div>
+ <div class="node dark"><div class="mark act"><span>？</span></div><div class="lab">？？？<small>まだ読んでいない</small></div>
+  <div class="side" style="margin-left:auto"><div class="dash dim"></div><div class="orn unseen">？？？<small>未見のエンド</small></div></div></div>
+
+ <div class="chap dark"><div class="door">第？章</div><div class="name"><em>CHAPTER ?</em>？？？</div></div>
+ <div class="node dark"><div class="mark who"><span>？</span></div><div class="lab">？？？<small>まだ読んでいない</small></div></div>
+ <div class="fan">
+  <div class="orn unseen">？？？</div><div class="orn unseen">？？？</div>
+  <div class="orn unseen">？？？</div><div class="orn unseen">？？？</div>
+ </div>
+ <div class="lane">？？？ へ続く道</div>
+ <div class="lane">？？？ へ続く道</div>
+ <div class="chap dark"><div class="door">第？章</div><div class="name"><em>CHAPTER ?</em>？？？</div></div>
+ <div class="chap dark"><div class="door">第？章</div><div class="name"><em>CHAPTER ?</em>？？？</div></div>
+ <div class="chap dark"><div class="door">🔒</div><div class="name"><em>EXTRA</em>？？？</div></div>
+ <div class="foot">明るい所は読んだ所。↺ を押すと、その分かれ道の直前から読み直せます(手がかり帳・登場人物パネルもその時のまま)。いまの続きは残ります。</div>
+</div></div>
+<div class="sheetbg"></div>
+<div class="sheet">
+ <h2>第二章 十二の鐘 ― 推理の問い①</h2>
+ <div class="q">黒羽は、どこにいる？ 居場所を示す手がかりを、手がかり帳から1つ突きつけよう</div>
+ <ul><li>手がかり帳: 5個(その時のまま)</li><li>登場人物パネル・選んだ派も、その時のまま</li><li>一発で当てた記録・見たエンドは消えません</li></ul>
+ <div class="btn main">ここから読み直す</div>
+ <div class="btn sub">やめる</div>
+ <div class="note">いまの続き(第六章 推理の問い⑥)は残ります。地図の「いまここ」か、タイトルの「つづきから」でいつでも戻れます。</div>
+</div>
+</body></html>

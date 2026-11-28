@@ -3,7 +3,7 @@
 // 入口は openXmasNovel(opts) の関数1つ(イベントページの物語タブなどから呼ぶ)。App の状態は使わず、自分で body に重ねて開き、閉じたら片づける。
 //   opts.playerName … 台詞の {name} に入れる名前 / opts.onClose() … 閉じたあと / opts.force … 期間の外でも開く(デバッグ・検査だけ)
 //   遊べるのはイベントの期間中だけ(xmasNovelPlayableAt)。期間の外は開かずに false を返す。保存の記録は消さない
-// 保存は新しいキー mh_xmas_novel_v1 だけ(書くのはこれだけ・⑦)。ほかに読むのは、台詞の {name} に入れるブリーダー名(mh_breeder_name)だけ。形は xmasNovelNormalize。
+// 保存は新しいキー mh_xmas_novel_v1 と、分岐の地図の読み直しの mh_xmas_novel_route_v1(r1126-102)だけ(⑦)。ほかに読むのは、台詞の {name} に入れるブリーダー名(mh_breeder_name)だけ。形は xmasNovelNormalize。
 // 見た目: 暗めの紺と雪・金の細い縁・明朝寄りの見出し。縦・横・タブレットで、立ち絵と文の箱の置き方を変える。動きは prefers-reduced-motion で止める
 
 const XMAS_NOVEL_CSS = `
@@ -1378,6 +1378,7 @@ const XMAS_NOVEL_ICONS = {
   skip: '<polygon points="4 5 12 12 4 19 4 5"/><polygon points="12 5 20 12 12 19 12 5"/>',
   log: '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>',
   book: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><circle cx="12" cy="10" r="3"/><line x1="14.2" y1="12.2" x2="16.5" y2="14.5"/>',
+  map: '<polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21 3 6"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/>',
   menu: '<line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/>',
 };
 
@@ -1388,6 +1389,14 @@ const xmasNovelLoad = async (script = XMAS_NOVEL_SCRIPT) => {
 };
 const xmasNovelStore = async (save, script = XMAS_NOVEL_SCRIPT) => {
   try { await storeSet(XMAS_NOVEL_STORAGE_KEY, xmasNovelNormalize(save, script), false); return true; } catch (e) { return false; }
+};
+// 分岐の地図の読み直し(r1126-102): 新しいキー mh_xmas_novel_route_v1。形は xmasNovelRouteNormalize
+const xmasNovelRouteLoad = async (script = XMAS_NOVEL_SCRIPT) => {
+  try { return xmasNovelRouteNormalize(await storeGet(XMAS_NOVEL_ROUTE_KEY, null, false), script); }
+  catch (e) { return xmasNovelRouteNormalize(null, script); }
+};
+const xmasNovelRouteStore = async (route, script = XMAS_NOVEL_SCRIPT) => {
+  try { await storeSet(XMAS_NOVEL_ROUTE_KEY, xmasNovelRouteNormalize(route, script), false); return true; } catch (e) { return false; }
 };
 // ほかの画面から読む口: 見たエンディング(日時つき)・一発で当てた数(記録だけ)
 const xmasNovelRecordState = async () => {
@@ -1445,6 +1454,8 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
   const [log, setLog] = useState([]);
   const [confirmNew, setConfirmNew] = useState(false);
   const saveRef = useRef(null);
+  const [route, setRoute] = useState(null); // 分岐の地図の読み直し(mh_xmas_novel_route_v1・r1126-102)
+  const routeRef = useRef(null);
   const lastBgm = useRef(null);
   const lastChapter = useRef(null);
   const prevBgm = useRef(null);
@@ -1482,10 +1493,41 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
   useEffect(() => {
     let alive = true;
     try { prevBgm.current = typeof Audio_ !== 'undefined' && Audio_.currentBgmKey ? Audio_.currentBgmKey() : null; } catch (e) { prevBgm.current = null; }
-    xmasNovelLoad(S).then((s) => { if (alive) { saveRef.current = s; setSave(s); } });
+    xmasNovelLoad(S).then((s) => {
+      if (!alive) return;
+      saveRef.current = s; setSave(s);
+      // 分岐の地図の読み直し(r1126-102): 別のキーから読み、地図より前に通った分かれ道は今の保存から1回だけ作る
+      xmasNovelRouteLoad(S).then((r) => {
+        if (!alive) return;
+        const seeded = r.seeded === 1 ? r : xmasNovelRouteSeed(S, s, r);
+        routeRef.current = seeded; setRoute(seeded);
+        if (seeded !== r) void xmasNovelRouteStore(seeded, S);
+      });
+    });
     xmasNovelBgm('melo_dullahan_clockwork'); // 開いた所(題の画面)。歌の入った Kiss からはじまるミステリーをやめ、柱時計の不穏な曲に(r1126-093)
     return () => { alive = false; xmasNovelSeStop(); if (storeTimer.current) clearTimeout(storeTimer.current); };
   }, []);
+  const putRoute = (next) => {
+    if (!next) return;
+    routeRef.current = next; setRoute(next);
+    void xmasNovelRouteStore(next, S);
+  };
+  // 地図の「↺ ここから読み直す」: 読み直す前の続きを back に逃がしてから(すでにあれば、一番はじめの続きを残す)、その分かれ道の状態で始める
+  const redoFrom = (cur) => {
+    const r = routeRef.current || xmasNovelRouteNormalize(null, S);
+    const now = saveRef.current && saveRef.current.cur;
+    putRoute({ ...r, back: r.back || now || null });
+    setSheet(null);
+    start(cur);
+  };
+  const backFromRedo = () => {
+    const r = routeRef.current;
+    if (!r || !r.back) return;
+    const b = r.back;
+    putRoute({ ...r, back: null });
+    setSheet(null);
+    start(b);
+  };
   const persist = (next, now = false) => {
     saveRef.current = next; setSave(next);
     if (replayRef.current) return; // 見返しは保存しない
@@ -1610,6 +1652,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
       if (next.row.t === 'panel') { panelChanged = xmasNovelPanelChanged(next.cur.panel, cur.panel); if (next.row.stamp) xmasNovelSe('impact'); }
     }
     const settled = { ...next, cur, panelChanged };
+    if (next.row.t === 'q' && !replayRef.current && routeRef.current) putRoute(xmasNovelRouteRecord(routeRef.current, S, cur)); // 分かれ道の状態(r1126-102)
     s = arriveRow(next.row, { ...s, cur }, { held: chapterCard });
     setSt(settled);
     persist(s);
@@ -1898,6 +1941,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
           <XmasNovelIcon d={XMAS_NOVEL_ICONS.auto} /><span>{autoLevel === 2 ? 'はやい' : 'オート'}</span>
         </button>
         <button type="button" className="mh-nv-btn" data-xmas-novel-skip data-on={skip ? '' : undefined} onClick={toggleSkip} aria-label="既読スキップ"><XmasNovelIcon d={XMAS_NOVEL_ICONS.skip} /><span className="hidden sm:inline">スキップ</span></button>
+        <button type="button" className="mh-nv-btn" data-xmas-novel-open-map onClick={() => setSheet('map')} aria-label="地図"><XmasNovelIcon d={XMAS_NOVEL_ICONS.map} /><span>地図</span></button>
         <button type="button" className="mh-nv-btn" data-xmas-novel-menu onClick={() => setSheet('menu')} aria-label="メニュー"><XmasNovelIcon d={XMAS_NOVEL_ICONS.menu} /></button>
       </div>
 
@@ -1948,7 +1992,10 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
         </div>
       )}
 
-      {sheet && (
+      {sheet === 'map' && save && (
+        <XmasNovelMap script={S} save={save} route={route} playerName={playerName} onRedo={redoFrom} onBack={backFromRedo} onClose={() => setSheet(null)} />
+      )}
+      {sheet && sheet !== 'map' && (
         <div className="mh-nv-sheet" data-xmas-novel-sheet={typeof sheet === 'string' ? sheet : sheet.kind}
           onClick={() => { if (typeof sheet === 'string') setSheet(null); }}>
           <div className="mh-nv-panel" onClick={(e) => e.stopPropagation()}>
