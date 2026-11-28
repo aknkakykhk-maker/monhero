@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: dee3d36b9bdb8132
+// source-sha256: 2042f3f594ebb897
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -115970,7 +115970,11 @@ const xmasNovelSetFlags = (flags, sets) => {
   });
   return next;
 };
-const xmasNovelSettle = (script, cur) => {
+const xmasNovelSeenOf = save => ({
+  endings: save && Array.isArray(save.endings) ? save.endings : [],
+  read: save && Array.isArray(save.read) ? save.read : []
+});
+const xmasNovelSettle = (script, cur, seen) => {
   let c = cur;
   for (let guard = 0; guard < 4000; guard += 1) {
     const scene = xmasNovelSceneById(script, c.scene);
@@ -115981,7 +115985,7 @@ const xmasNovelSettle = (script, cur) => {
       ending: null
     };
     const rows = scene.rows || [];
-    const ctx = xmasNovelCtx(script, c);
+    const ctx = xmasNovelCtx(script, c, seen && seen.endings, seen && seen.read);
     let i = Math.max(0, Number(c.idx) || 0);
     while (i < rows.length && !xmasNovelCondOk(rows[i] && rows[i].c, ctx)) i += 1;
     if (i < rows.length) return {
@@ -116042,10 +116046,10 @@ const xmasNovelSettle = (script, cur) => {
     ending: null
   };
 };
-const xmasNovelStep = (script, cur) => xmasNovelSettle(script, {
+const xmasNovelStep = (script, cur, seen) => xmasNovelSettle(script, {
   ...cur,
   idx: (Number(cur.idx) || 0) + 1
-});
+}, seen);
 const xmasNovelPickReplies = (q, key) => q.replies && Array.isArray(q.replies[key]) ? q.replies[key] : [];
 const xmasNovelAnswer = (script, cur, q, pick, endings, read) => {
   if (!q || q.t !== 'q') return {
@@ -135968,7 +135972,7 @@ const XmasNovelScreen = ({
     });
     setSt(settled);
     persist(s);
-    if (next.row.t === 'flag') setTimeout(() => arrive(xmasNovelStep(S, cur)), 0);
+    if (next.row.t === 'flag') setTimeout(() => arrive(xmasNovelStep(S, cur, xmasNovelSeenOf(saveRef.current))), 0);
   };
   const start = (cur, replay = false) => {
     replayRef.current = replay;
@@ -135993,7 +135997,7 @@ const XmasNovelScreen = ({
     lastBodyRef.current = '';
     setPanelIntro(null);
     setMode('read');
-    arrive(xmasNovelSettle(S, cur));
+    arrive(xmasNovelSettle(S, cur, xmasNovelSeenOf(saveRef.current)));
   };
   const advance = () => {
     if (card) {
@@ -136064,7 +136068,7 @@ const XmasNovelScreen = ({
       });
       return;
     }
-    arrive(xmasNovelStep(S, st.cur));
+    arrive(xmasNovelStep(S, st.cur, xmasNovelSeenOf(saveRef.current)));
   };
   const finishReply = (then, q, cur) => {
     setReply(null);
@@ -136077,10 +136081,10 @@ const XmasNovelScreen = ({
       return;
     }
     if (then && then.to) {
-      arrive(xmasNovelSettle(S, xmasNovelJump(S, cur, then.to)));
+      arrive(xmasNovelSettle(S, xmasNovelJump(S, cur, then.to), xmasNovelSeenOf(saveRef.current)));
       return;
     }
-    arrive(xmasNovelStep(S, cur));
+    arrive(xmasNovelStep(S, cur, xmasNovelSeenOf(saveRef.current)));
   };
   const answer = (q, pick) => {
     setPick(null);

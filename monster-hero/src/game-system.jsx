@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7b97419a506fde96
+// generated-sha256: d4b0c098d88ede22
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -68773,13 +68773,15 @@ const xmasNovelSetFlags = (flags, sets) => {
 };
 // いまの場所から、条件の合う次の行へ(idx が今の行を指していれば、その次から探す)。
 //   返り値 { cur, row, scene, ending, chapterChanged }。row=null で ending があれば、そのエンディングの終わり
-const xmasNovelSettle = (script, cur) => {
+//   seen … { endings, read }(省略可)。行・場面の条件の end_G / bm_red / rd_* に使う(保存は読むだけ・r1126-115。省略すると今までどおり「何も見ていない」)
+const xmasNovelSeenOf = (save) => ({ endings: (save && Array.isArray(save.endings)) ? save.endings : [], read: (save && Array.isArray(save.read)) ? save.read : [] });
+const xmasNovelSettle = (script, cur, seen) => {
   let c = cur;
   for (let guard = 0; guard < 4000; guard += 1) {
     const scene = xmasNovelSceneById(script, c.scene);
     if (!scene) return { cur: c, row: null, scene: null, ending: null };
     const rows = scene.rows || [];
-    const ctx = xmasNovelCtx(script, c);
+    const ctx = xmasNovelCtx(script, c, seen && seen.endings, seen && seen.read);
     let i = Math.max(0, Number(c.idx) || 0);
     while (i < rows.length && !xmasNovelCondOk(rows[i] && rows[i].c, ctx)) i += 1;
     if (i < rows.length) return { cur: { ...c, idx: i }, row: rows[i], scene, ending: null };
@@ -68798,7 +68800,7 @@ const xmasNovelSettle = (script, cur) => {
   return { cur: c, row: null, scene: null, ending: null };
 };
 // 1行すすめる(問いの行では使わない。問いは xmasNovelAnswer)
-const xmasNovelStep = (script, cur) => xmasNovelSettle(script, { ...cur, idx: (Number(cur.idx) || 0) + 1 });
+const xmasNovelStep = (script, cur, seen) => xmasNovelSettle(script, { ...cur, idx: (Number(cur.idx) || 0) + 1 }, seen);
 
 // ---- 問いに答える ----
 //  pick … 突きつけ: 手がかりの名前 / 人を選ぶ: 人のid / 行動: 選択肢の番号(0から)
@@ -72692,7 +72694,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
     setSt(settled);
     persist(s);
     // フラグの行は見せずに次へ
-    if (next.row.t === 'flag') setTimeout(() => arrive(xmasNovelStep(S, cur)), 0);
+    if (next.row.t === 'flag') setTimeout(() => arrive(xmasNovelStep(S, cur, xmasNovelSeenOf(saveRef.current))), 0);
   };
   const start = (cur, replay = false) => {
     replayRef.current = replay;
@@ -72702,7 +72704,7 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
     lastBgRef.current = null; pendingSwRef.current = null; seenWhoRef.current = new Set(); lastWhoRef.current = ''; setSw(null); setFigEnter(null);
     setReveal(null); pendingFxRef.current = null; lastBodyRef.current = ''; setPanelIntro(null);
     setMode('read');
-    arrive(xmasNovelSettle(S, cur));
+    arrive(xmasNovelSettle(S, cur, xmasNovelSeenOf(saveRef.current)));
   };
 
   // すすめる(タップ・オート・スキップ)
@@ -72738,13 +72740,13 @@ const XmasNovelScreen = ({ playerName: playerNameProp = '', onClose, script = nu
       return;
     }
     if (row.t === 'q') { setSheet({ kind: row.kind, q: row }); return; }
-    arrive(xmasNovelStep(S, st.cur));
+    arrive(xmasNovelStep(S, st.cur, xmasNovelSeenOf(saveRef.current)));
   };
   const finishReply = (then, q, cur) => {
     setReply(null);
     if (then === 'retry') { setSheet({ kind: q.kind, q }); setShown(99999); return; }
-    if (then && then.to) { arrive(xmasNovelSettle(S, xmasNovelJump(S, cur, then.to))); return; }
-    arrive(xmasNovelStep(S, cur));
+    if (then && then.to) { arrive(xmasNovelSettle(S, xmasNovelJump(S, cur, then.to), xmasNovelSeenOf(saveRef.current))); return; }
+    arrive(xmasNovelStep(S, cur, xmasNovelSeenOf(saveRef.current)));
   };
   // 答える
   const answer = (q, pick) => {
