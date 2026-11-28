@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d3127c495209d136
+// source-sha256: 03c5086dcddcb4f4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -9488,24 +9488,30 @@ const Audio_ = (() => {
     if (!res.ok) throw new Error(`audio fetch failed: ${res.status}`);
     return longEntryOf(url, new Uint8Array(await res.arrayBuffer()));
   };
-  const monoRange = (buf, from, len) => {
-    const out = new Float32Array(len),
+  const longScratch = [];
+  const scratchOf = (slot, len) => {
+    let a = longScratch[slot];
+    if (!a || a.length < len) a = longScratch[slot] = new Float32Array(Math.max(len, a ? a.length : 0));
+    return a.length === len ? a : a.subarray(0, len);
+  };
+  const monoRange = (buf, from, len, slot = -1) => {
+    const out = slot >= 0 ? scratchOf(slot, len) : new Float32Array(len),
       c0 = buf.getChannelData(0),
       c1 = buf.numberOfChannels > 1 ? buf.getChannelData(1) : null;
     for (let i = 0; i < len; i++) {
       const k = from + i;
-      if (k >= 0 && k < buf.length) out[i] = c1 ? (c0[k] + c1[k]) * 0.5 : c0[k];
+      out[i] = k >= 0 && k < buf.length ? c1 ? (c0[k] + c1[k]) * 0.5 : c0[k] : 0;
     }
     return out;
   };
   const longAlignLag = (aBuf, bBuf, j0, len, L0, R = 3200) => {
     const D = 8;
     len -= len % D;
-    const A = monoRange(aBuf, j0 + L0 - R - D, len + 2 * R + 2 * D),
-      B = monoRange(bBuf, j0, len);
-    const dec = x => {
+    const A = monoRange(aBuf, j0 + L0 - R - D, len + 2 * R + 2 * D, 0),
+      B = monoRange(bBuf, j0, len, 1);
+    const dec = (x, slot) => {
       const m = Math.floor(x.length / D),
-        o = new Float32Array(m);
+        o = scratchOf(slot, m);
       for (let i = 0; i < m; i++) {
         let t = 0;
         for (let k = 0; k < D; k++) t += x[i * D + k];
@@ -9513,8 +9519,8 @@ const Audio_ = (() => {
       }
       return o;
     };
-    const Ad = dec(A),
-      Bd = dec(B),
+    const Ad = dec(A, 2),
+      Bd = dec(B, 3),
       RD = R / D;
     let best = -Infinity,
       bestD = 0;
@@ -9531,8 +9537,8 @@ const Audio_ = (() => {
       W = 12,
       len2 = Math.min(len, 8192),
       j1 = j0 + Math.floor((len - len2) / 2);
-    const A2 = monoRange(aBuf, j1 + Lc - W, len2 + 2 * W),
-      B2 = monoRange(bBuf, j1, len2);
+    const A2 = monoRange(aBuf, j1 + Lc - W, len2 + 2 * W, 4),
+      B2 = monoRange(bBuf, j1, len2, 5);
     const sc = [];
     for (let L = -W; L <= W; L++) {
       let t = 0;
@@ -9641,7 +9647,7 @@ const Audio_ = (() => {
         bestE = 0;
       for (let p = lo; p <= hi; p += Math.max(1, Math.round(1 / fsec))) {
         const from = Math.round(p * fsec * rate),
-          seg = monoRange(head, from, Math.round(0.5 * rate));
+          seg = monoRange(head, from, Math.round(0.5 * rate), 6);
         let e = 0;
         for (let i = 0; i < seg.length; i += 4) e += seg[i] * seg[i];
         if (e > bestE) {
@@ -49338,17 +49344,36 @@ const RhythmTapTest = ({
   const setPressedLanes = coordinates => {
     const area = playAreaRef.current;
     if (!area) return;
-    const active = new Set(Array.from(coordinates || []).map(value => Math.max(0, Math.min(RHYTHM_SUB_LANE_COUNT - 1, Math.floor(Number(value))))).filter(Number.isFinite)),
-      glowOpacity = settings.laneGlow === 'NONE' ? '0' : settings.laneGlow === 'LOW' ? '.35' : '1';
+    const glowOpacity = settings.laneGlow === 'NONE' ? '0' : settings.laneGlow === 'LOW' ? '.35' : '1';
+    let mask = 0;
+    if (coordinates) {
+      for (const value of coordinates) {
+        const n = Math.max(0, Math.min(RHYTHM_SUB_LANE_COUNT - 1, Math.floor(Number(value))));
+        if (Number.isFinite(n)) mask |= 1 << n;
+      }
+    }
     let nodes = glowNodesRef.current;
-    if (!nodes || !nodes.length || !nodes[0].isConnected) nodes = glowNodesRef.current = Array.from(area.querySelectorAll('[data-rhythm-sublane-feedback]'));
-    nodes.forEach((el, index) => {
-      const pressed = active.has(index);
-      const want = pressed ? 'true' : 'false';
-      if (el.dataset.pressed === want && (!pressed || el.style.opacity === glowOpacity)) return;
-      el.dataset.pressed = want;
-      el.style.opacity = pressed ? glowOpacity : '0';
-    });
+    if (!nodes || !nodes.length || !nodes[0].isConnected) {
+      nodes = glowNodesRef.current = Array.from(area.querySelectorAll('[data-rhythm-sublane-feedback]'));
+      glowNodesRef.lastKey = null;
+    }
+    const glowKey = `${mask}|${glowOpacity}`;
+    if (glowNodesRef.lastKey !== glowKey) {
+      glowNodesRef.lastKey = glowKey;
+      for (let index = 0; index < nodes.length; index++) {
+        const el = nodes[index],
+          pressed = (mask >> index & 1) === 1;
+        const want = pressed ? 'true' : 'false';
+        const curPressed = el._mhGlowPressed !== undefined ? el._mhGlowPressed : el.dataset.pressed,
+          curOpacity = el._mhGlowOpacity !== undefined ? el._mhGlowOpacity : el.style.opacity;
+        if (curPressed === want && (!pressed || curOpacity === glowOpacity)) continue;
+        const nextOpacity = pressed ? glowOpacity : '0';
+        if (curPressed !== want) el.dataset.pressed = want;
+        if (curOpacity !== nextOpacity) el.style.opacity = nextOpacity;
+        el._mhGlowPressed = want;
+        el._mhGlowOpacity = nextOpacity;
+      }
+    }
     if (typeof RHYTHM_CANVAS_RENDERER !== 'undefined' && typeof RHYTHM_CANVAS_RENDERER.setSkyPressed === 'function') {
       {
         const skyMask = settings.holdTrace !== false ? holdTraceRef.current.s : 0;

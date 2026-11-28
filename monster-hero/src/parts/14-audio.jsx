@@ -702,20 +702,24 @@ const Audio_ = (() => {
     return longEntryOf(url, new Uint8Array(await res.arrayBuffer()));
   };
   // 2つの音の波形を突き合わせ、b[j] が a[j+L] に当たる L(サンプル・小数)を探す。L0 の前後 R だけ見る
-  const monoRange = (buf, from, len) => {
-    const out = new Float32Array(len), c0 = buf.getChannelData(0), c1 = buf.numberOfChannels > 1 ? buf.getChannelData(1) : null;
-    for (let i = 0; i < len; i++) { const k = from + i; if (k >= 0 && k < buf.length) out[i] = c1 ? (c0[k] + c1[k]) * 0.5 : c0[k]; }
+  // 作業用の配列は使い回す(2026-11-28 r1126-100「ワルキューレの原曲がかくつく」)。演奏中も約20秒ごとにつなぎ目を合わせるので、
+  // そのたびに数百KBの配列を作って捨てると、ごみ集め(GC)を呼ぶ。中身は毎回すべて書き直すので、結果は前と同じ
+  const longScratch = [];
+  const scratchOf = (slot, len) => { let a = longScratch[slot]; if (!a || a.length < len) a = longScratch[slot] = new Float32Array(Math.max(len, a ? a.length : 0)); return a.length === len ? a : a.subarray(0, len); };
+  const monoRange = (buf, from, len, slot = -1) => {
+    const out = slot >= 0 ? scratchOf(slot, len) : new Float32Array(len), c0 = buf.getChannelData(0), c1 = buf.numberOfChannels > 1 ? buf.getChannelData(1) : null;
+    for (let i = 0; i < len; i++) { const k = from + i; out[i] = k >= 0 && k < buf.length ? (c1 ? (c0[k] + c1[k]) * 0.5 : c0[k]) : 0; }
     return out;
   };
   const longAlignLag = (aBuf, bBuf, j0, len, L0, R = 3200) => {
     const D = 8; len -= len % D;
-    const A = monoRange(aBuf, j0 + L0 - R - D, len + 2 * R + 2 * D), B = monoRange(bBuf, j0, len);
-    const dec = (x) => { const m = Math.floor(x.length / D), o = new Float32Array(m); for (let i = 0; i < m; i++) { let t = 0; for (let k = 0; k < D; k++) t += x[i * D + k]; o[i] = t; } return o; };
-    const Ad = dec(A), Bd = dec(B), RD = R / D;
+    const A = monoRange(aBuf, j0 + L0 - R - D, len + 2 * R + 2 * D, 0), B = monoRange(bBuf, j0, len, 1);
+    const dec = (x, slot) => { const m = Math.floor(x.length / D), o = scratchOf(slot, m); for (let i = 0; i < m; i++) { let t = 0; for (let k = 0; k < D; k++) t += x[i * D + k]; o[i] = t; } return o; };
+    const Ad = dec(A, 2), Bd = dec(B, 3), RD = R / D;
     let best = -Infinity, bestD = 0;
     for (let d = -RD; d <= RD; d++) { let t = 0; const o = d + RD + 1; for (let i = 0; i < Bd.length; i++) t += Ad[i + o] * Bd[i]; if (t > best) { best = t; bestD = d; } }
     const Lc = L0 + bestD * D, W = 12, len2 = Math.min(len, 8192), j1 = j0 + Math.floor((len - len2) / 2);
-    const A2 = monoRange(aBuf, j1 + Lc - W, len2 + 2 * W), B2 = monoRange(bBuf, j1, len2);
+    const A2 = monoRange(aBuf, j1 + Lc - W, len2 + 2 * W, 4), B2 = monoRange(bBuf, j1, len2, 5);
     const sc = []; for (let L = -W; L <= W; L++) { let t = 0; for (let i = 0; i < len2; i++) t += A2[i + L + W] * B2[i]; sc.push(t); }
     let bi = 0; for (let i = 1; i < sc.length; i++) if (sc[i] > sc[bi]) bi = i;
     let frac = 0; if (bi > 0 && bi < sc.length - 1) { const den = sc[bi - 1] - 2 * sc[bi] + sc[bi + 1]; if (den < 0) frac = 0.5 * (sc[bi - 1] - sc[bi + 1]) / den; }
@@ -767,7 +771,7 @@ const Audio_ = (() => {
       const probeLen = 48, lo = LONG_PRE_FRAMES + 8, hi = Math.min(bounds[1] || n, n) - probeLen - 8;
       let bestP = -1, bestE = 0;
       for (let p = lo; p <= hi; p += Math.max(1, Math.round(1 / fsec))) {
-        const from = Math.round(p * fsec * rate), seg = monoRange(head, from, Math.round(0.5 * rate)); let e = 0;
+        const from = Math.round(p * fsec * rate), seg = monoRange(head, from, Math.round(0.5 * rate), 6); let e = 0;
         for (let i = 0; i < seg.length; i += 4) e += seg[i] * seg[i];
         if (e > bestE) { bestE = e; bestP = p; }
       }

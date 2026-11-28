@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ab1fd928ec3d9248
+// generated-sha256: 5bcbbc2140181a77
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -7058,20 +7058,24 @@ const Audio_ = (() => {
     return longEntryOf(url, new Uint8Array(await res.arrayBuffer()));
   };
   // 2つの音の波形を突き合わせ、b[j] が a[j+L] に当たる L(サンプル・小数)を探す。L0 の前後 R だけ見る
-  const monoRange = (buf, from, len) => {
-    const out = new Float32Array(len), c0 = buf.getChannelData(0), c1 = buf.numberOfChannels > 1 ? buf.getChannelData(1) : null;
-    for (let i = 0; i < len; i++) { const k = from + i; if (k >= 0 && k < buf.length) out[i] = c1 ? (c0[k] + c1[k]) * 0.5 : c0[k]; }
+  // 作業用の配列は使い回す(2026-11-28 r1126-100「ワルキューレの原曲がかくつく」)。演奏中も約20秒ごとにつなぎ目を合わせるので、
+  // そのたびに数百KBの配列を作って捨てると、ごみ集め(GC)を呼ぶ。中身は毎回すべて書き直すので、結果は前と同じ
+  const longScratch = [];
+  const scratchOf = (slot, len) => { let a = longScratch[slot]; if (!a || a.length < len) a = longScratch[slot] = new Float32Array(Math.max(len, a ? a.length : 0)); return a.length === len ? a : a.subarray(0, len); };
+  const monoRange = (buf, from, len, slot = -1) => {
+    const out = slot >= 0 ? scratchOf(slot, len) : new Float32Array(len), c0 = buf.getChannelData(0), c1 = buf.numberOfChannels > 1 ? buf.getChannelData(1) : null;
+    for (let i = 0; i < len; i++) { const k = from + i; out[i] = k >= 0 && k < buf.length ? (c1 ? (c0[k] + c1[k]) * 0.5 : c0[k]) : 0; }
     return out;
   };
   const longAlignLag = (aBuf, bBuf, j0, len, L0, R = 3200) => {
     const D = 8; len -= len % D;
-    const A = monoRange(aBuf, j0 + L0 - R - D, len + 2 * R + 2 * D), B = monoRange(bBuf, j0, len);
-    const dec = (x) => { const m = Math.floor(x.length / D), o = new Float32Array(m); for (let i = 0; i < m; i++) { let t = 0; for (let k = 0; k < D; k++) t += x[i * D + k]; o[i] = t; } return o; };
-    const Ad = dec(A), Bd = dec(B), RD = R / D;
+    const A = monoRange(aBuf, j0 + L0 - R - D, len + 2 * R + 2 * D, 0), B = monoRange(bBuf, j0, len, 1);
+    const dec = (x, slot) => { const m = Math.floor(x.length / D), o = scratchOf(slot, m); for (let i = 0; i < m; i++) { let t = 0; for (let k = 0; k < D; k++) t += x[i * D + k]; o[i] = t; } return o; };
+    const Ad = dec(A, 2), Bd = dec(B, 3), RD = R / D;
     let best = -Infinity, bestD = 0;
     for (let d = -RD; d <= RD; d++) { let t = 0; const o = d + RD + 1; for (let i = 0; i < Bd.length; i++) t += Ad[i + o] * Bd[i]; if (t > best) { best = t; bestD = d; } }
     const Lc = L0 + bestD * D, W = 12, len2 = Math.min(len, 8192), j1 = j0 + Math.floor((len - len2) / 2);
-    const A2 = monoRange(aBuf, j1 + Lc - W, len2 + 2 * W), B2 = monoRange(bBuf, j1, len2);
+    const A2 = monoRange(aBuf, j1 + Lc - W, len2 + 2 * W, 4), B2 = monoRange(bBuf, j1, len2, 5);
     const sc = []; for (let L = -W; L <= W; L++) { let t = 0; for (let i = 0; i < len2; i++) t += A2[i + L + W] * B2[i]; sc.push(t); }
     let bi = 0; for (let i = 1; i < sc.length; i++) if (sc[i] > sc[bi]) bi = i;
     let frac = 0; if (bi > 0 && bi < sc.length - 1) { const den = sc[bi - 1] - 2 * sc[bi] + sc[bi + 1]; if (den < 0) frac = 0.5 * (sc[bi - 1] - sc[bi + 1]) / den; }
@@ -7123,7 +7127,7 @@ const Audio_ = (() => {
       const probeLen = 48, lo = LONG_PRE_FRAMES + 8, hi = Math.min(bounds[1] || n, n) - probeLen - 8;
       let bestP = -1, bestE = 0;
       for (let p = lo; p <= hi; p += Math.max(1, Math.round(1 / fsec))) {
-        const from = Math.round(p * fsec * rate), seg = monoRange(head, from, Math.round(0.5 * rate)); let e = 0;
+        const from = Math.round(p * fsec * rate), seg = monoRange(head, from, Math.round(0.5 * rate), 6); let e = 0;
         for (let i = 0; i < seg.length; i += 4) e += seg[i] * seg[i];
         if (e > bestE) { bestE = e; bestP = p; }
       }
@@ -29542,7 +29546,14 @@ const inputEnds=inputs=>{const run=runRef.current;if(!run||run.finished||run.pau
   const pressedSkyLanesNow=()=>[...(liveTouchSkySubLanesRef.current||[]),...(runRef.current?.activePointerSkyFeedback?.values()||[])];
   // 押せている帯のサブレーン(ビットの集まり。g=地上・s=空中)。tick が変わったときだけ書き換える(設定 holdTrace)
   const holdTraceRef=useRef({g:0,s:0});
-  const setPressedLanes=coordinates=>{const area=playAreaRef.current;if(!area)return;const active=new Set(Array.from(coordinates||[]).map(value=>Math.max(0,Math.min(RHYTHM_SUB_LANE_COUNT-1,Math.floor(Number(value))))).filter(Number.isFinite)),glowOpacity=settings.laneGlow==='NONE'?'0':settings.laneGlow==='LOW'?'.35':'1';let nodes=glowNodesRef.current;if(!nodes||!nodes.length||!nodes[0].isConnected)nodes=glowNodesRef.current=Array.from(area.querySelectorAll('[data-rhythm-sublane-feedback]'));nodes.forEach((el,index)=>{const pressed=active.has(index);const want=pressed?'true':'false';if(el.dataset.pressed===want&&(!pressed||el.style.opacity===glowOpacity))return;el.dataset.pressed=want;el.style.opacity=pressed?glowOpacity:'0';});if(typeof RHYTHM_CANVAS_RENDERER!=='undefined'&&typeof RHYTHM_CANVAS_RENDERER.setSkyPressed==='function'){{const skyMask=settings.holdTrace!==false?holdTraceRef.current.s:0;RHYTHM_CANVAS_RENDERER.setSkyPressed(skyMask?pressedSkyLanesNow().filter(v=>!(skyMask>>Math.floor(Number(v))&1)):pressedSkyLanesNow(),Number(glowOpacity));}paintIdleSkyPress();}};
+  const setPressedLanes=coordinates=>{const area=playAreaRef.current;if(!area)return;const glowOpacity=settings.laneGlow==='NONE'?'0':settings.laneGlow==='LOW'?'.35':'1';
+    /* 押しているサブレーンを印(ビット)にまとめる。指が動くたびに呼ばれる(iPhone の touchmove は指1本で毎秒60〜120回)ので、
+       前と同じ押し方・同じ濃さなら DOM に触らずに抜ける(2026-11-28 r1126-100「ワルキューレの原曲がかくつく」。以前は毎回 Set と配列を作り、
+       12本ぶんの dataset と style を読み直していた)。要素が作り直されたら覚えた印は捨てて書き直す。見た目は前と同じ */
+    let mask=0;if(coordinates){for(const value of coordinates){const n=Math.max(0,Math.min(RHYTHM_SUB_LANE_COUNT-1,Math.floor(Number(value))));if(Number.isFinite(n))mask|=1<<n;}}
+    let nodes=glowNodesRef.current;if(!nodes||!nodes.length||!nodes[0].isConnected){nodes=glowNodesRef.current=Array.from(area.querySelectorAll('[data-rhythm-sublane-feedback]'));glowNodesRef.lastKey=null;}
+    const glowKey=`${mask}|${glowOpacity}`;
+    if(glowNodesRef.lastKey!==glowKey){glowNodesRef.lastKey=glowKey;for(let index=0;index<nodes.length;index++){const el=nodes[index],pressed=((mask>>index)&1)===1;const want=pressed?'true':'false';/* 書いた値は要素に覚えておき、DOM を読み直さずに比べる(初めの1回だけ DOM を読む) */const curPressed=el._mhGlowPressed!==undefined?el._mhGlowPressed:el.dataset.pressed,curOpacity=el._mhGlowOpacity!==undefined?el._mhGlowOpacity:el.style.opacity;if(curPressed===want&&(!pressed||curOpacity===glowOpacity))continue;const nextOpacity=pressed?glowOpacity:'0';if(curPressed!==want)el.dataset.pressed=want;if(curOpacity!==nextOpacity)el.style.opacity=nextOpacity;el._mhGlowPressed=want;el._mhGlowOpacity=nextOpacity;}}if(typeof RHYTHM_CANVAS_RENDERER!=='undefined'&&typeof RHYTHM_CANVAS_RENDERER.setSkyPressed==='function'){{const skyMask=settings.holdTrace!==false?holdTraceRef.current.s:0;RHYTHM_CANVAS_RENDERER.setSkyPressed(skyMask?pressedSkyLanesNow().filter(v=>!(skyMask>>Math.floor(Number(v))&1)):pressedSkyLanesNow(),Number(glowOpacity));}paintIdleSkyPress();}};
   // 曲が始まる前の待機中(幕・READY→3→2→1)は、毎フレームの描画(tick)がまだ動いていない。地上のレーンの光は画面の要素なので光るが、
   // 空中のレーンの光は canvas に描くので、そのままだと光らなかった(2026-10-13 社長「待機中、地上は光るのに空中は光らない」)。
   // 指の出入りのたびに、空中の押した光だけをここで1回描く(叩いた光・ノーツはまだ無い)。止めている間(ポーズ)はノーツの絵を残すので描かない
