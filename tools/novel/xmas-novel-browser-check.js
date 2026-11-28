@@ -42,6 +42,10 @@ const CASES = CASES_ALL.filter((c) => !ONLY || c.shot === ONLY);
       const errors = [];
       page.on('pageerror', (e) => errors.push(String(e)));
       await page.route(/supabase\.co/, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+      // ①〜④は「期間の外」で見る。実際の時計に頼ると、開幕(11/28 10:00)のあとに落ちた(2026-11-28)。時計を開幕前にずらす(Date だけ)
+      await page.addInitScript({ content: `(() => { const off = Date.parse('2026-11-27T13:05:00+09:00') - Date.now(); const RD = Date;
+        class D extends RD { constructor(...a) { if (a.length === 0) super(RD.now() + off); else super(...a); } static now() { return RD.now() + off; } }
+        D.parse = RD.parse; D.UTC = RD.UTC; window.Date = D; })();` });
       await page.addInitScript(() => {
         const put = (k, v) => localStorage.setItem(k, JSON.stringify(v));
         put('mh_breeder_name', '検査ブリーダー'); put('mh_breeder_icon', '🐣'); put('mh_onboarded', true); put('mh_tutorial_seen_v1', true);
