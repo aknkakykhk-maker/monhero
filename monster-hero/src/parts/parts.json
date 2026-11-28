@@ -432,6 +432,10 @@
       "role": "クリスマスのミステリーノベルの分岐の地図「聖夜の見取り図」(r1126-102)。台本から章・分かれ道・エンドを並べ、通った分かれ道から読み直す札を出す(保存は呼ぶ側・mh_xmas_novel_route_v1)"
     },
     {
+      "file": "79-xmas-novel-profile.jsx",
+      "role": "クリスマスのミステリーノベルの人物調書(登場人物紹介・r1126-117)。起動画面の目次から開く。12人の名前・顔・ひとこと と、章・見た結末・真エンドで開く項目(保存は読むだけ・mh_xmas_novel_v1 の snaps/endings/read)"
+    },
+    {
       "file": "56-assistant-chat.jsx",
       "role": "助手とおしゃべりの窓(AssistantChatWindow)。中継役へ送るだけで、会話は端末の新しいキーにだけ置く。公開の印 assistantChat の後ろ"
     },
