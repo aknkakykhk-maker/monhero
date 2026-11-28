@@ -6807,6 +6807,9 @@ function MonsterHeroGame() {
       && bgmArrangement.home === DEFAULT_BGM_ARRANGEMENT.home) ? RAID_JACK_BGM_TRACK
       // クリスマスイベントの期間は「Dear Santa」(台帳 r1126-023・デフォルトのままの人だけ)
       : (xmasEventBgmOpenAt(Date.now()) && bgmArrangement.home === DEFAULT_BGM_ARRANGEMENT.home) ? XMAS_HOME_BGM_TRACK : bgmArrangement.home;
+    // カードの画面では裏の周回が負け・やめでもカードの曲のまま(r1126-101 追記2)
+    if (state === 'CARD_TOP' || state === 'CARD_BATTLE') return cardBgm || homeBgm;
+    if (state === 'CARD_PACK_OPEN') return homeBgm;
     if (isGameOver) return bgmArrangement.gameOver;
     if (!debugBattleRef.current && currentWave === 10 && (state === 'WAVE_RESULT' || state === 'CHAMPION')) {
       // AUTO∞は最終リザルトでも直前の戦闘BGMを継続する。設定をONにした場合だけ従来のクリアBGMへ切り替える。
@@ -14885,7 +14888,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 待ち時間は、消える0.6秒＋VICTORY!の1秒に合わせる
     if(defeatFxOn) setDefeatFx({name:enemy?.name||'敵',boss:wave>=10,key:Date.now()});
     // 裏クイックがクリスマスのイベントページ・事件簿で回っているあいだは鳴らさない(ジングルは曲を止めるので、事件簿の曲が途切れる・r1126-072)
-    if ((!autoBattleRef.current || bgmArrangement.autoVictoryJingle === 'on') && !(runBackgroundAllowedRef.current && isXmasQuietScreen(gameStateNowRef.current))) Audio_.playJingle('victory');
+    //   MFバトルカードの画面で裏の周回が回っているあいだも鳴らさない(ジングルがカードの曲を止める・台帳 r1126-101 追記2)
+    if ((!autoBattleRef.current || bgmArrangement.autoVictoryJingle === 'on') && !(runBackgroundAllowedRef.current && (isXmasQuietScreen(gameStateNowRef.current) || isCardRunScreen(gameStateNowRef.current)))) Audio_.playJingle('victory');
     // 呼ぶ側は、今回のぶん(damage・distDamage)を足してからここへ来る。合計は「いまの値」から読む(上の currentWaveDamageRef の説明)
     const totalWaveDamage=waveDamageAtDefeat(currentWaveDamageRef.current,currentWaveDamage,damage);
     const waveMult=1.0+(wave*0.1); const remainingTurns=Math.max(0,21-turnCount);

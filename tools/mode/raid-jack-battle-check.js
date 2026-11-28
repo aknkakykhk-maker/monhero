@@ -146,8 +146,9 @@ check('AもBも、味方のライフ・ガッツは全快からはじまる(追�
 // ⑨ ターン数とBGM(2026-10-04)。2026-11-27: クリスマスのレイド戦(winter fall)・期間中のHOME(Dear Santa)の分岐も受け付ける(台帳 r1126-023)
 check('1回の戦闘は20ターン(レイドバトルもグランドスラムも)・ターンごとのバフは半分(5% / 1.5%)',
   /const RAID_JACK_TURNS = 20;/.test(defs35) && /RAID_JACK_TURN_GROWTH = 1\.05;/.test(defs35) && /RAID_JACK_TURN_REGEN_STEP = 0\.015;/.test(defs35));
+// 2026-11-28: isGameOver の手前に MFバトルカードの画面の曲(r1126-101 追記2)を足したので、幅を 900→1200 に広げた
 check('ジャックとの戦いは Monster(全編)、レイド画面・段階えらび・編成はぱんぷきんの曲に固定(どちらも isGameOver より前で決める)',
-  /if \(state === 'BATTLE' && raidJackRunRef\.current\) return (?:raidJackRunRef\.current\.ev === 'xmas' \? XMAS_RAID_BATTLE_BGM_TRACK : )?RAID_JACK_BATTLE_BGM_TRACK;\s*(?:\/\/[^\n]*\n\s*)*if \(RAID_JACK_BGM_STATES\.includes\(state\)(?: && raidEvRef\.current !== 'xmas')?\) return (?:raidEvRef\.current === 'xmas' \? XMAS_EVENT_BGM_TRACK : )?RAID_JACK_BGM_TRACK;[\s\S]{0,900}if \(isGameOver\) return bgmArrangement\.gameOver;/.test(app)
+  /if \(state === 'BATTLE' && raidJackRunRef\.current\) return (?:raidJackRunRef\.current\.ev === 'xmas' \? XMAS_RAID_BATTLE_BGM_TRACK : )?RAID_JACK_BATTLE_BGM_TRACK;\s*(?:\/\/[^\n]*\n\s*)*if \(RAID_JACK_BGM_STATES\.includes\(state\)(?: && raidEvRef\.current !== 'xmas')?\) return (?:raidEvRef\.current === 'xmas' \? XMAS_EVENT_BGM_TRACK : )?RAID_JACK_BGM_TRACK;[\s\S]{0,1200}if \(isGameOver\) return bgmArrangement\.gameOver;/.test(app)
   && /RAID_JACK_BGM_TRACK = 'melo_crazy_party_night_full'/.test(defs35) && /id:'melo_crazy_party_night_full'/.test(read('monster-hero/src/parts/13-bgm-and-rhythm-settings.jsx'))
   && /RAID_JACK_BATTLE_BGM_TRACK = 'melo_monster';/.test(defs35) && /id:'melo_monster'/.test(read('monster-hero/src/parts/13-bgm-and-rhythm-settings.jsx')));
 check('HOMEの曲は、イベント中かつ曲を選んでいないときだけぱんぷきん(開催中は見るたびに数え直す)',
