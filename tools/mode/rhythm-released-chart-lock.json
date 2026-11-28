@@ -466,6 +466,11 @@
   "winter_fall_short/hard": "de9ef98c35536f39",
   "winter_fall_short/expert": "0eb4665df3daab89",
   "winter_fall_short/master": "706cd0b4651ab483",
+  "three_y_three_s/easy": "9268fd6956debf3b",
+  "three_y_three_s/normal": "0f3d5fada20bfdc2",
+  "three_y_three_s/hard": "5a02742762061eab",
+  "three_y_three_s/expert": "309575961f509963",
+  "three_y_three_s/master": "212692f414353593",
   "zenbu_hissatsuwaza/easy": "07f646677627ba53",
   "zenbu_hissatsuwaza/normal": "1d1fcd2a2e216f28",
   "zenbu_hissatsuwaza/hard": "1a984063bd072fb0",
@@ -574,6 +579,7 @@
   "dear_santa_short/hell": "2661bec7c3e38eff",
   "winter_fall/hell": "e9fd6788c3b23fca",
   "winter_fall_short/hell": "9884e50326e14940",
+  "three_y_three_s/hell": "86de881618dc56b8",
   "zenbu_hissatsuwaza/hell": "52af5d2cacf4545f",
   "megalovania_sans/hell": "b54acba215aae1da",
   "megalovania_smash/hell": "2ba3b2a5cd05b394"
@@ -1362,6 +1368,18 @@
     "battle_5_short/master",
     "battle_5/hell",
     "battle_5_short/hell"
+   ]
+  },
+  {
+   "at": "2026-11-28 17:37",
+   "reason": "新曲 3y3s を公開",
+   "changed": [
+    "three_y_three_s/easy",
+    "three_y_three_s/normal",
+    "three_y_three_s/hard",
+    "three_y_three_s/expert",
+    "three_y_three_s/master",
+    "three_y_three_s/hell"
    ]
   }
  ]

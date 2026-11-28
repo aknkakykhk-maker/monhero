@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "bda06f974bf5",
-  "packs": {"beat":{"bytes":335238636,"count":177},"battle":{"bytes":632082537,"count":1870},"card":{"bytes":38085297,"count":1046},"all":{"bytes":1005406470,"count":3093},"core":{"bytes":27344037,"count":25}},
+  "id": "8685e74e9dd7",
+  "packs": {"beat":{"bytes":335238636,"count":177},"battle":{"bytes":632082537,"count":1870},"card":{"bytes":38085297,"count":1046},"all":{"bytes":1005406470,"count":3093},"core":{"bytes":27345066,"count":25}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"b43d691d4773","size":2833344,"pack":"beat"},
@@ -3098,7 +3098,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"29e1c9fc6a7c","size":322141,"pack":"core"},
+    "tailwind.css": {"v":"698c694f81c2","size":322141,"pack":"core"},
     "data/images/images-ally.js": {"v":"7fcc9331d4b6","size":92225,"pack":"core"},
     "data/images/images-enemy.js": {"v":"fc6148828d29","size":4003,"pack":"core"},
     "data/ally-monsters.js": {"v":"6737b7dced48","size":60894,"pack":"core"},
@@ -3111,7 +3111,7 @@
     "data/rhythm-geometry-calibration.js": {"v":"02534cca12f6","size":15552,"pack":"core"},
     "data/rhythm-result-replay-remount.js": {"v":"381554180360","size":5743,"pack":"core"},
     "data/rhythm-event.js": {"v":"cab7dc3975c8","size":110426,"pack":"core"},
-    "data/changelog.js": {"v":"f6be08eed62c","size":2063810,"pack":"core"},
+    "data/changelog.js": {"v":"e50e06c2b56c","size":2064839,"pack":"core"},
     "data/help.js": {"v":"e0949bd5f199","size":927670,"pack":"core"},
     "data/mhsave-backup.js": {"v":"7845a4fd261f","size":14703,"pack":"core"},
     "data/rhythm-step3-release.js": {"v":"ae1d7f73f23a","size":8517,"pack":"core"},

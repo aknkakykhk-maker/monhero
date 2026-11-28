@@ -3717,6 +3717,41 @@
    "besideHeldBand": 0,
    "fastSameSide": 0,
    "heldHandSwitch": 0
+  },
+  "three_y_three_s/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "three_y_three_s/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "three_y_three_s/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 26,
+   "heldHandSwitch": 0
+  },
+  "three_y_three_s/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 47,
+   "heldHandSwitch": 0
+  },
+  "three_y_three_s/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 83,
+   "heldHandSwitch": 0
   }
  },
  "history": [
@@ -3919,6 +3954,11 @@
    "at": "2026-11-26T14:04",
    "reason": "新曲 Kissからはじまるミステリー・Dear Santa・winter fall(原曲と short ver.)を公開",
    "changed": 30
+  },
+  {
+   "at": "2026-11-28T08:36",
+   "reason": "新曲 3y3s を公開",
+   "changed": 5
   }
  ]
 }

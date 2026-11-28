@@ -195,7 +195,9 @@
   "winter_fall/MASTER": 0,
   "winter_fall/HELL": 8,
   "winter_fall_short/MASTER": 0,
-  "winter_fall_short/HELL": 3
+  "winter_fall_short/HELL": 3,
+  "three_y_three_s/MASTER": 0,
+  "three_y_three_s/HELL": 0
  },
  "history": [
   {
@@ -252,6 +254,11 @@
    "at": "2026-11-26T14:04",
    "reason": "新曲 Kissからはじまるミステリー・Dear Santa・winter fall(原曲と short ver.)を公開",
    "changed": 12
+  },
+  {
+   "at": "2026-11-28T08:36",
+   "reason": "新曲 3y3s を公開",
+   "changed": 2
   }
  ]
 }
